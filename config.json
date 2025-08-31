@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1-dev",
+  "api": {
+    "baseURL": "http://127.0.0.1:8000/api"
+  },
+  "features": {
+    "analytics": true,
+    "caching": true,
+    "offline": true
+  },
+  "debug": true
+}

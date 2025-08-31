@@ -1,0 +1,12 @@
+{
+  "testEnvironment": "node",
+  "roots": ["<rootDir>/tests", "<rootDir>/src"],
+  "testMatch": ["**/__tests__/**/*.js", "**/?(*.)+(spec|test).js"],
+  "transform": {
+    "^.+\\.js$": "babel-jest"
+  },
+  "collectCoverageFrom": ["src/**/*.js", "!src/**/*.test.js"],
+  "coverageDirectory": "coverage",
+  "coverageReporters": ["text", "lcov", "html"],
+  "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"]
+}

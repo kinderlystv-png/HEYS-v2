@@ -1,0 +1,16 @@
+# HEYS Project Workspace Configuration
+packages:
+  # Core packages
+  - 'packages/*'
+
+  # Applications
+  - 'apps/*'
+
+  # Development tools
+  - 'tools/*'
+
+  # Documentation and legacy (not part of workspace)
+  - '!docs/**'
+  - '!temp/**'
+  - '!TESTS/**'
+  - '!старые МЕТОДОЛОГИИ И ИНСТРУКЦИИ ДЛЯ ИИ/**'

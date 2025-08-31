@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEYS - Функциональные тесты</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            background: rgba(255,255,255,0.95); 
+            padding: 30px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+        .test-item { 
+            margin: 10px 0; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border-left: 4px solid #ddd; 
+        }
+        .test-item.success { 
+            background: #d4edda; 
+            border-left-color: #28a745; 
+        }
+        .test-item.failure { 
+            background: #f8d7da; 
+            border-left-color: #dc3545; 
+        }
+        .test-item.warning { 
+            background: #fff3cd; 
+            border-left-color: #ffc107; 
+        }
+        .summary { 
+            font-size: 20px; 
+            text-align: center; 
+            margin: 20px 0; 
+            padding: 20px; 
+            border-radius: 10px; 
+            font-weight: bold;
+        }
+        .summary.excellent { background: #d4edda; color: #155724; }
+        .summary.good { background: #cce7ff; color: #004085; }
+        .summary.warning { background: #fff3cd; color: #856404; }
+        .summary.danger { background: #f8d7da; color: #721c24; }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        
+        .log { 
+            background: #212529; 
+            color: #fff;
+            padding: 15px; 
+            border-radius: 8px; 
+            font-family: 'Courier New', monospace; 
+            white-space: pre-wrap; 
+            max-height: 400px; 
+            overflow-y: auto; 
+            margin: 20px 0;
+            font-size: 12px;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.3s ease;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 HEYS - Функциональные тесты</h1>
+        <p><strong>Проверяем реальную работу модулей, а не только их наличие</strong></p>
+
+        <div class="test-section">
+            <h3>🚀 Тестирование</h3>
+            <button onclick="runAllTests()" id="runAllBtn">🧪 Запустить все функциональные тесты</button>
+            <button onclick="runCoreTests()" id="runCoreBtn">⚡ Только базовые функции</button>
+            <button onclick="runAdvancedTests()" id="runAdvBtn">🔬 Продвинутые тесты</button>
+            <button onclick="clearResults()" id="clearBtn">🗑️ Очистить результаты</button>
+        </div>
+
+        <div id="progress-section" style="display: none;">
+            <h4>📊 Прогресс тестирования</h4>
+            <div class="progress">
+                <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
+            </div>
+            <p id="currentTest">Готовность к тестированию...</p>
+        </div>
+
+        <div id="summary" class="summary" style="display: none;"></div>
+        
+        <div id="results"></div>
+        
+        <div id="log-section" style="display: none;">
+            <h4>📝 Детальный лог</h4>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <!-- Загружаем все модули HEYS -->
+    <script src="../heys_core_v12.js"></script>
+    <script src="../heys_day_v12.js"></script>
+    <script src="../heys_user_v12.js"></script>
+    <script src="../heys_storage_supabase_v1.js"></script>
+    <script src="../heys_storage_indexeddb_v1.js"></script>
+    <script src="../heys_performance_monitor.js"></script>
+    <script src="../heys_analytics_ui.js"></script>
+    <script src="../heys_models_v1.js"></script>
+    <script src="../heys_stats_v1.js"></script>
+    <script src="../heys_smart_search_with_typos_v1.js"></script>
+    <script src="../heys_advanced_error_tracker_v1.js"></script>
+    <script src="../heys_worker_manager_v1.js"></script>
+    <script src="../heys_integration_layer_v1.js"></script>
+    <script src="../heys_service_worker_v1.js"></script>
+    <script src="../modern-search-integration.js"></script>
+
+    <script>
+        let testResults = [];
+        let currentTestIndex = 0;
+        let totalTests = 0;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            logDiv.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[FunctionalTest] ${message}`);
+        }
+
+        function updateProgress(current, total, testName) {
+            const percentage = Math.round((current / total) * 100);
+            const progressBar = document.getElementById('progressBar');
+            const currentTestSpan = document.getElementById('currentTest');
+            
+            progressBar.style.width = `${percentage}%`;
+            progressBar.textContent = `${percentage}%`;
+            currentTestSpan.textContent = `Тест ${current}/${total}: ${testName}`;
+        }
+
+        function addTestResult(name, success, message = '', details = '') {
+            testResults.push({ name, success, message, details });
+            
+            const resultsDiv = document.getElementById('results');
+            const testDiv = document.createElement('div');
+            testDiv.className = `test-item ${success ? 'success' : 'failure'}`;
+            testDiv.innerHTML = `
+                <strong>${success ? '✅' : '❌'} ${name}</strong>
+                ${message ? `<br><em>${message}</em>` : ''}
+                ${details ? `<br><small style="color: #666;">${details}</small>` : ''}
+            `;
+            resultsDiv.appendChild(testDiv);
+        }
+
+        function updateSummary() {
+            const passed = testResults.filter(t => t.success).length;
+            const total = testResults.length;
+            const percentage = Math.round((passed / total) * 100);
+            
+            const summaryDiv = document.getElementById('summary');
+            summaryDiv.style.display = 'block';
+            summaryDiv.textContent = `Функциональные тесты: ${passed}/${total} (${percentage}%)`;
+            
+            if (percentage === 100) {
+                summaryDiv.className = 'summary excellent';
+                summaryDiv.textContent += ' - ПРЕВОСХОДНО! 🏆';
+            } else if (percentage >= 90) {
+                summaryDiv.className = 'summary good';
+                summaryDiv.textContent += ' - ОТЛИЧНО! 🎉';
+            } else if (percentage >= 70) {
+                summaryDiv.className = 'summary warning';
+                summaryDiv.textContent += ' - ХОРОШО, НО ЕСТЬ ПРОБЛЕМЫ ⚠️';
+            } else {
+                summaryDiv.className = 'summary danger';
+                summaryDiv.textContent += ' - ТРЕБУЕТСЯ ВНИМАНИЕ! 🚨';
+            }
+        }
+
+        function clearResults() {
+            testResults = [];
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('log').textContent = '';
+            document.getElementById('summary').style.display = 'none';
+            document.getElementById('progress-section').style.display = 'none';
+            document.getElementById('log-section').style.display = 'none';
+        }
+
+        // === ФУНКЦИОНАЛЬНЫЕ ТЕСТЫ ===
+
+        async function testCoreSystemFunctionality() {
+            try {
+                log('Тестируем основные функции HEYS...');
+                
+                // Проверяем инициализацию
+                if (!window.HEYS) {
+                    throw new Error('HEYS не загружен');
+                }
+
+                // Тестируем создание продукта
+                const testProduct = {
+                    name: 'Тестовый продукт',
+                    kcal100: 200,
+                    proteins: 10,
+                    fats: 5,
+                    carbs: 25
+                };
+
+                if (typeof HEYS.addProduct === 'function') {
+                    // Проверяем добавление продукта
+                    const result = await HEYS.addProduct(testProduct);
+                    log('Продукт добавлен успешно', 'success');
+                } else {
+                    throw new Error('Функция addProduct не найдена');
+                }
+
+                return { success: true, message: 'Основные функции работают' };
+            } catch (error) {
+                log(`Ошибка в основных функциях: ${error.message}`, 'error');
+                return { success: false, message: error.message };
+            }
+        }
+
+        async function testSearchFunctionality() {
+            try {
+                log('Тестируем функции поиска...');
+                
+                // Тестируем базовый поиск
+                if (typeof HEYS.searchProducts === 'function') {
+                    const results = await HEYS.searchProducts('тест', { limit: 5 });
+                    log(`Поиск выполнен, найдено ${results?.length || 0} результатов`, 'success');
+                } else {
+                    throw new Error('Функция searchProducts не найдена');
+                }
+
+                // Тестируем умный поиск
+                if (HEYS.SmartSearch && typeof HEYS.SmartSearch.search === 'function') {
+                    const smartResults = await HEYS.SmartSearch.search('тестовый');
+                    log('Умный поиск работает', 'success');
+                } else {
+                    log('Умный поиск недоступен', 'warning');
+                }
+
+                return { success: true, message: 'Поиск функционирует корректно' };
+            } catch (error) {
+                log(`Ошибка в поиске: ${error.message}`, 'error');
+                return { success: false, message: error.message };
+            }
+        }
+
+        async function testDataPersistence() {
+            try {
+                log('Тестируем сохранение данных...');
+                
+                // Тестируем localStorage
+                const testKey = 'heys_functional_test';
+                const testData = { test: true, timestamp: Date.now() };
+                
+                if (typeof HEYS.lsSet === 'function') {
+                    HEYS.lsSet(testKey, testData);
+                    const retrieved = HEYS.lsGet(testKey);
+                    
+                    if (retrieved && retrieved.test === true) {
+                        log('localStorage работает корректно', 'success');
+                        // Очищаем тестовые данные
+                        localStorage.removeItem(testKey);
+                    } else {
+                        throw new Error('Данные не сохранились в localStorage');
+                    }
+                } else {
+                    throw new Error('Функции lsSet/lsGet не найдены');
+                }
+
+                return { success: true, message: 'Сохранение данных работает' };
+            } catch (error) {
+                log(`Ошибка сохранения: ${error.message}`, 'error');
+                return { success: false, message: error.message };
+            }
+        }
+
+        async function testPerformanceMonitoring() {
+            try {
+                log('Тестируем мониторинг производительности...');
+                
+                if (HEYS.performance && typeof HEYS.performance.trackUserInteraction === 'function') {
+                    // Тестируем трекинг
+                    HEYS.performance.trackUserInteraction('functional_test', { 
+                        test: true, 
+                        timestamp: Date.now() 
+                    });
+                    log('Трекинг взаимодействий работает', 'success');
+
+                    // Тестируем измерения
+                    if (typeof HEYS.performance.measure === 'function') {
+                        const result = await HEYS.performance.measure('test_operation', async () => {
+                            await new Promise(resolve => setTimeout(resolve, 10));
+                            return 'test_result';
+                        });
+                        log(`Измерение производительности работает: ${result}`, 'success');
+                    }
+                } else {
+                    throw new Error('Performance Monitor недоступен');
+                }
+
+                return { success: true, message: 'Мониторинг производительности активен' };
+            } catch (error) {
+                log(`Ошибка мониторинга: ${error.message}`, 'error');
+                return { success: false, message: error.message };
+            }
+        }
+
+        async function testErrorTracking() {
+            try {
+                log('Тестируем отслеживание ошибок...');
+                
+                if (HEYS.errorTracker && typeof HEYS.errorTracker.captureException === 'function') {
+                    // Создаем тестовую ошибку
+                    const testError = new Error('Тестовая ошибка для проверки трекинга');
+                    HEYS.errorTracker.captureException(testError, { 
+                        test: true, 
+                        source: 'functional_test' 
+                    });
+                    log('Отслеживание ошибок работает', 'success');
+                } else {
+                    throw new Error('Error Tracker недоступен');
+                }
+
+                return { success: true, message: 'Трекинг ошибок функционирует' };
+            } catch (error) {
+                log(`Ошибка трекинга: ${error.message}`, 'error');
+                return { success: false, message: error.message };
+            }
+        }
+
+        async function testIndexedDBFunctionality() {
+            try {
+                log('Тестируем IndexedDB...');
+                
+                if (HEYS.indexedDB && typeof HEYS.indexedDB.init === 'function') {
+                    // Инициализируем IndexedDB
+                    await HEYS.indexedDB.init();
+                    log('IndexedDB инициализирован', 'success');
+                    
+                    // Тестируем сохранение продукта
+                    if (typeof HEYS.indexedDB.saveProducts === 'function') {
+                        const testProducts = [{
+                            id: 'test_product_' + Date.now(),
+                            name: 'Тестовый продукт IndexedDB',
+                            kcal100: 150
+                        }];
+                        
+                        await HEYS.indexedDB.saveProducts(testProducts);
+                        log('Сохранение в IndexedDB работает', 'success');
+                    }
+                } else {
+                    throw new Error('IndexedDB недоступен');
+                }
+
+                return { success: true, message: 'IndexedDB полностью функционален' };
+            } catch (error) {
+                log(`Ошибка IndexedDB: ${error.message}`, 'error');
+                return { success: false, message: error.message };
+            }
+        }
+
+        async function testWorkerManagerFunctionality() {
+            try {
+                log('Тестируем Worker Manager...');
+                
+                if (HEYS.WorkerManager && typeof HEYS.WorkerManager.createWorker === 'function') {
+                    // Проверяем поддержку Web Workers
+                    if (typeof Worker !== 'undefined') {
+                        log('Web Workers поддерживаются', 'success');
+                        
+                        // Тестируем создание простого worker'а
+                        const stats = HEYS.WorkerManager.getStats();
+                        log(`Worker Manager активен: ${JSON.stringify(stats)}`, 'success');
+                    } else {
+                        throw new Error('Web Workers не поддерживаются браузером');
+                    }
+                } else {
+                    throw new Error('Worker Manager недоступен');
+                }
+
+                return { success: true, message: 'Worker Manager готов к работе' };
+            } catch (error) {
+                log(`Ошибка Worker Manager: ${error.message}`, 'error');
+                return { success: false, message: error.message };
+            }
+        }
+
+        async function testModernSearchIntegration() {
+            try {
+                log('Тестируем Modern Search Integration...');
+                
+                if (HEYS.ModernSearch && typeof HEYS.ModernSearch.smartSearch === 'function') {
+                    // Тестируем современный поиск
+                    const result = await HEYS.ModernSearch.smartSearch('тест', { limit: 3 });
+                    log('Modern Search Integration работает', 'success');
+                } else {
+                    throw new Error('Modern Search Integration недоступен');
+                }
+
+                return { success: true, message: 'Современная интеграция поиска активна' };
+            } catch (error) {
+                log(`Ошибка Modern Search: ${error.message}`, 'error');
+                return { success: false, message: error.message };
+            }
+        }
+
+        // === ЗАПУСК ТЕСТОВ ===
+
+        async function runTest(testFunction, testName) {
+            currentTestIndex++;
+            updateProgress(currentTestIndex, totalTests, testName);
+            
+            try {
+                const result = await testFunction();
+                addTestResult(testName, result.success, result.message, result.details);
+                log(`${testName}: ${result.success ? 'УСПЕХ' : 'ПРОВАЛ'} - ${result.message}`, 
+                    result.success ? 'success' : 'error');
+                return result.success;
+            } catch (error) {
+                addTestResult(testName, false, `Исключение: ${error.message}`);
+                log(`${testName}: КРИТИЧЕСКАЯ ОШИБКА - ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function runCoreTests() {
+            clearResults();
+            document.getElementById('progress-section').style.display = 'block';
+            document.getElementById('log-section').style.display = 'block';
+            
+            const coreTests = [
+                [testCoreSystemFunctionality, 'Основные функции HEYS'],
+                [testSearchFunctionality, 'Функции поиска'],
+                [testDataPersistence, 'Сохранение данных'],
+                [testPerformanceMonitoring, 'Мониторинг производительности']
+            ];
+            
+            totalTests = coreTests.length;
+            currentTestIndex = 0;
+            
+            log('=== ЗАПУСК БАЗОВЫХ ФУНКЦИОНАЛЬНЫХ ТЕСТОВ ===');
+            
+            for (const [testFunc, testName] of coreTests) {
+                await runTest(testFunc, testName);
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            updateSummary();
+            log('=== БАЗОВЫЕ ТЕСТЫ ЗАВЕРШЕНЫ ===');
+        }
+
+        async function runAdvancedTests() {
+            clearResults();
+            document.getElementById('progress-section').style.display = 'block';
+            document.getElementById('log-section').style.display = 'block';
+            
+            const advancedTests = [
+                [testErrorTracking, 'Отслеживание ошибок'],
+                [testIndexedDBFunctionality, 'IndexedDB функциональность'],
+                [testWorkerManagerFunctionality, 'Worker Manager'],
+                [testModernSearchIntegration, 'Modern Search Integration']
+            ];
+            
+            totalTests = advancedTests.length;
+            currentTestIndex = 0;
+            
+            log('=== ЗАПУСК ПРОДВИНУТЫХ ФУНКЦИОНАЛЬНЫХ ТЕСТОВ ===');
+            
+            for (const [testFunc, testName] of advancedTests) {
+                await runTest(testFunc, testName);
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            updateSummary();
+            log('=== ПРОДВИНУТЫЕ ТЕСТЫ ЗАВЕРШЕНЫ ===');
+        }
+
+        async function runAllTests() {
+            clearResults();
+            document.getElementById('progress-section').style.display = 'block';
+            document.getElementById('log-section').style.display = 'block';
+            
+            const allTests = [
+                [testCoreSystemFunctionality, 'Основные функции HEYS'],
+                [testSearchFunctionality, 'Функции поиска'],
+                [testDataPersistence, 'Сохранение данных'],
+                [testPerformanceMonitoring, 'Мониторинг производительности'],
+                [testErrorTracking, 'Отслеживание ошибок'],
+                [testIndexedDBFunctionality, 'IndexedDB функциональность'],
+                [testWorkerManagerFunctionality, 'Worker Manager'],
+                [testModernSearchIntegration, 'Modern Search Integration']
+            ];
+            
+            totalTests = allTests.length;
+            currentTestIndex = 0;
+            
+            log('=== ЗАПУСК ПОЛНЫХ ФУНКЦИОНАЛЬНЫХ ТЕСТОВ ===');
+            
+            for (const [testFunc, testName] of allTests) {
+                await runTest(testFunc, testName);
+                await new Promise(resolve => setTimeout(resolve, 150));
+            }
+            
+            updateSummary();
+            log('=== ВСЕ ФУНКЦИОНАЛЬНЫЕ ТЕСТЫ ЗАВЕРШЕНЫ ===');
+        }
+
+        // Инициализация при загрузке
+        window.addEventListener('load', () => {
+            log('Функциональные тесты готовы к запуску');
+            log('Доступные модули HEYS: ' + Object.keys(window.HEYS || {}).join(', '));
+        });
+    </script>
+</body>
+</html>

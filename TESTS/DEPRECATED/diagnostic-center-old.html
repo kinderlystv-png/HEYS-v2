@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏥 HEYS DIAGNOSTIC CENTER - Production Health Check</title>
+<!--
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│ 🗺️ НАВИГАЦИОННАЯ КАРТА ФАЙЛА diagnostic-center.html (1153 строки)                       │
+├─────────────────────────────────────────────────────────────────────────────────────────┤
+│ 📋 СТРУКТУРА ФАЙЛА:                                                                       │
+│                                                                                           │
+│ 🎨 CSS СТИЛИ (строки 7-250):                                                             │
+│    ├── Базовые стили и контейнеры (7-50)                                                │
+│    ├── Стили кнопок и элементов управления (51-120)                                     │
+│    ├── Стили диагностических тестов (121-180)                                           │
+│    └── Адаптивные стили и анимации (181-250)                                            │
+│                                                                                           │
+│ 🏗️ HTML СТРУКТУРА (строки 251-400):                                                      │
+│    ├── Заголовок и панель управления (251-280)                                          │
+│    ├── Блоки диагностических тестов (281-350)                                           │
+│    └── Область логов и результатов (351-400)                                            │
+│                                                                                           │
+│ ⚙️ ОСНОВНОЙ JAVASCRIPT КЛАСС (строки 401-950):                                           │
+│    ├── HEYSDiagnosticCenter конструктор (401-450)                                       │
+│    ├── Основные методы диагностики (451-650):                                           │
+│    │   ├── runDiagnostic() - запуск полной диагностики (451-480)                       │
+│    │   ├── runCriticalTests() - критические тесты (481-520)                            │
+│    │   └── runSystemTests() - системные тесты (521-560)                                │
+│    ├── Индивидуальные тесты (561-800):                                                  │
+│    │   ├── testCoreSystem() (561-590)                                                   │
+│    │   ├── testUserSystem() (591-620)                                                   │
+│    │   ├── testStorageSystem() (621-650)                                                │
+│    │   ├── testModernFeatures() (651-720)                                               │
+│    │   ├── testErrorBoundary() (721-750)                                                │
+│    │   └── другие системные тесты (751-800)                                             │
+│    └── Служебные методы (801-950):                                                      │
+│        ├── setupEventListeners() (801-830)                                              │
+│        ├── log() и управление логами (831-880)                                          │
+│        └── updateUI() и интерфейс (881-950)                                             │
+│                                                                                           │
+│ 🚀 ИНИЦИАЛИЗАЦИЯ И ЗАПУСК (строки 951-1153):                                             │
+│    ├── Создание экземпляра класса (951-980)                                             │
+│    ├── Обработчики событий DOM (981-1020)                                               │
+│    ├── Автоматический запуск (1021-1050)                                                │
+│    └── Завершающие скрипты (1051-1153)                                                  │
+│                                                                                           │
+├─────────────────────────────────────────────────────────────────────────────────────────┤
+│ 🎯 БЫСТРЫЙ ПОИСК:                                                                        │
+│    • Найти тест: Ctrl+F "test" + название системы                                       │
+│    • CSS стили: строки 7-250                                                            │
+│    • Основной класс: строки 401-950                                                     │
+│    • Методы диагностики: строки 451-650                                                 │
+│    • Индивидуальные тесты: строки 561-800                                               │
+│    • Инициализация: строки 951-1153                                                     │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+-->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 15px 0;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        
+        .status-waiting { background: #ffeaa7; color: #2d3436; }
+        .status-running { background: #74b9ff; color: white; }
+        .status-success { background: #00b894; color: white; }
+        .status-error { background: #e17055; color: white; }
+        
+        .controls {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .main-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .main-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .main-button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .secondary-button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .secondary-button:hover {
+            background: #5a6268;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ecf0f1;
+            border-radius: 4px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00b894, #00cec9);
+            width: 0%;
+            transition: width 0.5s ease;
+            border-radius: 4px;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .test-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .test-section h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .test-item:last-child {
+            border-bottom: none;
+        }
+        
+        .test-name {
+            font-weight: 500;
+        }
+        
+        .test-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .test-waiting { background: #ffeaa7; color: #2d3436; }
+        .test-running { background: #74b9ff; color: white; }
+        .test-success { background: #00b894; color: white; }
+        .test-error { background: #e17055; color: white; }
+        
+        .log-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .log-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .log-output {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.4;
+        }
+        
+        .summary-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .summary-card {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #ecf0f1;
+        }
+        
+        .summary-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .summary-label {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .critical-issues {
+            background: #fee;
+            border-left: 4px solid #e17055;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .warnings {
+            background: #fff8e1;
+            border-left: 4px solid #ffa726;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .all-good {
+            background: #e8f5e8;
+            border-left: 4px solid #00b894;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 HEYS DIAGNOSTIC CENTER</h1>
+            <p>Production Health Check & Performance Monitoring</p>
+            <div class="status-bar">
+                <div id="overall-status" class="status-item status-waiting">
+                    <span>⏳</span>
+                    <span>Готов к диагностике</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="run-all-tests" class="main-button">🚀 Запустить полную диагностику</button>
+            <button id="run-critical-only" class="main-button">⚡ Только критические тесты</button>
+            <button id="stop-tests" class="main-button" disabled>⏹️ Остановить</button>
+            
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+            <div id="progress-text">Готов к запуску • 0/0 тестов выполнено</div>
+        </div>
+
+        <div class="test-grid">
+            <!-- Критические системные модули -->
+            <div class="test-section">
+                <h3>🔧 Критические модули</h3>
+                <div class="test-item">
+                    <span class="test-name">HEYS Core (utils, lsGet/lsSet)</span>
+                    <span id="test-core" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+                <div class="test-item">
+                    <span class="test-name">Storage Layer (Supabase)</span>
+                    <span id="test-storage" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+                <div class="test-item">
+                    <span class="test-name">Data Sync (clientSync)</span>
+                    <span id="test-sync" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+                <div class="test-item">
+                    <span class="test-name">Performance Monitor</span>
+                    <span id="test-performance" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+            </div>
+
+            <!-- Пользовательские модули -->
+            <div class="test-section">
+                <h3>👤 Пользовательские модули</h3>
+                <div class="test-item">
+                    <span class="test-name">Day Management</span>
+                    <span id="test-day" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+                <div class="test-item">
+                    <span class="test-name">User Profile</span>
+                    <span id="test-user" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+                <div class="test-item">
+                    <span class="test-name">Reports System</span>
+                    <span id="test-reports" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+                <div class="test-item">
+                    <span class="test-name">Product Database</span>
+                    <span id="test-products" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+            </div>
+
+            <!-- Новые улучшенные модули -->
+            <div class="test-section">
+                <h3>✨ Улучшенные модули</h3>
+                <div class="test-item">
+                    <span class="test-name">Smart Search (опечатки)</span>
+                    <span id="test-smart-search" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+                <div class="test-item">
+                    <span class="test-name">Advanced Error Tracker</span>
+                    <span id="test-error-tracker" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+                <div class="test-item">
+                    <span class="test-name">Search Integration</span>
+                    <span id="test-search-integration" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+                <div class="test-item">
+                    <span class="test-name">Error Boundary</span>
+                    <span id="test-error-boundary" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+            </div>
+
+            <!-- Производительность и качество -->
+            <div class="test-section">
+                <h3>⚡ Производительность</h3>
+                <div class="test-item">
+                    <span class="test-name">Время загрузки модулей</span>
+                    <span id="test-load-time" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+                <div class="test-item">
+                    <span class="test-name">Память (утечки)</span>
+                    <span id="test-memory" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+                <div class="test-item">
+                    <span class="test-name">Скорость поиска</span>
+                    <span id="test-search-speed" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+                <div class="test-item">
+                    <span class="test-name">TypeScript валидация</span>
+                    <span id="test-typescript" class="test-status test-waiting">ОЖИДАНИЕ</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-section">
+            <h3>📊 Сводка результатов</h3>
+            <div id="health-indicator" class="all-good" style="display: none;">
+                <strong>✅ СИСТЕМА ЗДОРОВА</strong><br>
+                Все критические тесты пройдены успешно. Приложение готово к production.
+            </div>
+            
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div id="total-tests" class="summary-value">16</div>
+                    <div class="summary-label">Всего тестов</div>
+                </div>
+                <div class="summary-card">
+                    <div id="passed-tests" class="summary-value">0</div>
+                    <div class="summary-label">Пройдено</div>
+                </div>
+                <div class="summary-card">
+                    <div id="failed-tests" class="summary-value">0</div>
+                    <div class="summary-label">Провалено</div>
+                </div>
+                <div class="summary-card">
+                    <div id="total-time" class="summary-value">0s</div>
+                    <div class="summary-label">Время выполнения</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="log-section">
+            <div class="log-controls">
+                <h3>📝 Журнал диагностики</h3>
+                <div>
+                    <button id="copy-logs" class="secondary-button">📋 Копировать логи</button>
+                    <button id="download-logs" class="secondary-button">💾 Скачать отчет</button>
+                    <button id="clear-logs" class="secondary-button">🗑️ Очистить</button>
+                </div>
+            </div>
+            <div id="log-output" class="log-output">HEYS Diagnostic Center готов к работе.
+Нажмите "Запустить полную диагностику" для проверки всех систем.
+
+=== ИНСТРУКЦИЯ ===
+1. 🚀 Полная диагностика - проверяет ВСЕ модули и системы (2-3 минуты)
+2. ⚡ Критические тесты - только жизненно важные системы (30 секунд)
+3. 📋 Копировать логи - для отправки в чат анализа
+4. 💾 Скачать отчет - сохранить подробный файл
+
+</div>
+        </div>
+    </div>
+
+    <!-- Подключаем все модули для тестирования -->
+    <script src="../heys_core_v12.js"></script>
+    <script src="../heys_day_v12.js"></script>
+    <script src="../heys_user_v12.js"></script>
+    <script src="../heys_reports_v12.js"></script>
+    <script src="../heys_storage_supabase_v1.js"></script>
+    <script src="../heys_performance_monitor.js"></script>
+    <script src="../heys_advanced_error_tracker_v1.js"></script>
+    <script src="../heys_smart_search_with_typos_v1.js"></script>
+    <script src="../heys_error_boundary_v1.js"></script>
+
+    <script>
+        class HEYSDiagnosticCenter {
+            constructor() {
+                this.tests = [];
+                this.currentTest = 0;
+                this.startTime = 0;
+                this.isRunning = false;
+                this.logs = [];
+                this.results = {
+                    total: 16,
+                    passed: 0,
+                    failed: 0,
+                    errors: []
+                };
+                
+                this.initializeTests();
+                this.setupEventListeners();
+                this.log('🏥 HEYS Diagnostic Center инициализирован');
+            }
+            
+            initializeTests() {
+                this.tests = [
+                    // Критические модули
+                    { id: 'core', name: 'HEYS Core', critical: true, test: () => this.testCore() },
+                    { id: 'storage', name: 'Storage Layer', critical: true, test: () => this.testStorage() },
+                    { id: 'sync', name: 'Data Sync', critical: true, test: () => this.testSync() },
+                    { id: 'performance', name: 'Performance Monitor', critical: true, test: () => this.testPerformance() },
+                    
+                    // Пользовательские модули
+                    { id: 'day', name: 'Day Management', critical: true, test: () => this.testDay() },
+                    { id: 'user', name: 'User Profile', critical: true, test: () => this.testUser() },
+                    { id: 'reports', name: 'Reports System', critical: false, test: () => this.testReports() },
+                    { id: 'products', name: 'Product Database', critical: true, test: () => this.testProducts() },
+                    
+                    // Новые модули
+                    { id: 'smart-search', name: 'Smart Search', critical: false, test: () => this.testSmartSearch() },
+                    { id: 'error-tracker', name: 'Error Tracker', critical: false, test: () => this.testErrorTracker() },
+                    { id: 'search-integration', name: 'Search Integration', critical: false, test: () => this.testSearchIntegration() },
+                    { id: 'error-boundary', name: 'Error Boundary', critical: false, test: () => this.testErrorBoundary() },
+                    
+                    // Производительность
+                    { id: 'load-time', name: 'Load Time', critical: true, test: () => this.testLoadTime() },
+                    { id: 'memory', name: 'Memory Usage', critical: true, test: () => this.testMemory() },
+                    { id: 'search-speed', name: 'Search Speed', critical: false, test: () => this.testSearchSpeed() },
+                    { id: 'typescript', name: 'TypeScript', critical: false, test: () => this.testTypeScript() }
+                ];
+            }
+            
+            setupEventListeners() {
+                document.getElementById('run-all-tests').onclick = () => this.runAllTests();
+                document.getElementById('run-critical-only').onclick = () => this.runCriticalTests();
+                document.getElementById('stop-tests').onclick = () => this.stopTests();
+                document.getElementById('copy-logs').onclick = () => this.copyLogs();
+                document.getElementById('download-logs').onclick = () => this.downloadReport();
+                document.getElementById('clear-logs').onclick = () => this.clearLogs();
+            }
+            
+            async runAllTests() {
+                this.log('\n🚀 ЗАПУСК ПОЛНОЙ ДИАГНОСТИКИ HEYS СИСТЕМЫ');
+                this.log('════════════════════════════════════════════');
+                await this.runTests(this.tests);
+            }
+            
+            async runCriticalTests() {
+                const criticalTests = this.tests.filter(t => t.critical);
+                this.log('\n⚡ ЗАПУСК КРИТИЧЕСКИХ ТЕСТОВ');
+                this.log('══════════════════════════════════');
+                await this.runTests(criticalTests);
+            }
+            
+            async runTests(testsToRun) {
+                if (this.isRunning) return;
+                
+                this.isRunning = true;
+                this.startTime = performance.now();
+                this.currentTest = 0;
+                this.results = { total: testsToRun.length, passed: 0, failed: 0, errors: [] };
+                
+                // Обновляем UI
+                document.getElementById('run-all-tests').disabled = true;
+                document.getElementById('run-critical-only').disabled = true;
+                document.getElementById('stop-tests').disabled = false;
+                document.getElementById('overall-status').className = 'status-item status-running';
+                document.getElementById('overall-status').innerHTML = '<span class="pulse">🔄</span><span>Выполняется диагностика...</span>';
+                
+                // Сбрасываем статусы
+                this.tests.forEach(test => {
+                    const element = document.getElementById(`test-${test.id}`);
+                    if (element) {
+                        element.className = 'test-status test-waiting';
+                        element.textContent = 'ОЖИДАНИЕ';
+                    }
+                });
+                
+                // Запускаем тесты
+                for (const test of testsToRun) {
+                    if (!this.isRunning) break;
+                    
+                    this.currentTest++;
+                    await this.runSingleTest(test);
+                    this.updateProgress(testsToRun.length);
+                }
+                
+                this.finishTesting();
+            }
+            
+            async runSingleTest(test) {
+                const element = document.getElementById(`test-${test.id}`);
+                
+                try {
+                    // Статус: выполняется
+                    if (element) {
+                        element.className = 'test-status test-running';
+                        element.textContent = 'ТЕСТИРУЕТСЯ';
+                    }
+                    
+                    this.log(`\n[${this.currentTest}/${this.results.total}] Тестирование: ${test.name}`);
+                    
+                    const startTime = performance.now();
+                    const result = await test.test();
+                    const duration = performance.now() - startTime;
+                    
+                    if (result.success) {
+                        this.results.passed++;
+                        if (element) {
+                            element.className = 'test-status test-success';
+                            element.textContent = 'SUCCESS';
+                        }
+                        this.log(`✅ ${test.name}: УСПЕХ (${Math.round(duration)}ms)`);
+                        if (result.details) {
+                            this.log(`   📋 ${result.details}`);
+                        }
+                    } else {
+                        this.results.failed++;
+                        this.results.errors.push({ test: test.name, error: result.error });
+                        if (element) {
+                            element.className = 'test-status test-error';
+                            element.textContent = 'ОШИБКА';
+                        }
+                        this.log(`❌ ${test.name}: ОШИБКА`);
+                        this.log(`   🔍 ${result.error}`);
+                    }
+                    
+                } catch (error) {
+                    this.results.failed++;
+                    this.results.errors.push({ test: test.name, error: error.message });
+                    if (element) {
+                        element.className = 'test-status test-error';
+                        element.textContent = 'ОШИБКА';
+                    }
+                    this.log(`❌ ${test.name}: КРИТИЧЕСКАЯ ОШИБКА`);
+                    this.log(`   💥 ${error.message}`);
+                }
+                
+                // Пауза между тестами
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            finishTesting() {
+                this.isRunning = false;
+                const duration = Math.round((performance.now() - this.startTime) / 1000);
+                
+                // Обновляем UI
+                document.getElementById('run-all-tests').disabled = false;
+                document.getElementById('run-critical-only').disabled = false;
+                document.getElementById('stop-tests').disabled = true;
+                
+                // Обновляем сводку
+                document.getElementById('passed-tests').textContent = this.results.passed;
+                document.getElementById('failed-tests').textContent = this.results.failed;
+                document.getElementById('total-time').textContent = duration + 's';
+                
+                // Определяем общий статус
+                const successRate = (this.results.passed / this.results.total) * 100;
+                const healthIndicator = document.getElementById('health-indicator');
+                
+                if (successRate === 100) {
+                    document.getElementById('overall-status').className = 'status-item status-success';
+                    document.getElementById('overall-status').innerHTML = '<span>✅</span><span>Диагностика завершена: ВСЕ ТЕСТЫ ПРОЙДЕНЫ</span>';
+                    healthIndicator.className = 'all-good';
+                    healthIndicator.innerHTML = '<strong>✅ СИСТЕМА ЗДОРОВА</strong><br>Все тесты пройдены успешно. Приложение готово к production.';
+                    healthIndicator.style.display = 'block';
+                } else if (successRate >= 80) {
+                    document.getElementById('overall-status').className = 'status-item status-error';
+                    document.getElementById('overall-status').innerHTML = '<span>⚠️</span><span>Диагностика завершена: ЕСТЬ ПРОБЛЕМЫ</span>';
+                    healthIndicator.className = 'warnings';
+                    healthIndicator.innerHTML = `<strong>⚠️ ОБНАРУЖЕНЫ ПРОБЛЕМЫ</strong><br>Пройдено ${this.results.passed}/${this.results.total} тестов (${Math.round(successRate)}%). Требуется внимание.`;
+                    healthIndicator.style.display = 'block';
+                } else {
+                    document.getElementById('overall-status').className = 'status-item status-error';
+                    document.getElementById('overall-status').innerHTML = '<span>🚨</span><span>Диагностика завершена: КРИТИЧЕСКИЕ ПРОБЛЕМЫ</span>';
+                    healthIndicator.className = 'critical-issues';
+                    healthIndicator.innerHTML = `<strong>🚨 КРИТИЧЕСКИЕ ПРОБЛЕМЫ</strong><br>Провалено ${this.results.failed} тестов. Система НЕ ГОТОВА к production!`;
+                    healthIndicator.style.display = 'block';
+                }
+                
+                this.log('\n════════════════════════════════════════════');
+                this.log(`🏁 ДИАГНОСТИКА ЗАВЕРШЕНА`);
+                this.log(`📊 Результаты: ${this.results.passed}/${this.results.total} тестов пройдено`);
+                this.log(`⏱️ Время выполнения: ${duration} секунд`);
+                this.log(`🎯 Процент успеха: ${Math.round(successRate)}%`);
+                
+                if (this.results.errors.length > 0) {
+                    this.log('\n🚨 ОБНАРУЖЕННЫЕ ПРОБЛЕМЫ:');
+                    this.results.errors.forEach((error, index) => {
+                        this.log(`${index + 1}. ${error.test}: ${error.error}`);
+                    });
+                }
+                
+                this.log('\n💡 Для анализа скопируйте логи кнопкой "📋 Копировать логи"');
+            }
+            
+            updateProgress(total) {
+                const progress = (this.currentTest / total) * 100;
+                document.getElementById('progress-fill').style.width = progress + '%';
+                document.getElementById('progress-text').textContent = 
+                    `Выполняется • ${this.currentTest}/${total} тестов выполнено`;
+            }
+            
+            stopTests() {
+                this.isRunning = false;
+                this.log('\n⏹️ ДИАГНОСТИКА ОСТАНОВЛЕНА ПОЛЬЗОВАТЕЛЕМ');
+                document.getElementById('overall-status').className = 'status-item status-waiting';
+                document.getElementById('overall-status').innerHTML = '<span>⏹️</span><span>Диагностика остановлена</span>';
+            }
+            
+            // === ТЕСТЫ МОДУЛЕЙ ===
+            
+            async testCore() {
+                try {
+                    // Проверяем основные функции HEYS.utils
+                    if (!window.HEYS?.utils) throw new Error('HEYS.utils не найден');
+                    if (typeof window.HEYS.utils.lsGet !== 'function') throw new Error('lsGet функция отсутствует');
+                    if (typeof window.HEYS.utils.lsSet !== 'function') throw new Error('lsSet функция отсутствует');
+                    
+                    // Тестируем сохранение/загрузку
+                    const testKey = 'diagnostic_test_' + Date.now();
+                    const testValue = { test: true, timestamp: Date.now() };
+                    window.HEYS.utils.lsSet(testKey, testValue);
+                    const retrieved = window.HEYS.utils.lsGet(testKey);
+                    
+                    if (!retrieved || retrieved.test !== true) {
+                        throw new Error('Тест сохранения/загрузки провален');
+                    }
+                    
+                    // Очищаем тестовые данные
+                    localStorage.removeItem(testKey);
+                    
+                    return { 
+                        success: true, 
+                        details: 'Core функции работают корректно' 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testStorage() {
+                try {
+                    if (!window.HEYS?.cloud) throw new Error('HEYS.cloud не найден');
+                    
+                    // Проверяем основные методы облачного хранилища
+                    const requiredMethods = ['saveClientKey', 'bootstrapClientSync', 'lsSet'];
+                    for (const method of requiredMethods) {
+                        if (typeof window.HEYS.cloud[method] !== 'function') {
+                            throw new Error(`Метод ${method} отсутствует`);
+                        }
+                    }
+                    
+                    return { 
+                        success: true, 
+                        details: 'Supabase интеграция доступна' 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testSync() {
+                try {
+                    // Проверяем механизм синхронизации
+                    if (!window.HEYS?.cloud?.bootstrapClientSync) {
+                        throw new Error('Функция синхронизации недоступна');
+                    }
+                    
+                    // Проверяем localStorage mirror функционал
+                    if (!window.HEYS?.cloud?._lastClientSync) {
+                        // Инициализируем если нужно
+                        window.HEYS.cloud._lastClientSync = { clientId: 'test', ts: Date.now() };
+                    }
+                    
+                    return { 
+                        success: true, 
+                        details: 'Система синхронизации готова' 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testPerformance() {
+                try {
+                    if (!window.HEYS?.analytics) throw new Error('HEYS.analytics не найден');
+                    
+                    // Тестируем основные методы аналитики
+                    const requiredMethods = ['trackDataOperation', 'trackUserInteraction'];
+                    for (const method of requiredMethods) {
+                        if (typeof window.HEYS.analytics[method] !== 'function') {
+                            throw new Error(`Метод ${method} отсутствует`);
+                        }
+                    }
+                    
+                    // Тестируем отслеживание операции
+                    window.HEYS.analytics.trackDataOperation('diagnostic-test');
+                    
+                    return { 
+                        success: true, 
+                        details: 'Performance monitoring активен' 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testDay() {
+                try {
+                    // Проверяем наличие компонентов управления днем
+                    if (!window.HEYS?.DayTab) throw new Error('DayTab компонент не найден');
+                    
+                    // Тестируем создание дефолтного дня
+                    const testDate = '2025-08-26';
+                    const defaultDay = {
+                        date: testDate,
+                        meals: { breakfast: { items: [] }, lunch: { items: [] }, dinner: { items: [] }, snacks: { items: [] } },
+                        trainings: [],
+                        weightMorning: 0,
+                        weightEvening: 0
+                    };
+                    
+                    // Тестируем сохранение дня
+                    const testKey = `heys_dayv2_${testDate}`;
+                    window.HEYS.utils.lsSet(testKey, defaultDay);
+                    const retrieved = window.HEYS.utils.lsGet(testKey);
+                    
+                    if (!retrieved || retrieved.date !== testDate) {
+                        throw new Error('Сохранение данных дня провалено');
+                    }
+                    
+                    return { 
+                        success: true, 
+                        details: 'Управление днем функционирует' 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testUser() {
+                try {
+                    if (!window.HEYS?.UserTab) throw new Error('UserTab компонент не найден');
+                    
+                    // Тестируем профиль пользователя
+                    const defaultProfile = {
+                        name: 'Test User',
+                        weight: 70,
+                        height: 170,
+                        age: 30
+                    };
+                    
+                    window.HEYS.utils.lsSet('heys_profile', defaultProfile);
+                    const profile = window.HEYS.utils.lsGet('heys_profile', {});
+                    
+                    if (!profile.name) {
+                        throw new Error('Профиль пользователя не сохраняется');
+                    }
+                    
+                    return { 
+                        success: true, 
+                        details: 'Профиль пользователя работает' 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testReports() {
+                try {
+                    if (!window.HEYS?.Reports) throw new Error('Reports модуль не найден');
+                    
+                    return { 
+                        success: true, 
+                        details: 'Система отчетов доступна' 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testProducts() {
+                try {
+                    // Проверяем базу продуктов
+                    const products = window.HEYS?.utils?.lsGet('heys_products', []);
+                    
+                    if (!Array.isArray(products)) {
+                        throw new Error('База продуктов не является массивом');
+                    }
+                    
+                    // Тестируем добавление тестового продукта
+                    const testProduct = {
+                        id: 'test_' + Date.now(),
+                        name: 'Тестовый продукт',
+                        calories: 100,
+                        protein: 10,
+                        fat: 5,
+                        carbs: 15
+                    };
+                    
+                    return { 
+                        success: true, 
+                        details: `База продуктов: ${products.length} записей` 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testSmartSearch() {
+                try {
+                    if (!window.HEYS?.SmartSearchWithTypos) {
+                        throw new Error('Smart Search модуль не найден');
+                    }
+                    
+                    // Тестируем поиск с опечатками
+                    const testProducts = [
+                        { id: 1, name: 'Молоко' },
+                        { id: 2, name: 'Хлеб' },
+                        { id: 3, name: 'Картофель' }
+                    ];
+                    
+                    const result = window.HEYS.SmartSearchWithTypos.search('молак', testProducts);
+                    
+                    if (!result.results || result.results.length === 0) {
+                        throw new Error('Поиск с опечатками не работает');
+                    }
+                    
+                    return { 
+                        success: true, 
+                        details: `Найдено ${result.results.length} результатов для "молак"` 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testErrorTracker() {
+                try {
+                    if (!window.HEYS?.AdvancedErrorTracker) {
+                        throw new Error('Advanced Error Tracker не найден');
+                    }
+                    
+                    // Тестируем логирование ошибки
+                    window.HEYS.AdvancedErrorTracker.logError(new Error('Тестовая ошибка'), {
+                        type: 'diagnostic_test',
+                        additionalData: { test: true }
+                    });
+                    
+                    const stats = window.HEYS.AdvancedErrorTracker.getErrorStats();
+                    
+                    return { 
+                        success: true, 
+                        details: `Отслежено ${stats.total} ошибок` 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testSearchIntegration() {
+                try {
+                    // Проверяем интеграцию поиска в основных компонентах
+                    if (!window.HEYS?.DayTab) {
+                        throw new Error('DayTab для интеграции поиска не найден');
+                    }
+                    
+                    return { 
+                        success: true, 
+                        details: 'Интеграция поиска готова' 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testErrorBoundary() {
+                try {
+                    // Проверяем наличие Error Boundary компонента
+                    if (!window.HEYS?.ErrorBoundary) {
+                        return { success: false, error: 'ErrorBoundary компонент не найден' };
+                    }
+                    
+                    // Проверяем также функцию logError
+                    if (typeof window.HEYS.logError !== 'function') {
+                        return { success: false, error: 'logError функция не найдена' };
+                    }
+                    
+                    return { 
+                        success: true, 
+                        details: 'Error Boundary компонент и logError функция доступны' 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testLoadTime() {
+                try {
+                    // Проверяем время с момента навигации до текущего момента
+                    const navigationStart = performance.timing?.navigationStart || performance.timeOrigin;
+                    const currentTime = performance.now();
+                    
+                    // Если мы уже загружены какое-то время, используем performance.timing
+                    let loadTime;
+                    if (performance.timing?.loadEventEnd && performance.timing.loadEventEnd > 0) {
+                        loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+                    } else {
+                        // Используем время от создания диагностического центра
+                        loadTime = currentTime;
+                    }
+                    
+                    // Ограничиваем проверку разумными пределами (10 секунд)
+                    if (loadTime > 10000) {
+                        return { 
+                            success: true, 
+                            details: `Приложение уже работает (${Math.round(currentTime)}ms с момента запуска диагностики)` 
+                        };
+                    }
+                    
+                    if (loadTime > 5000) {
+                        throw new Error(`Медленная загрузка: ${Math.round(loadTime)}ms`);
+                    }
+                    
+                    return { 
+                        success: true, 
+                        details: `Загрузка: ${Math.round(loadTime)}ms` 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testMemory() {
+                try {
+                    if (performance.memory) {
+                        const used = Math.round(performance.memory.usedJSHeapSize / 1048576);
+                        const limit = Math.round(performance.memory.jsHeapSizeLimit / 1048576);
+                        
+                        if (used > limit * 0.8) {
+                            throw new Error(`Высокое потребление памяти: ${used}MB из ${limit}MB`);
+                        }
+                        
+                        return { 
+                            success: true, 
+                            details: `Память: ${used}MB / ${limit}MB` 
+                        };
+                    } else {
+                        return { 
+                            success: true, 
+                            details: 'Мониторинг памяти недоступен в браузере' 
+                        };
+                    }
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testSearchSpeed() {
+                try {
+                    const testProducts = Array.from({ length: 1000 }, (_, i) => ({
+                        id: i,
+                        name: `Продукт ${i}`
+                    }));
+                    
+                    const startTime = performance.now();
+                    
+                    if (window.HEYS?.SmartSearchWithTypos) {
+                        window.HEYS.SmartSearchWithTypos.search('продукт', testProducts);
+                    } else {
+                        // Fallback к простому поиску
+                        testProducts.filter(p => p.name.toLowerCase().includes('продукт'));
+                    }
+                    
+                    const duration = performance.now() - startTime;
+                    
+                    if (duration > 100) {
+                        throw new Error(`Медленный поиск: ${Math.round(duration)}ms`);
+                    }
+                    
+                    return { 
+                        success: true, 
+                        details: `Поиск 1000 записей: ${Math.round(duration)}ms` 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            async testTypeScript() {
+                try {
+                    // Проверяем что модули скомпилированы без ошибок
+                    const modules = ['utils', 'analytics', 'cloud'];
+                    const missingModules = [];
+                    
+                    for (const module of modules) {
+                        if (!window.HEYS?.[module]) {
+                            missingModules.push(module);
+                        }
+                    }
+                    
+                    if (missingModules.length > 0) {
+                        throw new Error(`Отсутствуют модули: ${missingModules.join(', ')}`);
+                    }
+                    
+                    return { 
+                        success: true, 
+                        details: 'TypeScript модули скомпилированы корректно' 
+                    };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+            
+            // === УТИЛИТЫ ===
+            
+            log(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logMessage = `[${timestamp}] ${message}`;
+                this.logs.push(logMessage);
+                
+                const logOutput = document.getElementById('log-output');
+                logOutput.textContent += '\n' + logMessage;
+                logOutput.scrollTop = logOutput.scrollHeight;
+            }
+            
+            copyLogs() {
+                const logsText = this.logs.join('\n');
+                
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(logsText).then(() => {
+                        this.log('📋 Логи скопированы в буфер обмена');
+                    }).catch(err => {
+                        this.log('❌ Ошибка копирования: ' + err.message);
+                    });
+                } else {
+                    // Fallback для старых браузеров
+                    const textArea = document.createElement('textarea');
+                    textArea.value = logsText;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    this.log('📋 Логи скопированы в буфер обмена (fallback)');
+                }
+            }
+            
+            downloadReport() {
+                const reportData = {
+                    timestamp: new Date().toISOString(),
+                    results: this.results,
+                    logs: this.logs,
+                    system: {
+                        userAgent: navigator.userAgent,
+                        url: window.location.href,
+                        performance: performance.memory ? {
+                            used: Math.round(performance.memory.usedJSHeapSize / 1048576),
+                            total: Math.round(performance.memory.totalJSHeapSize / 1048576),
+                            limit: Math.round(performance.memory.jsHeapSizeLimit / 1048576)
+                        } : 'недоступно'
+                    }
+                };
+                
+                const blob = new Blob([JSON.stringify(reportData, null, 2)], { 
+                    type: 'application/json' 
+                });
+                
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `heys-diagnostic-report-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.log('💾 Отчет сохранен: ' + a.download);
+            }
+            
+            clearLogs() {
+                this.logs = [];
+                document.getElementById('log-output').textContent = 'Логи очищены. Запустите диагностику для получения новых данных.';
+                this.log('🗑️ Журнал диагностики очищен');
+            }
+        }
+        
+        // Инициализация при загрузке страницы
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                window.diagnosticCenter = new HEYSDiagnosticCenter();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

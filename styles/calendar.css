@@ -1,0 +1,15 @@
+@import './_variables.css';
+
+/* Стили для календаря */
+.area-cal {
+  /* Пример: если есть специфичные стили для календаря */
+  /* min-width, max-width, z-index и т.д. */
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+/* Добавьте сюда остальные стили календаря по мере необходимости */

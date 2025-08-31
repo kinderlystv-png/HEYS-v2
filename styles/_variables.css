@@ -1,0 +1,10 @@
+:root {
+  --bg: #ffffff;
+  --card: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --acc: #2563eb;
+  --acc-contrast: #ffffff;
+  /* Add more variables as needed */
+}

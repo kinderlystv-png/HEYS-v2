@@ -1,0 +1,18 @@
+
+> @heys/gaming@13.0.0 build C:\! HEYS 2\packages\gaming
+> tsup
+
+[34mCLI[39m Building entry: src/index.ts
+[34mCLI[39m Using tsconfig: tsconfig.json
+[34mCLI[39m tsup v7.3.0
+[34mCLI[39m Using tsup config: C:\! HEYS 2\packages\gaming\tsup.config.ts
+[34mCLI[39m Target: es2022
+[34mCLI[39m Cleaning output folder
+[34mCJS[39m Build start
+[34mESM[39m Build start
+[32mCJS[39m [1mdist\index.cjs     [22m[32m149.00 B[39m
+[32mCJS[39m [1mdist\index.cjs.map [22m[32m276.00 B[39m
+[32mCJS[39m ⚡️ Build success in 84ms
+[32mESM[39m [1mdist\index.js     [22m[32m137.00 B[39m
+[32mESM[39m [1mdist\index.js.map [22m[32m276.00 B[39m
+[32mESM[39m ⚡️ Build success in 85ms

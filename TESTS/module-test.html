@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест модулей HEYS</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .test-section { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; }
+        .status { padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        input { padding: 10px; width: 300px; margin: 10px 0; border: 2px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        #search-results { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 4px; min-height: 100px; }
+        
+        /* Стили для системы логирования */
+        .console-log {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        
+        .log-controls {
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .copy-button {
+            background: #28a745;
+            margin-right: 10px;
+        }
+        
+        .copy-button:hover {
+            background: #1e7e34;
+        }
+        
+        .clear-button {
+            background: #dc3545;
+        }
+        
+        .clear-button:hover {
+            background: #bd2130;
+        }
+        
+        /* Стили для поиска с выпадающим списком */
+        .search-container {
+            position: relative;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .search-container input {
+            flex: 1;
+        }
+        
+        .dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .dropdown.show {
+            display: block;
+        }
+        
+        .dropdown-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s;
+        }
+        
+        .dropdown-item:hover,
+        .dropdown-item.selected {
+            background-color: #f8f9fa;
+        }
+        
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+        
+        .match-type {
+            font-size: 0.8em;
+            color: #666;
+            margin-left: 5px;
+        }
+        
+        .match-type.exact {
+            color: #28a745;
+        }
+        
+        .match-type.typo {
+            color: #fd7e14;
+        }
+        
+        .match-type.synonym {
+            color: #007bff;
+        }
+        
+        .match-type.phonetic {
+            color: #6f42c1;
+        }
+        
+        .relevance-score {
+            float: right;
+            font-size: 0.7em;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест модулей HEYS</h1>
+    
+    <div class="test-section">
+        <h3>📋 Статус загрузки модулей</h3>
+        <div id="module-status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>🔍 Тест умного поиска</h3>
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="Введите запрос (например: мола, хлеп, курятина)" autocomplete="off">
+            <div class="dropdown" id="search-dropdown"></div>
+            <button onclick="testSearch()">Поиск</button>
+            <button onclick="clearSearch()">Очистить</button>
+        </div>
+        <div id="search-results">Введите запрос для поиска...</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>🛡️ Тест отслеживания ошибок</h3>
+        <button onclick="testError()">Вызвать тестовую ошибку</button>
+        <div id="error-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>📋 Лог выполнения тестов</h3>
+        <div class="log-controls">
+            <button class="copy-button" onclick="copyLog()">📋 Копировать лог</button>
+            <button class="clear-button" onclick="clearLog()">🧹 Очистить лог</button>
+        </div>
+        <div id="console-log" class="console-log">Лог инициализируется...</div>
+    </div>
+
+    <!-- Подключение модулей -->
+    <script src="../heys_advanced_error_tracker_v1.js?v=4"></script>
+    <script src="../heys_smart_search_with_typos_v1.js?v=4"></script>
+    
+    <script>
+        // Система логирования
+        let logMessages = [];
+        const logDiv = document.getElementById('console-log');
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                info: '#e2e8f0',
+                success: '#68d391',
+                warning: '#fbd38d',
+                error: '#fc8181'
+            };
+            
+            const logEntry = {
+                timestamp: timestamp,
+                message: message,
+                type: type,
+                raw: `[${timestamp}] ${message}`
+            };
+            
+            logMessages.push(logEntry);
+            
+            // Добавляем в DOM
+            const div = document.createElement('div');
+            div.style.color = colors[type] || colors.info;
+            div.style.marginBottom = '2px';
+            div.textContent = logEntry.raw;
+            
+            if (logDiv) {
+                logDiv.appendChild(div);
+                logDiv.scrollTop = logDiv.scrollHeight;
+                
+                // Ограничиваем количество сообщений в DOM
+                while (logDiv.children.length > 100) {
+                    logDiv.removeChild(logDiv.firstChild);
+                }
+            }
+            
+            // Также дублируем в консоль браузера
+            const consoleMethod = type === 'error' ? 'error' : type === 'warning' ? 'warn' : 'log';
+            console[consoleMethod](`[ДИАГНОСТИКА] ${message}`);
+        }
+        
+        function copyLog() {
+            const logText = logMessages.map(entry => entry.raw).join('\n');
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(logText).then(() => {
+                    addLog('📋 Лог скопирован в буфер обмена', 'success');
+                }).catch(err => {
+                    addLog('❌ Ошибка копирования: ' + err.message, 'error');
+                });
+            } else {
+                // Fallback для старых браузеров
+                const textArea = document.createElement('textarea');
+                textArea.value = logText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    addLog('📋 Лог скопирован в буфер обмена (fallback)', 'success');
+                } catch (err) {
+                    addLog('❌ Ошибка копирования: ' + err.message, 'error');
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+        
+        function clearLog() {
+            logMessages = [];
+            if (logDiv) {
+                logDiv.innerHTML = '';
+            }
+            addLog('🧹 Лог очищен', 'info');
+        }
+        
+        // Функция настройки перехвата консоли
+        function setupConsoleInterception() {
+            // Перехватываем console для автоматического логирования
+            const originalConsoleLog = console.log;
+            const originalConsoleError = console.error;
+            const originalConsoleWarn = console.warn;
+            
+            console.log = function(...args) {
+                originalConsoleLog.apply(console, args);
+                const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+                if (message.includes('[ДИАГНОСТИКА]')) return; // Избегаем рекурсии
+                addLog(message, 'info');
+            };
+            
+            console.error = function(...args) {
+                originalConsoleError.apply(console, args);
+                const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+                if (message.includes('[ДИАГНОСТИКА]')) return;
+                addLog(message, 'error');
+            };
+            
+            console.warn = function(...args) {
+                originalConsoleWarn.apply(console, args);
+                const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+                if (message.includes('[ДИАГНОСТИКА]')) return;
+                addLog(message, 'warning');
+            };
+        }
+
+        // Тестовые данные
+        const testProducts = [
+            { id: 1, name: 'Хлеб белый', category: 'Хлебобулочные' },
+            { id: 2, name: 'Молоко 3.2%', category: 'Молочные' },
+            { id: 3, name: 'Курица филе', category: 'Мясные' },
+            { id: 4, name: 'Картофель', category: 'Овощи' },
+            { id: 5, name: 'Яблоки', category: 'Фрукты' },
+            { id: 6, name: 'Молоко обезжиренное', category: 'Молочные' },
+            { id: 7, name: 'Мола (приправа)', category: 'Специи' },
+            { id: 8, name: 'Морковь', category: 'Овощи' },
+            { id: 9, name: 'Мука пшеничная', category: 'Бакалея' },
+            { id: 10, name: 'Макароны', category: 'Бакалея' }
+        ];
+
+        function checkModules() {
+            addLog('🔍 Начало проверки модулей...', 'info');
+            
+            const statusDiv = document.getElementById('module-status');
+            let html = '';
+            
+            // Проверка основного namespace
+            if (typeof window.HEYS === 'object') {
+                html += '<div class="status success">✅ HEYS namespace: OK</div>';
+                addLog('✅ HEYS namespace: OK', 'success');
+            } else {
+                html += '<div class="status error">❌ HEYS namespace: НЕ НАЙДЕН</div>';
+                addLog('❌ HEYS namespace: НЕ НАЙДЕН', 'error');
+            }
+            
+            // Проверка умного поиска
+            if (window.HEYS && typeof window.HEYS.SmartSearchWithTypos === 'object') {
+                html += '<div class="status success">✅ SmartSearchWithTypos: OK</div>';
+                addLog('✅ SmartSearchWithTypos: загружен корректно', 'success');
+                
+                // Проверяем методы
+                const methods = ['search', 'addCommonWords', 'addSynonyms', 'configure'];
+                methods.forEach(method => {
+                    if (typeof window.HEYS.SmartSearchWithTypos[method] === 'function') {
+                        addLog(`  ✅ Метод ${method}: доступен`, 'success');
+                    } else {
+                        addLog(`  ❌ Метод ${method}: НЕ НАЙДЕН`, 'error');
+                    }
+                });
+            } else {
+                html += '<div class="status error">❌ SmartSearchWithTypos: НЕ НАЙДЕН</div>';
+                addLog('❌ SmartSearchWithTypos: НЕ НАЙДЕН', 'error');
+            }
+            
+            // Проверка отслеживания ошибок
+            if (window.HEYS && typeof window.HEYS.AdvancedErrorTracker === 'object') {
+                html += '<div class="status success">✅ AdvancedErrorTracker: OK</div>';
+                addLog('✅ AdvancedErrorTracker: загружен корректно', 'success');
+                
+                // Проверяем методы
+                const methods = ['logError', 'getErrorStats', 'exportErrors', 'clearErrors'];
+                methods.forEach(method => {
+                    if (typeof window.HEYS.AdvancedErrorTracker[method] === 'function') {
+                        addLog(`  ✅ Метод ${method}: доступен`, 'success');
+                    } else {
+                        addLog(`  ❌ Метод ${method}: НЕ НАЙДЕН`, 'error');
+                    }
+                });
+            } else {
+                html += '<div class="status error">❌ AdvancedErrorTracker: НЕ НАЙДЕН</div>';
+                addLog('❌ AdvancedErrorTracker: НЕ НАЙДЕН', 'error');
+            }
+            
+            // Общая информация
+            const heysInfo = {
+                type: typeof window.HEYS,
+                exists: !!window.HEYS,
+                properties: window.HEYS ? Object.keys(window.HEYS).length : 0,
+                propertyNames: window.HEYS ? Object.keys(window.HEYS).join(', ') : 'нет'
+            };
+            
+            addLog(`📊 Детальная информация о HEYS:`, 'info');
+            addLog(`  • typeof HEYS: ${heysInfo.type}`, 'info');
+            addLog(`  • window.HEYS существует: ${heysInfo.exists}`, 'info');
+            addLog(`  • Количество свойств: ${heysInfo.properties}`, 'info');
+            addLog(`  • Свойства: ${heysInfo.propertyNames}`, 'info');
+            
+            html += `<div class="status warning">📊 Общая информация:
+                <br>• typeof HEYS: ${heysInfo.type}
+                <br>• window.HEYS: ${heysInfo.exists ? 'существует' : 'не найден'}
+                <br>• Количество свойств: ${heysInfo.properties}
+                <br>• Свойства: ${heysInfo.propertyNames}
+            </div>`;
+            
+            statusDiv.innerHTML = html;
+            addLog('🔍 Проверка модулей завершена', 'info');
+        }
+
+        function testSearch() {
+            const query = document.getElementById('search-input').value;
+            const resultsDiv = document.getElementById('search-results');
+            
+            addLog(`🔍 Начало тестирования поиска с запросом: "${query}"`, 'info');
+            
+            if (!query.trim()) {
+                resultsDiv.innerHTML = 'Введите запрос для поиска...';
+                addLog('⚠️ Пустой запрос, тест отменен', 'warning');
+                return;
+            }
+            
+            try {
+                if (!window.HEYS || !window.HEYS.SmartSearchWithTypos) {
+                    resultsDiv.innerHTML = '<div class="status error">❌ Модуль SmartSearchWithTypos не загружен</div>';
+                    addLog('❌ Модуль SmartSearchWithTypos недоступен', 'error');
+                    return;
+                }
+                
+                addLog('📡 Вызов HEYS.SmartSearchWithTypos.search...', 'info');
+                const startTime = performance.now();
+                
+                const result = window.HEYS.SmartSearchWithTypos.search(query, testProducts, {
+                    debugMode: true,
+                    limit: 5
+                });
+                
+                const searchTime = performance.now() - startTime;
+                addLog(`⏱️ Поиск выполнен за ${searchTime.toFixed(2)}мс`, 'info');
+                addLog(`📊 Результат поиска: найдено ${result.totalFound} из ${testProducts.length} продуктов`, 'success');
+                
+                if (result.corrections && result.corrections.length > 0) {
+                    addLog(`🔧 Исправления опечаток: ${result.corrections.length}`, 'info');
+                    result.corrections.forEach(correction => {
+                        addLog(`  • "${correction.original}" → "${correction.corrected}" (уверенность: ${(correction.confidence * 100).toFixed(1)}%)`, 'info');
+                    });
+                }
+                
+                if (result.suggestions && result.suggestions.length > 0) {
+                    addLog(`💡 Предложения: ${result.suggestions.join(', ')}`, 'info');
+                }
+                
+                addLog(`📈 Статистика совпадений:`, 'info');
+                addLog(`  • Точные: ${result.searchStats.exactMatches}`, 'info');
+                addLog(`  • Исправленные опечатки: ${result.searchStats.typoMatches}`, 'info');
+                addLog(`  • Синонимы: ${result.searchStats.synonymMatches}`, 'info');
+                addLog(`  • Фонетические: ${result.searchStats.phoneticMatches}`, 'info');
+                
+                let html = `<strong>Найдено: ${result.totalFound} результатов за ${result.searchTime}мс</strong><br><br>`;
+                
+                if (result.results.length === 0) {
+                    html += '<div class="status warning">⚠️ Ничего не найдено</div>';
+                    addLog('⚠️ Поиск не дал результатов', 'warning');
+                } else {
+                    result.results.forEach((item, index) => {
+                        html += `<div style="margin: 5px 0; padding: 8px; background: white; border-radius: 4px;">
+                            <strong>${item.name}</strong> (${item.category})
+                            <br><small>Тип: ${item.matchType}, Релевантность: ${item.relevance}</small>
+                        </div>`;
+                        addLog(`  ${index + 1}. ${item.name} (${item.matchType}, релевантность: ${item.relevance})`, 'success');
+                    });
+                }
+                
+                if (result.corrections && result.corrections.length > 0) {
+                    html += '<br><strong>Исправления:</strong><br>';
+                    result.corrections.forEach(correction => {
+                        html += `<span style="background: #ffeaa7; padding: 2px 6px; margin: 2px; border-radius: 3px;">
+                            ${correction.original} → ${correction.corrected}
+                        </span> `;
+                    });
+                }
+                
+                if (result.suggestions && result.suggestions.length > 0) {
+                    html += '<br><br><strong>Предложения:</strong><br>';
+                    result.suggestions.forEach(suggestion => {
+                        html += `<span style="background: #d1ecf1; padding: 2px 6px; margin: 2px; border-radius: 3px;">
+                            ${suggestion}
+                        </span> `;
+                    });
+                }
+                
+                resultsDiv.innerHTML = html;
+                addLog('✅ Тест поиска завершен успешно', 'success');
+                
+            } catch (error) {
+                addLog(`❌ Ошибка при выполнении поиска: ${error.message}`, 'error');
+                addLog(`❌ Стек ошибки: ${error.stack}`, 'error');
+                resultsDiv.innerHTML = `<div class="status error">❌ Ошибка: ${error.message}</div>`;
+            }
+        }
+        
+        // Функция очистки поиска
+        function clearSearch() {
+            const searchInput = document.getElementById('search-input');
+            const searchResults = document.getElementById('search-results');
+            const dropdown = document.getElementById('search-dropdown');
+            
+            searchInput.value = '';
+            searchResults.innerHTML = 'Введите запрос для поиска...';
+            dropdown.classList.remove('show');
+            dropdown.innerHTML = '';
+            
+            addLog('🧹 Поиск очищен', 'info');
+        }
+        
+        // Функция отображения выпадающего списка
+        function showDropdown(results, corrections, query) {
+            const dropdown = document.getElementById('search-dropdown');
+            
+            if (results.length === 0 && corrections.length === 0) {
+                dropdown.classList.remove('show');
+                return;
+            }
+            
+            let html = '';
+            
+            // Добавляем исправления опечаток в начало
+            corrections.forEach(correction => {
+                html += `
+                    <div class="dropdown-item" onclick="selectDropdownItem('${correction.corrected}', 'correction')">
+                        <strong>${correction.corrected}</strong>
+                        <span class="match-type typo">исправление: "${correction.original}"</span>
+                        <span class="relevance-score">${Math.round(correction.confidence * 100)}%</span>
+                    </div>
+                `;
+            });
+            
+            // Добавляем найденные результаты
+            results.forEach(item => {
+                const matchTypeText = {
+                    'exact': 'точное совпадение',
+                    'typo': 'исправлена опечатка',
+                    'synonym': 'синоним',
+                    'phonetic': 'фонетическое'
+                };
+                
+                html += `
+                    <div class="dropdown-item" onclick="selectDropdownItem('${item.name}', 'result')">
+                        <strong>${item.name}</strong>
+                        <span class="match-type ${item.matchType}">${matchTypeText[item.matchType] || item.matchType}</span>
+                        <span class="relevance-score">${Math.round(item.relevance)}</span>
+                    </div>
+                `;
+            });
+            
+            dropdown.innerHTML = html;
+            dropdown.classList.add('show');
+            
+            addLog(`📋 Выпадающий список показан: ${results.length} результатов, ${corrections.length} исправлений`, 'info');
+        }
+        
+        // Функция выбора элемента из выпадающего списка
+        function selectDropdownItem(text, type) {
+            const searchInput = document.getElementById('search-input');
+            const dropdown = document.getElementById('search-dropdown');
+            
+            searchInput.value = text;
+            dropdown.classList.remove('show');
+            
+            addLog(`✅ Выбран элемент: "${text}" (тип: ${type})`, 'success');
+            
+            // Автоматически выполняем поиск
+            testSearch();
+        }
+        
+        // Живой поиск при вводе
+        function setupLiveSearch() {
+            const searchInput = document.getElementById('search-input');
+            let searchTimeout;
+            let selectedIndex = -1;
+            
+            searchInput.addEventListener('input', function() {
+                const query = this.value.trim();
+                selectedIndex = -1; // Сбрасываем выбор при новом вводе
+                
+                clearTimeout(searchTimeout);
+                
+                if (query.length < 2) {
+                    document.getElementById('search-dropdown').classList.remove('show');
+                    return;
+                }
+                
+                // Задержка для избежания слишком частых запросов
+                searchTimeout = setTimeout(() => {
+                    performLiveSearch(query);
+                }, 300);
+            });
+            
+            // Навигация по клавиатуре
+            searchInput.addEventListener('keydown', function(e) {
+                const dropdown = document.getElementById('search-dropdown');
+                const items = dropdown.querySelectorAll('.dropdown-item');
+                
+                if (items.length === 0) return;
+                
+                switch(e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                        updateSelection(items, selectedIndex);
+                        break;
+                        
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        selectedIndex = Math.max(selectedIndex - 1, -1);
+                        updateSelection(items, selectedIndex);
+                        break;
+                        
+                    case 'Enter':
+                        e.preventDefault();
+                        if (selectedIndex >= 0 && items[selectedIndex]) {
+                            items[selectedIndex].click();
+                        } else {
+                            testSearch();
+                        }
+                        break;
+                        
+                    case 'Escape':
+                        dropdown.classList.remove('show');
+                        selectedIndex = -1;
+                        break;
+                }
+            });
+            
+            // Скрываем dropdown при клике вне его
+            document.addEventListener('click', function(e) {
+                const dropdown = document.getElementById('search-dropdown');
+                const searchContainer = document.querySelector('.search-container');
+                
+                if (!searchContainer.contains(e.target)) {
+                    dropdown.classList.remove('show');
+                    selectedIndex = -1;
+                }
+            });
+        }
+        
+        // Обновление выделения в выпадающем списке
+        function updateSelection(items, index) {
+            items.forEach((item, i) => {
+                item.classList.toggle('selected', i === index);
+            });
+        }
+        
+        // Живой поиск
+        function performLiveSearch(query) {
+            addLog(`🔄 Живой поиск: "${query}"`, 'info');
+            
+            try {
+                if (!window.HEYS || !window.HEYS.SmartSearchWithTypos) {
+                    addLog('❌ Модуль SmartSearchWithTypos недоступен для живого поиска', 'error');
+                    return;
+                }
+                
+                const searchResult = window.HEYS.SmartSearchWithTypos.search(query, testProducts, {
+                    enablePhonetic: true,
+                    enableSynonyms: true,
+                    maxSuggestions: 5
+                });
+                
+                showDropdown(searchResult.results, searchResult.corrections, query);
+                
+            } catch (error) {
+                addLog(`❌ Ошибка живого поиска: ${error.message}`, 'error');
+            }
+        }
+
+        function testError() {
+            const resultsDiv = document.getElementById('error-results');
+            
+            addLog('🛡️ Начало тестирования системы отслеживания ошибок...', 'info');
+            
+            try {
+                if (!window.HEYS || !window.HEYS.AdvancedErrorTracker) {
+                    resultsDiv.innerHTML = '<div class="status error">❌ Модуль AdvancedErrorTracker не загружен</div>';
+                    addLog('❌ Модуль AdvancedErrorTracker недоступен', 'error');
+                    return;
+                }
+                
+                // Создаем тестовую ошибку
+                const testError = new Error('Тестовая ошибка для проверки системы диагностики');
+                addLog('📝 Создание тестовой ошибки...', 'info');
+                
+                window.HEYS.AdvancedErrorTracker.logError(testError, {
+                    type: 'test',
+                    additionalData: { 
+                        demo: true, 
+                        timestamp: Date.now(),
+                        testId: 'module-test-' + Math.random().toString(36).substr(2, 9)
+                    }
+                });
+                
+                addLog('✅ Ошибка успешно передана в систему отслеживания', 'success');
+                
+                // Получаем статистику
+                const stats = window.HEYS.AdvancedErrorTracker.getErrorStats();
+                addLog('📊 Получение статистики ошибок...', 'info');
+                addLog(`  • Всего ошибок: ${stats.total}`, 'info');
+                addLog(`  • За последний час: ${stats.recentCount}`, 'info');
+                
+                if (stats.bySeverity && Object.keys(stats.bySeverity).length > 0) {
+                    addLog('  • По критичности:', 'info');
+                    Object.entries(stats.bySeverity).forEach(([severity, count]) => {
+                        addLog(`    - ${severity}: ${count}`, 'info');
+                    });
+                }
+                
+                if (stats.byType && Object.keys(stats.byType).length > 0) {
+                    addLog('  • По типам:', 'info');
+                    Object.entries(stats.byType).forEach(([type, count]) => {
+                        addLog(`    - ${type}: ${count}`, 'info');
+                    });
+                }
+                
+                resultsDiv.innerHTML = `
+                    <div class="status success">✅ Ошибка успешно залогирована</div>
+                    <div class="status warning">📊 Статистика ошибок:
+                        <br>• Всего: ${stats.total}
+                        <br>• За последний час: ${stats.recentCount}
+                        <br>• По критичности: ${JSON.stringify(stats.bySeverity)}
+                        <br>• По типам: ${JSON.stringify(stats.byType)}
+                    </div>
+                `;
+                
+                addLog('✅ Тест системы отслеживания ошибок завершен успешно', 'success');
+                
+            } catch (error) {
+                addLog(`❌ Ошибка при тестировании системы отслеживания: ${error.message}`, 'error');
+                addLog(`❌ Стек ошибки: ${error.stack}`, 'error');
+                resultsDiv.innerHTML = `<div class="status error">❌ Ошибка: ${error.message}</div>`;
+            }
+        }
+
+        // Автоматическая проверка при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            addLog('🚀 Инициализация диагностической системы...', 'info');
+            addLog('📋 Система логирования активирована', 'success');
+            
+            try {
+                // Настраиваем перехват консоли для детального логирования
+                setupConsoleInterception();
+                addLog('🔧 Перехват консоли настроен', 'info');
+                
+                // Проверяем доступность HEYS
+                if (window.HEYS) {
+                    addLog('✅ Основное пространство имен HEYS доступно', 'success');
+                } else {
+                    addLog('⚠️ Пространство имен HEYS недоступно', 'warning');
+                }
+                
+                addLog('📊 Система готова к диагностике модулей', 'success');
+                
+                // Инициализируем живой поиск
+                setupLiveSearch();
+                addLog('🔄 Живой поиск инициализирован', 'success');
+                
+            } catch (error) {
+                addLog(`❌ Ошибка инициализации: ${error.message}`, 'error');
+            }
+            
+            // Проверяем модули сразу и через секунду
+            checkModules();
+            setTimeout(checkModules, 1000);
+            
+            // Добавляем обработчик для поиска по Enter
+            document.getElementById('search-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    testSearch();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>HEYS Module Load Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #222; color: #eee; }
+        .step { margin: 10px 0; padding: 10px; border-left: 4px solid #0a84ff; background: #333; }
+        .success { border-color: #30d158; }
+        .error { border-color: #ff453a; }
+        .warning { border-color: #ff9f0a; }
+        .log { background: #111; padding: 10px; margin: 10px 0; font-family: monospace; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 HEYS Module Load Test</h1>
+    <div id="progress"></div>
+    <div id="log" class="log"></div>
+    <button onclick="runDiagnostic().then(result => console.log('Диагностика завершена:', result))">🔄 Запустить диагностику</button>
+
+    <!-- Загружаем модули в том же порядке, что и диагностический центр -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    
+    <script src="../heys_performance_monitor.js"></script>
+    <script src="../heys_analytics_ui.js"></script>
+    <script src="../heys_smart_search.js"></script>
+    <script src="../heys_integration_layer.js"></script>
+    <script src="../heys_security_validation.js"></script>
+    <script src="../heys_storage_supabase_v1.js"></script>
+    <script src="../heys_models_v1.js"></script>
+    <script src="../heys_storage_layer_v1.js"></script>
+    <script src="../heys_core_v12.js"></script>
+    <script src="../heys_day_v12.js"></script>
+    <script src="../heys_user_v12.js"></script>
+    <script src="../heys_reports_v12.js"></script>
+    <script src="../heys_error_boundary_v1.js"></script>
+    <script src="../heys_virtual_list_v1.js"></script>
+    <script src="../heys_stats_v1.js"></script>
+
+    <script>
+        let logContent = '';
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            logContent += `[${timestamp}] ${message}\n`;
+            document.getElementById('log').textContent = logContent;
+            console.log(message);
+        }
+
+        function addStep(message, type = 'step') {
+            const progress = document.getElementById('progress');
+            const step = document.createElement('div');
+            step.className = `step ${type}`;
+            step.textContent = message;
+            progress.appendChild(step);
+        }
+
+        function testModule(name, path) {
+            const parts = path.split('.');
+            let current = window;
+            
+            for (const part of parts) {
+                if (current && current[part]) {
+                    current = current[part];
+                } else {
+                    return { exists: false, error: `Не найден ${part} в ${path}` };
+                }
+            }
+            
+            return { exists: true, value: current };
+        }
+
+        function runDiagnostic() {
+            return new Promise(async (resolve) => {
+                document.getElementById('progress').innerHTML = '';
+                logContent = '';
+                
+                const startTime = performance.now();
+                log('🚀 Запуск диагностики модулей HEYS...');
+                addStep('🔄 Проверка базового namespace', 'step');
+
+                // 🔒 PROMISE-BASED СИНХРОНИЗАЦИЯ: Ждем завершения каждой проверки
+                
+                // Проверяем HEYS namespace
+                if (typeof window.HEYS === 'undefined') {
+                    log('❌ КРИТИЧЕСКАЯ ОШИБКА: window.HEYS не определен');
+                    addStep('❌ HEYS namespace отсутствует', 'error');
+                    resolve({ status: 'critical_error', message: 'HEYS namespace отсутствует' });
+                    return;
+                }
+
+                log('✅ HEYS namespace найден');
+                log(`📋 Содержимое HEYS: ${Object.keys(window.HEYS).join(', ')}`);
+                addStep('✅ HEYS namespace найден', 'success');
+
+                // Проверяем каждый модуль ПОСЛЕДОВАТЕЛЬНО
+                const modules = [
+                    { name: 'Reports System', path: 'HEYS.ReportsManager' },
+                    { name: 'Smart Search', path: 'HEYS.SmartSearchEngine' },
+                    { name: 'Integration Layer', path: 'HEYS.IntegrationLayer' },
+                    { name: 'Security Headers', path: 'HEYS.SecurityValidationManager' }
+                ];
+
+                const testResults = [];
+                
+                // 🧪 ПОСЛЕДОВАТЕЛЬНОЕ ТЕСТИРОВАНИЕ: Каждый модуль ждет завершения предыдущего
+                for (const module of modules) {
+                    const moduleStartTime = performance.now();
+                    addStep(`🔄 Тестирование ${module.name}...`, 'step');
+                    
+                    // ⏳ ИМИТАЦИЯ СИНХРОННОГО ОЖИДАНИЯ
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    const result = testModule(module.name, module.path);
+                    const moduleTime = Math.round(performance.now() - moduleStartTime);
+                    
+                    if (result.exists) {
+                        log(`✅ ${module.name}: НАЙДЕН (${moduleTime}ms)`);
+                        addStep(`✅ ${module.name}: НАЙДЕН (${moduleTime}ms)`, 'success');
+                        
+                        // Дополнительные проверки
+                        if (typeof result.value === 'function') {
+                            log(`  📦 ${module.name} является функцией/классом`);
+                            
+                            try {
+                                const instance = new result.value();
+                                log(`  ✅ Экземпляр ${module.name} создан успешно`);
+                                
+                                // Специальные проверки для SecurityValidationManager
+                                if (module.path === 'HEYS.SecurityValidationManager') {
+                                    await testSecurityMethods(instance);
+                                }
+                                
+                                testResults.push({ 
+                                    module: module.name, 
+                                    status: 'success', 
+                                    duration: moduleTime,
+                                    instanceCreated: true 
+                                });
+                                
+                            } catch (error) {
+                                log(`  ❌ Не удалось создать экземпляр: ${error.message}`);
+                                addStep(`⚠️ ${module.name}: проблема с инстанцированием`, 'warning');
+                                testResults.push({ 
+                                    module: module.name, 
+                                    status: 'warning', 
+                                    duration: moduleTime,
+                                    instanceCreated: false,
+                                    error: error.message 
+                                });
+                            }
+                        } else {
+                            log(`  📋 ${module.name} является ${typeof result.value}`);
+                            testResults.push({ 
+                                module: module.name, 
+                                status: 'success', 
+                                duration: moduleTime,
+                                type: typeof result.value 
+                            });
+                        }
+                    } else {
+                        log(`❌ ${module.name}: НЕ НАЙДЕН - ${result.error} (${moduleTime}ms)`);
+                        addStep(`❌ ${module.name}: НЕ НАЙДЕН (${moduleTime}ms)`, 'error');
+                        testResults.push({ 
+                            module: module.name, 
+                            status: 'error', 
+                            duration: moduleTime,
+                            error: result.error 
+                        });
+                    }
+                }
+
+                // 📊 ФИНАЛЬНАЯ СТАТИСТИКА
+                const totalTime = Math.round(performance.now() - startTime);
+                const successful = testResults.filter(r => r.status === 'success').length;
+                const failed = testResults.filter(r => r.status === 'error').length;
+                const warnings = testResults.filter(r => r.status === 'warning').length;
+                
+                log('🏁 Диагностика завершена');
+                log(`📊 Результаты: ${successful} успешно, ${warnings} предупреждений, ${failed} ошибок`);
+                log(`⏱️ Общее время: ${totalTime}ms`);
+                
+                addStep('🏁 Диагностика завершена', 'success');
+                addStep(`📊 ${successful}✅ ${warnings}⚠️ ${failed}❌ за ${totalTime}ms`, 'success');
+                
+                resolve({
+                    status: 'completed',
+                    totalTime,
+                    successful,
+                    warnings,
+                    failed,
+                    results: testResults
+                });
+            });
+        }
+
+        async function testSecurityMethods(instance) {
+            // 🔒 ПРОВЕРКА МЕТОДОВ БЕЗОПАСНОСТИ
+            if (typeof instance.applySecurityHeaders === 'function') {
+                log(`  ✅ applySecurityHeaders() доступен`);
+                try {
+                    const headers = instance.applySecurityHeaders();
+                    log(`  ✅ applySecurityHeaders() работает, заголовков: ${headers.size}`);
+                } catch (error) {
+                    log(`  ❌ applySecurityHeaders() ошибка: ${error.message}`);
+                }
+            } else {
+                log(`  ❌ applySecurityHeaders() НЕ НАЙДЕН`);
+            }
+            
+            if (typeof instance.validateInput === 'function') {
+                log(`  ✅ validateInput() доступен`);
+                try {
+                    const result = instance.validateInput('test@email.com', 'email');
+                    log(`  ✅ validateInput() работает: ${JSON.stringify(result)}`);
+                } catch (error) {
+                    log(`  ❌ validateInput() ошибка: ${error.message}`);
+                }
+            } else {
+                log(`  ❌ validateInput() НЕ НАЙДЕН`);
+            }
+        }
+
+        // Автоматический запуск через 3 секунды после загрузки
+        window.addEventListener('load', () => {
+            setTimeout(async () => {
+                log('🔄 Автоматический запуск диагностики...');
+                const result = await runDiagnostic();
+                log(`📋 Итоговый результат: ${result.status}`);
+                if (result.status === 'completed') {
+                    log(`🎯 Качество системы: ${Math.round((result.successful / (result.successful + result.failed + result.warnings)) * 100)}%`);
+                }
+            }, 3000);
+        });
+    </script>
+</body>
+</html>

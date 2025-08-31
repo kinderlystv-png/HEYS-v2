@@ -1,0 +1,1 @@
+{"version":3,"sources":["../src/index.ts"],"names":["formatDate","date","generateId"],"mappings":"AACO,IAAMA,EAAcC,GAAeA,EAAK,YAAY,EAAE,MAAM,GAAG,EAAE,CAAC,EAC5DC,EAAa,IAAM,OAAO,WAAW","sourcesContent":["// Shared utilities\nexport const formatDate = (date: Date) => date.toISOString().split('T')[0];\nexport const generateId = () => crypto.randomUUID();\n"]}

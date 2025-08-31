@@ -1,0 +1,56 @@
+
+> @heys/web@13.0.0 build C:\! HEYS 2\apps\web
+> vite build
+
+polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
+[36mvite v4.5.14 [32mbuilding for production...[36m[39m
+<script src="heys_performance_monitor.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_analytics_ui.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_advanced_error_tracker_v1.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_smart_search_with_typos_v1.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_storage_indexeddb_v1.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_worker_manager_v1.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_integration_layer_v1.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="modern-search-integration.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_storage_supabase_v1.js?v=15"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_models_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_storage_layer_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_core_v12.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_v12.js?v=3"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_user_v12.js"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_reports_v12.js"> in "/index.html" can't be bundled without type="module" attribute
+
+styles/main.css doesn't exist at build time, it will remain unchanged to be resolved at runtime
+
+styles/analytics.css doesn't exist at build time, it will remain unchanged to be resolved at runtime
+transforming...
+[32m✓[39m 1 modules transformed.
+[31mCould not resolve entry module "@heys/shared".[39m
+
+PWA v1.0.3
+warnings
+mode      generateSW
+  One of the glob patterns doesn't match any files. Please remove or fix the following: {
+  "globDirectory": "C:\\! HEYS 2\\apps\\web\\dist",
+precache  1 entries (0.00 KiB)
+files generated
+  "globPattern": "**/*.{js,css,html,ico,png,svg}",
+  dist/sw.js.map
+  dist/sw.js
+  dist/workbox-6bc9069b.js.map
+  dist/workbox-6bc9069b.js
+  "globIgnores": [
+    "**/node_modules/**/*",
+[32m✓ built in 5.48s[39m
+    "sw.js",
+    "workbox-*.js"
+  ]
+}
+
+[31merror during build:
+RollupError: Could not resolve entry module "@heys/shared".
+    at error (file:///C:/!%20HEYS%202/node_modules/.pnpm/rollup@3.29.5/node_modules/rollup/dist/es/shared/node-entry.js:2287:30)
+    at ModuleLoader.loadEntryModule (file:///C:/!%20HEYS%202/node_modules/.pnpm/rollup@3.29.5/node_modules/rollup/dist/es/shared/node-entry.js:24881:20)
+    at async Promise.all (index 0)
+    at async Promise.all (index 0)[39m
+ ELIFECYCLE  Command failed with exit code 1.

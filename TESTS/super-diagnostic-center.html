@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>HEYS Diagnostic Center (v2-core)</title>
+    <link rel="manifest" href="../manifest.webmanifest">
+
+    <!-- ♦ МИНИМАЛЬНЫЙ CSS -->
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0;font-family:Segoe UI,Arial,sans-serif}
+        body{background:#f8fafc;color:#1e293b}
+        h1{font-size:1.8rem;margin:20px 0;text-align:center}
+        .controls,.log,.stats{max-width:1100px;margin:20px auto}
+        .controls button{margin:4px;padding:8px 14px;border:0;border-radius:6px;cursor:pointer;background:#667eea;color:#fff}
+        .controls button:hover{background:#5a67d8}
+        .bar{width:100%;height:10px;background:#e2e8f0;border-radius:6px;overflow:hidden;margin:10px 0}
+        .fill{height:100%;width:0;background:#22c55e;transition:width .3s}
+        .tests{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;max-width:1100px;margin:20px auto}
+        .test{padding:12px;border:1px solid #cbd5e1;border-radius:8px;display:flex;justify-content:space-between}
+        .test.running{background:#fef9c3}
+        .test.success{background:#dcfce7}
+        .test.error{background:#fee2e2}
+        .log{background:#1e293b;color:#cbd5e1;padding:12px;border-radius:8px;max-height:280px;overflow:auto;font-size:12px}
+    </style>
+
+    <!-- ♦ ранняя инициализация реестра, чтобы suites могли регистрироваться -->
+    <script>
+        window.__heysTests = [];
+        window.addTest = t => window.__heysTests.push(t);
+    </script>
+
+    <!-- ♦ heys-скрипты (как было) -->
+    <script src="../heys_core_v12.js"></script>
+    <script src="../heys_reports_v12.js"></script>
+    <script src="../heys_smart_search_with_typos_v1.js"></script>
+    <script src="../heys_integration_layer_v1.js"></script>
+
+    <!-- ♦ модули-suites (могут сразу zвать addTest) -->
+    <script src="./suites/core.js"></script>
+    <script src="./suites/security.js"></script>
+    <script src="./suites/performance.js"></script>
+    <script src="./suites/ux.js"></script>
+    <script src="./suites/pwa.js"></script>
+    <link rel="manifest" href="../manifest.webmanifest">
+</head>
+<body>
+
+<h1>🏥 HEYS Diagnostic Center</h1>
+
+<!-- ♦ КНОПКИ ЗАПУСКА -->
+<div class="controls">
+    <button id="btn-keep">⚡ Критические (KEEP)</button>
+    <button id="btn-fast">🏃‍♂️ Быстрые (KEEP + SIMPLIFY)</button>
+    <button id="btn-all">🚀 Полная диагностика</button>
+    <button id="btn-core">🔧 Core Tests</button>
+    <button id="btn-security">🔒 Security Tests</button>
+    <button id="btn-performance">⚡ Performance Tests</button>
+    <button id="btn-ux">🎨 UX Tests</button>
+    <button id="btn-pwa">📱 PWA Tests</button>
+</div>
+
+<!-- ♦ ПРОГРЕСС -->
+<div class="controls">
+    <div class="bar"><div id="bar-fill" class="fill"></div></div>
+    <div id="stat-text">0 / 0</div>
+</div>
+
+<!-- ♦ СПИСОК ТЕСТОВ (генерируется JS) -->
+<div id="tests" class="tests"></div>
+
+<!-- ♦ ЛОГ -->
+<div class="log" id="log"></div>
+
+<!-- ♦ ЕДИНЫЙ РАННЕР -->
+<script>
+/* ----------  ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ  ---------- */
+const qs  = id => document.getElementById(id);
+const diagResults = [];
+
+const log = (msg, cls = '') => {
+  const area = qs('log');
+  const line = document.createElement('div');
+  if (cls) {
+    line.style.color =
+      cls === 'error'   ? '#f87171' :
+      cls === 'success' ? '#4ade80' :
+                          '#60a5fa';
+  }
+  line.textContent = msg;
+  area.appendChild(line);
+  area.scrollTop = area.scrollHeight;
+};
+
+const setBar = (done, total) => {
+  qs('bar-fill').style.width = total ? `${(done / total) * 100}%` : '0';
+  qs('stat-text').textContent = `${done}/${total}`;
+};
+
+const addTestEl = name => {
+  const el = document.createElement('div');
+  el.className = 'test';
+  el.id = `test-${name}`.replace(/\s+/g, '-');
+  el.innerHTML = `<span>${name}</span><span>🕒</span>`;
+  qs('tests').appendChild(el);
+  return el;
+};
+
+/* ----------  РЕЕСТР  ---------- */
+const tests = window.__heysTests;
+
+/* ----------  RUNNER  ---------- */
+async function run(profile) {
+    // нормализуем аргумент
+    const tags = Array.isArray(profile) ? profile : [profile];
+
+    // если это одна из категорий → фильтруем по category
+    const categories = ['core','security','performance','ux','pwa'];
+    let allowed;
+    if (categories.includes(tags[0])) {
+        const cat = tags[0];
+        allowed = tests.filter(t => t.category === cat && !t.tags.includes('drop'));
+    } else {
+        // профиль-по-тегам
+        const tagSet = tags[0]==='keep' ? ['keep']
+                    : tags[0]==='fast' ? ['keep','simplify']
+                    : tags.includes('all') ? ['all'] : tags;
+
+        allowed = tagSet.includes('all')
+            ? tests
+            : tests.filter(t => !t.tags || t.tags.some(tag => tagSet.includes(tag)));
+    }
+
+    if (!allowed.length) {
+        log(`❌ Нет тестов для профиля: ${profile}`, 'error');   // ← profile
+        return;
+    }
+
+    log(`🚀 Запуск ${allowed.length} тестов (профиль: ${profile})`, 'info'); // ← profile
+    allowed.forEach(t => addTestEl(t.name));
+
+    let done = 0;
+    for (const t of allowed){
+        const el = qs(`test-${t.name}`.replace(/\s+/g,'-'));
+        el.classList.add('running');
+
+        let ok = false, reason = '';
+        try {
+            const result = await Promise.race([
+                Promise.resolve(t.fn()).catch(e=>{throw e}),
+                new Promise(r=>setTimeout(()=>r(false), t.timeout||4000))
+            ]);
+            
+            // Поддержка расширенного результата
+            if (typeof result === 'object' && result !== null) {
+                ok = result.success;
+                reason = result.error || result.details || '';
+            } else {
+                ok = result;
+                if (!ok && !reason) reason = 'timeout | returned false';
+            }
+        } catch (e){
+            ok = false;
+            reason = e?.message || 'exception';
+        }
+
+        diagResults.push({ 
+            name: t.name, 
+            category: t.category || 'legacy',
+            tags: t.tags || [],
+            ok, 
+            reason,
+            description: t.description || ''
+        });
+        
+        el.classList.remove('running');
+        el.classList.add(ok ? 'success' : 'error');
+        el.lastChild.textContent = ok ? '✅' : '❌';
+
+        const icon = ok ? '✅' : '❌';
+        log(`${icon} ${t.name}${!ok ? ' — ' + reason : ''}`, ok?'success':'error');
+
+        setBar(++done, allowed.length);
+    }
+
+    /* итоговое резюме в одну строку JSON ─ удобно копировать */
+    const summary = {
+        timestamp: new Date().toISOString(),
+        passed:   diagResults.filter(r=>r.ok).length,
+        failed:   diagResults.filter(r=>!r.ok).length,
+        results:  diagResults
+    };
+    console.table(diagResults);
+    console.log('📄 HEYS-Diag-Summary:', summary);   // копировать из консоли
+    log('—— РЕЗУЛЬТАТЫ JSON скопируйте из консоли: "HEYS-Diag-Summary" ——','info');
+}
+
+/* ----------  КНОПКИ  ---------- */
+qs('btn-keep').onclick        = () => run('keep');
+qs('btn-fast').onclick        = () => run('fast');
+qs('btn-all').onclick         = () => run('all');
+qs('btn-core').onclick        = () => run('core');
+qs('btn-security').onclick    = () => run('security');
+qs('btn-performance').onclick = () => run('performance');
+qs('btn-ux').onclick          = () => run('ux');
+qs('btn-pwa').onclick         = () => run('pwa');
+</script>
+</body>
+</html>

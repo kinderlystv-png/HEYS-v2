@@ -1,0 +1,1 @@
+{"version":3,"sources":["../src/index.ts"],"names":["createAchievement","name"],"mappings":"AACO,IAAMA,EAAqBC,IAAkB,CAAE,KAAAA,EAAM,SAAU,EAAM","sourcesContent":["// Gaming system placeholder\nexport const createAchievement = (name: string) => ({ name, unlocked: false });\n"]}

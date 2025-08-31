@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Enhanced Error Logging</title>
+  </head>
+  <body>
+    <h1>🔍 Тестирование Enhanced Error Logging</h1>
+
+    <div>
+      <button onclick="testError()">🔥 Создать ошибку</button>
+      <button onclick="testWarning()">⚠️ Создать предупреждение</button>
+      <button onclick="testInfo()">ℹ️ Создать информацию</button>
+      <button onclick="showStats()">📊 Показать статистику</button>
+      <button onclick="exportLogs()">📤 Экспорт логов</button>
+      <button onclick="clearLogs()">🧹 Очистить логи</button>
+    </div>
+
+    <div
+      id="output"
+      style="margin-top: 20px; padding: 10px; background: #f0f0f0; font-family: monospace"
+    ></div>
+
+    <!-- Enhanced Error Logging System -->
+    <script src="TOOLS/enhanced-error-logger.js"></script>
+    <script src="TOOLS/stack-trace-analyzer.js"></script>
+    <script src="TOOLS/error-classification-engine.js"></script>
+    <script src="TOOLS/real-time-error-dashboard.js"></script>
+    <script src="TOOLS/enhanced-error-logging-tests.js"></script>
+
+    <script>
+      // Инициализация системы логирования
+      let logger;
+
+      function initLogger() {
+        logger = new EnhancedErrorLogger({
+          logLevels: ['error', 'warning', 'info', 'debug'],
+          autoClassify: true,
+          detailedStackTrace: true,
+          performanceTracking: true,
+          realTimeUpdates: true,
+        });
+
+        log('✅ Enhanced Error Logger инициализирован');
+        log(`📍 Session ID: ${logger.sessionId}`);
+      }
+
+      function testError() {
+        console.error('Тестовая ошибка из консоли');
+
+        // Также создаем программную ошибку
+        try {
+          throw new Error('Программная тестовая ошибка');
+        } catch (e) {
+          logger.logError('Test Error', {
+            message: e.message,
+            source: 'manual_test',
+            stackTrace: e.stack,
+          });
+        }
+
+        log('🔥 Ошибки созданы');
+      }
+
+      function testWarning() {
+        console.warn('Тестовое предупреждение из консоли');
+
+        logger.logWarning('Test Warning', {
+          message: 'Программное тестовое предупреждение',
+          source: 'manual_test',
+        });
+
+        log('⚠️ Предупреждения созданы');
+      }
+
+      function testInfo() {
+        logger.logInfo('Test Info', {
+          message: 'Информационное сообщение',
+          source: 'manual_test',
+        });
+
+        log('ℹ️ Информационное сообщение создано');
+      }
+
+      function showStats() {
+        const stats = logger.getStats();
+        log('📊 Статистика логирования:');
+        log(`   Всего: ${stats.total}`);
+        log(`   Ошибки: ${stats.byLevel.error || 0}`);
+        log(`   Предупреждения: ${stats.byLevel.warning || 0}`);
+        log(`   Информация: ${stats.byLevel.info || 0}`);
+        log(`   Отладка: ${stats.byLevel.debug || 0}`);
+        log(`   Длительность сессии: ${Math.round(stats.sessionDuration / 1000)}s`);
+      }
+
+      function exportLogs() {
+        const exportData = logger.exportLogs('json');
+
+        // Создаем ссылку для скачивания
+        const blob = new Blob([exportData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `error-report-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        log('📤 Логи экспортированы в файл');
+      }
+
+      function clearLogs() {
+        logger.clearLogs();
+        log('🧹 Логи очищены');
+      }
+
+      function log(message) {
+        const output = document.getElementById('output');
+        const time = new Date().toLocaleTimeString();
+        output.innerHTML += `[${time}] ${message}<br>`;
+        output.scrollTop = output.scrollHeight;
+      }
+
+      // Инициализация при загрузке
+      window.addEventListener('load', () => {
+        initLogger();
+
+        // Слушаем события от Enhanced Error Logger
+        window.addEventListener('enhancedLogEntry', event => {
+          const logEntry = event.detail;
+          log(`📥 Новый лог: [${logEntry.level.toUpperCase()}] ${logEntry.title}`);
+        });
+      });
+
+      // Создаем несколько тестовых ошибок при загрузке
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          log('🚀 Создаем тестовые события...');
+          testInfo();
+          setTimeout(() => testWarning(), 1000);
+          setTimeout(() => testError(), 2000);
+        }, 1000);
+      });
+    </script>
+  </body>
+</html>

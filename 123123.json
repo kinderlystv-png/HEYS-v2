@@ -1,0 +1,305 @@
+{
+  "timestamp": "2025-08-26T21:02:11.374Z",
+  "stats": {
+    "total": 6,
+    "byLevel": {
+      "error": 2,
+      "warning": 1,
+      "info": 3,
+      "debug": 0
+    },
+    "byType": {},
+    "sessionDuration": 18266,
+    "sessionId": "session_1756242113108_24k2pral5"
+  },
+  "chartData": {
+    "timeline": [
+      {
+        "time": 1756242060000,
+        "errors": 0,
+        "warnings": 0,
+        "info": 107,
+        "debug": 1000,
+        "warning": null,
+        "error": null
+      }
+    ],
+    "byLevel": {
+      "info": 107,
+      "warning": 43,
+      "error": 5,
+      "debug": 1000
+    },
+    "byCategory": {}
+  },
+  "filters": {
+    "level": "all",
+    "category": "all",
+    "timeRange": "1h",
+    "searchText": ""
+  },
+  "logs": [
+    {
+      "id": "log_1756242113108_kdkvmu",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113108,
+      "level": "info",
+      "title": "Logs cleared",
+      "details": {
+        "clearedAt": 1756242113108
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logInfo (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:208:21)\n    at EnhancedErrorLogger.clearLogs (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:448:14)\n    at EnhancedErrorLogger.restart (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:465:14)\n    at EnhancedErrorLoggingTests.testDataPersistence (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:464:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242113108_aqra3l",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113108,
+      "level": "info",
+      "title": "Enhanced Error Logger restarted",
+      "details": {
+        "sessionId": "session_1756242113108_24k2pral5"
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logInfo (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:208:21)\n    at EnhancedErrorLogger.restart (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:466:14)\n    at EnhancedErrorLoggingTests.testDataPersistence (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:464:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242113108_z6q0mu",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113108,
+      "level": "error",
+      "title": "Test export error",
+      "details": {
+        "testData": "error"
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logError (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:200:21)\n    at EnhancedErrorLoggingTests.testExportFunctionality (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:487:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242113109_q5oxwp",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113109,
+      "level": "warning",
+      "title": "Test export warning",
+      "details": {
+        "testData": "warning"
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logWarning (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:204:21)\n    at EnhancedErrorLoggingTests.testExportFunctionality (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:488:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242113109_nrrja0",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113109,
+      "level": "info",
+      "title": "Test export info",
+      "details": {
+        "testData": "info"
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logInfo (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:208:21)\n    at EnhancedErrorLoggingTests.testExportFunctionality (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:489:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242115786_pnwk8e",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242115786,
+      "level": "error",
+      "title": "Console Error",
+      "details": {
+        "message": "Test error tracking",
+        "source": "console.error",
+        "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at console.error (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:105:34)\n    at SuperHEYSDiagnosticCenter.testErrorTracking (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:4290:33)\n    at SuperHEYSDiagnosticCenter.runFunctionalTests (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3918:51)\n    at async SuperHEYSDiagnosticCenter.runCompleteSuite (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:4101:42)\n    at async completeBtn.onclick (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2391:29)",
+        "timestamp": 1756242115786
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at console.error (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:105:34)\n    at SuperHEYSDiagnosticCenter.testErrorTracking (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:4290:33)\n    at SuperHEYSDiagnosticCenter.runFunctionalTests (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3918:51)\n    at async SuperHEYSDiagnosticCenter.runCompleteSuite (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:4101:42)\n    at async completeBtn.onclick (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2391:29)",
+      "classification": null,
+      "suggestions": []
+    }
+  ],
+  "filteredLogs": [
+    {
+      "id": "log_1756242113108_kdkvmu",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113108,
+      "level": "info",
+      "title": "Logs cleared",
+      "details": {
+        "clearedAt": 1756242113108
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logInfo (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:208:21)\n    at EnhancedErrorLogger.clearLogs (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:448:14)\n    at EnhancedErrorLogger.restart (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:465:14)\n    at EnhancedErrorLoggingTests.testDataPersistence (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:464:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242113108_aqra3l",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113108,
+      "level": "info",
+      "title": "Enhanced Error Logger restarted",
+      "details": {
+        "sessionId": "session_1756242113108_24k2pral5"
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logInfo (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:208:21)\n    at EnhancedErrorLogger.restart (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:466:14)\n    at EnhancedErrorLoggingTests.testDataPersistence (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:464:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242113108_z6q0mu",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113108,
+      "level": "error",
+      "title": "Test export error",
+      "details": {
+        "testData": "error"
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logError (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:200:21)\n    at EnhancedErrorLoggingTests.testExportFunctionality (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:487:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242113109_q5oxwp",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113109,
+      "level": "warning",
+      "title": "Test export warning",
+      "details": {
+        "testData": "warning"
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logWarning (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:204:21)\n    at EnhancedErrorLoggingTests.testExportFunctionality (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:488:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242113109_nrrja0",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113109,
+      "level": "info",
+      "title": "Test export info",
+      "details": {
+        "testData": "info"
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logInfo (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:208:21)\n    at EnhancedErrorLoggingTests.testExportFunctionality (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:489:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242115786_pnwk8e",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242115786,
+      "level": "error",
+      "title": "Console Error",
+      "details": {
+        "message": "Test error tracking",
+        "source": "console.error",
+        "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at console.error (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:105:34)\n    at SuperHEYSDiagnosticCenter.testErrorTracking (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:4290:33)\n    at SuperHEYSDiagnosticCenter.runFunctionalTests (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3918:51)\n    at async SuperHEYSDiagnosticCenter.runCompleteSuite (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:4101:42)\n    at async completeBtn.onclick (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2391:29)",
+        "timestamp": 1756242115786
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at console.error (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:105:34)\n    at SuperHEYSDiagnosticCenter.testErrorTracking (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:4290:33)\n    at SuperHEYSDiagnosticCenter.runFunctionalTests (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3918:51)\n    at async SuperHEYSDiagnosticCenter.runCompleteSuite (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:4101:42)\n    at async completeBtn.onclick (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2391:29)",
+      "classification": null,
+      "suggestions": []
+    }
+  ],
+  "directLogs": [
+    {
+      "id": "log_1756242113108_kdkvmu",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113108,
+      "level": "info",
+      "title": "Logs cleared",
+      "details": {
+        "clearedAt": 1756242113108
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logInfo (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:208:21)\n    at EnhancedErrorLogger.clearLogs (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:448:14)\n    at EnhancedErrorLogger.restart (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:465:14)\n    at EnhancedErrorLoggingTests.testDataPersistence (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:464:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242113108_aqra3l",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113108,
+      "level": "info",
+      "title": "Enhanced Error Logger restarted",
+      "details": {
+        "sessionId": "session_1756242113108_24k2pral5"
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logInfo (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:208:21)\n    at EnhancedErrorLogger.restart (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:466:14)\n    at EnhancedErrorLoggingTests.testDataPersistence (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:464:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242113108_z6q0mu",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113108,
+      "level": "error",
+      "title": "Test export error",
+      "details": {
+        "testData": "error"
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logError (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:200:21)\n    at EnhancedErrorLoggingTests.testExportFunctionality (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:487:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242113109_q5oxwp",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113109,
+      "level": "warning",
+      "title": "Test export warning",
+      "details": {
+        "testData": "warning"
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logWarning (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:204:21)\n    at EnhancedErrorLoggingTests.testExportFunctionality (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:488:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242113109_nrrja0",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242113109,
+      "level": "info",
+      "title": "Test export info",
+      "details": {
+        "testData": "info"
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at EnhancedErrorLogger.log (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:230:52)\n    at EnhancedErrorLogger.logInfo (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:208:21)\n    at EnhancedErrorLoggingTests.testExportFunctionality (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:489:20)\n    at EnhancedErrorLoggingTests.runAllTests (http://127.0.0.1:8000/TOOLS/tests/enhanced-error-logging-tests.js:37:28)\n    at async SuperHEYSDiagnosticCenter.testEnhancedErrorLogging (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3029:37)\n    at async http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2745:40",
+      "classification": null,
+      "suggestions": []
+    },
+    {
+      "id": "log_1756242115786_pnwk8e",
+      "sessionId": "session_1756242113108_24k2pral5",
+      "timestamp": 1756242115786,
+      "level": "error",
+      "title": "Console Error",
+      "details": {
+        "message": "Test error tracking",
+        "source": "console.error",
+        "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at console.error (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:105:34)\n    at SuperHEYSDiagnosticCenter.testErrorTracking (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:4290:33)\n    at SuperHEYSDiagnosticCenter.runFunctionalTests (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3918:51)\n    at async SuperHEYSDiagnosticCenter.runCompleteSuite (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:4101:42)\n    at async completeBtn.onclick (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2391:29)",
+        "timestamp": 1756242115786
+      },
+      "stackTrace": "Error\n    at EnhancedErrorLogger.getStackTrace (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:183:19)\n    at console.error (http://127.0.0.1:8000/TOOLS/enhanced-error-logger.js:105:34)\n    at SuperHEYSDiagnosticCenter.testErrorTracking (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:4290:33)\n    at SuperHEYSDiagnosticCenter.runFunctionalTests (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:3918:51)\n    at async SuperHEYSDiagnosticCenter.runCompleteSuite (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:4101:42)\n    at async completeBtn.onclick (http://127.0.0.1:8000/TESTS/super-diagnostic-center.html:2391:29)",
+      "classification": null,
+      "suggestions": []
+    }
+  ],
+  "totalLogsCount": 6,
+  "filteredLogsCount": 6,
+  "directLogsCount": 6,
+  "debugInfo": {
+    "loggerType": "EnhancedErrorLogger",
+    "hasGetStats": true,
+    "hasGetLogs": true,
+    "sessionId": "session_1756242113108_24k2pral5",
+    "isActive": true,
+    "methodsAvailable": {
+      "getLogs": true,
+      "getStats": true,
+      "logs": true
+    }
+  }
+}

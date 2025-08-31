@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-widt    <div class="test-card">
+        <h3>📝 Лог выполнения</h3>
+        <div id="console-log" class="log" style="max-height: 250px; min-height: 150px;"></div>
+        <button class="test-button" onclick="copyConsoleLog()" style="background: #4299e1; font-size: 12px; padding: 5px 10px; margin-right: 5px;">📋 Копировать лог</button>
+        <button class="test-button" onclick="clearConsoleLog()" style="background: #a0aec0; font-size: 12px; padding: 5px 10px;">🗑️ Очистить лог</button>
+    </div>itial-scale=1.0">
+    <title>HEYS - Быстрый тест интеграции</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        
+        .test-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            color: #9b2c2c;
+        }
+        
+        .status.pending {
+            background: #fef5e7;
+            color: #744210;
+        }
+        
+        .test-button {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .test-button:hover {
+            background: #3182ce;
+        }
+        
+        .log {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        
+        .back-button {
+            background: #718096;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .back-button:hover {
+            background: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div style="margin-bottom: 20px;">
+        <a href="../TESTS/index.html" class="back-button">← Назад к центру тестирования</a>
+    </div>
+    
+    <h1>🔍 HEYS - Тест интеграции умного поиска</h1>
+    <p>Проверяем работает ли современный стек технологий</p>
+    
+    <div class="test-card">
+        <h3>📚 Загрузка модулей</h3>
+        <div id="modules-status" class="status pending">⏳ Проверяем...</div>
+        <div id="modules-log" class="log"></div>
+    </div>
+    
+    <div class="test-card">
+        <h3>🗄️ IndexedDB</h3>
+        <div id="indexeddb-status" class="status pending">⏳ Тестируем...</div>
+        <button class="test-button" onclick="testIndexedDB()">Тест IndexedDB</button>
+        <div id="indexeddb-log" class="log"></div>
+    </div>
+    
+    <div class="test-card">
+        <h3>👷 Web Workers</h3>
+        <div id="workers-status" class="status pending">⏳ Тестируем...</div>
+        <button class="test-button" onclick="testWorkers()">Тест Workers</button>
+        <div id="workers-log" class="log"></div>
+    </div>
+    
+    <div class="test-card">
+        <h3>🧠 Умный поиск</h3>
+        <div id="search-status" class="status pending">⏳ Тестируем...</div>
+        <button class="test-button" onclick="testSmartSearch()">Тест умного поиска</button>
+        <div id="search-log" class="log"></div>
+    </div>
+    
+    <div class="test-card">
+        <h3>� Лог выполнения</h3>
+        <div id="console-log" class="log" style="max-height: 250px; min-height: 150px;"></div>
+        <button class="test-button" onclick="clearConsoleLog()" style="background: #a0aec0; font-size: 12px; padding: 5px 10px;">🗑️ Очистить лог</button>
+    </div>
+    
+    <div class="test-card">
+        <h3>�📊 Общий результат</h3>
+        <div id="overall-status" class="status pending">⏳ Ожидание тестов...</div>
+        <button class="test-button" onclick="runAllTests()" style="background: #48bb78;">🚀 Запустить все тесты</button>
+    </div>
+
+    <!-- Загружаем модули из корневой папки -->
+    <script src="../heys_storage_indexeddb_v1.js"></script>
+    <script src="../heys_worker_manager_v1.js?v=4"></script>
+    <script src="../heys_integration_layer_v1.js"></script>
+    <!-- Загружаем search integration ПОСЛЕ всех основных модулей -->
+    <script src="../modern-search-integration.js?v=2"></script>
+
+    <script>
+        function log(elementId, message) {
+            const logElement = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function setStatus(elementId, status, message) {
+            const statusElement = document.getElementById(elementId);
+            statusElement.className = `status ${status}`;
+            statusElement.textContent = message;
+        }
+        
+        // Перехват консоли для отображения логов
+        // Проверяем, не установлен ли уже перехват
+        let consoleInterceptionSetup = false;
+        
+        function setupConsoleInterception() {
+            if (consoleInterceptionSetup) {
+                console.log('[Debug] Console interception уже установлен');
+                return;
+            }
+            
+            consoleInterceptionSetup = true;
+            console.log('[Debug] Устанавливаем console interception...');
+            
+            const consoleLogDiv = document.getElementById('console-log');
+            const originalLog = console.log;
+            const originalError = console.error;
+            const originalWarn = console.warn;
+
+            const addToConsoleLog = (level, args, color = '#e2e8f0') => {
+                const timestamp = new Date().toLocaleTimeString();
+                const message = args.map(arg => 
+                    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+                ).join(' ');
+                
+                const logEntry = document.createElement('div');
+                logEntry.innerHTML = `<span style="color: #9ca3af;">[${timestamp}]</span> <span style="color: ${color};">[${level}]</span> ${message}`;
+                consoleLogDiv.appendChild(logEntry);
+                consoleLogDiv.scrollTop = consoleLogDiv.scrollHeight;
+            };
+
+            console.log = (...args) => {
+                originalLog.apply(console, args);
+                addToConsoleLog('LOG', args, '#60a5fa');
+            };
+
+            console.error = (...args) => {
+                originalError.apply(console, args);
+                addToConsoleLog('ERROR', args, '#ef4444');
+            };
+
+            console.warn = (...args) => {
+                originalWarn.apply(console, args);
+                addToConsoleLog('WARN', args, '#f59e0b');
+            };
+        }
+        
+        function clearConsoleLog() {
+            document.getElementById('console-log').innerHTML = '';
+        }
+        
+        function copyConsoleLog() {
+            const logDiv = document.getElementById('console-log');
+            const logText = logDiv.innerText || logDiv.textContent;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(logText).then(() => {
+                    addToConsoleLog('LOG', ['📋 Лог скопирован в буфер обмена'], '#10b981');
+                }).catch(err => {
+                    addToConsoleLog('ERROR', ['Ошибка копирования:', err], '#ef4444');
+                });
+            } else {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = logText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                addToConsoleLog('LOG', ['📋 Лог скопирован в буфер обмена (fallback)'], '#10b981');
+            }
+        }
+        
+        // Инициализация перехвата консоли
+        setupConsoleInterception();
+        
+        // Проверка загрузки модулей
+        function checkModules() {
+            console.log('📦 Проверяем загрузку модулей...');
+            
+            // Дополнительная диагностика
+            console.log('window.HEYS:', typeof window.HEYS, window.HEYS);
+            console.log('window.HEYS.integration:', typeof window.HEYS?.integration, window.HEYS?.integration);
+            console.log('window.modernSearchIntegration:', typeof window.modernSearchIntegration, window.modernSearchIntegration);
+            
+            const modules = [
+                { name: 'HEYS Core', check: () => typeof window.HEYS !== 'undefined' },
+                { name: 'IndexedDB Storage', check: () => typeof window.HEYS?.indexedDB !== 'undefined' },
+                { name: 'Web Workers', check: () => typeof window.HEYS?.workers !== 'undefined' },
+                { name: 'Integration Layer', check: () => typeof window.HEYS?.integration !== 'undefined' },
+                { 
+                    name: 'Search Integration', 
+                    check: () => {
+                        const exists = typeof window.modernSearchIntegration !== 'undefined';
+                        if (exists) {
+                            const status = window.modernSearchIntegration;
+                            console.log(`[Debug] Search Integration status:`, status);
+                            return status.loaded === true;
+                        }
+                        console.log(`[Debug] window.modernSearchIntegration не существует`);
+                        return false;
+                    }
+                }
+            ];
+            
+            let allLoaded = true;
+            modules.forEach(module => {
+                const loaded = module.check();
+                const status = loaded ? '✅' : '❌';
+                const message = loaded ? 'Module loaded and available' : 'Module not found or not loaded';
+                
+                console.log(`${status} ${module.name}: ${message}`);
+                log('modules-log', `${module.name}: ${loaded ? '✅ Загружен' : '❌ Не найден'}`);
+                if (!loaded) allLoaded = false;
+            });
+            
+            if (allLoaded) {
+                console.log('🎉 Все модули успешно загружены!');
+                setStatus('modules-status', 'success', '✅ Все модули загружены');
+            } else {
+                console.warn('⚠️ Некоторые модули не загружены');
+                setStatus('modules-status', 'error', '❌ Некоторые модули не загружены');
+            }
+            
+            return allLoaded;
+        }
+        
+        // Тест IndexedDB
+        async function testIndexedDB() {
+            try {
+                console.log('🗄️ Начинаем тест IndexedDB...');
+                setStatus('indexeddb-status', 'pending', '⏳ Тестируем IndexedDB...');
+                log('indexeddb-log', 'Инициализация IndexedDB...');
+                
+                if (!window.HEYS?.indexedDB) {
+                    throw new Error('IndexedDB модуль не найден');
+                }
+                console.log('✅ IndexedDB модуль найден');
+                
+                // Инициализация
+                console.log('🔄 Инициализируем IndexedDB...');
+                await window.HEYS.indexedDB.init();
+                log('indexeddb-log', '✅ IndexedDB инициализирован');
+                console.log('✅ IndexedDB инициализирован');
+                
+                // Тест сохранения
+                console.log('💾 Тестируем сохранение...');
+                const testProducts = [{ id: 'test-1', name: 'Тестовый продукт', calories: 100 }];
+                await window.HEYS.indexedDB.saveProducts(testProducts);
+                log('indexeddb-log', '✅ Продукты сохранены');
+                console.log('✅ Продукты сохранены');
+                
+                // Тест поиска
+                console.log('🔍 Тестируем поиск...');
+                const results = await window.HEYS.indexedDB.searchProducts('тест', 10);
+                log('indexeddb-log', `✅ Поиск выполнен: найдено ${results.length} результатов`);
+                console.log(`✅ Поиск выполнен: найдено ${results.length} результатов`);
+                
+                setStatus('indexeddb-status', 'success', '✅ IndexedDB работает');
+                console.log('🎉 IndexedDB тест завершен успешно');
+                return true;
+            } catch (error) {
+                console.error('💥 Ошибка в IndexedDB тесте:', error);
+                log('indexeddb-log', `❌ Ошибка: ${error.message}`);
+                setStatus('indexeddb-status', 'error', '❌ IndexedDB не работает');
+                return false;
+            }
+        }
+        
+        // Тест Web Workers
+        async function testWorkers() {
+            try {
+                console.log('👷 Начинаем тест Web Workers...');
+                setStatus('workers-status', 'pending', '⏳ Тестируем Workers...');
+                log('workers-log', 'Инициализация Workers...');
+                
+                if (!window.HEYS?.workers) {
+                    throw new Error('Workers модуль не найден');
+                }
+                console.log('✅ Workers модуль найден');
+                
+                // Инициализация
+                console.log('🔄 Инициализируем Workers...');
+                await window.HEYS.workers.init();
+                log('workers-log', '✅ Workers инициализированы');
+                console.log('✅ Workers инициализированы');
+                
+                // Тест задачи через Worker
+                console.log('⚙️ Тестируем выполнение задачи...');
+                const result = await window.HEYS.workers.execute('search', {
+                    query: 'тест',
+                    products: [{ name: 'Тестовый продукт', calories: 100 }],
+                    limit: 5
+                });
+                log('workers-log', `✅ Задача выполнена: результатов ${result?.results?.length || result?.length || 0}`);
+                console.log(`✅ Задача выполнена: результатов ${result?.results?.length || result?.length || 0}`);
+                
+                setStatus('workers-status', 'success', '✅ Workers работают');
+                console.log('🎉 Workers тест завершен успешно');
+                return true;
+            } catch (error) {
+                console.error('💥 Ошибка в Workers тесте:', error);
+                console.error('💥 Stack trace:', error.stack);
+                console.error('💥 Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+                log('workers-log', `❌ Ошибка: ${error.message}`);
+                setStatus('workers-status', 'error', '❌ Workers не работают');
+                return false;
+            }
+        }
+        
+        // Тест умного поиска
+        async function testSmartSearch() {
+            try {
+                console.log('🧠 Начинаем тест умного поиска...');
+                setStatus('search-status', 'pending', '⏳ Тестируем умный поиск...');
+                log('search-log', 'Инициализация интеграционного слоя...');
+                
+                if (!window.HEYS?.integration) {
+                    throw new Error('Integration модуль не найден');
+                }
+                console.log('✅ Integration модуль найден');
+                
+                // Инициализация
+                console.log('🔄 Инициализируем Integration слой...');
+                await window.HEYS.integration.init();
+                log('search-log', '✅ Integration слой инициализирован');
+                console.log('✅ Integration слой инициализирован');
+                
+                // Тест умного поиска
+                console.log('🔍 Тестируем умный поиск...');
+                const startTime = performance.now();
+                const results = await window.HEYS.integration.smartSearch('хлеб', { limit: 10 });
+                const duration = performance.now() - startTime;
+                
+                log('search-log', `✅ Умный поиск выполнен за ${duration.toFixed(1)}ms`);
+                log('search-log', `📊 Источник: ${results.source}, результатов: ${results.results?.length || 0}`);
+                console.log(`✅ Умный поиск выполнен за ${duration.toFixed(1)}ms`);
+                console.log(`📊 Источник: ${results.source}, результатов: ${results.results?.length || 0}`);
+                
+                // Тест производительности
+                console.log('📈 Получаем статистику...');
+                const stats = window.HEYS.integration.getStats();
+                log('search-log', `📈 Статистика: ${JSON.stringify(stats, null, 2)}`);
+                console.log('📈 Статистика:', stats);
+                
+                setStatus('search-status', 'success', `✅ Умный поиск работает (${duration.toFixed(1)}ms)`);
+                console.log('🎉 Smart Search тест завершен успешно');
+                return true;
+            } catch (error) {
+                console.error('💥 Ошибка в Smart Search тесте:', error);
+                log('search-log', `❌ Ошибка: ${error.message}`);
+                setStatus('search-status', 'error', '❌ Умный поиск не работает');
+                return false;
+            }
+        }
+        
+        // Запуск всех тестов
+        async function runAllTests() {
+            console.log('🚀 Запуск всех тестов...');
+            log('search-log', '🚀 Запуск всех тестов...');
+            
+            try {
+                const modulesOk = checkModules();
+                if (!modulesOk) {
+                    setStatus('overall-status', 'error', '❌ Модули не загружены');
+                    return;
+                }
+                
+                console.log('📚 Модули проверены, запускаем IndexedDB тест...');
+                const indexedDBOk = await testIndexedDB();
+                console.log('📊 IndexedDB результат:', indexedDBOk);
+                
+                console.log('👷 Запускаем Workers тест...');
+                const workersOk = await testWorkers();
+                console.log('📊 Workers результат:', workersOk);
+                
+                console.log('🧠 Запускаем Smart Search тест...');
+                const searchOk = await testSmartSearch();
+                console.log('📊 Smart Search результат:', searchOk);
+                
+                const allOk = indexedDBOk && workersOk && searchOk;
+                console.log('📋 Финальный результат:', { indexedDBOk, workersOk, searchOk, allOk });
+                
+                if (allOk) {
+                    setStatus('overall-status', 'success', '🎉 Все тесты пройдены! Умный поиск полностью работает!');
+                } else {
+                    setStatus('overall-status', 'error', '❌ Некоторые тесты не прошли');
+                }
+            } catch (error) {
+                console.error('💥 Ошибка при запуске тестов:', error);
+                setStatus('overall-status', 'error', '💥 Ошибка: ' + error.message);
+            }
+        }
+        
+        // Автоматическая проверка при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            // Добавляем приветственные логи
+            console.log('🚀 Starting HEYS Integration Tests...');
+            console.log('Checking modern web technologies stack...');
+            console.log('Technologies: IndexedDB, Web Workers, Integration Layer');
+            
+            setTimeout(() => {
+                console.log('🔍 Проверяем загрузку модулей...');
+                checkModules();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

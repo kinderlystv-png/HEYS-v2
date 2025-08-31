@@ -1,0 +1,1 @@
+{"version":3,"sources":["../src/index.ts"],"names":["trackEvent","event","data"],"mappings":"AACO,IAAMA,EAAa,CAACC,EAAeC,IAAe,QAAQ,IAAI,SAAUD,EAAOC,CAAI","sourcesContent":["// Analytics placeholder\nexport const trackEvent = (event: string, data?: any) => console.log('Track:', event, data);\n"]}

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEYS - Быстрая проверка исправлений</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        .test-item { 
+            margin: 10px 0; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border-left: 4px solid #ddd; 
+        }
+        .test-item.success { 
+            background: #d4edda; 
+            border-left-color: #28a745; 
+        }
+        .test-item.failure { 
+            background: #f8d7da; 
+            border-left-color: #dc3545; 
+        }
+        .test-item.loading { 
+            background: #fff3cd; 
+            border-left-color: #ffc107; 
+        }
+        .summary { 
+            font-size: 24px; 
+            text-align: center; 
+            margin: 20px 0; 
+            padding: 20px; 
+            border-radius: 10px; 
+        }
+        .summary.good { 
+            background: #d4edda; 
+            color: #155724; 
+        }
+        .summary.warning { 
+            background: #fff3cd; 
+            color: #856404; 
+        }
+        .summary.danger { 
+            background: #f8d7da; 
+            color: #721c24; 
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 8px; 
+            font-family: monospace; 
+            white-space: pre-wrap; 
+            max-height: 300px; 
+            overflow-y: auto; 
+            margin: 20px 0;
+            border: 1px solid #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 HEYS - Быстрая проверка исправлений</h1>
+        <p>Проверяем исправленные модули после обновлений экспортов</p>
+
+        <button onclick="runQuickTest()">🚀 Запустить быструю проверку</button>
+
+        <div id="summary" class="summary" style="display: none;"></div>
+        <div id="results"></div>
+        <div id="log" class="log" style="display: none;"></div>
+    </div>
+
+    <!-- Загружаем основные модули HEYS -->
+    <script src="../heys_core_v12.js"></script>
+    <script src="../heys_day_v12.js"></script>
+    <script src="../heys_user_v12.js"></script>
+    <script src="../heys_storage_supabase_v1.js"></script>
+    <script src="../heys_storage_indexeddb_v1.js"></script>
+    <script src="../heys_performance_monitor.js"></script>
+    <script src="../heys_analytics_ui.js"></script>
+    <script src="../heys_models_v1.js"></script>
+    <script src="../heys_stats_v1.js"></script>
+    <script src="../heys_smart_search_with_typos_v1.js"></script>
+    <script src="../heys_advanced_error_tracker_v1.js"></script>
+    <script src="../heys_worker_manager_v1.js"></script>
+    <script src="../heys_integration_layer_v1.js"></script>
+    <script src="../heys_service_worker_v1.js"></script>
+    <script src="../modern-search-integration.js"></script>
+
+    <script>
+        const testResults = [];
+        
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.style.display = 'block';
+            logDiv.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log('[QuickTest]', message);
+        }
+
+        function addTestResult(name, success, message = '') {
+            testResults.push({ name, success, message });
+            
+            const resultsDiv = document.getElementById('results');
+            const testDiv = document.createElement('div');
+            testDiv.className = `test-item ${success ? 'success' : 'failure'}`;
+            testDiv.innerHTML = `
+                <strong>${success ? '✅' : '❌'} ${name}</strong>
+                ${message ? `<br><small>${message}</small>` : ''}
+            `;
+            resultsDiv.appendChild(testDiv);
+        }
+
+        function updateSummary() {
+            const passed = testResults.filter(t => t.success).length;
+            const total = testResults.length;
+            const percentage = Math.round((passed / total) * 100);
+            
+            const summaryDiv = document.getElementById('summary');
+            summaryDiv.style.display = 'block';
+            summaryDiv.textContent = `Результат: ${passed}/${total} тестов пройдено (${percentage}%)`;
+            
+            if (percentage >= 90) {
+                summaryDiv.className = 'summary good';
+            } else if (percentage >= 70) {
+                summaryDiv.className = 'summary warning';
+            } else {
+                summaryDiv.className = 'summary danger';
+            }
+        }
+
+        async function runQuickTest() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('log').textContent = '';
+            testResults.length = 0;
+            
+            log('Начинаем быструю проверку исправлений...');
+
+            // Ждем инициализации
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            try {
+                // Тест 1: Performance Monitor
+                log('Тестируем Performance Monitor...');
+                if (typeof HEYS.performance === 'object' && typeof HEYS.performance.trackUserInteraction === 'function') {
+                    HEYS.performance.trackUserInteraction('test_event', { test: true });
+                    addTestResult('Performance Monitor', true, 'HEYS.performance экспорт работает');
+                } else {
+                    addTestResult('Performance Monitor', false, 'HEYS.performance не найден или неполный');
+                }
+
+                // Тест 2: Analytics UI
+                log('Тестируем Analytics UI...');
+                if (typeof HEYS.AnalyticsUI === 'object') {
+                    addTestResult('Analytics UI', true, 'HEYS.AnalyticsUI экспорт работает');
+                } else {
+                    addTestResult('Analytics UI', false, 'HEYS.AnalyticsUI не найден');
+                }
+
+                // Тест 3: Models System
+                log('Тестируем Models System...');
+                if (typeof HEYS.validateProduct === 'function' && typeof HEYS.validateDay === 'function') {
+                    const testProduct = { name: 'Test', kcal100: 100 };
+                    const isValid = HEYS.validateProduct(testProduct);
+                    addTestResult('Models System', true, `Валидация продукта: ${isValid}`);
+                } else {
+                    addTestResult('Models System', false, 'Функции валидации не найдены');
+                }
+
+                // Тест 4: Stats System
+                log('Тестируем Stats System...');
+                if (typeof HEYS.Stats === 'object' && HEYS.Stats.StatsTab) {
+                    addTestResult('Stats System', true, 'HEYS.Stats с StatsTab работает');
+                } else {
+                    addTestResult('Stats System', false, 'HEYS.Stats или StatsTab не найдены');
+                }
+
+                // Тест 5: Smart Search
+                log('Тестируем Smart Search...');
+                if (typeof HEYS.SmartSearch === 'object' && typeof HEYS.SmartSearch.search === 'function') {
+                    addTestResult('Smart Search', true, 'HEYS.SmartSearch экспорт работает');
+                } else {
+                    addTestResult('Smart Search', false, 'HEYS.SmartSearch не найден');
+                }
+
+                // Тест 6: Advanced Error Tracker
+                log('Тестируем Advanced Error Tracker...');
+                if (typeof HEYS.errorTracker === 'object' && typeof HEYS.errorTracker.captureException === 'function') {
+                    addTestResult('Advanced Error Tracker', true, 'HEYS.errorTracker экспорт работает');
+                } else {
+                    addTestResult('Advanced Error Tracker', false, 'HEYS.errorTracker не найден');
+                }
+
+                // Тест 7: IndexedDB Storage
+                log('Тестируем IndexedDB Storage...');
+                if (typeof HEYS.indexedDB === 'object' && typeof HEYS.indexedDB.init === 'function') {
+                    addTestResult('IndexedDB Storage', true, 'HEYS.indexedDB экспорт работает');
+                } else {
+                    addTestResult('IndexedDB Storage', false, 'HEYS.indexedDB не найден');
+                }
+
+                // Тест 8: Worker Manager
+                log('Тестируем Worker Manager...');
+                if (typeof HEYS.WorkerManager === 'object' && typeof HEYS.WorkerManager.createWorker === 'function') {
+                    addTestResult('Worker Manager', true, 'HEYS.WorkerManager экспорт работает');
+                } else {
+                    addTestResult('Worker Manager', false, 'HEYS.WorkerManager не найден');
+                }
+
+                // Тест 9: Integration Layer
+                log('Тестируем Integration Layer...');
+                if (typeof HEYS.integration === 'object' && typeof HEYS.integration.init === 'function') {
+                    addTestResult('Integration Layer', true, 'HEYS.integration экспорт работает');
+                } else {
+                    addTestResult('Integration Layer', false, 'HEYS.integration не найден');
+                }
+
+                // Тест 10: Supabase Connection
+                log('Тестируем Supabase Connection...');
+                if (typeof HEYS.SupabaseConnection === 'object' && typeof HEYS.SupabaseConnection.connect === 'function') {
+                    addTestResult('Supabase Connection', true, 'HEYS.SupabaseConnection экспорт работает');
+                } else {
+                    addTestResult('Supabase Connection', false, 'HEYS.SupabaseConnection не найден');
+                }
+
+                // Тест 11: Service Worker
+                log('Тестируем Service Worker...');
+                if (typeof HEYS.serviceWorker === 'object' && typeof HEYS.serviceWorker.register === 'function') {
+                    addTestResult('Service Worker', true, 'HEYS.serviceWorker экспорт работает');
+                } else {
+                    addTestResult('Service Worker', false, 'HEYS.serviceWorker не найден');
+                }
+
+                // Тест 12: Modern Search Integration
+                log('Тестируем Modern Search Integration...');
+                if (typeof HEYS.ModernSearch === 'object' && typeof HEYS.ModernSearch.smartSearch === 'function') {
+                    addTestResult('Modern Search Integration', true, 'HEYS.ModernSearch экспорт работает');
+                } else {
+                    addTestResult('Modern Search Integration', false, 'HEYS.ModernSearch не найден');
+                }
+
+                log('Быстрая проверка завершена');
+                updateSummary();
+
+            } catch (error) {
+                log('Ошибка при выполнении тестов: ' + error.message);
+                addTestResult('Общая ошибка', false, error.message);
+                updateSummary();
+            }
+        }
+
+        // Автозапуск через 2 секунды
+        setTimeout(() => {
+            log('Автоматический запуск проверки...');
+            runQuickTest();
+        }, 2000);
+    </script>
+</body>
+</html>

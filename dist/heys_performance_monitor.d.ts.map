@@ -1,0 +1,1 @@
+{"version":3,"file":"heys_performance_monitor.d.ts","sourceRoot":"","sources":["../heys_performance_monitor.ts"],"names":[],"mappings":"AAEA,OAAO,KAAK,EAAE,UAAU,EAAkC,MAAM,cAAc,CAAC;AA+G/E,OAAO,CAAC,MAAM,CAAC;IACb,UAAU,MAAM;QACd,IAAI,EAAE,UAAU,CAAC;QACjB,WAAW,EAAE,WAAW,CAAC;QACzB,mBAAmB,CAAC,EAAE,GAAG,CAAC;KAC3B;CACF"}

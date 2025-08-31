@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест кнопок</title>
+</head>
+<body>
+    <h1>Тест кнопок функционального тестирования</h1>
+    
+    <button id="run-functional-tests">🧪 Функциональные тесты</button>
+    <button id="run-complete-suite">🏆 ПОЛНОЕ ТЕСТИРОВАНИЕ</button>
+    
+    <div id="logs" style="margin-top: 20px; border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto;"></div>
+    
+    <script>
+        class TestClass {
+            constructor() {
+                this.logs = [];
+                this.setupEventListeners();
+            }
+            
+            log(message, type = 'info') {
+                console.log(`[${type}] ${message}`);
+                const logsDiv = document.getElementById('logs');
+                logsDiv.innerHTML += `<div style="color: ${type === 'error' ? 'red' : type === 'success' ? 'green' : 'black'}">[${new Date().toLocaleTimeString()}] ${message}</div>`;
+                logsDiv.scrollTop = logsDiv.scrollHeight;
+            }
+            
+            setupEventListeners() {
+                console.log('Настройка обработчиков событий...');
+                
+                const functionalBtn = document.getElementById('run-functional-tests');
+                const completeBtn = document.getElementById('run-complete-suite');
+                
+                console.log('Функциональная кнопка найдена:', !!functionalBtn);
+                console.log('Кнопка полного тестирования найдена:', !!completeBtn);
+                
+                if (functionalBtn) {
+                    functionalBtn.onclick = async () => {
+                        console.log('🧪 Клик по кнопке функциональных тестов');
+                        try {
+                            await this.runFunctionalTests();
+                        } catch (error) {
+                            this.log(`❌ Ошибка функциональных тестов: ${error.message}`, 'error');
+                        }
+                    };
+                }
+                
+                if (completeBtn) {
+                    completeBtn.onclick = async () => {
+                        console.log('🏆 Клик по кнопке полного тестирования');
+                        try {
+                            await this.runCompleteSuite();
+                        } catch (error) {
+                            this.log(`❌ Ошибка полного тестирования: ${error.message}`, 'error');
+                        }
+                    };
+                }
+            }
+            
+            async runFunctionalTests() {
+                console.log('🧪 ФУНКЦИОНАЛЬНЫЕ ТЕСТЫ: Метод вызван');
+                this.log('🧪 ЗАПУСК ФУНКЦИОНАЛЬНЫХ ТЕСТОВ', 'info');
+                
+                // Имитация тестов
+                for (let i = 1; i <= 3; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    this.log(`✅ Тест ${i} выполнен`, 'success');
+                }
+                
+                this.log('🏆 Функциональные тесты завершены!', 'success');
+            }
+            
+            async runCompleteSuite() {
+                console.log('🏆 ПОЛНОЕ ТЕСТИРОВАНИЕ: Метод вызван');
+                this.log('🏆 ЗАПУСК ПОЛНОГО НАБОРА ТЕСТОВ', 'info');
+                
+                // Имитация полного тестирования
+                this.log('📋 ЭТАП 1: СТРУКТУРНОЕ ТЕСТИРОВАНИЕ', 'info');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                this.log('🧪 ЭТАП 2: ФУНКЦИОНАЛЬНОЕ ТЕСТИРОВАНИЕ', 'info');
+                await this.runFunctionalTests();
+                
+                this.log('🎯 ПОЛНОЕ ТЕСТИРОВАНИЕ ЗАВЕРШЕНО!', 'success');
+            }
+        }
+        
+        // Инициализация после загрузки страницы
+        window.addEventListener('load', () => {
+            console.log('Страница загружена, создаем TestClass...');
+            const testInstance = new TestClass();
+            console.log('TestClass создан:', testInstance);
+        });
+    </script>
+</body>
+</html>

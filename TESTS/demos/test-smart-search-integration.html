@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест интеграции умного поиска</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .test-input { margin: 10px 0; }
+        .test-input input { padding: 8px; width: 300px; }
+        .results { margin: 10px 0; max-height: 300px; overflow-y: auto; }
+        .result-item { padding: 5px; margin: 2px 0; background: #f8f9fa; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест интеграции умного поиска в HEYS</h1>
+    
+    <div id="status"></div>
+    
+    <div class="test-input">
+        <input type="text" id="search-query" placeholder="Введите запрос для тестирования (например: молак, хлеп)" />
+        <button onclick="testSearch()">Тестировать поиск</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <!-- Подключаем модули -->
+    <script src="heys_advanced_error_tracker_v1.js"></script>
+    <script src="heys_smart_search_with_typos_v1.js"></script>
+    
+    <script>
+        // Инициализация HEYS
+        window.HEYS = window.HEYS || {};
+        
+        // Тестовые продукты
+        const testProducts = [
+            { id: 1, name: 'Хлеб белый', category: 'Хлебобулочные', kcal100: 265 },
+            { id: 2, name: 'Молоко 3.2%', category: 'Молочные', kcal100: 60 },
+            { id: 3, name: 'Курица филе', category: 'Мясные', kcal100: 165 },
+            { id: 4, name: 'Картофель', category: 'Овощи', kcal100: 80 },
+            { id: 5, name: 'Яблоки', category: 'Фрукты', kcal100: 52 },
+            { id: 6, name: 'Молоко обезжиренное', category: 'Молочные', kcal100: 35 },
+            { id: 7, name: 'Мола (приправа)', category: 'Специи', kcal100: 15 },
+            { id: 8, name: 'Морковь', category: 'Овощи', kcal100: 35 },
+            { id: 9, name: 'Мука пшеничная', category: 'Бакалея', kcal100: 334 },
+            { id: 10, name: 'Макароны', category: 'Бакалея', kcal100: 371 }
+        ];
+        
+        function updateStatus(message, type = 'success') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        function checkIntegration() {
+            const checks = [];
+            
+            // Проверяем HEYS namespace
+            if (window.HEYS) {
+                checks.push('✅ HEYS namespace доступен');
+            } else {
+                checks.push('❌ HEYS namespace недоступен');
+            }
+            
+            // Проверяем SmartSearchWithTypos
+            if (window.HEYS.SmartSearchWithTypos) {
+                checks.push('✅ SmartSearchWithTypos загружен');
+                
+                if (typeof window.HEYS.SmartSearchWithTypos.search === 'function') {
+                    checks.push('✅ Метод search доступен');
+                } else {
+                    checks.push('❌ Метод search недоступен');
+                }
+            } else {
+                checks.push('❌ SmartSearchWithTypos не загружен');
+            }
+            
+            // Проверяем AdvancedErrorTracker
+            if (window.HEYS.AdvancedErrorTracker) {
+                checks.push('✅ AdvancedErrorTracker загружен');
+            } else {
+                checks.push('❌ AdvancedErrorTracker не загружен');
+            }
+            
+            const allOk = checks.every(check => check.startsWith('✅'));
+            const status = allOk ? 'success' : 'error';
+            
+            updateStatus(checks.join('<br>'), status);
+            
+            return allOk;
+        }
+        
+        function testSearch() {
+            const query = document.getElementById('search-query').value.trim();
+            const resultsDiv = document.getElementById('results');
+            
+            if (!query) {
+                resultsDiv.innerHTML = '<div class="status warning">⚠️ Введите запрос для поиска</div>';
+                return;
+            }
+            
+            if (!checkIntegration()) {
+                resultsDiv.innerHTML = '<div class="status error">❌ Система не готова к тестированию</div>';
+                return;
+            }
+            
+            try {
+                const startTime = performance.now();
+                
+                const result = window.HEYS.SmartSearchWithTypos.search(query, testProducts, {
+                    enablePhonetic: true,
+                    enableSynonyms: true,
+                    maxSuggestions: 10
+                });
+                
+                const searchTime = performance.now() - startTime;
+                
+                let html = `<h3>🔍 Результаты поиска для "${query}"</h3>`;
+                html += `<p><strong>Время поиска:</strong> ${searchTime.toFixed(2)} мс</p>`;
+                html += `<p><strong>Найдено:</strong> ${result.results.length} результатов</p>`;
+                
+                if (result.corrections && result.corrections.length > 0) {
+                    html += '<h4>🔧 Исправления опечаток:</h4>';
+                    result.corrections.forEach(correction => {
+                        html += `<div class="result-item">
+                            "${correction.original}" → "${correction.corrected}" 
+                            (уверенность: ${Math.round(correction.confidence * 100)}%)
+                        </div>`;
+                    });
+                }
+                
+                if (result.results.length > 0) {
+                    html += '<h4>📊 Найденные продукты:</h4>';
+                    result.results.forEach((product, index) => {
+                        const matchTypeText = {
+                            'exact': 'точное совпадение',
+                            'typo': 'исправлена опечатка',
+                            'synonym': 'синоним',
+                            'phonetic': 'фонетическое'
+                        };
+                        
+                        html += `<div class="result-item">
+                            <strong>${index + 1}. ${product.name}</strong> (${product.category})
+                            <br><small>Тип: ${matchTypeText[product.matchType] || product.matchType}, 
+                            Релевантность: ${Math.round(product.relevance)}, 
+                            Калории: ${product.kcal100}/100г</small>
+                        </div>`;
+                    });
+                } else {
+                    html += '<div class="status warning">⚠️ Продукты не найдены</div>';
+                }
+                
+                if (result.searchStats) {
+                    html += '<h4>📈 Статистика:</h4>';
+                    html += `<div class="result-item">
+                        Точные: ${result.searchStats.exactMatches}, 
+                        Опечатки: ${result.searchStats.typoMatches}, 
+                        Синонимы: ${result.searchStats.synonymMatches}, 
+                        Фонетические: ${result.searchStats.phoneticMatches}
+                    </div>`;
+                }
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="status error">❌ Ошибка: ${error.message}</div>`;
+                console.error('Search error:', error);
+            }
+        }
+        
+        // Автоматическая проверка при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(checkIntegration, 100);
+            
+            // Тест по Enter
+            document.getElementById('search-query').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    testSearch();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

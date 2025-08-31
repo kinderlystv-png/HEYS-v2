@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+dist/
+build/
+coverage/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Legacy and temporary files
+heys_*.js
+temp/
+TESTS/
+старые МЕТОДОЛОГИИ И ИНСТРУКЦИИ ДЛЯ ИИ/
+
+# Build artifacts
+*.tgz
+*.tar.gz
+.next/
+.turbo/
+storybook-static/
+
+# Package manager
+.pnpm-store/
+.yarn/
+.npm/

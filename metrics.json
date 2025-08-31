@@ -1,0 +1,48 @@
+{
+  "uptime": 1756634426074,
+  "checks": [
+    {
+      "timestamp": "2025-08-31T10:00:30.148Z",
+      "status": "unhealthy",
+      "results": [
+        {
+          "endpoint": "Health Check",
+          "status": "error",
+          "error": "Health Check error: ",
+          "attempts": 3,
+          "timestamp": "2025-08-31T10:00:28.125Z"
+        },
+        {
+          "endpoint": "API Status",
+          "status": "error",
+          "error": "API Status error: ",
+          "attempts": 3,
+          "timestamp": "2025-08-31T10:00:30.148Z"
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "lastCheck": {
+    "status": "unhealthy",
+    "healthPercentage": 0,
+    "healthyEndpoints": 0,
+    "totalEndpoints": 2,
+    "results": [
+      {
+        "endpoint": "Health Check",
+        "status": "error",
+        "error": "Health Check error: ",
+        "attempts": 3,
+        "timestamp": "2025-08-31T10:00:28.125Z"
+      },
+      {
+        "endpoint": "API Status",
+        "status": "error",
+        "error": "API Status error: ",
+        "attempts": 3,
+        "timestamp": "2025-08-31T10:00:30.148Z"
+      }
+    ]
+  }
+}

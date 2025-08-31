@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HEYS System Comprehensive Test Suite</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        padding: 30px;
+      }
+      h1 {
+        color: #4a5568;
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 2.5em;
+      }
+      .test-section {
+        margin: 30px 0;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #3182ce;
+      }
+      .test-item {
+        margin: 15px 0;
+        padding: 15px;
+        background: white;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+      }
+      .status {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 12px;
+      }
+      .status.success {
+        background: #c6f6d5;
+        color: #22543d;
+      }
+      .status.error {
+        background: #fed7d7;
+        color: #742a2a;
+      }
+      .status.warning {
+        background: #fefcbf;
+        color: #744210;
+      }
+      .status.loading {
+        background: #bee3f8;
+        color: #2a4365;
+      }
+      .test-name {
+        font-weight: bold;
+        color: #2d3748;
+        margin-bottom: 8px;
+      }
+      .test-result {
+        margin: 8px 0;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+      }
+      .button {
+        background: #3182ce;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        margin: 10px 5px;
+        transition: background 0.3s;
+      }
+      .button:hover {
+        background: #2c5282;
+      }
+      .button.success {
+        background: #38a169;
+      }
+      .button.error {
+        background: #e53e3e;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+      }
+      .metric-card {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .metric-value {
+        font-size: 2em;
+        font-weight: bold;
+        color: #3182ce;
+      }
+      .metric-label {
+        color: #718096;
+        font-size: 14px;
+      }
+      .log-output {
+        background: #1a202c;
+        color: #e2e8f0;
+        padding: 15px;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        margin: 15px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🧪 HEYS System Comprehensive Test Suite</h1>
+
+      <div class="metrics" id="metricsPanel">
+        <div class="metric-card">
+          <div class="metric-value" id="totalTests">0</div>
+          <div class="metric-label">Total Tests</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" id="passedTests">0</div>
+          <div class="metric-label">Passed</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" id="failedTests">0</div>
+          <div class="metric-label">Failed</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" id="testProgress">0%</div>
+          <div class="metric-label">Progress</div>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin: 20px 0">
+        <button class="button" onclick="runAllTests()">🚀 Run All Tests</button>
+        <button class="button" onclick="runDiagnostics()">🔍 Run Diagnostics</button>
+        <button class="button" onclick="clearLogs()">🧹 Clear Logs</button>
+      </div>
+
+      <div class="test-section">
+        <h2>📊 Smart Search Engine Tests</h2>
+        <div class="test-item" id="smartSearchTest">
+          <div class="test-name">HEYS.SmartSearchEngine</div>
+          <div class="status loading">WAITING</div>
+          <div class="test-result" id="smartSearchResult"></div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>🔗 Integration Layer Tests</h2>
+        <div class="test-item" id="integrationTest">
+          <div class="test-name">HEYS.IntegrationLayer</div>
+          <div class="status loading">WAITING</div>
+          <div class="test-result" id="integrationResult"></div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>📈 Reports Manager Tests</h2>
+        <div class="test-item" id="reportsTest">
+          <div class="test-name">HEYS.ReportsManager</div>
+          <div class="status loading">WAITING</div>
+          <div class="test-result" id="reportsResult"></div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>🛡️ Security & Validation Tests</h2>
+        <div class="test-item" id="securityTest">
+          <div class="test-name">HEYS.SecurityValidationManager</div>
+          <div class="status loading">WAITING</div>
+          <div class="test-result" id="securityResult"></div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>🧪 Input Validation Logic Tests</h2>
+        <div class="test-item" id="validationLogicTest">
+          <div class="test-name">Input Validation Logic</div>
+          <div class="status loading">WAITING</div>
+          <div class="test-result" id="validationLogicResult"></div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>🔒 Security Headers Tests</h2>
+        <div class="test-item" id="securityHeadersTest">
+          <div class="test-name">Security Headers Logic</div>
+          <div class="status loading">WAITING</div>
+          <div class="test-result" id="securityHeadersResult"></div>
+        </div>
+      </div>
+
+      <div class="log-output" id="logOutput">
+        <div>📋 Test logs will appear here...</div>
+      </div>
+    </div>
+
+    <!-- Загружаем все модули HEYS -->
+    <script src="heys_core_v12.js"></script>
+    <script src="heys_smart_search.js"></script>
+    <script src="heys_integration_layer.js"></script>
+    <script src="heys_reports_v12.js"></script>
+    <script src="heys_security_validation.js"></script>
+
+    <script>
+      // Глобальные переменные для тестирования
+      let testResults = {
+        total: 0,
+        passed: 0,
+        failed: 0,
+      };
+
+      let testStartTime = 0;
+
+      /**
+       * Логирование в консоль тестов
+       */
+      function logTest(message, type = 'info') {
+        const logOutput = document.getElementById('logOutput');
+        const timestamp = new Date().toLocaleTimeString();
+        const emoji = type === 'error' ? '❌' : type === 'success' ? '✅' : '📝';
+
+        const logEntry = document.createElement('div');
+        logEntry.innerHTML = `[${timestamp}] ${emoji} ${message}`;
+        logOutput.appendChild(logEntry);
+        logOutput.scrollTop = logOutput.scrollHeight;
+
+        console.log(`[HEYS-TEST] ${message}`);
+      }
+
+      /**
+       * Обновление метрик тестов
+       */
+      function updateMetrics() {
+        document.getElementById('totalTests').textContent = testResults.total;
+        document.getElementById('passedTests').textContent = testResults.passed;
+        document.getElementById('failedTests').textContent = testResults.failed;
+
+        const progress =
+          testResults.total > 0
+            ? Math.round(((testResults.passed + testResults.failed) / testResults.total) * 100)
+            : 0;
+        document.getElementById('testProgress').textContent = progress + '%';
+      }
+
+      /**
+       * Обновление статуса теста
+       */
+      function updateTestStatus(testId, status, result) {
+        const testElement = document.getElementById(testId);
+        const statusElement = testElement.querySelector('.status');
+        const resultElement = testElement.querySelector('.test-result');
+
+        statusElement.className = `status ${status}`;
+        statusElement.textContent = status.toUpperCase();
+
+        if (result) {
+          resultElement.innerHTML = result;
+        }
+      }
+
+      /**
+       * Тест Smart Search Engine
+       */
+      async function testSmartSearchEngine() {
+        logTest('Testing Smart Search Engine...');
+        testResults.total++;
+
+        try {
+          // Проверяем наличие класса
+          if (typeof window.HEYS === 'undefined' || !window.HEYS.SmartSearchEngine) {
+            throw new Error('HEYS.SmartSearchEngine не найден');
+          }
+
+          // Создаем экземпляр
+          const searchEngine = new window.HEYS.SmartSearchEngine({
+            language: 'ru',
+            fuzzySearch: true,
+          });
+
+          // Тестируем индексацию
+          const testData = [
+            { id: 1, title: 'Тестовая запись', content: 'Содержимое для поиска' },
+            { id: 2, title: 'Другая запись', content: 'Ещё одно содержимое' },
+          ];
+
+          await searchEngine.indexData(testData);
+
+          // Тестируем поиск
+          const searchResults = searchEngine.search('тест');
+
+          if (searchResults.length === 0) {
+            throw new Error('Поиск не вернул результатов');
+          }
+
+          // Проверяем метрики
+          const metrics = searchEngine.getMetrics();
+          if (!metrics.totalDocuments || metrics.totalDocuments !== 2) {
+            throw new Error('Неверные метрики индексации');
+          }
+
+          updateTestStatus(
+            'smartSearchTest',
+            'success',
+            `✅ Проиндексировано: ${metrics.totalDocuments} документов<br>` +
+              `🔍 Найдено результатов: ${searchResults.length}<br>` +
+              `📊 Уникальных терминов: ${metrics.uniqueTerms}`
+          );
+
+          testResults.passed++;
+          logTest('Smart Search Engine test PASSED', 'success');
+        } catch (error) {
+          updateTestStatus('smartSearchTest', 'error', `❌ ${error.message}`);
+          testResults.failed++;
+          logTest(`Smart Search Engine test FAILED: ${error.message}`, 'error');
+        }
+      }
+
+      /**
+       * Тест Integration Layer
+       */
+      async function testIntegrationLayer() {
+        logTest('Testing Integration Layer...');
+        testResults.total++;
+
+        try {
+          if (typeof window.HEYS === 'undefined' || !window.HEYS.IntegrationLayer) {
+            throw new Error('HEYS.IntegrationLayer не найден');
+          }
+
+          const integrationLayer = new window.HEYS.IntegrationLayer({
+            enableLogging: true,
+            enableMetrics: true,
+          });
+
+          // Тестируем подключение к тестовому сервису
+          const connectionResult = await integrationLayer.connectAPI('rest', {
+            baseURL: 'https://jsonplaceholder.typicode.com',
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          if (!connectionResult.connectionId) {
+            throw new Error('Не удалось создать подключение');
+          }
+
+          // Тестируем получение подключений
+          const connections = integrationLayer.getConnections();
+          if (connections.total === 0) {
+            throw new Error('Подключения не найдены');
+          }
+
+          // Тестируем метрики
+          const metrics = integrationLayer.getMetrics();
+
+          updateTestStatus(
+            'integrationTest',
+            'success',
+            `✅ Активных подключений: ${connections.active}<br>` +
+              `🔗 ID подключения: ${connectionResult.connectionId}<br>` +
+              `📊 Сервис: ${connectionResult.service}`
+          );
+
+          testResults.passed++;
+          logTest('Integration Layer test PASSED', 'success');
+        } catch (error) {
+          updateTestStatus('integrationTest', 'error', `❌ ${error.message}`);
+          testResults.failed++;
+          logTest(`Integration Layer test FAILED: ${error.message}`, 'error');
+        }
+      }
+
+      /**
+       * Тест Reports Manager
+       */
+      async function testReportsManager() {
+        logTest('Testing Reports Manager...');
+        testResults.total++;
+
+        try {
+          if (typeof window.HEYS === 'undefined' || !window.HEYS.ReportsManager) {
+            throw new Error('HEYS.ReportsManager не найден');
+          }
+
+          const reportsManager = window.HEYS.ReportsManager;
+
+          // Проверяем наличие основных методов
+          const requiredMethods = ['invalidateCache', 'getDayData', 'getWeekData', 'clearAllCache'];
+          const missingMethods = requiredMethods.filter(
+            method => typeof reportsManager[method] !== 'function'
+          );
+
+          if (missingMethods.length > 0) {
+            throw new Error(`Отсутствуют методы: ${missingMethods.join(', ')}`);
+          }
+
+          // Проверяем наличие компонента ReportsTab
+          if (!reportsManager.ReportsTab) {
+            throw new Error('ReportsTab компонент не найден');
+          }
+
+          updateTestStatus(
+            'reportsTest',
+            'success',
+            `✅ Все методы доступны: ${requiredMethods.length}<br>` +
+              `📊 ReportsTab компонент: Найден<br>` +
+              `🔧 Экспорт в namespace: Корректен`
+          );
+
+          testResults.passed++;
+          logTest('Reports Manager test PASSED', 'success');
+        } catch (error) {
+          updateTestStatus('reportsTest', 'error', `❌ ${error.message}`);
+          testResults.failed++;
+          logTest(`Reports Manager test FAILED: ${error.message}`, 'error');
+        }
+      }
+
+      /**
+       * Тест Security & Validation Manager
+       */
+      async function testSecurityValidationManager() {
+        logTest('Testing Security & Validation Manager...');
+        testResults.total++;
+
+        try {
+          if (typeof window.HEYS === 'undefined' || !window.HEYS.SecurityValidationManager) {
+            throw new Error('HEYS.SecurityValidationManager не найден');
+          }
+
+          const securityManager = new window.HEYS.SecurityValidationManager({
+            enableStrictMode: true,
+            enableLogging: true,
+          });
+
+          // Тестируем валидацию email
+          const emailTest = securityManager.validateInput('test@example.com', 'email');
+          if (!emailTest.valid) {
+            throw new Error('Email валидация не работает');
+          }
+
+          // Тестируем санитизацию HTML
+          const htmlTest = securityManager.sanitizeHtml(
+            '&lt;script&gt;alert("xss")&lt;/script&gt;'
+          );
+          if (htmlTest.includes('&lt;script&gt;')) {
+            throw new Error('HTML санитизация не работает');
+          }
+
+          // Тестируем XSS детекцию
+          const xssTest = securityManager.checkXSS('&lt;script&gt;alert("test")&lt;/script&gt;');
+          if (xssTest.safe) {
+            throw new Error('XSS детекция не работает');
+          }
+
+          // Проверяем интеграционную проверку
+          const integrityCheck = securityManager.runIntegrityCheck();
+          if (!integrityCheck.passed) {
+            throw new Error('Integrity check не прошел');
+          }
+
+          updateTestStatus(
+            'securityTest',
+            'success',
+            `✅ Email валидация: Работает<br>` +
+              `🧼 HTML санитизация: Работает<br>` +
+              `🛡️ XSS детекция: Работает<br>` +
+              `🔍 Integrity check: Пройден`
+          );
+
+          testResults.passed++;
+          logTest('Security & Validation Manager test PASSED', 'success');
+        } catch (error) {
+          updateTestStatus('securityTest', 'error', `❌ ${error.message}`);
+          testResults.failed++;
+          logTest(`Security & Validation Manager test FAILED: ${error.message}`, 'error');
+        }
+      }
+
+      /**
+       * Тест логики валидации входных данных
+       */
+      async function testValidationLogic() {
+        logTest('Testing Input Validation Logic...');
+        testResults.total++;
+
+        try {
+          const securityManager = new window.HEYS.SecurityValidationManager();
+
+          const testCases = [
+            // Email валидация
+            { value: 'valid@email.com', type: 'email', shouldPass: true },
+            { value: 'invalid-email', type: 'email', shouldPass: false },
+            { value: null, type: 'email', shouldPass: false },
+
+            // URL валидация
+            { value: 'https://example.com', type: 'url', shouldPass: true },
+            { value: 'invalid-url', type: 'url', shouldPass: false },
+            { value: 'javascript:alert(1)', type: 'url', shouldPass: false },
+
+            // Number валидация
+            { value: '123.45', type: 'number', args: [0, 1000], shouldPass: true },
+            { value: 'not-a-number', type: 'number', shouldPass: false },
+            { value: '2000', type: 'number', args: [0, 1000], shouldPass: false },
+
+            // Password валидация
+            { value: 'ValidPass123', type: 'password', shouldPass: true },
+            { value: '123', type: 'password', shouldPass: false },
+            { value: 'onlyletters', type: 'password', shouldPass: false },
+          ];
+
+          let passedCases = 0;
+          let totalCases = testCases.length;
+
+          for (const testCase of testCases) {
+            const result = securityManager.validateInput(
+              testCase.value,
+              testCase.type,
+              ...(testCase.args || [])
+            );
+
+            if (result.valid === testCase.shouldPass) {
+              passedCases++;
+            } else {
+              logTest(`Validation logic failed for ${testCase.type}: ${testCase.value}`, 'error');
+            }
+          }
+
+          if (passedCases !== totalCases) {
+            throw new Error(`Провалено ${totalCases - passedCases} из ${totalCases} тест-кейсов`);
+          }
+
+          updateTestStatus(
+            'validationLogicTest',
+            'success',
+            `✅ Пройдено тестов: ${passedCases}/${totalCases}<br>` +
+              `📧 Email валидация: Исправлена<br>` +
+              `🔗 URL валидация: Исправлена<br>` +
+              `🔢 Number валидация: Исправлена<br>` +
+              `🔑 Password валидация: Исправлена`
+          );
+
+          testResults.passed++;
+          logTest('Input Validation Logic test PASSED', 'success');
+        } catch (error) {
+          updateTestStatus('validationLogicTest', 'error', `❌ ${error.message}`);
+          testResults.failed++;
+          logTest(`Input Validation Logic test FAILED: ${error.message}`, 'error');
+        }
+      }
+
+      /**
+       * Тест логики заголовков безопасности
+       */
+      async function testSecurityHeaders() {
+        logTest('Testing Security Headers Logic...');
+        testResults.total++;
+
+        try {
+          const securityManager = new window.HEYS.SecurityValidationManager();
+
+          // Проверяем заголовки безопасности
+          const headers = securityManager.applySecurityHeaders();
+
+          const requiredHeaders = [
+            'Content-Security-Policy',
+            'X-Content-Type-Options',
+            'X-Frame-Options',
+            'X-XSS-Protection',
+            'Referrer-Policy',
+          ];
+
+          const missingHeaders = requiredHeaders.filter(header => !headers.has(header));
+
+          if (missingHeaders.length > 0) {
+            throw new Error(`Отсутствуют заголовки: ${missingHeaders.join(', ')}`);
+          }
+
+          // Проверяем правильность CSP
+          const csp = headers.get('Content-Security-Policy');
+          if (!csp.includes("default-src 'self'")) {
+            throw new Error('CSP заголовок некорректен');
+          }
+
+          // Проверяем X-Frame-Options
+          const frameOptions = headers.get('X-Frame-Options');
+          if (frameOptions !== 'DENY') {
+            throw new Error('X-Frame-Options заголовок некорректен');
+          }
+
+          updateTestStatus(
+            'securityHeadersTest',
+            'success',
+            `✅ Заголовков настроено: ${headers.size}<br>` +
+              `🔒 CSP: Корректен<br>` +
+              `🚫 X-Frame-Options: DENY<br>` +
+              `🛡️ XSS Protection: Включена<br>` +
+              `📋 Все обязательные заголовки: Присутствуют`
+          );
+
+          testResults.passed++;
+          logTest('Security Headers Logic test PASSED', 'success');
+        } catch (error) {
+          updateTestStatus('securityHeadersTest', 'error', `❌ ${error.message}`);
+          testResults.failed++;
+          logTest(`Security Headers Logic test FAILED: ${error.message}`, 'error');
+        }
+      }
+
+      /**
+       * Запуск всех тестов
+       */
+      async function runAllTests() {
+        logTest('🚀 Starting comprehensive test suite...');
+        testStartTime = Date.now();
+
+        // Сброс результатов
+        testResults = { total: 0, passed: 0, failed: 0 };
+        updateMetrics();
+
+        // Запуск всех тестов последовательно
+        await testSmartSearchEngine();
+        updateMetrics();
+
+        await testIntegrationLayer();
+        updateMetrics();
+
+        await testReportsManager();
+        updateMetrics();
+
+        await testSecurityValidationManager();
+        updateMetrics();
+
+        await testValidationLogic();
+        updateMetrics();
+
+        await testSecurityHeaders();
+        updateMetrics();
+
+        const testDuration = Date.now() - testStartTime;
+        const successRate = Math.round((testResults.passed / testResults.total) * 100);
+
+        logTest(`🏁 Test suite completed in ${testDuration}ms`);
+        logTest(`📊 Results: ${testResults.passed}/${testResults.total} passed (${successRate}%)`);
+
+        if (testResults.failed === 0) {
+          logTest('🎉 All tests PASSED! HEYS system is healthy.', 'success');
+        } else {
+          logTest(`⚠️ ${testResults.failed} tests FAILED. Review errors above.`, 'error');
+        }
+      }
+
+      /**
+       * Диагностика системы
+       */
+      async function runDiagnostics() {
+        logTest('🔍 Running system diagnostics...');
+
+        // Проверяем HEYS namespace
+        if (typeof window.HEYS === 'undefined') {
+          logTest('❌ HEYS namespace не найден', 'error');
+          return;
+        }
+
+        logTest('✅ HEYS namespace найден', 'success');
+
+        // Проверяем все модули
+        const modules = [
+          'SmartSearchEngine',
+          'IntegrationLayer',
+          'ReportsManager',
+          'SecurityValidationManager',
+        ];
+
+        modules.forEach(module => {
+          if (window.HEYS[module]) {
+            logTest(`✅ ${module}: Загружен`, 'success');
+          } else {
+            logTest(`❌ ${module}: Не найден`, 'error');
+          }
+        });
+
+        logTest('🔍 Diagnostics completed');
+      }
+
+      /**
+       * Очистка логов
+       */
+      function clearLogs() {
+        document.getElementById('logOutput').innerHTML = '<div>📋 Test logs cleared...</div>';
+      }
+
+      // Автоматический запуск диагностики при загрузке
+      window.addEventListener('load', () => {
+        setTimeout(runDiagnostics, 1000);
+      });
+    </script>
+  </body>
+</html>

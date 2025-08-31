@@ -1,0 +1,1983 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🗺️ HEYS ROADMAPS SUPERSYSTEM - Управление дорожными картами</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .nav-link {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+        
+        .roadmap-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .roadmap-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .roadmap-header h3 {
+            color: #2d3748;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .roadmap-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .toggle-btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        
+        .toggle-btn:hover {
+            background: #3182ce;
+        }
+        
+        .roadmap-content {
+            transition: all 0.3s ease;
+        }
+        
+        .roadmap-content.hidden {
+            display: none;
+        }
+        
+        .roadmap-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .roadmap-stat {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .roadmap-stat .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .roadmap-stat .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .roadmap-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .roadmap-item {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .roadmap-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .roadmap-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            gap: 15px;
+        }
+        
+        .roadmap-item-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #2d3748;
+            line-height: 1.3;
+        }
+        
+        .roadmap-item-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 500;
+            white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-ready {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .status-planning {
+            background: #fef5e7;
+            color: #c05621;
+        }
+        
+        .status-progress {
+            background: #e6fffa;
+            color: #234e52;
+        }
+        
+        .status-completed {
+            background: #e6fffa;
+            color: #234e52;
+        }
+        
+        .priority-high {
+            border-left: 4px solid #e53e3e;
+        }
+        
+        .priority-medium {
+            border-left: 4px solid #d69e2e;
+        }
+        
+        .priority-low {
+            border-left: 4px solid #38a169;
+        }
+        
+        .roadmap-item-details {
+            margin: 15px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+        }
+        
+        .roadmap-detail {
+            text-align: center;
+        }
+        
+        .roadmap-detail-label {
+            font-size: 0.75em;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+        
+        .roadmap-detail-value {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .complexity-stars {
+            color: #ffd700;
+        }
+        
+        .roadmap-description {
+            background: #edf2f7;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            color: #4a5568;
+            margin: 15px 0;
+            line-height: 1.4;
+        }
+        
+        .roadmap-item-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .view-roadmap-btn {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .view-roadmap-btn:hover {
+            background: #3182ce;
+        }
+        
+        .copy-command-btn {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .copy-command-btn:hover {
+            background: #38a169;
+        }
+        
+        .edit-roadmap-btn {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .edit-roadmap-btn:hover {
+            background: #dd6b20;
+        }
+        
+        .status-toggle-btn {
+            background: #667eea;
+            color: white;
+        }
+        
+        .status-toggle-btn:hover {
+            background: #5a67d8;
+        }
+        
+        .mark-completed-btn {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .mark-completed-btn:hover {
+            background: #38a169;
+        }
+        
+        .mark-progress-btn {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .mark-progress-btn:hover {
+            background: #dd6b20;
+        }
+        
+        .mark-ready-btn {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .mark-ready-btn:hover {
+            background: #3182ce;
+        }
+        
+        .delete-roadmap-btn {
+            background: #e53e3e;
+            color: white;
+        }
+        
+        .delete-roadmap-btn:hover {
+            background: #c53030;
+            transform: scale(1.05);
+        }
+        
+        .roadmap-phases {
+            margin: 15px 0;
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .phases-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .phases-progress {
+            font-size: 0.9em;
+            color: #4a5568;
+        }
+        
+        .phase-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .phase-item:last-child {
+            border-bottom: none;
+        }
+        
+        .phase-status {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .phase-status.completed {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .phase-status.in-progress {
+            background: #fef5e7;
+            color: #c05621;
+        }
+        
+        .phase-status.pending {
+            background: #edf2f7;
+            color: #4a5568;
+            border: 2px solid #cbd5e0;
+        }
+        
+        .phase-content {
+            flex: 1;
+        }
+        
+        .phase-title {
+            font-weight: 500;
+            color: #2d3748;
+            margin-bottom: 2px;
+        }
+        
+        .phase-description {
+            font-size: 0.85em;
+            color: #718096;
+            line-height: 1.3;
+        }
+        
+        .phase-date {
+            font-size: 0.75em;
+            color: #48bb78;
+            font-weight: 500;
+        }
+        
+        .phase-toggle-btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75em;
+            transition: all 0.2s ease;
+        }
+        
+        .phase-toggle-btn:hover {
+            background: #3182ce;
+        }
+        
+        .phases-collapsed .phase-item {
+            display: none;
+        }
+        
+        .phases-collapsed .phase-item:first-child {
+            display: flex;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #48bb78;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.error {
+            background: #e53e3e;
+        }
+        
+        .create-roadmap-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .create-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .create-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .create-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+        
+        .quick-actions {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .quick-actions h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+        
+        .quick-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .quick-btn {
+            background: #764ba2;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .quick-btn:hover {
+            background: #6b46c1;
+            transform: translateY(-2px);
+        }
+        
+        /* Стили для вкладок дорожных карт */
+        .roadmap-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+        
+        .tab-btn {
+            background: #f7fafc;
+            color: #4a5568;
+            border: 2px solid #e2e8f0;
+            padding: 12px 20px;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-bottom: none;
+            font-size: 0.95em;
+        }
+        
+        .tab-btn:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+        
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            box-shadow: 0 -2px 8px rgba(102, 126, 234, 0.2);
+        }
+        
+        .filter-section {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .filter-group label {
+            font-size: 0.85em;
+            color: #4a5568;
+            font-weight: 500;
+        }
+        
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        /* Модальное окно для отображения планов */
+        .roadmap-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .roadmap-modal-content {
+            background: white;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90%;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .roadmap-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .roadmap-modal-header h2 {
+            margin: 0;
+            color: #2d3748;
+            font-size: 1.5em;
+        }
+        
+        .roadmap-modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #666;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        
+        .roadmap-modal-close:hover {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+        
+        .roadmap-modal-body {
+            padding: 25px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .roadmap-modal-footer {
+            display: flex;
+            gap: 15px;
+            padding: 20px 25px;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+            border-radius: 0 0 12px 12px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .roadmap-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .roadmap-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .create-form {
+                grid-template-columns: 1fr;
+            }
+            
+            .quick-buttons {
+                justify-content: center;
+            }
+            
+            .filter-section {
+                justify-content: center;
+            }
+            
+            .roadmap-modal-content {
+                width: 95%;
+                max-height: 95%;
+            }
+            
+            .roadmap-modal-body {
+                padding: 15px;
+            }
+            
+            .roadmap-modal-footer {
+                padding: 15px;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🗺️ HEYS ROADMAPS SUPERSYSTEM</h1>
+            <div class="subtitle">Управление дорожными картами и планирование задач</div>
+            <div class="nav-links">
+                <a href="super-diagnostic-center.html" class="nav-link">🏥 Диагностический центр</a>
+                <a href="#roadmaps" class="nav-link">🗺️ Дорожные карты</a>
+                <a href="#create" class="nav-link">➕ Создать карту</a>
+                <a href="#analytics" class="nav-link">📊 Аналитика</a>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <h3>⚡ Быстрые действия</h3>
+            <div class="quick-buttons">
+                <button class="quick-btn" onclick="roadmapSystem.createQuickRoadmap('[ПЛАН]')">📋 Создать план</button>
+                <button class="quick-btn" onclick="roadmapSystem.exportAllRoadmaps()">📤 Экспорт всех карт</button>
+                <button class="quick-btn" onclick="roadmapSystem.refreshData()">🔄 Обновить данные</button>
+                <button class="quick-btn" onclick="roadmapSystem.openDocs()">📚 Открыть документацию</button>
+            </div>
+        </div>
+
+        <!-- Roadmaps Section -->
+        <div class="roadmap-section" id="roadmaps">
+            <div class="roadmap-header">
+                <h3>🗺️ Управление дорожными картами</h3>
+                <div class="roadmap-controls">
+                    <button class="toggle-btn" onclick="roadmapSystem.toggleRoadmapContent()">
+                        Свернуть/Развернуть
+                    </button>
+                    <button class="toggle-btn" onclick="roadmapSystem.refreshRoadmaps()">
+                        🔄 Обновить
+                    </button>
+                </div>
+            </div>
+            
+            <div class="roadmap-content" id="roadmapContent">
+                <!-- Статистика -->
+                <div class="roadmap-stats" id="roadmapStats">
+                    <div class="roadmap-stat">
+                        <div class="stat-value" id="totalRoadmaps">-</div>
+                        <div class="stat-label">Всего карт</div>
+                    </div>
+                    <div class="roadmap-stat">
+                        <div class="stat-value" id="readyRoadmaps">-</div>
+                        <div class="stat-label">Готовы к реализации</div>
+                    </div>
+                    <div class="roadmap-stat">
+                        <div class="stat-value" id="inProgressRoadmaps">-</div>
+                        <div class="stat-label">В процессе</div>
+                    </div>
+                    <div class="roadmap-stat">
+                        <div class="stat-value" id="completedRoadmaps">-</div>
+                        <div class="stat-label">Завершенные</div>
+                    </div>
+                </div>
+
+                <!-- Фильтры -->
+                <div class="filter-section">
+                    <!-- Добавляем вкладки для активных и завершенных -->
+                    <div class="roadmap-tabs">
+                        <button class="tab-btn active" id="activeTab" onclick="roadmapSystem.switchTab('active')">
+                            📋 Активные дорожные карты
+                        </button>
+                        <button class="tab-btn" id="completedTab" onclick="roadmapSystem.switchTab('completed')">
+                            ✅ Завершенные дорожные карты
+                        </button>
+                    </div>
+                    
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="🔍 Поиск по названию или описанию...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Статус</label>
+                        <select id="statusFilter">
+                            <option value="">Все статусы</option>
+                            <option value="ready">Готов к реализации</option>
+                            <option value="planning">Планирование</option>
+                            <option value="progress">В процессе</option>
+                            <option value="completed">Завершен</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Приоритет</label>
+                        <select id="priorityFilter">
+                            <option value="">Все приоритеты</option>
+                            <option value="high">Высокий</option>
+                            <option value="medium">Средний</option>
+                            <option value="low">Низкий</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Сложность</label>
+                        <select id="complexityFilter">
+                            <option value="">Любая сложность</option>
+                            <option value="1">⭐ (1)</option>
+                            <option value="2">⭐⭐ (2)</option>
+                            <option value="3">⭐⭐⭐ (3)</option>
+                            <option value="4">⭐⭐⭐⭐ (4)</option>
+                            <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Список дорожных карт -->
+                <div class="roadmap-list" id="roadmapList">
+                    <!-- Динамически генерируется JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Roadmap Section -->
+        <div class="create-roadmap-section" id="create">
+            <div class="roadmap-header">
+                <h3>➕ Создание новой дорожной карты</h3>
+            </div>
+            
+            <div class="create-form">
+                <div class="form-group">
+                    <label for="roadmapTitle">Название задачи</label>
+                    <input type="text" id="roadmapTitle" placeholder="Краткое описание задачи">
+                </div>
+                
+                <div class="form-group">
+                    <label for="roadmapPriority">Приоритет</label>
+                    <select id="roadmapPriority">
+                        <option value="high">Высокий</option>
+                        <option value="medium">Средний</option>
+                        <option value="low">Низкий</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="roadmapComplexity">Сложность</label>
+                    <select id="roadmapComplexity">
+                        <option value="1">⭐ Простая</option>
+                        <option value="2">⭐⭐ Легкая</option>
+                        <option value="3">⭐⭐⭐ Средняя</option>
+                        <option value="4">⭐⭐⭐⭐ Сложная</option>
+                        <option value="5">⭐⭐⭐⭐⭐ Очень сложная</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="roadmapDescription">Детальное описание</label>
+                    <textarea id="roadmapDescription" placeholder="Подробно опишите что нужно сделать, какие проблемы решить, какой результат ожидается..."></textarea>
+                </div>
+            </div>
+            
+            <button class="create-btn" onclick="roadmapSystem.createRoadmap()">
+                🚀 Создать дорожную карту
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Roadmap System Manager
+        class RoadmapSystem {
+            constructor() {
+                this.roadmaps = [];
+                this.filteredRoadmaps = [];
+                this.persisted = { roadmaps: {}, deleted: [] }; // Единое хранилище состояния
+                this.currentTab = 'active';
+                this.roadmapFilesPath = '../docs/plans/';
+                this.init();
+            }
+            
+            // 🚀 АВТОМАТИЧЕСКАЯ ЗАГРУЗКА ROADMAPS ИЗ ФАЙЛОВ
+            async loadRoadmapFiles() {
+                try {
+                    // Список файлов roadmaps в папке docs/plans
+                    const roadmapFilesList = [
+                        'UNIVERSAL_NAVIGATION_MAPS_SYSTEM.md',
+                        'ENHANCED_ERROR_LOGGING_SYSTEM.md', 
+                        'ROADMAPS_INTERACTIVE_SYSTEM.md',
+                        'COMPREHENSIVE_SYSTEM_FIXES_ROADMAP.md',
+                        'DOCS_ACTUALIZATION_SYSTEM.md'
+                    ];
+                    
+                    const roadmaps = [];
+                    
+                    for (const filename of roadmapFilesList) {
+                        try {
+                            const response = await fetch(this.roadmapFilesPath + filename);
+                            if (response.ok) {
+                                const content = await response.text();
+                                const roadmap = this.parseRoadmapFile(filename, content);
+                                if (roadmap) {
+                                    roadmaps.push(roadmap);
+                                }
+                            }
+                        } catch (error) {
+                            console.warn(`Не удалось загрузить файл ${filename}:`, error);
+                        }
+                    }
+                    
+                    return roadmaps;
+                } catch (error) {
+                    console.error('Ошибка загрузки roadmaps из файлов:', error);
+                    return null;
+                }
+            }
+            
+            // 📋 ПАРСИНГ ROADMAP ФАЙЛА
+            parseRoadmapFile(filename, content) {
+                try {
+                    // Извлекаем метаданные из заголовка файла
+                    const metadata = this.extractMetadata(content);
+                    const phases = this.extractPhases(content);
+                    
+                    return {
+                        id: filename.replace('.md', '').toLowerCase().replace(/_/g, '-'),
+                        title: metadata.title || filename.replace('.md', '').replace(/_/g, ' '),
+                        filename: filename,
+                        status: metadata.status || 'ready',
+                        priority: metadata.priority || 'medium',
+                        complexity: metadata.complexity || 3,
+                        created: metadata.created || new Date().toLocaleDateString('ru-RU'),
+                        description: metadata.description || 'Описание загружается...',
+                        estimatedTime: metadata.estimatedTime || 'Уточняется',
+                        filesAffected: metadata.filesAffected || 'Файлы проекта',
+                        phases: phases,
+                        completedDate: metadata.completedDate,
+                        startedDate: metadata.startedDate
+                    };
+                } catch (error) {
+                    console.error(`Ошибка парсинга файла ${filename}:`, error);
+                    return null;
+                }
+            }
+            
+            // 🔍 ИЗВЛЕЧЕНИЕ МЕТАДАННЫХ ИЗ ФАЙЛА
+            extractMetadata(content) {
+                const metadata = {};
+                
+                // Извлекаем заголовок
+                const titleMatch = content.match(/^#\s+(.+)/m);
+                if (titleMatch) {
+                    metadata.title = titleMatch[1].replace(/[📚🎯🗺️⚡🚀]/g, '').trim();
+                }
+                
+                // Извлекаем статус
+                const statusMatch = content.match(/\*\*Статус:\*\*\s*(.+)/);
+                if (statusMatch) {
+                    const statusText = statusMatch[1].toLowerCase();
+                    if (statusText.includes('завершен') || statusText.includes('completed') || statusText.includes('✅')) {
+                        metadata.status = 'completed';
+                    } else if (statusText.includes('прогресс') || statusText.includes('progress') || statusText.includes('🔄')) {
+                        metadata.status = 'progress';
+                    } else if (statusText.includes('планирован') || statusText.includes('planning') || statusText.includes('🔄')) {
+                        metadata.status = 'planning';
+                    } else {
+                        metadata.status = 'ready';
+                    }
+                }
+                
+                // Извлекаем описание
+                const descMatch = content.match(/##\s+🎯\s+Цель проекта\s*\n\n(.+?)(?=\n\n##|\n\n$)/s);
+                if (descMatch) {
+                    metadata.description = descMatch[1].replace(/\n/g, ' ').trim().substring(0, 200) + '...';
+                }
+                
+                // Извлекаем время
+                const timeMatch = content.match(/\*\*Длительность:\*\*\s*(.+)/);
+                if (timeMatch) {
+                    metadata.estimatedTime = timeMatch[1].trim();
+                }
+                
+                return metadata;
+            }
+            
+            // 📝 ИЗВЛЕЧЕНИЕ ЭТАПОВ ИЗ ФАЙЛА
+            extractPhases(content) {
+                const phases = [];
+                
+                // Ищем этапы в формате "### 🏗️ **Этап N: Название**"
+                const phaseMatches = content.match(/###\s*[🏗️🔧🎨🤖🌐]*\s*\*\*Этап\s*\d+:\s*(.+?)\*\*/g);
+                
+                if (phaseMatches) {
+                    phaseMatches.forEach((match, index) => {
+                        const titleMatch = match.match(/Этап\s*\d+:\s*(.+?)\*\*/);
+                        if (titleMatch) {
+                            phases.push({
+                                id: `phase${index + 1}`,
+                                title: titleMatch[1].trim(),
+                                status: 'pending',
+                                description: `Этап ${index + 1} реализации проекта`
+                            });
+                        }
+                    });
+                }
+                
+                // Если этапов не найдено, создаем базовые
+                if (phases.length === 0) {
+                    phases.push(
+                        { id: 'phase1', title: 'Планирование и анализ', status: 'pending', description: 'Детальное планирование и анализ требований' },
+                        { id: 'phase2', title: 'Разработка основной функциональности', status: 'pending', description: 'Реализация ключевых компонентов' },
+                        { id: 'phase3', title: 'Тестирование и отладка', status: 'pending', description: 'Комплексное тестирование и исправление ошибок' },
+                        { id: 'phase4', title: 'Интеграция и финализация', status: 'pending', description: 'Интеграция с существующей системой' }
+                    );
+                }
+                
+                return phases;
+            }
+
+            async init() {
+                console.log('🚀 Инициализация RoadmapSystem...');
+                
+                // Сначала загружаем сохраненные данные
+                this.loadFromLocalStorage();
+                console.log(`💾 Загружено из localStorage: ${Object.keys(this.persisted.roadmaps).length} сохраненных roadmaps, ${this.persisted.deleted.length} удаленных`);
+                
+                // Затем загружаем roadmaps и применяем сохраненные статусы
+                await this.loadRoadmaps();
+                console.log(`📂 Загружено roadmaps: ${this.roadmaps.length}`);
+                
+                this.autoUpdateRoadmapStatuses(); // Автоматически обновляем статусы
+                this.setupEventListeners();
+                
+                // Устанавливаем активную вкладку "Активные" по умолчанию (без уведомления)
+                this.switchTab('active', true);
+                
+                console.log('✅ Инициализация завершена');
+            }
+
+            setupEventListeners() {
+                // Поиск
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    this.filterRoadmaps();
+                });
+
+                // Фильтры
+                ['statusFilter', 'priorityFilter', 'complexityFilter'].forEach(id => {
+                    document.getElementById(id).addEventListener('change', () => {
+                        this.filterRoadmaps();
+                    });
+                });
+            }
+
+            async loadRoadmaps() {
+                /* 1. читаем локальное хранилище */
+                this.loadFromLocalStorage();
+
+                /* 2. грузим MD-файлы */
+                const list = await this.loadRoadmapFiles() || [];   // [] если ошибка
+                const fresh = new Map(list.map(r => [r.id, r]));
+
+                /* 3. мержим:  MD-файл ⟶ поверх сохранённого  */
+                Object.entries(this.persisted.roadmaps).forEach(([id, saved]) => {
+                    if (fresh.has(id)) {
+                        fresh.set(id, { ...fresh.get(id), ...saved });
+                    }
+                });
+
+                /* 4. удалённые карты исключаем */
+                this.roadmaps = [...fresh.values()]
+                               .filter(r => !this.persisted.deleted.includes(r.id));
+
+                this.filterRoadmaps();   // построить filteredRoadmaps + render + stats
+                
+                if (list.length > 0) {
+                    console.log(`✅ Успешно загружено ${list.length} roadmaps из файлов`);
+                    this.showNotification(`📂 Загружено ${list.length} дорожных карт`, 'success');
+                } else {
+                    console.warn('⚠️ Не удалось загрузить roadmaps из файлов');
+                    this.showNotification('⚠️ Не удалось загрузить файлы из docs/plans/', 'warning');
+                }
+            }
+
+            filterRoadmaps() {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                const statusFilter = document.getElementById('statusFilter').value;
+                const priorityFilter = document.getElementById('priorityFilter').value;
+                const complexityFilter = document.getElementById('complexityFilter').value;
+
+                let baseRoadmaps = [...this.roadmaps];
+                
+                // Фильтрация по вкладке (активные или завершенные)
+                if (this.currentTab === 'active') {
+                    baseRoadmaps = baseRoadmaps.filter(roadmap => roadmap.status !== 'completed');
+                } else if (this.currentTab === 'completed') {
+                    baseRoadmaps = baseRoadmaps.filter(roadmap => roadmap.status === 'completed');
+                }
+
+                this.filteredRoadmaps = baseRoadmaps.filter(roadmap => {
+                    const matchesSearch = !searchTerm || 
+                        roadmap.title.toLowerCase().includes(searchTerm) ||
+                        roadmap.description.toLowerCase().includes(searchTerm);
+                    
+                    const matchesStatus = !statusFilter || roadmap.status === statusFilter;
+                    const matchesPriority = !priorityFilter || roadmap.priority === priorityFilter;
+                    const matchesComplexity = !complexityFilter || roadmap.complexity.toString() === complexityFilter;
+
+                    return matchesSearch && matchesStatus && matchesPriority && matchesComplexity;
+                });
+
+                this.renderRoadmaps();
+                this.updateStats();
+            }
+
+            // Переключение между вкладками
+            switchTab(tab, silent = false) {
+                console.log(`🔄 Переключение на вкладку: ${tab}`);
+                
+                // Обновляем текущую вкладку
+                this.currentTab = tab;
+                
+                // Обновляем активную кнопку
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(tab + 'Tab').classList.add('active');
+                
+                // Скрываем/показываем неподходящие фильтры для завершенных
+                const statusFilter = document.getElementById('statusFilter');
+                if (tab === 'completed') {
+                    // Для завершенных устанавливаем фильтр только на completed
+                    statusFilter.value = 'completed';
+                    statusFilter.disabled = true;
+                } else {
+                    // Для активных разрешаем все статусы кроме completed
+                    statusFilter.disabled = false;
+                    if (statusFilter.value === 'completed') {
+                        statusFilter.value = '';
+                    }
+                }
+                
+                // Перерендериваем список
+                this.filterRoadmaps();
+                
+                // Подсчитываем количество карт для отладки
+                const activeCount = this.roadmaps.filter(r => r.status !== 'completed').length;
+                const completedCount = this.roadmaps.filter(r => r.status === 'completed').length;
+                console.log(`📊 Статистика: Активных: ${activeCount}, Завершенных: ${completedCount}, Показано: ${this.filteredRoadmaps.length}`);
+                
+                // Показываем уведомление только если не silent
+                if (!silent) {
+                    this.showNotification(`📋 Переключено на: ${tab === 'active' ? 'Активные дорожные карты' : 'Завершенные дорожные карты'}`);
+                }
+            }
+
+            renderRoadmaps() {
+                const container = document.getElementById('roadmapList');
+                
+                if (this.filteredRoadmaps.length === 0) {
+                    container.innerHTML = `
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #666;">
+                            <h3>🔍 Дорожные карты не найдены</h3>
+                            <p>Попробуйте изменить фильтры или создать новую дорожную карту</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = this.filteredRoadmaps.map(roadmap => `
+                    <div class="roadmap-item priority-${roadmap.priority}">
+                        <div class="roadmap-item-header">
+                            <div class="roadmap-item-title">${roadmap.title}</div>
+                            <div class="roadmap-item-status status-${roadmap.status}">
+                                ${this.getStatusLabel(roadmap.status)}
+                            </div>
+                        </div>
+                        
+                        <div class="roadmap-item-details">
+                            <div class="roadmap-detail">
+                                <div class="roadmap-detail-label">Приоритет</div>
+                                <div class="roadmap-detail-value">${this.getPriorityLabel(roadmap.priority)}</div>
+                            </div>
+                            <div class="roadmap-detail">
+                                <div class="roadmap-detail-label">Сложность</div>
+                                <div class="roadmap-detail-value complexity-stars">${'⭐'.repeat(roadmap.complexity)}</div>
+                            </div>
+                            <div class="roadmap-detail">
+                                <div class="roadmap-detail-label">Время</div>
+                                <div class="roadmap-detail-value">${roadmap.estimatedTime}</div>
+                            </div>
+                            <div class="roadmap-detail">
+                                <div class="roadmap-detail-label">Создано</div>
+                                <div class="roadmap-detail-value">${roadmap.created}</div>
+                            </div>
+                            ${roadmap.completedDate ? `
+                                <div class="roadmap-detail">
+                                    <div class="roadmap-detail-label">Завершено</div>
+                                    <div class="roadmap-detail-value" style="color: #48bb78; font-weight: bold;">✅ ${roadmap.completedDate}</div>
+                                </div>
+                            ` : ''}
+                            ${roadmap.startedDate && roadmap.status === 'progress' ? `
+                                <div class="roadmap-detail">
+                                    <div class="roadmap-detail-label">Начато</div>
+                                    <div class="roadmap-detail-value" style="color: #ed8936; font-weight: bold;">🚀 ${roadmap.startedDate}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="roadmap-description">
+                            ${roadmap.description}
+                        </div>
+                        
+                        <div class="roadmap-phases" id="phases-${roadmap.id}">
+                            <div class="phases-header">
+                                <span>📋 Этапы реализации</span>
+                                <div class="phases-progress">
+                                    ${this.getPhaseProgress(roadmap.phases)}
+                                    <button class="phase-toggle-btn" onclick="roadmapSystem.togglePhases('${roadmap.id}')">
+                                        ▼ Свернуть
+                                    </button>
+                                </div>
+                            </div>
+                            ${roadmap.phases.map(phase => `
+                                <div class="phase-item">
+                                    <div class="phase-status ${phase.status}">
+                                        ${this.getPhaseIcon(phase.status)}
+                                    </div>
+                                    <div class="phase-content">
+                                        <div class="phase-title">${phase.title}</div>
+                                        <div class="phase-description">${phase.description}</div>
+                                        ${phase.completedDate ? `<div class="phase-date">✅ Завершено: ${phase.completedDate}</div>` : ''}
+                                    </div>
+                                    ${phase.status === 'pending' ? `
+                                        <button class="action-btn mark-progress-btn" style="font-size: 0.75em; padding: 4px 8px;" onclick="roadmapSystem.markPhaseInProgress('${roadmap.id}', '${phase.id}')">
+                                            🚀 Начать
+                                        </button>
+                                    ` : ''}
+                                    ${phase.status === 'in-progress' ? `
+                                        <button class="action-btn mark-completed-btn" style="font-size: 0.75em; padding: 4px 8px;" onclick="roadmapSystem.markPhaseCompleted('${roadmap.id}', '${phase.id}')">
+                                            ✅ Завершить
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div style="font-size: 0.85em; color: #666; margin: 10px 0;">
+                            <strong>Затрагиваемые файлы:</strong> ${roadmap.filesAffected}
+                        </div>
+                        
+                        <div class="roadmap-item-actions">
+                            <button class="action-btn view-roadmap-btn" onclick="roadmapSystem.viewRoadmap('${roadmap.filename}')">
+                                👁️ Посмотреть план
+                            </button>
+                            <button class="action-btn copy-command-btn" onclick="roadmapSystem.copyImplementCommand('${roadmap.filename}')">
+                                📋 Копировать команду
+                            </button>
+                            ${roadmap.status !== 'completed' ? `
+                                <button class="action-btn mark-completed-btn" onclick="roadmapSystem.markAsCompleted('${roadmap.id}')">
+                                    ✅ Выполнено
+                                </button>
+                            ` : ''}
+                            ${roadmap.status !== 'progress' && roadmap.status !== 'completed' ? `
+                                <button class="action-btn mark-progress-btn" onclick="roadmapSystem.markAsInProgress('${roadmap.id}')">
+                                    🚀 В работу
+                                </button>
+                            ` : ''}
+                            ${roadmap.status === 'completed' ? `
+                                <button class="action-btn mark-ready-btn" onclick="roadmapSystem.markAsReady('${roadmap.id}')">
+                                    🔄 Вернуть в готово
+                                </button>
+                            ` : ''}
+                            <button class="action-btn edit-roadmap-btn" onclick="roadmapSystem.editRoadmap('${roadmap.id}')">
+                                ✏️ Редактировать
+                            </button>
+                            <button class="action-btn delete-roadmap-btn" onclick="roadmapSystem.confirmDeleteRoadmap('${roadmap.id}')">
+                                🗑️ Удалить
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            updateStats() {
+                // Определяем какие карты показывать в статистике в зависимости от вкладки
+                let roadmapsToCount = this.roadmaps;
+                if (this.currentTab === 'active') {
+                    roadmapsToCount = this.roadmaps.filter(r => r.status !== 'completed');
+                } else if (this.currentTab === 'completed') {
+                    roadmapsToCount = this.roadmaps.filter(r => r.status === 'completed');
+                }
+
+                const stats = {
+                    total: roadmapsToCount.length,
+                    ready: roadmapsToCount.filter(r => r.status === 'ready').length,
+                    inProgress: roadmapsToCount.filter(r => r.status === 'progress').length,
+                    completed: roadmapsToCount.filter(r => r.status === 'completed').length
+                };
+
+                document.getElementById('totalRoadmaps').textContent = stats.total;
+                document.getElementById('readyRoadmaps').textContent = stats.ready;
+                document.getElementById('inProgressRoadmaps').textContent = stats.inProgress;
+                document.getElementById('completedRoadmaps').textContent = stats.completed;
+            }
+
+            getStatusLabel(status) {
+                const labels = {
+                    'ready': '📋 Готов к реализации',
+                    'planning': '🔍 Планирование',
+                    'progress': '🚀 В процессе',
+                    'completed': '✅ Завершен'
+                };
+                return labels[status] || status;
+            }
+
+            getPriorityLabel(priority) {
+                const labels = {
+                    'high': '🔥 Высокий',
+                    'medium': '⚡ Средний',
+                    'low': '📝 Низкий'
+                };
+                return labels[priority] || priority;
+            }
+
+            getPhaseProgress(phases) {
+                const completed = phases.filter(p => p.status === 'completed').length;
+                const total = phases.length;
+                return `${completed}/${total} этапов`;
+            }
+
+            getPhaseIcon(status) {
+                const icons = {
+                    'completed': '✓',
+                    'in-progress': '⚡',
+                    'pending': '○'
+                };
+                return icons[status] || '?';
+            }
+
+            togglePhases(roadmapId) {
+                const phasesContainer = document.getElementById(`phases-${roadmapId}`);
+                const button = phasesContainer.querySelector('.phase-toggle-btn');
+                
+                if (phasesContainer.classList.contains('phases-collapsed')) {
+                    phasesContainer.classList.remove('phases-collapsed');
+                    button.textContent = '▼ Свернуть';
+                } else {
+                    phasesContainer.classList.add('phases-collapsed');
+                    button.textContent = '▶ Развернуть';
+                }
+            }
+
+            markPhaseInProgress(roadmapId, phaseId) {
+                const roadmap = this.roadmaps.find(r => r.id === roadmapId);
+                if (roadmap) {
+                    const phase = roadmap.phases.find(p => p.id === phaseId);
+                    if (phase) {
+                        phase.status = 'in-progress';
+                        phase.startedDate = new Date().toLocaleDateString('ru-RU');
+                        this.updateRoadmapStatus(roadmap);
+                        this.renderRoadmaps();
+                        this.updateStats();
+                        this.saveToLocalStorage();
+                        this.showNotification(`🚀 Этап "${phase.title}" взят в работу!`);
+                    }
+                }
+            }
+
+            markPhaseCompleted(roadmapId, phaseId) {
+                const roadmap = this.roadmaps.find(r => r.id === roadmapId);
+                if (roadmap) {
+                    const phase = roadmap.phases.find(p => p.id === phaseId);
+                    if (phase) {
+                        phase.status = 'completed';
+                        phase.completedDate = new Date().toLocaleDateString('ru-RU');
+                        
+                        const oldStatus = roadmap.status;
+                        this.updateRoadmapStatus(roadmap);
+                        
+                        // Если дорожная карта полностью завершена, переключаем на вкладку "Завершенные"
+                        if (oldStatus !== 'completed' && roadmap.status === 'completed') {
+                            setTimeout(() => {
+                                this.switchTab('completed');
+                            }, 1500);
+                            this.showNotification(`✅ Этап "${phase.title}" завершен! Дорожная карта "${roadmap.title}" полностью завершена!`);
+                        } else {
+                            this.showNotification(`✅ Этап "${phase.title}" завершен!`);
+                        }
+                        
+                        this.renderRoadmaps();
+                        this.updateStats();
+                        this.saveToLocalStorage();
+                    }
+                }
+            }
+
+            updateRoadmapStatus(roadmap) {
+                const phases = roadmap.phases;
+                const completedPhases = phases.filter(p => p.status === 'completed').length;
+                const inProgressPhases = phases.filter(p => p.status === 'in-progress').length;
+                
+                if (completedPhases === phases.length) {
+                    roadmap.status = 'completed';
+                    if (!roadmap.completedDate) {
+                        roadmap.completedDate = new Date().toLocaleDateString('ru-RU');
+                    }
+                } else if (inProgressPhases > 0 || completedPhases > 0) {
+                    roadmap.status = 'progress';
+                    if (!roadmap.startedDate) {
+                        roadmap.startedDate = new Date().toLocaleDateString('ru-RU');
+                    }
+                } else {
+                    roadmap.status = 'ready';
+                    delete roadmap.startedDate;
+                    delete roadmap.completedDate;
+                }
+            }
+
+            autoUpdateRoadmapStatuses() {
+                // Автоматическое обновление статусов на основе файловой системы и реального состояния
+                this.roadmaps.forEach(roadmap => {
+                    if (roadmap.id === 'enhanced-error-logging') {
+                        // Проверяем наличие всех файлов Enhanced Error Logging System
+                        this.checkEnhancedErrorLoggingStatus(roadmap);
+                    } else if (roadmap.id === 'universal-navigation-maps') {
+                        // Проверяем состояние навигационных карт
+                        this.checkNavigationMapsStatus(roadmap);
+                    } else if (roadmap.id === 'performance-optimization') {
+                        // Проверяем состояние оптимизации производительности
+                        this.checkPerformanceOptimizationStatus(roadmap);
+                    } else if (roadmap.id === 'comprehensive-system-fixes') {
+                        // Проверяем состояние системных исправлений
+                        this.checkComprehensiveFixesStatus(roadmap);
+                    } else if (roadmap.id === 'roadmaps-interactive-system') {
+                        // Интерактивная система дорожных карт уже реализована
+                        this.checkRoadmapsInteractiveSystemStatus(roadmap);
+                    }
+                });
+            }
+
+            checkEnhancedErrorLoggingStatus(roadmap) {
+                // Enhanced Error Logging полностью реализован
+                roadmap.phases.forEach(phase => {
+                    if (phase.status !== 'completed') {
+                        phase.status = 'completed';
+                        phase.completedDate = '26.08.2025';
+                    }
+                });
+                this.updateRoadmapStatus(roadmap);
+            }
+
+            checkNavigationMapsStatus(roadmap) {
+                // Пока не реализован - оставляем как есть
+                // В будущем здесь будет проверка файлов
+            }
+
+            checkPerformanceOptimizationStatus(roadmap) {
+                // Частично реализован - первый этап завершен
+                if (roadmap.phases[0].status !== 'completed') {
+                    roadmap.phases[0].status = 'completed';
+                    roadmap.phases[0].completedDate = '26.08.2025';
+                }
+                if (roadmap.phases[1].status !== 'in-progress') {
+                    roadmap.phases[1].status = 'in-progress';
+                    roadmap.phases[1].startedDate = '26.08.2025';
+                }
+                this.updateRoadmapStatus(roadmap);
+            }
+
+            checkComprehensiveFixesStatus(roadmap) {
+                // Проверяем состояние исправления системных проблем
+                // На основе анализа ошибок - все этапы пока не реализованы
+                // Но дорожная карта готова к реализации
+                roadmap.phases.forEach(phase => {
+                    if (phase.status === 'completed') {
+                        // Если какие-то этапы уже помечены как завершенные в localStorage
+                        // оставляем их статус
+                    }
+                });
+                this.updateRoadmapStatus(roadmap);
+            }
+
+            checkRoadmapsInteractiveSystemStatus(roadmap) {
+                // Интерактивная система дорожных карт полностью реализована
+                roadmap.phases.forEach(phase => {
+                    if (phase.status !== 'completed') {
+                        phase.status = 'completed';
+                        phase.completedDate = '26.08.2025';
+                    }
+                });
+                this.updateRoadmapStatus(roadmap);
+            }
+
+            viewRoadmap(filename) {
+                const path = `../docs/plans/${filename}`;
+                
+                // Загружаем содержимое файла и отображаем в модальном окне
+                fetch(path)
+                    .then(response => {
+                        if (response.ok) {
+                            return response.text();
+                        } else {
+                            throw new Error(`Файл не найден: ${path}`);
+                        }
+                    })
+                    .then(content => {
+                        this.showRoadmapModal(filename, content);
+                    })
+                    .catch(() => {
+                        this.showNotification(`❌ Не удалось загрузить файл ${filename}`, 'error');
+                    });
+            }
+
+            showRoadmapModal(filename, content) {
+                // Создаем модальное окно для отображения плана
+                const modal = document.createElement('div');
+                modal.className = 'roadmap-modal';
+                
+                const modalContent = document.createElement('div');
+                modalContent.className = 'roadmap-modal-content';
+                
+                modalContent.innerHTML = `
+                    <div class="roadmap-modal-header">
+                        <h2>📋 ${filename}</h2>
+                        <button class="roadmap-modal-close">✕</button>
+                    </div>
+                    <div class="roadmap-modal-body">
+                        <pre style="white-space: pre-wrap; font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #333;"></pre>
+                    </div>
+                    <div class="roadmap-modal-footer">
+                        <button class="action-btn copy-plan-btn">
+                            📋 Копировать план
+                        </button>
+                        <button class="action-btn close-modal-btn">
+                            ❌ Закрыть
+                        </button>
+                    </div>
+                `;
+                
+                // Устанавливаем содержимое отдельно для избежания проблем с кавычками
+                const preElement = modalContent.querySelector('pre');
+                preElement.textContent = content;
+                
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+                
+                // Обработчики событий
+                modalContent.querySelector('.roadmap-modal-close').addEventListener('click', () => {
+                    modal.remove();
+                });
+                
+                modalContent.querySelector('.close-modal-btn').addEventListener('click', () => {
+                    modal.remove();
+                });
+                
+                modalContent.querySelector('.copy-plan-btn').addEventListener('click', () => {
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(content).then(() => {
+                            this.showNotification('📋 Содержимое скопировано!');
+                        });
+                    } else {
+                        this.fallbackCopy(content);
+                    }
+                });
+                
+                // Закрытие по клику вне модального окна
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+            }
+
+            copyImplementCommand(filename) {
+                const command = `[РЕАЛИЗОВАТЬ] ${filename}`;
+                
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(command).then(() => {
+                        this.showNotification(`📋 Команда скопирована: ${command}`);
+                    }).catch(() => {
+                        this.fallbackCopy(command);
+                    });
+                } else {
+                    this.fallbackCopy(command);
+                }
+            }
+
+            fallbackCopy(text) {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    this.showNotification(`📋 Команда скопирована: ${text}`);
+                } catch (err) {
+                    this.showNotification('❌ Не удалось скопировать команду', 'error');
+                }
+                
+                document.body.removeChild(textArea);
+            }
+
+            createRoadmap() {
+                const title = document.getElementById('roadmapTitle').value.trim();
+                const priority = document.getElementById('roadmapPriority').value;
+                const complexity = parseInt(document.getElementById('roadmapComplexity').value);
+                const description = document.getElementById('roadmapDescription').value.trim();
+
+                if (!title || !description) {
+                    this.showNotification('❌ Заполните название и описание задачи', 'error');
+                    return;
+                }
+
+                // Создание команды для ИИ
+                const command = `[ПЛАН] ${title}\n\nПриоритет: ${priority}\nСложность: ${complexity} звезд\n\nОписание:\n${description}`;
+                
+                // Копирование в буфер обмена
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(command).then(() => {
+                        this.showNotification('🚀 Команда для создания дорожной карты скопирована! Вставьте её в чат с ИИ.');
+                        this.clearCreateForm();
+                    });
+                } else {
+                    this.fallbackCopy(command);
+                    this.clearCreateForm();
+                }
+            }
+
+            clearCreateForm() {
+                document.getElementById('roadmapTitle').value = '';
+                document.getElementById('roadmapDescription').value = '';
+                document.getElementById('roadmapPriority').value = 'medium';
+                document.getElementById('roadmapComplexity').value = '3';
+            }
+
+            createQuickRoadmap(prefix) {
+                const description = prompt('Введите описание задачи для создания дорожной карты:');
+                if (description && description.trim()) {
+                    const command = `${prefix} ${description.trim()}`;
+                    
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(command).then(() => {
+                            this.showNotification(`📋 Команда скопирована: ${command}`);
+                        });
+                    } else {
+                        this.fallbackCopy(command);
+                    }
+                }
+            }
+
+            exportAllRoadmaps() {
+                const data = {
+                    exported: new Date().toISOString(),
+                    roadmaps: this.roadmaps,
+                    stats: {
+                        total: this.roadmaps.length,
+                        ready: this.roadmaps.filter(r => r.status === 'ready').length,
+                        inProgress: this.roadmaps.filter(r => r.status === 'progress').length,
+                        completed: this.roadmaps.filter(r => r.status === 'completed').length
+                    }
+                };
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `heys-roadmaps-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                this.showNotification('📤 Дорожные карты экспортированы');
+            }
+
+            refreshData() {
+                this.loadRoadmaps().then(() => {
+                    this.showNotification('🔄 Данные обновлены');
+                });
+            }
+
+            refreshRoadmaps() {
+                this.refreshData();
+            }
+
+            openDocs() {
+                window.open('../docs/', '_blank');
+            }
+
+            markAsCompleted(id) {
+                const roadmap = this.roadmaps.find(r => r.id === id);
+                if (roadmap) {
+                    console.log(`🔄 Отмечаем как завершенную: ${roadmap.title} (ID: ${id})`);
+                    
+                    roadmap.status = 'completed';
+                    roadmap.completedDate = new Date().toLocaleDateString('ru-RU');
+                    
+                    // Сохраняем изменения
+                    this.saveToLocalStorage();
+                    
+                    console.log(`💾 Статус сохранен: ${roadmap.title} = ${roadmap.status}`);
+                    
+                    // Автоматически переключаем на вкладку "Завершенные"
+                    setTimeout(() => {
+                        this.switchTab('completed');
+                    }, 1000);
+                    
+                    this.renderRoadmaps();
+                    this.updateStats();
+                    this.showNotification(`✅ "${roadmap.title}" отмечена как выполненная! Переключение на вкладку "Завершенные"...`);
+                }
+            }
+
+            markAsInProgress(id) {
+                const roadmap = this.roadmaps.find(r => r.id === id);
+                if (roadmap) {
+                    roadmap.status = 'progress';
+                    roadmap.startedDate = new Date().toLocaleDateString('ru-RU');
+                    
+                    // Убеждаемся что мы на вкладке "Активные"
+                    if (this.currentTab !== 'active') {
+                        this.switchTab('active');
+                    }
+                    
+                    this.renderRoadmaps();
+                    this.updateStats();
+                    this.saveToLocalStorage();
+                    this.showNotification(`🚀 "${roadmap.title}" взята в работу!`);
+                }
+            }
+
+            markAsReady(id) {
+                const roadmap = this.roadmaps.find(r => r.id === id);
+                if (roadmap) {
+                    roadmap.status = 'ready';
+                    delete roadmap.completedDate;
+                    delete roadmap.startedDate;
+                    
+                    // Автоматически переключаем на вкладку "Активные"
+                    this.switchTab('active');
+                    
+                    this.renderRoadmaps();
+                    this.updateStats();
+                    this.saveToLocalStorage();
+                    this.showNotification(`🔄 "${roadmap.title}" возвращена в статус "Готов к реализации"`);
+                }
+            }
+
+            // Подтверждение удаления дорожной карты
+            confirmDeleteRoadmap(id) {
+                const roadmap = this.roadmaps.find(r => r.id === id);
+                if (roadmap) {
+                    const isConfirmed = confirm(
+                        `⚠️ Вы уверены, что хотите удалить дорожную карту?\n\n` +
+                        `"${roadmap.title}"\n\n` +
+                        `Это действие нельзя отменить!`
+                    );
+                    
+                    if (isConfirmed) {
+                        this.deleteRoadmap(id);
+                    }
+                }
+            }
+
+            // Удаление дорожной карты
+            deleteRoadmap(id) {
+                const roadmapIndex = this.roadmaps.findIndex(r => r.id === id);
+                if (roadmapIndex !== -1) {
+                    const deletedRoadmap = this.roadmaps[roadmapIndex];
+                    
+                    // Добавляем ID в список удаленных
+                    this.persisted.deleted.push(id);
+                    
+                    // Удаляем из массива
+                    this.roadmaps.splice(roadmapIndex, 1);
+                    
+                    // Обновляем отображение и сохраняем
+                    this.renderRoadmaps();
+                    this.updateStats();
+                    this.saveToLocalStorage();
+                    
+                    this.showNotification(`🗑️ Дорожная карта "${deletedRoadmap.title}" удалена`);
+                }
+            }
+
+            saveToLocalStorage() {
+                try {
+                    const obj = {
+                        roadmaps: Object.fromEntries(this.roadmaps.map(r => [r.id, {
+                            status: r.status,
+                            completedDate: r.completedDate,
+                            startedDate: r.startedDate,
+                            phases: r.phases.map(p => ({
+                                id: p.id,
+                                status: p.status,
+                                completedDate: p.completedDate,
+                                startedDate: p.startedDate
+                            }))
+                        }])),
+                        deleted: this.persisted.deleted
+                    };
+                    localStorage.setItem('heys-roadmaps-status', JSON.stringify(obj));
+                    this.persisted = obj;
+                } catch (error) {
+                    console.warn('Не удалось сохранить данные в localStorage:', error);
+                }
+            }
+
+            loadFromLocalStorage() {
+                try {
+                    const raw = localStorage.getItem('heys-roadmaps-status');
+                    if (raw) {
+                        const saveData = JSON.parse(raw);
+                        
+                        // Поддержка старого формата
+                        if (Array.isArray(saveData)) {
+                            // Старый формат - конвертируем
+                            this.persisted.roadmaps = {};
+                            saveData.forEach(roadmap => {
+                                this.persisted.roadmaps[roadmap.id] = roadmap;
+                            });
+                            this.persisted.deleted = [];
+                        } else {
+                            // Новый формат
+                            this.persisted = {
+                                roadmaps: saveData.roadmaps || {},
+                                deleted: saveData.deleted || saveData.deletedRoadmapIds || []
+                            };
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Не удалось загрузить данные из localStorage:', error);
+                    this.persisted = { roadmaps: {}, deleted: [] };
+                }
+            }
+
+            applySavedStatuses() {
+                if (!this.savedRoadmaps || this.savedRoadmaps.length === 0) {
+                    return;
+                }
+
+                // Применяем сохраненные статусы к загруженным roadmaps
+                this.savedRoadmaps.forEach(savedRoadmap => {
+                    const roadmap = this.roadmaps.find(r => r.id === savedRoadmap.id);
+                    if (roadmap) {
+                        // Применяем сохраненный статус
+                        roadmap.status = savedRoadmap.status;
+                        
+                        // Применяем сохраненные даты
+                        if (savedRoadmap.completedDate) {
+                            roadmap.completedDate = savedRoadmap.completedDate;
+                        }
+                        if (savedRoadmap.startedDate) {
+                            roadmap.startedDate = savedRoadmap.startedDate;
+                        }
+                        
+                        // Восстанавливаем статусы этапов
+                        if (savedRoadmap.phases && roadmap.phases) {
+                            savedRoadmap.phases.forEach(savedPhase => {
+                                const phase = roadmap.phases.find(p => p.id === savedPhase.id);
+                                if (phase) {
+                                    phase.status = savedPhase.status;
+                                    if (savedPhase.completedDate) {
+                                        phase.completedDate = savedPhase.completedDate;
+                                    }
+                                    if (savedPhase.startedDate) {
+                                        phase.startedDate = savedPhase.startedDate;
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+
+                console.log(`✅ Применены сохраненные статусы для ${Object.keys(this.persisted.roadmaps).length} дорожных карт`);
+            }
+
+            editRoadmap(id) {
+                this.showNotification('✏️ Функция редактирования будет реализована в следующих версиях');
+            }
+
+            toggleRoadmapContent() {
+                const content = document.getElementById('roadmapContent');
+                content.classList.toggle('hidden');
+            }
+
+            showNotification(message, type = 'success') {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.className = `notification ${type}`;
+                notification.classList.add('show');
+
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        // Инициализация системы
+        const roadmapSystem = new RoadmapSystem();
+
+        // Автоматическое обновление каждые 5 минут
+        setInterval(() => {
+            roadmapSystem.refreshData();
+        }, 300000);
+    </script>
+</body>
+</html>

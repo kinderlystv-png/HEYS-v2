@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "noEmit": false,
+    "jsx": "react-jsx"
+  },
+  "include": ["src/**/*", "index.html"],
+  "exclude": ["dist", "node_modules", "**/*.test.*", "**/*.spec.*"],
+  "references": [
+    { "path": "../../packages/core" },
+    { "path": "../../packages/ui" },
+    { "path": "../../packages/search" },
+    { "path": "../../packages/storage" },
+    { "path": "../../packages/gaming" },
+    { "path": "../../packages/analytics" },
+    { "path": "../../packages/shared" }
+  ]
+}

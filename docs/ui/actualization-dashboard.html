@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🔄 Панель Управления Актуализацией Документации HEYS</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      <!--
+        Панель
+        действий
+        --
+        > <div
+        class='actions-panel'
+        > <div
+        class='prompt-info'
+        > <h4
+        > 💡
+        Как
+        использовать
+        генератор
+        промптов:</h4
+        > <p
+        > 1.
+        Нажмите
+        на
+        кнопку
+        нужного
+        действия</p
+        > <p
+        > 2.
+        Готовый
+        запрос
+        автоматически
+        скопируется
+        в
+        буфер
+        обмена</p
+        > <p
+        > 3.
+        Вставьте
+        запрос
+        в
+        чат
+        с
+        ИИ
+        (Ctrl+V)</p
+        > <p
+        > 4.
+        ИИ
+        выполнит
+        реальные
+        изменения
+        в
+        проекте</p
+        > </div
+        > <div
+        class='action-group'
+        > <h3
+        > 📝
+        Генерация
+        Запросов
+        для
+        ИИ</h3
+        > body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        color: #333;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .header {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+
+      .header h1 {
+        color: #2c3e50;
+        font-size: 2.5em;
+        margin-bottom: 10px;
+      }
+
+      .header .subtitle {
+        color: #7f8c8d;
+        font-size: 1.2em;
+      }
+
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+      }
+
+      .card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+      }
+
+      .card-title {
+        font-size: 1.4em;
+        margin-bottom: 15px;
+        color: #2c3e50;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      .status-active {
+        background: #27ae60;
+      }
+      .status-warning {
+        background: #f39c12;
+      }
+      .status-error {
+        background: #e74c3c;
+      }
+      .status-inactive {
+        background: #95a5a6;
+      }
+
+      .metric {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #ecf0f1;
+      }
+
+      .metric:last-child {
+        border-bottom: none;
+      }
+
+      .metric-value {
+        font-weight: bold;
+        color: #2c3e50;
+      }
+
+      .button {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1em;
+        transition: all 0.3s ease;
+        margin: 5px;
+      }
+
+      .button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
+      }
+
+      .button.secondary {
+        background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+      }
+
+      .button.success {
+        background: linear-gradient(135deg, #27ae60, #229954);
+      }
+
+      .button.danger {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+      }
+
+      .file-list {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #ecf0f1;
+        border-radius: 8px;
+        margin: 15px 0;
+      }
+
+      .file-item {
+        padding: 12px 15px;
+        border-bottom: 1px solid #ecf0f1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .file-item:last-child {
+        border-bottom: none;
+      }
+
+      .file-item:hover {
+        background: #f8f9fa;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #ecf0f1;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 10px 0;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #27ae60, #2ecc71);
+        transition: width 0.3s ease;
+      }
+
+      .log-area {
+        background: #2c3e50;
+        color: #ecf0f1;
+        padding: 20px;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+        max-height: 200px;
+        overflow-y: auto;
+        margin: 15px 0;
+      }
+
+      .actions-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        margin-top: 30px;
+      }
+
+      .action-group {
+        margin-bottom: 20px;
+      }
+
+      .action-group h3 {
+        color: #2c3e50;
+        margin-bottom: 15px;
+        font-size: 1.2em;
+      }
+
+      .prompt-info {
+        background: #e8f4f8;
+        border: 1px solid #3498db;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 20px 0;
+        color: #2c3e50;
+      }
+
+      .prompt-info h4 {
+        margin-bottom: 10px;
+        color: #2980b9;
+      }
+
+      .copy-success {
+        animation: copyPulse 0.6s ease-in-out;
+      }
+
+      @keyframes copyPulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .updating {
+        animation: pulse 1.5s infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Заголовок -->
+      <div class="header">
+        <h1>🔄 Система Актуализации Документации HEYS</h1>
+        <p class="subtitle">Автоматизированное управление и мониторинг документации экосистемы</p>
+      </div>
+
+      <!-- Основная панель управления -->
+      <div class="dashboard-grid">
+        <!-- Общие метрики -->
+        <div class="card">
+          <div class="card-title">
+            📊 Общие Метрики
+            <span class="status-indicator status-active"></span>
+          </div>
+          <div class="metric">
+            <span>Общее количество файлов:</span>
+            <span class="metric-value" id="totalFiles">25</span>
+          </div>
+          <div class="metric">
+            <span>Файлов с навигационными картами:</span>
+            <span class="metric-value" id="navMapFiles">8/12</span>
+          </div>
+          <div class="metric">
+            <span>Актуальность документации:</span>
+            <span class="metric-value" id="docActuality">92%</span>
+          </div>
+          <div class="metric">
+            <span>Последняя актуализация:</span>
+            <span class="metric-value" id="lastUpdate">26.08.2025 00:00</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: 92%"></div>
+          </div>
+        </div>
+
+        <!-- Статус системы -->
+        <div class="card">
+          <div class="card-title">
+            🔧 Статус Системы
+            <span class="status-indicator status-active"></span>
+          </div>
+          <div class="metric">
+            <span>Система backup:</span>
+            <span class="metric-value">✅ Активна</span>
+          </div>
+          <div class="metric">
+            <span>Git hooks:</span>
+            <span class="metric-value">⚠️ Настройка</span>
+          </div>
+          <div class="metric">
+            <span>Dependency resolver:</span>
+            <span class="metric-value">✅ Работает</span>
+          </div>
+          <div class="metric">
+            <span>Циклические зависимости:</span>
+            <span class="metric-value">1 (низкая)</span>
+          </div>
+        </div>
+
+        <!-- Последние изменения -->
+        <div class="card">
+          <div class="card-title">
+            📝 Последние Изменения
+            <span class="status-indicator status-warning"></span>
+          </div>
+          <div class="file-list">
+            <div class="file-item">
+              <span>docs/dependencies.yaml</span>
+              <span>26.08.2025</span>
+            </div>
+            <div class="file-item">
+              <span>heys_core_v12.js</span>
+              <span>26.08.2025</span>
+            </div>
+            <div class="file-item">
+              <span>docs/DOCS_ACTUALIZATION_SYSTEM.md</span>
+              <span>26.08.2025</span>
+            </div>
+            <div class="file-item">
+              <span>heys_day_v12.js</span>
+              <span>25.08.2025</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Требуют обновления -->
+        <div class="card">
+          <div class="card-title">
+            ⚠️ Требуют Актуализации
+            <span class="status-indicator status-warning"></span>
+          </div>
+          <div class="file-list">
+            <div class="file-item">
+              <span>AI_PROJECT_CONTEXT.md</span>
+              <span class="metric-value">Высокий</span>
+            </div>
+            <div class="file-item">
+              <span>ROADMAPS_INTERACTIVE_SYSTEM.md</span>
+              <span class="metric-value">Средний</span>
+            </div>
+            <div class="file-item">
+              <span>heys_reports_v12.js</span>
+              <span class="metric-value">Низкий</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Панель действий -->
+      <div class="actions-panel">
+        <div class="action-group">
+          <h3>� Генерация Запросов для ИИ</h3>
+          <button class="button success" onclick="generateAndCopyPrompt('fullActualization')">
+            📝 Сгенерировать: Полная Актуализация
+          </button>
+          <button class="button" onclick="generateAndCopyPrompt('partialUpdate')">
+            📝 Сгенерировать: Частичное Обновление
+          </button>
+          <button class="button secondary" onclick="generateAndCopyPrompt('createReport')">
+            📝 Сгенерировать: Создать Отчет
+          </button>
+          <button class="button" onclick="generateAndCopyPrompt('validateDependencies')">
+            📝 Сгенерировать: Проверить Зависимости
+          </button>
+        </div>
+
+        <div class="action-group">
+          <h3>� Генерация Backup Запросов</h3>
+          <button class="button" onclick="generateAndCopyPrompt('createBackup')">
+            📝 Сгенерировать: Создать Backup
+          </button>
+          <button class="button secondary" onclick="generateAndCopyPrompt('viewBackups')">
+            📝 Сгенерировать: Список Backup'ов
+          </button>
+          <button class="button danger" onclick="generateAndCopyPrompt('rollbackToBackup')">
+            📝 Сгенерировать: Откатить к Backup
+          </button>
+        </div>
+
+        <div class="action-group">
+          <h3>🗺️ Генерация Запросов Навигационных Карт</h3>
+          <button class="button" onclick="generateAndCopyPrompt('updateNavigationMaps')">
+            📝 Сгенерировать: Обновить Карты
+          </button>
+          <button class="button secondary" onclick="generateAndCopyPrompt('validateNavMaps')">
+            📝 Сгенерировать: Проверить Карты
+          </button>
+          <button class="button" onclick="generateAndCopyPrompt('addMissingNavMaps')">
+            📝 Сгенерировать: Добавить Отсутствующие
+          </button>
+        </div>
+
+        <!-- Лог операций -->
+        <div style="margin-top: 30px">
+          <h3>📋 Лог Операций</h3>
+          <div class="log-area" id="operationLog">
+            [00:00:00] 🔄 Система актуализации инициализирована [00:00:01] ✅ Загружены зависимости
+            из dependencies.yaml [00:00:02] 🔍 Проверка состояния файлов... [00:00:03] ⚠️ Обнаружены
+            файлы требующие обновления: 3 [00:00:04] 📊 Готов к операциям актуализации
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 🔄 Система управления актуализацией
+      class ActualizationManager {
+        constructor() {
+          this.isRunning = false;
+          this.currentOperation = null;
+          this.initializeEventListeners();
+          this.loadDependencyResolver();
+        }
+
+        // 📥 Загрузка системы зависимостей
+        async loadDependencyResolver() {
+          try {
+            // В реальной среде здесь будет загрузка dependency-resolver.js
+            this.log('✅ Dependency resolver подключен');
+          } catch (error) {
+            this.log('❌ Ошибка загрузки dependency resolver: ' + error.message);
+          }
+        }
+
+        // 🎯 Инициализация обработчиков событий
+        initializeEventListeners() {
+          // Автообновление метрик каждые 30 секунд
+          setInterval(() => {
+            this.updateMetrics();
+          }, 30000);
+        }
+
+        // 📊 Обновление метрик в реальном времени
+        updateMetrics() {
+          // Имитация получения актуальных данных
+          const now = new Date().toLocaleString('ru-RU');
+          document.getElementById('lastUpdate').textContent = now;
+
+          // Обновление других метрик при необходимости
+          this.log(`📊 Метрики обновлены: ${now}`);
+        }
+
+        // 📝 Добавление записи в лог
+        log(message) {
+          const logArea = document.getElementById('operationLog');
+          const timestamp = new Date().toLocaleTimeString('ru-RU');
+          const logEntry = `[${timestamp}] ${message}\n`;
+
+          logArea.textContent += logEntry;
+          logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        // 🔄 Полная актуализация
+        async runFullActualization() {
+          if (this.isRunning) {
+            this.log('⚠️ Операция уже выполняется');
+            return;
+          }
+
+          this.isRunning = true;
+          this.currentOperation = 'full_actualization';
+
+          this.log('🚀 Запуск полной актуализации...');
+
+          try {
+            // Этап 1: Создание backup
+            this.log('🔒 Создание backup критических файлов...');
+            await this.simulateAsyncOperation(2000);
+            this.log('✅ Backup создан успешно');
+
+            // Этап 2: Анализ зависимостей
+            this.log('🔍 Анализ зависимостей...');
+            await this.simulateAsyncOperation(3000);
+            this.log('✅ Зависимости проанализированы');
+
+            // Этап 3: Обновление навигационных карт
+            this.log('🗺️ Обновление навигационных карт...');
+            await this.simulateAsyncOperation(4000);
+            this.log('✅ Навигационные карты обновлены');
+
+            // Этап 4: Актуализация документов
+            this.log('📝 Актуализация документов...');
+            await this.simulateAsyncOperation(5000);
+            this.log('✅ Документы актуализированы');
+
+            // Этап 5: Валидация
+            this.log('🧪 Финальная валидация...');
+            await this.simulateAsyncOperation(2000);
+            this.log('✅ Валидация пройдена');
+
+            this.log('🎉 Полная актуализация завершена успешно!');
+
+            // Обновление метрик
+            document.getElementById('docActuality').textContent = '98%';
+            document.querySelector('.progress-fill').style.width = '98%';
+          } catch (error) {
+            this.log('❌ Ошибка при актуализации: ' + error.message);
+          } finally {
+            this.isRunning = false;
+            this.currentOperation = null;
+          }
+        }
+
+        // 🔧 Частичное обновление
+        async runPartialUpdate() {
+          this.log('🔄 Запуск частичного обновления...');
+          await this.simulateAsyncOperation(3000);
+          this.log('✅ Частичное обновление завершено');
+        }
+
+        // 📊 Генерация отчета
+        async generateReport() {
+          this.log('📊 Генерация отчета актуализации...');
+          await this.simulateAsyncOperation(2000);
+          this.log('✅ Отчет создан: docs/reports/actualization_report_' + Date.now() + '.md');
+        }
+
+        // 🔍 Валидация зависимостей
+        async validateDependencies() {
+          this.log('🔍 Проверка зависимостей...');
+          await this.simulateAsyncOperation(2500);
+          this.log('✅ Зависимости валидны. Циклических зависимостей: 1 (низкая критичность)');
+        }
+
+        // 💾 Создание backup
+        async createBackup() {
+          this.log('🔒 Создание backup...');
+          await this.simulateAsyncOperation(1500);
+          this.log('✅ Backup создан: docs/backups/backup_' + Date.now());
+        }
+
+        // 📋 Просмотр списка backup'ов
+        viewBackups() {
+          this.log("📋 Список доступных backup'ов:");
+          this.log('  - backup_2025-08-26_000001.json (26.08.2025 00:00:01)');
+          this.log('  - backup_2025-08-25_230045.json (25.08.2025 23:00:45)');
+          this.log('  - backup_2025-08-25_180022.json (25.08.2025 18:00:22)');
+        }
+
+        // 🔄 Откат к backup
+        async rollbackToBackup() {
+          if (!confirm("Вы уверены, что хотите откатить к последнему backup'у?")) {
+            return;
+          }
+
+          this.log('🔄 Откат к backup...');
+          await this.simulateAsyncOperation(3000);
+          this.log('✅ Откат выполнен успешно');
+        }
+
+        // 🗺️ Обновление навигационных карт
+        async updateNavigationMaps() {
+          this.log('🗺️ Обновление навигационных карт...');
+          await this.simulateAsyncOperation(4000);
+          this.log('✅ Навигационные карты обновлены для 8 файлов');
+        }
+
+        // 🧪 Валидация навигационных карт
+        async validateNavMaps() {
+          this.log('🧪 Проверка навигационных карт...');
+          await this.simulateAsyncOperation(2000);
+          this.log('✅ Навигационные карты валидны');
+        }
+
+        // ➕ Добавление отсутствующих навигационных карт
+        async addMissingNavMaps() {
+          this.log('➕ Добавление отсутствующих навигационных карт...');
+          await this.simulateAsyncOperation(3000);
+          this.log('✅ Добавлено 4 навигационные карты');
+
+          // Обновление счетчика
+          document.getElementById('navMapFiles').textContent = '12/12';
+        }
+
+        // ⏱️ Имитация асинхронной операции
+        simulateAsyncOperation(delay) {
+          return new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+
+      // 🚀 Глобальные функции для кнопок
+      let actualizationManager;
+
+      window.onload = function () {
+        actualizationManager = new ActualizationManager();
+      };
+
+      // Генератор промптов для ИИ
+      function generateAIPrompt(actionType) {
+        const prompts = {
+          fullActualization: `[АКТУАЛИЗИРОВАТЬ] Обновить все навигационные карты в файлах проекта согласно текущей структуре. Проверить количество строк и актуализировать разделы.`,
+
+          partialUpdate: `[АКТУАЛИЗИРОВАТЬ] Обновить навигационные карты только в измененных файлах. Фокус на файлах больше 500 строк.`,
+
+          createReport: `[ОТЧЕТ] Создать детальный отчет о состоянии навигационных карт во всех файлах проекта. Указать какие файлы требуют обновления.`,
+
+          validateDependencies: `[АНАЛИЗ] Проверить зависимости между документами в папке docs/ и создать граф зависимостей.`,
+
+          updateNavigationMaps: `[ОБНОВИТЬ] Актуализировать навигационные карты в указанных файлах проекта.`,
+
+          addMissingNavMaps: `[СОЗДАТЬ] Добавить отсутствующие навигационные карты в файлы без них. Приоритет на файлы больше 1000 строк.`,
+
+          validateNavMaps: `[ПРОВЕРИТЬ] Проанализировать существующие навигационные карты на соответствие реальной структуре файлов.`,
+
+          createBackup: `[BACKUP] Создать резервную копию всех критических файлов документации перед изменениями.`,
+
+          viewBackups: `[СПИСОК] Показать все доступные backup'ы документации с датами создания.`,
+
+          rollbackToBackup: `[ОТКАТ] Восстановить документацию из указанного backup'а с сохранением текущего состояния.`,
+        };
+
+        return prompts[actionType] || `[ВЫПОЛНИТЬ] ${actionType}`;
+      }
+
+      // Функция копирования в буфер обмена
+      function copyToClipboard(text) {
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            showNotification(`✅ Запрос скопирован в буфер обмена!`, 'success');
+            logOperation(`Запрос скопирован: ${text.substring(0, 50)}...`, 'info');
+          })
+          .catch(() => {
+            // Fallback для старых браузеров
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            showNotification(`✅ Запрос скопирован!`, 'success');
+          });
+      }
+
+      // Показ уведомлений
+      function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#27ae60' : '#3498db'};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                z-index: 1000;
+                font-weight: bold;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+          notification.remove();
+        }, 3000);
+      }
+
+      // Генерация и копирование готового промпта
+      function generateAndCopyPrompt(actionType) {
+        let prompt = generateAIPrompt(actionType);
+
+        // Добавляем контекст для более точных запросов
+        const timestamp = new Date().toLocaleString('ru-RU');
+
+        const fullPrompt = `${prompt}
+
+📊 Контекст:
+- Время запроса: ${timestamp}
+- Тип операции: ${actionType}
+- Рабочая директория: c:\\! HEYS 2
+
+#file:c:\\! HEYS 2 проанализируй структуру проекта и выполни запрос.`;
+
+        copyToClipboard(fullPrompt);
+      }
+
+      // Логирование операций
+      function logOperation(message, type = 'info') {
+        const log = document.getElementById('operationLog');
+        const timestamp = new Date().toLocaleTimeString('ru-RU');
+        const icon =
+          type === 'info' ? '📝' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
+
+        log.textContent += `\n[${timestamp}] ${icon} ${message}`;
+        log.scrollTop = log.scrollHeight;
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+[
+  // 1. убираем штатное действие
+  {
+    "key": "ctrl+shift+t",
+    "command": "-workbench.action.reopenClosedEditor"
+  },
+  // 2. вешаем запуск тестов
+  {
+    "key": "ctrl+shift+t",
+    "command": "workbench.action.tasks.runTask",
+    "args": "Run All Tests"
+  }
+]

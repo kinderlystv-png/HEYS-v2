@@ -1,0 +1,10 @@
+{
+  "default": true,
+  "line-length": false,
+  "MD013": false,
+  "MD033": false,
+  "MD041": false,
+  "language": "en",
+  "no-inline-html": false,
+  "no-bare-urls": false
+}

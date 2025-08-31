@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <title>Schema Verification Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .error { color: #d63384; background: #f8d7da; }
+        .success { color: #0f5132; background: #d1e7dd; }
+        .warning { color: #664d03; background: #fff3cd; }
+        .output { background: #f8f9fa; padding: 10px; border-radius: 3px; white-space: pre-wrap; font-family: monospace; }
+        button { padding: 8px 16px; margin: 5px; border: 1px solid #ddd; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <h1>HEYS Database Schema Verification</h1>
+    
+    <div class="section">
+        <h3>Database Connection Status</h3>
+        <div id="connection-status">Checking...</div>
+    </div>
+    
+    <div class="section">
+        <h3>Schema Verification</h3>
+        <button onclick="checkTables()">Check Tables</button>
+        <button onclick="checkColumns()">Check Columns</button>
+        <button onclick="testOperations()">Test Operations</button>
+        <div id="schema-results" class="output"></div>
+    </div>
+    
+    <div class="section warning">
+        <h3>Schema Reset (Use with caution!)</h3>
+        <p><strong>Warning:</strong> This will recreate all tables and may delete existing data!</p>
+        <button onclick="resetSchema()" style="background: #dc3545; color: white;">Reset Database Schema</button>
+        <div id="reset-results" class="output"></div>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script>
+        let client = null;
+        
+        // Initialize Supabase client
+        try {
+            client = supabase.createClient(
+                'https://ukqolcziqcuplqfgrmsh.supabase.co',
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds'
+            );
+            document.getElementById('connection-status').innerHTML = '<span class="success">✓ Connected to Supabase</span>';
+        } catch (e) {
+            document.getElementById('connection-status').innerHTML = '<span class="error">✗ Failed to connect: ' + e.message + '</span>';
+        }
+
+        async function checkTables() {
+            const output = document.getElementById('schema-results');
+            output.textContent = 'Checking tables...\n';
+            
+            try {
+                // Test each table
+                const tables = ['clients', 'kv_store', 'client_kv_store'];
+                for (const table of tables) {
+                    try {
+                        const { data, error } = await client.from(table).select('*').limit(1);
+                        if (error) {
+                            output.textContent += `✗ Table "${table}": ${error.message}\n`;
+                        } else {
+                            output.textContent += `✓ Table "${table}": EXISTS\n`;
+                        }
+                    } catch (e) {
+                        output.textContent += `✗ Table "${table}": ${e.message}\n`;
+                    }
+                }
+            } catch (e) {
+                output.textContent += 'Error checking tables: ' + e.message;
+            }
+        }
+
+        async function checkColumns() {
+            const output = document.getElementById('schema-results');
+            output.textContent = 'Checking specific columns...\n';
+            
+            try {
+                // Check clients table updated_at column
+                const { data: clientsData, error: clientsError } = await client
+                    .from('clients')
+                    .select('id, user_id, name, updated_at')
+                    .limit(1);
+                    
+                if (clientsError) {
+                    output.textContent += `✗ clients.updated_at: ${clientsError.message}\n`;
+                } else {
+                    output.textContent += `✓ clients table columns: OK\n`;
+                }
+
+                // Check client_kv_store table
+                const { data: ckvData, error: ckvError } = await client
+                    .from('client_kv_store')
+                    .select('user_id, client_id, k, v, updated_at')
+                    .limit(1);
+                    
+                if (ckvError) {
+                    output.textContent += `✗ client_kv_store: ${ckvError.message}\n`;
+                } else {
+                    output.textContent += `✓ client_kv_store table columns: OK\n`;
+                }
+            } catch (e) {
+                output.textContent += 'Error checking columns: ' + e.message;
+            }
+        }
+
+        async function testOperations() {
+            const output = document.getElementById('schema-results');
+            output.textContent = 'Testing operations...\n';
+            
+            try {
+                // Try to authenticate first
+                const { data: authData, error: authError } = await client.auth.getSession();
+                if (!authData.session) {
+                    output.textContent += '⚠ Not authenticated - some operations may fail\n';
+                    
+                    // Try to sign in
+                    const email = prompt('Enter email for testing:');
+                    const password = prompt('Enter password for testing:');
+                    
+                    if (email && password) {
+                        const { data: signInData, error: signInError } = await client.auth.signInWithPassword({
+                            email, password
+                        });
+                        
+                        if (signInError) {
+                            output.textContent += `✗ Authentication failed: ${signInError.message}\n`;
+                            return;
+                        } else {
+                            output.textContent += `✓ Authentication successful\n`;
+                        }
+                    } else {
+                        output.textContent += 'Skipping authenticated operations\n';
+                        return;
+                    }
+                }
+                
+                // Test insert operation
+                const testClientId = crypto.randomUUID();
+                const { data: insertData, error: insertError } = await client
+                    .from('clients')
+                    .insert([{ id: testClientId, name: 'Test Client' }])
+                    .select();
+                    
+                if (insertError) {
+                    output.textContent += `✗ Insert test failed: ${insertError.message}\n`;
+                } else {
+                    output.textContent += `✓ Insert test successful\n`;
+                    
+                    // Test client_kv_store operation
+                    const { data: ckvInsertData, error: ckvInsertError } = await client
+                        .from('client_kv_store')
+                        .insert([{ 
+                            client_id: testClientId, 
+                            k: 'test_key', 
+                            v: { test: 'value' } 
+                        }])
+                        .select();
+                        
+                    if (ckvInsertError) {
+                        output.textContent += `✗ client_kv_store test failed: ${ckvInsertError.message}\n`;
+                    } else {
+                        output.textContent += `✓ client_kv_store test successful\n`;
+                    }
+                    
+                    // Clean up test data
+                    await client.from('client_kv_store').delete().eq('client_id', testClientId);
+                    await client.from('clients').delete().eq('id', testClientId);
+                    output.textContent += `✓ Test data cleaned up\n`;
+                }
+                
+            } catch (e) {
+                output.textContent += 'Error testing operations: ' + e.message;
+            }
+        }
+
+        async function resetSchema() {
+            if (!confirm('Are you sure you want to reset the database schema? This may delete existing data!')) {
+                return;
+            }
+            
+            const output = document.getElementById('reset-results');
+            output.textContent = 'Resetting schema...\n';
+            
+            const schema = `
+-- Drop existing tables (if they exist)
+DROP POLICY IF EXISTS "client_kv delete own" ON public.client_kv_store;
+DROP POLICY IF EXISTS "client_kv update own" ON public.client_kv_store;
+DROP POLICY IF EXISTS "client_kv insert own" ON public.client_kv_store;
+DROP POLICY IF EXISTS "client_kv select own" ON public.client_kv_store;
+DROP TABLE IF EXISTS public.client_kv_store;
+
+DROP POLICY IF EXISTS "kv delete own" ON public.kv_store;
+DROP POLICY IF EXISTS "kv update own" ON public.kv_store;
+DROP POLICY IF EXISTS "kv insert own" ON public.kv_store;
+DROP POLICY IF EXISTS "kv select own" ON public.kv_store;
+DROP TABLE IF EXISTS public.kv_store;
+
+DROP POLICY IF EXISTS "clients delete own" ON public.clients;
+DROP POLICY IF EXISTS "clients update own" ON public.clients;
+DROP POLICY IF EXISTS "clients insert own" ON public.clients;
+DROP POLICY IF EXISTS "clients select own" ON public.clients;
+DROP TABLE IF EXISTS public.clients;
+
+-- Recreate tables
+CREATE TABLE IF NOT EXISTS public.clients (
+  id uuid not null default gen_random_uuid() primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  updated_at timestamptz not null default now()
+);
+
+ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "clients select own" ON public.clients
+FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "clients insert own" ON public.clients
+FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "clients update own" ON public.clients
+FOR UPDATE USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "clients delete own" ON public.clients
+FOR DELETE USING (auth.uid() = user_id);
+
+-- Таблица общих данных
+CREATE TABLE IF NOT EXISTS public.kv_store (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  k text not null,
+  v jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, k)
+);
+
+ALTER TABLE public.kv_store ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "kv select own" ON public.kv_store
+FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "kv insert own" ON public.kv_store
+FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "kv update own" ON public.kv_store
+FOR UPDATE USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "kv delete own" ON public.kv_store
+FOR DELETE USING (auth.uid() = user_id);
+
+-- Таблица клиентских данных
+CREATE TABLE IF NOT EXISTS public.client_kv_store (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  client_id uuid not null references public.clients(id) on delete cascade,
+  k text not null,
+  v jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, client_id, k)
+);
+
+ALTER TABLE public.client_kv_store ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "client_kv select own" ON public.client_kv_store
+FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "client_kv insert own" ON public.client_kv_store
+FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "client_kv update own" ON public.client_kv_store
+FOR UPDATE USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "client_kv delete own" ON public.client_kv_store
+FOR DELETE USING (auth.uid() = user_id);
+`;
+
+            try {
+                // Note: This would require admin privileges
+                output.textContent += 'Schema reset requires direct database access.\n';
+                output.textContent += 'Please run the following SQL in your Supabase SQL editor:\n\n';
+                output.textContent += schema;
+                
+            } catch (e) {
+                output.textContent += 'Error resetting schema: ' + e.message;
+            }
+        }
+
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            setTimeout(checkTables, 1000);
+        });
+    </script>
+</body>
+</html>

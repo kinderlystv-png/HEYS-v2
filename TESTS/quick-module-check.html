@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick HEYS Module Check</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #1a1a1a; color: #e0e0e0; }
+        .module { margin: 10px 0; padding: 10px; border: 1px solid #444; border-radius: 4px; }
+        .success { border-color: #51cf66; background: #1a4c96; }
+        .error { border-color: #ff6b6b; background: #c62d42; }
+        .log { background: #333; padding: 10px; margin: 10px 0; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Quick HEYS Module Check</h1>
+    <div id="results"></div>
+    <div id="log" class="log"></div>
+
+    <!-- Загружаем те же модули, что и в диагностическом центре -->
+    <script src="../heys_core_v12.js"></script>
+    <script src="../heys_models_v1.js"></script>
+    <script src="../heys_storage_supabase_v1.js"></script>
+    <script src="../heys_reports_v12.js"></script>
+    <script src="../heys_smart_search.js"></script>
+    <script src="../heys_integration_layer.js"></script>
+    <script src="../heys_security_validation.js"></script>
+
+    <script>
+        function log(message) {
+            document.getElementById('log').innerHTML += message + '\n';
+            console.log(message);
+        }
+
+        function checkModule(name, path) {
+            const parts = path.split('.');
+            let current = window;
+            
+            for (const part of parts) {
+                if (current && current[part]) {
+                    current = current[part];
+                } else {
+                    return false;
+                }
+            }
+            
+            return typeof current !== 'undefined';
+        }
+
+        function displayResult(name, exists, details = '') {
+            const resultsDiv = document.getElementById('results');
+            const moduleDiv = document.createElement('div');
+            moduleDiv.className = `module ${exists ? 'success' : 'error'}`;
+            moduleDiv.innerHTML = `
+                <strong>${exists ? '✅' : '❌'} ${name}</strong>
+                ${details ? `<br><small>${details}</small>` : ''}
+            `;
+            resultsDiv.appendChild(moduleDiv);
+        }
+
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                log('🔍 Проверяем модули HEYS...');
+                
+                // Проверяем основной namespace
+                const heysExists = typeof window.HEYS !== 'undefined';
+                displayResult('HEYS Namespace', heysExists, heysExists ? `Содержит: ${Object.keys(window.HEYS).join(', ')}` : '');
+                log(`HEYS namespace: ${heysExists ? 'НАЙДЕН' : 'НЕ НАЙДЕН'}`);
+                
+                if (heysExists) {
+                    log(`HEYS содержит: ${Object.keys(window.HEYS).join(', ')}`);
+                }
+
+                // Проверяем конкретные модули
+                const modules = [
+                    { name: 'ReportsManager', path: 'HEYS.ReportsManager' },
+                    { name: 'SmartSearchEngine', path: 'HEYS.SmartSearchEngine' },
+                    { name: 'IntegrationLayer', path: 'HEYS.IntegrationLayer' },
+                    { name: 'SecurityValidationManager', path: 'HEYS.SecurityValidationManager' },
+                ];
+
+                modules.forEach(module => {
+                    const exists = checkModule(module.name, module.path);
+                    displayResult(module.name, exists, module.path);
+                    log(`${module.name}: ${exists ? 'НАЙДЕН' : 'НЕ НАЙДЕН'} по пути ${module.path}`);
+                });
+
+                // Проверяем методы Security Manager
+                if (window.HEYS && window.HEYS.SecurityValidationManager) {
+                    log('🧪 Тестируем SecurityValidationManager...');
+                    try {
+                        const sm = new window.HEYS.SecurityValidationManager();
+                        const hasApplyHeaders = typeof sm.applySecurityHeaders === 'function';
+                        const hasValidateInput = typeof sm.validateInput === 'function';
+                        
+                        log(`applySecurityHeaders: ${hasApplyHeaders ? 'НАЙДЕН' : 'НЕ НАЙДЕН'}`);
+                        log(`validateInput: ${hasValidateInput ? 'НАЙДЕН' : 'НЕ НАЙДЕН'}`);
+                        
+                        if (hasApplyHeaders) {
+                            const headers = sm.applySecurityHeaders();
+                            log(`applySecurityHeaders() вернул ${headers.size} заголовков`);
+                        }
+                        
+                        if (hasValidateInput) {
+                            const result = sm.validateInput('test@email.com', 'email');
+                            log(`validateInput() тест: ${JSON.stringify(result)}`);
+                        }
+                    } catch (error) {
+                        log(`❌ Ошибка тестирования SecurityValidationManager: ${error.message}`);
+                    }
+                }
+
+                log('✅ Проверка завершена');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+@import './_variables.css';
+
+.side-row {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.side-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.side-compare {
+  width: 100%;
+  margin-top: 0;
+}
+.side-compare .card.tone-slate {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
