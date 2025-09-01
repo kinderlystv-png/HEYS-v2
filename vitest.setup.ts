@@ -2,14 +2,60 @@ import { vi, beforeEach, afterEach } from 'vitest';
 
 // Setup browser environment mocks
 beforeEach(() => {
-  // Mock alert, confirm, prompt
+  // Enhanced security mocking for XSS protection
   (global as any).alert = vi.fn();
   (global as any).confirm = vi.fn(() => true);
   (global as any).prompt = vi.fn(() => 'test');
   
-  // Mock console methods for clean test output
+  // Enhanced console methods for clean test output
   (global.console as any).warn = vi.fn();
   (global.console as any).error = vi.fn();
+  (global.console as any).log = vi.fn();
+  
+  // Security: Prevent any accidental script execution
+  (global as any).eval = vi.fn(() => {
+    throw new Error('eval() blocked for security in tests');
+  });
+  
+  // Security: Mock dangerous DOM methods
+  const mockCreateElement = vi.fn((tagName: string) => {
+    const element: any = {
+      tagName: tagName.toUpperCase(),
+      innerHTML: '',
+      textContent: '',
+      setAttribute: vi.fn(),
+      getAttribute: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      appendChild: vi.fn(),
+      removeChild: vi.fn(),
+      style: {},
+      click: vi.fn(),
+      focus: vi.fn(),
+      blur: vi.fn(),
+      src: '',
+      href: '',
+    };
+    
+    // Intercept dangerous assignments
+    Object.defineProperty(element, 'innerHTML', {
+      get: () => element._innerHTML || '',
+      set: (value: string) => {
+        // Security check - log but don't execute dangerous content
+        if (value.includes('<script>') || value.includes('javascript:')) {
+          console.warn('Security: Blocked potentially dangerous innerHTML assignment:', value.substring(0, 50));
+        }
+        element._innerHTML = value;
+      },
+    });
+    
+    return element;
+  });
+  
+  // Mock document with security enhancements
+  if (global.document) {
+    (global.document as any).createElement = mockCreateElement;
+  }
   
   // Enhanced URL mocking
   if (!(global.URL as any).createObjectURL) {

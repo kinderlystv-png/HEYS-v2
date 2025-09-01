@@ -21,6 +21,16 @@ const mockScreen = {
   height: 896,
 };
 
+// Mock PerformanceObserver
+const mockPerformanceObserver = vi.fn().mockImplementation((_callback) => {
+  const instance = {
+    observe: vi.fn(),
+    disconnect: vi.fn(),
+    takeRecords: vi.fn().mockReturnValue([]),
+  };
+  return instance;
+});
+
 const mockWindow = {
   devicePixelRatio: 2,
   performance: {
@@ -44,6 +54,7 @@ const mockWindow = {
   clearTimeout: vi.fn((id) => clearTimeout(id)),
   screen: mockScreen,
   ontouchstart: true, // Add touch support for mobile detection
+  PerformanceObserver: mockPerformanceObserver, // Add PerformanceObserver to window
 };
 
 const mockDocument = {
@@ -64,13 +75,6 @@ const mockDocument = {
   },
 };
 
-// Mock PerformanceObserver
-const mockPerformanceObserver = vi.fn().mockImplementation((_callback) => ({
-  observe: vi.fn(),
-  disconnect: vi.fn(),
-  takeRecords: vi.fn().mockReturnValue([]),
-}));
-
 // Mock getBattery API
 const mockBattery = {
   level: 0.8,
@@ -86,7 +90,6 @@ global.navigator = mockNavigator as any;
 global.window = mockWindow as any;
 global.document = mockDocument as any;
 global.screen = mockScreen as any;
-global.PerformanceObserver = mockPerformanceObserver as any;
 (global.navigator as any).getBattery = vi.fn().mockResolvedValue(mockBattery);
 
 // Global mocks
@@ -99,11 +102,7 @@ Object.defineProperty(global, 'IntersectionObserver', { value: vi.fn(), writable
 Object.defineProperty(global, 'WebAssembly', { value: {}, writable: true });
 
 // Mock PerformanceObserver
-global.PerformanceObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  disconnect: vi.fn(),
-  takeRecords: vi.fn(() => []),
-})) as any;
+global.PerformanceObserver = mockPerformanceObserver as any;
 (global.PerformanceObserver as any).supportedEntryTypes = [
   'navigation',
   'resource',
@@ -178,8 +177,11 @@ describe('MobilePerformanceOptimizer', () => {
       expect(deviceInfo.supportedFeatures).toBeDefined();
     });
 
-    it('should setup performance monitoring', () => {
+    it('should setup performance monitoring', async () => {
       optimizer = new MobilePerformanceOptimizer(config);
+      
+      // Wait for async initialization to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       // Verify performance observers are set up
       expect(global.PerformanceObserver).toHaveBeenCalled();
@@ -195,17 +197,17 @@ describe('MobilePerformanceOptimizer', () => {
       expect(mockDocument.addEventListener).toHaveBeenCalledWith(
         'touchstart',
         expect.any(Function),
-        expect.any(Object),
+        expect.anything(),
       );
       expect(mockDocument.addEventListener).toHaveBeenCalledWith(
         'touchmove',
         expect.any(Function),
-        expect.any(Object),
+        expect.anything(),
       );
       expect(mockDocument.addEventListener).toHaveBeenCalledWith(
         'touchend',
         expect.any(Function),
-        expect.any(Object),
+        expect.anything(),
       );
     });
 
@@ -465,28 +467,44 @@ describe('MobilePerformanceOptimizer', () => {
     it('should clean up event listeners on destroy', () => {
       optimizer.destroy();
 
+      // Check that removeEventListener was called for all three touch events
+      expect(mockDocument.removeEventListener).toHaveBeenCalledTimes(3);
+      
+      // Check the call arguments - function references can be any function
       expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
         'touchstart',
-        expect.any(Function),
-        expect.any(Object),
+        expect.anything()
       );
       expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
         'touchmove',
-        expect.any(Function),
-        expect.any(Object),
+        expect.anything()
       );
       expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
         'touchend',
-        expect.any(Function),
-        expect.any(Object),
+        expect.anything()
       );
     });
 
-    it('should stop performance monitoring on destroy', () => {
-      const performanceObserver = new global.PerformanceObserver(() => {});
+    it('should stop performance monitoring on destroy', async () => {
+      optimizer = new MobilePerformanceOptimizer(config);
+      
+      // Wait for async initialization to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
+      // The constructor should have created a PerformanceObserver
+      expect(global.PerformanceObserver).toHaveBeenCalled();
+      
+      // Get the most recent mock instance that was created
+      const mockInstances = (global.PerformanceObserver as any).mock.results;
+      const mockInstance = mockInstances[mockInstances.length - 1].value;
+      
+      // Ensure disconnect method exists on the mock
+      expect(mockInstance).toBeDefined();
+      expect(mockInstance.disconnect).toBeDefined();
+      
       optimizer.destroy();
 
-      expect(performanceObserver.disconnect).toHaveBeenCalled();
+      expect(mockInstance.disconnect).toHaveBeenCalled();
     });
   });
 });

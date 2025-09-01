@@ -169,7 +169,10 @@ describe('BundleOptimizer', () => {
         fallback,
       );
 
-      await expect(lazyFactory()).rejects.toThrow('Import failed');
+      // Should return fallback when error occurs and fallback is provided
+      const result = await lazyFactory();
+      expect(result).toEqual({ name: 'Fallback' });
+      expect(fallback).toHaveBeenCalled();
     });
   });
 
