@@ -193,13 +193,8 @@ export class AdvancedAuditLogger extends EventEmitter {
         await this.performRealTimeAnalysis(entry);
       }
 
-      // Add to buffer and memory storage
+      // Add to buffer first
       this.buffer.push(entry);
-      
-      // Also store in memory for immediate querying
-      if (this.config.storage === 'memory') {
-        this.memoryStorage.push(entry);
-      }
       
       this.updateStatistics(entry);
 
@@ -356,6 +351,14 @@ export class AdvancedAuditLogger extends EventEmitter {
           
           const order = query.sortOrder === 'desc' ? -1 : 1;
           
+          // Special handling for severity (low < medium < high < critical)
+          if (query.sortBy === 'severity') {
+            const severityOrder = { low: 1, medium: 2, high: 3, critical: 4 };
+            const aOrder = severityOrder[aVal as keyof typeof severityOrder] || 0;
+            const bOrder = severityOrder[bVal as keyof typeof severityOrder] || 0;
+            return (aOrder - bOrder) * order;
+          }
+          
           if (aVal < bVal) return -1 * order;
           if (aVal > bVal) return 1 * order;
           return 0;
@@ -446,7 +449,8 @@ export class AdvancedAuditLogger extends EventEmitter {
       // Process based on storage type
       switch (this.config.storage) {
         case 'memory':
-          // Keep in memory (for testing)
+          // Store in memory for testing/development
+          this.memoryStorage.push(...logsToFlush);
           break;
         case 'file':
           await this.writeToFile(logsToFlush);
