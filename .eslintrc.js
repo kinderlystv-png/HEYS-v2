@@ -8,7 +8,7 @@ module.exports = {
     es2022: true,
     node: true,
   },
-  extends: ['eslint:recommended', '@typescript-eslint/recommended', 'prettier'],
+  extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'prettier'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 2022,
@@ -25,7 +25,7 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-non-null-assertion': 'warn',
-    '@typescript-eslint/prefer-const': 'error',
+    'prefer-const': 'error',
 
     // Import rules
     'import/order': [
@@ -40,14 +40,13 @@ module.exports = {
     // General rules
     'no-console': 'warn',
     'no-debugger': 'error',
-    'prefer-const': 'error',
     'no-var': 'error',
   },
   overrides: [
     // React-specific rules for UI package and apps
     {
       files: ['packages/ui/**/*.{ts,tsx}', 'apps/**/*.{ts,tsx}'],
-      extends: ['eslint:recommended', '@typescript-eslint/recommended', 'prettier'],
+      extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'prettier'],
       plugins: ['@typescript-eslint', 'react', 'react-hooks', 'import'],
       rules: {
         // React rules

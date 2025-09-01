@@ -3,11 +3,15 @@ node_modules/
 dist/
 build/
 coverage/
+.turbo/
+.next/
+out/
 
 # Environment files
 .env
 .env.local
 .env.production
+.env*
 
 # Logs
 *.log
@@ -15,6 +19,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+logs/
 
 # Runtime data
 pids
@@ -41,11 +46,40 @@ TESTS/
 # Build artifacts
 *.tgz
 *.tar.gz
-.next/
-.turbo/
 storybook-static/
 
 # Package manager
 .pnpm-store/
 .yarn/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Generated files
+CHANGELOG*.md
+CHANGELOG/
+.changeset/
+
+# Cache
+.cache/
+.parcel-cache/
+.docusaurus/
+
+# Test results
+test-results/
+playwright-report/
+
+# PWA
+public/sw.js
+public/workbox-*.js
+**/sw.js
+**/workbox-*.js
+
+# Auto-generated
+auto-imports.d.ts
+components.d.ts
+
+# Misc
+*.min.js
+*.min.css
 .npm/
