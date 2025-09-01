@@ -1,6 +1,6 @@
 {
   "name": "@heys/search",
-  "version": "13.0.0",
+  "version": "14.0.0",
   "description": "HEYS Search - Smart search functionality with typo tolerance",
   "type": "module",
   "main": "./dist/index.js",

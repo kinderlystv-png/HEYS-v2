@@ -1,6 +1,6 @@
 {
   "name": "@heys/ui",
-  "version": "13.0.0",
+  "version": "14.0.0",
   "description": "HEYS UI Components - Reusable React components library",
   "type": "module",
   "main": "./dist/index.js",

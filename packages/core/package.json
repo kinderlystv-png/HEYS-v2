@@ -1,6 +1,6 @@
 {
   "name": "@heys/core",
-  "version": "13.0.0",
+  "version": "14.0.0",
   "description": "HEYS Core - Central business logic and data models",
   "type": "module",
   "main": "./dist/index.js",

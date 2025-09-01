@@ -1,6 +1,6 @@
 {
   "name": "@heys/analytics",
-  "version": "13.0.0",
+  "version": "14.0.0",
   "description": "HEYS Analytics - Data analytics and reporting",
   "type": "module",
   "main": "./dist/index.js",

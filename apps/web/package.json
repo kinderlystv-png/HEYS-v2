@@ -1,6 +1,6 @@
 {
   "name": "@heys/web",
-  "version": "13.0.0",
+  "version": "13.0.1",
   "description": "HEYS Web Application - Main web interface",
   "type": "module",
   "private": true,
