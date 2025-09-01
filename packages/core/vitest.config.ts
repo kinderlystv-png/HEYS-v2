@@ -24,6 +24,12 @@ export default defineConfig({
       '@heys/shared': path.resolve(__dirname, '../shared/src'),
       '@heys/core': path.resolve(__dirname, './src'),
       '@heys': path.resolve(__dirname, '../..'),
+      // Дополнительные workspace aliases
+      '@heys/threat-detection': path.resolve(__dirname, '../threat-detection/src'),
+      '@heys/analytics': path.resolve(__dirname, '../analytics/src'),
+      '@heys/storage': path.resolve(__dirname, '../storage/src'),
+      '@heys/search': path.resolve(__dirname, '../search/src'),
+      '@heys/gaming': path.resolve(__dirname, '../gaming/src')
     },
   },
 });

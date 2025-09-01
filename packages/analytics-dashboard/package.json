@@ -8,34 +8,44 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup src/index.ts --dts --format cjs,esm",
-    "dev": "vite dev",
+    "dev": "vite --config vite.config.dev.ts",
+    "demo": "vite --config vite.config.dev.ts",
+    "build:demo": "vite build --config vite.config.dev.ts",
     "test": "vitest",
     "test:watch": "vitest --watch",
+    "test:visual": "playwright test",
+    "test:visual:ui": "playwright test --ui",
+    "test:visual:headed": "playwright test --headed",
+    "test:visual:update": "playwright test --update-snapshots",
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@types/d3": "^7.4.3",
+    "buffer": "^6.0.3",
+    "d3": "^7.9.0",
+    "date-fns": "^3.6.0",
+    "eventemitter3": "^5.0.1",
+    "process": "^0.11.10",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "d3": "^7.9.0",
-    "socket.io-client": "^4.7.5",
-    "@types/d3": "^7.4.3",
-    "date-fns": "^3.6.0",
-    "recharts": "^2.12.7"
+    "recharts": "^2.12.7",
+    "socket.io-client": "^4.7.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@testing-library/jest-dom": "^6.4.6",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "@testing-library/react": "^16.0.0",
-    "@testing-library/jest-dom": "^6.4.6",
-    "@testing-library/user-event": "^14.5.2",
-    "tsup": "^8.2.4",
-    "vite": "^5.4.1",
-    "vitest": "^2.0.5",
-    "typescript": "^5.5.4",
-    "eslint": "^9.9.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "jsdom": "^24.1.1"
+    "eslint": "^9.9.0",
+    "jsdom": "^24.1.1",
+    "tsup": "^8.2.4",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.1",
+    "vitest": "^2.0.5"
   },
   "peerDependencies": {
     "@heys/shared": "workspace:*"
@@ -43,7 +53,7 @@
   "keywords": [
     "analytics",
     "dashboard",
-    "business-intelligence", 
+    "business-intelligence",
     "real-time",
     "metrics",
     "heys"
