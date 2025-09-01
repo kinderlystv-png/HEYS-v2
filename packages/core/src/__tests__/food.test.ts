@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { FoodEntrySchema, FoodProductSchema, calculateNutrition } from '../models/food.js';
 
 describe('Food Models', () => {

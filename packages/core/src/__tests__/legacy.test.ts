@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { AnalyticsService, type AnalyticsProvider } from '../services/analytics';
 import { NutritionService, type NutritionData } from '../services/nutrition';
 

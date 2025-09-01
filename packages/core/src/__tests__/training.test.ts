@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { ExerciseSchema, TrainingProgramSchema, WorkoutSessionSchema } from '../models/training.js';
 
 describe('Training Models', () => {

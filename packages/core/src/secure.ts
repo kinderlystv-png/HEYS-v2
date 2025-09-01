@@ -8,6 +8,7 @@
  */
 
 import { defaultValidator, SecurityError, ValidationSchemas } from '@heys/shared';
+
 import { HeysDay, HeysSession, HeysUser } from './legacy/index';
 
 /**

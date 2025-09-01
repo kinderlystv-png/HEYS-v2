@@ -553,7 +553,7 @@ declare global {
       try {
         let total = 0;
         for (let key in localStorage) {
-          if (localStorage.hasOwnProperty(key)) {
+          if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
             total += localStorage.getItem(key)?.length || 0;
           }
         }
@@ -590,7 +590,7 @@ declare global {
     }
 
     // HEYSAnalytics interface implementation
-    trackDataOperation(type: string, details?: any): void {
+    trackDataOperation(type: string, _details?: any): void {
       this.increment(`dataOp.${type}`);
 
       switch (type) {
@@ -621,7 +621,7 @@ declare global {
       }
     }
 
-    trackUserInteraction(action: string, details?: any): void {
+    trackUserInteraction(action: string, _details?: any): void {
       this.increment(`userAction.${action}`);
     }
 
@@ -630,7 +630,7 @@ declare global {
       this.increment(success ? `api.${endpoint}.success` : `api.${endpoint}.error`);
     }
 
-    trackError(error: string, details?: any): void {
+    trackError(error: string, _details?: any): void {
       this.increment(`error.${error}`);
       this.metrics.errors.consoleErrors.push({
         level: 'error',

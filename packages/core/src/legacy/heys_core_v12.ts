@@ -65,6 +65,7 @@
 // heys_core_v12.ts — ядро + вкладка «Рацион» (TypeScript version)
 
 import React from 'react';
+
 import type { HEYSGlobal, Product } from './types/heys';
 
 // Declare global types for React UMD

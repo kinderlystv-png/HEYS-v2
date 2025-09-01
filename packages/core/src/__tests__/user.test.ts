@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { createUser, UserDraft, UserSchema } from '../models/user.js';
 
 describe('User Model', () => {

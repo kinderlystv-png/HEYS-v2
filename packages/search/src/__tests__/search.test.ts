@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+
 import { SearchConfig, SmartSearchEngine } from '../index.js';
 
 describe('SmartSearchEngine', () => {
