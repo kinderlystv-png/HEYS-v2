@@ -1,0 +1,53 @@
+{
+  "name": "@heys/analytics-dashboard",
+  "version": "0.1.0",
+  "description": "Business Intelligence MVP - Real-time analytics dashboard for HEYS v2",
+  "private": true,
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --dts --format cjs,esm",
+    "dev": "vite dev",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "lint": "eslint src --ext .ts,.tsx",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "d3": "^7.9.0",
+    "socket.io-client": "^4.7.5",
+    "@types/d3": "^7.4.3",
+    "date-fns": "^3.6.0",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/jest-dom": "^6.4.6",
+    "@testing-library/user-event": "^14.5.2",
+    "tsup": "^8.2.4",
+    "vite": "^5.4.1",
+    "vitest": "^2.0.5",
+    "typescript": "^5.5.4",
+    "eslint": "^9.9.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "jsdom": "^24.1.1"
+  },
+  "peerDependencies": {
+    "@heys/shared": "workspace:*"
+  },
+  "keywords": [
+    "analytics",
+    "dashboard",
+    "business-intelligence", 
+    "real-time",
+    "metrics",
+    "heys"
+  ],
+  "author": "HEYS v2 Development Team",
+  "license": "MIT"
+}
