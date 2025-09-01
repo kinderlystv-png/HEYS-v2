@@ -17,9 +17,12 @@ export default defineConfig({
         'vitest.config.ts',
       ],
     },
+    setupFiles: ['./src/__tests__/setup.ts'],
   },
   resolve: { 
     alias: { 
+      '@heys/shared': path.resolve(__dirname, '../shared/src'),
+      '@heys/core': path.resolve(__dirname, './src'),
       '@heys': path.resolve(__dirname, '../..') 
     } 
   }

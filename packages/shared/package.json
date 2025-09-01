@@ -16,7 +16,8 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@heys/core": "workspace:*"
+    "zod": "^3.25.76",
+    "dompurify": "^3.2.6"
   },
   "devDependencies": {
     "tsup": "^7.2.0",

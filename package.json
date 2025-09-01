@@ -107,6 +107,25 @@
     "not dead"
   ],
   "dependencies": {
-    "@playwright/test": "^1.37.0"
+    "@playwright/test": "^1.37.0",
+    "@sentry/browser": "^10.8.0",
+    "@sentry/integrations": "^7.114.0",
+    "@sentry/node": "^10.8.0",
+    "@types/dompurify": "^3.2.0",
+    "dompurify": "^3.2.6",
+    "fuse.js": "^7.0.0",
+    "zod": "^3.22.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "*.ts": [
+      "vitest related --run"
+    ]
   }
 }
