@@ -1,4 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+
+import { BusinessROICalculator } from '../core/BusinessROICalculator';
+import { ErrorImpactAnalyzer } from '../core/ErrorImpactAnalyzer';
+import { MetricsEngine } from '../core/MetricsEngine';
+import { UserExperienceScorer } from '../core/UserExperienceScorer';
 import { 
   AnalyticsData, 
   MetricDefinition, 
@@ -7,10 +12,6 @@ import {
   ErrorImpactData,
   ROICalculation 
 } from '../types';
-import { MetricsEngine } from '../core/MetricsEngine';
-import { BusinessROICalculator } from '../core/BusinessROICalculator';
-import { UserExperienceScorer } from '../core/UserExperienceScorer';
-import { ErrorImpactAnalyzer } from '../core/ErrorImpactAnalyzer';
 
 interface MetricsContextType {
   // Engines

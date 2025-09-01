@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { WebSocketProvider, useWebSocket } from '../providers/WebSocketProvider';
+
 import { MetricsProvider, useMetrics } from '../providers/MetricsProvider';
+import { WebSocketProvider, useWebSocket } from '../providers/WebSocketProvider';
 import { formatMetricValue, formatDuration, generateTimeRanges } from '../utils';
 
 interface AnalyticsDashboardProps {
