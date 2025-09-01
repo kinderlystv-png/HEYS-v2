@@ -99,11 +99,11 @@ class DocsBackupSystem {
     try {
       const files = await fs.readdir(this.backupDir);
       const fileBackups = files
-        .filter(f => f.startsWith(fileName))
-        .map(f => ({
+        .filter((f) => f.startsWith(fileName))
+        .map((f) => ({
           name: f,
           path: path.join(this.backupDir, f),
-          time: fs.stat(path.join(this.backupDir, f)).then(s => s.mtime),
+          time: fs.stat(path.join(this.backupDir, f)).then((s) => s.mtime),
         }));
 
       // Сортировка по времени (новые первые)
@@ -132,10 +132,10 @@ class DocsBackupSystem {
 
     try {
       const files = await fs.readdir(this.backupDir);
-      let backups = files.filter(f => f.endsWith('.backup'));
+      let backups = files.filter((f) => f.endsWith('.backup'));
 
       if (fileName) {
-        backups = backups.filter(f => f.startsWith(fileName));
+        backups = backups.filter((f) => f.startsWith(fileName));
       }
 
       const backupDetails = [];

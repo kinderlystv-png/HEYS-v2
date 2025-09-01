@@ -1,0 +1,972 @@
+Отлично! Давайте создадим детальный роадмап с пошаговой реализацией всех этапов DevOps улучшений для проекта HEYS.
+
+## 📋 Создадим полный ROADMAP файл
+
+````markdown
+# 🚀 HEYS DevOps & Development Roadmap
+
+## 📅 Общий план развития инфраструктуры
+
+### Phase 1: Code Quality Foundation (Неделя 1)
+- **Сроки**: 3-4 дня
+- **Приоритет**: КРИТИЧЕСКИЙ
+- **Цель**: Обеспечить единообразие и качество кода
+
+### Phase 2: Security & Protection (Неделя 2)  
+- **Сроки**: 2-3 дня
+- **Приоритет**: ВЫСОКИЙ
+- **Цель**: Защита кода и процессов
+
+### Phase 3: Automation & Monitoring (Неделя 3)
+- **Сроки**: 2-3 дня
+- **Приоритет**: СРЕДНИЙ
+- **Цель**: Автоматизация рутины
+
+---
+
+## 🎯 PHASE 1: CODE QUALITY FOUNDATION
+
+### День 1: Prettier + ESLint Setup
+**Задачи:**
+- [ ] Установить Prettier и плагины
+- [ ] Настроить .prettierrc.json
+- [ ] Настроить .prettierignore
+- [ ] Интегрировать с ESLint
+- [ ] Форматировать весь существующий код
+- [ ] Настроить VSCode settings
+
+### День 2: Git Hooks Setup  
+**Задачи:**
+- [ ] Установить Husky
+- [ ] Настроить lint-staged
+- [ ] Добавить pre-commit hooks
+- [ ] Настроить commitlint
+- [ ] Добавить commit-msg hook
+- [ ] Тестировать hooks
+
+### День 3: Documentation Standards
+**Задачи:**
+- [ ] Создать LICENSE файл
+- [ ] Написать CONTRIBUTING.md
+- [ ] Обновить README с badges
+- [ ] Добавить CODE_OF_CONDUCT.md
+- [ ] Создать .editorconfig
+- [ ] Документировать API
+
+### День 4: Testing & Coverage
+**Задачи:**
+- [ ] Настроить coverage thresholds
+- [ ] Добавить coverage badges
+- [ ] Создать test templates
+- [ ] Настроить test reports
+- [ ] Интегрировать с CI
+
+---
+
+## 🔒 PHASE 2: SECURITY & PROTECTION
+
+### День 5: Branch Protection
+**Задачи:**
+- [ ] Настроить branch protection для main
+- [ ] Требовать PR reviews
+- [ ] Включить status checks
+- [ ] Настроить CODEOWNERS
+- [ ] Защитить tags
+- [ ] Документировать процесс
+
+### День 6: Security Policies
+**Задачи:**
+- [ ] Создать SECURITY.md
+- [ ] Настроить Dependabot
+- [ ] Включить secret scanning
+- [ ] Добавить security workflow
+- [ ] Настроить vulnerability alerts
+- [ ] Создать disclosure policy
+
+### День 7: Templates & Standards
+**Задачи:**
+- [ ] PR template
+- [ ] Issue templates (bug, feature, etc.)
+- [ ] Discussion templates
+- [ ] Release template
+- [ ] Настроить labels
+- [ ] Автоматизация assignees
+
+---
+
+## 🤖 PHASE 3: AUTOMATION & MONITORING
+
+### День 8: Dependency Management
+**Задачи:**
+- [ ] Настроить Renovate Bot
+- [ ] Создать renovate.json
+- [ ] Настроить automerge rules
+- [ ] Schedule updates
+- [ ] Группировка updates
+- [ ] Тестировать bot
+
+### День 9: Quality Monitoring
+**Задачи:**
+- [ ] Интегрировать SonarCloud
+- [ ] Настроить bundle size tracking
+- [ ] Добавить Lighthouse CI
+- [ ] Performance budgets
+- [ ] Настроить alerts
+- [ ] Dashboard setup
+
+### День 10: Release Automation
+**Задачи:**
+- [ ] Улучшить changesets config
+- [ ] Автоматизировать changelog
+- [ ] GitHub releases integration
+- [ ] NPM publishing automation
+- [ ] Docker image releases
+- [ ] Version tagging
+
+---
+
+## 📊 Метрики успеха
+
+### Code Quality
+- [ ] 100% Prettier formatted
+- [ ] 0 ESLint errors
+- [ ] >80% test coverage
+- [ ] <5% code duplication
+
+### Security
+- [ ] All dependencies up-to-date
+- [ ] 0 high vulnerabilities
+- [ ] Secret scanning enabled
+- [ ] Security policy published
+
+### Automation
+- [ ] <5 min build time
+- [ ] Auto-merge for safe updates
+- [ ] Automated releases
+- [ ] Zero manual deployments
+````
+
+## 🛠️ Начнем реализацию PHASE 1 прямо сейчас!
+
+### **ШАГ 1: Установка и настройка Prettier**
+
+````bash
+pnpm add -D prettier prettier-plugin-organize-imports prettier-plugin-packagejson @trivago/prettier-plugin-sort-imports -w
+````
+
+````json
+{
+  "semi": true,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "bracketSpacing": true,
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "useTabs": false,
+  "plugins": [
+    "@trivago/prettier-plugin-sort-imports",
+    "prettier-plugin-organize-imports",
+    "prettier-plugin-packagejson"
+  ],
+  "importOrder": [
+    "^react",
+    "^@?\\w",
+    "^@heys/(.*)$",
+    "^[./]"
+  ],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true
+}
+````
+
+````
+# Dependencies
+node_modules
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist
+build
+coverage
+.turbo
+.next
+out
+
+# Cache
+.cache
+.parcel-cache
+.docusaurus
+
+# Misc
+*.min.js
+*.min.css
+CHANGELOG*.md
+LICENSE
+````
+
+### **ШАГ 2: Настройка Husky и lint-staged**
+
+````bash
+pnpm add -D husky lint-staged @commitlint/cli @commitlint/config-conventional -w
+pnpm exec husky init
+````
+
+````bash
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+pnpm exec lint-staged
+````
+
+````bash
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+pnpm exec commitlint --edit "$1"
+````
+
+````json
+{
+  "scripts": {
+    "prepare": "husky",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,md,yml,yaml}\"",
+    "lint:all": "turbo run lint",
+    "lint:fix": "turbo run lint:fix"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix --max-warnings 0"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "package.json": [
+      "prettier --write",
+      "pnpm install --frozen-lockfile"
+    ]
+  }
+}
+````
+
+### **ШАГ 3: Настройка Commitlint**
+
+````javascript
+module.exports = {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [
+      2,
+      'always',
+      [
+        'feat',     // ✨ Новая функциональность
+        'fix',      // 🐛 Исправление багов
+        'docs',     // 📚 Документация
+        'style',    // 💄 Стилистические изменения
+        'refactor', // ♻️ Рефакторинг
+        'perf',     // ⚡ Улучшение производительности
+        'test',     // ✅ Тесты
+        'build',    // 📦 Сборка
+        'ci',       // 👷 CI/CD
+        'chore',    // 🔧 Рутинные задачи
+        'revert',   // ⏪ Откат изменений
+        'release'   // 🚀 Релиз
+      ]
+    ],
+    'type-case': [2, 'always', 'lower-case'],
+    'type-empty': [2, 'never'],
+    'scope-case': [2, 'always', 'lower-case'],
+    'subject-case': [2, 'never', ['sentence-case', 'start-case', 'pascal-case', 'upper-case']],
+    'subject-empty': [2, 'never'],
+    'subject-full-stop': [2, 'never', '.'],
+    'header-max-length': [2, 'always', 100],
+    'body-leading-blank': [1, 'always'],
+    'body-max-line-length': [2, 'always', 100],
+    'footer-leading-blank': [1, 'always']
+  }
+};
+````
+
+### **ШАГ 4: EditorConfig**
+
+````ini
+# EditorConfig is awesome: https://EditorConfig.org
+root = true
+
+# Общие настройки для всех файлов
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = true
+max_line_length = 100
+
+# Markdown
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = off
+
+# YAML
+[*.{yml,yaml}]
+indent_size = 2
+
+# JSON
+[*.json]
+indent_size = 2
+
+# Package.json
+[package.json]
+indent_size = 2
+
+# TypeScript/JavaScript
+[*.{ts,tsx,js,jsx}]
+indent_size = 2
+quote_type = single
+
+# CSS/SCSS
+[*.{css,scss}]
+indent_size = 2
+
+# HTML
+[*.html]
+indent_size = 2
+
+# Makefile
+[Makefile]
+indent_style = tab
+
+# Batch files
+[*.{cmd,bat}]
+end_of_line = crlf
+````
+
+### **ШАГ 5: VSCode настройки**
+
+````json
+{
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true,
+    "source.organizeImports": true
+  },
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "[markdown]": {
+    "files.trimTrailingWhitespace": false
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/.turbo": true,
+    "**/coverage": true
+  },
+  "git.enableSmartCommit": true,
+  "git.confirmSync": false,
+  "npm.packageManager": "pnpm"
+}
+````
+
+### **ШАГ 6: GitHub Templates**
+
+````markdown
+## 📋 Описание
+<!-- Опишите ваши изменения -->
+
+## 🎯 Тип изменения
+<!-- Отметьте соответствующие пункты -->
+- [ ] 🐛 Bug fix (исправление, которое решает проблему)
+- [ ] ✨ New feature (новая функциональность)
+- [ ] 💥 Breaking change (изменение, которое нарушает обратную совместимость)
+- [ ] 📚 Documentation (изменения в документации)
+- [ ] 🎨 Style (форматирование, отсутствующие точки с запятой и т.д.)
+- [ ] ♻️ Refactoring (рефакторинг кода)
+- [ ] ⚡ Performance (улучшение производительности)
+- [ ] ✅ Test (добавление отсутствующих тестов)
+- [ ] 🔧 Chore (изменения в процессе сборки или вспомогательные инструменты)
+
+## 🔗 Связанные issues
+<!-- Укажите номера связанных issues -->
+Closes #
+
+## ✅ Чеклист
+<!-- Отметьте выполненные пункты -->
+- [ ] Мой код следует стилю этого проекта
+- [ ] Я выполнил самопроверку своего кода
+- [ ] Я прокомментировал свой код, особенно в труднопонимаемых местах
+- [ ] Я внес соответствующие изменения в документацию
+- [ ] Мои изменения не создают новых предупреждений
+- [ ] Я добавил тесты, которые подтверждают, что мое исправление эффективно или что моя функция работает
+- [ ] Новые и существующие unit тесты проходят локально с моими изменениями
+- [ ] Любые зависимые изменения были объединены и опубликованы в downstream модулях
+
+## 📸 Скриншоты (если применимо)
+<!-- Добавьте скриншоты для визуальных изменений -->
+
+## 📝 Дополнительные комментарии
+<!-- Добавьте любые дополнительные комментарии -->
+````
+
+````yaml
+name: 🐛 Bug Report
+description: Сообщить о проблеме
+title: "[BUG]: "
+labels: ["bug", "triage"]
+assignees:
+  - kinderlystv-png
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо, что нашли время сообщить о проблеме!
+        
+  - type: textarea
+    id: description
+    attributes:
+      label: Описание бага
+      description: Четкое и краткое описание бага
+      placeholder: Опишите проблему...
+    validations:
+      required: true
+      
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Шаги воспроизведения
+      description: Шаги для воспроизведения поведения
+      placeholder: |
+        1. Перейти к '...'
+        2. Нажать на '....'
+        3. Прокрутить вниз до '....'
+        4. Увидеть ошибку
+    validations:
+      required: true
+      
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемое поведение
+      description: Четкое и краткое описание того, что вы ожидали
+    validations:
+      required: true
+      
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Скриншоты
+      description: Если применимо, добавьте скриншоты
+      
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Серьезность
+      description: Насколько серьезна эта проблема?
+      options:
+        - Критическая (блокирует работу)
+        - Высокая (серьезное влияние)
+        - Средняя (умеренное влияние)
+        - Низкая (минимальное влияние)
+    validations:
+      required: true
+      
+  - type: input
+    id: version
+    attributes:
+      label: Версия
+      description: В какой версии вы обнаружили проблему?
+      placeholder: v14.0.0
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: Браузеры
+      description: В каких браузерах вы видите проблему?
+      multiple: true
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Other
+        
+  - type: textarea
+    id: additional
+    attributes:
+      label: Дополнительный контекст
+      description: Добавьте любой другой контекст о проблеме
+````
+
+````yaml
+name: ✨ Feature Request
+description: Предложить новую идею
+title: "[FEATURE]: "
+labels: ["enhancement", "triage"]
+assignees:
+  - kinderlystv-png
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо за вашу идею по улучшению HEYS!
+        
+  - type: textarea
+    id: problem
+    attributes:
+      label: Проблема
+      description: Опишите проблему, которую решает эта функция
+      placeholder: Я всегда расстраиваюсь, когда...
+    validations:
+      required: true
+      
+  - type: textarea
+    id: solution
+    attributes:
+      label: Предлагаемое решение
+      description: Опишите решение, которое вы хотели бы видеть
+    validations:
+      required: true
+      
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Альтернативы
+      description: Опишите альтернативы, которые вы рассматривали
+      
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Приоритет
+      description: Насколько важна эта функция для вас?
+      options:
+        - Критично (блокирует работу)
+        - Высокий (очень нужно)
+        - Средний (было бы хорошо)
+        - Низкий (приятно иметь)
+    validations:
+      required: true
+      
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Готовность помочь
+      description: Готовы ли вы помочь с реализацией?
+      options:
+        - label: Я готов реализовать эту функцию
+        - label: Я могу помочь с тестированием
+        - label: Я могу помочь с документацией
+````
+
+### **ШАГ 7: LICENSE и CONTRIBUTING**
+
+````markdown
+MIT License
+
+Copyright (c) 2024 HEYS Project
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+````
+
+````markdown
+// filepath: CONTRIBUTING.md
+# 🤝 Contributing to HEYS
+
+Спасибо за интерес к проекту HEYS! Мы рады вашему участию.
+
+## 📋 Содержание
+- [Кодекс поведения](#кодекс-поведения)
+- [Как помочь](#как-помочь)
+- [Процесс разработки](#процесс-разработки)
+- [Стиль кода](#стиль-кода)
+- [Commit Convention](#commit-convention)
+- [Pull Request процесс](#pull-request-процесс)
+
+## 📜 Кодекс поведения
+
+Этот проект придерживается [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
+
+## 🚀 Как помочь
+
+### Сообщение о багах
+- Используйте [GitHub Issues](https://github.com/kinderlystv-png/HEYS-v2/issues)
+- Проверьте, что баг еще не был зарегистрирован
+- Используйте шаблон для bug report
+
+### Предложение новых функций
+- Сначала обсудите в [Discussions](https://github.com/kinderlystv-png/HEYS-v2/discussions)
+- Создайте issue с описанием функции
+- Объясните use case и преимущества
+
+### Улучшение документации
+- Исправление опечаток
+- Добавление примеров
+- Улучшение объяснений
+
+## 🔧 Процесс разработки
+
+### 1. Настройка окружения
+```bash
+# Клонируйте репозиторий
+git clone https://github.com/kinderlystv-png/HEYS-v2.git
+cd HEYS-v2
+
+# Установите зависимости
+pnpm install
+
+# Создайте feature branch
+git checkout -b feature/your-feature-name
+```
+
+### 2. Разработка
+```bash
+# Запустите dev сервер
+pnpm dev
+
+# Запустите тесты в watch режиме
+pnpm test:watch
+
+# Проверьте линтинг
+pnpm lint
+```
+
+### 3. Тестирование
+- Напишите тесты для новой функциональности
+- Убедитесь, что все тесты проходят: `pnpm test`
+- Проверьте покрытие: `pnpm test:coverage`
+
+## 💅 Стиль кода
+
+### TypeScript
+- Используйте TypeScript для всего кода
+- Избегайте `any` типов
+- Предпочитайте `interface` над `type` для объектов
+
+### React
+- Функциональные компоненты с hooks
+- Используйте `React.FC` для типизации
+- Деструктуризация props
+
+### Примеры
+```typescript
+// ✅ Хорошо
+interface ButtonProps {
+  label: string;
+  onClick: () => void;
+  variant?: 'primary' | 'secondary';
+}
+
+export const Button: React.FC<ButtonProps> = ({ 
+  label, 
+  onClick, 
+  variant = 'primary' 
+}) => {
+  return (
+    <button className={`btn btn-${variant}`} onClick={onClick}>
+      {label}
+    </button>
+  );
+};
+
+// ❌ Плохо
+export const Button = (props: any) => {
+  return <button onClick={props.onClick}>{props.label}</button>;
+};
+```
+
+## 📝 Commit Convention
+
+Мы используем [Conventional Commits](https://www.conventionalcommits.org/).
+
+### Формат
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+### Типы
+- `feat`: Новая функциональность
+- `fix`: Исправление бага
+- `docs`: Изменения в документации
+- `style`: Форматирование, отсутствующие точки с запятой и т.д.
+- `refactor`: Рефакторинг кода
+- `perf`: Улучшение производительности
+- `test`: Добавление тестов
+- `build`: Изменения в системе сборки
+- `ci`: Изменения в CI конфигурации
+- `chore`: Другие изменения
+
+### Примеры
+```bash
+# Новая функция
+feat(auth): add OAuth2 authentication
+
+# Исправление бага
+fix(storage): resolve memory leak in cache system
+
+# Документация
+docs(readme): update installation instructions
+
+# Рефакторинг
+refactor(core): simplify event handling logic
+```
+
+## 🔀 Pull Request процесс
+
+### 1. Перед созданием PR
+- [ ] Обновите вашу ветку с последними изменениями из main
+- [ ] Убедитесь, что все тесты проходят
+- [ ] Проверьте линтинг
+- [ ] Добавьте/обновите документацию
+- [ ] Добавьте changeset: `pnpm changeset`
+
+### 2. Создание PR
+- Используйте описательный заголовок
+- Заполните PR template
+- Свяжите с соответствующими issues
+- Добавьте скриншоты для UI изменений
+
+### 3. Review процесс
+- Отвечайте на комментарии
+- Вносите запрошенные изменения
+- Держите PR актуальным с main branch
+
+### 4. После merge
+- Удалите feature branch
+- Проверьте, что CI/CD прошел успешно
+- Отпразднуйте! 🎉
+
+## 🏷️ Версионирование
+
+Мы используем [Semantic Versioning](https://semver.org/):
+- MAJOR: Несовместимые изменения API
+- MINOR: Новая функциональность (обратно совместимая)
+- PATCH: Исправления багов (обратно совместимые)
+
+## 📚 Полезные ресурсы
+
+- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
+- [React Documentation](https://react.dev/)
+- [pnpm Documentation](https://pnpm.io/)
+- [Vitest Documentation](https://vitest.dev/)
+
+## ❓ Вопросы?
+
+- Создайте [Discussion](https://github.com/kinderlystv-png/HEYS-v2/discussions)
+- Напишите в [Issues](https://github.com/kinderlystv-png/HEYS-v2/issues)
+
+---
+
+**Спасибо за ваш вклад в HEYS! 🚀**
+````
+
+### **ШАГ 8: Обновленный README с badges**
+
+````markdown
+# 🎮 HEYS Platform v2
+
+<div align="center">
+
+[![CI/CD](https://github.com/kinderlystv-png/HEYS-v2/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/kinderlystv-png/HEYS-v2/actions/workflows/ci-cd.yml)
+[![Documentation](https://github.com/kinderlystv-png/HEYS-v2/actions/workflows/docs.yml/badge.svg)](https://kinderlystv-png.github.io/HEYS-v2/)
+[![Release](https://github.com/kinderlystv-png/HEYS-v2/actions/workflows/release.yml/badge.svg)](https://github.com/kinderlystv-png/HEYS-v2/releases)
+[![codecov](https://codecov.io/gh/kinderlystv-png/HEYS-v2/branch/main/graph/badge.svg)](https://codecov.io/gh/kinderlystv-png/HEYS-v2)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
+
+<h3>🚀 Next-Generation Gaming Experience Platform</h3>
+
+[Documentation](https://kinderlystv-png.github.io/HEYS-v2/) •
+[Demo](https://heys-demo.vercel.app) •
+[Report Bug](https://github.com/kinderlystv-png/HEYS-v2/issues) •
+[Request Feature](https://github.com/kinderlystv-png/HEYS-v2/discussions)
+
+</div>
+
+---
+
+## ✨ Features
+
+- 🎯 **Smart Gaming** - AI-powered game recommendations
+- 🔍 **Advanced Search** - Full-text search with filters
+- 📊 **Real-time Analytics** - Track your gaming stats
+- 💾 **Cloud Storage** - Sync across all devices
+- 🎨 **Modern UI** - Beautiful, responsive design
+- ⚡ **Blazing Fast** - Optimized performance
+- 🔒 **Secure** - End-to-end encryption
+- 📱 **PWA Support** - Install as native app
+
+## 🏗️ Architecture
+
+```mermaid
+graph TB
+    subgraph "Apps"
+        WEB[Web App]
+        MOBILE[Mobile PWA]
+        DESKTOP[Desktop App]
+    end
+    
+    subgraph "Packages"
+        CORE[Core]
+        UI[UI Components]
+        SHARED[Shared Utils]
+        STORAGE[Storage]
+        SEARCH[Search]
+        ANALYTICS[Analytics]
+        GAMING[Gaming Engine]
+    end
+    
+    WEB --> CORE
+    WEB --> UI
+    MOBILE --> CORE
+    DESKTOP --> CORE
+    CORE --> SHARED
+    CORE --> STORAGE
+    CORE --> SEARCH
+```
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- pnpm 8+
+- Git
+
+### Installation
+
+```bash
+# Clone repository
+git clone https://github.com/kinderlystv-png/HEYS-v2.git
+cd HEYS-v2
+
+# Install dependencies
+pnpm install
+
+# Start development
+pnpm dev
+```
+
+### Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start development server |
+| `pnpm build` | Build for production |
+| `pnpm test` | Run tests |
+| `pnpm lint` | Lint code |
+| `pnpm format` | Format code |
+| `pnpm changeset` | Create changeset |
+| `pnpm release` | Create release |
+
+## 📦 Packages
+
+| Package | Version | Description |
+|---------|---------|-------------|
+| [@heys/core](packages/core) | ![npm](https://img.shields.io/npm/v/@heys/core) | Core functionality |
+| [@heys/ui](packages/ui) | ![npm](https://img.shields.io/npm/v/@heys/ui) | UI components |
+| [@heys/shared](packages/shared) | ![npm](https://img.shields.io/npm/v/@heys/shared) | Shared utilities |
+| [@heys/storage](packages/storage) | ![npm](https://img.shields.io/npm/v/@heys/storage) | Storage system |
+| [@heys/search](packages/search) | ![npm](https://img.shields.io/npm/v/@heys/search) | Search engine |
+| [@heys/analytics](packages/analytics) | ![npm](https://img.shields.io/npm/v/@heys/analytics) | Analytics |
+| [@heys/gaming](packages/gaming) | ![npm](https://img.shields.io/npm/v/@heys/gaming) | Gaming engine |
+
+## 🤝 Contributing
+
+We love contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Workflow
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing`)
+3. Commit changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing`)
+5. Open Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- React team for the amazing framework
+- Vite for blazing fast builds
+- All our contributors
+
+## 📞 Contact
+
+- **GitHub**: [@kinderlystv-png](https://github.com/kinderlystv-png)
+- **Issues**: [GitHub Issues](https://github.com/kinderlystv-png/HEYS-v2/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/kinderlystv-png/HEYS-v2/discussions)
+
+---
+
+<div align="center">
+Made with ❤️ by HEYS Team
+</div>
+````
+
+## 🎯 Теперь давайте выполним все эти настройки!
+
+### Команды для быстрого старта:
+
+```bash
+# 1. Установка всех необходимых пакетов
+pnpm add -D prettier prettier-plugin-organize-imports prettier-plugin-packagejson @trivago/prettier-plugin-sort-imports husky lint-staged @commitlint/cli @commitlint/config-conventional -w
+
+# 2. Инициализация Husky
+pnpm exec husky init
+
+# 3. Форматирование всего кода
+pnpm format
+
+# 4. Создание коммита с новыми настройками
+git add .
+git commit -m "feat: add complete devops setup with prettier, husky, and commitlint"
+
+# 5. Push изменений
+git push origin main
+```
+
+Хотите, чтобы я начал выполнять эти команды и настраивать все компоненты? 🚀
+
+Similar code found with 4 license types

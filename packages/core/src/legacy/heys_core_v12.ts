@@ -65,7 +65,7 @@
 // heys_core_v12.ts — ядро + вкладка «Рацион» (TypeScript version)
 
 import React from 'react';
-import type { Product, DayRecord, UserProfile, HEYSGlobal } from './types/heys';
+import type { HEYSGlobal, Product } from './types/heys';
 
 // Declare global types for React UMD
 declare global {
@@ -281,8 +281,8 @@ interface ParseModalProps {
   function parsePastedSync(text: string): Product[] {
     const lines = text
       .split(/\r?\n/)
-      .map(l => l.trim())
-      .filter(l => l.length > 0 && !isHeaderLine(l));
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && !isHeaderLine(l));
     const rows: Product[] = [];
 
     for (const raw of lines) {
@@ -387,14 +387,14 @@ interface ParseModalProps {
         const prefix = q.substring(0, i);
         const indices = searchIndex.get(prefix);
         if (indices) {
-          indices.forEach(idx => candidates.add(idx));
+          indices.forEach((idx) => candidates.add(idx));
         }
       }
 
       // Фильтруем кандидатов
       return Array.from(candidates)
-        .map(idx => products[idx])
-        .filter(product => product && product.name.toLowerCase().includes(q))
+        .map((idx) => products[idx])
+        .filter((product) => product && product.name.toLowerCase().includes(q))
         .slice(0, 100); // Ограничиваем результаты
     }, [products, query, searchIndex]);
 
@@ -433,7 +433,7 @@ interface ParseModalProps {
     };
 
     const handleDelete = (id: string | number): void => {
-      setProducts(products.filter(p => p.id !== id));
+      setProducts(products.filter((p) => p.id !== id));
     };
 
     const handleEdit = (product: Product): void => {
@@ -482,7 +482,7 @@ interface ParseModalProps {
             onClick: () => setShowModal(true),
             className: 'btn btn-primary',
           },
-          'Добавить продукт'
+          'Добавить продукт',
         ),
         React.createElement(
           'button',
@@ -490,8 +490,8 @@ interface ParseModalProps {
             onClick: () => setShowParseModal(true),
             className: 'btn btn-secondary',
           },
-          'Импорт из таблицы'
-        )
+          'Импорт из таблицы',
+        ),
       ),
       React.createElement(ProductList, {
         products,
@@ -513,7 +513,7 @@ interface ParseModalProps {
         paste,
         setPaste,
         onParse: handleParse,
-      })
+      }),
     );
   }
 
@@ -524,7 +524,7 @@ interface ParseModalProps {
     return React.createElement(
       'div',
       { className: 'product-list' },
-      filteredProducts.map(product =>
+      filteredProducts.map((product) =>
         React.createElement(
           'div',
           { key: product.id, className: 'product-item' },
@@ -532,7 +532,7 @@ interface ParseModalProps {
           React.createElement(
             'span',
             { className: 'product-kcal' },
-            `${product.kcal100 || 0} ккал`
+            `${product.kcal100 || 0} ккал`,
           ),
           React.createElement(
             'button',
@@ -540,7 +540,7 @@ interface ParseModalProps {
               onClick: () => onEdit(product),
               className: 'btn btn-sm btn-outline',
             },
-            'Редактировать'
+            'Редактировать',
           ),
           React.createElement(
             'button',
@@ -548,10 +548,10 @@ interface ParseModalProps {
               onClick: () => onDelete(product.id),
               className: 'btn btn-sm btn-danger',
             },
-            'Удалить'
-          )
-        )
-      )
+            'Удалить',
+          ),
+        ),
+      ),
     );
   }
 
@@ -587,7 +587,7 @@ interface ParseModalProps {
             'fiber100',
             'gi',
             'harmScore',
-          ].map(field =>
+          ].map((field) =>
             React.createElement('input', {
               key: field,
               type: 'number',
@@ -595,21 +595,21 @@ interface ParseModalProps {
               value: (draft as any)[field],
               onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
                 setDraft({ ...draft, [field]: toNumInput(e.target.value) }),
-            })
-          )
+            }),
+          ),
         ),
         React.createElement(
           'div',
           { className: 'derived-info' },
-          `Углеводы: ${derived.carbs100}г, Жиры: ${derived.fat100}г, Ккал: ${derived.kcal100}`
+          `Углеводы: ${derived.carbs100}г, Жиры: ${derived.fat100}г, Ккал: ${derived.kcal100}`,
         ),
         React.createElement(
           'div',
           { className: 'modal-actions' },
           React.createElement('button', { onClick: onSave }, 'Сохранить'),
-          React.createElement('button', { onClick: onHide }, 'Отмена')
-        )
-      )
+          React.createElement('button', { onClick: onHide }, 'Отмена'),
+        ),
+      ),
     );
   }
 
@@ -635,9 +635,9 @@ interface ParseModalProps {
           'div',
           { className: 'modal-actions' },
           React.createElement('button', { onClick: onParse }, 'Импорт'),
-          React.createElement('button', { onClick: onHide }, 'Отмена')
-        )
-      )
+          React.createElement('button', { onClick: onHide }, 'Отмена'),
+        ),
+      ),
     );
   }
 

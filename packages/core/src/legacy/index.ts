@@ -52,10 +52,10 @@ export class HeysDay {
 export class HeysSession {
   async createSession(sessionData: any): Promise<any> {
     // Legacy session creation logic
-    return { 
-      id: this.generateId(), 
+    return {
+      id: this.generateId(),
       token: this.generateToken(),
-      ...sessionData 
+      ...sessionData,
     };
   }
 

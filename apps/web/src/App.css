@@ -159,9 +159,15 @@
 }
 
 @keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* Responsive design */
@@ -169,29 +175,29 @@
   .app-header {
     padding: 1rem;
   }
-  
+
   .app-header h1 {
     font-size: 2rem;
   }
-  
+
   .app-main {
     padding: 1rem;
   }
-  
+
   .performance-section,
   .modules-section,
   .status-section {
     padding: 1rem;
   }
-  
+
   .modules-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .status-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .status-item {
     flex-direction: column;
     text-align: center;

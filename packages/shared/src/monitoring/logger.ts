@@ -89,22 +89,22 @@ export class StructuredLogger {
    */
   private redactSensitiveData(obj: any): any {
     if (!obj || typeof obj !== 'object') return obj;
-    
+
     const redacted = { ...obj };
-    
+
     for (const path of this.config.redactPaths) {
       if (redacted[path] !== undefined) {
         redacted[path] = '[REDACTED]';
       }
     }
-    
+
     // Recursively redact nested objects
     for (const key in redacted) {
       if (typeof redacted[key] === 'object' && redacted[key] !== null) {
         redacted[key] = this.redactSensitiveData(redacted[key]);
       }
     }
-    
+
     return redacted;
   }
 
@@ -116,16 +116,16 @@ export class StructuredLogger {
       const time = new Date(entry.timestamp).toLocaleTimeString();
       const levelColor = this.getLevelColor(entry.level);
       const reset = '\x1b[0m';
-      
+
       let formatted = `${levelColor}[${time}] ${entry.level.toUpperCase()}${reset}: ${entry.message}`;
-      
+
       if (entry.context) {
         formatted += `\n  Context: ${JSON.stringify(entry.context, null, 2)}`;
       }
-      
+
       return formatted;
     }
-    
+
     return JSON.stringify(entry);
   }
 
@@ -136,8 +136,8 @@ export class StructuredLogger {
     const colors = {
       trace: '\x1b[37m', // white
       debug: '\x1b[36m', // cyan
-      info: '\x1b[32m',  // green
-      warn: '\x1b[33m',  // yellow
+      info: '\x1b[32m', // green
+      warn: '\x1b[33m', // yellow
       error: '\x1b[31m', // red
       fatal: '\x1b[35m', // magenta
     };
@@ -157,7 +157,7 @@ export class StructuredLogger {
         // Browser environment
         const consoleMethod = entry.level === 'fatal' ? 'error' : entry.level;
         const method = console[consoleMethod as keyof Console] as (...args: any[]) => void;
-        
+
         if (this.config.prettyPrint) {
           method(`[${entry.level.toUpperCase()}] ${entry.message}`, entry.context);
         } else {
@@ -249,7 +249,7 @@ export class StructuredLogger {
     if (typeof process !== 'undefined') {
       entry.pid = process.pid;
     }
-    
+
     if (this.config.version) {
       entry.version = this.config.version;
     }
@@ -314,7 +314,7 @@ export class StructuredLogger {
     operation: string,
     success: boolean = true,
     component?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ): number {
     const startTime = this.startTimes.get(operationId);
     if (!startTime) {
@@ -339,11 +339,7 @@ export class StructuredLogger {
   /**
    * Log user action
    */
-  public logUserAction(
-    action: string,
-    userId: string,
-    metadata?: Record<string, any>
-  ): void {
+  public logUserAction(action: string, userId: string, metadata?: Record<string, any>): void {
     const context: LogContext = {
       userId,
       operation: action,
@@ -363,7 +359,7 @@ export class StructuredLogger {
     statusCode?: number,
     duration?: number,
     userId?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ): void {
     const context: LogContext = {
       ...(userId && { userId }),
@@ -380,7 +376,7 @@ export class StructuredLogger {
 
     const level = statusCode && statusCode >= 400 ? 'warn' : 'info';
     const message = `API ${method} ${url} - ${statusCode || 'pending'}`;
-    
+
     this.log(level, message, context);
   }
 
@@ -391,7 +387,7 @@ export class StructuredLogger {
     event: string,
     severity: 'low' | 'medium' | 'high' | 'critical',
     userId?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ): void {
     const context: LogContext = {
       ...(userId && { userId }),
@@ -412,7 +408,7 @@ export class StructuredLogger {
    */
   public child(defaultContext: Partial<LogContext>): StructuredLogger {
     const childLogger = new StructuredLogger(this.config);
-    
+
     // Override log method to include default context
     const originalLog = childLogger.log.bind(childLogger);
     childLogger.log = (level: LogLevel, message: string, context?: LogContext) => {
@@ -462,9 +458,9 @@ export function LogPerformance(operation?: string) {
     descriptor.value = async function (...args: any[]) {
       const logger = globalLogger || new StructuredLogger();
       const operationId = `${operationName}-${Date.now()}-${Math.random()}`;
-      
+
       logger.startTiming(operationId);
-      
+
       try {
         const result = await originalMethod.apply(this, args);
         logger.endTiming(operationId, operationName, true, target.constructor.name);
@@ -492,13 +488,13 @@ export function LogErrors(component?: string) {
         return await originalMethod.apply(this, args);
       } catch (error) {
         const logger = globalLogger || new StructuredLogger();
-        
+
         logger.logError({
           error: error as Error,
           component: componentName,
           operation: propertyKey,
         });
-        
+
         throw error;
       }
     };

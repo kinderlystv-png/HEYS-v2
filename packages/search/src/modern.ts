@@ -43,10 +43,12 @@ export interface SearchResponse<T = SearchItem> {
 
 const SearchQuerySchema = z.object({
   q: z.string().min(1),
-  type: z.union([
-    z.enum(['food', 'workout', 'recipe', 'exercise', 'user', 'content']),
-    z.array(z.enum(['food', 'workout', 'recipe', 'exercise', 'user', 'content']))
-  ]).optional(),
+  type: z
+    .union([
+      z.enum(['food', 'workout', 'recipe', 'exercise', 'user', 'content']),
+      z.array(z.enum(['food', 'workout', 'recipe', 'exercise', 'user', 'content'])),
+    ])
+    .optional(),
   category: z.string().optional(),
   tags: z.array(z.string()).optional(),
   limit: z.number().min(1).max(100).default(10),
@@ -58,7 +60,7 @@ const SearchQuerySchema = z.object({
 export class ModernSearch {
   private indices = new Map<string, Fuse<SearchItem>>();
   private items = new Map<string, SearchItem>();
-  
+
   private defaultFuseOptions: Fuse.IFuseOptions<SearchItem> = {
     includeScore: true,
     includeMatches: true,
@@ -113,22 +115,22 @@ export class ModernSearch {
 
   private rebuildIndices(): void {
     this.indices.clear();
-    
+
     const itemsByType = new Map<string, SearchItem[]>();
     const allItems: SearchItem[] = [];
-    
+
     for (const item of this.items.values()) {
       allItems.push(item);
-      
+
       if (!itemsByType.has(item.type)) {
         itemsByType.set(item.type, []);
       }
       itemsByType.get(item.type)!.push(item);
     }
-    
+
     // Create global index
     this.indices.set('all', new Fuse(allItems, this.defaultFuseOptions));
-    
+
     // Create type-specific indices
     for (const [type, items] of itemsByType) {
       this.indices.set(type, new Fuse(items, this.defaultFuseOptions));
@@ -138,19 +140,21 @@ export class ModernSearch {
   // Main search method
   async search<T extends SearchItem = SearchItem>(
     query: SearchQuery,
-    customOptions?: Partial<Fuse.IFuseOptions<T>>
+    customOptions?: Partial<Fuse.IFuseOptions<T>>,
   ): Promise<SearchResponse<T>> {
     const start = Date.now();
-    
+
     // Validate query
     const validatedQuery = SearchQuerySchema.parse(query);
-    
+
     // Get appropriate index
     let searchIndex = this.indices.get('all');
-    
+
     if (validatedQuery.type) {
-      const types = Array.isArray(validatedQuery.type) ? validatedQuery.type : [validatedQuery.type];
-      
+      const types = Array.isArray(validatedQuery.type)
+        ? validatedQuery.type
+        : [validatedQuery.type];
+
       if (types.length === 1) {
         const typeIndex = this.indices.get(types[0]);
         if (typeIndex) {
@@ -161,7 +165,7 @@ export class ModernSearch {
         searchIndex = this.indices.get('all');
       }
     }
-    
+
     if (!searchIndex) {
       return {
         results: [],
@@ -170,63 +174,67 @@ export class ModernSearch {
         took: Date.now() - start,
       };
     }
-    
+
     // Perform search
-    const fuseOptions = customOptions 
+    const fuseOptions = customOptions
       ? { ...this.defaultFuseOptions, ...customOptions }
       : this.defaultFuseOptions;
-    
+
     const fuseResults = searchIndex.search(validatedQuery.q, fuseOptions);
-    
+
     // Apply additional filters
-    let filteredResults = fuseResults.filter(result => {
+    let filteredResults = fuseResults.filter((result) => {
       const item = result.item;
-      
+
       // Type filter (for multiple types)
       if (validatedQuery.type && Array.isArray(validatedQuery.type)) {
         if (!validatedQuery.type.includes(item.type)) {
           return false;
         }
       }
-      
+
       // Category filter
       if (validatedQuery.category && item.category !== validatedQuery.category) {
         return false;
       }
-      
+
       // Tags filter
       if (validatedQuery.tags && validatedQuery.tags.length > 0) {
-        if (!item.tags || !validatedQuery.tags.some(tag => item.tags!.includes(tag))) {
+        if (!item.tags || !validatedQuery.tags.some((tag) => item.tags!.includes(tag))) {
           return false;
         }
       }
-      
+
       return true;
     });
-    
+
     // Sort results
     if (validatedQuery.sortBy !== 'relevance') {
-      filteredResults = this.sortResults(filteredResults, validatedQuery.sortBy, validatedQuery.sortOrder);
+      filteredResults = this.sortResults(
+        filteredResults,
+        validatedQuery.sortBy,
+        validatedQuery.sortOrder,
+      );
     }
-    
+
     // Apply pagination
     const total = filteredResults.length;
     const paginatedResults = filteredResults.slice(
       validatedQuery.offset,
-      validatedQuery.offset + validatedQuery.limit
+      validatedQuery.offset + validatedQuery.limit,
     );
-    
+
     // Transform to SearchResult format
-    const results: SearchResult<T>[] = paginatedResults.map(fuseResult => ({
+    const results: SearchResult<T>[] = paginatedResults.map((fuseResult) => ({
       item: fuseResult.item as T,
       score: fuseResult.score || 0,
       matches: fuseResult.matches,
       highlighted: this.highlightMatches(fuseResult.item, fuseResult.matches) as Partial<T>,
     }));
-    
+
     // Generate facets
-    const facets = this.generateFacets(filteredResults.map(r => r.item));
-    
+    const facets = this.generateFacets(filteredResults.map((r) => r.item));
+
     return {
       results,
       total,
@@ -240,16 +248,16 @@ export class ModernSearch {
   async quickSearch(
     query: string,
     limit: number = 5,
-    types?: SearchItem['type'][]
+    types?: SearchItem['type'][],
   ): Promise<SearchResult[]> {
     if (query.length < 2) return [];
-    
+
     const searchQuery: SearchQuery = {
       q: query,
       limit,
       ...(types && { type: types }),
     };
-    
+
     const response = await this.search(searchQuery);
     return response.results;
   }
@@ -257,13 +265,13 @@ export class ModernSearch {
   // Search suggestions
   async getSuggestions(query: string, limit: number = 5): Promise<string[]> {
     const suggestions = new Set<string>();
-    
+
     // Get quick search results
     const results = await this.quickSearch(query, limit * 2);
-    
+
     for (const result of results) {
       suggestions.add(result.item.title);
-      
+
       if (result.item.tags) {
         for (const tag of result.item.tags) {
           if (tag.toLowerCase().includes(query.toLowerCase())) {
@@ -271,10 +279,10 @@ export class ModernSearch {
           }
         }
       }
-      
+
       if (suggestions.size >= limit) break;
     }
-    
+
     return Array.from(suggestions).slice(0, limit);
   }
 
@@ -283,13 +291,13 @@ export class ModernSearch {
     const stats: Record<string, number> = {
       total: this.items.size,
     };
-    
+
     for (const [type, index] of this.indices) {
       if (type !== 'all') {
         stats[type] = index.getIndex().size;
       }
     }
-    
+
     return stats;
   }
 
@@ -303,11 +311,11 @@ export class ModernSearch {
   private sortResults(
     results: Fuse.FuseResult<SearchItem>[],
     sortBy: 'date' | 'title',
-    order: 'asc' | 'desc'
+    order: 'asc' | 'desc',
   ): Fuse.FuseResult<SearchItem>[] {
     return results.sort((a, b) => {
       let comparison = 0;
-      
+
       if (sortBy === 'date') {
         const dateA = a.item.updatedAt || a.item.createdAt;
         const dateB = b.item.updatedAt || b.item.createdAt;
@@ -315,36 +323,39 @@ export class ModernSearch {
       } else if (sortBy === 'title') {
         comparison = a.item.title.localeCompare(b.item.title);
       }
-      
+
       return order === 'desc' ? -comparison : comparison;
     });
   }
 
-  private highlightMatches(item: SearchItem, matches?: Fuse.FuseResultMatch[]): Partial<SearchItem> {
+  private highlightMatches(
+    item: SearchItem,
+    matches?: Fuse.FuseResultMatch[],
+  ): Partial<SearchItem> {
     if (!matches) return {};
-    
+
     const highlighted: Partial<SearchItem> = {};
-    
+
     for (const match of matches) {
       const key = match.key as keyof SearchItem;
       const value = item[key];
-      
+
       if (typeof value === 'string') {
         let highlightedValue = value;
-        
+
         // Apply highlights in reverse order to maintain indices
         for (let i = match.indices.length - 1; i >= 0; i--) {
           const [start, end] = match.indices[i];
-          highlightedValue = 
+          highlightedValue =
             highlightedValue.slice(0, start) +
             `<mark>${highlightedValue.slice(start, end + 1)}</mark>` +
             highlightedValue.slice(end + 1);
         }
-        
+
         (highlighted as any)[key] = highlightedValue;
       }
     }
-    
+
     return highlighted;
   }
 
@@ -354,16 +365,16 @@ export class ModernSearch {
       category: new Map(),
       tags: new Map(),
     };
-    
+
     for (const item of items) {
       // Type facet
       facets.type.set(item.type, (facets.type.get(item.type) || 0) + 1);
-      
+
       // Category facet
       if (item.category) {
         facets.category.set(item.category, (facets.category.get(item.category) || 0) + 1);
       }
-      
+
       // Tags facet
       if (item.tags) {
         for (const tag of item.tags) {
@@ -371,16 +382,16 @@ export class ModernSearch {
         }
       }
     }
-    
+
     // Convert to the expected format
     const result: Record<string, { value: string; count: number }[]> = {};
-    
+
     for (const [facetName, facetMap] of Object.entries(facets)) {
       result[facetName] = Array.from(facetMap.entries())
         .map(([value, count]) => ({ value, count }))
         .sort((a, b) => b.count - a.count);
     }
-    
+
     return result;
   }
 }

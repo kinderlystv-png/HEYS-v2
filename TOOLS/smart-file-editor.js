@@ -51,7 +51,7 @@ class SmartFileEditor {
       if (lines.length < 100) return;
 
       // Проверяем, есть ли уже якоря
-      const existingAnchors = lines.filter(line => /@ANCHOR:/.test(line)).length;
+      const existingAnchors = lines.filter((line) => /@ANCHOR:/.test(line)).length;
       const anchorDensity = existingAnchors / lines.length;
 
       // Если якорей меньше 5% от строк - добавляем
@@ -61,7 +61,7 @@ class SmartFileEditor {
 
         const newAnchors = processedContent
           .split('\n')
-          .filter(line => /@ANCHOR:/.test(line)).length;
+          .filter((line) => /@ANCHOR:/.test(line)).length;
         console.log(`✅ Добавлено ${newAnchors - existingAnchors} новых якорей`);
       }
     } catch (error) {

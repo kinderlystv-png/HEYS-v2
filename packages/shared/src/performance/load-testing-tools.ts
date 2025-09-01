@@ -1,7 +1,7 @@
 /**
  * HEYS Load Testing & Stress Testing Tools v1.0
  * Automated Load Testing, Stress Testing, and Performance Validation
- * 
+ *
  * Features:
  * - Load testing with various patterns
  * - Stress testing with breaking point detection
@@ -267,7 +267,7 @@ export class LoadTestingEngine {
     }
 
     console.log(`Starting ${this.config.type} test: ${this.config.name}`);
-    
+
     this.isRunning = true;
     this.startTime = Date.now();
     this.virtualUsers.clear();
@@ -287,12 +287,10 @@ export class LoadTestingEngine {
       this.results = await this.generateResults();
 
       console.log(`Load test completed: ${this.results.status}`);
-
     } catch (error) {
       console.error('Load test failed:', error);
       this.recordError('test_execution', (error as Error).message, { error });
       throw error;
-
     } finally {
       this.isRunning = false;
       this.stopMonitoring();
@@ -333,7 +331,10 @@ export class LoadTestingEngine {
   /**
    * Execute constant load pattern
    */
-  private async executeConstantLoad(userConfig: VirtualUserConfig, duration: number): Promise<void> {
+  private async executeConstantLoad(
+    userConfig: VirtualUserConfig,
+    duration: number,
+  ): Promise<void> {
     console.log(`Executing constant load: ${userConfig.target} users for ${duration}s`);
 
     // Ramp up to target users
@@ -350,7 +351,9 @@ export class LoadTestingEngine {
    * Execute ramp-up load pattern
    */
   private async executeRampUpLoad(userConfig: VirtualUserConfig, duration: number): Promise<void> {
-    console.log(`Executing ramp-up load: ${userConfig.initial} to ${userConfig.target} users over ${duration}s`);
+    console.log(
+      `Executing ramp-up load: ${userConfig.initial} to ${userConfig.target} users over ${duration}s`,
+    );
 
     const steps = 10;
     const stepDuration = duration / steps;
@@ -411,7 +414,10 @@ export class LoadTestingEngine {
   /**
    * Execute sine-wave load pattern
    */
-  private async executeSineWaveLoad(userConfig: VirtualUserConfig, duration: number): Promise<void> {
+  private async executeSineWaveLoad(
+    userConfig: VirtualUserConfig,
+    duration: number,
+  ): Promise<void> {
     console.log(`Executing sine-wave load over ${duration}s`);
 
     const interval = 5; // 5 second intervals
@@ -422,7 +428,7 @@ export class LoadTestingEngine {
     for (let step = 0; step < steps; step++) {
       const angle = (step / steps) * 2 * Math.PI;
       const targetUsers = Math.round(baseline + amplitude * Math.sin(angle));
-      
+
       await this.adjustUserCount(targetUsers);
       await this.wait(interval * 1000);
     }
@@ -439,9 +445,9 @@ export class LoadTestingEngine {
 
     for (let step = 0; step < steps; step++) {
       const randomUsers = Math.round(
-        userConfig.initial + Math.random() * (userConfig.target - userConfig.initial)
+        userConfig.initial + Math.random() * (userConfig.target - userConfig.initial),
       );
-      
+
       await this.adjustUserCount(randomUsers);
       await this.wait(interval * 1000);
     }
@@ -453,7 +459,7 @@ export class LoadTestingEngine {
   private async rampUpUsers(targetUsers: number, rampDuration: number): Promise<void> {
     const currentUserCount = this.virtualUsers.size;
     const usersToAdd = targetUsers - currentUserCount;
-    
+
     if (usersToAdd <= 0) return;
 
     const interval = (rampDuration * 1000) / usersToAdd;
@@ -495,7 +501,7 @@ export class LoadTestingEngine {
    */
   private async adjustUserCount(targetUsers: number): Promise<void> {
     const currentUsers = this.virtualUsers.size;
-    
+
     if (targetUsers > currentUsers) {
       // Add users
       const usersToAdd = targetUsers - currentUsers;
@@ -506,7 +512,7 @@ export class LoadTestingEngine {
       // Remove users
       const usersToRemove = currentUsers - targetUsers;
       const userIds = Array.from(this.virtualUsers.keys()).slice(0, usersToRemove);
-      
+
       for (const userId of userIds) {
         await this.removeVirtualUser(userId);
       }
@@ -521,7 +527,7 @@ export class LoadTestingEngine {
   private async addVirtualUser(): Promise<void> {
     const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const virtualUser = new VirtualUser(userId, this.config, this);
-    
+
     this.virtualUsers.set(userId, virtualUser);
     virtualUser.start();
   }
@@ -540,14 +546,19 @@ export class LoadTestingEngine {
   /**
    * Record request metrics
    */
-  recordRequest(responseTime: number, success: boolean, statusCode: number, bodySize: number): void {
+  recordRequest(
+    responseTime: number,
+    success: boolean,
+    statusCode: number,
+    bodySize: number,
+  ): void {
     const timestamp = Date.now();
 
     // Record response time
     this.metrics.response_times.push({
       timestamp,
       value: responseTime,
-      tags: { success: success.toString(), status_code: statusCode.toString() }
+      tags: { success: success.toString(), status_code: statusCode.toString() },
     });
 
     // Record throughput
@@ -586,7 +597,7 @@ export class LoadTestingEngine {
    */
   private startMonitoring(): void {
     console.log('Starting performance monitoring...');
-    
+
     this.monitoringInterval = setInterval(() => {
       this.collectSystemMetrics();
       this.checkThresholds();
@@ -629,7 +640,7 @@ export class LoadTestingEngine {
     for (const threshold of this.config.thresholds) {
       const currentValue = this.getCurrentMetricValue(threshold.metric);
       const passed = this.evaluateThreshold(currentValue, threshold.operator, threshold.value);
-      
+
       if (!passed && threshold.severity === 'critical') {
         console.warn(`Critical threshold exceeded: ${threshold.metric} = ${currentValue}`);
         // Could stop test or trigger alerts here
@@ -658,12 +669,18 @@ export class LoadTestingEngine {
    */
   private evaluateThreshold(value: number, operator: string, threshold: number): boolean {
     switch (operator) {
-      case 'lt': return value < threshold;
-      case 'lte': return value <= threshold;
-      case 'gt': return value > threshold;
-      case 'gte': return value >= threshold;
-      case 'eq': return value === threshold;
-      default: return false;
+      case 'lt':
+        return value < threshold;
+      case 'lte':
+        return value <= threshold;
+      case 'gt':
+        return value > threshold;
+      case 'gte':
+        return value >= threshold;
+      case 'eq':
+        return value === threshold;
+      default:
+        return false;
     }
   }
 
@@ -673,7 +690,7 @@ export class LoadTestingEngine {
   private calculateAverageResponseTime(): number {
     const responseTimes = this.metrics.response_times;
     if (responseTimes.length === 0) return 0;
-    
+
     const sum = responseTimes.reduce((acc, rt) => acc + rt.value, 0);
     return sum / responseTimes.length;
   }
@@ -684,8 +701,8 @@ export class LoadTestingEngine {
   private calculateCurrentThroughput(): number {
     const now = Date.now();
     const oneSecondAgo = now - 1000;
-    
-    const recentRequests = this.metrics.throughput.filter(t => t.timestamp >= oneSecondAgo);
+
+    const recentRequests = this.metrics.throughput.filter((t) => t.timestamp >= oneSecondAgo);
     return recentRequests.reduce((acc, t) => acc + t.value, 0);
   }
 
@@ -695,7 +712,7 @@ export class LoadTestingEngine {
   private calculateCurrentErrorRate(): number {
     const recentErrors = this.metrics.error_rates.slice(-100); // Last 100 requests
     if (recentErrors.length === 0) return 0;
-    
+
     const errorCount = recentErrors.reduce((acc, e) => acc + e.value, 0);
     return (errorCount / recentErrors.length) * 100;
   }
@@ -730,9 +747,9 @@ export class LoadTestingEngine {
    * Calculate test summary
    */
   private calculateSummary(): LoadTestSummary {
-    const responseTimes = this.metrics.response_times.map(rt => rt.value);
+    const responseTimes = this.metrics.response_times.map((rt) => rt.value);
     const totalRequests = responseTimes.length;
-    const successfulRequests = this.metrics.error_rates.filter(e => e.value === 0).length;
+    const successfulRequests = this.metrics.error_rates.filter((e) => e.value === 0).length;
     const failedRequests = totalRequests - successfulRequests;
 
     responseTimes.sort((a, b) => a - b);
@@ -741,10 +758,14 @@ export class LoadTestingEngine {
       total_requests: totalRequests,
       successful_requests: successfulRequests,
       failed_requests: failedRequests,
-      requests_per_second: totalRequests / (this.results?.duration || 1) * 1000,
-      average_response_time: responseTimes.length > 0 ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length : 0,
+      requests_per_second: (totalRequests / (this.results?.duration || 1)) * 1000,
+      average_response_time:
+        responseTimes.length > 0
+          ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
+          : 0,
       min_response_time: responseTimes.length > 0 ? (responseTimes[0] ?? 0) : 0,
-      max_response_time: responseTimes.length > 0 ? (responseTimes[responseTimes.length - 1] ?? 0) : 0,
+      max_response_time:
+        responseTimes.length > 0 ? (responseTimes[responseTimes.length - 1] ?? 0) : 0,
       p50_response_time: this.percentile(responseTimes, 50),
       p90_response_time: this.percentile(responseTimes, 90),
       p95_response_time: this.percentile(responseTimes, 95),
@@ -761,7 +782,7 @@ export class LoadTestingEngine {
    */
   private percentile(sortedArray: number[], percentile: number): number {
     if (sortedArray.length === 0) return 0;
-    
+
     const index = Math.ceil((percentile / 100) * sortedArray.length) - 1;
     return sortedArray[Math.max(0, Math.min(index, sortedArray.length - 1))] ?? 0;
   }
@@ -785,21 +806,23 @@ export class LoadTestingEngine {
    */
   private evaluateThresholds(): ThresholdResult[] {
     const results: ThresholdResult[] = [];
-    
+
     for (const threshold of this.config.thresholds) {
       const actualValue = this.getCurrentMetricValue(threshold.metric);
       const passed = this.evaluateThreshold(actualValue, threshold.operator, threshold.value);
-      
+
       results.push({
         metric: threshold.metric,
         threshold_value: threshold.value,
         actual_value: actualValue,
         passed,
         severity: threshold.severity,
-        message: passed ? 'Threshold met' : `Threshold exceeded: ${actualValue} ${threshold.operator} ${threshold.value}`,
+        message: passed
+          ? 'Threshold met'
+          : `Threshold exceeded: ${actualValue} ${threshold.operator} ${threshold.value}`,
       });
     }
-    
+
     return results;
   }
 
@@ -846,7 +869,7 @@ export class LoadTestingEngine {
    * Wait for specified time
    */
   private wait(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -871,7 +894,7 @@ export class LoadTestingEngine {
 
   async stopTest(): Promise<void> {
     if (!this.isRunning) return;
-    
+
     console.log('Stopping load test...');
     this.isRunning = false;
   }
@@ -890,12 +913,14 @@ export class LoadTestingEngine {
     } else {
       // Simple CSV export
       const headers = 'Timestamp,ResponseTime,Success,StatusCode,ActiveUsers\n';
-      const rows = this.metrics.response_times.map((rt, index) => {
-        const error = this.metrics.error_rates[index] || { value: 0 };
-        const users = this.metrics.active_users[index] || { value: 0 };
-        return `${rt.timestamp},${rt.value},${error.value === 0},${rt.tags?.status_code || 'unknown'},${users.value}`;
-      }).join('\n');
-      
+      const rows = this.metrics.response_times
+        .map((rt, index) => {
+          const error = this.metrics.error_rates[index] || { value: 0 };
+          const users = this.metrics.active_users[index] || { value: 0 };
+          return `${rt.timestamp},${rt.value},${error.value === 0},${rt.tags?.status_code || 'unknown'},${users.value}`;
+        })
+        .join('\n');
+
       return headers + rows;
     }
   }
@@ -919,7 +944,7 @@ class VirtualUser {
 
   start(): void {
     if (this.isActive) return;
-    
+
     this.isActive = true;
     this.scheduleNextRequest();
   }
@@ -936,7 +961,7 @@ class VirtualUser {
     if (!this.isActive) return;
 
     const thinkTime = this.calculateThinkTime();
-    
+
     this.executionInterval = setTimeout(async () => {
       try {
         await this.executeRequest();
@@ -993,16 +1018,15 @@ class VirtualUser {
 
       statusCode = response.status;
       success = response.ok;
-      
+
       const responseText = await response.text();
       bodySize = new Blob([responseText]).size;
-
     } catch (error) {
       success = false;
       statusCode = 0;
-      this.engine.recordError('http_request', (error as Error).message, { 
+      this.engine.recordError('http_request', (error as Error).message, {
         userId: this.id,
-        url: this.config.target.url 
+        url: this.config.target.url,
       });
     }
 

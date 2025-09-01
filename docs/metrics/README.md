@@ -220,11 +220,11 @@ For ad-hoc analysis or troubleshooting:
 
 ```javascript
 // Quality check example
-const validateNPSData = data => {
+const validateNPSData = (data) => {
   const checks = {
-    scoreRange: data.every(d => d.score >= 0 && d.score <= 10),
-    noMissingIds: data.every(d => d.anonymous_id),
-    recentData: data.some(d => isRecent(d.created_at, 30)),
+    scoreRange: data.every((d) => d.score >= 0 && d.score <= 10),
+    noMissingIds: data.every((d) => d.anonymous_id),
+    recentData: data.some((d) => isRecent(d.created_at, 30)),
   };
 
   return checks;

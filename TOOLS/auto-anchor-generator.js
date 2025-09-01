@@ -96,7 +96,7 @@ class AutoAnchorGenerator {
             modifiedContent,
             match,
             anchorText,
-            pattern.position
+            pattern.position,
           );
 
           modifiedContent = newContent;
@@ -231,7 +231,7 @@ class AutoAnchorGenerator {
     }
 
     // Уже обработанные файлы (если много якорей)
-    const anchorCount = lines.filter(line => /@ANCHOR:/i.test(line)).length;
+    const anchorCount = lines.filter((line) => /@ANCHOR:/i.test(line)).length;
     if (anchorCount > lines.length * 0.1) {
       // Больше 10% строк с якорями
       return false;
@@ -306,7 +306,7 @@ class VSCodeAnchorIntegration {
 
     if (result.changes.length > 0) {
       // Создаем edits для VSCode
-      const edits = result.changes.map(change => ({
+      const edits = result.changes.map((change) => ({
         range: new vscode.Range(change.line, 0, change.line, 0),
         newText: change.anchor + '\n',
       }));

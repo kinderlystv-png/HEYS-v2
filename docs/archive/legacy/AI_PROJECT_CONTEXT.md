@@ -179,7 +179,7 @@ await monitor.validateAnchorIntegrity();
 
 ```javascript
 // СТАРЫЙ способ (заменен):
-products.filter(p => p.name.toLowerCase().includes(query));
+products.filter((p) => p.name.toLowerCase().includes(query));
 
 // НОВЫЙ способ (используется):
 HEYS.SmartSearchWithTypos.search(query, products, {
@@ -272,10 +272,12 @@ http://localhost:8000/test-smart-search-integration.html
 ```javascript
 // В консоли браузера
 console.log(
-  window.HEYS.SmartSearchWithTypos ? '✅ Умный поиск' : '❌ Не загружен'
+  window.HEYS.SmartSearchWithTypos ? '✅ Умный поиск' : '❌ Не загружен',
 );
 console.log(
-  window.HEYS.AdvancedErrorTracker ? '✅ Отслеживание ошибок' : '❌ Не загружен'
+  window.HEYS.AdvancedErrorTracker
+    ? '✅ Отслеживание ошибок'
+    : '❌ Не загружен',
 );
 ```
 

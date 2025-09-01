@@ -103,7 +103,7 @@ class AnchorNavigationSystem {
     const lines = content.split('\n');
     let offset = 0;
 
-    suggestions.forEach(suggestion => {
+    suggestions.forEach((suggestion) => {
       const insertLine = suggestion.line - 1 + offset;
       lines.splice(insertLine, 0, suggestion.before);
       offset++;
@@ -120,14 +120,14 @@ class AnchorNavigationSystem {
     <div style="font-weight: bold; margin-bottom: 10px;">🗺️ Навигация</div>
     ${anchors
       .map(
-        anchor => `
+        (anchor) => `
         <div style="margin: 5px 0; cursor: pointer; padding: 3px; border-radius: 3px;" 
              onclick="document.querySelector('[data-anchor=\\"${anchor.id}\\"]')?.scrollIntoView({behavior: 'smooth'})"
              onmouseover="this.style.backgroundColor='rgba(255,255,255,0.2)'"
              onmouseout="this.style.backgroundColor='transparent'">
             ${anchor.icon} ${anchor.name}
         </div>
-    `
+    `,
       )
       .join('')}
     <div style="margin-top: 10px; font-size: 10px; opacity: 0.7;">
@@ -212,7 +212,7 @@ class FileAnchorManager {
 
 ## ⚓ Добавленные якоря
 
-${results.suggestions.map(s => `- **${s.anchor}** - ${s.description} (строка ${s.line})`).join('\n')}
+${results.suggestions.map((s) => `- **${s.anchor}** - ${s.description} (строка ${s.line})`).join('\n')}
 
 ## 🎯 Использование
 

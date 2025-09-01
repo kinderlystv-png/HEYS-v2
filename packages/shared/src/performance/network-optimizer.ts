@@ -1,7 +1,7 @@
 /**
  * HEYS Network Optimizer v1.0
  * Advanced Network Performance Optimization System
- * 
+ *
  * Features:
  * - Connection quality detection and adaptation
  * - Intelligent prefetching strategies
@@ -149,7 +149,7 @@ export class NetworkOptimizer {
 
   constructor(config: NetworkOptimizationConfig) {
     this.config = config;
-    
+
     this.connectionMonitor = new ConnectionMonitor();
     this.prefetchManager = new PrefetchManager(config.prefetching);
     this.cacheManager = new NetworkCacheManager(config.caching);
@@ -206,14 +206,14 @@ export class NetworkOptimizer {
   /**
    * Public API Methods
    */
-  
+
   async optimizeRequest(request: Request): Promise<Response> {
     if (!this.isInitialized) {
       throw new Error('Network Optimizer not initialized');
     }
 
     const startTime = performance.now();
-    
+
     try {
       // Check cache first
       const cachedResponse = await this.cacheManager.get(request);
@@ -224,10 +224,10 @@ export class NetworkOptimizer {
 
       // Apply connection optimization
       const optimizedRequest = await this.optimizeConnectionSettings(request);
-      
+
       // Execute request with error handling
       const response = await this.errorHandler.executeWithRetry(optimizedRequest);
-      
+
       // Cache successful response
       if (response.ok) {
         await this.cacheManager.set(request, response.clone());
@@ -272,7 +272,7 @@ export class NetworkOptimizer {
   adaptToNetworkConditions(): void {
     const connection = this.getConnectionInfo();
     const metrics = this.getNetworkMetrics();
-    
+
     if (connection) {
       this.qualityAdapter.adaptToConnection(connection, metrics);
       this.prefetchManager.adaptToConnection(connection);
@@ -313,7 +313,7 @@ export class NetworkOptimizer {
 
     // Setup adaptive strategy
     this.prefetchManager.setStrategy(this.config.prefetching.adaptiveStrategy);
-    
+
     // Start prefetch monitoring
     this.prefetchManager.startMonitoring();
   }
@@ -321,7 +321,7 @@ export class NetworkOptimizer {
   private async initializeCaching(): Promise<void> {
     // Initialize cache storage
     await this.cacheManager.initialize();
-    
+
     // Setup compression if enabled
     if (this.config.caching.compression) {
       this.cacheManager.enableCompression();
@@ -342,7 +342,7 @@ export class NetworkOptimizer {
   private async initializeQualityAdaptation(): Promise<void> {
     // Initialize quality profiles
     this.qualityAdapter.initializeProfiles();
-    
+
     // Setup adaptive streaming if enabled
     if (this.config.qualityAdaptation.adaptiveStreaming) {
       this.qualityAdapter.enableAdaptiveStreaming();
@@ -352,7 +352,7 @@ export class NetworkOptimizer {
   private async initializeMonitoring(): Promise<void> {
     // Start metrics collection
     this.metricsCollector.startCollection(this.config.monitoring.metricsInterval);
-    
+
     // Setup real-time reporting if enabled
     if (this.config.monitoring.realTimeReporting) {
       this.metricsCollector.enableRealTimeReporting();
@@ -433,7 +433,7 @@ export class NetworkOptimizer {
     this.errorHandler.destroy();
     this.qualityAdapter.destroy();
     this.metricsCollector.destroy();
-    
+
     this.isInitialized = false;
   }
 }
@@ -453,7 +453,7 @@ class ConnectionMonitor {
     if (typeof navigator !== 'undefined' && 'connection' in navigator) {
       const conn = (navigator as any).connection;
       this.updateConnection(conn);
-      
+
       conn.addEventListener('change', () => {
         this.updateConnection(conn);
       });
@@ -474,7 +474,7 @@ class ConnectionMonitor {
 
   private notifyObservers(): void {
     if (this.connection) {
-      this.observers.forEach(observer => observer(this.connection!));
+      this.observers.forEach((observer) => observer(this.connection!));
     }
   }
 
@@ -539,7 +539,7 @@ class PrefetchManager {
     }
 
     // Check conditions
-    return request.conditions.every(condition => this.evaluateCondition(condition));
+    return request.conditions.every((condition) => this.evaluateCondition(condition));
   }
 
   private evaluateCondition(condition: PrefetchCondition): boolean {
@@ -869,19 +869,19 @@ class NetworkErrorHandler {
 
   async executeWithRetry(request: Request): Promise<Response> {
     let lastError: Error;
-    
+
     for (let attempt = 0; attempt <= this.config.maxRetries; attempt++) {
       try {
         const response = await fetch(request);
-        
+
         if (response.ok) {
           return response;
         }
-        
+
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       } catch (error) {
         lastError = error as Error;
-        
+
         if (attempt < this.config.maxRetries) {
           await this.delay(this.calculateBackoff(attempt));
         }
@@ -910,7 +910,7 @@ class NetworkErrorHandler {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   destroy(): void {
@@ -949,9 +949,12 @@ class QualityAdapter {
     this.currentProfile = this.selectProfile(connection, metrics);
   }
 
-  private selectProfile(connection: NetworkConnection, metrics: NetworkMetrics): NetworkQualityProfile {
+  private selectProfile(
+    connection: NetworkConnection,
+    metrics: NetworkMetrics,
+  ): NetworkQualityProfile {
     const bandwidth = connection.downlink;
-    
+
     if (bandwidth >= this.config.bandwidthThresholds.high && metrics.latency < 100) {
       return this.getExcellentProfile();
     } else if (bandwidth >= this.config.bandwidthThresholds.medium && metrics.latency < 200) {
@@ -1007,7 +1010,7 @@ class QualityAdapter {
       characteristics: {
         minBandwidth: 1,
         maxLatency: 200,
-        reliability: 0.90,
+        reliability: 0.9,
       },
       optimizations: {
         imageQuality: 60,
@@ -1024,7 +1027,7 @@ class QualityAdapter {
       characteristics: {
         minBandwidth: 0.5,
         maxLatency: 500,
-        reliability: 0.80,
+        reliability: 0.8,
       },
       optimizations: {
         imageQuality: 40,
@@ -1102,7 +1105,7 @@ class NetworkMetricsCollector {
   private collectMetrics(): void {
     // Collect current network metrics
     this.updateMetrics();
-    
+
     if (this.realTimeReporting) {
       this.reportMetrics();
     }

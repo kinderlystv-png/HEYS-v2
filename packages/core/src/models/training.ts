@@ -55,9 +55,9 @@ export const TrainingProgramSchema = z.object({
           sets: z.number(),
           reps: z.string(), // e.g., "8-12", "30 sec"
           weight: z.string().optional(), // e.g., "bodyweight", "60% 1RM"
-        })
+        }),
       ),
-    })
+    }),
   ),
   level: z.enum(['beginner', 'intermediate', 'advanced']),
   createdAt: z.date(),

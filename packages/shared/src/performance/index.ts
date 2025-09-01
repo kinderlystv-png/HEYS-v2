@@ -1,85 +1,59 @@
 /**
  * HEYS Performance Optimization Suite
  * Comprehensive performance monitoring and optimization toolkit
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
  */
 
 // Core performance profiling
-export {
-  PerformanceProfiler,
-  measurePerformance,
-  defaultProfiler,
-} from './profiler';
+export { defaultProfiler, measurePerformance, PerformanceProfiler } from './profiler';
 
-export type {
-  PerformanceMetric,
-  BundleAnalysis,
-  RuntimePerformance,
-} from './profiler';
+export type { BundleAnalysis, PerformanceMetric, RuntimePerformance } from './profiler';
 
 // Bundle analysis
-export {
-  BundleAnalyzer,
-  defaultBundleAnalyzer,
-} from './bundle-analyzer';
+export { BundleAnalyzer, defaultBundleAnalyzer } from './bundle-analyzer';
 
-export type {
-  OptimizationRecommendation,
-} from './bundle-analyzer';
+export type { OptimizationRecommendation } from './bundle-analyzer';
 
 // Cache management
 export {
-  SmartCacheManager,
-  MemoryCacheStrategy,
-  IndexedDBCacheStrategy,
   cached,
   defaultCacheManager,
+  IndexedDBCacheStrategy,
+  MemoryCacheStrategy,
+  SmartCacheManager,
 } from './cache';
 
-export type {
-  CacheConfig,
-  CacheEntry,
-  CacheStats,
-  CacheStrategy,
-} from './cache';
+export type { CacheConfig, CacheEntry, CacheStats, CacheStrategy } from './cache';
 
 // Mobile optimization
-export {
-  MobilePerformanceOptimizer,
-  MobileUtils,
-  defaultMobileOptimizer,
-} from './mobile';
+export { defaultMobileOptimizer, MobilePerformanceOptimizer, MobileUtils } from './mobile';
 
-export type {
-  DeviceCapabilities,
-  PerformanceSettings,
-  NetworkCondition,
-} from './mobile';
+export type { DeviceCapabilities, NetworkCondition, PerformanceSettings } from './mobile';
 
 // Network optimization
 export {
-  NetworkOptimizer,
-  OptimizedHTTPClient,
-  OfflineSupport,
   defaultHTTPClient,
+  NetworkOptimizer,
+  OfflineSupport,
+  OptimizedHTTPClient,
 } from './network';
 
 export type {
-  RequestConfig,
+  ConnectionInfo,
   NetworkRequest,
   NetworkStats,
-  ConnectionInfo,
+  RequestConfig,
   RequestPriority,
 } from './network';
 
 // Import classes for internal use
-import { PerformanceProfiler } from './profiler';
 import { SmartCacheManager } from './cache';
 import { MobilePerformanceOptimizer } from './mobile';
 import { OptimizedHTTPClient, type RequestConfig } from './network';
+import { PerformanceProfiler } from './profiler';
 
 /**
  * Performance optimization configuration
@@ -122,7 +96,7 @@ export class PerformanceManager {
 
   constructor(config: PerformanceConfig = {}) {
     this.config = this.mergeConfig(config);
-    
+
     // Initialize components based on configuration
     this.profiler = new PerformanceProfiler();
     this.cacheManager = new SmartCacheManager(this.config.caching.strategy);
@@ -221,7 +195,11 @@ export class PerformanceManager {
         severity: 'high',
         title: 'Frame Rate Issues',
         description: 'Average frame time exceeds 16.67ms (60fps threshold)',
-        actions: ['Optimize rendering loops', 'Reduce DOM manipulations', 'Use requestAnimationFrame'],
+        actions: [
+          'Optimize rendering loops',
+          'Reduce DOM manipulations',
+          'Use requestAnimationFrame',
+        ],
       });
     }
 
@@ -263,15 +241,15 @@ export class PerformanceManager {
     recommendations: any[];
   }> {
     console.log('Starting performance analysis...');
-    
+
     // Wait for analysis duration
-    await new Promise(resolve => setTimeout(resolve, duration));
-    
+    await new Promise((resolve) => setTimeout(resolve, duration));
+
     // Get results
     const report = await this.getPerformanceReport();
-    
+
     console.log('Performance Analysis Complete:', report);
-    
+
     return report;
   }
 
@@ -325,7 +303,7 @@ export class PerformanceManager {
    */
   updateConfig(newConfig: Partial<PerformanceConfig>): void {
     this.config = this.mergeConfig({ ...this.config, ...newConfig });
-    
+
     // Re-initialize if needed
     if (newConfig.mobile?.autoOptimize && this.config.mobile.enabled) {
       this.mobileOptimizer.applyOptimizations();
@@ -355,12 +333,12 @@ export const defaultPerformanceManager = new PerformanceManager();
  */
 export function initializePerformanceOptimization(config?: PerformanceConfig): PerformanceManager {
   const manager = new PerformanceManager(config);
-  
+
   // Apply immediate optimizations
   if (config?.mobile?.autoOptimize !== false) {
     manager.getMobileOptimizer().applyOptimizations();
   }
-  
+
   console.log('HEYS Performance Optimization initialized');
   return manager;
 }

@@ -118,7 +118,7 @@ export class SmartSearchEngine<T = any> {
         matrix[j][i] = Math.min(
           matrix[j][i - 1] + 1, // deletion
           matrix[j - 1][i] + 1, // insertion
-          matrix[j - 1][i - 1] + indicator // substitution
+          matrix[j - 1][i - 1] + indicator, // substitution
         );
       }
     }
@@ -157,7 +157,7 @@ export class SmartSearchEngine<T = any> {
     // Also check if word is a synonym of another word
     for (const [key, values] of this.synonyms) {
       if (values.includes(word)) {
-        synonymList.push(key, ...values.filter(v => v !== word));
+        synonymList.push(key, ...values.filter((v) => v !== word));
       }
     }
 
@@ -188,7 +188,7 @@ export class SmartSearchEngine<T = any> {
   search<TItem extends Record<string, any>>(
     items: TItem[],
     query: string,
-    searchFields: (keyof TItem)[]
+    searchFields: (keyof TItem)[],
   ): SearchResult<TItem> {
     const startTime = Date.now();
     const normalizedQuery = this.normalizeQuery(query);
@@ -237,7 +237,7 @@ export class SmartSearchEngine<T = any> {
         const phoneticScore = this.calculateRelevance(
           phoneticQuery,
           phoneticValue,
-          phoneticDistance
+          phoneticDistance,
         );
 
         if (phoneticScore > score) {
@@ -268,11 +268,11 @@ export class SmartSearchEngine<T = any> {
     }
 
     // Sort by score and remove duplicates
-    const uniqueMatches = Array.from(new Map(matches.map(m => [m.item, m])).values()).sort(
-      (a, b) => b.score - a.score
+    const uniqueMatches = Array.from(new Map(matches.map((m) => [m.item, m])).values()).sort(
+      (a, b) => b.score - a.score,
     );
 
-    const resultItems = uniqueMatches.slice(0, this.config.maxSuggestions).map(m => m.item);
+    const resultItems = uniqueMatches.slice(0, this.config.maxSuggestions).map((m) => m.item);
     const suggestions = this.generateSuggestions(normalizedQuery, uniqueMatches);
 
     const result: SearchResult<TItem> = {
@@ -305,7 +305,7 @@ export class SmartSearchEngine<T = any> {
 
   private generateSuggestions<TItem>(
     query: string,
-    matches: Array<{ item: TItem; score: number; field: string }>
+    matches: Array<{ item: TItem; score: number; field: string }>,
   ): string[] {
     // Extract unique suggestions from field values
     const suggestions = new Set<string>();

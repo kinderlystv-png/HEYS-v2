@@ -123,6 +123,7 @@ Technologies) и содержит обширную документацию в �
    ```
 
 3. **Индекс актуализации интегрированный с ROADMAPS_SUPERSYSTEM**
+
    ```markdown
    DOCS_STATUS_INDEX.md:
 
@@ -281,13 +282,13 @@ backup_strategy:
 ```javascript
 // Интеграция с HEYS error tracking
 const rollbackManager = {
-  detectConflicts: files => {
+  detectConflicts: (files) => {
     // Используем enhanced error tracking для логирования
     HEYS.ErrorTracker.trackDocumentationConflict(files);
     return conflicts;
   },
 
-  autoRollback: async backupId => {
+  autoRollback: async (backupId) => {
     // Принцип "Graceful Degradation"
     try {
       await restoreFromBackup(backupId);
@@ -298,7 +299,7 @@ const rollbackManager = {
     }
   },
 
-  validateIntegrity: restoredFiles => {
+  validateIntegrity: (restoredFiles) => {
     // Проверка через существующие системы HEYS
     return HEYS.SecurityValidation.validateDocumentStructure(restoredFiles);
   },
@@ -475,7 +476,7 @@ dependencies:
 const DependencyResolver = {
   async analyzeDocumentGraph() {
     const dependencies = await HEYS.FileSystem.loadYAML(
-      'docs/dependencies.yaml'
+      'docs/dependencies.yaml',
     );
     return this.buildDependencyGraph(dependencies);
   },
@@ -570,7 +571,7 @@ const OutdatedAnalyzer = {
     const anchors = await HEYS.AnchorSystem.findAnchorsInFile(filePath);
     for (const anchor of anchors) {
       const references = await HEYS.AnchorSystem.findReferencesInCode(anchor);
-      if (references.some(ref => changedTechFiles.includes(ref.file))) {
+      if (references.some((ref) => changedTechFiles.includes(ref.file))) {
         analysis.outdatedScore += 10;
         analysis.reasons.push(`Anchor ${anchor} referenced in changed code`);
       }
@@ -591,7 +592,7 @@ const OutdatedAnalyzer = {
       if (codeVersion !== docVersion) {
         analysis.outdatedScore += 20;
         analysis.reasons.push(
-          `Module ${module} version mismatch: code=${codeVersion}, docs=${docVersion}`
+          `Module ${module} version mismatch: code=${codeVersion}, docs=${docVersion}`,
         );
       }
     }
@@ -608,8 +609,8 @@ const OutdatedAnalyzer = {
       totalFiles: outdatedFiles.length,
       estimatedTime: this.estimateUpdateTime(outdatedFiles),
       updateOrder: updateOrder,
-      criticalFiles: outdatedFiles.filter(f => f.priority === 1),
-      autoUpdatable: outdatedFiles.filter(f => f.autoUpdate === true),
+      criticalFiles: outdatedFiles.filter((f) => f.priority === 1),
+      autoUpdatable: outdatedFiles.filter((f) => f.autoUpdate === true),
     };
   },
 };
@@ -627,7 +628,7 @@ const ChangeDetector = {
       excludes: ['node_modules/', 'dist/', 'TESTS/'],
     });
 
-    watcher.on('change', async event => {
+    watcher.on('change', async (event) => {
       // Логируем через enhanced error tracking
       HEYS.ErrorTracker.trackFileChange({
         file: event.file,
@@ -798,7 +799,7 @@ const DocsActualizationWidget = () => {
       // Геймификация - достижение за актуализацию
       if (result.filesUpdated >= 5) {
         HEYS.GamingSystem.unlockAchievement('docs_maintainer');
-        setAchievements(prev => [...prev, 'docs_maintainer']);
+        setAchievements((prev) => [...prev, 'docs_maintainer']);
       }
 
       HEYS.Notifications.show({

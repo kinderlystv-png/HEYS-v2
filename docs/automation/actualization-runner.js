@@ -221,7 +221,7 @@ class ActualizationSystem {
 
     const files = [];
 
-    const scanDirectory = async dir => {
+    const scanDirectory = async (dir) => {
       try {
         const items = await fs.readdir(dir, { withFileTypes: true });
 
@@ -229,7 +229,7 @@ class ActualizationSystem {
           const fullPath = path.join(dir, item.name);
 
           if (item.isDirectory()) {
-            if (!excludePatterns.some(pattern => item.name.includes(pattern))) {
+            if (!excludePatterns.some((pattern) => item.name.includes(pattern))) {
               await scanDirectory(fullPath);
             }
           } else if (item.isFile()) {
@@ -251,7 +251,7 @@ class ActualizationSystem {
   // 🗺️ Анализ навигационных карт
   async analyzeNavigationMaps() {
     const jsFiles = await this.findFilesToCheck();
-    const codeFiles = jsFiles.filter(f => f.endsWith('.js') || f.endsWith('.ts'));
+    const codeFiles = jsFiles.filter((f) => f.endsWith('.js') || f.endsWith('.ts'));
 
     let withMaps = 0;
     let needUpdate = 0;
@@ -289,7 +289,7 @@ class ActualizationSystem {
   // 🗺️ Обновление навигационных карт
   async updateNavigationMaps() {
     const jsFiles = await this.findFilesToCheck();
-    const codeFiles = jsFiles.filter(f => f.endsWith('.js') || f.endsWith('.ts'));
+    const codeFiles = jsFiles.filter((f) => f.endsWith('.js') || f.endsWith('.ts'));
 
     for (let file of codeFiles) {
       try {
@@ -324,14 +324,14 @@ class ActualizationSystem {
     // Простой анализ содержимого для определения основных функций
     const functions =
       content.match(
-        /(?:function\s+|const\s+\w+\s*=\s*(?:async\s+)?(?:function|\()|class\s+)\w+/g
+        /(?:function\s+|const\s+\w+\s*=\s*(?:async\s+)?(?:function|\()|class\s+)\w+/g,
       ) || [];
-    const mainFunctions = functions.slice(0, 5).map(f => f.replace(/[(){}]/g, '').trim());
+    const mainFunctions = functions.slice(0, 5).map((f) => f.replace(/[(){}]/g, '').trim());
 
     // Поиск импортов/зависимостей
     const imports =
       content.match(/(?:import.*from\s+['"]([^'"]+)['"]|require\(['"]([^'"]+)['"]\))/g) || [];
-    const dependencies = imports.slice(0, 3).map(imp => {
+    const dependencies = imports.slice(0, 3).map((imp) => {
       const match = imp.match(/['"]([^'"]+)['"]/);
       return match ? match[1] : 'unknown';
     });
@@ -342,10 +342,10 @@ class ActualizationSystem {
 //
 // 📍 ФАЙЛ: ${fileName}
 // 🔧 ОСНОВНЫЕ ФУНКЦИИ:
-${mainFunctions.map(f => `//   - ${f}`).join('\n')}
+${mainFunctions.map((f) => `//   - ${f}`).join('\n')}
 //
 // 🔗 ЗАВИСИМОСТИ:
-${dependencies.map(d => `//   - ${d}`).join('\n')}
+${dependencies.map((d) => `//   - ${d}`).join('\n')}
 //
 // 📅 ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ: ${timestamp}
 // 🔄 Статус: Активно поддерживается
@@ -372,7 +372,7 @@ ${dependencies.map(d => `//   - ${d}`).join('\n')}
       const currentCount = this.stats.filesUpdated;
       content = content.replace(
         /Файлов обновлено:\*\* \d+\/\d+/,
-        `Файлов обновлено:** ${currentCount + 20}/25`
+        `Файлов обновлено:** ${currentCount + 20}/25`,
       );
 
       // Обновление времени
@@ -382,7 +382,7 @@ ${dependencies.map(d => `//   - ${d}`).join('\n')}
       // Обновление статуса
       content = content.replace(
         /Статус системы:\*\* .*/,
-        `Статус системы:** 🟢 Активна (актуализация выполнена)`
+        `Статус системы:** 🟢 Активна (актуализация выполнена)`,
       );
 
       await fs.writeFile(filePath, content);
@@ -404,7 +404,7 @@ ${dependencies.map(d => `//   - ${d}`).join('\n')}
     const result = { valid: 0, warnings: 0, errors: 0 };
 
     const jsFiles = await this.findFilesToCheck();
-    const codeFiles = jsFiles.filter(f => f.endsWith('.js') || f.endsWith('.ts'));
+    const codeFiles = jsFiles.filter((f) => f.endsWith('.js') || f.endsWith('.ts'));
 
     for (let file of codeFiles) {
       try {
@@ -472,7 +472,7 @@ ${dependencies.map(d => `//   - ${d}`).join('\n')}
       // Обновление метрик
       content = content.replace(
         /documents_with_nav_maps: \d+/,
-        `documents_with_nav_maps: ${this.stats.filesUpdated + 8}`
+        `documents_with_nav_maps: ${this.stats.filesUpdated + 8}`,
       );
 
       await fs.writeFile(metricsFile, content);
@@ -501,7 +501,7 @@ ${dependencies.map(d => `//   - ${d}`).join('\n')}
     console.log(`✅ Файлов обновлено: ${this.stats.filesUpdated}`);
     console.log(`❌ Ошибок: ${this.stats.errors}`);
     console.log(
-      `📈 Успешность: ${this.stats.errors === 0 ? '100%' : Math.round((1 - this.stats.errors / this.stats.filesProcessed) * 100)}%`
+      `📈 Успешность: ${this.stats.errors === 0 ? '100%' : Math.round((1 - this.stats.errors / this.stats.filesProcessed) * 100)}%`,
     );
     console.log('='.repeat(60));
     console.log('🎉 АКТУАЛИЗАЦИЯ ЗАВЕРШЕНА УСПЕШНО!');
@@ -517,14 +517,14 @@ ${dependencies.map(d => `//   - ${d}`).join('\n')}
 
     try {
       const backups = await this.backupSystem.listBackups();
-      const latestBackup = backups.find(b => b.reason === 'pre_actualization');
+      const latestBackup = backups.find((b) => b.reason === 'pre_actualization');
 
       if (latestBackup) {
         console.log(`📂 Найден backup: ${latestBackup.file}`);
         // В реальной ситуации здесь был бы код восстановления
         console.log('⚠️ Автоматическое восстановление отключено для безопасности');
         console.log(
-          '💡 Для восстановления выполните: node docs/automation/backup-system.js restore'
+          '💡 Для восстановления выполните: node docs/automation/backup-system.js restore',
         );
       }
     } catch (backupError) {
@@ -554,7 +554,7 @@ async function main() {
 
 // Запуск только если скрипт вызван напрямую
 if (require.main === module) {
-  main().catch(error => {
+  main().catch((error) => {
     console.error('💥 Неожиданная ошибка:', error);
     process.exit(1);
   });

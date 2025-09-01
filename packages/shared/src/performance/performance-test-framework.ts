@@ -1,7 +1,7 @@
 /**
  * HEYS Performance Test Framework v1.0
  * Automated Performance Testing & Validation System
- * 
+ *
  * Features:
  * - Automated performance test execution
  * - Load testing and stress testing
@@ -223,7 +223,7 @@ export class PerformanceTestFramework {
    * Initialize test scenarios
    */
   private initializeScenarios(): void {
-    this.config.scenarios.forEach(scenario => {
+    this.config.scenarios.forEach((scenario) => {
       this.scenarios.set(scenario.id, scenario);
     });
   }
@@ -242,30 +242,29 @@ export class PerformanceTestFramework {
 
     try {
       console.log(`Starting performance test: ${this.config.name}`);
-      
+
       // Initialize metrics collection
       this.initializeMetricsCollection();
-      
+
       // Execute test phases
       await this.executeTestPhases();
-      
+
       // Generate test result
       const result = await this.generateTestResult();
-      
+
       // Store result
       this.results.set(this.currentExecution, result);
-      
+
       // Generate reports if enabled
       if (this.config.reporting.enabled) {
         await this.generateReports(result);
       }
-      
+
       // Send notifications
       await this.sendNotifications(result);
-      
+
       console.log(`Performance test completed: ${result.status}`);
       return result;
-
     } catch (error) {
       console.error('Performance test failed:', error);
       throw error;
@@ -280,15 +279,15 @@ export class PerformanceTestFramework {
    */
   private async executeTestPhases(): Promise<void> {
     const { concurrency } = this.config;
-    
+
     // Phase 1: Ramp-up
     console.log('Phase 1: Ramp-up');
     await this.executeRampUp(concurrency.users, concurrency.rampUpTime);
-    
+
     // Phase 2: Sustain
     console.log('Phase 2: Sustain load');
     await this.executeSustainLoad(concurrency.sustainTime);
-    
+
     // Phase 3: Ramp-down
     console.log('Phase 3: Ramp-down');
     await this.executeRampDown(concurrency.rampDownTime);
@@ -299,11 +298,11 @@ export class PerformanceTestFramework {
    */
   private async executeRampUp(targetUsers: number, duration: number): Promise<void> {
     const interval = duration / targetUsers;
-    
+
     for (let i = 0; i < targetUsers; i++) {
       await this.startVirtualUser();
       this.activeUsers++;
-      
+
       if (i < targetUsers - 1) {
         await this.wait(interval);
       }
@@ -322,11 +321,11 @@ export class PerformanceTestFramework {
    */
   private async executeRampDown(duration: number): Promise<void> {
     const interval = duration / this.activeUsers;
-    
+
     while (this.activeUsers > 0) {
       await this.stopVirtualUser();
       this.activeUsers--;
-      
+
       if (this.activeUsers > 0) {
         await this.wait(interval);
       }
@@ -341,7 +340,7 @@ export class PerformanceTestFramework {
     if (!scenario) return;
 
     // Execute scenario in background
-    this.executeScenario(scenario).catch(error => {
+    this.executeScenario(scenario).catch((error) => {
       console.error('Virtual user scenario failed:', error);
     });
   }
@@ -361,7 +360,7 @@ export class PerformanceTestFramework {
     const scenarios = Array.from(this.scenarios.values());
     const totalWeight = scenarios.reduce((sum, s) => sum + s.weight, 0);
     const random = Math.random() * totalWeight;
-    
+
     let currentWeight = 0;
     for (const scenario of scenarios) {
       currentWeight += scenario.weight;
@@ -369,7 +368,7 @@ export class PerformanceTestFramework {
         return scenario;
       }
     }
-    
+
     return scenarios[0] || null;
   }
 
@@ -379,25 +378,25 @@ export class PerformanceTestFramework {
   private async executeScenario(scenario: PerformanceTestScenario): Promise<ScenarioResult> {
     const stepResults: StepResult[] = [];
     const assertionResults: AssertionResult[] = [];
-    
+
     try {
       // Execute scenario steps
       for (const step of scenario.steps) {
         const stepResult = await this.executeStep(step);
         stepResults.push(stepResult);
-        
+
         // Add think time between steps
         if (scenario.thinkTime > 0) {
           await this.wait(scenario.thinkTime);
         }
       }
-      
+
       // Execute assertions
       for (const assertion of scenario.assertions) {
         const assertionResult = await this.executeAssertion(assertion, stepResults);
         assertionResults.push(assertionResult);
       }
-      
+
       return {
         scenarioId: scenario.id,
         scenarioName: scenario.name,
@@ -407,7 +406,6 @@ export class PerformanceTestFramework {
         steps: stepResults,
         assertions: assertionResults,
       };
-      
     } catch (error) {
       console.error(`Scenario execution failed: ${scenario.name}`, error);
       throw error;
@@ -420,7 +418,7 @@ export class PerformanceTestFramework {
   private async executeStep(step: PerformanceTestStep): Promise<StepResult> {
     const startTime = Date.now();
     const errors: string[] = [];
-    
+
     try {
       switch (step.type) {
         case 'http':
@@ -441,10 +439,10 @@ export class PerformanceTestFramework {
         default:
           throw new Error(`Unknown step type: ${step.type}`);
       }
-      
+
       const endTime = Date.now();
       const responseTime = endTime - startTime;
-      
+
       return {
         stepId: step.id,
         stepName: step.name,
@@ -455,12 +453,11 @@ export class PerformanceTestFramework {
         maxResponseTime: responseTime,
         errors: errors,
       };
-      
     } catch (error) {
       const endTime = Date.now();
       const responseTime = endTime - startTime;
       errors.push((error as Error).message);
-      
+
       return {
         stepId: step.id,
         stepName: step.name,
@@ -480,7 +477,7 @@ export class PerformanceTestFramework {
   private async executeHttpStep(step: PerformanceTestStep): Promise<void> {
     const { config, validation } = step;
     const url = this.resolveUrl(config.url || '');
-    
+
     const requestOptions: RequestInit = {
       method: config.method || 'GET',
       headers: {
@@ -488,35 +485,38 @@ export class PerformanceTestFramework {
         ...config.headers,
       },
     };
-    
+
     if (config.body) {
-      requestOptions.body = typeof config.body === 'string' ? config.body : JSON.stringify(config.body);
+      requestOptions.body =
+        typeof config.body === 'string' ? config.body : JSON.stringify(config.body);
     }
-    
+
     const startTime = Date.now();
     const response = await fetch(url, requestOptions);
     const endTime = Date.now();
     const responseTime = endTime - startTime;
-    
+
     // Validate response
     if (validation.statusCode && response.status !== validation.statusCode) {
       throw new Error(`Expected status ${validation.statusCode}, got ${response.status}`);
     }
-    
+
     if (validation.responseTime && responseTime > validation.responseTime) {
-      throw new Error(`Response time ${responseTime}ms exceeded limit ${validation.responseTime}ms`);
+      throw new Error(
+        `Response time ${responseTime}ms exceeded limit ${validation.responseTime}ms`,
+      );
     }
-    
+
     if (validation.contentType) {
       const contentType = response.headers.get('content-type');
       if (!contentType?.includes(validation.contentType)) {
         throw new Error(`Expected content type ${validation.contentType}, got ${contentType}`);
       }
     }
-    
+
     if (validation.bodyContains || validation.bodyNotContains) {
       const responseText = await response.text();
-      
+
       if (validation.bodyContains) {
         for (const content of validation.bodyContains) {
           if (!responseText.includes(content)) {
@@ -524,7 +524,7 @@ export class PerformanceTestFramework {
           }
         }
       }
-      
+
       if (validation.bodyNotContains) {
         for (const content of validation.bodyNotContains) {
           if (responseText.includes(content)) {
@@ -570,10 +570,13 @@ export class PerformanceTestFramework {
   /**
    * Execute assertion
    */
-  private async executeAssertion(assertion: PerformanceAssertion, stepResults: StepResult[]): Promise<AssertionResult> {
+  private async executeAssertion(
+    assertion: PerformanceAssertion,
+    stepResults: StepResult[],
+  ): Promise<AssertionResult> {
     const actualValue = this.extractMetricValue(assertion.metric, stepResults);
     const passed = this.evaluateAssertion(actualValue, assertion.operator, assertion.value);
-    
+
     return {
       assertionId: assertion.id,
       assertionName: assertion.name,
@@ -581,7 +584,9 @@ export class PerformanceTestFramework {
       actualValue,
       expectedValue: assertion.value,
       operator: assertion.operator,
-      message: passed ? 'Assertion passed' : `Assertion failed: ${actualValue} ${assertion.operator} ${assertion.value}`,
+      message: passed
+        ? 'Assertion passed'
+        : `Assertion failed: ${actualValue} ${assertion.operator} ${assertion.value}`,
     };
   }
 
@@ -591,9 +596,11 @@ export class PerformanceTestFramework {
   private extractMetricValue(metric: string, stepResults: StepResult[]): number {
     switch (metric) {
       case 'averageResponseTime':
-        return stepResults.reduce((sum, step) => sum + step.averageResponseTime, 0) / stepResults.length;
+        return (
+          stepResults.reduce((sum, step) => sum + step.averageResponseTime, 0) / stepResults.length
+        );
       case 'maxResponseTime':
-        return Math.max(...stepResults.map(step => step.maxResponseTime));
+        return Math.max(...stepResults.map((step) => step.maxResponseTime));
       case 'successRate':
         return stepResults.reduce((sum, step) => sum + step.successRate, 0) / stepResults.length;
       default:
@@ -606,13 +613,20 @@ export class PerformanceTestFramework {
    */
   private evaluateAssertion(actualValue: number, operator: string, expectedValue: number): boolean {
     switch (operator) {
-      case 'lt': return actualValue < expectedValue;
-      case 'lte': return actualValue <= expectedValue;
-      case 'gt': return actualValue > expectedValue;
-      case 'gte': return actualValue >= expectedValue;
-      case 'eq': return actualValue === expectedValue;
-      case 'ne': return actualValue !== expectedValue;
-      default: return false;
+      case 'lt':
+        return actualValue < expectedValue;
+      case 'lte':
+        return actualValue <= expectedValue;
+      case 'gt':
+        return actualValue > expectedValue;
+      case 'gte':
+        return actualValue >= expectedValue;
+      case 'eq':
+        return actualValue === expectedValue;
+      case 'ne':
+        return actualValue !== expectedValue;
+      default:
+        return false;
     }
   }
 
@@ -629,7 +643,9 @@ export class PerformanceTestFramework {
    */
   private calculateAverageResponseTime(stepResults: StepResult[]): number {
     if (stepResults.length === 0) return 0;
-    return stepResults.reduce((sum, step) => sum + step.averageResponseTime, 0) / stepResults.length;
+    return (
+      stepResults.reduce((sum, step) => sum + step.averageResponseTime, 0) / stepResults.length
+    );
   }
 
   /**
@@ -646,7 +662,7 @@ export class PerformanceTestFramework {
    * Wait for specified time
    */
   private wait(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -654,12 +670,12 @@ export class PerformanceTestFramework {
    */
   private initializeMetricsCollection(): void {
     this.metrics = this.createEmptyMetrics();
-    
+
     // Start collecting metrics at regular intervals
     const metricsInterval = setInterval(() => {
       this.collectMetrics();
     }, 1000);
-    
+
     // Stop collecting after test duration
     setTimeout(() => {
       clearInterval(metricsInterval);
@@ -671,25 +687,25 @@ export class PerformanceTestFramework {
    */
   private collectMetrics(): void {
     const timestamp = Date.now();
-    
+
     // Collect throughput
     this.metrics.throughputOverTime.push({
       timestamp,
       value: this.calculateCurrentThroughput(),
     });
-    
+
     // Collect error rate
     this.metrics.errorRateOverTime.push({
       timestamp,
       value: this.calculateCurrentErrorRate(),
     });
-    
+
     // Collect active users
     this.metrics.activeUsersOverTime.push({
       timestamp,
       value: this.activeUsers,
     });
-    
+
     // Collect system metrics if available
     if (typeof performance !== 'undefined' && (performance as any).memory) {
       const memory = (performance as any).memory;
@@ -736,16 +752,16 @@ export class PerformanceTestFramework {
   private async generateTestResult(): Promise<PerformanceTestResult> {
     const endTime = Date.now();
     const duration = endTime - this.startTime;
-    
+
     // Calculate summary metrics
     const summary = await this.calculateSummaryMetrics();
-    
+
     // Evaluate budgets
     const budgetResults = await this.evaluateBudgets(summary);
-    
+
     // Determine test status
     const status = this.determineTestStatus(budgetResults);
-    
+
     return {
       testId: this.config.name,
       testName: this.config.name,
@@ -788,23 +804,27 @@ export class PerformanceTestFramework {
   /**
    * Evaluate performance budgets
    */
-  private async evaluateBudgets(summary: PerformanceTestResult['summary']): Promise<BudgetResult[]> {
+  private async evaluateBudgets(
+    summary: PerformanceTestResult['summary'],
+  ): Promise<BudgetResult[]> {
     const results: BudgetResult[] = [];
-    
+
     for (const budget of this.config.budgets) {
       const actualValue = this.extractSummaryMetric(budget.metric, summary);
       const passed = this.evaluateAssertion(actualValue, budget.operator, budget.limit);
-      
+
       results.push({
         metric: budget.metric,
         actualValue,
         budgetLimit: budget.limit,
         passed,
         severity: budget.severity,
-        message: passed ? 'Budget met' : `Budget exceeded: ${actualValue} ${budget.operator} ${budget.limit}`,
+        message: passed
+          ? 'Budget met'
+          : `Budget exceeded: ${actualValue} ${budget.operator} ${budget.limit}`,
       });
     }
-    
+
     return results;
   }
 
@@ -813,23 +833,34 @@ export class PerformanceTestFramework {
    */
   private extractSummaryMetric(metric: string, summary: PerformanceTestResult['summary']): number {
     switch (metric) {
-      case 'averageResponseTime': return summary.averageResponseTime;
-      case 'p95ResponseTime': return summary.p95ResponseTime;
-      case 'p99ResponseTime': return summary.p99ResponseTime;
-      case 'errorRate': return summary.errorRate;
-      case 'requestsPerSecond': return summary.requestsPerSecond;
-      case 'throughput': return summary.throughput;
-      default: return 0;
+      case 'averageResponseTime':
+        return summary.averageResponseTime;
+      case 'p95ResponseTime':
+        return summary.p95ResponseTime;
+      case 'p99ResponseTime':
+        return summary.p99ResponseTime;
+      case 'errorRate':
+        return summary.errorRate;
+      case 'requestsPerSecond':
+        return summary.requestsPerSecond;
+      case 'throughput':
+        return summary.throughput;
+      default:
+        return 0;
     }
   }
 
   /**
    * Determine test status based on budget results
    */
-  private determineTestStatus(budgetResults: BudgetResult[]): 'passed' | 'failed' | 'error' | 'cancelled' {
-    const hasErrors = budgetResults.some(result => !result.passed && result.severity === 'error');
-    const hasWarnings = budgetResults.some(result => !result.passed && result.severity === 'warning');
-    
+  private determineTestStatus(
+    budgetResults: BudgetResult[],
+  ): 'passed' | 'failed' | 'error' | 'cancelled' {
+    const hasErrors = budgetResults.some((result) => !result.passed && result.severity === 'error');
+    const hasWarnings = budgetResults.some(
+      (result) => !result.passed && result.severity === 'warning',
+    );
+
     if (hasErrors) return 'failed';
     if (hasWarnings) return 'failed';
     return 'passed';
@@ -840,7 +871,7 @@ export class PerformanceTestFramework {
    */
   private async generateReports(result: PerformanceTestResult): Promise<void> {
     console.log('Generating performance test reports...');
-    
+
     switch (this.config.reporting.format) {
       case 'html':
         await this.generateHtmlReport(result);
@@ -894,15 +925,15 @@ export class PerformanceTestFramework {
    */
   private async sendNotifications(result: PerformanceTestResult): Promise<void> {
     console.log('Sending notifications...');
-    
+
     if (this.config.integrations.slack) {
       await this.sendSlackNotification(result);
     }
-    
+
     if (this.config.integrations.email) {
       await this.sendEmailNotification(result);
     }
-    
+
     if (this.config.integrations.webhook) {
       await this.sendWebhookNotification(result);
     }
@@ -968,16 +999,19 @@ export class PerformanceTestFramework {
 
   exportResults(format: 'json' | 'csv'): string {
     const results = Array.from(this.results.values());
-    
+
     if (format === 'json') {
       return JSON.stringify(results, null, 2);
     } else {
       // Simple CSV export
       const headers = 'TestName,ExecutionId,Status,Duration,AverageResponseTime,ErrorRate\n';
-      const rows = results.map(result => 
-        `${result.testName},${result.executionId},${result.status},${result.duration},${result.summary.averageResponseTime},${result.summary.errorRate}`
-      ).join('\n');
-      
+      const rows = results
+        .map(
+          (result) =>
+            `${result.testName},${result.executionId},${result.status},${result.duration},${result.summary.averageResponseTime},${result.summary.errorRate}`,
+        )
+        .join('\n');
+
       return headers + rows;
     }
   }

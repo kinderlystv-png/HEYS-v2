@@ -19,16 +19,20 @@ const LoggerConfigSchema = z.object({
   enableConsole: z.boolean().default(true),
   enableFile: z.boolean().default(false),
   enableRemote: z.boolean().default(false),
-  fileOptions: z.object({
-    filename: z.string(),
-    maxFiles: z.number().default(5),
-    maxSize: z.string().default('10MB'),
-  }).optional(),
-  remoteOptions: z.object({
-    url: z.string().url(),
-    headers: z.record(z.string()).optional(),
-    interval: z.number().default(5000),
-  }).optional(),
+  fileOptions: z
+    .object({
+      filename: z.string(),
+      maxFiles: z.number().default(5),
+      maxSize: z.string().default('10MB'),
+    })
+    .optional(),
+  remoteOptions: z
+    .object({
+      url: z.string().url(),
+      headers: z.record(z.string()).optional(),
+      interval: z.number().default(5000),
+    })
+    .optional(),
   redactPaths: z.array(z.string()).default(['password', 'token', 'secret', 'apiKey']),
   prettyPrint: z.boolean().default(false),
 });
@@ -249,7 +253,7 @@ export class StructuredLogger {
     operation: string,
     success: boolean = true,
     component?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ): number {
     const startTime = this.startTimes.get(operationId);
     if (!startTime) {
@@ -274,11 +278,7 @@ export class StructuredLogger {
   /**
    * Log user action
    */
-  public logUserAction(
-    action: string,
-    userId: string,
-    metadata?: Record<string, any>
-  ): void {
+  public logUserAction(action: string, userId: string, metadata?: Record<string, any>): void {
     const context: LogContext = {
       userId,
       operation: action,
@@ -298,7 +298,7 @@ export class StructuredLogger {
     statusCode?: number,
     duration?: number,
     userId?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ): void {
     const context: LogContext = {
       userId,
@@ -315,7 +315,7 @@ export class StructuredLogger {
 
     const level = statusCode && statusCode >= 400 ? 'warn' : 'info';
     const message = `API ${method} ${url} - ${statusCode || 'pending'}`;
-    
+
     this.log(level, message, context);
   }
 
@@ -326,7 +326,7 @@ export class StructuredLogger {
     event: string,
     severity: 'low' | 'medium' | 'high' | 'critical',
     userId?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ): void {
     const context: LogContext = {
       userId,
@@ -347,7 +347,7 @@ export class StructuredLogger {
    */
   public child(defaultContext: Partial<LogContext>): StructuredLogger {
     const childLogger = new StructuredLogger(this.config);
-    
+
     // Override log method to include default context
     const originalLog = childLogger.log.bind(childLogger);
     childLogger.log = (level: LogLevel, message: string, context?: LogContext) => {
@@ -408,9 +408,9 @@ export function LogPerformance(operation?: string) {
     descriptor.value = async function (...args: any[]) {
       const logger = globalLogger || new StructuredLogger();
       const operationId = `${operationName}-${Date.now()}-${Math.random()}`;
-      
+
       logger.startTiming(operationId);
-      
+
       try {
         const result = await originalMethod.apply(this, args);
         logger.endTiming(operationId, operationName, true, target.constructor.name);
@@ -438,13 +438,13 @@ export function LogErrors(component?: string) {
         return await originalMethod.apply(this, args);
       } catch (error) {
         const logger = globalLogger || new StructuredLogger();
-        
+
         logger.logError({
           error: error as Error,
           component: componentName,
           operation: propertyKey,
         });
-        
+
         throw error;
       }
     };

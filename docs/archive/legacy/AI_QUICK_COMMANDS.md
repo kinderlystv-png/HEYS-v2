@@ -63,7 +63,7 @@ await integration.autoCreateFile(filePath, content);
 const automation = new UniversalAnchorAutomation();
 const results = await automation.processAllFiles();
 console.log(
-  `Обработано ${results.totalFiles} файлов, добавлено ${results.totalAnchors} якорей`
+  `Обработано ${results.totalFiles} файлов, добавлено ${results.totalAnchors} якорей`,
 );
 ```
 
@@ -80,8 +80,8 @@ if (window.HEYS && window.HEYS.SmartSearchWithTypos) {
   return result.results;
 } else {
   // Fallback к обычному поиску
-  return dataSource.filter(item =>
-    item.name.toLowerCase().includes(query.toLowerCase())
+  return dataSource.filter((item) =>
+    item.name.toLowerCase().includes(query.toLowerCase()),
   );
 }
 ```
@@ -116,7 +116,7 @@ console.log(
   'Найдено:',
   result.results.length,
   'Исправления:',
-  result.corrections
+  result.corrections,
 );
 
 // Экспорт отчета об ошибках

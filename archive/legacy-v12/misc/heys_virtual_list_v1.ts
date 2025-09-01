@@ -32,7 +32,7 @@ declare global {
   const React = global.React;
 
   // Virtual List Component
-  const VirtualList: React.FC<VirtualListProps> = props => {
+  const VirtualList: React.FC<VirtualListProps> = (props) => {
     const { items, itemHeight, height, renderItem, className, style } = props;
     const [scroll, setScroll] = React.useState(0);
 
@@ -89,10 +89,10 @@ declare global {
               key: item.id || start + i,
               style: itemStyle,
             },
-            renderItem(item, start + i)
+            renderItem(item, start + i),
           );
-        })
-      )
+        }),
+      ),
     );
   };
 
@@ -106,7 +106,7 @@ declare global {
     loadingComponent?: React.ReactNode;
   }
 
-  const EnhancedVirtualList: React.FC<EnhancedVirtualListProps> = props => {
+  const EnhancedVirtualList: React.FC<EnhancedVirtualListProps> = (props) => {
     const {
       items,
       itemHeight,
@@ -156,7 +156,7 @@ declare global {
           }
         }
       },
-      [lastScrollTop, onScroll, loadMore, hasMore, loading]
+      [lastScrollTop, onScroll, loadMore, hasMore, loading],
     );
 
     const visibleItems = React.useMemo(() => {
@@ -201,7 +201,7 @@ declare global {
               key: item.id || start + i,
               style: itemStyle,
             },
-            renderItem(item, start + i)
+            renderItem(item, start + i),
           );
         }),
 
@@ -222,9 +222,9 @@ declare global {
                 alignItems: 'center',
               },
             },
-            loadingComponent
-          )
-      )
+            loadingComponent,
+          ),
+      ),
     );
   };
 
@@ -259,7 +259,7 @@ declare global {
 
   // Utility function for dynamic item heights
   const createDynamicVirtualList = (
-    heightEstimator: (item: VirtualListItem, index: number) => number
+    heightEstimator: (item: VirtualListItem, index: number) => number,
   ) => {
     return React.forwardRef<HTMLDivElement, VirtualListProps>((props, ref) => {
       const { items, renderItem, height, ...restProps } = props;
@@ -357,10 +357,10 @@ declare global {
                   height: pos.height + 'px',
                 },
               },
-              renderItem(item, actualIndex)
+              renderItem(item, actualIndex),
             );
-          })
-        )
+          }),
+        ),
       );
     });
   };

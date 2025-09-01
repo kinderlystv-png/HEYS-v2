@@ -80,10 +80,10 @@ export class DependencyResolver {
     const allNodes = new Set();
 
     // Build graph from documents
-    documents.forEach(doc => {
+    documents.forEach((doc) => {
       graph[doc.path] = doc.dependencies || [];
       allNodes.add(doc.path);
-      doc.dependencies?.forEach(dep => allNodes.add(dep));
+      doc.dependencies?.forEach((dep) => allNodes.add(dep));
     });
 
     const analysis = {
@@ -109,12 +109,12 @@ export class DependencyResolver {
 
     // Find orphaned documents (not referenced by others)
     const referencedNodes = new Set();
-    Object.values(graph).forEach(deps => {
-      deps.forEach(dep => referencedNodes.add(dep));
+    Object.values(graph).forEach((deps) => {
+      deps.forEach((dep) => referencedNodes.add(dep));
     });
 
     analysis.orphanedDocuments = Array.from(allNodes).filter(
-      node => !referencedNodes.has(node) && graph[node]?.length === 0
+      (node) => !referencedNodes.has(node) && graph[node]?.length === 0,
     );
 
     // Calculate dependency depths
@@ -132,17 +132,17 @@ export class DependencyResolver {
     const visited = new Set();
     const result = [];
 
-    const visit = node => {
+    const visit = (node) => {
       if (visited.has(node)) return;
       visited.add(node);
 
       const dependencies = graph[node] || [];
-      dependencies.forEach(dep => visit(dep));
+      dependencies.forEach((dep) => visit(dep));
 
       result.push(node);
     };
 
-    Object.keys(graph).forEach(node => visit(node));
+    Object.keys(graph).forEach((node) => visit(node));
 
     return result;
   }
@@ -156,7 +156,7 @@ export class DependencyResolver {
     const depths = {};
     const visited = new Set();
 
-    const calculateDepth = node => {
+    const calculateDepth = (node) => {
       if (visited.has(node)) return depths[node] || 0;
       visited.add(node);
 
@@ -166,12 +166,12 @@ export class DependencyResolver {
         return 0;
       }
 
-      const maxDepth = Math.max(...dependencies.map(dep => calculateDepth(dep)));
+      const maxDepth = Math.max(...dependencies.map((dep) => calculateDepth(dep)));
       depths[node] = maxDepth + 1;
       return depths[node];
     };
 
-    Object.keys(graph).forEach(node => calculateDepth(node));
+    Object.keys(graph).forEach((node) => calculateDepth(node));
 
     return depths;
   }

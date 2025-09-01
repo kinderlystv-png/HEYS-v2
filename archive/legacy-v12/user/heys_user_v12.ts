@@ -1,7 +1,7 @@
 // heys_user_v12.ts — вкладка «Данные пользователя» (TypeScript version)
 
 import React from 'react';
-import type { UserProfile, HEYSGlobal, UserTabProps, PulseZone } from './types/heys';
+import type { HEYSGlobal, PulseZone, UserProfile, UserTabProps } from './types/heys';
 
 // Declare global types
 declare global {
@@ -105,12 +105,12 @@ declare global {
 
     // Обновление профиля
     const updateProfile = (field: keyof UserProfile, value: any) => {
-      setProfile(prev => ({ ...prev, [field]: value }));
+      setProfile((prev) => ({ ...prev, [field]: value }));
     };
 
     // Обновление зоны
     const updateZone = (index: number, field: keyof PulseZone, value: any) => {
-      setZones(prev => {
+      setZones((prev) => {
         const newZones = [...prev];
         newZones[index] = { ...newZones[index], [field]: value };
         return newZones;
@@ -150,7 +150,7 @@ declare global {
                 updateProfile('gender', e.target.value),
             },
             React.createElement('option', { value: 'Мужской' }, 'Мужской'),
-            React.createElement('option', { value: 'Женский' }, 'Женский')
+            React.createElement('option', { value: 'Женский' }, 'Женский'),
           ),
           React.createElement('input', {
             type: 'number',
@@ -172,8 +172,8 @@ declare global {
             value: profile.age || '',
             onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
               updateProfile('age', toNum(e.target.value)),
-          })
-        )
+          }),
+        ),
       ),
       React.createElement(
         'div',
@@ -208,11 +208,11 @@ declare global {
                 value: zone.MET || '',
                 onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
                   updateZone(index, 'MET', toNum(e.target.value)),
-              })
-            )
-          )
-        )
-      )
+              }),
+            ),
+          ),
+        ),
+      ),
     );
   }
 

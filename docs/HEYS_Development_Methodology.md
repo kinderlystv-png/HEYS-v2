@@ -416,7 +416,7 @@ useEffect(() => {
 ```javascript
 // Применяем ТУ ЖЕ логику для профиля:
 const [profile, setProfile] = useState(() =>
-  lsGet('heys_profile', defaultProfile)
+  lsGet('heys_profile', defaultProfile),
 );
 
 useEffect(() => {
@@ -708,7 +708,7 @@ useEffect(() => {
 ```javascript
 // Копируем логику в heys_user_v12.js:
 const [profile, setProfile] = useState(() =>
-  lsGet('heys_profile', defaultProfile)
+  lsGet('heys_profile', defaultProfile),
 );
 useEffect(() => {
   lsSet('heys_profile', profile);
@@ -776,7 +776,7 @@ open_simple_browser("http://127.0.0.1:8000")
 function NewComponent() {
   // 1. Инициализация из localStorage
   const [data, setData] = useState(() =>
-    lsGet('heys_new_component', defaultValue)
+    lsGet('heys_new_component', defaultValue),
   );
 
   // 2. Автосохранение при изменениях
@@ -809,7 +809,7 @@ function NewComponent() {
 
   // 4. Функция обновления
   const updateData = (key, value) => {
-    setData(prev => ({ ...prev, [key]: value }));
+    setData((prev) => ({ ...prev, [key]: value }));
   };
 
   return /* JSX */;
@@ -833,13 +833,13 @@ if (window.HEYS && window.HEYS.analytics) {
 // Эталон из MealAddProduct
 const [selectedIndex, setSelectedIndex] = useState(-1);
 
-const handleKeyDown = e => {
+const handleKeyDown = (e) => {
   if (e.key === 'ArrowDown') {
     e.preventDefault();
-    setSelectedIndex(prev => Math.min(prev + 1, items.length - 1));
+    setSelectedIndex((prev) => Math.min(prev + 1, items.length - 1));
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
-    setSelectedIndex(prev => Math.max(prev - 1, -1));
+    setSelectedIndex((prev) => Math.max(prev - 1, -1));
   } else if (e.key === 'Enter' && selectedIndex >= 0) {
     e.preventDefault();
     selectItem(items[selectedIndex]);

@@ -1,7 +1,7 @@
 /**
  * HEYS Mobile Performance Optimizer
  * Specialized optimizations for mobile devices and network conditions
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
@@ -77,10 +77,11 @@ export class MobilePerformanceOptimizer {
     };
 
     // Determine if this is a low-end device
-    capabilities.isLowEndDevice = 
-      capabilities.memory <= 2 || 
-      capabilities.cpu <= 3 || 
-      (capabilities.network === 'slow-2g' || capabilities.network === '2g');
+    capabilities.isLowEndDevice =
+      capabilities.memory <= 2 ||
+      capabilities.cpu <= 3 ||
+      capabilities.network === 'slow-2g' ||
+      capabilities.network === '2g';
 
     return capabilities;
   }
@@ -92,7 +93,7 @@ export class MobilePerformanceOptimizer {
     if ('deviceMemory' in navigator) {
       return (navigator as any).deviceMemory;
     }
-    
+
     // Fallback estimation based on user agent and hardware concurrency
     const cores = navigator.hardwareConcurrency || 4;
     if (cores <= 2) return 1;
@@ -107,12 +108,12 @@ export class MobilePerformanceOptimizer {
   private estimateCPUPerformance(): number {
     const cores = navigator.hardwareConcurrency || 4;
     const platform = navigator.platform.toLowerCase();
-    
+
     // Basic heuristics for CPU performance estimation
     if (platform.includes('arm') || platform.includes('mobile')) {
       return Math.min(cores * 1.2, 6); // Mobile processors
     }
-    
+
     return Math.min(cores * 1.5, 10); // Desktop processors
   }
 
@@ -126,7 +127,7 @@ export class MobilePerformanceOptimizer {
         return connection.effectiveType as DeviceCapabilities['network'];
       }
     }
-    
+
     // Fallback: assume 4g for modern browsers
     return '4g';
   }
@@ -141,7 +142,7 @@ export class MobilePerformanceOptimizer {
         return battery.level;
       });
     }
-    
+
     // Default to 50% battery
     return 0.5;
   }
@@ -300,7 +301,7 @@ export class MobilePerformanceOptimizer {
    */
   private handleLongTask(entry: PerformanceEntry): void {
     console.warn(`Long task detected: ${entry.duration}ms`);
-    
+
     // If we detect frequent long tasks, adjust settings
     if (entry.duration > 100) {
       this.performanceSettings.renderStrategy = 'batched';
@@ -334,13 +335,13 @@ export class MobilePerformanceOptimizer {
     const { isLowEndDevice } = this.deviceCapabilities;
     const { maxImageQuality } = this.performanceSettings;
     const { saveData } = this.networkCondition;
-    
+
     const quality = Math.floor(maxImageQuality * 100);
     const format = this.getSupportedImageFormat();
-    
+
     // Apply device pixel ratio if not low-end device
     const pixelRatio = isLowEndDevice ? 1 : Math.min(this.deviceCapabilities.pixelRatio, 2);
-    
+
     const optimizedWidth = width ? Math.floor(width * pixelRatio) : undefined;
     const optimizedHeight = height ? Math.floor(height * pixelRatio) : undefined;
 
@@ -363,7 +364,7 @@ export class MobilePerformanceOptimizer {
     const canvas = document.createElement('canvas');
     canvas.width = 1;
     canvas.height = 1;
-    
+
     try {
       if (canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0) {
         return 'webp';
@@ -371,7 +372,7 @@ export class MobilePerformanceOptimizer {
     } catch (e) {
       // WebP not supported
     }
-    
+
     return 'jpeg';
   }
 
@@ -380,7 +381,7 @@ export class MobilePerformanceOptimizer {
    */
   async optimizeBundleLoading(): Promise<void> {
     const { bundleSize } = this.performanceSettings;
-    
+
     if (bundleSize === 'minimal') {
       // Load only critical features
       await this.loadCriticalFeatures();
@@ -456,7 +457,7 @@ export class MobilePerformanceOptimizer {
    */
   private optimizeRendering(): void {
     const { renderStrategy } = this.performanceSettings;
-    
+
     if (renderStrategy === 'batched') {
       this.enableBatchedRendering();
     } else if (renderStrategy === 'throttled') {
@@ -485,10 +486,10 @@ export class MobilePerformanceOptimizer {
    */
   private optimizeNetworking(): void {
     const { maxConcurrentRequests } = this.performanceSettings;
-    
+
     // Limit concurrent requests
     this.setMaxConcurrentRequests(maxConcurrentRequests);
-    
+
     // Enable compression if supported
     this.enableCompression();
   }
@@ -514,7 +515,7 @@ export class MobilePerformanceOptimizer {
    */
   private optimizeMemory(): void {
     const { cacheStrategy } = this.performanceSettings;
-    
+
     if (cacheStrategy === 'minimal') {
       this.enableMinimalCaching();
     } else if (cacheStrategy === 'aggressive') {
@@ -541,7 +542,7 @@ export class MobilePerformanceOptimizer {
    */
   private optimizeAnimations(): void {
     const { enableAnimations } = this.performanceSettings;
-    
+
     if (!enableAnimations) {
       this.disableAnimations();
     } else {
@@ -608,7 +609,7 @@ export class MobilePerformanceOptimizer {
    * Clean up observers
    */
   destroy(): void {
-    this.observers.forEach(observer => observer.disconnect());
+    this.observers.forEach((observer) => observer.disconnect());
     this.observers.clear();
   }
 }
@@ -621,7 +622,9 @@ export class MobileUtils {
    * Check if device is mobile
    */
   static isMobile(): boolean {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent,
+    );
   }
 
   /**
@@ -654,13 +657,13 @@ export class MobileUtils {
   static optimizeViewport(): void {
     // Ensure viewport meta tag is present
     let viewportMeta = document.querySelector('meta[name="viewport"]') as HTMLMetaElement;
-    
+
     if (!viewportMeta) {
       viewportMeta = document.createElement('meta');
       viewportMeta.name = 'viewport';
       document.head.appendChild(viewportMeta);
     }
-    
+
     viewportMeta.content = 'width=device-width, initial-scale=1.0, user-scalable=no';
   }
 

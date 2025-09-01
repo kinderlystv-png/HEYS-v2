@@ -126,7 +126,7 @@
         initLogger();
 
         // Слушаем события от Enhanced Error Logger
-        window.addEventListener('enhancedLogEntry', event => {
+        window.addEventListener('enhancedLogEntry', (event) => {
           const logEntry = event.detail;
           log(`📥 Новый лог: [${logEntry.level.toUpperCase()}] ${logEntry.title}`);
         });

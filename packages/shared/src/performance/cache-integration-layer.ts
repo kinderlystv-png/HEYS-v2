@@ -1,14 +1,14 @@
 /**
  * Cache Integration Layer for HEYS Application
  * Provides unified interface for all caching strategies
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
  */
 
 import { AdvancedCacheManager, CacheConfig, defaultCacheConfig } from './advanced-cache-manager';
-import { HTTPCacheStrategy, HTTPCacheConfig, defaultHTTPCacheConfig } from './http-cache-strategy';
+import { HTTPCacheConfig, HTTPCacheStrategy, defaultHTTPCacheConfig } from './http-cache-strategy';
 
 export interface CacheIntegrationConfig {
   cache: CacheConfig;
@@ -58,7 +58,7 @@ export class CacheIntegrationLayer {
     this.cacheManager = new AdvancedCacheManager(this.config.cache);
     this.httpCache = new HTTPCacheStrategy(this.config.http);
     this.invalidationRules = new Map();
-    
+
     this.performanceMetrics = {
       hitRate: 0,
       averageResponseTime: 0,
@@ -77,7 +77,7 @@ export class CacheIntegrationLayer {
   private async initialize(): Promise<void> {
     try {
       // Setup invalidation rules
-      this.config.cacheInvalidationRules.forEach(rule => {
+      this.config.cacheInvalidationRules.forEach((rule) => {
         this.invalidationRules.set(rule.pattern, rule);
       });
 
@@ -107,15 +107,15 @@ export class CacheIntegrationLayer {
       strategy?: 'auto' | 'memory' | 'localStorage' | 'sessionStorage' | 'indexedDB';
       compress?: boolean;
       version?: string;
-    } = {}
+    } = {},
   ): Promise<boolean> {
     const startTime = Date.now();
 
     try {
       const { strategy = 'auto', ...restOptions } = options;
-      
+
       let finalStrategy = strategy;
-      
+
       // Auto strategy selection based on data characteristics
       if (strategy === 'auto') {
         finalStrategy = this.selectOptimalStrategy(key, value, options);
@@ -127,7 +127,7 @@ export class CacheIntegrationLayer {
       });
 
       this.updatePerformanceMetrics(Date.now() - startTime, result);
-      
+
       return result;
     } catch (error) {
       console.error('Cache store failed:', error);
@@ -144,16 +144,16 @@ export class CacheIntegrationLayer {
     options: {
       strategy?: 'auto' | 'memory' | 'localStorage' | 'sessionStorage' | 'indexedDB';
       fallbackStrategies?: string[];
-    } = {}
+    } = {},
   ): Promise<T | null> {
     const startTime = Date.now();
 
     try {
       const result = await this.cacheManager.retrieve<T>(key, options);
-      
+
       const isHit = result !== null;
       this.updatePerformanceMetrics(Date.now() - startTime, isHit);
-      
+
       return result;
     } catch (error) {
       console.error('Cache retrieve failed:', error);
@@ -168,7 +168,7 @@ export class CacheIntegrationLayer {
   private selectOptimalStrategy<T>(
     key: string,
     value: T,
-    _options: any
+    _options: any,
   ): 'memory' | 'localStorage' | 'sessionStorage' | 'indexedDB' {
     const serialized = JSON.stringify(value);
     const size = serialized.length;
@@ -227,19 +227,23 @@ export class CacheIntegrationLayer {
         const clonedResponse = response.clone();
         const body = await clonedResponse.text();
         const headers: Record<string, string> = {};
-        
+
         clonedResponse.headers.forEach((value, key) => {
           headers[key] = value;
         });
 
-        await cacheManager.store(cacheKey, {
-          body,
-          headers,
-          status: response.status,
-        }, {
-          strategy: this.selectOptimalStrategy(cacheKey, { body, headers }, {}),
-          ttl: this.getTTLFromResponse(response),
-        });
+        await cacheManager.store(
+          cacheKey,
+          {
+            body,
+            headers,
+            status: response.status,
+          },
+          {
+            strategy: this.selectOptimalStrategy(cacheKey, { body, headers }, {}),
+            ttl: this.getTTLFromResponse(response),
+          },
+        );
       }
 
       return response;
@@ -259,7 +263,7 @@ export class CacheIntegrationLayer {
    */
   private getTTLFromResponse(response: Response): number {
     const cacheControl = response.headers.get('cache-control');
-    
+
     if (cacheControl) {
       const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
       if (maxAgeMatch && maxAgeMatch[1]) {
@@ -284,10 +288,10 @@ export class CacheIntegrationLayer {
     try {
       // Check invalidation rules
       const rule = this.invalidationRules.get(pattern);
-      
+
       if (rule) {
         console.log(`Applying invalidation rule for pattern: ${pattern}`);
-        
+
         if (rule.triggers.includes('dependency') && cascade) {
           // Find and invalidate dependent entries
           await this.cascadeInvalidation(pattern);
@@ -296,10 +300,9 @@ export class CacheIntegrationLayer {
 
       // Invalidate from cache manager
       await this.cacheManager.invalidate(pattern, cascade);
-      
+
       this.performanceMetrics.invalidations++;
       this.performanceMetrics.lastUpdated = new Date();
-      
     } catch (error) {
       console.error('Cache invalidation failed:', error);
     }
@@ -317,13 +320,15 @@ export class CacheIntegrationLayer {
   /**
    * Get comprehensive cache statistics
    */
-  async getStats(): Promise<CachePerformanceMetrics & {
-    breakdown: {
-      memory: any;
-      http: any;
-      advanced: any;
-    };
-  }> {
+  async getStats(): Promise<
+    CachePerformanceMetrics & {
+      breakdown: {
+        memory: any;
+        http: any;
+        advanced: any;
+      };
+    }
+  > {
     const advancedStats = await this.cacheManager.getStats();
     const httpStats = this.httpCache.getCacheStats();
 
@@ -345,10 +350,7 @@ export class CacheIntegrationLayer {
    * Clear all caches
    */
   async clearAll(): Promise<void> {
-    await Promise.all([
-      this.cacheManager.clearAll(),
-      this.httpCache.clearCache(),
-    ]);
+    await Promise.all([this.cacheManager.clearAll(), this.httpCache.clearCache()]);
 
     this.performanceMetrics = {
       hitRate: 0,
@@ -365,19 +367,23 @@ export class CacheIntegrationLayer {
    */
   private updatePerformanceMetrics(responseTime: number, hit: boolean): void {
     this.performanceMetrics.totalRequests++;
-    
+
     if (hit) {
-      const currentHits = this.performanceMetrics.hitRate * (this.performanceMetrics.totalRequests - 1);
+      const currentHits =
+        this.performanceMetrics.hitRate * (this.performanceMetrics.totalRequests - 1);
       this.performanceMetrics.hitRate = (currentHits + 1) / this.performanceMetrics.totalRequests;
     } else {
-      const currentHits = this.performanceMetrics.hitRate * (this.performanceMetrics.totalRequests - 1);
+      const currentHits =
+        this.performanceMetrics.hitRate * (this.performanceMetrics.totalRequests - 1);
       this.performanceMetrics.hitRate = currentHits / this.performanceMetrics.totalRequests;
     }
 
     // Update average response time
-    const currentTotal = this.performanceMetrics.averageResponseTime * (this.performanceMetrics.totalRequests - 1);
-    this.performanceMetrics.averageResponseTime = (currentTotal + responseTime) / this.performanceMetrics.totalRequests;
-    
+    const currentTotal =
+      this.performanceMetrics.averageResponseTime * (this.performanceMetrics.totalRequests - 1);
+    this.performanceMetrics.averageResponseTime =
+      (currentTotal + responseTime) / this.performanceMetrics.totalRequests;
+
     this.performanceMetrics.lastUpdated = new Date();
   }
 
@@ -423,7 +429,7 @@ export class CacheIntegrationLayer {
    */
   async importConfig(config: Partial<CacheIntegrationConfig>): Promise<void> {
     this.config = { ...this.config, ...config };
-    
+
     // Reinitialize with new config
     await this.initialize();
   }
@@ -445,11 +451,7 @@ export const defaultCacheIntegrationConfig: CacheIntegrationConfig = {
   http: defaultHTTPCacheConfig,
   serviceWorkerPath: '/packages/shared/src/performance/service-worker.js',
   enableOfflineMode: true,
-  preloadResources: [
-    '/static/css/main.css',
-    '/static/js/main.js',
-    '/manifest.webmanifest',
-  ],
+  preloadResources: ['/static/css/main.css', '/static/js/main.js', '/manifest.webmanifest'],
   cacheInvalidationRules: [
     {
       pattern: 'api/user/*',

@@ -18,7 +18,7 @@ class NavigationMapsDeployer {
     const fs = require('fs').promises;
     const path = require('path');
 
-    const scanDirectory = async dir => {
+    const scanDirectory = async (dir) => {
       const items = await fs.readdir(dir, { withFileTypes: true });
 
       for (const item of items) {
@@ -149,7 +149,7 @@ class NavigationMapsDeployer {
     </style>`;
 
     // Добавляем навигацию после <body>
-    content = content.replace(/<body[^>]*>/i, match => {
+    content = content.replace(/<body[^>]*>/i, (match) => {
       return match + navigationHTML;
     });
 
@@ -281,7 +281,7 @@ class NavigationMapsDeployer {
 
     console.log(`📊 Найдено ${this.targetFiles.length} файлов для обновления:\n`);
 
-    this.targetFiles.forEach(file => {
+    this.targetFiles.forEach((file) => {
       const status = file.hasNavigation ? '✅' : '🔄';
       console.log(`${status} ${file.path} (${file.lines} строк, ${file.type.toUpperCase()})`);
     });
@@ -327,7 +327,7 @@ class NavigationMapsDeployer {
 
     if (this.errors.length > 0) {
       console.log('\n❌ Список ошибок:');
-      this.errors.forEach(err => {
+      this.errors.forEach((err) => {
         console.log(`   ${err.file}: ${err.error}`);
       });
     }

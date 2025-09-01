@@ -50,9 +50,9 @@ const checkHealth = () => {
 const main = async () => {
   try {
     console.log(`🔍 Checking health at http://${HOST}:${PORT}${HEALTH_ENDPOINT}`);
-    
+
     const result = await checkHealth();
-    
+
     console.log('✅ Health check passed:', result);
     process.exit(0);
   } catch (error) {

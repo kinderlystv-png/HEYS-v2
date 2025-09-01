@@ -1,7 +1,7 @@
 /**
  * HEYS Performance Profiler
  * Advanced performance monitoring and optimization toolkit
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
@@ -178,9 +178,11 @@ export class PerformanceProfiler {
   private observeNavigationTiming(): void {
     if (!window.performance?.getEntriesByType) return;
 
-    const navigationEntries = window.performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
-    
-    navigationEntries.forEach(entry => {
+    const navigationEntries = window.performance.getEntriesByType(
+      'navigation',
+    ) as PerformanceNavigationTiming[];
+
+    navigationEntries.forEach((entry) => {
       this.addMetric({
         name: 'DOM Loading',
         value: entry.domContentLoadedEventStart - entry.fetchStart,
@@ -218,7 +220,7 @@ export class PerformanceProfiler {
    */
   private observePaintTiming(): void {
     const observer = new PerformanceObserver((list) => {
-      list.getEntries().forEach(entry => {
+      list.getEntries().forEach((entry) => {
         if (entry.name === 'first-paint') {
           this.addMetric({
             name: 'First Paint',
@@ -259,8 +261,8 @@ export class PerformanceProfiler {
   private observeLayoutShift(): void {
     const observer = new PerformanceObserver((list) => {
       let totalShift = 0;
-      
-      list.getEntries().forEach(entry => {
+
+      list.getEntries().forEach((entry) => {
         const layoutShiftEntry = entry as any;
         if (!layoutShiftEntry.hadRecentInput) {
           totalShift += layoutShiftEntry.value;
@@ -293,7 +295,7 @@ export class PerformanceProfiler {
    */
   private observeFirstInputDelay(): void {
     const observer = new PerformanceObserver((list) => {
-      list.getEntries().forEach(entry => {
+      list.getEntries().forEach((entry) => {
         const fidEntry = entry as any;
         this.addMetric({
           name: 'First Input Delay',
@@ -320,7 +322,7 @@ export class PerformanceProfiler {
    */
   private observeLongTasks(): void {
     const observer = new PerformanceObserver((list) => {
-      list.getEntries().forEach(entry => {
+      list.getEntries().forEach((entry) => {
         this.addMetric({
           name: 'Long Task',
           value: entry.duration,
@@ -346,9 +348,9 @@ export class PerformanceProfiler {
    */
   private observeResourceTiming(): void {
     const observer = new PerformanceObserver((list) => {
-      list.getEntries().forEach(entry => {
+      list.getEntries().forEach((entry) => {
         const resourceEntry = entry as PerformanceResourceTiming;
-        
+
         this.addMetric({
           name: `Resource Load: ${resourceEntry.name.split('/').pop()}`,
           value: resourceEntry.responseEnd - resourceEntry.requestStart,
@@ -387,10 +389,12 @@ export class PerformanceProfiler {
    */
   addMetric(metric: PerformanceMetric): void {
     this.metrics.push(metric);
-    
+
     // Check against thresholds
     if (metric.threshold && metric.value > metric.threshold) {
-      console.warn(`Performance threshold exceeded: ${metric.name} = ${metric.value}${metric.unit} (threshold: ${metric.threshold}${metric.unit})`);
+      console.warn(
+        `Performance threshold exceeded: ${metric.name} = ${metric.value}${metric.unit} (threshold: ${metric.threshold}${metric.unit})`,
+      );
     }
   }
 
@@ -402,7 +406,7 @@ export class PerformanceProfiler {
 
     if (typeof window !== 'undefined' && (window.performance as any)?.memory) {
       const memory = (window.performance as any).memory;
-      
+
       memMetrics.push({
         name: 'JS Heap Used',
         value: memory.usedJSHeapSize,
@@ -488,7 +492,7 @@ export class PerformanceProfiler {
    * Get metrics by category
    */
   getMetricsByCategory(category: PerformanceMetric['category']): PerformanceMetric[] {
-    return this.getMetrics().filter(metric => metric.category === category);
+    return this.getMetrics().filter((metric) => metric.category === category);
   }
 
   /**
@@ -509,15 +513,16 @@ export class PerformanceProfiler {
     };
 
     Object.entries(weights).forEach(([category, weight]) => {
-      const categoryMetrics = metrics.filter(m => m.category === category);
+      const categoryMetrics = metrics.filter((m) => m.category === category);
       if (categoryMetrics.length === 0) return;
 
-      const categoryScore = categoryMetrics.reduce((sum, metric) => {
-        if (!metric.target) return sum + 100;
-        
-        const score = Math.max(0, Math.min(100, (metric.target / metric.value) * 100));
-        return sum + score;
-      }, 0) / categoryMetrics.length;
+      const categoryScore =
+        categoryMetrics.reduce((sum, metric) => {
+          if (!metric.target) return sum + 100;
+
+          const score = Math.max(0, Math.min(100, (metric.target / metric.value) * 100));
+          return sum + score;
+        }, 0) / categoryMetrics.length;
 
       weightedScore += categoryScore * weight;
       totalScore += weight;
@@ -536,13 +541,13 @@ export class PerformanceProfiler {
     recommendations: string[];
   } {
     const metrics = this.getMetrics();
-    const violations = metrics.filter(m => m.threshold && m.value > m.threshold);
+    const violations = metrics.filter((m) => m.threshold && m.value > m.threshold);
     const score = this.getPerformanceScore();
 
     const recommendations: string[] = [];
 
     // Generate recommendations based on violations
-    violations.forEach(violation => {
+    violations.forEach((violation) => {
       switch (violation.category) {
         case 'loading':
           recommendations.push('Consider code splitting and lazy loading');
@@ -584,7 +589,7 @@ export class PerformanceProfiler {
   startMonitoring(interval: number = 5000): NodeJS.Timeout {
     return setInterval(() => {
       const memoryMetrics = this.getMemoryUsage();
-      memoryMetrics.forEach(metric => this.addMetric(metric));
+      memoryMetrics.forEach((metric) => this.addMetric(metric));
     }, interval);
   }
 
@@ -592,7 +597,7 @@ export class PerformanceProfiler {
    * Stop monitoring and cleanup
    */
   stopMonitoring(): void {
-    this.observers.forEach(observer => observer.disconnect());
+    this.observers.forEach((observer) => observer.disconnect());
     this.observers = [];
   }
 
@@ -613,11 +618,11 @@ export const defaultProfiler = new PerformanceProfiler();
  * Performance decorator for methods
  */
 export function measurePerformance(name?: string) {
-  return function(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
     const methodName = name || `${target.constructor.name}.${propertyKey}`;
 
-    descriptor.value = function(...args: any[]) {
+    descriptor.value = function (...args: any[]) {
       return defaultProfiler.measureFunction(methodName, () => {
         return originalMethod.apply(this, args);
       });
@@ -631,11 +636,11 @@ export function measurePerformance(name?: string) {
  * Async performance decorator
  */
 export function measureAsyncPerformance(name?: string) {
-  return function(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
     const methodName = name || `${target.constructor.name}.${propertyKey}`;
 
-    descriptor.value = async function(...args: any[]) {
+    descriptor.value = async function (...args: any[]) {
       return await defaultProfiler.measureAsyncFunction(methodName, async () => {
         return await originalMethod.apply(this, args);
       });

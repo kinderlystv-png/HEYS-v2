@@ -251,7 +251,7 @@ function calculateMacroTrends(days) {
 
 function calculateConsistency(days) {
   // Расчет консистентности питания
-  const kcalValues = days.map(day => day.totalKcal || 0).filter(kcal => kcal > 0);
+  const kcalValues = days.map((day) => day.totalKcal || 0).filter((kcal) => kcal > 0);
 
   if (kcalValues.length === 0) return { score: 0, rating: 'insufficient_data' };
 
@@ -276,7 +276,7 @@ function calculateConsistency(days) {
 }
 
 function analyzeDailyGoalAchievement(days, goals) {
-  return days.map(day => ({
+  return days.map((day) => ({
     date: day.date,
     kcalAchieved: (((day.totalKcal || 0) / goals.kcal) * 100).toFixed(1),
     proteinAchieved: (((day.totalProteins || 0) / goals.proteins) * 100).toFixed(1),
@@ -288,7 +288,7 @@ function analyzeWeeklyGoalAchievement(days, goals) {
   // Группируем дни по неделям и анализируем
   const weeks = groupDaysByWeek(days);
 
-  return weeks.map(week => ({
+  return weeks.map((week) => ({
     weekStart: week[0].date,
     avgKcalAchievement: calculateAverageGoalAchievement(week, goals, 'kcal'),
     avgProteinAchievement: calculateAverageGoalAchievement(week, goals, 'proteins'),
@@ -300,7 +300,7 @@ function analyzeMonthlyGoalAchievement(days, goals) {
   // Анализ по месяцам
   const months = groupDaysByMonth(days);
 
-  return months.map(month => ({
+  return months.map((month) => ({
     month: month.name,
     totalDays: month.days.length,
     avgAchievement: calculateMonthlyAverageAchievement(month.days, goals),
@@ -334,7 +334,7 @@ function groupDaysByWeek(days) {
   const weeks = [];
   let currentWeek = [];
 
-  days.forEach(day => {
+  days.forEach((day) => {
     const date = new Date(day.date);
     const dayOfWeek = date.getDay();
 
@@ -357,7 +357,7 @@ function groupDaysByWeek(days) {
 function groupDaysByMonth(days) {
   const months = {};
 
-  days.forEach(day => {
+  days.forEach((day) => {
     const date = new Date(day.date);
     const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
 
@@ -384,14 +384,14 @@ function calculateOverallAchievement(day, goals) {
 function calculateAverageGoalAchievement(days, goals, metric) {
   const total = days.reduce(
     (sum, day) => sum + (day[`total${metric.charAt(0).toUpperCase() + metric.slice(1)}`] || 0),
-    0
+    0,
   );
   const average = total / days.length;
   return ((average / goals[metric]) * 100).toFixed(1);
 }
 
 function calculateWeeklyConsistency(days) {
-  const kcalValues = days.map(day => day.totalKcal || 0);
+  const kcalValues = days.map((day) => day.totalKcal || 0);
   const mean = kcalValues.reduce((sum, kcal) => sum + kcal, 0) / kcalValues.length;
   const variance =
     kcalValues.reduce((sum, kcal) => sum + Math.pow(kcal - mean, 2), 0) / kcalValues.length;
@@ -418,7 +418,7 @@ function findBestWeekInMonth(days, goals) {
   let bestWeek = null;
   let bestScore = 0;
 
-  weeks.forEach(week => {
+  weeks.forEach((week) => {
     const score = parseFloat(calculateAverageGoalAchievement(week, goals, 'kcal'));
     if (score > bestScore) {
       bestScore = score;

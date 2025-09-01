@@ -2,7 +2,7 @@
  * Advanced Caching Manager for HEYS Application
  * Implements comprehensive caching strategies including HTTP caching,
  * browser storage, and Service Worker integration
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
@@ -185,7 +185,7 @@ export class AdvancedCacheManager {
     try {
       this.serviceWorkerRegistration = await navigator.serviceWorker.register(
         this.config.strategies.serviceWorker.scriptPath,
-        { scope: this.config.strategies.serviceWorker.scope }
+        { scope: this.config.strategies.serviceWorker.scope },
       );
 
       console.log('Service Worker registered successfully');
@@ -199,7 +199,6 @@ export class AdvancedCacheManager {
       setInterval(() => {
         this.serviceWorkerRegistration?.update();
       }, this.config.strategies.serviceWorker.updateInterval);
-
     } catch (error) {
       console.error('Service Worker registration failed:', error);
     }
@@ -234,7 +233,6 @@ export class AdvancedCacheManager {
 
       const blob = new Blob([workerCode], { type: 'application/javascript' });
       this.compressionWorker = new Worker(URL.createObjectURL(blob));
-
     } catch (error) {
       console.warn('Compression worker initialization failed:', error);
     }
@@ -252,7 +250,7 @@ export class AdvancedCacheManager {
       compress?: boolean;
       dependencies?: string[];
       version?: string;
-    } = {}
+    } = {},
   ): Promise<boolean> {
     const startTime = Date.now();
 
@@ -270,7 +268,11 @@ export class AdvancedCacheManager {
       let finalValue = serialized;
 
       // Compress if requested and enabled
-      if (compress && this.config.compression.enabled && serialized.length > this.config.compression.threshold) {
+      if (
+        compress &&
+        this.config.compression.enabled &&
+        serialized.length > this.config.compression.threshold
+      ) {
         finalValue = await this.compressData(serialized);
       }
 
@@ -309,7 +311,6 @@ export class AdvancedCacheManager {
 
       this.updatePerformanceMetrics(Date.now() - startTime, true);
       return true;
-
     } catch (error) {
       console.error('Cache store failed:', error);
       this.updatePerformanceMetrics(Date.now() - startTime, false);
@@ -325,12 +326,13 @@ export class AdvancedCacheManager {
     options: {
       strategy?: 'memory' | 'localStorage' | 'sessionStorage' | 'indexedDB' | 'auto';
       fallbackStrategies?: string[];
-    } = {}
+    } = {},
   ): Promise<T | null> {
     const startTime = Date.now();
 
     try {
-      const { strategy = 'auto', fallbackStrategies = ['memory', 'localStorage', 'indexedDB'] } = options;
+      const { strategy = 'auto', fallbackStrategies = ['memory', 'localStorage', 'indexedDB'] } =
+        options;
 
       let entry: CacheEntry<string> | null = null;
 
@@ -374,7 +376,6 @@ export class AdvancedCacheManager {
       this.updatePerformanceMetrics(Date.now() - startTime, true);
 
       return result;
-
     } catch (error) {
       console.error('Cache retrieve failed:', error);
       this.performanceMetrics.misses++;
@@ -409,7 +410,10 @@ export class AdvancedCacheManager {
 
       // Check size limit
       const currentSize = this.getLocalStorageSize();
-      if (currentSize + serializedEntry.length > this.config.strategies.browser.localStorage.maxSize) {
+      if (
+        currentSize + serializedEntry.length >
+        this.config.strategies.browser.localStorage.maxSize
+      ) {
         await this.cleanupLocalStorage();
       }
 
@@ -449,7 +453,6 @@ export class AdvancedCacheManager {
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
-
     } catch (error) {
       console.warn('IndexedDB store failed:', error);
     }
@@ -458,7 +461,10 @@ export class AdvancedCacheManager {
   /**
    * Retrieve from specific storage strategy
    */
-  private async retrieveFromStrategy(key: string, strategy: string): Promise<CacheEntry<string> | null> {
+  private async retrieveFromStrategy(
+    key: string,
+    strategy: string,
+  ): Promise<CacheEntry<string> | null> {
     switch (strategy) {
       case 'memory':
         return this.memoryCache.get(key) || null;
@@ -565,11 +571,11 @@ export class AdvancedCacheManager {
 
     return new Promise((resolve, reject) => {
       const id = Math.random().toString(36).substr(2, 9);
-      
+
       const handleMessage = (event: MessageEvent) => {
         if (event.data.id === id) {
           this.compressionWorker?.removeEventListener('message', handleMessage);
-          
+
           if (event.data.type === 'result') {
             resolve(btoa(String.fromCharCode(...event.data.result)));
           } else {
@@ -601,11 +607,11 @@ export class AdvancedCacheManager {
 
     return new Promise((resolve, reject) => {
       const id = Math.random().toString(36).substr(2, 9);
-      
+
       const handleMessage = (event: MessageEvent) => {
         if (event.data.id === id) {
           this.compressionWorker?.removeEventListener('message', handleMessage);
-          
+
           if (event.data.type === 'result') {
             resolve(event.data.result);
           } else {
@@ -615,9 +621,9 @@ export class AdvancedCacheManager {
       };
 
       this.compressionWorker?.addEventListener('message', handleMessage);
-      
+
       try {
-        const binaryData = Uint8Array.from(atob(data), c => c.charCodeAt(0));
+        const binaryData = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
         this.compressionWorker?.postMessage({
           type: 'decompress',
           data: binaryData,
@@ -642,7 +648,7 @@ export class AdvancedCacheManager {
     if (this.memoryCache.size === 0) return;
 
     const entries = Array.from(this.memoryCache.entries());
-    
+
     // Sort by last accessed time (LRU)
     entries.sort((a, b) => a[1].metadata.lastAccessed - b[1].metadata.lastAccessed);
 
@@ -706,7 +712,7 @@ export class AdvancedCacheManager {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(
         this.config.strategies.browser.indexedDB.dbName,
-        this.config.strategies.browser.indexedDB.version
+        this.config.strategies.browser.indexedDB.version,
       );
 
       request.onerror = () => reject(request.error);
@@ -714,7 +720,7 @@ export class AdvancedCacheManager {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        
+
         if (!db.objectStoreNames.contains('cache')) {
           const store = db.createObjectStore('cache', { keyPath: 'id' });
           store.createIndex('timestamp', 'timestamp');
@@ -729,9 +735,12 @@ export class AdvancedCacheManager {
    */
   private startCleanupIntervals(): void {
     // Cleanup expired entries every 5 minutes
-    setInterval(() => {
-      this.cleanupExpiredEntries();
-    }, 5 * 60 * 1000);
+    setInterval(
+      () => {
+        this.cleanupExpiredEntries();
+      },
+      5 * 60 * 1000,
+    );
 
     // Memory pressure cleanup every minute
     setInterval(() => {
@@ -805,30 +814,35 @@ export class AdvancedCacheManager {
    */
   async getStats(): Promise<CacheStats> {
     const memoryEntries = this.memoryCache.size;
-    const memorySize = Array.from(this.memoryCache.values())
-      .reduce((total, entry) => total + entry.metadata.size, 0);
+    const memorySize = Array.from(this.memoryCache.values()).reduce(
+      (total, entry) => total + entry.metadata.size,
+      0,
+    );
 
     const stats: CacheStats = {
       total: {
         entries: memoryEntries,
         size: memorySize,
-        hitRate: this.performanceMetrics.totalRequests > 0 
-          ? this.performanceMetrics.hits / this.performanceMetrics.totalRequests 
-          : 0,
+        hitRate:
+          this.performanceMetrics.totalRequests > 0
+            ? this.performanceMetrics.hits / this.performanceMetrics.totalRequests
+            : 0,
       },
       byType: {
         memory: {
           entries: memoryEntries,
           size: memorySize,
-          hitRate: this.performanceMetrics.totalRequests > 0 
-            ? this.performanceMetrics.hits / this.performanceMetrics.totalRequests 
-            : 0,
+          hitRate:
+            this.performanceMetrics.totalRequests > 0
+              ? this.performanceMetrics.hits / this.performanceMetrics.totalRequests
+              : 0,
         },
       },
       performance: {
-        averageResponseTime: this.performanceMetrics.totalRequests > 0 
-          ? this.performanceMetrics.totalResponseTime / this.performanceMetrics.totalRequests 
-          : 0,
+        averageResponseTime:
+          this.performanceMetrics.totalRequests > 0
+            ? this.performanceMetrics.totalResponseTime / this.performanceMetrics.totalRequests
+            : 0,
         totalRequests: this.performanceMetrics.totalRequests,
         cacheHits: this.performanceMetrics.hits,
         cacheMisses: this.performanceMetrics.misses,
@@ -854,7 +868,7 @@ export class AdvancedCacheManager {
           keysToRemove.push(key);
         }
       }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
     } catch (error) {
       console.warn('localStorage clear failed:', error);
     }
@@ -885,10 +899,9 @@ export class AdvancedCacheManager {
         console.log('Service Worker cache cleared:', event.data);
       };
 
-      navigator.serviceWorker.controller?.postMessage(
-        { type: 'CLEAR_CACHE' },
-        [messageChannel.port2]
-      );
+      navigator.serviceWorker.controller?.postMessage({ type: 'CLEAR_CACHE' }, [
+        messageChannel.port2,
+      ]);
     }
 
     // Reset performance metrics

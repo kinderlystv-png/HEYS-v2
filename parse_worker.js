@@ -12,7 +12,7 @@ self.onmessage = function (e) {
   function normalizeLine(raw) {
     let s = raw.replace(
       /[\u00A0\u1680\u180E\u2000-\u200A\u200B-\u200F\u202F\u205F\u3000\uFEFF]/g,
-      ' '
+      ' ',
     );
     s = s
       .replace(/[\u060C]/g, ',')
@@ -71,8 +71,8 @@ self.onmessage = function (e) {
   function parsePastedSync(text) {
     const lines = text
       .split(/\r?\n/)
-      .map(l => l.trim())
-      .filter(l => l.length > 0 && !isHeaderLine(l));
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && !isHeaderLine(l));
     const rows = [];
     for (const raw of lines) {
       const st = extractRow(raw);

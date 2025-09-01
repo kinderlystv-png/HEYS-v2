@@ -1,7 +1,7 @@
 /**
  * HEYS Security Headers Manager v1.4
  * Modern security headers and CSP management
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
@@ -125,13 +125,15 @@ export class CSPBuilder {
 export interface SecurityHeadersConfig {
   // Content Security Policy
   csp?: CSPDirectives;
-  
+
   // HTTP Strict Transport Security
-  hsts?: {
-    maxAge?: number;
-    includeSubDomains?: boolean;
-    preload?: boolean;
-  } | false;
+  hsts?:
+    | {
+        maxAge?: number;
+        includeSubDomains?: boolean;
+        preload?: boolean;
+      }
+    | false;
 
   // X-Frame-Options
   frameOptions?: 'DENY' | 'SAMEORIGIN' | string;
@@ -143,7 +145,15 @@ export interface SecurityHeadersConfig {
   xssProtection?: boolean;
 
   // Referrer Policy
-  referrerPolicy?: 'no-referrer' | 'no-referrer-when-downgrade' | 'origin' | 'origin-when-cross-origin' | 'same-origin' | 'strict-origin' | 'strict-origin-when-cross-origin' | 'unsafe-url';
+  referrerPolicy?:
+    | 'no-referrer'
+    | 'no-referrer-when-downgrade'
+    | 'origin'
+    | 'origin-when-cross-origin'
+    | 'same-origin'
+    | 'strict-origin'
+    | 'strict-origin-when-cross-origin'
+    | 'unsafe-url';
 
   // Permissions Policy
   permissionsPolicy?: Record<string, string[]>;
@@ -178,9 +188,7 @@ export class SecurityHeadersManager {
       headers['Content-Security-Policy'] = csp.build();
     } else {
       // Default CSP based on environment
-      const defaultCSP = this.isDevelopment 
-        ? CSPBuilder.development() 
-        : CSPBuilder.strict();
+      const defaultCSP = this.isDevelopment ? CSPBuilder.development() : CSPBuilder.strict();
       headers['Content-Security-Policy'] = defaultCSP.build();
     }
 
@@ -189,15 +197,15 @@ export class SecurityHeadersManager {
       const hsts = this.config.hsts || {};
       const maxAge = hsts.maxAge || 31536000; // 1 year
       let hstsValue = `max-age=${maxAge}`;
-      
+
       if (hsts.includeSubDomains !== false) {
         hstsValue += '; includeSubDomains';
       }
-      
+
       if (hsts.preload) {
         hstsValue += '; preload';
       }
-      
+
       headers['Strict-Transport-Security'] = hstsValue;
     }
 
@@ -238,9 +246,12 @@ export class SecurityHeadersManager {
     }
 
     // Cross-Origin policies
-    headers['Cross-Origin-Embedder-Policy'] = this.config.crossOriginEmbedderPolicy || 'unsafe-none';
-    headers['Cross-Origin-Opener-Policy'] = this.config.crossOriginOpenerPolicy || 'same-origin-allow-popups';
-    headers['Cross-Origin-Resource-Policy'] = this.config.crossOriginResourcePolicy || 'same-origin';
+    headers['Cross-Origin-Embedder-Policy'] =
+      this.config.crossOriginEmbedderPolicy || 'unsafe-none';
+    headers['Cross-Origin-Opener-Policy'] =
+      this.config.crossOriginOpenerPolicy || 'same-origin-allow-popups';
+    headers['Cross-Origin-Resource-Policy'] =
+      this.config.crossOriginResourcePolicy || 'same-origin';
 
     return headers;
   }
@@ -261,7 +272,7 @@ export class SecurityHeadersManager {
   getFetchHeaders(): Headers {
     const headers = new Headers();
     const securityHeaders = this.generateHeaders();
-    
+
     Object.entries(securityHeaders).forEach(([name, value]) => {
       headers.set(name, value);
     });
@@ -283,11 +294,11 @@ export class SecurityHeadersManager {
         if (values.includes("'unsafe-inline'")) {
           warnings.push(`${directive} allows 'unsafe-inline' which can enable XSS attacks`);
         }
-        
+
         if (values.includes("'unsafe-eval'")) {
           warnings.push(`${directive} allows 'unsafe-eval' which can enable code injection`);
         }
-        
+
         if (values.includes('*')) {
           warnings.push(`${directive} allows wildcard (*) which is overly permissive`);
         }
@@ -317,7 +328,10 @@ export class SecurityHeadersManager {
   /**
    * Create security headers for different environments
    */
-  static forEnvironment(env: 'development' | 'staging' | 'production', customConfig: SecurityHeadersConfig = {}): SecurityHeadersManager {
+  static forEnvironment(
+    env: 'development' | 'staging' | 'production',
+    customConfig: SecurityHeadersConfig = {},
+  ): SecurityHeadersManager {
     const baseConfigs: Record<string, SecurityHeadersConfig> = {
       development: {
         csp: CSPBuilder.development().directives,
@@ -475,12 +489,11 @@ export class CORSManager {
  * Default security headers manager instance
  */
 export const defaultSecurityHeaders = SecurityHeadersManager.forEnvironment(
-  process.env.NODE_ENV === 'production' ? 'production' : 'development'
+  process.env.NODE_ENV === 'production' ? 'production' : 'development',
 );
 
 /**
  * Default CORS manager instance
  */
-export const defaultCORS = process.env.NODE_ENV === 'production' 
-  ? CORSManager.secure([])
-  : CORSManager.development();
+export const defaultCORS =
+  process.env.NODE_ENV === 'production' ? CORSManager.secure([]) : CORSManager.development();

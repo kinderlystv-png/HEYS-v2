@@ -1,7 +1,8 @@
-import { defineConfig } from 'vite';
-import { VitePWA } from 'vite-plugin-pwa';
-import compression from 'vite-plugin-compression';
 import path from 'path';
+
+import { defineConfig } from 'vite';
+import compression from 'vite-plugin-compression';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   plugins: [
@@ -27,14 +28,14 @@ export default defineConfig({
           {
             src: '/icon-192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
           },
           {
             src: '/icon-512.png',
             sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
+            type: 'image/png',
+          },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
@@ -46,13 +47,13 @@ export default defineConfig({
               cacheName: 'api-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 // 1 день
-              }
-            }
-          }
-        ]
-      }
-    })
+                maxAgeSeconds: 60 * 60 * 24, // 1 день
+              },
+            },
+          },
+        ],
+      },
+    }),
   ],
   resolve: {
     alias: {
@@ -64,18 +65,18 @@ export default defineConfig({
       '@heys/shared': path.resolve(__dirname, '../../packages/shared/src'),
       '@heys/analytics': path.resolve(__dirname, '../../packages/analytics/src'),
       '@heys/gaming': path.resolve(__dirname, '../../packages/gaming/src'),
-    }
+    },
   },
   build: {
     // Оптимизация чанков
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor': ['@heys/shared', '@heys/storage'],
-          'features': ['@heys/search', '@heys/analytics', '@heys/gaming'],
-          'core': ['@heys/core', '@heys/ui']
-        }
-      }
+          vendor: ['@heys/shared', '@heys/storage'],
+          features: ['@heys/search', '@heys/analytics', '@heys/gaming'],
+          core: ['@heys/core', '@heys/ui'],
+        },
+      },
     },
     // Минимизация
     minify: 'terser',
@@ -84,14 +85,14 @@ export default defineConfig({
         drop_console: true,
         drop_debugger: true,
         pure_funcs: ['console.log', 'console.info', 'console.debug'],
-        passes: 2
+        passes: 2,
       },
       mangle: {
-        safari10: true
+        safari10: true,
       },
       format: {
-        comments: false
-      }
+        comments: false,
+      },
     },
     // Размер чанков
     chunkSizeWarningLimit: 500,
@@ -103,16 +104,23 @@ export default defineConfig({
     // Target
     target: 'es2020',
     // Поддержка legacy браузеров
-    polyfillModulePreload: true
+    polyfillModulePreload: true,
   },
   // Оптимизация для dev
   server: {
     port: 3002,
-    host: true
+    host: true,
   },
   // Предварительная оптимизация зависимостей
   optimizeDeps: {
     include: ['@heys/shared'],
-    exclude: ['@heys/core', '@heys/ui', '@heys/search', '@heys/analytics', '@heys/gaming', '@heys/storage']
-  }
+    exclude: [
+      '@heys/core',
+      '@heys/ui',
+      '@heys/search',
+      '@heys/analytics',
+      '@heys/gaming',
+      '@heys/storage',
+    ],
+  },
 });

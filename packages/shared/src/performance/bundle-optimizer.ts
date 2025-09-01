@@ -1,7 +1,7 @@
 /**
  * HEYS Bundle Optimizer
  * Advanced bundle optimization with dynamic imports and code splitting
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
@@ -183,7 +183,7 @@ export class BundleOptimizer {
   async dynamicImport<T = any>(
     moduleFactory: () => Promise<T>,
     moduleName: string,
-    strategy: LoadingStrategy = 'lazy'
+    strategy: LoadingStrategy = 'lazy',
   ): Promise<DynamicImportResult<T>> {
     const startTime = performance.now();
 
@@ -242,20 +242,20 @@ export class BundleOptimizer {
    */
   private async loadModule<T>(
     moduleFactory: () => Promise<T>,
-    strategy: LoadingStrategy
+    strategy: LoadingStrategy,
   ): Promise<T> {
     switch (strategy) {
       case 'immediate':
         return moduleFactory();
-      
+
       case 'lazy':
         return moduleFactory();
-      
+
       case 'preload':
         // Preload but don't execute immediately
         setTimeout(() => moduleFactory(), 0);
         return moduleFactory();
-      
+
       case 'prefetch':
         // Prefetch during idle time
         if ('requestIdleCallback' in window) {
@@ -264,11 +264,11 @@ export class BundleOptimizer {
           setTimeout(() => moduleFactory(), 100);
         }
         return moduleFactory();
-      
+
       case 'intersection':
         // Load when element comes into view (requires element reference)
         return moduleFactory();
-      
+
       default:
         return moduleFactory();
     }
@@ -280,12 +280,12 @@ export class BundleOptimizer {
   createLazyComponent<T = any>(
     importFunction: () => Promise<{ default: T }>,
     componentName: string,
-    fallback?: () => any
+    fallback?: () => any,
   ): () => Promise<T> {
     return async () => {
       try {
         const result = await this.dynamicImport(importFunction, componentName, 'lazy');
-        
+
         if (result.error) {
           throw result.error;
         }
@@ -294,11 +294,11 @@ export class BundleOptimizer {
         return result.module.default;
       } catch (error) {
         console.error(`Failed to load component '${componentName}':`, error);
-        
+
         if (fallback) {
           return fallback();
         }
-        
+
         throw error;
       }
     };
@@ -307,11 +307,13 @@ export class BundleOptimizer {
   /**
    * Preload critical resources
    */
-  async preloadCriticalResources(resources: Array<{
-    name: string;
-    factory: () => Promise<any>;
-    priority: number;
-  }>): Promise<void> {
+  async preloadCriticalResources(
+    resources: Array<{
+      name: string;
+      factory: () => Promise<any>;
+      priority: number;
+    }>,
+  ): Promise<void> {
     // Sort by priority (higher number = higher priority)
     const sortedResources = resources.sort((a, b) => b.priority - a.priority);
 
@@ -319,11 +321,9 @@ export class BundleOptimizer {
     const batchSize = 3;
     for (let i = 0; i < sortedResources.length; i += batchSize) {
       const batch = sortedResources.slice(i, i + batchSize);
-      
+
       await Promise.allSettled(
-        batch.map(resource => 
-          this.dynamicImport(resource.factory, resource.name, 'preload')
-        )
+        batch.map((resource) => this.dynamicImport(resource.factory, resource.name, 'preload')),
       );
     }
   }
@@ -335,7 +335,7 @@ export class BundleOptimizer {
     elements: Element[],
     moduleFactory: () => Promise<T>,
     moduleName: string,
-    callback?: (module: T, element: Element) => void
+    callback?: (module: T, element: Element) => void,
   ): void {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -343,11 +343,11 @@ export class BundleOptimizer {
           if (entry.isIntersecting) {
             try {
               const result = await this.dynamicImport(moduleFactory, moduleName, 'intersection');
-              
+
               if (result.module && callback) {
                 callback(result.module, entry.target);
               }
-              
+
               observer.unobserve(entry.target);
             } catch (error) {
               console.error(`Failed to load module '${moduleName}' for element:`, error);
@@ -358,10 +358,10 @@ export class BundleOptimizer {
       {
         rootMargin: '50px', // Start loading 50px before element is visible
         threshold: 0.1,
-      }
+      },
     );
 
-    elements.forEach(element => observer.observe(element));
+    elements.forEach((element) => observer.observe(element));
     this.observers.push(observer);
   }
 
@@ -374,65 +374,73 @@ export class BundleOptimizer {
     return {
       mode: 'production',
       optimization: {
-        splitChunks: optimization.splitChunks ? {
-          chunks: 'all',
-          minSize: codeSplitting.minSize,
-          maxSize: codeSplitting.maxSize,
-          maxAsyncRequests: codeSplitting.maxAsyncRequests,
-          maxInitialRequests: codeSplitting.maxInitialRequests,
-          cacheGroups: {
-            // Vendor chunk for node_modules
-            vendor: codeSplitting.vendor ? {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              priority: 10,
+        splitChunks: optimization.splitChunks
+          ? {
               chunks: 'all',
-            } : false,
-            
-            // Common chunk for shared modules
-            common: codeSplitting.commons ? {
-              minChunks: 2,
-              priority: 5,
-              chunks: 'all',
-              reuseExistingChunk: true,
-            } : false,
-            
-            // Default chunk
-            default: {
-              minChunks: 2,
-              priority: -10,
-              reuseExistingChunk: true,
-            },
-          },
-        } : false,
-        
+              minSize: codeSplitting.minSize,
+              maxSize: codeSplitting.maxSize,
+              maxAsyncRequests: codeSplitting.maxAsyncRequests,
+              maxInitialRequests: codeSplitting.maxInitialRequests,
+              cacheGroups: {
+                // Vendor chunk for node_modules
+                vendor: codeSplitting.vendor
+                  ? {
+                      test: /[\\/]node_modules[\\/]/,
+                      name: 'vendors',
+                      priority: 10,
+                      chunks: 'all',
+                    }
+                  : false,
+
+                // Common chunk for shared modules
+                common: codeSplitting.commons
+                  ? {
+                      minChunks: 2,
+                      priority: 5,
+                      chunks: 'all',
+                      reuseExistingChunk: true,
+                    }
+                  : false,
+
+                // Default chunk
+                default: {
+                  minChunks: 2,
+                  priority: -10,
+                  reuseExistingChunk: true,
+                },
+              },
+            }
+          : false,
+
         runtimeChunk: optimization.runtimeChunk ? 'single' : false,
         sideEffects: optimization.sideEffects,
         concatenateModules: optimization.concatenateModules,
         usedExports: treeShaking.usedExports,
-        
-        minimizer: minification.terser ? [
-          {
-            terserOptions: {
-              compress: {
-                drop_console: minification.removeConsole,
-                drop_debugger: minification.dropDebugger,
+
+        minimizer: minification.terser
+          ? [
+              {
+                terserOptions: {
+                  compress: {
+                    drop_console: minification.removeConsole,
+                    drop_debugger: minification.dropDebugger,
+                  },
+                  output: {
+                    comments: !minification.removeComments,
+                  },
+                },
               },
-              output: {
-                comments: !minification.removeComments,
-              },
-            },
-          },
-        ] : [],
+            ]
+          : [],
       },
-      
+
       resolve: {
         alias: {
           // Add aliases for tree shaking
-          'lodash': 'lodash-es',
+          lodash: 'lodash-es',
         },
       },
-      
+
       module: {
         rules: [
           {
@@ -442,25 +450,32 @@ export class BundleOptimizer {
               loader: 'babel-loader',
               options: {
                 presets: [
-                  ['@babel/preset-env', {
-                    modules: false, // Preserve ES modules for tree shaking
-                    useBuiltIns: 'usage',
-                    corejs: 3,
-                  }],
+                  [
+                    '@babel/preset-env',
+                    {
+                      modules: false, // Preserve ES modules for tree shaking
+                      useBuiltIns: 'usage',
+                      corejs: 3,
+                    },
+                  ],
                   '@babel/preset-typescript',
                   '@babel/preset-react',
                 ],
                 plugins: [
                   // Dynamic import support
                   '@babel/plugin-syntax-dynamic-import',
-                  
+
                   // Tree shaking optimizations
-                  treeShaking.enabled && ['babel-plugin-import', {
-                    libraryName: 'lodash',
-                    libraryDirectory: '',
-                    camel2DashComponentName: false,
-                  }, 'lodash'],
-                  
+                  treeShaking.enabled && [
+                    'babel-plugin-import',
+                    {
+                      libraryName: 'lodash',
+                      libraryDirectory: '',
+                      camel2DashComponentName: false,
+                    },
+                    'lodash',
+                  ],
+
                   // Remove unused imports
                   'babel-plugin-transform-imports',
                 ].filter(Boolean),
@@ -469,7 +484,7 @@ export class BundleOptimizer {
           },
         ],
       },
-      
+
       plugins: [
         // Compression plugins
         compression.gzip && {
@@ -484,7 +499,7 @@ export class BundleOptimizer {
             },
           },
         },
-        
+
         compression.brotli && {
           plugin: 'compression-webpack-plugin',
           options: {
@@ -499,7 +514,7 @@ export class BundleOptimizer {
             },
           },
         },
-        
+
         // Bundle analyzer plugin for development
         process.env.ANALYZE && {
           plugin: 'webpack-bundle-analyzer',
@@ -524,43 +539,50 @@ export class BundleOptimizer {
         rollupOptions: {
           output: {
             // Manual chunk splitting
-            manualChunks: optimization.splitChunks ? {
-              // Vendor chunks
-              'vendor-react': ['react', 'react-dom'],
-              'vendor-ui': ['@headlessui/react', '@heroicons/react'],
-              'vendor-utils': ['lodash-es', 'date-fns', 'zod'],
-              
-              // Feature-based chunks
-              'auth': ['./src/features/auth'],
-              'dashboard': ['./src/features/dashboard'],
-              'reports': ['./src/features/reports'],
-            } : undefined,
-            
+            manualChunks: optimization.splitChunks
+              ? {
+                  // Vendor chunks
+                  'vendor-react': ['react', 'react-dom'],
+                  'vendor-ui': ['@headlessui/react', '@heroicons/react'],
+                  'vendor-utils': ['lodash-es', 'date-fns', 'zod'],
+
+                  // Feature-based chunks
+                  auth: ['./src/features/auth'],
+                  dashboard: ['./src/features/dashboard'],
+                  reports: ['./src/features/reports'],
+                }
+              : undefined,
+
             // Chunk file naming
             chunkFileNames: (chunkInfo: any) => {
               const facadeModuleId = chunkInfo.facadeModuleId;
               if (facadeModuleId) {
-                const name = facadeModuleId.split('/').pop()?.replace(/\.(js|ts|jsx|tsx)$/, '');
+                const name = facadeModuleId
+                  .split('/')
+                  .pop()
+                  ?.replace(/\.(js|ts|jsx|tsx)$/, '');
                 return `chunks/${name}-[hash].js`;
               }
               return 'chunks/[name]-[hash].js';
             },
           },
-          
+
           // Tree shaking configuration
-          treeshake: treeShaking.enabled ? {
-            moduleSideEffects: treeShaking.sideEffects ? 'no-external' : false,
-            propertyReadSideEffects: false,
-            unknownGlobalSideEffects: false,
-          } : false,
+          treeshake: treeShaking.enabled
+            ? {
+                moduleSideEffects: treeShaking.sideEffects ? 'no-external' : false,
+                propertyReadSideEffects: false,
+                unknownGlobalSideEffects: false,
+              }
+            : false,
         },
-        
+
         // Chunk size warnings
         chunkSizeWarningLimit: codeSplitting.maxSize / 1000, // Convert to KB
-        
+
         // Source maps for production debugging
         sourcemap: process.env.NODE_ENV === 'development',
-        
+
         // Minification
         minify: 'terser',
         terserOptions: {
@@ -573,19 +595,17 @@ export class BundleOptimizer {
           },
         },
       },
-      
+
       // Tree shaking optimizations
-      define: treeShaking.enabled ? {
-        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-      } : {},
-      
+      define: treeShaking.enabled
+        ? {
+            'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+          }
+        : {},
+
       // Dependency optimization
       optimizeDeps: {
-        include: [
-          'react',
-          'react-dom',
-          'lodash-es',
-        ],
+        include: ['react', 'react-dom', 'lodash-es'],
         exclude: [
           // Exclude large libraries that should be loaded dynamically
           'monaco-editor',
@@ -624,7 +644,8 @@ export class BundleOptimizer {
     // Check for large modules
     this.loadedModules.forEach((module, name) => {
       const moduleSize = JSON.stringify(module).length;
-      if (moduleSize > 100000) { // 100KB
+      if (moduleSize > 100000) {
+        // 100KB
         recommendations.push(`Large module detected: ${name} (${Math.round(moduleSize / 1024)}KB)`);
       }
     });
@@ -675,7 +696,7 @@ export class BundleOptimizer {
    * Cleanup observers
    */
   destroy(): void {
-    this.observers.forEach(observer => observer.disconnect());
+    this.observers.forEach((observer) => observer.disconnect());
     this.observers = [];
     this.clearCache();
   }
@@ -686,7 +707,7 @@ export class BundleOptimizer {
  */
 export function createLazyComponentFactory(
   importFunction: () => Promise<{ default: any }>,
-  componentName: string
+  componentName: string,
 ): () => Promise<any> {
   return async () => {
     try {
@@ -705,7 +726,7 @@ export function createLazyComponentFactory(
  */
 export function createIntersectionLoader(
   callback: (isIntersecting: boolean) => void,
-  options?: IntersectionObserverInit
+  options?: IntersectionObserverInit,
 ): IntersectionObserver {
   return new IntersectionObserver(
     (entries) => {
@@ -717,23 +738,29 @@ export function createIntersectionLoader(
       rootMargin: '50px',
       threshold: 0.1,
       ...options,
-    }
+    },
   );
 }
 
 /**
  * Bundle size decorator for development
  */
-export function trackBundleSize(targetObj: any, propertyKey: string, descriptor: PropertyDescriptor) {
+export function trackBundleSize(
+  targetObj: any,
+  propertyKey: string,
+  descriptor: PropertyDescriptor,
+) {
   const originalMethod = descriptor.value;
 
-  descriptor.value = function(...args: any[]) {
+  descriptor.value = function (...args: any[]) {
     const startTime = performance.now();
     const result = originalMethod.apply(this, args);
     const endTime = performance.now();
 
-    console.log(`Method ${propertyKey} on ${targetObj.constructor?.name || 'object'} execution time: ${endTime - startTime}ms`);
-    
+    console.log(
+      `Method ${propertyKey} on ${targetObj.constructor?.name || 'object'} execution time: ${endTime - startTime}ms`,
+    );
+
     return result;
   };
 

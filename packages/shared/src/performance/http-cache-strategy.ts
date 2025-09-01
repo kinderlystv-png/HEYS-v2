@@ -2,7 +2,7 @@
  * HTTP Caching Strategies for HEYS Application
  * Implements intelligent HTTP caching, ETags, Cache-Control headers,
  * and CDN integration for optimal performance
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
@@ -22,11 +22,11 @@ export interface HTTPCacheConfig {
 
 export interface CacheHeaders {
   'Cache-Control': string;
-  'ETag'?: string;
+  ETag?: string;
   'Last-Modified'?: string;
-  'Vary'?: string;
-  'Expires'?: string;
-  'Pragma'?: string;
+  Vary?: string;
+  Expires?: string;
+  Pragma?: string;
 }
 
 export interface CacheableResource {
@@ -67,7 +67,10 @@ export class HTTPCacheStrategy {
   private lastModifiedCache: Map<string, string>;
   private responseTimeCache: Map<string, number>;
 
-  constructor(config: HTTPCacheConfig, cdnConfig: CDNConfig = { enabled: false, provider: 'custom', cacheRules: [] }) {
+  constructor(
+    config: HTTPCacheConfig,
+    cdnConfig: CDNConfig = { enabled: false, provider: 'custom', cacheRules: [] },
+  ) {
     this.config = config;
     this.cdnConfig = cdnConfig;
     this.etagCache = new Map();
@@ -86,18 +89,16 @@ export class HTTPCacheStrategy {
       ttl?: number;
       mustRevalidate?: boolean;
       customTTL?: number;
-    } = {}
+    } = {},
   ): CacheHeaders {
     const { isPrivate = false, mustRevalidate = false, customTTL } = options;
-    
+
     const headers: Partial<CacheHeaders> & { 'Cache-Control': string } = {
-      'Cache-Control': ''
+      'Cache-Control': '',
     };
-    
+
     // Determine if this should be cached
-    const shouldNotCache = this.config.noCache.some(pattern => 
-      new RegExp(pattern).test(url)
-    );
+    const shouldNotCache = this.config.noCache.some((pattern) => new RegExp(pattern).test(url));
 
     if (shouldNotCache) {
       headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
@@ -109,14 +110,14 @@ export class HTTPCacheStrategy {
     // Determine cache directive
     const ttl = customTTL || this.getTTLForResource(url);
     const maxAge = Math.min(ttl, this.config.maxAge);
-    
+
     let cacheControl = isPrivate ? 'private' : 'public';
     cacheControl += `, max-age=${maxAge}`;
-    
+
     if (this.config.staleWhileRevalidate > 0) {
       cacheControl += `, stale-while-revalidate=${this.config.staleWhileRevalidate}`;
     }
-    
+
     if (mustRevalidate || this.config.mustRevalidate) {
       cacheControl += ', must-revalidate';
     }
@@ -150,17 +151,17 @@ export class HTTPCacheStrategy {
    */
   checkConditionalRequest(
     url: string,
-    requestHeaders: Record<string, string>
+    requestHeaders: Record<string, string>,
   ): { isNotModified: boolean; lastModified?: string; etag?: string } {
     const ifNoneMatch = requestHeaders['if-none-match'];
     const ifModifiedSince = requestHeaders['if-modified-since'];
-    
+
     const cachedETag = this.etagCache.get(url);
     const cachedLastModified = this.lastModifiedCache.get(url);
 
     // Check ETag first (stronger validator)
     if (ifNoneMatch && cachedETag) {
-      const requestETags = ifNoneMatch.split(',').map(tag => tag.trim().replace(/"/g, ''));
+      const requestETags = ifNoneMatch.split(',').map((tag) => tag.trim().replace(/"/g, ''));
       if (requestETags.includes(cachedETag) || requestETags.includes('*')) {
         return { isNotModified: true, etag: cachedETag };
       }
@@ -170,22 +171,24 @@ export class HTTPCacheStrategy {
     if (ifModifiedSince && cachedLastModified) {
       const requestDate = new Date(ifModifiedSince);
       const cachedDate = new Date(cachedLastModified);
-      
+
       if (requestDate >= cachedDate) {
         return { isNotModified: true, lastModified: cachedLastModified };
       }
     }
 
-    const result: { isNotModified: boolean; lastModified?: string; etag?: string } = { isNotModified: false };
-    
+    const result: { isNotModified: boolean; lastModified?: string; etag?: string } = {
+      isNotModified: false,
+    };
+
     if (cachedETag) {
       result.etag = cachedETag;
     }
-    
+
     if (cachedLastModified) {
       result.lastModified = cachedLastModified;
     }
-    
+
     return result;
   }
 
@@ -197,7 +200,7 @@ export class HTTPCacheStrategy {
     let hash = 0;
     for (let i = 0; i < content.length; i++) {
       const char = content.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return Math.abs(hash).toString(36) + '-' + content.length.toString(36);
@@ -211,22 +214,22 @@ export class HTTPCacheStrategy {
     if (/\.(css|js|woff2?|ttf|eot|ico)$/.test(url)) {
       return 31536000; // 1 year
     }
-    
+
     // Images - medium cache
     if (/\.(jpg|jpeg|png|gif|webp|svg)$/.test(url)) {
       return 2592000; // 30 days
     }
-    
+
     // API responses - short cache
     if (url.includes('/api/')) {
       return 300; // 5 minutes
     }
-    
+
     // HTML pages - very short cache
     if (url.endsWith('.html') || url.endsWith('/')) {
       return 3600; // 1 hour
     }
-    
+
     return this.config.defaultTTL;
   }
 
@@ -235,20 +238,18 @@ export class HTTPCacheStrategy {
    */
   createCacheAwareFetch() {
     const originalFetch = globalThis.fetch;
-    
+
     return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       const request = new Request(input, init);
       const url = request.url;
-      
+
       // Skip caching for non-GET requests
       if (request.method !== 'GET') {
         return originalFetch(request);
       }
 
       // Check if response should be cached
-      const shouldCache = !this.config.noCache.some(pattern => 
-        new RegExp(pattern).test(url)
-      );
+      const shouldCache = !this.config.noCache.some((pattern) => new RegExp(pattern).test(url));
 
       if (!shouldCache) {
         return originalFetch(request);
@@ -256,7 +257,7 @@ export class HTTPCacheStrategy {
 
       // Add conditional headers
       const headers = new Headers(request.headers);
-      
+
       // Normalize URL to pathname for cache lookup
       let normalizedUrl = url;
       try {
@@ -272,24 +273,24 @@ export class HTTPCacheStrategy {
         // If URL parsing fails, use the original URL
         console.warn('URL parsing failed:', error);
       }
-      
+
       const cachedETag = this.etagCache.get(normalizedUrl);
       const cachedLastModified = this.lastModifiedCache.get(normalizedUrl);
 
       if (cachedETag) {
         headers.set('If-None-Match', `"${cachedETag}"`);
       }
-      
+
       if (cachedLastModified) {
         headers.set('If-Modified-Since', cachedLastModified);
       }
 
       const enhancedRequest = new Request(request, { headers });
-      
+
       const startTime = Date.now();
       const response = await originalFetch(enhancedRequest);
       const responseTime = Date.now() - startTime;
-      
+
       this.responseTimeCache.set(url, responseTime);
 
       // If 304 Not Modified, we can use cached version
@@ -307,11 +308,11 @@ export class HTTPCacheStrategy {
       if (response.ok) {
         const etag = response.headers.get('etag');
         const lastModified = response.headers.get('last-modified');
-        
+
         if (etag) {
           this.etagCache.set(url, etag.replace(/"/g, ''));
         }
-        
+
         if (lastModified) {
           this.lastModifiedCache.set(url, lastModified);
         }
@@ -329,11 +330,11 @@ export class HTTPCacheStrategy {
       try {
         const response = await fetch(url, {
           headers: {
-            'Purpose': 'prefetch',
+            Purpose: 'prefetch',
             'Cache-Control': 'max-age=3600',
           },
         });
-        
+
         if (response.ok) {
           console.log(`Preloaded: ${url}`);
         }
@@ -348,23 +349,25 @@ export class HTTPCacheStrategy {
   /**
    * Implement resource hints for better caching
    */
-  injectResourceHints(resources: Array<{ url: string; rel: 'preload' | 'prefetch' | 'dns-prefetch'; as?: string }>): void {
+  injectResourceHints(
+    resources: Array<{ url: string; rel: 'preload' | 'prefetch' | 'dns-prefetch'; as?: string }>,
+  ): void {
     const head = document.head;
-    
+
     resources.forEach(({ url, rel, as }) => {
       const link = document.createElement('link');
       link.rel = rel;
       link.href = url;
-      
+
       if (as) {
         link.as = as;
       }
-      
+
       // Add crossorigin for external resources
       if (url.startsWith('http') && !url.includes(window.location.hostname)) {
         link.crossOrigin = 'anonymous';
       }
-      
+
       head.appendChild(link);
     });
   }
@@ -382,7 +385,7 @@ export class HTTPCacheStrategy {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.cdnConfig.apiKey}`,
+          Authorization: `Bearer ${this.cdnConfig.apiKey}`,
         },
         body: JSON.stringify({
           files: urls.length > 0 ? urls : ['/*'], // Purge all if no specific URLs
@@ -407,9 +410,11 @@ export class HTTPCacheStrategy {
     lastModifiedCacheSize: number;
   } {
     const totalRequests = this.responseTimeCache.size;
-    const totalResponseTime = Array.from(this.responseTimeCache.values())
-      .reduce((sum, time) => sum + time, 0);
-    
+    const totalResponseTime = Array.from(this.responseTimeCache.values()).reduce(
+      (sum, time) => sum + time,
+      0,
+    );
+
     return {
       totalRequests,
       averageResponseTime: totalRequests > 0 ? totalResponseTime / totalRequests : 0,
@@ -433,7 +438,7 @@ export class HTTPCacheStrategy {
    */
   createCacheMiddleware() {
     const httpCacheStrategy = this;
-    
+
     return (req: any, res: any, next: any) => {
       const url = req.url;
       const method = req.method;
@@ -445,7 +450,7 @@ export class HTTPCacheStrategy {
 
       // Check conditional request headers
       const conditionalResult = httpCacheStrategy.checkConditionalRequest(url, req.headers);
-      
+
       if (conditionalResult.isNotModified) {
         res.status(304);
         if (conditionalResult.etag) {
@@ -459,16 +464,16 @@ export class HTTPCacheStrategy {
 
       // Override res.send to add cache headers
       const originalSend = res.send;
-      res.send = function(body: any) {
+      res.send = function (body: any) {
         const content = typeof body === 'string' ? body : JSON.stringify(body);
         const cacheHeaders = httpCacheStrategy.generateCacheHeaders(url, content);
-        
+
         Object.entries(cacheHeaders).forEach(([key, value]) => {
           if (value) {
             res.set(key, value);
           }
         });
-        
+
         return originalSend.call(this, body);
       };
 
@@ -491,18 +496,8 @@ export const defaultHTTPCacheConfig: HTTPCacheConfig = {
     '/admin/',
     '\\?.*', // Query parameters
   ],
-  privateResources: [
-    '/api/user/',
-    '/profile/',
-    '/settings/',
-  ],
-  publicResources: [
-    '/static/',
-    '/assets/',
-    '/images/',
-    '/css/',
-    '/js/',
-  ],
+  privateResources: ['/api/user/', '/profile/', '/settings/'],
+  publicResources: ['/static/', '/assets/', '/images/', '/css/', '/js/'],
   compressionTypes: [
     'text/html',
     'text/css',
@@ -512,11 +507,7 @@ export const defaultHTTPCacheConfig: HTTPCacheConfig = {
     'text/xml',
     'application/xml',
   ],
-  varyHeaders: [
-    'Accept-Encoding',
-    'Accept-Language',
-    'User-Agent',
-  ],
+  varyHeaders: ['Accept-Encoding', 'Accept-Language', 'User-Agent'],
 };
 
 /**
@@ -535,11 +526,12 @@ export const cdnConfigs = {
       { pattern: '/api/*', ttl: 300, bypassCache: false, alwaysOnline: false },
     ],
   },
-  
+
   aws: {
     enabled: true,
     provider: 'aws' as const,
-    purgeEndpoint: 'https://cloudfront.amazonaws.com/2020-05-31/distribution/{distributionId}/invalidation',
+    purgeEndpoint:
+      'https://cloudfront.amazonaws.com/2020-05-31/distribution/{distributionId}/invalidation',
     cacheRules: [
       { pattern: '/static/*', ttl: 31536000, bypassCache: false, alwaysOnline: true },
       { pattern: '/api/*', ttl: 300, bypassCache: true, alwaysOnline: false },

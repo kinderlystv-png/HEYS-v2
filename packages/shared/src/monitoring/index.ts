@@ -1,72 +1,68 @@
 /**
  * Monitoring Index
- * 
+ *
  * Central export point for all monitoring functionality
  */
 
 // Performance monitoring
 export {
-  PerformanceMonitor,
-  monitor,
-  recordMetric,
-  recordError,
-  measureAsync,
   measure,
-  type PerformanceMetric,
+  measureAsync,
+  monitor,
+  PerformanceMonitor,
+  recordError,
+  recordMetric,
   type ErrorReport,
-  type MonitoringConfig
+  type MonitoringConfig,
+  type PerformanceMetric,
 } from './performance';
 
 // Real-time monitoring
 export {
+  addAlert,
+  getActiveAlerts,
+  getLiveMetrics,
   RealtimeMonitor,
   realtimeMonitor,
-  addAlert,
   removeAlert,
   updateLiveMetric,
-  getLiveMetrics,
-  getActiveAlerts,
-  type AlertRule,
   type Alert,
-  type LiveMetric
+  type AlertRule,
+  type LiveMetric,
 } from './realtime';
 
 // Import for internal use
-import { 
-  monitor, 
-  recordMetric, 
-  recordError, 
-  measureAsync, 
-  measure
-} from './performance';
 import type { MonitoringConfig } from './performance';
+import { measure, measureAsync, monitor, recordError, recordMetric } from './performance';
 
 // Monitoring utilities
-export const createMonitoringConfig = (config: Partial<MonitoringConfig> = {}): MonitoringConfig => ({
+export const createMonitoringConfig = (
+  config: Partial<MonitoringConfig> = {},
+): MonitoringConfig => ({
   enabled: process.env.NODE_ENV === 'production',
   batchSize: 100,
   flushInterval: 30000,
   enableRealtime: false,
-  ...config
+  ...config,
 });
 
 // Global monitoring setup
 export const setupMonitoring = (config?: Partial<MonitoringConfig>) => {
   const monitoringConfig = createMonitoringConfig(config);
-  
+
   // Setup error boundary for unhandled errors
   if (typeof window !== 'undefined') {
     window.addEventListener('error', (event) => {
       monitor.recordError(event.error || event.message, 'high', {
         filename: event.filename,
         lineno: event.lineno,
-        colno: event.colno
+        colno: event.colno,
       });
     });
 
     window.addEventListener('unhandledrejection', (event) => {
       monitor.recordError(event.reason, 'high', {
-        type: 'unhandled_promise_rejection'
+        type: 'unhandled_promise_rejection',
       });
     });
   }
@@ -85,7 +81,9 @@ export const setupMonitoring = (config?: Partial<MonitoringConfig>) => {
       // First Input Delay
       const fidObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
-          monitor.recordMetric('fid', (entry as any).processingStart - entry.startTime, 'ms', { type: 'core_web_vital' });
+          monitor.recordMetric('fid', (entry as any).processingStart - entry.startTime, 'ms', {
+            type: 'core_web_vital',
+          });
         }
       });
       fidObserver.observe({ entryTypes: ['first-input'] });
@@ -110,6 +108,6 @@ export const setupMonitoring = (config?: Partial<MonitoringConfig>) => {
     recordMetric,
     recordError,
     measureAsync,
-    measure
+    measure,
   };
 };

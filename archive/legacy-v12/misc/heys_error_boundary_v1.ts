@@ -1,7 +1,7 @@
 // heys_error_boundary_v1.ts — Error Boundary для React (TypeScript version)
 
 import React from 'react';
-import type { HEYSGlobal, ErrorBoundaryProps } from './types/heys';
+import type { ErrorBoundaryProps, HEYSGlobal } from './types/heys';
 
 // Error Boundary State
 interface ErrorBoundaryState {
@@ -223,13 +223,13 @@ declare global {
             {
               style: { color: '#d63031', marginTop: 0 },
             },
-            '🚨 Произошла ошибка'
+            '🚨 Произошла ошибка',
           ),
 
           React.createElement(
             'p',
             null,
-            'Извините, что-то пошло не так. Мы зафиксировали эту ошибку и работаем над её исправлением.'
+            'Извините, что-то пошло не так. Мы зафиксировали эту ошибку и работаем над её исправлением.',
           ),
 
           React.createElement(
@@ -242,7 +242,7 @@ declare global {
               {
                 style: { cursor: 'pointer', fontWeight: 'bold' },
               },
-              'Техническая информация'
+              'Техническая информация',
             ),
             React.createElement(
               'div',
@@ -262,10 +262,10 @@ declare global {
                 React.createElement(
                   'div',
                   null,
-                  `Component: ${errorInfo.componentStack?.split('\n')[1]?.trim() || 'Unknown'}`
+                  `Component: ${errorInfo.componentStack?.split('\n')[1]?.trim() || 'Unknown'}`,
                 ),
-              React.createElement('div', null, `Retry Count: ${retryCount}`)
-            )
+              React.createElement('div', null, `Retry Count: ${retryCount}`),
+            ),
           ),
 
           React.createElement(
@@ -287,7 +287,7 @@ declare global {
                     cursor: 'pointer',
                   },
                 },
-                `Попробовать снова ${retryCount > 0 ? `(${retryCount}/3)` : ''}`
+                `Попробовать снова ${retryCount > 0 ? `(${retryCount}/3)` : ''}`,
               ),
 
             React.createElement(
@@ -303,7 +303,7 @@ declare global {
                   cursor: 'pointer',
                 },
               },
-              'Перезагрузить страницу'
+              'Перезагрузить страницу',
             ),
 
             React.createElement(
@@ -326,9 +326,9 @@ declare global {
                   cursor: 'pointer',
                 },
               },
-              'Скопировать ошибку'
-            )
-          )
+              'Скопировать ошибку',
+            ),
+          ),
         );
       }
 
@@ -355,7 +355,7 @@ declare global {
               color: '#c62828',
             },
           },
-          `${message}: ${error.message}`
+          `${message}: ${error.message}`,
         ),
     });
   };
@@ -363,9 +363,9 @@ declare global {
   // HOC for wrapping components with error boundary
   function withErrorBoundary<P extends object>(
     Component: React.ComponentType<P>,
-    fallbackComponent?: React.ComponentType<{ error: Error }>
+    fallbackComponent?: React.ComponentType<{ error: Error }>,
   ): React.ComponentType<P> {
-    const WrappedComponent: React.FC<P> = props => {
+    const WrappedComponent: React.FC<P> = (props) => {
       return React.createElement(ErrorBoundary, {
         fallback: fallbackComponent,
         children: React.createElement(Component, props),
@@ -400,7 +400,7 @@ declare global {
   };
 
   // Global error handler for unhandled errors
-  window.addEventListener('error', event => {
+  window.addEventListener('error', (event) => {
     logError(new Error(event.message), undefined, {
       filename: event.filename,
       lineno: event.lineno,
@@ -410,7 +410,7 @@ declare global {
   });
 
   // Global handler for unhandled promise rejections
-  window.addEventListener('unhandledrejection', event => {
+  window.addEventListener('unhandledrejection', (event) => {
     const error = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
     logError(error, undefined, { type: 'unhandledPromise' });
   });

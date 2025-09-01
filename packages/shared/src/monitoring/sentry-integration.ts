@@ -63,7 +63,7 @@ export class SentryMonitoring {
         tracesSampleRate: this.config.tracesSampleRate,
         release: this.config.release,
         debug: this.config.debug,
-        
+
         integrations: [
           Sentry.browserTracingIntegration(),
           ...(this.config.enableSessionReplay ? [Sentry.replayIntegration()] : []),
@@ -139,7 +139,7 @@ export class SentryMonitoring {
         if (context.action) scope.setTag('action', context.action);
         if (context.metadata) scope.setContext('metadata', context.metadata);
       }
-      
+
       return Sentry.captureException(error);
     });
   }
@@ -148,9 +148,9 @@ export class SentryMonitoring {
    * Capture custom message
    */
   public captureMessage(
-    message: string, 
+    message: string,
     level: 'debug' | 'info' | 'warning' | 'error' | 'fatal' = 'info',
-    context?: ErrorContext
+    context?: ErrorContext,
   ): string {
     return Sentry.withScope((scope) => {
       if (context) {
@@ -165,7 +165,7 @@ export class SentryMonitoring {
         if (context.action) scope.setTag('action', context.action);
         if (context.metadata) scope.setContext('metadata', context.metadata);
       }
-      
+
       scope.setLevel(level);
       return Sentry.captureMessage(message);
     });
@@ -175,10 +175,13 @@ export class SentryMonitoring {
    * Start performance transaction (using modern Sentry API)
    */
   public startTransaction(name: string, operation: string = 'navigation') {
-    return Sentry.startSpan({
-      name,
-      op: operation,
-    }, (span) => span);
+    return Sentry.startSpan(
+      {
+        name,
+        op: operation,
+      },
+      (span) => span,
+    );
   }
 
   /**
@@ -187,66 +190,72 @@ export class SentryMonitoring {
   public async measurePerformance<T>(
     name: string,
     fn: () => Promise<T> | T,
-    tags?: Record<string, string>
+    tags?: Record<string, string>,
   ): Promise<T> {
-    return Sentry.startSpan({
-      name,
-      op: 'function',
-    }, async (span) => {
-      if (tags) {
-        Object.entries(tags).forEach(([key, value]) => {
-          span?.setTag(key, value);
-        });
-      }
+    return Sentry.startSpan(
+      {
+        name,
+        op: 'function',
+      },
+      async (span) => {
+        if (tags) {
+          Object.entries(tags).forEach(([key, value]) => {
+            span?.setTag(key, value);
+          });
+        }
 
-      const startTime = performance.now();
+        const startTime = performance.now();
 
-      try {
-        const result = await fn();
-        const duration = performance.now() - startTime;
-        
-        span?.setData('duration', duration);
-        span?.setStatus('ok');
-        
-        return result;
-      } catch (error) {
-        const duration = performance.now() - startTime;
-        
-        span?.setData('duration', duration);
-        span?.setStatus('internal_error');
-        
-        this.captureError(error as Error, { 
-          action: 'performance_measurement',
-          metadata: { function: name, duration: performance.now() - startTime }
-        });
-        
-        throw error;
-      }
-    });
+        try {
+          const result = await fn();
+          const duration = performance.now() - startTime;
+
+          span?.setData('duration', duration);
+          span?.setStatus('ok');
+
+          return result;
+        } catch (error) {
+          const duration = performance.now() - startTime;
+
+          span?.setData('duration', duration);
+          span?.setStatus('internal_error');
+
+          this.captureError(error as Error, {
+            action: 'performance_measurement',
+            metadata: { function: name, duration: performance.now() - startTime },
+          });
+
+          throw error;
+        }
+      },
+    );
   }
 
   /**
    * Record custom performance metrics
    */
   public recordMetric(metric: PerformanceMetrics): void {
-    Sentry.startSpan({
-      name: metric.name,
-      op: 'custom',
-    }, (span) => {
-      if (metric.tags) {
-        Object.entries(metric.tags).forEach(([key, value]) => {
-          span?.setTag(key, value);
-        });
-      }
+    Sentry.startSpan(
+      {
+        name: metric.name,
+        op: 'custom',
+      },
+      (span) => {
+        if (metric.tags) {
+          Object.entries(metric.tags).forEach(([key, value]) => {
+            span?.setTag(key, value);
+          });
+        }
 
-      if (metric.data) {
-        Object.entries(metric.data).forEach(([key, value]) => {
-          span?.setData(key, value);
-        });
-      }
+        if (metric.data) {
+          Object.entries(metric.data).forEach(([key, value]) => {
+            span?.setData(key, value);
+          });
+        }
 
-      span?.setData('duration', metric.duration);
-    });
+        span?.setData('duration', metric.duration);
+      },
+    );
   }
 
   /**
@@ -256,7 +265,7 @@ export class SentryMonitoring {
     message: string,
     category: string = 'default',
     level: 'debug' | 'info' | 'warning' | 'error' | 'fatal' = 'info',
-    data?: Record<string, any>
+    data?: Record<string, any>,
   ): void {
     const breadcrumb: any = {
       message,
@@ -277,7 +286,7 @@ export class SentryMonitoring {
    */
   public showUserFeedback(): void {
     if (!this.config.enableUserFeedback) return;
-    
+
     const eventId = Sentry.lastEventId();
     if (eventId) {
       Sentry.showReportDialog({ eventId });
@@ -318,7 +327,7 @@ export class SentryMonitoring {
   public withContext(context: ErrorContext): SentryMonitoring {
     const child = new SentryMonitoring(this.config);
     child.initialized = this.initialized;
-    
+
     // Apply context immediately if initialized
     if (this.initialized) {
       if (context.userId) {
@@ -331,7 +340,7 @@ export class SentryMonitoring {
       if (context.component) child.setTags({ component: context.component });
       if (context.metadata) child.setContext('metadata', context.metadata);
     }
-    
+
     return child;
   }
 }
@@ -344,7 +353,7 @@ export function MonitorPerformance(operationName?: string) {
 
     descriptor.value = async function (...args: any[]) {
       const monitoring = globalMonitoring || new SentryMonitoring();
-      
+
       return monitoring.measurePerformance(name, () => originalMethod.apply(this, args), {
         class: target.constructor.name,
         method: propertyKey,
@@ -365,13 +374,13 @@ export function CaptureErrors(context?: Partial<ErrorContext>) {
         return await originalMethod.apply(this, args);
       } catch (error) {
         const monitoring = globalMonitoring || new SentryMonitoring();
-        
+
         monitoring.captureError(error as Error, {
           component: target.constructor.name,
           action: propertyKey,
           ...context,
         });
-        
+
         throw error;
       }
     };
@@ -422,7 +431,7 @@ if (typeof window !== 'undefined') {
     if (globalMonitoring) {
       globalMonitoring.captureError(
         event.reason instanceof Error ? event.reason : new Error(event.reason),
-        { action: 'unhandled_promise_rejection' }
+        { action: 'unhandled_promise_rejection' },
       );
     }
   });
@@ -438,7 +447,7 @@ export function MonitorPerformance(operationName?: string) {
 
     descriptor.value = async function (...args: any[]) {
       const monitoring = globalMonitoring || new SentryMonitoring();
-      
+
       return monitoring.measurePerformance(name, () => originalMethod.apply(this, args), {
         class: target.constructor.name,
         method: propertyKey,
@@ -459,13 +468,13 @@ export function CaptureErrors(context?: Partial<ErrorContext>) {
         return await originalMethod.apply(this, args);
       } catch (error) {
         const monitoring = globalMonitoring || new SentryMonitoring();
-        
+
         monitoring.captureError(error as Error, {
           component: target.constructor.name,
           action: propertyKey,
           ...context,
         });
-        
+
         throw error;
       }
     };
@@ -516,7 +525,7 @@ if (typeof window !== 'undefined') {
     if (globalMonitoring) {
       globalMonitoring.captureError(
         event.reason instanceof Error ? event.reason : new Error(event.reason),
-        { action: 'unhandled_promise_rejection' }
+        { action: 'unhandled_promise_rejection' },
       );
     }
   });

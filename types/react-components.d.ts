@@ -1,7 +1,7 @@
 // types/react-components.d.ts - React компоненты и их props
 
 import * as React from 'react';
-import { Product, Meal, UserProfile, Client, PulseZone, Norms } from './heys';
+import { Client, Meal, Norms, Product, PulseZone, UserProfile } from './heys';
 
 // === Calendar Component ===
 export interface CalendarProps {

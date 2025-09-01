@@ -1,14 +1,14 @@
 /**
  * HEYS UI Security Integration
  * Security-enhanced UI components with validation and sanitization
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
  */
 
+import { defaultValidator, SecurityError, ValidationSchemas } from '@heys/shared';
 import React, { useCallback, useMemo } from 'react';
-import { defaultValidator, ValidationSchemas, SecurityError } from '@heys/shared';
 
 /**
  * Security-enhanced form input component
@@ -38,30 +38,33 @@ export const SecureInput: React.FC<SecureInputProps> = ({
   className,
   'data-testid': testId,
 }) => {
-  const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    let newValue = event.target.value;
+  const handleChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      let newValue = event.target.value;
 
-    if (validateOnChange) {
-      // Validate input based on type
-      let inputType: 'text' | 'email' | 'password' | 'html' | 'filename' = 'text';
-      if (type === 'email') inputType = 'email';
-      else if (type === 'password') inputType = 'password';
-      
-      const validation = defaultValidator.validateInput(newValue, inputType, {
-        required,
-        sanitize,
-      });
+      if (validateOnChange) {
+        // Validate input based on type
+        let inputType: 'text' | 'email' | 'password' | 'html' | 'filename' = 'text';
+        if (type === 'email') inputType = 'email';
+        else if (type === 'password') inputType = 'password';
 
-      if (!validation.isValid && required) {
-        // Don't update if validation fails for required fields
-        return;
+        const validation = defaultValidator.validateInput(newValue, inputType, {
+          required,
+          sanitize,
+        });
+
+        if (!validation.isValid && required) {
+          // Don't update if validation fails for required fields
+          return;
+        }
+
+        newValue = (validation.sanitized as string) || newValue;
       }
 
-      newValue = (validation.sanitized as string) || newValue;
-    }
-
-    onChange(newValue);
-  }, [onChange, type, required, maxLength, sanitize, validateOnChange]);
+      onChange(newValue);
+    },
+    [onChange, type, required, maxLength, sanitize, validateOnChange],
+  );
 
   return (
     <input
@@ -138,42 +141,40 @@ export const SecureForm: React.FC<SecureFormProps> = ({
   className,
   'data-testid': testId,
 }) => {
-  const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    
-    const formData = new FormData(event.currentTarget);
-    const data: Record<string, any> = {};
-    
-    // Extract form data
-    for (const [key, value] of formData.entries()) {
-      data[key] = value;
-    }
+  const handleSubmit = useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
 
-    // Validate if schema provided
-    if (validationSchema) {
-      const validation = await defaultValidator.validateSchema(
-        data,
-        validationSchema,
-        { sanitize: true, strictMode: true }
-      );
+      const formData = new FormData(event.currentTarget);
+      const data: Record<string, any> = {};
 
-      if (!validation.isValid) {
-        throw new SecurityError('Form validation failed', validation.errors);
+      // Extract form data
+      for (const [key, value] of formData.entries()) {
+        data[key] = value;
       }
 
-      // Use sanitized data
-      Object.assign(data, validation.sanitized || {});
-    }
+      // Validate if schema provided
+      if (validationSchema) {
+        const validation = await defaultValidator.validateSchema(data, validationSchema, {
+          sanitize: true,
+          strictMode: true,
+        });
 
-    await onSubmit(data);
-  }, [onSubmit, validationSchema]);
+        if (!validation.isValid) {
+          throw new SecurityError('Form validation failed', validation.errors);
+        }
+
+        // Use sanitized data
+        Object.assign(data, validation.sanitized || {});
+      }
+
+      await onSubmit(data);
+    },
+    [onSubmit, validationSchema],
+  );
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className={className}
-      data-testid={testId}
-    >
+    <form onSubmit={handleSubmit} className={className} data-testid={testId}>
       {children}
     </form>
   );
@@ -208,11 +209,10 @@ export const SecureUserProfile: React.FC<SecureUserProfileProps> = ({
     if (!onUpdate) return;
 
     // Validate user data
-    const validation = await defaultValidator.validateSchema(
-      formData,
-      ValidationSchemas.user,
-      { sanitize: true, strictMode: true }
-    );
+    const validation = await defaultValidator.validateSchema(formData, ValidationSchemas.user, {
+      sanitize: true,
+      strictMode: true,
+    });
 
     if (!validation.isValid) {
       throw new SecurityError('User profile validation failed', validation.errors);
@@ -237,10 +237,7 @@ export const SecureUserProfile: React.FC<SecureUserProfileProps> = ({
           </div>
         )}
         {editable && (
-          <button
-            onClick={() => setIsEditing(true)}
-            data-testid="edit-profile-button"
-          >
+          <button onClick={() => setIsEditing(true)} data-testid="edit-profile-button">
             Edit Profile
           </button>
         )}
@@ -257,7 +254,7 @@ export const SecureUserProfile: React.FC<SecureUserProfileProps> = ({
       >
         <SecureInput
           value={formData.email}
-          onChange={(email) => setFormData(prev => ({ ...prev, email }))}
+          onChange={(email) => setFormData((prev) => ({ ...prev, email }))}
           type="email"
           placeholder="Email"
           required
@@ -265,7 +262,7 @@ export const SecureUserProfile: React.FC<SecureUserProfileProps> = ({
         />
         <SecureInput
           value={formData.username}
-          onChange={(username) => setFormData(prev => ({ ...prev, username }))}
+          onChange={(username) => setFormData((prev) => ({ ...prev, username }))}
           type="text"
           placeholder="Username"
           required
@@ -274,7 +271,7 @@ export const SecureUserProfile: React.FC<SecureUserProfileProps> = ({
         />
         <SecureInput
           value={formData.bio || ''}
-          onChange={(bio) => setFormData(prev => ({ ...prev, bio }))}
+          onChange={(bio) => setFormData((prev) => ({ ...prev, bio }))}
           type="text"
           placeholder="Bio"
           maxLength={500}
@@ -283,11 +280,7 @@ export const SecureUserProfile: React.FC<SecureUserProfileProps> = ({
         <button type="submit" data-testid="save-button">
           Save
         </button>
-        <button
-          type="button"
-          onClick={() => setIsEditing(false)}
-          data-testid="cancel-button"
-        >
+        <button type="button" onClick={() => setIsEditing(false)} data-testid="cancel-button">
           Cancel
         </button>
       </SecureForm>
@@ -308,7 +301,7 @@ export interface SecureSearchProps {
 
 export const SecureSearch: React.FC<SecureSearchProps> = ({
   onSearch,
-  placeholder = "Search...",
+  placeholder = 'Search...',
   debounceMs = 300,
   maxLength = 100,
   className,

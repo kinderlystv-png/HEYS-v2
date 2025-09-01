@@ -1,13 +1,20 @@
 /**
  * HEYS Bundle Analyzer
  * Advanced bundle analysis and optimization recommendations
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
  */
 
-import { BundleAnalysis, ModuleInfo, ChunkInfo, DependencyInfo, DuplicateInfo, TreeshakingInfo } from './profiler';
+import {
+  BundleAnalysis,
+  ChunkInfo,
+  DependencyInfo,
+  DuplicateInfo,
+  ModuleInfo,
+  TreeshakingInfo,
+} from './profiler';
 
 /**
  * Bundle optimization recommendations
@@ -139,7 +146,7 @@ export class BundleAnalyzer {
     const moduleMap = new Map<string, ModuleInfo[]>();
 
     // Group modules by name
-    modules.forEach(module => {
+    modules.forEach((module) => {
       const baseName = this.getBaseName(module.name);
       if (!moduleMap.has(baseName)) {
         moduleMap.set(baseName, []);
@@ -154,7 +161,7 @@ export class BundleAnalyzer {
           module: baseName,
           occurrences: moduleGroup.length,
           totalSize: moduleGroup.reduce((sum, m) => sum + m.size, 0),
-          locations: moduleGroup.map(m => m.path),
+          locations: moduleGroup.map((m) => m.path),
         });
       }
     });
@@ -174,11 +181,14 @@ export class BundleAnalyzer {
     if (stats.modules) {
       stats.modules.forEach((module: any) => {
         if (module.providedExports && module.usedExports) {
-          const providedCount = Array.isArray(module.providedExports) ? module.providedExports.length : 0;
+          const providedCount = Array.isArray(module.providedExports)
+            ? module.providedExports.length
+            : 0;
           const usedCount = Array.isArray(module.usedExports) ? module.usedExports.length : 0;
-          
+
           if (providedCount > usedCount && usedCount > 0) {
-            const estimatedEliminated = (module.size || 0) * ((providedCount - usedCount) / providedCount);
+            const estimatedEliminated =
+              (module.size || 0) * ((providedCount - usedCount) / providedCount);
             eliminatedSize += estimatedEliminated;
             eliminatedModules.push(module.name || module.identifier);
           }
@@ -232,7 +242,7 @@ export class BundleAnalyzer {
     }
 
     // Check for large chunks
-    const largeChunks = this.bundleData.chunks.filter(chunk => chunk.size > 100 * 1024);
+    const largeChunks = this.bundleData.chunks.filter((chunk) => chunk.size > 100 * 1024);
     if (largeChunks.length > 0) {
       recommendations.push({
         type: 'performance',
@@ -249,15 +259,16 @@ export class BundleAnalyzer {
           'Use dynamic imports for route-based splitting',
           'Consider vendor chunk separation',
         ],
-        examples: [
-          'optimization: { splitChunks: { chunks: "all" } }',
-        ],
+        examples: ['optimization: { splitChunks: { chunks: "all" } }'],
       });
     }
 
     // Check for duplicates
     if (this.bundleData.duplicates.length > 0) {
-      const totalDuplicateSize = this.bundleData.duplicates.reduce((sum, dup) => sum + dup.totalSize, 0);
+      const totalDuplicateSize = this.bundleData.duplicates.reduce(
+        (sum, dup) => sum + dup.totalSize,
+        0,
+      );
       recommendations.push({
         type: 'duplication',
         severity: 'high',
@@ -273,14 +284,12 @@ export class BundleAnalyzer {
           'Use peerDependencies for shared libraries',
           'Implement proper module resolution',
         ],
-        examples: [
-          'resolve: { alias: { "react": path.resolve("./node_modules/react") } }',
-        ],
+        examples: ['resolve: { alias: { "react": path.resolve("./node_modules/react") } }'],
       });
     }
 
     // Check for unused dependencies
-    const unusedDeps = this.bundleData.dependencies.filter(dep => !dep.used);
+    const unusedDeps = this.bundleData.dependencies.filter((dep) => !dep.used);
     if (unusedDeps.length > 0) {
       recommendations.push({
         type: 'dependency',
@@ -297,10 +306,7 @@ export class BundleAnalyzer {
           'Use depcheck tool to identify unused packages',
           'Implement proper dependency audit process',
         ],
-        examples: [
-          'npm uninstall unused-package',
-          'pnpm remove unused-package',
-        ],
+        examples: ['npm uninstall unused-package', 'pnpm remove unused-package'],
       });
     }
 
@@ -322,10 +328,7 @@ export class BundleAnalyzer {
           'Use production mode builds',
           'Avoid importing entire libraries',
         ],
-        examples: [
-          'import { debounce } from "lodash-es"',
-          'mode: "production" in webpack config',
-        ],
+        examples: ['import { debounce } from "lodash-es"', 'mode: "production" in webpack config'],
       });
     }
 
@@ -392,7 +395,9 @@ export class BundleAnalyzer {
     </div>
 
     <h2>Optimization Recommendations</h2>
-    ${recommendations.map(rec => `
+    ${recommendations
+      .map(
+        (rec) => `
         <div class="recommendation ${rec.severity}">
             <h3>${rec.title}</h3>
             <p>${rec.description}</p>
@@ -404,16 +409,22 @@ export class BundleAnalyzer {
             </ul>
             <h4>Actions:</h4>
             <ul>
-                ${rec.actions.map(action => `<li>${action}</li>`).join('')}
+                ${rec.actions.map((action) => `<li>${action}</li>`).join('')}
             </ul>
-            ${rec.examples ? `
+            ${
+              rec.examples
+                ? `
                 <h4>Examples:</h4>
                 <ul>
-                    ${rec.examples.map(example => `<li><code>${example}</code></li>`).join('')}
+                    ${rec.examples.map((example) => `<li><code>${example}</code></li>`).join('')}
                 </ul>
-            ` : ''}
+            `
+                : ''
+            }
         </div>
-    `).join('')}
+    `,
+      )
+      .join('')}
 
     <h2>Largest Modules</h2>
     <table>
@@ -426,14 +437,19 @@ export class BundleAnalyzer {
             </tr>
         </thead>
         <tbody>
-            ${this.bundleData.modules.slice(0, 20).map(module => `
+            ${this.bundleData.modules
+              .slice(0, 20)
+              .map(
+                (module) => `
                 <tr>
                     <td>${module.name}</td>
                     <td class="size">${this.formatBytes(module.size)}</td>
                     <td class="size">${this.formatBytes(module.gzippedSize)}</td>
                     <td>${module.chunks.length}</td>
                 </tr>
-            `).join('')}
+            `,
+              )
+              .join('')}
         </tbody>
     </table>
 
@@ -448,18 +464,24 @@ export class BundleAnalyzer {
             </tr>
         </thead>
         <tbody>
-            ${this.bundleData.chunks.map(chunk => `
+            ${this.bundleData.chunks
+              .map(
+                (chunk) => `
                 <tr>
                     <td>${chunk.name}</td>
                     <td class="size">${this.formatBytes(chunk.size)}</td>
                     <td>${chunk.modules.length}</td>
                     <td>${chunk.entry ? 'Entry' : 'Async'}</td>
                 </tr>
-            `).join('')}
+            `,
+              )
+              .join('')}
         </tbody>
     </table>
 
-    ${this.bundleData.duplicates.length > 0 ? `
+    ${
+      this.bundleData.duplicates.length > 0
+        ? `
         <h2>Duplicate Modules</h2>
         <table>
             <thead>
@@ -470,16 +492,22 @@ export class BundleAnalyzer {
                 </tr>
             </thead>
             <tbody>
-                ${this.bundleData.duplicates.map(dup => `
+                ${this.bundleData.duplicates
+                  .map(
+                    (dup) => `
                     <tr>
                         <td>${dup.module}</td>
                         <td>${dup.occurrences}</td>
                         <td class="size">${this.formatBytes(dup.totalSize)}</td>
                     </tr>
-                `).join('')}
+                `,
+                  )
+                  .join('')}
             </tbody>
         </table>
-    ` : ''}
+    `
+        : ''
+    }
 </body>
 </html>
     `;
@@ -502,7 +530,7 @@ export class BundleAnalyzer {
   private isTreeshakeable(packageName: string): boolean {
     // Known tree-shakeable packages
     const treeshakeablePackages = ['lodash-es', 'ramda', 'date-fns'];
-    return treeshakeablePackages.some(pkg => packageName.includes(pkg));
+    return treeshakeablePackages.some((pkg) => packageName.includes(pkg));
   }
 
   private calculateTotalSize(modules: ModuleInfo[]): number {

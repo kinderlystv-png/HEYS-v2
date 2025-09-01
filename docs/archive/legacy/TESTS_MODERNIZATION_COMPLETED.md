@@ -26,7 +26,7 @@ addTest('Core System', () => diagnosticCenter.testCoreSystem(), {
 
 ```javascript
 const timeoutPromise = new Promise((_, reject) =>
-  setTimeout(() => reject(new Error('timeout')), test.timeout)
+  setTimeout(() => reject(new Error('timeout')), test.timeout),
 );
 const result = await Promise.race([testPromise, timeoutPromise]);
 ```
@@ -41,7 +41,7 @@ const result = await Promise.race([testPromise, timeoutPromise]);
 if (successRate < 0.7) {
   diagnosticCenter.log(
     `🔴 FLAKY TEST DETECTED: ${result.name} (${Math.round(successRate * 100)}% success rate)`,
-    'warning'
+    'warning',
   );
 }
 ```

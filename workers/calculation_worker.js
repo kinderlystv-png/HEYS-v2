@@ -354,7 +354,7 @@ function exportToCSV(startDate, endDate) {
     ]);
   }
 
-  const csvContent = csvData.map(row => row.join(',')).join('\n');
+  const csvContent = csvData.map((row) => row.join(',')).join('\n');
 
   return {
     format: 'csv',

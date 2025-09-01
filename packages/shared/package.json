@@ -7,17 +7,17 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsup",
+    "clean": "rimraf dist",
     "dev": "tsup --watch",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "clean": "rimraf dist"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "^3.25.76",
-    "dompurify": "^3.2.6"
+    "dompurify": "^3.2.6",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "tsup": "^7.2.0",

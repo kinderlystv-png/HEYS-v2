@@ -98,12 +98,12 @@ const search = new SmartSearch();
 // Index entries from HEYS storage
 const entries = await core.storage.getAllEntries();
 search.index(
-  entries.map(entry => ({
+  entries.map((entry) => ({
     id: entry.id,
     title: entry.title,
     content: entry.content,
     tags: entry.tags?.join(' ') || '',
-  }))
+  })),
 );
 
 // Search with user input
@@ -120,7 +120,7 @@ const virtualList = new VirtualList({
   itemHeight: 60,
 });
 
-search.query('user input').then(results => {
+search.query('user input').then((results) => {
   virtualList.setData(results);
 });
 ```
@@ -173,7 +173,7 @@ const search = new SmartSearch({
   debug: true, // Enables console logging
 });
 
-search.query('test').forEach(result => {
+search.query('test').forEach((result) => {
   console.log(`Score: ${result.score}, Match: ${result.title}`);
 });
 ```

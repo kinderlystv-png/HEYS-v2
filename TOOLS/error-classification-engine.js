@@ -266,7 +266,7 @@ class ErrorClassificationEngine {
       const finalClassification = this.combineClassifications(
         classification,
         heysClassification,
-        generalClassification
+        generalClassification,
       );
 
       // Обучение на основе результата
@@ -324,7 +324,7 @@ class ErrorClassificationEngine {
           heysSpecific: true,
           tags: rule.tags || [],
           suggestions: rule.suggestions || [],
-          patterns: rule.patterns.filter(p => p.test(text)),
+          patterns: rule.patterns.filter((p) => p.test(text)),
         };
       }
     }
@@ -355,7 +355,7 @@ class ErrorClassificationEngine {
           severity: rule.severity,
           heysSpecific: false,
           tags: rule.tags || [],
-          patterns: rule.patterns.filter(p => p.test(text)),
+          patterns: rule.patterns.filter((p) => p.test(text)),
         };
       }
     }
@@ -431,12 +431,12 @@ class ErrorClassificationEngine {
     // Специфичные рекомендации из классификации
     if (classification.suggestions) {
       suggestions.push(
-        ...classification.suggestions.map(s => ({
+        ...classification.suggestions.map((s) => ({
           type: 'specific',
           priority: 'high',
           message: s,
           source: 'classification',
-        }))
+        })),
       );
     }
 
@@ -541,7 +541,8 @@ class ErrorClassificationEngine {
   prioritizeAndDeduplicateSuggestions(suggestions) {
     // Удаление дубликатов по message
     const unique = suggestions.filter(
-      (suggestion, index, array) => array.findIndex(s => s.message === suggestion.message) === index
+      (suggestion, index, array) =>
+        array.findIndex((s) => s.message === suggestion.message) === index,
     );
 
     // Сортировка по приоритету

@@ -236,7 +236,7 @@
           if (typeof window.EnhancedErrorLogger === 'undefined') {
             showStatus(
               '❌ EnhancedErrorLogger не найден! Убедитесь, что все скрипты загружены.',
-              'error'
+              'error',
             );
             return;
           }
@@ -251,7 +251,7 @@
           });
 
           // Добавляем слушатель для отображения новых логов
-          logger.addListener(logEntry => {
+          logger.addListener((logEntry) => {
             log(`📥 Новый лог: [${logEntry.level.toUpperCase()}] ${logEntry.title}`);
             updateStats();
           });

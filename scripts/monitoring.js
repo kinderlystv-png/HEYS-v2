@@ -20,7 +20,7 @@ const MONITORING_CONFIG = {
   alerts: {
     email: process.env.ALERT_EMAIL,
     webhook: process.env.ALERT_WEBHOOK,
-  }
+  },
 };
 
 const METRICS_FILE = path.join(__dirname, '..', 'metrics.json');
@@ -52,7 +52,7 @@ class HealthMonitor {
   log(message, level = 'info') {
     const timestamp = new Date().toISOString();
     const logMessage = `[${timestamp}] [${level.toUpperCase()}] ${message}\n`;
-    
+
     console.log(`[${level.toUpperCase()}] ${message}`);
     fs.appendFileSync(LOG_FILE, logMessage);
   }
@@ -69,7 +69,7 @@ class HealthMonitor {
 
       const req = http.request(options, (res) => {
         const responseTime = Date.now() - startTime;
-        
+
         if (res.statusCode === 200) {
           resolve({
             endpoint: endpoint.name,
@@ -100,11 +100,11 @@ class HealthMonitor {
 
   async performHealthCheck() {
     const checkResults = [];
-    
+
     for (const endpoint of MONITORING_CONFIG.endpoints) {
       let result;
       let attempts = 0;
-      
+
       while (attempts < MONITORING_CONFIG.retries) {
         try {
           result = await this.checkEndpoint(endpoint);
@@ -120,25 +120,25 @@ class HealthMonitor {
               timestamp: new Date().toISOString(),
             };
           } else {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
           }
         }
       }
-      
+
       checkResults.push(result);
     }
-    
+
     return checkResults;
   }
 
   analyzeResults(results) {
-    const healthyCount = results.filter(r => r.status === 'success').length;
+    const healthyCount = results.filter((r) => r.status === 'success').length;
     const totalCount = results.length;
     const healthPercentage = (healthyCount / totalCount) * 100;
-    
-    const status = healthPercentage === 100 ? 'healthy' : 
-                   healthPercentage >= 50 ? 'degraded' : 'unhealthy';
-    
+
+    const status =
+      healthPercentage === 100 ? 'healthy' : healthPercentage >= 50 ? 'degraded' : 'unhealthy';
+
     return {
       status,
       healthPercentage,
@@ -150,7 +150,7 @@ class HealthMonitor {
 
   async sendAlert(analysis) {
     if (analysis.status === 'healthy') return;
-    
+
     const alertMessage = `
 🚨 HEYS Health Alert
 Status: ${analysis.status.toUpperCase()}
@@ -159,13 +159,13 @@ Time: ${new Date().toISOString()}
 
 Failed Endpoints:
 ${analysis.results
-  .filter(r => r.status === 'error')
-  .map(r => `- ${r.endpoint}: ${r.error}`)
+  .filter((r) => r.status === 'error')
+  .map((r) => `- ${r.endpoint}: ${r.error}`)
   .join('\n')}
     `.trim();
 
     this.log(`Sending alert: ${analysis.status}`, 'warn');
-    
+
     // В реальной системе здесь был бы код для отправки email/webhook
     console.log(alertMessage);
   }
@@ -173,10 +173,10 @@ ${analysis.results
   async runCheck() {
     try {
       this.log('Starting health check cycle');
-      
+
       const results = await this.performHealthCheck();
       const analysis = this.analyzeResults(results);
-      
+
       // Сохраняем метрики
       this.metrics.lastCheck = analysis;
       this.metrics.checks.push({
@@ -184,23 +184,22 @@ ${analysis.results
         status: analysis.status,
         results,
       });
-      
+
       // Ограничиваем историю (последние 100 проверок)
       if (this.metrics.checks.length > 100) {
         this.metrics.checks = this.metrics.checks.slice(-100);
       }
-      
+
       this.saveMetrics();
-      
+
       // Логируем результат
       this.log(
         `Health check completed: ${analysis.status} (${analysis.healthPercentage}%)`,
-        analysis.status === 'healthy' ? 'info' : 'warn'
+        analysis.status === 'healthy' ? 'info' : 'warn',
       );
-      
+
       // Отправляем алерт если нужно
       await this.sendAlert(analysis);
-      
     } catch (error) {
       this.log(`Health check failed: ${error.message}`, 'error');
       this.metrics.errors.push({
@@ -216,18 +215,18 @@ ${analysis.results
       this.log('Monitor is already running', 'warn');
       return;
     }
-    
+
     this.isRunning = true;
     this.log('Starting HEYS health monitor');
-    
+
     // Первая проверка сразу
     this.runCheck();
-    
+
     // Периодические проверки
     this.interval = setInterval(() => {
       this.runCheck();
     }, MONITORING_CONFIG.interval);
-    
+
     // Graceful shutdown
     process.on('SIGTERM', () => this.stop());
     process.on('SIGINT', () => this.stop());
@@ -235,14 +234,14 @@ ${analysis.results
 
   stop() {
     if (!this.isRunning) return;
-    
+
     this.log('Stopping HEYS health monitor');
     this.isRunning = false;
-    
+
     if (this.interval) {
       clearInterval(this.interval);
     }
-    
+
     process.exit(0);
   }
 
@@ -254,9 +253,9 @@ ${analysis.results
 // CLI interface
 if (require.main === module) {
   const monitor = new HealthMonitor();
-  
+
   const command = process.argv[2];
-  
+
   switch (command) {
     case 'start':
       monitor.start();

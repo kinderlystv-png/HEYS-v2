@@ -74,7 +74,7 @@ class CodeMapper {
 
     // Поиск функций
     const functionMatches = [...content.matchAll(/function\s+(\w+)/g)];
-    functionMatches.forEach(match => {
+    functionMatches.forEach((match) => {
       const lineIndex = content.substring(0, match.index).split('\n').length - 1;
       sections.push({
         type: 'function',
@@ -86,7 +86,7 @@ class CodeMapper {
 
     // Поиск классов
     const classMatches = [...content.matchAll(/class\s+(\w+)/g)];
-    classMatches.forEach(match => {
+    classMatches.forEach((match) => {
       const lineIndex = content.substring(0, match.index).split('\n').length - 1;
       sections.push({
         type: 'class',
@@ -98,7 +98,7 @@ class CodeMapper {
 
     // Поиск комментариев-разделителей
     const sectionMatches = [...content.matchAll(/\/\/\s*[=\-]{3,}\s*(.+?)\s*[=\-]{3,}/g)];
-    sectionMatches.forEach(match => {
+    sectionMatches.forEach((match) => {
       const lineIndex = content.substring(0, match.index).split('\n').length - 1;
       sections.push({
         type: 'section',
@@ -196,7 +196,7 @@ class CodeMapper {
 
       map += `│ ${typeIcon} ${typeName}:${' '.repeat(85 - typeName.length - 5)}│\n`;
 
-      typeSections.forEach(section => {
+      typeSections.forEach((section) => {
         const sectionLine = `│    ├── ${section.name} (${section.startLine}-${section.endLine})`;
         const padding = ' '.repeat(Math.max(0, 85 - sectionLine.length + 4));
         map += `${sectionLine}${padding}│\n`;
@@ -218,7 +218,7 @@ class CodeMapper {
   groupSectionsByType(sections) {
     const grouped = {};
 
-    sections.forEach(section => {
+    sections.forEach((section) => {
       if (!grouped[section.type]) {
         grouped[section.type] = [];
       }
@@ -260,7 +260,7 @@ class CodeMapper {
     const results = [];
     const files = this.findLargeFiles(projectPath);
 
-    files.forEach(filePath => {
+    files.forEach((filePath) => {
       try {
         const analysis = this.analyzeFile(filePath);
         results.push(analysis);
@@ -282,11 +282,11 @@ class CodeMapper {
     const files = [];
     const extensions = ['.js', '.html', '.css', '.ts', '.jsx', '.tsx'];
 
-    const scan = dir => {
+    const scan = (dir) => {
       try {
         const items = fs.readdirSync(dir);
 
-        items.forEach(item => {
+        items.forEach((item) => {
           const fullPath = path.join(dir, item);
           const stat = fs.statSync(fullPath);
 
@@ -323,10 +323,10 @@ if (require.main === module) {
 
   console.log('\n📊 СВОДКА:');
   console.log(`Всего проанализировано файлов: ${results.length}`);
-  console.log(`Файлов нуждающихся в картах: ${results.filter(r => r.needsMap).length}`);
+  console.log(`Файлов нуждающихся в картах: ${results.filter((r) => r.needsMap).length}`);
 
   // Создаем отчет
-  const report = results.map(r => ({
+  const report = results.map((r) => ({
     file: path.basename(r.filePath),
     lines: r.totalLines,
     sections: r.sections.length,

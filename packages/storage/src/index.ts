@@ -46,16 +46,16 @@ export class StorageService {
 
   async get<T>(key: string, schema?: z.ZodSchema<T>, adapterName?: string): Promise<T | null> {
     const adapter = this.getAdapter(adapterName);
-    
+
     const item = await adapter.get(key);
     if (!item) return null;
-    
+
     // Check expiration
     if (item.expiresAt && item.expiresAt < new Date()) {
       await adapter.delete(key);
       return null;
     }
-    
+
     // Validate with schema if provided
     if (schema) {
       try {
@@ -65,7 +65,7 @@ export class StorageService {
         return null;
       }
     }
-    
+
     return item.value as T;
   }
 
@@ -97,26 +97,33 @@ export class StorageService {
   // Bulk operations
   async setMany(items: Record<string, unknown>, ttl?: number, adapterName?: string): Promise<void> {
     const promises = Object.entries(items).map(([key, value]) =>
-      this.set(key, value, ttl, adapterName)
+      this.set(key, value, ttl, adapterName),
     );
     await Promise.all(promises);
   }
 
-  async getMany<T>(keys: string[], schema?: z.ZodSchema<T>, adapterName?: string): Promise<Record<string, T | null>> {
+  async getMany<T>(
+    keys: string[],
+    schema?: z.ZodSchema<T>,
+    adapterName?: string,
+  ): Promise<Record<string, T | null>> {
     const promises = keys.map(async (key) => ({
       key,
       value: await this.get<T>(key, schema, adapterName),
     }));
-    
+
     const results = await Promise.all(promises);
-    return results.reduce((acc, { key, value }) => {
-      acc[key] = value;
-      return acc;
-    }, {} as Record<string, T | null>);
+    return results.reduce(
+      (acc, { key, value }) => {
+        acc[key] = value;
+        return acc;
+      },
+      {} as Record<string, T | null>,
+    );
   }
 
   async deleteMany(keys: string[], adapterName?: string): Promise<void> {
-    const promises = keys.map(key => this.delete(key, adapterName));
+    const promises = keys.map((key) => this.delete(key, adapterName));
     await Promise.all(promises);
   }
 }
@@ -128,20 +135,20 @@ export class MemoryStorageAdapter implements StorageAdapter {
   async get(key: string): Promise<StorageItem | null> {
     const item = this.storage.get(key);
     if (!item) return null;
-    
+
     // Check expiration
     if (item.expiresAt && item.expiresAt < new Date()) {
       this.storage.delete(key);
       return null;
     }
-    
+
     return item;
   }
 
   async set(key: string, value: unknown, ttl?: number): Promise<void> {
     const now = new Date();
     const existing = this.storage.get(key);
-    
+
     this.storage.set(key, {
       id: existing?.id || crypto.randomUUID(),
       key,
@@ -169,13 +176,13 @@ export class MemoryStorageAdapter implements StorageAdapter {
   async keys(): Promise<string[]> {
     const allKeys = Array.from(this.storage.keys());
     const validKeys: string[] = [];
-    
+
     for (const key of allKeys) {
       if (await this.has(key)) {
         validKeys.push(key);
       }
     }
-    
+
     return validKeys;
   }
 
@@ -187,13 +194,13 @@ export class MemoryStorageAdapter implements StorageAdapter {
   getStats(): { size: number; totalItems: number; expiredItems: number } {
     const totalItems = this.storage.size;
     let expiredItems = 0;
-    
+
     for (const item of this.storage.values()) {
       if (item.expiresAt && item.expiresAt < new Date()) {
         expiredItems++;
       }
     }
-    
+
     return {
       size: totalItems,
       totalItems,
@@ -204,14 +211,14 @@ export class MemoryStorageAdapter implements StorageAdapter {
   cleanupExpired(): number {
     let cleaned = 0;
     const now = new Date();
-    
+
     for (const [key, item] of this.storage.entries()) {
       if (item.expiresAt && item.expiresAt < now) {
         this.storage.delete(key);
         cleaned++;
       }
     }
-    
+
     return cleaned;
   }
 }
@@ -235,22 +242,22 @@ export class LocalStorageAdapter implements StorageAdapter {
     try {
       const data = localStorage.getItem(this.getKey(key));
       if (!data) return null;
-      
+
       const item: StorageItem = JSON.parse(data);
-      
+
       // Convert date strings back to Date objects
       item.createdAt = new Date(item.createdAt);
       item.updatedAt = new Date(item.updatedAt);
       if (item.expiresAt) {
         item.expiresAt = new Date(item.expiresAt);
       }
-      
+
       // Check expiration
       if (item.expiresAt && item.expiresAt < new Date()) {
         await this.delete(key);
         return null;
       }
-      
+
       return item;
     } catch (error) {
       console.error('LocalStorage get error:', error);
@@ -262,7 +269,7 @@ export class LocalStorageAdapter implements StorageAdapter {
     try {
       const now = new Date();
       const existing = await this.get(key);
-      
+
       const item: StorageItem = {
         id: existing?.id || crypto.randomUUID(),
         key,
@@ -272,7 +279,7 @@ export class LocalStorageAdapter implements StorageAdapter {
         updatedAt: now,
         ...(ttl && { expiresAt: new Date(now.getTime() + ttl * 1000) }),
       };
-      
+
       localStorage.setItem(this.getKey(key), JSON.stringify(item));
     } catch (error) {
       console.error('LocalStorage set error:', error);

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { FoodProductSchema, FoodEntrySchema, calculateNutrition } from '../models/food.js';
+import { describe, expect, it } from 'vitest';
+import { FoodEntrySchema, FoodProductSchema, calculateNutrition } from '../models/food.js';
 
 describe('Food Models', () => {
   describe('FoodProductSchema validation', () => {
@@ -112,7 +112,7 @@ describe('Food Models', () => {
 
     it('should calculate nutrition for same amount', () => {
       const result = calculateNutrition(testProduct, 100);
-      
+
       expect(result.calories).toBe(100);
       expect(result.protein).toBe(10);
       expect(result.carbs).toBe(20);
@@ -124,7 +124,7 @@ describe('Food Models', () => {
 
     it('should calculate nutrition for double amount', () => {
       const result = calculateNutrition(testProduct, 200);
-      
+
       expect(result.calories).toBe(200);
       expect(result.protein).toBe(20);
       expect(result.carbs).toBe(40);
@@ -133,7 +133,7 @@ describe('Food Models', () => {
 
     it('should calculate nutrition for half amount', () => {
       const result = calculateNutrition(testProduct, 50);
-      
+
       expect(result.calories).toBe(50);
       expect(result.protein).toBe(5);
       expect(result.carbs).toBe(10);
@@ -152,7 +152,7 @@ describe('Food Models', () => {
       };
 
       const result = calculateNutrition(productWithoutOptionals, 100);
-      
+
       expect(result.calories).toBe(100);
       expect(result.fiber).toBeUndefined();
       expect(result.sugar).toBeUndefined();
@@ -161,7 +161,7 @@ describe('Food Models', () => {
 
     it('should round to one decimal place', () => {
       const result = calculateNutrition(testProduct, 33);
-      
+
       // 100 * 33/100 = 33
       expect(result.calories).toBe(33);
       // 10 * 33/100 = 3.3

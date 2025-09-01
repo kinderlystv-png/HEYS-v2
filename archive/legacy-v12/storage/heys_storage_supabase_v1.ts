@@ -193,7 +193,7 @@ declare global {
 
   cloud.signIn = async function (
     email: string,
-    password: string
+    password: string,
   ): Promise<{ user?: SupabaseUser; error?: any }> {
     if (!client) {
       err('client not initialized');
@@ -417,7 +417,7 @@ declare global {
   };
 
   cloud.waitForSync = async function (key: string, timeout: number = 5000): Promise<string> {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       const startTime = Date.now();
       const checkStatus = (): void => {
         const status = syncStatuses.get(key);

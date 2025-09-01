@@ -157,14 +157,14 @@ errorDashboard.updateFilter('searchText', 'HEYS');
 
 ```javascript
 // Слушатель новых логов
-enhancedLogger.addListener(logEntry => {
+enhancedLogger.addListener((logEntry) => {
   if (logEntry.level === 'error') {
     console.log('Новая ошибка:', logEntry.title);
   }
 });
 
 // Event-based подход
-window.addEventListener('enhancedLogEntry', event => {
+window.addEventListener('enhancedLogEntry', (event) => {
   const logEntry = event.detail;
   // Обработка нового лога
 });

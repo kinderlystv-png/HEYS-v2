@@ -1,11 +1,7 @@
 // Tests for Modern Storage Service
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import {
-  StorageService,
-  MemoryStorageAdapter,
-  storage
-} from '../index.js';
+import { MemoryStorageAdapter, storage, StorageService } from '../index.js';
 
 describe('MemoryStorageAdapter', () => {
   let adapter: MemoryStorageAdapter;
@@ -17,7 +13,7 @@ describe('MemoryStorageAdapter', () => {
   it('should store and retrieve data', async () => {
     await adapter.set('test-key', 'test-value');
     const result = await adapter.get('test-key');
-    
+
     expect(result).toBeDefined();
     expect(result?.key).toBe('test-key');
     expect(result?.value).toBe('test-value');
@@ -28,10 +24,10 @@ describe('MemoryStorageAdapter', () => {
 
   it('should handle TTL expiration', async () => {
     await adapter.set('expire-key', 'expire-value', 0.001);
-    
+
     // Wait for expiration
-    await new Promise(resolve => setTimeout(resolve, 5));
-    
+    await new Promise((resolve) => setTimeout(resolve, 5));
+
     const result = await adapter.get('expire-key');
     expect(result).toBeNull();
   });
@@ -39,13 +35,13 @@ describe('MemoryStorageAdapter', () => {
   it('should update existing items', async () => {
     await adapter.set('update-key', 'original');
     const original = await adapter.get('update-key');
-    
+
     // Add small delay to ensure different timestamps
-    await new Promise(resolve => setTimeout(resolve, 2));
-    
+    await new Promise((resolve) => setTimeout(resolve, 2));
+
     await adapter.set('update-key', 'updated');
     const updated = await adapter.get('update-key');
-    
+
     expect(updated?.value).toBe('updated');
     expect(updated?.id).toBe(original?.id);
     expect(updated?.createdAt).toEqual(original?.createdAt);
@@ -54,7 +50,7 @@ describe('MemoryStorageAdapter', () => {
 
   it('should check item existence', async () => {
     expect(await adapter.has('nonexistent')).toBe(false);
-    
+
     await adapter.set('exists', 'value');
     expect(await adapter.has('exists')).toBe(true);
   });
@@ -62,7 +58,7 @@ describe('MemoryStorageAdapter', () => {
   it('should delete items', async () => {
     await adapter.set('delete-me', 'value');
     expect(await adapter.has('delete-me')).toBe(true);
-    
+
     await adapter.delete('delete-me');
     expect(await adapter.has('delete-me')).toBe(false);
   });
@@ -70,9 +66,9 @@ describe('MemoryStorageAdapter', () => {
   it('should clear all items', async () => {
     await adapter.set('key1', 'value1');
     await adapter.set('key2', 'value2');
-    
+
     await adapter.clear();
-    
+
     expect(await adapter.has('key1')).toBe(false);
     expect(await adapter.has('key2')).toBe(false);
   });
@@ -80,7 +76,7 @@ describe('MemoryStorageAdapter', () => {
   it('should return all keys', async () => {
     await adapter.set('key1', 'value1');
     await adapter.set('key2', 'value2');
-    
+
     const keys = await adapter.keys();
     expect(keys).toContain('key1');
     expect(keys).toContain('key2');
@@ -102,16 +98,16 @@ describe('StorageService', () => {
   it('should use default adapter when none specified', async () => {
     await service.set('test', 'value');
     const result = await service.get('test');
-    
+
     expect(result).toBe('value');
   });
 
   it('should use specific adapter when specified', async () => {
     const customAdapter = new MemoryStorageAdapter();
     service.addAdapter('custom', customAdapter);
-    
+
     await service.set('test', 'value', undefined, 'custom');
-    
+
     expect(await service.get('test')).toBeNull();
     expect(await service.get('test', undefined, 'custom')).toBe('value');
   });
@@ -138,18 +134,18 @@ describe('StorageService', () => {
 
   it('should handle bulk operations', async () => {
     const items = {
-      'item1': 'value1',
-      'item2': 'value2',
-      'item3': 'value3',
+      item1: 'value1',
+      item2: 'value2',
+      item3: 'value3',
     };
 
     await service.setMany(items);
-    
+
     const results = await service.getMany(['item1', 'item2', 'item3']);
     expect(results).toEqual({
-      'item1': 'value1',
-      'item2': 'value2',
-      'item3': 'value3',
+      item1: 'value1',
+      item2: 'value2',
+      item3: 'value3',
     });
   });
 
@@ -166,7 +162,7 @@ describe('Default storage instance', () => {
   it('should work with default configuration', async () => {
     await storage.set('default-test', 'value');
     const result = await storage.get('default-test');
-    
+
     expect(result).toBe('value');
   });
 });

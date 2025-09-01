@@ -1,7 +1,7 @@
 /**
  * HEYS Performance Analytics Dashboard v1.0
  * Advanced Performance Analytics & Visualization
- * 
+ *
  * Features:
  * - Real-time performance analytics
  * - Interactive performance charts
@@ -12,7 +12,7 @@
  * - Performance comparison tools
  */
 
-import { RealTimePerformanceMonitor, PerformanceMetrics } from './real-time-performance-monitor';
+import { PerformanceMetrics, RealTimePerformanceMonitor } from './real-time-performance-monitor';
 
 export interface AnalyticsDashboardConfig {
   refreshInterval: number;
@@ -659,32 +659,44 @@ export class PerformanceAnalyticsDashboard {
    */
   private async initializeCharts(): Promise<void> {
     // Initialize performance trends chart
-    this.charts.set('trends', new PerformanceChart('trends-chart', {
-      type: 'line',
-      title: 'Performance Trends',
-      metrics: ['lcp', 'fid', 'cls'],
-    }));
+    this.charts.set(
+      'trends',
+      new PerformanceChart('trends-chart', {
+        type: 'line',
+        title: 'Performance Trends',
+        metrics: ['lcp', 'fid', 'cls'],
+      }),
+    );
 
     // Initialize vitals distribution chart
-    this.charts.set('vitals-distribution', new PerformanceChart('vitals-distribution-chart', {
-      type: 'bar',
-      title: 'Core Web Vitals Distribution',
-      metrics: ['lcp', 'fid', 'cls'],
-    }));
+    this.charts.set(
+      'vitals-distribution',
+      new PerformanceChart('vitals-distribution-chart', {
+        type: 'bar',
+        title: 'Core Web Vitals Distribution',
+        metrics: ['lcp', 'fid', 'cls'],
+      }),
+    );
 
     // Initialize resource usage chart
-    this.charts.set('resource-usage', new PerformanceChart('resource-usage-chart', {
-      type: 'area',
-      title: 'Resource Usage',
-      metrics: ['memory', 'cpu'],
-    }));
+    this.charts.set(
+      'resource-usage',
+      new PerformanceChart('resource-usage-chart', {
+        type: 'area',
+        title: 'Resource Usage',
+        metrics: ['memory', 'cpu'],
+      }),
+    );
 
     // Initialize user experience chart
-    this.charts.set('user-experience', new PerformanceChart('user-experience-chart', {
-      type: 'line',
-      title: 'User Experience',
-      metrics: ['pageLoadTime', 'interactionLatency'],
-    }));
+    this.charts.set(
+      'user-experience',
+      new PerformanceChart('user-experience-chart', {
+        type: 'line',
+        title: 'User Experience',
+        metrics: ['pageLoadTime', 'interactionLatency'],
+      }),
+    );
   }
 
   /**
@@ -718,16 +730,15 @@ export class PerformanceAnalyticsDashboard {
     try {
       // Update overview metrics
       this.updateOverviewMetrics();
-      
+
       // Update charts
       this.updateCharts();
-      
+
       // Update analysis sections
       this.updateAnalysisSections();
-      
+
       // Update profiles
       this.updateProfiles();
-
     } catch (error) {
       console.error('Error updating analytics dashboard:', error);
     }
@@ -749,10 +760,10 @@ export class PerformanceAnalyticsDashboard {
 
     // Update Core Web Vitals
     this.updateCoreWebVitals(currentMetrics);
-    
+
     // Update resource usage
     this.updateResourceUsage(currentMetrics);
-    
+
     // Update alerts summary
     this.updateAlertsummary();
   }
@@ -832,7 +843,7 @@ export class PerformanceAnalyticsDashboard {
     if (!resourceUsage) return;
 
     const memoryUsage = (metrics.memory.used / metrics.memory.total) * 100;
-    
+
     resourceUsage.innerHTML = `
       <div class="resource-item">
         <span>Memory Usage</span>
@@ -868,12 +879,16 @@ export class PerformanceAnalyticsDashboard {
       return;
     }
 
-    alertsContainer.innerHTML = recentAlerts.map(alert => `
+    alertsContainer.innerHTML = recentAlerts
+      .map(
+        (alert) => `
       <div class="alert-item ${alert.type}">
         <div>${alert.message}</div>
         <div class="alert-meta">${new Date(alert.timestamp).toLocaleTimeString()}</div>
       </div>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 
   /**
@@ -910,7 +925,9 @@ export class PerformanceAnalyticsDashboard {
       return;
     }
 
-    regressionsContainer.innerHTML = this.regressions.map(regression => `
+    regressionsContainer.innerHTML = this.regressions
+      .map(
+        (regression) => `
       <div class="regression-item ${regression.severity}">
         <div class="regression-title">${regression.metric} Regression</div>
         <div class="regression-description">${regression.description}</div>
@@ -920,7 +937,9 @@ export class PerformanceAnalyticsDashboard {
           Status: ${regression.status}
         </div>
       </div>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 
   /**
@@ -934,17 +953,21 @@ export class PerformanceAnalyticsDashboard {
     if (!currentMetrics) return;
 
     const bottlenecks = this.identifyBottlenecks(currentMetrics);
-    
+
     if (bottlenecks.length === 0) {
       bottlenecksContainer.innerHTML = '<p>No performance bottlenecks detected</p>';
       return;
     }
 
-    bottlenecksContainer.innerHTML = bottlenecks.map(bottleneck => `
+    bottlenecksContainer.innerHTML = bottlenecks
+      .map(
+        (bottleneck) => `
       <div class="bottleneck-item">
         <strong>${bottleneck}</strong>
       </div>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 
   /**
@@ -974,15 +997,19 @@ export class PerformanceAnalyticsDashboard {
     if (!currentMetrics) return;
 
     const recommendations = this.generateRecommendations(currentMetrics);
-    
+
     if (recommendations.length === 0) {
       recommendationsContainer.innerHTML = '<p>No recommendations at this time</p>';
       return;
     }
 
-    recommendationsContainer.innerHTML = recommendations.map(rec => `
+    recommendationsContainer.innerHTML = recommendations
+      .map(
+        (rec) => `
       <div class="recommendation-item">${rec}</div>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 
   /**
@@ -1027,13 +1054,15 @@ export class PerformanceAnalyticsDashboard {
     if (!profilesContainer) return;
 
     const profiles = this.performanceMonitor.getActiveProfiles();
-    
+
     if (profiles.length === 0) {
       profilesContainer.innerHTML = '<p>No active performance profiles</p>';
       return;
     }
 
-    profilesContainer.innerHTML = profiles.map(profile => `
+    profilesContainer.innerHTML = profiles
+      .map(
+        (profile) => `
       <div class="profile-card">
         <div class="profile-title">${profile.name}</div>
         <div class="profile-score">${profile.summary.performanceScore}</div>
@@ -1042,7 +1071,9 @@ export class PerformanceAnalyticsDashboard {
           Samples: ${profile.metrics.length}
         </div>
       </div>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 
   /**
@@ -1061,7 +1092,7 @@ export class PerformanceAnalyticsDashboard {
     const report = this.generateReport();
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.href = url;
     a.download = `performance-report-${Date.now()}.json`;
@@ -1077,7 +1108,7 @@ export class PerformanceAnalyticsDashboard {
   private generateReport(): PerformanceReport {
     const currentMetrics = this.performanceMonitor.getCurrentMetrics();
     const metricsHistory = this.performanceMonitor.getMetricsHistory();
-    
+
     return {
       id: `report-${Date.now()}`,
       title: 'Performance Analytics Report',
@@ -1118,11 +1149,11 @@ export class PerformanceAnalyticsDashboard {
    */
   private generateCoreWebVitalsReport(metrics: PerformanceMetrics[]): CoreWebVitalsReport {
     // Simplified implementation
-    const lcpValues = metrics.map(m => m.lcp).filter(v => v > 0);
-    const fidValues = metrics.map(m => m.fid).filter(v => v > 0);
-    const clsValues = metrics.map(m => m.cls).filter(v => v > 0);
-    const fcpValues = metrics.map(m => m.fcp).filter(v => v > 0);
-    const ttfbValues = metrics.map(m => m.ttfb).filter(v => v > 0);
+    const lcpValues = metrics.map((m) => m.lcp).filter((v) => v > 0);
+    const fidValues = metrics.map((m) => m.fid).filter((v) => v > 0);
+    const clsValues = metrics.map((m) => m.cls).filter((v) => v > 0);
+    const fcpValues = metrics.map((m) => m.fcp).filter((v) => v > 0);
+    const ttfbValues = metrics.map((m) => m.ttfb).filter((v) => v > 0);
 
     return {
       lcp: this.calculateStatistics(lcpValues),
@@ -1136,7 +1167,12 @@ export class PerformanceAnalyticsDashboard {
   /**
    * Calculate statistics for metric values
    */
-  private calculateStatistics(values: number[]): { avg: number; p75: number; p90: number; distribution: number[] } {
+  private calculateStatistics(values: number[]): {
+    avg: number;
+    p75: number;
+    p90: number;
+    distribution: number[];
+  } {
     if (values.length === 0) {
       return { avg: 0, p75: 0, p90: 0, distribution: [] };
     }
@@ -1144,7 +1180,7 @@ export class PerformanceAnalyticsDashboard {
     const sorted = [...values].sort((a, b) => a - b);
     const avg = values.reduce((sum, val) => sum + val, 0) / values.length;
     const p75 = sorted[Math.floor(sorted.length * 0.75)] || 0;
-    const p90 = sorted[Math.floor(sorted.length * 0.90)] || 0;
+    const p90 = sorted[Math.floor(sorted.length * 0.9)] || 0;
 
     return { avg, p75, p90, distribution: sorted };
   }
@@ -1161,9 +1197,9 @@ export class PerformanceAnalyticsDashboard {
       };
     }
 
-    const memoryValues = metrics.map(m => (m.memory.used / m.memory.total) * 100);
-    const cpuValues = metrics.map(m => m.cpu.usage);
-    const latencyValues = metrics.map(m => m.network.averageLatency);
+    const memoryValues = metrics.map((m) => (m.memory.used / m.memory.total) * 100);
+    const cpuValues = metrics.map((m) => m.cpu.usage);
+    const latencyValues = metrics.map((m) => m.network.averageLatency);
     const dataTransferred = metrics.reduce((sum, m) => sum + m.network.totalDataTransferred, 0);
 
     return {
@@ -1199,8 +1235,8 @@ export class PerformanceAnalyticsDashboard {
       };
     }
 
-    const loadTimes = metrics.map(m => m.userExperience.pageLoadTime);
-    const interactionLatencies = metrics.map(m => m.userExperience.interactionLatency);
+    const loadTimes = metrics.map((m) => m.userExperience.pageLoadTime);
+    const interactionLatencies = metrics.map((m) => m.userExperience.interactionLatency);
 
     return {
       pageLoadTime: this.calculateStatistics(loadTimes),
@@ -1224,9 +1260,9 @@ export class PerformanceAnalyticsDashboard {
    */
   destroy(): void {
     this.stop();
-    this.charts.forEach(chart => chart.destroy());
+    this.charts.forEach((chart) => chart.destroy());
     this.charts.clear();
-    
+
     if (this.container) {
       this.container.innerHTML = '';
     }
@@ -1246,11 +1282,14 @@ class PerformanceChart {
   private canvas: HTMLCanvasElement | null;
   private ctx: CanvasRenderingContext2D | null;
 
-  constructor(canvasId: string, _config: {
-    type: string;
-    title: string;
-    metrics: string[];
-  }) {
+  constructor(
+    canvasId: string,
+    _config: {
+      type: string;
+      title: string;
+      metrics: string[];
+    },
+  ) {
     this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
     this.ctx = this.canvas?.getContext('2d') || null;
 
@@ -1264,7 +1303,7 @@ class PerformanceChart {
     if (!this.ctx || !this.canvas || metrics.length === 0) return;
 
     this.clearCanvas();
-    
+
     // Simple chart rendering implementation
     this.drawChart(metrics);
   }
@@ -1281,22 +1320,22 @@ class PerformanceChart {
     this.ctx.strokeStyle = '#007bff';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
-    
+
     const width = this.canvas.width;
     const height = this.canvas.height;
     const stepX = width / (metrics.length - 1);
-    
+
     metrics.forEach((_metric, index) => {
       const x = index * stepX;
-      const y = height - (height * 0.5); // Placeholder positioning
-      
+      const y = height - height * 0.5; // Placeholder positioning
+
       if (index === 0) {
         this.ctx!.moveTo(x, y);
       } else {
         this.ctx!.lineTo(x, y);
       }
     });
-    
+
     this.ctx.stroke();
   }
 

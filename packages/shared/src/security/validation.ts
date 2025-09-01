@@ -1,14 +1,14 @@
 /**
  * HEYS Security Layer v1.4
  * Modern validation and security system
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
  */
 
-import { z } from 'zod';
 import DOMPurify from 'dompurify';
+import { z } from 'zod';
 
 /**
  * Base validation schema definitions
@@ -18,7 +18,11 @@ export const ValidationSchemas = {
   user: z.object({
     id: z.string().uuid(),
     email: z.string().email(),
-    username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_-]+$/),
+    username: z
+      .string()
+      .min(3)
+      .max(50)
+      .regex(/^[a-zA-Z0-9_-]+$/),
     password: z.string().min(8).max(128),
     role: z.enum(['admin', 'user', 'moderator', 'guest']),
     isActive: z.boolean().default(true),
@@ -41,7 +45,10 @@ export const ValidationSchemas = {
   file: z.object({
     name: z.string().min(1).max(255),
     type: z.string().regex(/^[a-zA-Z0-9\/\-\.]+$/),
-    size: z.number().min(1).max(10 * 1024 * 1024), // 10MB max
+    size: z
+      .number()
+      .min(1)
+      .max(10 * 1024 * 1024), // 10MB max
     content: z.string().or(z.instanceof(ArrayBuffer)),
   }),
 
@@ -101,7 +108,7 @@ export class InputSanitizer {
     if (typeof input !== 'string') {
       throw new Error('Input must be a string');
     }
-    
+
     // Remove dangerous SQL patterns
     const dangerous = [
       /('|(\\'))/gi,
@@ -111,7 +118,7 @@ export class InputSanitizer {
     ];
 
     let sanitized = input;
-    dangerous.forEach(pattern => {
+    dangerous.forEach((pattern) => {
       sanitized = sanitized.replace(pattern, '');
     });
 
@@ -156,7 +163,7 @@ export const SecurityRules: Record<string, SecurityRule> = {
         /<object/gi,
         /<embed/gi,
       ];
-      return !xssPatterns.some(pattern => pattern.test(value));
+      return !xssPatterns.some((pattern) => pattern.test(value));
     },
     message: 'Potential XSS attack detected',
     severity: 'critical',
@@ -171,7 +178,7 @@ export const SecurityRules: Record<string, SecurityRule> = {
         /(;|--|\||\|\||&&)/gi,
         /\b(union|select|insert|update|delete|drop|create|alter|exec|execute)\b/gi,
       ];
-      return !sqlPatterns.some(pattern => pattern.test(value));
+      return !sqlPatterns.some((pattern) => pattern.test(value));
     },
     message: 'Potential SQL injection detected',
     severity: 'critical',
@@ -199,7 +206,8 @@ export const SecurityRules: Record<string, SecurityRule> = {
         /[^A-Za-z0-9]/.test(value)
       );
     },
-    message: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character',
+    message:
+      'Password must be at least 8 characters with uppercase, lowercase, number, and special character',
     severity: 'high',
   },
 
@@ -274,7 +282,7 @@ export class SecurityValidator {
       sanitize?: boolean;
       strictMode?: boolean;
       customRules?: string[];
-    } = {}
+    } = {},
   ): Promise<ValidationResult> {
     const result: ValidationResult = {
       isValid: true,
@@ -323,7 +331,6 @@ export class SecurityValidator {
           result.isValid = false;
         }
       }
-
     } catch (error) {
       result.isValid = false;
       result.errors.push({
@@ -343,7 +350,7 @@ export class SecurityValidator {
   validateInput(
     value: unknown,
     type: 'email' | 'password' | 'text' | 'html' | 'filename',
-    options: { required?: boolean; sanitize?: boolean } = {}
+    options: { required?: boolean; sanitize?: boolean } = {},
   ): ValidationResult {
     const result: ValidationResult = {
       isValid: true,
@@ -450,7 +457,7 @@ export class SecurityValidator {
     }
 
     if (Array.isArray(obj)) {
-      return obj.map(item => this.sanitizeObject(item));
+      return obj.map((item) => this.sanitizeObject(item));
     }
 
     if (obj && typeof obj === 'object') {
@@ -470,7 +477,7 @@ export class SecurityValidator {
   private applySecurityRules(data: unknown, ruleNames: string[]): ValidationError[] {
     const errors: ValidationError[] = [];
 
-    ruleNames.forEach(ruleName => {
+    ruleNames.forEach((ruleName) => {
       const rule = SecurityRules[ruleName] || this.customRules.get(ruleName);
       if (rule && !rule.validator(data)) {
         errors.push({
@@ -498,16 +505,15 @@ export function SecurityBoundary(rules: string[] = []) {
     descriptor.value = async function (...args: any[]) {
       // Validate all arguments
       for (let i = 0; i < args.length; i++) {
-        const validation = await validator.validateSchema(
-          args[i],
-          z.unknown(),
-          { strictMode: true, customRules: rules }
-        );
+        const validation = await validator.validateSchema(args[i], z.unknown(), {
+          strictMode: true,
+          customRules: rules,
+        });
 
         if (!validation.isValid) {
           throw new SecurityError(
             `Security validation failed for argument ${i}`,
-            validation.errors
+            validation.errors,
           );
         }
       }
@@ -540,8 +546,12 @@ export const defaultValidator = new SecurityValidator();
  */
 export const validate = {
   email: (value: unknown) => defaultValidator.validateInput(value, 'email', { required: true }),
-  password: (value: unknown) => defaultValidator.validateInput(value, 'password', { required: true }),
-  text: (value: unknown, sanitize = true) => defaultValidator.validateInput(value, 'text', { sanitize }),
-  html: (value: unknown, sanitize = true) => defaultValidator.validateInput(value, 'html', { sanitize }),
-  filename: (value: unknown, sanitize = true) => defaultValidator.validateInput(value, 'filename', { sanitize }),
+  password: (value: unknown) =>
+    defaultValidator.validateInput(value, 'password', { required: true }),
+  text: (value: unknown, sanitize = true) =>
+    defaultValidator.validateInput(value, 'text', { sanitize }),
+  html: (value: unknown, sanitize = true) =>
+    defaultValidator.validateInput(value, 'html', { sanitize }),
+  filename: (value: unknown, sanitize = true) =>
+    defaultValidator.validateInput(value, 'filename', { sanitize }),
 };

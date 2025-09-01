@@ -1,13 +1,9 @@
 // Security module exports
-export * from './validation';
 export * from './headers';
 export * from './pentest';
+export * from './validation';
 
 // Type definitions
-export type { ValidationResult, ValidationError, ValidationWarning } from './validation';
-export type { SecurityHeadersConfig, CSPDirectives, CORSConfig } from './headers';
-export type { 
-  VulnerabilityScanner, 
-  VulnerabilityResult, 
-  PenetrationTestReport 
-} from './pentest';
+export type { CORSConfig, CSPDirectives, SecurityHeadersConfig } from './headers';
+export type { PenetrationTestReport, VulnerabilityResult, VulnerabilityScanner } from './pentest';
+export type { ValidationError, ValidationResult, ValidationWarning } from './validation';

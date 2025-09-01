@@ -30,7 +30,7 @@
 ```javascript
 // 🔗 СИСТЕМА АВТОМАТИЧЕСКИХ ЯКОРЕЙ
 await this.runTest('Anchor System Monitoring', () =>
-  this.testAnchorSystemMonitoring()
+  this.testAnchorSystemMonitoring(),
 );
 ```
 
@@ -105,7 +105,7 @@ this.log('\n🎯 ФИНАЛЬНЫЙ ОТЧЕТ ПОЛНОГО ТЕСТИРОВА
 if (this.testsResults && this.testsResults.passed !== undefined) {
   this.log(
     `📊 Структурные тесты: ${this.testsResults.passed}/${this.testsResults.total}`,
-    'info'
+    'info',
   );
 } else {
   this.log(`📊 Структурные тесты: результаты недоступны`, 'warning');
@@ -113,7 +113,7 @@ if (this.testsResults && this.testsResults.passed !== undefined) {
 
 this.log(
   `🧪 Функциональные тесты: ${functionalResult.passed}/${functionalResult.total}`,
-  'info'
+  'info',
 );
 
 // Безопасное вычисление общего результата

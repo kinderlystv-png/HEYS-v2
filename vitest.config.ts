@@ -13,7 +13,7 @@ export default defineConfig({
         'dist/',
         '**/*.d.ts',
         '**/*.{test,spec}.{ts,tsx}',
-        'vitest.config.ts'
+        'vitest.config.ts',
       ],
       reportsDirectory: './coverage',
     },

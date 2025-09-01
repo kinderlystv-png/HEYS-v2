@@ -369,7 +369,7 @@ export interface HEYSStats {
   getRecentAverage: (daysCount?: number) => DayAggregation;
   comparePeriods: (
     period1: DayRecord[],
-    period2: DayRecord[]
+    period2: DayRecord[],
   ) => {
     period1: DayAggregation;
     period2: DayAggregation;
@@ -377,7 +377,7 @@ export interface HEYSStats {
   };
   findAnomalies: (
     days: DayRecord[],
-    threshold?: number
+    threshold?: number,
   ) => Array<{
     date: string;
     type: 'high_kcal' | 'low_kcal' | 'high_weight' | 'low_weight';

@@ -1,5 +1,5 @@
 
-> @heys/analytics@13.0.0 build C:\! HEYS 2\packages\analytics
+> @heys/analytics@14.0.0 build C:\! HEYS 2\packages\analytics
 > tsup
 
 [34mCLI[39m Building entry: src/index.ts
@@ -12,7 +12,7 @@
 [34mESM[39m Build start
 [32mCJS[39m [1mdist\index.cjs     [22m[32m146.00 B[39m
 [32mCJS[39m [1mdist\index.cjs.map [22m[32m296.00 B[39m
-[32mCJS[39m ⚡️ Build success in 93ms
+[32mCJS[39m ⚡️ Build success in 100ms
 [32mESM[39m [1mdist\index.js     [22m[32m134.00 B[39m
 [32mESM[39m [1mdist\index.js.map [22m[32m296.00 B[39m
-[32mESM[39m ⚡️ Build success in 92ms
+[32mESM[39m ⚡️ Build success in 96ms

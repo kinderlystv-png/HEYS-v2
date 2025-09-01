@@ -24,7 +24,7 @@ await integration.autoCreateFile(filePath, content);
 const automation = new UniversalAnchorAutomation();
 const results = await automation.processAllFiles();
 console.log(
-  `Добавлено ${results.totalAnchors} якорей в ${results.totalFiles} файлов`
+  `Добавлено ${results.totalAnchors} якорей в ${results.totalFiles} файлов`,
 );
 ```
 
@@ -50,8 +50,8 @@ const searchResults = React.useMemo(() => {
   }
 
   // Простой поиск как fallback
-  return allItems.filter(item =>
-    item.name.toLowerCase().includes(query.toLowerCase())
+  return allItems.filter((item) =>
+    item.name.toLowerCase().includes(query.toLowerCase()),
   );
 }, [query, allItems]);
 ```
@@ -133,7 +133,7 @@ class CodeNavigator {
   // @ANCHOR: navigate_to_anchor_method
   navigateToAnchor(anchorName, editor) {
     const anchors = this.extractAnchors(editor.getValue());
-    const anchor = anchors.find(a => a.name === anchorName);
+    const anchor = anchors.find((a) => a.name === anchorName);
     if (anchor) {
       editor.gotoLine(anchor.line);
     }
@@ -248,7 +248,7 @@ const [products, setProducts] = productsManager.useState([]);
   // Экспорт в HEYS namespace
   global.HEYS.ModuleName = {
     mainMethod: (input, options) => moduleInstance.mainMethod(input, options),
-    configure: newConfig => Object.assign(CONFIG, newConfig),
+    configure: (newConfig) => Object.assign(CONFIG, newConfig),
     getStatus: () => ({
       initialized: moduleInstance.initialized,
       version: CONFIG.version,
@@ -287,7 +287,7 @@ function SmartSearchInput({ data, onSelect, placeholder = 'Поиск...' }) {
             enablePhonetic: true,
             enableSynonyms: true,
             maxSuggestions: 10,
-          }
+          },
         );
         return searchResult.results || [];
       } catch (error) {
@@ -296,20 +296,20 @@ function SmartSearchInput({ data, onSelect, placeholder = 'Поиск...' }) {
     }
 
     return data
-      .filter(item => item.name.toLowerCase().includes(query.toLowerCase()))
+      .filter((item) => item.name.toLowerCase().includes(query.toLowerCase()))
       .slice(0, 10);
   }, [query, data]);
 
   const handleKeyDown = React.useCallback(
-    e => {
+    (e) => {
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          setSelectedIndex(prev => Math.min(prev + 1, results.length - 1));
+          setSelectedIndex((prev) => Math.min(prev + 1, results.length - 1));
           break;
         case 'ArrowUp':
           e.preventDefault();
-          setSelectedIndex(prev => Math.max(prev - 1, -1));
+          setSelectedIndex((prev) => Math.max(prev - 1, -1));
           break;
         case 'Enter':
           e.preventDefault();
@@ -325,7 +325,7 @@ function SmartSearchInput({ data, onSelect, placeholder = 'Поиск...' }) {
           break;
       }
     },
-    [results, selectedIndex, onSelect]
+    [results, selectedIndex, onSelect],
   );
 
   return React.createElement(
@@ -335,7 +335,7 @@ function SmartSearchInput({ data, onSelect, placeholder = 'Поиск...' }) {
       type: 'text',
       value: query,
       placeholder,
-      onChange: e => {
+      onChange: (e) => {
         setQuery(e.target.value);
         setIsOpen(true);
       },
@@ -382,10 +382,10 @@ function SmartSearchInput({ data, onSelect, placeholder = 'Поиск...' }) {
               },
               onMouseEnter: () => setSelectedIndex(index),
             },
-            item.name
-          )
-        )
-      )
+            item.name,
+          ),
+        ),
+      ),
   );
 }
 ```
@@ -405,7 +405,7 @@ const LazyModule = {
   async get() {
     if (this._instance) return this._instance;
     if (this._loading)
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         const check = () =>
           this._instance ? resolve(this._instance) : setTimeout(check, 10);
         check();
@@ -452,7 +452,7 @@ const LazyModule = {
     switch (method) {
       case 'search':
         const [query, data] = args;
-        return { results: data.filter(item => item.name.includes(query)) };
+        return { results: data.filter((item) => item.name.includes(query)) };
       default:
         return null;
     }

@@ -3,28 +3,36 @@
  * Centralized monitoring with Sentry integration and structured logging
  */
 
-import SentryMonitoring from './sentry-monitoring';
-import StructuredLogger from './logger';
 import { z } from 'zod';
+import StructuredLogger from './logger';
+import SentryMonitoring from './sentry-monitoring';
 
 // Monitoring configuration schema
 const MonitoringConfigSchema = z.object({
   enabled: z.boolean().default(true),
-  sentry: z.object({
-    enabled: z.boolean().default(true),
-    config: z.any().optional(),
-  }).optional(),
-  logging: z.object({
-    enabled: z.boolean().default(true),
-    config: z.any().optional(),
-  }).optional(),
-  performance: z.object({
-    enabled: z.boolean().default(true),
-    thresholds: z.object({
-      slow: z.number().default(1000), // ms
-      critical: z.number().default(5000), // ms
-    }).default({}),
-  }).default({}),
+  sentry: z
+    .object({
+      enabled: z.boolean().default(true),
+      config: z.any().optional(),
+    })
+    .optional(),
+  logging: z
+    .object({
+      enabled: z.boolean().default(true),
+      config: z.any().optional(),
+    })
+    .optional(),
+  performance: z
+    .object({
+      enabled: z.boolean().default(true),
+      thresholds: z
+        .object({
+          slow: z.number().default(1000), // ms
+          critical: z.number().default(5000), // ms
+        })
+        .default({}),
+    })
+    .default({}),
   errorSampling: z.number().min(0).max(1).default(1),
   performanceSampling: z.number().min(0).max(1).default(0.1),
 });
@@ -95,7 +103,6 @@ export class MonitoringService {
 
       // Setup error handlers
       this.setupGlobalErrorHandlers();
-
     } catch (error) {
       console.error('Failed to initialize monitoring service:', error);
       throw error;
@@ -146,7 +153,7 @@ export class MonitoringService {
   public log(
     level: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal',
     message: string,
-    context?: Record<string, any>
+    context?: Record<string, any>,
   ): void {
     if (!this.initialized) return;
 
@@ -176,7 +183,7 @@ export class MonitoringService {
       component?: string;
       operation?: string;
       metadata?: Record<string, any>;
-    }
+    },
   ): string | null {
     if (!this.initialized) return null;
 
@@ -219,24 +226,24 @@ export class MonitoringService {
       component?: string;
       userId?: string;
       metadata?: Record<string, any>;
-    }
+    },
   ): Promise<T> {
     if (!this.initialized) {
       return await fn();
     }
 
     const startTime = performance.now();
-    
+
     try {
       const result = await fn();
       const duration = performance.now() - startTime;
-      
+
       this.recordPerformance(operation, duration, true, context);
-      
+
       return result;
     } catch (error) {
       const duration = performance.now() - startTime;
-      
+
       this.recordPerformance(operation, duration, false, context);
       this.captureError(error as Error, {
         ...(context?.component && { component: context.component }),
@@ -244,7 +251,7 @@ export class MonitoringService {
         ...(context?.userId && { userId: context.userId }),
         ...(context?.metadata && { metadata: context.metadata }),
       });
-      
+
       throw error;
     }
   }
@@ -260,12 +267,13 @@ export class MonitoringService {
       component?: string;
       userId?: string;
       metadata?: Record<string, any>;
-    }
+    },
   ): void {
     // Update metrics
     this.metrics.performance.measurements++;
-    this.metrics.performance.averageTime = 
-      (this.metrics.performance.averageTime * (this.metrics.performance.measurements - 1) + duration) / 
+    this.metrics.performance.averageTime =
+      (this.metrics.performance.averageTime * (this.metrics.performance.measurements - 1) +
+        duration) /
       this.metrics.performance.measurements;
 
     // Track slow operations
@@ -323,7 +331,7 @@ export class MonitoringService {
   private updateErrorMetrics(level: string, message: string): void {
     this.metrics.errors.total++;
     this.metrics.errors.byLevel[level] = (this.metrics.errors.byLevel[level] || 0) + 1;
-    
+
     this.metrics.errors.recent.push({
       timestamp: new Date(),
       message,
@@ -339,11 +347,7 @@ export class MonitoringService {
   /**
    * Log user action
    */
-  public logUserAction(
-    action: string,
-    userId: string,
-    metadata?: Record<string, any>
-  ): void {
+  public logUserAction(action: string, userId: string, metadata?: Record<string, any>): void {
     if (!this.initialized) return;
 
     if (this.logger) {
@@ -351,12 +355,7 @@ export class MonitoringService {
     }
 
     if (this.sentry) {
-      this.sentry.addBreadcrumb(
-        `User action: ${action}`,
-        'user',
-        'info',
-        { userId, ...metadata }
-      );
+      this.sentry.addBreadcrumb(`User action: ${action}`, 'user', 'info', { userId, ...metadata });
     }
   }
 
@@ -369,7 +368,7 @@ export class MonitoringService {
     statusCode?: number,
     duration?: number,
     userId?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ): void {
     if (!this.initialized) return;
 
@@ -378,12 +377,14 @@ export class MonitoringService {
     }
 
     if (this.sentry && statusCode && statusCode >= 400) {
-      this.sentry.addBreadcrumb(
-        `API Error: ${method} ${url} - ${statusCode}`,
-        'http',
-        'error',
-        { method, url, statusCode, duration, userId, ...metadata }
-      );
+      this.sentry.addBreadcrumb(`API Error: ${method} ${url} - ${statusCode}`, 'http', 'error', {
+        method,
+        url,
+        statusCode,
+        duration,
+        userId,
+        ...metadata,
+      });
     }
   }
 
@@ -394,7 +395,7 @@ export class MonitoringService {
     event: string,
     severity: 'low' | 'medium' | 'high' | 'critical',
     userId?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ): void {
     if (!this.initialized) return;
 
@@ -445,7 +446,7 @@ export class MonitoringService {
     this.metrics.health.lastHeartbeat = new Date();
     this.metrics.health.sentryConnected = this.sentry?.isHealthy() || false;
     this.metrics.health.loggingActive = !!this.logger;
-    
+
     return { ...this.metrics };
   }
 
@@ -532,18 +533,14 @@ export function MonitorMethod(operation?: string) {
 
     descriptor.value = async function (...args: any[]) {
       const monitoring = globalMonitoringService;
-      
+
       if (!monitoring) {
         return originalMethod.apply(this, args);
       }
 
-      return monitoring.measurePerformance(
-        operationName,
-        () => originalMethod.apply(this, args),
-        {
-          component: target.constructor.name,
-        }
-      );
+      return monitoring.measurePerformance(operationName, () => originalMethod.apply(this, args), {
+        component: target.constructor.name,
+      });
     };
 
     return descriptor;
@@ -560,14 +557,14 @@ export function CaptureMethodErrors() {
         return await originalMethod.apply(this, args);
       } catch (error) {
         const monitoring = globalMonitoringService;
-        
+
         if (monitoring) {
           monitoring.captureError(error as Error, {
             component: target.constructor.name,
             operation: propertyKey,
           });
         }
-        
+
         throw error;
       }
     };
@@ -582,7 +579,9 @@ export let globalMonitoringService: MonitoringService | null = null;
 /**
  * Initialize global monitoring service
  */
-export async function initializeGlobalMonitoring(config: Partial<MonitoringConfig>): Promise<MonitoringService> {
+export async function initializeGlobalMonitoring(
+  config: Partial<MonitoringConfig>,
+): Promise<MonitoringService> {
   globalMonitoringService = new MonitoringService(config);
   await globalMonitoringService.initialize();
   return globalMonitoringService;

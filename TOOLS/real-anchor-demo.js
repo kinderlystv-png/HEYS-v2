@@ -10,27 +10,27 @@ class SimpleAnchorGenerator {
         // Классы
         pattern: /^(export\s+)?class\s+(\w+)/gm,
         template: (match, indent) => `${indent}// @ANCHOR:CLASS_{NAME}\n${indent}// КЛАСС {NAME}`,
-        getName: match => match[2],
+        getName: (match) => match[2],
       },
       {
         // Функции (не методы)
         pattern: /^(\s*)(export\s+)?(?:async\s+)?function\s+(\w+)/gm,
         template: (match, indent) =>
           `${indent}// @ANCHOR:FUNCTION_{NAME}\n${indent}// ФУНКЦИЯ {NAME}`,
-        getName: match => match[3],
+        getName: (match) => match[3],
       },
       {
         // Методы в классах (с отступом)
         pattern: /^(\s{4,})(async\s+)?(\w+)\s*\([^)]*\)\s*{/gm,
         template: (match, indent) => `${indent}// @ANCHOR:METHOD_{NAME}\n${indent}// МЕТОД {NAME}`,
-        getName: match => match[3],
-        condition: match => match[3] !== 'constructor', // Пропускаем конструкторы
+        getName: (match) => match[3],
+        condition: (match) => match[3] !== 'constructor', // Пропускаем конструкторы
       },
       {
         // Важные секции с комментариями
         pattern: /^(\s*)(\/\/\s*[=\-]{3,}.*[=\-]{3,})/gm,
         template: (match, indent) => `${indent}// @ANCHOR:SECTION_{NAME}`,
-        getName: match => 'SECTION',
+        getName: (match) => 'SECTION',
       },
     ];
   }

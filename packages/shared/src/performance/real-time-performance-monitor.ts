@@ -1,7 +1,7 @@
 /**
  * HEYS Real-time Performance Monitor v1.0
  * Advanced Performance Monitoring & Analysis System
- * 
+ *
  * Features:
  * - Real-time performance metrics collection
  * - Memory usage and leak detection
@@ -20,7 +20,7 @@ export interface PerformanceMetrics {
   cls: number; // Cumulative Layout Shift
   fcp: number; // First Contentful Paint
   ttfb: number; // Time to First Byte
-  
+
   // Memory Metrics
   memory: {
     used: number;
@@ -29,7 +29,7 @@ export interface PerformanceMetrics {
     usedJSHeapSize: number;
     totalJSHeapSize: number;
   };
-  
+
   // CPU & Performance
   cpu: {
     usage: number;
@@ -38,7 +38,7 @@ export interface PerformanceMetrics {
     renderingTime: number;
     paintingTime: number;
   };
-  
+
   // Rendering Performance
   rendering: {
     fps: number;
@@ -47,7 +47,7 @@ export interface PerformanceMetrics {
     maxFrameTime: number;
     smoothness: number;
   };
-  
+
   // Network Performance
   network: {
     requestCount: number;
@@ -55,7 +55,7 @@ export interface PerformanceMetrics {
     averageLatency: number;
     connectionType: string;
   };
-  
+
   // User Experience
   userExperience: {
     interactionLatency: number;
@@ -63,10 +63,10 @@ export interface PerformanceMetrics {
     clickResponsiveness: number;
     pageLoadTime: number;
   };
-  
+
   // Custom Metrics
   custom: Record<string, number>;
-  
+
   // Metadata
   timestamp: number;
   url: string;
@@ -205,7 +205,7 @@ export class RealTimePerformanceMonitor {
       this.intervalId = null;
     }
 
-    this.observers.forEach(observer => observer.disconnect());
+    this.observers.forEach((observer) => observer.disconnect());
     console.log('Performance monitoring stopped');
   }
 
@@ -259,7 +259,6 @@ export class RealTimePerformanceMonitor {
       if (this.config.profiling.autoProfile) {
         this.checkAutoProfile(metrics);
       }
-
     } catch (error) {
       console.error('Error collecting performance metrics:', error);
     }
@@ -270,7 +269,7 @@ export class RealTimePerformanceMonitor {
    */
   private getMemoryMetrics(): PerformanceMetrics['memory'] {
     const memory = (performance as any).memory;
-    
+
     if (!memory) {
       return {
         used: 0,
@@ -300,7 +299,7 @@ export class RealTimePerformanceMonitor {
     let renderingTime = 0;
     let paintingTime = 0;
 
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       if (entry.name.includes('script')) {
         scriptingTime += entry.duration;
       } else if (entry.name.includes('render')) {
@@ -325,12 +324,15 @@ export class RealTimePerformanceMonitor {
    */
   private calculateCPUUsage(): number {
     // Simplified CPU usage calculation
-    const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+    const navigationTiming = performance.getEntriesByType(
+      'navigation',
+    )[0] as PerformanceNavigationTiming;
     if (!navigationTiming) return 0;
 
     const totalTime = navigationTiming.loadEventEnd - navigationTiming.fetchStart;
-    const scriptTime = navigationTiming.domContentLoadedEventEnd - navigationTiming.domContentLoadedEventStart;
-    
+    const scriptTime =
+      navigationTiming.domContentLoadedEventEnd - navigationTiming.domContentLoadedEventStart;
+
     return totalTime > 0 ? (scriptTime / totalTime) * 100 : 0;
   }
 
@@ -340,16 +342,16 @@ export class RealTimePerformanceMonitor {
   private getRenderingMetrics(): PerformanceMetrics['rendering'] {
     const now = performance.now();
     const frameTime = now - this.lastFrameTime;
-    
+
     if (this.lastFrameTime > 0) {
       this.frameCount++;
-      
+
       // Check for dropped frames (> 16.67ms = 60fps)
       if (frameTime > 16.67) {
         this.droppedFrames++;
       }
     }
-    
+
     this.lastFrameTime = now;
 
     const fps = this.frameCount > 0 ? 1000 / (now / this.frameCount) : 0;
@@ -374,7 +376,7 @@ export class RealTimePerformanceMonitor {
     let totalLatency = 0;
     let requestCount = resourceEntries.length;
 
-    resourceEntries.forEach(entry => {
+    resourceEntries.forEach((entry) => {
       const resourceEntry = entry as PerformanceResourceTiming;
       totalDataTransferred += resourceEntry.transferSize || 0;
       totalLatency += resourceEntry.responseEnd - resourceEntry.requestStart;
@@ -395,13 +397,17 @@ export class RealTimePerformanceMonitor {
    * Get user experience metrics
    */
   private getUserExperienceMetrics(): PerformanceMetrics['userExperience'] {
-    const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-    
+    const navigationTiming = performance.getEntriesByType(
+      'navigation',
+    )[0] as PerformanceNavigationTiming;
+
     return {
       interactionLatency: this.measureInteractionLatency(),
       scrollResponsiveness: this.measureScrollResponsiveness(),
       clickResponsiveness: this.measureClickResponsiveness(),
-      pageLoadTime: navigationTiming ? navigationTiming.loadEventEnd - navigationTiming.fetchStart : 0,
+      pageLoadTime: navigationTiming
+        ? navigationTiming.loadEventEnd - navigationTiming.fetchStart
+        : 0,
     };
   }
 
@@ -454,7 +460,7 @@ export class RealTimePerformanceMonitor {
       // FID Observer
       const fidObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        entries.forEach(entry => {
+        entries.forEach((entry) => {
           const fidEntry = entry as any; // PerformanceEventTiming
           if (fidEntry.processingStart) {
             this.updateLatestMetric('fid', fidEntry.processingStart - entry.startTime);
@@ -473,7 +479,7 @@ export class RealTimePerformanceMonitor {
       const clsObserver = new PerformanceObserver((list) => {
         let clsValue = 0;
         const entries = list.getEntries();
-        entries.forEach(entry => {
+        entries.forEach((entry) => {
           const clsEntry = entry as any; // PerformanceLayoutShiftTiming
           if (clsEntry.hadRecentInput !== undefined && !clsEntry.hadRecentInput) {
             clsValue += clsEntry.value || 0;
@@ -492,7 +498,7 @@ export class RealTimePerformanceMonitor {
       // FCP Observer
       const fcpObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        entries.forEach(entry => {
+        entries.forEach((entry) => {
           if (entry.name === 'first-contentful-paint') {
             this.updateLatestMetric('fcp', entry.startTime);
           }
@@ -587,7 +593,9 @@ export class RealTimePerformanceMonitor {
    */
   private updateWebVitalsMetrics(metrics: PerformanceMetrics): void {
     // Get TTFB from navigation timing
-    const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+    const navigationTiming = performance.getEntriesByType(
+      'navigation',
+    )[0] as PerformanceNavigationTiming;
     if (navigationTiming) {
       metrics.ttfb = navigationTiming.responseStart - navigationTiming.requestStart;
     }
@@ -641,43 +649,88 @@ export class RealTimePerformanceMonitor {
 
     // Check Core Web Vitals
     if (metrics.lcp > thresholds.lcp.poor) {
-      alerts.push(this.createAlert('critical', 'user-experience', 
-        `Poor LCP: ${metrics.lcp.toFixed(0)}ms`, metrics.lcp, thresholds.lcp.poor,
-        ['Optimize image loading', 'Reduce server response time', 'Use CDN']));
+      alerts.push(
+        this.createAlert(
+          'critical',
+          'user-experience',
+          `Poor LCP: ${metrics.lcp.toFixed(0)}ms`,
+          metrics.lcp,
+          thresholds.lcp.poor,
+          ['Optimize image loading', 'Reduce server response time', 'Use CDN'],
+        ),
+      );
     }
 
     if (metrics.fid > thresholds.fid.poor) {
-      alerts.push(this.createAlert('critical', 'user-experience',
-        `Poor FID: ${metrics.fid.toFixed(0)}ms`, metrics.fid, thresholds.fid.poor,
-        ['Reduce JavaScript execution time', 'Break up long tasks', 'Use web workers']));
+      alerts.push(
+        this.createAlert(
+          'critical',
+          'user-experience',
+          `Poor FID: ${metrics.fid.toFixed(0)}ms`,
+          metrics.fid,
+          thresholds.fid.poor,
+          ['Reduce JavaScript execution time', 'Break up long tasks', 'Use web workers'],
+        ),
+      );
     }
 
     if (metrics.cls > thresholds.cls.poor) {
-      alerts.push(this.createAlert('critical', 'user-experience',
-        `Poor CLS: ${metrics.cls.toFixed(3)}`, metrics.cls, thresholds.cls.poor,
-        ['Set dimensions for images and videos', 'Avoid inserting content above existing content']));
+      alerts.push(
+        this.createAlert(
+          'critical',
+          'user-experience',
+          `Poor CLS: ${metrics.cls.toFixed(3)}`,
+          metrics.cls,
+          thresholds.cls.poor,
+          [
+            'Set dimensions for images and videos',
+            'Avoid inserting content above existing content',
+          ],
+        ),
+      );
     }
 
     // Check memory usage
     const memoryUsagePercent = (metrics.memory.used / metrics.memory.total) * 100;
     if (memoryUsagePercent > thresholds.memory.critical) {
-      alerts.push(this.createAlert('critical', 'memory',
-        `Critical memory usage: ${memoryUsagePercent.toFixed(1)}%`, memoryUsagePercent, thresholds.memory.critical,
-        ['Check for memory leaks', 'Optimize data structures', 'Implement garbage collection']));
+      alerts.push(
+        this.createAlert(
+          'critical',
+          'memory',
+          `Critical memory usage: ${memoryUsagePercent.toFixed(1)}%`,
+          memoryUsagePercent,
+          thresholds.memory.critical,
+          ['Check for memory leaks', 'Optimize data structures', 'Implement garbage collection'],
+        ),
+      );
     }
 
     // Check CPU usage
     if (metrics.cpu.usage > thresholds.cpu.critical) {
-      alerts.push(this.createAlert('critical', 'cpu',
-        `High CPU usage: ${metrics.cpu.usage.toFixed(1)}%`, metrics.cpu.usage, thresholds.cpu.critical,
-        ['Optimize algorithms', 'Use web workers', 'Reduce DOM manipulations']));
+      alerts.push(
+        this.createAlert(
+          'critical',
+          'cpu',
+          `High CPU usage: ${metrics.cpu.usage.toFixed(1)}%`,
+          metrics.cpu.usage,
+          thresholds.cpu.critical,
+          ['Optimize algorithms', 'Use web workers', 'Reduce DOM manipulations'],
+        ),
+      );
     }
 
     // Check FPS
     if (metrics.rendering.fps < thresholds.fps.critical) {
-      alerts.push(this.createAlert('critical', 'rendering',
-        `Low FPS: ${metrics.rendering.fps.toFixed(1)}`, metrics.rendering.fps, thresholds.fps.critical,
-        ['Optimize animations', 'Use CSS transforms', 'Reduce paint operations']));
+      alerts.push(
+        this.createAlert(
+          'critical',
+          'rendering',
+          `Low FPS: ${metrics.rendering.fps.toFixed(1)}`,
+          metrics.rendering.fps,
+          thresholds.fps.critical,
+          ['Optimize animations', 'Use CSS transforms', 'Reduce paint operations'],
+        ),
+      );
     }
 
     // Add alerts to history
@@ -693,7 +746,7 @@ export class RealTimePerformanceMonitor {
     message: string,
     value: number,
     threshold: number,
-    recommendations: string[]
+    recommendations: string[],
   ): PerformanceAlert {
     return {
       type,
@@ -730,7 +783,7 @@ export class RealTimePerformanceMonitor {
    * Check for auto-profiling trigger
    */
   private checkAutoProfile(metrics: PerformanceMetrics): void {
-    const shouldProfile = 
+    const shouldProfile =
       metrics.lcp > this.config.thresholds.lcp.needs_improvement ||
       metrics.fid > this.config.thresholds.fid.needs_improvement ||
       metrics.cpu.usage > this.config.thresholds.cpu.warning ||
@@ -745,7 +798,7 @@ export class RealTimePerformanceMonitor {
    * Check if currently profiling
    */
   private isCurrentlyProfiling(): boolean {
-    return Array.from(this.profileSessions.values()).some(session => !session.endTime);
+    return Array.from(this.profileSessions.values()).some((session) => !session.endTime);
   }
 
   /**
@@ -761,7 +814,7 @@ export class RealTimePerformanceMonitor {
    */
   startProfiling(sessionId: string, duration?: number): void {
     const profileDuration = duration || this.config.profiling.profileDuration;
-    
+
     const profile: PerformanceProfile = {
       name: sessionId,
       duration: profileDuration,
@@ -805,8 +858,8 @@ export class RealTimePerformanceMonitor {
    * Get metrics for specific time period
    */
   private getMetricsForPeriod(startTime: number, endTime: number): PerformanceMetrics[] {
-    return this.metricsHistory.filter(metrics => 
-      metrics.timestamp >= startTime && metrics.timestamp <= endTime
+    return this.metricsHistory.filter(
+      (metrics) => metrics.timestamp >= startTime && metrics.timestamp <= endTime,
     );
   }
 
@@ -825,13 +878,13 @@ export class RealTimePerformanceMonitor {
 
     // Calculate average metrics
     const averageMetrics = this.calculateAverageMetrics(profile.metrics);
-    
+
     // Calculate performance score
     const performanceScore = this.calculatePerformanceScore(averageMetrics);
-    
+
     // Identify bottlenecks
     const bottlenecks = this.identifyBottlenecks(averageMetrics);
-    
+
     // Generate recommendations
     const recommendations = this.generateRecommendations(bottlenecks, averageMetrics);
 
@@ -849,9 +902,9 @@ export class RealTimePerformanceMonitor {
   private calculateAverageMetrics(metrics: PerformanceMetrics[]): PerformanceMetrics {
     // Implementation for calculating averages across all metrics
     const count = metrics.length;
-    
+
     return metrics.reduce((avg, current) => {
-      Object.keys(current).forEach(key => {
+      Object.keys(current).forEach((key) => {
         if (typeof current[key as keyof PerformanceMetrics] === 'number') {
           const numKey = key as keyof PerformanceMetrics;
           (avg as any)[numKey] = ((avg as any)[numKey] || 0) + (current[numKey] as number) / count;
@@ -922,7 +975,7 @@ export class RealTimePerformanceMonitor {
   private generateRecommendations(bottlenecks: string[], _metrics: PerformanceMetrics): string[] {
     const recommendations: string[] = [];
 
-    bottlenecks.forEach(bottleneck => {
+    bottlenecks.forEach((bottleneck) => {
       switch (bottleneck) {
         case 'Slow loading of main content':
           recommendations.push('Optimize images and use next-gen formats');
@@ -959,12 +1012,12 @@ export class RealTimePerformanceMonitor {
 
     // Remove duplicates
     const uniqueRecommendations: string[] = [];
-    recommendations.forEach(rec => {
+    recommendations.forEach((rec) => {
       if (uniqueRecommendations.indexOf(rec) === -1) {
         uniqueRecommendations.push(rec);
       }
     });
-    
+
     return uniqueRecommendations;
   }
 
@@ -1014,7 +1067,7 @@ export class RealTimePerformanceMonitor {
 
   destroy(): void {
     this.stop();
-    this.observers.forEach(observer => observer.disconnect());
+    this.observers.forEach((observer) => observer.disconnect());
     this.observers.clear();
     this.profileSessions.clear();
     this.clearHistory();

@@ -2,16 +2,16 @@
 
 // Import existing types to maintain compatibility
 import type {
+  DayRecord,
   HEYSGlobal,
   Meal,
-  DayRecord,
-  UserProfile,
-  Product,
   MealItem,
-  Training,
   MealTotals,
   NutritionTotals,
+  Product,
   ProductIndex,
+  Training,
+  UserProfile,
 } from './types/heys';
 
 // Declare global HEYS namespace
@@ -124,7 +124,7 @@ export interface DerivedProduct {
     trainings = trainings.map((t: any) =>
       t && Array.isArray(t.z)
         ? { z: [+t.z[0] || 0, +t.z[1] || 0, +t.z[2] || 0, +t.z[3] || 0] }
-        : { z: [0, 0, 0, 0] }
+        : { z: [0, 0, 0, 0] },
     );
 
     return {
@@ -241,7 +241,7 @@ export interface DerivedProduct {
       T.fiber += scale(per.fiber100, G);
     });
 
-    Object.keys(T).forEach(k => ((T as any)[k] = round1((T as any)[k])));
+    Object.keys(T).forEach((k) => ((T as any)[k] = round1((T as any)[k])));
     _mealTotalsCache.set(key, T);
     return T;
   }

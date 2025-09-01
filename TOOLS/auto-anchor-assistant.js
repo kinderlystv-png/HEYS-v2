@@ -103,7 +103,9 @@ class AutoAnchorAssistant {
   // Проверка, нужно ли обрабатывать файл
   shouldProcessFile(filePath) {
     // Проверяем расширение
-    const hasValidExtension = this.config.autoProcessExtensions.some(ext => filePath.endsWith(ext));
+    const hasValidExtension = this.config.autoProcessExtensions.some((ext) =>
+      filePath.endsWith(ext),
+    );
 
     if (!hasValidExtension) return false;
 
@@ -169,7 +171,7 @@ async function smartReplace(filePath, oldString, newString) {
     'replace_string_in_file',
     filePath,
     oldString,
-    newString
+    newString,
   );
 }
 

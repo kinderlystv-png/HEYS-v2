@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { createUser, UserSchema, UserDraft } from '../models/user.js';
+import { describe, expect, it } from 'vitest';
+import { createUser, UserDraft, UserSchema } from '../models/user.js';
 
 describe('User Model', () => {
   describe('UserSchema validation', () => {

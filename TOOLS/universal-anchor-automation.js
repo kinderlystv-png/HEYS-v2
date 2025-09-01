@@ -158,8 +158,8 @@ class UniversalAnchorAutomation {
   // Проверка, нужно ли обрабатывать файл
   shouldProcessFile(filePath) {
     // Проверяем расширение
-    const hasValidExtension = this.config.processExtensions.some(ext =>
-      filePath.toLowerCase().endsWith(ext)
+    const hasValidExtension = this.config.processExtensions.some((ext) =>
+      filePath.toLowerCase().endsWith(ext),
     );
 
     if (!hasValidExtension) return false;
@@ -239,7 +239,7 @@ class UniversalAnchorAutomation {
       'replace_string_in_file',
       filePath,
       oldString,
-      newString
+      newString,
     );
   }
 
@@ -377,7 +377,7 @@ if (require.main === module) {
 
     const report = getDetailedAnchorReport();
     console.log('\n📋 ОБРАБОТАННЫЕ ФАЙЛЫ:');
-    report.files.forEach(file => {
+    report.files.forEach((file) => {
       console.log(`   📄 ${file.path}: ${file.anchorsAdded} якорей (${file.mode} режим)`);
     });
   }

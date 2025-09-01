@@ -1,14 +1,14 @@
 // heys_stats_v1.ts — предагрегация и быстрые вычисления статистик по дням (TypeScript version)
 
 import type {
+  DayAggregation,
+  DayRecord,
   HEYSGlobal,
   HEYSStats,
-  DayRecord,
-  DayAggregation,
-  TrendData,
-  WeeklyStats,
   MealTotals,
   Product,
+  TrendData,
+  WeeklyStats,
 } from './types/heys';
 
 // Global declarations
@@ -205,7 +205,7 @@ declare global {
     }
 
     const sortedDays = [...days].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
 
     // Дневные тренды
@@ -247,7 +247,7 @@ declare global {
     }
 
     const sortedDays = [...days].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
     const weeks: WeeklyStats['weeks'] = [];
 
@@ -293,7 +293,7 @@ declare global {
   // Сравнение периодов
   Stats.comparePeriods = function (
     period1: DayRecord[],
-    period2: DayRecord[]
+    period2: DayRecord[],
   ): { period1: DayAggregation; period2: DayAggregation; diff: Partial<DayAggregation> } {
     const stats1 = Stats.aggregateDays(period1);
     const stats2 = Stats.aggregateDays(period2);
@@ -312,7 +312,7 @@ declare global {
   // Поиск аномалий в данных
   Stats.findAnomalies = function (
     days: DayRecord[],
-    threshold: number = 2
+    threshold: number = 2,
   ): Array<{
     date: string;
     type: 'high_kcal' | 'low_kcal' | 'high_weight' | 'low_weight';
@@ -325,10 +325,10 @@ declare global {
     const validDays = days.filter(isValidDay);
 
     // Вычисляем средние и стандартные отклонения
-    const kcalValues = validDays.map(day => calculateDayTotals(day).kcal);
+    const kcalValues = validDays.map((day) => calculateDayTotals(day).kcal);
     const avgKcal = kcalValues.reduce((sum, val) => sum + val, 0) / kcalValues.length;
     const stdKcal = Math.sqrt(
-      kcalValues.reduce((sum, val) => sum + Math.pow(val - avgKcal, 2), 0) / kcalValues.length
+      kcalValues.reduce((sum, val) => sum + Math.pow(val - avgKcal, 2), 0) / kcalValues.length,
     );
 
     // Ищем аномалии по калориям

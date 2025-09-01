@@ -1,12 +1,7 @@
 // Tests for Storage Service with adapters and validation
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import {
-  StorageService,
-  MemoryStorageAdapter,
-  LocalStorageAdapter,
-  storage
-} from '../index.js';
+import { LocalStorageAdapter, MemoryStorageAdapter, storage, StorageService } from '../index.js';
 
 // Mock localStorage for testing
 const localStorageMock = {
@@ -38,7 +33,7 @@ describe('MemoryStorageAdapter', () => {
   it('should store and retrieve data', async () => {
     await adapter.set('test-key', 'test-value');
     const result = await adapter.get('test-key');
-    
+
     expect(result).toBeDefined();
     expect(result?.key).toBe('test-key');
     expect(result?.value).toBe('test-value');
@@ -50,10 +45,10 @@ describe('MemoryStorageAdapter', () => {
   it('should handle TTL expiration', async () => {
     // Set with 1ms TTL
     await adapter.set('expire-key', 'expire-value', 0.001);
-    
+
     // Wait for expiration
-    await new Promise(resolve => setTimeout(resolve, 5));
-    
+    await new Promise((resolve) => setTimeout(resolve, 5));
+
     const result = await adapter.get('expire-key');
     expect(result).toBeNull();
   });
@@ -61,10 +56,10 @@ describe('MemoryStorageAdapter', () => {
   it('should update existing items', async () => {
     await adapter.set('update-key', 'original');
     const original = await adapter.get('update-key');
-    
+
     await adapter.set('update-key', 'updated');
     const updated = await adapter.get('update-key');
-    
+
     expect(updated?.value).toBe('updated');
     expect(updated?.id).toBe(original?.id); // Same ID
     expect(updated?.createdAt).toEqual(original?.createdAt); // Same creation time
@@ -73,7 +68,7 @@ describe('MemoryStorageAdapter', () => {
 
   it('should check item existence', async () => {
     expect(await adapter.has('nonexistent')).toBe(false);
-    
+
     await adapter.set('exists', 'value');
     expect(await adapter.has('exists')).toBe(true);
   });
@@ -81,7 +76,7 @@ describe('MemoryStorageAdapter', () => {
   it('should delete items', async () => {
     await adapter.set('delete-me', 'value');
     expect(await adapter.has('delete-me')).toBe(true);
-    
+
     await adapter.delete('delete-me');
     expect(await adapter.has('delete-me')).toBe(false);
   });
@@ -89,9 +84,9 @@ describe('MemoryStorageAdapter', () => {
   it('should clear all items', async () => {
     await adapter.set('key1', 'value1');
     await adapter.set('key2', 'value2');
-    
+
     await adapter.clear();
-    
+
     expect(await adapter.has('key1')).toBe(false);
     expect(await adapter.has('key2')).toBe(false);
   });
@@ -99,7 +94,7 @@ describe('MemoryStorageAdapter', () => {
   it('should return all keys', async () => {
     await adapter.set('key1', 'value1');
     await adapter.set('key2', 'value2');
-    
+
     const keys = await adapter.keys();
     expect(keys).toContain('key1');
     expect(keys).toContain('key2');
@@ -109,14 +104,14 @@ describe('MemoryStorageAdapter', () => {
   it('should provide memory-specific stats', async () => {
     await adapter.set('stats1', 'value1');
     await adapter.set('stats2', 'value2', 0.001); // Will expire
-    
+
     const stats = adapter.getStats();
     expect(stats.totalItems).toBe(2);
     expect(stats.size).toBe(2);
-    
+
     // Wait for expiration
-    await new Promise(resolve => setTimeout(resolve, 5));
-    
+    await new Promise((resolve) => setTimeout(resolve, 5));
+
     const updatedStats = adapter.getStats();
     expect(updatedStats.expiredItems).toBe(1);
   });
@@ -125,10 +120,10 @@ describe('MemoryStorageAdapter', () => {
     await adapter.set('keep', 'value');
     await adapter.set('expire1', 'value', 0.001);
     await adapter.set('expire2', 'value', 0.001);
-    
+
     // Wait for expiration
-    await new Promise(resolve => setTimeout(resolve, 5));
-    
+    await new Promise((resolve) => setTimeout(resolve, 5));
+
     const cleaned = adapter.cleanupExpired();
     expect(cleaned).toBe(2);
     expect(await adapter.has('keep')).toBe(true);
@@ -151,19 +146,19 @@ describe('StorageService', () => {
   it('should use default adapter when none specified', async () => {
     await service.set('test', 'value');
     const result = await service.get('test');
-    
+
     expect(result).toBe('value');
   });
 
   it('should use specific adapter when specified', async () => {
     const customAdapter = new MemoryStorageAdapter();
     service.addAdapter('custom', customAdapter);
-    
+
     await service.set('test', 'value', undefined, 'custom');
-    
+
     // Should not exist in default adapter
     expect(await service.get('test')).toBeNull();
-    
+
     // Should exist in custom adapter
     expect(await service.get('test', undefined, 'custom')).toBe('value');
   });
@@ -190,26 +185,26 @@ describe('StorageService', () => {
 
   it('should handle bulk operations', async () => {
     const items = {
-      'item1': 'value1',
-      'item2': 'value2',
-      'item3': 'value3',
+      item1: 'value1',
+      item2: 'value2',
+      item3: 'value3',
     };
 
     await service.setMany(items);
-    
+
     const results = await service.getMany(['item1', 'item2', 'item3']);
     expect(results).toEqual({
-      'item1': 'value1',
-      'item2': 'value2',
-      'item3': 'value3',
+      item1: 'value1',
+      item2: 'value2',
+      item3: 'value3',
     });
   });
 
   it('should handle bulk deletion', async () => {
     await service.setMany({
-      'delete1': 'value1',
-      'delete2': 'value2',
-      'keep': 'value3',
+      delete1: 'value1',
+      delete2: 'value2',
+      keep: 'value3',
     });
 
     await service.deleteMany(['delete1', 'delete2']);
@@ -236,7 +231,7 @@ describe('Default storage instance', () => {
   it('should work with default configuration', async () => {
     await storage.set('default-test', 'value');
     const result = await storage.get('default-test');
-    
+
     expect(result).toBe('value');
   });
 });
@@ -250,28 +245,28 @@ describe('TTL functionality', () => {
 
   it('should respect TTL on get operations', async () => {
     await adapter.set('ttl-test', 'value', 0.1); // 100ms TTL
-    
+
     // Should exist immediately
     expect(await adapter.get('ttl-test')).not.toBeNull();
-    
+
     // Wait for expiration
-    await new Promise(resolve => setTimeout(resolve, 150));
-    
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
     // Should be null after expiration
     expect(await adapter.get('ttl-test')).toBeNull();
   });
 
   it('should clean up expired items automatically', async () => {
     await adapter.set('auto-cleanup', 'value', 0.05); // 50ms TTL
-    
+
     expect(adapter.size()).toBe(1);
-    
+
     // Wait for expiration
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     // Get should trigger cleanup
     await adapter.get('auto-cleanup');
-    
+
     expect(adapter.size()).toBe(0);
   });
 });
@@ -281,7 +276,7 @@ describe('Legacy Storage Interface', () => {
   it('should maintain compatibility with createStorage', () => {
     const { createStorage } = require('../index.js');
     const legacyStorage = createStorage();
-    
+
     expect(legacyStorage).toBeDefined();
     expect(typeof legacyStorage.get).toBe('function');
     expect(typeof legacyStorage.set).toBe('function');
@@ -290,9 +285,9 @@ describe('Legacy Storage Interface', () => {
   it('should handle bulk operations', () => {
     const storage = new LocalStorageAdapter();
     const testData = {
-      'key1': 'value1',
-      'key2': 'value2',
-      'key3': 'value3'
+      key1: 'value1',
+      key2: 'value2',
+      key3: 'value3',
     };
 
     // Set multiple values
@@ -308,68 +303,67 @@ describe('Legacy Storage Interface', () => {
 });
 
 describe('Edge cases', () => {
-    it('should handle special characters in keys', () => {
-      const specialKey = 'key-with-special@chars#123';
-      const value = 'special-value';
-      
-      storage.set(specialKey, value);
-      const result = storage.get(specialKey);
-      
-      expect(result).toBe(value);
-    });
+  it('should handle special characters in keys', () => {
+    const specialKey = 'key-with-special@chars#123';
+    const value = 'special-value';
 
-    it('should handle special characters in values', () => {
-      const key = 'special-value-key';
-      const specialValue = 'value with spaces, symbols: @#$%^&*()';
-      
-      storage.set(key, specialValue);
-      const result = storage.get(key);
-      
-      expect(result).toBe(specialValue);
-    });
+    storage.set(specialKey, value);
+    const result = storage.get(specialKey);
 
-    it('should handle JSON string values', async () => {
-      const key = 'json-key';
-      const jsonValue = JSON.stringify({ name: 'test', age: 25 });
-      
-      await storage.set(key, jsonValue);
-      const result = await storage.get(key) as string;
-      
-      expect(result).toBe(jsonValue);
-      expect(JSON.parse(result || '')).toEqual({ name: 'test', age: 25 });
-    });
-
-    it('should handle very long strings', async () => {
-      const key = 'long-string-key';
-      const longValue = 'a'.repeat(10000);
-      
-      await storage.set(key, longValue);
-      const result = await storage.get(key) as string;
-      
-      expect(result).toBe(longValue);
-      expect(result?.length).toBe(10000);
-    });
+    expect(result).toBe(value);
   });
 
-  describe('Data types handling', () => {
-    it('should handle unicode strings', () => {
-      const key = 'unicode-key';
-      const unicodeValue = '🚀 Привет мир! 你好世界';
-      
-      storage.set(key, unicodeValue);
-      const result = storage.get(key);
-      
-      expect(result).toBe(unicodeValue);
-    });
+  it('should handle special characters in values', () => {
+    const key = 'special-value-key';
+    const specialValue = 'value with spaces, symbols: @#$%^&*()';
 
-    it('should convert numbers to strings', () => {
-      const key = 'number-key';
-      // localStorage always stores strings
-      storage.set(key, '123');
-      const result = storage.get(key);
-      
-      expect(result).toBe('123');
-      expect(typeof result).toBe('string');
-    });
+    storage.set(key, specialValue);
+    const result = storage.get(key);
+
+    expect(result).toBe(specialValue);
   });
-}
+
+  it('should handle JSON string values', async () => {
+    const key = 'json-key';
+    const jsonValue = JSON.stringify({ name: 'test', age: 25 });
+
+    await storage.set(key, jsonValue);
+    const result = (await storage.get(key)) as string;
+
+    expect(result).toBe(jsonValue);
+    expect(JSON.parse(result || '')).toEqual({ name: 'test', age: 25 });
+  });
+
+  it('should handle very long strings', async () => {
+    const key = 'long-string-key';
+    const longValue = 'a'.repeat(10000);
+
+    await storage.set(key, longValue);
+    const result = (await storage.get(key)) as string;
+
+    expect(result).toBe(longValue);
+    expect(result?.length).toBe(10000);
+  });
+});
+
+describe('Data types handling', () => {
+  it('should handle unicode strings', () => {
+    const key = 'unicode-key';
+    const unicodeValue = '🚀 Привет мир! 你好世界';
+
+    storage.set(key, unicodeValue);
+    const result = storage.get(key);
+
+    expect(result).toBe(unicodeValue);
+  });
+
+  it('should convert numbers to strings', () => {
+    const key = 'number-key';
+    // localStorage always stores strings
+    storage.set(key, '123');
+    const result = storage.get(key);
+
+    expect(result).toBe('123');
+    expect(typeof result).toBe('string');
+  });
+});

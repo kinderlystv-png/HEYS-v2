@@ -238,7 +238,7 @@ class DependencyResolver {
       if (nodeData && (nodeData.criticality === 'critical' || nodeData.type === 'architecture')) {
         impactAnalysis.critical_path.push(file);
         impactAnalysis.recommendations.push(
-          `⚠️ Файл ${file} является критическим. Рекомендуется дополнительное тестирование.`
+          `⚠️ Файл ${file} является критическим. Рекомендуется дополнительное тестирование.`,
         );
       }
 
@@ -267,7 +267,7 @@ class DependencyResolver {
       // Добавление навигационных карт если изменился JS/TS файл
       if (file.endsWith('.js') || file.endsWith('.ts')) {
         const navMaps = this.findNavigationMaps(file);
-        navMaps.forEach(map => updateList.add(map));
+        navMaps.forEach((map) => updateList.add(map));
       }
     }
 

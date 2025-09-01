@@ -199,7 +199,7 @@ const stats = monitor.anchorStats;
 const automation = new UniversalAnchorAutomation();
 const results = await automation.processAllFiles();
 console.log(
-  `Обработано ${results.totalFiles} файлов, добавлено ${results.totalAnchors} якорей`
+  `Обработано ${results.totalFiles} файлов, добавлено ${results.totalAnchors} якорей`,
 );
 ```
 

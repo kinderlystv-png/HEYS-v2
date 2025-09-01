@@ -51,7 +51,7 @@ class DynamicNavigationMapper {
     const patterns = this.patterns[ext] || this.patterns.js;
 
     // Поиск функций с точными позициями
-    this.findMatches(content, patterns.functions, 'function').forEach(match => {
+    this.findMatches(content, patterns.functions, 'function').forEach((match) => {
       const endLine = this.findBlockEnd(lines, match.line - 1);
       sections.push({
         type: 'function',
@@ -63,7 +63,7 @@ class DynamicNavigationMapper {
     });
 
     // Поиск классов
-    this.findMatches(content, patterns.classes, 'class').forEach(match => {
+    this.findMatches(content, patterns.classes, 'class').forEach((match) => {
       const endLine = this.findBlockEnd(lines, match.line - 1);
       sections.push({
         type: 'class',
@@ -75,7 +75,7 @@ class DynamicNavigationMapper {
     });
 
     // Поиск секций-комментариев
-    this.findMatches(content, patterns.sections, 'section').forEach(match => {
+    this.findMatches(content, patterns.sections, 'section').forEach((match) => {
       sections.push({
         type: 'section',
         name: match.name,
@@ -153,7 +153,7 @@ class DynamicNavigationMapper {
 
       map += `│ ${icon} ${name}:${' '.repeat(85 - name.length - 5)}│\n`;
 
-      items.forEach(item => {
+      items.forEach((item) => {
         const line = `│    ├── ${item.name} (${item.startLine}-${item.endLine})`;
         const padding = ' '.repeat(Math.max(0, 89 - line.length));
         map += `${line}${padding}│\n`;
@@ -175,7 +175,7 @@ class DynamicNavigationMapper {
   // Вспомогательные методы
   groupByType(sections) {
     const grouped = {};
-    sections.forEach(section => {
+    sections.forEach((section) => {
       if (!grouped[section.type]) {
         grouped[section.type] = [];
       }

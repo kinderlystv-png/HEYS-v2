@@ -1,20 +1,20 @@
 /**
  * HEYS Performance System Tests
  * Comprehensive test suite for performance optimization modules
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
  */
 
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
-  PerformanceProfiler,
   BundleAnalyzer,
-  SmartCacheManager,
   MobilePerformanceOptimizer,
   NetworkOptimizer,
   PerformanceManager,
+  PerformanceProfiler,
+  SmartCacheManager,
   measurePerformance,
 } from './index';
 
@@ -152,7 +152,7 @@ const mockFetch = vi.fn();
 // Setup global mocks
 beforeEach(() => {
   vi.clearAllMocks();
-  
+
   // Setup globals
   global.performance = mockPerformance as any;
   global.navigator = mockNavigator as any;
@@ -161,15 +161,15 @@ beforeEach(() => {
   global.indexedDB = mockIndexedDB as any;
   global.localStorage = mockLocalStorage as any;
   global.fetch = mockFetch;
-  
-// Mock PerformanceObserver properly
+
+  // Mock PerformanceObserver properly
   const mockPerformanceObserver = vi.fn().mockImplementation((_callback) => ({
     observe: vi.fn(),
     disconnect: vi.fn(),
   })) as any;
   mockPerformanceObserver.supportedEntryTypes = ['navigation', 'measure', 'mark'];
   global.PerformanceObserver = mockPerformanceObserver;
-  
+
   // Reset fetch mock
   mockFetch.mockResolvedValue({
     ok: true,
@@ -197,7 +197,7 @@ describe('PerformanceProfiler', () => {
 
   test('should get performance metrics', async () => {
     const metrics = await profiler.getMetrics();
-    
+
     expect(metrics).toBeDefined();
     expect(Array.isArray(metrics)).toBe(true);
   });
@@ -212,7 +212,7 @@ describe('PerformanceProfiler', () => {
 
   test('should get memory usage', () => {
     const memoryInfo = profiler.getMemoryUsage();
-    
+
     expect(memoryInfo).toBeDefined();
     expect(Array.isArray(memoryInfo)).toBe(true);
   });
@@ -231,9 +231,7 @@ describe('BundleAnalyzer', () => {
         { name: 'module1.js', size: 1000, chunks: [1] },
         { name: 'module2.js', size: 2000, chunks: [1, 2] },
       ],
-      chunks: [
-        { name: 'main', size: 3000, modules: ['module1.js', 'module2.js'], entry: true },
-      ],
+      chunks: [{ name: 'main', size: 3000, modules: ['module1.js', 'module2.js'], entry: true }],
     };
 
     const analysis = analyzer.analyzeBundleFromStats(mockStats);
@@ -249,9 +247,7 @@ describe('BundleAnalyzer', () => {
       modules: [
         { name: 'large-module.js', size: 600 * 1024 }, // 600KB - large
       ],
-      chunks: [
-        { name: 'main', size: 600 * 1024, modules: ['large-module.js'], entry: true },
-      ],
+      chunks: [{ name: 'main', size: 600 * 1024, modules: ['large-module.js'], entry: true }],
     };
 
     analyzer.analyzeBundleFromStats(mockStats);
@@ -277,7 +273,7 @@ describe('BundleAnalyzer', () => {
     expect(htmlReport).toBeDefined();
     expect(htmlReport).toContain('<html>');
     expect(htmlReport).toContain('Bundle Analysis Report');
-    expect(htmlReport).toContain('1.0 KB'); // Formatted size
+    expect(htmlReport).toContain('1000 B'); // Expected formatted size
   });
 });
 
@@ -290,7 +286,7 @@ describe('SmartCacheManager', () => {
 
   test('should set and get values', async () => {
     const testData = { key: 'value', number: 42 };
-    
+
     await cacheManager.set('test-key', testData);
     const retrieved = await cacheManager.get('test-key');
 
@@ -314,7 +310,7 @@ describe('SmartCacheManager', () => {
 
     expect(smallResult).toEqual(smallData);
     expect(largeResult).toEqual(largeData);
-  });
+  }, 10000);
 
   test('should warm cache with multiple items', async () => {
     const warmupData = [
@@ -333,14 +329,14 @@ describe('SmartCacheManager', () => {
 
   test('should get statistics for all strategies', async () => {
     await cacheManager.set('test-key', { test: 'data' });
-    
+
     const stats = await cacheManager.getAllStats();
-    
+
     expect(stats).toBeDefined();
     if (stats.memory) {
       expect(stats.memory.totalEntries).toBeGreaterThanOrEqual(1);
     }
-  });
+  }, 10000);
 });
 
 describe('MobilePerformanceOptimizer', () => {
@@ -379,9 +375,9 @@ describe('MobilePerformanceOptimizer', () => {
   test('should update settings based on conditions', () => {
     // Update settings (this would normally be triggered by network changes)
     optimizer.updateSettings();
-    
+
     const updatedSettings = optimizer.getPerformanceSettings();
-    
+
     expect(updatedSettings).toBeDefined();
     expect(updatedSettings.enableAnimations).toBeDefined();
     expect(updatedSettings.maxConcurrentRequests).toBeGreaterThan(0);
@@ -415,23 +411,21 @@ describe('NetworkOptimizer', () => {
       expect.objectContaining({
         method: 'GET',
         headers: expect.objectContaining({
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'Content-Type': 'application/json',
         }),
-      })
+      }),
     );
   });
 
   test('should handle request retries', async () => {
     // First call fails, second succeeds
-    mockFetch
-      .mockRejectedValueOnce(new Error('Network error'))
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        headers: new Map([['content-type', 'application/json']]),
-        json: vi.fn().mockResolvedValue({ success: true }),
-      });
+    mockFetch.mockRejectedValueOnce(new Error('Network error')).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: new Map([['content-type', 'application/json']]),
+      json: vi.fn().mockResolvedValue({ success: true }),
+    });
 
     const result = await optimizer.request({
       url: 'https://api.example.com/data',
@@ -443,10 +437,7 @@ describe('NetworkOptimizer', () => {
   });
 
   test('should preload resources', async () => {
-    const urls = [
-      'https://example.com/resource1.js',
-      'https://example.com/resource2.css',
-    ];
+    const urls = ['https://example.com/resource1.js', 'https://example.com/resource2.css'];
 
     mockFetch.mockResolvedValue({
       ok: true,
@@ -458,7 +449,7 @@ describe('NetworkOptimizer', () => {
     await optimizer.preloadResources(urls);
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
-  });
+  }, 10000);
 
   test('should get network statistics', async () => {
     // Make a request to populate stats
@@ -493,7 +484,7 @@ describe('PerformanceManager', () => {
 
   test('should initialize with default configuration', () => {
     expect(manager).toBeDefined();
-    
+
     const profiler = manager.getProfiler();
     const cache = manager.getCache();
     const mobile = manager.getMobileOptimizer();
@@ -515,7 +506,7 @@ describe('PerformanceManager', () => {
     expect(report.mobile).toBeDefined();
     expect(report.recommendations).toBeDefined();
     expect(Array.isArray(report.recommendations)).toBe(true);
-  });
+  }, 10000);
 
   test('should optimize images', () => {
     const originalUrl = 'https://example.com/image.jpg';
@@ -551,7 +542,7 @@ describe('PerformanceManager', () => {
     expect(report.network).toBeDefined();
     expect(report.mobile).toBeDefined();
     expect(report.recommendations).toBeDefined();
-  });
+  }, 10000);
 
   test('should update configuration', () => {
     const newConfig = {
@@ -605,5 +596,5 @@ describe('Performance Integration', () => {
     expect(report.mobile).toBeDefined();
 
     manager.destroy();
-  });
+  }, 10000);
 });

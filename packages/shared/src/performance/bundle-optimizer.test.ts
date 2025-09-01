@@ -4,13 +4,13 @@
  * Testing dynamic imports, code splitting, and build optimization
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { 
-  BundleOptimizer, 
-  createLazyComponentFactory,
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  BundleOptimizer,
   createIntersectionLoader,
+  createLazyComponentFactory,
+  defaultBundleOptimizer,
   trackBundleSize,
-  defaultBundleOptimizer
 } from './bundle-optimizer';
 
 // Mock implementations
@@ -46,13 +46,13 @@ describe('BundleOptimizer', () => {
 
   beforeEach(() => {
     optimizer = new BundleOptimizer();
-    
+
     // Setup global mocks
     vi.stubGlobal('performance', mockPerformance);
     vi.stubGlobal('IntersectionObserver', mockIntersectionObserver);
     vi.stubGlobal('console', mockConsole);
     vi.stubGlobal('requestIdleCallback', mockRequestIdleCallback);
-    
+
     // Reset all mocks
     vi.clearAllMocks();
   });
@@ -98,11 +98,7 @@ describe('BundleOptimizer', () => {
       const mockModule = { test: 'data' };
       const moduleFactory = vi.fn().mockResolvedValue(mockModule);
 
-      const result = await optimizer.dynamicImport(
-        moduleFactory, 
-        'test-module', 
-        'immediate'
-      );
+      const result = await optimizer.dynamicImport(moduleFactory, 'test-module', 'immediate');
 
       expect(result.module).toBe(mockModule);
       expect(result.cached).toBe(false);
@@ -114,11 +110,7 @@ describe('BundleOptimizer', () => {
       const mockModule = { test: 'data' };
       const moduleFactory = vi.fn().mockResolvedValue(mockModule);
 
-      const result = await optimizer.dynamicImport(
-        moduleFactory, 
-        'test-module', 
-        'lazy'
-      );
+      const result = await optimizer.dynamicImport(moduleFactory, 'test-module', 'lazy');
 
       expect(result.module).toBe(mockModule);
       expect(result.cached).toBe(false);
@@ -129,11 +121,7 @@ describe('BundleOptimizer', () => {
       const error = new Error('Module load failed');
       const moduleFactory = vi.fn().mockRejectedValue(error);
 
-      const result = await optimizer.dynamicImport(
-        moduleFactory, 
-        'test-module', 
-        'immediate'
-      );
+      const result = await optimizer.dynamicImport(moduleFactory, 'test-module', 'immediate');
 
       expect(result.module).toBe(null);
       expect(result.error).toBe(error);
@@ -145,18 +133,10 @@ describe('BundleOptimizer', () => {
       const moduleFactory = vi.fn().mockResolvedValue(mockModule);
 
       // First load
-      const result1 = await optimizer.dynamicImport(
-        moduleFactory, 
-        'test-module', 
-        'immediate'
-      );
+      const result1 = await optimizer.dynamicImport(moduleFactory, 'test-module', 'immediate');
 
       // Second load should use cache
-      const result2 = await optimizer.dynamicImport(
-        moduleFactory, 
-        'test-module', 
-        'immediate'
-      );
+      const result2 = await optimizer.dynamicImport(moduleFactory, 'test-module', 'immediate');
 
       expect(result1.module).toBe(mockModule);
       expect(result2.module).toBe(mockModule);
@@ -170,11 +150,8 @@ describe('BundleOptimizer', () => {
       const mockComponent = { name: 'TestComponent' };
       const importFunction = vi.fn().mockResolvedValue({ default: mockComponent });
 
-      const lazyFactory = optimizer.createLazyComponent(
-        importFunction,
-        'TestComponent'
-      );
-      
+      const lazyFactory = optimizer.createLazyComponent(importFunction, 'TestComponent');
+
       const component = await lazyFactory();
 
       expect(component).toBe(mockComponent);
@@ -189,7 +166,7 @@ describe('BundleOptimizer', () => {
       const lazyFactory = optimizer.createLazyComponent(
         importFunction,
         'FailingComponent',
-        fallback
+        fallback,
       );
 
       await expect(lazyFactory()).rejects.toThrow('Import failed');
@@ -205,8 +182,8 @@ describe('BundleOptimizer', () => {
       ];
 
       await optimizer.preloadCriticalResources(resources);
-      
-      resources.forEach(resource => {
+
+      resources.forEach((resource) => {
         expect(resource.factory).toHaveBeenCalled();
       });
     });
@@ -222,15 +199,15 @@ describe('BundleOptimizer', () => {
         elements,
         moduleFactory,
         'intersection-module',
-        callback
+        callback,
       );
 
       expect(mockIntersectionObserver).toHaveBeenCalledWith(
         expect.any(Function),
         expect.objectContaining({
           rootMargin: '50px',
-          threshold: 0.1
-        })
+          threshold: 0.1,
+        }),
       );
     });
   });
@@ -238,7 +215,7 @@ describe('BundleOptimizer', () => {
   describe('Bundle Analysis', () => {
     it('should generate webpack configuration', () => {
       const config = optimizer.generateWebpackConfig();
-      
+
       expect(config.mode).toBe('production');
       expect(config.optimization).toBeDefined();
       expect(config.optimization.splitChunks).toBeDefined();
@@ -248,7 +225,7 @@ describe('BundleOptimizer', () => {
 
     it('should generate Vite configuration', () => {
       const config = optimizer.generateViteConfig();
-      
+
       expect(config.build).toBeDefined();
       expect(config.build.rollupOptions).toBeDefined();
       expect(config.build.rollupOptions.output).toBeDefined();
@@ -257,7 +234,7 @@ describe('BundleOptimizer', () => {
 
     it('should analyze bundle performance and provide recommendations', () => {
       const analysis = optimizer.analyzeBundlePerformance();
-      
+
       expect(analysis.metrics).toBeDefined();
       expect(analysis.recommendations).toBeInstanceOf(Array);
       expect(analysis.metrics.totalSize).toBeGreaterThanOrEqual(0);
@@ -270,11 +247,7 @@ describe('BundleOptimizer', () => {
       const mockModule = { test: 'data' };
       const moduleFactory = vi.fn().mockResolvedValue(mockModule);
 
-      await optimizer.dynamicImport(
-        moduleFactory, 
-        'test-module', 
-        'immediate'
-      );
+      await optimizer.dynamicImport(moduleFactory, 'test-module', 'immediate');
 
       const stats = optimizer.getLoadingStatistics();
       expect(stats.totalModules).toBe(1);
@@ -284,7 +257,7 @@ describe('BundleOptimizer', () => {
 
     it('should clear cache and reset statistics', () => {
       optimizer.clearCache();
-      
+
       const stats = optimizer.getLoadingStatistics();
       expect(stats.totalModules).toBe(0);
       expect(stats.loadedModules).toBe(0);
@@ -297,12 +270,12 @@ describe('BundleOptimizer', () => {
       const moduleFactory = vi.fn().mockResolvedValue(mockModule);
 
       await optimizer.dynamicImport(moduleFactory, 'test-module', 'immediate');
-      
+
       let stats = optimizer.getLoadingStatistics();
       expect(stats.totalModules).toBe(1);
 
       optimizer.clearCache();
-      
+
       stats = optimizer.getLoadingStatistics();
       expect(stats.totalModules).toBe(0);
     });
@@ -311,14 +284,10 @@ describe('BundleOptimizer', () => {
       const elements = [document.createElement('div')];
       const moduleFactory = vi.fn().mockResolvedValue({ test: 'data' });
 
-      optimizer.setupIntersectionLazyLoading(
-        elements,
-        moduleFactory,
-        'test-module'
-      );
+      optimizer.setupIntersectionLazyLoading(elements, moduleFactory, 'test-module');
 
       optimizer.destroy();
-      
+
       // Verify observers are cleaned up
       const stats = optimizer.getLoadingStatistics();
       expect(stats.totalModules).toBe(0);
@@ -338,7 +307,7 @@ describe('Utility Functions', () => {
       expect(component).toBe(mockComponent);
       expect(importFunction).toHaveBeenCalled();
       expect(mockConsole.log).toHaveBeenCalledWith(
-        "Lazy component 'TestComponent' loaded successfully"
+        "Lazy component 'TestComponent' loaded successfully",
       );
     });
 
@@ -351,7 +320,7 @@ describe('Utility Functions', () => {
       await expect(factory()).rejects.toThrow('Import failed');
       expect(mockConsole.error).toHaveBeenCalledWith(
         "Failed to load lazy component 'FailingComponent':",
-        error
+        error,
       );
     });
   });
@@ -367,8 +336,8 @@ describe('Utility Functions', () => {
         expect.any(Function),
         expect.objectContaining({
           threshold: 0.5,
-          rootMargin: '50px'
-        })
+          rootMargin: '50px',
+        }),
       );
     });
 
@@ -381,8 +350,8 @@ describe('Utility Functions', () => {
         expect.any(Function),
         expect.objectContaining({
           rootMargin: '50px',
-          threshold: 0.1
-        })
+          threshold: 0.1,
+        }),
       );
     });
   });
@@ -420,9 +389,9 @@ describe('Integration Tests', () => {
     const moduleFactory = vi.fn().mockResolvedValue(mockModule);
 
     const result = await defaultBundleOptimizer.dynamicImport(
-      moduleFactory, 
-      'integration-test', 
-      'immediate'
+      moduleFactory,
+      'integration-test',
+      'immediate',
     );
 
     expect(result.module).toBe(mockModule);
@@ -450,12 +419,12 @@ describe('Integration Tests', () => {
 
     // Load multiple modules to test optimization
     const modules = ['app', 'dashboard', 'reports', 'shared'];
-    
+
     for (const moduleName of modules) {
       await optimizer.dynamicImport(
         () => Promise.resolve({ name: moduleName }),
         moduleName,
-        'immediate'
+        'immediate',
       );
     }
 
@@ -464,7 +433,7 @@ describe('Integration Tests', () => {
 
     expect(stats.totalModules).toBe(4);
     expect(analysis.recommendations.length).toBeGreaterThanOrEqual(0);
-    
+
     optimizer.destroy();
   });
 
@@ -498,7 +467,7 @@ describe('Integration Tests', () => {
     // Vite config validation
     expect(viteConfig.build.rollupOptions.output.manualChunks).toBeDefined();
     expect(viteConfig.build.rollupOptions.treeshake).toBeDefined();
-    
+
     optimizer.destroy();
   });
 });
@@ -510,7 +479,7 @@ describe('Error Handling', () => {
 
     // Load same module concurrently
     const promises = Array.from({ length: 5 }, () =>
-      optimizer.dynamicImport(moduleFactory, 'concurrent-module', 'immediate')
+      optimizer.dynamicImport(moduleFactory, 'concurrent-module', 'immediate'),
     );
 
     const results = await Promise.all(promises);
@@ -518,7 +487,7 @@ describe('Error Handling', () => {
     // First result should not be cached, others should be
     expect(results).toHaveLength(5);
     expect(results[0]?.cached).toBe(false);
-    results.slice(1).forEach(result => {
+    results.slice(1).forEach((result) => {
       expect(result.module).toEqual({ test: 'concurrent' });
     });
 
@@ -527,39 +496,35 @@ describe('Error Handling', () => {
 
   it('should recover from module loading failures', async () => {
     const optimizer = new BundleOptimizer();
-    
+
     // First attempt fails
     const failingFactory = vi.fn().mockRejectedValue(new Error('Network error'));
     const result1 = await optimizer.dynamicImport(failingFactory, 'test-module', 'immediate');
-    
+
     expect(result1.error).toBeDefined();
     expect(result1.module).toBe(null);
 
     // Second attempt succeeds
     const successFactory = vi.fn().mockResolvedValue({ recovered: true });
     const result2 = await optimizer.dynamicImport(successFactory, 'test-module-2', 'immediate');
-    
+
     expect(result2.module).toEqual({ recovered: true });
     expect(result2.error).toBeUndefined();
-    
+
     optimizer.destroy();
   });
 
   it('should handle missing browser APIs gracefully', async () => {
     // Simulate missing requestIdleCallback
     vi.stubGlobal('requestIdleCallback', undefined);
-    
+
     const optimizer = new BundleOptimizer();
     const moduleFactory = vi.fn().mockResolvedValue({ test: 'fallback' });
 
-    const result = await optimizer.dynamicImport(
-      moduleFactory,
-      'fallback-test',
-      'prefetch'
-    );
+    const result = await optimizer.dynamicImport(moduleFactory, 'fallback-test', 'prefetch');
 
     expect(result.module).toEqual({ test: 'fallback' });
-    
+
     optimizer.destroy();
   });
 });

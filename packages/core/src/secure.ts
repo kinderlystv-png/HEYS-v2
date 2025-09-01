@@ -1,14 +1,14 @@
 /**
  * HEYS Security-Enhanced Core Module v1.4
  * Core functionality with built-in security validation
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
  */
 
-import { defaultValidator, ValidationSchemas, SecurityError } from '@heys/shared';
-import { HeysUser, HeysDay, HeysSession } from './legacy/index';
+import { defaultValidator, SecurityError, ValidationSchemas } from '@heys/shared';
+import { HeysDay, HeysSession, HeysUser } from './legacy/index';
 
 /**
  * Security-enhanced user manager
@@ -18,11 +18,10 @@ export class SecureUserManager extends HeysUser {
    * Create user with security validation
    */
   async createUser(userData: unknown): Promise<any> {
-    const validation = await defaultValidator.validateSchema(
-      userData,
-      ValidationSchemas.user,
-      { sanitize: true, strictMode: true }
-    );
+    const validation = await defaultValidator.validateSchema(userData, ValidationSchemas.user, {
+      sanitize: true,
+      strictMode: true,
+    });
 
     if (!validation.isValid) {
       throw new SecurityError('User validation failed', validation.errors);
@@ -38,7 +37,7 @@ export class SecureUserManager extends HeysUser {
     // Validate user ID
     const idValidation = await defaultValidator.validateSchema(
       userId,
-      ValidationSchemas.user.shape.id
+      ValidationSchemas.user.shape.id,
     );
 
     if (!idValidation.isValid) {
@@ -49,7 +48,7 @@ export class SecureUserManager extends HeysUser {
     const dataValidation = await defaultValidator.validateSchema(
       updateData,
       ValidationSchemas.user.partial(),
-      { sanitize: true, strictMode: true }
+      { sanitize: true, strictMode: true },
     );
 
     if (!dataValidation.isValid) {
@@ -63,9 +62,9 @@ export class SecureUserManager extends HeysUser {
    * Search users with input sanitization
    */
   async searchUsers(query: unknown): Promise<any[]> {
-    const validation = defaultValidator.validateInput(query, 'text', { 
-      sanitize: true, 
-      required: true 
+    const validation = defaultValidator.validateInput(query, 'text', {
+      sanitize: true,
+      required: true,
     });
 
     if (!validation.isValid) {
@@ -90,11 +89,10 @@ export class SecureDayManager extends HeysDay {
       userId: ValidationSchemas.user.shape.id,
     });
 
-    const validation = await defaultValidator.validateSchema(
-      dayData,
-      daySchema,
-      { sanitize: true, strictMode: true }
-    );
+    const validation = await defaultValidator.validateSchema(dayData, daySchema, {
+      sanitize: true,
+      strictMode: true,
+    });
 
     if (!validation.isValid) {
       throw new SecurityError('Day data validation failed', validation.errors);
@@ -110,7 +108,7 @@ export class SecureDayManager extends HeysDay {
     const validation = await defaultValidator.validateSchema(
       updateData,
       ValidationSchemas.content.partial(),
-      { sanitize: true, strictMode: true }
+      { sanitize: true, strictMode: true },
     );
 
     if (!validation.isValid) {
@@ -125,14 +123,12 @@ export class SecureDayManager extends HeysDay {
    */
   async getDayContent(dayId: string): Promise<any> {
     const content = await super.getDayContent(dayId);
-    
+
     if (content && typeof content === 'object') {
       // Sanitize content before returning
-      const validation = await defaultValidator.validateSchema(
-        content,
-        ValidationSchemas.content,
-        { sanitize: true }
-      );
+      const validation = await defaultValidator.validateSchema(content, ValidationSchemas.content, {
+        sanitize: true,
+      });
 
       return validation.sanitized || content;
     }
@@ -149,19 +145,20 @@ export class SecureSessionManager extends HeysSession {
    * Create session with security validation
    */
   async createSession(sessionData: unknown): Promise<any> {
-    const sessionSchema = ValidationSchemas.user.pick({
-      id: true,
-      email: true,
-    }).extend({
-      token: ValidationSchemas.apiRequest.shape.headers,
-      expiresAt: ValidationSchemas.user.shape.createdAt,
-    });
+    const sessionSchema = ValidationSchemas.user
+      .pick({
+        id: true,
+        email: true,
+      })
+      .extend({
+        token: ValidationSchemas.apiRequest.shape.headers,
+        expiresAt: ValidationSchemas.user.shape.createdAt,
+      });
 
-    const validation = await defaultValidator.validateSchema(
-      sessionData,
-      sessionSchema,
-      { sanitize: true, strictMode: true }
-    );
+    const validation = await defaultValidator.validateSchema(sessionData, sessionSchema, {
+      sanitize: true,
+      strictMode: true,
+    });
 
     if (!validation.isValid) {
       throw new SecurityError('Session validation failed', validation.errors);
@@ -176,7 +173,7 @@ export class SecureSessionManager extends HeysSession {
   async validateSessionToken(token: unknown): Promise<boolean> {
     const validation = defaultValidator.validateInput(token, 'text', {
       required: true,
-      sanitize: true
+      sanitize: true,
     });
 
     if (!validation.isValid) {
@@ -208,7 +205,7 @@ export class SecureHeysCore {
     const configValidation = await defaultValidator.validateSchema(
       config,
       ValidationSchemas.apiRequest.shape.body || {},
-      { sanitize: true }
+      { sanitize: true },
     );
 
     if (!configValidation.isValid) {
@@ -228,7 +225,7 @@ export class SecureHeysCore {
     const validation = await defaultValidator.validateSchema(
       request,
       ValidationSchemas.apiRequest,
-      { sanitize: true, strictMode: true }
+      { sanitize: true, strictMode: true },
     );
 
     if (!validation.isValid) {
@@ -291,7 +288,7 @@ export class SecureHeysCore {
 
   private async handleDeleteRequest(request: any): Promise<any> {
     // Handle DELETE requests with security checks
-    
+
     // Validate that user has permission to delete
     if (!request.headers?.authorization) {
       throw new SecurityError('Authorization required for DELETE operations', []);

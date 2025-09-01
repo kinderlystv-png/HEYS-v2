@@ -141,7 +141,7 @@ async function realWorldExample() {
         return 'csv data...';
     }
     
-    // Конец класса HEYSReports`
+    // Конец класса HEYSReports`,
   );
 
   // 2. Якоря автоматически добавятся к новым методам:

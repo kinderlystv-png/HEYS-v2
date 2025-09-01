@@ -77,6 +77,27 @@ module.exports = {
         'no-console': 'off',
       },
     },
+    // Legacy files - более мягкие правила для старого кода
+    {
+      files: [
+        '**/legacy/**/*.{ts,tsx}',
+        '**/*_v12.{ts,tsx}',
+        '**/*_v1.{ts,tsx}',
+        'archive/**/*.{ts,tsx}',
+        'TOOLS/**/*.js',
+      ],
+      rules: {
+        '@typescript-eslint/no-explicit-any': 'warn',
+        '@typescript-eslint/no-unused-vars': 'warn',
+        'no-console': 'warn',
+        'no-empty': 'warn',
+        'no-prototype-builtins': 'warn',
+        'no-useless-escape': 'warn',
+        'prefer-spread': 'warn',
+        '@typescript-eslint/no-non-null-assertion': 'warn',
+        'no-undef': 'warn',
+      },
+    },
     // Config files
     {
       files: ['*.config.{js,ts}', '.*rc.{js,ts}'],

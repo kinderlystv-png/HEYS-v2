@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { NutritionService, type NutritionData } from '../services/nutrition';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnalyticsService, type AnalyticsProvider } from '../services/analytics';
+import { NutritionService, type NutritionData } from '../services/nutrition';
 
 describe('NutritionService', () => {
   describe('calculateCalories', () => {
@@ -10,7 +10,7 @@ describe('NutritionService', () => {
         carbs: 50, // 50g * 4 = 200 kcal
         fats: 20, // 20g * 9 = 180 kcal
       };
-      
+
       const result = NutritionService.calculateCalories(data);
       expect(result).toBe(780); // 400 + 200 + 180
     });
@@ -21,13 +21,13 @@ describe('NutritionService', () => {
         carbs: 25,
         fats: 10,
       };
-      
+
       const result = NutritionService.calculateCalories(data, {
         proteinMultiplier: 5,
         carbMultiplier: 3,
         fatMultiplier: 10,
       });
-      
+
       expect(result).toBe(425); // 50*5 + 25*3 + 10*10
     });
 
@@ -37,7 +37,7 @@ describe('NutritionService', () => {
         carbs: 0,
         fats: 0,
       };
-      
+
       const result = NutritionService.calculateCalories(data);
       expect(result).toBe(0);
     });
@@ -50,9 +50,9 @@ describe('NutritionService', () => {
         carbs: 50, // 200 kcal
         fats: 20, // 180 kcal
       }; // Total: 780 kcal
-      
+
       const result = NutritionService.calculateMacroRatio(data);
-      
+
       expect(result.proteinsPercent).toBe(51); // 400/780 * 100 ≈ 51%
       expect(result.carbsPercent).toBe(26); // 200/780 * 100 ≈ 26%
       expect(result.fatsPercent).toBe(23); // 180/780 * 100 ≈ 23%
@@ -64,9 +64,9 @@ describe('NutritionService', () => {
         carbs: 0,
         fats: 0,
       };
-      
+
       const result = NutritionService.calculateMacroRatio(data);
-      
+
       expect(result.proteinsPercent).toBe(0);
       expect(result.carbsPercent).toBe(0);
       expect(result.fatsPercent).toBe(0);
@@ -81,7 +81,7 @@ describe('NutritionService', () => {
         fats: 20,
         weight: 300,
       };
-      
+
       expect(NutritionService.validateNutritionData(data)).toBe(true);
     });
 
@@ -91,7 +91,7 @@ describe('NutritionService', () => {
         carbs: 50,
         fats: 20,
       };
-      
+
       expect(NutritionService.validateNutritionData(data)).toBe(false);
     });
 
@@ -101,7 +101,7 @@ describe('NutritionService', () => {
         carbs: 50,
         fats: 20,
       };
-      
+
       expect(NutritionService.validateNutritionData(data)).toBe(true);
     });
 
@@ -112,7 +112,7 @@ describe('NutritionService', () => {
         fats: 20,
         weight: 0,
       };
-      
+
       expect(NutritionService.validateNutritionData(data)).toBe(false);
     });
   });
@@ -133,10 +133,10 @@ describe('AnalyticsService', () => {
   describe('track', () => {
     it('should add event to queue', async () => {
       await analyticsService.track('test_event', { key: 'value' });
-      
+
       const queue = analyticsService.getEventQueue();
       expect(queue).toHaveLength(1);
-      
+
       const firstEvent = queue[0]!;
       expect(firstEvent.name).toBe('test_event');
       expect(firstEvent.properties).toEqual({ key: 'value' });
@@ -146,14 +146,14 @@ describe('AnalyticsService', () => {
 
     it('should call providers track method', async () => {
       analyticsService.addProvider(mockProvider);
-      
+
       await analyticsService.track('test_event', { key: 'value' });
-      
+
       expect(mockProvider.track).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'test_event',
           properties: { key: 'value' },
-        })
+        }),
       );
     });
 
@@ -162,9 +162,9 @@ describe('AnalyticsService', () => {
         track: vi.fn().mockRejectedValue(new Error('Provider error')),
         identify: vi.fn().mockResolvedValue(undefined),
       };
-      
+
       analyticsService.addProvider(failingProvider);
-      
+
       // Should not throw
       await expect(analyticsService.track('test_event')).resolves.toBeUndefined();
     });
@@ -173,16 +173,16 @@ describe('AnalyticsService', () => {
   describe('identify', () => {
     it('should call providers identify method', async () => {
       analyticsService.addProvider(mockProvider);
-      
+
       await analyticsService.identify('user123', { name: 'John' });
-      
+
       expect(mockProvider.identify).toHaveBeenCalledWith('user123', { name: 'John' });
     });
 
     it('should include userId in subsequent events', async () => {
       await analyticsService.identify('user123');
       await analyticsService.track('test_event');
-      
+
       const queue = analyticsService.getEventQueue();
       expect(queue[0]!.userId).toBe('user123');
     });
@@ -192,11 +192,11 @@ describe('AnalyticsService', () => {
     it('should clear event queue', async () => {
       await analyticsService.track('event1');
       await analyticsService.track('event2');
-      
+
       expect(analyticsService.getEventQueue()).toHaveLength(2);
-      
+
       analyticsService.clearEventQueue();
-      
+
       expect(analyticsService.getEventQueue()).toHaveLength(0);
     });
   });
@@ -216,7 +216,7 @@ describe('Legacy Core Migration Status', () => {
       carbs: 10,
       fats: 10,
     });
-    
+
     expect(basicCalories).toBeGreaterThan(0);
   });
 

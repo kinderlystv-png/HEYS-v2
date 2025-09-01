@@ -1,5 +1,5 @@
-import { defineConfig } from 'vitest/config';
 import path from 'node:path';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
@@ -19,11 +19,11 @@ export default defineConfig({
     },
     setupFiles: ['./src/__tests__/setup.ts'],
   },
-  resolve: { 
-    alias: { 
+  resolve: {
+    alias: {
       '@heys/shared': path.resolve(__dirname, '../shared/src'),
       '@heys/core': path.resolve(__dirname, './src'),
-      '@heys': path.resolve(__dirname, '../..') 
-    } 
-  }
+      '@heys': path.resolve(__dirname, '../..'),
+    },
+  },
 });

@@ -1,25 +1,25 @@
-import { useState } from 'react'
-import './App.css'
+import { useState } from 'react';
+import './App.css';
 
 export function App() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [testResult, setTestResult] = useState<string>('')
+  const [isLoading, setIsLoading] = useState(false);
+  const [testResult, setTestResult] = useState<string>('');
 
   const handlePerformanceTest = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       // Простой тест производительности
-      const start = performance.now()
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      const end = performance.now()
-      
-      setTestResult(`✅ Тест завершен за ${(end - start).toFixed(2)}ms`)
+      const start = performance.now();
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const end = performance.now();
+
+      setTestResult(`✅ Тест завершен за ${(end - start).toFixed(2)}ms`);
     } catch (error) {
-      setTestResult(`❌ Ошибка: ${error}`)
+      setTestResult(`❌ Ошибка: ${error}`);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="app">
@@ -31,11 +31,7 @@ export function App() {
       <main className="app-main">
         <section className="performance-section">
           <h2>Performance Monitor</h2>
-          <button 
-            onClick={handlePerformanceTest} 
-            disabled={isLoading}
-            className="performance-btn"
-          >
+          <button onClick={handlePerformanceTest} disabled={isLoading} className="performance-btn">
             {isLoading ? '⏳ Тестирование...' : '🔧 Запустить Performance Test'}
           </button>
 
@@ -96,5 +92,5 @@ export function App() {
         <p>HEYS Platform — Современная архитектура с Turbo монорепозиторием</p>
       </footer>
     </div>
-  )
+  );
 }

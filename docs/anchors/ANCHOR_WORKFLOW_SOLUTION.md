@@ -21,7 +21,7 @@ await replace_string_in_file('heys_core_v12.js', oldCode, newCode);
 
 // + НОВОЕ: Сразу обновляю якоря
 await run_in_terminal(
-  'cd "c:\\! HEYS 2"; node TOOLS/real-anchor-demo.js heys_core_v12.js'
+  'cd "c:\\! HEYS 2"; node TOOLS/real-anchor-demo.js heys_core_v12.js',
 );
 ```
 
@@ -34,7 +34,7 @@ await create_file('heys_new_feature.js', bigModuleCode);
 // + НОВОЕ: Если файл большой - сразу добавляю якоря
 if (bigModuleCode.length > 2000) {
   await run_in_terminal(
-    'cd "c:\\! HEYS 2"; node TOOLS/real-anchor-demo.js heys_new_feature.js'
+    'cd "c:\\! HEYS 2"; node TOOLS/real-anchor-demo.js heys_new_feature.js',
   );
 }
 ```
@@ -52,7 +52,7 @@ const modifiedFiles = [
 // Пакетная обработка якорей
 for (const file of modifiedFiles) {
   await run_in_terminal(
-    `cd "c:\\! HEYS 2"; node TOOLS/real-anchor-demo.js ${file}`
+    `cd "c:\\! HEYS 2"; node TOOLS/real-anchor-demo.js ${file}`,
   );
 }
 ```
@@ -107,7 +107,7 @@ async function smartEditAndAnchors(filePath, oldString, newString) {
   if (estimatedLines > 200) {
     console.log('🔗 Автоматически обновляю якоря...');
     await run_in_terminal(
-      `cd "c:\\! HEYS 2"; node TOOLS/real-anchor-demo.js ${filePath}`
+      `cd "c:\\! HEYS 2"; node TOOLS/real-anchor-demo.js ${filePath}`,
     );
   }
 }
@@ -130,7 +130,7 @@ async function finishTaskWithAnchorCheck() {
   // Обновляю якоря во всех потенциально измененных файлах
   for (const file of potentialFiles) {
     await run_in_terminal(
-      `cd "c:\\! HEYS 2"; node TOOLS/real-anchor-demo.js ${file}`
+      `cd "c:\\! HEYS 2"; node TOOLS/real-anchor-demo.js ${file}`,
     );
   }
 

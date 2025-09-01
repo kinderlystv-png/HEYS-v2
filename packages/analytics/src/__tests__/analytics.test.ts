@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { trackEvent } from '../index.js';
 
 describe('Analytics', () => {
@@ -15,7 +15,7 @@ describe('Analytics', () => {
   describe('trackEvent', () => {
     it('should track event with name only', () => {
       trackEvent('user_login');
-      
+
       expect(consoleSpy).toHaveBeenCalledWith('Track:', 'user_login', undefined);
       expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
@@ -23,21 +23,15 @@ describe('Analytics', () => {
     it('should track event with name and data', () => {
       const eventData = { userId: '123', timestamp: Date.now() };
       trackEvent('user_action', eventData);
-      
+
       expect(consoleSpy).toHaveBeenCalledWith('Track:', 'user_action', eventData);
       expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should handle different event names', () => {
-      const events = [
-        'page_view',
-        'button_click',
-        'form_submit',
-        'api_call',
-        'error_occurred',
-      ];
+      const events = ['page_view', 'button_click', 'form_submit', 'api_call', 'error_occurred'];
 
-      events.forEach(eventName => {
+      events.forEach((eventName) => {
         trackEvent(eventName);
         expect(consoleSpy).toHaveBeenCalledWith('Track:', eventName, undefined);
       });
@@ -66,7 +60,7 @@ describe('Analytics', () => {
 
     it('should handle empty string event', () => {
       trackEvent('');
-      
+
       expect(consoleSpy).toHaveBeenCalledWith('Track:', '', undefined);
       expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
@@ -94,7 +88,7 @@ describe('Analytics', () => {
       };
 
       trackEvent('complex_interaction', complexData);
-      
+
       expect(consoleSpy).toHaveBeenCalledWith('Track:', 'complex_interaction', complexData);
       expect(consoleSpy).toHaveBeenCalledTimes(1);
     });
@@ -110,7 +104,7 @@ describe('Analytics', () => {
         'event@with@symbols',
       ];
 
-      specialEvents.forEach(eventName => {
+      specialEvents.forEach((eventName) => {
         trackEvent(eventName);
         expect(consoleSpy).toHaveBeenCalledWith('Track:', eventName, undefined);
       });
@@ -119,15 +113,9 @@ describe('Analytics', () => {
     });
 
     it('should handle unicode characters', () => {
-      const unicodeEvents = [
-        'событие',
-        '事件',
-        'événement',
-        'حدث',
-        '🎉 celebration',
-      ];
+      const unicodeEvents = ['событие', '事件', 'événement', 'حدث', '🎉 celebration'];
 
-      unicodeEvents.forEach(eventName => {
+      unicodeEvents.forEach((eventName) => {
         trackEvent(eventName);
         expect(consoleSpy).toHaveBeenCalledWith('Track:', eventName, undefined);
       });
@@ -139,7 +127,7 @@ describe('Analytics', () => {
       expect(() => trackEvent('normal_event')).not.toThrow();
       expect(() => trackEvent('', null)).not.toThrow();
       expect(() => trackEvent('event', { circular: {} })).not.toThrow();
-      
+
       // Создаем циклическую ссылку
       const circularObj: any = { name: 'test' };
       circularObj.self = circularObj;
@@ -160,7 +148,7 @@ describe('Analytics', () => {
         trackEvent('event3', null),
       ];
 
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result).toBeUndefined();
       });
     });
@@ -173,7 +161,7 @@ describe('Analytics', () => {
       }
 
       expect(consoleSpy).toHaveBeenCalledTimes(100);
-      
+
       // Проверяем первый и последний вызовы
       expect(consoleSpy).toHaveBeenNthCalledWith(1, 'Track:', 'rapid_event_0', { index: 0 });
       expect(consoleSpy).toHaveBeenNthCalledWith(100, 'Track:', 'rapid_event_99', { index: 99 });
@@ -203,7 +191,7 @@ describe('Analytics', () => {
       };
 
       trackEvent('error_occurred', errorData);
-      
+
       expect(consoleSpy).toHaveBeenCalledWith('Track:', 'error_occurred', errorData);
       expect(consoleSpy).toHaveBeenCalledTimes(1);
     });

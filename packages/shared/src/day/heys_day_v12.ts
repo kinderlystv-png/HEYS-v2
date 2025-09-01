@@ -2,16 +2,16 @@
 
 import React from 'react';
 import type {
-  Product,
   DayRecord,
-  UserProfile,
+  DayTabProps,
   HEYSGlobal,
   Meal,
   MealItem,
-  Training,
-  ProductIndex,
   NutritionTotals,
-  DayTabProps, // используем существующий тип
+  Product,
+  ProductIndex,
+  Training,
+  UserProfile,
 } from './types/heys';
 
 // Declare global types
@@ -76,7 +76,7 @@ interface TrainingComponentProps {
   function parseISO(s: string): Date {
     const [y, m, d] = String(s || '')
       .split('-')
-      .map(x => parseInt(x, 10));
+      .map((x) => parseInt(x, 10));
     if (!y || !m || !d) return new Date();
     const dt = new Date(y, m - 1, d);
     dt.setHours(12);
@@ -306,7 +306,7 @@ interface TrainingComponentProps {
       { className: 'day-tab' },
       React.createElement('h2', null, `День: ${date}`),
       React.createElement('div', null, `Приёмов пищи: ${day.meals?.length || 0}`),
-      React.createElement('div', null, `Продуктов доступно: ${products.length}`)
+      React.createElement('div', null, `Продуктов доступно: ${products.length}`),
     );
   }
 

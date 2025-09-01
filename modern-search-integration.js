@@ -101,7 +101,7 @@
         }
 
         console.log(
-          `[ModernSearch] Результат: ${result.results.length} продуктов за ${duration.toFixed(1)}ms из ${result.source}`
+          `[ModernSearch] Результат: ${result.results.length} продуктов за ${duration.toFixed(1)}ms из ${result.source}`,
         );
 
         // Показываем уведомление о источнике
@@ -244,7 +244,7 @@
     };
 
     // Перехватываем события поиска для статистики
-    HEYS.integration.on('smart_search_complete', event => {
+    HEYS.integration.on('smart_search_complete', (event) => {
       const { query, source, duration, results } = event.detail;
 
       searchStats.totalSearches++;
@@ -377,11 +377,11 @@
           console.log(
             '[ModernSearch] Предзагружено',
             popularProducts.length,
-            'популярных продуктов'
+            'популярных продуктов',
           );
           showSearchNotification(
             `📦 Загружено ${popularProducts.length} популярных продуктов`,
-            'success'
+            'success',
           );
         }
       } catch (error) {

@@ -194,7 +194,7 @@ await core.storage.set('project_navigation', navigation);
 
 ```javascript
 // Auto-update docs when code changes
-anchors.on('anchorUpdated', anchor => {
+anchors.on('anchorUpdated', (anchor) => {
   updateDocumentation(anchor);
 });
 
@@ -295,7 +295,7 @@ const automation = new AnchorAutomation({
 });
 
 // View anchor detection process
-automation.on('debug', message => {
+automation.on('debug', (message) => {
   console.log('Anchor Debug:', message);
 });
 ```

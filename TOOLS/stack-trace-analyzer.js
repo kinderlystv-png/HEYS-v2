@@ -29,7 +29,7 @@ class StackTraceAnalyzer {
   detectHeysModules() {
     // Обнаружение HEYS модулей из window объекта
     if (typeof window !== 'undefined' && window.HEYS) {
-      Object.keys(window.HEYS).forEach(moduleName => {
+      Object.keys(window.HEYS).forEach((moduleName) => {
         this.heysModules.add(moduleName);
       });
     }
@@ -102,7 +102,7 @@ class StackTraceAnalyzer {
    * 📋 Парсинг stack trace в структурированный формат
    */
   parseStackTrace(stackTrace) {
-    const lines = stackTrace.split('\n').filter(line => line.trim());
+    const lines = stackTrace.split('\n').filter((line) => line.trim());
     const frames = [];
 
     for (const line of lines) {
@@ -116,7 +116,7 @@ class StackTraceAnalyzer {
       rawTrace: stackTrace,
       frames: frames,
       topFrame: frames[0] || null,
-      heysFrames: frames.filter(frame => this.isHeysFrame(frame)),
+      heysFrames: frames.filter((frame) => this.isHeysFrame(frame)),
     };
   }
 
@@ -198,7 +198,7 @@ class StackTraceAnalyzer {
   isHeysFrame(frame) {
     if (!frame.fileName) return false;
 
-    return this.heysFilePatterns.some(pattern => pattern.test(frame.fileName));
+    return this.heysFilePatterns.some((pattern) => pattern.test(frame.fileName));
   }
 
   /**
@@ -382,7 +382,7 @@ class StackTraceAnalyzer {
 
     // Возвращаем паттерн с наивысшей уверенностью
     const bestPattern = analysis.patterns.reduce((best, current) =>
-      current.confidence > best.confidence ? current : best
+      current.confidence > best.confidence ? current : best,
     );
 
     return bestPattern.type;
@@ -486,7 +486,8 @@ class StackTraceAnalyzer {
   deduplicateAndSortSuggestions(suggestions) {
     // Удаление дубликатов по сообщению
     const unique = suggestions.filter(
-      (suggestion, index, array) => array.findIndex(s => s.message === suggestion.message) === index
+      (suggestion, index, array) =>
+        array.findIndex((s) => s.message === suggestion.message) === index,
     );
 
     // Сортировка по приоритету
@@ -507,7 +508,7 @@ class StackTraceAnalyzer {
     };
 
     // Найдем все HEYS модули в stack trace
-    parsed.heysFrames.forEach(frame => {
+    parsed.heysFrames.forEach((frame) => {
       const moduleName = this.extractModuleName(frame.fileName);
       if (moduleName && !heysContext.modulesInvolved.includes(moduleName)) {
         heysContext.modulesInvolved.push(moduleName);
@@ -515,7 +516,7 @@ class StackTraceAnalyzer {
     });
 
     // Определяем точку входа в HEYS
-    const firstHeysFrame = parsed.frames.find(frame => frame.isHeys);
+    const firstHeysFrame = parsed.frames.find((frame) => frame.isHeys);
     if (firstHeysFrame) {
       heysContext.entryPoint = {
         function: firstHeysFrame.functionName,

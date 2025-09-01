@@ -58,13 +58,13 @@ const STATIC_ASSETS = [
 // События Service Worker
 
 // Установка
-self.addEventListener('install', event => {
+self.addEventListener('install', (event) => {
   console.log('[SW] Установка Service Worker');
 
   event.waitUntil(
     caches
       .open(STATIC_CACHE)
-      .then(cache => {
+      .then((cache) => {
         console.log('[SW] Кеширование статических файлов');
         return cache.addAll(STATIC_ASSETS);
       })
@@ -72,37 +72,37 @@ self.addEventListener('install', event => {
         console.log('[SW] Статические файлы закешированы');
         return self.skipWaiting();
       })
-      .catch(error => {
+      .catch((error) => {
         console.error('[SW] Ошибка кеширования:', error);
-      })
+      }),
   );
 });
 
 // Активация
-self.addEventListener('activate', event => {
+self.addEventListener('activate', (event) => {
   console.log('[SW] Активация Service Worker');
 
   event.waitUntil(
     Promise.all([
       // Очистка старых кешей
-      caches.keys().then(cacheNames => {
+      caches.keys().then((cacheNames) => {
         return Promise.all(
-          cacheNames.map(cacheName => {
+          cacheNames.map((cacheName) => {
             if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
               console.log('[SW] Удаление старого кеша:', cacheName);
               return caches.delete(cacheName);
             }
-          })
+          }),
         );
       }),
       // Принятие управления всеми клиентами
       self.clients.claim(),
-    ])
+    ]),
   );
 });
 
 // Перехват запросов
-self.addEventListener('fetch', event => {
+self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
@@ -198,7 +198,7 @@ async function networkFirst(request) {
       {
         status: 503,
         headers: { 'Content-Type': 'application/json' },
-      }
+      },
     );
   }
 }
@@ -218,28 +218,28 @@ function isStaticAsset(pathname) {
     '.woff',
     '.woff2',
   ];
-  return staticExtensions.some(ext => pathname.endsWith(ext));
+  return staticExtensions.some((ext) => pathname.endsWith(ext));
 }
 
 // Обработка сообщений от клиентов
-self.addEventListener('message', event => {
+self.addEventListener('message', (event) => {
   const { type, data } = event.data;
 
   switch (type) {
     case 'GET_CACHE_STATS':
-      getCacheStats().then(stats => {
+      getCacheStats().then((stats) => {
         event.ports[0].postMessage({ type: 'CACHE_STATS', data: stats });
       });
       break;
 
     case 'CLEAR_CACHE':
-      clearCaches(data?.cacheNames).then(result => {
+      clearCaches(data?.cacheNames).then((result) => {
         event.ports[0].postMessage({ type: 'CACHE_CLEARED', data: result });
       });
       break;
 
     case 'PREFETCH_RESOURCES':
-      prefetchResources(data?.urls).then(result => {
+      prefetchResources(data?.urls).then((result) => {
         event.ports[0].postMessage({ type: 'PREFETCH_COMPLETE', data: result });
       });
       break;
@@ -266,7 +266,7 @@ async function getCacheStats() {
     const keys = await cache.keys();
     stats.caches[cacheName] = {
       entries: keys.length,
-      urls: keys.map(req => req.url),
+      urls: keys.map((req) => req.url),
     };
   }
 
@@ -278,11 +278,11 @@ async function clearCaches(cacheNames = null) {
   const allCacheNames = await caches.keys();
   const namesToClear = cacheNames || allCacheNames;
 
-  const results = await Promise.allSettled(namesToClear.map(name => caches.delete(name)));
+  const results = await Promise.allSettled(namesToClear.map((name) => caches.delete(name)));
 
   return {
-    cleared: results.filter(r => r.status === 'fulfilled' && r.value).length,
-    failed: results.filter(r => r.status === 'rejected').length,
+    cleared: results.filter((r) => r.status === 'fulfilled' && r.value).length,
+    failed: results.filter((r) => r.status === 'rejected').length,
     total: namesToClear.length,
   };
 }
@@ -293,7 +293,7 @@ async function prefetchResources(urls = []) {
 
   const cache = await caches.open(DYNAMIC_CACHE);
   const results = await Promise.allSettled(
-    urls.map(async url => {
+    urls.map(async (url) => {
       try {
         const response = await fetch(url);
         if (response.ok) {
@@ -303,18 +303,18 @@ async function prefetchResources(urls = []) {
       } catch (error) {
         console.warn('[SW] Ошибка предзагрузки:', url, error);
       }
-    })
+    }),
   );
 
   return {
-    prefetched: results.filter(r => r.status === 'fulfilled' && r.value).length,
-    failed: results.filter(r => r.status === 'rejected').length,
+    prefetched: results.filter((r) => r.status === 'fulfilled' && r.value).length,
+    failed: results.filter((r) => r.status === 'rejected').length,
     total: urls.length,
   };
 }
 
 // Фоновая синхронизация
-self.addEventListener('sync', event => {
+self.addEventListener('sync', (event) => {
   console.log('[SW] Фоновая синхронизация:', event.tag);
 
   switch (event.tag) {
@@ -340,7 +340,7 @@ async function performDataSync() {
     // Например, отправка pending операций из IndexedDB
 
     const clients = await self.clients.matchAll();
-    clients.forEach(client => {
+    clients.forEach((client) => {
       client.postMessage({
         type: 'SYNC_COMPLETE',
         data: { success: true, timestamp: Date.now() },
@@ -367,7 +367,7 @@ async function performAnalyticsSync() {
 }
 
 // Push уведомления
-self.addEventListener('push', event => {
+self.addEventListener('push', (event) => {
   console.log('[SW] Push уведомление получено');
 
   let notificationData = {
@@ -392,13 +392,13 @@ self.addEventListener('push', event => {
 });
 
 // Клик по уведомлению
-self.addEventListener('notificationclick', event => {
+self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Клик по уведомлению:', event.notification.tag);
 
   event.notification.close();
 
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then(clientList => {
+    clients.matchAll({ type: 'window' }).then((clientList) => {
       // Если есть открытое окно, фокусируемся на нем
       for (const client of clientList) {
         if (client.url === '/' && 'focus' in client) {
@@ -410,16 +410,16 @@ self.addEventListener('notificationclick', event => {
       if (clients.openWindow) {
         return clients.openWindow('/');
       }
-    })
+    }),
   );
 });
 
 // Обработка ошибок
-self.addEventListener('error', event => {
+self.addEventListener('error', (event) => {
   console.error('[SW] Глобальная ошибка:', event.error);
 });
 
-self.addEventListener('unhandledrejection', event => {
+self.addEventListener('unhandledrejection', (event) => {
   console.error('[SW] Необработанное отклонение промиса:', event.reason);
 });
 

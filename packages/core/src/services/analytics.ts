@@ -44,10 +44,8 @@ export class AnalyticsService {
     this.eventQueue.push(event);
 
     // Send to all providers
-    const promises = this.providers.map(provider => 
-      provider.track(event).catch(error => 
-        console.error('Analytics provider error:', error)
-      )
+    const promises = this.providers.map((provider) =>
+      provider.track(event).catch((error) => console.error('Analytics provider error:', error)),
     );
 
     await Promise.allSettled(promises);
@@ -56,10 +54,10 @@ export class AnalyticsService {
   async identify(userId: string, traits?: Record<string, any>): Promise<void> {
     this.userId = userId;
 
-    const promises = this.providers.map(provider =>
-      provider.identify(userId, traits).catch(error =>
-        console.error('Analytics identify error:', error)
-      )
+    const promises = this.providers.map((provider) =>
+      provider
+        .identify(userId, traits)
+        .catch((error) => console.error('Analytics identify error:', error)),
     );
 
     await Promise.allSettled(promises);

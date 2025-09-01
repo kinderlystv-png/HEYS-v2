@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { ExerciseSchema, WorkoutSessionSchema, TrainingProgramSchema } from '../models/training.js';
+import { describe, expect, it } from 'vitest';
+import { ExerciseSchema, TrainingProgramSchema, WorkoutSessionSchema } from '../models/training.js';
 
 describe('Training Models', () => {
   describe('ExerciseSchema validation', () => {

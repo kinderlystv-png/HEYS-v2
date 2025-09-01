@@ -1,7 +1,7 @@
 /**
  * HEYS Network Optimizer
  * Advanced network performance optimization and request management
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
@@ -80,9 +80,11 @@ class RequestQueue {
 
   constructor() {
     // Initialize priority queues
-    (['critical', 'high', 'normal', 'low', 'background'] as RequestPriority[]).forEach(priority => {
-      this.queues.set(priority, []);
-    });
+    (['critical', 'high', 'normal', 'low', 'background'] as RequestPriority[]).forEach(
+      (priority) => {
+        this.queues.set(priority, []);
+      },
+    );
   }
 
   enqueue(request: NetworkRequest): void {
@@ -115,14 +117,14 @@ class RequestQueue {
   private getNextRequest(): NetworkRequest | null {
     // Process in priority order
     const priorities: RequestPriority[] = ['critical', 'high', 'normal', 'low', 'background'];
-    
+
     for (const priority of priorities) {
       const queue = this.queues.get(priority);
       if (queue && queue.length > 0) {
         return queue.shift()!;
       }
     }
-    
+
     return null;
   }
 
@@ -274,7 +276,7 @@ export class NetworkOptimizer {
 
     try {
       const response = await this.executeRequest(request);
-      
+
       // Cache successful response
       if (config.cache !== false && response) {
         const cacheKey = this.generateCacheKey(config);
@@ -289,7 +291,7 @@ export class NetworkOptimizer {
         await this.delay(Math.pow(2, request.retryCount) * 1000); // Exponential backoff
         return this.request(config);
       }
-      
+
       throw error;
     } finally {
       this.requestHistory.push(request);
@@ -308,7 +310,7 @@ export class NetworkOptimizer {
       const fetchOptions: RequestInit = {
         method: config.method || 'GET',
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'Content-Type': 'application/json',
           ...config.headers,
         },
@@ -316,7 +318,8 @@ export class NetworkOptimizer {
       };
 
       if (config.body) {
-        fetchOptions.body = typeof config.body === 'string' ? config.body : JSON.stringify(config.body);
+        fetchOptions.body =
+          typeof config.body === 'string' ? config.body : JSON.stringify(config.body);
       }
 
       const response = await fetch(config.url, fetchOptions);
@@ -377,7 +380,7 @@ export class NetworkOptimizer {
    */
   async preloadResources(urls: string[], priority: RequestPriority = 'low'): Promise<void> {
     const preloadPromises = urls
-      .filter(url => !this.preloadedResources.has(url))
+      .filter((url) => !this.preloadedResources.has(url))
       .map(async (url) => {
         try {
           await this.request({
@@ -398,17 +401,19 @@ export class NetworkOptimizer {
   /**
    * Implement resource hints
    */
-  addResourceHints(hints: Array<{ url: string; type: 'dns-prefetch' | 'preconnect' | 'prefetch' | 'preload' }>): void {
+  addResourceHints(
+    hints: Array<{ url: string; type: 'dns-prefetch' | 'preconnect' | 'prefetch' | 'preload' }>,
+  ): void {
     hints.forEach(({ url, type }) => {
       const link = document.createElement('link');
       link.rel = type;
       link.href = url;
-      
+
       if (type === 'preload') {
         link.as = 'fetch';
         link.crossOrigin = 'anonymous';
       }
-      
+
       document.head.appendChild(link);
     });
   }
@@ -418,14 +423,14 @@ export class NetworkOptimizer {
    */
   async batchRequests<T = any>(configs: RequestConfig[]): Promise<T[]> {
     // Check if we can batch these requests
-    const batchableConfigs = configs.filter(config => 
-      config.method === 'GET' || config.method === undefined
+    const batchableConfigs = configs.filter(
+      (config) => config.method === 'GET' || config.method === undefined,
     );
 
     if (batchableConfigs.length > 1) {
       // Create a batch request URL
       const batchUrl = this.createBatchUrl(batchableConfigs);
-      
+
       try {
         const batchResponse = await this.request({
           url: batchUrl,
@@ -433,7 +438,7 @@ export class NetworkOptimizer {
           body: { requests: batchableConfigs },
           priority: 'high',
         });
-        
+
         return batchResponse.responses || [];
       } catch (error) {
         console.warn('Batch request failed, falling back to individual requests');
@@ -441,7 +446,7 @@ export class NetworkOptimizer {
     }
 
     // Fallback to individual requests
-    return Promise.all(configs.map(config => this.request<T>(config)));
+    return Promise.all(configs.map((config) => this.request<T>(config)));
   }
 
   /**
@@ -457,26 +462,23 @@ export class NetworkOptimizer {
    */
   getNetworkStats(): NetworkStats {
     const requests = this.requestHistory;
-    const successful = requests.filter(r => r.status && r.status < 400);
-    const failed = requests.filter(r => !r.status || r.status >= 400);
-    const cached = requests.filter(r => r.fromCache);
+    const successful = requests.filter((r) => r.status && r.status < 400);
+    const failed = requests.filter((r) => !r.status || r.status >= 400);
+    const cached = requests.filter((r) => r.fromCache);
 
     const totalResponseTime = successful
-      .filter(r => r.duration)
+      .filter((r) => r.duration)
       .reduce((sum, r) => sum + (r.duration || 0), 0);
 
-    const averageResponseTime = successful.length > 0 ? 
-      totalResponseTime / successful.length : 0;
+    const averageResponseTime = successful.length > 0 ? totalResponseTime / successful.length : 0;
 
     const totalDataTransferred = requests
-      .filter(r => r.size)
+      .filter((r) => r.size)
       .reduce((sum, r) => sum + (r.size || 0), 0);
 
-    const cacheHitRate = requests.length > 0 ? 
-      cached.length / requests.length : 0;
+    const cacheHitRate = requests.length > 0 ? cached.length / requests.length : 0;
 
-    const networkEfficiency = successful.length > 0 ? 
-      successful.length / requests.length : 0;
+    const networkEfficiency = successful.length > 0 ? successful.length / requests.length : 0;
 
     return {
       totalRequests: requests.length,
@@ -535,7 +537,7 @@ export class NetworkOptimizer {
    * Delay utility
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**

@@ -59,7 +59,7 @@
 
 // heys_performance_monitor.ts — расширенная аналитика и мониторинг производительности (TypeScript version)
 
-import type { HEYSGlobal, HEYSPerformance, HEYSAnalytics } from './types/heys';
+import type { HEYSGlobal } from './types/heys';
 
 // Performance monitoring types
 interface PerformanceMetrics {
@@ -534,7 +534,7 @@ declare global {
       const timing = this.timings.get(name);
       if (timing && timing.avg > threshold) {
         console.warn(
-          `⚠️ Slow operation detected: ${name} avg ${timing.avg.toFixed(2)}ms (threshold: ${threshold}ms)`
+          `⚠️ Slow operation detected: ${name} avg ${timing.avg.toFixed(2)}ms (threshold: ${threshold}ms)`,
         );
       }
     }
@@ -575,7 +575,7 @@ declare global {
         .sort((a, b) => b.avg - a.avg)
         .slice(0, 5);
 
-      slowOps.forEach(op => {
+      slowOps.forEach((op) => {
         console.log(`  ${op.name}: ${op.avg.toFixed(2)}ms avg (${op.count} calls)`);
       });
 

@@ -450,7 +450,7 @@ class RealTimeErrorDashboard {
       this.updateConnectionStatus('🟢 Подключен к Enhanced Logger');
     } else {
       // Слушаем событие инициализации логгера
-      window.addEventListener('enhancedLogEntry', event => {
+      window.addEventListener('enhancedLogEntry', (event) => {
         this.onNewLogEntry(event.detail);
       });
       this.updateConnectionStatus('🟡 Ожидание подключения...');
@@ -491,7 +491,7 @@ class RealTimeErrorDashboard {
     const timeSlot = Math.floor(now / (60 * 1000)) * 60 * 1000; // Минутные слоты
 
     // Обновляем timeline данные
-    let timelineEntry = this.chartData.timeline.find(entry => entry.time === timeSlot);
+    let timelineEntry = this.chartData.timeline.find((entry) => entry.time === timeSlot);
     if (!timelineEntry) {
       timelineEntry = { time: timeSlot, errors: 0, warnings: 0, info: 0, debug: 0 };
       this.chartData.timeline.push(timelineEntry);
@@ -501,7 +501,7 @@ class RealTimeErrorDashboard {
 
     // Очищаем старые данные (оставляем последние 60 минут)
     const cutoff = now - 60 * 60 * 1000;
-    this.chartData.timeline = this.chartData.timeline.filter(entry => entry.time > cutoff);
+    this.chartData.timeline = this.chartData.timeline.filter((entry) => entry.time > cutoff);
 
     // Обновляем данные по уровням
     this.chartData.byLevel[logEntry.level] = (this.chartData.byLevel[logEntry.level] || 0) + 1;
@@ -540,8 +540,8 @@ class RealTimeErrorDashboard {
     // Находим максимальное значение
     const maxValue = Math.max(
       ...this.chartData.timeline.map(
-        entry => entry.errors + entry.warnings + entry.info + entry.debug
-      )
+        (entry) => entry.errors + entry.warnings + entry.info + entry.debug,
+      ),
     );
 
     if (maxValue === 0) return;
@@ -573,7 +573,7 @@ class RealTimeErrorDashboard {
         { key: 'debug', color: '#6b7280' },
       ];
 
-      levels.forEach(level => {
+      levels.forEach((level) => {
         const levelHeight = (entry[level.key] / maxValue) * chartHeight;
         if (levelHeight > 0) {
           ctx.fillStyle = level.color;
@@ -688,7 +688,7 @@ class RealTimeErrorDashboard {
       severity === 'critical' ? 'critical' : null,
     ].filter(Boolean);
 
-    const tagsHTML = tags.map(tag => `<span class="error-tag ${tag}">${tag}</span>`).join('');
+    const tagsHTML = tags.map((tag) => `<span class="error-tag ${tag}">${tag}</span>`).join('');
 
     return `
             <div class="error-item level-${logEntry.level}" onclick="errorDashboard.showErrorDetails('${logEntry.id}')">
@@ -769,7 +769,7 @@ class RealTimeErrorDashboard {
     logs
       .reverse()
       .slice(0, 50)
-      .forEach(logEntry => {
+      .forEach((logEntry) => {
         const errorItem = this.createErrorItemHTML(logEntry);
         errorsList.insertAdjacentHTML('beforeend', errorItem);
       });
@@ -781,7 +781,7 @@ class RealTimeErrorDashboard {
   showErrorDetails(logId) {
     if (!this.logger) return;
 
-    const logEntry = this.logger.logs.find(log => log.id === logId);
+    const logEntry = this.logger.logs.find((log) => log.id === logId);
     if (!logEntry) return;
 
     // Создаем модальное окно с деталями
@@ -841,7 +841,7 @@ class RealTimeErrorDashboard {
     document.body.appendChild(modal);
 
     // Закрытие по клику вне модального окна
-    modal.addEventListener('click', e => {
+    modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         modal.remove();
       }
@@ -999,13 +999,13 @@ class RealTimeErrorDashboard {
 
     // Логируем информацию об экспорте
     console.log(
-      `📤 Экспортирован отчет: ${allLogs.length} всего логов (метод), ${directLogs.length} прямых логов, ${filteredLogs.length} отфильтрованных`
+      `📤 Экспортирован отчет: ${allLogs.length} всего логов (метод), ${directLogs.length} прямых логов, ${filteredLogs.length} отфильтрованных`,
     );
 
     // Если все массивы пустые, это проблема
     if (allLogs.length === 0 && directLogs.length === 0 && stats.total > 0) {
       console.warn(
-        '⚠️ ВНИМАНИЕ: Статистика показывает логи, но массивы пустые! Возможна проблема с методом getLogs()'
+        '⚠️ ВНИМАНИЕ: Статистика показывает логи, но массивы пустые! Возможна проблема с методом getLogs()',
       );
     }
   }
@@ -1053,7 +1053,7 @@ class RealTimeErrorDashboard {
     }, 100);
 
     // Клавиатурные сокращения
-    document.addEventListener('keydown', e => {
+    document.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'E') {
         this.togglePause();
       }

@@ -1,6 +1,6 @@
 /**
  * Real-time Monitoring Dashboard
- * 
+ *
  * Provides real-time monitoring capabilities with WebSocket support,
  * live metrics visualization, and alert management.
  */
@@ -56,7 +56,8 @@ export class RealtimeMonitor {
       return;
     }
 
-    if (!this.websocketUrl || (this.ws && this.ws.readyState === 1)) { // 1 = OPEN
+    if (!this.websocketUrl || (this.ws && this.ws.readyState === 1)) {
+      // 1 = OPEN
       return;
     }
 
@@ -68,7 +69,7 @@ export class RealtimeMonitor {
       }
 
       this.ws = new WebSocket(this.websocketUrl);
-      
+
       this.ws.onopen = () => {
         console.log('Real-time monitoring connected');
         this.emit('connection', { status: 'connected' });
@@ -86,7 +87,7 @@ export class RealtimeMonitor {
       this.ws.onclose = () => {
         console.log('Real-time monitoring disconnected');
         this.emit('connection', { status: 'disconnected' });
-        
+
         // Attempt to reconnect after 5 seconds
         setTimeout(() => this.connect(), 5000);
       };
@@ -117,9 +118,9 @@ export class RealtimeMonitor {
     if (!this.subscribers.has(event)) {
       this.subscribers.set(event, new Set());
     }
-    
+
     this.subscribers.get(event)!.add(callback);
-    
+
     // Return unsubscribe function
     return () => {
       this.subscribers.get(event)?.delete(callback);
@@ -132,12 +133,12 @@ export class RealtimeMonitor {
   addAlertRule(rule: Omit<AlertRule, 'id'>): string {
     const alertRule: AlertRule = {
       id: this.generateId(),
-      ...rule
+      ...rule,
     };
-    
+
     this.alertRules.push(alertRule);
     this.emit('alert_rule_added', alertRule);
-    
+
     return alertRule.id;
   }
 
@@ -145,7 +146,7 @@ export class RealtimeMonitor {
    * Remove alert rule
    */
   removeAlertRule(id: string): boolean {
-    const index = this.alertRules.findIndex(rule => rule.id === id);
+    const index = this.alertRules.findIndex((rule) => rule.id === id);
     if (index >= 0) {
       const rule = this.alertRules.splice(index, 1)[0];
       this.emit('alert_rule_removed', rule);
@@ -165,12 +166,12 @@ export class RealtimeMonitor {
       previous: previous?.current ?? value,
       trend: this.calculateTrend(value, previous?.current),
       unit,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     this.liveMetrics.set(name, current);
     this.emit('metric_updated', current);
-    
+
     // Check alerts
     this.checkAlerts(name, value);
   }
@@ -186,14 +187,14 @@ export class RealtimeMonitor {
    * Get active alerts
    */
   getActiveAlerts(): Alert[] {
-    return this.alerts.filter(alert => !alert.acknowledged && !alert.resolvedAt);
+    return this.alerts.filter((alert) => !alert.acknowledged && !alert.resolvedAt);
   }
 
   /**
    * Acknowledge alert
    */
   acknowledgeAlert(id: string): boolean {
-    const alert = this.alerts.find(a => a.id === id);
+    const alert = this.alerts.find((a) => a.id === id);
     if (alert && !alert.acknowledged) {
       alert.acknowledged = true;
       this.emit('alert_acknowledged', alert);
@@ -206,7 +207,7 @@ export class RealtimeMonitor {
    * Resolve alert
    */
   resolveAlert(id: string): boolean {
-    const alert = this.alerts.find(a => a.id === id);
+    const alert = this.alerts.find((a) => a.id === id);
     if (alert && !alert.resolvedAt) {
       alert.resolvedAt = Date.now();
       this.emit('alert_resolved', alert);
@@ -247,7 +248,7 @@ export class RealtimeMonitor {
       message: data.message,
       severity: data.severity,
       timestamp: data.timestamp || Date.now(),
-      acknowledged: false
+      acknowledged: false,
     };
 
     this.alerts.push(alert);
@@ -256,7 +257,7 @@ export class RealtimeMonitor {
 
   private checkAlerts(metricName: string, value: number): void {
     const applicableRules = this.alertRules.filter(
-      rule => rule.enabled && rule.metric === metricName
+      (rule) => rule.enabled && rule.metric === metricName,
     );
 
     for (const rule of applicableRules) {
@@ -268,21 +269,28 @@ export class RealtimeMonitor {
 
   private evaluateRule(rule: AlertRule, value: number): boolean {
     switch (rule.operator) {
-      case 'gt': return value > rule.threshold;
-      case 'gte': return value >= rule.threshold;
-      case 'lt': return value < rule.threshold;
-      case 'lte': return value <= rule.threshold;
-      case 'eq': return value === rule.threshold;
-      default: return false;
+      case 'gt':
+        return value > rule.threshold;
+      case 'gte':
+        return value >= rule.threshold;
+      case 'lt':
+        return value < rule.threshold;
+      case 'lte':
+        return value <= rule.threshold;
+      case 'eq':
+        return value === rule.threshold;
+      default:
+        return false;
     }
   }
 
   private triggerAlert(rule: AlertRule, value: number): void {
     // Avoid duplicate alerts for the same rule within a short timeframe
     const recentAlert = this.alerts.find(
-      alert => alert.ruleId === rule.id && 
-               Date.now() - alert.timestamp < (rule.duration || 60) * 1000 &&
-               !alert.resolvedAt
+      (alert) =>
+        alert.ruleId === rule.id &&
+        Date.now() - alert.timestamp < (rule.duration || 60) * 1000 &&
+        !alert.resolvedAt,
     );
 
     if (recentAlert) return;
@@ -293,7 +301,7 @@ export class RealtimeMonitor {
       message: `${rule.name}: ${rule.metric} is ${value} (threshold: ${rule.threshold})`,
       severity: value > rule.threshold * 2 ? 'critical' : 'warning',
       timestamp: Date.now(),
-      acknowledged: false
+      acknowledged: false,
     };
 
     this.alerts.push(alert);
@@ -308,7 +316,7 @@ export class RealtimeMonitor {
   private emit(event: string, data: any): void {
     const subscribers = this.subscribers.get(event);
     if (subscribers) {
-      subscribers.forEach(callback => {
+      subscribers.forEach((callback) => {
         try {
           callback(data);
         } catch (error) {
@@ -325,13 +333,14 @@ export class RealtimeMonitor {
 
 // Default instance for real-time monitoring
 export const realtimeMonitor = new RealtimeMonitor(
-  process.env.MONITORING_WS_URL || (typeof window !== 'undefined' ? 'ws://localhost:8080/monitoring' : undefined)
+  process.env.MONITORING_WS_URL ||
+    (typeof window !== 'undefined' ? 'ws://localhost:8080/monitoring' : undefined),
 );
 
 // Convenient helper functions
 export const addAlert = (rule: Omit<AlertRule, 'id'>) => realtimeMonitor.addAlertRule(rule);
 export const removeAlert = (id: string) => realtimeMonitor.removeAlertRule(id);
-export const updateLiveMetric = (name: string, value: number, unit?: string) => 
+export const updateLiveMetric = (name: string, value: number, unit?: string) =>
   realtimeMonitor.updateMetric(name, value, unit);
 export const getLiveMetrics = () => realtimeMonitor.getLiveMetrics();
 export const getActiveAlerts = () => realtimeMonitor.getActiveAlerts();

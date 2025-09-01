@@ -42,7 +42,7 @@ if (!window.errorDashboard || !window.enhancedLogger) {
     const sinceTime = convertedFilters.since;
     const hoursDiff = (now - sinceTime) / (1000 * 60 * 60);
     console.log(
-      `   ⏰ Фильтр времени: since ${new Date(sinceTime).toLocaleTimeString()} (${hoursDiff.toFixed(1)}h ago)`
+      `   ⏰ Фильтр времени: since ${new Date(sinceTime).toLocaleTimeString()} (${hoursDiff.toFixed(1)}h ago)`,
     );
 
     // Проверяем timestamps логов
@@ -52,7 +52,7 @@ if (!window.errorDashboard || !window.enhancedLogger) {
         const age = (now - log.timestamp) / (1000 * 60);
         const tooOld = log.timestamp < sinceTime;
         console.log(
-          `     ${i + 1}. ${new Date(log.timestamp).toLocaleTimeString()} (${age.toFixed(1)}m ago) ${tooOld ? '❌ TOO OLD' : '✅ OK'}`
+          `     ${i + 1}. ${new Date(log.timestamp).toLocaleTimeString()} (${age.toFixed(1)}m ago) ${tooOld ? '❌ TOO OLD' : '✅ OK'}`,
         );
       });
     }
@@ -71,10 +71,10 @@ if (!window.errorDashboard || !window.enhancedLogger) {
   const newConvertedFilterLogs = logger.getLogs(convertedFilters);
 
   console.log(
-    `   📋 getLogs(): ${newAllLogs.length} логов (+${newAllLogs.length - allLogs.length})`
+    `   📋 getLogs(): ${newAllLogs.length} логов (+${newAllLogs.length - allLogs.length})`,
   );
   console.log(
-    `   📋 getLogs(convertedFilters): ${newConvertedFilterLogs.length} логов (+${newConvertedFilterLogs.length - convertedFilterLogs.length})`
+    `   📋 getLogs(convertedFilters): ${newConvertedFilterLogs.length} логов (+${newConvertedFilterLogs.length - convertedFilterLogs.length})`,
   );
 
   // Тестируем экспорт

@@ -109,7 +109,7 @@ async function modernLsSet(key, value) {
 
 ```javascript
 // Синхронизация через Web Workers (без блокировки UI)
-const syncData = async data => {
+const syncData = async (data) => {
   // Отправляем задачу в sync воркер
   const result = await HEYS.workers.sync.postMessage({
     type: 'SYNC_DATA',
@@ -288,7 +288,7 @@ React.useEffect(() => {
   const reloadData = async () => {
     if (cancelled) return;
     console.log(
-      '[Component] Reloading data with modern stack after client change...'
+      '[Component] Reloading data with modern stack after client change...',
     );
 
     // 🔄 Перезагружаем из localStorage ПОСЛЕ облачной синхронизации (Legacy)
@@ -352,7 +352,7 @@ React.useEffect(() => {
     });
 
     // Слушаем результаты синхронизации
-    window.HEYS.workers.sync.onmessage = event => {
+    window.HEYS.workers.sync.onmessage = (event) => {
       if (
         event.data.type === 'SYNC_COMPLETE' &&
         event.data.key === 'heys_data_key'
@@ -372,7 +372,7 @@ React.useEffect(() => {
 React.useEffect(() => {
   if ('serviceWorker' in navigator) {
     // Регистрируем обработчик событий синхронизации
-    navigator.serviceWorker.addEventListener('message', event => {
+    navigator.serviceWorker.addEventListener('message', (event) => {
       if (event.data.type === 'OFFLINE_SYNC_READY') {
         console.log('[Component] Offline sync queue ready');
         // Можно показать индикатор офлайн статуса
@@ -556,7 +556,7 @@ useEffect(() => {
 ```javascript
 // Просто применили ТУ ЖЕ логику для профиля:
 const [profile, setProfile] = useState(() =>
-  lsGet('heys_profile', defaultProfile)
+  lsGet('heys_profile', defaultProfile),
 );
 
 useEffect(() => {
@@ -827,7 +827,7 @@ useEffect(() => {
 ```javascript
 // ✅ Правильное решение:
 const [data, setData] = useState(
-  () => lsGet('heys_data_key', defaultValue) // Читать из localStorage при инициализации
+  () => lsGet('heys_data_key', defaultValue), // Читать из localStorage при инициализации
 );
 ```
 
@@ -924,7 +924,7 @@ interface StorageOperations {
 // Пример компонента с типизированной синхронизацией
 const ProfileComponent: React.FC = () => {
   const [profile, setProfile] = useState<ProfileData>(() =>
-    window.HEYS.utils.lsGet<ProfileData>('heys_profile', defaultProfile)
+    window.HEYS.utils.lsGet<ProfileData>('heys_profile', defaultProfile),
   );
 
   // TypeScript проверяет типы при сохранении
@@ -935,9 +935,9 @@ const ProfileComponent: React.FC = () => {
   // Типизированная функция обновления
   const updateProfileField = <K extends keyof ProfileData>(
     key: K,
-    value: ProfileData[K]
+    value: ProfileData[K],
   ): void => {
-    setProfile(prev => ({ ...prev, [key]: value }));
+    setProfile((prev) => ({ ...prev, [key]: value }));
   };
 };
 ```

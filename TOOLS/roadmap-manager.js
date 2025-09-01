@@ -138,7 +138,7 @@ class RoadmapManager {
       /^\d+\./, // Любая нумерованная задача
     ];
 
-    return taskPatterns.some(pattern => pattern.test(line));
+    return taskPatterns.some((pattern) => pattern.test(line));
   }
 
   /**
@@ -205,7 +205,7 @@ class RoadmapManager {
     };
 
     // Инициализируем состояние каждой задачи
-    roadmap.tasks.forEach(task => {
+    roadmap.tasks.forEach((task) => {
       progressData.tasks[task.id] = {
         state: task.state,
         updatedAt: new Date().toISOString(),
@@ -388,7 +388,7 @@ class RoadmapManager {
    */
   toggleRoadmap(filePath) {
     const roadmapElement = document.querySelector(
-      `[data-filepath="${filePath}"] .roadmap-sections`
+      `[data-filepath="${filePath}"] .roadmap-sections`,
     );
     if (roadmapElement) {
       roadmapElement.style.display = roadmapElement.style.display === 'none' ? 'block' : 'none';
@@ -405,7 +405,7 @@ class RoadmapManager {
     const progress = this.progress.get(filePath);
     if (!progress) return;
 
-    roadmap.tasks.forEach(task => {
+    roadmap.tasks.forEach((task) => {
       progress.tasks[task.id] = {
         ...progress.tasks[task.id],
         state: this.taskStates.DONE,
@@ -507,7 +507,7 @@ class RoadmapManager {
         totalTasks: roadmap.tasks.length,
         completedTasks: completedCount,
         progress: Math.round((completedCount / roadmap.tasks.length) * 100),
-        tasks: roadmap.tasks.map(task => ({
+        tasks: roadmap.tasks.map((task) => ({
           id: task.id,
           title: task.title,
           section: task.section,

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 // Мини-тест, просто чтобы папка не была пустой
 describe('web-app sanity', () => {

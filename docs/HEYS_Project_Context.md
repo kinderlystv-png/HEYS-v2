@@ -363,10 +363,10 @@ useEffect(() => {
 
 ```javascript
 const [selectedIndex, setSelectedIndex] = useState(-1);
-const handleKeyDown = e => {
+const handleKeyDown = (e) => {
   if (e.key === 'ArrowDown')
-    setSelectedIndex(prev => Math.min(prev + 1, items.length - 1));
-  if (e.key === 'ArrowUp') setSelectedIndex(prev => Math.max(prev - 1, -1));
+    setSelectedIndex((prev) => Math.min(prev + 1, items.length - 1));
+  if (e.key === 'ArrowUp') setSelectedIndex((prev) => Math.max(prev - 1, -1));
   if (e.key === 'Enter' && selectedIndex >= 0) selectItem(items[selectedIndex]);
 };
 ```

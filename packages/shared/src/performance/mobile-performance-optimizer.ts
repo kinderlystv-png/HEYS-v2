@@ -2,7 +2,7 @@
  * Mobile Performance Optimizer for HEYS Application
  * Implements mobile-specific performance optimizations including
  * touch handling, network efficiency, battery optimization, and adaptive loading
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
@@ -110,7 +110,7 @@ export class MobilePerformanceOptimizer {
     this.touchHandlers = new Map();
     this.deviceInfo = this.detectDeviceCapabilities();
     this.performanceBudget = this.getPerformanceBudgetForDevice();
-    
+
     this.networkMonitor = new NetworkMonitor();
     this.batteryMonitor = new BatteryMonitor();
     this.memoryMonitor = new MemoryMonitor();
@@ -173,7 +173,7 @@ export class MobilePerformanceOptimizer {
   /**
    * Public API Methods
    */
-  
+
   getDeviceInfo(): MobileDeviceInfo {
     return this.deviceInfo;
   }
@@ -232,9 +232,9 @@ export class MobilePerformanceOptimizer {
 
   async getCoreWebVitals(): Promise<Record<string, number>> {
     const paintEntries = performance.getEntriesByType('paint');
-    
+
     const metrics: Record<string, number> = {};
-    
+
     paintEntries.forEach((entry) => {
       if (entry.name === 'first-contentful-paint') {
         metrics.firstContentfulPaint = entry.startTime;
@@ -244,7 +244,7 @@ export class MobilePerformanceOptimizer {
     return metrics;
   }
 
-  getMemoryUsage(): { used: number; total: number; } {
+  getMemoryUsage(): { used: number; total: number } {
     const memory = (performance as any).memory;
     if (memory) {
       return {
@@ -285,7 +285,10 @@ export class MobilePerformanceOptimizer {
   }
 
   private validateConfig(newConfig: MobileOptimizationConfig): void {
-    if (newConfig.networkOptimization.compressionLevel < 0 || newConfig.networkOptimization.compressionLevel > 9) {
+    if (
+      newConfig.networkOptimization.compressionLevel < 0 ||
+      newConfig.networkOptimization.compressionLevel > 9
+    ) {
       throw new Error('Compression level must be between 0 and 9');
     }
   }
@@ -312,31 +315,37 @@ export class MobilePerformanceOptimizer {
   private detectDeviceCapabilities(): MobileDeviceInfo {
     const screen = window.screen;
     const navigator = window.navigator;
-    
+
     // Detect device type based on screen size and touch capability
     const deviceType = this.getDeviceType();
-    
+
     // Get network information
-    const connection = typeof navigator !== 'undefined' ? 
-      (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection :
-      null;
+    const connection =
+      typeof navigator !== 'undefined'
+        ? (navigator as any).connection ||
+          (navigator as any).mozConnection ||
+          (navigator as any).webkitConnection
+        : null;
     const networkType = connection?.effectiveType || 'unknown';
 
     // Check for low-end device indicators
     const isLowEndDevice = this.isLowEndDevice();
 
     // Get memory information if available
-    const memoryInfo: MobileDeviceInfo['memoryInfo'] = (typeof performance !== 'undefined' && (performance as any).memory) ? {
-      totalJSHeapSize: Number((performance as any).memory.totalJSHeapSize) || 0,
-      usedJSHeapSize: Number((performance as any).memory.usedJSHeapSize) || 0,
-      jsHeapSizeLimit: Number((performance as any).memory.jsHeapSizeLimit) || 0,
-    } : undefined;
+    const memoryInfo: MobileDeviceInfo['memoryInfo'] =
+      typeof performance !== 'undefined' && (performance as any).memory
+        ? {
+            totalJSHeapSize: Number((performance as any).memory.totalJSHeapSize) || 0,
+            usedJSHeapSize: Number((performance as any).memory.usedJSHeapSize) || 0,
+            jsHeapSizeLimit: Number((performance as any).memory.jsHeapSizeLimit) || 0,
+          }
+        : undefined;
 
     const deviceInfo: MobileDeviceInfo = {
       deviceType,
       screenSize: {
-        width: (typeof screen !== 'undefined' ? screen.width : 1920),
-        height: (typeof screen !== 'undefined' ? screen.height : 1080),
+        width: typeof screen !== 'undefined' ? screen.width : 1920,
+        height: typeof screen !== 'undefined' ? screen.height : 1080,
         dpr: (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1,
       },
       isLowEndDevice,
@@ -371,7 +380,7 @@ export class MobilePerformanceOptimizer {
     if (typeof window === 'undefined' || typeof screen === 'undefined') {
       return 'desktop';
     }
-    
+
     const width = window.screen?.width ?? screen?.width ?? 1920;
     const height = window.screen?.height ?? screen?.height ?? 1080;
     const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
@@ -400,7 +409,8 @@ export class MobilePerformanceOptimizer {
       // Low memory
       (performance as any).memory?.jsHeapSizeLimit < 1000000000, // < 1GB
       // Slow network
-      (navigator as any).connection?.effectiveType === 'slow-2g' || (navigator as any).connection?.effectiveType === '2g',
+      (navigator as any).connection?.effectiveType === 'slow-2g' ||
+        (navigator as any).connection?.effectiveType === '2g',
       // Low-end device hints
       navigator.hardwareConcurrency <= 2,
       // Old browser (rough estimation)
@@ -484,7 +494,7 @@ export class MobilePerformanceOptimizer {
    */
   private async initializeTouchOptimization(): Promise<void> {
     const touchHandler = new TouchHandler(this.config.touchOptimization);
-    
+
     // Prevent scroll bounce on iOS
     if (this.config.touchOptimization.preventScrollBounce && document.body?.style) {
       document.body.style.overscrollBehavior = 'none';
@@ -494,9 +504,21 @@ export class MobilePerformanceOptimizer {
     const passiveSupported = this.deviceInfo.supportedFeatures.passiveEventListeners;
     const eventOptions = passiveSupported ? { passive: true } : false;
 
-    document.addEventListener('touchstart', touchHandler.handleTouchStart.bind(touchHandler), eventOptions);
-    document.addEventListener('touchmove', touchHandler.handleTouchMove.bind(touchHandler), eventOptions);
-    document.addEventListener('touchend', touchHandler.handleTouchEnd.bind(touchHandler), eventOptions);
+    document.addEventListener(
+      'touchstart',
+      touchHandler.handleTouchStart.bind(touchHandler),
+      eventOptions,
+    );
+    document.addEventListener(
+      'touchmove',
+      touchHandler.handleTouchMove.bind(touchHandler),
+      eventOptions,
+    );
+    document.addEventListener(
+      'touchend',
+      touchHandler.handleTouchEnd.bind(touchHandler),
+      eventOptions,
+    );
 
     console.log('Touch optimization initialized');
   }
@@ -506,7 +528,7 @@ export class MobilePerformanceOptimizer {
    */
   private async initializeNetworkOptimization(): Promise<void> {
     await this.networkMonitor.start();
-    
+
     // Implement adaptive image quality based on network
     if (this.config.networkOptimization.adaptiveImageQuality) {
       this.implementAdaptiveImageQuality();
@@ -525,7 +547,7 @@ export class MobilePerformanceOptimizer {
    */
   private async initializeBatteryOptimization(): Promise<void> {
     await this.batteryMonitor.start();
-    
+
     this.batteryMonitor.onBatteryChange((batteryInfo) => {
       if (batteryInfo.level < 0.2 && this.config.batteryOptimization.enabled) {
         this.enablePowerSavingMode();
@@ -542,7 +564,7 @@ export class MobilePerformanceOptimizer {
    */
   private async initializeMemoryOptimization(): Promise<void> {
     await this.memoryMonitor.start();
-    
+
     this.memoryMonitor.onMemoryPressure((pressure) => {
       if (pressure === 'critical') {
         this.handleCriticalMemoryPressure();
@@ -564,7 +586,7 @@ export class MobilePerformanceOptimizer {
    */
   private async initializeAdaptiveLoading(): Promise<void> {
     await this.adaptiveLoader.initialize();
-    
+
     console.log('Adaptive loading initialized');
   }
 
@@ -594,7 +616,7 @@ export class MobilePerformanceOptimizer {
     document.body.classList.remove('reduced-motion');
     this.resumeBackgroundTasks();
     this.unthrottleNonCriticalWork();
-    
+
     console.log('Power saving mode disabled');
   }
 
@@ -642,7 +664,7 @@ export class MobilePerformanceOptimizer {
         if (entry.isIntersecting) {
           const img = entry.target as HTMLImageElement;
           const networkType = this.networkMonitor.getCurrentNetworkType();
-          
+
           const quality = this.getImageQualityForNetwork(networkType);
           this.loadAdaptiveImage(img, quality);
         }
@@ -688,7 +710,7 @@ export class MobilePerformanceOptimizer {
 
     const qualitySuffix = qualityMap[quality];
     const adaptiveSrc = baseSrc.replace(/(\.[^.]+)$/, `${qualitySuffix}$1`);
-    
+
     img.src = adaptiveSrc;
     img.removeAttribute('data-adaptive');
   }
@@ -697,24 +719,29 @@ export class MobilePerformanceOptimizer {
    * Setup request coalescing to batch network requests
    */
   private setupRequestCoalescing(): void {
-    const requestQueue: Array<{ url: string; options: RequestInit; resolve: Function; reject: Function }> = [];
+    const requestQueue: Array<{
+      url: string;
+      options: RequestInit;
+      resolve: Function;
+      reject: Function;
+    }> = [];
     let batchTimer: number | null = null;
 
     const originalFetch = window.fetch;
-    
+
     window.fetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       const url = typeof input === 'string' ? input : input.toString();
-      
+
       // Only coalesce GET requests to API endpoints
       if (!init || init.method === 'GET' || !init.method) {
         if (url.includes('/api/')) {
           return new Promise((resolve, reject) => {
             requestQueue.push({ url, options: init || {}, resolve, reject });
-            
+
             if (batchTimer) {
               clearTimeout(batchTimer);
             }
-            
+
             batchTimer = window.setTimeout(() => {
               this.processBatchedRequests(requestQueue.splice(0), originalFetch);
               batchTimer = null;
@@ -722,7 +749,7 @@ export class MobilePerformanceOptimizer {
           });
         }
       }
-      
+
       return originalFetch(input, init);
     };
   }
@@ -732,11 +759,11 @@ export class MobilePerformanceOptimizer {
    */
   private async processBatchedRequests(
     requests: Array<{ url: string; options: RequestInit; resolve: Function; reject: Function }>,
-    originalFetch: typeof fetch
+    originalFetch: typeof fetch,
   ): Promise<void> {
     // Group similar requests
     const grouped = new Map<string, typeof requests>();
-    
+
     requests.forEach((req) => {
       const key = `${req.options.method || 'GET'}_${req.url}`;
       if (!grouped.has(key)) {
@@ -765,9 +792,9 @@ export class MobilePerformanceOptimizer {
           try {
             const response = await originalFetch(firstReq.url, firstReq.options);
             const clonedResponses = await Promise.all(
-              requestGroup.map(async () => response.clone())
+              requestGroup.map(async () => response.clone()),
             );
-            
+
             requestGroup.forEach((req, index) => {
               if (req) {
                 req.resolve(clonedResponses[index]);
@@ -791,10 +818,10 @@ export class MobilePerformanceOptimizer {
   private startPerformanceMonitoring(): void {
     // Monitor Core Web Vitals
     this.monitorCoreWebVitals();
-    
+
     // Monitor frame rate
     this.monitorFrameRate();
-    
+
     // Monitor memory usage
     this.monitorMemoryUsage();
   }
@@ -857,25 +884,25 @@ export class MobilePerformanceOptimizer {
   private monitorFrameRate(): void {
     let frameCount = 0;
     let lastTime = performance.now();
-    
+
     const checkFrameRate = () => {
       frameCount++;
       const currentTime = performance.now();
-      
+
       if (currentTime - lastTime >= 1000) {
         const fps = frameCount;
         frameCount = 0;
         lastTime = currentTime;
-        
+
         if (fps < 30) {
           console.warn(`Low frame rate detected: ${fps} FPS`);
           this.handleLowFrameRate();
         }
       }
-      
+
       requestAnimationFrame(checkFrameRate);
     };
-    
+
     requestAnimationFrame(checkFrameRate);
   }
 
@@ -887,7 +914,7 @@ export class MobilePerformanceOptimizer {
       setInterval(() => {
         const memInfo = (performance as any).memory;
         const usageRatio = memInfo.usedJSHeapSize / memInfo.jsHeapSizeLimit;
-        
+
         if (usageRatio > 0.9) {
           this.handleHighMemoryUsage();
         }
@@ -900,7 +927,7 @@ export class MobilePerformanceOptimizer {
    */
   private checkPerformanceBudget(metric: keyof PerformanceBudget, value: number): void {
     const budget = this.performanceBudget[metric];
-    
+
     if (value > budget) {
       console.warn(`Performance budget exceeded for ${metric}: ${value}ms > ${budget}ms`);
       this.handlePerformanceBudgetViolation(metric, value);
@@ -970,7 +997,7 @@ export class MobilePerformanceOptimizer {
   private handleLowFrameRate(): void {
     // Reduce animation complexity
     document.body.classList.add('performance-mode');
-    
+
     // Cancel non-essential animations
     this.cancelNonEssentialAnimations();
   }
@@ -1059,7 +1086,7 @@ export class MobilePerformanceOptimizer {
     await this.batteryMonitor.stop();
     await this.memoryMonitor.stop();
     await this.adaptiveLoader.destroy();
-    
+
     this.isInitialized = false;
   }
 }
@@ -1088,7 +1115,8 @@ class TouchHandler {
   handleTouchMove(_event: TouchEvent): void {
     // Throttle touch move events
     const now = Date.now();
-    if (now - this.lastTouchTime < 16) { // ~60fps
+    if (now - this.lastTouchTime < 16) {
+      // ~60fps
       return;
     }
     this.lastTouchTime = now;
@@ -1097,7 +1125,7 @@ class TouchHandler {
   handleTouchEnd(event: TouchEvent): void {
     const touchEndTime = Date.now();
     const touchDuration = touchEndTime - this.touchStartTime;
-    
+
     // Fast click detection
     if (touchDuration < this.config.fastClickThreshold) {
       this.handleFastClick(event);
@@ -1107,7 +1135,7 @@ class TouchHandler {
   private handleFastClick(event: TouchEvent): void {
     // Prevent 300ms delay on mobile
     event.preventDefault?.();
-    
+
     const target = event.target as HTMLElement;
     if (target) {
       target.click();
@@ -1123,11 +1151,14 @@ class NetworkMonitor {
   private currentNetworkType: string = 'unknown';
 
   async start(): Promise<void> {
-    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-    
+    const connection =
+      (navigator as any).connection ||
+      (navigator as any).mozConnection ||
+      (navigator as any).webkitConnection;
+
     if (connection) {
       this.currentNetworkType = connection.effectiveType || 'unknown';
-      
+
       connection.addEventListener('change', () => {
         const newNetworkType = connection.effectiveType || 'unknown';
         if (newNetworkType !== this.currentNetworkType) {
@@ -1147,7 +1178,7 @@ class NetworkMonitor {
   }
 
   private notifyNetworkChange(networkType: string): void {
-    this.networkChangeHandlers.forEach(handler => handler(networkType));
+    this.networkChangeHandlers.forEach((handler) => handler(networkType));
   }
 
   async stop(): Promise<void> {
@@ -1159,14 +1190,16 @@ class NetworkMonitor {
  * Battery Monitor for tracking battery status
  */
 class BatteryMonitor {
-  private batteryChangeHandlers: Array<(batteryInfo: { level: number; charging: boolean }) => void> = [];
+  private batteryChangeHandlers: Array<
+    (batteryInfo: { level: number; charging: boolean }) => void
+  > = [];
   private battery: any = null;
 
   async start(): Promise<void> {
     try {
       if ('getBattery' in navigator) {
         this.battery = await (navigator as any).getBattery();
-        
+
         const handleBatteryChange = () => {
           this.notifyBatteryChange({
             level: this.battery.level,
@@ -1187,7 +1220,7 @@ class BatteryMonitor {
   }
 
   private notifyBatteryChange(batteryInfo: { level: number; charging: boolean }): void {
-    this.batteryChangeHandlers.forEach(handler => handler(batteryInfo));
+    this.batteryChangeHandlers.forEach((handler) => handler(batteryInfo));
   }
 
   async stop(): Promise<void> {
@@ -1229,7 +1262,7 @@ class MemoryMonitor {
       pressure = 'low';
     }
 
-    this.memoryPressureHandlers.forEach(handler => handler(pressure));
+    this.memoryPressureHandlers.forEach((handler) => handler(pressure));
   }
 
   async stop(): Promise<void> {

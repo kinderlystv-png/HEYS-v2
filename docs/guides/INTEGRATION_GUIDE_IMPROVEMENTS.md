@@ -151,10 +151,10 @@ const suggestions = HEYS.SmartSearchWithTypos.suggest('хле', products, 5);
 console.log('Предложения:', suggestions); // ['хлеб', 'хлебцы', ...]
 
 // Интеграция с input
-document.getElementById('search-input').addEventListener('input', e => {
+document.getElementById('search-input').addEventListener('input', (e) => {
   const suggestions = HEYS.SmartSearchWithTypos.suggest(
     e.target.value,
-    products
+    products,
   );
   showSuggestions(suggestions);
 });
@@ -202,7 +202,7 @@ function SmartSearchComponent({ products }) {
   const [results, setResults] = useState([]);
 
   const handleSearch = useCallback(
-    searchQuery => {
+    (searchQuery) => {
       if (!searchQuery.trim()) {
         setResults([]);
         return;
@@ -210,7 +210,7 @@ function SmartSearchComponent({ products }) {
 
       const searchResult = HEYS.SmartSearchWithTypos.search(
         searchQuery,
-        products
+        products,
       );
       setResults(searchResult.results);
 
@@ -221,14 +221,14 @@ function SmartSearchComponent({ products }) {
         hasCorrections: searchResult.hasTypoCorrections,
       });
     },
-    [products]
+    [products],
   );
 
   return (
     <div>
       <input
         value={query}
-        onChange={e => {
+        onChange={(e) => {
           setQuery(e.target.value);
           handleSearch(e.target.value);
         }}

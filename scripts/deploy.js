@@ -32,7 +32,7 @@ const runCommand = (command, description) => {
 
 const checkPrerequisites = () => {
   log('🔍 Checking prerequisites...');
-  
+
   // Проверяем Docker
   try {
     runCommand('docker --version', 'Docker version check');
@@ -56,44 +56,43 @@ const checkPrerequisites = () => {
 const deploy = async () => {
   try {
     log('🚀 Starting HEYS production deployment...');
-    
+
     // 1. Проверяем prerequisites
     checkPrerequisites();
-    
+
     // 2. Обновляем код
     runCommand('git pull origin main', 'Pulling latest code');
-    
+
     // 3. Устанавливаем зависимости
     runCommand('pnpm install --frozen-lockfile', 'Installing dependencies');
-    
+
     // 4. Запускаем тесты
     runCommand('pnpm run test:all', 'Running all tests');
-    
+
     // 5. Собираем Docker образ
     runCommand('docker build -t heys:latest .', 'Building Docker image');
-    
+
     // 6. Тегируем для registry
     const version = require('../package.json').version;
     runCommand(`docker tag heys:latest heys:${version}`, 'Tagging Docker image');
-    
+
     // 7. Останавливаем старый контейнер
     try {
       runCommand('docker-compose down', 'Stopping old containers');
     } catch (error) {
       log('⚠️ No existing containers to stop');
     }
-    
+
     // 8. Запускаем новый контейнер
     runCommand('docker-compose up -d heys-web', 'Starting new container');
-    
+
     // 9. Проверяем health check
     log('⏳ Waiting for application to start...');
-    await new Promise(resolve => setTimeout(resolve, 10000)); // 10 секунд
-    
+    await new Promise((resolve) => setTimeout(resolve, 10000)); // 10 секунд
+
     runCommand('pnpm run healthcheck', 'Running health check');
-    
+
     log('🎉 Deployment completed successfully!');
-    
   } catch (error) {
     log(`💥 Deployment failed: ${error.message}`);
     process.exit(1);

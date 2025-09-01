@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MobilePerformanceOptimizer } from './mobile-performance-optimizer';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MobileOptimizationConfig } from './mobile-performance-optimizer';
+import { MobilePerformanceOptimizer } from './mobile-performance-optimizer';
 
 // Mock DOM APIs
 const mockNavigator = {
@@ -76,7 +76,12 @@ global.PerformanceObserver = vi.fn().mockImplementation(() => ({
   disconnect: vi.fn(),
   takeRecords: vi.fn(() => []),
 })) as any;
-(global.PerformanceObserver as any).supportedEntryTypes = ['navigation', 'resource', 'measure', 'mark'];
+(global.PerformanceObserver as any).supportedEntryTypes = [
+  'navigation',
+  'resource',
+  'measure',
+  'mark',
+];
 
 describe('MobilePerformanceOptimizer', () => {
   let optimizer: MobilePerformanceOptimizer;
@@ -84,7 +89,7 @@ describe('MobilePerformanceOptimizer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     config = {
       touchOptimization: {
         enabled: true,
@@ -135,7 +140,7 @@ describe('MobilePerformanceOptimizer', () => {
     it('should detect device capabilities', () => {
       optimizer = new MobilePerformanceOptimizer(config);
       const deviceInfo = optimizer.getDeviceInfo();
-      
+
       expect(deviceInfo).toBeDefined();
       expect(deviceInfo.deviceType).toBe('phone');
       expect(deviceInfo.screenSize.width).toBe(412);
@@ -147,7 +152,7 @@ describe('MobilePerformanceOptimizer', () => {
 
     it('should setup performance monitoring', () => {
       optimizer = new MobilePerformanceOptimizer(config);
-      
+
       // Verify performance observers are set up
       expect(global.PerformanceObserver).toHaveBeenCalled();
     });
@@ -162,33 +167,33 @@ describe('MobilePerformanceOptimizer', () => {
       expect(mockDocument.addEventListener).toHaveBeenCalledWith(
         'touchstart',
         expect.any(Function),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(mockDocument.addEventListener).toHaveBeenCalledWith(
         'touchmove',
         expect.any(Function),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(mockDocument.addEventListener).toHaveBeenCalledWith(
         'touchend',
         expect.any(Function),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
     it('should not register touch listeners when disabled', () => {
       optimizer.destroy();
       vi.clearAllMocks();
-      
+
       const disabledConfig = { ...config };
       disabledConfig.touchOptimization.enabled = false;
-      
+
       optimizer = new MobilePerformanceOptimizer(disabledConfig);
-      
+
       expect(mockDocument.addEventListener).not.toHaveBeenCalledWith(
         'touchstart',
         expect.any(Function),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
@@ -299,7 +304,7 @@ describe('MobilePerformanceOptimizer', () => {
       ];
 
       mockWindow.performance.getEntriesByType.mockReturnValue(mockEntries);
-      
+
       const metrics = await optimizer.getCoreWebVitals();
       expect(metrics).toBeDefined();
     });
@@ -326,7 +331,7 @@ describe('MobilePerformanceOptimizer', () => {
         screen: phoneScreen,
         ontouchstart: true,
       };
-      
+
       Object.defineProperty(global, 'screen', { value: phoneScreen, writable: true });
       Object.defineProperty(global, 'window', { value: phoneWindow, writable: true });
 
@@ -343,7 +348,7 @@ describe('MobilePerformanceOptimizer', () => {
         screen: tabletScreen,
         ontouchstart: true,
       };
-      
+
       Object.defineProperty(global, 'screen', { value: tabletScreen, writable: true });
       Object.defineProperty(global, 'window', { value: tabletWindow, writable: true });
 
@@ -360,7 +365,7 @@ describe('MobilePerformanceOptimizer', () => {
         screen: desktopScreen,
         ontouchstart: undefined,
       };
-      
+
       Object.defineProperty(global, 'screen', { value: desktopScreen, writable: true });
       Object.defineProperty(global, 'window', { value: desktopWindow, writable: true });
 
@@ -378,16 +383,16 @@ describe('MobilePerformanceOptimizer', () => {
     it('should allow runtime configuration updates', () => {
       const newConfig = { ...config };
       newConfig.touchOptimization.enabled = false;
-      
+
       optimizer.updateConfig(newConfig);
-      
+
       expect(optimizer.isOptimizationEnabled('touch')).toBe(false);
     });
 
     it('should validate configuration parameters', () => {
       const invalidConfig = { ...config };
       invalidConfig.networkOptimization.compressionLevel = 15; // Invalid range
-      
+
       expect(() => {
         optimizer.updateConfig(invalidConfig);
       }).toThrow();
@@ -401,7 +406,7 @@ describe('MobilePerformanceOptimizer', () => {
 
     it('should set appropriate performance budgets for mobile devices', () => {
       const budget = optimizer.getPerformanceBudget();
-      
+
       expect(budget).toBeDefined();
       expect(budget.firstContentfulPaint).toBeTypeOf('number');
       expect(budget.largestContentfulPaint).toBeTypeOf('number');
@@ -415,10 +420,10 @@ describe('MobilePerformanceOptimizer', () => {
       // Mock low-end device
       mockNavigator.hardwareConcurrency = 2;
       mockWindow.performance.memory.totalJSHeapSize = 10000000;
-      
+
       optimizer = new MobilePerformanceOptimizer(config);
       const budget = optimizer.getPerformanceBudget();
-      
+
       // Budgets should be more relaxed for low-end devices
       expect(budget.firstContentfulPaint).toBeGreaterThan(1000);
     });
@@ -431,28 +436,28 @@ describe('MobilePerformanceOptimizer', () => {
 
     it('should clean up event listeners on destroy', () => {
       optimizer.destroy();
-      
+
       expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
         'touchstart',
         expect.any(Function),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
         'touchmove',
         expect.any(Function),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
         'touchend',
         expect.any(Function),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
     it('should stop performance monitoring on destroy', () => {
       const performanceObserver = new global.PerformanceObserver(() => {});
       optimizer.destroy();
-      
+
       expect(performanceObserver.disconnect).toHaveBeenCalled();
     });
   });

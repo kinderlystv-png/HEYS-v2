@@ -325,7 +325,7 @@
             'success',
             `✅ Проиндексировано: ${metrics.totalDocuments} документов<br>` +
               `🔍 Найдено результатов: ${searchResults.length}<br>` +
-              `📊 Уникальных терминов: ${metrics.uniqueTerms}`
+              `📊 Уникальных терминов: ${metrics.uniqueTerms}`,
           );
 
           testResults.passed++;
@@ -378,7 +378,7 @@
             'success',
             `✅ Активных подключений: ${connections.active}<br>` +
               `🔗 ID подключения: ${connectionResult.connectionId}<br>` +
-              `📊 Сервис: ${connectionResult.service}`
+              `📊 Сервис: ${connectionResult.service}`,
           );
 
           testResults.passed++;
@@ -407,7 +407,7 @@
           // Проверяем наличие основных методов
           const requiredMethods = ['invalidateCache', 'getDayData', 'getWeekData', 'clearAllCache'];
           const missingMethods = requiredMethods.filter(
-            method => typeof reportsManager[method] !== 'function'
+            (method) => typeof reportsManager[method] !== 'function',
           );
 
           if (missingMethods.length > 0) {
@@ -424,7 +424,7 @@
             'success',
             `✅ Все методы доступны: ${requiredMethods.length}<br>` +
               `📊 ReportsTab компонент: Найден<br>` +
-              `🔧 Экспорт в namespace: Корректен`
+              `🔧 Экспорт в namespace: Корректен`,
           );
 
           testResults.passed++;
@@ -461,7 +461,7 @@
 
           // Тестируем санитизацию HTML
           const htmlTest = securityManager.sanitizeHtml(
-            '&lt;script&gt;alert("xss")&lt;/script&gt;'
+            '&lt;script&gt;alert("xss")&lt;/script&gt;',
           );
           if (htmlTest.includes('&lt;script&gt;')) {
             throw new Error('HTML санитизация не работает');
@@ -485,7 +485,7 @@
             `✅ Email валидация: Работает<br>` +
               `🧼 HTML санитизация: Работает<br>` +
               `🛡️ XSS детекция: Работает<br>` +
-              `🔍 Integrity check: Пройден`
+              `🔍 Integrity check: Пройден`,
           );
 
           testResults.passed++;
@@ -536,7 +536,7 @@
             const result = securityManager.validateInput(
               testCase.value,
               testCase.type,
-              ...(testCase.args || [])
+              ...(testCase.args || []),
             );
 
             if (result.valid === testCase.shouldPass) {
@@ -557,7 +557,7 @@
               `📧 Email валидация: Исправлена<br>` +
               `🔗 URL валидация: Исправлена<br>` +
               `🔢 Number валидация: Исправлена<br>` +
-              `🔑 Password валидация: Исправлена`
+              `🔑 Password валидация: Исправлена`,
           );
 
           testResults.passed++;
@@ -590,7 +590,7 @@
             'Referrer-Policy',
           ];
 
-          const missingHeaders = requiredHeaders.filter(header => !headers.has(header));
+          const missingHeaders = requiredHeaders.filter((header) => !headers.has(header));
 
           if (missingHeaders.length > 0) {
             throw new Error(`Отсутствуют заголовки: ${missingHeaders.join(', ')}`);
@@ -615,7 +615,7 @@
               `🔒 CSP: Корректен<br>` +
               `🚫 X-Frame-Options: DENY<br>` +
               `🛡️ XSS Protection: Включена<br>` +
-              `📋 Все обязательные заголовки: Присутствуют`
+              `📋 Все обязательные заголовки: Присутствуют`,
           );
 
           testResults.passed++;
@@ -692,7 +692,7 @@
           'SecurityValidationManager',
         ];
 
-        modules.forEach(module => {
+        modules.forEach((module) => {
           if (window.HEYS[module]) {
             logTest(`✅ ${module}: Загружен`, 'success');
           } else {

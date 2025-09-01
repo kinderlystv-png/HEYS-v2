@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 describe('Legacy SEARCH Components Integration', () => {
   it('should have legacy search files available', () => {

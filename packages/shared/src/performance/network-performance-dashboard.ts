@@ -1,7 +1,7 @@
 /**
  * HEYS Network Performance Dashboard v1.0
  * Real-time Network Performance Monitoring & Visualization
- * 
+ *
  * Features:
  * - Real-time network metrics display
  * - Connection quality visualization
@@ -11,7 +11,12 @@
  * - Interactive performance controls
  */
 
-import { NetworkOptimizer, NetworkMetrics, NetworkConnection, NetworkQualityProfile } from './network-optimizer';
+import {
+  NetworkConnection,
+  NetworkMetrics,
+  NetworkOptimizer,
+  NetworkQualityProfile,
+} from './network-optimizer';
 
 export interface DashboardConfig {
   refreshInterval: number;
@@ -87,7 +92,7 @@ export class NetworkPerformanceDashboard {
   constructor(networkOptimizer: NetworkOptimizer, config: DashboardConfig) {
     this.networkOptimizer = networkOptimizer;
     this.config = config;
-    
+
     this.stats = {
       totalRequests: 0,
       successfulRequests: 0,
@@ -112,7 +117,7 @@ export class NetworkPerformanceDashboard {
     await this.createDashboardHTML();
     await this.initializeCharts();
     await this.setupEventListeners();
-    
+
     if (this.config.notifications.enabled) {
       this.initializeNotifications();
     }
@@ -164,16 +169,15 @@ export class NetworkPerformanceDashboard {
 
       // Update metrics display
       this.updateMetricsDisplay(metrics, connection, qualityProfile);
-      
+
       // Update charts
       this.updateCharts(metrics);
-      
+
       // Check for alerts
       this.checkAlerts(metrics);
-      
+
       // Update statistics
       this.updateStatistics(metrics);
-
     } catch (error) {
       console.error('Error updating dashboard:', error);
     }
@@ -507,28 +511,37 @@ export class NetworkPerformanceDashboard {
     if (!this.config.charts.enabled) return;
 
     // Initialize latency chart
-    this.charts.set('latency', new Chart('latency-chart', {
-      type: 'line',
-      label: 'Latency (ms)',
-      color: '#007bff',
-      maxDataPoints: this.config.charts.maxDataPoints,
-    }));
+    this.charts.set(
+      'latency',
+      new Chart('latency-chart', {
+        type: 'line',
+        label: 'Latency (ms)',
+        color: '#007bff',
+        maxDataPoints: this.config.charts.maxDataPoints,
+      }),
+    );
 
     // Initialize bandwidth chart
-    this.charts.set('bandwidth', new Chart('bandwidth-chart', {
-      type: 'line',
-      label: 'Bandwidth (Mbps)',
-      color: '#28a745',
-      maxDataPoints: this.config.charts.maxDataPoints,
-    }));
+    this.charts.set(
+      'bandwidth',
+      new Chart('bandwidth-chart', {
+        type: 'line',
+        label: 'Bandwidth (Mbps)',
+        color: '#28a745',
+        maxDataPoints: this.config.charts.maxDataPoints,
+      }),
+    );
 
     // Initialize throughput chart
-    this.charts.set('throughput', new Chart('throughput-chart', {
-      type: 'line',
-      label: 'Throughput (KB/s)',
-      color: '#17a2b8',
-      maxDataPoints: this.config.charts.maxDataPoints,
-    }));
+    this.charts.set(
+      'throughput',
+      new Chart('throughput-chart', {
+        type: 'line',
+        label: 'Throughput (KB/s)',
+        color: '#17a2b8',
+        maxDataPoints: this.config.charts.maxDataPoints,
+      }),
+    );
   }
 
   /**
@@ -550,13 +563,14 @@ export class NetworkPerformanceDashboard {
   private updateMetricsDisplay(
     metrics: NetworkMetrics,
     connection: NetworkConnection | null,
-    qualityProfile: NetworkQualityProfile
+    qualityProfile: NetworkQualityProfile,
   ): void {
     // Update connection quality
     const qualityElement = document.getElementById('connection-quality');
     const qualityIndicator = document.getElementById('quality-indicator');
     if (qualityElement && qualityIndicator) {
-      qualityElement.textContent = qualityProfile.type.charAt(0).toUpperCase() + qualityProfile.type.slice(1);
+      qualityElement.textContent =
+        qualityProfile.type.charAt(0).toUpperCase() + qualityProfile.type.slice(1);
       qualityIndicator.className = `metric-indicator ${qualityProfile.type}`;
     }
 
@@ -580,7 +594,7 @@ export class NetworkPerformanceDashboard {
 
     // Update connection details
     this.updateConnectionDetails(connection);
-    
+
     // Update quality profile
     this.updateQualityProfileDisplay(qualityProfile);
   }
@@ -723,7 +737,7 @@ export class NetworkPerformanceDashboard {
 
     // Add new alerts
     this.alerts.push(...alerts);
-    
+
     // Keep only recent alerts (last 100)
     if (this.alerts.length > 100) {
       this.alerts = this.alerts.slice(-100);
@@ -731,10 +745,10 @@ export class NetworkPerformanceDashboard {
 
     // Update alerts display
     this.updateAlertsDisplay();
-    
+
     // Show notifications
     if (this.config.notifications.enabled) {
-      alerts.forEach(alert => this.showNotification(alert));
+      alerts.forEach((alert) => this.showNotification(alert));
     }
   }
 
@@ -747,15 +761,19 @@ export class NetworkPerformanceDashboard {
 
     // Show last 10 alerts
     const recentAlerts = this.alerts.slice(-10).reverse();
-    
-    alertsList.innerHTML = recentAlerts.map(alert => `
+
+    alertsList.innerHTML = recentAlerts
+      .map(
+        (alert) => `
       <div class="alert-item ${alert.type}">
         <div>${alert.message}</div>
         <div class="alert-timestamp">
           ${new Date(alert.timestamp).toLocaleTimeString()}
         </div>
       </div>
-    `).join('');
+    `,
+      )
+      .join('');
   }
 
   /**
@@ -845,9 +863,9 @@ export class NetworkPerformanceDashboard {
       compressionRatio: 0,
     };
 
-    this.charts.forEach(chart => chart.clear());
+    this.charts.forEach((chart) => chart.clear());
     this.updateAlertsDisplay();
-    
+
     console.log('Dashboard reset');
   }
 
@@ -856,9 +874,9 @@ export class NetworkPerformanceDashboard {
    */
   destroy(): void {
     this.stop();
-    this.charts.forEach(chart => chart.destroy());
+    this.charts.forEach((chart) => chart.destroy());
     this.charts.clear();
-    
+
     if (this.container) {
       this.container.innerHTML = '';
     }
@@ -885,12 +903,15 @@ class Chart {
     maxDataPoints: number;
   };
 
-  constructor(canvasId: string, config: {
-    type: string;
-    label: string;
-    color: string;
-    maxDataPoints: number;
-  }) {
+  constructor(
+    canvasId: string,
+    config: {
+      type: string;
+      label: string;
+      color: string;
+      maxDataPoints: number;
+    },
+  ) {
     this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
     this.ctx = this.canvas?.getContext('2d') || null;
     this.config = config;
@@ -903,7 +924,7 @@ class Chart {
 
   addDataPoint(timestamp: number, value: number): void {
     this.data.push({ timestamp, value });
-    
+
     // Keep only max data points
     if (this.data.length > this.config.maxDataPoints) {
       this.data = this.data.slice(-this.config.maxDataPoints);
@@ -916,14 +937,14 @@ class Chart {
     if (!this.ctx || !this.canvas) return;
 
     const { width, height } = this.canvas;
-    
+
     // Clear canvas
     this.ctx.clearRect(0, 0, width, height);
-    
+
     if (this.data.length < 2) return;
 
     // Find min/max values
-    const values = this.data.map(d => d.value);
+    const values = this.data.map((d) => d.value);
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
     const range = maxValue - minValue || 1;
@@ -931,7 +952,7 @@ class Chart {
     // Draw grid
     this.ctx.strokeStyle = '#e9ecef';
     this.ctx.lineWidth = 1;
-    
+
     for (let i = 0; i <= 5; i++) {
       const y = (height / 5) * i;
       this.ctx.beginPath();
@@ -948,7 +969,7 @@ class Chart {
     this.data.forEach((point, index) => {
       const x = (width / (this.data.length - 1)) * index;
       const y = height - ((point.value - minValue) / range) * height;
-      
+
       if (index === 0) {
         this.ctx!.moveTo(x, y);
       } else {

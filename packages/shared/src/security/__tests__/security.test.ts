@@ -1,25 +1,21 @@
 /**
  * HEYS Security Testing Suite v1.4
  * Comprehensive security validation tests
- * 
+ *
  * @author HEYS Team
  * @version 1.4.0
  * @created 2025-01-31
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { CORSManager, CSPBuilder, SecurityHeadersManager } from '../headers';
 import {
-  SecurityValidator,
-  ValidationSchemas,
   InputSanitizer,
-  validate,
   SecurityError,
+  SecurityValidator,
+  validate,
+  ValidationSchemas,
 } from '../validation';
-import {
-  SecurityHeadersManager,
-  CSPBuilder,
-  CORSManager,
-} from '../headers';
 
 describe('SecurityValidator', () => {
   let validator: SecurityValidator;
@@ -55,7 +51,7 @@ describe('SecurityValidator', () => {
 
       const result = await validator.validateSchema(invalidUser, ValidationSchemas.user);
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.field === 'email')).toBe(true);
+      expect(result.errors.some((e) => e.field === 'email')).toBe(true);
     });
 
     it('should reject weak password', async () => {
@@ -69,7 +65,7 @@ describe('SecurityValidator', () => {
 
       const result = await validator.validateSchema(userWithWeakPassword, ValidationSchemas.user);
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.field === 'password')).toBe(true);
+      expect(result.errors.some((e) => e.field === 'password')).toBe(true);
     });
   });
 
@@ -79,11 +75,11 @@ describe('SecurityValidator', () => {
       const result = await validator.validateSchema(
         xssAttempt,
         ValidationSchemas.content.shape.content,
-        { strictMode: true }
+        { strictMode: true },
       );
 
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.rule === 'noXSS')).toBe(true);
+      expect(result.errors.some((e) => e.rule === 'noXSS')).toBe(true);
     });
 
     it('should detect SQL injection attempts', async () => {
@@ -91,11 +87,11 @@ describe('SecurityValidator', () => {
       const result = await validator.validateSchema(
         sqlInjection,
         ValidationSchemas.content.shape.content,
-        { strictMode: true }
+        { strictMode: true },
       );
 
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.rule === 'noSQLInjection')).toBe(true);
+      expect(result.errors.some((e) => e.rule === 'noSQLInjection')).toBe(true);
     });
 
     it('should detect path traversal attempts', async () => {
@@ -103,7 +99,7 @@ describe('SecurityValidator', () => {
       const result = validator.validateInput(pathTraversal, 'filename');
 
       expect(result.isValid).toBe(false);
-      expect(result.errors.some(e => e.rule === 'noPathTraversal')).toBe(true);
+      expect(result.errors.some((e) => e.rule === 'noPathTraversal')).toBe(true);
     });
   });
 
@@ -113,7 +109,7 @@ describe('SecurityValidator', () => {
       const result = await validator.validateSchema(
         { content: dirtyInput },
         ValidationSchemas.content.pick({ content: true }),
-        { sanitize: true }
+        { sanitize: true },
       );
 
       // Sanitization might not always be returned
@@ -142,7 +138,7 @@ describe('SecurityValidator', () => {
       };
 
       validator.addRule('noProfanity', customRule);
-      
+
       // Note: Custom rules need to be applied through validateSchema with customRules option
       expect(validator['customRules'].has('noProfanity')).toBe(true);
     });
@@ -159,7 +155,7 @@ describe('InputSanitizer', () => {
   it('should sanitize HTML content', () => {
     const dirty = '<p>Safe content</p><img src="x" onerror="alert(1)">';
     const clean = sanitizer.sanitizeHTML(dirty);
-    
+
     expect(clean).not.toContain('onerror');
     expect(clean).toContain('<p>Safe content</p>');
   });
@@ -167,7 +163,7 @@ describe('InputSanitizer', () => {
   it('should remove all HTML from text', () => {
     const dirty = '<b>Bold</b> and <i>italic</i> text';
     const clean = sanitizer.sanitizeText(dirty);
-    
+
     // DOMPurify in some configurations might not remove all tags
     expect(clean).toContain('Bold');
     expect(clean).toContain('italic');
@@ -179,7 +175,7 @@ describe('InputSanitizer', () => {
   it('should sanitize file names', () => {
     const dirty = '../../../etc/passwd<script>.txt';
     const clean = sanitizer.sanitizeFileName(dirty);
-    
+
     expect(clean).not.toContain('../');
     expect(clean).not.toContain('<script>');
     expect(clean.length).toBeLessThanOrEqual(255);
@@ -188,7 +184,7 @@ describe('InputSanitizer', () => {
   it('should handle SQL injection patterns', () => {
     const dirty = "admin'; DROP TABLE users; --";
     const clean = sanitizer.sanitizeSQL(dirty);
-    
+
     expect(clean).not.toContain(';');
     expect(clean).not.toContain('--');
     expect(clean).not.toContain('DROP');
@@ -234,13 +230,16 @@ describe('SecurityHeadersManager', () => {
   });
 
   it('should include HSTS in production', () => {
-    const manager = new SecurityHeadersManager({
-      hsts: {
-        maxAge: 31536000,
-        includeSubDomains: true,
-        preload: true,
-      }
-    }, false);
+    const manager = new SecurityHeadersManager(
+      {
+        hsts: {
+          maxAge: 31536000,
+          includeSubDomains: true,
+          preload: true,
+        },
+      },
+      false,
+    );
     const headers = manager.generateHeaders();
 
     expect(headers).toHaveProperty('Strict-Transport-Security');
@@ -254,14 +253,14 @@ describe('SecurityHeadersManager', () => {
       csp: {
         'script-src': ["'unsafe-inline'", "'unsafe-eval'"],
         'default-src': ['*'],
-      }
+      },
     });
 
     const validation = manager.validateCSP();
     expect(validation.warnings.length).toBeGreaterThan(0);
-    expect(validation.warnings.some(w => w.includes('unsafe-inline'))).toBe(true);
-    expect(validation.warnings.some(w => w.includes('unsafe-eval'))).toBe(true);
-    expect(validation.warnings.some(w => w.includes('wildcard'))).toBe(true);
+    expect(validation.warnings.some((w) => w.includes('unsafe-inline'))).toBe(true);
+    expect(validation.warnings.some((w) => w.includes('unsafe-eval'))).toBe(true);
+    expect(validation.warnings.some((w) => w.includes('wildcard'))).toBe(true);
   });
 });
 
@@ -298,8 +297,9 @@ describe('CSPBuilder', () => {
   });
 
   it('should add to existing directives', () => {
-    const csp = new CSPBuilder({ 'script-src': ["'self'"] })
-      .addToDirective('script-src', ['example.com']);
+    const csp = new CSPBuilder({ 'script-src': ["'self'"] }).addToDirective('script-src', [
+      'example.com',
+    ]);
 
     const policy = csp.build();
     expect(policy).toContain("script-src 'self' example.com");
@@ -319,8 +319,8 @@ describe('CORSManager', () => {
   });
 
   it('should allow specific origins', () => {
-    const cors = new CORSManager({ 
-      origin: ['https://example.com', 'https://app.example.com'] 
+    const cors = new CORSManager({
+      origin: ['https://example.com', 'https://app.example.com'],
     });
     expect(cors.isOriginAllowed('https://example.com')).toBe(true);
     expect(cors.isOriginAllowed('https://app.example.com')).toBe(true);
@@ -329,9 +329,9 @@ describe('CORSManager', () => {
 
   it('should use custom origin validator', () => {
     const cors = new CORSManager({
-      origin: (origin) => origin?.endsWith('.example.com') || false
+      origin: (origin) => origin?.endsWith('.example.com') || false,
     });
-    
+
     expect(cors.isOriginAllowed('https://app.example.com')).toBe(true);
     expect(cors.isOriginAllowed('https://malicious.com')).toBe(false);
   });
@@ -372,7 +372,7 @@ describe('CORSManager', () => {
 describe('Security Integration Tests', () => {
   it('should handle complex validation scenarios', async () => {
     const validator = new SecurityValidator();
-    
+
     const maliciousContent = {
       id: '123e4567-e89b-12d3-a456-426614174000',
       title: '<script>alert("xss")</script>Malicious Title',
@@ -382,15 +382,11 @@ describe('Security Integration Tests', () => {
       isPublic: true,
     };
 
-    const result = await validator.validateSchema(
-      maliciousContent,
-      ValidationSchemas.content,
-      { 
-        sanitize: true, 
-        strictMode: true,
-        customRules: ['noXSS', 'noSQLInjection', 'noPathTraversal']
-      }
-    );
+    const result = await validator.validateSchema(maliciousContent, ValidationSchemas.content, {
+      sanitize: true,
+      strictMode: true,
+      customRules: ['noXSS', 'noSQLInjection', 'noPathTraversal'],
+    });
 
     expect(result.isValid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
@@ -403,18 +399,16 @@ describe('Security Integration Tests', () => {
     // This test demonstrates how the SecurityBoundary decorator would work
     // In actual usage, it would be applied to class methods
     const validator = new SecurityValidator();
-    
+
     const mockMethod = async (input: any) => {
-      const validation = await validator.validateSchema(
-        input,
-        ValidationSchemas.user,
-        { strictMode: true }
-      );
-      
+      const validation = await validator.validateSchema(input, ValidationSchemas.user, {
+        strictMode: true,
+      });
+
       if (!validation.isValid) {
         throw new SecurityError('Validation failed', validation.errors);
       }
-      
+
       return 'Method executed successfully';
     };
 
@@ -440,14 +434,15 @@ describe('Performance Tests', () => {
     }));
 
     const startTime = Date.now();
-    
-    for (const item of largeDataset.slice(0, 100)) { // Test with smaller subset for speed
+
+    for (const item of largeDataset.slice(0, 100)) {
+      // Test with smaller subset for speed
       await validator.validateSchema(item, ValidationSchemas.content.partial());
     }
-    
+
     const endTime = Date.now();
     const duration = endTime - startTime;
-    
+
     // Should process 100 items in reasonable time (less than 1 second)
     expect(duration).toBeLessThan(1000);
   });
@@ -455,11 +450,11 @@ describe('Performance Tests', () => {
   it('should sanitize content efficiently', () => {
     const sanitizer = new InputSanitizer();
     const largeHtml = '<div>' + 'a'.repeat(10000) + '</div>';
-    
+
     const startTime = Date.now();
     const result = sanitizer.sanitizeHTML(largeHtml);
     const endTime = Date.now();
-    
+
     expect(result).toBeDefined();
     expect(endTime - startTime).toBeLessThan(100); // Should be very fast
   });

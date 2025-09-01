@@ -59,14 +59,14 @@
 
 import React from 'react';
 import type {
-  Product,
   DayRecord,
-  UserProfile,
   HEYSGlobal,
-  ReportTabProps,
+  MealTotals,
+  Product,
   PulseZone,
   ReportRow,
-  MealTotals,
+  ReportTabProps,
+  UserProfile,
 } from './types/heys';
 
 // Declare global types
@@ -168,7 +168,7 @@ interface ChartData {
         keysToDelete.push(key);
       }
     }
-    keysToDelete.forEach(key => dayCache.delete(key));
+    keysToDelete.forEach((key) => dayCache.delete(key));
 
     // Также очищаем кэш недель если изменились дни
     if (pattern) {
@@ -226,7 +226,7 @@ interface ChartData {
     dateStr: string,
     products: Product[],
     profile: UserProfile,
-    zones: PulseZone[]
+    zones: PulseZone[],
   ): string {
     const productsHash = JSON.stringify(products).substring(0, 100); // Усеченный хэш для производительности
     const profileHash = JSON.stringify(profile);
@@ -239,7 +239,7 @@ interface ChartData {
     dateStr: string,
     products: Product[],
     profile: UserProfile,
-    zones: PulseZone[]
+    zones: PulseZone[],
   ): ReportRow {
     const start = performance.now();
 
@@ -433,11 +433,11 @@ interface ChartData {
         zone3: 0,
         zone4: 0,
         zone5: 0,
-      }
+      },
     );
 
     const count = days.length;
-    const weightCount = days.filter(d => d.weight > 0).length;
+    const weightCount = days.filter((d) => d.weight > 0).length;
 
     return {
       kcal: round1(totals.kcal / count),
@@ -460,14 +460,14 @@ interface ChartData {
     const last14Days = rows.slice(-14); // Последние 2 недели для графиков
 
     return {
-      labels: last14Days.map(row => {
+      labels: last14Days.map((row) => {
         const date = new Date(row.date);
         return `${date.getDate()}/${date.getMonth() + 1}`;
       }),
       datasets: [
         {
           label,
-          data: last14Days.map(row => {
+          data: last14Days.map((row) => {
             const value = row[field];
             return typeof value === 'number' ? value : 0;
           }),
@@ -542,8 +542,8 @@ interface ChartData {
           React.createElement('th', null, 'У'),
           React.createElement('th', null, 'Вес'),
           React.createElement('th', null, 'Тренировка'),
-          React.createElement('th', null, 'Сон')
-        )
+          React.createElement('th', null, 'Сон'),
+        ),
       ),
       React.createElement(
         'tbody',
@@ -559,8 +559,8 @@ interface ChartData {
             React.createElement('td', null, row.carbs),
             React.createElement('td', null, row.weight || '-'),
             React.createElement('td', null, row.trainDuration ? `${row.trainDuration}мин` : '-'),
-            React.createElement('td', null, row.sleepHours ? `${row.sleepHours}ч` : '-')
-          )
+            React.createElement('td', null, row.sleepHours ? `${row.sleepHours}ч` : '-'),
+          ),
         ),
         averages &&
           React.createElement(
@@ -570,36 +570,27 @@ interface ChartData {
             React.createElement(
               'td',
               null,
-              React.createElement('strong', null, averages.kcal || '-')
+              React.createElement('strong', null, averages.kcal || '-'),
             ),
             React.createElement(
               'td',
               null,
-              React.createElement('strong', null, averages.protein || '-')
+              React.createElement('strong', null, averages.protein || '-'),
             ),
             React.createElement(
               'td',
               null,
-              React.createElement('strong', null, averages.fat || '-')
+              React.createElement('strong', null, averages.fat || '-'),
             ),
             React.createElement(
               'td',
               null,
-              React.createElement('strong', null, averages.carbs || '-')
+              React.createElement('strong', null, averages.carbs || '-'),
             ),
             React.createElement(
               'td',
               null,
-              React.createElement('strong', null, averages.weight || '-')
-            ),
-            React.createElement(
-              'td',
-              null,
-              React.createElement(
-                'strong',
-                null,
-                averages.trainDuration ? `${averages.trainDuration}мин` : '-'
-              )
+              React.createElement('strong', null, averages.weight || '-'),
             ),
             React.createElement(
               'td',
@@ -607,11 +598,20 @@ interface ChartData {
               React.createElement(
                 'strong',
                 null,
-                averages.sleepHours ? `${averages.sleepHours}ч` : '-'
-              )
-            )
-          )
-      )
+                averages.trainDuration ? `${averages.trainDuration}мин` : '-',
+              ),
+            ),
+            React.createElement(
+              'td',
+              null,
+              React.createElement(
+                'strong',
+                null,
+                averages.sleepHours ? `${averages.sleepHours}ч` : '-',
+              ),
+            ),
+          ),
+      ),
     );
   };
 
@@ -628,9 +628,9 @@ interface ChartData {
           React.createElement(ReportTable, {
             rows: week.days,
             averages: week.averages,
-          })
-        )
-      )
+          }),
+        ),
+      ),
     );
   };
 
@@ -644,7 +644,7 @@ interface ChartData {
         renderChart(
           'training-chart',
           prepareChartData(rows, 'trainDuration', 'Тренировки'),
-          'Длительность тренировок (мин)'
+          'Длительность тренировок (мин)',
         );
       }, 100);
 
@@ -661,24 +661,24 @@ interface ChartData {
         React.createElement(
           'div',
           { className: 'chart-container' },
-          React.createElement('canvas', { id: 'kcal-chart', width: 400, height: 200 })
+          React.createElement('canvas', { id: 'kcal-chart', width: 400, height: 200 }),
         ),
         React.createElement(
           'div',
           { className: 'chart-container' },
-          React.createElement('canvas', { id: 'weight-chart', width: 400, height: 200 })
+          React.createElement('canvas', { id: 'weight-chart', width: 400, height: 200 }),
         ),
         React.createElement(
           'div',
           { className: 'chart-container' },
-          React.createElement('canvas', { id: 'sleep-chart', width: 400, height: 200 })
+          React.createElement('canvas', { id: 'sleep-chart', width: 400, height: 200 }),
         ),
         React.createElement(
           'div',
           { className: 'chart-container' },
-          React.createElement('canvas', { id: 'training-chart', width: 400, height: 200 })
-        )
-      )
+          React.createElement('canvas', { id: 'training-chart', width: 400, height: 200 }),
+        ),
+      ),
     );
   };
 
@@ -738,19 +738,19 @@ interface ChartData {
             onClick: refreshData,
             className: 'refresh-btn',
           },
-          'Обновить данные'
-        )
+          'Обновить данные',
+        ),
       ),
 
       React.createElement(
         'div',
         { className: 'report-summary' },
         React.createElement('p', null, `Всего дней в отчете: ${reportData.length}`),
-        React.createElement('p', null, `Недель: ${weeks.length}`)
+        React.createElement('p', null, `Недель: ${weeks.length}`),
       ),
 
       React.createElement(ChartsSection, { rows: reportData }),
-      React.createElement(WeeklyReport, { weeks })
+      React.createElement(WeeklyReport, { weeks }),
     );
   };
 

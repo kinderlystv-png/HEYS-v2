@@ -120,7 +120,7 @@ if (hasDashboard) {
 
     if (allLogs.length === 0 && stats.total > 0) {
       console.warn(
-        '⚠️ ПРОБЛЕМА: Статистика показывает логи, но getLogs() возвращает пустой массив!'
+        '⚠️ ПРОБЛЕМА: Статистика показывает логи, но getLogs() возвращает пустой массив!',
       );
 
       // Попробуем разные варианты фильтров
@@ -128,7 +128,7 @@ if (hasDashboard) {
       console.log(`   📋 getLogs(): ${activeLogger.getLogs().length}`);
       console.log(`   📋 getLogs({}): ${activeLogger.getLogs({}).length}`);
       console.log(
-        `   📋 getLogs({level: 'all'}): ${activeLogger.getLogs({ level: 'all' }).length}`
+        `   📋 getLogs({level: 'all'}): ${activeLogger.getLogs({ level: 'all' }).length}`,
       );
     }
   }

@@ -1,7 +1,7 @@
 /**
  * HEYS Performance Regression Testing & CI/CD Integration v1.0
  * Automated Performance Regression Detection and Continuous Integration
- * 
+ *
  * Features:
  * - Performance regression detection
  * - Historical performance comparison
@@ -313,7 +313,7 @@ export class PerformanceRegressionTester {
     environment: string,
     metrics: BaselineMetrics,
     tests: BaselineTest[],
-    metadata: PerformanceBaseline['metadata']
+    metadata: PerformanceBaseline['metadata'],
   ): Promise<PerformanceBaseline> {
     const baseline: PerformanceBaseline = {
       id: `baseline-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -327,7 +327,7 @@ export class PerformanceRegressionTester {
     };
 
     this.baselines.set(baseline.id, baseline);
-    
+
     console.log(`Created performance baseline: ${name} v${version} (${environment})`);
     return baseline;
   }
@@ -338,7 +338,7 @@ export class PerformanceRegressionTester {
   async compareAgainstBaseline(
     baselineId: string,
     currentMetrics: BaselineMetrics,
-    currentTests: BaselineTest[]
+    currentTests: BaselineTest[],
   ): Promise<RegressionResult> {
     const baseline = this.baselines.get(baselineId);
     if (!baseline) {
@@ -379,7 +379,7 @@ export class PerformanceRegressionTester {
     };
 
     this.regressionResults.set(result.id, result);
-    
+
     console.log(`Regression analysis completed: ${status}`);
     return result;
   }
@@ -389,7 +389,7 @@ export class PerformanceRegressionTester {
    */
   private performDetailedComparison(
     baseline: PerformanceBaseline,
-    current: PerformanceBaseline
+    current: PerformanceBaseline,
   ): ComparisonResult {
     const comparisons: MetricComparison[] = [];
     const metricNames = Object.keys(baseline.metrics) as (keyof BaselineMetrics)[];
@@ -417,10 +417,11 @@ export class PerformanceRegressionTester {
       });
     }
 
-    const regressionCount = comparisons.filter(c => c.status === 'regression').length;
-    const improvementCount = comparisons.filter(c => c.status === 'improvement').length;
-    const stableCount = comparisons.filter(c => c.status === 'stable').length;
-    const overallChange = comparisons.reduce((sum, c) => sum + Math.abs(c.changePercent), 0) / comparisons.length;
+    const regressionCount = comparisons.filter((c) => c.status === 'regression').length;
+    const improvementCount = comparisons.filter((c) => c.status === 'improvement').length;
+    const stableCount = comparisons.filter((c) => c.status === 'stable').length;
+    const overallChange =
+      comparisons.reduce((sum, c) => sum + Math.abs(c.changePercent), 0) / comparisons.length;
 
     return {
       summary: {
@@ -460,8 +461,12 @@ export class PerformanceRegressionTester {
   /**
    * Get comparison status
    */
-  private getComparisonStatus(changePercent: number, threshold: number): 'regression' | 'improvement' | 'stable' {
-    if (Math.abs(changePercent) < 2) { // Less than 2% change is considered stable
+  private getComparisonStatus(
+    changePercent: number,
+    threshold: number,
+  ): 'regression' | 'improvement' | 'stable' {
+    if (Math.abs(changePercent) < 2) {
+      // Less than 2% change is considered stable
       return 'stable';
     }
 
@@ -508,8 +513,8 @@ export class PerformanceRegressionTester {
    */
   private identifyRegressions(comparison: ComparisonResult): Regression[] {
     return comparison.detailedComparison
-      .filter(c => c.status === 'regression')
-      .map(c => ({
+      .filter((c) => c.status === 'regression')
+      .map((c) => ({
         metric: c.metric,
         baselineValue: c.baseline,
         currentValue: c.current,
@@ -527,8 +532,8 @@ export class PerformanceRegressionTester {
    */
   private identifyImprovements(comparison: ComparisonResult): Improvement[] {
     return comparison.detailedComparison
-      .filter(c => c.status === 'improvement')
-      .map(c => ({
+      .filter((c) => c.status === 'improvement')
+      .map((c) => ({
         metric: c.metric,
         baselineValue: c.baseline,
         currentValue: c.current,
@@ -603,8 +608,8 @@ export class PerformanceRegressionTester {
    * Determine overall status
    */
   private determineStatus(regressions: Regression[]): 'pass' | 'fail' | 'warning' {
-    const criticalRegressions = regressions.filter(r => r.severity === 'critical');
-    const highRegressions = regressions.filter(r => r.severity === 'high');
+    const criticalRegressions = regressions.filter((r) => r.severity === 'critical');
+    const highRegressions = regressions.filter((r) => r.severity === 'high');
 
     if (criticalRegressions.length > 0) return 'fail';
     if (highRegressions.length > 0) return 'warning';
@@ -628,7 +633,7 @@ export class PerformanceRegressionTester {
         actual: actualValue,
         passed,
         severity: budget.severity,
-        message: passed 
+        message: passed
           ? `Budget met: ${budget.metric} = ${actualValue} ${budget.operator} ${budget.limit}`
           : `Budget exceeded: ${budget.metric} = ${actualValue} (limit: ${budget.limit})`,
       };
@@ -655,11 +660,16 @@ export class PerformanceRegressionTester {
    */
   private evaluateBudgetCondition(value: number, operator: string, limit: number): boolean {
     switch (operator) {
-      case 'lt': return value < limit;
-      case 'lte': return value <= limit;
-      case 'gt': return value > limit;
-      case 'gte': return value >= limit;
-      default: return false;
+      case 'lt':
+        return value < limit;
+      case 'lte':
+        return value <= limit;
+      case 'gt':
+        return value > limit;
+      case 'gte':
+        return value >= limit;
+      default:
+        return false;
     }
   }
 
@@ -683,7 +693,7 @@ export class PerformanceRegressionTester {
    */
   async analyzeTrends(metric: string, dataPoints: number[]): Promise<TrendAnalysis> {
     const period = {
-      start: Date.now() - (dataPoints.length * 24 * 60 * 60 * 1000), // Assuming daily data points
+      start: Date.now() - dataPoints.length * 24 * 60 * 60 * 1000, // Assuming daily data points
       end: Date.now(),
       dataPoints: dataPoints.length,
     };
@@ -728,7 +738,7 @@ export class PerformanceRegressionTester {
     const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
 
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    
+
     // Calculate R-squared for confidence
     const yMean = sumY / n;
     const ssRes = y.reduce((sum, yi, i) => {
@@ -736,7 +746,7 @@ export class PerformanceRegressionTester {
       return sum + Math.pow(yi - predicted, 2);
     }, 0);
     const ssTot = y.reduce((sum, yi) => sum + Math.pow(yi - yMean, 2), 0);
-    const rSquared = 1 - (ssRes / ssTot);
+    const rSquared = 1 - ssRes / ssTot;
 
     // Determine direction
     let direction: 'up' | 'down' | 'stable' | 'volatile';
@@ -771,9 +781,10 @@ export class PerformanceRegressionTester {
     if (dataPoints.length < 2) return 0;
 
     const mean = dataPoints.reduce((a, b) => a + b, 0) / dataPoints.length;
-    const variance = dataPoints.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / dataPoints.length;
+    const variance =
+      dataPoints.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / dataPoints.length;
     const stdDev = Math.sqrt(variance);
-    
+
     return stdDev / mean; // Coefficient of variation
   }
 
@@ -795,11 +806,13 @@ export class PerformanceRegressionTester {
   private calculateStatistics(dataPoints: number[]): TrendAnalysis['statistics'] {
     const sorted = [...dataPoints].sort((a, b) => a - b);
     const mean = dataPoints.reduce((a, b) => a + b, 0) / dataPoints.length;
-    const median = sorted.length % 2 === 0 
-      ? ((sorted[sorted.length / 2 - 1] ?? 0) + (sorted[sorted.length / 2] ?? 0)) / 2
-      : (sorted[Math.floor(sorted.length / 2)] ?? 0);
-    
-    const variance = dataPoints.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / dataPoints.length;
+    const median =
+      sorted.length % 2 === 0
+        ? ((sorted[sorted.length / 2 - 1] ?? 0) + (sorted[sorted.length / 2] ?? 0)) / 2
+        : (sorted[Math.floor(sorted.length / 2)] ?? 0);
+
+    const variance =
+      dataPoints.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / dataPoints.length;
     const standardDeviation = Math.sqrt(variance);
 
     return {
@@ -820,14 +833,14 @@ export class PerformanceRegressionTester {
     const forecastPeriods = 5;
     const trend = this.calculateTrend(dataPoints);
     const lastValue = dataPoints[dataPoints.length - 1] || 0;
-    
+
     const predicted: number[] = [];
     const confidence_interval: { lower: number; upper: number }[] = [];
 
     for (let i = 1; i <= forecastPeriods; i++) {
-      const forecast = lastValue + (trend.slope * i);
+      const forecast = lastValue + trend.slope * i;
       const errorMargin = Math.abs(forecast * 0.1); // 10% error margin
-      
+
       predicted.push(forecast);
       confidence_interval.push({
         lower: forecast - errorMargin,
@@ -857,7 +870,7 @@ export class PerformanceRegressionTester {
   async executeCicdGate(
     baselineId: string,
     currentMetrics: BaselineMetrics,
-    currentTests: BaselineTest[]
+    currentTests: BaselineTest[],
   ): Promise<{
     passed: boolean;
     results: {
@@ -874,21 +887,28 @@ export class PerformanceRegressionTester {
 
     // Evaluate performance budgets
     const budgetResults = await this.evaluateBudgets(currentMetrics);
-    
+
     // Compare against baseline
-    const regressionResult = await this.compareAgainstBaseline(baselineId, currentMetrics, currentTests);
+    const regressionResult = await this.compareAgainstBaseline(
+      baselineId,
+      currentMetrics,
+      currentTests,
+    );
 
     // Determine if gate should pass
-    const budgetFailures = budgetResults.filter(r => !r.passed && r.severity === 'error');
-    const criticalRegressions = regressionResult.regressions.filter(r => r.severity === 'critical');
+    const budgetFailures = budgetResults.filter((r) => !r.passed && r.severity === 'error');
+    const criticalRegressions = regressionResult.regressions.filter(
+      (r) => r.severity === 'critical',
+    );
     const totalRegressions = regressionResult.regressions.length;
 
     const { gates } = this.cicdConfig;
-    const passed = 
+    const passed =
       budgetFailures.length === 0 &&
       criticalRegressions.length <= gates.regressionThresholds.maxCriticalRegressions &&
       (totalRegressions === 0 || !gates.regressionThresholds.failOnAnyRegression) &&
-      (regressionResult.comparison.summary.overallChange <= gates.regressionThresholds.maxRegressionPercent);
+      regressionResult.comparison.summary.overallChange <=
+        gates.regressionThresholds.maxRegressionPercent;
 
     const summary = this.generateCicdSummary(passed, budgetResults, regressionResult);
 
@@ -913,10 +933,10 @@ export class PerformanceRegressionTester {
   private generateCicdSummary(
     passed: boolean,
     budgetResults: BudgetResult[],
-    regressionResult: RegressionResult
+    regressionResult: RegressionResult,
   ): string {
     const status = passed ? '✅ PASSED' : '❌ FAILED';
-    const budgetStatus = budgetResults.filter(r => !r.passed).length;
+    const budgetStatus = budgetResults.filter((r) => !r.passed).length;
     const regressionCount = regressionResult.regressions.length;
     const improvementCount = regressionResult.improvements.length;
 
@@ -932,15 +952,23 @@ ${budgetStatus > 0 ? `- ${budgetStatus} budget violations detected` : ''}
 - ${improvementCount} improvements detected
 - Overall change: ${regressionResult.comparison.summary.overallChange.toFixed(2)}%
 
-${regressionResult.regressions.length > 0 ? `
+${
+  regressionResult.regressions.length > 0
+    ? `
 ⚠️ Regressions:
-${regressionResult.regressions.map(r => `- ${r.metric}: +${r.changePercent.toFixed(2)}% (${r.severity})`).join('\n')}
-` : ''}
+${regressionResult.regressions.map((r) => `- ${r.metric}: +${r.changePercent.toFixed(2)}% (${r.severity})`).join('\n')}
+`
+    : ''
+}
 
-${regressionResult.improvements.length > 0 ? `
+${
+  regressionResult.improvements.length > 0
+    ? `
 🚀 Improvements:
-${regressionResult.improvements.map(i => `- ${i.metric}: ${i.changePercent.toFixed(2)}%`).join('\n')}
-` : ''}
+${regressionResult.improvements.map((i) => `- ${i.metric}: ${i.changePercent.toFixed(2)}%`).join('\n')}
+`
+    : ''
+}
     `.trim();
   }
 
@@ -951,7 +979,7 @@ ${regressionResult.improvements.map(i => `- ${i.metric}: ${i.changePercent.toFix
     if (!this.cicdConfig) return;
 
     const { notifications } = this.cicdConfig;
-    const shouldNotify = 
+    const shouldNotify =
       (passed && notifications.onSuccess) ||
       (!passed && notifications.onFailure) ||
       (!passed && notifications.onRegression);
@@ -959,7 +987,7 @@ ${regressionResult.improvements.map(i => `- ${i.metric}: ${i.changePercent.toFix
     if (!shouldNotify) return;
 
     console.log('Sending CI/CD notifications...');
-    
+
     for (const channel of notifications.channels) {
       switch (channel) {
         case 'email':
@@ -1048,7 +1076,7 @@ ${regressionResult.improvements.map(i => `- ${i.metric}: ${i.changePercent.toFix
 
   exportResults(format: 'json' | 'csv' | 'html'): string {
     const results = this.getRegressionResults();
-    
+
     switch (format) {
       case 'json':
         return JSON.stringify(results, null, 2);
@@ -1066,10 +1094,13 @@ ${regressionResult.improvements.map(i => `- ${i.metric}: ${i.changePercent.toFix
    */
   private exportToCsv(results: RegressionResult[]): string {
     const headers = 'TestId,Status,RegressionCount,ImprovementCount,OverallChange,Timestamp\n';
-    const rows = results.map(result => 
-      `${result.testId},${result.status},${result.regressions.length},${result.improvements.length},${result.comparison.summary.overallChange},${result.createdAt}`
-    ).join('\n');
-    
+    const rows = results
+      .map(
+        (result) =>
+          `${result.testId},${result.status},${result.regressions.length},${result.improvements.length},${result.comparison.summary.overallChange},${result.createdAt}`,
+      )
+      .join('\n');
+
     return headers + rows;
   }
 
@@ -1077,7 +1108,9 @@ ${regressionResult.improvements.map(i => `- ${i.metric}: ${i.changePercent.toFix
    * Export to HTML
    */
   private exportToHtml(results: RegressionResult[]): string {
-    const tableRows = results.map(result => `
+    const tableRows = results
+      .map(
+        (result) => `
       <tr>
         <td>${result.testId}</td>
         <td><span class="status ${result.status}">${result.status.toUpperCase()}</span></td>
@@ -1086,7 +1119,9 @@ ${regressionResult.improvements.map(i => `- ${i.metric}: ${i.changePercent.toFix
         <td>${result.comparison.summary.overallChange.toFixed(2)}%</td>
         <td>${new Date(result.createdAt).toLocaleString()}</td>
       </tr>
-    `).join('');
+    `,
+      )
+      .join('');
 
     return `
 <!DOCTYPE html>

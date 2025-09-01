@@ -43,7 +43,7 @@ export type FoodEntry = z.infer<typeof FoodEntrySchema>;
 // Nutrition calculations
 export const calculateNutrition = (
   product: FoodProduct,
-  amount: number
+  amount: number,
 ): FoodProduct['nutrition'] => {
   const ratio = amount / product.perUnit.amount;
   return {

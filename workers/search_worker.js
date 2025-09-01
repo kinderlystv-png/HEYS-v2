@@ -25,9 +25,9 @@
 
     data.forEach((item, index) => {
       const normalizedName = normalizeText(item.name || '');
-      const words = normalizedName.split(/\s+/).filter(word => word.length > 0);
+      const words = normalizedName.split(/\s+/).filter((word) => word.length > 0);
 
-      words.forEach(word => {
+      words.forEach((word) => {
         if (!searchIndex.has(word)) {
           searchIndex.set(word, []);
         }
@@ -52,26 +52,26 @@
     if (!normalizedQuery) return [];
 
     const results = new Set();
-    const queryWords = normalizedQuery.split(/\s+/).filter(word => word.length > 0);
+    const queryWords = normalizedQuery.split(/\s+/).filter((word) => word.length > 0);
 
     // Поиск по каждому слову запроса
-    queryWords.forEach(word => {
+    queryWords.forEach((word) => {
       // Точное совпадение
       if (searchIndex.has(word)) {
-        searchIndex.get(word).forEach(index => results.add(index));
+        searchIndex.get(word).forEach((index) => results.add(index));
       }
 
       // Поиск по началу слова
       for (const [indexedWord, indices] of searchIndex.entries()) {
         if (indexedWord.startsWith(word)) {
-          indices.forEach(index => results.add(index));
+          indices.forEach((index) => results.add(index));
         }
       }
     });
 
     // Преобразуем индексы в объекты и сортируем по релевантности
     const resultItems = Array.from(results)
-      .map(index => ({
+      .map((index) => ({
         ...searchData[index],
         relevance: calculateRelevance(searchData[index], normalizedQuery),
       }))
@@ -116,7 +116,7 @@
     if (!normalizedQuery) return [];
 
     return searchData
-      .filter(item => {
+      .filter((item) => {
         const itemName = normalizeText(item.name || '');
         return itemName.includes(normalizedQuery);
       })
@@ -157,7 +157,7 @@
 
           const duration = performance.now() - startTime;
           console.log(
-            `[Search Worker] Поиск "${query}" завершен за ${duration.toFixed(1)}ms, найдено ${result.length} результатов`
+            `[Search Worker] Поиск "${query}" завершен за ${duration.toFixed(1)}ms, найдено ${result.length} результатов`,
           );
           break;
 

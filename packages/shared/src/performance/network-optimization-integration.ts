@@ -1,7 +1,7 @@
 /**
  * HEYS Network Optimization Integration Layer v1.0
  * Integration point for all network optimization features
- * 
+ *
  * Features:
  * - Unified network optimization API
  * - Integration with existing HEYS systems
@@ -10,8 +10,8 @@
  * - Error handling and recovery
  */
 
-import { NetworkOptimizer, NetworkOptimizationConfig } from './network-optimizer';
-import { NetworkPerformanceDashboard, DashboardConfig } from './network-performance-dashboard';
+import { NetworkOptimizationConfig, NetworkOptimizer } from './network-optimizer';
+import { DashboardConfig, NetworkPerformanceDashboard } from './network-performance-dashboard';
 
 export interface NetworkIntegrationConfig {
   optimizer: NetworkOptimizationConfig;
@@ -197,7 +197,7 @@ export class NetworkOptimizationIntegration {
 
     try {
       this.isRunning = true;
-      
+
       // Start dashboard if available
       if (this.dashboard) {
         this.dashboard.start();
@@ -261,7 +261,7 @@ export class NetworkOptimizationIntegration {
   async updateConfiguration(newConfig: Partial<NetworkIntegrationConfig>): Promise<void> {
     try {
       this.config = this.mergeConfig(newConfig);
-      
+
       // Update optimizer configuration
       if (this.optimizer && newConfig.optimizer) {
         this.optimizer.updateConfig(newConfig.optimizer);
@@ -372,7 +372,7 @@ export class NetworkOptimizationIntegration {
    */
   getStatistics(): any {
     const metrics = this.getCurrentMetrics();
-    
+
     return {
       isInitialized: this.isInitialized,
       isRunning: this.isRunning,
@@ -451,10 +451,7 @@ export class NetworkOptimizationIntegration {
         return;
       }
 
-      localStorage.setItem(
-        this.config.integration.storageKey,
-        JSON.stringify(this.config)
-      );
+      localStorage.setItem(this.config.integration.storageKey, JSON.stringify(this.config));
     } catch (error) {
       console.warn('Failed to save configuration:', error);
     }
@@ -481,7 +478,7 @@ export class NetworkOptimizationIntegration {
     this.syncIntervalId = window.setInterval(async () => {
       try {
         await this.saveConfiguration();
-        
+
         // Emit metrics update event
         const metrics = this.getCurrentMetrics();
         if (metrics) {
@@ -504,7 +501,7 @@ let globalNetworkIntegration: NetworkOptimizationIntegration | null = null;
  */
 export function createNetworkOptimization(
   config?: Partial<NetworkIntegrationConfig>,
-  events?: NetworkIntegrationEvents
+  events?: NetworkIntegrationEvents,
 ): NetworkOptimizationIntegration {
   if (globalNetworkIntegration) {
     console.warn('Network optimization already exists, destroying previous instance');
@@ -527,7 +524,7 @@ export function getNetworkOptimization(): NetworkOptimizationIntegration | null 
  */
 export async function initializeNetworkOptimization(
   config?: Partial<NetworkIntegrationConfig>,
-  events?: NetworkIntegrationEvents
+  events?: NetworkIntegrationEvents,
 ): Promise<NetworkOptimizationIntegration> {
   const integration = createNetworkOptimization(config, events);
   await integration.initialize();
@@ -564,19 +561,19 @@ export async function setupBasicNetworkOptimization(): Promise<NetworkOptimizati
 export async function setupHighPerformanceNetworkOptimization(): Promise<NetworkOptimizationIntegration> {
   const config: Partial<NetworkIntegrationConfig> = {
     optimizer: {
-      prefetching: { 
-        enabled: true, 
+      prefetching: {
+        enabled: true,
         adaptiveStrategy: 'aggressive',
         maxConcurrentRequests: 8,
         intelligentPrediction: true,
       },
-      caching: { 
-        enabled: true, 
+      caching: {
+        enabled: true,
         strategy: 'adaptive',
         maxCacheSize: 200,
         compression: true,
       },
-      connectionOptimization: { 
+      connectionOptimization: {
         enabled: true,
         http2Push: true,
         http3Support: true,
@@ -586,7 +583,7 @@ export async function setupHighPerformanceNetworkOptimization(): Promise<Network
         enabled: true,
         adaptiveStreaming: true,
       },
-      monitoring: { 
+      monitoring: {
         enabled: true,
         realTimeReporting: true,
         metricsInterval: 1000,
@@ -609,18 +606,18 @@ export async function setupHighPerformanceNetworkOptimization(): Promise<Network
 export async function setupMobileNetworkOptimization(): Promise<NetworkOptimizationIntegration> {
   const config: Partial<NetworkIntegrationConfig> = {
     optimizer: {
-      prefetching: { 
-        enabled: true, 
+      prefetching: {
+        enabled: true,
         adaptiveStrategy: 'conservative',
         maxConcurrentRequests: 2,
       },
-      caching: { 
-        enabled: true, 
+      caching: {
+        enabled: true,
         strategy: 'lfu',
         maxCacheSize: 50,
         compression: true,
       },
-      connectionOptimization: { 
+      connectionOptimization: {
         enabled: true,
         keepAlive: true,
       },

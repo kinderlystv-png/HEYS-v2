@@ -104,7 +104,7 @@ class RealAnchorIntegration {
 
       // Добавляем якоря
       console.log(
-        `  🔗 Добавление якорей в ${path.basename(filePath)} (${fileInfo.lines} строк)...`
+        `  🔗 Добавление якорей в ${path.basename(filePath)} (${fileInfo.lines} строк)...`,
       );
 
       // В РЕАЛЬНОСТИ здесь будет:
@@ -140,7 +140,7 @@ class RealAnchorIntegration {
     }
 
     const lines = fileContent.split('\n');
-    const existingAnchors = lines.filter(line => /@ANCHOR:/i.test(line)).length;
+    const existingAnchors = lines.filter((line) => /@ANCHOR:/i.test(line)).length;
 
     return {
       lines: lines.length,
@@ -266,7 +266,7 @@ function simpleHelper() {
 }
 
 export default simpleHelper;
-        `
+        `,
     );
 
     // Сценарий 2: Создание среднего файла
@@ -292,7 +292,7 @@ function helper2() { }
 function helper3() { }
 
 export default MediumModule;
-        `
+        `,
     );
 
     // Сценарий 3: Редактирование существующего файла
@@ -310,7 +310,7 @@ export default MediumModule;
     console.log(`   Среднее на файл: ${report.averageAnchorsPerFile}`);
 
     console.log('\n📁 ОБРАБОТАННЫЕ ФАЙЛЫ:');
-    report.files.forEach(file => {
+    report.files.forEach((file) => {
       console.log(`   📄 ${path.basename(file)}`);
     });
 

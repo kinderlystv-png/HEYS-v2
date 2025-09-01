@@ -127,7 +127,7 @@ class EnhancedErrorLogger {
    */
   setupErrorHandlers() {
     // Глобальный обработчик JavaScript ошибок
-    window.addEventListener('error', event => {
+    window.addEventListener('error', (event) => {
       this.logError('JavaScript Error', {
         message: event.message,
         filename: event.filename,
@@ -141,7 +141,7 @@ class EnhancedErrorLogger {
     });
 
     // Обработчик unhandled promise rejections
-    window.addEventListener('unhandledrejection', event => {
+    window.addEventListener('unhandledrejection', (event) => {
       this.logError('Unhandled Promise Rejection', {
         reason: event.reason,
         promise: event.promise,
@@ -163,7 +163,7 @@ class EnhancedErrorLogger {
 
     // Observer для мониторинга DOM изменений
     if (typeof MutationObserver !== 'undefined') {
-      this.domObserver = new MutationObserver(mutations => {
+      this.domObserver = new MutationObserver((mutations) => {
         if (mutations.length > 100) {
           this.logWarning('High DOM Mutation Activity', {
             mutationsCount: mutations.length,
@@ -248,7 +248,7 @@ class EnhancedErrorLogger {
 
     // Отладочное логирование
     this.originalConsole.log(
-      `📝 EnhancedErrorLogger: Added log entry [${level}] "${title}" (total: ${this.logs.length})`
+      `📝 EnhancedErrorLogger: Added log entry [${level}] "${title}" (total: ${this.logs.length})`,
     );
 
     // Управление размером коллекции
@@ -279,7 +279,7 @@ class EnhancedErrorLogger {
    */
   notifyListeners(logEntry) {
     if (this.listeners) {
-      this.listeners.forEach(listener => {
+      this.listeners.forEach((listener) => {
         try {
           listener(logEntry);
         } catch (e) {
@@ -292,7 +292,7 @@ class EnhancedErrorLogger {
     window.dispatchEvent(
       new CustomEvent('enhancedLogEntry', {
         detail: logEntry,
-      })
+      }),
     );
   }
 
@@ -308,7 +308,7 @@ class EnhancedErrorLogger {
 
   removeListener(callback) {
     if (this.listeners) {
-      this.listeners = this.listeners.filter(l => l !== callback);
+      this.listeners = this.listeners.filter((l) => l !== callback);
     }
   }
 
@@ -324,12 +324,12 @@ class EnhancedErrorLogger {
       sessionId: this.sessionId,
     };
 
-    this.config.logLevels.forEach(level => {
-      stats.byLevel[level] = this.logs.filter(log => log.level === level).length;
+    this.config.logLevels.forEach((level) => {
+      stats.byLevel[level] = this.logs.filter((log) => log.level === level).length;
     });
 
     // Группировка по типам классификации
-    this.logs.forEach(log => {
+    this.logs.forEach((log) => {
       if (log.classification && log.classification.type) {
         stats.byType[log.classification.type] = (stats.byType[log.classification.type] || 0) + 1;
       }
@@ -355,28 +355,28 @@ class EnhancedErrorLogger {
     };
 
     if (filter.level) {
-      filteredLogs = filteredLogs.filter(log => log.level === filter.level);
+      filteredLogs = filteredLogs.filter((log) => log.level === filter.level);
       debugInfo.afterLevelFilter = filteredLogs.length;
     }
 
     if (filter.since) {
-      filteredLogs = filteredLogs.filter(log => log.timestamp >= filter.since);
+      filteredLogs = filteredLogs.filter((log) => log.timestamp >= filter.since);
       debugInfo.afterSinceFilter = filteredLogs.length;
     }
 
     if (filter.searchText) {
       const searchText = filter.searchText.toLowerCase();
       filteredLogs = filteredLogs.filter(
-        log =>
+        (log) =>
           log.title.toLowerCase().includes(searchText) ||
-          JSON.stringify(log.details).toLowerCase().includes(searchText)
+          JSON.stringify(log.details).toLowerCase().includes(searchText),
       );
       debugInfo.afterSearchFilter = filteredLogs.length;
     }
 
     if (filter.classification) {
       filteredLogs = filteredLogs.filter(
-        log => log.classification && log.classification.type === filter.classification
+        (log) => log.classification && log.classification.type === filter.classification,
       );
       debugInfo.afterClassificationFilter = filteredLogs.length;
     }
@@ -387,7 +387,7 @@ class EnhancedErrorLogger {
     if (this.logs.length > 0 && filteredLogs.length === 0 && Object.keys(filter).length > 0) {
       this.originalConsole.warn(
         '⚠️ Enhanced Error Logger: getLogs() returned empty array despite having logs',
-        debugInfo
+        debugInfo,
       );
     }
 
@@ -435,7 +435,7 @@ class EnhancedErrorLogger {
    */
   convertToCSV(logs) {
     const headers = ['timestamp', 'level', 'title', 'message', 'type', 'filename', 'line'];
-    const rows = logs.map(log => [
+    const rows = logs.map((log) => [
       new Date(log.timestamp).toISOString(),
       log.level,
       log.title,
@@ -445,7 +445,7 @@ class EnhancedErrorLogger {
       log.details.lineno || '',
     ]);
 
-    return [headers, ...rows].map(row => row.join(',')).join('\n');
+    return [headers, ...rows].map((row) => row.join(',')).join('\n');
   }
 
   /**
