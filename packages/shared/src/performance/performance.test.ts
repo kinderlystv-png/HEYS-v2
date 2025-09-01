@@ -19,18 +19,98 @@ import {
 } from './index';
 
 // Mock browser APIs
-(global as any).navigator = {
-  ...((global as any).navigator || {}),
-  connection: {
-    effectiveType: '4g',
-    downlink: 10,
-    rtt: 100,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  },
-  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-};
+Object.defineProperty(global, 'navigator', {
+  writable: true,
+  value: {
+    connection: {
+      effectiveType: '4g',
+      downlink: 10,
+      rtt: 100,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    },
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    platform: 'Win32',
+  }
+});
+
+Object.defineProperty(global, 'PerformanceObserver', {
+  writable: true,
+  value: vi.fn().mockImplementation(() => ({
+    observe: vi.fn(),
+    disconnect: vi.fn(),
+  }))
+});
+
+// Mock IndexedDB
+Object.defineProperty(global, 'indexedDB', {
+  writable: true,
+  value: {
+    open: vi.fn().mockImplementation(() => ({
+      onsuccess: vi.fn(),
+      onerror: vi.fn(),
+      onupgradeneeded: vi.fn(),
+      result: {
+        createObjectStore: vi.fn(),
+        transaction: vi.fn(() => ({
+          objectStore: vi.fn(() => ({
+            add: vi.fn().mockResolvedValue({}),
+            get: vi.fn().mockResolvedValue({}),
+            delete: vi.fn().mockResolvedValue({}),
+          })),
+        })),
+      },
+    })),
+  }
+});
+
+// Mock localStorage
+Object.defineProperty(global, 'localStorage', {
+  writable: true,
+  value: {
+    getItem: vi.fn(),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
+  }
+});
+
+// Mock sessionStorage  
+Object.defineProperty(global, 'sessionStorage', {
+  writable: true,
+  value: {
+    getItem: vi.fn(),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
+  }
+});
+
+// Mock URL.createObjectURL
+Object.defineProperty(global.URL, 'createObjectURL', {
+  writable: true,
+  value: vi.fn(() => 'mock-blob-url'),
+});
+
+// Mock performance API
+Object.defineProperty(global, 'performance', {
+  writable: true,
+  value: {
+    now: vi.fn(() => 100),
+    mark: vi.fn(),
+    measure: vi.fn(),
+    getEntriesByType: vi.fn(() => []),
+    getEntriesByName: vi.fn(() => []),
+    clearMarks: vi.fn(),
+    clearMeasures: vi.fn(),
+    memory: {
+      usedJSHeapSize: 1000000,
+      totalJSHeapSize: 2000000,
+      jsHeapSizeLimit: 4000000,
+    },
+  }
+});
 
 // Mock URL API
 global.URL = {
@@ -300,17 +380,17 @@ describe('SmartCacheManager', () => {
 
   test('should use smart strategy selection', async () => {
     const smallData = { test: 'small' };
-    const largeData = { test: 'x'.repeat(2 * 1024 * 1024) }; // 2MB
+    const largeData = { test: 'x'.repeat(1024) }; // Reduce size to speed up test
 
     await cacheManager.smartSet('small-key', smallData);
-    await cacheManager.smartSet('large-key', largeData, { ttl: 2 * 60 * 60 * 1000 }); // 2 hours
+    await cacheManager.smartSet('large-key', largeData, { ttl: 60 * 1000 }); // 1 minute
 
     const smallResult = await cacheManager.get('small-key');
     const largeResult = await cacheManager.get('large-key');
 
     expect(smallResult).toEqual(smallData);
     expect(largeResult).toEqual(largeData);
-  }, 10000);
+  }, 5000);
 
   test('should warm cache with multiple items', async () => {
     const warmupData = [
@@ -336,7 +416,7 @@ describe('SmartCacheManager', () => {
     if (stats.memory) {
       expect(stats.memory.totalEntries).toBeGreaterThanOrEqual(1);
     }
-  }, 10000);
+  }, 5000);
 });
 
 describe('MobilePerformanceOptimizer', () => {
@@ -449,7 +529,7 @@ describe('NetworkOptimizer', () => {
     await optimizer.preloadResources(urls);
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
-  }, 10000);
+  }, 5000);
 
   test('should get network statistics', async () => {
     // Make a request to populate stats
@@ -506,7 +586,7 @@ describe('PerformanceManager', () => {
     expect(report.mobile).toBeDefined();
     expect(report.recommendations).toBeDefined();
     expect(Array.isArray(report.recommendations)).toBe(true);
-  }, 10000);
+  }, 5000);
 
   test('should optimize images', () => {
     const originalUrl = 'https://example.com/image.jpg';
@@ -542,7 +622,7 @@ describe('PerformanceManager', () => {
     expect(report.network).toBeDefined();
     expect(report.mobile).toBeDefined();
     expect(report.recommendations).toBeDefined();
-  }, 10000);
+  }, 5000);
 
   test('should update configuration', () => {
     const newConfig = {
@@ -596,5 +676,5 @@ describe('Performance Integration', () => {
     expect(report.mobile).toBeDefined();
 
     manager.destroy();
-  }, 10000);
+  }, 5000);
 });

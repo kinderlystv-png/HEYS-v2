@@ -1,202 +1,875 @@
 
-> @heys/shared@13.0.0 test C:\! HEYS 2\packages\shared
+> @heys/shared@14.0.0 test C:\! HEYS 2\packages\shared
 > vitest run
 
 
 [7m[1m[36m RUN [39m[22m[27m [36mv0.34.6[39m [90mC:/! HEYS 2/packages/shared[39m
 
- [32m✓[39m src/__tests__/legacy.test.ts [2m ([22m[2m12 tests[22m[2m)[22m[90m 10[2mms[22m[39m
- [32m✓[39m src/__tests__/monitoring.test.ts [2m ([22m[2m8 tests[22m[2m)[22m[90m 21[2mms[22m[39m
- [33m❯[39m src/__tests__/utils.test.ts [2m ([22m[2m0 test[22m[2m)[22m
- [32m✓[39m src/security/__tests__/security.test.ts [2m ([22m[2m34 tests[22m[2m)[22m[90m 54[2mms[22m[39m
- [33m❯[39m src/security/__tests__/pentest.test.ts [2m ([22m[2m18 tests[22m [2m|[22m [31m2 failed[39m[2m)[22m[90m 51[2mms[22m[39m
-[90mstderr[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mPenetrationTestFramework[2m > [22m[2mshould run comprehensive penetration test[22m[39m
-Scanner XSS Scanner failed: TypeError: alert is not a function
-    at eval (http://localhost:3000/:2:1)
-    at GlobalWindow.eval (<anonymous>)
-    at HTMLScriptElement.#evaluateScript (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:456:20)
-[31m   [33m❯[31m src/security/__tests__/pentest.test.ts[2m > [22mXSSScanner[2m > [22mshould detect XSS vulnerabilities[39m
-[31m     → alert is not a function[39m
-    at HTMLScriptElement.[connectedToDocument] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:329:45)
-[31m   [33m❯[31m src/security/__tests__/pentest.test.ts[2m > [22mXSSScanner[2m > [22mshould identify malicious script tags[39m
-[31m     → alert is not a function[39m
+ [33m❯[39m src/performance/bundle-optimizer.test.ts [2m ([22m[2m28 tests[22m [2m|[22m [31m3 failed[39m[2m)[22m[90m 81[2mms[22m[39m
+[31m   [33m❯[31m src/performance/bundle-optimizer.test.ts[2m > [22mBundleOptimizer[2m > [22mDynamic Module Loading[2m > [22mshould load module with immediate strategy[39m
+[31m     → expected 0 to be greater than 0[39m
+[31m   [33m❯[31m src/performance/bundle-optimizer.test.ts[2m > [22mBundleOptimizer[2m > [22mLazy Component Creation[2m > [22mshould handle lazy component loading errors[39m
+[31m     → promise resolved "{ name: 'Fallback' }" instead of rejecting[39m
+[31m   [33m❯[31m src/performance/bundle-optimizer.test.ts[2m > [22mError Handling[2m > [22mshould handle missing browser APIs gracefully[39m
+[31m     → expected null to deeply equal { test: 'fallback' }[39m
+ [33m❯[39m src/performance/mobile-performance-optimizer.test.ts [2m ([22m[2m29 tests[22m [2m|[22m [31m6 failed[39m[2m)[22m[90m 101[2mms[22m[39m
+[31m   [33m❯[31m src/performance/mobile-performance-optimizer.test.ts[2m > [22mMobilePerformanceOptimizer[2m > [22mInitialization[2m > [22mshould setup performance monitoring[39m
+[31m     → expected "spy" to be called at least once[39m
+[31m   [33m❯[31m src/performance/mobile-performance-optimizer.test.ts[2m > [22mMobilePerformanceOptimizer[2m > [22mTouch Optimization[2m > [22mshould register touch event listeners when enabled[39m
+[31m     → expected "spy" to be called with arguments: [ 'touchstart', Any{ …(3) }, …(1) ][90m
+
+Received: 
+
+[1m  1st spy call:
+
+[22m[2m  Array [[22m
+[2m    "touchstart",[22m
+[32m-   Any<Function>,[90m
+[32m-   Any<Object>,[90m
+[31m+   [Function bound handleTouchStart],[90m
+[31m+   false,[90m
+[2m  ][22m
+
+[1m  2nd spy call:
+
+[22m[2m  Array [[22m
+[32m-   "touchstart",[90m
+[32m-   Any<Function>,[90m
+[32m-   Any<Object>,[90m
+[31m+   "touchmove",[90m
+[31m+   [Function bound handleTouchMove],[90m
+[31m+   false,[90m
+[2m  ][22m
+
+[1m  3rd spy call:
+
+[22m[2m  Array [[22m
+[32m-   "touchstart",[90m
+[32m-   Any<Function>,[90m
+[32m-   Any<Object>,[90m
+[31m+   "touchend",[90m
+[31m+   [Function bound handleTouchEnd],[90m
+[31m+   false,[90m
+[2m  ][22m
+[31m[90m
+
+Number of calls: [1m3[22m
+[31m[39m
+[31m   [33m❯[31m src/performance/mobile-performance-optimizer.test.ts[2m > [22mMobilePerformanceOptimizer[2m > [22mDevice Detection[2m > [22mshould detect desktop when no touch support[39m
+[31m     → expected 'tablet' to be 'desktop' // Object.is equality[39m
+[31m   [33m❯[31m src/performance/mobile-performance-optimizer.test.ts[2m > [22mMobilePerformanceOptimizer[2m > [22mConfiguration Updates[2m > [22mshould validate configuration parameters[39m
+[31m     → expected [Function] to throw an error[39m
+[31m   [33m❯[31m src/performance/mobile-performance-optimizer.test.ts[2m > [22mMobilePerformanceOptimizer[2m > [22mCleanup[2m > [22mshould clean up event listeners on destroy[39m
+[31m     → expected "spy" to be called with arguments: [ 'touchstart', Any{ …(3) }, …(1) ][90m
+
+Received: 
+
+[31m[90m
+
+Number of calls: [1m0[22m
+[31m[39m
+[31m   [33m❯[31m src/performance/mobile-performance-optimizer.test.ts[2m > [22mMobilePerformanceOptimizer[2m > [22mCleanup[2m > [22mshould stop performance monitoring on destroy[39m
+[31m     → expected "spy" to be called at least once[39m
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mInitialization[2m > [22m[2mshould create instance with default configuration[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mInitialization[2m > [22m[2mshould detect device capabilities[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mInitialization[2m > [22m[2mshould setup performance monitoring[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mTouch Optimization[2m > [22m[2mshould register touch event listeners when enabled[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mTouch Optimization[2m > [22m[2mshould not register touch listeners when disabled[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Network optimization initialized
+Memory optimization initialized
+Battery optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mNetwork Optimization[2m > [22m[2mshould implement adaptive prefetching strategy[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mNetwork Optimization[2m > [22m[2mshould enable request coalescing[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mNetwork Optimization[2m > [22m[2mshould adapt image quality based on network conditions[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mBattery Optimization[2m > [22m[2mshould implement reduced animations for battery saving[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mBattery Optimization[2m > [22m[2mshould suspend background tasks when enabled[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mBattery Optimization[2m > [22m[2mshould throttle non-critical work[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mMemory Optimization[2m > [22m[2mshould enable lazy component unmounting[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mMemory Optimization[2m > [22m[2mshould implement image pooling[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mMemory Optimization[2m > [22m[2mshould provide garbage collection hints[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mAdaptive Loading[2m > [22m[2mshould implement device-based code splitting[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mAdaptive Loading[2m > [22m[2mshould adapt loading based on network conditions[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mAdaptive Loading[2m > [22m[2mshould support progressive enhancement[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mPerformance Monitoring[2m > [22m[2mshould track Core Web Vitals[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mPerformance Monitoring[2m > [22m[2mshould monitor memory usage[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mPerformance Monitoring[2m > [22m[2mshould track network performance[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mDevice Detection[2m > [22m[2mshould detect phone device type[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mDevice Detection[2m > [22m[2mshould detect tablet device type for larger screens[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mDevice Detection[2m > [22m[2mshould detect desktop when no touch support[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mConfiguration Updates[2m > [22m[2mshould allow runtime configuration updates[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mConfiguration Updates[2m > [22m[2mshould validate configuration parameters[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mPerformance Budget[2m > [22m[2mshould set appropriate performance budgets for mobile devices[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mPerformance Budget[2m > [22m[2mshould adjust budgets for low-end devices[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Touch optimization initialized
+Memory optimization initialized
+Network optimization initialized
+Adaptive loading initialized
+Battery optimization initialized
+Mobile Performance Optimizer initialized successfully
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mCleanup[2m > [22m[2mshould clean up event listeners on destroy[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/mobile-performance-optimizer.test.ts[2m > [22m[2mMobilePerformanceOptimizer[2m > [22m[2mCleanup[2m > [22m[2mshould stop performance monitoring on destroy[22m[39m
+Touch optimization initialized
+Network optimization initialized
+Battery optimization initialized
+Memory optimization initialized
+Adaptive loading initialized
+Mobile Performance Optimizer initialized successfully
+
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mMemory Cache Operations[2m > [22m[2mshould store and retrieve data from memory cache[22m[39m
+Service Worker registered successfully
+AdvancedCacheManager initialized successfully
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mMemory Cache Operations[2m > [22m[2mshould store and retrieve data from memory cache[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+
+ [32m✓[39m src/__tests__/utils.test.ts [2m ([22m[2m12 tests[22m[2m)[22m[90m 47[2mms[22m[39m
+[90mstdout[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mXSSScanner[2m > [22m[2mshould detect XSS vulnerabilities[22m[39m
+XSS
+XSS
+
+[90mstdout[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mXSSScanner[2m > [22m[2mshould identify malicious script tags[22m[39m
+XSS
+
 [90mstdout[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mPenetrationTestFramework[2m > [22m[2mshould run comprehensive penetration test[22m[39m
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:785:53)
 Running XSS Scanner...
+XSS
+XSS
+XSS
+XSS
 Running SQL Injection Scanner...
 Running Input Validation Scanner...
 Running Authentication Bypass Scanner...
 
 [90mstdout[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mPenetrationTestFramework[2m > [22m[2mshould filter scanners by inclusion[22m[39m
 Running XSS Scanner...
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-element/HTMLElement.js:812:46)
+XSS
 
 [90mstdout[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mPenetrationTestFramework[2m > [22m[2mshould filter scanners by exclusion[22m[39m
 Running XSS Scanner...
+XSS
 Running Input Validation Scanner...
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:404:45)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:999:62)
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:505:45)
 Running Authentication Bypass Scanner...
 
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:1015:63)
 [90mstdout[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mPenetrationTestFramework[2m > [22m[2mshould filter scanners by severity[22m[39m
 Running SQL Injection Scanner...
 Running Authentication Bypass Scanner...
 
-
 [90mstdout[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mPenetrationTestFramework[2m > [22m[2mshould export report to JSON[22m[39m
 Running XSS Scanner...
+XSS
 Running SQL Injection Scanner...
-[90mstderr[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mPenetrationTestFramework[2m > [22m[2mshould filter scanners by inclusion[22m[39m
-Scanner XSS Scanner failed: TypeError: alert is not a function
 Running Input Validation Scanner...
 Running Authentication Bypass Scanner...
-    at eval (http://localhost:3000/:2:1)
 
-    at GlobalWindow.eval (<anonymous>)
 [90mstdout[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mPenetrationTestFramework[2m > [22m[2mshould generate HTML report[22m[39m
 Running XSS Scanner...
-    at HTMLScriptElement.#evaluateScript (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:456:20)
+XSS
 Running SQL Injection Scanner...
 Running Input Validation Scanner...
 Running Authentication Bypass Scanner...
 
-    at HTMLScriptElement.[connectedToDocument] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:329:45)
 [90mstdout[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mPenetrationTestFramework[2m > [22m[2mshould register custom scanners[22m[39m
 Running XSS Scanner...
+XSS
 Running SQL Injection Scanner...
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:785:53)
 Running Input Validation Scanner...
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-element/HTMLElement.js:812:46)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:404:45)
 Running Authentication Bypass Scanner...
 Running Custom XSS Scanner...
+XSS
 
 [90mstdout[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mdefaultPentestFramework[2m > [22m[2mshould run basic penetration test[22m[39m
 Running XSS Scanner...
+XSS
+XSS
 Running SQL Injection Scanner...
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:999:62)
 Running Input Validation Scanner...
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:505:45)
 Running Authentication Bypass Scanner...
 
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:1015:63)
+ [32m✓[39m src/security/__tests__/pentest.test.ts [2m ([22m[2m18 tests[22m[2m)[22m[33m 380[2mms[22m[39m
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mInitialization[2m > [22m[2mshould initialize successfully with valid config[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstderr[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mPenetrationTestFramework[2m > [22m[2mshould filter scanners by exclusion[22m[39m
-Scanner XSS Scanner failed: TypeError: alert is not a function
-    at eval (http://localhost:3000/:2:1)
-    at GlobalWindow.eval (<anonymous>)
-    at HTMLScriptElement.#evaluateScript (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:456:20)
-    at HTMLScriptElement.[connectedToDocument] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:329:45)
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:785:53)
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-element/HTMLElement.js:812:46)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:404:45)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:999:62)
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:505:45)
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:1015:63)
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mError Capturing[2m > [22m[2mshould capture errors with context[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstderr[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mPenetrationTestFramework[2m > [22m[2mshould export report to JSON[22m[39m
-Scanner XSS Scanner failed: TypeError: alert is not a function
-    at eval (http://localhost:3000/:2:1)
-    at GlobalWindow.eval (<anonymous>)
-    at HTMLScriptElement.#evaluateScript (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:456:20)
-    at HTMLScriptElement.[connectedToDocument] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:329:45)
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:785:53)
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-element/HTMLElement.js:812:46)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:404:45)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:999:62)
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:505:45)
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:1015:63)
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mError Capturing[2m > [22m[2mshould handle errors without context[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstderr[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mPenetrationTestFramework[2m > [22m[2mshould generate HTML report[22m[39m
-Scanner XSS Scanner failed: TypeError: alert is not a function
-    at eval (http://localhost:3000/:2:1)
-    at GlobalWindow.eval (<anonymous>)
-    at HTMLScriptElement.#evaluateScript (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:456:20)
-    at HTMLScriptElement.[connectedToDocument] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:329:45)
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:785:53)
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-element/HTMLElement.js:812:46)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:404:45)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:999:62)
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:505:45)
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:1015:63)
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mError Capturing[2m > [22m[2mshould update error metrics[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstderr[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mPenetrationTestFramework[2m > [22m[2mshould register custom scanners[22m[39m
-Scanner XSS Scanner failed: TypeError: alert is not a function
-    at eval (http://localhost:3000/:2:1)
-    at GlobalWindow.eval (<anonymous>)
-    at HTMLScriptElement.#evaluateScript (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:456:20)
-    at HTMLScriptElement.[connectedToDocument] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:329:45)
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:785:53)
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-element/HTMLElement.js:812:46)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:404:45)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:999:62)
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:505:45)
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:1015:63)
-Scanner Custom XSS Scanner failed: TypeError: alert is not a function
-    at eval (http://localhost:3000/:2:1)
-    at GlobalWindow.eval (<anonymous>)
-    at HTMLScriptElement.#evaluateScript (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:456:20)
-    at HTMLScriptElement.[connectedToDocument] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:329:45)
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:785:53)
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-element/HTMLElement.js:812:46)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:404:45)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:999:62)
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:505:45)
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:1015:63)
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mPerformance Monitoring[2m > [22m[2mshould measure performance of sync functions[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[90mstderr[2m | src/security/__tests__/pentest.test.ts[2m > [22m[2mdefaultPentestFramework[2m > [22m[2mshould run basic penetration test[22m[39m
-Scanner XSS Scanner failed: TypeError: alert is not a function
-    at eval (http://localhost:3000/:2:1)
-    at GlobalWindow.eval (<anonymous>)
-    at HTMLScriptElement.#evaluateScript (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:456:20)
-    at HTMLScriptElement.[connectedToDocument] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-script-element/HTMLScriptElement.js:329:45)
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mPerformance Monitoring[2m > [22m[2mshould measure performance of async functions[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:785:53)
-    at HTMLScriptElement.[connectedToNode] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/html-element/HTMLElement.js:812:46)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:404:45)
-    at HTMLHtmlElement.[appendChild] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:999:62)
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/node/Node.js:505:45)
-    at HTMLHtmlElement.[insertBefore] (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/happy-dom@18.0.1/node_modules/[4mhappy-dom[24m/lib/nodes/element/Element.js:1015:63)
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mPerformance Monitoring[2m > [22m[2mshould handle performance measurement errors[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[31m⎯⎯⎯⎯⎯⎯[1m[7m Failed Suites 1 [27m[22m⎯⎯⎯⎯⎯⎯⎯[39m
+[90mstdout[2m | unknown test[22m[39m
+Performance profiling enabled
+Setting max concurrent requests to 6
+Enabling compression
+Optimizing animation performance
 
-[31m[1m[7m FAIL [27m[22m[39m src/__tests__/utils.test.ts [2m[ src/__tests__/utils.test.ts ][22m
-[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'OPEN')[39m
-[36m [2m❯[22m RealtimeMonitor.connect src/monitoring/realtime.ts:[2m54:65[22m[39m
-[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m3 passed[39m[22m[90m (5)[39m
-[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m70 passed[39m[22m[90m (72)[39m
-[2m   Start at [22m 20:46:33
-[2m   Duration [22m 1.49s[2m (transform 424ms, setup 0ms, collect 624ms, tests 136ms, environment 3.12s, prepare 1.02s)[22m
+ [32m✓[39m src/security/__tests__/security.test.ts [2m ([22m[2m34 tests[22m[2m)[22m[90m 103[2mms[22m[39m
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mPerformance Monitoring[2m > [22m[2mshould detect slow operations[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-    [90m 52| [39m   */
-    [90m 53| [39m  connect(): void {
-    [90m 54| [39m    if (!this.websocketUrl || this.ws?.readyState === WebSocket.OPEN) {
-    [90m   | [39m                                                                [31m^[39m
-    [90m 55| [39m      return;
-    [90m 56| [39m    }
-[90m [2m❯[22m new RealtimeMonitor src/monitoring/realtime.ts:[2m46:12[22m[39m
-[90m [2m❯[22m src/monitoring/realtime.ts:[2m316:32[22m[39m
-[90m [2m❯[22m src/monitoring/index.ts:[2m9:174[22m[39m
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mLogging[2m > [22m[2mshould log messages with different levels[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯[22m[39m
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mLogging[2m > [22m[2mshould log user actions[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[31m⎯⎯⎯⎯⎯⎯⎯[1m[7m Failed Tests 2 [27m[22m⎯⎯⎯⎯⎯⎯⎯[39m
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mLogging[2m > [22m[2mshould log API requests[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[31m[1m[7m FAIL [27m[22m[39m src/security/__tests__/pentest.test.ts[2m > [22mXSSScanner[2m > [22mshould detect XSS vulnerabilities
-[31m[1m[7m FAIL [27m[22m[39m src/security/__tests__/pentest.test.ts[2m > [22mXSSScanner[2m > [22mshould identify malicious script tags
-[31m[1mTypeError[22m: alert is not a function[39m
-[90m [2m❯[22m eval ../../../../:[2m2:1[22m[39m
-[90m [2m❯[22m HTMLScriptElement.#evaluateScript ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/html-script-element/HTMLScriptElement.js:[2m456:20[22m[39m
-[90m [2m❯[22m HTMLScriptElement.[connectedToDocument] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/html-script-element/HTMLScriptElement.js:[2m329:45[22m[39m
-[90m [2m❯[22m HTMLScriptElement.[connectedToNode] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/node/Node.js:[2m785:53[22m[39m
-[90m [2m❯[22m HTMLScriptElement.[connectedToNode] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/html-element/HTMLElement.js:[2m812:46[22m[39m
-[90m [2m❯[22m HTMLHtmlElement.[appendChild] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/node/Node.js:[2m404:45[22m[39m
-[90m [2m❯[22m HTMLHtmlElement.[appendChild] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/element/Element.js:[2m999:62[22m[39m
-[90m [2m❯[22m HTMLHtmlElement.[insertBefore] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/node/Node.js:[2m505:45[22m[39m
-[90m [2m❯[22m HTMLHtmlElement.[insertBefore] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/element/Element.js:[2m1015:63[22m[39m
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mLogging[2m > [22m[2mshould log security events[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
 
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯[22m[39m
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mHealth Check[2m > [22m[2mshould return health status[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
 
- ELIFECYCLE  Test failed. See above for more details.
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mMetrics[2m > [22m[2mshould return current metrics[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
+
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mMetrics[2m > [22m[2mshould update health metrics on access[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
+
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mUser Context[2m > [22m[2mshould set user context[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
+
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mUser Context[2m > [22m[2mshould set additional context[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
+
+[90mstdout[2m | src/monitoring/__tests__/monitoring-service.test.ts[2m > [22m[2mMonitoringService[2m > [22m[2mFlush and Shutdown[2m > [22m[2mshould flush monitoring data[22m[39m
+[INFO] Shutting down monitoring service [90mundefined[39m
+
+ [33m❯[39m src/monitoring/__tests__/monitoring-service.test.ts [2m ([22m[2m24 tests[22m [2m|[22m [31m1 failed[39m[2m)[22m[33m 1136[2mms[22m[39m
+[31m   [33m❯[31m src/monitoring/__tests__/monitoring-service.test.ts[2m > [22mMonitoringService[2m > [22mLogging[2m > [22mshould log messages with different levels[39m
+[31m     → expected "spy" to be called 3 times, but got 0 times[39m
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mMemory Cache Operations[2m > [22m[2mshould store and retrieve data from memory cache[22m[39m
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mMemory Cache Operations[2m > [22m[2mshould store and retrieve data from memory cache[22m[39m
+Cache cleanup error: Error: Cleanup timeout
+    at Timeout._onTimeout [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:188:62[90m)[39m
+<empty line>
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mMemory Cache Operations[2m > [22m[2mshould return null for expired entries[22m[39m
+Service Worker registered successfully
+AdvancedCacheManager initialized successfully
+
+[90m    at listOnTimeout (node:internal/timers:588:17)[39m
+[90m    at processTimers (node:internal/timers:523:7)[39m
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mMemory Cache Operations[2m > [22m[2mshould return null for expired entries[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mMemory Cache Operations[2m > [22m[2mshould return null for expired entries[22m[39m
+<empty line>
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mMemory Cache Operations[2m > [22m[2mshould return null for expired entries[22m[39m
+Cache invalidation partially failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mMemory Cache Operations[2m > [22m[2mshould handle cache eviction when memory limit is reached[22m[39m
+Service Worker registered successfully
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.invalidate [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:525:31[90m)[39m
+    at AdvancedCacheManager.retrieve [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:357:20[90m)[39m
+AdvancedCacheManager initialized successfully
+Service Worker registered successfully
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:226:25
+AdvancedCacheManager initialized successfully
+
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mLocalStorage Operations[2m > [22m[2mshould store and retrieve data from localStorage[22m[39m
+Service Worker registered successfully
+AdvancedCacheManager initialized successfully
+
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mLocalStorage Operations[2m > [22m[2mshould handle localStorage cleanup when approaching limits[22m[39m
+Service Worker registered successfully
+AdvancedCacheManager initialized successfully
+Service Worker registered successfully
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:663:11)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+AdvancedCacheManager initialized successfully
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mSessionStorage Operations[2m > [22m[2mshould store and retrieve data from sessionStorage[22m[39m
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+Service Worker registered successfully
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+AdvancedCacheManager initialized successfully
+
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mIndexedDB Operations[2m > [22m[2mshould store and retrieve data from IndexedDB[22m[39m
+Service Worker registered successfully
+AdvancedCacheManager initialized successfully
+
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mAuto Strategy (Fallback)[2m > [22m[2mshould fallback to different storage strategies[22m[39m
+Service Worker registered successfully
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:187:24
+AdvancedCacheManager initialized successfully
+
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mCompression[2m > [22m[2mshould compress large data when compression is enabled[22m[39m
+Service Worker registered successfully
+AdvancedCacheManager initialized successfully
+
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mDependency Tracking[2m > [22m[2mshould invalidate dependent entries when a dependency is invalidated[22m[39m
+Service Worker registered successfully
+AdvancedCacheManager initialized successfully
+
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mCache Statistics[2m > [22m[2mshould track cache statistics[22m[39m
+Service Worker registered successfully
+AdvancedCacheManager initialized successfully
+
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mCache Clearing[2m > [22m[2mshould clear all caches[22m[39m
+Service Worker registered successfully
+AdvancedCacheManager initialized successfully
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mHTTPCacheStrategy[2m > [22m[2mCache-Aware Fetch[2m > [22m[2mshould handle 304 Not Modified responses[22m[39m
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:582:59
+    at Array.map (<anonymous>)
+
+Cache hit (304): undefined
+
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mHTTPCacheStrategy[2m > [22m[2mResource Preloading[2m > [22m[2mshould preload resources successfully[22m[39m
+Preloaded: /style.css
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mMemory Cache Operations[2m > [22m[2mshould handle cache eviction when memory limit is reached[22m[39m
+Preloaded: /script.js
+
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mIntegration Tests[2m > [22m[2mshould work together - Advanced Cache Manager with HTTP Cache Strategy[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+Service Worker registered successfully
+AdvancedCacheManager initialized successfully
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+
+[90mstdout[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mIntegration Tests[2m > [22m[2mshould handle Service Worker integration gracefully[22m[39m
+Service Worker registered successfully
+AdvancedCacheManager initialized successfully
+
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+ [33m❯[39m src/performance/advanced-cache-strategies.test.ts [2m ([22m[2m34 tests[22m [2m|[22m [31m1 failed[39m[2m)[22m[33m 2184[2mms[22m[39m
+[31m   [33m❯[31m src/performance/advanced-cache-strategies.test.ts[2m > [22mHTTPCacheStrategy[2m > [22mCache-Aware Fetch[2m > [22mshould add conditional headers to requests[39m
+[31m     → expected null to be truthy[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:265:31
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:663:11)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:187:24
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:582:59
+    at Array.map (<anonymous>)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mLocalStorage Operations[2m > [22m[2mshould store and retrieve data from localStorage[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:187:24
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:582:59
+    at Array.map (<anonymous>)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mLocalStorage Operations[2m > [22m[2mshould handle localStorage cleanup when approaching limits[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:314:31
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:663:11)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:187:24
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+ [32m✓[39m src/__tests__/legacy.test.ts [2m ([22m[2m12 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:582:59
+    at Array.map (<anonymous>)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mSessionStorage Operations[2m > [22m[2mshould store and retrieve data from sessionStorage[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+ [32m✓[39m src/__tests__/monitoring.test.ts [2m ([22m[2m8 tests[22m[2m)[22m[90m 30[2mms[22m[39m
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:187:24
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:582:59
+    at Array.map (<anonymous>)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mIndexedDB Operations[2m > [22m[2mshould store and retrieve data from IndexedDB[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+IndexedDB store failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.storeInIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:447:29[90m)[39m
+    at AdvancedCacheManager.store [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:306:22[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:341:41
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:663:17)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:187:24
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:582:59
+    at Array.map (<anonymous>)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mAuto Strategy (Fallback)[2m > [22m[2mshould fallback to different storage strategies[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:187:24
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:582:59
+    at Array.map (<anonymous>)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mCompression[2m > [22m[2mshould compress large data when compression is enabled[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:187:24
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:582:59
+    at Array.map (<anonymous>)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mDependency Tracking[2m > [22m[2mshould invalidate dependent entries when a dependency is invalidated[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+Cache invalidation partially failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.invalidate [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:525:31[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:410:26
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:663:11)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runFiles (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:834:5)
+Cache invalidation partially failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.invalidate [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:525:31[90m)[39m
+    at AdvancedCacheManager.cascadeInvalidation [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:555:18[90m)[39m
+    at AdvancedCacheManager.invalidate [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:536:18[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:410:7
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:663:11)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:187:24
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:582:59
+    at Array.map (<anonymous>)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mCache Statistics[2m > [22m[2mshould track cache statistics[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:187:24
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:582:59
+    at Array.map (<anonymous>)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mAdvancedCacheManager[2m > [22m[2mCache Clearing[2m > [22m[2mshould clear all caches[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:441:26
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:663:11)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runFiles (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:834:5)
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:187:24
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:582:59
+    at Array.map (<anonymous>)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mHTTPCacheStrategy[2m > [22m[2mCache-Aware Fetch[2m > [22m[2mshould create a cache-aware fetch function[22m[39m
+URL parsing failed: TypeError: Cannot read properties of undefined (reading 'startsWith')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\http-cache-strategy.ts:264:17
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:569:30
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:663:17)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runFiles (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:834:5)
+    at startTests (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:843:3)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mHTTPCacheStrategy[2m > [22m[2mCache-Aware Fetch[2m > [22m[2mshould add conditional headers to requests[22m[39m
+URL parsing failed: TypeError: Cannot read properties of undefined (reading 'startsWith')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\http-cache-strategy.ts:264:17
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:591:13
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:663:17)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runFiles (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:834:5)
+    at startTests (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:843:3)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mHTTPCacheStrategy[2m > [22m[2mCache-Aware Fetch[2m > [22m[2mshould handle 304 Not Modified responses[22m[39m
+URL parsing failed: TypeError: Cannot read properties of undefined (reading 'startsWith')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\http-cache-strategy.ts:264:17
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:613:30
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:663:17)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runFiles (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:834:5)
+    at startTests (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:843:3)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mHTTPCacheStrategy[2m > [22m[2mResource Preloading[2m > [22m[2mshould handle preload failures gracefully[22m[39m
+Failed to preload /failing-resource.css: Error: Network error
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:633:35
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:663:17)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runFiles (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:834:5)
+    at startTests (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:843:3)
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/vitest@0.34.6_happy-dom@18.0.1_jsdom@26.1.0/node_modules/[4mvitest[24m/dist/entry.js:103:7
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mIntegration Tests[2m > [22m[2mshould work together - Advanced Cache Manager with HTTP Cache Strategy[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:744:24
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:663:11)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+    at runFiles (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:834:5)
+
+[90mstderr[2m | src/performance/advanced-cache-strategies.test.ts[2m > [22m[2mIntegration Tests[2m > [22m[2mshould handle Service Worker integration gracefully[22m[39m
+Compression worker initialization failed: TypeError: URL.createObjectURL is not a function
+    at AdvancedCacheManager.initializeCompressionWorker [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:235:47[90m)[39m
+    at AdvancedCacheManager.initialize [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:164:20[90m)[39m
+IndexedDB clear failed: TypeError: Cannot set properties of undefined (setting 'onerror')
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:718:15
+    at new Promise (<anonymous>)
+    at AdvancedCacheManager.openIndexedDB [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:712:12[90m)[39m
+    at AdvancedCacheManager.clearAll [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:886:31[90m)[39m
+    at AdvancedCacheManager.destroy [90m(C:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-manager.ts:920:16[90m)[39m
+    at [90mC:\! HEYS 2\packages\shared\[39msrc\performance\advanced-cache-strategies.test.ts:764:24
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:135:14
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:58:26
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:663:17)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@0.34.6/node_modules/[4m@vitest[24m/runner/dist/index.js:782:15)
+

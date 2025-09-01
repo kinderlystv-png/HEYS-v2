@@ -6,7 +6,7 @@ export default defineConfig({
     environment: 'node',
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html', 'json'],
+      reporter: ['text', 'html', 'json', 'lcov'],
       include: ['packages/*/src/**/*.{ts,tsx}'],
       exclude: [
         'node_modules/',
@@ -16,6 +16,34 @@ export default defineConfig({
         'vitest.config.ts',
       ],
       reportsDirectory: './coverage',
+      // Coverage thresholds for PHASE 1 DAY 4
+      thresholds: {
+        global: {
+          branches: 80,
+          functions: 80,
+          lines: 80,
+          statements: 80,
+        },
+        // Per-package thresholds
+        'packages/core/': {
+          branches: 85,
+          functions: 85,
+          lines: 85,
+          statements: 85,
+        },
+        'packages/shared/': {
+          branches: 75,
+          functions: 75,
+          lines: 75,
+          statements: 75,
+        },
+      },
+    },
+    // Reporter configuration for better output
+    reporters: ['verbose', 'html', 'json'],
+    outputFile: {
+      html: './test-results/index.html',
+      json: './test-results/results.json',
     },
   },
 });

@@ -456,6 +456,10 @@ export class SecurityValidator {
       return this.sanitizer.sanitizeText(obj);
     }
 
+    if (obj instanceof Date) {
+      return obj; // Don't sanitize Date objects
+    }
+
     if (Array.isArray(obj)) {
       return obj.map((item) => this.sanitizeObject(item));
     }

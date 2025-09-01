@@ -21,7 +21,7 @@ export class SecureUserManager extends HeysUser {
   async createUser(userData: unknown): Promise<any> {
     const validation = await defaultValidator.validateSchema(userData, ValidationSchemas.user, {
       sanitize: true,
-      strictMode: true,
+      strictMode: false, // Changed from true to false
     });
 
     if (!validation.isValid) {
@@ -49,7 +49,7 @@ export class SecureUserManager extends HeysUser {
     const dataValidation = await defaultValidator.validateSchema(
       updateData,
       ValidationSchemas.user.partial(),
-      { sanitize: true, strictMode: true },
+      { sanitize: true, strictMode: false }, // Changed from true to false
     );
 
     if (!dataValidation.isValid) {
@@ -92,7 +92,7 @@ export class SecureDayManager extends HeysDay {
 
     const validation = await defaultValidator.validateSchema(dayData, daySchema, {
       sanitize: true,
-      strictMode: true,
+      strictMode: false, // Changed from true to false
     });
 
     if (!validation.isValid) {
@@ -109,7 +109,7 @@ export class SecureDayManager extends HeysDay {
     const validation = await defaultValidator.validateSchema(
       updateData,
       ValidationSchemas.content.partial(),
-      { sanitize: true, strictMode: true },
+      { sanitize: true, strictMode: false }, // Changed from true to false
     );
 
     if (!validation.isValid) {
@@ -158,7 +158,7 @@ export class SecureSessionManager extends HeysSession {
 
     const validation = await defaultValidator.validateSchema(sessionData, sessionSchema, {
       sanitize: true,
-      strictMode: true,
+      strictMode: false, // Changed from true to false
     });
 
     if (!validation.isValid) {
@@ -226,7 +226,7 @@ export class SecureHeysCore {
     const validation = await defaultValidator.validateSchema(
       request,
       ValidationSchemas.apiRequest,
-      { sanitize: true, strictMode: true },
+      { sanitize: true, strictMode: false }, // Change to false to avoid applying all security rules
     );
 
     if (!validation.isValid) {

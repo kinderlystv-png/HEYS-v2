@@ -26,6 +26,60 @@ global.Worker = vi.fn().mockImplementation(() => ({
   removeEventListener: vi.fn(),
 })) as any;
 
+// Mock IndexedDB
+const mockIndexedDBRequest = {
+  result: null,
+  error: null,
+  onsuccess: null,
+  onerror: null,
+  onupgradeneeded: null
+};
+
+const mockObjectStore = {
+  add: vi.fn().mockReturnValue(mockIndexedDBRequest),
+  get: vi.fn().mockReturnValue(mockIndexedDBRequest),
+  put: vi.fn().mockReturnValue(mockIndexedDBRequest),
+  delete: vi.fn().mockReturnValue(mockIndexedDBRequest),
+  clear: vi.fn().mockReturnValue(mockIndexedDBRequest),
+  createIndex: vi.fn(),
+  index: vi.fn().mockReturnValue({
+    get: vi.fn().mockReturnValue(mockIndexedDBRequest)
+  })
+};
+
+const mockTransaction = {
+  objectStore: vi.fn().mockReturnValue(mockObjectStore),
+  oncomplete: null,
+  onerror: null,
+  onabort: null
+};
+
+const mockDatabase = {
+  createObjectStore: vi.fn().mockReturnValue(mockObjectStore),
+  transaction: vi.fn().mockReturnValue(mockTransaction),
+  close: vi.fn(),
+  deleteObjectStore: vi.fn()
+};
+
+global.indexedDB = {
+  open: vi.fn().mockImplementation(() => {
+    const request = {
+      ...mockIndexedDBRequest,
+      result: mockDatabase
+    };
+    // Simulate successful open
+    setTimeout(() => {
+      if (request.onsuccess) {
+        (request.onsuccess as any)({} as any);
+      }
+    }, 0);
+    return request;
+  }),
+  deleteDatabase: vi.fn().mockReturnValue(mockIndexedDBRequest),
+  cmp: vi.fn(),
+  databases: vi.fn().mockResolvedValue([])
+} as any;
+
 // Mock browser APIs
 const mockLocalStorage = (() => {
   let store: Record<string, string> = {};

@@ -57,6 +57,9 @@ describe('MemoryStorageAdapter', () => {
     await adapter.set('update-key', 'original');
     const original = await adapter.get('update-key');
 
+    // Small delay to ensure different timestamp
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
     await adapter.set('update-key', 'updated');
     const updated = await adapter.get('update-key');
 
@@ -273,8 +276,8 @@ describe('TTL functionality', () => {
 
 // Legacy compatibility tests
 describe('Legacy Storage Interface', () => {
-  it('should maintain compatibility with createStorage', () => {
-    const { createStorage } = require('../index.js');
+  it('should maintain compatibility with createStorage', async () => {
+    const { createStorage } = await import('../index');
     const legacyStorage = createStorage();
 
     expect(legacyStorage).toBeDefined();
@@ -282,8 +285,8 @@ describe('Legacy Storage Interface', () => {
     expect(typeof legacyStorage.set).toBe('function');
   });
 
-  it('should handle bulk operations', () => {
-    const storage = new LocalStorageAdapter();
+  it('should handle bulk operations', async () => {
+    const storage = new MemoryStorageAdapter(); // Use MemoryStorageAdapter instead
     const testData = {
       key1: 'value1',
       key2: 'value2',
@@ -291,34 +294,35 @@ describe('Legacy Storage Interface', () => {
     };
 
     // Set multiple values
-    Object.entries(testData).forEach(([key, value]) => {
-      storage.set(key, value);
-    });
+    for (const [key, value] of Object.entries(testData)) {
+      await storage.set(key, value);
+    }
 
     // Verify all values
-    Object.entries(testData).forEach(([key, value]) => {
-      expect(storage.get(key)).toBe(value);
-    });
+    for (const [key, value] of Object.entries(testData)) {
+      const item = await storage.get(key);
+      expect(item?.value).toBe(value); // MemoryStorageAdapter returns StorageItem, not direct value
+    }
   });
 });
 
 describe('Edge cases', () => {
-  it('should handle special characters in keys', () => {
+  it('should handle special characters in keys', async () => {
     const specialKey = 'key-with-special@chars#123';
     const value = 'special-value';
 
-    storage.set(specialKey, value);
-    const result = storage.get(specialKey);
+    await storage.set(specialKey, value);
+    const result = await storage.get(specialKey);
 
     expect(result).toBe(value);
   });
 
-  it('should handle special characters in values', () => {
+  it('should handle special characters in values', async () => {
     const key = 'special-value-key';
     const specialValue = 'value with spaces, symbols: @#$%^&*()';
 
-    storage.set(key, specialValue);
-    const result = storage.get(key);
+    await storage.set(key, specialValue);
+    const result = await storage.get(key);
 
     expect(result).toBe(specialValue);
   });
@@ -347,21 +351,21 @@ describe('Edge cases', () => {
 });
 
 describe('Data types handling', () => {
-  it('should handle unicode strings', () => {
+  it('should handle unicode strings', async () => {
     const key = 'unicode-key';
     const unicodeValue = '🚀 Привет мир! 你好世界';
 
-    storage.set(key, unicodeValue);
-    const result = storage.get(key);
+    await storage.set(key, unicodeValue);
+    const result = await storage.get(key);
 
     expect(result).toBe(unicodeValue);
   });
 
-  it('should convert numbers to strings', () => {
+  it('should convert numbers to strings', async () => {
     const key = 'number-key';
     // localStorage always stores strings
-    storage.set(key, '123');
-    const result = storage.get(key);
+    await storage.set(key, '123');
+    const result = await storage.get(key);
 
     expect(result).toBe('123');
     expect(typeof result).toBe('string');

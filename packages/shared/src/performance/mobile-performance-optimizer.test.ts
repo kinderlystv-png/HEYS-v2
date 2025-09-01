@@ -48,6 +48,8 @@ const mockWindow = {
 const mockDocument = {
   addEventListener: vi.fn(),
   removeEventListener: vi.fn(),
+  visibilityState: 'visible',
+  hidden: false,
   querySelectorAll: vi.fn(() => []),
   createElement: vi.fn(() => ({
     style: {},
@@ -60,6 +62,31 @@ const mockDocument = {
     },
   },
 };
+
+// Mock PerformanceObserver
+const mockPerformanceObserver = vi.fn().mockImplementation((_callback) => ({
+  observe: vi.fn(),
+  disconnect: vi.fn(),
+  takeRecords: vi.fn().mockReturnValue([]),
+}));
+
+// Mock getBattery API
+const mockBattery = {
+  level: 0.8,
+  charging: true,
+  dischargingTime: Infinity,
+  chargingTime: 0,
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+};
+
+// Apply mocks to global
+global.navigator = mockNavigator as any;
+global.window = mockWindow as any;
+global.document = mockDocument as any;
+global.screen = mockScreen as any;
+global.PerformanceObserver = mockPerformanceObserver as any;
+(global.navigator as any).getBattery = vi.fn().mockResolvedValue(mockBattery);
 
 // Global mocks
 Object.defineProperty(global, 'navigator', { value: mockNavigator, writable: true });

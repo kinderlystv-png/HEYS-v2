@@ -82,6 +82,7 @@ describe('SecureDayManager', () => {
       content: 'This is test content',
       authorId: '550e8400-e29b-41d4-a716-446655440000', // Valid UUID for author
       date: new Date(),
+      userId: '550e8400-e29b-41d4-a716-446655440000', // Valid UUID for user
       isPublic: false,
     };
 
@@ -162,6 +163,8 @@ describe('SecureHeysCore', () => {
     const invalidRequest = {
       method: 'INVALID' as any,
       path: '/users',
+      headers: {},
+      query: {},
     };
 
     await expect(secureCore.handleApiRequest(invalidRequest)).rejects.toThrow(
@@ -174,11 +177,15 @@ describe('SecureHeysCore', () => {
       method: 'POST' as const,
       path: '/users',
       headers: { 'content-type': 'application/json' },
+      query: {}, // Add empty query object
       body: {
-        id: 'user123',
+        id: '550e8400-e29b-41d4-a716-446655440002', // Valid UUID
         email: 'test@example.com',
         username: 'testuser',
-        createdAt: new Date().toISOString(),
+        password: 'SecurePassword123!', // Add required password
+        role: 'user' as const, // Add required role
+        isActive: true, // Add required field
+        createdAt: new Date(), // Use Date object, not string
       },
     };
 
@@ -190,11 +197,13 @@ describe('SecureHeysCore', () => {
     const deleteRequest = {
       method: 'DELETE' as const,
       path: '/users/123',
-      headers: {},
+      headers: { authorization: 'Bearer token' }, // Add authorization
+      query: {},
     };
 
+    // This should now pass validation but fail on "not implemented"
     await expect(secureCore.handleApiRequest(deleteRequest)).rejects.toThrow(
-      'API request validation failed',
+      'DELETE operations not implemented',
     );
   });
 });

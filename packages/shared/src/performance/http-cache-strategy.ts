@@ -261,7 +261,7 @@ export class HTTPCacheStrategy {
       // Normalize URL to pathname for cache lookup
       let normalizedUrl = url;
       try {
-        if (url.startsWith('http')) {
+        if (url && typeof url === 'string' && url.startsWith('http')) {
           // For absolute URLs, extract pathname manually
           const urlParts = url.split('/');
           if (urlParts.length >= 3) {

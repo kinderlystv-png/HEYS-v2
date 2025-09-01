@@ -1,192 +1,173 @@
 
-> @heys/core@13.0.0 test C:\! HEYS 2\packages\core
+> @heys/core@14.0.0 test C:\! HEYS 2\packages\core
 > vitest run
 
 ▲ [WARNING] The condition "types" here will never be used as it comes after both "import" and "require" [package.json]
 
-    package.json:13:6:
-      13 │       "types": "./dist/index.d.ts"
+    package.json:10:6:
+      10 │       "types": "./dist/index.d.ts"
          ╵       ~~~~~~~
 
   The "import" condition comes earlier and will be used for all "import" statements:
 
-    package.json:11:6:
-      11 │       "import": "./dist/index.js",
+    package.json:8:6:
+      8 │       "import": "./dist/index.js",
+        ╵       ~~~~~~~~
+
+  The "require" condition comes earlier and will be used for all "require" calls:
+
+    package.json:9:6:
+      9 │       "require": "./dist/index.cjs",
+        ╵       ~~~~~~~~~
+
+▲ [WARNING] The condition "types" here will never be used as it comes after both "import" and "require" [package.json]
+
+    package.json:15:6:
+      15 │       "types": "./dist/models/index.d.ts"
+         ╵       ~~~~~~~
+
+  The "import" condition comes earlier and will be used for all "import" statements:
+
+    package.json:13:6:
+      13 │       "import": "./dist/models/index.js",
          ╵       ~~~~~~~~
 
   The "require" condition comes earlier and will be used for all "require" calls:
 
-    package.json:12:6:
-      12 │       "require": "./dist/index.cjs",
+    package.json:14:6:
+      14 │       "require": "./dist/models/index.cjs",
          ╵       ~~~~~~~~~
 
 ▲ [WARNING] The condition "types" here will never be used as it comes after both "import" and "require" [package.json]
+
+    package.json:20:6:
+      20 │       "types": "./dist/services/index.d.ts"
+         ╵       ~~~~~~~
+
+  The "import" condition comes earlier and will be used for all "import" statements:
 
     package.json:18:6:
-      18 │       "types": "./dist/models/index.d.ts"
-         ╵       ~~~~~~~
-
-  The "import" condition comes earlier and will be used for all "import" statements:
-
-    package.json:16:6:
-      16 │       "import": "./dist/models/index.js",
+      18 │       "import": "./dist/services/index.js",
          ╵       ~~~~~~~~
 
   The "require" condition comes earlier and will be used for all "require" calls:
 
-    package.json:17:6:
-      17 │       "require": "./dist/models/index.cjs",
-         ╵       ~~~~~~~~~
-
-▲ [WARNING] The condition "types" here will never be used as it comes after both "import" and "require" [package.json]
-
-    package.json:23:6:
-      23 │       "types": "./dist/services/index.d.ts"
-         ╵       ~~~~~~~
-
-  The "import" condition comes earlier and will be used for all "import" statements:
-
-    package.json:21:6:
-      21 │       "import": "./dist/services/index.js",
-         ╵       ~~~~~~~~
-
-  The "require" condition comes earlier and will be used for all "require" calls:
-
-    package.json:22:6:
-      22 │       "require": "./dist/services/index.cjs",
+    package.json:19:6:
+      19 │       "require": "./dist/services/index.cjs",
          ╵       ~~~~~~~~~
 
 
 [1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/! HEYS 2/packages/core[39m
 
- [32m✓[39m src/__tests__/legacy.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 4[2mms[22m[39m
- [32m✓[39m src/__tests__/my-first.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
- [32m✓[39m src/__tests__/food.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 13[2mms[22m[39m
- [32m✓[39m src/__tests__/training.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 13[2mms[22m[39m
- [32m✓[39m src/__tests__/user.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 14[2mms[22m[39m
- [32m✓[39m src/__tests__/basic.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
- [31m❯[39m src/__tests__/secure.test.ts [2m([22m[2m12 tests[22m[2m | [22m[31m7 failed[39m[2m)[22m[32m 32[2mms[22m[39m
-[31m   [31m×[31m SecureUserManager[2m > [22mshould validate user data before creation[39m[32m 11[2mms[22m[39m
+ [32m✓[39m src/__tests__/my-first.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/__tests__/user.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m src/__tests__/basic.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m src/__tests__/food.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m src/__tests__/training.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+[90mstderr[2m | src/__tests__/legacy.test.ts[2m > [22m[2mAnalyticsService[2m > [22m[2mtrack[2m > [22m[2mshould handle provider errors gracefully
+ [32m✓[39m src/__tests__/legacy.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+[22m[39mAnalytics provider error: Error: Provider error
+    at [90mC:\! HEYS 2\packages\core\[39msrc\__tests__\legacy.test.ts:163:42
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:155:11
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:752:26
+    at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1863:10)
+    at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1574:12)
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1729:8)
+    at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1729:8)
+
+ [31m❯[39m src/__tests__/secure.test.ts [2m([22m[2m12 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[32m 39[2mms[22m[39m
+[31m   [31m×[31m SecureUserManager[2m > [22mshould validate user data before creation[39m[32m 13[2mms[22m[39m
+
 [31m     → User validation failed[39m
-   [32m✓[39m SecureUserManager[2m > [22mshould reject invalid user data[32m 5[2mms[22m[39m
-[31m   [31m×[31m SecureUserManager[2m > [22mshould sanitize search queries[39m[32m 2[2mms[22m[39m
-[31m     → alert is not a function[39m
-[31m   [31m×[31m SecureDayManager[2m > [22mshould validate day data before creation[39m[32m 1[2mms[22m[39m
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 5 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+   [32m✓[39m SecureUserManager[2m > [22mshould reject invalid user data[32m 12[2mms[22m[39m
+
+   [32m✓[39m SecureUserManager[2m > [22mshould sanitize search queries[32m 1[2mms[22m[39m
+[31m   [31m×[31m SecureDayManager[2m > [22mshould validate day data before creation[39m[32m 2[2mms[22m[39m
 [31m     → Day data validation failed[39m
    [32m✓[39m SecureDayManager[2m > [22mshould sanitize content when retrieving days[32m 1[2mms[22m[39m
-[31m   [31m×[31m SecureSessionManager[2m > [22mshould validate session data before creation[39m[32m 1[2mms[22m[39m
+[31m   [31m×[31m SecureSessionManager[2m > [22mshould validate session data before creation[39m[32m 2[2mms[22m[39m
 [31m     → Session validation failed[39m
    [32m✓[39m SecureSessionManager[2m > [22mshould validate session tokens[32m 1[2mms[22m[39m
    [32m✓[39m SecureHeysCore[2m > [22mshould initialize with validated configuration[32m 1[2mms[22m[39m
 [31m   [31m×[31m SecureHeysCore[2m > [22mshould handle secure API requests[39m[32m 1[2mms[22m[39m
 [31m     → API request validation failed[39m
-   [32m✓[39m SecureHeysCore[2m > [22mshould reject malformed API requests[32m 0[2mms[22m[39m
-[31m   [31m×[31m SecureHeysCore[2m > [22mshould handle POST requests with validation[39m[32m 1[2mms[22m[39m
-[31m     → API request validation failed[39m
-[31m   [31m×[31m SecureHeysCore[2m > [22mshould require authorization for DELETE requests[39m[32m 5[2mms[22m[39m
-[31m     → expected [Function] to throw error including 'Authorization required for DELETE ope…' but got 'API request validation failed'[39m
-
-[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 7 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
-
 [41m[1m FAIL [22m[49m src/__tests__/secure.test.ts[2m > [22mSecureUserManager[2m > [22mshould validate user data before creation
 [31m[1mSecurityError[22m: User validation failed[39m
+   [32m✓[39m SecureHeysCore[2m > [22mshould reject malformed API requests[32m 1[2mms[22m[39m
 [36m [2m❯[22m SecureUserManager.createUser src/secure.ts:[2m28:13[22m[39m
+[31m   [31m×[31m SecureHeysCore[2m > [22mshould handle POST requests with validation[39m[32m 2[2mms[22m[39m
+[31m     → API request validation failed[39m
+   [32m✓[39m SecureHeysCore[2m > [22mshould require authorization for DELETE requests[32m 0[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m6 passed[39m[22m[90m (7)[39m
     [90m 26| [39m
     [90m 27| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
+[2m      Tests [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m52 passed[39m[22m[90m (57)[39m
+[2m   Start at [22m 11:26:48
+[2m   Duration [22m 7.95s[2m (transform 7.17s, setup 984ms, collect 8.22s, tests 131ms, environment 12.37s, prepare 4.02s)[22m
+
     [90m 28| [39m      throw new SecurityError('User validation failed', validation.err…
     [90m   | [39m            [31m^[39m
     [90m 29| [39m    }
     [90m 30| [39m
-[90m [2m❯[22m src/__tests__/secure.test.ts:[2m29:20[22m[39m
+[90m [2m❯[22m src/__tests__/secure.test.ts:[2m46:20[22m[39m
 
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯[22m[39m
-
-[41m[1m FAIL [22m[49m src/__tests__/secure.test.ts[2m > [22mSecureUserManager[2m > [22mshould sanitize search queries
-[31m[1mTypeError[22m: alert is not a function[39m
-[90m [2m❯[22m eval ../../../../:[2m2:1[22m[39m
-[90m [2m❯[22m HTMLScriptElement.#evaluateScript ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/html-script-element/HTMLScriptElement.js:[2m456:20[22m[39m
-[90m [2m❯[22m HTMLScriptElement.[connectedToDocument] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/html-script-element/HTMLScriptElement.js:[2m329:45[22m[39m
-[90m [2m❯[22m HTMLScriptElement.[connectedToNode] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/node/Node.js:[2m785:53[22m[39m
-[90m [2m❯[22m HTMLScriptElement.[connectedToNode] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/html-element/HTMLElement.js:[2m812:46[22m[39m
-[90m [2m❯[22m HTMLHtmlElement.[appendChild] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/node/Node.js:[2m404:45[22m[39m
-[90m [2m❯[22m HTMLHtmlElement.[appendChild] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/element/Element.js:[2m999:62[22m[39m
-[90m [2m❯[22m HTMLHtmlElement.[insertBefore] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/node/Node.js:[2m505:45[22m[39m
-[90m [2m❯[22m HTMLHtmlElement.[insertBefore] ../../../!%20HEYS%202/node_modules/.pnpm/happy-dom@18.0.1/node_modules/happy-dom/lib/nodes/element/Element.js:[2m1015:63[22m[39m
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯[22m[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯[22m[39m
 
 [41m[1m FAIL [22m[49m src/__tests__/secure.test.ts[2m > [22mSecureDayManager[2m > [22mshould validate day data before creation
 [31m[1mSecurityError[22m: Day data validation failed[39m
-[36m [2m❯[22m SecureDayManager.createDay src/secure.ts:[2m100:13[22m[39m
-    [90m 98| [39m
-    [90m 99| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
-    [90m100| [39m      throw new SecurityError('Day data validation failed', validation…
+[36m [2m❯[22m SecureDayManager.createDay src/secure.ts:[2m99:13[22m[39m
+    [90m 97| [39m
+    [90m 98| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
+    [90m 99| [39m      throw new SecurityError('Day data validation failed', validation…
     [90m   | [39m            [31m^[39m
-    [90m101| [39m    }
-    [90m102| [39m
-[90m [2m❯[22m src/__tests__/secure.test.ts:[2m67:20[22m[39m
+    [90m100| [39m    }
+    [90m101| [39m
+[90m [2m❯[22m src/__tests__/secure.test.ts:[2m88:20[22m[39m
 
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯[22m[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯[22m[39m
 
 [41m[1m FAIL [22m[49m src/__tests__/secure.test.ts[2m > [22mSecureSessionManager[2m > [22mshould validate session data before creation
 [31m[1mSecurityError[22m: Session validation failed[39m
-[36m [2m❯[22m SecureSessionManager.createSession src/secure.ts:[2m167:13[22m[39m
-    [90m165| [39m
-    [90m166| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
-    [90m167| [39m      throw new SecurityError('Session validation failed', validation.…
+[36m [2m❯[22m SecureSessionManager.createSession src/secure.ts:[2m165:13[22m[39m
+    [90m163| [39m
+    [90m164| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
+    [90m165| [39m      throw new SecurityError('Session validation failed', validation.…
     [90m   | [39m            [31m^[39m
-    [90m168| [39m    }
-    [90m169| [39m
-[90m [2m❯[22m src/__tests__/secure.test.ts:[2m95:20[22m[39m
+    [90m166| [39m    }
+    [90m167| [39m
+[90m [2m❯[22m src/__tests__/secure.test.ts:[2m116:20[22m[39m
 
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯[22m[39m
-
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯[22m[39m
 
 [41m[1m FAIL [22m[49m src/__tests__/secure.test.ts[2m > [22mSecureHeysCore[2m > [22mshould handle secure API requests
 [31m[1mSecurityError[22m: API request validation failed[39m
-[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m6 passed[39m[22m[90m (7)[39m
-[36m [2m❯[22m SecureHeysCore.handleApiRequest src/secure.ts:[2m235:13[22m[39m
-[2m      Tests [22m [1m[31m7 failed[39m[22m[2m | [22m[1m[32m37 passed[39m[22m[90m (44)[39m
-[2m   Start at [22m 20:40:15
-[2m   Duration [22m 1.89s[2m (transform 439ms, setup 178ms, collect 909ms, tests 86ms, environment 5.78s, prepare 1.79s)[22m
-
-    [90m233| [39m
-    [90m234| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
-    [90m235| [39m      throw new SecurityError('API request validation failed', validat…
+[36m [2m❯[22m SecureHeysCore.handleApiRequest src/secure.ts:[2m233:13[22m[39m
+    [90m231| [39m
+    [90m232| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
+    [90m233| [39m      throw new SecurityError('API request validation failed', validat…
     [90m   | [39m            [31m^[39m
-    [90m236| [39m    }
-    [90m237| [39m
-[90m [2m❯[22m src/__tests__/secure.test.ts:[2m136:20[22m[39m
+    [90m234| [39m    }
+    [90m235| [39m
+[90m [2m❯[22m src/__tests__/secure.test.ts:[2m157:20[22m[39m
 
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯[22m[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯[22m[39m
 
 [41m[1m FAIL [22m[49m src/__tests__/secure.test.ts[2m > [22mSecureHeysCore[2m > [22mshould handle POST requests with validation
 [31m[1mSecurityError[22m: API request validation failed[39m
-[36m [2m❯[22m SecureHeysCore.handleApiRequest src/secure.ts:[2m235:13[22m[39m
-    [90m233| [39m
-    [90m234| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
-    [90m235| [39m      throw new SecurityError('API request validation failed', validat…
+[36m [2m❯[22m SecureHeysCore.handleApiRequest src/secure.ts:[2m233:13[22m[39m
+    [90m231| [39m
+    [90m232| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
+    [90m233| [39m      throw new SecurityError('API request validation failed', validat…
     [90m   | [39m            [31m^[39m
-    [90m236| [39m    }
-    [90m237| [39m
-[90m [2m❯[22m src/__tests__/secure.test.ts:[2m162:20[22m[39m
+    [90m234| [39m    }
+    [90m235| [39m
+[90m [2m❯[22m src/__tests__/secure.test.ts:[2m185:20[22m[39m
 
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯[22m[39m
-
-[41m[1m FAIL [22m[49m src/__tests__/secure.test.ts[2m > [22mSecureHeysCore[2m > [22mshould require authorization for DELETE requests
-[31m[1mAssertionError[22m: expected [Function] to throw error including 'Authorization required for DELETE ope…' but got 'API request validation failed'[39m
-
-Expected: [32m"A[7muthorization required for DELETE operations[27m"[39m
-Received: [31m"A[7mPI request validation failed[27m"[39m
-
-[36m [2m❯[22m src/__tests__/secure.test.ts:[2m173:5[22m[39m
-    [90m171| [39m    }[33m;[39m
-    [90m172| [39m
-    [90m173| [39m    await expect(secureCore.handleApiRequest(deleteRequest)).rejects.t…
-    [90m   | [39m    [31m^[39m
-    [90m174| [39m  })[33m;[39m
-    [90m175| [39m})[33m;[39m
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯[22m[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯[22m[39m
 
  ELIFECYCLE  Test failed. See above for more details.

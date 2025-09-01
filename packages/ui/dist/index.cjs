@@ -1,8 +1,8 @@
 'use strict';
 
 var jsxRuntime = require('react/jsx-runtime');
-var g = require('react');
 var shared = require('@heys/shared');
+var g = require('react');
 
 function _interopDefault (e) { return e && e.__esModule ? e : { default: e }; }
 
