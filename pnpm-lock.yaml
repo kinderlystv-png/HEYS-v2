@@ -22,7 +22,7 @@ importers:
         specifier: ^0.4.8
         version: 0.4.8
       '@changesets/cli':
-        specifier: ^2.26.2
+        specifier: ^2.29.6
         version: 2.29.6(@types/node@20.19.11)
       '@supabase/supabase-js':
         specifier: ^2.56.1
