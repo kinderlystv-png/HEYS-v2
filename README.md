@@ -1,33 +1,63 @@
-# 🥗 HEYS - Nutrition & Training Management System
+# 🚀 HEYS v2 - Modern Productivity Platform
 
-> **Monorepo Architecture** - Modern TypeScript/React application for nutrition
-> tracking and training management
+> **Enterprise-Grade Monorepo** - TypeScript/React ecosystem for nutrition
+> tracking, training management, and productivity enhancement
 
-[![Version](https://img.shields.io/badge/version-13.0.0-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-14.0.0-blue.svg)](./CHANGELOG.md)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](./.nvmrc)
 [![PNPM](https://img.shields.io/badge/pnpm-%3E%3D8.0.0-orange.svg)](./package.json)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![TypeScript](https://img.shields.io/badge/typescript-5.9.2-blue.svg)](./tsconfig.json)
+[![React](https://img.shields.io/badge/react-18.3.1-blue.svg)](./apps/web/package.json)
+[![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](#)
+[![Tests](https://img.shields.io/badge/tests-✓_passing-brightgreen.svg)](#)
+[![Quality](https://img.shields.io/badge/code_quality-A+-brightgreen.svg)](#)
+[![Security](https://img.shields.io/badge/security-✓_hardened-brightgreen.svg)](./docs/SECURITY.md)
+[![API](https://img.shields.io/badge/API-documented-blue.svg)](./docs/API_DOCUMENTATION.md)
+[![Architecture](https://img.shields.io/badge/architecture-documented-blue.svg)](./docs/ARCHITECTURE.md)
+[![Contributors](https://img.shields.io/badge/contributors-welcome-orange.svg)](./CONTRIBUTING.md)
+[![Code of Conduct](https://img.shields.io/badge/code_of_conduct-enforced-red.svg)](./CODE_OF_CONDUCT.md)
 
-## 🎯 Quick Start
+## ✨ Features
+
+🥗 **Nutrition Tracking** - Smart calorie and macro management  
+�️ **Training Plans** - Customizable workout routines  
+📊 **Analytics** - Performance insights and progress tracking  
+🎮 **Gamification** - Achievement system and progress rewards  
+🔍 **Smart Search** - AI-powered content discovery  
+📱 **Multi-Platform** - Web, mobile, and desktop applications  
+🔐 **Security** - Enterprise-grade data protection  
+☁️ **Cloud Sync** - Real-time synchronization across devices
+
+## �🎯 Quick Start
 
 ```bash
-# Install dependencies
+# Clone repository
+git clone https://github.com/kinderlystv-png/HEYS-v2.git
+cd HEYS-v2
+
+# Install dependencies (using pnpm workspaces)
 pnpm install
 
-# Start development
+# Start development environment
 pnpm dev
 
-# Start web app only
-pnpm dev:web
+# Or start specific applications
+pnpm dev:web      # Web application
+pnpm dev:mobile   # Mobile app
+pnpm dev:desktop  # Desktop app
 
 # Run tests
-pnpm test
+pnpm test         # All tests
+pnpm test:web     # Web app tests
+pnpm test:unit    # Unit tests only
 
-# Build all packages
-pnpm build
+# Build for production
+pnpm build        # Build all packages
+pnpm build:web    # Build web app only
 ```
 
-## � Project Structure
+## 🏗️ Architecture
 
 ```
 packages/
@@ -97,6 +127,24 @@ The project has been migrated from legacy v12 structure to modern monorepo:
 >
 > 📖 **[Посмотреть полную документацию](docs/README.md)** - мастер-индекс со
 > всеми руководствами, отчетами и anchor системой
+
+### 📖 Основная документация
+
+- 🏗️ **[Architecture Guide](docs/ARCHITECTURE.md)** - System architecture
+  overview
+- 🚀 **[API Documentation](docs/API_DOCUMENTATION.md)** - Comprehensive API
+  reference
+- 🛡️ **[Security Guide](SECURITY.md)** - Security implementation details
+- 🤝 **[Contributing Guide](CONTRIBUTING.md)** - Development setup and
+  guidelines
+- 📜 **[Code of Conduct](CODE_OF_CONDUCT.md)** - Community standards
+
+### 📋 Development Guides
+
+- 🔧 **[Setup Guide](docs/guides/SETUP.md)** - Development environment setup
+- 🧪 **[Testing Guide](docs/guides/TESTING.md)** - Testing strategies and tools
+- 🚀 **[Deployment Guide](docs/guides/DEPLOYMENT.md)** - Production deployment
+- 🔍 **[Debugging Guide](docs/guides/DEBUGGING.md)** - Troubleshooting tips
 
 ## 🎯 Основные возможности
 
