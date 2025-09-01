@@ -107,7 +107,7 @@ export default defineConfig({
   },
   // Оптимизация для dev
   server: {
-    port: 3000,
+    port: 3002,
     host: true
   },
   // Предварительная оптимизация зависимостей

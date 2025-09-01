@@ -1,847 +1,412 @@
-<!--
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│ 🗺️ НАВИГАЦИОННАЯ КАРТА ФАЙЛА index.html (513 строк)                                     │
-├─────────────────────────────────────────────────────────────────────────────────────────┤
-│ 📋 СТРУКТУРА ФАЙЛА:                                                                       │
-│                                                                                           │
-│ 📄 HTML HEAD И НАСТРОЙКИ (строки 1-20):                                                  │
-│    ├── DOCTYPE и meta теги (1-6)                                                        │
-│    ├── Подключение CSS стилей (7-8)                                                     │
-│    └── Title и viewport (5-6)                                                           │
-│                                                                                           │
-│ 📚 ПОДКЛЮЧЕНИЕ БИБЛИОТЕК (строки 21-40):                                                 │
-│    ├── React и ReactDOM (13-14)                                                         │
-│    ├── Supabase SDK (15)                                                                │
-│    └── Внешние зависимости                                                              │
-│                                                                                           │
-│ 🧩 ОСНОВНЫЕ МОДУЛИ ПРИЛОЖЕНИЯ (строки 41-100):                                           │
-│    ├── Системы мониторинга (17-22):                                                     │
-│    │   ├── heys_performance_monitor.js (17)                                             │
-│    │   ├── heys_analytics_ui.js (18)                                                    │
-│    │   └── heys_advanced_error_tracker_v1.js (20)                                       │
-│    ├── Поиск и интеграция (23-27):                                                      │
-│    │   ├── heys_smart_search_with_typos_v1.js (21)                                      │
-│    │   ├── modern-search-integration.js (27)                                            │
-│    │   └── heys_integration_layer_v1.js (26)                                            │
-│    └── Современный стек (24-28):                                                        │
-│        ├── heys_storage_indexeddb_v1.js (24)                                            │
-│        └── heys_worker_manager_v1.js (25)                                               │
-│                                                                                           │
-│ 🏛️ ОСНОВНЫЕ КОМПОНЕНТЫ HEYS (строки 101-200):                                           │
-│    ├── Хранилище и модели (30-33):                                                      │
-│    │   ├── heys_storage_supabase_v1.js (30)                                             │
-│    │   ├── heys_models_v1.js (31)                                                       │
-│    │   └── heys_storage_layer_v1.js (32)                                                │
-│    ├── Основные компоненты (33-36):                                                     │
-│    │   ├── heys_core_v12.js (33)                                                        │
-│    │   ├── heys_day_v12.js (34)                                                         │
-│    │   ├── heys_user_v12.js (35)                                                        │
-│    │   └── heys_reports_v12.js (36)                                                     │
-│                                                                                           │
-│ ⚛️ ОСНОВНОЕ ПРИЛОЖЕНИЕ (строки 201-400):                                                 │
-│    ├── React hooks и state (42-45)                                                      │
-│    ├── Инициализация cloud (46-60)                                                      │
-│    ├── Главный компонент App (61-150)                                                   │
-│    ├── Система табов (151-250)                                                          │
-│    ├── Аутентификация и UI (251-350)                                                    │
-│    └── Обработчики событий (351-400)                                                    │
-│                                                                                           │
-│ 🎨 СТИЛИ И ФИНАЛИЗАЦИЯ (строки 401-513):                                                 │
-│    ├── CSS стили компонентов (401-480)                                                  │
-│    ├── Responsive дизайн (481-500)                                                      │
-│    ├── ReactDOM.render() (501-510)                                                      │
-│    └── Закрывающие теги (511-513)                                                       │
-│                                                                                           │
-├─────────────────────────────────────────────────────────────────────────────────────────┤
-│ 🎯 БЫСТРЫЙ ПОИСК:                                                                        │
-│    • Модули: Производительность (17), Аналитика (18), Поиск (21), Ядро (33)            │
-│    • Компоненты: App (61), TabButton (151), AuthForm (251)                             │
-│    • Инициализация: cloud.init (46), ReactDOM.render (501)                             │
-│    • Стили: Основные (401), Адаптивные (481)                                           │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
--->
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>HEYS — светлая тема (модульная)</title>
-    <link rel="stylesheet" href="styles/main.css" />
-    <link rel="stylesheet" href="styles/analytics.css" />
-  </head>
-  <body>
-    <div id="root"></div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEYS Nutrition Tracker - Production</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <div id="root"></div>
 
-    <!-- libs -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <!-- libs -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
-    <!-- app modules (order matters) -->
-    <script src="heys_performance_monitor.js"></script>
-    <script src="heys_analytics_ui.js"></script>
+  <!-- app modules (order matters) -->
+  <script src="heys_performance_monitor.js"></script>
+  <script src="heys_analytics_ui.js"></script>
+  <script src="heys_storage_supabase_v1.js?v=15"></script>
+  <script src="heys_models_v1.js?v=1"></script>
+  <script src="heys_storage_layer_v1.js?v=1"></script>
+  <script src="heys_core_v12.js"></script>
+  <script src="heys_day_v12.js?v=2"></script>
+  <script src="heys_user_v12.js"></script>
+  <script src="heys_reports_v12.js"></script>
 
-    <!-- Новые улучшенные модули -->
-    <script src="heys_advanced_error_tracker_v1.js"></script>
-    <script src="heys_smart_search_with_typos_v1.js"></script>
+  <script>
+  (function(){
+    window.HEYS = window.HEYS || {};
+    const React = window.React, ReactDOM = window.ReactDOM;
+    const {useState, useEffect} = React;
 
-    <!-- Modern Tech Stack -->
-    <script src="heys_storage_indexeddb_v1.js"></script>
-    <script src="heys_worker_manager_v1.js"></script>
-    <script src="heys_integration_layer_v1.js"></script>
-    <script src="modern-search-integration.js"></script>
+    // init cloud (safe if no cloud module)
+    if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
+      HEYS.cloud.init({
+        url: 'https://ukqolcziqcuplqfgrmsh.supabase.co',
+        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds'
+      });
+    }
 
-    <!-- Legacy modules (still supported) -->
-    <script src="heys_storage_supabase_v1.js?v=15"></script>
-    <script src="heys_models_v1.js?v=1"></script>
-    <script src="heys_storage_layer_v1.js?v=1"></script>
-    <script src="heys_core_v12.js"></script>
-    <script src="heys_day_v12.js?v=3"></script>
-    <script src="heys_user_v12.js"></script>
-    <script src="heys_reports_v12.js"></script>
+    // Обёртка для DayTab: при каждом открытии вкладки day — подгружает актуальные данные из облака
+    function DayTabWithCloudSync(props) {
+      const { clientId, products } = props;
+      const [loading, setLoading] = React.useState(true);
+      React.useEffect(() => {
+        let cancelled = false;
+        const cloud = window.HEYS && window.HEYS.cloud;
+        const finish = ()=>{ if (!cancelled) setLoading(false); };
+        if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
+          const need = typeof cloud.shouldSyncClient === 'function' ? cloud.shouldSyncClient(clientId, 4000) : true;
+            if (need){ setLoading(true); cloud.bootstrapClientSync(clientId).then(finish); }
+            else finish();
+        } else {
+          finish();
+        }
+        return () => { cancelled = true; };
+      }, [clientId]);
+      if (loading) return React.createElement('div', {className:'muted', style:{padding:24}}, 'Загрузка данных клиента...');
+      return React.createElement(window.HEYS.DayTab, { products });
+    }
 
-    <script>
-      (function () {
-        window.HEYS = window.HEYS || {};
-        const React = window.React,
-          ReactDOM = window.ReactDOM;
-        const { useState, useEffect } = React;
-
-        // init cloud (safe if no cloud module)
-        if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
-          HEYS.cloud.init({
-            url: 'https://ukqolcziqcuplqfgrmsh.supabase.co',
-            anonKey:
-              'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
+    // Обёртка для Ration: при каждом открытии вкладки рацион — подгружает продукты из облака
+    function RationTabWithCloudSync(props) {
+      const { clientId, setProducts, products } = props;
+      const [loading, setLoading] = React.useState(true);
+      React.useEffect(() => {
+        let cancelled = false;
+        if (clientId && window.HEYS.cloud && typeof window.HEYS.cloud.bootstrapClientSync === 'function') {
+          setLoading(true);
+          window.HEYS.cloud.bootstrapClientSync(clientId).then(() => {
+            if (!cancelled) {
+              const loadedProducts = Array.isArray(window.HEYS.utils.lsGet('heys_products', [])) ? window.HEYS.utils.lsGet('heys_products', []) : [];
+              setProducts(loadedProducts);
+              setLoading(false);
+            }
           });
+        } else {
+          setLoading(false);
         }
+        return () => { cancelled = true; };
+      }, [clientId]);
+      if (loading) return React.createElement('div', {className:'muted', style:{padding:24}}, 'Загрузка продуктов клиента...');
+      return React.createElement(window.HEYS.Ration, { products, setProducts });
+    }
 
-        // Initialize Modern Tech Stack
-        if (window.HEYS.integration) {
-          HEYS.integration
-            .init()
-            .then(() => {
-              console.log('🚀 HEYS Modern Tech Stack готов!');
-
-              // Enable performance analytics
-              if (HEYS.analytics) {
-                HEYS.analytics.trackComponentRender('main_app', performance.now());
-              }
-
-              // Setup offline handlers
-              HEYS.integration.on('network_offline', () => {
-                console.log('📱 Переход в офлайн режим');
-                showNotification('Работаем в офлайн режиме', 'info');
-              });
-
-              HEYS.integration.on('network_online', () => {
-                console.log('🌐 Подключение восстановлено');
-                showNotification('Синхронизация данных...', 'success');
-              });
-            })
-            .catch(error => {
-              console.warn('⚠️ Modern Tech Stack недоступен:', error);
-            });
+    // Обёртка для User: при каждом открытии вкладки данные пользователя — подгружает профиль и зоны из облака
+    function UserTabWithCloudSync(props) {
+      const { clientId } = props;
+      const [loading, setLoading] = React.useState(true);
+      React.useEffect(() => {
+        let cancelled = false;
+        if (clientId && window.HEYS.cloud && typeof window.HEYS.cloud.bootstrapClientSync === 'function') {
+          setLoading(true);
+          window.HEYS.cloud.bootstrapClientSync(clientId).then(() => {
+            if (!cancelled) setLoading(false);
+          });
+        } else {
+          setLoading(false);
         }
+        return () => { cancelled = true; };
+      }, [clientId]);
+      if (loading) return React.createElement('div', {className:'muted', style:{padding:24}}, 'Загрузка профиля клиента...');
+      return React.createElement(window.HEYS.UserTab, {});
+    }
 
-        // Global notification function
-        window.showNotification = function (message, type = 'info') {
-          const notification = document.createElement('div');
-          notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-weight: 500;
-        z-index: 10001;
-        transition: all 0.3s ease;
-        max-width: 400px;
-        text-align: center;
-      `;
+    function App(){
+  const ONE_CURATOR_MODE = true;
+  const [tab, setTab] = useState('ration');
+  // ...все остальные useState...
+  // useEffect автосмены клиента — ниже всех useState!
+  const U = (window.HEYS.utils) || { lsGet:(k,d)=>d, lsSet:()=>{} };
+  const [products, setProducts] = useState([]);
+  const [reportsRefresh, setReportsRefresh] = useState(0);
 
-          const colors = {
-            info: { bg: '#bee3f8', color: '#2a69ac' },
-            success: { bg: '#c6f6d5', color: '#22543d' },
-            warning: { bg: '#faf089', color: '#744210' },
-            error: { bg: '#fed7d7', color: '#9b2c2c' },
-          };
+  const cloud = window.HEYS.cloud || {};
+  const [status, setStatus] = useState(typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'offline');
+  const [syncVer, setSyncVer] = useState(0);
+  // === Clients (selector + persistence) ===
+  const [clients, setClients]   = useState([]);
+  const [clientId, setClientId] = useState('');
+  const [newName, setNewName]   = useState('');
+  const [cloudUser, setCloudUser] = useState(null);
 
-          const style = colors[type] || colors.info;
-          notification.style.backgroundColor = style.bg;
-          notification.style.color = style.color;
-          notification.textContent = message;
+      // Получить клиентов куратора из Supabase
+      async function fetchClientsFromCloud(curatorId) {
+        if (!cloud.client || !curatorId) return [];
+        const { data, error } = await cloud.client
+          .from('clients')
+          .select('id, name')
+          .eq('curator_id', curatorId)
+          .order('updated_at', { ascending: true });
+        if (error) { console.error('Ошибка загрузки клиентов:', error); return []; }
+        return data || [];
+      }
 
-          document.body.appendChild(notification);
-
-          setTimeout(() => {
-            notification.style.opacity = '0';
-            notification.style.transform = 'translateX(-50%) translateY(-20px)';
-            setTimeout(() => notification.remove(), 300);
-          }, 3000);
-        };
-
-        // Обёртка для DayTab: при каждом открытии вкладки day — подгружает актуальные данные из облака
-        function DayTabWithCloudSync(props) {
-          const { clientId, products } = props;
-          const [loading, setLoading] = React.useState(true);
-          React.useEffect(() => {
-            let cancelled = false;
-            const cloud = window.HEYS && window.HEYS.cloud;
-            const finish = () => {
-              if (!cancelled) setLoading(false);
-            };
-            if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
-              const need =
-                typeof cloud.shouldSyncClient === 'function'
-                  ? cloud.shouldSyncClient(clientId, 4000)
-                  : true;
-              if (need) {
-                setLoading(true);
-                cloud.bootstrapClientSync(clientId).then(finish);
-              } else finish();
-            } else {
-              finish();
-            }
-            return () => {
-              cancelled = true;
-            };
-          }, [clientId]);
-          if (loading)
-            return React.createElement(
-              'div',
-              { className: 'muted', style: { padding: 24 } },
-              'Загрузка данных клиента...'
-            );
-          return React.createElement(window.HEYS.DayTab, { products });
+      // Добавить клиента в Supabase
+      async function addClientToCloud(name) {
+        if (!cloud.client || !cloudUser || !cloudUser.id) {
+          console.warn('addClientToCloud: отсутствует client или cloudUser', {
+            hasClient: !!cloud.client,
+            hasCloudUser: !!cloudUser,
+            cloudUserId: cloudUser?.id
+          });
+          return;
         }
-
-        // Обёртка для Ration: при каждом открытии вкладки рацион — подгружает продукты из облака
-        function RationTabWithCloudSync(props) {
-          const { clientId, setProducts, products } = props;
-          const [loading, setLoading] = React.useState(true);
-          React.useEffect(() => {
-            let cancelled = false;
-            if (
-              clientId &&
-              window.HEYS.cloud &&
-              typeof window.HEYS.cloud.bootstrapClientSync === 'function'
-            ) {
-              setLoading(true);
-              window.HEYS.cloud.bootstrapClientSync(clientId).then(() => {
-                if (!cancelled) {
-                  const loadedProducts = Array.isArray(window.HEYS.utils.lsGet('heys_products', []))
-                    ? window.HEYS.utils.lsGet('heys_products', [])
-                    : [];
-                  setProducts(loadedProducts);
-                  setLoading(false);
-                }
-              });
-            } else {
-              setLoading(false);
-            }
-            return () => {
-              cancelled = true;
-            };
-          }, [clientId]);
-          if (loading)
-            return React.createElement(
-              'div',
-              { className: 'muted', style: { padding: 24 } },
-              'Загрузка продуктов клиента...'
-            );
-          return React.createElement(window.HEYS.Ration, { products, setProducts });
+        
+        const userId = cloudUser.id; // Сохраняем локально для безопасности
+        const { data, error } = await cloud.client
+          .from('clients')
+          .insert([{ name: (name||'').trim() || `Клиент ${clients.length+1}`, curator_id: userId }])
+          .select('id, name')
+          .single();
+        if (error) { 
+          console.error('Ошибка создания клиента:', error);
+          alert('Ошибка создания клиента: ' + error.message); 
+          return; 
         }
+        // После создания — обновить список
+        const updated = await fetchClientsFromCloud(userId);
+        setClients(updated);
+        setClientId(data.id);
+      }
 
-        // Обёртка для User: при каждом открытии вкладки данные пользователя — подгружает профиль и зоны из облака
-        function UserTabWithCloudSync(props) {
-          const { clientId } = props;
-          const [loading, setLoading] = React.useState(true);
-          React.useEffect(() => {
-            let cancelled = false;
-            if (
-              clientId &&
-              window.HEYS.cloud &&
-              typeof window.HEYS.cloud.bootstrapClientSync === 'function'
-            ) {
-              setLoading(true);
-              window.HEYS.cloud.bootstrapClientSync(clientId).then(() => {
-                if (!cancelled) setLoading(false);
-              });
-            } else {
-              setLoading(false);
-            }
-            return () => {
-              cancelled = true;
-            };
-          }, [clientId]);
-          if (loading)
-            return React.createElement(
-              'div',
-              { className: 'muted', style: { padding: 24 } },
-              'Загрузка профиля клиента...'
-            );
-          return React.createElement(window.HEYS.UserTab, {});
-        }
+      // Переименовать клиента (Supabase)
+      async function renameClient(id, name) {
+        if (!cloud.client || !cloudUser || !cloudUser.id) return;
+        const userId = cloudUser.id; // Сохраняем локально
+        await cloud.client.from('clients').update({ name }).eq('id', id);
+        const updated = await fetchClientsFromCloud(userId);
+        setClients(updated);
+      }
 
-        function App() {
-          const ONE_CURATOR_MODE = true;
-          const [tab, setTab] = useState('ration');
-          // ...все остальные useState...
-          // useEffect автосмены клиента — ниже всех useState!
-          const U = window.HEYS.utils || { lsGet: (k, d) => d, lsSet: () => {} };
-          const [products, setProducts] = useState([]);
-          const [reportsRefresh, setReportsRefresh] = useState(0);
+      // Удалить клиента (Supabase)
+      async function removeClient(id) {
+        if (!cloud.client || !cloudUser || !cloudUser.id) return;
+        const userId = cloudUser.id; // Сохраняем локально
+        await cloud.client.from('clients').delete().eq('id', id);
+        const updated = await fetchClientsFromCloud(userId);
+        setClients(updated);
+        if (clientId===id) setClientId('');
+      }
 
-          const cloud = window.HEYS.cloud || {};
-          const [status, setStatus] = useState(
-            typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'offline'
-          );
-          const [syncVer, setSyncVer] = useState(0);
-          // === Clients (selector + persistence) ===
-          const [clients, setClients] = useState([]);
-          const [clientId, setClientId] = useState('');
-          const [newName, setNewName] = useState('');
-          const [cloudUser, setCloudUser] = useState(null);
+  // Автопереключение на вкладку статистики дня при выборе клиента
+  useEffect(()=>{ if (clientId) setTab('day'); }, [clientId]);
 
-          // Получить клиентов куратора из Supabase
-          async function fetchClientsFromCloud(curatorId) {
-            if (!cloud.client || !curatorId) return [];
-            const { data, error } = await cloud.client
-              .from('clients')
-              .select('id, name')
-              .eq('curator_id', curatorId)
-              .order('updated_at', { ascending: true });
-            if (error) {
-              console.error('Ошибка загрузки клиентов:', error);
-              return [];
-            }
-            return data || [];
-          }
+    // Fallback: если после входа продукты пустые, пробуем взять из localStorage через utils
+    useEffect(()=>{
+      if (products.length===0) {
+        try {
+          const stored = (window.HEYS&&window.HEYS.utils&&window.HEYS.utils.lsGet&&window.HEYS.utils.lsGet('heys_products', []))||[];
+          if (Array.isArray(stored) && stored.length) setProducts(stored);
+        }catch(e){}
+      }
+    }, [products.length]);
 
-          // Добавить клиента в Supabase
-          async function addClientToCloud(name) {
-            if (!cloud.client || !cloudUser || !cloudUser.id) {
-              console.warn('addClientToCloud: отсутствует client или cloudUser', {
-                hasClient: !!cloud.client,
-                hasCloudUser: !!cloudUser,
-                cloudUserId: cloudUser?.id,
-              });
-              return;
-            }
-
-            const userId = cloudUser.id; // Сохраняем локально для безопасности
-            const { data, error } = await cloud.client
-              .from('clients')
-              .insert([
-                { name: (name || '').trim() || `Клиент ${clients.length + 1}`, curator_id: userId },
-              ])
-              .select('id, name')
-              .single();
-            if (error) {
-              console.error('Ошибка создания клиента:', error);
-              alert('Ошибка создания клиента: ' + error.message);
-              return;
-            }
-            // После создания — обновить список
-            const updated = await fetchClientsFromCloud(userId);
-            setClients(updated);
-            setClientId(data.id);
-          }
-
-          // Переименовать клиента (Supabase)
-          async function renameClient(id, name) {
-            if (!cloud.client || !cloudUser || !cloudUser.id) return;
-            const userId = cloudUser.id; // Сохраняем локально
-            await cloud.client.from('clients').update({ name }).eq('id', id);
-            const updated = await fetchClientsFromCloud(userId);
-            setClients(updated);
-          }
-
-          // Удалить клиента (Supabase)
-          async function removeClient(id) {
-            if (!cloud.client || !cloudUser || !cloudUser.id) return;
-            const userId = cloudUser.id; // Сохраняем локально
-            await cloud.client.from('clients').delete().eq('id', id);
-            const updated = await fetchClientsFromCloud(userId);
-            setClients(updated);
-            if (clientId === id) setClientId('');
-          }
-
-          // Автопереключение на вкладку статистики дня при выборе клиента
-          useEffect(() => {
-            if (clientId) setTab('day');
-          }, [clientId]);
-
-          // Fallback: если после входа продукты пустые, пробуем взять из localStorage через utils
-          useEffect(() => {
-            if (products.length === 0) {
-              try {
-                const stored =
-                  (window.HEYS &&
-                    window.HEYS.utils &&
-                    window.HEYS.utils.lsGet &&
-                    window.HEYS.utils.lsGet('heys_products', [])) ||
-                  [];
-                if (Array.isArray(stored) && stored.length) setProducts(stored);
-              } catch (e) {}
-            }
-          }, [products.length]);
-
-          // При смене клиента сохраняем в localStorage (для совместимости)
-          useEffect(() => {
-            if (clientId) {
-              U.lsSet('heys_client_current', clientId);
-              window.HEYS = window.HEYS || {};
-              window.HEYS.currentClientId = clientId;
-              // Подгружаем данные клиента из Supabase и обновляем продукты
-              if (cloud && typeof cloud.bootstrapClientSync === 'function') {
-                cloud.bootstrapClientSync(clientId).then(() => {
-                  // всегда используем HEYS.utils.lsGet для clientId-специфичного ключа
-                  const loadedProducts = Array.isArray(window.HEYS.utils.lsGet('heys_products', []))
-                    ? window.HEYS.utils.lsGet('heys_products', [])
-                    : [];
-                  setProducts(loadedProducts);
-                  setSyncVer(v => v + 1);
-                });
-              } else {
-                setSyncVer(v => v + 1);
-              }
-            }
-          }, [clientId]);
-
-          // Слушаем событие обновления продуктов из облака
-          useEffect(() => {
-            const handleProductsUpdate = event => {
-              const { products } = event.detail;
-              setProducts(products);
-              setSyncVer(v => v + 1);
-            };
-
-            window.addEventListener('heysProductsUpdated', handleProductsUpdate);
-            return () => window.removeEventListener('heysProductsUpdated', handleProductsUpdate);
-          }, []);
-
-          // Обертка для сохранения данных клиента в облако
+    // При смене клиента сохраняем в localStorage (для совместимости)
+      useEffect(()=>{
+        if (clientId) {
+          U.lsSet('heys_client_current', clientId);
           window.HEYS = window.HEYS || {};
-          window.HEYS.saveClientKey = function (k, v) {
-            if (clientId && cloud && typeof cloud.saveClientKey === 'function') {
-              cloud.saveClientKey(clientId, k, v);
-            }
-          };
-          // overlay (no early return, to keep hooks order stable)
-          // One-time migration of old, namespaced client lists -> global
-          // После входа — загрузить клиентов куратора
-          useEffect(() => {
-            if (cloudUser && cloudUser.id) {
-              fetchClientsFromCloud(cloudUser.id).then(setClients);
-            }
-          }, [cloudUser]);
-
-          // Создать тестовых клиентов
-          async function createTestClients() {
-            if (!cloud.client || !cloudUser || !cloudUser.id) return;
-            const userId = cloudUser.id; // Сохраняем локально
-            const testClients = [{ name: 'Иван Петров' }, { name: 'Анна Сидорова' }];
-
-            for (const testClient of testClients) {
-              try {
-                await cloud.client
-                  .from('clients')
-                  .insert([{ name: testClient.name, curator_id: userId }]);
-              } catch (error) {
-                console.error('Ошибка создания тестового клиента:', error);
-              }
-            }
-
-            // Обновить список клиентов
-            const updated = await fetchClientsFromCloud(userId);
-            setClients(updated);
+          window.HEYS.currentClientId = clientId;
+          // Подгружаем данные клиента из Supabase и обновляем продукты
+          if (cloud && typeof cloud.bootstrapClientSync === 'function') {
+            cloud.bootstrapClientSync(clientId).then(()=>{
+              // всегда используем HEYS.utils.lsGet для clientId-специфичного ключа
+              const loadedProducts = Array.isArray(window.HEYS.utils.lsGet('heys_products', [])) ? window.HEYS.utils.lsGet('heys_products', []) : [];
+              setProducts(loadedProducts);
+              setSyncVer(v=>v+1);
+            });
+          } else {
+            setSyncVer(v=>v+1);
           }
+        }
+      }, [clientId]);
 
-          const gate = !clientId
-            ? React.createElement(
-                'div',
-                { className: 'modal-backdrop' },
-                React.createElement(
-                  'div',
-                  { className: 'modal' },
-                  React.createElement(
-                    'div',
-                    {
-                      className: 'row',
-                      style: { justifyContent: 'space-between', marginBottom: '6px' },
-                    },
-                    React.createElement('div', { style: { fontWeight: 600 } }, 'Выберите клиента'),
-                    React.createElement('span', { className: 'muted' }, `Всего: ${clients.length}`)
-                  ),
-                  React.createElement(
-                    'div',
-                    { style: { maxHeight: 260, overflow: 'auto', marginBottom: 8 } },
-                    clients.length
-                      ? clients.map(c =>
-                          React.createElement(
-                            'div',
-                            {
-                              key: c.id,
-                              className: 'row',
-                              style: { justifyContent: 'space-between' },
-                            },
-                            React.createElement(
-                              'div',
-                              null,
-                              React.createElement('div', { style: { fontWeight: 600 } }, c.name),
-                              React.createElement('div', { className: 'muted' }, c.id)
-                            ),
-                            React.createElement(
-                              'div',
-                              { className: 'row' },
-                              React.createElement(
-                                'button',
-                                { className: 'btn', onClick: () => setClientId(c.id) },
-                                'Выбрать'
-                              ),
-                              React.createElement(
-                                'button',
-                                {
-                                  className: 'btn',
-                                  onClick: () => {
-                                    const nm = prompt('Новое имя', c.name) || c.name;
-                                    renameClient(c.id, nm);
-                                  },
-                                },
-                                'Переимен.'
-                              ),
-                              React.createElement(
-                                'button',
-                                {
-                                  className: 'btn',
-                                  onClick: () => {
-                                    if (confirm('Удалить клиента?')) removeClient(c.id);
-                                  },
-                                },
-                                'Удалить'
-                              )
-                            )
-                          )
-                        )
-                      : React.createElement(
-                          'div',
-                          { className: 'muted' },
-                          'Ещё нет ни одного клиента'
-                        )
-                  ),
-                  React.createElement(
-                    'div',
-                    { className: 'row' },
-                    React.createElement('input', {
-                      placeholder: 'Имя нового клиента',
-                      value: newName,
-                      onChange: e => setNewName(e.target.value),
-                    }),
-                    React.createElement(
-                      'button',
-                      { className: 'btn acc', onClick: () => addClientToCloud(newName) },
-                      'Создать и выбрать'
-                    )
-                  ),
-                  React.createElement(
-                    'div',
-                    { className: 'row', style: { marginTop: 8 } },
-                    React.createElement(
-                      'button',
-                      { className: 'btn secondary', onClick: createTestClients },
-                      'Создать тестовых клиентов'
+      // Слушаем событие обновления продуктов из облака
+      useEffect(() => {
+        const handleProductsUpdate = (event) => {
+          const { products } = event.detail;
+          setProducts(products);
+          setSyncVer(v=>v+1);
+        };
+        
+        window.addEventListener('heysProductsUpdated', handleProductsUpdate);
+        return () => window.removeEventListener('heysProductsUpdated', handleProductsUpdate);
+      }, []);
+
+      // Обертка для сохранения данных клиента в облако
+      window.HEYS = window.HEYS || {};
+      window.HEYS.saveClientKey = function(k, v) {
+        if (clientId && cloud && typeof cloud.saveClientKey === 'function') {
+          cloud.saveClientKey(clientId, k, v);
+        }
+      };
+      // overlay (no early return, to keep hooks order stable)
+      // One-time migration of old, namespaced client lists -> global
+      // После входа — загрузить клиентов куратора
+      useEffect(()=>{
+        if (cloudUser && cloudUser.id) {
+          fetchClientsFromCloud(cloudUser.id).then(setClients);
+        }
+      }, [cloudUser]);
+
+      // Создать тестовых клиентов
+      async function createTestClients() {
+        if (!cloud.client || !cloudUser || !cloudUser.id) return;
+        const userId = cloudUser.id; // Сохраняем локально
+        const testClients = [
+          { name: 'Иван Петров' },
+          { name: 'Анна Сидорова' }
+        ];
+        
+        for (const testClient of testClients) {
+          try {
+            await cloud.client
+              .from('clients')
+              .insert([{ name: testClient.name, curator_id: userId }]);
+          } catch (error) {
+            console.error('Ошибка создания тестового клиента:', error);
+          }
+        }
+        
+        // Обновить список клиентов
+        const updated = await fetchClientsFromCloud(userId);
+        setClients(updated);
+      }
+
+      const gate = !clientId ? React.createElement('div', {className:'modal-backdrop'},
+        React.createElement('div', {className:'modal'},
+          React.createElement('div', {className:'row', style:{justifyContent:'space-between', marginBottom: '6px'}},
+            React.createElement('div', {style:{fontWeight:600}}, 'Выберите клиента'),
+            React.createElement('span', {className:'muted'}, `Всего: ${clients.length}`)
+          ),
+          React.createElement('div', {style:{maxHeight:260, overflow:'auto', marginBottom:8}},
+            clients.length
+              ? clients.map(c =>
+                  React.createElement('div', {key:c.id, className:'row', style:{justifyContent:'space-between'}},
+                    React.createElement('div', null,
+                      React.createElement('div', {style:{fontWeight:600}}, c.name),
+                      React.createElement('div', {className:'muted'}, c.id)
+                    ),
+                    React.createElement('div', {className:'row'},
+                      React.createElement('button', {className:'btn', onClick:()=>setClientId(c.id)}, 'Выбрать'),
+                      React.createElement('button', {className:'btn', onClick:()=>{ const nm = prompt('Новое имя', c.name) || c.name; renameClient(c.id, nm); }}, 'Переимен.'),
+                      React.createElement('button', {className:'btn', onClick:()=>{ if (confirm('Удалить клиента?')) removeClient(c.id); }}, 'Удалить')
                     )
                   )
                 )
-              )
-            : null;
+              : React.createElement('div', {className:'muted'}, 'Ещё нет ни одного клиента')
+          ),
+          React.createElement('div', {className:'row'},
+            React.createElement('input', {placeholder:'Имя нового клиента', value:newName, onChange:e=>setNewName(e.target.value)}),
+            React.createElement('button', {className:'btn acc', onClick:()=>addClientToCloud(newName)}, 'Создать и выбрать')
+          ),
+          React.createElement('div', {className:'row', style:{marginTop:8}},
+            React.createElement('button', {className:'btn secondary', onClick:createTestClients}, 'Создать тестовых клиентов')
+          )
+        )
+      ) : null;
 
-          const [email, setEmail] = useState('poplanton@mail.ru');
-          const [pwd, setPwd] = useState('007670');
+      const [email, setEmail] = useState('poplanton@mail.ru');
+      const [pwd, setPwd] = useState('007670');
 
-          useEffect(() => {
-            if (cloud && typeof cloud.bootstrapSync === 'function') {
-              cloud
-                .bootstrapSync()
-                .then(() => {
-                  setStatus(typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'online');
-                  setProducts(
-                    Array.isArray(U.lsGet('heys_products', [])) ? U.lsGet('heys_products', []) : []
-                  );
-                  setSyncVer(v => v + 1);
-                })
-                .catch(() => {
-                  setStatus('offline');
-                });
-            }
-          }, []);
-
-          // При полной перезагрузке панели — bootstrap продуктов из облака, если выбран клиент
-          useEffect(() => {
-            if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
-              cloud.bootstrapClientSync(clientId).then(() => {
-                const loadedProducts = Array.isArray(window.HEYS.utils.lsGet('heys_products', []))
-                  ? window.HEYS.utils.lsGet('heys_products', [])
-                  : [];
-                setProducts(loadedProducts);
-                setSyncVer(v => v + 1);
-              });
-            }
-          }, [clientId]);
-
-          // debounced save products
-          const saveTimerRef = React.useRef(null);
-          useEffect(() => {
-            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-            saveTimerRef.current = setTimeout(() => {
-              try {
-                window.HEYS.saveClientKey('heys_products', products);
-              } catch (e) {}
-            }, 300);
-            return () => {
-              if (saveTimerRef.current) {
-                clearTimeout(saveTimerRef.current);
-                saveTimerRef.current = null;
-              }
-            };
-          }, [products]);
-
-          // auto sign-in in single-curator mode
-          useEffect(() => {
-            if (ONE_CURATOR_MODE && status !== 'online') {
-              doSignIn();
-            }
-          }, [ONE_CURATOR_MODE, status]);
-
-          async function doSignIn() {
-            try {
-              if (!email || !pwd) {
-                alert('Введите email и пароль');
-                return;
-              }
-              setStatus('signin');
-              if (cloud && typeof cloud.signIn === 'function') {
-                const result = await cloud.signIn(email, pwd);
-                if (result.error) {
-                  alert('Ошибка входа: ' + (result.error.message || result.error));
-                  setStatus('offline');
-                  return;
-                }
-                setCloudUser(result.user);
-              }
-              setStatus(typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'online');
-              // Загружаем продукты после sign-in
-              const loadedProducts = Array.isArray(U.lsGet('heys_products', []))
-                ? U.lsGet('heys_products', [])
-                : [];
-              setProducts(loadedProducts);
-              setSyncVer(v => v + 1);
-            } catch (e) {
-              setStatus('offline');
-              alert('Ошибка входа: ' + (e && e.message ? e.message : e));
-            }
-          }
-          async function doSignOut() {
-            try {
-              if (cloud && typeof cloud.signOut === 'function') await cloud.signOut();
-            } catch (e) {}
-            setStatus(typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'offline');
-            setProducts([]);
-            setSyncVer(v => v + 1);
-          }
-
-          return React.createElement(
-            React.Fragment,
-            null,
-            gate,
-            React.createElement(
-              'div',
-              { className: 'wrap' },
-              React.createElement(
-                'div',
-                { className: 'hdr' },
-                React.createElement('div', null, 'HEYS — панель куратора'),
-                ONE_CURATOR_MODE
-                  ? React.createElement(
-                      'div',
-                      { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                      React.createElement(
-                        'span',
-                        { className: 'status ' + (status === 'online' ? 'ok' : 'err') },
-                        'cloud: ' + String(status || '')
-                      ),
-                      window.HEYS.analyticsUI
-                        ? React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
-                        : null,
-                      React.createElement(
-                        'button',
-                        {
-                          className: 'btn',
-                          style: {
-                            fontSize: '12px',
-                            padding: '4px 8px',
-                            backgroundColor: '#4299e1',
-                            color: 'white',
-                          },
-                          onClick: () => {
-                            if (window.HEYS.integration) {
-                              const stats = window.HEYS.integration.getStats();
-                              const message =
-                                `🚀 Modern Tech Status:\n` +
-                                `IndexedDB: ${stats.capabilities.indexedDB ? '✅' : '❌'}\n` +
-                                `Workers: ${stats.capabilities.webWorkers ? '✅' : '❌'}\n` +
-                                `Service Worker: ${stats.capabilities.serviceWorker ? '✅' : '❌'}\n` +
-                                `Network: ${stats.online ? '🟢 Online' : '🔴 Offline'}`;
-                              alert(message);
-
-                              // Тестируем современный поиск
-                              if (stats.capabilities.indexedDB) {
-                                window.HEYS.preloadPopularProducts().then(() => {
-                                  window.showNotification(
-                                    '🚀 Популярные продукты загружены!',
-                                    'success'
-                                  );
-                                });
-                              }
-                            } else {
-                              alert('Modern Tech Stack не инициализирован');
-                            }
-                          },
-                        },
-                        '🚀 Modern Tech'
-                      )
-                    )
-                  : React.createElement(
-                      'div',
-                      { className: 'login' },
-                      React.createElement('input', {
-                        placeholder: 'email',
-                        value: email,
-                        onChange: e => setEmail(e.target.value),
-                      }),
-                      React.createElement('input', {
-                        placeholder: 'пароль',
-                        type: 'password',
-                        value: pwd,
-                        onChange: e => setPwd(e.target.value),
-                      }),
-                      React.createElement(
-                        'button',
-                        { className: 'btn', onClick: doSignIn },
-                        'Войти'
-                      ),
-                      React.createElement(
-                        'button',
-                        { className: 'btn secondary', onClick: doSignOut },
-                        'Выйти'
-                      ),
-                      React.createElement(
-                        'span',
-                        { className: 'status ' + (status === 'online' ? 'ok' : 'err') },
-                        String(status || '')
-                      ),
-                      window.HEYS.analyticsUI
-                        ? React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
-                        : null
-                    ),
-                React.createElement(
-                  'div',
-                  { className: 'row' },
-                  clientId
-                    ? React.createElement(
-                        React.Fragment,
-                        null,
-                        React.createElement(
-                          'span',
-                          { className: 'muted', style: { marginRight: 8 } },
-                          'Клиент:'
-                        ),
-                        React.createElement(
-                          'span',
-                          { style: { fontWeight: 600, marginRight: 8 } },
-                          clients.find(c => c.id === clientId)?.name || clientId
-                        ),
-                        React.createElement(
-                          'button',
-                          { className: 'btn', onClick: () => setClientId('') },
-                          'Сменить'
-                        )
-                      )
-                    : null
-                )
-              ),
-              React.createElement(
-                'div',
-                { className: 'tabs' },
-                React.createElement(
-                  'div',
-                  {
-                    className: 'tab ' + (tab === 'ration' ? 'active' : ''),
-                    onClick: () => setTab('ration'),
-                  },
-                  'Рацион'
-                ),
-                React.createElement(
-                  'div',
-                  {
-                    className: 'tab ' + (tab === 'day' ? 'active' : ''),
-                    onClick: () => setTab('day'),
-                  },
-                  'Статистика дня'
-                ),
-                React.createElement(
-                  'div',
-                  {
-                    className: 'tab ' + (tab === 'reports' ? 'active' : ''),
-                    onClick: () => {
-                      setTab('reports');
-                      setReportsRefresh(Date.now());
-                    },
-                  },
-                  'Отчётность'
-                ),
-                React.createElement(
-                  'div',
-                  {
-                    className: 'tab ' + (tab === 'user' ? 'active' : ''),
-                    onClick: () => setTab('user'),
-                  },
-                  'Данные пользователя'
-                )
-              ),
-              tab === 'ration'
-                ? React.createElement(RationTabWithCloudSync, {
-                    key: 'ration' + syncVer + '_' + String(clientId || ''),
-                    products,
-                    setProducts,
-                    clientId,
-                  })
-                : tab === 'day'
-                  ? React.createElement(DayTabWithCloudSync, {
-                      key: 'day' + syncVer + '_' + String(clientId || ''),
-                      products,
-                      clientId,
-                    })
-                  : tab === 'user'
-                    ? React.createElement(UserTabWithCloudSync, {
-                        key: 'user' + syncVer + '_' + String(clientId || ''),
-                        clientId,
-                      })
-                    : React.createElement(window.HEYS.ReportTab, {
-                        key:
-                          'reports' + syncVer + '_' + String(clientId || '') + '_' + reportsRefresh,
-                        products,
-                      })
-            )
-          );
+      useEffect(()=>{
+        if (cloud && typeof cloud.bootstrapSync === 'function') {
+          cloud.bootstrapSync().then(()=>{
+            setStatus(typeof cloud.getStatus==='function' ? cloud.getStatus() : 'online');
+            setProducts(Array.isArray(U.lsGet('heys_products', [])) ? U.lsGet('heys_products', []) : []);
+            setSyncVer(v=>v+1);
+          }).catch(()=>{ setStatus('offline'); });
         }
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(App));
-      })();
-    </script>
-  </body>
+      }, []);
+
+      // При полной перезагрузке панели — bootstrap продуктов из облака, если выбран клиент
+      useEffect(() => {
+        if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
+          cloud.bootstrapClientSync(clientId).then(() => {
+            const loadedProducts = Array.isArray(window.HEYS.utils.lsGet('heys_products', [])) ? window.HEYS.utils.lsGet('heys_products', []) : [];
+            setProducts(loadedProducts);
+            setSyncVer(v=>v+1);
+          });
+        }
+      }, [clientId]);
+
+      // debounced save products
+      const saveTimerRef = React.useRef(null);
+      useEffect(()=>{
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(()=>{
+          try { window.HEYS.saveClientKey('heys_products', products); } catch(e){}
+        }, 300);
+        return ()=>{ if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current=null; } };
+      }, [products]);
+
+      // auto sign-in in single-curator mode
+      useEffect(()=>{ if (ONE_CURATOR_MODE && status!=='online') { doSignIn(); } }, [ONE_CURATOR_MODE, status]);
+
+      async function doSignIn(){
+        try{
+          if (!email || !pwd) { alert('Введите email и пароль'); return; }
+          setStatus('signin');
+          if (cloud && typeof cloud.signIn==='function'){
+            const result = await cloud.signIn(email, pwd);
+            if (result.error) {
+              alert('Ошибка входа: ' + (result.error.message || result.error));
+              setStatus('offline');
+              return;
+            }
+            setCloudUser(result.user);
+          }
+          setStatus(typeof cloud.getStatus==='function' ? cloud.getStatus() : 'online');
+          // Загружаем продукты после sign-in
+          const loadedProducts = Array.isArray(U.lsGet('heys_products', [])) ? U.lsGet('heys_products', []) : [];
+          setProducts(loadedProducts);
+          setSyncVer(v=>v+1);
+        }catch(e){
+          setStatus('offline');
+          alert('Ошибка входа: ' + (e && e.message ? e.message : e));
+        }
+      }
+      async function doSignOut(){
+        try{ if (cloud && typeof cloud.signOut==='function') await cloud.signOut(); }catch(e){}
+        setStatus(typeof cloud.getStatus==='function' ? cloud.getStatus() : 'offline');
+        setProducts([]);
+        setSyncVer(v=>v+1);
+      }
+
+      return React.createElement(React.Fragment, null, gate, React.createElement('div', {className:'wrap'},
+        React.createElement('div', {className:'hdr'},
+  React.createElement('div', null, 'HEYS — панель куратора'),
+  (ONE_CURATOR_MODE
+    ? React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+        React.createElement('span', {className:'status '+(status==='online'?'ok':'err')}, 'cloud: '+String(status||'')),
+        window.HEYS.analyticsUI ? React.createElement(window.HEYS.analyticsUI.AnalyticsButton) : null
+      )
+    : React.createElement('div', {className:'login'},
+        React.createElement('input', {placeholder:'email', value: email, onChange:e=>setEmail(e.target.value)}),
+        React.createElement('input', {placeholder:'пароль', type:'password', value: pwd, onChange:e=>setPwd(e.target.value)}),
+        React.createElement('button', {className:'btn', onClick:doSignIn}, 'Войти'),
+        React.createElement('button', {className:'btn secondary', onClick:doSignOut}, 'Выйти'),
+        React.createElement('span', {className:'status '+(status==='online'?'ok':'err')}, String(status||'')),
+        window.HEYS.analyticsUI ? React.createElement(window.HEYS.analyticsUI.AnalyticsButton) : null
+      )
+  ),
+  React.createElement('div', {className:'row'},
+    clientId ? React.createElement(React.Fragment, null,
+      React.createElement('span', {className:'muted', style:{marginRight:8}}, 'Клиент:'),
+      React.createElement('span', {style:{fontWeight:600, marginRight:8}}, (clients.find(c=>c.id===clientId)?.name) || clientId),
+      React.createElement('button', {className:'btn', onClick:()=>setClientId('')}, 'Сменить')
+    ) : null
+  )
+),
+React.createElement('div', {className:'tabs'},
+          React.createElement('div', {className:'tab '+(tab==='ration'?'active':''), onClick:()=>setTab('ration')}, 'Рацион'),
+          React.createElement('div', {className:'tab '+(tab==='day'?'active':''), onClick:()=>setTab('day')}, 'Статистика дня'),
+          React.createElement('div', {className:'tab '+(tab==='reports'?'active':''), onClick:()=>{setTab('reports'); setReportsRefresh(Date.now());}}, 'Отчётность'),
+          React.createElement('div', {className:'tab '+(tab==='user'?'active':''), onClick:()=>setTab('user')}, 'Данные пользователя')
+        ),
+  tab==='ration' ? React.createElement(RationTabWithCloudSync, { key:'ration'+syncVer+'_'+String(clientId||''), products, setProducts, clientId })
+  : tab==='day' ? React.createElement(DayTabWithCloudSync, { key:'day'+syncVer+'_'+String(clientId||''), products, clientId })
+  : tab==='user' ? React.createElement(UserTabWithCloudSync, { key:'user'+syncVer+'_'+String(clientId||''), clientId })
+  : React.createElement(window.HEYS.ReportTab, { key:'reports'+syncVer+'_'+String(clientId||'')+'_'+reportsRefresh, products })
+        )
+      );
+    }
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(React.createElement(App));
+  })();
+  </script>
+</body>
 </html>

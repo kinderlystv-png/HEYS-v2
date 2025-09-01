@@ -3,10 +3,10 @@ name: Deploy Documentation
 on:
   push:
     branches: [main]
-    paths: ['docs/website/**']
+    paths: ["docs/website/**"]
   pull_request:
     branches: [main]
-    paths: ['docs/website/**']
+    paths: ["docs/website/**"]
   workflow_dispatch:
 
 permissions:

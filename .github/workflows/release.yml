@@ -74,9 +74,9 @@ jobs:
           release_name: Release v${{ steps.changesets.outputs.publishedPackages[0].version }}
           body: |
             ## What's Changed
-            
+
             ${{ steps.changesets.outputs.publishedPackages[0].changelog }}
-            
+
             **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ steps.changesets.outputs.publishedPackages[0].version }}...v${{ steps.changesets.outputs.publishedPackages[0].version }}
           draft: false
           prerelease: false
