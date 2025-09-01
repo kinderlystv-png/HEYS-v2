@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { trackEvent } from '../index.js';
 
 describe('Analytics', () => {

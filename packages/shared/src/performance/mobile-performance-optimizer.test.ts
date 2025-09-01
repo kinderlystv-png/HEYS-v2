@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { MobileOptimizationConfig } from './mobile-performance-optimizer';
 import { MobilePerformanceOptimizer } from './mobile-performance-optimizer';
 

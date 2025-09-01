@@ -1,9 +1,14 @@
 import { defineConfig } from 'vitest/config';
+import { vi } from 'vitest';
 
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
+    environment: 'happy-dom',
+    // Setup files for mocking browser APIs
+    setupFiles: ['./vitest.setup.ts'],
+    // Increase timeout for performance tests
+    testTimeout: 10000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json', 'lcov'],
@@ -14,6 +19,7 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.{test,spec}.{ts,tsx}',
         'vitest.config.ts',
+        'vitest.setup.ts',
       ],
       reportsDirectory: './coverage',
       // Coverage thresholds for PHASE 1 DAY 4

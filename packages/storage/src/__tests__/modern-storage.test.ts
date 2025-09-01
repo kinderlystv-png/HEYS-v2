@@ -1,6 +1,7 @@
 // Tests for Modern Storage Service
 import { beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
+
 import { MemoryStorageAdapter, storage, StorageService } from '../index.js';
 
 describe('MemoryStorageAdapter', () => {

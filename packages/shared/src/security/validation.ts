@@ -44,7 +44,7 @@ export const ValidationSchemas = {
   // File upload validation
   file: z.object({
     name: z.string().min(1).max(255),
-    type: z.string().regex(/^[a-zA-Z0-9\/\-\.]+$/),
+    type: z.string().regex(/^[a-zA-Z0-9/.\-]+$/),
     size: z
       .number()
       .min(1)
@@ -55,7 +55,7 @@ export const ValidationSchemas = {
   // API request validation
   apiRequest: z.object({
     method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']),
-    path: z.string().regex(/^\/[a-zA-Z0-9\/_-]*$/),
+    path: z.string().regex(/^\/[a-zA-Z0-9/_-]*$/),
     headers: z.record(z.string()).optional(),
     body: z.unknown().optional(),
     query: z.record(z.string()).optional(),

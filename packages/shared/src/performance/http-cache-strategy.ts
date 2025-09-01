@@ -437,8 +437,8 @@ export class HTTPCacheStrategy {
    * Create a middleware for Express.js or similar frameworks
    */
   createCacheMiddleware() {
-    const httpCacheStrategy = this;
-
+    const cacheStrategy = this;
+    
     return (req: any, res: any, next: any) => {
       const url = req.url;
       const method = req.method;
@@ -449,7 +449,7 @@ export class HTTPCacheStrategy {
       }
 
       // Check conditional request headers
-      const conditionalResult = httpCacheStrategy.checkConditionalRequest(url, req.headers);
+      const conditionalResult = cacheStrategy.checkConditionalRequest(url, req.headers);
 
       if (conditionalResult.isNotModified) {
         res.status(304);
@@ -466,7 +466,7 @@ export class HTTPCacheStrategy {
       const originalSend = res.send;
       res.send = function (body: any) {
         const content = typeof body === 'string' ? body : JSON.stringify(body);
-        const cacheHeaders = httpCacheStrategy.generateCacheHeaders(url, content);
+        const cacheHeaders = cacheStrategy.generateCacheHeaders(url, content);
 
         Object.entries(cacheHeaders).forEach(([key, value]) => {
           if (value) {

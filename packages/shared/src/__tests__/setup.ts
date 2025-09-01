@@ -14,7 +14,9 @@ const mockIndexedDB = {
       readyState: 'pending',
       onsuccess: null as any,
       onerror: null as any,
-      onupgradeneeded: null as any
+      onupgradeneeded: null as any,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
     };
 
     // Simulate async operation
@@ -25,22 +27,22 @@ const mockIndexedDB = {
         objectStoreNames: [],
         createObjectStore: vi.fn().mockReturnValue({
           name: 'mockStore',
-          add: vi.fn(),
-          get: vi.fn(),
-          put: vi.fn(),
-          delete: vi.fn(),
-          clear: vi.fn(),
+          add: vi.fn().mockResolvedValue(undefined),
+          get: vi.fn().mockResolvedValue(undefined),
+          put: vi.fn().mockResolvedValue(undefined),
+          delete: vi.fn().mockResolvedValue(undefined),
+          clear: vi.fn().mockResolvedValue(undefined),
           createIndex: vi.fn()
         }),
         transaction: vi.fn().mockReturnValue({
           objectStore: vi.fn().mockReturnValue({
-            add: vi.fn(),
-            get: vi.fn(),
-            put: vi.fn(),
-            delete: vi.fn(),
-            clear: vi.fn(),
-            openCursor: vi.fn(),
-            count: vi.fn()
+            add: vi.fn().mockReturnValue({ onsuccess: null, onerror: null }),
+            get: vi.fn().mockReturnValue({ onsuccess: null, onerror: null }),
+            put: vi.fn().mockReturnValue({ onsuccess: null, onerror: null }),
+            delete: vi.fn().mockReturnValue({ onsuccess: null, onerror: null }),
+            clear: vi.fn().mockReturnValue({ onsuccess: null, onerror: null }),
+            openCursor: vi.fn().mockReturnValue({ onsuccess: null, onerror: null }),
+            count: vi.fn().mockReturnValue({ onsuccess: null, onerror: null })
           }),
           oncomplete: null,
           onerror: null,
@@ -73,6 +75,9 @@ const mockURL = {
     }
   })
 };
+
+// Extend global URL with our mocks
+Object.assign(globalThis.URL, mockURL);
 
 // Mock Web Workers
 const mockWorker = vi.fn().mockImplementation(() => ({

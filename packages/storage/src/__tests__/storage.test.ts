@@ -1,7 +1,8 @@
 // Tests for Storage Service with adapters and validation
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { LocalStorageAdapter, MemoryStorageAdapter, storage, StorageService } from '../index.js';
+
+import { MemoryStorageAdapter, storage, StorageService } from '../index.js';
 
 // Mock localStorage for testing
 const localStorageMock = {
