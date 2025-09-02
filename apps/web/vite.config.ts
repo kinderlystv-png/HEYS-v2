@@ -108,8 +108,15 @@ export default defineConfig({
   },
   // Оптимизация для dev
   server: {
-    port: 3002,
+    port: parseInt(process.env.PORT || '3001'),
     host: true,
+    proxy: {
+      '/api': {
+        target: `http://localhost:${process.env.API_PORT || '4001'}`,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
   // Предварительная оптимизация зависимостей
   optimizeDeps: {

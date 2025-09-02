@@ -2,15 +2,95 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Run All Tests",          // имя, которое будет видно в списке
+      "label": "Run All Tests",
       "type": "shell",
-      "command": "pnpm run test:all",    // единая команда
-      "group": "test",                   // помечаем как тестовую
+      "command": "pnpm run test:all",
+      "group": "test",
       "presentation": {
-        "panel": "dedicated",            // вывод в отдельную вкладку терминала
+        "panel": "dedicated",
         "reveal": "always"
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Start Frontend (Port 3001)",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["--filter", "@heys/web", "run", "dev"],
+      "group": "build",
+      "options": {
+        "env": {
+          "PORT": "3001",
+          "VITE_PORT": "3001",
+          "API_PORT": "4001"
+        }
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "."
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "\\[vite\\]",
+          "endsPattern": "Local:.*http://localhost:3001"
+        }
+      }
+    },
+    {
+      "label": "Start API Server (Port 4001)",
+      "type": "shell",
+      "command": "node",
+      "args": ["packages/core/src/server.js"],
+      "group": "build",
+      "options": {
+        "env": {
+          "PORT": "4001",
+          "API_PORT": "4001",
+          "DATABASE_NAME": "projectB"
+        }
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "isBackground": true
+    },
+    {
+      "label": "Start Full Stack (Ports 3001 & 4001)",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "Start Frontend (Port 3001)",
+        "Start API Server (Port 4001)"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "Build for Production",
+      "type": "shell",
+      "command": "cross-env",
+      "args": ["PORT=3001", "API_PORT=4001", "pnpm", "run", "build"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
     }
   ]
 }

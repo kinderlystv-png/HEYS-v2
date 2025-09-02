@@ -1,6 +1,26 @@
-# 🚀 HEYS v2 - Modern Productivity Platform
+# 🚀 HEYS v2 - Modern Productiv## 🎯 Quick Start
 
-> **Enterprise-Grade Monorepo** - TypeScript/React ecosystem for nutrition
+```bash
+# Clone repository
+git clone https://github.com/kinderlystv-png/HEYS-v2.git
+cd HEYS-v2
+
+# Install dependencies (using pnpm workspaces)
+pnpm install
+
+# Start development environment (Port 3001)
+pnpm dev
+
+# Or start specific applications
+pnpm dev:web      # Web application on port 3001
+pnpm dev:mobile   # Mobile app
+pnpm dev:desktop  # Desktop app
+
+# Access the application
+# Frontend: http://localhost:3001
+# API: http://localhost:4001
+
+# Run testsnterprise-Grade Monorepo** - TypeScript/React ecosystem for nutrition
 > tracking, training management, and productivity enhancement
 
 [![Version](https://img.shields.io/badge/version-14.0.0-blue.svg)](./CHANGELOG.md)

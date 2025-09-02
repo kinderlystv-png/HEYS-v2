@@ -81,43 +81,164 @@
   function isHeaderLine(line){ const l=line.toLowerCase(); return l.includes('название') && (l.includes('ккал') || l.includes('калори') || l.includes('углевод')); }
   function normalizeLine(raw){ let s = raw.replace(INVIS,' '); s = s.replace(/\u060C/g, ',').replace(/\u066B/g, ',').replace(/\u066C/g, ',').replace(/\u201A/g, ','); s = s.replace(/\u00B7/g, '.').replace(/[–—−]/g, '-').replace(/%/g, ''); s = s.replace(/\t+/g, ' ').replace(/\s+/g, ' ').trim(); return s; }
   function findTokenPositions(s, tokens){ const positions=[]; let start=0; for(const tok of tokens){ const idx=s.indexOf(tok, start); positions.push(idx===-1?null:idx); if(idx!==-1) start=idx+tok.length; } return positions; }
-  function extractRow(raw){ const clean = normalizeLine(raw); const tokens = clean.match(NUM_RE) || []; if (!tokens.length) return null; let last = tokens.slice(-12); if (last.length<12) last = Array(12-last.length).fill('0').concat(last); const positions = findTokenPositions(clean, last); const firstPos = positions[0] ?? clean.length; const name = clean.slice(0, firstPos).trim() || 'Без названия'; const nums = last.map(toNum); return { name, nums }; }
+  function extractRow(raw){ 
+    console.log('🔍 [EXTRACT] Обрабатываем строку:', raw);
+    
+    const clean = normalizeLine(raw); 
+    console.log('🧹 [EXTRACT] Нормализованная строка:', clean);
+    
+    const tokens = clean.match(NUM_RE) || []; 
+    console.log('🔢 [EXTRACT] Найденные числовые токены:', tokens);
+    
+    if (!tokens.length) {
+      console.warn('⚠️ [EXTRACT] Числовые токены не найдены');
+      return null;
+    }
+    
+    let last = tokens.slice(-12); 
+    console.log('📊 [EXTRACT] Последние 12 токенов:', last);
+    
+    if (last.length<12) {
+      last = Array(12-last.length).fill('0').concat(last);
+      console.log('📊 [EXTRACT] Дополнено нулями до 12:', last);
+    }
+    
+    const positions = findTokenPositions(clean, last); 
+    console.log('📍 [EXTRACT] Позиции токенов:', positions);
+    
+    const firstPos = positions[0] ?? clean.length; 
+    const name = clean.slice(0, firstPos).trim() || 'Без названия'; 
+    console.log('📝 [EXTRACT] Извлеченное название:', name);
+    
+    const nums = last.map(toNum); 
+    console.log('🔢 [EXTRACT] Числовые значения:', nums);
+    
+    const result = { name, nums };
+    console.log('✅ [EXTRACT] Результат извлечения:', result);
+    
+    return result;
+  }
   // --- Web Worker proxy for heavy parsePasted ---
   let _parseWorker = null;
   function getParseWorker() {
+    console.log('👷 [WORKER] Проверяем существующий worker:', !!_parseWorker);
+    
     if (!_parseWorker) {
-      _parseWorker = new Worker('parse_worker.js');
+      try {
+        console.log('👷 [WORKER] Создаем новый Web Worker: parse_worker.js');
+        _parseWorker = new Worker('parse_worker.js');
+        console.log('✅ [WORKER] Web Worker создан успешно');
+        
+        // Добавляем обработчик ошибок
+        _parseWorker.onerror = (error) => {
+          console.error('❌ [WORKER] Ошибка Web Worker:', error);
+        };
+        
+      } catch (error) {
+        console.error('❌ [WORKER] Не удалось создать Web Worker:', error);
+        throw error;
+      }
     }
+    
     return _parseWorker;
   }
   function parsePasted(text) {
+    console.log('🔍 [PARSE] Начинаем парсинг текста');
+    console.log('📊 [PARSE] Длина текста:', text?.length || 0);
+    console.log('🔧 [PARSE] Проверяем поддержку Web Worker:', typeof Worker !== 'undefined');
+    
+    // Временно отключаем Web Worker из-за проблем с загрузкой
+    console.log('⚠️ [PARSE] Используем синхронный парсинг (Worker отключен)');
+    return Promise.resolve(parsePastedSync(text));
+    
     // fallback sync for environments without Worker
-    if (typeof Worker === 'undefined') return parsePastedSync(text);
+    if (typeof Worker === 'undefined') {
+      console.log('⚠️ [PARSE] Web Worker недоступен, используем синхронный парсинг');
+      return parsePastedSync(text);
+    }
+    
+    console.log('🔄 [PARSE] Используем Web Worker для парсинга');
+    
     return new Promise((resolve, reject) => {
-      const worker = getParseWorker();
-      const handler = (e) => {
-        worker.removeEventListener('message', handler);
-        resolve(e.data.result && e.data.result.rows ? e.data.result.rows : []);
-      };
-      worker.addEventListener('message', handler);
-      worker.postMessage({ text });
-      setTimeout(() => {
-        worker.removeEventListener('message', handler);
-        reject(new Error('parse timeout'));
-      }, 10000);
+      try {
+        const worker = getParseWorker();
+        console.log('👷 [PARSE] Web Worker создан:', !!worker);
+        
+        const handler = (e) => {
+          console.log('📨 [PARSE] Получен ответ от Worker:', e.data);
+          worker.removeEventListener('message', handler);
+          
+          const result = e.data.result && e.data.result.rows ? e.data.result.rows : [];
+          console.log('✅ [PARSE] Результат парсинга:', result.length, 'продуктов');
+          resolve(result);
+        };
+        
+        const errorHandler = (error) => {
+          console.error('❌ [PARSE] Ошибка Web Worker:', error);
+          worker.removeEventListener('message', handler);
+          worker.removeEventListener('error', errorHandler);
+          reject(new Error('Worker error: ' + error.message));
+        };
+        
+        worker.addEventListener('message', handler);
+        worker.addEventListener('error', errorHandler);
+        
+        console.log('📤 [PARSE] Отправляем данные в Worker');
+        worker.postMessage({ text });
+        
+        setTimeout(() => {
+          console.warn('⏰ [PARSE] Таймаут парсинга (10 сек)');
+          worker.removeEventListener('message', handler);
+          worker.removeEventListener('error', errorHandler);
+          reject(new Error('parse timeout'));
+        }, 10000);
+      } catch (error) {
+        console.error('❌ [PARSE] Критическая ошибка:', error);
+        reject(error);
+      }
     });
   }
   // Синхронная версия (используется внутри воркера и как fallback)
   function parsePastedSync(text){
+    console.log('🔍 [PARSE_SYNC] Начинаем синхронный парсинг');
+    console.log('📊 [PARSE_SYNC] Длина текста:', text?.length || 0);
+    
+    if (!text || typeof text !== 'string') {
+      console.warn('⚠️ [PARSE_SYNC] Пустой или некорректный текст');
+      return [];
+    }
+    
     const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0 && !isHeaderLine(l));
+    console.log('📄 [PARSE_SYNC] Количество строк после фильтрации:', lines.length);
+    console.log('📝 [PARSE_SYNC] Первые 3 строки:', lines.slice(0, 3));
+    
     const rows=[];
-    for(const raw of lines){
-      const st = extractRow(raw); if(!st) continue;
+    for(let i = 0; i < lines.length; i++){
+      const raw = lines[i];
+      console.log(`🔍 [PARSE_SYNC] Обрабатываем строку ${i + 1}:`, raw.substring(0, 50) + '...');
+      
+      const st = extractRow(raw); 
+      if(!st) {
+        console.warn(`⚠️ [PARSE_SYNC] Не удалось извлечь данные из строки ${i + 1}:`, raw);
+        continue;
+      }
+      
+      console.log(`✅ [PARSE_SYNC] Извлечены данные из строки ${i + 1}:`, st.name, st.nums);
+      
       const [kcal, carbs, simple, complex, protein, fat, bad, good, trans, fiber, gi, harm] = st.nums;
       const base = { id: uuid(), name: st.name, simple100:simple, complex100:complex, protein100:protein, badFat100:bad, goodFat100:good, trans100:trans, fiber100:fiber, gi:gi, harmScore:harm };
-      const d = computeDerived(base);
-      rows.push({ id: base.id, name: base.name, ...base, carbs100: d.carbs100, fat100: d.fat100, kcal100: d.kcal100 });
+      
+      try {
+        const d = computeDerived(base);
+        const product = { id: base.id, name: base.name, ...base, carbs100: d.carbs100, fat100: d.fat100, kcal100: d.kcal100 };
+        rows.push(product);
+        console.log(`✅ [PARSE_SYNC] Продукт ${i + 1} создан:`, product.name, 'ккал:', product.kcal100);
+      } catch (error) {
+        console.error(`❌ [PARSE_SYNC] Ошибка при создании продукта ${i + 1}:`, error);
+      }
     }
+    
+    console.log('✅ [PARSE_SYNC] Синхронный парсинг завершен, создано продуктов:', rows.length);
     return rows;
   }
 
@@ -316,15 +437,27 @@
       }
     }
     async function importAppend(){
+      console.log('🔍 [IMPORT] Начинаем импорт в режиме добавления');
+      console.log('📋 [IMPORT] Текст для импорта:', paste.substring(0, 200) + '...');
+      console.log('📊 [IMPORT] Длина текста:', paste.length);
+      
       const startTime = performance.now();
       let rows = [];
       try {
+        console.log('🔄 [IMPORT] Вызываем parsePasted...');
         rows = await parsePasted(paste);
+        console.log('✅ [IMPORT] parsePasted завершен успешно');
+        console.log('📈 [IMPORT] Количество обработанных строк:', rows.length);
+        console.log('📝 [IMPORT] Первые 3 продукта:', rows.slice(0, 3));
+        
         const duration = performance.now() - startTime;
         if (window.HEYS && window.HEYS.analytics) {
           window.HEYS.analytics.trackApiCall('parsePasted', duration, true);
         }
       } catch(e) { 
+        console.error('❌ [IMPORT] Ошибка при парсинге:', e);
+        console.error('📄 [IMPORT] Stack trace:', e.stack);
+        
         const duration = performance.now() - startTime;
         if (window.HEYS && window.HEYS.analytics) {
           window.HEYS.analytics.trackApiCall('parsePasted', duration, false);
@@ -332,22 +465,48 @@
         alert('Ошибка парсинга: '+e.message); 
         return; 
       }
-      if(!rows.length){ alert('Не удалось распознать данные'); return; }
+      
+      if(!rows.length){ 
+        console.warn('⚠️ [IMPORT] Не удалось распознать данные');
+        console.log('📄 [IMPORT] Исходный текст:', paste);
+        alert('Не удалось распознать данные'); 
+        return; 
+      }
+      
+      console.log('💾 [IMPORT] Добавляем продукты к существующим');
+      console.log('📊 [IMPORT] Было продуктов:', products.length);
+      console.log('📊 [IMPORT] Добавляем продуктов:', rows.length);
+      
       setProducts([...products, ...rows]);
+      
+      console.log('✅ [IMPORT] Импорт завершен успешно');
+      
       if (window.HEYS && window.HEYS.analytics) {
         window.HEYS.analytics.trackDataOperation('products-loaded', rows.length);
       }
     }
     async function importReplace(){
+      console.log('🔍 [IMPORT] Начинаем импорт в режиме замены');
+      console.log('📋 [IMPORT] Текст для импорта:', paste.substring(0, 200) + '...');
+      console.log('📊 [IMPORT] Длина текста:', paste.length);
+      
       const startTime = performance.now();
       let rows = [];
       try {
+        console.log('🔄 [IMPORT] Вызываем parsePasted...');
         rows = await parsePasted(paste);
+        console.log('✅ [IMPORT] parsePasted завершен успешно');
+        console.log('📈 [IMPORT] Количество обработанных строк:', rows.length);
+        console.log('📝 [IMPORT] Первые 3 продукта:', rows.slice(0, 3));
+        
         const duration = performance.now() - startTime;
         if (window.HEYS && window.HEYS.analytics) {
           window.HEYS.analytics.trackApiCall('parsePasted', duration, true);
         }
       } catch(e) { 
+        console.error('❌ [IMPORT] Ошибка при парсинге:', e);
+        console.error('📄 [IMPORT] Stack trace:', e.stack);
+        
         const duration = performance.now() - startTime;
         if (window.HEYS && window.HEYS.analytics) {
           window.HEYS.analytics.trackApiCall('parsePasted', duration, false);
@@ -355,8 +514,22 @@
         alert('Ошибка парсинга: '+e.message); 
         return; 
       }
-      if(!rows.length){ alert('Не удалось распознать данные'); return; }
+      
+      if(!rows.length){ 
+        console.warn('⚠️ [IMPORT] Не удалось распознать данные');
+        console.log('📄 [IMPORT] Исходный текст:', paste);
+        alert('Не удалось распознать данные'); 
+        return; 
+      }
+      
+      console.log('💾 [IMPORT] Заменяем все продукты');
+      console.log('📊 [IMPORT] Было продуктов:', products.length);
+      console.log('📊 [IMPORT] Новых продуктов:', rows.length);
+      
       setProducts(rows);
+      
+      console.log('✅ [IMPORT] Замена завершена успешно');
+      
       if (window.HEYS && window.HEYS.analytics) {
         window.HEYS.analytics.trackDataOperation('products-loaded', rows.length);
       }

@@ -7,10 +7,10 @@
   "scripts": {
     "build": "vite build",
     "clean": "rimraf dist",
-    "dev": "vite",
+    "dev": "cross-env PORT=3001 vite",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
-    "preview": "vite preview",
+    "preview": "cross-env PORT=3001 vite preview",
     "test": "vitest run",
     "test:coverage": "vitest --coverage",
     "test:e2e": "playwright test",
