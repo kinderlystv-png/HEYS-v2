@@ -147,3 +147,30 @@ k8s/secrets/
 
 # Local configuration
 config.local.json
+
+# Temporary and debug files
+debug-exports.js
+diagnostic-console-script.js
+filter-fix-test-script.js
+quick-diagnostic-script.js
+*-diagnostic*.js
+*-debug*.js
+
+# Test and report files
+enhanced-error-logger-diagnostics.html
+test-comprehensive-fixes.html
+test-error-logging.html
+error-report-*.json
+metrics.json
+123123.json
+*-report-*.json
+
+# Archive and old reports
+archive/reports-*/
+
+# Turbo cache
+.turbo/daemon/
+
+# Test results
+test-results/
+coverage/
