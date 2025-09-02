@@ -2,7 +2,6 @@
   "name": "@heys/core",
   "version": "14.0.0",
   "description": "HEYS Core - Central business logic and data models",
-  "type": "module",
   "exports": {
     ".": {
       "import": "./dist/index.js",
