@@ -86,7 +86,8 @@ export class SecurityAnalyticsService extends EventEmitter {
         responseSize: savedEvent.data_volume || 0,
         geoLocation: savedEvent.geo_location,
         deviceFingerprint: savedEvent.device_fingerprint,
-        customAttributes: savedEvent.metadata || {}
+        // Исправлено: используем оригинальные metadata из входного события
+        customAttributes: event.metadata || savedEvent.metadata || {}
       });
 
       // 3. Создание интегрированного события

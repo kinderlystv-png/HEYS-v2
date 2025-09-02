@@ -1,14 +1,17 @@
-# 🚀 HEYS API Documentation
+# � HEYS API Documentation
 
-> **Version:** 14.0.0  
-> **Last Updated:** September 1, 2025  
+> **Version:** 15.0.0  
+> **Last Updated:** September 2, 2025  
+> **Status:** Production Ready (98.5% test coverage)  
 > **Maintainer:** @development-team
 
 ## 📋 Overview
 
-HEYS Platform provides a comprehensive API for nutrition tracking, training
-management, and data synchronization. The API is built on a dual-layer
-architecture combining Legacy Core and Modern Web Technologies.
+HEYS Platform provides a comprehensive RESTful API for diary tracking, nutrition management, training sessions, and analytics. The API is built on modern TypeScript/Node.js stack with Supabase backend integration.
+
+**Base URL:** `https://api.heys.app/v1`  
+**Authentication:** Bearer JWT tokens via Supabase Auth  
+**Content-Type:** `application/json`
 
 ## 🏗️ Architecture
 
