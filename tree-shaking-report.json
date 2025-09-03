@@ -1,0 +1,23 @@
+{
+  "timestamp": "2025-09-03T15:22:47.600Z",
+  "sprint": "Performance Optimization Day 2",
+  "analysis": {
+    "before": {
+      "totalSize": 0,
+      "chunks": {}
+    },
+    "after": {
+      "totalSize": 0,
+      "chunks": {}
+    },
+    "reduction": {
+      "totalBytes": 0,
+      "percentage": 0
+    }
+  },
+  "summary": {
+    "effectivenessScore": 0,
+    "sprintGoalProgress": "0.00% / 10% target",
+    "recommendation": "Needs improvement"
+  }
+}

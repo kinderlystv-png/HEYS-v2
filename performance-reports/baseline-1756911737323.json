@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-09-03T15:02:17.322Z",
+  "url": "http://localhost:3001",
+  "viewport": "mobile",
+  "metrics": {
+    "navigationTime": 1703,
+    "memoryUsage": 3,
+    "totalMemory": 6,
+    "fcp": "N/A",
+    "lcp": "N/A"
+  }
+}

@@ -4,28 +4,97 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HEYS Nutrition Tracker - Production</title>
-    <link rel="stylesheet" href="styles/main.css" />
+    
+    <!-- Critical CSS inline for instant rendering -->
+    <style>
+      :root {
+        --bg: #ffffff;
+        --card: #ffffff;
+        --text: #111827;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --acc: #2563eb;
+        --acc-contrast: #ffffff;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 13px;
+        line-height: 1.35;
+      }
+      .app {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .app-header {
+        background: var(--acc);
+        color: var(--acc-contrast);
+        padding: 1rem;
+        text-align: center;
+      }
+      .app-main {
+        flex: 1;
+        padding: 1rem;
+      }
+    </style>
+    
+    <!-- HTTP/2 + Resource hints for optimal performance -->
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="dns-prefetch" href="https://unpkg.com">
+    
+    <!-- HTTP/2 Server Push hints -->
+    <link rel="preload" href="https://unpkg.com/react@18/umd/react.production.min.js" as="script" crossorigin>
+    <link rel="preload" href="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" as="script" crossorigin>
+    
+    <!-- Critical resource preloading with priority hints -->
+    <link rel="preload" href="heys_core_v12.js" as="script" fetchpriority="high">
+    <link rel="preload" href="heys_performance_monitor.js" as="script" fetchpriority="high">
+    <link rel="preload" href="heys_analytics_ui.js" as="script" fetchpriority="low">
+    
+    <!-- Resource hints for better caching -->
+    <link rel="prefetch" href="heys_storage_supabase_v1.js">
+    <link rel="prefetch" href="heys_models_v1.js">
+    
+    <!-- Load non-critical CSS asynchronously -->
+    <link rel="preload" href="styles/main.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles/main.css"></noscript>
   </head>
   <body>
     <div id="root"></div>
 
-    <!-- libs -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <!-- libs with defer and priority for optimal loading -->
+    <script defer src="https://unpkg.com/react@18/umd/react.production.min.js" fetchpriority="high"></script>
+    <script defer src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" fetchpriority="high"></script>
+    <script defer src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js" fetchpriority="low"></script>
 
-    <!-- app modules (order matters) -->
-    <script src="heys_performance_monitor.js"></script>
-    <script src="heys_analytics_ui.js"></script>
-    <script src="heys_storage_supabase_v1.js?v=15"></script>
-    <script src="heys_models_v1.js?v=1"></script>
-    <script src="heys_storage_layer_v1.js?v=1"></script>
-    <script src="heys_core_v12.js"></script>
-    <script src="heys_day_v12.js?v=2"></script>
-    <script src="heys_user_v12.js"></script>
-    <script src="heys_reports_v12.js"></script>
+    <!-- app modules with defer and optimized priority -->
+    <script defer src="heys_performance_monitor.js" fetchpriority="high"></script>
+    <script defer src="heys_core_v12.js" fetchpriority="high"></script>
+    <script defer src="heys_analytics_ui.js" fetchpriority="low"></script>
+    <script defer src="heys_storage_supabase_v1.js?v=15" fetchpriority="low"></script>
+    <script defer src="heys_models_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_storage_layer_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_v12.js?v=2" fetchpriority="low"></script>
+    <script defer src="heys_user_v12.js" fetchpriority="low"></script>
+    <script defer src="heys_reports_v12.js" fetchpriority="low"></script>
 
     <script>
+      // Service Worker Registration для Performance Optimization
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('✅ SW: Registered successfully', registration.scope);
+            })
+            .catch((error) => {
+              console.log('❌ SW: Registration failed', error);
+            });
+        });
+      }
+
       (function () {
         window.HEYS = window.HEYS || {};
         const React = window.React,

@@ -5,37 +5,26 @@
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 [36mvite v4.5.14 [32mbuilding for production...[36m[39m
 <script src="heys_performance_monitor.js"> in "/index.html" can't be bundled without type="module" attribute
-transforming...
 <script src="heys_analytics_ui.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_storage_supabase_v1.js?v=15"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_models_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-[32m✓[39m 2 modules transformed.
 <script src="heys_storage_layer_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_core_v12.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_day_v12.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_user_v12.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_reports_v12.js"> in "/index.html" can't be bundled without type="module" attribute
+transforming...
+[32m✓[39m 2 modules transformed.
+[1m[33m[plugin:vite:resolve][39m[22m [33mModule "events" has been externalized for browser compatibility, imported by "C:/! HEYS 2/packages/shared/dist/index.js". See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.[39m
+[1m[33m[plugin:vite:resolve][39m[22m [33mModule "events" has been externalized for browser compatibility, imported by "C:/! HEYS 2/packages/shared/src/security/SecurityAnalyticsService.ts". See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.[39m
 Generated an empty chunk: "vendor".
 Generated an empty chunk: "features".
 Generated an empty chunk: "core".
 rendering chunks...
 computing gzip size...
-[2mdist/[22m[32mregisterSW.js                [39m[1m[2m 0.13 kB[22m[1m[22m
-[2mdist/[22m[32mmanifest.webmanifest         [39m[1m[2m 0.36 kB[22m[1m[22m
-[2mdist/[22m[32mindex.html                   [39m[1m[2m27.86 kB[22m[1m[22m[2m │ gzip: 5.70 kB[22m
+[2mdist/[22m[32mindex.html                   [39m[1m[2m27.74 kB[22m[1m[22m[2m │ gzip: 5.65 kB[22m
 [2mdist/[22m[35massets/index-ba0dbd15.css    [39m[1m[2m14.79 kB[22m[1m[22m[2m │ gzip: 3.75 kB[22m
 [2mdist/[22m[36massets/features-4ed993c7.js  [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
-[2mdist/[22m[36massets/core-4ed993c7.js      [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
 [2mdist/[22m[36massets/vendor-4ed993c7.js    [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
-
-✨ [vite-plugin-compression]:algorithm=gzip - compressed file successfully: 
-dist/C:/! HEYS 2/apps/web/assets/index-ba0dbd15.css.gz   14.47kb / gzip: 3.66kb
-dist/C:/! HEYS 2/apps/web/index.html.gz                  28.56kb / gzip: 5.53kb
-
-
-
-✨ [vite-plugin-compression]:algorithm=brotliCompress - compressed file successfully: 
-dist/C:/! HEYS 2/apps/web/assets/index-ba0dbd15.css.br   14.47kb / brotliCompress: 3.21kb
-dist/C:/! HEYS 2/apps/web/index.html.br                  28.56kb / brotliCompress: 4.63kb
-
-
+[2mdist/[22m[36massets/core-4ed993c7.js      [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
+[32m✓ built in 1.07s[39m
