@@ -89,7 +89,7 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
     }
     }
     onError?.(error);
-  }, [onError]);
+  }, []);
 
   // Preload при переключении табов
   const handleTabHover = React.useCallback((tabName: string) => {
@@ -177,8 +177,7 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
           { key: 'generator', label: '📊 Генератор', icon: '⚡' },
           { key: 'viewer', label: '👁️ Просмотр', icon: '🔍' },
           { key: 'exporter', label: '📤 Экспорт', icon: '💾' },
-          { key: 'history', label: '📚 История', icon: '⏰' }
-        ].map((tab: unknown) => (
+          { key: 'history', label: '📚 История', icon: '⏰' }].map((tab: unknown) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -293,7 +292,7 @@ const ReportsGeneratorComponent: React.FC<Record<string, unknown>> = ({ onGenera
     } finally {
       setIsGenerating(false);
     }
-  }, [reportType, dateRange, filters, onGenerate, onError]);
+  }, [reportType, dateRange, filters, onGenerate,]);
 
   return (
     <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
@@ -488,7 +487,7 @@ const ReportsViewerComponent: React.FC<Record<string, unknown>> = ({ data, filte
       )}
       
       <div style={{ fontSize: '12px', color: '#666', marginTop: '16px' }}>
-        Bundle: reports-viewer.js | Active filters: {Object.keys(filters || {}).length}
+        Bundle: reports-viewer.js | Active filters: {Object.keys(filters || {_}).length}
       </div>
     </div>
   );
@@ -514,7 +513,7 @@ const ReportsExporterComponent: React.FC<Record<string, unknown>> = ({ data, onE
     } finally {
       setIsExporting(false);
     }
-  }, [exportFormat, data, onExport, onError]);
+  }, [exportFormat, data, onExport,]);
 
   return (
     <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
@@ -556,13 +555,13 @@ const ReportsExporterComponent: React.FC<Record<string, unknown>> = ({ data, onE
       </button>
       
       <div style={{ fontSize: '12px', color: '#666', marginTop: '16px' }}>
-        Bundle: reports-exporter.js | Data size: {JSON.stringify(data || {}).length} bytes
+        Bundle: reports-exporter.js | Data size: {JSON.stringify(data || {_}).length} bytes
       </div>
     </div>
   );
 };
 
-const ReportsHistoryComponent: React.FC<Record<string, unknown>> = ({  }) => {
+const ReportsHistoryComponent: React.FC<Record<string, unknown>> = ({_}) => {
   const [historyData] = React.useState([
     { id: 1, action: 'Generated Analytics Report', user: 'admin', timestamp: '2025-09-04 10:30:00', status: 'success' },
     { id: 2, action: 'Exported Performance Report', user: 'manager', timestamp: '2025-09-04 09:15:00', status: 'success' },

@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-var-requires, no-console */
 const fs = require('fs');
-const path = require('path');
 
 /**
  * Финальная очистка ESLint ошибок после основной автоматизации

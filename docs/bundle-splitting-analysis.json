@@ -1,0 +1,89 @@
+{
+  "timestamp": "2025-09-04T07:46:51.495Z",
+  "currentChunks": {},
+  "optimizedChunks": {
+    "vendor": [
+      "react",
+      "react-dom",
+      "react/jsx-runtime"
+    ],
+    "ui": [
+      "@heys/ui",
+      "@heys/shared"
+    ],
+    "core": [
+      "@heys/core"
+    ],
+    "analytics": [
+      "@heys/analytics"
+    ],
+    "search": [
+      "@heys/search"
+    ],
+    "gaming": [
+      "@heys/gaming"
+    ],
+    "storage": [
+      "@heys/storage",
+      "@supabase/supabase-js"
+    ],
+    "utils": [
+      "zod",
+      "date-fns"
+    ]
+  },
+  "chunkSizeAnalysis": {
+    "core-4ed993c7.js": {
+      "size": 0,
+      "type": "core"
+    },
+    "features-4ed993c7.js": {
+      "size": 0,
+      "type": "features"
+    },
+    "heys_analytics_ui-279cbf8e.js": {
+      "size": 25.5,
+      "type": "legacy"
+    },
+    "heys_core_v12-ac6551da.js": {
+      "size": 42.72,
+      "type": "core"
+    },
+    "heys_models_v1-f4f68254.js": {
+      "size": 11.22,
+      "type": "legacy"
+    },
+    "heys_performance_monitor-b8643643.js": {
+      "size": 32.67,
+      "type": "legacy"
+    },
+    "heys_storage_supabase_v1-463550c0.js": {
+      "size": 26.12,
+      "type": "legacy"
+    },
+    "react-4ed993c7.js": {
+      "size": 0,
+      "type": "react"
+    },
+    "vendor-4ed993c7.js": {
+      "size": 0,
+      "type": "vendor"
+    }
+  },
+  "recommendations": [
+    "Implement optimized manual chunks configuration",
+    "Separate vendor libraries for better caching",
+    "Create feature-based chunks for lazy loading",
+    "Use long-term caching with content hashes",
+    "Implement service worker for chunk caching",
+    "Add route-based code splitting",
+    "Implement dynamic imports for heavy features"
+  ],
+  "viteConfigUpdates": [
+    {
+      "section": "rollupOptions",
+      "code": "\n// Enhanced Bundle Splitting Configuration - Performance Sprint Day 2\nrollupOptions: {\n  output: {\n    manualChunks: {\n      // Vendor libraries (stable, cached separately)\n      vendor: ['react', 'react-dom', 'react/jsx-runtime'],\n      \n      // UI and shared components\n      ui: ['@heys/ui', '@heys/shared'],\n      \n      // Core business logic\n      core: ['@heys/core'],\n      \n      // Feature modules (lazy loadable)\n      analytics: ['@heys/analytics'],\n      search: ['@heys/search'],\n      gaming: ['@heys/gaming'],\n      \n      // Storage and data\n      storage: ['@heys/storage', '@supabase/supabase-js'],\n      \n      // Utilities\n      utils: ['zod', 'date-fns']\n    },\n    \n    // Optimize chunk file names\n    entryFileNames: 'assets/[name]-[hash].js',\n    chunkFileNames: (chunkInfo) => {\n      const facadeModuleId = chunkInfo.facadeModuleId \n        ? chunkInfo.facadeModuleId.split('/').pop() \n        : 'chunk';\n      return `assets/${facadeModuleId}-[hash].js`;\n    },\n    assetFileNames: 'assets/[name]-[hash].[ext]',\n    \n    // Размер chunk limits\n    maxParallelFileOps: 5,\n  },\n  \n  // Advanced Tree shaking\n  treeshake: {\n    preset: 'recommended',\n    moduleSideEffects: false,\n    propertyReadSideEffects: false,\n    tryCatchDeoptimization: false,\n    unknownGlobalSideEffects: false,\n    annotations: true,\n    correctVarValueBeforeDeclaration: false,\n  },\n  \n  // External dependencies (don't bundle these)\n  external: (id) => {\n    // Externalize Node.js modules for better performance\n    return ['fs', 'path', 'crypto'].includes(id);\n  }\n},",
+      "description": "Enhanced bundle splitting with optimized chunks"
+    }
+  ]
+}

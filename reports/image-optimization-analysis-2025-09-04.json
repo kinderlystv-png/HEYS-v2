@@ -1,0 +1,76 @@
+{
+  "timestamp": "2025-09-04T08:05:57.852Z",
+  "imageOptimization": {
+    "infrastructureFiles": 4,
+    "totalLines": 1113,
+    "features": {
+      "formatConversion": true,
+      "lazyLoading": true,
+      "caching": true,
+      "preloading": true,
+      "errorHandling": true,
+      "progressive": true
+    }
+  },
+  "componentAnalysis": {
+    "optimizedImageUsage": 2,
+    "lazyImageUsage": 0,
+    "standardImgTags": 1,
+    "files": [
+      {
+        "file": "apps\\web\\src\\components\\OptimizedImage\\LazyImage.tsx",
+        "optimizedImage": 1,
+        "lazyImage": 0,
+        "standardImg": 0
+      },
+      {
+        "file": "apps\\web\\src\\components\\OptimizedImage\\OptimizedImage.tsx",
+        "optimizedImage": 0,
+        "lazyImage": 0,
+        "standardImg": 1
+      },
+      {
+        "file": "apps\\web\\src\\components\\OptimizedImage\\__tests__\\OptimizedImage.test.tsx",
+        "optimizedImage": 7,
+        "lazyImage": 0,
+        "standardImg": 0
+      }
+    ],
+    "optimizationCoverage": 67
+  },
+  "performanceMetrics": {
+    "averageImageLoadTime": 466,
+    "totalImageSize": 1908,
+    "optimizedImageSize": 449,
+    "lazyLoadingSavings": 66,
+    "formatConversionSavings": 20,
+    "cacheHitRate": 74,
+    "note": "Simulated metrics - integrate with real performance monitoring"
+  },
+  "recommendations": [
+    {
+      "type": "suggestion",
+      "category": "Component Usage",
+      "message": "Image optimization coverage is 67%.",
+      "action": "Migrate more standard <img> tags to OptimizedImage components."
+    },
+    {
+      "type": "success",
+      "category": "Infrastructure",
+      "message": "Complete image optimization infrastructure implemented!",
+      "action": "Monitor performance metrics and optimize based on usage patterns."
+    }
+  ],
+  "imageUsagePatterns": {
+    "totalImages": 11,
+    "imageExtensions": [
+      "webp",
+      "jpg",
+      "svg"
+    ],
+    "lazyLoadingCandidates": 1,
+    "formatOptimizationOpportunities": 9,
+    "sizeOptimizationNeeded": 0,
+    "imageFiles": []
+  }
+}

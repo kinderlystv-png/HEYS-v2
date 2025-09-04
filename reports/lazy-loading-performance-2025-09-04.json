@@ -1,0 +1,93 @@
+{
+  "timestamp": "2025-09-04T07:57:09.813Z",
+  "bundleAnalysis": {
+    "mainBundleSize": "0 B",
+    "mainBundleSizeBytes": 0,
+    "totalSize": "3.92 KB",
+    "totalSizeBytes": 4014,
+    "totalChunks": 1,
+    "lazyChunks": 0,
+    "chunks": [
+      {
+        "name": "sw.js",
+        "size": "3.92 KB",
+        "sizeBytes": 4014
+      }
+    ]
+  },
+  "chunkAnalysis": {
+    "vendorChunks": [],
+    "featureChunks": [],
+    "routeChunks": [],
+    "averageChunkSize": "3.92 KB",
+    "totalJSChunks": 1
+  },
+  "lazyLoadingStats": {
+    "totalLazyComponents": 2,
+    "routeLazyComponents": 15,
+    "componentLazyComponents": 8,
+    "preloadingStrategies": 188,
+    "infrastructureFiles": {
+      "lazyLoader": true,
+      "dynamicImports": true,
+      "lazyRoutes": true
+    },
+    "details": [
+      {
+        "file": "apps\\web\\src\\hooks\\useLazyComponent.ts",
+        "lazy": 0,
+        "routeLazy": 0,
+        "componentLazy": 2,
+        "preloading": 28
+      },
+      {
+        "file": "apps\\web\\src\\routes\\LazyRoutes.tsx",
+        "lazy": 0,
+        "routeLazy": 14,
+        "componentLazy": 0,
+        "preloading": 8
+      },
+      {
+        "file": "apps\\web\\src\\utils\\dynamicImport.ts",
+        "lazy": 1,
+        "routeLazy": 0,
+        "componentLazy": 2,
+        "preloading": 14
+      },
+      {
+        "file": "apps\\web\\src\\utils\\lazy-loader.ts",
+        "lazy": 1,
+        "routeLazy": 1,
+        "componentLazy": 4,
+        "preloading": 23
+      }
+    ]
+  },
+  "recommendations": [
+    {
+      "type": "suggestion",
+      "category": "Lazy Loading",
+      "message": "Few lazy components detected. Consider adding more lazy loading.",
+      "action": "Identify heavy components or routes that can be lazy loaded."
+    },
+    {
+      "type": "suggestion",
+      "category": "Code Splitting",
+      "message": "Limited chunk splitting detected.",
+      "action": "Configure more aggressive chunk splitting in Vite config."
+    },
+    {
+      "type": "warning",
+      "category": "Performance",
+      "message": "Initial load time is over 1.2s.",
+      "action": "Optimize critical path and implement resource preloading."
+    }
+  ],
+  "performanceMetrics": {
+    "initialLoadTime": 1358,
+    "timeToInteractive": 1371,
+    "largestContentfulPaint": 1018,
+    "firstContentfulPaint": 672,
+    "note": "Simulated metrics - integrate with Lighthouse for real measurements"
+  }
+}

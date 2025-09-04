@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build:analyze": "cross-env ANALYZE=true vite build",
     "clean": "rimraf dist",
     "dev": "cross-env PORT=3001 vite",
     "lint": "eslint src --ext .ts,.tsx",

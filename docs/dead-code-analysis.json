@@ -1,0 +1,1605 @@
+{
+  "timestamp": "2025-09-04T07:45:40.990Z",
+  "analysis": {
+    "unusedExports": [
+      {
+        "name": "FoodProduct",
+        "file": "packages\\core\\src\\models\\food.ts",
+        "line": 27,
+        "type": "type"
+      },
+      {
+        "name": "FoodEntry",
+        "file": "packages\\core\\src\\models\\food.ts",
+        "line": 41,
+        "type": "type"
+      },
+      {
+        "name": "Exercise",
+        "file": "packages\\core\\src\\models\\training.ts",
+        "line": 15,
+        "type": "type"
+      },
+      {
+        "name": "WorkoutSetSchema",
+        "file": "packages\\core\\src\\models\\training.ts",
+        "line": 18,
+        "type": "const"
+      },
+      {
+        "name": "WorkoutSet",
+        "file": "packages\\core\\src\\models\\training.ts",
+        "line": 27,
+        "type": "type"
+      },
+      {
+        "name": "WorkoutSession",
+        "file": "packages\\core\\src\\models\\training.ts",
+        "line": 41,
+        "type": "type"
+      },
+      {
+        "name": "TrainingProgram",
+        "file": "packages\\core\\src\\models\\training.ts",
+        "line": 66,
+        "type": "type"
+      },
+      {
+        "name": "User",
+        "file": "packages\\core\\src\\models\\user.ts",
+        "line": 29,
+        "type": "type"
+      },
+      {
+        "name": "UserDraftSchema",
+        "file": "packages\\core\\src\\models\\user.ts",
+        "line": 32,
+        "type": "const"
+      },
+      {
+        "name": "SecureUserManager",
+        "file": "packages\\core\\src\\secure.ts",
+        "line": 17,
+        "type": "class"
+      },
+      {
+        "name": "SecureDayManager",
+        "file": "packages\\core\\src\\secure.ts",
+        "line": 82,
+        "type": "class"
+      },
+      {
+        "name": "SecureSessionManager",
+        "file": "packages\\core\\src\\secure.ts",
+        "line": 144,
+        "type": "class"
+      },
+      {
+        "name": "SecureHeysCore",
+        "file": "packages\\core\\src\\secure.ts",
+        "line": 191,
+        "type": "class"
+      },
+      {
+        "name": "secureCore",
+        "file": "packages\\core\\src\\secure.ts",
+        "line": 306,
+        "type": "const"
+      },
+      {
+        "name": "AnalyticsEvent",
+        "file": "packages\\core\\src\\services\\analytics.ts",
+        "line": 2,
+        "type": "interface"
+      },
+      {
+        "name": "AnalyticsProvider",
+        "file": "packages\\core\\src\\services\\analytics.ts",
+        "line": 10,
+        "type": "interface"
+      },
+      {
+        "name": "NutritionData",
+        "file": "packages\\core\\src\\services\\nutrition.ts",
+        "line": 2,
+        "type": "interface"
+      },
+      {
+        "name": "CalorieCalculationOptions",
+        "file": "packages\\core\\src\\services\\nutrition.ts",
+        "line": 9,
+        "type": "interface"
+      },
+      {
+        "name": "StorageService",
+        "file": "packages\\core\\src\\services\\storage.ts",
+        "line": 2,
+        "type": "const"
+      },
+      {
+        "name": "HeysConfig",
+        "file": "packages\\core\\src\\types\\index.ts",
+        "line": 2,
+        "type": "interface"
+      },
+      {
+        "name": "HeysState",
+        "file": "packages\\core\\src\\types\\index.ts",
+        "line": 12,
+        "type": "interface"
+      },
+      {
+        "name": "ButtonProps",
+        "file": "packages\\ui\\src\\components\\Button\\Button.tsx",
+        "line": 3,
+        "type": "interface"
+      },
+      {
+        "name": "SecureInputProps",
+        "file": "packages\\ui\\src\\security\\index.tsx",
+        "line": 16,
+        "type": "interface"
+      },
+      {
+        "name": "SecureInput",
+        "file": "packages\\ui\\src\\security\\index.tsx",
+        "line": 29,
+        "type": "const"
+      },
+      {
+        "name": "SecureContentProps",
+        "file": "packages\\ui\\src\\security\\index.tsx",
+        "line": 86,
+        "type": "interface"
+      },
+      {
+        "name": "SecureContent",
+        "file": "packages\\ui\\src\\security\\index.tsx",
+        "line": 94,
+        "type": "const"
+      },
+      {
+        "name": "SecureFormProps",
+        "file": "packages\\ui\\src\\security\\index.tsx",
+        "line": 129,
+        "type": "interface"
+      },
+      {
+        "name": "SecureForm",
+        "file": "packages\\ui\\src\\security\\index.tsx",
+        "line": 137,
+        "type": "const"
+      },
+      {
+        "name": "SecureUserProfileProps",
+        "file": "packages\\ui\\src\\security\\index.tsx",
+        "line": 186,
+        "type": "interface"
+      },
+      {
+        "name": "SecureUserProfile",
+        "file": "packages\\ui\\src\\security\\index.tsx",
+        "line": 199,
+        "type": "const"
+      },
+      {
+        "name": "SecureSearchProps",
+        "file": "packages\\ui\\src\\security\\index.tsx",
+        "line": 294,
+        "type": "interface"
+      },
+      {
+        "name": "SecureSearch",
+        "file": "packages\\ui\\src\\security\\index.tsx",
+        "line": 302,
+        "type": "const"
+      },
+      {
+        "name": "AnalyticsMetric",
+        "file": "packages\\shared\\src\\database\\DatabaseService.ts",
+        "line": 52,
+        "type": "interface"
+      },
+      {
+        "name": "ThreatIntelligence",
+        "file": "packages\\shared\\src\\database\\DatabaseService.ts",
+        "line": 66,
+        "type": "interface"
+      },
+      {
+        "name": "GuestSession",
+        "file": "packages\\shared\\src\\database\\DatabaseService.ts",
+        "line": 83,
+        "type": "interface"
+      },
+      {
+        "name": "SecurityMetrics",
+        "file": "packages\\shared\\src\\database\\DatabaseService.ts",
+        "line": 99,
+        "type": "interface"
+      },
+      {
+        "name": "TopThreat",
+        "file": "packages\\shared\\src\\database\\DatabaseService.ts",
+        "line": 109,
+        "type": "interface"
+      },
+      {
+        "name": "DerivedProduct",
+        "file": "packages\\shared\\src\\misc\\heys_models_v1.ts",
+        "line": 40,
+        "type": "interface"
+      },
+      {
+        "name": "AuditEventType",
+        "file": "packages\\shared\\src\\monitoring\\AdvancedAuditLogger.ts",
+        "line": 11,
+        "type": "enum"
+      },
+      {
+        "name": "AuditSeverity",
+        "file": "packages\\shared\\src\\monitoring\\AdvancedAuditLogger.ts",
+        "line": 22,
+        "type": "enum"
+      },
+      {
+        "name": "AuditLogEntry",
+        "file": "packages\\shared\\src\\monitoring\\AdvancedAuditLogger.ts",
+        "line": 30,
+        "type": "interface"
+      },
+      {
+        "name": "AuditLoggerConfig",
+        "file": "packages\\shared\\src\\monitoring\\AdvancedAuditLogger.ts",
+        "line": 54,
+        "type": "interface"
+      },
+      {
+        "name": "AuditQuery",
+        "file": "packages\\shared\\src\\monitoring\\AdvancedAuditLogger.ts",
+        "line": 83,
+        "type": "interface"
+      },
+      {
+        "name": "AuditStatistics",
+        "file": "packages\\shared\\src\\monitoring\\AdvancedAuditLogger.ts",
+        "line": 102,
+        "type": "interface"
+      },
+      {
+        "name": "ComplianceContext",
+        "file": "packages\\shared\\src\\monitoring\\AdvancedAuditLogger.ts",
+        "line": 116,
+        "type": "interface"
+      },
+      {
+        "name": "AdvancedAuditLogger",
+        "file": "packages\\shared\\src\\monitoring\\AdvancedAuditLogger.ts",
+        "line": 128,
+        "type": "class"
+      },
+      {
+        "name": "defaultAuditLogger",
+        "file": "packages\\shared\\src\\monitoring\\AdvancedAuditLogger.ts",
+        "line": 705,
+        "type": "const"
+      },
+      {
+        "name": "createAuditMiddleware",
+        "file": "packages\\shared\\src\\monitoring\\AdvancedAuditLogger.ts",
+        "line": 710,
+        "type": "function"
+      },
+      {
+        "name": "AuditLoggerUtils",
+        "file": "packages\\shared\\src\\monitoring\\AdvancedAuditLogger.ts",
+        "line": 797,
+        "type": "class"
+      },
+      {
+        "name": "createMonitoringConfig",
+        "file": "packages\\shared\\src\\monitoring\\modern-index.ts",
+        "line": 66,
+        "type": "const"
+      },
+      {
+        "name": "setupMonitoring",
+        "file": "packages\\shared\\src\\monitoring\\modern-index.ts",
+        "line": 77,
+        "type": "const"
+      },
+      {
+        "name": "LogLevel",
+        "file": "packages\\shared\\src\\monitoring\\structured-logger.ts",
+        "line": 11,
+        "type": "type"
+      },
+      {
+        "name": "LoggerConfig",
+        "file": "packages\\shared\\src\\monitoring\\structured-logger.ts",
+        "line": 40,
+        "type": "type"
+      },
+      {
+        "name": "LogPerformance",
+        "file": "packages\\shared\\src\\monitoring\\structured-logger.ts",
+        "line": 403,
+        "type": "function"
+      },
+      {
+        "name": "LogErrors",
+        "file": "packages\\shared\\src\\monitoring\\structured-logger.ts",
+        "line": 431,
+        "type": "function"
+      },
+      {
+        "name": "initializeGlobalLogger",
+        "file": "packages\\shared\\src\\monitoring\\structured-logger.ts",
+        "line": 462,
+        "type": "function"
+      },
+      {
+        "name": "getGlobalLogger",
+        "file": "packages\\shared\\src\\monitoring\\structured-logger.ts",
+        "line": 470,
+        "type": "function"
+      },
+      {
+        "name": "default",
+        "file": "packages\\shared\\src\\monitoring\\modern-index.ts",
+        "line": 16,
+        "type": "named"
+      },
+      {
+        "name": "MonitoringConfig",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 68,
+        "type": "interface"
+      },
+      {
+        "name": "MonitorMethod",
+        "file": "packages\\shared\\src\\monitoring\\monitoring-service.ts",
+        "line": 529,
+        "type": "function"
+      },
+      {
+        "name": "CaptureMethodErrors",
+        "file": "packages\\shared\\src\\monitoring\\monitoring-service.ts",
+        "line": 551,
+        "type": "function"
+      },
+      {
+        "name": "getGlobalMonitoring",
+        "file": "packages\\shared\\src\\monitoring\\sentry-monitoring.ts",
+        "line": 408,
+        "type": "function"
+      },
+      {
+        "name": "PerformanceMetric",
+        "file": "packages\\shared\\src\\performance\\profiler.ts",
+        "line": 13,
+        "type": "interface"
+      },
+      {
+        "name": "ErrorReport",
+        "file": "packages\\shared\\src\\monitoring\\performance.ts",
+        "line": 16,
+        "type": "interface"
+      },
+      {
+        "name": "AlertRule",
+        "file": "packages\\shared\\src\\monitoring\\realtime.ts",
+        "line": 8,
+        "type": "interface"
+      },
+      {
+        "name": "Alert",
+        "file": "packages\\shared\\src\\monitoring\\realtime.ts",
+        "line": 18,
+        "type": "interface"
+      },
+      {
+        "name": "LiveMetric",
+        "file": "packages\\shared\\src\\monitoring\\realtime.ts",
+        "line": 28,
+        "type": "interface"
+      },
+      {
+        "name": "RealtimeMonitor",
+        "file": "packages\\shared\\src\\monitoring\\realtime.ts",
+        "line": 37,
+        "type": "class"
+      },
+      {
+        "name": "realtimeMonitor",
+        "file": "packages\\shared\\src\\monitoring\\realtime.ts",
+        "line": 335,
+        "type": "const"
+      },
+      {
+        "name": "addAlert",
+        "file": "packages\\shared\\src\\monitoring\\realtime.ts",
+        "line": 341,
+        "type": "const"
+      },
+      {
+        "name": "removeAlert",
+        "file": "packages\\shared\\src\\monitoring\\realtime.ts",
+        "line": 342,
+        "type": "const"
+      },
+      {
+        "name": "updateLiveMetric",
+        "file": "packages\\shared\\src\\monitoring\\realtime.ts",
+        "line": 343,
+        "type": "const"
+      },
+      {
+        "name": "getLiveMetrics",
+        "file": "packages\\shared\\src\\monitoring\\realtime.ts",
+        "line": 345,
+        "type": "const"
+      },
+      {
+        "name": "getActiveAlerts",
+        "file": "packages\\shared\\src\\monitoring\\realtime.ts",
+        "line": 346,
+        "type": "const"
+      },
+      {
+        "name": "SentryConfig",
+        "file": "packages\\shared\\src\\monitoring\\sentry-monitoring.ts",
+        "line": 22,
+        "type": "type"
+      },
+      {
+        "name": "MonitorPerformance",
+        "file": "packages\\shared\\src\\monitoring\\sentry-monitoring.ts",
+        "line": 350,
+        "type": "function"
+      },
+      {
+        "name": "CaptureErrors",
+        "file": "packages\\shared\\src\\monitoring\\sentry-monitoring.ts",
+        "line": 369,
+        "type": "function"
+      },
+      {
+        "name": "initializeGlobalMonitoring",
+        "file": "packages\\shared\\src\\monitoring\\sentry-monitoring.ts",
+        "line": 399,
+        "type": "function"
+      },
+      {
+        "name": "HttpCacheConfig",
+        "file": "packages\\shared\\src\\performance\\advanced-cache-manager.ts",
+        "line": 23,
+        "type": "interface"
+      },
+      {
+        "name": "BrowserCacheConfig",
+        "file": "packages\\shared\\src\\performance\\advanced-cache-manager.ts",
+        "line": 38,
+        "type": "interface"
+      },
+      {
+        "name": "ServiceWorkerConfig",
+        "file": "packages\\shared\\src\\performance\\advanced-cache-manager.ts",
+        "line": 56,
+        "type": "interface"
+      },
+      {
+        "name": "MemoryCacheConfig",
+        "file": "packages\\shared\\src\\performance\\advanced-cache-manager.ts",
+        "line": 69,
+        "type": "interface"
+      },
+      {
+        "name": "InvalidationConfig",
+        "file": "packages\\shared\\src\\performance\\advanced-cache-manager.ts",
+        "line": 76,
+        "type": "interface"
+      },
+      {
+        "name": "CompressionConfig",
+        "file": "packages\\shared\\src\\performance\\advanced-cache-manager.ts",
+        "line": 83,
+        "type": "interface"
+      },
+      {
+        "name": "CacheEntry",
+        "file": "packages\\shared\\src\\performance\\cache.ts",
+        "line": 25,
+        "type": "interface"
+      },
+      {
+        "name": "CacheStats",
+        "file": "packages\\shared\\src\\performance\\cache.ts",
+        "line": 40,
+        "type": "interface"
+      },
+      {
+        "name": "OptimizationRecommendation",
+        "file": "packages\\shared\\src\\performance\\bundle-analyzer.ts",
+        "line": 22,
+        "type": "interface"
+      },
+      {
+        "name": "BundleAnalyzer",
+        "file": "packages\\shared\\src\\performance\\index.ts",
+        "line": 16,
+        "type": "named"
+      },
+      {
+        "name": "defaultBundleAnalyzer",
+        "file": "packages\\shared\\src\\performance\\index.ts",
+        "line": 16,
+        "type": "named"
+      },
+      {
+        "name": "BundleChunk",
+        "file": "packages\\shared\\src\\performance\\bundle-optimizer.ts",
+        "line": 13,
+        "type": "interface"
+      },
+      {
+        "name": "CodeSplittingStrategy",
+        "file": "packages\\shared\\src\\performance\\bundle-optimizer.ts",
+        "line": 27,
+        "type": "interface"
+      },
+      {
+        "name": "BundleOptimizationConfig",
+        "file": "packages\\shared\\src\\performance\\bundle-optimizer.ts",
+        "line": 41,
+        "type": "interface"
+      },
+      {
+        "name": "LoadingStrategy",
+        "file": "packages\\shared\\src\\performance\\bundle-optimizer.ts",
+        "line": 70,
+        "type": "type"
+      },
+      {
+        "name": "DynamicImportResult",
+        "file": "packages\\shared\\src\\performance\\bundle-optimizer.ts",
+        "line": 75,
+        "type": "interface"
+      },
+      {
+        "name": "BundleOptimizer",
+        "file": "packages\\shared\\src\\performance\\bundle-optimizer.ts",
+        "line": 85,
+        "type": "class"
+      },
+      {
+        "name": "createLazyComponentFactory",
+        "file": "packages\\shared\\src\\performance\\bundle-optimizer.ts",
+        "line": 728,
+        "type": "function"
+      },
+      {
+        "name": "createIntersectionLoader",
+        "file": "packages\\shared\\src\\performance\\bundle-optimizer.ts",
+        "line": 747,
+        "type": "function"
+      },
+      {
+        "name": "trackBundleSize",
+        "file": "packages\\shared\\src\\performance\\bundle-optimizer.ts",
+        "line": 768,
+        "type": "function"
+      },
+      {
+        "name": "defaultBundleOptimizer",
+        "file": "packages\\shared\\src\\performance\\bundle-optimizer.ts",
+        "line": 793,
+        "type": "const"
+      },
+      {
+        "name": "CacheIntegrationConfig",
+        "file": "packages\\shared\\src\\performance\\cache-integration-layer.ts",
+        "line": 13,
+        "type": "interface"
+      },
+      {
+        "name": "CacheInvalidationRule",
+        "file": "packages\\shared\\src\\performance\\cache-integration-layer.ts",
+        "line": 22,
+        "type": "interface"
+      },
+      {
+        "name": "CachePerformanceMetrics",
+        "file": "packages\\shared\\src\\performance\\cache-integration-layer.ts",
+        "line": 28,
+        "type": "interface"
+      },
+      {
+        "name": "CacheIntegrationLayer",
+        "file": "packages\\shared\\src\\performance\\cache-integration-layer.ts",
+        "line": 40,
+        "type": "class"
+      },
+      {
+        "name": "defaultCacheIntegrationConfig",
+        "file": "packages\\shared\\src\\performance\\cache-integration-layer.ts",
+        "line": 449,
+        "type": "const"
+      },
+      {
+        "name": "createGlobalCache",
+        "file": "packages\\shared\\src\\performance\\cache-integration-layer.ts",
+        "line": 479,
+        "type": "function"
+      },
+      {
+        "name": "getGlobalCache",
+        "file": "packages\\shared\\src\\performance\\cache-integration-layer.ts",
+        "line": 486,
+        "type": "function"
+      },
+      {
+        "name": "destroyGlobalCache",
+        "file": "packages\\shared\\src\\performance\\cache-integration-layer.ts",
+        "line": 490,
+        "type": "function"
+      },
+      {
+        "name": "EvictionPolicy",
+        "file": "packages\\shared\\src\\performance\\cache.ts",
+        "line": 54,
+        "type": "type"
+      },
+      {
+        "name": "CacheStrategy",
+        "file": "packages\\shared\\src\\performance\\cache.ts",
+        "line": 59,
+        "type": "interface"
+      },
+      {
+        "name": "MemoryCacheStrategy",
+        "file": "packages\\shared\\src\\performance\\cache.ts",
+        "line": 74,
+        "type": "class"
+      },
+      {
+        "name": "LocalStorageCacheStrategy",
+        "file": "packages\\shared\\src\\performance\\cache.ts",
+        "line": 281,
+        "type": "class"
+      },
+      {
+        "name": "IndexedDBCacheStrategy",
+        "file": "packages\\shared\\src\\performance\\cache.ts",
+        "line": 598,
+        "type": "class"
+      },
+      {
+        "name": "SmartCacheStrategy",
+        "file": "packages\\shared\\src\\performance\\cache.ts",
+        "line": 897,
+        "type": "class"
+      },
+      {
+        "name": "cached",
+        "file": "packages\\shared\\src\\performance\\cache.ts",
+        "line": 1205,
+        "type": "function"
+      },
+      {
+        "name": "defaultCacheManager",
+        "file": "packages\\shared\\src\\performance\\cache.ts",
+        "line": 1235,
+        "type": "const"
+      },
+      {
+        "name": "CacheHeaders",
+        "file": "packages\\shared\\src\\performance\\http-cache-strategy.ts",
+        "line": 23,
+        "type": "interface"
+      },
+      {
+        "name": "CacheableResource",
+        "file": "packages\\shared\\src\\performance\\http-cache-strategy.ts",
+        "line": 32,
+        "type": "interface"
+      },
+      {
+        "name": "CDNConfig",
+        "file": "packages\\shared\\src\\performance\\network-optimizer.ts",
+        "line": 100,
+        "type": "interface"
+      },
+      {
+        "name": "CDNCacheRule",
+        "file": "packages\\shared\\src\\performance\\http-cache-strategy.ts",
+        "line": 53,
+        "type": "interface"
+      },
+      {
+        "name": "cdnConfigs",
+        "file": "packages\\shared\\src\\performance\\http-cache-strategy.ts",
+        "line": 516,
+        "type": "const"
+      },
+      {
+        "name": "defaultProfiler",
+        "file": "packages\\shared\\src\\performance\\profiler.ts",
+        "line": 615,
+        "type": "const"
+      },
+      {
+        "name": "measurePerformance",
+        "file": "packages\\shared\\src\\performance\\profiler.ts",
+        "line": 620,
+        "type": "function"
+      },
+      {
+        "name": "defaultMobileOptimizer",
+        "file": "packages\\shared\\src\\performance\\mobile.ts",
+        "line": 694,
+        "type": "const"
+      },
+      {
+        "name": "MobileUtils",
+        "file": "packages\\shared\\src\\performance\\mobile.ts",
+        "line": 620,
+        "type": "class"
+      },
+      {
+        "name": "PerformanceConfig",
+        "file": "packages\\shared\\src\\performance\\index.ts",
+        "line": 61,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceManager",
+        "file": "packages\\shared\\src\\performance\\index.ts",
+        "line": 90,
+        "type": "class"
+      },
+      {
+        "name": "defaultPerformanceManager",
+        "file": "packages\\shared\\src\\performance\\index.ts",
+        "line": 329,
+        "type": "const"
+      },
+      {
+        "name": "initializePerformanceOptimization",
+        "file": "packages\\shared\\src\\performance\\index.ts",
+        "line": 334,
+        "type": "function"
+      },
+      {
+        "name": "LoadTestConfiguration",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 16,
+        "type": "interface"
+      },
+      {
+        "name": "LoadProfile",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 33,
+        "type": "interface"
+      },
+      {
+        "name": "VirtualUserConfig",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 45,
+        "type": "interface"
+      },
+      {
+        "name": "RequestConfig",
+        "file": "packages\\shared\\src\\performance\\network.ts",
+        "line": 18,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceThreshold",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 60,
+        "type": "interface"
+      },
+      {
+        "name": "AlertConfig",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 76,
+        "type": "interface"
+      },
+      {
+        "name": "WidgetConfig",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 90,
+        "type": "interface"
+      },
+      {
+        "name": "ReportingConfig",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 97,
+        "type": "interface"
+      },
+      {
+        "name": "LoadTestResult",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 107,
+        "type": "interface"
+      },
+      {
+        "name": "LoadTestSummary",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 123,
+        "type": "interface"
+      },
+      {
+        "name": "LoadTestMetrics",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 141,
+        "type": "interface"
+      },
+      {
+        "name": "TimeSeries",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 151,
+        "type": "interface"
+      },
+      {
+        "name": "ResponseTimeDistribution",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 157,
+        "type": "interface"
+      },
+      {
+        "name": "StatusCodeDistribution",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 163,
+        "type": "interface"
+      },
+      {
+        "name": "ErrorTypeDistribution",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 169,
+        "type": "interface"
+      },
+      {
+        "name": "ThresholdResult",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 176,
+        "type": "interface"
+      },
+      {
+        "name": "LoadTestError",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 185,
+        "type": "interface"
+      },
+      {
+        "name": "SystemMetrics",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 198,
+        "type": "interface"
+      },
+      {
+        "name": "RawTestData",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 207,
+        "type": "interface"
+      },
+      {
+        "name": "RequestData",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 213,
+        "type": "interface"
+      },
+      {
+        "name": "ResponseData",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 223,
+        "type": "interface"
+      },
+      {
+        "name": "SystemSample",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 233,
+        "type": "interface"
+      },
+      {
+        "name": "LoadTestingEngine",
+        "file": "packages\\shared\\src\\performance\\load-testing-tools.ts",
+        "line": 246,
+        "type": "class"
+      },
+      {
+        "name": "MobileDeviceInfo",
+        "file": "packages\\shared\\src\\performance\\mobile-performance-optimizer.ts",
+        "line": 11,
+        "type": "interface"
+      },
+      {
+        "name": "MobileOptimizationConfig",
+        "file": "packages\\shared\\src\\performance\\mobile-performance-optimizer.ts",
+        "line": 32,
+        "type": "interface"
+      },
+      {
+        "name": "CustomTouchEvent",
+        "file": "packages\\shared\\src\\performance\\mobile-performance-optimizer.ts",
+        "line": 66,
+        "type": "interface"
+      },
+      {
+        "name": "DOMTouchEvent",
+        "file": "packages\\shared\\src\\performance\\mobile-performance-optimizer.ts",
+        "line": 76,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceBudget",
+        "file": "packages\\shared\\src\\performance\\profiler.ts",
+        "line": 113,
+        "type": "interface"
+      },
+      {
+        "name": "defaultMobileOptimizationConfig",
+        "file": "packages\\shared\\src\\performance\\mobile-performance-optimizer.ts",
+        "line": 1358,
+        "type": "const"
+      },
+      {
+        "name": "DeviceCapabilities",
+        "file": "packages\\shared\\src\\performance\\mobile.ts",
+        "line": 13,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceSettings",
+        "file": "packages\\shared\\src\\performance\\mobile.ts",
+        "line": 27,
+        "type": "interface"
+      },
+      {
+        "name": "NetworkCondition",
+        "file": "packages\\shared\\src\\performance\\mobile.ts",
+        "line": 40,
+        "type": "interface"
+      },
+      {
+        "name": "NetworkIntegrationConfig",
+        "file": "packages\\shared\\src\\performance\\network-optimization-integration.ts",
+        "line": 16,
+        "type": "interface"
+      },
+      {
+        "name": "NetworkIntegrationEvents",
+        "file": "packages\\shared\\src\\performance\\network-optimization-integration.ts",
+        "line": 32,
+        "type": "interface"
+      },
+      {
+        "name": "DEFAULT_NETWORK_CONFIG",
+        "file": "packages\\shared\\src\\performance\\network-optimization-integration.ts",
+        "line": 43,
+        "type": "const"
+      },
+      {
+        "name": "NetworkOptimizationIntegration",
+        "file": "packages\\shared\\src\\performance\\network-optimization-integration.ts",
+        "line": 135,
+        "type": "class"
+      },
+      {
+        "name": "createNetworkOptimization",
+        "file": "packages\\shared\\src\\performance\\network-optimization-integration.ts",
+        "line": 502,
+        "type": "function"
+      },
+      {
+        "name": "getNetworkOptimization",
+        "file": "packages\\shared\\src\\performance\\network-optimization-integration.ts",
+        "line": 518,
+        "type": "function"
+      },
+      {
+        "name": "NetworkConnection",
+        "file": "packages\\shared\\src\\performance\\network-optimizer.ts",
+        "line": 15,
+        "type": "interface"
+      },
+      {
+        "name": "NetworkMetrics",
+        "file": "packages\\shared\\src\\performance\\network-optimizer.ts",
+        "line": 23,
+        "type": "interface"
+      },
+      {
+        "name": "PrefetchRequest",
+        "file": "packages\\shared\\src\\performance\\network-optimizer.ts",
+        "line": 85,
+        "type": "interface"
+      },
+      {
+        "name": "PrefetchCondition",
+        "file": "packages\\shared\\src\\performance\\network-optimizer.ts",
+        "line": 94,
+        "type": "interface"
+      },
+      {
+        "name": "CDNProvider",
+        "file": "packages\\shared\\src\\performance\\network-optimizer.ts",
+        "line": 108,
+        "type": "interface"
+      },
+      {
+        "name": "NetworkQualityProfile",
+        "file": "packages\\shared\\src\\performance\\network-optimizer.ts",
+        "line": 121,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceAlert",
+        "file": "packages\\shared\\src\\performance\\real-time-performance-monitor.ts",
+        "line": 76,
+        "type": "interface"
+      },
+      {
+        "name": "NetworkStats",
+        "file": "packages\\shared\\src\\performance\\network.ts",
+        "line": 49,
+        "type": "interface"
+      },
+      {
+        "name": "ChartDataPoint",
+        "file": "packages\\shared\\src\\performance\\network-performance-dashboard.ts",
+        "line": 66,
+        "type": "interface"
+      },
+      {
+        "name": "ChartSeries",
+        "file": "packages\\shared\\src\\performance\\network-performance-dashboard.ts",
+        "line": 72,
+        "type": "interface"
+      },
+      {
+        "name": "RequestPriority",
+        "file": "packages\\shared\\src\\performance\\network.ts",
+        "line": 13,
+        "type": "type"
+      },
+      {
+        "name": "NetworkRequest",
+        "file": "packages\\shared\\src\\performance\\network.ts",
+        "line": 34,
+        "type": "interface"
+      },
+      {
+        "name": "ConnectionInfo",
+        "file": "packages\\shared\\src\\performance\\network.ts",
+        "line": 62,
+        "type": "interface"
+      },
+      {
+        "name": "OfflineSupport",
+        "file": "packages\\shared\\src\\performance\\network.ts",
+        "line": 555,
+        "type": "class"
+      },
+      {
+        "name": "defaultHTTPClient",
+        "file": "packages\\shared\\src\\performance\\network.ts",
+        "line": 730,
+        "type": "const"
+      },
+      {
+        "name": "AnalyticsDashboardConfig",
+        "file": "packages\\shared\\src\\performance\\performance-analytics-dashboard.ts",
+        "line": 17,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceTrend",
+        "file": "packages\\shared\\src\\performance\\performance-analytics-dashboard.ts",
+        "line": 54,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceRegression",
+        "file": "packages\\shared\\src\\performance\\performance-analytics-dashboard.ts",
+        "line": 63,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceReport",
+        "file": "packages\\shared\\src\\performance\\performance-analytics-dashboard.ts",
+        "line": 75,
+        "type": "interface"
+      },
+      {
+        "name": "CoreWebVitalsReport",
+        "file": "packages\\shared\\src\\performance\\performance-analytics-dashboard.ts",
+        "line": 100,
+        "type": "interface"
+      },
+      {
+        "name": "ResourceUsageReport",
+        "file": "packages\\shared\\src\\performance\\performance-analytics-dashboard.ts",
+        "line": 108,
+        "type": "interface"
+      },
+      {
+        "name": "UserExperienceReport",
+        "file": "packages\\shared\\src\\performance\\performance-analytics-dashboard.ts",
+        "line": 114,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceAnalyticsDashboard",
+        "file": "packages\\shared\\src\\performance\\performance-analytics-dashboard.ts",
+        "line": 125,
+        "type": "class"
+      },
+      {
+        "name": "PerformanceBaseline",
+        "file": "packages\\shared\\src\\performance\\performance-regression-tester.ts",
+        "line": 16,
+        "type": "interface"
+      },
+      {
+        "name": "BaselineMetrics",
+        "file": "packages\\shared\\src\\performance\\performance-regression-tester.ts",
+        "line": 32,
+        "type": "interface"
+      },
+      {
+        "name": "BaselineTest",
+        "file": "packages\\shared\\src\\performance\\performance-regression-tester.ts",
+        "line": 47,
+        "type": "interface"
+      },
+      {
+        "name": "TestMetrics",
+        "file": "packages\\shared\\src\\performance\\performance-test-framework.ts",
+        "line": 183,
+        "type": "interface"
+      },
+      {
+        "name": "MetricValue",
+        "file": "packages\\shared\\src\\performance\\performance-regression-tester.ts",
+        "line": 66,
+        "type": "interface"
+      },
+      {
+        "name": "TestEnvironment",
+        "file": "packages\\shared\\src\\performance\\performance-regression-tester.ts",
+        "line": 78,
+        "type": "interface"
+      },
+      {
+        "name": "RegressionResult",
+        "file": "packages\\shared\\src\\performance\\performance-regression-tester.ts",
+        "line": 92,
+        "type": "interface"
+      },
+      {
+        "name": "ComparisonResult",
+        "file": "packages\\shared\\src\\performance\\performance-regression-tester.ts",
+        "line": 104,
+        "type": "interface"
+      },
+      {
+        "name": "MetricComparison",
+        "file": "packages\\shared\\src\\performance\\performance-regression-tester.ts",
+        "line": 115,
+        "type": "interface"
+      },
+      {
+        "name": "Regression",
+        "file": "packages\\shared\\src\\performance\\performance-regression-tester.ts",
+        "line": 127,
+        "type": "interface"
+      },
+      {
+        "name": "Improvement",
+        "file": "packages\\shared\\src\\performance\\performance-regression-tester.ts",
+        "line": 139,
+        "type": "interface"
+      },
+      {
+        "name": "BudgetResult",
+        "file": "packages\\shared\\src\\performance\\performance-test-framework.ts",
+        "line": 165,
+        "type": "interface"
+      },
+      {
+        "name": "CicdConfiguration",
+        "file": "packages\\shared\\src\\performance\\performance-regression-tester.ts",
+        "line": 167,
+        "type": "interface"
+      },
+      {
+        "name": "TrendAnalysis",
+        "file": "packages\\shared\\src\\performance\\performance-regression-tester.ts",
+        "line": 200,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceRegressionTester",
+        "file": "packages\\shared\\src\\performance\\performance-regression-tester.ts",
+        "line": 232,
+        "type": "class"
+      },
+      {
+        "name": "PerformanceTestConfig",
+        "file": "packages\\shared\\src\\performance\\performance-test-framework.ts",
+        "line": 16,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceTestScenario",
+        "file": "packages\\shared\\src\\performance\\performance-test-framework.ts",
+        "line": 50,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceTestStep",
+        "file": "packages\\shared\\src\\performance\\performance-test-framework.ts",
+        "line": 61,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceAssertion",
+        "file": "packages\\shared\\src\\performance\\performance-test-framework.ts",
+        "line": 86,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceTestResult",
+        "file": "packages\\shared\\src\\performance\\performance-test-framework.ts",
+        "line": 104,
+        "type": "interface"
+      },
+      {
+        "name": "ScenarioResult",
+        "file": "packages\\shared\\src\\performance\\performance-test-framework.ts",
+        "line": 134,
+        "type": "interface"
+      },
+      {
+        "name": "StepResult",
+        "file": "packages\\shared\\src\\performance\\performance-test-framework.ts",
+        "line": 144,
+        "type": "interface"
+      },
+      {
+        "name": "AssertionResult",
+        "file": "packages\\shared\\src\\performance\\performance-test-framework.ts",
+        "line": 155,
+        "type": "interface"
+      },
+      {
+        "name": "TestError",
+        "file": "packages\\shared\\src\\performance\\performance-test-framework.ts",
+        "line": 174,
+        "type": "interface"
+      },
+      {
+        "name": "LoadTestProfile",
+        "file": "packages\\shared\\src\\performance\\performance-test-framework.ts",
+        "line": 192,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceTestFramework",
+        "file": "packages\\shared\\src\\performance\\performance-test-framework.ts",
+        "line": 207,
+        "type": "class"
+      },
+      {
+        "name": "BundleAnalysis",
+        "file": "packages\\shared\\src\\performance\\profiler.ts",
+        "line": 26,
+        "type": "interface"
+      },
+      {
+        "name": "ModuleInfo",
+        "file": "packages\\shared\\src\\performance\\profiler.ts",
+        "line": 36,
+        "type": "interface"
+      },
+      {
+        "name": "ChunkInfo",
+        "file": "packages\\shared\\src\\performance\\profiler.ts",
+        "line": 45,
+        "type": "interface"
+      },
+      {
+        "name": "DependencyInfo",
+        "file": "packages\\shared\\src\\performance\\profiler.ts",
+        "line": 53,
+        "type": "interface"
+      },
+      {
+        "name": "DuplicateInfo",
+        "file": "packages\\shared\\src\\performance\\profiler.ts",
+        "line": 61,
+        "type": "interface"
+      },
+      {
+        "name": "TreeshakingInfo",
+        "file": "packages\\shared\\src\\performance\\profiler.ts",
+        "line": 68,
+        "type": "interface"
+      },
+      {
+        "name": "RuntimePerformance",
+        "file": "packages\\shared\\src\\performance\\profiler.ts",
+        "line": 77,
+        "type": "interface"
+      },
+      {
+        "name": "measureAsyncPerformance",
+        "file": "packages\\shared\\src\\performance\\profiler.ts",
+        "line": 638,
+        "type": "function"
+      },
+      {
+        "name": "PerformanceThresholds",
+        "file": "packages\\shared\\src\\performance\\real-time-performance-monitor.ts",
+        "line": 87,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceProfile",
+        "file": "packages\\shared\\src\\performance\\real-time-performance-monitor.ts",
+        "line": 97,
+        "type": "interface"
+      },
+      {
+        "name": "PerformanceMonitorConfig",
+        "file": "packages\\shared\\src\\performance\\real-time-performance-monitor.ts",
+        "line": 111,
+        "type": "interface"
+      },
+      {
+        "name": "EncryptionConfig",
+        "file": "packages\\shared\\src\\security\\AdvancedEncryption.ts",
+        "line": 20,
+        "type": "interface"
+      },
+      {
+        "name": "EncryptedData",
+        "file": "packages\\shared\\src\\security\\AdvancedEncryption.ts",
+        "line": 32,
+        "type": "interface"
+      },
+      {
+        "name": "KeyPair",
+        "file": "packages\\shared\\src\\security\\AdvancedEncryption.ts",
+        "line": 45,
+        "type": "interface"
+      },
+      {
+        "name": "RateLimitConfig",
+        "file": "packages\\shared\\src\\security\\AdvancedRateLimiter.ts",
+        "line": 21,
+        "type": "interface"
+      },
+      {
+        "name": "RateLimitInfo",
+        "file": "packages\\shared\\src\\security\\AdvancedRateLimiter.ts",
+        "line": 32,
+        "type": "interface"
+      },
+      {
+        "name": "CSPDirectives",
+        "file": "packages\\shared\\src\\security\\headers.ts",
+        "line": 13,
+        "type": "interface"
+      },
+      {
+        "name": "SecurityHeadersConfig",
+        "file": "packages\\shared\\src\\security\\headers.ts",
+        "line": 125,
+        "type": "interface"
+      },
+      {
+        "name": "CORSConfig",
+        "file": "packages\\shared\\src\\security\\headers.ts",
+        "line": 364,
+        "type": "interface"
+      },
+      {
+        "name": "defaultSecurityHeaders",
+        "file": "packages\\shared\\src\\security\\headers.ts",
+        "line": 491,
+        "type": "const"
+      },
+      {
+        "name": "defaultCORS",
+        "file": "packages\\shared\\src\\security\\headers.ts",
+        "line": 498,
+        "type": "const"
+      },
+      {
+        "name": "VulnerabilityScanner",
+        "file": "packages\\shared\\src\\security\\pentest.ts",
+        "line": 15,
+        "type": "interface"
+      },
+      {
+        "name": "VulnerabilityResult",
+        "file": "packages\\shared\\src\\security\\pentest.ts",
+        "line": 25,
+        "type": "interface"
+      },
+      {
+        "name": "PenetrationTestReport",
+        "file": "packages\\shared\\src\\security\\pentest.ts",
+        "line": 41,
+        "type": "interface"
+      },
+      {
+        "name": "XSSScanner",
+        "file": "packages\\shared\\src\\security\\pentest.ts",
+        "line": 60,
+        "type": "class"
+      },
+      {
+        "name": "SQLInjectionScanner",
+        "file": "packages\\shared\\src\\security\\pentest.ts",
+        "line": 147,
+        "type": "class"
+      },
+      {
+        "name": "InputValidationScanner",
+        "file": "packages\\shared\\src\\security\\pentest.ts",
+        "line": 210,
+        "type": "class"
+      },
+      {
+        "name": "AuthBypassScanner",
+        "file": "packages\\shared\\src\\security\\pentest.ts",
+        "line": 277,
+        "type": "class"
+      },
+      {
+        "name": "PenetrationTestFramework",
+        "file": "packages\\shared\\src\\security\\pentest.ts",
+        "line": 333,
+        "type": "class"
+      },
+      {
+        "name": "defaultPentestFramework",
+        "file": "packages\\shared\\src\\security\\pentest.ts",
+        "line": 562,
+        "type": "const"
+      },
+      {
+        "name": "IntegratedSecurityEvent",
+        "file": "packages\\shared\\src\\security\\SecurityAnalyticsService.ts",
+        "line": 5,
+        "type": "interface"
+      },
+      {
+        "name": "SecurityAnalyticsConfig",
+        "file": "packages\\shared\\src\\security\\SecurityAnalyticsService.ts",
+        "line": 12,
+        "type": "interface"
+      },
+      {
+        "name": "SecurityAnalyticsService",
+        "file": "packages\\shared\\src\\security\\SecurityAnalyticsService.ts",
+        "line": 24,
+        "type": "class"
+      },
+      {
+        "name": "InputSanitizer",
+        "file": "packages\\shared\\src\\security\\validation.ts",
+        "line": 68,
+        "type": "class"
+      },
+      {
+        "name": "SecurityRule",
+        "file": "packages\\shared\\src\\security\\validation.ts",
+        "line": 146,
+        "type": "interface"
+      },
+      {
+        "name": "SecurityRules",
+        "file": "packages\\shared\\src\\security\\validation.ts",
+        "line": 153,
+        "type": "const"
+      },
+      {
+        "name": "ValidationResult",
+        "file": "packages\\shared\\src\\security\\validation.ts",
+        "line": 228,
+        "type": "interface"
+      },
+      {
+        "name": "ValidationError",
+        "file": "packages\\shared\\src\\security\\validation.ts",
+        "line": 235,
+        "type": "interface"
+      },
+      {
+        "name": "ValidationWarning",
+        "file": "packages\\shared\\src\\security\\validation.ts",
+        "line": 243,
+        "type": "interface"
+      },
+      {
+        "name": "SecurityValidator",
+        "file": "packages\\shared\\src\\security\\validation.ts",
+        "line": 252,
+        "type": "class"
+      },
+      {
+        "name": "SecurityBoundary",
+        "file": "packages\\shared\\src\\security\\validation.ts",
+        "line": 504,
+        "type": "function"
+      },
+      {
+        "name": "validate",
+        "file": "packages\\shared\\src\\security\\validation.ts",
+        "line": 551,
+        "type": "const"
+      },
+      {
+        "name": "SearchResult",
+        "file": "packages\\search\\src\\modern.ts",
+        "line": 29,
+        "type": "interface"
+      },
+      {
+        "name": "SearchMetrics",
+        "file": "packages\\search\\src\\index.ts",
+        "line": 24,
+        "type": "interface"
+      },
+      {
+        "name": "SearchItem",
+        "file": "packages\\search\\src\\modern.ts",
+        "line": 5,
+        "type": "interface"
+      },
+      {
+        "name": "SearchQuery",
+        "file": "packages\\search\\src\\modern.ts",
+        "line": 18,
+        "type": "interface"
+      },
+      {
+        "name": "SearchResponse",
+        "file": "packages\\search\\src\\modern.ts",
+        "line": 36,
+        "type": "interface"
+      },
+      {
+        "name": "ModernSearch",
+        "file": "packages\\search\\src\\modern.ts",
+        "line": 60,
+        "type": "class"
+      },
+      {
+        "name": "modernSearch",
+        "file": "packages\\search\\src\\modern.ts",
+        "line": 400,
+        "type": "const"
+      }
+    ],
+    "unusedImports": [],
+    "deadFunctions": [],
+    "unusedVariables": [],
+    "emptyFiles": []
+  },
+  "eliminated": [],
+  "bundleImpact": {},
+  "recommendations": [
+    "Remove 264 unused exports",
+    "Review exported API surface for over-exposure",
+    "Remove 36 unused TypeScript types",
+    "Enable TypeScript strict mode for better tree shaking",
+    "Use ES modules consistently across the codebase",
+    "Add \"sideEffects\": false to package.json files"
+  ]
+}

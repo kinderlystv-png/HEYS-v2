@@ -30,7 +30,7 @@ interface LazyComponentOptions extends ImportOptions {
 /**
  * Hook для управления lazy loading компонентов
  */
-export function useLazyComponent<T extends React.ComponentType<Record<string, unknown>>>(
+export function useLazyComponent<T extends React.ComponentType<unknown>>(
   importFunction: () => Promise<{ default: T }>,
   options: LazyComponentOptions = {}
 ) {

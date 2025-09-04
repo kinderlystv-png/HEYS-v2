@@ -1,0 +1,205 @@
+{
+  "timestamp": "2025-09-04T07:36:46.511Z",
+  "summary": {
+    "totalSizeKB": 189.76999999999995,
+    "totalFiles": 18,
+    "jsSizeKB": 142.15,
+    "cssSizeKB": 14.47,
+    "htmlSizeKB": 31.25
+  },
+  "files": [
+    {
+      "path": "assets\\heys_core_v12-ac6551da.js",
+      "size": 42.72,
+      "type": "js"
+    },
+    {
+      "path": "assets\\heys_performance_monitor-b8643643.js",
+      "size": 32.67,
+      "type": "js"
+    },
+    {
+      "path": "index.html",
+      "size": 31.25,
+      "type": "html"
+    },
+    {
+      "path": "assets\\heys_storage_supabase_v1-463550c0.js",
+      "size": 26.12,
+      "type": "js"
+    },
+    {
+      "path": "assets\\heys_analytics_ui-279cbf8e.js",
+      "size": 25.5,
+      "type": "js"
+    },
+    {
+      "path": "assets\\index-ba0dbd15.css",
+      "size": 14.47,
+      "type": "css"
+    },
+    {
+      "path": "assets\\heys_models_v1-f4f68254.js",
+      "size": 11.22,
+      "type": "js"
+    },
+    {
+      "path": "sw.js",
+      "size": 3.92,
+      "type": "js"
+    },
+    {
+      "path": ".htaccess",
+      "size": 1.41,
+      "type": "other"
+    },
+    {
+      "path": "assets\\features-4ed993c7.js.map",
+      "size": 0.1,
+      "type": "map"
+    },
+    {
+      "path": "assets\\index-5ce72314.js.map",
+      "size": 0.1,
+      "type": "map"
+    },
+    {
+      "path": "assets\\react-4ed993c7.js.map",
+      "size": 0.1,
+      "type": "map"
+    },
+    {
+      "path": "assets\\vendor-4ed993c7.js.map",
+      "size": 0.1,
+      "type": "map"
+    },
+    {
+      "path": "assets\\core-4ed993c7.js.map",
+      "size": 0.09,
+      "type": "map"
+    },
+    {
+      "path": "assets\\core-4ed993c7.js",
+      "size": 0,
+      "type": "js"
+    },
+    {
+      "path": "assets\\features-4ed993c7.js",
+      "size": 0,
+      "type": "js"
+    },
+    {
+      "path": "assets\\react-4ed993c7.js",
+      "size": 0,
+      "type": "js"
+    },
+    {
+      "path": "assets\\vendor-4ed993c7.js",
+      "size": 0,
+      "type": "js"
+    }
+  ],
+  "byType": {
+    "other": [
+      {
+        "path": ".htaccess",
+        "size": 1.41,
+        "type": "other"
+      }
+    ],
+    "js": [
+      {
+        "path": "assets\\heys_core_v12-ac6551da.js",
+        "size": 42.72,
+        "type": "js"
+      },
+      {
+        "path": "assets\\heys_performance_monitor-b8643643.js",
+        "size": 32.67,
+        "type": "js"
+      },
+      {
+        "path": "assets\\heys_storage_supabase_v1-463550c0.js",
+        "size": 26.12,
+        "type": "js"
+      },
+      {
+        "path": "assets\\heys_analytics_ui-279cbf8e.js",
+        "size": 25.5,
+        "type": "js"
+      },
+      {
+        "path": "assets\\heys_models_v1-f4f68254.js",
+        "size": 11.22,
+        "type": "js"
+      },
+      {
+        "path": "sw.js",
+        "size": 3.92,
+        "type": "js"
+      },
+      {
+        "path": "assets\\core-4ed993c7.js",
+        "size": 0,
+        "type": "js"
+      },
+      {
+        "path": "assets\\features-4ed993c7.js",
+        "size": 0,
+        "type": "js"
+      },
+      {
+        "path": "assets\\react-4ed993c7.js",
+        "size": 0,
+        "type": "js"
+      },
+      {
+        "path": "assets\\vendor-4ed993c7.js",
+        "size": 0,
+        "type": "js"
+      }
+    ],
+    "map": [
+      {
+        "path": "assets\\features-4ed993c7.js.map",
+        "size": 0.1,
+        "type": "map"
+      },
+      {
+        "path": "assets\\index-5ce72314.js.map",
+        "size": 0.1,
+        "type": "map"
+      },
+      {
+        "path": "assets\\react-4ed993c7.js.map",
+        "size": 0.1,
+        "type": "map"
+      },
+      {
+        "path": "assets\\vendor-4ed993c7.js.map",
+        "size": 0.1,
+        "type": "map"
+      },
+      {
+        "path": "assets\\core-4ed993c7.js.map",
+        "size": 0.09,
+        "type": "map"
+      }
+    ],
+    "css": [
+      {
+        "path": "assets\\index-ba0dbd15.css",
+        "size": 14.47,
+        "type": "css"
+      }
+    ],
+    "html": [
+      {
+        "path": "index.html",
+        "size": 31.25,
+        "type": "html"
+      }
+    ]
+  },
+  "recommendations": []
+}

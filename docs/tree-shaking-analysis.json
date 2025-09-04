@@ -1,0 +1,117 @@
+{
+  "timestamp": "2025-09-04T07:44:25.484Z",
+  "analysis": {
+    "starImports": 3,
+    "defaultImports": 0,
+    "largeLibraryImports": 8,
+    "namedImports": 79,
+    "treeShakableImports": 1
+  },
+  "optimizations": [
+    {
+      "type": "star-imports",
+      "description": "Replace star imports with named imports",
+      "impact": "High",
+      "files": [
+        "packages\\ui\\src\\test-setup.ts",
+        "packages\\shared\\src\\monitoring\\sentry-integration.ts",
+        "packages\\shared\\src\\monitoring\\sentry-monitoring.ts"
+      ]
+    },
+    {
+      "type": "large-imports",
+      "description": "Split large library imports into smaller chunks",
+      "impact": "Medium",
+      "count": 8
+    }
+  ],
+  "bundleImpact": {
+    "totalSizeKB": 189.76999999999995,
+    "jsFiles": [
+      {
+        "path": "assets\\core-4ed993c7.js",
+        "size": 0
+      },
+      {
+        "path": "assets\\features-4ed993c7.js",
+        "size": 0
+      },
+      {
+        "path": "assets\\heys_analytics_ui-279cbf8e.js",
+        "size": 25.5
+      },
+      {
+        "path": "assets\\heys_core_v12-ac6551da.js",
+        "size": 42.72
+      },
+      {
+        "path": "assets\\heys_models_v1-f4f68254.js",
+        "size": 11.22
+      },
+      {
+        "path": "assets\\heys_performance_monitor-b8643643.js",
+        "size": 32.67
+      },
+      {
+        "path": "assets\\heys_storage_supabase_v1-463550c0.js",
+        "size": 26.12
+      },
+      {
+        "path": "assets\\react-4ed993c7.js",
+        "size": 0
+      },
+      {
+        "path": "assets\\vendor-4ed993c7.js",
+        "size": 0
+      },
+      {
+        "path": "sw.js",
+        "size": 3.92
+      }
+    ],
+    "cssFiles": [
+      {
+        "path": "assets\\index-ba0dbd15.css",
+        "size": 14.47
+      }
+    ],
+    "otherFiles": [
+      {
+        "path": ".htaccess",
+        "size": 1.41
+      },
+      {
+        "path": "assets\\core-4ed993c7.js.map",
+        "size": 0.09
+      },
+      {
+        "path": "assets\\features-4ed993c7.js.map",
+        "size": 0.1
+      },
+      {
+        "path": "assets\\index-5ce72314.js.map",
+        "size": 0.1
+      },
+      {
+        "path": "assets\\react-4ed993c7.js.map",
+        "size": 0.1
+      },
+      {
+        "path": "assets\\vendor-4ed993c7.js.map",
+        "size": 0.1
+      },
+      {
+        "path": "index.html",
+        "size": 31.25
+      }
+    ]
+  },
+  "recommendations": [
+    "Replace 3 star imports with named imports",
+    "Optimize 8 large library imports",
+    "Consider using barrel exports for frequently imported modules",
+    "Enable side effects false in package.json files",
+    "Use dynamic imports for heavy components",
+    "Implement route-based code splitting"
+  ]
+}

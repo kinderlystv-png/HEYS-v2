@@ -18,14 +18,14 @@
   "dependencies": {
     "dompurify": "^3.2.6",
     "zod": "^3.25.76",
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.56.1"
   },
   "peerDependencies": {
     "@heys/threat-detection": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^7.2.0",
-    "typescript": "^5.2.0",
-    "vitest": "^0.34.0"
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
   }
 }

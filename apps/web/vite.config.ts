@@ -3,7 +3,8 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [
-    // Базовая конфигурация без дополнительных плагинов
+    // Bundle analyzer отключен из-за конфликта версий rollup
+    // Используем отдельный скрипт для анализа
   ],
   resolve: {
     alias: {

@@ -1,0 +1,91 @@
+{
+  "timestamp": "2025-09-04T07:33:55.503Z",
+  "packages": {
+    "packages/core": {
+      "nodeModulesSize": 0,
+      "nodeModulesCount": 12,
+      "dependencies": 3,
+      "devDependencies": 5,
+      "dependencyList": [
+        "@heys/shared",
+        "date-fns",
+        "zod"
+      ]
+    },
+    "packages/ui": {
+      "nodeModulesSize": 0,
+      "nodeModulesCount": 13,
+      "dependencies": 5,
+      "devDependencies": 13,
+      "dependencyList": [
+        "@heys/core",
+        "@heys/shared",
+        "clsx",
+        "react",
+        "react-dom"
+      ]
+    },
+    "packages/shared": {
+      "nodeModulesSize": 0,
+      "nodeModulesCount": 11,
+      "dependencies": 3,
+      "devDependencies": 3,
+      "dependencyList": [
+        "dompurify",
+        "zod",
+        "@supabase/supabase-js"
+      ]
+    },
+    "apps/web": {
+      "nodeModulesSize": 0,
+      "nodeModulesCount": 12,
+      "dependencies": 10,
+      "devDependencies": 7,
+      "dependencyList": [
+        "@heys/analytics",
+        "@heys/core",
+        "@heys/gaming",
+        "@heys/search",
+        "@heys/shared",
+        "@heys/storage",
+        "@heys/ui",
+        "react",
+        "react-dom",
+        "react-router-dom"
+      ]
+    },
+    "packages/analytics": {
+      "nodeModulesSize": 0,
+      "nodeModulesCount": 7,
+      "dependencies": 1,
+      "devDependencies": 3,
+      "dependencyList": [
+        "@heys/core"
+      ]
+    },
+    "packages/search": {
+      "nodeModulesSize": 0,
+      "nodeModulesCount": 9,
+      "dependencies": 2,
+      "devDependencies": 4,
+      "dependencyList": [
+        "@heys/core",
+        "fuse.js"
+      ]
+    }
+  },
+  "totalSize": 0,
+  "recommendations": [
+    "Remove duplicate dependency: @heys/shared",
+    "Remove duplicate dependency: zod",
+    "Remove duplicate dependency: @heys/core",
+    "Remove duplicate dependency: react",
+    "Remove duplicate dependency: react-dom",
+    "Review large dependency: date-fns",
+    "Review large dependency: react",
+    "Review large dependency: react-dom",
+    "Review large dependency: react",
+    "Review large dependency: react-dom",
+    "Many duplicate dependencies found, use workspace deduplication"
+  ]
+}

@@ -78,7 +78,7 @@ interface LazySettingsProps {
  */
 export const LazySettings: React.FC<LazySettingsProps> = ({
   category = 'all',
-  currentSettings = {},
+  currentSettings = {_},
   onSettingsChange,
   onSave,
   _onError,
@@ -106,15 +106,15 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
       console.error(`❌ Failed to load Settings ${componentName}:`, error);
     }
     onError?.(error);
-  }, [onError]);
+  }, []);
 
   // Settings change handler
   const handleSettingChange = React.useCallback((categoryKey: string, settingKey: string, value: unknown) => {
-    if (_readonly) return;
+    if (_) return;
     
     setHasUnsavedChanges(true);
     onSettingsChange?.(categoryKey, settingKey, value);
-  }, [_readonly, onSettingsChange]);
+  }, [__readonly, onSettingsChange]);
 
   // Preload on hover
   const handleCategoryHover = React.useCallback((categoryKey: string) => {
@@ -131,7 +131,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
 
   // Save settings
   const handleSave = React.useCallback(() => {
-    if (_readonly) return;
+    if (_) return;
     
     setHasUnsavedChanges(false);
     onSave?.(currentSettings);
@@ -141,7 +141,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
 
       console.log('💾 Settings saved:', currentSettings);
     }
-  }, [_readonly, currentSettings, onSave]);
+  }, [__readonly, currentSettings, onSave]);
 
   // Single category mode
   if (category !== 'all') {

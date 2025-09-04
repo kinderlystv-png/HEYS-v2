@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-09-04T07:37:39.514Z",
+  "lighthouse": {},
+  "bundle": {
+    "packages": {
+      "apps/web/dist": {
+        "sizeBytes": 194316,
+        "sizeMB": 0.19
+      },
+      "packages/core/dist": {
+        "sizeBytes": 85521,
+        "sizeMB": 0.08
+      },
+      "packages/ui/dist": {
+        "sizeBytes": 48305,
+        "sizeMB": 0.05
+      }
+    },
+    "totalSizeMB": 0.32
+  },
+  "vitals": {},
+  "network": {
+    "js": 142.14999999999998,
+    "css": 14.47,
+    "images": 0,
+    "fonts": 0,
+    "other": 33.15
+  },
+  "recommendations": []
+}
