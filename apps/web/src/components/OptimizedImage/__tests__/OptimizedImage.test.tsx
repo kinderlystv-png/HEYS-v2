@@ -2,8 +2,9 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import OptimizedImage from '../OptimizedImage';
+
 import { imageOptimizer } from '../../../utils/image-optimizer';
+import OptimizedImage from '../OptimizedImage';
 
 // Mock image optimizer
 vi.mock('../../../utils/image-optimizer', () => ({

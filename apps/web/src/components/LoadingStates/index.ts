@@ -1,5 +1,5 @@
-import { PageSkeleton } from './PageSkeleton';
 import { ComponentSkeleton, SkeletonVariants } from './ComponentSkeleton';
+import { PageSkeleton } from './PageSkeleton';
 
 export { PageSkeleton } from './PageSkeleton';
 export { ComponentSkeleton, SkeletonVariants } from './ComponentSkeleton';

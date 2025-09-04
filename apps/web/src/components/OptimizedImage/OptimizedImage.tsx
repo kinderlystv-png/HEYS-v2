@@ -1,8 +1,10 @@
 // filepath: apps/web/src/components/OptimizedImage/OptimizedImage.tsx
 
 import { useState, useEffect, useRef, ImgHTMLAttributes } from 'react';
-import { imageOptimizer, ImageOptimizationOptions, ImageMetadata } from '../../utils/image-optimizer';
+
 import { useLazyLoad } from '../../hooks/useLazyLoad';
+import { usePerformanceMetrics } from '../../hooks/useServiceWorker';
+import { imageOptimizer, ImageOptimizationOptions, ImageMetadata } from '../../utils/image-optimizer';
 
 interface OptimizedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'width' | 'height' | 'onLoad' | 'onError'> {
   src: string;
@@ -38,6 +40,8 @@ export function OptimizedImage({
   className = '',
   ...imgProps
 }: OptimizedImageProps) {
+  const { sendImageLoadMetrics, sendErrorMetrics } = usePerformanceMetrics();
+  
   const [imageState, setImageState] = useState<{
     src: string;
     metadata?: ImageMetadata;
@@ -69,6 +73,7 @@ export function OptimizedImage({
   // Устанавливаем ref для intersection observer
   useEffect(() => {
     if (imgRef.current && intersectionRef) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (intersectionRef as any).current = imgRef.current;
     }
   }, [intersectionRef]);
@@ -104,6 +109,9 @@ export function OptimizedImage({
         img.onload = () => {
           if (isCancelled) return;
           
+          const loadEndTime = performance.now();
+          const loadTime = loadEndTime - loadStartTime;
+          
           setImageState({
             src: metadata.src,
             metadata,
@@ -112,15 +120,28 @@ export function OptimizedImage({
             isOptimized: metadata.optimized
           });
 
+          // Отправляем метрики производительности в Service Worker
+          sendImageLoadMetrics(
+            src,
+            loadTime,
+            loadTime < 50, // Предполагаем кэш если загрузка быстрая
+            metadata.size
+          );
+
           onLoad?.(metadata);
         };
 
         img.onerror = () => {
           if (isCancelled) return;
           
+          // Отправляем метрики об ошибке
+          sendErrorMetrics('image_load_failed');
+          
           // Fallback к оригинальному изображению
           handleImageError(new Error('Optimized image failed to load'));
         };
+
+        const loadStartTime = performance.now();
 
         img.src = metadata.src;
 
@@ -131,7 +152,12 @@ export function OptimizedImage({
     };
 
     const handleImageError = (error: Error) => {
-      console.warn('Image optimization failed:', error);
+      // Отправляем метрики об ошибке оптимизации
+      sendErrorMetrics('image_optimization_failed');
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Image optimization failed:', error);
+      }
       
       // Пробуем fallback или оригинальное изображение
       const fallbackSrc = fallback || src;

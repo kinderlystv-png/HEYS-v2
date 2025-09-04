@@ -77,7 +77,7 @@ export function ComponentSkeleton({
           </div>
         );
 
-      case 'table-row':
+      case 'table-row': {
         const columns = variant === 'compact' ? 3 : variant === 'detailed' ? 6 : 4;
         return (
           <tr className="border-b">
@@ -88,6 +88,7 @@ export function ComponentSkeleton({
             ))}
           </tr>
         );
+      }
 
       case 'chart':
         return (

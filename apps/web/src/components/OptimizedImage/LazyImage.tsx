@@ -1,11 +1,10 @@
 // filepath: apps/web/src/components/OptimizedImage/LazyImage.tsx
 
 import { ComponentProps } from 'react';
+
 import OptimizedImage from './OptimizedImage';
 
 interface LazyImageProps extends ComponentProps<typeof OptimizedImage> {
-  threshold?: number;
-  rootMargin?: string;
   fadeIn?: boolean;
   blurUp?: boolean;
 }
@@ -15,8 +14,6 @@ interface LazyImageProps extends ComponentProps<typeof OptimizedImage> {
  * Автоматически применяет оптимальные настройки для lazy loading
  */
 export function LazyImage({
-  threshold = 0.1,
-  rootMargin = '50px',
   fadeIn = true,
   blurUp = true,
   placeholder = 'blur',

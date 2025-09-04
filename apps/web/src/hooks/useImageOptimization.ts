@@ -1,6 +1,7 @@
 // filepath: apps/web/src/hooks/useImageOptimization.ts
 
 import { useState, useEffect, useCallback } from 'react';
+
 import { imageOptimizer, ImageOptimizationOptions, ImageMetadata } from '../utils/image-optimizer';
 
 interface UseImageOptimizationOptions extends ImageOptimizationOptions {
@@ -100,7 +101,9 @@ export function useImageOptimization(
         preload: true
       });
     } catch (error) {
-      console.warn('Image preload failed:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Image preload failed:', error);
+      }
     }
   }, [src, optimizationOptions]);
 

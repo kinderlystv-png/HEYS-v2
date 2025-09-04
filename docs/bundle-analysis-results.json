@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-09-04T07:33:55.503Z",
+  "timestamp": "2025-09-04T08:26:39.735Z",
   "packages": {
     "packages/core": {
       "nodeModulesSize": 0,
@@ -38,7 +38,7 @@
     },
     "apps/web": {
       "nodeModulesSize": 0,
-      "nodeModulesCount": 12,
+      "nodeModulesCount": 13,
       "dependencies": 10,
       "devDependencies": 7,
       "dependencyList": [
