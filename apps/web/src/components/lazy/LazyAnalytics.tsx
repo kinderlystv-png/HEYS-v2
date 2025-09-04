@@ -2,6 +2,7 @@
 // Lazy loaded Analytics Dashboard - Performance Sprint Day 3
 
 import React, { Suspense } from 'react';
+
 import { createChunkedLazyComponent } from '../../utils/dynamicImport';
 import { AnalyticsSkeleton } from '../loading/ComponentSkeleton';
 
@@ -43,7 +44,7 @@ interface LazyAnalyticsProps {
   /** Тип отображения аналитики */
   view?: 'dashboard' | 'charts' | 'table' | 'full';
   /** Данные для отображения */
-  data?: any;
+  data?: unknown;
   /** Колбэк при ошибке загрузки */
   onError?: (error: Error) => void;
 }
@@ -60,7 +61,15 @@ export const LazyAnalytics: React.FC<LazyAnalyticsProps> = ({
 
   // Error boundary для lazy компонентов
   const handleError = React.useCallback((error: Error, componentName: string) => {
-    console.error(`❌ Failed to load ${componentName}:`, error);
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      if (process.env.NODE_ENV === 'development') {
+
+        // eslint-disable-next-line no-console
+
+        console.error(`❌ Failed to load ${componentName}:`, error);
+    }
+    }
     setLoadingComponent(null);
     onError?.(error);
   }, [onError]);
@@ -164,10 +173,10 @@ export const LazyAnalytics: React.FC<LazyAnalyticsProps> = ({
 // Заглушки для компонентов (будут заменены реальными)
 // Эти компоненты должны быть в отдельных файлах для оптимального splitting
 
-const AnalyticsDashboardComponent: React.FC<any> = ({ data, onError }) => {
+const AnalyticsDashboardComponent: React.FC<Record<string, unknown>> = ({ data, onError }) => {
   React.useEffect(() => {
     // Симуляция возможной ошибки
-    if (Math.random() < 0.01 && onError) {
+    if (Math.random() < 0.01 && _onError) {
       onError(new Error('Random analytics error'));
     }
   }, [onError]);
@@ -194,7 +203,7 @@ const AnalyticsDashboardComponent: React.FC<any> = ({ data, onError }) => {
   );
 };
 
-const AnalyticsChartsComponent: React.FC<any> = ({ data }) => {
+const AnalyticsChartsComponent: React.FC<Record<string, unknown>> = ({ data }) => {
   return (
     <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px', marginBottom: '20px' }}>
       <h3>📈 Performance Charts</h3>
@@ -210,7 +219,7 @@ const AnalyticsChartsComponent: React.FC<any> = ({ data }) => {
   );
 };
 
-const AnalyticsDataTableComponent: React.FC<any> = ({ data }) => {
+const AnalyticsDataTableComponent: React.FC<Record<string, unknown>> = ({ data }) => {
   return (
     <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
       <h3>📋 Data Table</h3>

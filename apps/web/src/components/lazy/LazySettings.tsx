@@ -2,6 +2,7 @@
 // Lazy loaded Settings Panel - Performance Sprint Day 3
 
 import React, { Suspense } from 'react';
+
 import { createChunkedLazyComponent } from '../../utils/dynamicImport';
 import { SettingsSkeleton } from '../loading/ComponentSkeleton';
 
@@ -61,11 +62,11 @@ interface LazySettingsProps {
   /** Активная категория настроек */
   category?: 'general' | 'performance' | 'security' | 'notifications' | 'advanced' | 'all';
   /** Текущие настройки */
-  currentSettings?: Record<string, any>;
+  currentSettings?: Record<string, unknown>;
   /** Колбэк при изменении настроек */
-  onSettingsChange?: (category: string, key: string, value: any) => void;
+  onSettingsChange?: (category: string, key: string, value: unknown) => void;
   /** Колбэк при сохранении */
-  onSave?: (settings: Record<string, any>) => void;
+  onSave?: (settings: Record<string, unknown>) => void;
   /** Колбэк при ошибке */
   onError?: (error: Error) => void;
   /** Режим только для чтения */
@@ -80,7 +81,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
   currentSettings = {},
   onSettingsChange,
   onSave,
-  onError,
+  _onError,
   readonly = false
 }) => {
   const [activeCategory, setActiveCategory] = React.useState<string>(category === 'all' ? 'general' : category);
@@ -98,34 +99,49 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
 
   // Error handling
   const handleComponentError = React.useCallback((error: Error, componentName: string) => {
-    console.error(`❌ Failed to load Settings ${componentName}:`, error);
+    if (process.env.NODE_ENV === 'development') {
+
+      // eslint-disable-next-line no-console
+
+      console.error(`❌ Failed to load Settings ${componentName}:`, error);
+    }
     onError?.(error);
   }, [onError]);
 
   // Settings change handler
-  const handleSettingChange = React.useCallback((categoryKey: string, settingKey: string, value: any) => {
-    if (readonly) return;
+  const handleSettingChange = React.useCallback((categoryKey: string, settingKey: string, value: unknown) => {
+    if (_readonly) return;
     
     setHasUnsavedChanges(true);
     onSettingsChange?.(categoryKey, settingKey, value);
-  }, [readonly, onSettingsChange]);
+  }, [_readonly, onSettingsChange]);
 
   // Preload on hover
   const handleCategoryHover = React.useCallback((categoryKey: string) => {
     if (!preloadQueue.has(categoryKey)) {
       setPreloadQueue(prev => new Set([...prev, categoryKey]));
-      console.log(`🚀 Preloading settings ${categoryKey} component`);
+      if (process.env.NODE_ENV === 'development') {
+
+        // eslint-disable-next-line no-console
+
+        console.log(`🚀 Preloading settings ${categoryKey} component`);
+    }
     }
   }, [preloadQueue]);
 
   // Save settings
   const handleSave = React.useCallback(() => {
-    if (readonly) return;
+    if (_readonly) return;
     
     setHasUnsavedChanges(false);
     onSave?.(currentSettings);
-    console.log('💾 Settings saved:', currentSettings);
-  }, [readonly, currentSettings, onSave]);
+    if (process.env.NODE_ENV === 'development') {
+
+      // eslint-disable-next-line no-console
+
+      console.log('💾 Settings saved:', currentSettings);
+    }
+  }, [_readonly, currentSettings, onSave]);
 
   // Single category mode
   if (category !== 'all') {
@@ -133,7 +149,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
       const categoryProps = {
         settings: currentSettings,
         onChange: handleSettingChange,
-        readonly,
+        _readonly,
         onError: (error: Error) => handleComponentError(error, category)
       };
 
@@ -190,7 +206,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
           ⚙️ Настройки
         </h3>
         
-        {settingsCategories.map(cat => (
+        {settingsCategories.map((cat: unknown) => (
           <button
             key={cat.key}
             onClick={() => setActiveCategory(cat.key)}
@@ -320,7 +336,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
 
 // Settings Components (заглушки для демонстрации)
 
-const GeneralSettingsComponent: React.FC<any> = ({ settings, onChange, readonly }) => {
+const GeneralSettingsComponent: React.FC<Record<string, unknown>> = ({ _settings, _onChange, readonly }) => {
   const [localSettings, setLocalSettings] = React.useState({
     language: settings?.language || 'ru',
     theme: settings?.theme || 'light',
@@ -328,7 +344,7 @@ const GeneralSettingsComponent: React.FC<any> = ({ settings, onChange, readonly 
     dateFormat: settings?.dateFormat || 'DD.MM.YYYY'
   });
 
-  const handleChange = (key: string, value: any) => {
+  const handleChange = (key: string, value: unknown) => {
     setLocalSettings(prev => ({ ...prev, [key]: value }));
     onChange?.('general', key, value);
   };
@@ -359,7 +375,7 @@ const GeneralSettingsComponent: React.FC<any> = ({ settings, onChange, readonly 
             Тема оформления:
           </label>
           <div style={{ display: 'flex', gap: '12px' }}>
-            {['light', 'dark', 'auto'].map(theme => (
+            {['light', 'dark', 'auto'].map((theme: unknown) => (
               <label key={theme} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <input
                   type="radio"
@@ -398,7 +414,7 @@ const GeneralSettingsComponent: React.FC<any> = ({ settings, onChange, readonly 
   );
 };
 
-const PerformanceSettingsComponent: React.FC<any> = ({ settings, onChange, readonly }) => {
+const PerformanceSettingsComponent: React.FC<Record<string, unknown>> = ({ _settings, _onChange, readonly }) => {
   const [localSettings, setLocalSettings] = React.useState({
     enableCaching: settings?.enableCaching ?? true,
     lazyLoading: settings?.lazyLoading ?? true,
@@ -406,7 +422,7 @@ const PerformanceSettingsComponent: React.FC<any> = ({ settings, onChange, reado
     maxConcurrentRequests: settings?.maxConcurrentRequests || 5
   });
 
-  const handleChange = (key: string, value: any) => {
+  const handleChange = (key: string, value: unknown) => {
     setLocalSettings(prev => ({ ...prev, [key]: value }));
     onChange?.('performance', key, value);
   };
@@ -481,7 +497,7 @@ const PerformanceSettingsComponent: React.FC<any> = ({ settings, onChange, reado
   );
 };
 
-const SecuritySettingsComponent: React.FC<any> = ({ settings, onChange, readonly }) => {
+const SecuritySettingsComponent: React.FC<Record<string, unknown>> = ({ _settings, _onChange, readonly }) => {
   return (
     <div>
       <h2>🔐 Настройки безопасности</h2>
@@ -499,7 +515,7 @@ const SecuritySettingsComponent: React.FC<any> = ({ settings, onChange, readonly
   );
 };
 
-const NotificationSettingsComponent: React.FC<any> = ({ settings, onChange, readonly }) => {
+const NotificationSettingsComponent: React.FC<Record<string, unknown>> = ({ _settings, _onChange, readonly }) => {
   return (
     <div>
       <h2>🔔 Настройки уведомлений</h2>
@@ -514,7 +530,7 @@ const NotificationSettingsComponent: React.FC<any> = ({ settings, onChange, read
   );
 };
 
-const AdvancedSettingsComponent: React.FC<any> = ({ settings, onChange, readonly }) => {
+const AdvancedSettingsComponent: React.FC<Record<string, unknown>> = ({ _settings, _onChange, readonly }) => {
   return (
     <div>
       <h2>🛠️ Расширенные настройки</h2>

@@ -28,7 +28,7 @@ interface PreloadState {
  * Hook для preloading маршрутов и компонентов
  */
 export function usePreloadRoute(
-  importFunction: () => Promise<{ default: any }>,
+  importFunction: () => Promise<{ default: unknown }>,
   options: PreloadOptions = {}
 ) {
   const {
@@ -82,14 +82,28 @@ export function usePreloadRoute(
       current.state.isPreloading = false;
       current.state.preloadedAt = Date.now();
 
-      console.log(`✅ Route preloaded successfully (priority: ${priority})`);
+      if (process.env.NODE_ENV === 'development') {
+
+
+        // eslint-disable-next-line no-console
+
+
+        console.log(`✅ Route preloaded successfully (priority: ${priority})`);
+    }
 
     } catch (error) {
       // Ошибка preload
       current.state.isPreloading = false;
       current.state.error = error as Error;
       
-      console.warn(`⚠️ Route preload failed (priority: ${priority}):`, error);
+      if (process.env.NODE_ENV === 'development') {
+
+      
+        // eslint-disable-next-line no-console
+
+      
+        console.warn(`⚠️ Route preload failed (priority: ${priority}):`, error);
+    }
     }
   }, [importFunction, delay, priority]);
 
@@ -170,16 +184,16 @@ export function usePreloadRoute(
 export function usePreloadRoutes(
   routes: Array<{
     name: string;
-    importFunction: () => Promise<{ default: any }>;
+    importFunction: () => Promise<{ default: unknown }>;
     options?: PreloadOptions;
   }>
 ) {
-  const preloaders = routes.map(route => 
+  const preloaders = routes.map((route: unknown) => 
     usePreloadRoute(route.importFunction, route.options)
   );
 
   const preloadAll = useCallback(async () => {
-    const promises = preloaders.map(preloader => preloader.preload());
+    const promises = preloaders.map((preloader: unknown) => preloader.preload());
     await Promise.allSettled(promises);
   }, [preloaders]);
 
@@ -202,10 +216,15 @@ export function usePreloadRoutes(
     // Preload по приоритету с задержками
     for (const [priority, group] of Object.entries(priorityGroups)) {
       if (group.length > 0) {
-        console.log(`🚀 Preloading ${priority} priority routes (${group.length} routes)`);
+        if (process.env.NODE_ENV === 'development') {
+
+          // eslint-disable-next-line no-console
+
+          console.log(`🚀 Preloading ${priority} priority routes (${group.length} routes)`);
+    }
         
         await Promise.allSettled(
-          group.map(preloader => preloader.preload())
+          group.map((preloader: unknown) => preloader.preload())
         );
 
         // Задержка между группами приоритета
@@ -219,7 +238,7 @@ export function usePreloadRoutes(
   }, [routes, preloaders]);
 
   const getOverallState = () => {
-    const states = preloaders.map(p => p.state);
+    const states = preloaders.map((p: unknown) => p.state);
     
     return {
       totalRoutes: routes.length,
@@ -287,7 +306,14 @@ export function usePreloadPerformance() {
       performanceRef.current.totalErrors++;
     }
 
-    console.log(`📊 Preload ${name}: ${duration}ms (${success ? 'success' : 'error'})`);
+    if (process.env.NODE_ENV === 'development') {
+
+
+      // eslint-disable-next-line no-console
+
+
+      console.log(`📊 Preload ${name}: ${duration}ms (${success ? 'success' : 'error'})`);
+    }
   }, []);
 
   const getPerformanceReport = useCallback(() => {
@@ -306,7 +332,7 @@ export function usePreloadPerformance() {
     }
 
     const successfulPreloads = preloadTimes.filter(p => p.success);
-    const durations = successfulPreloads.map(p => p.duration);
+    const durations = successfulPreloads.map((p: unknown) => p.duration);
     
     return {
       totalPreloads: preloadTimes.length,

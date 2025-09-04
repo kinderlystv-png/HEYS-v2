@@ -29,15 +29,14 @@ export interface LazyComponentOptions extends ImportOptions {
 /**
  * Создает lazy компонент с дополнительными возможностями
  */
-export function createLazyComponent<T extends ComponentType<any>>(
+export function createLazyComponent<T extends ComponentType<unknown>>(
   importFunc: () => Promise<{ default: T }>,
   options: LazyComponentOptions = {}
 ): LazyExoticComponent<T> {
   const {
     delay = 0,
     retries = 3,
-    timeout = 10000,
-    showLoading = true
+    timeout = 10000
   } = options;
 
   // Обертываем import функцию с retry логикой
@@ -62,13 +61,19 @@ export function createLazyComponent<T extends ComponentType<any>>(
           timeoutPromise
         ]);
 
-        // Логируем успешную загрузку
-        console.log(`✅ Component loaded successfully (attempt ${i + 1})`);
+        // Логируем успешную загрузку для мониторинга
+        if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
+          console.log(`✅ Component loaded successfully (attempt ${i + 1})`);
+        }
         return result;
 
       } catch (error) {
         lastError = error as Error;
-        console.warn(`⚠️ Import failed (attempt ${i + 1}/${retries + 1}):`, error);
+        if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
+          console.warn(`⚠️ Import failed (attempt ${i + 1}/${retries + 1}):`, error);
+        }
         
         // Экспоненциальная задержка между попытками
         if (i < retries) {
@@ -78,7 +83,10 @@ export function createLazyComponent<T extends ComponentType<any>>(
     }
 
     // Если все попытки неудачны
-    console.error('❌ All import attempts failed:', lastError);
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.error('❌ All import attempts failed:', lastError);
+    }
     throw lastError;
   };
 
@@ -89,14 +97,20 @@ export function createLazyComponent<T extends ComponentType<any>>(
  * Preload функция для предварительной загрузки
  */
 export function preloadComponent(
-  importFunc: () => Promise<{ default: ComponentType<any> }>
+  importFunc: () => Promise<{ default: ComponentType<unknown> }>
 ): Promise<void> {
   return importFunc()
     .then(() => {
-      console.log('🚀 Component preloaded successfully');
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.log('🚀 Component preloaded successfully');
+      }
     })
     .catch(error => {
-      console.warn('⚠️ Component preload failed:', error);
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.warn('⚠️ Component preload failed:', error);
+      }
     });
 }
 
@@ -104,7 +118,7 @@ export function preloadComponent(
  * Создает preloader для компонента
  */
 export function createComponentPreloader(
-  importFunc: () => Promise<{ default: ComponentType<any> }>
+  importFunc: () => Promise<{ default: ComponentType<unknown> }>
 ) {
   let preloadPromise: Promise<void> | null = null;
 
@@ -148,7 +162,7 @@ export function createChunkName(category: keyof typeof BUNDLE_CHUNKS, componentN
 /**
  * Dynamic import с указанием chunk name
  */
-export function createChunkedImport<T extends ComponentType<any>>(
+export function createChunkedImport<T extends ComponentType<unknown>>(
   importFunc: () => Promise<{ default: T }>
 ): () => Promise<{ default: T }> {
   return () => importFunc();
@@ -157,12 +171,13 @@ export function createChunkedImport<T extends ComponentType<any>>(
 /**
  * Утилита для создания lazy компонентов с chunk names
  */
-export function createChunkedLazyComponent<T extends ComponentType<any>>(
+export function createChunkedLazyComponent<T extends ComponentType<unknown>>(
   category: keyof typeof BUNDLE_CHUNKS,
   componentName: string,
   importFunc: () => Promise<{ default: T }>,
   options: LazyComponentOptions = {}
 ): LazyExoticComponent<T> {
+  // Создаем chunk name для webpack magic comments
   const chunkName = createChunkName(category, componentName);
   
   // В production используем chunk name для webpack
@@ -174,7 +189,8 @@ export function createChunkedLazyComponent<T extends ComponentType<any>>(
     ...options,
     // Добавляем chunk name в опции для отладки
     ...(process.env.NODE_ENV === 'development' && {
-      // В dev режиме добавляем информацию о chunk
+      // Можем использовать chunkName для логирования
+      metadata: { chunkName }
     })
   });
 }

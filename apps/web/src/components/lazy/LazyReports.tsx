@@ -2,6 +2,7 @@
 // Lazy loaded Reports Section - Performance Sprint Day 3
 
 import React, { Suspense } from 'react';
+
 import { createChunkedLazyComponent } from '../../utils/dynamicImport';
 import { ReportsSkeleton } from '../loading/ComponentSkeleton';
 
@@ -51,13 +52,13 @@ interface LazyReportsProps {
   /** Режим отображения отчетов */
   mode?: 'generator' | 'viewer' | 'exporter' | 'history' | 'full';
   /** Данные отчетов */
-  reportsData?: any;
+  reportsData?: unknown;
   /** Фильтры для отчетов */
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
   /** Колбэк при генерации отчета */
-  onGenerate?: (reportConfig: any) => void;
+  onGenerate?: (reportConfig: unknown) => void;
   /** Колбэк при экспорте */
-  onExport?: (format: string, data: any) => void;
+  onExport?: (exportConfig: unknown) => void;
   /** Колбэк при ошибке */
   onError?: (error: Error) => void;
 }
@@ -78,7 +79,15 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
 
   // Error handling
   const handleComponentError = React.useCallback((error: Error, componentName: string) => {
-    console.error(`❌ Failed to load Reports ${componentName}:`, error);
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      if (process.env.NODE_ENV === 'development') {
+
+        // eslint-disable-next-line no-console
+
+        console.error(`❌ Failed to load Reports ${componentName}:`, error);
+    }
+    }
     onError?.(error);
   }, [onError]);
 
@@ -88,7 +97,15 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
       setPreloadedComponents(prev => new Set([...prev, tabName]));
       
       // Логируем preload
-      console.log(`🚀 Preloading reports ${tabName} component`);
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        if (process.env.NODE_ENV === 'development') {
+
+          // eslint-disable-next-line no-console
+
+          console.log(`🚀 Preloading reports ${tabName} component`);
+    }
+      }
     }
   }, [preloadedComponents]);
 
@@ -161,7 +178,7 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
           { key: 'viewer', label: '👁️ Просмотр', icon: '🔍' },
           { key: 'exporter', label: '📤 Экспорт', icon: '💾' },
           { key: 'history', label: '📚 История', icon: '⏰' }
-        ].map(tab => (
+        ].map((tab: unknown) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -254,7 +271,7 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
 // Компоненты-заглушки для демонстрации lazy loading
 // В production это должны быть отдельные файлы
 
-const ReportsGeneratorComponent: React.FC<any> = ({ onGenerate, filters, onError }) => {
+const ReportsGeneratorComponent: React.FC<Record<string, unknown>> = ({ onGenerate, filters }) => {
   const [reportType, setReportType] = React.useState('analytics');
   const [dateRange, setDateRange] = React.useState('week');
   const [isGenerating, setIsGenerating] = React.useState(false);
@@ -265,7 +282,12 @@ const ReportsGeneratorComponent: React.FC<any> = ({ onGenerate, filters, onError
       await new Promise(resolve => setTimeout(resolve, 2000)); // Симуляция генерации
       const reportConfig = { type: reportType, range: dateRange, filters };
       onGenerate?.(reportConfig);
-      console.log('✅ Report generated:', reportConfig);
+      if (process.env.NODE_ENV === 'development') {
+
+        // eslint-disable-next-line no-console
+
+        console.log('✅ Report generated:', reportConfig);
+    }
     } catch (error) {
       onError?.(error as Error);
     } finally {
@@ -334,7 +356,7 @@ const ReportsGeneratorComponent: React.FC<any> = ({ onGenerate, filters, onError
   );
 };
 
-const ReportsViewerComponent: React.FC<any> = ({ data, filters, onError }) => {
+const ReportsViewerComponent: React.FC<Record<string, unknown>> = ({ data, filters }) => {
   const [viewMode, setViewMode] = React.useState('table');
 
   const sampleData = data || [
@@ -392,7 +414,7 @@ const ReportsViewerComponent: React.FC<any> = ({ data, filters, onError }) => {
               </tr>
             </thead>
             <tbody>
-              {sampleData.map(report => (
+              {sampleData.map((report: unknown) => (
                 <tr key={report.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                   <td style={{ padding: '12px 8px' }}>{report.id}</td>
                   <td style={{ padding: '12px 8px' }}>{report.name}</td>
@@ -429,7 +451,7 @@ const ReportsViewerComponent: React.FC<any> = ({ data, filters, onError }) => {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-          {sampleData.map(report => (
+          {sampleData.map((report: unknown) => (
             <div key={report.id} style={{
               padding: '16px',
               border: '1px solid #e0e0e0',
@@ -472,7 +494,7 @@ const ReportsViewerComponent: React.FC<any> = ({ data, filters, onError }) => {
   );
 };
 
-const ReportsExporterComponent: React.FC<any> = ({ data, onExport, onError }) => {
+const ReportsExporterComponent: React.FC<Record<string, unknown>> = ({ data, onExport }) => {
   const [exportFormat, setExportFormat] = React.useState('pdf');
   const [isExporting, setIsExporting] = React.useState(false);
 
@@ -481,7 +503,12 @@ const ReportsExporterComponent: React.FC<any> = ({ data, onExport, onError }) =>
     try {
       await new Promise(resolve => setTimeout(resolve, 1500)); // Симуляция экспорта
       onExport?.(exportFormat, data);
-      console.log(`✅ Exported as ${exportFormat}:`, data);
+      if (process.env.NODE_ENV === 'development') {
+
+        // eslint-disable-next-line no-console
+
+        console.log(`✅ Exported as ${exportFormat}:`, data);
+    }
     } catch (error) {
       onError?.(error as Error);
     } finally {
@@ -498,7 +525,7 @@ const ReportsExporterComponent: React.FC<any> = ({ data, onExport, onError }) =>
           Формат экспорта:
         </label>
         <div style={{ display: 'flex', gap: '12px' }}>
-          {['pdf', 'excel', 'csv', 'json'].map(format => (
+          {['pdf', 'excel', 'csv', 'json'].map((format: unknown) => (
             <label key={format} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <input
                 type="radio"
@@ -535,7 +562,7 @@ const ReportsExporterComponent: React.FC<any> = ({ data, onExport, onError }) =>
   );
 };
 
-const ReportsHistoryComponent: React.FC<any> = ({ onError }) => {
+const ReportsHistoryComponent: React.FC<Record<string, unknown>> = ({  }) => {
   const [historyData] = React.useState([
     { id: 1, action: 'Generated Analytics Report', user: 'admin', timestamp: '2025-09-04 10:30:00', status: 'success' },
     { id: 2, action: 'Exported Performance Report', user: 'manager', timestamp: '2025-09-04 09:15:00', status: 'success' },
@@ -548,7 +575,7 @@ const ReportsHistoryComponent: React.FC<any> = ({ onError }) => {
       <h2>📚 История отчетов</h2>
       
       <div style={{ marginBottom: '20px' }}>
-        {historyData.map(item => (
+        {historyData.map((item: unknown) => (
           <div key={item.id} style={{
             padding: '12px',
             border: '1px solid #f0f0f0',

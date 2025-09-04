@@ -2,6 +2,7 @@
 // Lazy Component Hook - Performance Sprint Day 3
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+
 import { createLazyComponent, ImportOptions } from '../utils/dynamicImport';
 
 interface LazyComponentState {
@@ -29,7 +30,7 @@ interface LazyComponentOptions extends ImportOptions {
 /**
  * Hook для управления lazy loading компонентов
  */
-export function useLazyComponent<T extends React.ComponentType<any>>(
+export function useLazyComponent<T extends React.ComponentType<Record<string, unknown>>>(
   importFunction: () => Promise<{ default: T }>,
   options: LazyComponentOptions = {}
 ) {
@@ -88,13 +89,23 @@ export function useLazyComponent<T extends React.ComponentType<any>>(
       // Используем preload promise если есть
       if (preloadPromiseRef.current) {
         if (verbose) {
-          console.log('🚀 Using preloaded component');
+          if (process.env.NODE_ENV === 'development') {
+
+            // eslint-disable-next-line no-console
+
+            console.log('🚀 Using preloaded component');
+    }
         }
         componentModule = await preloadPromiseRef.current;
         setState(prev => ({ ...prev, wasPreloaded: true }));
       } else {
         if (verbose) {
-          console.log('📥 Loading component on demand');
+          if (process.env.NODE_ENV === 'development') {
+
+            // eslint-disable-next-line no-console
+
+            console.log('📥 Loading component on demand');
+    }
         }
         componentModule = await importFunction();
       }
@@ -111,7 +122,12 @@ export function useLazyComponent<T extends React.ComponentType<any>>(
       }));
 
       if (verbose) {
-        console.log(`✅ Component loaded in ${loadTime.toFixed(2)}ms`);
+        if (process.env.NODE_ENV === 'development') {
+
+          // eslint-disable-next-line no-console
+
+          console.log(`✅ Component loaded in ${loadTime.toFixed(2)}ms`);
+    }
       }
 
       return componentRef.current;
@@ -127,7 +143,12 @@ export function useLazyComponent<T extends React.ComponentType<any>>(
       }));
 
       if (verbose) {
-        console.error(`❌ Component failed to load after ${loadTime.toFixed(2)}ms:`, error);
+        if (process.env.NODE_ENV === 'development') {
+
+          // eslint-disable-next-line no-console
+
+          console.error(`❌ Component failed to load after ${loadTime.toFixed(2)}ms:`, error);
+    }
       }
 
       return null;
@@ -141,7 +162,12 @@ export function useLazyComponent<T extends React.ComponentType<any>>(
     }
 
     if (verbose) {
-      console.log('🚀 Preloading component...');
+      if (process.env.NODE_ENV === 'development') {
+
+        // eslint-disable-next-line no-console
+
+        console.log('🚀 Preloading component...');
+    }
     }
 
     preloadPromiseRef.current = importFunction();
@@ -149,12 +175,22 @@ export function useLazyComponent<T extends React.ComponentType<any>>(
     try {
       await preloadPromiseRef.current;
       if (verbose) {
-        console.log('✅ Component preloaded successfully');
+        if (process.env.NODE_ENV === 'development') {
+
+          // eslint-disable-next-line no-console
+
+          console.log('✅ Component preloaded successfully');
+    }
       }
     } catch (error) {
       preloadPromiseRef.current = null;
       if (verbose) {
-        console.warn('⚠️ Component preload failed:', error);
+        if (process.env.NODE_ENV === 'development') {
+
+          // eslint-disable-next-line no-console
+
+          console.warn('⚠️ Component preload failed:', error);
+    }
       }
     }
   }, [state.isLoaded, importFunction, verbose]);
@@ -217,7 +253,7 @@ export function useLazyComponent<T extends React.ComponentType<any>>(
 /**
  * Hook для управления группой lazy компонентов
  */
-export function useLazyComponents<T extends Record<string, React.ComponentType<any>>>(
+export function useLazyComponents<T extends Record<string, React.ComponentType<Record<string, unknown>>>>(
   components: Record<keyof T, () => Promise<{ default: T[keyof T] }>>,
   options: LazyComponentOptions = {}
 ) {
@@ -228,13 +264,13 @@ export function useLazyComponents<T extends Record<string, React.ComponentType<a
 
   // Загрузка всех компонентов
   const loadAll = useCallback(async () => {
-    const promises = Object.values(componentHooks).map(hook => hook.load());
+    const promises = Object.values(componentHooks).map((hook: unknown) => hook.load());
     await Promise.allSettled(promises);
   }, [componentHooks]);
 
   // Preload всех компонентов
   const preloadAll = useCallback(async () => {
-    const promises = Object.values(componentHooks).map(hook => hook.preload());
+    const promises = Object.values(componentHooks).map((hook: unknown) => hook.preload());
     await Promise.allSettled(promises);
   }, [componentHooks]);
 
@@ -279,7 +315,7 @@ export function useLazyComponents<T extends Record<string, React.ComponentType<a
 /**
  * Hook для lazy loading с условиями
  */
-export function useConditionalLazyComponent<T extends React.ComponentType<any>>(
+export function useConditionalLazyComponent<T extends React.ComponentType<Record<string, unknown>>>(
   importFunction: () => Promise<{ default: T }>,
   condition: boolean,
   options: LazyComponentOptions = {}
@@ -306,13 +342,13 @@ export function useConditionalLazyComponent<T extends React.ComponentType<any>>(
 /**
  * Hook для batch loading компонентов
  */
-export function useBatchLazyLoading<T extends React.ComponentType<any>>(
+export function useBatchLazyLoading<T extends React.ComponentType<Record<string, unknown>>>(
   importFunctions: Array<() => Promise<{ default: T }>>,
   batchSize: number = 3,
   options: LazyComponentOptions = {}
 ) {
   const [currentBatch, setCurrentBatch] = useState(0);
-  const componentHooks = importFunctions.map(importFn => 
+  const componentHooks = importFunctions.map((importFn: unknown) => 
     useLazyComponent(importFn, { ...options, autoLoad: false })
   );
 
@@ -322,11 +358,18 @@ export function useBatchLazyLoading<T extends React.ComponentType<any>>(
     const endIndex = Math.min(startIndex + batchSize, componentHooks.length);
     
     const batchHooks = componentHooks.slice(startIndex, endIndex);
-    const promises = batchHooks.map(hook => hook.load());
+    const promises = batchHooks.map((hook: unknown) => hook.load());
     
     await Promise.allSettled(promises);
     
-    console.log(`✅ Batch ${batchIndex + 1} loaded (${batchHooks.length} components)`);
+    if (process.env.NODE_ENV === 'development') {
+
+    
+      // eslint-disable-next-line no-console
+
+    
+      console.log(`✅ Batch ${batchIndex + 1} loaded (${batchHooks.length} components)`);
+    }
   }, [componentHooks, batchSize]);
 
   // Загрузка следующего батча
