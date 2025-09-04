@@ -125,6 +125,7 @@
     "rimraf": "^5.0.0",
     "rollup-plugin-visualizer": "^6.0.3",
     "sharp": "^0.34.3",
+    "terser": "^5.44.0",
     "tsup": "^7.2.0",
     "tsx": "^4.20.5",
     "turbo": "^1.13.4",
