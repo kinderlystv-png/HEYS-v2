@@ -1,0 +1,154 @@
+# GitHub Actions Workflow для автоматического сканирования безопасности
+# Интегрирует SAST (Static Application Security Testing) в CI/CD пайплайн
+# 
+# @created КТ4 - Автоматизация безопасности  
+# @author HEYS Security Team
+
+name: 🛡️ Security Scan & SAST
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '**/*.ts'
+      - '**/*.tsx'
+      - '**/*.js'
+      - '**/*.jsx'
+      - '**/package.json'
+      - '**/pnpm-lock.yaml'
+  pull_request:
+    branches: [ main, develop ]
+    types: [opened, synchronize, reopened]
+  schedule:
+    # Ежедневное сканирование в 2:00 UTC
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '18.x'
+  PNPM_VERSION: '8.x'
+
+jobs:
+  # ==================== СТАТИЧЕСКИЙ АНАЛИЗ БЕЗОПАСНОСТИ ====================
+  sast-analysis:
+    name: 🔍 SAST Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Полная история для анализа
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 🔽 Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔍 Run Custom SAST Scanner
+        run: |
+          echo "🔍 Running custom SAST security scanner..."
+          node scripts/security/sast-scan.js
+
+      - name: 🔍 ESLint Security Scan
+        run: |
+          echo "🔍 Running ESLint security analysis..."
+          pnpm run lint:security || echo "ESLint security issues found"
+
+      - name: 🛡️ Semgrep SAST Scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/owasp-top-ten
+            p/javascript
+            p/typescript
+            p/react
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+  # ==================== АНАЛИЗ ЗАВИСИМОСТЕЙ ====================
+  dependency-security:
+    name: 📦 Dependency Security
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 🔽 Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔍 Run Custom Dependency Scanner
+        run: |
+          echo "🔍 Running custom dependency security scanner..."
+          node scripts/security/dependency-check.js
+
+      - name: 🔍 Audit Dependencies
+        run: |
+          echo "🔍 Running dependency security audit..."
+          pnpm audit --audit-level high
+
+  # ==================== ГЕНЕРАЦИЯ ОТЧЕТА БЕЗОПАСНОСТИ ====================
+  security-report:
+    name: 📊 Security Report
+    needs: [sast-analysis, dependency-security]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 🔽 Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 📊 Generate Security Report
+        run: |
+          echo "📊 Generating consolidated security report..."
+          node scripts/security/security-report.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SECURITY_SCAN_RESULTS: ${{ needs.sast-analysis.result }}
+          DEPENDENCY_SCAN_RESULTS: ${{ needs.dependency-security.result }}
+
+      - name: 📋 Upload Security Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report-${{ github.run_id }}
+          path: |
+            security-reports/
+          retention-days: 30

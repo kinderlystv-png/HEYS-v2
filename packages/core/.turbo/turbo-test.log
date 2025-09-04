@@ -4,68 +4,93 @@
 
 ▲ [WARNING] The condition "types" here will never be used as it comes after both "import" and "require" [package.json]
 
-    package.json:10:6:
-      10 │       "types": "./dist/index.d.ts"
-         ╵       ~~~~~~~
+    package.json:9:6:
+      9 │       "types": "./dist/index.d.ts"
+        ╵       ~~~~~~~
 
   The "import" condition comes earlier and will be used for all "import" statements:
 
-    package.json:8:6:
-      8 │       "import": "./dist/index.js",
+    package.json:7:6:
+      7 │       "import": "./dist/index.js",
         ╵       ~~~~~~~~
 
   The "require" condition comes earlier and will be used for all "require" calls:
 
-    package.json:9:6:
-      9 │       "require": "./dist/index.cjs",
+    package.json:8:6:
+      8 │       "require": "./dist/index.cjs",
         ╵       ~~~~~~~~~
 
 ▲ [WARNING] The condition "types" here will never be used as it comes after both "import" and "require" [package.json]
 
-    package.json:15:6:
-      15 │       "types": "./dist/models/index.d.ts"
+    package.json:14:6:
+      14 │       "types": "./dist/models/index.d.ts"
          ╵       ~~~~~~~
 
   The "import" condition comes earlier and will be used for all "import" statements:
 
-    package.json:13:6:
-      13 │       "import": "./dist/models/index.js",
+    package.json:12:6:
+      12 │       "import": "./dist/models/index.js",
          ╵       ~~~~~~~~
 
   The "require" condition comes earlier and will be used for all "require" calls:
 
-    package.json:14:6:
-      14 │       "require": "./dist/models/index.cjs",
+    package.json:13:6:
+      13 │       "require": "./dist/models/index.cjs",
          ╵       ~~~~~~~~~
 
 ▲ [WARNING] The condition "types" here will never be used as it comes after both "import" and "require" [package.json]
 
-    package.json:20:6:
-      20 │       "types": "./dist/services/index.d.ts"
+    package.json:19:6:
+      19 │       "types": "./dist/services/index.d.ts"
          ╵       ~~~~~~~
 
   The "import" condition comes earlier and will be used for all "import" statements:
 
-    package.json:18:6:
-      18 │       "import": "./dist/services/index.js",
+    package.json:17:6:
+      17 │       "import": "./dist/services/index.js",
          ╵       ~~~~~~~~
 
   The "require" condition comes earlier and will be used for all "require" calls:
 
-    package.json:19:6:
-      19 │       "require": "./dist/services/index.cjs",
+    package.json:18:6:
+      18 │       "require": "./dist/services/index.cjs",
          ╵       ~~~~~~~~~
 
 
 [1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/! HEYS 2/packages/core[39m
 
- [32m✓[39m src/__tests__/my-first.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
- [32m✓[39m src/__tests__/user.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 13[2mms[22m[39m
- [32m✓[39m src/__tests__/basic.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 13[2mms[22m[39m
- [32m✓[39m src/__tests__/food.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 18[2mms[22m[39m
- [32m✓[39m src/__tests__/training.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [31m❯[39m src/tests/security-automation-basic.test.js [2m([22m[2m23 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[32m 95[2mms[22m[39m
+[31m   [31m×[31m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mФайлы скриптов безопасности[2m > [22mSAST Scanner должен существовать[39m[32m 38[2mms[22m[39m
+[31m     → expected '#!/usr/bin/env node\r\n/**\r\n * SAST…' to contain 'class SastSecurityScanner'[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mФайлы скриптов безопасности[2m > [22mDependency Checker должен существовать[32m 1[2mms[22m[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mФайлы скриптов безопасности[2m > [22mSecurity Report Consolidator должен существовать[32m 1[2mms[22m[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mGitHub Actions Workflow[2m > [22mWorkflow файл должен существовать[32m 0[2mms[22m[39m
+[31m   [31m×[31m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mGitHub Actions Workflow[2m > [22mWorkflow должен содержать security jobs[39m[32m 8[2mms[22m[39m
+[31m     → expected '# GitHub Actions Workflow для автомат…' to contain 'name: Security Scan'[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mСтруктура безопасности[2m > [22mДиректория scripts/security должна существовать[32m 1[2mms[22m[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mСтруктура безопасности[2m > [22mВсе основные скрипты должны быть ES modules[32m 3[2mms[22m[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mСтруктура безопасности[2m > [22mСкрипты должны содержать правильные shebang для Node.js[32m 1[2mms[22m[39m
+[31m   [31m×[31m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mКонфигурация безопасности[2m > [22mSAST Scanner должен иметь правила безопасности[39m[32m 14[2mms[22m[39m
+[31m     → expected '#!/usr/bin/env node\r\n/**\r\n * SAST…' to contain 'sql-injection'[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mКонфигурация безопасности[2m > [22mDependency Checker должен проверять критические пакеты[32m 1[2mms[22m[39m
+[31m   [31m×[31m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mКонфигурация безопасности[2m > [22mSecurity Report должен иметь систему оценки[39m[32m 8[2mms[22m[39m
+[31m     → expected '#!/usr/bin/env node\r\n/**\r\n * Сист…' to contain 'severityLevels'[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mСистема отчетности[2m > [22mСкрипты должны поддерживать JSON отчеты[32m 1[2mms[22m[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mСистема отчетности[2m > [22mДолжна быть поддержка HTML отчетов[32m 1[2mms[22m[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mСистема отчетности[2m > [22mДолжна быть поддержка SARIF формата[32m 2[2mms[22m[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mИнтеграция CI/CD[2m > [22mWorkflow должен использовать наши скрипты[32m 1[2mms[22m[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mИнтеграция CI/CD[2m > [22mWorkflow должен поддерживать различные триггеры[32m 1[2mms[22m[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mФункциональность детекции[2m > [22mSAST Scanner должен детектировать различные типы уязвимостей[32m 1[2mms[22m[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mФункциональность детекции[2m > [22mDependency Checker должен проверять уровни критичности[32m 1[2mms[22m[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mКонсолидация отчетов[2m > [22mReport Consolidator должен поддерживать множественные источники[32m 1[2mms[22m[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mКонсолидация отчетов[2m > [22mДолжна быть система дедупликации уязвимостей[32m 1[2mms[22m[39m
+   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mКонсолидация отчетов[2m > [22mДолжны быть compliance проверки[32m 1[2mms[22m[39m
+   [32m✓[39m КТ4 - Файловая структура проекта[2m > [22mОсновные директории должны существовать[32m 1[2mms[22m[39m
+   [32m✓[39m КТ4 - Файловая структура проекта[2m > [22mpackage.json должен содержать необходимые зависимости[32m 2[2mms[22m[39m
+ [32m✓[39m src/__tests__/my-first.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/__tests__/food.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m src/__tests__/training.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 116[2mms[22m[39m
 [90mstderr[2m | src/__tests__/legacy.test.ts[2m > [22m[2mAnalyticsService[2m > [22m[2mtrack[2m > [22m[2mshould handle provider errors gracefully
- [32m✓[39m src/__tests__/legacy.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 25[2mms[22m[39m
 [22m[39mAnalytics provider error: Error: Provider error
     at [90mC:\! HEYS 2\packages\core\[39msrc\__tests__\legacy.test.ts:163:42
     at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:155:11
@@ -74,100 +99,10 @@
     at new Promise (<anonymous>)
     at runWithTimeout (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1863:10)
     at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1574:12)
+ [32m✓[39m src/__tests__/user.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 17[2mms[22m[39m
 [90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
     at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1729:8)
     at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1729:8)
 
- [31m❯[39m src/__tests__/secure.test.ts [2m([22m[2m12 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[32m 39[2mms[22m[39m
-[31m   [31m×[31m SecureUserManager[2m > [22mshould validate user data before creation[39m[32m 13[2mms[22m[39m
-
-[31m     → User validation failed[39m
-[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 5 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
-   [32m✓[39m SecureUserManager[2m > [22mshould reject invalid user data[32m 12[2mms[22m[39m
-
-   [32m✓[39m SecureUserManager[2m > [22mshould sanitize search queries[32m 1[2mms[22m[39m
-[31m   [31m×[31m SecureDayManager[2m > [22mshould validate day data before creation[39m[32m 2[2mms[22m[39m
-[31m     → Day data validation failed[39m
-   [32m✓[39m SecureDayManager[2m > [22mshould sanitize content when retrieving days[32m 1[2mms[22m[39m
-[31m   [31m×[31m SecureSessionManager[2m > [22mshould validate session data before creation[39m[32m 2[2mms[22m[39m
-[31m     → Session validation failed[39m
-   [32m✓[39m SecureSessionManager[2m > [22mshould validate session tokens[32m 1[2mms[22m[39m
-   [32m✓[39m SecureHeysCore[2m > [22mshould initialize with validated configuration[32m 1[2mms[22m[39m
-[31m   [31m×[31m SecureHeysCore[2m > [22mshould handle secure API requests[39m[32m 1[2mms[22m[39m
-[31m     → API request validation failed[39m
-[41m[1m FAIL [22m[49m src/__tests__/secure.test.ts[2m > [22mSecureUserManager[2m > [22mshould validate user data before creation
-[31m[1mSecurityError[22m: User validation failed[39m
-   [32m✓[39m SecureHeysCore[2m > [22mshould reject malformed API requests[32m 1[2mms[22m[39m
-[36m [2m❯[22m SecureUserManager.createUser src/secure.ts:[2m28:13[22m[39m
-[31m   [31m×[31m SecureHeysCore[2m > [22mshould handle POST requests with validation[39m[32m 2[2mms[22m[39m
-[31m     → API request validation failed[39m
-   [32m✓[39m SecureHeysCore[2m > [22mshould require authorization for DELETE requests[32m 0[2mms[22m[39m
-
-[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m6 passed[39m[22m[90m (7)[39m
-    [90m 26| [39m
-    [90m 27| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
-[2m      Tests [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m52 passed[39m[22m[90m (57)[39m
-[2m   Start at [22m 11:26:48
-[2m   Duration [22m 7.95s[2m (transform 7.17s, setup 984ms, collect 8.22s, tests 131ms, environment 12.37s, prepare 4.02s)[22m
-
-    [90m 28| [39m      throw new SecurityError('User validation failed', validation.err…
-    [90m   | [39m            [31m^[39m
-    [90m 29| [39m    }
-    [90m 30| [39m
-[90m [2m❯[22m src/__tests__/secure.test.ts:[2m46:20[22m[39m
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯[22m[39m
-
-[41m[1m FAIL [22m[49m src/__tests__/secure.test.ts[2m > [22mSecureDayManager[2m > [22mshould validate day data before creation
-[31m[1mSecurityError[22m: Day data validation failed[39m
-[36m [2m❯[22m SecureDayManager.createDay src/secure.ts:[2m99:13[22m[39m
-    [90m 97| [39m
-    [90m 98| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
-    [90m 99| [39m      throw new SecurityError('Day data validation failed', validation…
-    [90m   | [39m            [31m^[39m
-    [90m100| [39m    }
-    [90m101| [39m
-[90m [2m❯[22m src/__tests__/secure.test.ts:[2m88:20[22m[39m
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯[22m[39m
-
-[41m[1m FAIL [22m[49m src/__tests__/secure.test.ts[2m > [22mSecureSessionManager[2m > [22mshould validate session data before creation
-[31m[1mSecurityError[22m: Session validation failed[39m
-[36m [2m❯[22m SecureSessionManager.createSession src/secure.ts:[2m165:13[22m[39m
-    [90m163| [39m
-    [90m164| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
-    [90m165| [39m      throw new SecurityError('Session validation failed', validation.…
-    [90m   | [39m            [31m^[39m
-    [90m166| [39m    }
-    [90m167| [39m
-[90m [2m❯[22m src/__tests__/secure.test.ts:[2m116:20[22m[39m
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯[22m[39m
-
-[41m[1m FAIL [22m[49m src/__tests__/secure.test.ts[2m > [22mSecureHeysCore[2m > [22mshould handle secure API requests
-[31m[1mSecurityError[22m: API request validation failed[39m
-[36m [2m❯[22m SecureHeysCore.handleApiRequest src/secure.ts:[2m233:13[22m[39m
-    [90m231| [39m
-    [90m232| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
-    [90m233| [39m      throw new SecurityError('API request validation failed', validat…
-    [90m   | [39m            [31m^[39m
-    [90m234| [39m    }
-    [90m235| [39m
-[90m [2m❯[22m src/__tests__/secure.test.ts:[2m157:20[22m[39m
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯[22m[39m
-
-[41m[1m FAIL [22m[49m src/__tests__/secure.test.ts[2m > [22mSecureHeysCore[2m > [22mshould handle POST requests with validation
-[31m[1mSecurityError[22m: API request validation failed[39m
-[36m [2m❯[22m SecureHeysCore.handleApiRequest src/secure.ts:[2m233:13[22m[39m
-    [90m231| [39m
-    [90m232| [39m    [35mif[39m ([33m![39mvalidation[33m.[39misValid) {
-    [90m233| [39m      throw new SecurityError('API request validation failed', validat…
-    [90m   | [39m            [31m^[39m
-    [90m234| [39m    }
-    [90m235| [39m
-[90m [2m❯[22m src/__tests__/secure.test.ts:[2m185:20[22m[39m
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯[22m[39m
-
- ELIFECYCLE  Test failed. See above for more details.
+ [32m✓[39m src/__tests__/legacy.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m src/__tests__/basic.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m

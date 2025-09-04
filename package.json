@@ -1,6 +1,7 @@
 {
   "name": "@heys/monorepo",
   "version": "13.0.0",
+  "type": "module",
   "private": true,
   "description": "HEYS - Monorepo for nutrition and training management system",
   "license": "MIT",

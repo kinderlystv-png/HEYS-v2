@@ -72,18 +72,18 @@
       
       const reloadData = () => {
         if (cancelled) return;
-        console.log('[Profile] Reloading data after client change...');
+        // Тихая перезагрузка данных профиля
         
         const newProfile = lsGet('heys_profile', {
           firstName:'', lastName:'', gender:'Мужской',
           weight:70, height:175, age:30,
           sleepHours:8, insulinWaveHours:3
         });
-        console.log('[Profile] Loaded profile:', newProfile);
+        // Тихая загрузка профиля
         setProfile(newProfile);
         
         const newZones = lsGet('heys_hr_zones', defaultZones);
-        console.log('[Profile] Loaded zones:', newZones);
+        // Тихая загрузка зон
         setZones(newZones);
       };
       
@@ -103,11 +103,11 @@
     }, [window.HEYS && window.HEYS.currentClientId]);
 
   React.useEffect(() => {
-    console.log('[Profile] Saving profile:', profile);
+    // Тихое сохранение профиля без логов
     lsSet('heys_profile', profile);
   }, [profile]);
   React.useEffect(()=>{
-    console.log('[Profile] Saving zones:', zones);
+    // Тихое сохранение зон без логов
     lsSet('heys_hr_zones', zones);
   }, [zones]);
 
@@ -206,7 +206,7 @@
     });
     // Больше не подгружаем нормы из облака при каждом рендере — только при смене клиента (bootstrapClientSync вызывается в index.html)
     React.useEffect(() => {
-      console.log('[Norms] Saving norms:', norms);
+      // Тихое сохранение норм без логов
       lsSet('heys_norms', norms);
     }, [norms]);
     
@@ -218,12 +218,12 @@
       
       const reloadNorms = () => {
         if (cancelled) return;
-        console.log('[Norms] Reloading norms after client change...');
+        // Тихая перезагрузка норм
         
         const newNorms = lsGet('heys_norms', {
           carbsPct:0, proteinPct:0, badFatPct:0, superbadFatPct:0, simpleCarbPct:0, giPct:0, harmPct:0, fiberPct:0
         });
-        console.log('[Norms] Loaded norms:', newNorms);
+        // Тихая загрузка норм
         setNorms(newNorms);
       };
       

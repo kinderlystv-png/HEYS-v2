@@ -29,5 +29,6 @@
       "dependsOn": ["^build"],
       "outputs": []
     }
-  }
+  },
+  "globalEnv": ["NODE_ENV"]
 }

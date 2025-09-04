@@ -69,9 +69,11 @@
   function lsGet(key, def){ try{ const v = localStorage.getItem(key); return v? JSON.parse(v): def; }catch(e){ return def; } }
   function lsSet(key, val){ 
     try{ 
-      console.log('[lsSet] Saving to localStorage:', key, val);
+      // Логируем только важные операции, не данные пользователя
+      if (key.includes('_current') || key.includes('session')) {
+        console.log('[lsSet] Saving key:', key);
+      }
       localStorage.setItem(key, JSON.stringify(val)); 
-      console.log('[lsSet] Saving to cloud:', key);
       window.HEYS.saveClientKey(key, val); 
     }catch(e){
       console.error('[lsSet] Error saving:', key, e);

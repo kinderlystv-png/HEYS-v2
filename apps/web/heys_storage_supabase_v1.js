@@ -211,7 +211,7 @@
     
     // Увеличиваем throttling с 4 до 30 секунд для снижения нагрузки
     if (cloud._lastClientSync && cloud._lastClientSync.clientId === client_id && (now - cloud._lastClientSync.ts) < 30000){
-      log('client bootstrap skipped (throttled)', client_id);
+      // Тихий пропуск throttled запросов
       return;
     }
     

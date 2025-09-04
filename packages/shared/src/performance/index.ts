@@ -12,8 +12,76 @@ export { defaultProfiler, measurePerformance, PerformanceProfiler } from './prof
 
 export type { BundleAnalysis, PerformanceMetric, RuntimePerformance } from './profiler';
 
-// Bundle analysis
-export { BundleAnalyzer, defaultBundleAnalyzer } from './bundle-analyzer';
+// Bundle analysis (новая система)
+export { BundleAnalyzer, bundleAnalyzer } from './BundleAnalyzer';
+export type { BundleMetrics, BaselineMetrics } from './BundleAnalyzer';
+
+// Tree Shaking - удаление неиспользуемого кода
+export { TreeShaker, treeShaker } from './TreeShaker';
+export type {
+  UnusedExport,
+  TreeShakingAnalysis,
+  TreeShakingConfig
+} from './TreeShaker';
+
+// Code Splitting - разделение кода на chunks
+export { CodeSplitter } from './CodeSplitter';
+export type {
+  SplitPoint,
+  CodeSplittingAnalysis
+} from './CodeSplitter';
+
+// Lazy Loading - ленивая загрузка ресурсов (НОВОЕ)
+export { LazyLoader, LazyLoadingStrategy, ResourceType } from './LazyLoader';
+export type { LazyLoadingConfig, LazyLoadingMetrics } from './LazyLoader';
+
+// Lazy Loading конфигурации и утилиты
+export {
+  aggressiveLazyConfig,
+  balancedLazyConfig,
+  conservativeLazyConfig,
+  mobileLazyConfig,
+  slowNetworkLazyConfig,
+  premiumLazyConfig,
+  lazyLoadingStrategies,
+  deviceSpecificConfigs,
+  lazyLoadingConfigs,
+  LazyConfigDetector,
+  LazyLoadingHelpers,
+  createLazyConfig
+} from './lazy-loading-config';
+
+// Lazy Loading компоненты
+export { 
+  LazyComponent, 
+  LazyComponentFactory, 
+  globalLazyComponent 
+} from './components/LazyComponent';
+
+// Tree Shaking Configurations
+export {
+  viteTreeShakingConfig,
+  webpackTreeShakingConfig,
+  rollupTreeShakingConfig,
+  esbuildTreeShakingConfig,
+  treeShakingPresets,
+  getBundlerConfig,
+  getTreeShakingPreset,
+  createTreeShakingConfig
+} from './tree-shaking-config';
+
+// Code Splitting Configurations
+export {
+  viteCodeSplittingConfig,
+  webpackCodeSplittingConfig,
+  rollupCodeSplittingConfig,
+  codeSplittingPresets,
+  createCodeSplittingConfig,
+  reactSplittingHelpers
+} from './code-splitting-config';
+
+// Bundle analysis (legacy)
+export { BundleAnalyzer as LegacyBundleAnalyzer, defaultBundleAnalyzer } from './bundle-analyzer';
 
 export type { OptimizationRecommendation } from './bundle-analyzer';
 

@@ -46,8 +46,8 @@
     <link rel="dns-prefetch" href="https://unpkg.com">
     
     <!-- HTTP/2 Server Push hints -->
-    <link rel="preload" href="https://unpkg.com/react@18/umd/react.production.min.js" as="script" crossorigin>
-    <link rel="preload" href="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" as="script" crossorigin>
+    <link rel="preload" href="https://unpkg.com/react@18/umd/react.development.js" as="script" crossorigin="anonymous">
+    <link rel="preload" href="https://unpkg.com/react-dom@18/umd/react-dom.development.js" as="script" crossorigin="anonymous">
     
     <!-- Critical resource preloading with priority hints -->
     <link rel="preload" href="heys_core_v12.js" as="script" fetchpriority="high">
@@ -66,9 +66,9 @@
     <div id="root"></div>
 
     <!-- libs with defer and priority for optimal loading -->
-    <script defer src="https://unpkg.com/react@18/umd/react.production.min.js" fetchpriority="high"></script>
-    <script defer src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" fetchpriority="high"></script>
-    <script defer src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js" fetchpriority="low"></script>
+    <script defer src="https://unpkg.com/react@18/umd/react.development.js" fetchpriority="high" crossorigin="anonymous"></script>
+    <script defer src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" fetchpriority="high" crossorigin="anonymous"></script>
+    <script defer src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js" fetchpriority="low" crossorigin="anonymous"></script>
 
     <!-- app modules with defer and optimized priority -->
     <script defer src="heys_performance_monitor.js" fetchpriority="high"></script>
@@ -97,9 +97,22 @@
 
       (function () {
         window.HEYS = window.HEYS || {};
-        const React = window.React,
-          ReactDOM = window.ReactDOM;
-        const { useState, useEffect } = React;
+        // Wait for React to load
+        let reactCheckCount = 0;
+        function initializeApp() {
+          if (!window.React || !window.ReactDOM) {
+            reactCheckCount++;
+            if (reactCheckCount === 1 || reactCheckCount % 10 === 0) {
+              console.log('⏳ Waiting for React to load...');
+            }
+            setTimeout(initializeApp, 100);
+            return;
+          }
+          
+          console.log('✅ React loaded, initializing app...');
+          const React = window.React,
+            ReactDOM = window.ReactDOM;
+          const { useState, useEffect } = React;
 
         // init cloud (safe if no cloud module)
         if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
@@ -731,6 +744,10 @@
         }
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(React.createElement(App));
+        }
+        
+        // Start initialization
+        initializeApp();
       })();
     </script>
   </body>
