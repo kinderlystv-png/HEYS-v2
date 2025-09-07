@@ -8,6 +8,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
+
 import { CORSManager, CSPBuilder, SecurityHeadersManager } from '../headers';
 import {
   InputSanitizer,
@@ -395,7 +396,7 @@ describe('Security Integration Tests', () => {
     }
   });
 
-  it('should work with SecurityBoundary decorator concept', () => {
+  it('should work with SecurityBoundary decorator concept', async () => {
     // This test demonstrates how the SecurityBoundary decorator would work
     // In actual usage, it would be applied to class methods
     const validator = new SecurityValidator();
@@ -412,7 +413,7 @@ describe('Security Integration Tests', () => {
       return 'Method executed successfully';
     };
 
-    expect(async () => {
+    await expect(async () => {
       await mockMethod({
         id: 'invalid-uuid',
         email: 'not-an-email',

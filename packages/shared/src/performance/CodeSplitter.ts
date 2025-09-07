@@ -364,9 +364,21 @@ export class CodeSplitter {
    * Проверяет, должен ли путь быть исключен
    */
   private shouldExclude(relativePath: string): boolean {
-    return this.config.excludePatterns.some(pattern => 
-      relativePath.includes(pattern) || new RegExp(pattern).test(relativePath)
-    );
+    return this.config.excludePatterns.some(pattern => {
+      // Если паттерн содержит wildcard, преобразуем в регулярку
+      if (pattern.includes('*')) {
+        const regexPattern = pattern
+          .replace(/\./g, '\\.')  // экранируем точки
+          .replace(/\*/g, '.*');  // заменяем * на .*
+        try {
+          return new RegExp(regexPattern).test(relativePath);
+        } catch {
+          return false;
+        }
+      }
+      // Обычная проверка на включение
+      return relativePath.includes(pattern);
+    });
   }
 
   /**

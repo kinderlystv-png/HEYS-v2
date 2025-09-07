@@ -1,0 +1,23 @@
+{
+  "name": "testing-integration-package",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Универсальный пакет для интеграции эталонной системы тестирования",
+  "main": "utils/project-detector.js",
+  "scripts": {
+    "detect": "node utils/project-detector.js",
+    "setup": "node utils/project-detector.js"
+  },
+  "keywords": [
+    "testing",
+    "vitest",
+    "integration",
+    "automation",
+    "react",
+    "vue",
+    "svelte",
+    "angular"
+  ],
+  "author": "Testing Integration Team",
+  "license": "MIT"
+}

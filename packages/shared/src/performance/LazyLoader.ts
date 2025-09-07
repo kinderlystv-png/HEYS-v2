@@ -156,6 +156,12 @@ export class LazyLoader {
    * Добавление элемента для ленивой загрузки
    */
   observe(element: Element, options: Partial<LazyLoadableElement> = {}): void {
+    // Проверка на null или undefined
+    if (!element) {
+      console.warn('LazyLoader: Cannot observe null or undefined element');
+      return;
+    }
+
     if (this.loadedElements.has(element) || this.loadingElements.has(element)) {
       return;
     }

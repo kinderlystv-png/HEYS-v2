@@ -58,7 +58,9 @@
     "test:unit": "vitest run",
     "test:watch": "pnpm -r run test:watch",
     "type-check": "turbo run type-check",
-    "workspace:graph": "pnpm list --depth=0 --json"
+    "workspace:graph": "pnpm list --depth=0 --json",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -95,13 +97,14 @@
     "@sentry/browser": "^10.8.0",
     "@supabase/supabase-js": "^2.56.1",
     "@swc/core": "^1.13.5",
-    "@testing-library/jest-dom": "^6.4.6",
+    "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^14.5.2",
+    "@testing-library/user-event": "^14.6.1",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
+    "@vitejs/plugin-react": "^5.0.2",
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "3.2.4",
     "chalk": "^5.6.0",
@@ -132,6 +135,7 @@
     "turbo": "^1.13.4",
     "typescript": "^5.9.2",
     "vite-bundle-analyzer": "^1.2.3",
+    "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4",
     "web-vitals": "3.4.0"
   },
