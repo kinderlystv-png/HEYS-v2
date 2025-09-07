@@ -1,8 +1,9 @@
 // filepath: packages/shared/src/performance/LazyLoader.simple.test.ts
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { LazyLoader } from './LazyLoader';
+
 import { balancedLazyConfig } from './lazy-loading-config';
+import { LazyLoader } from './LazyLoader';
 
 // Mock IntersectionObserver
 const mockIntersectionObserver = vi.fn();

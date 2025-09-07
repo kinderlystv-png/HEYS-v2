@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { CodeSplitter } from './CodeSplitter';
 
 describe('CodeSplitter - Упрощенные тесты', () => {
