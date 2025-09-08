@@ -1,8 +1,8 @@
-import { log, createHttpLogger } from '@heys/logger';
 import type { Handle, HandleServerError } from '@sveltejs/kit';
 
-// Логирование HTTP запросов
-const httpLogger = createHttpLogger('sveltekit-server');
+import { log } from '../src/lib/logger.js';
+
+// Создаем логгер для сервера
 
 export const handle: Handle = async ({ event, resolve }) => {
   // Добавляем логирование к каждому запросу

@@ -4,6 +4,7 @@
  */
 
 import { createServer } from 'http';
+
 import { log } from '@heys/logger';
 
 const HEALTH_PORT = process.env.HEALTH_PORT || 3001;
@@ -50,11 +51,11 @@ async function healthCheck() {
 if (import.meta.url === `file://${process.argv[1]}`) {
   healthCheck()
     .then(() => {
-      console.log('✅ Health check passed');
+      log.info('✅ Health check passed');
       process.exit(0);
     })
     .catch((error) => {
-      console.error('❌ Health check failed:', error.message);
+      log.error('❌ Health check failed:', { error: error.message });
       process.exit(1);
     });
 }

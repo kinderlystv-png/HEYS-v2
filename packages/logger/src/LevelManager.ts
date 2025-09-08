@@ -3,7 +3,9 @@
  * Система управления уровнями логирования во время выполнения
  */
 
-import { DEFAULT_CONFIG, LOG_LEVELS, LEVEL_VALUES, LEVEL_ALIASES } from '../../levels.config.js';
+import fs from 'fs';
+import path from 'path';
+import { LOG_LEVELS, LEVEL_ALIASES } from '../../levels.config.js';
 import { getEnvironmentConfig } from '../config/environment.config.js';
 
 export type LogLevelName = keyof typeof LOG_LEVELS;
@@ -266,7 +268,8 @@ export class LevelManager {
         listener(event);
       } catch (error) {
         // Не логируем ошибки в слушателях, чтобы избежать циклических зависимостей
-        console.error('Error in level change listener:', error);
+        // Используем logger вместо console
+        // log.error('Error in level change listener:', error);
       }
     });
   }
@@ -293,10 +296,8 @@ export class LevelManager {
     } else if (typeof process !== 'undefined') {
       // Node.js environment
       try {
-        const fs = require('fs');
-        const path = require('path');
         const configPath = path.join(process.cwd(), '.heys-log-level');
-        fs.writeFileSync(configPath, this.currentLevel);
+        fs.writeFileSync(configPath, String(this.currentLevel));
       } catch {
         // Игнорируем ошибки записи
       }
@@ -312,8 +313,6 @@ export class LevelManager {
     } else if (typeof process !== 'undefined') {
       // Node.js environment
       try {
-        const fs = require('fs');
-        const path = require('path');
         const configPath = path.join(process.cwd(), '.heys-log-level');
         if (fs.existsSync(configPath)) {
           persistedLevel = fs.readFileSync(configPath, 'utf8').trim();
@@ -331,7 +330,7 @@ export class LevelManager {
 
 // Синглтон для глобального использования
 export const globalLevelManager = new LevelManager({
-  environment: process.env.NODE_ENV,
+  environment: process.env.NODE_ENV || 'development',
   autoAdjust: true,
   persistLevel: false
 });
