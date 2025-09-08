@@ -1,10 +1,10 @@
 {
   "name": "@heys/monorepo",
   "version": "13.0.0",
-  "type": "module",
   "private": true,
   "description": "HEYS - Monorepo for nutrition and training management system",
   "license": "MIT",
+  "type": "module",
   "workspaces": [
     "packages/*",
     "apps/*",
@@ -22,7 +22,7 @@
     "deploy": "node scripts/deploy.js",
     "deps:check": "pnpm audit",
     "deps:update": "pnpm update -r",
-    "dev": "cross-env PORT=3001 turbo run dev",
+    "dev": "cross-env PORT=3001 turbo run dev --concurrency=15",
     "dev:web": "cross-env PORT=3001 pnpm --filter='@heys/web' run dev",
     "docker:build": "docker build -t heys:latest .",
     "docker:build:dev": "docker build --target development -t heys:dev .",
@@ -55,12 +55,12 @@
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:ui": "playwright test --ui",
     "test:packages": "pnpm -r --filter='./packages/*' run test",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
     "test:unit": "vitest run",
     "test:watch": "pnpm -r run test:watch",
     "type-check": "turbo run type-check",
-    "workspace:graph": "pnpm list --depth=0 --json",
-    "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "workspace:graph": "pnpm list --depth=0 --json"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
