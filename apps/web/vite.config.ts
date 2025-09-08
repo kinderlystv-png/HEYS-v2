@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite';
-
 import path from 'path';
+
+import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [
@@ -104,10 +104,15 @@ export default defineConfig({
   server: {
     port: parseInt(process.env.PORT || '3001'),
     host: true,
+    strictPort: true,
     // Performance headers
     headers: {
       'Cache-Control': 'public, max-age=0',
       'X-Content-Type-Options': 'nosniff',
+    },
+    // HMR configuration
+    hmr: {
+      port: parseInt(process.env.PORT || '3001'),
     },
     proxy: {
       '/api': {
