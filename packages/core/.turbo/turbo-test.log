@@ -59,50 +59,89 @@
 
 [1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/! HEYS 2/packages/core[39m
 
- [31m❯[39m src/tests/security-automation-basic.test.js [2m([22m[2m23 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[32m 95[2mms[22m[39m
-[31m   [31m×[31m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mФайлы скриптов безопасности[2m > [22mSAST Scanner должен существовать[39m[32m 38[2mms[22m[39m
-[31m     → expected '#!/usr/bin/env node\r\n/**\r\n * SAST…' to contain 'class SastSecurityScanner'[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mФайлы скриптов безопасности[2m > [22mDependency Checker должен существовать[32m 1[2mms[22m[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mФайлы скриптов безопасности[2m > [22mSecurity Report Consolidator должен существовать[32m 1[2mms[22m[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mGitHub Actions Workflow[2m > [22mWorkflow файл должен существовать[32m 0[2mms[22m[39m
-[31m   [31m×[31m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mGitHub Actions Workflow[2m > [22mWorkflow должен содержать security jobs[39m[32m 8[2mms[22m[39m
-[31m     → expected '# GitHub Actions Workflow для автомат…' to contain 'name: Security Scan'[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mСтруктура безопасности[2m > [22mДиректория scripts/security должна существовать[32m 1[2mms[22m[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mСтруктура безопасности[2m > [22mВсе основные скрипты должны быть ES modules[32m 3[2mms[22m[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mСтруктура безопасности[2m > [22mСкрипты должны содержать правильные shebang для Node.js[32m 1[2mms[22m[39m
-[31m   [31m×[31m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mКонфигурация безопасности[2m > [22mSAST Scanner должен иметь правила безопасности[39m[32m 14[2mms[22m[39m
-[31m     → expected '#!/usr/bin/env node\r\n/**\r\n * SAST…' to contain 'sql-injection'[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mКонфигурация безопасности[2m > [22mDependency Checker должен проверять критические пакеты[32m 1[2mms[22m[39m
-[31m   [31m×[31m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mКонфигурация безопасности[2m > [22mSecurity Report должен иметь систему оценки[39m[32m 8[2mms[22m[39m
-[31m     → expected '#!/usr/bin/env node\r\n/**\r\n * Сист…' to contain 'severityLevels'[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mСистема отчетности[2m > [22mСкрипты должны поддерживать JSON отчеты[32m 1[2mms[22m[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mСистема отчетности[2m > [22mДолжна быть поддержка HTML отчетов[32m 1[2mms[22m[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mСистема отчетности[2m > [22mДолжна быть поддержка SARIF формата[32m 2[2mms[22m[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mИнтеграция CI/CD[2m > [22mWorkflow должен использовать наши скрипты[32m 1[2mms[22m[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mИнтеграция CI/CD[2m > [22mWorkflow должен поддерживать различные триггеры[32m 1[2mms[22m[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mФункциональность детекции[2m > [22mSAST Scanner должен детектировать различные типы уязвимостей[32m 1[2mms[22m[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mФункциональность детекции[2m > [22mDependency Checker должен проверять уровни критичности[32m 1[2mms[22m[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mКонсолидация отчетов[2m > [22mReport Consolidator должен поддерживать множественные источники[32m 1[2mms[22m[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mКонсолидация отчетов[2m > [22mДолжна быть система дедупликации уязвимостей[32m 1[2mms[22m[39m
-   [32m✓[39m КТ4 - Автоматизация безопасности - Базовая проверка[2m > [22mКонсолидация отчетов[2m > [22mДолжны быть compliance проверки[32m 1[2mms[22m[39m
-   [32m✓[39m КТ4 - Файловая структура проекта[2m > [22mОсновные директории должны существовать[32m 1[2mms[22m[39m
-   [32m✓[39m КТ4 - Файловая структура проекта[2m > [22mpackage.json должен содержать необходимые зависимости[32m 2[2mms[22m[39m
- [32m✓[39m src/__tests__/my-first.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
- [32m✓[39m src/__tests__/food.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 14[2mms[22m[39m
- [32m✓[39m src/__tests__/training.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 116[2mms[22m[39m
+ [32m✓[39m src/tests/security-automation-basic.test.js [2m([22m[2m23 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m src/__tests__/user.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 12[2mms[22m[39m
 [90mstderr[2m | src/__tests__/legacy.test.ts[2m > [22m[2mAnalyticsService[2m > [22m[2mtrack[2m > [22m[2mshould handle provider errors gracefully
 [22m[39mAnalytics provider error: Error: Provider error
     at [90mC:\! HEYS 2\packages\core\[39msrc\__tests__\legacy.test.ts:163:42
+ [32m✓[39m src/__tests__/food.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 16[2mms[22m[39m
     at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:155:11
     at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:752:26
     at file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1897:20
+ [32m✓[39m src/__tests__/training.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
     at new Promise (<anonymous>)
     at runWithTimeout (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1863:10)
     at runTest (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1574:12)
- [32m✓[39m src/__tests__/user.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 17[2mms[22m[39m
 [90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
     at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1729:8)
     at runSuite (file:///C:/!%20HEYS%202/node_modules/[4m.pnpm[24m/@vitest+runner@3.2.4/node_modules/[4m@vitest[24m/runner/dist/chunk-hooks.js:1729:8)
 
- [32m✓[39m src/__tests__/legacy.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 30[2mms[22m[39m
- [32m✓[39m src/__tests__/basic.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/__tests__/legacy.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+[90mstdout[2m | src/__tests__/debug-validation.test.ts[2m > [22m[2mDebug Validation[2m > [22m[2mshould validate user schema directly
+[22m[39mValidation result: {
+  isValid: [33mtrue[39m,
+  errors: [],
+  warnings: [],
+  sanitized: {
+    id: [32m'550e8400-e29b-41d4-a716-446655440000'[39m,
+    email: [32m'test@example.com'[39m,
+    username: [32m'testuser'[39m,
+    password: [32m'SecurePassword123!'[39m,
+    role: [32m'user'[39m,
+    isActive: [33mtrue[39m,
+    createdAt: [35m2025-09-07T10:54:19.342Z[39m
+  }
+}
+User data: {
+  id: [32m'550e8400-e29b-41d4-a716-446655440000'[39m,
+  email: [32m'test@example.com'[39m,
+  username: [32m'testuser'[39m,
+  password: [32m'SecurePassword123!'[39m,
+  role: [32m'user'[39m,
+  isActive: [33mtrue[39m,
+  createdAt: [35m2025-09-07T10:54:19.342Z[39m
+}
+Schema: {
+  shape: [36m[Function: shape][39m,
+  unknownKeys: [32m'strip'[39m,
+  catchall: ZodNever {
+    spa: [36m[Function: bound safeParseAsync] AsyncFunction[39m,
+    _def: { typeName: [32m'ZodNever'[39m },
+    parse: [36m[Function: bound parse][39m,
+    safeParse: [36m[Function: bound safeParse][39m,
+    parseAsync: [36m[Function: bound parseAsync] AsyncFunction[39m,
+    safeParseAsync: [36m[Function: bound safeParseAsync] AsyncFunction[39m,
+    refine: [36m[Function: bound refine][39m,
+    refinement: [36m[Function: bound refinement][39m,
+    superRefine: [36m[Function: bound superRefine][39m,
+    optional: [36m[Function: bound optional][39m,
+    nullable: [36m[Function: bound nullable][39m,
+    nullish: [36m[Function: bound nullish][39m,
+    array: [36m[Function: bound array][39m,
+    promise: [36m[Function: bound promise][39m,
+    or: [36m[Function: bound or][39m,
+    and: [36m[Function: bound and][39m,
+    transform: [36m[Function: bound transform][39m,
+    brand: [36m[Function: bound brand][39m,
+    default: [36m[Function: bound default][39m,
+    catch: [36m[Function: bound catch][39m,
+    describe: [36m[Function: bound describe][39m,
+    pipe: [36m[Function: bound pipe][39m,
+    readonly: [36m[Function: bound readonly][39m,
+    isNullable: [36m[Function: bound isNullable][39m,
+    isOptional: [36m[Function: bound isOptional][39m,
+    [32m'~standard'[39m: { version: [33m1[39m, vendor: [32m'zod'[39m, validate: [36m[Function: validate][39m }
+  },
+  typeName: [32m'ZodObject'[39m
+}
+
+ [32m✓[39m src/__tests__/debug-validation.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/__tests__/secure.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m src/__tests__/my-first.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/__tests__/basic.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+[2m      Tests [22m [1m[32m81 passed[39m[22m[90m (81)[39m
+[2m   Start at [22m 13:54:16
+[2m   Duration [22m 3.40s[2m (transform 698ms, setup 287ms, collect 2.13s, tests 145ms, environment 9.10s, prepare 3.01s)[22m
+

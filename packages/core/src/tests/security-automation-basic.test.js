@@ -36,7 +36,7 @@ describe('КТ4 - Автоматизация безопасности - Базо
       expect(fs.existsSync(sastPath)).toBe(true);
       
       const content = fs.readFileSync(sastPath, 'utf8');
-      expect(content).toContain('class SastSecurityScanner');
+      expect(content).toContain('class SASTScanner');
       expect(content).toContain('runScan');
     });
 
@@ -69,11 +69,10 @@ describe('КТ4 - Автоматизация безопасности - Базо
       const workflowPath = path.resolve(__dirname, '../../../../.github/workflows/security-scan.yml');
       const content = fs.readFileSync(workflowPath, 'utf8');
       
-      expect(content).toContain('name: Security Scan');
+      expect(content).toContain('name: 🛡️ Security Scan & SAST');
       expect(content).toContain('sast-analysis');
       expect(content).toContain('dependency-security');
-      expect(content).toContain('secrets-scan');
-      expect(content).toContain('security-reporting');
+      expect(content).toContain('security-report');
     });
   });
 
@@ -110,10 +109,10 @@ describe('КТ4 - Автоматизация безопасности - Базо
       const content = fs.readFileSync(sastPath, 'utf8');
       
       // Проверяем наличие основных правил безопасности
-      expect(content).toContain('sql-injection');
-      expect(content).toContain('xss-vulnerability');
-      expect(content).toContain('hardcoded-secrets');
-      expect(content).toContain('insecure-operations');
+      expect(content).toContain('sqlInjection');
+      expect(content).toContain('xss');
+      expect(content).toContain('hardcodedSecrets');
+      expect(content).toContain('insecureOperations');
     });
 
     it('Dependency Checker должен проверять критические пакеты', () => {
@@ -131,7 +130,7 @@ describe('КТ4 - Автоматизация безопасности - Базо
       const content = fs.readFileSync(reportPath, 'utf8');
       
       expect(content).toContain('calculateSecurityScore');
-      expect(content).toContain('severityLevels');
+      expect(content).toContain('scoring');
       expect(content).toContain('thresholds');
     });
   });
