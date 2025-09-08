@@ -1,0 +1,20 @@
+{
+  "version": "0.2",
+  "language": "en,ru",
+  "ignorePaths": ["node_modules"],
+  "dictionaryDefinitions": [],
+  "dictionaries": [],
+  "words": [
+    "Способ",
+    "Способы",
+    "Содержимое",
+    "папки",
+    "использования",
+    "развертывания",
+    "проекта",
+    "диагностика",
+    "изменений"
+  ],
+  "ignoreWords": [],
+  "import": []
+}

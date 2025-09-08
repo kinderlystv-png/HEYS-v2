@@ -1,0 +1,57 @@
+{
+  "name": "emt-stable",
+  "version": "3.0.0-stable",
+  "description": "🎯 Эталонный Модуль Тестирования v3.0-stable - Production Ready",
+  "keywords": [
+    "testing",
+    "vitest",
+    "integration",
+    "stable",
+    "production-ready",
+    "nextjs",
+    "react",
+    "vue",
+    "svelte",
+    "angular"
+  ],
+  "homepage": "https://github.com/your-org/emt#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/emt"
+  },
+  "license": "MIT",
+  "author": "ЭМТ Team",
+  "type": "module",
+  "main": "utils/project-detector-v3.0-stable.js",
+  "bin": {
+    "emt": "utils/project-detector-v3.0-stable.js",
+    "emt-stable": "utils/project-detector-v3.0-stable.js"
+  },
+  "files": [
+    "utils/project-detector-v3.0-stable.js",
+    "README.md",
+    "DEPLOYMENT.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "diagnose": "node utils/project-detector-v3.0-stable.js --diagnose",
+    "help": "node utils/project-detector-v3.0-stable.js --help",
+    "start": "node utils/project-detector-v3.0-stable.js",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest --watch",
+    "version": "node utils/project-detector-v3.0-stable.js --version"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@vitest/ui": "^3.2.4",
+    "jsdom": "^26.1.0",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

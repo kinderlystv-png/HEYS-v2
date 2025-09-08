@@ -14,6 +14,9 @@ temp/
 TESTS/
 старые МЕТОДОЛОГИИ И ИНСТРУКЦИИ ДЛЯ ИИ/
 
+# EMT (Etalon Test Module) - external tool
+emt-v3-stable-clean/
+
 # Temporary ignore for problematic files
 docs/automation/
 archive/legacy-v12/
