@@ -1,3 +1,4 @@
+import { log, logError } from '@heys/logger';
 import { useState } from 'react';
 import './App.css';
 
@@ -6,18 +7,31 @@ export function App() {
   const [testResult, setTestResult] = useState<string>('');
 
   const handlePerformanceTest = async () => {
+    log.info('Performance test started by user');
     setIsLoading(true);
+    
     try {
       // Простой тест производительности
       const start = performance.now();
+      log.debug('Performance test timer started', { startTime: start });
+      
       await new Promise((resolve) => setTimeout(resolve, 1000));
       const end = performance.now();
+      const duration = end - start;
 
-      setTestResult(`✅ Тест завершен за ${(end - start).toFixed(2)}ms`);
+      log.info('Performance test completed successfully', { 
+        duration: duration.toFixed(2),
+        startTime: start,
+        endTime: end 
+      });
+
+      setTestResult(`✅ Тест завершен за ${duration.toFixed(2)}ms`);
     } catch (error) {
+      logError(error as Error, { context: 'performance-test' });
       setTestResult(`❌ Ошибка: ${error}`);
     } finally {
       setIsLoading(false);
+      log.debug('Performance test cleanup completed');
     }
   };
 

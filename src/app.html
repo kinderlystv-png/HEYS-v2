@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="description" content="HEYS Performance Platform - Система управления производительностью" />
+		<meta name="theme-color" content="#1a1a1a" />
+		<title>%sveltekit.title%</title>
+
+		<!-- SEO Meta Tags -->
+		<meta property="og:title" content="%sveltekit.title%" />
+		<meta property="og:description" content="HEYS Performance Platform - Система управления производительностью" />
+		<meta property="og:type" content="website" />
+		<meta name="twitter:card" content="summary_large_image" />
+
+		<!-- Performance Optimizations -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="dns-prefetch" href="https://api.heys.cloud" />
+
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover" class="heys-platform">
+		<div style="display: contents" class="app-container">%sveltekit.body%</div>
+
+		<!-- Performance Monitoring -->
+		<script>
+			// Базовая телеметрия производительности
+			if (typeof performance !== 'undefined') {
+				window.addEventListener('load', () => {
+					setTimeout(() => {
+						const perfData = performance.getEntriesByType('navigation')[0];
+						if (perfData && console.debug) {
+							console.debug('HEYS Performance:', {
+								loadTime: perfData.loadEventEnd - perfData.loadEventStart,
+								domContentLoaded: perfData.domContentLoadedEventEnd - perfData.domContentLoadedEventStart,
+								pageLoad: perfData.loadEventEnd - perfData.fetchStart
+							});
+						}
+					}, 0);
+				});
+			}
+		</script>
+	</body>
+</html>

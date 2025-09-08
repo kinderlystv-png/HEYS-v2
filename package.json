@@ -80,7 +80,9 @@
     "not dead"
   ],
   "dependencies": {
-    "@playwright/test": "^1.37.0",
+    "@sveltejs/adapter-node": "^5.3.1",
+    "@sveltejs/kit": "^2.37.1",
+    "@sveltejs/vite-plugin-svelte": "^6.1.4",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dompurify": "^3.2.6",
@@ -88,12 +90,16 @@
     "fuse.js": "^7.0.0",
     "helmet": "^8.1.0",
     "morgan": "^1.10.1",
+    "pino": "^9.9.4",
+    "pino-pretty": "^13.1.1",
+    "svelte": "^5.38.7",
     "zod": "^3.22.0"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.6",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
+    "@playwright/test": "^1.55.0",
     "@sentry/browser": "^10.8.0",
     "@supabase/supabase-js": "^2.56.1",
     "@swc/core": "^1.13.5",

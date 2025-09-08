@@ -1,0 +1,88 @@
+{
+  "logging": {
+    "version": "1.0",
+    "system": "HEYS Platform",
+    "defaultLevel": "info",
+    "transports": {
+      "console": {
+        "enabled": true,
+        "level": "debug",
+        "format": "pretty",
+        "colorize": true
+      },
+      "file": {
+        "enabled": true,
+        "level": "info",
+        "path": "./logs",
+        "filename": "{service}.log",
+        "maxSize": "10MB",
+        "maxFiles": 5,
+        "compression": true,
+        "rotation": "daily"
+      },
+      "error": {
+        "enabled": true,
+        "level": "error",
+        "path": "./logs",
+        "filename": "{service}.error.log",
+        "maxSize": "10MB",
+        "maxFiles": 10
+      },
+      "network": {
+        "enabled": false,
+        "level": "warn",
+        "endpoint": null,
+        "apiKey": null,
+        "timeout": 5000
+      }
+    },
+    "formatters": {
+      "timestamp": "iso",
+      "timezone": "UTC",
+      "messageFormat": "[{service}] {level}: {msg}",
+      "includeStackTrace": true
+    },
+    "security": {
+      "redactFields": [
+        "password",
+        "token",
+        "secret",
+        "authorization",
+        "cookie",
+        "session",
+        "apiKey",
+        "accessToken",
+        "refreshToken",
+        "creditCard",
+        "ssn",
+        "personalData"
+      ],
+      "maskingPattern": "[REDACTED]"
+    },
+    "performance": {
+      "sampling": {
+        "enabled": false,
+        "rate": 0.1,
+        "levels": ["debug", "trace"]
+      },
+      "metrics": {
+        "enabled": true,
+        "slowRequestThreshold": 1000,
+        "memoryUsageTracking": true
+      }
+    },
+    "contexts": {
+      "http": {
+        "includeHeaders": false,
+        "includeBody": false,
+        "includeQuery": true,
+        "maxBodySize": 1024
+      },
+      "error": {
+        "includeStackTrace": true,
+        "maxStackFrames": 50,
+        "includeSource": true
+      }
+    }
+  }
+}

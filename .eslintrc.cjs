@@ -38,9 +38,29 @@ module.exports = {
     ],
 
     // General rules
-    'no-console': 'warn',
+    'no-console': 'error', // ЭАП требует error для production
     'no-debugger': 'error',
     'no-var': 'error',
+    
+    // Console logging rules - расширенный контроль
+    'no-restricted-globals': [
+      'error',
+      {
+        name: 'console',
+        message: 'Use logger instead of console for production code. Import logger from @heys/logger'
+      }
+    ],
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector: "CallExpression[callee.object.name='console']",
+        message: 'Console methods are not allowed. Use logger from @heys/logger instead.'
+      },
+      {
+        selector: "MemberExpression[object.name='console']",
+        message: 'Console object access is not allowed. Use logger from @heys/logger instead.'
+      }
+    ],
   },
   overrides: [
     // React-specific rules for UI package and apps
@@ -66,7 +86,7 @@ module.exports = {
         },
       },
     },
-    // Test files
+    // Test files - разрешаем console в тестах
     {
       files: ['**/*.test.{ts,tsx,js,jsx}', '**/*.spec.{ts,tsx,js,jsx}'],
       env: {
@@ -75,6 +95,38 @@ module.exports = {
       rules: {
         '@typescript-eslint/no-explicit-any': 'off',
         'no-console': 'off',
+        'no-restricted-globals': 'off',
+        'no-restricted-syntax': 'off',
+      },
+    },
+    
+    // Development/debugging files - разрешаем console для отладки
+    {
+      files: ['**/debug/**/*.{ts,js}', '**/*.debug.{ts,js}', '**/scripts/**/*.{ts,js}'],
+      rules: {
+        'no-console': 'warn',
+        'no-restricted-globals': 'warn',
+        'no-restricted-syntax': 'warn',
+      },
+    },
+    
+    // Console replacer files - разрешаем console для создания заместителей
+    {
+      files: ['**/console-replacer.{ts,js}', '**/console-replacement.{ts,js}'],
+      rules: {
+        'no-console': 'off',
+        'no-restricted-globals': 'off',
+        'no-restricted-syntax': 'off',
+      },
+    },
+    
+    // Configuration files - разрешаем console в конфигах
+    {
+      files: ['*.config.{ts,js}', '**/config/**/*.{ts,js}', '.eslintrc.cjs'],
+      rules: {
+        'no-console': 'warn',
+        'no-restricted-globals': 'off',
+        'no-restricted-syntax': 'off',
       },
     },
     // Legacy files - более мягкие правила для старого кода

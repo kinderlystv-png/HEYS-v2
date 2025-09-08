@@ -73,12 +73,17 @@ COPY --chown=heys:nodejs scripts ./scripts
 # Переключаемся на непривилегированного пользователя
 USER heys
 
-# Здоровье контейнера
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node --version || exit 1
+# Расширенная проверка здоровья приложения
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD pnpm --filter "@heys/web" run health-check || curl -f http://localhost:3000/health || exit 1
 
 # Открываем порт
 EXPOSE 3000
+
+# Настройки для production
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV LOG_LEVEL=info
 
 # Запускаем приложение
 CMD ["pnpm", "--filter", "@heys/web", "run", "preview"]

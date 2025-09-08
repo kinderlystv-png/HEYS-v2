@@ -12,8 +12,9 @@ services:
       - NODE_ENV=production
       - PORT=3001
       - API_PORT=4001
+      - LOG_LEVEL=info
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      test: ["CMD", "pnpm", "--filter", "@heys/web", "run", "health-check"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -21,6 +22,11 @@ services:
     restart: unless-stopped
     networks:
       - heys-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 384M
 
   # Development version with hot reload
   heys-dev:

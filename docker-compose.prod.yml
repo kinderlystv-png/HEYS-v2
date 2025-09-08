@@ -1,0 +1,94 @@
+# Production Environment
+version: '3.8'
+
+services:
+  # Основное приложение (production)
+  heys-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: heys-web-prod
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - LOG_LEVEL=info
+      - API_PORT=4000
+    networks:
+      - heys-network
+    depends_on:
+      - heys-api
+    restart: always
+    healthcheck:
+      test: ["CMD", "pnpm", "--filter", "@heys/web", "run", "health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # API сервер (production)
+  heys-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: heys-api-prod
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - API_PORT=4000
+      - DATABASE_NAME=projectB_prod
+      - LOG_LEVEL=warn
+    networks:
+      - heys-network
+    restart: always
+    command: ["node", "packages/core/src/server.js"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # Reverse Proxy (Nginx)
+  nginx:
+    image: nginx:alpine
+    container_name: heys-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - heys-network
+    depends_on:
+      - heys-web
+      - heys-api
+    restart: always
+    profiles:
+      - nginx
+
+networks:
+  heys-network:
+    driver: bridge

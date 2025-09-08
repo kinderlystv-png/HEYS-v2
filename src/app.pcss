@@ -1,0 +1,40 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Кастомные стили для HEYS платформы */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply text-gray-900 bg-heys-surface;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-heys-primary hover:bg-heys-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-heys-primary transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-heys-primary transition-colors;
+  }
+  
+  .card {
+    @apply bg-white overflow-hidden shadow rounded-lg border border-gray-200;
+  }
+  
+  .input-field {
+    @apply shadow-sm focus:ring-heys-primary focus:border-heys-primary block w-full sm:text-sm border-gray-300 rounded-md;
+  }
+}
+
+@layer utilities {
+  .transition-colors {
+    transition-property: color, background-color, border-color;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+}

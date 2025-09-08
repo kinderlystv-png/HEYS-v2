@@ -1,0 +1,82 @@
+# Development Environment
+version: '3.8'
+
+services:
+  # Основное приложение
+  heys-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: heys-web-dev
+    ports:
+      - "3001:3001"
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - LOG_LEVEL=debug
+      - VITE_PORT=3001
+      - API_PORT=4001
+    networks:
+      - heys-network
+    depends_on:
+      - heys-api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pnpm", "--filter", "@heys/web", "run", "health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # API сервер
+  heys-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: heys-api-dev
+    ports:
+      - "4001:4001"
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=4001
+      - API_PORT=4001
+      - DATABASE_NAME=projectB
+      - LOG_LEVEL=debug
+    networks:
+      - heys-network
+    restart: unless-stopped
+    command: ["node", "packages/core/src/server.js"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Система мониторинга логов (опционально)
+  log-monitor:
+    image: prom/prometheus:latest
+    container_name: heys-logs-dev
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - heys-network
+    profiles:
+      - monitoring
+
+volumes:
+  node_modules:
+
+networks:
+  heys-network:
+    driver: bridge
