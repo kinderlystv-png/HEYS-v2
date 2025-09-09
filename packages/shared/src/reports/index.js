@@ -14,6 +14,9 @@ export * from './utils/index.js';
 // Caching system  
 export * from './cache/index.js';
 
+// Data services
+export * from './services/index.js';
+
 // TODO: Import data services (Phase 3B continuation)
 // export * from './services/index.js';
 
