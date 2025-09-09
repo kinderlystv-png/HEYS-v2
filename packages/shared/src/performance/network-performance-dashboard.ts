@@ -11,12 +11,20 @@
  * - Interactive performance controls
  */
 
+import { StructuredLogger } from '../monitoring/logger';
+
 import {
   NetworkConnection,
   NetworkMetrics,
   NetworkOptimizer,
   NetworkQualityProfile,
 } from './network-optimizer';
+
+// ESLINT FIX: Initialize logger for structured logging
+const logger = new StructuredLogger({
+  name: 'network-performance-dashboard',
+  level: 'info'
+});
 
 export interface DashboardConfig {
   refreshInterval: number;
@@ -126,7 +134,8 @@ export class NetworkPerformanceDashboard {
       this.initializeControls();
     }
 
-    console.log('Network Performance Dashboard initialized');
+    // ESLINT FIX: Replace console with structured logger
+    logger.info('Network Performance Dashboard initialized');
   }
 
   /**
@@ -140,7 +149,7 @@ export class NetworkPerformanceDashboard {
       this.updateDashboard();
     }, this.config.refreshInterval);
 
-    console.log('Network Performance Dashboard started');
+    logger.info('Network Performance Dashboard started');
   }
 
   /**
@@ -155,7 +164,7 @@ export class NetworkPerformanceDashboard {
       this.intervalId = null;
     }
 
-    console.log('Network Performance Dashboard stopped');
+    logger.info('Network Performance Dashboard stopped');
   }
 
   /**
@@ -179,7 +188,11 @@ export class NetworkPerformanceDashboard {
       // Update statistics
       this.updateStatistics(metrics);
     } catch (error) {
-      console.error('Error updating dashboard:', error);
+      logger.logError({
+        error: error instanceof Error ? error : new Error(String(error)),
+        component: 'NetworkPerformanceDashboard',
+        operation: 'updateDashboard'
+      });
     }
   }
 
@@ -791,7 +804,11 @@ export class NetworkPerformanceDashboard {
    */
   private showNotification(alert: PerformanceAlert): void {
     // Implementation for showing notifications
-    console.log(`Alert: ${alert.message}`);
+    logger.info(`Alert: ${alert.message}`, { 
+      component: 'NetworkPerformanceDashboard',
+      operation: 'showNotification',
+      metadata: { alertType: alert.type, threshold: alert.threshold }
+    });
   }
 
   /**
@@ -846,7 +863,10 @@ export class NetworkPerformanceDashboard {
    */
   private initializeNotifications(): void {
     // Setup notification system
-    console.log('Notifications initialized');
+    logger.info('Notifications initialized', { 
+      component: 'NetworkPerformanceDashboard',
+      operation: 'initializeNotifications'
+    });
   }
 
   /**
@@ -854,7 +874,10 @@ export class NetworkPerformanceDashboard {
    */
   private initializeControls(): void {
     // Setup interactive controls
-    console.log('Dashboard controls initialized');
+    logger.info('Dashboard controls initialized', { 
+      component: 'NetworkPerformanceDashboard',
+      operation: 'initializeControls'
+    });
   }
 
   /**
@@ -876,7 +899,10 @@ export class NetworkPerformanceDashboard {
     this.charts.forEach((chart) => chart.clear());
     this.updateAlertsDisplay();
 
-    console.log('Dashboard reset');
+    logger.info('Dashboard reset', { 
+      component: 'NetworkPerformanceDashboard',
+      operation: 'resetDashboard'
+    });
   }
 
   /**
@@ -981,9 +1007,9 @@ class Chart {
       const y = height - ((point.value - minValue) / range) * height;
 
       if (index === 0) {
-        this.ctx!.moveTo(x, y);
+        if (this.ctx) this.ctx.moveTo(x, y);
       } else {
-        this.ctx!.lineTo(x, y);
+        if (this.ctx) this.ctx.lineTo(x, y);
       }
     });
 

@@ -12,7 +12,14 @@
  * - Performance comparison tools
  */
 
+import { StructuredLogger } from '../monitoring/logger';
+
 import { PerformanceMetrics, RealTimePerformanceMonitor } from './real-time-performance-monitor';
+
+// Initialize logger instance
+const logger = new StructuredLogger({ 
+  name: 'performance-analytics-dashboard'
+});
 
 export interface AnalyticsDashboardConfig {
   refreshInterval: number;
@@ -129,7 +136,6 @@ export class PerformanceAnalyticsDashboard {
   private charts: Map<string, PerformanceChart> = new Map();
   private trends: PerformanceTrend[] = [];
   private regressions: PerformanceRegression[] = [];
-  private reports: PerformanceReport[] = [];
   private isRunning: boolean = false;
   private updateIntervalId: number | null = null;
 
@@ -151,7 +157,10 @@ export class PerformanceAnalyticsDashboard {
     await this.initializeCharts();
     await this.setupEventListeners();
 
-    console.log('Performance Analytics Dashboard initialized');
+    logger.info('Performance Analytics Dashboard initialized', {
+      component: 'PerformanceAnalyticsDashboard',
+      operation: 'constructor'
+    });
   }
 
   /**
@@ -165,7 +174,10 @@ export class PerformanceAnalyticsDashboard {
       this.updateDashboard();
     }, this.config.refreshInterval);
 
-    console.log('Performance Analytics Dashboard started');
+    logger.info('Performance Analytics Dashboard started', {
+      component: 'PerformanceAnalyticsDashboard',
+      operation: 'start'
+    });
   }
 
   /**
@@ -180,7 +192,10 @@ export class PerformanceAnalyticsDashboard {
       this.updateIntervalId = null;
     }
 
-    console.log('Performance Analytics Dashboard stopped');
+    logger.info('Performance Analytics Dashboard stopped', {
+      component: 'PerformanceAnalyticsDashboard',
+      operation: 'stop'
+    });
   }
 
   /**
@@ -740,7 +755,11 @@ export class PerformanceAnalyticsDashboard {
       // Update profiles
       this.updateProfiles();
     } catch (error) {
-      console.error('Error updating analytics dashboard:', error);
+      logger.logError({
+        error: error instanceof Error ? error : new Error(String(error)),
+        component: 'PerformanceAnalyticsDashboard',
+        operation: 'updateDashboard'
+      });
     }
   }
 
@@ -830,8 +849,8 @@ export class PerformanceAnalyticsDashboard {
    */
   private getVitalStatus(value: number, thresholds: number[]): string {
     if (thresholds.length < 2) return 'good';
-    if (value <= thresholds[0]!) return 'good';
-    if (value <= thresholds[1]!) return 'warning';
+    if (thresholds[0] !== undefined && value <= thresholds[0]) return 'good';
+    if (thresholds[1] !== undefined && value <= thresholds[1]) return 'warning';
     return 'poor';
   }
 
@@ -1092,7 +1111,11 @@ export class PerformanceAnalyticsDashboard {
    * Handle time range change
    */
   private updateTimeRange(timeRange: string): void {
-    console.log(`Time range changed to: ${timeRange}`);
+    logger.info(`Time range changed to: ${timeRange}`, {
+      component: 'PerformanceAnalyticsDashboard',
+      operation: 'updateTimeRange',
+      metadata: { timeRange }
+    });
     // Implement time range filtering logic
     this.refreshData();
   }
@@ -1126,7 +1149,7 @@ export class PerformanceAnalyticsDashboard {
       title: 'Performance Analytics Report',
       generatedAt: Date.now(),
       timeRange: {
-        start: metricsHistory.length > 0 ? metricsHistory[0]!.timestamp : Date.now(),
+        start: metricsHistory.length > 0 && metricsHistory[0] ? metricsHistory[0].timestamp : Date.now(),
         end: Date.now(),
       },
       summary: {
@@ -1263,7 +1286,10 @@ export class PerformanceAnalyticsDashboard {
    * Refresh dashboard data
    */
   private refreshData(): void {
-    console.log('Refreshing dashboard data...');
+    logger.info('Refreshing dashboard data...', {
+      component: 'PerformanceAnalyticsDashboard',
+      operation: 'refreshData'
+    });
     this.updateDashboard();
   }
 
@@ -1342,9 +1368,9 @@ class PerformanceChart {
       const y = height - height * 0.5; // Placeholder positioning
 
       if (index === 0) {
-        this.ctx!.moveTo(x, y);
+        if (this.ctx) this.ctx.moveTo(x, y);
       } else {
-        this.ctx!.lineTo(x, y);
+        if (this.ctx) this.ctx.lineTo(x, y);
       }
     });
 
