@@ -85,7 +85,7 @@
       // Service Worker Registration для Performance Optimization
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
+          navigator.serviceWorker.register('/heys-sw.js')
             .then((registration) => {
               console.log('✅ SW: Registered successfully', registration.scope);
             })
@@ -114,13 +114,34 @@
             ReactDOM = window.ReactDOM;
           const { useState, useEffect } = React;
 
-        // init cloud (safe if no cloud module)
-        if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
-          HEYS.cloud.init({
-            url: 'https://ukqolcziqcuplqfgrmsh.supabase.co',
-            anonKey:
-              'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
-          });
+        // init cloud (safe if no cloud module) с обработкой ошибок
+        try {
+          if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
+            HEYS.cloud.init({
+              url: 'https://ukqolcziqcuplqfgrmsh.supabase.co',
+              anonKey:
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
+            });
+            console.log('✅ HEYS.cloud initialized successfully');
+          } else {
+            console.warn('⚠️ HEYS.cloud not available or init function missing');
+          }
+        } catch (error) {
+          console.error('❌ HEYS.cloud initialization failed:', error);
+          // Fallback: попытка реинициализации через 1 секунду
+          setTimeout(() => {
+            try {
+              if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
+                HEYS.cloud.init({
+                  url: 'https://ukqolcziqcuplqfgrmsh.supabase.co',
+                  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
+                });
+                console.log('✅ HEYS.cloud retry initialization successful');
+              }
+            } catch (retryError) {
+              console.error('❌ HEYS.cloud retry failed:', retryError);
+            }
+          }, 1000);
         }
 
         // Обёртка для DayTab: при каждом открытии вкладки day — подгружает актуальные данные из облака

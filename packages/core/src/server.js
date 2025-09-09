@@ -23,6 +23,28 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Favicon handler - return empty response to avoid 404 errors
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
+// Root path handler
+app.get('/', (req, res) => {
+  res.json({
+    name: 'HEYS API Server',
+    version: '1.0.0',
+    status: 'running',
+    environment: NODE_ENV,
+    database: DATABASE_NAME,
+    endpoints: {
+      health: '/health',
+      api: '/api',
+      version: '/api/version'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
@@ -36,6 +58,21 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
+app.get('/api', (req, res) => {
+  res.json({
+    name: 'HEYS API Server',
+    version: '1.0.0',
+    database: DATABASE_NAME,
+    endpoints: [
+      '/api/version',
+      '/api/nutrition', 
+      '/api/training',
+      '/api/analytics'
+    ],
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.get('/api/version', (req, res) => {
   res.json({
     version: '1.0.0',

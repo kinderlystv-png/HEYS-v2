@@ -3,11 +3,28 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   // Опции сервера разработки
   server: {
-    port: 3000,
+    port: 3002,
     host: true,
     fs: {
       allow: ['..'],
     },
+    // Исправление WebSocket проблем для HMR
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 3002,
+      clientPort: 3002
+    },
+    // Настройки прокси для API
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    },
+    // Решение проблем с CORS
+    cors: true
   },
 
   // Настройки сборки

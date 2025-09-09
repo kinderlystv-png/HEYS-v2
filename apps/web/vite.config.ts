@@ -105,14 +105,18 @@ export default defineConfig({
     port: parseInt(process.env.PORT || '3001'),
     host: true,
     strictPort: true,
+    cors: true,
     // Performance headers
     headers: {
       'Cache-Control': 'public, max-age=0',
       'X-Content-Type-Options': 'nosniff',
     },
-    // HMR configuration
+    // HMR configuration with WebSocket fixes
     hmr: {
+      protocol: 'ws',
+      host: 'localhost',
       port: parseInt(process.env.PORT || '3001'),
+      clientPort: parseInt(process.env.PORT || '3001'),
     },
     proxy: {
       '/api': {

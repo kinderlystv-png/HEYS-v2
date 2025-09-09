@@ -196,8 +196,21 @@ declare global {
     password: string,
   ): Promise<{ user?: SupabaseUser; error?: any }> {
     if (!client) {
-      err('client not initialized');
-      return { error: 'Client not initialized' };
+      err('client not initialized - attempting to reinitialize');
+      // Попытка реинициализации если клиент не был инициализирован
+      if (global.HEYS?.cloud?._inited !== true) {
+        const config = {
+          url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+          anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+        };
+        if (config.url && config.anonKey) {
+          cloud.init(config);
+        }
+      }
+      
+      if (!client) {
+        return { error: 'Client not initialized and auto-init failed' };
+      }
     }
     try {
       status = 'signin';

@@ -9,4 +9,8 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   minify: true,
+  external: ['react', 'react-dom'],
+  esbuildOptions(options) {
+    options.jsx = 'automatic';
+  },
 });

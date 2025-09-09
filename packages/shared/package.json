@@ -21,7 +21,9 @@
     "@supabase/supabase-js": "^2.56.1"
   },
   "peerDependencies": {
-    "@heys/threat-detection": "workspace:*"
+    "@heys/threat-detection": "workspace:*",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   },
   "devDependencies": {
     "tsup": "^7.2.0",

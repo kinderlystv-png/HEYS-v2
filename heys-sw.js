@@ -1,6 +1,6 @@
 /*
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│ 🗺️ НАВИГАЦИОННАЯ КАРТА ФАЙЛА heys-sw.js (384 строки)                                    │
+│ 🗺️ НАВИГАЦИОННАЯ КАРТА ФАЙЛА heys-sw.js (384 строки) - v2.1.0-timeout-fix             │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │ 📋 СТРУКТУРА ФАЙЛА:                                                                       │
 │                                                                                           │
@@ -30,10 +30,10 @@
 └─────────────────────────────────────────────────────────────────────────────────────────┘
 */
 
-// heys-sw.js - Service Worker для HEYS
-const CACHE_NAME = 'heys-cache-v1';
-const STATIC_CACHE = 'heys-static-v1';
-const DYNAMIC_CACHE = 'heys-dynamic-v1';
+// heys-sw.js - Service Worker для HEYS - v2.1.0-timeout-fix
+const CACHE_NAME = 'heys-cache-v2.1.0';
+const STATIC_CACHE = 'heys-static-v2.1.0';
+const DYNAMIC_CACHE = 'heys-dynamic-v2.1.0';
 
 // Файлы для кеширования
 const STATIC_ASSETS = [
@@ -140,12 +140,21 @@ async function cacheFirst(request) {
   try {
     const cacheResponse = await caches.match(request);
     if (cacheResponse) {
-      console.log('[SW] Ответ из кеша:', request.url);
+      console.log('📦 SW: Static resource from cache:', request.url);
       return cacheResponse;
     }
 
-    console.log('[SW] Запрос в сеть:', request.url);
-    const networkResponse = await fetch(request);
+    console.log('🌐 SW: Fetch from network:', request.url);
+    
+    // Добавляем таймаут для локальной разработки
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    
+    const networkResponse = await fetch(request, {
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
 
     if (networkResponse.ok) {
       const cache = await caches.open(STATIC_CACHE);
@@ -154,8 +163,34 @@ async function cacheFirst(request) {
 
     return networkResponse;
   } catch (error) {
-    console.error('[SW] Cache First ошибка:', error);
-    return new Response('Офлайн', { status: 503 });
+    console.error('🔴 SW: Fetch error:', error, request.url);
+    
+    // Попытка найти fallback в кеше
+    const fallbackResponse = await caches.match(request);
+    if (fallbackResponse) {
+      console.log('🔄 SW: Fallback from cache:', request.url);
+      return fallbackResponse;
+    }
+    
+    // Для favicon возвращаем пустой ответ вместо ошибки
+    if (request.url.includes('favicon.ico')) {
+      return new Response('', {
+        status: 204,
+        statusText: 'No Content'
+      });
+    }
+    
+    return new Response(
+      JSON.stringify({
+        error: 'Ресурс недоступен офлайн',
+        url: request.url,
+        timestamp: Date.now()
+      }), 
+      { 
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   }
 }
 
@@ -163,7 +198,16 @@ async function cacheFirst(request) {
 async function networkFirst(request) {
   try {
     console.log('[SW] Network First запрос:', request.url);
-    const networkResponse = await fetch(request);
+    
+    // Добавляем таймаут для локальной разработки
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const networkResponse = await fetch(request, {
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
 
     if (networkResponse.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
@@ -172,7 +216,7 @@ async function networkFirst(request) {
 
     return networkResponse;
   } catch (error) {
-    console.log('[SW] Сеть недоступна, ищем в кеше:', request.url);
+    console.log('[SW] Сеть недоступна или таймаут, ищем в кеше:', request.url);
 
     const cacheResponse = await caches.match(request);
     if (cacheResponse) {
@@ -184,11 +228,32 @@ async function networkFirst(request) {
     if (request.destination === 'document') {
       const offlineResponse = await caches.match('/index.html');
       if (offlineResponse) {
+        console.log('[SW] Возвращаем index.html как fallback');
         return offlineResponse;
       }
     }
 
     console.error('[SW] Network First ошибка:', error);
+    
+    // Для localhost возвращаем более дружелюбный ответ
+    if (request.url.includes('localhost')) {
+      return new Response(
+        `<!DOCTYPE html>
+        <html>
+        <head><title>Локальный сервер недоступен</title></head>
+        <body>
+          <h1>Локальный сервер недоступен</h1>
+          <p>Убедитесь что сервер запущен на порту 3001</p>
+          <button onclick="location.reload()">Перезагрузить</button>
+        </body>
+        </html>`,
+        {
+          status: 503,
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        }
+      );
+    }
+    
     return new Response(
       JSON.stringify({
         error: 'Нет подключения к интернету',
