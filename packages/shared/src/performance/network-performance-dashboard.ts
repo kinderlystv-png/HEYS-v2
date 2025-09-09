@@ -762,18 +762,28 @@ export class NetworkPerformanceDashboard {
     // Show last 10 alerts
     const recentAlerts = this.alerts.slice(-10).reverse();
 
-    alertsList.innerHTML = recentAlerts
-      .map(
-        (alert) => `
-      <div class="alert-item ${alert.type}">
-        <div>${alert.message}</div>
-        <div class="alert-timestamp">
-          ${new Date(alert.timestamp).toLocaleTimeString()}
-        </div>
-      </div>
-    `,
-      )
-      .join('');
+    // PERFORMANCE FIX: Use DocumentFragment to avoid DOM manipulation in loop
+    const fragment = document.createDocumentFragment();
+    
+    recentAlerts.forEach((alert) => {
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `alert-item ${alert.type}`;
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.textContent = alert.message;
+      
+      const timestampDiv = document.createElement('div');
+      timestampDiv.className = 'alert-timestamp';
+      timestampDiv.textContent = new Date(alert.timestamp).toLocaleTimeString();
+      
+      alertDiv.appendChild(messageDiv);
+      alertDiv.appendChild(timestampDiv);
+      fragment.appendChild(alertDiv);
+    });
+
+    // Single DOM operation instead of innerHTML +=
+    alertsList.innerHTML = '';
+    alertsList.appendChild(fragment);
   }
 
   /**

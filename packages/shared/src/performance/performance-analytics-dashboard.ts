@@ -879,16 +879,28 @@ export class PerformanceAnalyticsDashboard {
       return;
     }
 
-    alertsContainer.innerHTML = recentAlerts
-      .map(
-        (alert) => `
-      <div class="alert-item ${alert.type}">
-        <div>${alert.message}</div>
-        <div class="alert-meta">${new Date(alert.timestamp).toLocaleTimeString()}</div>
-      </div>
-    `,
-      )
-      .join('');
+    // PERFORMANCE FIX: Use DocumentFragment to avoid DOM manipulation in loop
+    const fragment = document.createDocumentFragment();
+    
+    recentAlerts.forEach((alert) => {
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `alert-item ${alert.type}`;
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.textContent = alert.message;
+      
+      const metaDiv = document.createElement('div');
+      metaDiv.className = 'alert-meta';
+      metaDiv.textContent = new Date(alert.timestamp).toLocaleTimeString();
+      
+      alertDiv.appendChild(messageDiv);
+      alertDiv.appendChild(metaDiv);
+      fragment.appendChild(alertDiv);
+    });
+
+    // Single DOM operation instead of innerHTML +=
+    alertsContainer.innerHTML = '';
+    alertsContainer.appendChild(fragment);
   }
 
   /**
