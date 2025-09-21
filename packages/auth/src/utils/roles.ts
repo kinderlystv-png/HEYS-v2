@@ -259,6 +259,20 @@ export function getRolesAtOrAboveLevel(minLevel: number): RoleDefinition[] {
 }
 
 /**
+ * Get role level by name
+ */
+export function getRoleLevel(roleName: RoleName): number {
+  return ROLE_DEFINITIONS[roleName].level
+}
+
+/**
+ * Get role hierarchy as sorted array
+ */
+export function getRoleHierarchy(): RoleDefinition[] {
+  return Object.values(ROLE_DEFINITIONS).sort((a, b) => a.level - b.level)
+}
+
+/**
  * Check if user role can assign target role
  */
 export function canAssignRole(userRoleLevel: number, targetRoleLevel: number): boolean {

@@ -183,7 +183,25 @@
         function RationTabWithCloudSync(props) {
           const { clientId, setProducts, products } = props;
           const [loading, setLoading] = React.useState(true);
+          
+          // Проверяем доступность компонента
+          const [componentReady, setComponentReady] = React.useState(false);
+          
           React.useEffect(() => {
+            // Ждем загрузки компонента
+            const checkComponent = () => {
+              if (window.HEYS && window.HEYS.Ration) {
+                setComponentReady(true);
+              } else {
+                setTimeout(checkComponent, 100);
+              }
+            };
+            checkComponent();
+          }, []);
+          
+          React.useEffect(() => {
+            if (!componentReady) return;
+            
             let cancelled = false;
             if (
               clientId &&
@@ -206,7 +224,15 @@
             return () => {
               cancelled = true;
             };
-          }, [clientId]);
+          }, [clientId, componentReady]);
+          
+          if (!componentReady)
+            return React.createElement(
+              'div',
+              { className: 'muted', style: { padding: 24 } },
+              'Загрузка компонентов...',
+            );
+            
           if (loading)
             return React.createElement(
               'div',
@@ -220,7 +246,25 @@
         function UserTabWithCloudSync(props) {
           const { clientId } = props;
           const [loading, setLoading] = React.useState(true);
+          
+          // Проверяем доступность компонента
+          const [componentReady, setComponentReady] = React.useState(false);
+          
           React.useEffect(() => {
+            // Ждем загрузки компонента
+            const checkComponent = () => {
+              if (window.HEYS && window.HEYS.UserTab) {
+                setComponentReady(true);
+              } else {
+                setTimeout(checkComponent, 100);
+              }
+            };
+            checkComponent();
+          }, []);
+          
+          React.useEffect(() => {
+            if (!componentReady) return;
+            
             let cancelled = false;
             if (
               clientId &&
@@ -237,7 +281,15 @@
             return () => {
               cancelled = true;
             };
-          }, [clientId]);
+          }, [clientId, componentReady]);
+          
+          if (!componentReady)
+            return React.createElement(
+              'div',
+              { className: 'muted', style: { padding: 24 } },
+              'Загрузка компонентов...',
+            );
+            
           if (loading)
             return React.createElement(
               'div',
