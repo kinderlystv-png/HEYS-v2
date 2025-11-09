@@ -51,8 +51,7 @@
     
     <!-- Critical resource preloading with priority hints -->
     <link rel="preload" href="heys_core_v12.js" as="script" fetchpriority="high">
-    <link rel="preload" href="heys_performance_monitor.js" as="script" fetchpriority="high">
-    <link rel="preload" href="heys_analytics_ui.js" as="script" fetchpriority="low">
+    <link rel="preload" href="heys_simple_analytics.js" as="script" fetchpriority="high">
     
     <!-- Resource hints for better caching -->
     <link rel="prefetch" href="heys_storage_supabase_v1.js">
@@ -71,9 +70,8 @@
     <script defer src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js" fetchpriority="low" crossorigin="anonymous"></script>
     
     <!-- app modules with defer and optimized priority -->
-    <script defer src="heys_performance_monitor.js" fetchpriority="high"></script>
+    <script defer src="heys_simple_analytics.js" fetchpriority="high"></script>
     <script defer src="heys_core_v12.js" fetchpriority="high"></script>
-    <script defer src="heys_analytics_ui.js" fetchpriority="low"></script>
     <script defer src="heys_storage_supabase_v1.js?v=15" fetchpriority="low"></script>
     <script defer src="heys_models_v1.js?v=1" fetchpriority="low"></script>
     <script defer src="heys_storage_layer_v1.js?v=1" fetchpriority="low"></script>
