@@ -1,12 +1,31 @@
-import { ThreatDetectionService, type IThreatDetectionService } from './threat-detection-bridge';
-import { DatabaseService, SecurityEvent, SecurityIncident } from '../database/DatabaseService';
 import { EventEmitter } from 'events';
+
+import { DatabaseService, SecurityEvent, SecurityIncident } from '../database/DatabaseService';
+import { getGlobalLogger } from '../monitoring/structured-logger';
+
+import { ThreatDetectionService } from './threat-detection-bridge';
 
 export interface IntegratedSecurityEvent extends SecurityEvent {
   // Дополнительные поля для интеграции
   anomaly_score?: number;
   threat_level?: 'low' | 'medium' | 'high' | 'critical';
   automated_response?: string[];
+}
+
+interface ThreatIncidentDetails {
+  title: string;
+  description?: string;
+  severity: SecurityIncident['severity'];
+  responseActions?: unknown;
+  timeline?: unknown;
+  impactAssessment?: unknown;
+}
+
+interface ThreatAnalysisResult {
+  anomalyScore: number;
+  incidentCreated?: boolean;
+  incident?: ThreatIncidentDetails;
+  iocMatches?: unknown;
 }
 
 export interface SecurityAnalyticsConfig {
@@ -24,13 +43,12 @@ export interface SecurityAnalyticsConfig {
 export class SecurityAnalyticsService extends EventEmitter {
   private threatDetection: InstanceType<typeof ThreatDetectionService>;
   private database: DatabaseService;
-  private config: SecurityAnalyticsConfig;
   private processingQueue: SecurityEvent[] = [];
   private isProcessing = false;
+  private readonly logger = getGlobalLogger().child({ component: 'SecurityAnalyticsService' });
 
   constructor(config: SecurityAnalyticsConfig) {
     super();
-    this.config = config;
     this.database = new DatabaseService(config.supabaseUrl, config.supabaseKey);
     this.threatDetection = new ThreatDetectionService();
 
@@ -49,15 +67,20 @@ export class SecurityAnalyticsService extends EventEmitter {
 
       // Загрузка threat intelligence из базы
       const threatIntel = await this.database.getThreatIntelligence();
-      console.log(`Loaded ${threatIntel.length} threat intelligence indicators`);
+      this.logger.info('Loaded threat intelligence indicators', {
+        metadata: { indicatorCount: threatIntel.length },
+      });
 
       // Обучение ML модели на исторических данных
       await this.trainMLModel();
 
       this.emit('initialized');
-      console.log('SecurityAnalyticsService initialized successfully');
+      this.logger.info('SecurityAnalyticsService initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize SecurityAnalyticsService:', error);
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      this.logger.error('Failed to initialize SecurityAnalyticsService', {
+        metadata: { error: normalizedError },
+      });
       throw error;
     }
   }
@@ -71,7 +94,7 @@ export class SecurityAnalyticsService extends EventEmitter {
       const savedEvent = await this.database.createSecurityEvent(event);
 
       // 2. Threat detection анализ
-      const analysisResult = await this.threatDetection.analyzeSecurityEvent({
+      const analysisResult = (await this.threatDetection.analyzeSecurityEvent({
         id: savedEvent.id,
         timestamp: savedEvent.created_at,
         userId: savedEvent.user_id || 'unknown',
@@ -88,7 +111,7 @@ export class SecurityAnalyticsService extends EventEmitter {
         deviceFingerprint: savedEvent.device_fingerprint,
         // Исправлено: используем оригинальные metadata из входного события
         customAttributes: event.metadata || savedEvent.metadata || {}
-      });
+      })) as ThreatAnalysisResult;
 
       // 3. Создание интегрированного события
       const integratedEvent: IntegratedSecurityEvent = {
@@ -100,22 +123,52 @@ export class SecurityAnalyticsService extends EventEmitter {
 
       // 4. Создание инцидента если обнаружена угроза
       if (analysisResult.incidentCreated && analysisResult.incident) {
-        const incident = await this.database.createSecurityIncident({
-          title: analysisResult.incident.title,
-          description: analysisResult.incident.description,
-          severity: analysisResult.incident.severity,
-          user_id: savedEvent.user_id,
-          client_id: savedEvent.client_id,
-          event_ids: [savedEvent.id],
-          ioc_matches: analysisResult.iocMatches,
-          ml_confidence: analysisResult.anomalyScore,
-          response_actions: analysisResult.incident.responseActions,
-          timeline: analysisResult.incident.timeline,
-          impact_assessment: analysisResult.incident.impactAssessment
-        });
+        const { incident } = analysisResult;
+        const incidentPayload: Omit<SecurityIncident, 'id' | 'created_at' | 'updated_at'> = {
+          title: incident.title,
+          severity: incident.severity,
+          status: 'open'
+        };
 
-        integratedEvent.automated_response = this.getAutomatedResponseActions(incident);
-        this.emit('incidentCreated', incident);
+        if (incident.description) {
+          incidentPayload.description = incident.description;
+        }
+
+        if (savedEvent.user_id) {
+          incidentPayload.user_id = savedEvent.user_id;
+        }
+
+        if (savedEvent.client_id) {
+          incidentPayload.client_id = savedEvent.client_id;
+        }
+
+        incidentPayload.event_ids = [savedEvent.id];
+        incidentPayload.ml_confidence = analysisResult.anomalyScore;
+
+        const normalizedMatches = this.normalizeToRecord(analysisResult.iocMatches);
+        if (normalizedMatches) {
+          incidentPayload.ioc_matches = normalizedMatches;
+        }
+
+        const normalizedResponses = this.normalizeToRecord(incident.responseActions);
+        if (normalizedResponses) {
+          incidentPayload.response_actions = normalizedResponses;
+        }
+
+        const normalizedTimeline = this.normalizeToRecord(incident.timeline);
+        if (normalizedTimeline) {
+          incidentPayload.timeline = normalizedTimeline;
+        }
+
+        const normalizedImpact = this.normalizeToRecord(incident.impactAssessment);
+        if (normalizedImpact) {
+          incidentPayload.impact_assessment = normalizedImpact;
+        }
+
+        const incidentRecord = await this.database.createSecurityIncident(incidentPayload);
+
+        integratedEvent.automated_response = this.getAutomatedResponseActions(incidentRecord);
+        this.emit('incidentCreated', incidentRecord);
       }
 
       // 5. Real-time уведомления
@@ -123,7 +176,10 @@ export class SecurityAnalyticsService extends EventEmitter {
 
       return integratedEvent;
     } catch (error) {
-      console.error('Failed to process security event:', error);
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      this.logger.error('Failed to process security event', {
+        metadata: { error: normalizedError },
+      });
       throw error;
     }
   }
@@ -246,7 +302,10 @@ export class SecurityAnalyticsService extends EventEmitter {
             eventsToProcess.map(event => this.processSecurityEvent(event))
           );
         } catch (error) {
-          console.error('Error in real-time processing:', error);
+          const normalizedError = error instanceof Error ? error : new Error(String(error));
+          this.logger.error('Error in real-time processing', {
+            metadata: { error: normalizedError },
+          });
         } finally {
           this.isProcessing = false;
         }
@@ -280,10 +339,15 @@ export class SecurityAnalyticsService extends EventEmitter {
 
         // TODO: Implement training when threat detection is fully integrated
         // await this.threatDetection.trainAnomalyModel(trainingData);
-        console.log(`ML model trained on ${trainingData.length} historical events`);
+        this.logger.info('ML model trained on historical events', {
+          metadata: { trainingSamples: trainingData.length },
+        });
       }
     } catch (error) {
-      console.warn('Failed to train ML model:', error);
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      this.logger.warn('Failed to train ML model', {
+        metadata: { error: normalizedError },
+      });
     }
   }
 
@@ -291,10 +355,10 @@ export class SecurityAnalyticsService extends EventEmitter {
     if (!responseTime) return 0;
     // Парсим PostgreSQL interval в миллисекунды
     const match = responseTime.match(/(\d+(?:\.\d+)?)\s*ms/);
-    return match ? parseFloat(match[1]!) : 0;
+    return match ? parseFloat(match[1] ?? '0') : 0;
   }
 
-  private calculateThreatLevel(analysisResult: any): 'low' | 'medium' | 'high' | 'critical' {
+  private calculateThreatLevel(analysisResult: ThreatAnalysisResult): 'low' | 'medium' | 'high' | 'critical' {
     if (analysisResult.anomalyScore > 0.8) return 'critical';
     if (analysisResult.anomalyScore > 0.6) return 'high';
     if (analysisResult.anomalyScore > 0.4) return 'medium';
@@ -329,7 +393,10 @@ export class SecurityAnalyticsService extends EventEmitter {
       .map(([type, count]) => ({ type, count }));
   }
 
-  private calculateRiskScore(metrics: any, incidents: SecurityIncident[]): number {
+  private calculateRiskScore(
+    metrics: Awaited<ReturnType<DatabaseService['getSecurityMetrics']>>,
+    incidents: SecurityIncident[]
+  ): number {
     let score = 0;
     
     // Базовая оценка на основе метрик
@@ -349,14 +416,31 @@ export class SecurityAnalyticsService extends EventEmitter {
 
   private async calculateTrends(userId: string, timeRange: string, clientId?: string) {
     // Простая реализация трендов - сравнение с предыдущим периодом
-    const currentPeriod = await this.database.getSecurityMetrics(userId, clientId);
-    
+    await this.database.getSecurityMetrics(userId, clientId);
+
     // Для демонстрации возвращаем mock данные
     return {
+      period: timeRange,
       events_trend: '+15%',
       incidents_trend: '+3%',
       risk_trend: '-5%',
       response_time_trend: '-10%'
     };
+  }
+
+  private normalizeToRecord(value: unknown): Record<string, unknown> | undefined {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
+    if (Array.isArray(value)) {
+      return { items: value };
+    }
+
+    if (typeof value === 'object') {
+      return value as Record<string, unknown>;
+    }
+
+    return { value };
   }
 }

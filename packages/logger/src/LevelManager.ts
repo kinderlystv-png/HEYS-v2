@@ -5,11 +5,13 @@
 
 import fs from 'fs';
 import path from 'path';
-import { LOG_LEVELS, LEVEL_ALIASES } from '../../levels.config.js';
+
+import { LEVEL_ALIASES, LOG_LEVELS } from '../../../levels.config.js';
+import type { LogLevelName as ExternalLogLevelName } from '../../../levels.config.js';
 import { getEnvironmentConfig } from '../config/environment.config.js';
 
-export type LogLevelName = keyof typeof LOG_LEVELS;
-export type LogLevelValue = number;
+export type LogLevelName = ExternalLogLevelName;
+export type LogLevelValue = (typeof LOG_LEVELS)[LogLevelName]['value'];
 
 export interface LevelManagerOptions {
   initialLevel?: LogLevelName | string;
@@ -39,9 +41,9 @@ export class LevelManager {
     this.persistLevel = options.persistLevel ?? false;
     
     // Инициализируем уровень
-    const envConfig = getEnvironmentConfig(this.environment);
-    const initialLevel = options.initialLevel || envConfig.level || 'info';
-    this.currentLevel = this.normalizeLevel(initialLevel) as LogLevelName;
+  const envConfig = getEnvironmentConfig(this.environment);
+  const initialLevelInput = options.initialLevel ?? envConfig.level ?? envConfig.defaultLevel ?? 'info';
+  this.currentLevel = this.normalizeLevel(initialLevelInput);
     
     // Загружаем сохранённый уровень если включена персистентность
     if (this.persistLevel) {
@@ -73,13 +75,9 @@ export class LevelManager {
    */
   setLevel(level: LogLevelName | string, reason?: string): boolean {
     const normalizedLevel = this.normalizeLevel(level);
-    
-    if (!this.isValidLevel(normalizedLevel)) {
-      throw new Error(`Invalid log level: ${level}. Valid levels: ${Object.keys(LOG_LEVELS).join(', ')}`);
-    }
-    
+
     const previousLevel = this.currentLevel;
-    const newLevel = normalizedLevel as LogLevelName;
+    const newLevel = normalizedLevel;
     
     // Проверяем, нужно ли изменять уровень
     if (previousLevel === newLevel) {
@@ -92,9 +90,12 @@ export class LevelManager {
     const changeEvent: LevelChangeEvent = {
       previousLevel,
       newLevel,
-      timestamp: new Date(),
-      reason
+      timestamp: new Date()
     };
+
+    if (reason) {
+      changeEvent.reason = reason;
+    }
     
     // Добавляем в историю
     this.levelHistory.push(changeEvent);
@@ -119,13 +120,14 @@ export class LevelManager {
    * Проверить, включен ли определённый уровень
    */
   isEnabled(level: LogLevelName | string): boolean {
-    const normalizedLevel = this.normalizeLevel(level);
-    
-    if (!this.isValidLevel(normalizedLevel)) {
+    let normalizedLevel: LogLevelName;
+    try {
+      normalizedLevel = this.normalizeLevel(level);
+    } catch {
       return false;
     }
-    
-    const levelValue = LOG_LEVELS[normalizedLevel as LogLevelName].value;
+
+    const levelValue = LOG_LEVELS[normalizedLevel].value;
     const currentValue = this.getCurrentLevelValue();
     
     return levelValue >= currentValue;
@@ -150,7 +152,7 @@ export class LevelManager {
    * Поднять уровень логирования (уменьшить детализацию)
    */
   raiseLevel(steps: number = 1): boolean {
-    const levels = Object.keys(LOG_LEVELS);
+  const levels = Object.keys(LOG_LEVELS) as LogLevelName[];
     const currentIndex = levels.indexOf(this.currentLevel);
     const newIndex = Math.max(0, currentIndex - steps);
     
@@ -165,7 +167,7 @@ export class LevelManager {
    * Понизить уровень логирования (увеличить детализацию)
    */
   lowerLevel(steps: number = 1): boolean {
-    const levels = Object.keys(LOG_LEVELS);
+  const levels = Object.keys(LOG_LEVELS) as LogLevelName[];
     const currentIndex = levels.indexOf(this.currentLevel);
     const newIndex = Math.min(levels.length - 1, currentIndex + steps);
     
@@ -227,10 +229,10 @@ export class LevelManager {
    * Получить статистику по уровням
    */
   getStatistics() {
-    const levelCounts = this.levelHistory.reduce((acc, event) => {
+    const levelCounts = this.levelHistory.reduce<Record<LogLevelName, number>>((acc, event) => {
       acc[event.newLevel] = (acc[event.newLevel] || 0) + 1;
       return acc;
-    }, {} as Record<string, number>);
+    }, {} as Record<LogLevelName, number>);
     
     return {
       currentLevel: this.currentLevel,
@@ -248,17 +250,24 @@ export class LevelManager {
    */
   resetToDefault(): boolean {
     const envConfig = getEnvironmentConfig(this.environment);
-    return this.setLevel(envConfig.level, 'Reset to environment default');
+    const levelFromConfig = envConfig.level ?? envConfig.defaultLevel ?? 'info';
+    return this.setLevel(levelFromConfig, 'Reset to environment default');
   }
   
   // Приватные методы
   
-  private normalizeLevel(level: string): string {
-    const normalized = level.toLowerCase().trim();
-    return LEVEL_ALIASES[normalized] || normalized;
+  private normalizeLevel(level: LogLevelName | string): LogLevelName {
+    const normalized = level.toString().toLowerCase().trim();
+    const resolved = LEVEL_ALIASES[normalized] || normalized;
+
+    if (this.isValidLevel(resolved)) {
+      return resolved;
+    }
+
+    throw new Error(`Invalid log level: ${level}. Valid levels: ${Object.keys(LOG_LEVELS).join(', ')}`);
   }
   
-  private isValidLevel(level: string): boolean {
+  private isValidLevel(level: string): level is LogLevelName {
     return level in LOG_LEVELS;
   }
   
@@ -283,7 +292,8 @@ export class LevelManager {
       setInterval(() => {
         if (process.env.NODE_ENV !== originalEnv) {
           const newConfig = getEnvironmentConfig(process.env.NODE_ENV);
-          this.setLevel(newConfig.level, 'Auto-adjusted for environment change');
+          const levelFromConfig = newConfig.level ?? newConfig.defaultLevel ?? 'info';
+          this.setLevel(levelFromConfig, 'Auto-adjusted for environment change');
         }
       }, 30000);
     }
@@ -322,8 +332,12 @@ export class LevelManager {
       }
     }
     
-    if (persistedLevel && this.isValidLevel(this.normalizeLevel(persistedLevel))) {
-      this.currentLevel = this.normalizeLevel(persistedLevel) as LogLevelName;
+    if (persistedLevel) {
+      try {
+        this.currentLevel = this.normalizeLevel(persistedLevel);
+      } catch {
+        // Некорректное значение игнорируем
+      }
     }
   }
 }

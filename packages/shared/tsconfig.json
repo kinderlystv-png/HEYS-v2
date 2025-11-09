@@ -3,10 +3,22 @@
   "compilerOptions": {
     "composite": true,
     "outDir": "./dist",
-    "rootDir": "./src",
     "noEmit": false
   },
   "include": ["src/**/*"],
-  "exclude": ["dist", "node_modules", "**/*.test.*", "**/*.spec.*"],
-  "references": [{ "path": "../core" }]
+  "exclude": [
+    "dist",
+    "node_modules",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "src/**/__tests__/**",
+    "src/components/**",
+    "src/day/**",
+    "src/misc/**",
+    "src/performance/**",
+    "src/user/**"
+  ],
+  "references": [
+    { "path": "../core" }
+  ]
 }

@@ -1,7 +1,14 @@
 // filepath: packages/shared/src/components/PerformanceMonitor.tsx
 
-import React, { useState, useEffect } from 'react';
+import type { FC } from 'react';
+import { useEffect, useState } from 'react';
+
+import { getGlobalLogger } from '../monitoring/structured-logger';
+import type { BundleAnalyzer } from '../performance/BundleAnalyzer';
 import { bundleAnalyzer, BundleMetrics, BaselineMetrics } from '../performance/BundleAnalyzer';
+
+type BundleReport = ReturnType<BundleAnalyzer['generateReport']>;
+type BundleComparison = BundleReport['comparison'];
 
 /**
  * PerformanceMonitor - React компонент для отображения метрик производительности
@@ -14,14 +21,16 @@ interface PerformanceMonitorProps {
   refreshInterval?: number;
 }
 
-export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
+const performanceLogger = getGlobalLogger().child({ component: 'PerformanceMonitor' });
+
+export const PerformanceMonitor: FC<PerformanceMonitorProps> = ({
   showDetailed = false,
   autoRefresh = false,
   refreshInterval = 30000 // 30 секунд
 }) => {
   const [metrics, setMetrics] = useState<BundleMetrics | null>(null);
   const [baseline, setBaseline] = useState<BaselineMetrics | null>(null);
-  const [comparison, setComparison] = useState<any>(null);
+  const [comparison, setComparison] = useState<BundleComparison>(null);
   const [recommendations, setRecommendations] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +73,9 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки данных');
-      console.error('Ошибка при загрузке данных производительности:', err);
+      performanceLogger.error('Failed to load performance metrics', {
+        metadata: { error: err instanceof Error ? err : String(err) },
+      });
     } finally {
       setIsLoading(false);
     }
@@ -92,7 +103,9 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
       
     } catch (err) {
       setError('Ошибка при сохранении baseline');
-      console.error('Ошибка сохранения baseline:', err);
+      performanceLogger.error('Failed to save baseline metrics', {
+        metadata: { error: err instanceof Error ? err : String(err) },
+      });
     }
   };
 
@@ -261,7 +274,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
         </div>
       )}
 
-      <style jsx>{`
+  <style>{`
         .performance-monitor {
           padding: 20px;
           border-radius: 8px;

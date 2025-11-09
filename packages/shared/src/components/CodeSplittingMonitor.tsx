@@ -5,7 +5,8 @@
  * Предоставляет интерфейс для анализа и отслеживания разделения кода
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import type { FC } from 'react';
+import { useMemo, useState } from 'react';
 
 // Типы для компонента
 export interface CodeSplittingStats {
@@ -47,7 +48,7 @@ export interface CodeSplittingMonitorProps {
 /**
  * Основной компонент мониторинга Code Splitting
  */
-export const CodeSplittingMonitor: React.FC<CodeSplittingMonitorProps> = ({
+export const CodeSplittingMonitor: FC<CodeSplittingMonitorProps> = ({
   analysisData,
   onRunAnalysis,
   showDetails = true,
@@ -411,22 +412,22 @@ export const CodeSplittingMonitor: React.FC<CodeSplittingMonitorProps> = ({
                 💡 Рекомендации
               </h3>
               <div style={{ fontSize: '14px', lineHeight: '1.5' }}>
-                {data.summary.byType.route > 0 && (
+                {(data.summary.byType.route ?? 0) > 0 && (
                   <div style={{ marginBottom: '8px' }}>
                     <strong>🛣️ Route-based splitting:</strong> Используйте React.lazy() для {data.summary.byType.route} страниц
                   </div>
                 )}
-                {data.summary.byType.component > 0 && (
+                {(data.summary.byType.component ?? 0) > 0 && (
                   <div style={{ marginBottom: '8px' }}>
                     <strong>🧩 Component splitting:</strong> Разделите {data.summary.byType.component} больших компонентов
                   </div>
                 )}
-                {data.summary.byType.vendor > 0 && (
+                {(data.summary.byType.vendor ?? 0) > 0 && (
                   <div style={{ marginBottom: '8px' }}>
                     <strong>📦 Vendor splitting:</strong> Настройте manualChunks для внешних библиотек
                   </div>
                 )}
-                {data.summary.byType.dynamic > 0 && (
+                {(data.summary.byType.dynamic ?? 0) > 0 && (
                   <div>
                     <strong>⚡ Dynamic imports:</strong> Реализуйте условную загрузку для {data.summary.byType.dynamic} компонентов
                   </div>

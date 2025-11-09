@@ -5,6 +5,18 @@ import pino from 'pino';
 
 import { AdvancedLoggerConfig } from './config.js';
 
+const resolveStreamLevel = (level: AdvancedLoggerConfig['level']): pino.Level | null => {
+  if (level === 'silent') {
+    return null;
+  }
+
+  if (level === 'http') {
+    return 'info';
+  }
+
+  return level as pino.Level;
+};
+
 /**
  * Создает транспорты для логирования на основе конфигурации
  */
@@ -13,25 +25,29 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
 
   // Консольный транспорт
   if (config.transports.console.enabled) {
-    if (config.transports.console.pretty) {
-      streams.push({
-        level: config.level,
-        stream: pino.transport({
-          target: 'pino-pretty',
-          options: {
-            colorize: config.transports.console.colorize,
-            ignore: 'pid,hostname',
-            translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
-            messageFormat: `[${config.service}] {msg}`,
-            sync: false
-          }
-        })
-      });
-    } else {
-      streams.push({
-        level: config.level,
-        stream: process.stdout
-      });
+    const streamLevel = resolveStreamLevel(config.level);
+
+    if (streamLevel !== null) {
+      if (config.transports.console.pretty) {
+        streams.push({
+          level: streamLevel,
+          stream: pino.transport({
+            target: 'pino-pretty',
+            options: {
+              colorize: config.transports.console.colorize,
+              ignore: 'pid,hostname',
+              translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
+              messageFormat: `[${config.service}] {msg}`,
+              sync: false
+            }
+          })
+        });
+      } else {
+        streams.push({
+          level: streamLevel,
+          stream: process.stdout
+        });
+      }
     }
   }
 
@@ -40,14 +56,17 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
     ensureLogDirectory(config.transports.file.path);
     
     // Основной лог файл
-    streams.push({
-      level: config.level,
-      stream: pino.destination({
-        dest: path.join(config.transports.file.path, `${config.service}.log`),
-        sync: false,
-        mkdir: true
-      })
-    });
+    const fileLevel = resolveStreamLevel(config.level);
+    if (fileLevel !== null) {
+      streams.push({
+        level: fileLevel,
+        stream: pino.destination({
+          dest: path.join(config.transports.file.path, `${config.service}.log`),
+          sync: false,
+          mkdir: true
+        })
+      });
+    }
 
     // Отдельный файл для ошибок
     streams.push({
@@ -62,17 +81,21 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
 
   // Сетевой транспорт (для centralized logging)
   if (config.transports.network.enabled && config.transports.network.url) {
-    streams.push({
-      level: config.level,
-      stream: pino.transport({
-        target: '@axiomhq/pino', // Или другой сетевой транспорт
-        options: {
-          url: config.transports.network.url,
-          apiKey: config.transports.network.apiKey,
-          dataset: config.service
-        }
-      })
-    });
+    const networkLevel = resolveStreamLevel(config.level);
+
+    if (networkLevel !== null) {
+      streams.push({
+        level: networkLevel,
+        stream: pino.transport({
+          target: '@axiomhq/pino', // Или другой сетевой транспорт
+          options: {
+            url: config.transports.network.url,
+            apiKey: config.transports.network.apiKey,
+            dataset: config.service
+          }
+        })
+      });
+    }
   }
 
   return streams;

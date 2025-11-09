@@ -1,11 +1,9 @@
 import pino from 'pino';
 
+import { LEVEL_METHODS, LEVEL_VALUES } from '../../../levels.config.js';
+
 import { defaultConfig, validateConfig, type AdvancedLoggerConfig } from './config.js';
 import { createTransports, createFormatters, createSerializers } from './transports.js';
-
-// Импорт новых конфигураций уровней
-import { DEFAULT_CONFIG, LOG_LEVELS, LEVEL_VALUES, LEVEL_METHODS } from '../../../levels.config.js';
-import { getEnvironmentConfig } from '../config/environment.config.js';
 
 /**
  * Уровни логирования для HEYS системы (обновленные)
@@ -175,9 +173,17 @@ export function createHttpLogger(service?: string) {
       requestId,
       method: req.method,
       url: req.url,
-      userAgent: req.headers['user-agent'] || undefined,
-      ip: req.ip || req.connection?.remoteAddress || undefined
     };
+
+    const userAgent = req.headers['user-agent'];
+    if (userAgent) {
+      context.userAgent = userAgent;
+    }
+
+    const ip = req.ip ?? req.connection?.remoteAddress;
+    if (ip) {
+      context.ip = ip;
+    }
 
     req.logger = httpLogger.child(context);
     

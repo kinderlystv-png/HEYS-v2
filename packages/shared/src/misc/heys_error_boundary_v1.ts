@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { ErrorBoundaryProps, HEYSGlobal } from './types/heys';
+import { getGlobalLogger } from '../monitoring/structured-logger';
 
 // Error Boundary State
 interface ErrorBoundaryState {
@@ -14,14 +15,23 @@ interface ErrorBoundaryState {
 
 // Error reporting interface
 interface ErrorReport {
-  error: Error;
-  errorInfo: React.ErrorInfo;
-  timestamp: number;
-  userAgent: string;
-  url: string;
-  userId?: string;
-  sessionId: string;
-  retryCount: number;
+  readonly errorName: string;
+  readonly errorMessage: string;
+  readonly errorStack?: string;
+  readonly errorInfo: React.ErrorInfo;
+  readonly timestamp: number;
+  readonly userAgent: string;
+  readonly url: string;
+  readonly sessionId: string;
+  readonly retryCount: number;
+  readonly component?: string;
+  readonly metadata?: Record<string, unknown>;
+}
+
+interface ErrorLogContext {
+  readonly retryCount?: number;
+  readonly component?: string;
+  readonly metadata?: Record<string, unknown>;
 }
 
 // Global declarations
@@ -32,86 +42,102 @@ declare global {
   }
 }
 
-// Module implementation
-(function (global: Window & typeof globalThis): void {
-  const React = global.React;
-  if (!React) {
-    console.warn('React is not available for ErrorBoundary');
-    return;
-  }
+const runtimeWindow =
+  typeof window !== 'undefined' ? (window as Window & typeof globalThis) : undefined;
 
-  const HEYS = (global.HEYS = global.HEYS || ({} as HEYSGlobal));
+if (runtimeWindow) {
+  (function (global: Window & typeof globalThis): void {
+    const logger = getGlobalLogger().child({ component: 'HEYS Error Boundary v1' });
 
-  // Session ID for error tracking
-  const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const React = global.React;
+    if (!React) {
+      logger.warn('React is not available for ErrorBoundary');
+      return;
+    }
 
-  // Error logging function
-  function logError(error: Error, errorInfo?: React.ErrorInfo, additionalData?: any): void {
-    try {
+    const HEYS = (global.HEYS = global.HEYS || ({} as HEYSGlobal));
+
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+
+    function serializeError(error: Error): Record<string, unknown> {
+      return {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      };
+    }
+
+    function logError(error: Error, errorInfo?: React.ErrorInfo, context?: ErrorLogContext): void {
+      const retryCount = context?.retryCount ?? 0;
+      const component = context?.component ?? 'ErrorBoundary';
+      const errorInfoValue = errorInfo ?? { componentStack: 'Not available' };
       const errorReport: ErrorReport = {
-        error: {
-          name: error.name,
-          message: error.message,
-          stack: error.stack || 'No stack trace available',
-        } as Error,
-        errorInfo: errorInfo || { componentStack: 'Not available' },
+        errorName: error.name,
+        errorMessage: error.message,
+        errorStack: error.stack ?? 'No stack trace available',
+        errorInfo: errorInfoValue,
         timestamp: Date.now(),
-        userAgent: navigator.userAgent,
-        url: window.location.href,
+        userAgent: global.navigator?.userAgent ?? 'unknown',
+        url: global.location?.href ?? 'unknown',
         sessionId,
-        retryCount: additionalData?.retryCount || 0,
+        retryCount,
+        component,
+        metadata: context?.metadata,
       };
 
-      // Log to console
-      console.group('🚨 HEYS Error Report');
-      console.error('Error:', error);
-      if (errorInfo) {
-        console.error('Component Stack:', errorInfo.componentStack);
-      }
-      console.error('Additional Info:', additionalData);
-      console.error('Full Report:', errorReport);
-      console.groupEnd();
+      logger.error('Captured boundary error', {
+        operation: 'componentDidCatch',
+        metadata: {
+          errorReport,
+        },
+      });
 
-      // Track with analytics if available
       if (HEYS.analytics) {
-        HEYS.analytics.trackError('ComponentError', {
-          errorName: error.name,
-          errorMessage: error.message,
-          componentStack: errorInfo?.componentStack,
-          retryCount: additionalData?.retryCount || 0,
-        });
+        try {
+          HEYS.analytics.trackError('ComponentError', {
+            errorName: error.name,
+            errorMessage: error.message,
+            componentStack: errorInfoValue.componentStack,
+            retryCount,
+          });
+        } catch (analyticsError) {
+          logger.warn('Analytics error tracking failed', {
+            metadata: { analyticsError: serializeError(analyticsError as Error) },
+          });
+        }
       }
 
-      // Track with performance monitor if available
       if (HEYS.performance) {
-        HEYS.performance.increment('errors.boundary');
+        try {
+          HEYS.performance.increment('errors.boundary');
+        } catch (performanceError) {
+          logger.warn('Performance counter increment failed', {
+            metadata: { performanceError: serializeError(performanceError as Error) },
+          });
+        }
       }
 
-      // Store error for potential reporting
       try {
-        const recentErrors = JSON.parse(localStorage.getItem('heys_recent_errors') || '[]');
-        recentErrors.push({
-          ...errorReport,
-          error: {
-            name: error.name,
-            message: error.message,
-            stack: error.stack,
-          },
-        });
+        const storage = global.localStorage;
+        if (!storage) {
+          return;
+        }
 
-        // Keep only last 10 errors
+        const recentErrorsRaw = storage.getItem('heys_recent_errors');
+        const recentErrors: ErrorReport[] = recentErrorsRaw ? JSON.parse(recentErrorsRaw) : [];
+        recentErrors.push(errorReport);
+
         if (recentErrors.length > 10) {
           recentErrors.splice(0, recentErrors.length - 10);
         }
 
-        localStorage.setItem('heys_recent_errors', JSON.stringify(recentErrors));
+        storage.setItem('heys_recent_errors', JSON.stringify(recentErrors));
       } catch (storageError) {
-        console.warn('Could not store error report:', storageError);
+        logger.warn('Could not store error report', {
+          metadata: { storageError: serializeError(storageError as Error) },
+        });
       }
-    } catch (loggingError) {
-      console.error('Error in error logging:', loggingError);
     }
-  }
 
   // Enhanced Error Boundary Component
   class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -146,15 +172,17 @@ declare global {
         try {
           this.props.onError(error, errorInfo);
         } catch (handlerError) {
-          console.error('Error in custom error handler:', handlerError);
+          logger.error('Error in custom error handler', {
+            metadata: {
+              handlerError: serializeError(handlerError as Error),
+            },
+          });
         }
       }
 
-      // Log the error
       logError(error, errorInfo, {
         retryCount: this.state.retryCount,
         component: 'ErrorBoundary',
-        props: this.props,
       });
     }
 
@@ -163,7 +191,9 @@ declare global {
 
       // Limit retry attempts
       if (newRetryCount > 3) {
-        console.warn('Maximum retry attempts reached');
+        logger.warn('Maximum retry attempts reached', {
+          metadata: { retryCount: newRetryCount },
+        });
         return;
       }
 
@@ -310,11 +340,21 @@ declare global {
               'button',
               {
                 onClick: () => {
-                  if (navigator.clipboard) {
-                    const errorText = `Error ID: ${errorId}\nError: ${error?.name}: ${error?.message}\nURL: ${window.location.href}\nTime: ${new Date().toISOString()}`;
-                    navigator.clipboard.writeText(errorText).then(() => {
-                      alert('Информация об ошибке скопирована в буфер обмена');
-                    });
+                  const clipboard = global.navigator?.clipboard;
+                  if (clipboard) {
+                    const errorText = `Error ID: ${errorId}\nError: ${error?.name}: ${error?.message}\nURL: ${global.location?.href ?? 'unknown'}\nTime: ${new Date().toISOString()}`;
+                    clipboard
+                      .writeText(errorText)
+                      .then(() => {
+                        global.alert?.('Информация об ошибке скопирована в буфер обмена');
+                      })
+                      .catch((clipboardError) => {
+                        logger.warn('Clipboard write failed', {
+                          metadata: { clipboardError: serializeError(clipboardError as Error) },
+                        });
+                      });
+                  } else {
+                    logger.warn('Clipboard API is not available for copying error details');
                   }
                 },
                 style: {
@@ -400,27 +440,35 @@ declare global {
   };
 
   // Global error handler for unhandled errors
-  window.addEventListener('error', (event) => {
-    logError(new Error(event.message), undefined, {
-      filename: event.filename,
-      lineno: event.lineno,
-      colno: event.colno,
-      type: 'global',
+    global.addEventListener('error', (event) => {
+      const globalError = new Error(event.message);
+      logError(globalError, undefined, {
+        component: 'globalErrorHandler',
+        metadata: {
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+          type: 'global',
+        },
+      });
     });
-  });
 
-  // Global handler for unhandled promise rejections
-  window.addEventListener('unhandledrejection', (event) => {
-    const error = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
-    logError(error, undefined, { type: 'unhandledPromise' });
-  });
+    global.addEventListener('unhandledrejection', (event) => {
+      const reason = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
+      logError(reason, undefined, {
+        component: 'globalUnhandledRejection',
+        metadata: { type: 'unhandledPromise' },
+      });
+    });
 
-  // Assign to HEYS global
-  HEYS.ErrorBoundary = ErrorBoundary;
-  (HEYS as any).SimpleErrorBoundary = SimpleErrorBoundary;
-  (HEYS as any).withErrorBoundary = withErrorBoundary;
-  (HEYS as any).ErrorReporting = ErrorReporting;
-  HEYS.logError = logError;
+    HEYS.ErrorBoundary = ErrorBoundary;
+    (HEYS as Record<string, unknown>).SimpleErrorBoundary = SimpleErrorBoundary;
+    (HEYS as Record<string, unknown>).withErrorBoundary = withErrorBoundary;
+    (HEYS as Record<string, unknown>).ErrorReporting = ErrorReporting;
+    HEYS.logError = logError;
 
-  console.log('🛡️ HEYS Error Boundary v1 (TypeScript) загружен');
-})(window);
+    logger.info('🛡️ HEYS Error Boundary v1 (TypeScript) загружен');
+  })(runtimeWindow);
+} else {
+  getGlobalLogger().info('HEYS Error Boundary v1 skipped: window is undefined');
+}

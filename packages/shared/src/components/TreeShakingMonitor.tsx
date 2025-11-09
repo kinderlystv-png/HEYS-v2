@@ -5,7 +5,10 @@
  * Показывает неиспользуемые экспорты и рекомендации по оптимизации
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import type { FC } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+
+import { getGlobalLogger } from '../monitoring/structured-logger';
 import { TreeShaker } from '../performance/TreeShaker';
 import type { TreeShakingAnalysis, UnusedExport } from '../performance/TreeShaker';
 
@@ -24,6 +27,8 @@ interface TreeShakingMonitorProps {
   showDetails?: boolean;
 }
 
+const treeShakerLogger = getGlobalLogger().child({ component: 'TreeShakingMonitor' });
+
 interface AnalysisStats {
   totalFiles: number;
   totalExports: number;
@@ -32,7 +37,7 @@ interface AnalysisStats {
   potentialSavings: number;
 }
 
-export const TreeShakingMonitor: React.FC<TreeShakingMonitorProps> = ({
+export const TreeShakingMonitor: FC<TreeShakingMonitorProps> = ({
   projectPath = process.cwd(),
   autoAnalyze = false,
   refreshInterval = 0,
@@ -54,7 +59,9 @@ export const TreeShakingMonitor: React.FC<TreeShakingMonitorProps> = ({
     setError(null);
 
     try {
-      console.log('🌲 Запуск анализа tree shaking для:', projectPath);
+      treeShakerLogger.info('Starting tree shaking analysis', {
+        metadata: { projectPath },
+      });
       const result = await treeShaker.analyzeProject(projectPath);
       
       setAnalysis(result);
@@ -66,7 +73,9 @@ export const TreeShakingMonitor: React.FC<TreeShakingMonitorProps> = ({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
       setError(`Ошибка анализа: ${errorMessage}`);
-      console.error('Ошибка tree shaking анализа:', err);
+      treeShakerLogger.error('Tree shaking analysis failed', {
+        metadata: { error: err instanceof Error ? err : String(err) },
+      });
     } finally {
       setIsAnalyzing(false);
     }
@@ -76,24 +85,29 @@ export const TreeShakingMonitor: React.FC<TreeShakingMonitorProps> = ({
    * Автоматический анализ при монтировании
    */
   useEffect(() => {
-    if (autoAnalyze) {
-      performAnalysis();
+    if (!autoAnalyze) {
+      return undefined;
     }
+
+    void performAnalysis();
+    return undefined;
   }, [autoAnalyze, performAnalysis]);
 
   /**
    * Автообновление анализа
    */
   useEffect(() => {
-    if (refreshInterval > 0) {
-      const interval = setInterval(() => {
-        if (!isAnalyzing) {
-          performAnalysis();
-        }
-      }, refreshInterval * 1000);
-
-      return () => clearInterval(interval);
+    if (refreshInterval <= 0) {
+      return undefined;
     }
+
+    const interval = setInterval(() => {
+      if (!isAnalyzing) {
+        void performAnalysis();
+      }
+    }, refreshInterval * 1000);
+
+    return () => clearInterval(interval);
   }, [refreshInterval, isAnalyzing, performAnalysis]);
 
   /**
@@ -126,19 +140,23 @@ export const TreeShakingMonitor: React.FC<TreeShakingMonitorProps> = ({
    * Группирует неиспользуемые экспорты по файлам
    */
   const getExportsByFile = useCallback(() => {
-    if (!analysis) return new Map();
+    if (!analysis) {
+      return new Map<string, UnusedExport[]>();
+    }
 
     const byFile = new Map<string, UnusedExport[]>();
-    
-    analysis.unusedExports.forEach(exp => {
-      const fileName = exp.file.split('/').pop() || exp.file;
-      if (!byFile.has(fileName)) {
-        byFile.set(fileName, []);
-      }
-      byFile.get(fileName)!.push(exp);
-    });
 
-    // Сортируем по количеству неиспользуемых экспортов
+    for (const unusedExport of analysis.unusedExports) {
+      const fileName = unusedExport.file.split('/').pop() || unusedExport.file;
+      const existing = byFile.get(fileName);
+
+      if (existing) {
+        existing.push(unusedExport);
+      } else {
+        byFile.set(fileName, [unusedExport]);
+      }
+    }
+
     return new Map([...byFile.entries()].sort((a, b) => b[1].length - a[1].length));
   }, [analysis]);
 
@@ -424,7 +442,9 @@ export const TreeShakingMonitor: React.FC<TreeShakingMonitorProps> = ({
               </h3>
               
               <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                {Array.from(exportsByFile.entries()).slice(0, maxDisplayItems).map(([fileName, exports]) => (
+                {Array.from(exportsByFile.entries())
+                  .slice(0, maxDisplayItems)
+                  .map(([fileName, unusedExports]) => (
                   <div key={fileName} style={{
                     marginBottom: '16px',
                     padding: '12px',
@@ -453,7 +473,7 @@ export const TreeShakingMonitor: React.FC<TreeShakingMonitorProps> = ({
                         fontSize: '12px',
                         fontWeight: '500'
                       }}>
-                        {exports.length} экспортов
+                        {unusedExports.length} экспортов
                       </span>
                     </div>
                     
@@ -462,8 +482,8 @@ export const TreeShakingMonitor: React.FC<TreeShakingMonitorProps> = ({
                       gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
                       gap: '4px' 
                     }}>
-                      {exports.slice(0, 8).map((exp, index) => (
-                        <div key={index} style={{
+                      {unusedExports.slice(0, 8).map((unusedExport: UnusedExport, index: number) => (
+                        <div key={`${fileName}-${index}`} style={{
                           padding: '4px 8px',
                           backgroundColor: 'white',
                           borderRadius: '4px',
@@ -472,12 +492,12 @@ export const TreeShakingMonitor: React.FC<TreeShakingMonitorProps> = ({
                           border: '1px solid #e2e8f0'
                         }}>
                           <span style={{ fontWeight: '500', color: '#ef4444' }}>
-                            {exp.exportName}
+                            {unusedExport.exportName}
                           </span>
-                          <span style={{ color: '#9ca3af' }}> : {exp.line}</span>
+                          <span style={{ color: '#9ca3af' }}> : {unusedExport.line}</span>
                         </div>
                       ))}
-                      {exports.length > 8 && (
+                      {unusedExports.length > 8 && (
                         <div style={{
                           padding: '4px 8px',
                           backgroundColor: '#f1f5f9',
@@ -486,7 +506,7 @@ export const TreeShakingMonitor: React.FC<TreeShakingMonitorProps> = ({
                           color: '#64748b',
                           textAlign: 'center'
                         }}>
-                          +{exports.length - 8} еще
+                          +{unusedExports.length - 8} еще
                         </div>
                       )}
                     </div>

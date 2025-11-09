@@ -18,8 +18,9 @@ export interface TransportConfig {
   };
   network: {
     enabled: boolean;
-    url?: string;
-    apiKey?: string;
+    // optional properties may appear explicitly with undefined, so include it per exactOptionalPropertyTypes
+    url?: string | undefined;
+    apiKey?: string | undefined;
   };
 }
 
@@ -64,8 +65,9 @@ export const defaultConfig: AdvancedLoggerConfig = {
     },
     network: {
       enabled: process.env.LOG_NETWORK === 'true',
-      url: process.env.LOG_NETWORK_URL || undefined,
-      apiKey: process.env.LOG_API_KEY || undefined,
+      // Avoid assigning explicit undefined to satisfy exactOptionalPropertyTypes
+      url: process.env.LOG_NETWORK_URL ? process.env.LOG_NETWORK_URL : undefined,
+      apiKey: process.env.LOG_API_KEY ? process.env.LOG_API_KEY : undefined,
     },
   },
   redact: [
