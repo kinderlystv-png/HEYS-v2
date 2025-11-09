@@ -176,10 +176,7 @@ export class ModernSearch {
     }
 
     // Perform search
-    const fuseOptions = customOptions
-      ? { ...this.defaultFuseOptions, ...customOptions }
-      : this.defaultFuseOptions;
-
+        const fuseResults = searchIndex.search(validatedQuery.q, fuseOptions);
     const fuseResults = searchIndex.search(validatedQuery.q, fuseOptions);
 
     // Apply additional filters
