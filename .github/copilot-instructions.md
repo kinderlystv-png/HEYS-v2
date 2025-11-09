@@ -1,34 +1,152 @@
-# HEYS v2 – Copilot Playbook
+# HEYS v2 – AI Development Guide
 
-## System Layout
-- Все ответы и комментарии ведём на русском языке. Английские термины и имена файлов оставляем по-английски, но связующий текст — по-русски.
+## 🗣️ Communication
+**Русский язык** для всех ответов и комментариев. Технические термины и имена файлов — по-английски.
 
-- Monorepo managed with `pnpm` workspaces + Turbo; packages live in `packages/*`, deployable apps in `apps/*`, legacy v12 assets remain at repo root for reference only.
-- Core runtime code is TypeScript-first; each package typically ships via `tsup` (CJS + ESM) and expects generated `dist/**` (including `.d.ts`) files to exist.
-- Configuration shared across packages sits at the root (`tsconfig.json`, `levels.config.js`, `logger.config.*`). Logger utilities in `packages/logger` are consumed broadly.
+## 🏗️ Architecture Overview
+```
+HEYS-v2/
+├── apps/web/              # Legacy v12 app (standalone HTML + inline React)
+│   ├── index.html         # Main entry point, React components inline
+│   ├── heys_core_v12.js   # Product search, localStorage management
+│   ├── heys_day_v12.js    # Day statistics, meal tracking
+│   ├── heys_user_v12.js   # User profile management
+│   ├── heys_reports_v12.js # Reports and analytics
+│   └── heys_simple_analytics.js # Minimal performance tracking (217 lines)
+├── packages/              # Modern TypeScript packages
+│   ├── core/             # Core business logic
+│   ├── shared/           # Shared utilities
+│   └── logger/           # Logging infrastructure
+└── archive/              # Deprecated code (DO NOT USE)
+```
 
-## Required Tooling & Commands
-- Use Node ≥ 18 and `pnpm` ≥ 8 (enforced by `.nvmrc` and `package.json` engines).
-- Bootstrap once with `pnpm install`. `pnpm demo/dev` scripts spin up the web app; prefer `pnpm --filter @heys/web run dev` for frontend-only.
-- Type safety is driven by `pnpm run type-check` (Turbo fan-out). Many packages demand their build step first: run `pnpm -r --filter @heys/* run build` to refresh declarations before a clean type-check.
-- Unit tests: `pnpm test:packages` (per package `vitest`), end-to-end via Playwright (`pnpm test:e2e`).
-- Build artifacts for release use `pnpm run build` (Turbo) or target a package (`pnpm --filter @heys/logger run build`).
+**Key principle:** Legacy v12 код в `apps/web/` — это production runtime. Modern TS в `packages/` — для переиспользования и типизации.
 
-## Coding Conventions
-- Root `tsconfig.json` has `"noEmit": true`; rely on package-level configs (often `composite`) for emission. Update `paths`/`references` when introducing new cross-package imports.
-- Logger levels/types are sourced from `levels.config.js`; when adding transports adjust `packages/logger/src/transports.ts` *and* keep level mappings in sync.
-- Shared security & analytics modules (`packages/shared/src/security/**`, `.../analytics/**`) assume Supabase + custom threat detection stubs. Guard optional fields to satisfy `exactOptionalPropertyTypes` and avoid implicit `any`.
-- Legacy performance helpers under `packages/shared/src/performance/**` pull in React/Vite types even though `@heys/shared` is nominally framework-agnostic. Ensure the package’s `tsconfig` and dependencies cover those imports before refactoring.
-- Many legacy JS/HTML files at repo root are preserved for documentation—avoid editing unless explicitly requested.
+## 🚀 Quick Start
+```bash
+pnpm install           # Bootstrap (Node ≥18, pnpm ≥8)
+pnpm dev              # Dev server → localhost:3001
+pnpm build            # Production build (Turbo)
+pnpm type-check       # TypeScript validation
+```
 
-## Integration Notes
-- Supabase access flows through `DatabaseService` (`packages/shared/src/database/DatabaseService.ts`); incidents and analytics objects expect specific shape (status enums, timestamps, etc.).
-- Security analytics bridge (`packages/shared/src/security/threat-detection-bridge.ts`) optionally loads `@heys/threat-detection`; provide mocks when the dependency is absent.
-- Frontend styling uses Vite + Tailwind (`apps/web/postcss.config.js` expects `@tailwindcss/postcss`). Install corresponding plugins before running `vite build`.
-- Turbo caches outputs aggressively; when debugging inconsistent builds, clear via `pnpm clean` or `turbo run build --force`.
+## 📝 Development Rules
 
-## Documentation Pointers
-- High-level system context: `docs/ARCHITECTURE.md`, API specifics in `docs/API_DOCUMENTATION.md`, security processes in `docs/SECURITY.md`.
-- Legacy navigation aids (`NAVIGATION_MAPS_README.md`, `dynamic-navigation-mapper.js`) map anchors for large HTML/JS bundles—useful if you must touch v12 assets.
+### 1. Legacy v12 Files (`apps/web/*.js`)
+- ✅ **EDIT:** Когда пользователь работает с UI/UX, добавляет фичи в web app
+- ❌ **DON'T:** Переписывать на TypeScript без явного запроса
+- ⚠️ **WATCH OUT:** React компоненты inline в HTML, используют CDN React 18
+- 🔍 **Pattern:** `window.HEYS.ModuleName` для глобальных объектов
 
-Let me know if any section needs deeper coverage or if new workflows should be documented.
+### 2. Analytics & Performance
+- **MINIMAL:** `heys_simple_analytics.js` (217 строк) заменил 1316 строк legacy кода
+- **Methods:** `trackSearch()`, `trackApiCall()`, `trackDataOperation()`, `trackError()`
+- **Aliases:** `HEYS.performance.increment()`, `HEYS.performance.measure()`
+- ❌ **NEVER:** Добавлять сложный performance monitoring без обсуждения
+
+### 3. Supabase Integration
+- **Auth:** `heys_storage_supabase_v1.js` → `cloud.signIn(email, password)`
+- **Data:** `DatabaseService` → `packages/shared/src/database/DatabaseService.ts`
+- **RLS:** Таблица `clients` требует RLS политики (`database_clients_rls_policies.sql`)
+- **Local mode:** Приложение работает offline через `localStorage`
+
+### 4. Storage Pattern
+```javascript
+// Client-specific storage
+U.lsSet('heys_products', products);  // Автоматически добавляет clientId
+U.lsGet('heys_products', []);
+
+// Global storage
+localStorage.setItem('heys_client_current', clientId);
+```
+
+### 5. Code Style
+- **Russian comments** в legacy JS файлах
+- **English comments** в TypeScript packages
+- **No over-engineering:** Простота > сложность (см. `PERFORMANCE_MONITOR_AUDIT.md`)
+- **YAGNI:** Не добавляй функциональность "на будущее"
+
+## 🔧 Common Tasks
+
+### Add new product field
+1. Edit `heys_models_v1.js` (data model)
+2. Update `heys_day_v12.js` (UI rendering)
+3. Modify `heys_storage_layer_v1.js` (persistence)
+
+### Fix search issue
+1. Check `heys_core_v12.js` → `ProductsManager.search()`
+2. Verify `searchIndex` in `buildSearchIndex()`
+3. Test with `HEYS.analytics.trackSearch()` для slow queries
+
+### Add Supabase table
+1. Create SQL in `database/*.sql`
+2. Add RLS policies (см. `database_clients_rls_policies.sql`)
+3. Update `DatabaseService.ts` если нужен TypeScript access
+
+### Archive old code
+```bash
+mv apps/web/old_module.js archive/legacy-v12/
+git add archive/ && git commit -m "chore: archive old_module.js"
+```
+
+## ⚡ Performance Guidelines
+- **Bundle size:** Keep legacy JS < 50KB per file
+- **localStorage:** Clear old data periodically (>100KB warning)
+- **Supabase:** Используй `select('id, name')` вместо `select('*')`
+- **React:** Мемоизация через `useMemo()` для тяжелых вычислений
+
+## 🐛 Debugging Patterns
+
+### Check analytics stats
+```javascript
+// В browser console:
+heysStats()  // Shows session statistics
+```
+
+### Inspect localStorage
+```javascript
+Object.keys(localStorage).filter(k => k.startsWith('heys_'))
+```
+
+### Supabase connection issues
+```javascript
+// Check cloud status
+window.HEYS.cloud.getStatus()  // 'online' | 'offline'
+```
+
+## 📦 Package Dependencies
+- **Legacy JS:** React 18 (CDN), Supabase JS (CDN)
+- **Modern TS:** Built with `tsup`, published to `dist/`
+- **Shared config:** `tsconfig.json` (root), `levels.config.js`, `logger.config.*`
+
+## 🚫 Anti-Patterns (DO NOT)
+1. ❌ Monkey patching `document.createElement` или `console.*`
+2. ❌ FPS tracking, детальный memory profiling для nutrition app
+3. ❌ Глобальные event listeners без cleanup
+4. ❌ Избыточная типизация в legacy JS (используй JSDoc по минимуму)
+5. ❌ Преждевременная оптимизация
+
+## 📚 Documentation
+- **Architecture:** `docs/ARCHITECTURE.md`
+- **Performance audit:** `PERFORMANCE_MONITOR_AUDIT.md`
+- **Security:** `docs/SECURITY.md`, `database_clients_rls_policies.sql`
+- **Legacy navigation:** Navigation maps in repo root (для больших HTML файлов)
+
+## 🎯 Project Philosophy
+**"Минимализм и практичность"** — HEYS это приложение учета питания, не enterprise monitoring platform. Код должен быть простым, понятным и решать конкретные задачи пользователей.
+
+## 🤝 Commit Style
+```bash
+feat: add client selection modal
+fix: resolve Supabase RLS permissions
+refactor: simplify performance monitoring (-1099 lines)
+chore: archive legacy performance monitor
+docs: update architecture diagram
+```
+
+**Всегда тестируй изменения:**
+```bash
+pnpm dev  # Проверь localhost:3001
+# Убедись что нет ошибок в console
+# Проверь что данные сохраняются в localStorage
+```
