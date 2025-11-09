@@ -69,7 +69,7 @@
     <script defer src="https://unpkg.com/react@18/umd/react.development.js" fetchpriority="high" crossorigin="anonymous"></script>
     <script defer src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" fetchpriority="high" crossorigin="anonymous"></script>
     <script defer src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js" fetchpriority="low" crossorigin="anonymous"></script>
-
+    
     <!-- app modules with defer and optimized priority -->
     <script defer src="heys_performance_monitor.js" fetchpriority="high"></script>
     <script defer src="heys_core_v12.js" fetchpriority="high"></script>
@@ -82,18 +82,18 @@
     <script defer src="heys_reports_v12.js" fetchpriority="low"></script>
 
     <script>
-      // Service Worker Registration для Performance Optimization
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('✅ SW: Registered successfully', registration.scope);
-            })
-            .catch((error) => {
-              console.log('❌ SW: Registration failed', error);
-            });
-        });
-      }
+      // Service Worker отключен для dev режима
+      // if ('serviceWorker' in navigator) {
+      //   window.addEventListener('load', () => {
+      //     navigator.serviceWorker.register('/sw.js')
+      //       .then((registration) => {
+      //         console.log('✅ SW: Registered successfully', registration.scope);
+      //       })
+      //       .catch((error) => {
+      //         console.log('❌ SW: Registration failed', error);
+      //       });
+      //   });
+      // }
 
       (function () {
         window.HEYS = window.HEYS || {};
@@ -118,8 +118,7 @@
         if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
           HEYS.cloud.init({
             url: 'https://ukqolcziqcuplqfgrmsh.supabase.co',
-            anonKey:
-              'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
+            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds'
           });
         }
 
@@ -227,8 +226,8 @@
         }
 
         function App() {
-          const ONE_CURATOR_MODE = true;
-          const [tab, setTab] = useState('ration');
+          const ONE_CURATOR_MODE = true; // Включаем автовход для работы с Supabase
+          const [tab, setTab] = useState('day');
           // ...все остальные useState...
           // useEffect автосмены клиента — ниже всех useState!
           const U = window.HEYS.utils || { lsGet: (k, d) => d, lsSet: () => {} };
@@ -261,22 +260,31 @@
             return data || [];
           }
 
-          // Добавить клиента в Supabase
+          // Добавить клиента в Supabase или локально
           async function addClientToCloud(name) {
+            const clientName = (name || '').trim() || `Клиент ${clients.length + 1}`;
+            
+            // Локальный режим
             if (!cloud.client || !cloudUser || !cloudUser.id) {
-              console.warn('addClientToCloud: отсутствует client или cloudUser', {
-                hasClient: !!cloud.client,
-                hasCloudUser: !!cloudUser,
-                cloudUserId: cloudUser?.id,
-              });
+              console.log('addClientToCloud: создание локального клиента');
+              const newClient = {
+                id: `local-user-${Date.now()}`,
+                name: clientName
+              };
+              const updatedClients = [...clients, newClient];
+              setClients(updatedClients);
+              U.lsSet('heys_clients', updatedClients);
+              setClientId(newClient.id);
+              U.lsSet('heys_client_current', newClient.id);
               return;
             }
 
-            const userId = cloudUser.id; // Сохраняем локально для безопасности
+            // Облачный режим
+            const userId = cloudUser.id;
             const { data, error } = await cloud.client
               .from('clients')
               .insert([
-                { name: (name || '').trim() || `Клиент ${clients.length + 1}`, curator_id: userId },
+                { name: clientName, curator_id: userId },
               ])
               .select('id, name')
               .single();
@@ -289,25 +297,51 @@
             const updated = await fetchClientsFromCloud(userId);
             setClients(updated);
             setClientId(data.id);
+            U.lsSet('heys_client_current', data.id);
           }
 
-          // Переименовать клиента (Supabase)
+          // Переименовать клиента (локально или Supabase)
           async function renameClient(id, name) {
-            if (!cloud.client || !cloudUser || !cloudUser.id) return;
-            const userId = cloudUser.id; // Сохраняем локально
+            // Локальный режим
+            if (!cloud.client || !cloudUser || !cloudUser.id) {
+              const updatedClients = clients.map(c => 
+                c.id === id ? { ...c, name } : c
+              );
+              setClients(updatedClients);
+              U.lsSet('heys_clients', updatedClients);
+              return;
+            }
+            
+            // Облачный режим
+            const userId = cloudUser.id;
             await cloud.client.from('clients').update({ name }).eq('id', id);
             const updated = await fetchClientsFromCloud(userId);
             setClients(updated);
           }
 
-          // Удалить клиента (Supabase)
+          // Удалить клиента (локально или Supabase)
           async function removeClient(id) {
-            if (!cloud.client || !cloudUser || !cloudUser.id) return;
-            const userId = cloudUser.id; // Сохраняем локально
+            // Локальный режим
+            if (!cloud.client || !cloudUser || !cloudUser.id) {
+              const updatedClients = clients.filter(c => c.id !== id);
+              setClients(updatedClients);
+              U.lsSet('heys_clients', updatedClients);
+              if (clientId === id) {
+                setClientId('');
+                U.lsSet('heys_client_current', '');
+              }
+              return;
+            }
+            
+            // Облачный режим
+            const userId = cloudUser.id;
             await cloud.client.from('clients').delete().eq('id', id);
             const updated = await fetchClientsFromCloud(userId);
             setClients(updated);
-            if (clientId === id) setClientId('');
+            if (clientId === id) {
+              setClientId('');
+              U.lsSet('heys_client_current', '');
+            }
           }
 
           // Автопереключение на вкладку статистики дня при выборе клиента
@@ -440,7 +474,13 @@
                               { className: 'row' },
                               React.createElement(
                                 'button',
-                                { className: 'btn', onClick: () => setClientId(c.id) },
+                                { 
+                                  className: 'btn', 
+                                  onClick: () => {
+                                    setClientId(c.id);
+                                    U.lsSet('heys_client_current', c.id); // Сохраняем выбор
+                                  }
+                                },
                                 'Выбрать',
                               ),
                               React.createElement(
@@ -504,6 +544,41 @@
           const [pwd, setPwd] = useState('007670');
 
           useEffect(() => {
+            // Инициализация локальных данных
+            const initLocalData = () => {
+              // Загружаем продукты из localStorage или создаём пустой массив
+              const storedProducts = U.lsGet('heys_products', []);
+              if (Array.isArray(storedProducts)) {
+                setProducts(storedProducts);
+              }
+              
+              // Загружаем список локальных клиентов
+              const storedClients = U.lsGet('heys_clients', []);
+              if (Array.isArray(storedClients) && storedClients.length > 0) {
+                setClients(storedClients);
+              } else {
+                // Создаём тестовых клиентов для начала
+                const defaultClients = [
+                  { id: 'local-user-001', name: 'Иван Петров' },
+                  { id: 'local-user-002', name: 'Анна Сидорова' }
+                ];
+                setClients(defaultClients);
+                U.lsSet('heys_clients', defaultClients);
+              }
+              
+              // Проверяем есть ли сохраненный клиент
+              const currentClient = U.lsGet('heys_client_current');
+              const storedClientsArray = U.lsGet('heys_clients', []);
+              if (currentClient && storedClientsArray.some(c => c.id === currentClient)) {
+                setClientId(currentClient);
+              }
+              // Если нет currentClient - покажется modal выбора клиента
+              
+              setStatus('offline');
+              setSyncVer((v) => v + 1);
+            };
+            
+            // Пробуем подключиться к облаку если доступно
             if (cloud && typeof cloud.bootstrapSync === 'function') {
               cloud
                 .bootstrapSync()
@@ -515,8 +590,10 @@
                   setSyncVer((v) => v + 1);
                 })
                 .catch(() => {
-                  setStatus('offline');
+                  initLocalData();
                 });
+            } else {
+              initLocalData();
             }
           }, []);
 

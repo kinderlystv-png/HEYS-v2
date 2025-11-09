@@ -138,6 +138,11 @@
     
     // Инициализация Service Worker
     async initServiceWorker() {
+      // DEACTIVATED: Legacy SW registration removed to prevent conflicts
+      console.log('[Integration] Service Worker registration SKIPPED (legacy)');
+      return null;
+      
+      /* LEGACY CODE - DISABLED
       try {
         const registration = await navigator.serviceWorker.register('/heys-sw.js');
         console.log('[Integration] Service Worker зарегистрирован:', registration);
@@ -152,6 +157,7 @@
         console.error('[Integration] Ошибка Service Worker:', error);
         throw error;
       }
+      */
     }
     
     // === ВЫСОКОУРОВНЕВЫЕ МЕТОДЫ ===

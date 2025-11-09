@@ -1,22 +1,17 @@
 import path from 'path';
 
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [
+    react(),
     // Bundle analyzer отключен из-за конфликта версий rollup
     // Используем отдельный скрипт для анализа
   ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@heys/core': path.resolve(__dirname, '../../packages/core/src'),
-      '@heys/ui': path.resolve(__dirname, '../../packages/ui/src'),
-      '@heys/search': path.resolve(__dirname, '../../packages/search/src'),
-      '@heys/storage': path.resolve(__dirname, '../../packages/storage/src'),
-      '@heys/shared': path.resolve(__dirname, '../../packages/shared/src'),
-      '@heys/analytics': path.resolve(__dirname, '../../packages/analytics/src'),
-      '@heys/gaming': path.resolve(__dirname, '../../packages/gaming/src'),
     },
   },
   build: {
@@ -125,17 +120,9 @@ export default defineConfig({
   // Предварительная оптимизация зависимостей - Performance Sprint
   optimizeDeps: {
     include: [
-      '@heys/shared',
-      // React pre-bundling для лучшей производительности
+      'react',
+      'react-dom',
       'react/jsx-runtime',
-    ],
-    exclude: [
-      '@heys/core',
-      '@heys/ui', 
-      '@heys/search',
-      '@heys/analytics',
-      '@heys/gaming',
-      '@heys/storage',
     ],
     // Force re-optimization
     force: process.env.NODE_ENV === 'development',

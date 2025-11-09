@@ -1,37 +1,23 @@
 
-> @heys/web@13.0.1 build C:\! HEYS 2\apps\web
+> @heys/web@13.0.1 build /Users/poplavskijanton/HEYS-v2/apps/web
 > vite build
 
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 [36mvite v4.5.14 [32mbuilding for production...[36m[39m
-<script src="heys_performance_monitor.js"> in "/index.html" can't be bundled without type="module" attribute
-transforming...
-<script src="heys_core_v12.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_analytics_ui.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_storage_supabase_v1.js?v=15"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_models_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_storage_layer_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_day_v12.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_user_v12.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_reports_v12.js"> in "/index.html" can't be bundled without type="module" attribute
-[32m✓[39m 3 modules transformed.
-[1m[33m[plugin:vite:resolve][39m[22m [33mModule "events" has been externalized for browser compatibility, imported by "C:/! HEYS 2/packages/shared/dist/index.js". See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.[39m
-[1m[33m[plugin:vite:resolve][39m[22m [33mModule "events" has been externalized for browser compatibility, imported by "C:/! HEYS 2/packages/shared/src/security/SecurityAnalyticsService.ts". See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.[39m
-Generated an empty chunk: "react".
-Generated an empty chunk: "vendor".
-Generated an empty chunk: "features".
-Generated an empty chunk: "core".
-rendering chunks...
-computing gzip size...
-[2mdist/[22m[32massets/heys_models_v1-f4f68254.js            [39m[1m[2m11.49 kB[22m[1m[22m
-[2mdist/[22m[32massets/heys_analytics_ui-279cbf8e.js         [39m[1m[2m26.12 kB[22m[1m[22m
-[2mdist/[22m[32massets/heys_storage_supabase_v1-506c3f60.js  [39m[1m[2m26.74 kB[22m[1m[22m
-[2mdist/[22m[32mindex.html                                   [39m[1m[2m31.27 kB[22m[1m[22m[2m │ gzip: 6.63 kB[22m
-[2mdist/[22m[32massets/heys_performance_monitor-b8643643.js  [39m[1m[2m33.45 kB[22m[1m[22m
-[2mdist/[22m[32massets/heys_core_v12-f4cf8c77.js             [39m[1m[2m43.87 kB[22m[1m[22m
-[2mdist/[22m[35massets/index-ba0dbd15.css                    [39m[1m[2m14.79 kB[22m[1m[22m[2m │ gzip: 3.75 kB[22m
-[2mdist/[22m[36massets/vendor-4ed993c7.js                    [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
-[2mdist/[22m[36massets/features-4ed993c7.js                  [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
-[2mdist/[22m[36massets/react-4ed993c7.js                     [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
-[2mdist/[22m[36massets/core-4ed993c7.js                      [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
-[32m✓ built in 5.47s[39m
+[2K[1Gtransforming (1) [2mindex.html[22m[2K[1Gtransforming (3) [2msrc/main.tsx[22m[2K[1G[1m[33m[plugin:vite:resolve][39m[22m [33mModule "fs" has been externalized for browser compatibility, imported by "/Users/poplavskijanton/HEYS-v2/packages/logger/dist/index.js". See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.[39m
+[2K[1G[1m[33m[plugin:vite:resolve][39m[22m [33mModule "path" has been externalized for browser compatibility, imported by "/Users/poplavskijanton/HEYS-v2/packages/logger/dist/index.js". See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.[39m
+[2K[1Gtransforming (19) [2msrc/index.css[22m[2K[1Gtransforming (21) [2m../../node_modules/.pnpm/quick-format-unescaped@4.0.4/node_modules/quick-format-unescap[2K[1G[32m✓[39m 38 modules transformed.
+[2K[1Gtransforming (41) [2m../../packages/search/dist/index.js[22m[2K[1G[1m[33m[plugin:vite:resolve][39m[22m [33mModule "events" has been externalized for browser compatibility, imported by "/Users/poplavskijanton/HEYS-v2/packages/shared/dist/index.js". See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.[39m
+[2K[1Gtransforming (46) [2m../../packages/core/dist/index.js[22m[2K[1Gtransforming (51) [2m../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/external.js[22m[2K[1Gtransforming (68) [2m../../node_modules/.pnpm/@supabase+supabase-js@2.56.1/node_modules/@supabase/supabase-j[2K[1Gtransforming (78) [2m../../node_modules/.pnpm/@supabase+realtime-js@2.15.4/node_modules/@supabase/realtime-j[2K[1Gtransforming (86) [2m../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/locales/en.js[22m[2K[1G[1m[33m[plugin:vite:resolve][39m[22m [33mModule "events" has been externalized for browser compatibility, imported by "/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/SecurityAnalyticsService.ts". See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.[39m
+[2K[1Gtransforming (98) [2m../../node_modules/.pnpm/@supabase+auth-js@2.71.1/node_modules/@supabase/auth-js/dist/m[2K[1Gtransforming (125) [2m../../node_modules/.pnpm/@supabase+realtime-js@2.15.4/node_modules/@supabase/realtime-[2K[1Gtransforming (133) [2m../../node_modules/.pnpm/@supabase+realtime-js@2.15.4/node_modules/@supabase/realtime-[2K[1Gtransforming (141) [2m../../node_modules/.pnpm/@supabase+storage-js@2.11.0/node_modules/@supabase/storage-js[2K[1GGenerated an empty chunk: "react".
+[2K[1GGenerated an empty chunk: "vendor".
+[2K[1GGenerated an empty chunk: "features".
+[2K[1GGenerated an empty chunk: "core".
+[2K[1Grendering chunks (1)...[2K[1Grendering chunks (2)...[2K[1Grendering chunks (3)...[2K[1Grendering chunks (4)...[2K[1Grendering chunks (5)...[2K[1G[2K[1Gcomputing gzip size (0)...[2K[1Gcomputing gzip size (1)...[2K[1Gcomputing gzip size (2)...[2K[1Gcomputing gzip size (3)...[2K[1Gcomputing gzip size (4)...[2K[1Gcomputing gzip size (5)...[2K[1Gcomputing gzip size (6)...[2K[1Gcomputing gzip size (7)...[2K[1G[2mdist/[22m[32mindex.html                   [39m[1m[2m0.79 kB[22m[1m[22m[2m │ gzip: 0.45 kB[22m
+[2mdist/[22m[2massets/[22m[35mindex-a1c8c0a5.css    [39m[1m[2m3.14 kB[22m[1m[22m[2m │ gzip: 1.18 kB[22m
+[2mdist/[22m[2massets/[22m[36mvendor-4ed993c7.js    [39m[1m[2m0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
+[2mdist/[22m[2massets/[22m[36mreact-4ed993c7.js     [39m[1m[2m0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
+[2mdist/[22m[2massets/[22m[36mfeatures-4ed993c7.js  [39m[1m[2m0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
+[2mdist/[22m[2massets/[22m[36mcore-4ed993c7.js      [39m[1m[2m0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
+[2mdist/[22m[2massets/[22m[36mindex-a0d91dd2.js     [39m[1m[2m0.71 kB[22m[1m[22m[2m │ gzip: 0.40 kB[22m[2m │ map: 0.10 kB[22m
+[32m✓ built in 5.42s[39m
