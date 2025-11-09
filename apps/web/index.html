@@ -223,6 +223,191 @@
           return React.createElement(window.HEYS.UserTab, {});
         }
 
+        // Компонент вкладки аналитики
+        function AnalyticsTab() {
+          const [stats, setStats] = useState(null);
+          const [autoRefresh, setAutoRefresh] = useState(true);
+          
+          const loadStats = () => {
+            if (window.HEYS && window.HEYS.analytics) {
+              const data = window.HEYS.analytics.getStats();
+              setStats(data);
+            }
+          };
+          
+          useEffect(() => {
+            loadStats();
+            if (autoRefresh) {
+              const interval = setInterval(loadStats, 5000); // Обновление каждые 5 сек
+              return () => clearInterval(interval);
+            }
+          }, [autoRefresh]);
+          
+          if (!stats) {
+            return React.createElement('div', { style: { padding: 24 } }, 'Загрузка статистики...');
+          }
+          
+          return React.createElement(
+            'div',
+            { style: { padding: 24, maxWidth: 900 } },
+            // Заголовок
+            React.createElement(
+              'div',
+              { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 } },
+              React.createElement('h2', { style: { margin: 0 } }, '📊 Аналитика сессии'),
+              React.createElement(
+                'div',
+                { style: { display: 'flex', gap: 8, alignItems: 'center' } },
+                React.createElement('label', null,
+                  React.createElement('input', {
+                    type: 'checkbox',
+                    checked: autoRefresh,
+                    onChange: (e) => setAutoRefresh(e.target.checked),
+                    style: { marginRight: 4 }
+                  }),
+                  'Автообновление'
+                ),
+                React.createElement('button', { className: 'btn', onClick: loadStats }, '🔄 Обновить')
+              )
+            ),
+            
+            // Время сессии
+            React.createElement(
+              'div',
+              { style: { marginBottom: 24, padding: 16, background: '#f8f9fa', borderRadius: 8 } },
+              React.createElement('div', { style: { fontSize: 14, color: '#666', marginBottom: 4 } }, 'Время сессии'),
+              React.createElement('div', { style: { fontSize: 24, fontWeight: 600 } }, stats.session.duration)
+            ),
+            
+            // Поисковые запросы
+            React.createElement(
+              'div',
+              { style: { marginBottom: 24 } },
+              React.createElement('h3', null, '🔍 Поисковые запросы'),
+              React.createElement(
+                'div',
+                { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 } },
+                React.createElement(
+                  'div',
+                  { style: { padding: 16, background: '#e3f2fd', borderRadius: 8 } },
+                  React.createElement('div', { style: { fontSize: 12, color: '#666' } }, 'Всего'),
+                  React.createElement('div', { style: { fontSize: 20, fontWeight: 600 } }, stats.searches.total)
+                ),
+                React.createElement(
+                  'div',
+                  { style: { padding: 16, background: '#fff3e0', borderRadius: 8 } },
+                  React.createElement('div', { style: { fontSize: 12, color: '#666' } }, 'Медленных (>1s)'),
+                  React.createElement('div', { style: { fontSize: 20, fontWeight: 600 } }, stats.searches.slow)
+                ),
+                React.createElement(
+                  'div',
+                  { style: { padding: 16, background: stats.searches.slowRate === '0%' ? '#e8f5e9' : '#ffebee', borderRadius: 8 } },
+                  React.createElement('div', { style: { fontSize: 12, color: '#666' } }, 'Slow Rate'),
+                  React.createElement('div', { style: { fontSize: 20, fontWeight: 600 } }, stats.searches.slowRate)
+                )
+              )
+            ),
+            
+            // API вызовы
+            React.createElement(
+              'div',
+              { style: { marginBottom: 24 } },
+              React.createElement('h3', null, '🌐 API вызовы'),
+              React.createElement(
+                'div',
+                { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 } },
+                React.createElement(
+                  'div',
+                  { style: { padding: 16, background: '#e3f2fd', borderRadius: 8 } },
+                  React.createElement('div', { style: { fontSize: 12, color: '#666' } }, 'Всего'),
+                  React.createElement('div', { style: { fontSize: 20, fontWeight: 600 } }, stats.apiCalls.total)
+                ),
+                React.createElement(
+                  'div',
+                  { style: { padding: 16, background: '#fff3e0', borderRadius: 8 } },
+                  React.createElement('div', { style: { fontSize: 12, color: '#666' } }, 'Медленных (>2s)'),
+                  React.createElement('div', { style: { fontSize: 20, fontWeight: 600 } }, stats.apiCalls.slow)
+                ),
+                React.createElement(
+                  'div',
+                  { style: { padding: 16, background: stats.apiCalls.failed > 0 ? '#ffebee' : '#e8f5e9', borderRadius: 8 } },
+                  React.createElement('div', { style: { fontSize: 12, color: '#666' } }, 'Ошибок'),
+                  React.createElement('div', { style: { fontSize: 20, fontWeight: 600 } }, stats.apiCalls.failed)
+                ),
+                React.createElement(
+                  'div',
+                  { style: { padding: 16, background: '#f3e5f5', borderRadius: 8 } },
+                  React.createElement('div', { style: { fontSize: 12, color: '#666' } }, 'Slow Rate'),
+                  React.createElement('div', { style: { fontSize: 20, fontWeight: 600 } }, stats.apiCalls.slowRate)
+                )
+              )
+            ),
+            
+            // Cache эффективность
+            React.createElement(
+              'div',
+              { style: { marginBottom: 24 } },
+              React.createElement('h3', null, '💾 Cache эффективность'),
+              React.createElement(
+                'div',
+                { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 } },
+                React.createElement(
+                  'div',
+                  { style: { padding: 16, background: '#e8f5e9', borderRadius: 8 } },
+                  React.createElement('div', { style: { fontSize: 12, color: '#666' } }, 'Hits'),
+                  React.createElement('div', { style: { fontSize: 20, fontWeight: 600 } }, stats.cache.hits)
+                ),
+                React.createElement(
+                  'div',
+                  { style: { padding: 16, background: '#ffebee', borderRadius: 8 } },
+                  React.createElement('div', { style: { fontSize: 12, color: '#666' } }, 'Misses'),
+                  React.createElement('div', { style: { fontSize: 20, fontWeight: 600 } }, stats.cache.misses)
+                ),
+                React.createElement(
+                  'div',
+                  { style: { padding: 16, background: '#e1f5fe', borderRadius: 8 } },
+                  React.createElement('div', { style: { fontSize: 12, color: '#666' } }, 'Hit Rate'),
+                  React.createElement('div', { style: { fontSize: 20, fontWeight: 600 } }, stats.cache.hitRate)
+                )
+              )
+            ),
+            
+            // Ошибки
+            React.createElement(
+              'div',
+              { style: { marginBottom: 24 } },
+              React.createElement('h3', null, '🐛 Ошибки'),
+              React.createElement(
+                'div',
+                { style: { padding: 16, background: stats.errors.total > 0 ? '#ffebee' : '#e8f5e9', borderRadius: 8 } },
+                React.createElement('div', { style: { fontSize: 12, color: '#666' } }, 'Всего ошибок в сессии'),
+                React.createElement('div', { style: { fontSize: 24, fontWeight: 600 } }, stats.errors.total)
+              )
+            ),
+            
+            // Кнопка сброса
+            React.createElement(
+              'div',
+              { style: { marginTop: 32, paddingTop: 24, borderTop: '1px solid #eee' } },
+              React.createElement(
+                'button',
+                {
+                  className: 'btn secondary',
+                  onClick: () => {
+                    if (window.HEYS && window.HEYS.analytics && window.HEYS.analytics.reset) {
+                      if (confirm('Сбросить всю статистику сессии?')) {
+                        window.HEYS.analytics.reset();
+                        loadStats();
+                      }
+                    }
+                  }
+                },
+                '🗑️ Сбросить статистику'
+              )
+            )
+          );
+        }
+
         function App() {
           const ONE_CURATOR_MODE = true; // Включаем автовход для работы с Supabase
           const [tab, setTab] = useState('day');
@@ -790,6 +975,14 @@
                   },
                   'Данные пользователя',
                 ),
+                React.createElement(
+                  'div',
+                  {
+                    className: 'tab ' + (tab === 'analytics' ? 'active' : ''),
+                    onClick: () => setTab('analytics'),
+                  },
+                  '📊 Аналитика',
+                ),
               ),
               tab === 'ration'
                 ? React.createElement(RationTabWithCloudSync, {
@@ -809,7 +1002,11 @@
                         key: 'user' + syncVer + '_' + String(clientId || ''),
                         clientId,
                       })
-                    : React.createElement(window.HEYS.ReportsTab, {
+                    : tab === 'analytics'
+                      ? React.createElement(AnalyticsTab, {
+                          key: 'analytics' + syncVer,
+                        })
+                      : React.createElement(window.HEYS.ReportsTab, {
                         key:
                           'reports' + syncVer + '_' + String(clientId || '') + '_' + reportsRefresh,
                         products,
