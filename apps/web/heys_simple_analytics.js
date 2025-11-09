@@ -206,8 +206,23 @@
     trackEvent: () => {} // no-op alias
   };
   
-  // Alias для совместимости
-  HEYS.performance = HEYS.analytics;
+  // Alias для совместимости с heys_reports_v12.js
+  HEYS.performance = {
+    // Методы из analytics
+    ...HEYS.analytics,
+    
+    // Дополнительные методы для reports
+    increment: (metric) => {
+      // Используем trackDataOperation для совместимости
+      trackDataOperation(metric, 1);
+    },
+    
+    measure: (name, fn) => {
+      // Простой wrapper без реального измерения времени
+      // (для reports время не критично)
+      return fn();
+    }
+  };
   
   console.log('[HEYS Simple Analytics] Инициализирован ✓');
   
