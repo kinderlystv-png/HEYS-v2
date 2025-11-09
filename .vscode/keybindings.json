@@ -9,5 +9,11 @@
     "key": "ctrl+shift+t",
     "command": "workbench.action.tasks.runTask",
     "args": "Run All Tests"
+  },
+  // 3. запуск dev-сервера на Ctrl+Shift+H
+  {
+    "key": "ctrl+shift+h",
+    "command": "workbench.action.tasks.runTask",
+    "args": "Start Frontend (Port 3001)"
   }
 ]
