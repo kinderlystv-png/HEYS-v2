@@ -7,7 +7,7 @@
  * @created 2025-01-31
  */
 
-import DOMPurify from 'dompurify';
+import DOMPurify, { type Config as DOMPurifyConfig } from 'dompurify';
 import { z } from 'zod';
 
 /**
@@ -67,10 +67,10 @@ export const ValidationSchemas = {
  */
 export class InputSanitizer {
   private readonly dompurify: typeof DOMPurify;
-  private readonly config: DOMPurify.Config;
+  private readonly config: DOMPurifyConfig;
 
-  constructor() {
-    this.dompurify = DOMPurify;
+  constructor(purifier: typeof DOMPurify = DOMPurify) {
+    this.dompurify = purifier;
     this.config = {
       ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br'],
       ALLOWED_ATTR: ['href', 'title'],
@@ -88,7 +88,7 @@ export class InputSanitizer {
     if (typeof input !== 'string') {
       throw new Error('Input must be a string');
     }
-    return this.dompurify.sanitize(input, this.config);
+    return this.sanitizeToString(input, this.config);
   }
 
   /**
@@ -98,7 +98,7 @@ export class InputSanitizer {
     if (typeof input !== 'string') {
       throw new Error('Input must be a string');
     }
-    return this.dompurify.sanitize(input, { ALLOWED_TAGS: [] });
+    return this.sanitizeToString(input, { ALLOWED_TAGS: [] });
   }
 
   /**
@@ -137,6 +137,19 @@ export class InputSanitizer {
       .replace(/[^a-zA-Z0-9._-]/g, '')
       .replace(/\.{2,}/g, '.')
       .substring(0, 255);
+  }
+
+  private sanitizeToString(input: string, config?: DOMPurifyConfig): string {
+    const result = this.dompurify.sanitize(input, config);
+    if (typeof result === 'string') {
+      return result;
+    }
+
+    if (result && typeof (result as { toString?: () => string }).toString === 'function') {
+      return (result as { toString: () => string }).toString();
+    }
+
+    return String(result ?? '');
   }
 }
 

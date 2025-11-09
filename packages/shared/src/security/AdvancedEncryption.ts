@@ -14,6 +14,8 @@
  * @since Phase 2 Week 2
  */
 
+import { getGlobalLogger } from '../monitoring/structured-logger';
+
 /**
  * Encryption configuration options
  */
@@ -55,6 +57,8 @@ export class AdvancedEncryptionService {
   private readonly keyCache: Map<string, CryptoKey> = new Map();
   private readonly keyRotationInterval: number = 24 * 60 * 60 * 1000; // 24 hours
   private currentKeyVersion: string = '1';
+  private static readonly baseLogger = getGlobalLogger().child({ component: 'AdvancedEncryptionService' });
+  private readonly logger = AdvancedEncryptionService.baseLogger;
 
   constructor(config?: Partial<EncryptionConfig>) {
     this.config = {
@@ -175,15 +179,20 @@ export class AdvancedEncryptionService {
       encryptedData = encryptedArray;
     }
 
-    return {
+    const result: EncryptedData = {
       data: this.arrayBufferToBase64(encryptedData.buffer),
       iv: this.arrayBufferToBase64(iv.buffer),
       salt: salt ? this.arrayBufferToBase64(salt.buffer) : '',
-      tag: tag ? this.arrayBufferToBase64(tag.buffer) : undefined,
       algorithm: this.config.algorithm,
       timestamp: Date.now(),
       keyVersion: this.currentKeyVersion
     };
+
+    if (tag) {
+      result.tag = this.arrayBufferToBase64(tag.buffer);
+    }
+
+    return result;
   }
 
   /**
@@ -292,19 +301,20 @@ export class AdvancedEncryptionService {
   /**
    * Encrypt object fields selectively
    */
-  async encryptFields<T extends Record<string, any>>(
+  async encryptFields<T extends Record<string, unknown>>(
     obj: T,
     fieldsToEncrypt: (keyof T)[],
     key?: CryptoKey,
     password?: string
   ): Promise<T & { _encrypted: string[] }> {
-    const result = { ...obj, _encrypted: [] as string[] };
+    const result = { ...obj, _encrypted: [] as string[] } as T & { _encrypted: string[] };
 
     for (const field of fieldsToEncrypt) {
-      if (obj[field] !== undefined && obj[field] !== null) {
-        const fieldValue = typeof obj[field] === 'string' ? obj[field] : JSON.stringify(obj[field]);
+      const value = obj[field];
+      if (value !== undefined && value !== null) {
+        const fieldValue = typeof value === 'string' ? value : JSON.stringify(value);
         const encryptedData = await this.encryptData(fieldValue, key, password);
-        result[field] = encryptedData as any;
+        (result as Record<string, unknown>)[field as string] = encryptedData;
         result._encrypted.push(field as string);
       }
     }
@@ -315,17 +325,18 @@ export class AdvancedEncryptionService {
   /**
    * Decrypt object fields selectively
    */
-  async decryptFields<T extends Record<string, any> & { _encrypted?: string[] }>(
+  async decryptFields<T extends Record<string, unknown> & { _encrypted?: string[] }>(
     obj: T,
     key?: CryptoKey,
     password?: string
   ): Promise<Omit<T, '_encrypted'>> {
-    const result = { ...obj } as any;
-    const encryptedFields = obj._encrypted || [];
+    const result: Record<string, unknown> = { ...obj };
+    const encryptedFields = Array.isArray(obj._encrypted) ? obj._encrypted : [];
 
     for (const field of encryptedFields) {
-      if (result[field] && typeof result[field] === 'object') {
-        const encryptedData = result[field] as EncryptedData;
+      const currentValue = result[field];
+      if (currentValue && typeof currentValue === 'object') {
+        const encryptedData = currentValue as EncryptedData;
         const decryptedValue = await this.decryptData(encryptedData, key, password);
         
         try {
@@ -394,8 +405,10 @@ export class AdvancedEncryptionService {
     
     // Clear old keys from cache
     this.keyCache.clear();
-    
-    console.log(`Keys rotated to version ${newVersion}`);
+
+    this.logger.info('Encryption keys rotated', {
+      metadata: { newVersion },
+    });
   }
 
   /**
@@ -404,8 +417,8 @@ export class AdvancedEncryptionService {
   private arrayBufferToBase64(buffer: ArrayBuffer | ArrayBufferLike): string {
     const bytes = new Uint8Array(buffer);
     let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]!);
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
     }
     return btoa(binary);
   }
@@ -507,7 +520,10 @@ export const EncryptionUtils = {
   /**
    * Encrypt sensitive user data
    */
-  async encryptUserData(userData: any, password: string): Promise<any> {
+  async encryptUserData<T extends Record<string, unknown>>(
+    userData: T,
+    password: string,
+  ): Promise<T & { _encrypted: string[] }> {
     const sensitiveFields = ['email', 'phone', 'ssn', 'bankAccount', 'creditCard'];
     return defaultEncryptionService.encryptFields(userData, sensitiveFields, undefined, password);
   },
@@ -515,7 +531,10 @@ export const EncryptionUtils = {
   /**
    * Decrypt sensitive user data
    */
-  async decryptUserData(encryptedUserData: any, password: string): Promise<any> {
+  async decryptUserData<T extends Record<string, unknown> & { _encrypted?: string[] }>(
+    encryptedUserData: T,
+    password: string,
+  ): Promise<Omit<T, '_encrypted'>> {
     return defaultEncryptionService.decryptFields(encryptedUserData, undefined, password);
   },
 

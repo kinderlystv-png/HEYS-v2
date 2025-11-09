@@ -4,6 +4,7 @@
  */
 
 import pino from 'pino';
+import type { LogDescriptor } from 'pino';
 import { z } from 'zod';
 
 // Log level configuration
@@ -47,7 +48,7 @@ interface LogContext {
   component?: string;
   operation?: string;
   duration?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   tags?: string[];
 }
 
@@ -57,7 +58,7 @@ interface PerformanceLog {
   duration: number;
   success: boolean;
   component?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Error log interface
@@ -66,16 +67,18 @@ interface ErrorLog {
   component?: string;
   operation?: string;
   userId?: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export class StructuredLogger {
   private logger: pino.Logger;
   private config: LoggerConfig;
   private startTimes: Map<string, number> = new Map();
+  private defaultContext: Partial<LogContext>;
 
-  constructor(config: Partial<LoggerConfig> = {}) {
+  constructor(config: Partial<LoggerConfig> = {}, defaultContext: Partial<LogContext> = {}) {
     this.config = LoggerConfigSchema.parse(config);
+    this.defaultContext = defaultContext;
     this.logger = this.createLogger();
   }
 
@@ -103,17 +106,37 @@ export class StructuredLogger {
 
     // Browser environment
     if (typeof window !== 'undefined') {
+      const consoleApi = typeof globalThis.console !== 'undefined' ? globalThis.console : undefined;
+      const levelToConsoleMethod: Record<string, keyof Console> = {
+        trace: 'debug',
+        debug: 'debug',
+        info: 'info',
+        warn: 'warn',
+        error: 'error',
+        fatal: 'error',
+      };
+
       return pino({
         ...baseConfig,
         browser: {
           asObject: true,
-          write: {
-            trace: console.trace,
-            debug: console.debug,
-            info: console.info,
-            warn: console.warn,
-            error: console.error,
-            fatal: console.error,
+          write: (log: LogDescriptor) => {
+            if (!consoleApi) {
+              return;
+            }
+
+            const levelValue = log.level as number | string | undefined;
+            const levelLabel =
+              typeof levelValue === 'string'
+                ? levelValue
+                : pino.levels.labels[levelValue ?? 30] ?? 'info';
+
+            const consoleMethodName = levelToConsoleMethod[levelLabel] ?? 'log';
+            const consoleMethod = consoleApi[consoleMethodName];
+
+            if (typeof consoleMethod === 'function') {
+              (consoleMethod as (descriptor: LogDescriptor) => void).call(consoleApi, log);
+            }
           },
         },
       });
@@ -181,20 +204,43 @@ export class StructuredLogger {
    * Core logging method
    */
   private log(level: LogLevel, message: string, context?: LogContext): void {
-    const logData: any = {
+    const mergedContext = this.mergeContexts(this.defaultContext, context);
+
+    const logData: Record<string, unknown> = {
       msg: message,
       timestamp: new Date().toISOString(),
     };
 
-    if (context) {
-      if (context.userId) logData.userId = context.userId;
-      if (context.sessionId) logData.sessionId = context.sessionId;
-      if (context.traceId) logData.traceId = context.traceId;
-      if (context.component) logData.component = context.component;
-      if (context.operation) logData.operation = context.operation;
-      if (context.duration !== undefined) logData.duration = context.duration;
-      if (context.metadata) logData.metadata = context.metadata;
-      if (context.tags) logData.tags = context.tags;
+    if (mergedContext.userId) {
+      logData.userId = mergedContext.userId;
+    }
+
+    if (mergedContext.sessionId) {
+      logData.sessionId = mergedContext.sessionId;
+    }
+
+    if (mergedContext.traceId) {
+      logData.traceId = mergedContext.traceId;
+    }
+
+    if (mergedContext.component) {
+      logData.component = mergedContext.component;
+    }
+
+    if (mergedContext.operation) {
+      logData.operation = mergedContext.operation;
+    }
+
+    if (typeof mergedContext.duration === 'number') {
+      logData.duration = mergedContext.duration;
+    }
+
+    if (mergedContext.metadata && Object.keys(mergedContext.metadata).length > 0) {
+      logData.metadata = mergedContext.metadata;
+    }
+
+    if (mergedContext.tags && mergedContext.tags.length > 0) {
+      logData.tags = mergedContext.tags;
     }
 
     this.logger[level](logData);
@@ -204,37 +250,44 @@ export class StructuredLogger {
    * Log an error with full context
    */
   public logError(errorLog: ErrorLog): void {
-    const context: LogContext = {
-      component: errorLog.component,
-      operation: errorLog.operation,
-      userId: errorLog.userId,
-      metadata: {
-        errorName: errorLog.error.name,
-        errorMessage: errorLog.error.message,
-        errorStack: errorLog.error.stack,
-        ...errorLog.context,
-      },
+    const metadata: Record<string, unknown> = {
+      errorName: errorLog.error.name,
+      errorMessage: errorLog.error.message,
+      errorStack: errorLog.error.stack,
+      ...(errorLog.context ?? {}),
     };
 
-    this.error(`Error in ${errorLog.component || 'unknown'}: ${errorLog.error.message}`, context);
+    const context: LogContext = {
+      ...(errorLog.component ? { component: errorLog.component } : {}),
+      ...(errorLog.operation ? { operation: errorLog.operation } : {}),
+      ...(errorLog.userId ? { userId: errorLog.userId } : {}),
+      metadata,
+      tags: ['error'],
+    };
+
+    const componentLabel = errorLog.component ?? 'unknown';
+    this.error(`Error in ${componentLabel}: ${errorLog.error.message}`, context);
   }
 
   /**
    * Log performance metrics
    */
   public logPerformance(perfLog: PerformanceLog): void {
+    const metadata: Record<string, unknown> = {
+      success: perfLog.success,
+      ...(perfLog.metadata ?? {}),
+    };
+
     const context: LogContext = {
-      component: perfLog.component,
+      ...(perfLog.component ? { component: perfLog.component } : {}),
       operation: perfLog.operation,
       duration: perfLog.duration,
-      metadata: {
-        success: perfLog.success,
-        ...perfLog.metadata,
-      },
+      metadata,
       tags: ['performance'],
     };
 
-    const message = `${perfLog.operation} completed in ${perfLog.duration}ms (${perfLog.success ? 'success' : 'failed'})`;
+    const status = perfLog.success ? 'success' : 'failed';
+    const message = `${perfLog.operation} completed in ${perfLog.duration}ms (${status})`;
     this.info(message, context);
   }
 
@@ -253,7 +306,7 @@ export class StructuredLogger {
     operation: string,
     success: boolean = true,
     component?: string,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
   ): number {
     const startTime = this.startTimes.get(operationId);
     if (!startTime) {
@@ -268,8 +321,8 @@ export class StructuredLogger {
       operation,
       duration,
       success,
-      component,
-      metadata,
+      ...(component ? { component } : {}),
+      ...(metadata ? { metadata } : {}),
     });
 
     return duration;
@@ -278,11 +331,11 @@ export class StructuredLogger {
   /**
    * Log user action
    */
-  public logUserAction(action: string, userId: string, metadata?: Record<string, any>): void {
+  public logUserAction(action: string, userId: string, metadata?: Record<string, unknown>): void {
     const context: LogContext = {
       userId,
       operation: action,
-      metadata,
+      ...(metadata ? { metadata } : {}),
       tags: ['user-action'],
     };
 
@@ -298,17 +351,17 @@ export class StructuredLogger {
     statusCode?: number,
     duration?: number,
     userId?: string,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
   ): void {
     const context: LogContext = {
-      userId,
+      ...(userId ? { userId } : {}),
       operation: `${method} ${url}`,
-      duration,
+      ...(typeof duration === 'number' ? { duration } : {}),
       metadata: {
         method,
         url,
-        statusCode,
-        ...metadata,
+        ...(statusCode !== undefined ? { statusCode } : {}),
+        ...(metadata ?? {}),
       },
       tags: ['api-request'],
     };
@@ -326,14 +379,14 @@ export class StructuredLogger {
     event: string,
     severity: 'low' | 'medium' | 'high' | 'critical',
     userId?: string,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
   ): void {
     const context: LogContext = {
-      userId,
+      ...(userId ? { userId } : {}),
       operation: event,
       metadata: {
         severity,
-        ...metadata,
+        ...(metadata ?? {}),
       },
       tags: ['security', severity],
     };
@@ -346,16 +399,15 @@ export class StructuredLogger {
    * Create child logger with default context
    */
   public child(defaultContext: Partial<LogContext>): StructuredLogger {
-    const childLogger = new StructuredLogger(this.config);
-
-    // Override log method to include default context
-    const originalLog = childLogger.log.bind(childLogger);
-    childLogger.log = (level: LogLevel, message: string, context?: LogContext) => {
-      const mergedContext = { ...defaultContext, ...context };
-      originalLog(level, message, mergedContext);
-    };
-
-    return childLogger;
+    return new StructuredLogger(this.config, {
+      ...this.defaultContext,
+      ...defaultContext,
+      metadata: {
+        ...(this.defaultContext.metadata ?? {}),
+        ...(defaultContext.metadata ?? {}),
+      },
+      tags: this.mergeTags(this.defaultContext.tags, defaultContext.tags),
+    });
   }
 
   /**
@@ -369,8 +421,9 @@ export class StructuredLogger {
 
     // For Node.js with streams
     return new Promise((resolve) => {
-      if ('flush' in this.logger) {
-        (this.logger as any).flush();
+      const loggerCandidate = this.logger as unknown as { flush?: () => void };
+      if (typeof loggerCandidate.flush === 'function') {
+        loggerCandidate.flush();
       }
       resolve();
     });
@@ -397,31 +450,104 @@ export class StructuredLogger {
   public isLevelEnabled(level: LogLevel): boolean {
     return this.logger.isLevelEnabled(level);
   }
+  private mergeContexts(
+    base: Partial<LogContext>,
+    context?: LogContext,
+  ): LogContext {
+    const combinedMetadata: Record<string, unknown> = {
+      ...(base.metadata ?? {}),
+      ...(context?.metadata ?? {}),
+    };
+
+    const combinedTags = this.mergeTags(base.tags, context?.tags);
+
+    const result: LogContext = {
+      ...(base.userId ? { userId: base.userId } : {}),
+      ...(base.sessionId ? { sessionId: base.sessionId } : {}),
+      ...(base.traceId ? { traceId: base.traceId } : {}),
+      ...(base.component ? { component: base.component } : {}),
+      ...(base.operation ? { operation: base.operation } : {}),
+      ...(typeof base.duration === 'number' ? { duration: base.duration } : {}),
+    };
+
+    if (context) {
+      if (context.userId) {
+        result.userId = context.userId;
+      }
+      if (context.sessionId) {
+        result.sessionId = context.sessionId;
+      }
+      if (context.traceId) {
+        result.traceId = context.traceId;
+      }
+      if (context.component) {
+        result.component = context.component;
+      }
+      if (context.operation) {
+        result.operation = context.operation;
+      }
+      if (typeof context.duration === 'number') {
+        result.duration = context.duration;
+      }
+    }
+
+    if (Object.keys(combinedMetadata).length > 0) {
+      result.metadata = combinedMetadata;
+    }
+
+    if (combinedTags.length > 0) {
+      result.tags = combinedTags;
+    }
+
+    return result;
+  }
+
+  private mergeTags(
+    baseTags?: string[],
+    additionalTags?: string[],
+  ): string[] {
+    const combined = [...(baseTags ?? []), ...(additionalTags ?? [])];
+    return Array.from(new Set(combined));
+  }
 }
 
 // Performance logging decorator
 export function LogPerformance(operation?: string) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function <T extends (...args: unknown[]) => unknown>(
+    target: object,
+    propertyKey: string | symbol,
+    descriptor: TypedPropertyDescriptor<T>,
+  ): TypedPropertyDescriptor<T> {
     const originalMethod = descriptor.value;
-    const operationName = operation || `${target.constructor.name}.${propertyKey}`;
+    if (!originalMethod) {
+      return descriptor;
+    }
 
-    descriptor.value = async function (...args: any[]) {
-      const logger = globalLogger || new StructuredLogger();
-      const operationId = `${operationName}-${Date.now()}-${Math.random()}`;
+    const targetName =
+      typeof target === 'function' ? target.name : target.constructor?.name ?? 'Anonymous';
+    const operationName = operation ?? `${targetName}.${String(propertyKey)}`;
 
-      logger.startTiming(operationId);
+    descriptor.value = (async function (
+      this: unknown,
+      ...args: Parameters<T>
+    ): Promise<Awaited<ReturnType<T>>> {
+      const loggerInstance = globalLogger ?? new StructuredLogger();
+      const operationId = `${operationName}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      loggerInstance.startTiming(operationId);
 
       try {
-        const result = await originalMethod.apply(this, args);
-        logger.endTiming(operationId, operationName, true, target.constructor.name);
-        return result;
+        const result = await Promise.resolve(originalMethod.apply(this, args));
+        loggerInstance.endTiming(operationId, operationName, true, targetName);
+        return result as Awaited<ReturnType<T>>;
       } catch (error) {
-        logger.endTiming(operationId, operationName, false, target.constructor.name, {
-          error: (error as Error).message,
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
+        loggerInstance.endTiming(operationId, operationName, false, targetName, {
+          error: normalizedError.message,
         });
         throw error;
       }
-    };
+    }) as unknown as T;
 
     return descriptor;
   };
@@ -429,25 +555,40 @@ export function LogPerformance(operation?: string) {
 
 // Error logging decorator
 export function LogErrors(component?: string) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function <T extends (...args: unknown[]) => unknown>(
+    target: object,
+    propertyKey: string | symbol,
+    descriptor: TypedPropertyDescriptor<T>,
+  ): TypedPropertyDescriptor<T> {
     const originalMethod = descriptor.value;
-    const componentName = component || target.constructor.name;
+    if (!originalMethod) {
+      return descriptor;
+    }
 
-    descriptor.value = async function (...args: any[]) {
+    const targetName =
+      typeof target === 'function' ? target.name : target.constructor?.name ?? 'Anonymous';
+    const componentName = component ?? targetName;
+
+    descriptor.value = (async function (
+      this: unknown,
+      ...args: Parameters<T>
+    ): Promise<Awaited<ReturnType<T>>> {
       try {
-        return await originalMethod.apply(this, args);
+        const result = await Promise.resolve(originalMethod.apply(this, args));
+        return result as Awaited<ReturnType<T>>;
       } catch (error) {
-        const logger = globalLogger || new StructuredLogger();
+        const loggerInstance = globalLogger ?? new StructuredLogger();
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
 
-        logger.logError({
-          error: error as Error,
+        loggerInstance.logError({
+          error: normalizedError,
           component: componentName,
-          operation: propertyKey,
+          operation: String(propertyKey),
         });
 
         throw error;
       }
-    };
+    }) as unknown as T;
 
     return descriptor;
   };

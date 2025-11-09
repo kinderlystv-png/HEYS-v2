@@ -50,7 +50,8 @@
       "@heys/storage": ["./packages/storage/src"],
       "@heys/gaming": ["./packages/gaming/src"],
       "@heys/analytics": ["./packages/analytics/src"],
-      "@heys/shared": ["./packages/shared/src"]
+      "@heys/shared": ["./packages/shared/src"],
+      "@heys/logger": ["./packages/logger/src"]
     }
   },
 
@@ -67,7 +68,13 @@
   ],
 
   // Files to include/exclude
-  "include": ["packages/*/src/**/*", "apps/*/src/**/*", "tools/*/src/**/*"],
+  "include": [
+    "packages/*/src/**/*",
+    "apps/*/src/**/*",
+    "tools/*/src/**/*",
+    "levels.config.d.ts",
+    "packages/logger/config/**/*.d.ts"
+  ],
   "exclude": [
     "node_modules",
     "dist",

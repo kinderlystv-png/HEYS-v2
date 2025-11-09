@@ -6,6 +6,10 @@
 import * as Sentry from '@sentry/browser';
 import { z } from 'zod';
 
+import { getGlobalLogger } from './structured-logger';
+
+const sentryLoggerInstance = getGlobalLogger().child({ component: 'SentryMonitoring' });
+
 // Configuration schema
 const SentryConfigSchema = z.object({
   dsn: z.string().url(),
@@ -28,19 +32,34 @@ interface ErrorContext {
   route?: string;
   component?: string;
   action?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 interface PerformanceMetrics {
   name: string;
   duration: number;
   tags?: Record<string, string>;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
+
+type SentryUserContext = {
+  id?: string;
+  email?: string;
+  username?: string;
+} & Record<string, unknown>;
+
+type SpanLike = {
+  setTag?: (key: string, value: string) => void;
+  setAttribute?: (key: string, value: unknown) => void;
+  setData?: (key: string, value: unknown) => void;
+  setStatus?: (status: unknown) => void;
+};
 
 export class SentryMonitoring {
   private initialized = false;
   private config: SentryConfig;
+  private static readonly baseLogger = sentryLoggerInstance;
+  private readonly logger = SentryMonitoring.baseLogger;
 
   constructor(config: Partial<SentryConfig> = {}) {
     this.config = SentryConfigSchema.parse(config);
@@ -51,40 +70,50 @@ export class SentryMonitoring {
    */
   public initialize(): void {
     if (this.initialized) {
-      console.warn('Sentry already initialized');
+      this.logger.warn('Sentry already initialized');
       return;
     }
 
     try {
-      Sentry.init({
+      const options: Parameters<typeof Sentry.init>[0] = {
         dsn: this.config.dsn,
         environment: this.config.environment,
         sampleRate: this.config.sampleRate,
         tracesSampleRate: this.config.tracesSampleRate,
-        release: this.config.release,
         debug: this.config.debug,
-
         integrations: [
           Sentry.browserTracingIntegration(),
           ...(this.config.enableSessionReplay ? [Sentry.replayIntegration()] : []),
         ],
-
-        beforeSend: (event, hint) => {
+        beforeSend: (event) => {
           // Custom processing before sending to Sentry
-          console.log('Sending event to Sentry:', event.event_id);
+          this.logger.debug('Sending event to Sentry', {
+            metadata: { eventId: event.event_id },
+          });
           return event;
         },
-
-        beforeSendTransaction: (transaction, hint) => {
+        beforeSendTransaction: (transaction) => {
           // Custom processing for performance transactions
           return transaction;
         },
-      });
+      };
+
+      if (this.config.release) {
+        options.release = this.config.release;
+      }
+
+      Sentry.init(options);
 
       this.initialized = true;
-      console.log('Sentry monitoring initialized successfully');
+      this.logger.info('Sentry monitoring initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize Sentry:', error);
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      this.logger.error('Failed to initialize Sentry', {
+        metadata: { error: normalizedError },
+      });
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('Sentry initialization failed');
     }
   }
@@ -92,19 +121,14 @@ export class SentryMonitoring {
   /**
    * Set user context for error tracking
    */
-  public setUser(user: {
-    id?: string;
-    email?: string;
-    username?: string;
-    [key: string]: any;
-  }): void {
+  public setUser(user: SentryUserContext): void {
     Sentry.setUser(user);
   }
 
   /**
    * Set additional context for error tracking
    */
-  public setContext(key: string, context: Record<string, any>): void {
+  public setContext(key: string, context: Record<string, unknown>): void {
     Sentry.setContext(key, context);
   }
 
@@ -118,7 +142,7 @@ export class SentryMonitoring {
   /**
    * Set extra data for error reports
    */
-  public setExtra(key: string, extra: any): void {
+  public setExtra(key: string, extra: unknown): void {
     Sentry.setExtra(key, extra);
   }
 
@@ -198,10 +222,13 @@ export class SentryMonitoring {
         op: 'function',
       },
       async (span) => {
-        if (tags) {
-          Object.entries(tags).forEach(([key, value]) => {
-            span?.setTag(key, value);
-          });
+        const spanLike = (span as unknown as SpanLike | undefined) ?? undefined;
+
+        if (spanLike && tags) {
+          for (const [key, value] of Object.entries(tags)) {
+            spanLike.setTag?.(key, value);
+            spanLike.setAttribute?.(key, value);
+          }
         }
 
         const startTime = performance.now();
@@ -210,19 +237,21 @@ export class SentryMonitoring {
           const result = await fn();
           const duration = performance.now() - startTime;
 
-          span?.setData('duration', duration);
-          span?.setStatus('ok');
+          spanLike?.setData?.('duration', duration);
+          spanLike?.setAttribute?.('duration', duration);
 
           return result;
         } catch (error) {
           const duration = performance.now() - startTime;
 
-          span?.setData('duration', duration);
-          span?.setStatus('internal_error');
+          spanLike?.setData?.('duration', duration);
+          spanLike?.setAttribute?.('duration', duration);
+          spanLike?.setStatus?.({ code: 'error', message: 'performance_measurement_failed' });
 
-          this.captureError(error as Error, {
+          const normalizedError = error instanceof Error ? error : new Error(String(error));
+          this.captureError(normalizedError, {
             action: 'performance_measurement',
-            metadata: { function: name, duration: performance.now() - startTime },
+            metadata: { function: name, duration },
           });
 
           throw error;
@@ -241,19 +270,24 @@ export class SentryMonitoring {
         op: 'custom',
       },
       (span) => {
-        if (metric.tags) {
-          Object.entries(metric.tags).forEach(([key, value]) => {
-            span?.setTag(key, value);
-          });
+        const spanLike = (span as unknown as SpanLike | undefined) ?? undefined;
+
+        if (spanLike && metric.tags) {
+          for (const [key, value] of Object.entries(metric.tags)) {
+            spanLike.setTag?.(key, value);
+            spanLike.setAttribute?.(key, value);
+          }
         }
 
-        if (metric.data) {
-          Object.entries(metric.data).forEach(([key, value]) => {
-            span?.setData(key, value);
-          });
+        if (spanLike && metric.data) {
+          for (const [key, value] of Object.entries(metric.data)) {
+            spanLike.setData?.(key, value);
+            spanLike.setAttribute?.(key, value);
+          }
         }
 
-        span?.setData('duration', metric.duration);
+        spanLike?.setData?.('duration', metric.duration);
+        spanLike?.setAttribute?.('duration', metric.duration);
       },
     );
   }
@@ -265,9 +299,9 @@ export class SentryMonitoring {
     message: string,
     category: string = 'default',
     level: 'debug' | 'info' | 'warning' | 'error' | 'fatal' = 'info',
-    data?: Record<string, any>,
+    data?: Record<string, unknown>,
   ): void {
-    const breadcrumb: any = {
+    const breadcrumb: Sentry.Breadcrumb = {
       message,
       category,
       level,
@@ -347,112 +381,44 @@ export class SentryMonitoring {
 
 // Performance monitoring decorator
 export function MonitorPerformance(operationName?: string) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function <T extends (...args: unknown[]) => unknown>(
+    target: object,
+    propertyKey: string | symbol,
+    descriptor: TypedPropertyDescriptor<T>,
+  ): TypedPropertyDescriptor<T> {
     const originalMethod = descriptor.value;
-    const name = operationName || `${target.constructor.name}.${propertyKey}`;
+    if (!originalMethod) {
+      return descriptor;
+    }
 
-    descriptor.value = async function (...args: any[]) {
-      const monitoring = globalMonitoring || new SentryMonitoring();
+    const targetName =
+      typeof target === 'function' ? target.name : target.constructor?.name ?? 'Anonymous';
+    const resolvedName = operationName ?? `${targetName}.${String(propertyKey)}`;
 
-      return monitoring.measurePerformance(name, () => originalMethod.apply(this, args), {
-        class: target.constructor.name,
-        method: propertyKey,
-      });
-    };
+    descriptor.value = (async function (
+      this: unknown,
+      ...args: Parameters<T>
+    ): Promise<Awaited<ReturnType<T>>> {
+      const monitoring = globalMonitoring;
 
-    return descriptor;
-  };
-}
-
-// Error boundary decorator
-export function CaptureErrors(context?: Partial<ErrorContext>) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
-
-    descriptor.value = async function (...args: any[]) {
-      try {
-        return await originalMethod.apply(this, args);
-      } catch (error) {
-        const monitoring = globalMonitoring || new SentryMonitoring();
-
-        monitoring.captureError(error as Error, {
-          component: target.constructor.name,
-          action: propertyKey,
-          ...context,
-        });
-
-        throw error;
+      if (!monitoring) {
+        sentryLoggerInstance.warn('Performance monitoring skipped: Sentry not initialized', {
+            metadata: { operation: resolvedName },
+          });
+        const result = await Promise.resolve(originalMethod.apply(this, args));
+        return result as Awaited<ReturnType<T>>;
       }
-    };
 
-    return descriptor;
-  };
-}
-
-// Global monitoring instance
-export let globalMonitoring: SentryMonitoring | null = null;
-
-/**
- * Initialize global monitoring instance
- */
-export function initializeGlobalMonitoring(config: Partial<SentryConfig>): SentryMonitoring {
-  globalMonitoring = new SentryMonitoring(config);
-  globalMonitoring.initialize();
-  return globalMonitoring;
-}
-
-/**
- * Get global monitoring instance
- */
-export function getGlobalMonitoring(): SentryMonitoring {
-  if (!globalMonitoring) {
-    throw new Error('Global monitoring not initialized. Call initializeGlobalMonitoring first.');
-  }
-  return globalMonitoring;
-}
-
-// Browser error handler
-if (typeof window !== 'undefined') {
-  // Global error handler
-  window.addEventListener('error', (event) => {
-    if (globalMonitoring) {
-      globalMonitoring.captureError(new Error(event.message), {
-        metadata: {
-          filename: event.filename,
-          lineno: event.lineno,
-          colno: event.colno,
+      return monitoring.measurePerformance<Awaited<ReturnType<T>>>(
+        resolvedName,
+        () =>
+          Promise.resolve(originalMethod.apply(this, args)) as Promise<Awaited<ReturnType<T>>>,
+        {
+          class: targetName,
+          method: String(propertyKey),
         },
-      });
-    }
-  });
-
-  // Unhandled promise rejection handler
-  window.addEventListener('unhandledrejection', (event) => {
-    if (globalMonitoring) {
-      globalMonitoring.captureError(
-        event.reason instanceof Error ? event.reason : new Error(event.reason),
-        { action: 'unhandled_promise_rejection' },
       );
-    }
-  });
-}
-
-export default SentryMonitoring;
-
-// Performance monitoring decorator
-export function MonitorPerformance(operationName?: string) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
-    const name = operationName || `${target.constructor.name}.${propertyKey}`;
-
-    descriptor.value = async function (...args: any[]) {
-      const monitoring = globalMonitoring || new SentryMonitoring();
-
-      return monitoring.measurePerformance(name, () => originalMethod.apply(this, args), {
-        class: target.constructor.name,
-        method: propertyKey,
-      });
-    };
+    }) as unknown as T;
 
     return descriptor;
   };
@@ -460,24 +426,50 @@ export function MonitorPerformance(operationName?: string) {
 
 // Error boundary decorator
 export function CaptureErrors(context?: Partial<ErrorContext>) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function <T extends (...args: unknown[]) => unknown>(
+    target: object,
+    propertyKey: string | symbol,
+    descriptor: TypedPropertyDescriptor<T>,
+  ): TypedPropertyDescriptor<T> {
     const originalMethod = descriptor.value;
+    if (!originalMethod) {
+      return descriptor;
+    }
 
-    descriptor.value = async function (...args: any[]) {
+    const targetName =
+      typeof target === 'function' ? target.name : target.constructor?.name ?? 'Anonymous';
+    const actionName = String(propertyKey);
+
+    descriptor.value = (async function (
+      this: unknown,
+      ...args: Parameters<T>
+    ): Promise<Awaited<ReturnType<T>>> {
       try {
-        return await originalMethod.apply(this, args);
+        const result = await Promise.resolve(originalMethod.apply(this, args));
+        return result as Awaited<ReturnType<T>>;
       } catch (error) {
-        const monitoring = globalMonitoring || new SentryMonitoring();
+        const monitoring = globalMonitoring;
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
 
-        monitoring.captureError(error as Error, {
-          component: target.constructor.name,
-          action: propertyKey,
-          ...context,
-        });
+        if (monitoring) {
+          monitoring.captureError(normalizedError, {
+            component: targetName,
+            action: actionName,
+            ...context,
+          });
+        } else {
+          sentryLoggerInstance.error('Error captured but Sentry is not initialized', {
+            metadata: {
+              action: actionName,
+              component: targetName,
+              error: normalizedError,
+            },
+          });
+        }
 
         throw error;
       }
-    };
+    }) as unknown as T;
 
     return descriptor;
   };
