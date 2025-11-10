@@ -10,9 +10,9 @@ CLI Target: es2022
 CLI Cleaning output folder
 CJS Build start
 ESM Build start
-CJS dist/index.cjs     186.00 B
-CJS dist/index.cjs.map 498.00 B
-CJS ⚡️ Build success in 141ms
 ESM dist/index.js     174.00 B
 ESM dist/index.js.map 498.00 B
-ESM ⚡️ Build success in 141ms
+ESM ⚡️ Build success in 285ms
+CJS dist/index.cjs     186.00 B
+CJS dist/index.cjs.map 498.00 B
+CJS ⚡️ Build success in 285ms
