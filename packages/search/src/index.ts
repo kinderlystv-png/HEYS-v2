@@ -326,7 +326,9 @@ export class SmartSearchEngine<T = any> {
   }
 
   private getCachedResult<TItem>(query: string): SearchResult<TItem> | null {
-    const cached = this.cache.get(query) as { result: SearchResult<TItem>; timestamp: number } | undefined;
+    const cached = this.cache.get(query) as
+      | { result: SearchResult<TItem>; timestamp: number }
+      | undefined;
     if (!cached) return null;
 
     const isExpired = Date.now() - cached.timestamp > this.config.cacheTimeout;

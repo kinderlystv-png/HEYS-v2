@@ -1,6 +1,6 @@
 // Advanced search service with Fuse.js, indexing, and filtering
+import type { FuseResult, FuseResultMatch, IFuseOptions } from 'fuse.js';
 import Fuse from 'fuse.js';
-import type { IFuseOptions, FuseResult, FuseResultMatch } from 'fuse.js';
 import { z } from 'zod';
 
 export interface SearchItem {
@@ -180,7 +180,11 @@ export class ModernSearch {
 
     // Perform search
     const fuseOptions = customOptions
-      ? { ...this.defaultFuseOptions, ...customOptions, limit: validatedQuery.limit + validatedQuery.offset }
+      ? {
+          ...this.defaultFuseOptions,
+          ...customOptions,
+          limit: validatedQuery.limit + validatedQuery.offset,
+        }
       : { ...this.defaultFuseOptions, limit: validatedQuery.limit + validatedQuery.offset };
 
     const fuseResults = searchIndex.search(validatedQuery.q, fuseOptions);
