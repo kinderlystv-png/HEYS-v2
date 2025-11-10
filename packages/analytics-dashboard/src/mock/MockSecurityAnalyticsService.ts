@@ -1,7 +1,9 @@
 // Mock версия SecurityAnalyticsService для browser demo
+type SubscriberCallback = (data: unknown) => void;
+
 export class MockSecurityAnalyticsService {
   private updateInterval?: NodeJS.Timeout;
-  private subscribers: Function[] = [];
+  private subscribers: SubscriberCallback[] = [];
 
   async initialize() {
     console.log('🚀 Mock SecurityAnalyticsService initialized');
@@ -112,7 +114,7 @@ export class MockSecurityAnalyticsService {
     };
   }
 
-  async subscribeToEvents(callback: Function) {
+  async subscribeToEvents(callback: SubscriberCallback) {
     console.log('🔔 Subscribing to real-time security events');
     
     this.subscribers.push(callback);

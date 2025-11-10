@@ -1,6 +1,0 @@
-
-> @heys/shared@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/shared
-> tsup
-
-CLI Building entry: src/index.ts
-CLI Using tsconfig: tsconfig.json
