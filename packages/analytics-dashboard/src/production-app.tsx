@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+
 import { SecurityDashboard } from './components/SecurityDashboard';
 import './components/SecurityDashboard.css';
 
