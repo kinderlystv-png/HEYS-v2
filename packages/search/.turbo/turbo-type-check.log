@@ -2,3 +2,51 @@
 > @heys/search@14.0.0 type-check /home/runner/work/HEYS-v2/HEYS-v2/packages/search
 > tsc --noEmit
 
+src/index.ts(112,44): error TS2532: Object is possibly 'undefined'.
+src/index.ts(113,44): error TS2532: Object is possibly 'undefined'.
+src/index.ts(118,9): error TS2532: Object is possibly 'undefined'.
+src/index.ts(119,11): error TS2532: Object is possibly 'undefined'.
+src/index.ts(120,11): error TS2532: Object is possibly 'undefined'.
+src/index.ts(121,11): error TS2532: Object is possibly 'undefined'.
+src/index.ts(126,12): error TS2532: Object is possibly 'undefined'.
+src/index.ts(204,9): error TS2322: Type 'SearchResult<unknown>' is not assignable to type 'SearchResult<TItem>'.
+  Type 'unknown' is not assignable to type 'TItem'.
+    'TItem' could be instantiated with an arbitrary type which could be unrelated to 'unknown'.
+src/index.ts(336,5): error TS2322: Type 'SearchResult<T>' is not assignable to type 'SearchResult<TItem>'.
+  Type 'T' is not assignable to type 'TItem'.
+    'TItem' could be instantiated with an arbitrary type which could be unrelated to 'T'.
+src/index.ts(341,7): error TS2322: Type 'SearchResult<TItem>' is not assignable to type 'SearchResult<T>'.
+  Type 'TItem' is not assignable to type 'T'.
+    'T' could be instantiated with an arbitrary type which could be unrelated to 'TItem'.
+src/modern.ts(32,13): error TS2702: 'Fuse' only refers to a type, but is being used as a namespace here.
+src/modern.ts(64,31): error TS2702: 'Fuse' only refers to a type, but is being used as a namespace here.
+src/modern.ts(79,33): error TS2702: 'Fuse' only refers to a type, but is being used as a namespace here.
+src/modern.ts(143,29): error TS2702: 'Fuse' only refers to a type, but is being used as a namespace here.
+src/modern.ts(159,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/modern.ts(173,9): error TS2375: Type '{ q: string; limit: number; offset: number; sortBy: "relevance" | "date" | "title"; sortOrder: "asc" | "desc"; type?: "food" | "workout" | "recipe" | "exercise" | "user" | "content" | ("food" | ... 4 more ... | "content")[] | undefined; category?: string | undefined; tags?: string[] | undefined; }' is not assignable to type 'SearchQuery' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'type' are incompatible.
+    Type '"food" | "workout" | "recipe" | "exercise" | "user" | "content" | ("food" | "workout" | "recipe" | "exercise" | "user" | "content")[] | undefined' is not assignable to type '"food" | "workout" | "recipe" | "exercise" | "user" | "content" | ("food" | "workout" | "recipe" | "exercise" | "user" | "content")[]'.
+      Type 'undefined' is not assignable to type '"food" | "workout" | "recipe" | "exercise" | "user" | "content" | ("food" | "workout" | "recipe" | "exercise" | "user" | "content")[]'.
+src/modern.ts(228,11): error TS2322: Type '{ item: T; score: number; matches: readonly FuseResultMatch[] | undefined; highlighted: Partial<T>; }[]' is not assignable to type 'SearchResult<T>[]'.
+  Type '{ item: T; score: number; matches: readonly FuseResultMatch[] | undefined; highlighted: Partial<T>; }' is not assignable to type 'SearchResult<T>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'matches' are incompatible.
+      Type 'readonly FuseResultMatch[] | undefined' is not assignable to type 'Fuse.FuseResultMatch[]'.
+        Type 'undefined' is not assignable to type 'Fuse.FuseResultMatch[]'.
+src/modern.ts(232,59): error TS2345: Argument of type 'readonly FuseResultMatch[] | undefined' is not assignable to parameter of type 'Fuse.FuseResultMatch[] | undefined'.
+  The type 'readonly FuseResultMatch[]' is 'readonly' and cannot be assigned to the mutable type 'Fuse.FuseResultMatch[]'.
+src/modern.ts(241,7): error TS2375: Type '{ q: string; limit: number; offset: number; sortBy: "relevance" | "date" | "title"; sortOrder: "asc" | "desc"; type?: "food" | "workout" | "recipe" | "exercise" | "user" | "content" | ("food" | ... 4 more ... | "content")[] | undefined; category?: string | undefined; tags?: string[] | undefined; }' is not assignable to type 'SearchQuery' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'type' are incompatible.
+    Type '"food" | "workout" | "recipe" | "exercise" | "user" | "content" | ("food" | "workout" | "recipe" | "exercise" | "user" | "content")[] | undefined' is not assignable to type '"food" | "workout" | "recipe" | "exercise" | "user" | "content" | ("food" | "workout" | "recipe" | "exercise" | "user" | "content")[]'.
+      Type 'undefined' is not assignable to type '"food" | "workout" | "recipe" | "exercise" | "user" | "content" | ("food" | "workout" | "recipe" | "exercise" | "user" | "content")[]'.
+src/modern.ts(297,40): error TS2339: Property 'size' does not exist on type 'FuseIndex<SearchItem>'.
+src/modern.ts(312,14): error TS2702: 'Fuse' only refers to a type, but is being used as a namespace here.
+src/modern.ts(315,6): error TS2702: 'Fuse' only refers to a type, but is being used as a namespace here.
+src/modern.ts(333,15): error TS2702: 'Fuse' only refers to a type, but is being used as a namespace here.
+src/modern.ts(371,7): error TS18048: 'facets.type' is possibly 'undefined'.
+src/modern.ts(371,35): error TS18048: 'facets.type' is possibly 'undefined'.
+src/modern.ts(375,9): error TS18048: 'facets.category' is possibly 'undefined'.
+src/modern.ts(375,45): error TS18048: 'facets.category' is possibly 'undefined'.
+src/modern.ts(381,11): error TS18048: 'facets.tags' is possibly 'undefined'.
+src/modern.ts(381,33): error TS18048: 'facets.tags' is possibly 'undefined'.
+ ELIFECYCLE  Command failed with exit code 2.
