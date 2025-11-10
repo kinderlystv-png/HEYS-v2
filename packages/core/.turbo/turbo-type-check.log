@@ -1,4 +1,85 @@
 
-> @heys/core@14.0.0 type-check /home/runner/work/HEYS-v2/HEYS-v2/packages/core
+> @heys/core@14.0.0 type-check /Users/poplavskijanton/HEYS-v2/packages/core
 > tsc --noEmit
 
+src/legacy/heys_core_v12.ts(67,19): error TS2307: Cannot find module 'react' or its corresponding type declarations.
+src/legacy/heys_core_v12.ts(69,42): error TS2307: Cannot find module './types/heys' or its corresponding type declarations.
+src/legacy/heys_core_v12.ts(80,11): error TS6196: 'CoreUtils' is declared but never used.
+src/legacy/heys_core_v12.ts(145,9): error TS6133: 'Store' is declared but its value is never read.
+src/legacy/heys_core_v12.ts(293,14): error TS6133: 'kcal' is declared but its value is never read.
+src/legacy/heys_core_v12.ts(293,20): error TS6133: 'carbs' is declared but its value is never read.
+src/legacy/heys_core_v12.ts(293,53): error TS6133: 'fat' is declared but its value is never read.
+src/legacy/heys_core_v12.ts(391,28): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/secure.ts(10,68): error TS6059: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/index.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/core/src'. 'rootDir' is expected to contain all source files.
+src/secure.ts(10,68): error TS6307: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/index.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/core/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+src/secure.ts(21,9): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'HeysUser'.
+src/secure.ts(37,9): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'HeysUser'.
+src/secure.ts(65,9): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'HeysUser'.
+src/secure.ts(75,30): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/secure.ts(86,9): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'HeysDay'.
+src/secure.ts(108,9): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'HeysDay'.
+src/secure.ts(125,9): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'HeysDay'.
+src/secure.ts(148,9): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'HeysSession'.
+src/secure.ts(174,9): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'HeysSession'.
+src/secure.ts(184,39): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+../shared/src/index.ts(2,15): error TS6059: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/index.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/core/src'. 'rootDir' is expected to contain all source files.
+../shared/src/index.ts(2,15): error TS6307: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/index.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/core/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+../shared/src/index.ts(3,15): error TS6059: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/core/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via './security' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/index.ts'
+    Imported via '../security' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/pentest.ts'
+../shared/src/index.ts(3,15): error TS6307: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/core/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via './security' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/index.ts'
+    Imported via '../security' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/pentest.ts'
+../shared/src/index.ts(4,15): error TS6059: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/database/DatabaseService.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/core/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via './database/DatabaseService' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/index.ts'
+    Imported via '../database/DatabaseService' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/SecurityAnalyticsService.ts'
+../shared/src/index.ts(4,15): error TS6307: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/database/DatabaseService.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/core/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via './database/DatabaseService' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/index.ts'
+    Imported via '../database/DatabaseService' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/SecurityAnalyticsService.ts'
+../shared/src/index.ts(5,15): error TS6059: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/SecurityAnalyticsService.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/core/src'. 'rootDir' is expected to contain all source files.
+../shared/src/index.ts(5,15): error TS6307: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/SecurityAnalyticsService.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/core/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+../shared/src/monitoring/index.ts(18,8): error TS6059: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/performance.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/core/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via './performance' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/index.ts'
+    Imported via './performance' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/index.ts'
+    Imported via './performance' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/index.ts'
+../shared/src/monitoring/index.ts(18,8): error TS6307: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/performance.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/core/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via './performance' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/index.ts'
+    Imported via './performance' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/index.ts'
+    Imported via './performance' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/index.ts'
+../shared/src/monitoring/index.ts(32,8): error TS6059: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/realtime.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/core/src'. 'rootDir' is expected to contain all source files.
+../shared/src/monitoring/index.ts(32,8): error TS6307: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/realtime.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/core/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+../shared/src/security/index.ts(2,15): error TS6059: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/headers.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/core/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via './headers' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts'
+    Imported via './headers' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts'
+../shared/src/security/index.ts(2,15): error TS6307: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/headers.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/core/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via './headers' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts'
+    Imported via './headers' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts'
+../shared/src/security/index.ts(3,15): error TS6059: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/pentest.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/core/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via './pentest' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts'
+    Imported via './pentest' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts'
+../shared/src/security/index.ts(3,15): error TS6307: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/pentest.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/core/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via './pentest' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts'
+    Imported via './pentest' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts'
+../shared/src/security/index.ts(4,15): error TS6059: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/validation.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/core/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via './validation' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts'
+    Imported via './validation' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts'
+../shared/src/security/index.ts(4,15): error TS6307: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/validation.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/core/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via './validation' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts'
+    Imported via './validation' from file '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/index.ts'
+../shared/src/security/SecurityAnalyticsService.ts(4,33): error TS6059: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/structured-logger.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/core/src'. 'rootDir' is expected to contain all source files.
+../shared/src/security/SecurityAnalyticsService.ts(4,33): error TS6307: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/monitoring/structured-logger.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/core/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+../shared/src/security/SecurityAnalyticsService.ts(6,40): error TS6059: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/threat-detection-bridge.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/core/src'. 'rootDir' is expected to contain all source files.
+../shared/src/security/SecurityAnalyticsService.ts(6,40): error TS6307: File '/Users/poplavskijanton/HEYS-v2/packages/shared/src/security/threat-detection-bridge.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/core/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+ ELIFECYCLE  Command failed with exit code 2.
