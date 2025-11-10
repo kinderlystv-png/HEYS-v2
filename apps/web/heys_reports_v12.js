@@ -301,11 +301,11 @@
     const bmr = Math.round(10*(+weight||0) + 6.25*(+prof.height||175) - 5*(+prof.age||30) + ((prof.sex||'male')==='female'?-161:5));
     
     // Используем точно такие же функции расчета как в фиолетовой таблице
-    const kcalPerMin = (met,w) => Math.round(((+met||0)*(+w||0)*0.0175)*10)/10;
+    const kcalPerMin = (met,w) => Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10;
     const stepsKcal = (steps,w,sex,len) => { const coef=(sex==='female'?0.5:0.57); const km=(+steps||0)*(len||0.7)/1000; return Math.round(coef*(+w||0)*km*10)/10; };
     
     // Используем точно такие же MET зоны как в фиолетовой таблице
-    const z = (zones||[]).map(x => +x.met||0); 
+    const z = (zones||[]).map(x => +x.MET||0); 
     const mets = [2.5,6,8,10].map((_,i) => z[i]||[2.5,6,8,10][i]);
     const kcalMin = mets.map(m => kcalPerMin(m, weight));
     
@@ -1088,7 +1088,7 @@
       deficitPctTarget: profileRaw.deficitPctTarget || 0
     };
     
-    const zones = (profile.zones||[]).map(z=>({met: +z.met||0})).length ? (profile.zones||[]).map(z=>({met: +z.met||0})) : [{met:2.5},{met:6},{met:8},{met:10}];
+    const zones = (profile.zones||[]).map(z=>({met: +z.MET||0})).length ? (profile.zones||[]).map(z=>({met: +z.MET||0})) : [{met:2.5},{met:6},{met:8},{met:10}];
 
     // Инициализируем систему инвалидации кэша только при первом отображении
     useEffect(() => {
@@ -1106,54 +1106,78 @@
     // Форсируем обновление при изменении данных (используем timestamp)
     const [updateTrigger, setUpdateTrigger] = useState(Date.now());
     
-    // Подписываемся на изменения localStorage для принудительного обновления
+    // Подписываемся на события обновления дня (BroadcastChannel + storage) для актуализации отчётов
     useEffect(() => {
-      const checkForChanges = () => setUpdateTrigger(Date.now());
-      
-      // Слушаем изменения storage событий
-      window.addEventListener('storage', checkForChanges);
-      
-      // Проверяем изменения реже и более избирательно (каждые 10 секунд вместо 3)
+      if (!isInitialized) return;
+
+      const RECENT_WINDOW_MS = 1000 * 60 * 60 * 24 * 60; // 60 дней — достаточно для отчётов
+
+      const markUpdated = (isoDate) => {
+        if (isoDate) {
+          invalidateCache(isoDate);
+          const parsed = new Date(isoDate);
+          if (!Number.isNaN(parsed.getTime())) {
+            if (Date.now() - parsed.getTime() > RECENT_WINDOW_MS) {
+              return;
+            }
+          }
+        }
+        setUpdateTrigger(Date.now());
+      };
+
+      let channel = null;
+      if ('BroadcastChannel' in window) {
+        channel = new BroadcastChannel('heys_day_updates');
+        channel.onmessage = (event) => {
+          const data = event && event.data;
+          if (!data || data.type !== 'day:update') return;
+          const isoDate = (data.payload && data.payload.date) || data.date;
+          markUpdated(isoDate);
+        };
+      }
+
+      const handleStorage = (event) => {
+        if (!event || !event.key) return;
+        if (event.key.startsWith('heys_dayv2_')) {
+          const isoDate = event.key.slice('heys_dayv2_'.length);
+          markUpdated(isoDate);
+        }
+      };
+      window.addEventListener('storage', handleStorage);
+
       const interval = setInterval(() => {
-        // Инвалидируем кэш только для сегодня и вчера, без принудительного обновления
         const now = new Date();
         const today = fmtDate(now);
-        const yesterday = fmtDate(new Date(now.getTime() - 24*60*60*1000));
-        
-        // Проверяем, действительно ли изменились данные перед инвалидацией
-        const todayKey = 'heys_dayv2_' + today;
-        const yesterdayKey = 'heys_dayv2_' + yesterday;
-        const currentToday = window.localStorage.getItem(todayKey);
-        const currentYesterday = window.localStorage.getItem(yesterdayKey);
-        
-        // Сохраняем хэши для сравнения
+        const yesterday = fmtDate(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+        const dates = [today, yesterday];
+
         if (!window._heysLastDataHash) window._heysLastDataHash = {};
-        const todayHash = currentToday ? currentToday.length : 0;
-        const yesterdayHash = currentYesterday ? currentYesterday.length : 0;
-        
-        let needsUpdate = false;
-        if (window._heysLastDataHash.today !== todayHash) {
-          invalidateCache(today);
-          window._heysLastDataHash.today = todayHash;
-          needsUpdate = true;
+        let changed = false;
+
+        dates.forEach((isoDate) => {
+          const key = 'heys_dayv2_' + isoDate;
+          const raw = window.localStorage.getItem(key);
+          const hash = raw ? raw.length : 0;
+          if (window._heysLastDataHash[key] !== hash) {
+            window._heysLastDataHash[key] = hash;
+            invalidateCache(isoDate);
+            changed = true;
+          }
+        });
+
+        if (changed) {
+          markUpdated();
         }
-        if (window._heysLastDataHash.yesterday !== yesterdayHash) {
-          invalidateCache(yesterday);
-          window._heysLastDataHash.yesterday = yesterdayHash;
-          needsUpdate = true;
-        }
-        
-        // Обновляем только если реально изменились данные
-        if (needsUpdate) {
-          checkForChanges();
-        }
-      }, 10000); // Увеличиваем интервал с 3 до 10 секунд
-      
+      }, 10000);
+
       return () => {
-        window.removeEventListener('storage', checkForChanges);
+        if (channel) {
+          channel.close();
+        }
+        window.removeEventListener('storage', handleStorage);
         clearInterval(interval);
       };
-    }, []);
+    }, [isInitialized]);
 
     // 28 дней — для графиков и усреднений (ленивое вычисление)
     const rows28 = useMemo(()=>{
