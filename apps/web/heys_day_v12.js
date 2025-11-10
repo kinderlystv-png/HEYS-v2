@@ -124,6 +124,139 @@
   const scale=(v,g)=>Math.round(((+v||0)*(+g||0)/100)*10)/10;
 
   function loadMealsForDate(ds){ const keys=['heys_dayv2_'+ds,'heys_day_'+ds,'day_'+ds+'_meals','meals_'+ds,'food_'+ds]; for(const k of keys){ try{ const raw=localStorage.getItem(k); if(!raw)continue; const v=JSON.parse(raw); if(v&&Array.isArray(v.meals)) return v.meals; if(Array.isArray(v)) return v; }catch(e){} } return []; }
+
+  // Хук для централизованного автосохранения дня с учётом гонок и межвкладочной синхронизации
+  function useDayAutosave({
+    day,
+    date,
+    lsSet,
+    lsGetFn = lsGet,
+    keyPrefix = 'heys_dayv2_',
+    debounceMs = 500,
+    now = () => Date.now(),
+  }){
+    const timerRef = React.useRef(null);
+    const prevStoredSnapRef = React.useRef(null);
+    const prevDaySnapRef = React.useRef(null);
+    const sourceIdRef = React.useRef((global.crypto && typeof global.crypto.randomUUID === 'function')? global.crypto.randomUUID(): String(Math.random()));
+    const channelRef = React.useRef(null);
+    const isUnmountedRef = React.useRef(false);
+
+    React.useEffect(()=>{
+      isUnmountedRef.current = false;
+      if('BroadcastChannel' in global){
+        const channel = new BroadcastChannel('heys_day_updates');
+        channelRef.current = channel;
+        return ()=>{
+          isUnmountedRef.current = true;
+          channel.close();
+          channelRef.current = null;
+        };
+      }
+      channelRef.current = null;
+    },[]);
+
+    const getKey = React.useCallback((payload)=> keyPrefix + ((payload && payload.date) ? payload.date : date),[keyPrefix,date]);
+
+    const stripMeta = React.useCallback((payload)=>{
+      if(!payload) return payload;
+      const {updatedAt,_sourceId,...rest} = payload;
+      return rest;
+    },[]);
+
+    const readExisting = React.useCallback((key)=>{
+      if(!key) return null;
+      try{
+        const stored = lsGetFn? lsGetFn(key,null):null;
+        if(stored && typeof stored==='object') return stored;
+      }catch(e){}
+      try{
+        const raw = global.localStorage.getItem(key);
+        return raw? JSON.parse(raw):null;
+      }catch(e){ return null; }
+    },[lsGetFn]);
+
+    const save = React.useCallback((payload)=>{
+      if(!payload || !payload.date) return;
+      const key = getKey(payload);
+      const current = readExisting(key);
+      const incomingUpdatedAt = payload.updatedAt!=null? payload.updatedAt: now();
+
+      if(current && current.updatedAt > incomingUpdatedAt) return;
+      if(current && current.updatedAt===incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) return;
+
+      const toStore = {
+        ...payload,
+        schemaVersion: payload.schemaVersion!=null? payload.schemaVersion:3,
+        updatedAt: incomingUpdatedAt,
+        _sourceId: sourceIdRef.current,
+      };
+
+      try{
+        lsSet(key,toStore);
+        if(channelRef.current && !isUnmountedRef.current){ 
+          try{
+            channelRef.current.postMessage({type:'day:update',date:toStore.date,payload:toStore});
+          }catch(e){}
+        }
+        prevStoredSnapRef.current = JSON.stringify(toStore);
+        prevDaySnapRef.current = JSON.stringify(stripMeta(toStore));
+      }catch(error){
+        console.error('[AUTOSAVE] localStorage write failed:', error);
+      }
+    },[getKey,lsSet,now,readExisting,stripMeta]);
+
+    const flush = React.useCallback(()=>{
+      if(isUnmountedRef.current || !day || !day.date) return;
+      const payload = {...day, updatedAt: day.updatedAt!=null? day.updatedAt: now()};
+      const daySnap = JSON.stringify(stripMeta(payload));
+      if(prevDaySnapRef.current === daySnap) return;
+      save(payload);
+    },[day,now,save,stripMeta]);
+
+    React.useEffect(()=>{
+      if(!day || !day.date) return;
+      const key = getKey(day);
+      const current = readExisting(key);
+      if(current){
+        prevStoredSnapRef.current = JSON.stringify(current);
+        prevDaySnapRef.current = JSON.stringify(stripMeta(current));
+      }else{
+        prevDaySnapRef.current = JSON.stringify(stripMeta(day));
+      }
+    },[day && day.date,getKey,readExisting,stripMeta]);
+
+    React.useEffect(()=>{
+      if(!day || !day.date) return;
+      const daySnap = JSON.stringify(stripMeta(day));
+      if(prevDaySnapRef.current === daySnap) return;
+      global.clearTimeout(timerRef.current);
+      timerRef.current = global.setTimeout(flush,debounceMs);
+      return ()=>{ global.clearTimeout(timerRef.current); };
+    },[day,debounceMs,flush,stripMeta]);
+
+    React.useEffect(()=>{
+      return ()=>{
+        global.clearTimeout(timerRef.current);
+        flush();
+      };
+    },[flush]);
+
+    React.useEffect(()=>{
+      const onVisChange=()=>{
+        if(global.document.visibilityState!=='visible') flush();
+      };
+      global.document.addEventListener('visibilitychange',onVisChange);
+      global.addEventListener('pagehide',flush);
+      return ()=>{
+        global.document.removeEventListener('visibilitychange',onVisChange);
+        global.removeEventListener('pagehide',flush);
+      };
+    },[flush]);
+
+    return {flush};
+  }
+
   // Lightweight signature for products (ids/names only)
   function productsSignature(ps){ return (ps||[]).map(p=>p&& (p.id||p.product_id||p.name)||'').join('|'); }
   // Cached popular products (per month + signature + TTL)
@@ -150,7 +283,7 @@
 
   function getProfile(){ const p=lsGet('heys_profile',{})||{}; const g=(p.gender||p.sex||'Мужской'); const sex=(String(g).toLowerCase().startsWith('ж')?'female':'male'); return {sex,height:+p.height||175,age:+p.age||30, sleepHours:+p.sleepHours||8, weight:+p.weight||70, deficitPctTarget:+p.deficitPctTarget||0}; }
   function calcBMR(w,prof){ const h=+prof.height||175,a=+prof.age||30,sex=(prof.sex||'male'); return Math.round(10*(+w||0)+6.25*h-5*a+(sex==='female'?-161:5)); }
-  function kcalPerMin(met,w){ return Math.round(((+met||0)*(+w||0)*0.0175)*10)/10; }
+  function kcalPerMin(met,w){ return Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10; }
   function stepsKcal(steps,w,sex,len){ const coef=(sex==='female'?0.5:0.57); const km=(+steps||0)*(len||0.7)/1000; return Math.round(coef*(+w||0)*km*10)/10; }
   function parseTime(t){ if(!t||typeof t!=='string'||!t.includes(':')) return null; const [hh,mm]=t.split(':').map(x=>parseInt(x,10)); if(isNaN(hh)||isNaN(mm)) return null; return {hh:clamp(hh,0,23),mm:clamp(mm,0,59)}; }
   function sleepHours(a,b){ const s=parseTime(a),e=parseTime(b); if(!s||!e) return 0; let sh=s.hh+s.mm/60,eh=e.hh+e.mm/60; let d=eh-sh; if(d<0) d+=24; return r1(d); }
@@ -280,6 +413,18 @@
     }
   });
 
+    const { flush } = useDayAutosave({ day, date, lsSet, lsGetFn: lsGet });
+
+    useEffect(() => {
+      HEYS.Day = HEYS.Day || {};
+      HEYS.Day.requestFlush = flush;
+      return () => {
+        if (HEYS.Day && HEYS.Day.requestFlush === flush) {
+          delete HEYS.Day.requestFlush;
+        }
+      };
+    }, [flush]);
+
     // Логирование для диагностики рассинхрона продуктов и приёмов пищи
     useEffect(() => {
   // ...existing code...
@@ -293,7 +438,6 @@
 
   // ...удалены дублирующиеся объявления useState...
   useEffect(()=>{ lsSet('heys_dayv2_date',date); },[date]);
-  useEffect(()=>{ lsSet('heys_dayv2_'+day.date,day); },[JSON.stringify(day)]);
 
     // Подгружать данные дня из облака при смене даты
     useEffect(() => {
@@ -348,7 +492,7 @@
       return () => { cancelled = true; };
     }, [date]);
 
-    const z= (lsGet('heys_profile',{}).zones||[]).map(x=>+x.met||0); const mets=[2.5,6,8,10].map((_,i)=>z[i]||[2.5,6,8,10][i]);
+    const z= (lsGet('heys_hr_zones',[]).map(x=>+x.MET||0)); const mets=[2.5,6,8,10].map((_,i)=>z[i]||[2.5,6,8,10][i]);
     const weight=+day.weightMorning||+prof.weight||70; const kcalMin=mets.map(m=>kcalPerMin(m,weight));
     const trainK= t=>(t.z||[0,0,0,0]).reduce((s,min,i)=> s+r1((+min||0)*(kcalMin[i]||0)),0);
     const TR=(day.trainings&&Array.isArray(day.trainings)&&day.trainings.length>=2)?day.trainings:[{z:[0,0,0,0]},{z:[0,0,0,0]}];
@@ -368,7 +512,6 @@
       const arr=(day.trainings||[{z:[0,0,0,0]},{z:[0,0,0,0]}]).map((t,idx)=> idx===i? {z:t.z.map((v,j)=> j===zi?(+mins||0):v)}:t);
       const newDay = {...day, trainings:arr};
       setDay(newDay);
-      lsSet('heys_dayv2_'+newDay.date, newDay); // Сохраняем сразу после изменения
     }
 
     // Компонент для поиска и добавления продукта в конкретный приём
@@ -629,7 +772,7 @@
         valueISO:date,
         onSelect:(d)=>{
           // persist current day explicitly before switching date
-          try{ lsSet('heys_dayv2_'+day.date, day); }catch(e){}
+          try{ flush(); }catch(e){}
           setDate(d);
           const v = lsGet('heys_dayv2_'+d,null);
           const profNow = getProfile();

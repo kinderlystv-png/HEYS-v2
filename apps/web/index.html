@@ -1308,6 +1308,11 @@
                     {
                       className: 'tab ' + (tab === 'reports' ? 'active' : ''),
                       onClick: () => {
+                        if (window.HEYS && window.HEYS.Day && typeof window.HEYS.Day.requestFlush === 'function') {
+                          try {
+                            window.HEYS.Day.requestFlush();
+                          } catch (error) {}
+                        }
                         setTab('reports');
                         setReportsRefresh(Date.now());
                       },
