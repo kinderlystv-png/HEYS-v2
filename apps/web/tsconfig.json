@@ -4,7 +4,8 @@
     "outDir": "./dist",
     "noEmit": false,
     "jsx": "react-jsx",
-    "composite": true
+    "composite": true,
+    "ignoreDeprecations": "6.0"
   },
   "include": ["src/**/*", "index.html"],
   "exclude": [
