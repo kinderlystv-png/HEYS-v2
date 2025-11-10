@@ -21,7 +21,7 @@
     "build:demo": "vite build --config vite.config.dev.ts",
     "demo": "vite --config vite.config.dev.ts",
     "dev": "vite --config vite.config.dev.ts",
-    "lint": "eslint src --ext .ts,.tsx",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test": "vitest",
     "test:visual": "playwright test",
     "test:visual:headed": "playwright test --headed",

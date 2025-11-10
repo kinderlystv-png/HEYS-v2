@@ -8,9 +8,9 @@
   "scripts": {
     "build": "tsup",
     "clean": "rimraf dist",
-    "dev": "tsup --watch",
-    "lint": "eslint src --ext .ts",
-    "test": "vitest run",
+    "dev": "tsup src/index.ts --dts --format cjs,esm --watch",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "type-check": "tsc --noEmit"
