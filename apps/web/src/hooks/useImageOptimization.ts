@@ -1,8 +1,8 @@
 // filepath: apps/web/src/hooks/useImageOptimization.ts
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-import { imageOptimizer, ImageOptimizationOptions, ImageMetadata } from '../utils/image-optimizer';
+import { ImageMetadata, ImageOptimizationOptions, imageOptimizer } from '../utils/image-optimizer';
 
 interface UseImageOptimizationOptions extends ImageOptimizationOptions {
   enabled?: boolean;
@@ -25,14 +25,9 @@ interface UseImageOptimizationResult {
  */
 export function useImageOptimization(
   src: string,
-  options: UseImageOptimizationOptions = {}
+  options: UseImageOptimizationOptions = {},
 ): UseImageOptimizationResult {
-  const {
-    enabled = true,
-    onSuccess,
-    onError,
-    ...optimizationOptions
-  } = options;
+  const { enabled = true, onSuccess, onError, ...optimizationOptions } = options;
 
   const [state, setState] = useState<{
     optimizedSrc: string | null;
@@ -43,7 +38,7 @@ export function useImageOptimization(
     optimizedSrc: null,
     metadata: null,
     isLoading: false,
-    error: null
+    error: null,
   });
 
   const [retryCount, setRetryCount] = useState(0);
@@ -51,30 +46,30 @@ export function useImageOptimization(
   const optimizeImage = useCallback(async () => {
     if (!src || !enabled) return;
 
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       isLoading: true,
-      error: null
+      error: null,
     }));
 
     try {
       const metadata = await imageOptimizer.optimizeImage(src, optimizationOptions);
-      
+
       setState({
         optimizedSrc: metadata.src,
         metadata,
         isLoading: false,
-        error: null
+        error: null,
       });
 
       onSuccess?.(metadata);
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error('Image optimization failed');
-      
-      setState(prev => ({
+
+      setState((prev) => ({
         ...prev,
         isLoading: false,
-        error: errorObj
+        error: errorObj,
       }));
 
       onError?.(errorObj);
@@ -88,17 +83,17 @@ export function useImageOptimization(
 
   // Retry функция
   const retry = useCallback(() => {
-    setRetryCount(prev => prev + 1);
+    setRetryCount((prev) => prev + 1);
   }, []);
 
   // Preload функция
   const preload = useCallback(async () => {
     if (!src) return;
-    
+
     try {
       await imageOptimizer.optimizeImage(src, {
         ...optimizationOptions,
-        preload: true
+        preload: true,
       });
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
@@ -113,7 +108,7 @@ export function useImageOptimization(
     isLoading: state.isLoading,
     error: state.error,
     retry,
-    preload
+    preload,
   };
 }
 
@@ -123,13 +118,13 @@ export function useImageOptimization(
  */
 export function useBatchImageOptimization(
   sources: string[],
-  options: UseImageOptimizationOptions & { 
+  options: UseImageOptimizationOptions & {
     concurrency?: number;
     onProgress?: (completed: number, total: number) => void;
-  } = {}
+  } = {},
 ) {
   const { concurrency = 3, onProgress, ...optimizationOptions } = options;
-  
+
   const [state, setState] = useState<{
     results: Map<string, ImageMetadata>;
     errors: Map<string, Error>;
@@ -139,18 +134,18 @@ export function useBatchImageOptimization(
     results: new Map(),
     errors: new Map(),
     isLoading: false,
-    completed: 0
+    completed: 0,
   });
 
   const optimizeBatch = useCallback(async () => {
     if (sources.length === 0) return;
 
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       isLoading: true,
       completed: 0,
       results: new Map(),
-      errors: new Map()
+      errors: new Map(),
     }));
 
     // Создаем batches для concurrency control
@@ -165,39 +160,39 @@ export function useBatchImageOptimization(
       const promises = batch.map(async (src) => {
         try {
           const metadata = await imageOptimizer.optimizeImage(src, optimizationOptions);
-          
-          setState(prev => ({
+
+          setState((prev) => ({
             ...prev,
-            results: new Map(prev.results).set(src, metadata)
+            results: new Map(prev.results).set(src, metadata),
           }));
-          
+
           return { src, success: true, metadata };
         } catch (error) {
           const errorObj = error instanceof Error ? error : new Error('Optimization failed');
-          
-          setState(prev => ({
+
+          setState((prev) => ({
             ...prev,
-            errors: new Map(prev.errors).set(src, errorObj)
+            errors: new Map(prev.errors).set(src, errorObj),
           }));
-          
+
           return { src, success: false, error: errorObj };
         }
       });
 
       await Promise.all(promises);
       completed += batch.length;
-      
-      setState(prev => ({
+
+      setState((prev) => ({
         ...prev,
-        completed
+        completed,
       }));
 
       onProgress?.(completed, sources.length);
     }
 
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      isLoading: false
+      isLoading: false,
     }));
   }, [sources, concurrency, optimizationOptions, onProgress]);
 
@@ -212,7 +207,7 @@ export function useBatchImageOptimization(
     completed: state.completed,
     total: sources.length,
     progress: sources.length > 0 ? (state.completed / sources.length) * 100 : 0,
-    retry: optimizeBatch
+    retry: optimizeBatch,
   };
 }
 
@@ -220,53 +215,64 @@ export function useBatchImageOptimization(
  * Hook для image preloading стратегий
  * Предзагружает изображения на основе user behavior
  */
-export function useImagePreloading(options: {
-  strategy?: 'hover' | 'viewport' | 'idle' | 'immediate';
-  delay?: number;
-  priority?: boolean;
-} = {}) {
+export function useImagePreloading(
+  options: {
+    strategy?: 'hover' | 'viewport' | 'idle' | 'immediate';
+    delay?: number;
+    priority?: boolean;
+  } = {},
+) {
   const { delay = 0, priority = false } = options;
-  
-  const preloadImage = useCallback((src: string, imageOptions: ImageOptimizationOptions = {}) => {
-    const execute = async () => {
-      try {
-        await imageOptimizer.optimizeImage(src, {
-          ...imageOptions,
-          preload: true,
-          priority
-        });
-      } catch (error) {
-        console.warn('Image preload failed:', error);
+
+  const preloadImage = useCallback(
+    (src: string, imageOptions: ImageOptimizationOptions = {}) => {
+      const execute = async () => {
+        try {
+          await imageOptimizer.optimizeImage(src, {
+            ...imageOptions,
+            preload: true,
+            priority,
+          });
+        } catch (error) {
+          console.warn('Image preload failed:', error);
+        }
+      };
+
+      if (delay > 0) {
+        setTimeout(execute, delay);
+      } else {
+        execute();
       }
-    };
+    },
+    [delay, priority],
+  );
 
-    if (delay > 0) {
-      setTimeout(execute, delay);
-    } else {
-      execute();
-    }
-  }, [delay, priority]);
+  const preloadOnHover = useCallback(
+    (src: string, imageOptions?: ImageOptimizationOptions) => {
+      return {
+        onMouseEnter: () => preloadImage(src, imageOptions),
+        onFocus: () => preloadImage(src, imageOptions),
+      };
+    },
+    [preloadImage],
+  );
 
-  const preloadOnHover = useCallback((src: string, imageOptions?: ImageOptimizationOptions) => {
-    return {
-      onMouseEnter: () => preloadImage(src, imageOptions),
-      onFocus: () => preloadImage(src, imageOptions)
-    };
-  }, [preloadImage]);
-
-  const preloadOnIdle = useCallback((src: string, imageOptions?: ImageOptimizationOptions) => {
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => preloadImage(src, imageOptions));
-    } else {
-      // Fallback для браузеров без requestIdleCallback
-      setTimeout(() => preloadImage(src, imageOptions), 100);
-    }
-  }, [preloadImage]);
+  const preloadOnIdle = useCallback(
+    (src: string, imageOptions?: ImageOptimizationOptions) => {
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => preloadImage(src, imageOptions));
+      } else {
+        // Fallback для браузеров без requestIdleCallback
+        setTimeout(() => preloadImage(src, imageOptions), 100);
+      }
+    },
+    [preloadImage],
+  );
 
   return {
     preloadImage,
     preloadOnHover,
-    preloadOnIdle
+    preloadOnIdle,
   };
 }
 

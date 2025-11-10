@@ -1,0 +1,50 @@
+/* 
+ * ═══════════════════════════════════════════════════════════════════
+ * Critical CSS - загружается inline для мгновенного рендера
+ * Минимальные стили для первого отображения страницы
+ * ═══════════════════════════════════════════════════════════════════
+ */
+
+:root {
+  --bg: #ffffff;
+  --card: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --acc: #2563eb;
+  --acc-contrast: #ffffff;
+}
+
+body {
+  margin: 0;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Helvetica,
+    Arial;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  background: var(--acc);
+  color: var(--acc-contrast);
+  padding: 1rem;
+  text-align: center;
+}
+
+.app-main {
+  flex: 1;
+  padding: 1rem;
+}

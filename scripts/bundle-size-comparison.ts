@@ -1,10 +1,10 @@
 // filepath: scripts/bundle-size-comparison.ts
 // Simplified Bundle Size Analysis для Performance Sprint
 
-import { execSync } from 'child_process';
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
 import chalk from 'chalk';
+import { execSync } from 'child_process';
+import { existsSync } from 'fs';
+import { join } from 'path';
 
 class SimpleBundleAnalyzer {
   private workspaceRoot: string;
@@ -32,9 +32,9 @@ class SimpleBundleAnalyzer {
   private async createBuild(): Promise<void> {
     try {
       console.log(chalk.yellow('⚡ Building web app...'));
-      execSync('pnpm --filter="@heys/web" run build', { 
+      execSync('pnpm --filter="@heys/web" run build', {
         stdio: 'inherit',
-        cwd: this.workspaceRoot
+        cwd: this.workspaceRoot,
       });
     } catch (error) {
       console.log(chalk.red('❌ Build failed, analyzing existing files...'));
@@ -50,17 +50,20 @@ class SimpleBundleAnalyzer {
     try {
       // Анализ assets folder
       const assetsPath = join(this.buildPath, 'assets');
-      
-      if (existsSync(assetsPath)) {
-        const files = execSync(`Get-ChildItem "${assetsPath}" -File | ForEach-Object { "$($_.Name),$($_.Length)" }`, 
-          { encoding: 'utf-8' }
-        ).split('\n').filter(Boolean);
 
-        const jsFiles: Array<{name: string, size: number}> = [];
-        const cssFiles: Array<{name: string, size: number}> = [];
+      if (existsSync(assetsPath)) {
+        const files = execSync(
+          `Get-ChildItem "${assetsPath}" -File | ForEach-Object { "$($_.Name),$($_.Length)" }`,
+          { encoding: 'utf-8' },
+        )
+          .split('\n')
+          .filter(Boolean);
+
+        const jsFiles: Array<{ name: string; size: number }> = [];
+        const cssFiles: Array<{ name: string; size: number }> = [];
         let totalSize = 0;
 
-        files.forEach(line => {
+        files.forEach((line) => {
           const [name, size] = line.trim().split(',');
           const sizeNum = parseInt(size) || 0;
           totalSize += sizeNum;
@@ -76,7 +79,7 @@ class SimpleBundleAnalyzer {
           totalSize,
           jsFiles: jsFiles.sort((a, b) => b.size - a.size),
           cssFiles: cssFiles.sort((a, b) => b.size - a.size),
-          fileCount: files.length
+          fileCount: files.length,
         };
       }
     } catch (error) {
@@ -124,7 +127,7 @@ class SimpleBundleAnalyzer {
 
   private evaluateBundle(bundleInfo: any): void {
     const totalKB = bundleInfo.totalSize / 1024;
-    
+
     console.log(chalk.blue('\n🎯 PERFORMANCE EVALUATION:\n'));
 
     // Оценка размера bundle
@@ -152,22 +155,24 @@ class SimpleBundleAnalyzer {
 
     // Рекомендации для спринта
     console.log(chalk.blue('\n🚀 SPRINT OPTIMIZATION OPPORTUNITIES:\n'));
-    
+
     const recommendations = [
       totalKB > 100 ? '📦 Implement code splitting for large bundles' : null,
       bundleInfo.jsFiles.length > 3 ? '🔄 Merge small chunks to reduce HTTP requests' : null,
       '🌳 Enable aggressive tree shaking',
       '⚡ Use dynamic imports for non-critical code',
       '🗜️ Enable gzip/brotli compression',
-      '📱 Implement progressive loading'
+      '📱 Implement progressive loading',
     ].filter(Boolean);
 
-    recommendations.forEach(rec => rec && console.log(`   ${rec}`));
+    recommendations.forEach((rec) => rec && console.log(`   ${rec}`));
 
     // Sprint goals progress
     console.log(chalk.blue('\n📈 SPRINT PROGRESS:'));
     console.log(`   Bundle size goal: ${chalk.green('< 50 KB')}`);
-    console.log(`   Current status: ${totalKB > 50 ? chalk.red('Needs optimization') : chalk.green('Goal achieved!')}`);
+    console.log(
+      `   Current status: ${totalKB > 50 ? chalk.red('Needs optimization') : chalk.green('Goal achieved!')}`,
+    );
   }
 
   private formatBytes(bytes: number): string {

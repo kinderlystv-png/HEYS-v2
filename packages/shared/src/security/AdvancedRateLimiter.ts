@@ -1,14 +1,14 @@
 /**
  * @fileoverview Advanced Rate Limiting System
  * Enterprise-grade sliding window rate limiter with Redis support
- * 
+ *
  * Features:
  * - Sliding window algorithm for precise rate limiting
  * - Redis-backed storage for distributed systems
  * - Configurable rate limits per endpoint/user
  * - Real-time monitoring and alerts
  * - Automatic blacklisting for abuse prevention
- * 
+ *
  * @version 2.0.0
  * @since Phase 2 Week 2
  */
@@ -19,10 +19,10 @@ import { EventEmitter } from 'events';
  * Rate limit configuration for different endpoints
  */
 export interface RateLimitConfig {
-  windowSizeMs: number;    // Time window in milliseconds
-  maxRequests: number;     // Maximum requests per window
-  keyGenerator?: (req: any) => string;  // Custom key generation
-  skipIf?: (req: any) => boolean;       // Skip rate limiting condition
+  windowSizeMs: number; // Time window in milliseconds
+  maxRequests: number; // Maximum requests per window
+  keyGenerator?: (req: any) => string; // Custom key generation
+  skipIf?: (req: any) => boolean; // Skip rate limiting condition
   onLimitReached?: (req: any, info: RateLimitInfo) => void;
 }
 
@@ -45,20 +45,20 @@ export class AdvancedRateLimiter extends EventEmitter {
   private readonly redisClient: any; // Redis client instance
   private readonly requestLog: Map<string, number[]> = new Map();
   private readonly blacklist: Set<string> = new Set();
-  
+
   constructor(config: RateLimitConfig, redisClient?: any) {
     super();
-    
+
     this.config = {
       windowSizeMs: config.windowSizeMs,
       maxRequests: config.maxRequests,
       keyGenerator: config.keyGenerator || this.defaultKeyGenerator,
       skipIf: config.skipIf || (() => false),
-      onLimitReached: config.onLimitReached || (() => {})
+      onLimitReached: config.onLimitReached || (() => {}),
     };
-    
+
     this.redisClient = redisClient;
-    
+
     // Cleanup old entries every minute
     setInterval(() => this.cleanup(), 60000);
   }
@@ -82,13 +82,13 @@ export class AdvancedRateLimiter extends EventEmitter {
           totalRequests: 0,
           remainingRequests: this.config.maxRequests,
           resetTime: new Date(Date.now() + this.config.windowSizeMs),
-          retryAfter: 0
-        }
+          retryAfter: 0,
+        },
       };
     }
 
     const key = this.config.keyGenerator(req);
-    
+
     // Check blacklist
     if (this.blacklist.has(key)) {
       this.emit('blacklisted', { key, req });
@@ -98,8 +98,8 @@ export class AdvancedRateLimiter extends EventEmitter {
           totalRequests: this.config.maxRequests + 1,
           remainingRequests: 0,
           resetTime: new Date(Date.now() + this.config.windowSizeMs),
-          retryAfter: this.config.windowSizeMs / 1000
-        }
+          retryAfter: this.config.windowSizeMs / 1000,
+        },
       };
     }
 
@@ -108,7 +108,7 @@ export class AdvancedRateLimiter extends EventEmitter {
 
     // Get request history for this key
     let requests: number[];
-    
+
     if (this.redisClient) {
       requests = await this.getRequestsFromRedis(key, windowStart);
     } else {
@@ -117,7 +117,7 @@ export class AdvancedRateLimiter extends EventEmitter {
 
     // Add current request
     requests.push(now);
-    
+
     // Update storage
     if (this.redisClient) {
       await this.updateRedisRequests(key, requests, windowStart);
@@ -128,12 +128,12 @@ export class AdvancedRateLimiter extends EventEmitter {
     const totalRequests = requests.length;
     const remainingRequests = Math.max(0, this.config.maxRequests - totalRequests);
     const resetTime = new Date(Math.min(...requests) + this.config.windowSizeMs);
-    
+
     const info: RateLimitInfo = {
       totalRequests,
       remainingRequests,
       resetTime,
-      retryAfter: remainingRequests === 0 ? Math.ceil((resetTime.getTime() - now) / 1000) : 0
+      retryAfter: remainingRequests === 0 ? Math.ceil((resetTime.getTime() - now) / 1000) : 0,
     };
 
     const allowed = totalRequests <= this.config.maxRequests;
@@ -141,12 +141,12 @@ export class AdvancedRateLimiter extends EventEmitter {
     if (!allowed) {
       this.config.onLimitReached(req, info);
       this.emit('limitReached', { key, req, info });
-      
+
       // Check for abuse (3x over limit)
       if (totalRequests > this.config.maxRequests * 3) {
         this.blacklist.add(key);
         this.emit('abuse', { key, req, totalRequests });
-        
+
         // Auto-remove from blacklist after 1 hour
         setTimeout(() => {
           this.blacklist.delete(key);
@@ -163,10 +163,10 @@ export class AdvancedRateLimiter extends EventEmitter {
    */
   private async getRequestsFromRedis(key: string, windowStart: number): Promise<number[]> {
     const redisKey = `rate_limit:${key}`;
-    
+
     // Remove expired entries
     await this.redisClient.zremrangebyscore(redisKey, 0, windowStart);
-    
+
     // Get current entries
     const requests = await this.redisClient.zrange(redisKey, 0, -1);
     return requests.map(Number);
@@ -175,13 +175,17 @@ export class AdvancedRateLimiter extends EventEmitter {
   /**
    * Update Redis with new request
    */
-  private async updateRedisRequests(key: string, _requests: number[], _windowStart: number): Promise<void> {
+  private async updateRedisRequests(
+    key: string,
+    _requests: number[],
+    _windowStart: number,
+  ): Promise<void> {
     const redisKey = `rate_limit:${key}`;
     const now = Date.now();
-    
+
     // Add new request with score = timestamp
     await this.redisClient.zadd(redisKey, now, now);
-    
+
     // Set expiration
     await this.redisClient.expire(redisKey, Math.ceil(this.config.windowSizeMs / 1000));
   }
@@ -191,7 +195,7 @@ export class AdvancedRateLimiter extends EventEmitter {
    */
   private getRequestsFromMemory(key: string, windowStart: number): number[] {
     const requests = this.requestLog.get(key) || [];
-    return requests.filter(timestamp => timestamp > windowStart);
+    return requests.filter((timestamp) => timestamp > windowStart);
   }
 
   /**
@@ -207,10 +211,10 @@ export class AdvancedRateLimiter extends EventEmitter {
   private cleanup(): void {
     const now = Date.now();
     const cutoff = now - this.config.windowSizeMs;
-    
+
     for (const [key, requests] of this.requestLog.entries()) {
-      const validRequests = requests.filter(timestamp => timestamp > cutoff);
-      
+      const validRequests = requests.filter((timestamp) => timestamp > cutoff);
+
       if (validRequests.length === 0) {
         this.requestLog.delete(key);
       } else {
@@ -237,7 +241,7 @@ export class AdvancedRateLimiter extends EventEmitter {
       activeKeys: this.requestLog.size,
       blacklistedKeys: this.blacklist.size,
       totalRequests,
-      memoryUsage: process.memoryUsage().heapUsed
+      memoryUsage: process.memoryUsage().heapUsed,
     };
   }
 
@@ -286,29 +290,29 @@ export class AdvancedRateLimiter extends EventEmitter {
  */
 export function createRateLimitMiddleware(config: RateLimitConfig, redisClient?: any) {
   const limiter = new AdvancedRateLimiter(config, redisClient);
-  
+
   return async (req: any, res: any, next: any) => {
     try {
       const { allowed, info } = await limiter.checkRateLimit(req);
-      
+
       // Add rate limit headers
       res.set({
         'X-RateLimit-Limit': config.maxRequests.toString(),
         'X-RateLimit-Remaining': info.remainingRequests.toString(),
         'X-RateLimit-Reset': info.resetTime.toISOString(),
-        'X-RateLimit-Window': config.windowSizeMs.toString()
+        'X-RateLimit-Window': config.windowSizeMs.toString(),
       });
-      
+
       if (!allowed) {
         res.set('Retry-After', info.retryAfter.toString());
         return res.status(429).json({
           error: 'Too Many Requests',
           message: 'Rate limit exceeded',
           retryAfter: info.retryAfter,
-          resetTime: info.resetTime
+          resetTime: info.resetTime,
         });
       }
-      
+
       next();
     } catch (error) {
       console.error('Rate limiting error:', error);
@@ -323,33 +327,33 @@ export function createRateLimitMiddleware(config: RateLimitConfig, redisClient?:
 export const RateLimitPresets = {
   // API endpoints
   api: {
-    windowSizeMs: 60000,    // 1 minute
-    maxRequests: 100        // 100 requests per minute
+    windowSizeMs: 60000, // 1 minute
+    maxRequests: 100, // 100 requests per minute
   },
-  
+
   // Authentication endpoints
   auth: {
-    windowSizeMs: 900000,   // 15 minutes
-    maxRequests: 5          // 5 attempts per 15 minutes
+    windowSizeMs: 900000, // 15 minutes
+    maxRequests: 5, // 5 attempts per 15 minutes
   },
-  
+
   // File upload endpoints
   upload: {
-    windowSizeMs: 3600000,  // 1 hour
-    maxRequests: 10         // 10 uploads per hour
+    windowSizeMs: 3600000, // 1 hour
+    maxRequests: 10, // 10 uploads per hour
   },
-  
+
   // Search endpoints
   search: {
-    windowSizeMs: 60000,    // 1 minute
-    maxRequests: 30         // 30 searches per minute
+    windowSizeMs: 60000, // 1 minute
+    maxRequests: 30, // 30 searches per minute
   },
-  
+
   // Heavy computation endpoints
   compute: {
-    windowSizeMs: 300000,   // 5 minutes
-    maxRequests: 3          // 3 requests per 5 minutes
-  }
+    windowSizeMs: 300000, // 5 minutes
+    maxRequests: 3, // 3 requests per 5 minutes
+  },
 };
 
 export default AdvancedRateLimiter;

@@ -2,23 +2,23 @@
 /**
  * Тесты для RLS политик и TypeScript интеграции
  * Проверяет корректность доступа к данным через Supabase RLS
- * 
+ *
  * @created КТ3 - Supabase Security
  * @author HEYS Security Team
  */
 
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ProfileService } from '../profile-service';
-import { SessionService } from '../session-service';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AuditService } from '../audit-service';
 import { EncryptedProfileService, encryptedPreferencesService } from '../field-encryption';
+import { ProfileService } from '../profile-service';
 import {
-  UserRole,
+  DEFAULT_ROLE_PERMISSIONS,
   Permission,
   PermissionError,
   RLSError,
-  DEFAULT_ROLE_PERMISSIONS
+  UserRole,
 } from '../rls-policies';
+import { SessionService } from '../session-service';
 
 // Мокаем Supabase client
 const mockSupabaseClient = {
@@ -34,12 +34,12 @@ const mockSupabaseClient = {
   or: vi.fn(),
   single: vi.fn(),
   order: vi.fn(),
-  limit: vi.fn()
+  limit: vi.fn(),
 };
 
 // Мокаем createClientComponentClient
 vi.mock('@supabase/auth-helpers-nextjs', () => ({
-  createClientComponentClient: () => mockSupabaseClient
+  createClientComponentClient: () => mockSupabaseClient,
 }));
 
 describe('RLS Policies - TypeScript Types', () => {
@@ -53,7 +53,7 @@ describe('RLS Policies - TypeScript Types', () => {
   test('SUPER_ADMIN имеет все разрешения', () => {
     const superAdminPermissions = DEFAULT_ROLE_PERMISSIONS[UserRole.SUPER_ADMIN];
     const allPermissions = Object.values(Permission);
-    
+
     expect(superAdminPermissions).toEqual(allPermissions);
   });
 
@@ -65,7 +65,7 @@ describe('RLS Policies - TypeScript Types', () => {
   test('ADMIN имеет больше разрешений чем CURATOR', () => {
     const adminPermissions = DEFAULT_ROLE_PERMISSIONS[UserRole.ADMIN];
     const curatorPermissions = DEFAULT_ROLE_PERMISSIONS[UserRole.CURATOR];
-    
+
     expect(adminPermissions.length).toBeGreaterThan(curatorPermissions.length);
   });
 });
@@ -91,13 +91,13 @@ describe('ProfileService - RLS Integration', () => {
         role: 'user',
         permissions: [],
         created_at: '2025-01-01',
-        updated_at: '2025-01-01'
+        updated_at: '2025-01-01',
       };
 
       // Настраиваем цепочку моков
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: mockProfile, error: null })
+        single: vi.fn().mockResolvedValue({ data: mockProfile, error: null }),
       };
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
@@ -112,10 +112,10 @@ describe('ProfileService - RLS Integration', () => {
 
     test('должен обработать ошибку доступа', async () => {
       const mockError = { code: 'PGRST116', message: 'No rows found' };
-      
+
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: null, error: mockError })
+        single: vi.fn().mockResolvedValue({ data: null, error: mockError }),
       };
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
@@ -129,11 +129,11 @@ describe('ProfileService - RLS Integration', () => {
   describe('getProfileById', () => {
     test('должен вернуть PermissionError для обычного пользователя', async () => {
       const mockError = { code: 'PGRST116', message: 'No rows found' };
-      
+
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: null, error: mockError })
+        single: vi.fn().mockResolvedValue({ data: null, error: mockError }),
       };
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
@@ -152,7 +152,7 @@ describe('ProfileService - RLS Integration', () => {
       const mockQuery = {
         update: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: mockUpdatedProfile, error: null })
+        single: vi.fn().mockResolvedValue({ data: mockUpdatedProfile, error: null }),
       };
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
@@ -183,14 +183,14 @@ describe('SessionService - RLS Integration', () => {
           is_active: true,
           device_type: 'desktop',
           created_at: '2025-01-01',
-          last_activity_at: '2025-01-01'
-        }
+          last_activity_at: '2025-01-01',
+        },
       ];
 
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis()
+        order: vi.fn().mockReturnThis(),
       };
       // Настраиваем возврат данных на последнем методе в цепочке
       mockQuery.order.mockResolvedValue({ data: mockSessions, error: null, count: 1 });
@@ -211,7 +211,7 @@ describe('SessionService - RLS Integration', () => {
     test('должен завершить текущую сессию', async () => {
       const mockQuery = {
         update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis()
+        eq: vi.fn().mockReturnThis(),
       };
       mockQuery.eq.mockResolvedValue({ error: null });
       mockSupabaseClient.from.mockReturnValue(mockQuery);
@@ -220,7 +220,7 @@ describe('SessionService - RLS Integration', () => {
 
       expect(mockQuery.update).toHaveBeenCalledWith({
         is_active: false,
-        last_activity_at: expect.any(String)
+        last_activity_at: expect.any(String),
       });
       expect(result.data).toBe(true);
       expect(result.error).toBeNull();
@@ -234,11 +234,11 @@ describe('AuditService - Logging Integration', () => {
   beforeEach(() => {
     auditService = new AuditService();
     vi.clearAllMocks();
-    
+
     // Мокаем navigator.userAgent
     Object.defineProperty(navigator, 'userAgent', {
       value: 'Test User Agent',
-      configurable: true
+      configurable: true,
     });
   });
 
@@ -249,22 +249,19 @@ describe('AuditService - Logging Integration', () => {
         action: 'create',
         resource_type: 'user_profile',
         success: true,
-        created_at: '2025-01-01'
+        created_at: '2025-01-01',
       };
 
       const mockQuery = {
         insert: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: mockLogEntry, error: null })
+        single: vi.fn().mockResolvedValue({ data: mockLogEntry, error: null }),
       };
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
-      const result = await auditService.logAction(
-        'create',
-        'user_profile',
-        'profile-1',
-        { test: 'metadata' }
-      );
+      const result = await auditService.logAction('create', 'user_profile', 'profile-1', {
+        test: 'metadata',
+      });
 
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('audit_logs');
       expect(mockQuery.insert).toHaveBeenCalledWith(
@@ -273,8 +270,8 @@ describe('AuditService - Logging Integration', () => {
           resource_type: 'user_profile',
           resource_id: 'profile-1',
           metadata: { test: 'metadata' },
-          success: true
-        })
+          success: true,
+        }),
       );
       expect(result.data).toEqual(mockLogEntry);
     });
@@ -286,22 +283,19 @@ describe('AuditService - Logging Integration', () => {
         resource_type: 'user_profile',
         success: false,
         error_message: 'Access denied',
-        created_at: '2025-01-01'
+        created_at: '2025-01-01',
       };
 
       const mockQuery = {
         insert: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: mockLogEntry, error: null })
+        single: vi.fn().mockResolvedValue({ data: mockLogEntry, error: null }),
       };
       mockSupabaseClient.from.mockReturnValue(mockQuery);
 
-      const result = await auditService.logFailedAction(
-        'update',
-        'user_profile',
-        'Access denied',
-        { attempted_field: 'role' }
-      );
+      const result = await auditService.logFailedAction('update', 'user_profile', 'Access denied', {
+        attempted_field: 'role',
+      });
 
       expect(result.data).toEqual(mockLogEntry);
       expect(result.error).toBeNull();
@@ -316,14 +310,14 @@ describe('AuditService - Logging Integration', () => {
           action: 'login',
           resource_type: 'user_session',
           success: true,
-          created_at: '2025-01-01'
-        }
+          created_at: '2025-01-01',
+        },
       ];
 
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis()
+        limit: vi.fn().mockReturnThis(),
       };
       mockQuery.limit.mockResolvedValue({ data: mockLogs, error: null, count: 1 });
       mockSupabaseClient.from.mockReturnValue(mockQuery);
@@ -354,8 +348,8 @@ describe('EncryptedProfileService - Field Encryption', () => {
         address: {
           street: '123 Main St',
           city: 'New York',
-          country: 'USA'
-        }
+          country: 'USA',
+        },
       };
 
       const result = await encryptedProfileService.encryptProfileData(profileData);
@@ -371,7 +365,7 @@ describe('EncryptedProfileService - Field Encryption', () => {
 
     test('должен корректно обработать отсутствующие поля', async () => {
       const profileData = {
-        display_name: 'Jane Doe'
+        display_name: 'Jane Doe',
         // Нет чувствительных полей
       };
 
@@ -388,11 +382,11 @@ describe('EncryptedProfileService - Field Encryption', () => {
       // Сначала зашифруем данные
       const originalData = {
         phone: '+1234567890',
-        first_name: 'John'
+        first_name: 'John',
       };
 
       const encrypted = await encryptedProfileService.encryptProfileData(originalData);
-      
+
       const encryptedProfile = {
         id: 'profile-1',
         user_id: 'user-1',
@@ -400,7 +394,7 @@ describe('EncryptedProfileService - Field Encryption', () => {
         encrypted_phone: encrypted.encrypted_phone,
         encrypted_first_name: encrypted.encrypted_first_name,
         created_at: '2025-01-01',
-        updated_at: '2025-01-01'
+        updated_at: '2025-01-01',
       } as any;
 
       const decrypted = await encryptedProfileService.decryptProfileData(encryptedProfile);
@@ -415,7 +409,7 @@ describe('EncryptedProfileService - Field Encryption', () => {
         user_id: 'user-1',
         display_name: 'Jane Doe',
         created_at: '2025-01-01',
-        updated_at: '2025-01-01'
+        updated_at: '2025-01-01',
       } as any;
 
       const decrypted = await encryptedProfileService.decryptProfileData(encryptedProfile);
@@ -430,16 +424,26 @@ describe('EncryptedProfileService - Field Encryption', () => {
 describe('EncryptedPreferencesService - Settings Encryption', () => {
   describe('shouldEncryptPreference', () => {
     test('должен определить необходимость шифрования для чувствительных настроек', () => {
-      expect(encryptedPreferencesService.shouldEncryptPreference('security', 'backup_email')).toBe(true);
+      expect(encryptedPreferencesService.shouldEncryptPreference('security', 'backup_email')).toBe(
+        true,
+      );
       expect(encryptedPreferencesService.shouldEncryptPreference('personal', 'ssn')).toBe(true);
-      expect(encryptedPreferencesService.shouldEncryptPreference('payment', 'card_number')).toBe(true);
-      expect(encryptedPreferencesService.shouldEncryptPreference('medical', 'allergies')).toBe(true);
+      expect(encryptedPreferencesService.shouldEncryptPreference('payment', 'card_number')).toBe(
+        true,
+      );
+      expect(encryptedPreferencesService.shouldEncryptPreference('medical', 'allergies')).toBe(
+        true,
+      );
     });
 
     test('должен определить отсутствие необходимости шифрования для обычных настроек', () => {
       expect(encryptedPreferencesService.shouldEncryptPreference('ui', 'theme')).toBe(false);
-      expect(encryptedPreferencesService.shouldEncryptPreference('display', 'language')).toBe(false);
-      expect(encryptedPreferencesService.shouldEncryptPreference('notifications', 'email_enabled')).toBe(false);
+      expect(encryptedPreferencesService.shouldEncryptPreference('display', 'language')).toBe(
+        false,
+      );
+      expect(
+        encryptedPreferencesService.shouldEncryptPreference('notifications', 'email_enabled'),
+      ).toBe(false);
     });
   });
 
@@ -473,14 +477,17 @@ describe('EncryptedPreferencesService - Settings Encryption', () => {
   describe('decryptPreferenceValue', () => {
     test('должен расшифровать зашифрованное значение', async () => {
       const originalValue = 'sensitive-data';
-      
+
       // Зашифруем
-      const encrypted = await encryptedPreferencesService.encryptPreferenceValue(originalValue, true);
-      
+      const encrypted = await encryptedPreferencesService.encryptPreferenceValue(
+        originalValue,
+        true,
+      );
+
       // Расшифруем
       const decrypted = await encryptedPreferencesService.decryptPreferenceValue(
-        encrypted.value, 
-        encrypted.is_encrypted
+        encrypted.value,
+        encrypted.is_encrypted,
       );
 
       expect(decrypted).toBe(originalValue);
@@ -498,7 +505,7 @@ describe('EncryptedPreferencesService - Settings Encryption', () => {
 describe('Error Handling', () => {
   test('RLSError должен правильно инициализироваться', () => {
     const error = new RLSError('Test message', 'TEST_CODE', { detail: 'test' });
-    
+
     expect(error.message).toBe('Test message');
     expect(error.code).toBe('TEST_CODE');
     expect(error.details).toEqual({ detail: 'test' });
@@ -507,7 +514,7 @@ describe('Error Handling', () => {
 
   test('PermissionError должен правильно инициализироваться', () => {
     const error = new PermissionError(Permission.MANAGE_PROFILES, UserRole.USER);
-    
+
     expect(error.message).toContain('Недостаточно прав доступа');
     expect(error.code).toBe('PERMISSION_DENIED');
     expect(error.details?.required_permission).toBe(Permission.MANAGE_PROFILES);
@@ -519,35 +526,35 @@ describe('Error Handling', () => {
 describe('Integration Tests', () => {
   test('полный жизненный цикл профиля с шифрованием', async () => {
     const encryptedService = new EncryptedProfileService();
-    
+
     // 1. Подготавливаем данные с шифрованием
     const profileData = {
       display_name: 'Test User',
       phone: '+1234567890',
       first_name: 'Test',
-      theme: 'dark'
+      theme: 'dark',
     };
 
     const encryptedData = await encryptedService.encryptProfileData(profileData);
-    
+
     // 2. Проверяем, что чувствительные данные зашифрованы
     expect(encryptedData.encrypted_phone).toBeDefined();
     expect(encryptedData.encrypted_first_name).toBeDefined();
     expect(encryptedData.phone).toBeUndefined();
     expect(encryptedData.display_name).toBe('Test User'); // Остается как есть
-    
+
     // 3. Симулируем сохранение и получение из БД
     const mockProfile = {
       id: 'profile-1',
       user_id: 'user-1',
       ...encryptedData,
       created_at: '2025-01-01',
-      updated_at: '2025-01-01'
+      updated_at: '2025-01-01',
     };
 
     // 4. Расшифровываем полученные данные
     const decryptedData = await encryptedService.decryptProfileData(mockProfile as any);
-    
+
     // 5. Проверяем, что данные корректно расшифрованы
     expect(decryptedData.phone).toBe('+1234567890');
     expect(decryptedData.first_name).toBe('Test');

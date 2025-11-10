@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsup src/index.ts --dts --format cjs,esm",
     "dev": "vite dev",
-    "lint": "eslint src --ext .ts,.tsx",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "type-check": "tsc --noEmit"

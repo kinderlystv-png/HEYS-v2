@@ -16,7 +16,7 @@ class SimpleTreeShaker {
     this.config = {
       include: ['**/*.{js,ts,jsx,tsx}'],
       exclude: ['**/*.test.{js,ts,jsx,tsx}', '**/node_modules/**'],
-      ...config
+      ...config,
     };
   }
 
@@ -38,7 +38,7 @@ class SimpleTreeShaker {
         const content = fs.readFileSync(file, 'utf8');
         const exports = this.extractExports(content, file);
         totalExports += exports.length;
-        
+
         // Простая проверка использования
         for (const exp of exports) {
           const isUsed = this.isExportUsed(exp, files);
@@ -51,13 +51,15 @@ class SimpleTreeShaker {
       }
     }
 
-    console.log(`✅ Анализ завершен: найдено ${unusedExports.length} неиспользуемых экспортов из ${totalExports}`);
+    console.log(
+      `✅ Анализ завершен: найдено ${unusedExports.length} неиспользуемых экспортов из ${totalExports}`,
+    );
 
     return {
       totalFiles: files.length,
       totalExports,
       unusedExports,
-      recommendations: this.generateRecommendations(unusedExports)
+      recommendations: this.generateRecommendations(unusedExports),
     };
   }
 
@@ -66,15 +68,15 @@ class SimpleTreeShaker {
    */
   findSourceFiles(rootPath) {
     const files = [];
-    
+
     const walkDir = (dir) => {
       if (!fs.existsSync(dir)) return;
-      
+
       const entries = fs.readdirSync(dir, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
-        
+
         if (entry.isDirectory()) {
           if (!this.shouldExclude(fullPath)) {
             walkDir(fullPath);
@@ -95,7 +97,7 @@ class SimpleTreeShaker {
    * Проверяет, следует ли исключить путь
    */
   shouldExclude(filePath) {
-    return this.config.exclude.some(pattern => {
+    return this.config.exclude.some((pattern) => {
       const simplePattern = pattern.replace(/\*\*/g, '').replace(/\*/g, '');
       return filePath.includes(simplePattern);
     });
@@ -106,7 +108,7 @@ class SimpleTreeShaker {
    */
   isSourceFile(fileName) {
     const extensions = ['.js', '.ts', '.jsx', '.tsx'];
-    return extensions.some(ext => fileName.endsWith(ext));
+    return extensions.some((ext) => fileName.endsWith(ext));
   }
 
   /**
@@ -127,22 +129,22 @@ class SimpleTreeShaker {
         /export\s*{\s*([^}]+)\s*}/g,
       ];
 
-      patterns.forEach(pattern => {
+      patterns.forEach((pattern) => {
         let match;
         while ((match = pattern.exec(line)) !== null) {
           const exportName = match[1];
-          
+
           if (exportName) {
             if (pattern.source.includes('{')) {
               // Named exports
-              const namedExports = exportName.split(',').map(n => n.trim());
-              namedExports.forEach(name => {
+              const namedExports = exportName.split(',').map((n) => n.trim());
+              namedExports.forEach((name) => {
                 if (name && !name.includes('as')) {
                   exports.push({
                     name,
                     file: filePath,
                     line: index + 1,
-                    type: 'named'
+                    type: 'named',
                   });
                 }
               });
@@ -151,7 +153,7 @@ class SimpleTreeShaker {
                 name: exportName,
                 file: filePath,
                 line: index + 1,
-                type: this.detectType(line)
+                type: this.detectType(line),
               });
             }
           }
@@ -177,12 +179,12 @@ class SimpleTreeShaker {
    * Проверяет, используется ли экспорт
    */
   isExportUsed(exportItem, allFiles) {
-    const otherFiles = allFiles.filter(file => file !== exportItem.file);
-    
+    const otherFiles = allFiles.filter((file) => file !== exportItem.file);
+
     for (const file of otherFiles) {
       try {
         const content = fs.readFileSync(file, 'utf8');
-        
+
         // Простые паттерны поиска импортов
         const importPatterns = [
           new RegExp(`import\\s+\\{[^}]*\\b${exportItem.name}\\b[^}]*\\}`, 'g'),
@@ -194,7 +196,8 @@ class SimpleTreeShaker {
           if (pattern.test(content)) {
             // Дополнительная проверка - не является ли это объявлением
             const matches = content.match(pattern) || [];
-            if (matches.length > 1) { // Если больше одного совпадения, вероятно используется
+            if (matches.length > 1) {
+              // Если больше одного совпадения, вероятно используется
               return true;
             }
           }
@@ -230,7 +233,7 @@ class SimpleTreeShaker {
       if (exports.length > 3) {
         recommendations.push(`📁 ${fileName}: ${exports.length} неиспользуемых экспортов`);
       } else {
-        exports.forEach(exp => {
+        exports.forEach((exp) => {
           recommendations.push(`🔹 ${fileName}:${exp.line} - удалить '${exp.name}' (${exp.type})`);
         });
       }
@@ -253,17 +256,17 @@ class SimpleTreeShaker {
     report += `   Проанализировано файлов: ${analysis.totalFiles}\n`;
     report += `   Всего экспортов: ${analysis.totalExports}\n`;
     report += `   Неиспользуемых экспортов: ${analysis.unusedExports.length}\n`;
-    
+
     if (analysis.unusedExports.length > 0) {
       const percentage = ((analysis.unusedExports.length / analysis.totalExports) * 100).toFixed(1);
       report += `   Процент неиспользуемых: ${percentage}%\n`;
     }
-    
+
     report += '\n';
 
     if (analysis.recommendations.length > 0) {
       report += `💡 Рекомендации:\n`;
-      analysis.recommendations.forEach(rec => {
+      analysis.recommendations.forEach((rec) => {
         report += `   ${rec}\n`;
       });
       report += '\n';
@@ -272,11 +275,11 @@ class SimpleTreeShaker {
     // Детальный список (первые 10)
     if (analysis.unusedExports.length > 0) {
       report += `📋 Неиспользуемые экспорты (показано первые 10):\n`;
-      analysis.unusedExports.slice(0, 10).forEach(exp => {
+      analysis.unusedExports.slice(0, 10).forEach((exp) => {
         const fileName = path.basename(exp.file);
         report += `   ${fileName}:${exp.line} - ${exp.name} (${exp.type})\n`;
       });
-      
+
       if (analysis.unusedExports.length > 10) {
         report += `   ... и еще ${analysis.unusedExports.length - 10} экспортов\n`;
       }
@@ -326,7 +329,7 @@ async function main() {
       }, {});
 
       const topFiles = Object.entries(fileGroups)
-        .sort(([,a], [,b]) => b.length - a.length)
+        .sort(([, a], [, b]) => b.length - a.length)
         .slice(0, 5);
 
       if (topFiles.length > 0) {
@@ -340,7 +343,7 @@ async function main() {
     // Рекомендации
     if (analysis.recommendations.length > 0) {
       console.log('\n💡 ГЛАВНЫЕ РЕКОМЕНДАЦИИ:');
-      analysis.recommendations.slice(0, 5).forEach(rec => {
+      analysis.recommendations.slice(0, 5).forEach((rec) => {
         console.log(`   ${rec}`);
       });
     }
@@ -352,7 +355,6 @@ async function main() {
       console.log('\n⚠️  ВНИМАНИЕ: Найдено много неиспользуемых экспортов!');
       console.log('   Рекомендуется провести рефакторинг для улучшения производительности.');
     }
-
   } catch (error) {
     console.error('❌ Ошибка:', error.message);
     process.exit(1);

@@ -17,11 +17,14 @@ window.addEventListener('error', (event) => {
 // Обработка неперехваченных промисов
 window.addEventListener('unhandledrejection', (event) => {
   log.error('Unhandled promise rejection', {
-    reason: event.reason instanceof Error ? {
-      name: event.reason.name,
-      message: event.reason.message,
-      stack: event.reason.stack,
-    } : String(event.reason),
+    reason:
+      event.reason instanceof Error
+        ? {
+            name: event.reason.name,
+            message: event.reason.message,
+            stack: event.reason.stack,
+          }
+        : String(event.reason),
   });
 });
 

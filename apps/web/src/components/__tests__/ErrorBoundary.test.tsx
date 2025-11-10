@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { ErrorBoundary } from '../ErrorBoundary';
 
@@ -25,7 +25,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <ThrowError shouldThrow={false} />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(screen.getByText('No error')).toBeTruthy();
@@ -35,7 +35,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(screen.getByText(/Что-то пошло не так/i)).toBeTruthy();
@@ -48,7 +48,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary fallback={fallback}>
         <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(screen.getByText('Custom Error UI')).toBeTruthy();
@@ -60,7 +60,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary onError={onError}>
         <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(onError).toHaveBeenCalled();
@@ -74,7 +74,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(captureException).toHaveBeenCalled();
@@ -90,13 +90,13 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(trackError).toHaveBeenCalledWith(
       'react_error_boundary',
       'Test error',
-      expect.any(Object)
+      expect.any(Object),
     );
 
     delete window.HEYS;

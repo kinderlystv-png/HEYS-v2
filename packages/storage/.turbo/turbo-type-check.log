@@ -1,4 +1,4 @@
 
-> @heys/storage@14.0.0 type-check /home/runner/work/HEYS-v2/HEYS-v2/packages/storage
+> @heys/storage@14.0.0 type-check /Users/poplavskijanton/HEYS-v2/packages/storage
 > tsc --noEmit
 

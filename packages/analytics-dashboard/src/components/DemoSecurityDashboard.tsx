@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { MockSecurityAnalyticsService } from '../mock/MockSecurityAnalyticsService';
 import './SecurityDashboard.css';
@@ -7,15 +7,15 @@ interface DemoSecurityDashboardProps {
   updateInterval?: number;
 }
 
-export const DemoSecurityDashboard: React.FC<DemoSecurityDashboardProps> = ({ 
-  updateInterval = 5000 
+export const DemoSecurityDashboard: React.FC<DemoSecurityDashboardProps> = ({
+  updateInterval = 5000,
 }) => {
   const [analytics, setAnalytics] = useState<any>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  
+
   const analyticsService = useRef(new MockSecurityAnalyticsService());
   const unsubscribeRef = useRef<Function | null>(null);
 
@@ -42,7 +42,7 @@ export const DemoSecurityDashboard: React.FC<DemoSecurityDashboardProps> = ({
     const subscribeToEvents = async () => {
       try {
         const unsubscribe = await analyticsService.current.subscribeToEvents((event: any) => {
-          setEvents(prev => [event, ...prev.slice(0, 9)]); // Последние 10 событий
+          setEvents((prev) => [event, ...prev.slice(0, 9)]); // Последние 10 событий
           setLastUpdate(new Date());
         });
         unsubscribeRef.current = unsubscribe;
@@ -96,18 +96,23 @@ export const DemoSecurityDashboard: React.FC<DemoSecurityDashboardProps> = ({
 
   const getRiskColor = (score: number) => {
     if (score >= 0.8) return '#ff4757'; // critical
-    if (score >= 0.6) return '#ff6b35'; // high  
+    if (score >= 0.6) return '#ff6b35'; // high
     if (score >= 0.4) return '#ffa502'; // medium
     return '#2ed573'; // low
   };
 
   const getSeverityColor = (severity: string) => {
     switch (severity?.toLowerCase()) {
-      case 'critical': return '#ff4757';
-      case 'high': return '#ff6b35';
-      case 'medium': return '#ffa502';
-      case 'low': return '#2ed573';
-      default: return '#747d8c';
+      case 'critical':
+        return '#ff4757';
+      case 'high':
+        return '#ff6b35';
+      case 'medium':
+        return '#ffa502';
+      case 'low':
+        return '#2ed573';
+      default:
+        return '#747d8c';
     }
   };
 
@@ -139,10 +144,7 @@ export const DemoSecurityDashboard: React.FC<DemoSecurityDashboardProps> = ({
               <span className="stat-label">Failed Attempts</span>
             </div>
             <div className="stat-item risk-score">
-              <span 
-                className="stat-value" 
-                style={{ color: getRiskColor(overview.risk_score) }}
-              >
+              <span className="stat-value" style={{ color: getRiskColor(overview.risk_score) }}>
                 {Math.round(overview.risk_score * 100)}%
               </span>
               <span className="stat-label">Risk Score</span>
@@ -162,7 +164,7 @@ export const DemoSecurityDashboard: React.FC<DemoSecurityDashboardProps> = ({
                 </div>
                 <div className="threat-details">
                   <span className="threat-actor">{threat.threat_actor}</span>
-                  <span 
+                  <span
                     className="threat-count"
                     style={{ color: getSeverityColor(threat.severity) }}
                   >
@@ -182,7 +184,7 @@ export const DemoSecurityDashboard: React.FC<DemoSecurityDashboardProps> = ({
               <div key={incident.id} className="incident-item">
                 <div className="incident-header">
                   <span className="incident-title">{incident.title}</span>
-                  <span 
+                  <span
                     className={`severity-badge severity-${incident.severity}`}
                     style={{ backgroundColor: getSeverityColor(incident.severity) }}
                   >
@@ -218,10 +220,7 @@ export const DemoSecurityDashboard: React.FC<DemoSecurityDashboardProps> = ({
             </div>
             <div className="ml-stat">
               <span className="ml-label">Threat Level</span>
-              <span 
-                className="ml-value"
-                style={{ color: getSeverityColor(ml_stats.threatLevel) }}
-              >
+              <span className="ml-value" style={{ color: getSeverityColor(ml_stats.threatLevel) }}>
                 {ml_stats.threatLevel}
               </span>
             </div>
@@ -246,16 +245,14 @@ export const DemoSecurityDashboard: React.FC<DemoSecurityDashboardProps> = ({
                 </div>
                 <div className="event-details">
                   <span className="event-ip">{event.source_ip}</span>
-                  <span 
+                  <span
                     className="event-severity"
                     style={{ color: getSeverityColor(event.severity) }}
                   >
                     {event.severity}
                   </span>
                 </div>
-                <div className="event-time">
-                  {new Date(event.timestamp).toLocaleTimeString()}
-                </div>
+                <div className="event-time">{new Date(event.timestamp).toLocaleTimeString()}</div>
               </div>
             ))}
           </div>

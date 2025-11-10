@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { getGlobalLogger } from '../monitoring/structured-logger';
 import type { BundleAnalyzer } from '../performance/BundleAnalyzer';
-import { bundleAnalyzer, BundleMetrics, BaselineMetrics } from '../performance/BundleAnalyzer';
+import { BaselineMetrics, bundleAnalyzer, BundleMetrics } from '../performance/BundleAnalyzer';
 
 type BundleReport = ReturnType<BundleAnalyzer['generateReport']>;
 type BundleComparison = BundleReport['comparison'];
@@ -26,7 +26,7 @@ const performanceLogger = getGlobalLogger().child({ component: 'PerformanceMonit
 export const PerformanceMonitor: FC<PerformanceMonitorProps> = ({
   showDetailed = false,
   autoRefresh = false,
-  refreshInterval = 30000 // 30 секунд
+  refreshInterval = 30000, // 30 секунд
 }) => {
   const [metrics, setMetrics] = useState<BundleMetrics | null>(null);
   const [baseline, setBaseline] = useState<BaselineMetrics | null>(null);
@@ -62,7 +62,7 @@ export const PerformanceMonitor: FC<PerformanceMonitorProps> = ({
 
       // Измеряем текущие метрики
       const currentMetrics = await bundleAnalyzer.measureCurrentMetrics();
-      
+
       // Генерируем отчет
       const report = bundleAnalyzer.generateReport();
 
@@ -70,7 +70,6 @@ export const PerformanceMonitor: FC<PerformanceMonitorProps> = ({
       setBaseline(report.baseline);
       setComparison(report.comparison);
       setRecommendations(report.recommendations);
-
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки данных');
       performanceLogger.error('Failed to load performance metrics', {
@@ -89,9 +88,7 @@ export const PerformanceMonitor: FC<PerformanceMonitorProps> = ({
       const version = prompt('Введите версию для baseline (например, v1.2.3):');
       if (!version) return;
 
-      const lighthouseScore = parseFloat(
-        prompt('Введите Lighthouse Score (0-100):') || '0'
-      );
+      const lighthouseScore = parseFloat(prompt('Введите Lighthouse Score (0-100):') || '0');
 
       if (lighthouseScore < 0 || lighthouseScore > 100) {
         alert('Lighthouse Score должен быть от 0 до 100');
@@ -100,7 +97,6 @@ export const PerformanceMonitor: FC<PerformanceMonitorProps> = ({
 
       bundleAnalyzer.saveBaseline(version, lighthouseScore);
       loadPerformanceData(); // Обновляем данные
-      
     } catch (err) {
       setError('Ошибка при сохранении baseline');
       performanceLogger.error('Failed to save baseline metrics', {
@@ -176,39 +172,49 @@ export const PerformanceMonitor: FC<PerformanceMonitorProps> = ({
           <>
             <div className="metric-card">
               <h4>📦 Размер bundle</h4>
-              <div className="metric-value" style={{ 
-                color: getMetricColor(metrics.totalSize, { good: 250000, poor: 500000 }) 
-              }}>
+              <div
+                className="metric-value"
+                style={{
+                  color: getMetricColor(metrics.totalSize, { good: 250000, poor: 500000 }),
+                }}
+              >
                 {formatBytes(metrics.totalSize)}
               </div>
-              <div className="metric-secondary">
-                Gzip: {formatBytes(metrics.gzippedSize)}
-              </div>
+              <div className="metric-secondary">Gzip: {formatBytes(metrics.gzippedSize)}</div>
             </div>
 
             <div className="metric-card">
               <h4>⚡ First Contentful Paint</h4>
-              <div className="metric-value" style={{ 
-                color: getMetricColor(metrics.firstContentfulPaint, { good: 1800, poor: 3000 }) 
-              }}>
+              <div
+                className="metric-value"
+                style={{
+                  color: getMetricColor(metrics.firstContentfulPaint, { good: 1800, poor: 3000 }),
+                }}
+              >
                 {formatTime(metrics.firstContentfulPaint)}
               </div>
             </div>
 
             <div className="metric-card">
               <h4>🎯 Largest Contentful Paint</h4>
-              <div className="metric-value" style={{ 
-                color: getMetricColor(metrics.largestContentfulPaint, { good: 2500, poor: 4000 }) 
-              }}>
+              <div
+                className="metric-value"
+                style={{
+                  color: getMetricColor(metrics.largestContentfulPaint, { good: 2500, poor: 4000 }),
+                }}
+              >
                 {formatTime(metrics.largestContentfulPaint)}
               </div>
             </div>
 
             <div className="metric-card">
               <h4>⏱️ Time to Interactive</h4>
-              <div className="metric-value" style={{ 
-                color: getMetricColor(metrics.timeToInteractive, { good: 3800, poor: 7300 }) 
-              }}>
+              <div
+                className="metric-value"
+                style={{
+                  color: getMetricColor(metrics.timeToInteractive, { good: 3800, poor: 7300 }),
+                }}
+              >
                 {formatTime(metrics.timeToInteractive)}
               </div>
             </div>
@@ -221,7 +227,9 @@ export const PerformanceMonitor: FC<PerformanceMonitorProps> = ({
         <div className="comparison-section">
           <h4>📈 Сравнение с baseline (v{baseline.version})</h4>
           <div className="comparison-summary">
-            <div className={`improvement-badge ${comparison.improvement ? 'positive' : 'negative'}`}>
+            <div
+              className={`improvement-badge ${comparison.improvement ? 'positive' : 'negative'}`}
+            >
               {comparison.improvement ? '✅ Улучшение' : '⚠️ Ухудшение'}
             </div>
             <pre className="comparison-details">{comparison.summary}</pre>
@@ -247,7 +255,7 @@ export const PerformanceMonitor: FC<PerformanceMonitorProps> = ({
       {showDetailed && metrics && (
         <div className="detailed-section">
           <h4>🔍 Детальная информация</h4>
-          
+
           <div className="chunk-sizes">
             <h5>Размеры чанков:</h5>
             <div className="chunk-list">
@@ -264,17 +272,25 @@ export const PerformanceMonitor: FC<PerformanceMonitorProps> = ({
             <div className="baseline-info">
               <h5>Последний baseline:</h5>
               <div className="baseline-details">
-                <p><strong>Версия:</strong> {baseline.version}</p>
-                <p><strong>Дата:</strong> {new Date(baseline.timestamp).toLocaleDateString()}</p>
-                <p><strong>Lighthouse Score:</strong> {baseline.lighthouseScore}</p>
-                <p><strong>Оценка:</strong> {baseline.performanceGrade}</p>
+                <p>
+                  <strong>Версия:</strong> {baseline.version}
+                </p>
+                <p>
+                  <strong>Дата:</strong> {new Date(baseline.timestamp).toLocaleDateString()}
+                </p>
+                <p>
+                  <strong>Lighthouse Score:</strong> {baseline.lighthouseScore}
+                </p>
+                <p>
+                  <strong>Оценка:</strong> {baseline.performanceGrade}
+                </p>
               </div>
             </div>
           )}
         </div>
       )}
 
-  <style>{`
+      <style>{`
         .performance-monitor {
           padding: 20px;
           border-radius: 8px;

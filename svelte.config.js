@@ -16,10 +16,10 @@ const config = {
 
     // Псевдонимы для путей
     alias: {
-      '$lib': 'src/lib',
-      '$components': 'src/components',
-      '$stores': 'src/stores',
-      '$utils': 'src/utils',
+      $lib: 'src/lib',
+      $components: 'src/components',
+      $stores: 'src/stores',
+      $utils: 'src/utils',
     },
 
     // CSP конфигурация для безопасности

@@ -10,7 +10,7 @@ export interface SecurityEvent {
   type: SecurityEventType;
   severity: SecuritySeverity;
   source: string;
-  sourceIP?: string;  // Добавлено для совместимости
+  sourceIP?: string; // Добавлено для совместимости
   userId?: string;
   sessionId?: string;
   ipAddress: string;
@@ -43,7 +43,7 @@ export interface SecurityEvent {
 /**
  * Типы security events
  */
-export type SecurityEventType = 
+export type SecurityEventType =
   | 'login_attempt'
   | 'failed_authentication'
   | 'brute_force'
@@ -122,7 +122,7 @@ export interface ThreatIntelligence {
 /**
  * Типы угроз - расширяем для IOC
  */
-export type ThreatType = 
+export type ThreatType =
   | 'malicious_ip'
   | 'malware_hash'
   | 'phishing_domain'
@@ -140,7 +140,13 @@ export type ThreatType =
   | 'file_path';
 
 // Расширяем ContainmentAction status
-export type ContainmentStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'active' | 'removed';
+export type ContainmentStatus =
+  | 'pending'
+  | 'in_progress'
+  | 'completed'
+  | 'failed'
+  | 'active'
+  | 'removed';
 
 /**
  * Indicator of Compromise
@@ -193,7 +199,7 @@ export interface SecurityIncident {
 /**
  * Статусы инцидентов
  */
-export type IncidentStatus = 
+export type IncidentStatus =
   | 'new'
   | 'investigating'
   | 'contained'

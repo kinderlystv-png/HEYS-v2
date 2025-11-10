@@ -38,14 +38,14 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
               ignore: 'pid,hostname',
               translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
               messageFormat: `[${config.service}] {msg}`,
-              sync: false
-            }
-          })
+              sync: false,
+            },
+          }),
         });
       } else {
         streams.push({
           level: streamLevel,
-          stream: process.stdout
+          stream: process.stdout,
         });
       }
     }
@@ -54,7 +54,7 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
   // Файловый транспорт
   if (config.transports.file.enabled) {
     ensureLogDirectory(config.transports.file.path);
-    
+
     // Основной лог файл
     const fileLevel = resolveStreamLevel(config.level);
     if (fileLevel !== null) {
@@ -63,8 +63,8 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
         stream: pino.destination({
           dest: path.join(config.transports.file.path, `${config.service}.log`),
           sync: false,
-          mkdir: true
-        })
+          mkdir: true,
+        }),
       });
     }
 
@@ -74,8 +74,8 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
       stream: pino.destination({
         dest: path.join(config.transports.file.path, `${config.service}.error.log`),
         sync: false,
-        mkdir: true
-      })
+        mkdir: true,
+      }),
     });
   }
 
@@ -91,9 +91,9 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
           options: {
             url: config.transports.network.url,
             apiKey: config.transports.network.apiKey,
-            dataset: config.service
-          }
-        })
+            dataset: config.service,
+          },
+        }),
       });
     }
   }
@@ -117,8 +117,8 @@ export function createRotatingFileTransport(config: AdvancedLoggerConfig) {
       file: path.join(config.transports.file.path, `${config.service}.log`),
       frequency: 'daily',
       size: config.transports.file.maxSize,
-      mkdir: true
-    }
+      mkdir: true,
+    },
   });
 }
 
@@ -146,16 +146,16 @@ export function createFormatters(config: AdvancedLoggerConfig) {
       service: config.service,
       environment: config.environment,
       version: process.env.npm_package_version || '1.0.0',
-      ...bindings
+      ...bindings,
     }),
     log: (object: Record<string, unknown>) => {
       // Добавляем timestamp в UTC
       return {
         ...object,
         '@timestamp': new Date().toISOString(),
-        '@version': '1'
+        '@version': '1',
       };
-    }
+    },
   };
 }
 

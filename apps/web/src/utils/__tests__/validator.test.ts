@@ -1,63 +1,50 @@
 // filepath: apps/web/src/utils/__tests__/validator.test.ts
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  ValidationSchemas,
   HeysValidationSchemas,
   InputValidator,
+  ValidationSchemas,
   createValidationMiddleware,
   validateAndSanitize,
   validateHeysData,
-  validateRequest
+  validateRequest,
 } from '../validator';
 
 describe('ValidationSchemas', () => {
   describe('Базовые схемы валидации', () => {
     it('должен валидировать email', () => {
-      const validEmails = [
-        'test@example.com',
-        'user.name@domain.co.uk',
-        'test+tag@example.org'
-      ];
+      const validEmails = ['test@example.com', 'user.name@domain.co.uk', 'test+tag@example.org'];
 
-      validEmails.forEach(email => {
+      validEmails.forEach((email) => {
         const result = ValidationSchemas.email.safeParse(email);
         expect(result.success).toBe(true);
       });
 
-      const invalidEmails = [
-        'invalid-email',
-        '@domain.com',
-        'test@',
-        'test..email@domain.com'
-      ];
+      const invalidEmails = ['invalid-email', '@domain.com', 'test@', 'test..email@domain.com'];
 
-      invalidEmails.forEach(email => {
+      invalidEmails.forEach((email) => {
         const result = ValidationSchemas.email.safeParse(email);
         expect(result.success).toBe(false);
       });
     });
 
     it('должен валидировать пароли', () => {
-      const validPasswords = [
-        'SecurePass123!',
-        'MyP@ssw0rd',
-        'Complex_Pass1'
-      ];
+      const validPasswords = ['SecurePass123!', 'MyP@ssw0rd', 'Complex_Pass1'];
 
-      validPasswords.forEach(password => {
+      validPasswords.forEach((password) => {
         const result = ValidationSchemas.password.safeParse(password);
         expect(result.success).toBe(true);
       });
 
       const invalidPasswords = [
-        '123',          // Слишком короткий
-        'password',     // Без цифр и спец. символов
-        'PASSWORD123',  // Без строчных букв
-        'password123'   // Без спец. символов
+        '123', // Слишком короткий
+        'password', // Без цифр и спец. символов
+        'PASSWORD123', // Без строчных букв
+        'password123', // Без спец. символов
       ];
 
-      invalidPasswords.forEach(password => {
+      invalidPasswords.forEach((password) => {
         const result = ValidationSchemas.password.safeParse(password);
         expect(result.success).toBe(false);
       });
@@ -67,10 +54,10 @@ describe('ValidationSchemas', () => {
       const validUUIDs = [
         '550e8400-e29b-41d4-a716-446655440000',
         'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-        '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
+        '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
       ];
 
-      validUUIDs.forEach(uuid => {
+      validUUIDs.forEach((uuid) => {
         const result = ValidationSchemas.uuid.safeParse(uuid);
         expect(result.success).toBe(true);
       });
@@ -78,10 +65,10 @@ describe('ValidationSchemas', () => {
       const invalidUUIDs = [
         'not-a-uuid',
         '550e8400-e29b-41d4-a716',
-        '550e8400-e29b-41d4-a716-446655440000-extra'
+        '550e8400-e29b-41d4-a716-446655440000-extra',
       ];
 
-      invalidUUIDs.forEach(uuid => {
+      invalidUUIDs.forEach((uuid) => {
         const result = ValidationSchemas.uuid.safeParse(uuid);
         expect(result.success).toBe(false);
       });
@@ -112,21 +99,17 @@ describe('ValidationSchemas', () => {
       const validUrls = [
         'https://example.com',
         'http://localhost:3000',
-        'https://sub.domain.co.uk/path?query=value'
+        'https://sub.domain.co.uk/path?query=value',
       ];
 
-      validUrls.forEach(url => {
+      validUrls.forEach((url) => {
         const result = ValidationSchemas.url.safeParse(url);
         expect(result.success).toBe(true);
       });
 
-      const invalidUrls = [
-        'not-a-url',
-        'ftp://example.com',
-        'javascript:alert(1)'
-      ];
+      const invalidUrls = ['not-a-url', 'ftp://example.com', 'javascript:alert(1)'];
 
-      invalidUrls.forEach(url => {
+      invalidUrls.forEach((url) => {
         const result = ValidationSchemas.url.safeParse(url);
         expect(result.success).toBe(false);
       });
@@ -145,13 +128,9 @@ describe('ValidationSchemas', () => {
     });
 
     it('должен валидировать даты', () => {
-      const validDates = [
-        new Date(),
-        new Date('2023-01-01'),
-        new Date('2025-12-31T23:59:59Z')
-      ];
+      const validDates = [new Date(), new Date('2023-01-01'), new Date('2025-12-31T23:59:59Z')];
 
-      validDates.forEach(date => {
+      validDates.forEach((date) => {
         const result = ValidationSchemas.date.safeParse(date);
         expect(result.success).toBe(true);
       });
@@ -165,20 +144,26 @@ describe('ValidationSchemas', () => {
       const validFile = {
         name: 'document.pdf',
         size: 1024 * 1024, // 1MB
-        type: 'application/pdf'
+        type: 'application/pdf',
       };
 
-      const result = ValidationSchemas.file(2 * 1024 * 1024, ['application/pdf']).safeParse(validFile);
+      const result = ValidationSchemas.file(2 * 1024 * 1024, ['application/pdf']).safeParse(
+        validFile,
+      );
       expect(result.success).toBe(true);
 
       // Файл слишком большой
       const largeFile = { ...validFile, size: 3 * 1024 * 1024 };
-      const result2 = ValidationSchemas.file(2 * 1024 * 1024, ['application/pdf']).safeParse(largeFile);
+      const result2 = ValidationSchemas.file(2 * 1024 * 1024, ['application/pdf']).safeParse(
+        largeFile,
+      );
       expect(result2.success).toBe(false);
 
       // Неправильный тип
       const wrongType = { ...validFile, type: 'application/exe' };
-      const result3 = ValidationSchemas.file(2 * 1024 * 1024, ['application/pdf']).safeParse(wrongType);
+      const result3 = ValidationSchemas.file(2 * 1024 * 1024, ['application/pdf']).safeParse(
+        wrongType,
+      );
       expect(result3.success).toBe(false);
     });
   });
@@ -192,7 +177,7 @@ describe('HeysValidationSchemas', () => {
         password: 'SecurePass123!',
         firstName: 'John',
         lastName: 'Doe',
-        phone: '+1234567890'
+        phone: '+1234567890',
       };
 
       const result = HeysValidationSchemas.user.safeParse(validUser);
@@ -201,7 +186,7 @@ describe('HeysValidationSchemas', () => {
       // Обязательные поля
       const invalidUser = {
         email: 'invalid-email',
-        password: '123'
+        password: '123',
       };
 
       const result2 = HeysValidationSchemas.user.safeParse(invalidUser);
@@ -211,7 +196,7 @@ describe('HeysValidationSchemas', () => {
     it('должен валидировать обновления пользователя', () => {
       const validUpdate = {
         firstName: 'Jane',
-        phone: '+9876543210'
+        phone: '+9876543210',
       };
 
       const result = HeysValidationSchemas.userUpdate.safeParse(validUpdate);
@@ -230,7 +215,7 @@ describe('HeysValidationSchemas', () => {
         duration: 1800,
         mood: 8,
         notes: 'Great session today',
-        tags: ['relaxation', 'breathing']
+        tags: ['relaxation', 'breathing'],
       };
 
       const result = HeysValidationSchemas.session.safeParse(validSession);
@@ -239,7 +224,7 @@ describe('HeysValidationSchemas', () => {
       // Некорректная mood оценка
       const invalidSession = {
         ...validSession,
-        mood: 15 // Должно быть 1-10
+        mood: 15, // Должно быть 1-10
       };
 
       const result2 = HeysValidationSchemas.session.safeParse(invalidSession);
@@ -256,7 +241,7 @@ describe('HeysValidationSchemas', () => {
         sleep: 480, // 8 часов в минутах
         notes: 'Good day overall',
         activities: ['work', 'exercise', 'reading'],
-        gratitude: ['family', 'health', 'weather']
+        gratitude: ['family', 'health', 'weather'],
       };
 
       const result = HeysValidationSchemas.dayEntry.safeParse(validDayEntry);
@@ -265,7 +250,7 @@ describe('HeysValidationSchemas', () => {
       // Некорректный формат даты
       const invalidDayEntry = {
         ...validDayEntry,
-        date: '2023/01/01' // Должно быть YYYY-MM-DD
+        date: '2023/01/01', // Должно быть YYYY-MM-DD
       };
 
       const result2 = HeysValidationSchemas.dayEntry.safeParse(invalidDayEntry);
@@ -278,7 +263,7 @@ describe('HeysValidationSchemas', () => {
         method: 'POST',
         params: { limit: 10 },
         body: { sessionType: 'meditation' },
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       };
 
       const result = HeysValidationSchemas.apiRequest.safeParse(validApiRequest);
@@ -287,7 +272,7 @@ describe('HeysValidationSchemas', () => {
       // Некорректный HTTP метод
       const invalidApiRequest = {
         ...validApiRequest,
-        method: 'INVALID'
+        method: 'INVALID',
       };
 
       const result2 = HeysValidationSchemas.apiRequest.safeParse(invalidApiRequest);
@@ -322,13 +307,13 @@ describe('InputValidator', () => {
       const data = {
         email: 'test@example.com',
         password: 'SecurePass123!',
-        age: 25
+        age: 25,
       };
 
       const schemas = {
         email: ValidationSchemas.email,
         password: ValidationSchemas.password,
-        age: ValidationSchemas.number(18, 100)
+        age: ValidationSchemas.number(18, 100),
       };
 
       const result = validator.validateMultiple(data, schemas);
@@ -339,7 +324,7 @@ describe('InputValidator', () => {
       const invalidData = {
         email: 'invalid-email',
         password: '123',
-        age: 150
+        age: 150,
       };
 
       const result2 = validator.validateMultiple(invalidData, schemas);
@@ -355,8 +340,8 @@ describe('InputValidator', () => {
       const dirtyObject = {
         validField: 'value',
         '<script>': 'malicious',
-        'valid_field_2': 'another value',
-        'DROP TABLE': 'users'
+        valid_field_2: 'another value',
+        'DROP TABLE': 'users',
       };
 
       const cleaned = validator.sanitizeObject(dirtyObject);
@@ -371,11 +356,11 @@ describe('InputValidator', () => {
         '<script>alert("xss")</script>',
         'SELECT * FROM users WHERE 1=1; DROP TABLE users;',
         'Normal text',
-        '<img src="x" onerror="alert(1)">'
+        '<img src="x" onerror="alert(1)">',
       ];
 
-      const cleanedStrings = dirtyStrings.map(str => validator.sanitizeString(str));
-      
+      const cleanedStrings = dirtyStrings.map((str) => validator.sanitizeString(str));
+
       expect(cleanedStrings[0]).not.toContain('<script>');
       expect(cleanedStrings[1]).not.toContain('DROP TABLE');
       expect(cleanedStrings[2]).toBe('Normal text');
@@ -390,10 +375,10 @@ describe('InputValidator', () => {
             safeField: 'safe value',
             level3: {
               'DROP TABLE users': 'sql injection',
-              normalField: 'normal'
-            }
-          }
-        }
+              normalField: 'normal',
+            },
+          },
+        },
       };
 
       const cleaned = validator.deepSanitize(deepObject);
@@ -411,10 +396,10 @@ describe('InputValidator', () => {
         'SELECT * FROM users WHERE id = 1; DELETE FROM users;',
         "' OR '1'='1",
         'UNION SELECT password FROM users',
-        'INSERT INTO admin VALUES (1, "attacker")'
+        'INSERT INTO admin VALUES (1, "attacker")',
       ];
 
-      sqlInjections.forEach(injection => {
+      sqlInjections.forEach((injection) => {
         const result = validator.detectSQLInjection(injection);
         expect(result).toBe(true);
       });
@@ -430,10 +415,10 @@ describe('InputValidator', () => {
         '<iframe src="javascript:alert(1)"></iframe>',
         'javascript:alert(document.cookie)',
         '<svg onload="alert(1)">',
-        '<body onload="alert(1)">'
+        '<body onload="alert(1)">',
       ];
 
-      xssAttempts.forEach(xss => {
+      xssAttempts.forEach((xss) => {
         const result = validator.detectXSS(xss);
         expect(result).toBe(true);
       });
@@ -444,9 +429,9 @@ describe('InputValidator', () => {
 
     it('должен проверять безопасность данных', () => {
       const unsafeData = {
-        username: 'admin\'; DROP TABLE users; --',
+        username: "admin'; DROP TABLE users; --",
         bio: '<script>alert("xss")</script>',
-        website: 'javascript:alert(1)'
+        website: 'javascript:alert(1)',
       };
 
       const result = validator.checkSecurity(unsafeData);
@@ -457,7 +442,7 @@ describe('InputValidator', () => {
       const safeData = {
         username: 'john_doe',
         bio: 'I love programming',
-        website: 'https://johndoe.com'
+        website: 'https://johndoe.com',
       };
 
       const result2 = validator.checkSecurity(safeData);
@@ -476,11 +461,11 @@ describe('Middleware Functions', () => {
     mockReq = {
       body: {},
       query: {},
-      params: {}
+      params: {},
     };
     mockRes = {
       status: vi.fn().mockReturnThis(),
-      json: vi.fn()
+      json: vi.fn(),
     };
     mockNext = vi.fn();
   });
@@ -509,8 +494,8 @@ describe('Middleware Functions', () => {
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: 'Validation failed',
-          field: 'email'
-        })
+          field: 'email',
+        }),
       );
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -542,14 +527,14 @@ describe('Middleware Functions', () => {
       const middleware = validateAndSanitize({
         body: {
           email: ValidationSchemas.email,
-          name: ValidationSchemas.text(50)
-        }
+          name: ValidationSchemas.text(50),
+        },
       });
 
       mockReq.body = {
         email: 'test@example.com',
         name: 'John Doe',
-        maliciousField: '<script>alert(1)</script>'
+        maliciousField: '<script>alert(1)</script>',
       };
 
       middleware(mockReq, mockRes, mockNext);
@@ -563,12 +548,12 @@ describe('Middleware Functions', () => {
     it('должен обрабатывать ошибки валидации', () => {
       const middleware = validateAndSanitize({
         body: {
-          email: ValidationSchemas.email
-        }
+          email: ValidationSchemas.email,
+        },
       });
 
       mockReq.body = {
-        email: 'invalid-email'
+        email: 'invalid-email',
       };
 
       middleware(mockReq, mockRes, mockNext);
@@ -586,7 +571,7 @@ describe('Middleware Functions', () => {
         email: 'test@example.com',
         password: 'SecurePass123!',
         firstName: 'John',
-        lastName: 'Doe'
+        lastName: 'Doe',
       };
 
       middleware(mockReq, mockRes, mockNext);
@@ -600,7 +585,7 @@ describe('Middleware Functions', () => {
       mockReq.body = {
         userId: 'invalid-uuid',
         sessionType: 'invalid-type',
-        mood: 15 // Вне диапазона 1-10
+        mood: 15, // Вне диапазона 1-10
       };
 
       middleware(mockReq, mockRes, mockNext);
@@ -615,12 +600,12 @@ describe('Middleware Functions', () => {
       const middleware = validateRequest({
         maxSize: 1024,
         requireAuth: false,
-        sanitize: true
+        sanitize: true,
       });
 
       mockReq.body = {
         message: 'Hello world',
-        data: { test: 'value' }
+        data: { test: 'value' },
       };
 
       // Мокаем размер запроса
@@ -638,11 +623,11 @@ describe('Middleware Functions', () => {
     it('должен отклонять слишком большие запросы', () => {
       const middleware = validateRequest({
         maxSize: 10, // Очень маленький лимит
-        requireAuth: false
+        requireAuth: false,
       });
 
       mockReq.body = {
-        largeData: 'x'.repeat(1000)
+        largeData: 'x'.repeat(1000),
       };
 
       middleware(mockReq, mockRes, mockNext);

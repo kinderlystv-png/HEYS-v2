@@ -9,20 +9,20 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: [
     ['html', { outputFolder: 'test-results/visual-report' }],
-    ['junit', { outputFile: 'test-results/visual-results.xml' }]
+    ['junit', { outputFile: 'test-results/visual-results.xml' }],
   ],
   timeout: 30000,
   expect: {
     timeout: 10000,
     toHaveScreenshot: { threshold: 0.2, animations: 'disabled' },
-    toMatchSnapshot: { threshold: 0.2 }
+    toMatchSnapshot: { threshold: 0.2 },
   },
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    ignoreHTTPSErrors: true
+    ignoreHTTPSErrors: true,
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
@@ -30,13 +30,13 @@ export default defineConfig({
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
     { name: 'Mobile Chrome', use: { ...devices['Pixel 5'] } },
     { name: 'Mobile Safari', use: { ...devices['iPhone 12'] } },
-    { name: 'Tablet', use: { ...devices['iPad Pro'], viewport: { width: 1024, height: 768 } } }
+    { name: 'Tablet', use: { ...devices['iPad Pro'], viewport: { width: 1024, height: 768 } } },
   ],
   outputDir: 'test-results/visual-artifacts',
   webServer: {
     command: 'pnpm dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120000
-  }
+    timeout: 120000,
+  },
 });

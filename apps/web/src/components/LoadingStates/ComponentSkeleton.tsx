@@ -24,16 +24,16 @@ export function ComponentSkeleton({
   ...props
 }: ComponentSkeletonProps) {
   const baseClasses = `bg-gray-200 rounded ${animate ? 'animate-pulse' : ''}`;
-  
+
   const renderSkeleton = () => {
     switch (type) {
       case 'avatar':
         return (
-          <div 
+          <div
             className={`${baseClasses} rounded-full`}
             style={{
               width: typeof width === 'number' ? `${width}px` : width,
-              height: typeof height === 'number' ? `${height}px` : height || width
+              height: typeof height === 'number' ? `${height}px` : height || width,
             }}
           />
         );
@@ -46,7 +46,7 @@ export function ComponentSkeleton({
                 key={i}
                 className={`${baseClasses} h-4`}
                 style={{
-                  width: i === rows - 1 ? '75%' : '100%'
+                  width: i === rows - 1 ? '75%' : '100%',
                 }}
               />
             ))}
@@ -55,10 +55,10 @@ export function ComponentSkeleton({
 
       case 'button':
         return (
-          <div 
+          <div
             className={`${baseClasses} h-10`}
             style={{
-              width: typeof width === 'number' ? `${width}px` : width
+              width: typeof width === 'number' ? `${width}px` : width,
             }}
           />
         );
@@ -71,9 +71,7 @@ export function ComponentSkeleton({
               <div className={`${baseClasses} h-4 w-3/4 mb-2`} />
               <div className={`${baseClasses} h-3 w-1/2`} />
             </div>
-            {variant === 'detailed' && (
-              <div className={`${baseClasses} w-20 h-6`} />
-            )}
+            {variant === 'detailed' && <div className={`${baseClasses} w-20 h-6`} />}
           </div>
         );
 
@@ -92,11 +90,11 @@ export function ComponentSkeleton({
 
       case 'chart':
         return (
-          <div 
+          <div
             className={`${baseClasses} rounded-lg flex items-end justify-center p-4`}
             style={{
               width: typeof width === 'number' ? `${width}px` : width,
-              height: typeof height === 'number' ? `${height}px` : height || '200px'
+              height: typeof height === 'number' ? `${height}px` : height || '200px',
             }}
           >
             {Array.from({ length: 8 }).map((_, i) => (
@@ -105,7 +103,7 @@ export function ComponentSkeleton({
                 className={`${baseClasses} mx-1`}
                 style={{
                   width: '12px',
-                  height: `${20 + Math.random() * 80}%`
+                  height: `${20 + Math.random() * 80}%`,
                 }}
               />
             ))}
@@ -119,11 +117,9 @@ export function ComponentSkeleton({
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className={`${baseClasses} h-6 w-1/3`} />
-              {variant === 'detailed' && (
-                <div className={`${baseClasses} h-8 w-20`} />
-              )}
+              {variant === 'detailed' && <div className={`${baseClasses} h-8 w-20`} />}
             </div>
-            
+
             {/* Content */}
             <div className="space-y-3">
               {Array.from({ length: rows }).map((_, i) => (
@@ -131,12 +127,12 @@ export function ComponentSkeleton({
                   key={i}
                   className={`${baseClasses} h-4`}
                   style={{
-                    width: `${Math.random() * 40 + 60}%`
+                    width: `${Math.random() * 40 + 60}%`,
                   }}
                 />
               ))}
             </div>
-            
+
             {/* Footer */}
             {variant !== 'compact' && (
               <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
@@ -150,11 +146,7 @@ export function ComponentSkeleton({
   };
 
   return (
-    <div 
-      className={`component-skeleton ${className}`} 
-      data-testid={`skeleton-${type}`}
-      {...props}
-    >
+    <div className={`component-skeleton ${className}`} data-testid={`skeleton-${type}`} {...props}>
       <style>{`
         .component-skeleton .animate-pulse {
           animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -169,7 +161,7 @@ export function ComponentSkeleton({
           }
         }
       `}</style>
-      
+
       {renderSkeleton()}
     </div>
   );
@@ -180,14 +172,9 @@ export function ComponentSkeleton({
  */
 export const SkeletonVariants = {
   UserCard: () => (
-    <ComponentSkeleton 
-      type="card" 
-      variant="detailed" 
-      rows={2}
-      className="max-w-sm"
-    />
+    <ComponentSkeleton type="card" variant="detailed" rows={2} className="max-w-sm" />
   ),
-  
+
   DataTable: ({ rows = 5 }: { rows?: number }) => (
     <div className="w-full">
       <table className="w-full">
@@ -229,7 +216,7 @@ export const SkeletonVariants = {
       <ComponentSkeleton type="chart" height={200} />
       <ComponentSkeleton type="chart" height={200} />
     </div>
-  )
+  ),
 };
 
 export default ComponentSkeleton;

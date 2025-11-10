@@ -21,12 +21,7 @@ export const viteTreeShakingConfig = {
         unknownGlobalSideEffects: false,
       },
       // Внешние зависимости (не включаем в bundle)
-      external: [
-        'react',
-        'react-dom',
-        '@supabase/supabase-js',
-        'lodash',
-      ],
+      external: ['react', 'react-dom', '@supabase/supabase-js', 'lodash'],
       output: {
         // Mangling для уменьшения размера
         manualChunks: {
@@ -96,7 +91,7 @@ export const webpackTreeShakingConfig = {
     mainFields: ['module', 'main'],
     alias: {
       // Замена на ES modules версии
-      'lodash': 'lodash-es',
+      lodash: 'lodash-es',
     },
   },
 };
@@ -106,11 +101,7 @@ export const webpackTreeShakingConfig = {
  */
 export const rollupTreeShakingConfig = {
   // Внешние зависимости
-  external: [
-    'react',
-    'react-dom',
-    '@supabase/supabase-js',
-  ],
+  external: ['react', 'react-dom', '@supabase/supabase-js'],
   output: {
     // ES modules для лучшего tree shaking
     format: 'es',
@@ -142,11 +133,7 @@ export const esbuildTreeShakingConfig = {
   treeShaking: true,
   format: 'esm',
   // Внешние зависимости
-  external: [
-    'react',
-    'react-dom',
-    '@supabase/supabase-js',
-  ],
+  external: ['react', 'react-dom', '@supabase/supabase-js'],
   // Настройки для tree shaking
   define: {
     'process.env.NODE_ENV': '"production"',
@@ -176,20 +163,16 @@ export const treeShakingPresets: Record<string, Partial<TreeShakingConfig>> = {
       '**/*.d.ts',
     ],
   },
-  
+
   // Безопасная оптимизация с сохранением типов
   safe: {
     bundler: 'vite',
     aggressive: false,
     preserveTypes: true,
     include: ['src/**/*.{ts,tsx,js,jsx}'],
-    exclude: [
-      '**/*.test.{ts,tsx,js,jsx}',
-      '**/*.spec.{ts,tsx,js,jsx}',
-      '**/node_modules/**',
-    ],
+    exclude: ['**/*.test.{ts,tsx,js,jsx}', '**/*.spec.{ts,tsx,js,jsx}', '**/node_modules/**'],
   },
-  
+
   // Для библиотек и компонентов
   library: {
     bundler: 'rollup',
@@ -203,18 +186,14 @@ export const treeShakingPresets: Record<string, Partial<TreeShakingConfig>> = {
       '**/node_modules/**',
     ],
   },
-  
+
   // Для legacy проектов
   legacy: {
     bundler: 'webpack',
     aggressive: false,
     preserveTypes: true,
     include: ['src/**/*.{js,jsx,ts,tsx}'],
-    exclude: [
-      '**/*.test.{js,jsx,ts,tsx}',
-      '**/*.spec.{js,jsx,ts,tsx}',
-      '**/node_modules/**',
-    ],
+    exclude: ['**/*.test.{js,jsx,ts,tsx}', '**/*.spec.{js,jsx,ts,tsx}', '**/node_modules/**'],
   },
 };
 
@@ -239,7 +218,9 @@ export function getBundlerConfig(bundler: string) {
 /**
  * Получает preset конфигурации TreeShaker
  */
-export function getTreeShakingPreset(preset: keyof typeof treeShakingPresets): Partial<TreeShakingConfig> {
+export function getTreeShakingPreset(
+  preset: keyof typeof treeShakingPresets,
+): Partial<TreeShakingConfig> {
   const config = treeShakingPresets[preset];
   if (!config) {
     throw new Error(`Неизвестный preset: ${preset}`);
@@ -253,10 +234,10 @@ export function getTreeShakingPreset(preset: keyof typeof treeShakingPresets): P
 export function createTreeShakingConfig(
   bundler: 'vite' | 'webpack' | 'rollup' | 'esbuild',
   preset: keyof typeof treeShakingPresets = 'safe',
-  overrides: Partial<TreeShakingConfig> = {}
+  overrides: Partial<TreeShakingConfig> = {},
 ): TreeShakingConfig {
   const baseConfig = getTreeShakingPreset(preset);
-  
+
   return {
     bundler,
     ...baseConfig,

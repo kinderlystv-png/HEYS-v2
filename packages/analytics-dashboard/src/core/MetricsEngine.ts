@@ -1,4 +1,4 @@
-import { AnalyticsData, MetricDefinition, BusinessMetric } from '../types';
+import { AnalyticsData, BusinessMetric, MetricDefinition } from '../types';
 
 /**
  * MetricsEngine - Core analytics data processing and aggregation
@@ -34,12 +34,12 @@ export class MetricsEngine {
     const dataPoint: AnalyticsData = {
       ...data,
       metric: metricId,
-      timestamp: data.timestamp || Date.now()
+      timestamp: data.timestamp || Date.now(),
     };
 
     const points = this.dataPoints.get(metricId) || [];
     points.push(dataPoint);
-    
+
     // Keep only last 1000 points for performance
     if (points.length > 1000) {
       points.shift();
@@ -63,7 +63,7 @@ export class MetricsEngine {
     let filteredPoints = points;
     if (timeRange) {
       filteredPoints = points.filter(
-        p => p.timestamp >= timeRange.start && p.timestamp <= timeRange.end
+        (p) => p.timestamp >= timeRange.start && p.timestamp <= timeRange.end,
       );
     }
 
@@ -77,9 +77,9 @@ export class MetricsEngine {
       case 'avg':
         return filteredPoints.reduce((sum, point) => sum + point.value, 0) / filteredPoints.length;
       case 'max':
-        return Math.max(...filteredPoints.map(p => p.value));
+        return Math.max(...filteredPoints.map((p) => p.value));
       case 'min':
-        return Math.min(...filteredPoints.map(p => p.value));
+        return Math.min(...filteredPoints.map((p) => p.value));
       case 'count':
         return filteredPoints.length;
       default:
@@ -96,21 +96,19 @@ export class MetricsEngine {
     for (const [metricId, metric] of this.metrics) {
       if (metric.category === 'business') {
         const currentValue = this.getAggregatedValue(metricId, timeRange);
-        
+
         // Calculate previous period for trend
         const periodDuration = timeRange.end - timeRange.start;
         const previousTimeRange = {
           start: timeRange.start - periodDuration,
-          end: timeRange.start
+          end: timeRange.start,
         };
         const previousValue = this.getAggregatedValue(metricId, previousTimeRange);
-        
-        const percentageChange = previousValue > 0 
-          ? ((currentValue - previousValue) / previousValue) * 100 
-          : 0;
 
-        const trend = percentageChange > 5 ? 'up' : 
-                     percentageChange < -5 ? 'down' : 'stable';
+        const percentageChange =
+          previousValue > 0 ? ((currentValue - previousValue) / previousValue) * 100 : 0;
+
+        const trend = percentageChange > 5 ? 'up' : percentageChange < -5 ? 'down' : 'stable';
 
         businessMetrics.push({
           id: metricId,
@@ -119,7 +117,7 @@ export class MetricsEngine {
           trend,
           percentageChange,
           timeRange: `${new Date(timeRange.start).toISOString()} - ${new Date(timeRange.end).toISOString()}`,
-          unit: metric.unit
+          unit: metric.unit,
         });
       }
     }
@@ -174,8 +172,14 @@ export class MetricsEngine {
   getEngineStats() {
     return {
       metricsCount: this.metrics.size,
-      totalDataPoints: Array.from(this.dataPoints.values()).reduce((total, points) => total + points.length, 0),
-      subscribersCount: Array.from(this.eventListeners.values()).reduce((total, listeners) => total + listeners.length, 0)
+      totalDataPoints: Array.from(this.dataPoints.values()).reduce(
+        (total, points) => total + points.length,
+        0,
+      ),
+      subscribersCount: Array.from(this.eventListeners.values()).reduce(
+        (total, listeners) => total + listeners.length,
+        0,
+      ),
     };
   }
 
@@ -189,7 +193,7 @@ export class MetricsEngine {
       category: 'performance',
       aggregationType: 'avg',
       refreshInterval: 30,
-      isRealTime: true
+      isRealTime: true,
     });
 
     this.registerMetric({
@@ -200,7 +204,7 @@ export class MetricsEngine {
       category: 'technical',
       aggregationType: 'count',
       refreshInterval: 60,
-      isRealTime: true
+      isRealTime: true,
     });
 
     // Business Metrics
@@ -212,7 +216,7 @@ export class MetricsEngine {
       category: 'business',
       aggregationType: 'max',
       refreshInterval: 60,
-      isRealTime: true
+      isRealTime: true,
     });
 
     this.registerMetric({
@@ -223,7 +227,7 @@ export class MetricsEngine {
       category: 'business',
       aggregationType: 'avg',
       refreshInterval: 300,
-      isRealTime: false
+      isRealTime: false,
     });
 
     // User Experience Metrics
@@ -235,13 +239,13 @@ export class MetricsEngine {
       category: 'user-experience',
       aggregationType: 'avg',
       refreshInterval: 600,
-      isRealTime: false
+      isRealTime: false,
     });
   }
 
   private notifyListeners(metricId: string, data: AnalyticsData): void {
     const listeners = this.eventListeners.get(metricId) || [];
-    listeners.forEach(callback => {
+    listeners.forEach((callback) => {
       try {
         callback(data);
       } catch (error) {

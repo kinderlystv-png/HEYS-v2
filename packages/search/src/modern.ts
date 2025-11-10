@@ -1,4 +1,5 @@
 // Advanced search service with Fuse.js, indexing, and filtering
+import type { FuseResult, FuseResultMatch, IFuseOptions } from 'fuse.js';
 import Fuse from 'fuse.js';
 import { z } from 'zod';
 
@@ -9,7 +10,7 @@ export interface SearchItem {
   description?: string;
   content?: string;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   category?: string;
   createdAt: Date;
   updatedAt?: Date;
@@ -29,7 +30,7 @@ export interface SearchQuery {
 export interface SearchResult<T = SearchItem> {
   item: T;
   score: number;
-  matches?: Fuse.FuseResultMatch[];
+  matches?: FuseResultMatch[];
   highlighted?: Partial<T>;
 }
 
@@ -61,7 +62,7 @@ export class ModernSearch {
   private indices = new Map<string, Fuse<SearchItem>>();
   private items = new Map<string, SearchItem>();
 
-  private defaultFuseOptions: Fuse.IFuseOptions<SearchItem> = {
+  private defaultFuseOptions: IFuseOptions<SearchItem> = {
     includeScore: true,
     includeMatches: true,
     threshold: 0.3,
@@ -76,7 +77,7 @@ export class ModernSearch {
     ],
   };
 
-  constructor(options?: Partial<Fuse.IFuseOptions<SearchItem>>) {
+  constructor(options?: Partial<IFuseOptions<SearchItem>>) {
     if (options) {
       this.defaultFuseOptions = { ...this.defaultFuseOptions, ...options };
     }
@@ -122,10 +123,12 @@ export class ModernSearch {
     for (const item of this.items.values()) {
       allItems.push(item);
 
-      if (!itemsByType.has(item.type)) {
-        itemsByType.set(item.type, []);
+      const typeItems = itemsByType.get(item.type);
+      if (typeItems) {
+        typeItems.push(item);
+      } else {
+        itemsByType.set(item.type, [item]);
       }
-      itemsByType.get(item.type)!.push(item);
     }
 
     // Create global index
@@ -140,7 +143,7 @@ export class ModernSearch {
   // Main search method
   async search<T extends SearchItem = SearchItem>(
     query: SearchQuery,
-    customOptions?: Partial<Fuse.IFuseOptions<T>>,
+    customOptions?: Partial<IFuseOptions<T>>,
   ): Promise<SearchResponse<T>> {
     const start = Date.now();
 
@@ -155,7 +158,7 @@ export class ModernSearch {
         ? validatedQuery.type
         : [validatedQuery.type];
 
-      if (types.length === 1) {
+      if (types.length === 1 && types[0]) {
         const typeIndex = this.indices.get(types[0]);
         if (typeIndex) {
           searchIndex = typeIndex;
@@ -170,15 +173,19 @@ export class ModernSearch {
       return {
         results: [],
         total: 0,
-        query: validatedQuery,
+        query: validatedQuery as SearchQuery,
         took: Date.now() - start,
       };
     }
 
     // Perform search
     const fuseOptions = customOptions
-      ? { ...this.defaultFuseOptions, ...customOptions }
-      : this.defaultFuseOptions;
+      ? {
+          ...this.defaultFuseOptions,
+          ...customOptions,
+          limit: validatedQuery.limit + validatedQuery.offset,
+        }
+      : { ...this.defaultFuseOptions, limit: validatedQuery.limit + validatedQuery.offset };
 
     const fuseResults = searchIndex.search(validatedQuery.q, fuseOptions);
 
@@ -200,7 +207,7 @@ export class ModernSearch {
 
       // Tags filter
       if (validatedQuery.tags && validatedQuery.tags.length > 0) {
-        if (!item.tags || !validatedQuery.tags.some((tag) => item.tags!.includes(tag))) {
+        if (!item.tags || !validatedQuery.tags.some((tag) => item.tags?.includes(tag))) {
           return false;
         }
       }
@@ -225,12 +232,17 @@ export class ModernSearch {
     );
 
     // Transform to SearchResult format
-    const results: SearchResult<T>[] = paginatedResults.map((fuseResult) => ({
-      item: fuseResult.item as T,
-      score: fuseResult.score || 0,
-      matches: fuseResult.matches,
-      highlighted: this.highlightMatches(fuseResult.item, fuseResult.matches) as Partial<T>,
-    }));
+    const results: SearchResult<T>[] = paginatedResults.map((fuseResult) => {
+      const result: SearchResult<T> = {
+        item: fuseResult.item as T,
+        score: fuseResult.score || 0,
+        highlighted: this.highlightMatches(fuseResult.item, fuseResult.matches) as Partial<T>,
+      };
+      if (fuseResult.matches) {
+        result.matches = [...fuseResult.matches] as FuseResultMatch[];
+      }
+      return result;
+    });
 
     // Generate facets
     const facets = this.generateFacets(filteredResults.map((r) => r.item));
@@ -238,7 +250,7 @@ export class ModernSearch {
     return {
       results,
       total,
-      query: validatedQuery,
+      query: validatedQuery as SearchQuery,
       took: Date.now() - start,
       facets,
     };
@@ -292,10 +304,14 @@ export class ModernSearch {
       total: this.items.size,
     };
 
-    for (const [type, index] of this.indices) {
-      if (type !== 'all') {
-        stats[type] = index.getIndex().size;
-      }
+    // Count items by type
+    const typeCounts = new Map<string, number>();
+    for (const item of this.items.values()) {
+      typeCounts.set(item.type, (typeCounts.get(item.type) || 0) + 1);
+    }
+
+    for (const [type, count] of typeCounts) {
+      stats[type] = count;
     }
 
     return stats;
@@ -309,10 +325,10 @@ export class ModernSearch {
 
   // Helper methods
   private sortResults(
-    results: Fuse.FuseResult<SearchItem>[],
+    results: FuseResult<SearchItem>[],
     sortBy: 'date' | 'title',
     order: 'asc' | 'desc',
-  ): Fuse.FuseResult<SearchItem>[] {
+  ): FuseResult<SearchItem>[] {
     return results.sort((a, b) => {
       let comparison = 0;
 
@@ -330,7 +346,7 @@ export class ModernSearch {
 
   private highlightMatches(
     item: SearchItem,
-    matches?: Fuse.FuseResultMatch[],
+    matches?: readonly FuseResultMatch[],
   ): Partial<SearchItem> {
     if (!matches) return {};
 
@@ -345,14 +361,16 @@ export class ModernSearch {
 
         // Apply highlights in reverse order to maintain indices
         for (let i = match.indices.length - 1; i >= 0; i--) {
-          const [start, end] = match.indices[i];
+          const indexPair = match.indices[i];
+          if (!indexPair) continue;
+          const [start, end] = indexPair;
           highlightedValue =
             highlightedValue.slice(0, start) +
             `<mark>${highlightedValue.slice(start, end + 1)}</mark>` +
             highlightedValue.slice(end + 1);
         }
 
-        (highlighted as any)[key] = highlightedValue;
+        (highlighted as Record<string, unknown>)[key] = highlightedValue;
       }
     }
 
@@ -360,10 +378,10 @@ export class ModernSearch {
   }
 
   private generateFacets(items: SearchItem[]): Record<string, { value: string; count: number }[]> {
-    const facets: Record<string, Map<string, number>> = {
-      type: new Map(),
-      category: new Map(),
-      tags: new Map(),
+    const facets = {
+      type: new Map<string, number>(),
+      category: new Map<string, number>(),
+      tags: new Map<string, number>(),
     };
 
     for (const item of items) {

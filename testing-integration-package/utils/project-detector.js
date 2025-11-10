@@ -9,7 +9,16 @@ import { pathToFileURL } from 'url';
 
 // ---- НОВОЕ: утилиты аргументов и безопасной записи ----
 function parseArgs(argv = []) {
-  const args = { force: false, dryRun: false, framework: undefined, dir: undefined, msw: false, hooks: false, github: false, interactive: false };
+  const args = {
+    force: false,
+    dryRun: false,
+    framework: undefined,
+    dir: undefined,
+    msw: false,
+    hooks: false,
+    github: false,
+    interactive: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--force') args.force = true;
@@ -59,11 +68,11 @@ export function detectProjectType(projectPath = process.cwd()) {
   // Файлы-индикаторы для точного определения фреймворка
   const indicators = {
     'next.js': ['next.config.js', 'next.config.mjs', 'next.config.ts'],
-    'sveltekit': ['svelte.config.js', 'app.html'],
-    'nuxt': ['nuxt.config.ts', 'nuxt.config.js'],
-    'vue': ['vue.config.js'],
-    'angular': ['angular.json'],
-    'gatsby': ['gatsby-config.js']
+    sveltekit: ['svelte.config.js', 'app.html'],
+    nuxt: ['nuxt.config.ts', 'nuxt.config.js'],
+    vue: ['vue.config.js'],
+    angular: ['angular.json'],
+    gatsby: ['gatsby-config.js'],
   };
 
   // Проверяем файлы-индикаторы
@@ -112,15 +121,21 @@ export function getProjectInfo(projectPath) {
   const info = {
     ...result,
     hasTypeScript: fs.existsSync(path.join(result.projectPath, 'tsconfig.json')),
-    hasESLint: fs.existsSync(path.join(result.projectPath, '.eslintrc.js')) ||
-               fs.existsSync(path.join(result.projectPath, '.eslintrc.json')) ||
-               fs.existsSync(path.join(result.projectPath, 'eslint.config.js')),
-    hasTests: fs.existsSync(path.join(result.projectPath, 'tests')) ||
-              fs.existsSync(path.join(result.projectPath, '__tests__')) ||
-              fs.existsSync(path.join(result.projectPath, 'test')),
-  packageManager: fs.existsSync(path.join(result.projectPath, 'bun.lockb')) ? 'bun' :
-          fs.existsSync(path.join(result.projectPath, 'yarn.lock')) ? 'yarn' :
-          fs.existsSync(path.join(result.projectPath, 'pnpm-lock.yaml')) ? 'pnpm' : 'npm'
+    hasESLint:
+      fs.existsSync(path.join(result.projectPath, '.eslintrc.js')) ||
+      fs.existsSync(path.join(result.projectPath, '.eslintrc.json')) ||
+      fs.existsSync(path.join(result.projectPath, 'eslint.config.js')),
+    hasTests:
+      fs.existsSync(path.join(result.projectPath, 'tests')) ||
+      fs.existsSync(path.join(result.projectPath, '__tests__')) ||
+      fs.existsSync(path.join(result.projectPath, 'test')),
+    packageManager: fs.existsSync(path.join(result.projectPath, 'bun.lockb'))
+      ? 'bun'
+      : fs.existsSync(path.join(result.projectPath, 'yarn.lock'))
+        ? 'yarn'
+        : fs.existsSync(path.join(result.projectPath, 'pnpm-lock.yaml'))
+          ? 'pnpm'
+          : 'npm',
   };
 
   return info;
@@ -139,7 +154,7 @@ export function getFrameworkConfig(framework) {
         '@testing-library/user-event',
         '@vitejs/plugin-react',
         'jsdom',
-        'vite-tsconfig-paths'
+        'vite-tsconfig-paths',
       ],
       vitestConfig: `import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
@@ -176,7 +191,7 @@ export default defineConfig({
 
 export function renderWithProviders(component, options = {}) {
   return render(component, options);
-}`
+}`,
     },
 
     'next.js': {
@@ -187,7 +202,7 @@ export function renderWithProviders(component, options = {}) {
         '@testing-library/user-event',
         '@vitejs/plugin-react',
         'jsdom',
-        'vite-tsconfig-paths'
+        'vite-tsconfig-paths',
       ],
       vitestConfig: `import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
@@ -239,7 +254,7 @@ vi.mock('next/router', () => ({
 
 export function renderWithProviders(component, options = {}) {
   return render(component, options);
-}`
+}`,
     },
 
     vue: {
@@ -250,7 +265,7 @@ export function renderWithProviders(component, options = {}) {
         '@testing-library/user-event',
         '@vitejs/plugin-vue',
         'jsdom',
-        'vite-tsconfig-paths'
+        'vite-tsconfig-paths',
       ],
       vitestConfig: `import { defineConfig } from 'vitest/config';
 import vue from '@vitejs/plugin-vue';
@@ -286,17 +301,17 @@ export function renderWithProviders(component, options = {}) {
     },
     ...options
   });
-}`
+}`,
     },
 
-  sveltekit: {
+    sveltekit: {
       dependencies: [
         'vitest',
         '@testing-library/jest-dom',
         '@testing-library/svelte',
         '@testing-library/user-event',
         'jsdom',
-        'vite-tsconfig-paths'
+        'vite-tsconfig-paths',
       ],
       vitestConfig: `import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
@@ -330,12 +345,12 @@ export default defineConfig({
     }
   }
 });`,
-  testWrapper: `import { render } from '@testing-library/svelte';
+      testWrapper: `import { render } from '@testing-library/svelte';
 
 export function renderWithProviders(component, options = {}) {
   return render(component, options);
-}`
-    }
+}`,
+    },
   };
 
   return configs[framework] || configs.react;
@@ -351,10 +366,10 @@ export function createDirectories(projectPath = process.cwd()) {
     'tests/fixtures',
     'tests/mocks',
     'tests/components',
-    'src/constants'
+    'src/constants',
   ];
 
-  directories.forEach(dir => {
+  directories.forEach((dir) => {
     const fullPath = path.join(projectPath, dir);
     if (!fs.existsSync(fullPath)) {
       fs.mkdirSync(fullPath, { recursive: true });
@@ -611,17 +626,19 @@ export function updatePackageJsonScripts(projectPath = process.cwd(), options = 
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
   const testScripts = {
-    'test': 'vitest',
+    test: 'vitest',
     'test:ui': 'vitest --ui',
     'test:coverage': 'vitest run --coverage',
     'test:watch': 'vitest watch',
-    'test:run': 'vitest run'
+    'test:run': 'vitest run',
   };
 
   packageJson.scripts ||= {};
   for (const [k, v] of Object.entries(testScripts)) {
     if (packageJson.scripts[k] && packageJson.scripts[k] !== v && !options.force) {
-      console.info(`⏭️  scripts.${k} существует и отличается — пропущено (используйте --force для перезаписи)`);
+      console.info(
+        `⏭️  scripts.${k} существует и отличается — пропущено (используйте --force для перезаписи)`,
+      );
       continue;
     }
     packageJson.scripts[k] = v;
@@ -695,7 +712,7 @@ describe('Example Test', () => {
     await user.click(button);
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
-});`
+});`,
   };
 
   // Добавим пример для SvelteKit отдельно с выбором импорта для v4/v5
@@ -707,7 +724,8 @@ describe('Example Test', () => {
       const m = ver.match(/\d+/);
       if (m) svelteMajor = parseInt(m[0], 10);
     } catch {}
-    const importPath = svelteMajor >= 5 ? "@testing-library/svelte/svelte5" : "@testing-library/svelte";
+    const importPath =
+      svelteMajor >= 5 ? '@testing-library/svelte/svelte5' : '@testing-library/svelte';
     examples.sveltekit = `import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '${importPath}';
 import TestButton from './components/TestButton.svelte';
@@ -762,7 +780,9 @@ export async function setupTestingEnvironment(projectPath = process.cwd(), optio
     const detectedFramework = result.type;
     const actualProjectPath = result.projectPath;
     const framework = options.framework || detectedFramework;
-    console.info(`📦 Обнаружен фреймворк: ${framework}${options.framework ? ` (override, был ${detectedFramework})` : ''}`);
+    console.info(
+      `📦 Обнаружен фреймворк: ${framework}${options.framework ? ` (override, был ${detectedFramework})` : ''}`,
+    );
 
     // Интерактивный режим: спросить про опции
     if (options.interactive) {
@@ -770,7 +790,12 @@ export async function setupTestingEnvironment(projectPath = process.cwd(), optio
         const readline = await import('node:readline');
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
         const ask = (q) => new Promise((res) => rl.question(q, (ans) => res(ans)));
-        const yn = (s) => ['y', 'yes', 'д', 'да'].includes(String(s || '').trim().toLowerCase());
+        const yn = (s) =>
+          ['y', 'yes', 'д', 'да'].includes(
+            String(s || '')
+              .trim()
+              .toLowerCase(),
+          );
         const a1 = await ask('Enable MSW mocks? (y/N): ');
         const a2 = await ask('Setup Husky + lint-staged? (y/N): ');
         const a3 = await ask('Add GitHub Actions CI? (y/N): ');
@@ -789,11 +814,14 @@ export async function setupTestingEnvironment(projectPath = process.cwd(), optio
     // Создаем директории
     createDirectories(actualProjectPath);
 
-  // Создаем конфигурационные файлы (js/ts)
-  const isTs = fs.existsSync(path.join(actualProjectPath, 'tsconfig.json'));
-  const vitestConfigPath = path.join(actualProjectPath, `vitest.config.${isTs ? 'ts' : 'js'}`);
-  const vitestConfigContent = config.vitestConfig.replace('./tests/setup.ts', `./tests/setup.${isTs ? 'ts' : 'js'}`);
-  writeFileSafe(vitestConfigPath, vitestConfigContent, options);
+    // Создаем конфигурационные файлы (js/ts)
+    const isTs = fs.existsSync(path.join(actualProjectPath, 'tsconfig.json'));
+    const vitestConfigPath = path.join(actualProjectPath, `vitest.config.${isTs ? 'ts' : 'js'}`);
+    const vitestConfigContent = config.vitestConfig.replace(
+      './tests/setup.ts',
+      `./tests/setup.${isTs ? 'ts' : 'js'}`,
+    );
+    writeFileSafe(vitestConfigPath, vitestConfigContent, options);
 
     const wrapperPath = path.join(actualProjectPath, 'tests', 'utils', 'test-wrapper.js');
     let testWrapperContent = config.testWrapper;
@@ -801,13 +829,16 @@ export async function setupTestingEnvironment(projectPath = process.cwd(), optio
       // Определяем версию svelte для выбора импорта v4/v5
       let svelteMajor = 4;
       try {
-        const pkg = JSON.parse(fs.readFileSync(path.join(actualProjectPath, 'package.json'), 'utf8'));
+        const pkg = JSON.parse(
+          fs.readFileSync(path.join(actualProjectPath, 'package.json'), 'utf8'),
+        );
         const ver = (pkg.dependencies?.svelte || pkg.devDependencies?.svelte || '').toString();
         const m = ver.match(/\d+/);
         if (m) svelteMajor = parseInt(m[0], 10);
       } catch {}
-      const importPath = svelteMajor >= 5 ? "@testing-library/svelte/svelte5" : "@testing-library/svelte";
-      testWrapperContent = testWrapperContent.replace("@testing-library/svelte", importPath);
+      const importPath =
+        svelteMajor >= 5 ? '@testing-library/svelte/svelte5' : '@testing-library/svelte';
+      testWrapperContent = testWrapperContent.replace('@testing-library/svelte', importPath);
     }
     writeFileSafe(wrapperPath, testWrapperContent, options);
 
@@ -833,33 +864,43 @@ export async function setupTestingEnvironment(projectPath = process.cwd(), optio
       setupGithubActions(actualProjectPath, options);
     }
 
-  console.info('\n🎉 Настройка завершена!');
-  console.info('\n📋 Следующие шаги:');
-  const { packageManager } = getProjectInfo(actualProjectPath);
-  const pmInstall = packageManager === 'pnpm' ? 'pnpm add -D' :
-            packageManager === 'yarn' ? 'yarn add -D' :
-            packageManager === 'bun' ? 'bun add -d' :
-            'npm install -D';
-  const pmRun = packageManager === 'pnpm' ? 'pnpm' : packageManager === 'yarn' ? 'yarn' : packageManager === 'bun' ? 'bun' : 'npm';
-  const extraDeps = [];
-  if (options.msw) extraDeps.push('msw');
-  if (options.hooks) extraDeps.push('husky', 'lint-staged');
-  const deps = [...config.dependencies, ...extraDeps];
-  console.info('1. Установите зависимости:');
-  console.info(`   ${pmInstall} ${deps.join(' ')}`);
-  if (options.hooks) {
-    console.info('   Затем инициализируйте husky (один раз):');
-    console.info('   npx husky install');
-  }
-  console.info('2. Запустите тесты:');
-  console.info(`   ${pmRun} run test`);
+    console.info('\n🎉 Настройка завершена!');
+    console.info('\n📋 Следующие шаги:');
+    const { packageManager } = getProjectInfo(actualProjectPath);
+    const pmInstall =
+      packageManager === 'pnpm'
+        ? 'pnpm add -D'
+        : packageManager === 'yarn'
+          ? 'yarn add -D'
+          : packageManager === 'bun'
+            ? 'bun add -d'
+            : 'npm install -D';
+    const pmRun =
+      packageManager === 'pnpm'
+        ? 'pnpm'
+        : packageManager === 'yarn'
+          ? 'yarn'
+          : packageManager === 'bun'
+            ? 'bun'
+            : 'npm';
+    const extraDeps = [];
+    if (options.msw) extraDeps.push('msw');
+    if (options.hooks) extraDeps.push('husky', 'lint-staged');
+    const deps = [...config.dependencies, ...extraDeps];
+    console.info('1. Установите зависимости:');
+    console.info(`   ${pmInstall} ${deps.join(' ')}`);
+    if (options.hooks) {
+      console.info('   Затем инициализируйте husky (один раз):');
+      console.info('   npx husky install');
+    }
+    console.info('2. Запустите тесты:');
+    console.info(`   ${pmRun} run test`);
 
     return {
       framework,
       dependencies: config.dependencies,
-      success: true
+      success: true,
     };
-
   } catch (error) {
     console.error('❌ Ошибка при настройке:', error.message);
     return { success: false, error: error.message };

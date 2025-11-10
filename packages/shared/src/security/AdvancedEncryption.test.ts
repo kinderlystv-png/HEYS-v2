@@ -3,9 +3,13 @@
  * Comprehensive test suite for enterprise-grade encryption
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AdvancedEncryptionService, EncryptionUtils, defaultEncryptionService } from './AdvancedEncryption';
+import {
+  AdvancedEncryptionService,
+  EncryptionUtils,
+  defaultEncryptionService,
+} from './AdvancedEncryption';
 
 // Mock Web Crypto API for Node.js environment
 const mockCrypto = {
@@ -16,26 +20,26 @@ const mockCrypto = {
     exportKey: vi.fn(),
     encrypt: vi.fn(),
     decrypt: vi.fn(),
-    digest: vi.fn()
+    digest: vi.fn(),
   },
-  getRandomValues: vi.fn()
+  getRandomValues: vi.fn(),
 };
 
 // Mock crypto object
 Object.defineProperty(global, 'crypto', {
   value: mockCrypto,
-  configurable: true
+  configurable: true,
 });
 global.btoa = (str: string) => Buffer.from(str, 'binary').toString('base64');
 global.atob = (str: string) => Buffer.from(str, 'base64').toString('binary');
 
 describe('AdvancedEncryptionService', () => {
   let encryptionService: AdvancedEncryptionService;
-  
+
   beforeEach(() => {
     vi.clearAllMocks();
     encryptionService = new AdvancedEncryptionService();
-    
+
     // Setup common mock implementations
     mockCrypto.getRandomValues.mockImplementation((array: Uint8Array) => {
       for (let i = 0; i < array.length; i++) {
@@ -51,11 +55,11 @@ describe('AdvancedEncryptionService', () => {
       mockCrypto.subtle.generateKey.mockResolvedValue(mockKey);
 
       const key = await encryptionService.generateKey();
-      
+
       expect(mockCrypto.subtle.generateKey).toHaveBeenCalledWith(
         { name: 'AES-GCM', length: 256 },
         true,
-        ['encrypt', 'decrypt']
+        ['encrypt', 'decrypt'],
       );
       expect(key).toBe(mockKey);
     });
@@ -75,7 +79,7 @@ describe('AdvancedEncryptionService', () => {
         expect.any(Uint8Array),
         'PBKDF2',
         false,
-        ['deriveKey']
+        ['deriveKey'],
       );
       expect(mockCrypto.subtle.deriveKey).toHaveBeenCalled();
       expect(key).toBe(mockDerivedKey);
@@ -86,12 +90,12 @@ describe('AdvancedEncryptionService', () => {
     it('should encrypt data with password', async () => {
       const testData = 'Hello, World!';
       const password = 'testPassword123';
-      
+
       const mockKeyMaterial = { type: 'raw' };
       const mockDerivedKey = { type: 'secret' };
       const mockEncryptedBuffer = new ArrayBuffer(32);
       const mockEncryptedArray = new Uint8Array(mockEncryptedBuffer);
-      
+
       // Fill with test data
       for (let i = 0; i < mockEncryptedArray.length; i++) {
         mockEncryptedArray[i] = i;
@@ -114,7 +118,7 @@ describe('AdvancedEncryptionService', () => {
     it('should decrypt data with password', async () => {
       const originalData = 'Hello, World!';
       const password = 'testPassword123';
-      
+
       const encryptedData = {
         data: 'dGVzdGRhdGE=', // base64 encoded test data
         iv: 'dGVzdGl2', // base64 encoded test iv
@@ -122,7 +126,7 @@ describe('AdvancedEncryptionService', () => {
         tag: 'dGVzdHRhZw==', // base64 encoded test tag
         algorithm: 'AES-GCM' as const,
         timestamp: Date.now(),
-        keyVersion: '1'
+        keyVersion: '1',
       };
 
       const mockKeyMaterial = { type: 'raw' };
@@ -144,7 +148,7 @@ describe('AdvancedEncryptionService', () => {
     it('should generate RSA key pair', async () => {
       const mockKeyPair = {
         publicKey: { type: 'public', algorithm: { name: 'RSA-OAEP' } },
-        privateKey: { type: 'private', algorithm: { name: 'RSA-OAEP' } }
+        privateKey: { type: 'private', algorithm: { name: 'RSA-OAEP' } },
       };
 
       mockCrypto.subtle.generateKey.mockResolvedValue(mockKeyPair);
@@ -156,10 +160,10 @@ describe('AdvancedEncryptionService', () => {
           name: 'RSA-OAEP',
           modulusLength: 256, // From default config
           publicExponent: expect.any(Uint8Array),
-          hash: 'SHA-256'
+          hash: 'SHA-256',
         },
         true,
-        ['encrypt', 'decrypt']
+        ['encrypt', 'decrypt'],
       );
       expect(keyPair.publicKey).toBe(mockKeyPair.publicKey);
       expect(keyPair.privateKey).toBe(mockKeyPair.privateKey);
@@ -172,13 +176,16 @@ describe('AdvancedEncryptionService', () => {
 
       mockCrypto.subtle.encrypt.mockResolvedValue(mockEncryptedBuffer);
 
-      const encryptedData = await encryptionService.encryptWithPublicKey(testData, mockPublicKey as any);
+      const encryptedData = await encryptionService.encryptWithPublicKey(
+        testData,
+        mockPublicKey as any,
+      );
 
       expect(typeof encryptedData).toBe('string');
       expect(mockCrypto.subtle.encrypt).toHaveBeenCalledWith(
         { name: 'RSA-OAEP' },
         mockPublicKey,
-        expect.any(Uint8Array)
+        expect.any(Uint8Array),
       );
     });
 
@@ -190,13 +197,16 @@ describe('AdvancedEncryptionService', () => {
 
       mockCrypto.subtle.decrypt.mockResolvedValue(mockDecryptedBuffer);
 
-      const decryptedData = await encryptionService.decryptWithPrivateKey(encryptedData, mockPrivateKey as any);
+      const decryptedData = await encryptionService.decryptWithPrivateKey(
+        encryptedData,
+        mockPrivateKey as any,
+      );
 
       expect(decryptedData).toBe(originalData);
       expect(mockCrypto.subtle.decrypt).toHaveBeenCalledWith(
         { name: 'RSA-OAEP' },
         mockPrivateKey,
-        expect.any(ArrayBuffer)
+        expect.any(ArrayBuffer),
       );
     });
   });
@@ -208,7 +218,7 @@ describe('AdvancedEncryptionService', () => {
         name: 'John Doe',
         email: 'john@example.com',
         phone: '+1234567890',
-        publicInfo: 'This is public'
+        publicInfo: 'This is public',
       };
 
       const password = 'testPassword123';
@@ -223,7 +233,12 @@ describe('AdvancedEncryptionService', () => {
       mockCrypto.subtle.deriveKey.mockResolvedValue(mockDerivedKey);
       mockCrypto.subtle.encrypt.mockResolvedValue(mockEncryptedBuffer);
 
-      const encryptedUser = await encryptionService.encryptFields(userData, fieldsToEncrypt, undefined, password);
+      const encryptedUser = await encryptionService.encryptFields(
+        userData,
+        fieldsToEncrypt,
+        undefined,
+        password,
+      );
 
       expect(encryptedUser).toHaveProperty('_encrypted');
       expect(encryptedUser._encrypted).toEqual(['email', 'phone']);
@@ -245,7 +260,7 @@ describe('AdvancedEncryptionService', () => {
           tag: 'dGFn',
           algorithm: 'AES-GCM' as const,
           timestamp: Date.now(),
-          keyVersion: '1'
+          keyVersion: '1',
         },
         phone: {
           data: 'dGVzdA==',
@@ -254,9 +269,9 @@ describe('AdvancedEncryptionService', () => {
           tag: 'dGFn',
           algorithm: 'AES-GCM' as const,
           timestamp: Date.now(),
-          keyVersion: '1'
+          keyVersion: '1',
         },
-        _encrypted: ['email', 'phone']
+        _encrypted: ['email', 'phone'],
       };
 
       const password = 'testPassword123';
@@ -273,7 +288,11 @@ describe('AdvancedEncryptionService', () => {
         .mockResolvedValueOnce(emailBuffer)
         .mockResolvedValueOnce(phoneBuffer);
 
-      const decryptedUser = await encryptionService.decryptFields(encryptedUser, undefined, password);
+      const decryptedUser = await encryptionService.decryptFields(
+        encryptedUser,
+        undefined,
+        password,
+      );
 
       expect(decryptedUser).not.toHaveProperty('_encrypted');
       expect(decryptedUser.id).toBe('123');
@@ -374,7 +393,7 @@ describe('EncryptionUtils', () => {
         salt: 'salt',
         algorithm: 'AES-GCM',
         timestamp: Date.now(),
-        keyVersion: '1'
+        keyVersion: '1',
       });
 
       const result = await EncryptionUtils.quickEncrypt(testData, password);
@@ -390,12 +409,14 @@ describe('EncryptionUtils', () => {
         salt: 'salt',
         algorithm: 'AES-GCM' as const,
         timestamp: Date.now(),
-        keyVersion: '1'
+        keyVersion: '1',
       };
       const password = 'test password';
       const expectedResult = 'decrypted data';
 
-      const decryptSpy = vi.spyOn(defaultEncryptionService, 'decryptData').mockResolvedValue(expectedResult);
+      const decryptSpy = vi
+        .spyOn(defaultEncryptionService, 'decryptData')
+        .mockResolvedValue(expectedResult);
 
       const result = await EncryptionUtils.quickDecrypt(encryptedData, password);
 
@@ -411,14 +432,16 @@ describe('EncryptionUtils', () => {
         name: 'John Doe',
         email: 'john@example.com',
         phone: '+1234567890',
-        ssn: '123-45-6789'
+        ssn: '123-45-6789',
       };
       const password = 'userPassword';
 
-      const encryptFieldsSpy = vi.spyOn(defaultEncryptionService, 'encryptFields').mockResolvedValue({
-        ...userData,
-        _encrypted: ['email', 'phone', 'ssn']
-      });
+      const encryptFieldsSpy = vi
+        .spyOn(defaultEncryptionService, 'encryptFields')
+        .mockResolvedValue({
+          ...userData,
+          _encrypted: ['email', 'phone', 'ssn'],
+        });
 
       const result = await EncryptionUtils.encryptUserData(userData, password);
 
@@ -426,7 +449,7 @@ describe('EncryptionUtils', () => {
         userData,
         ['email', 'phone', 'ssn', 'bankAccount', 'creditCard'],
         undefined,
-        password
+        password,
       );
       expect(result).toHaveProperty('_encrypted');
     });
@@ -435,16 +458,18 @@ describe('EncryptionUtils', () => {
       const encryptedUserData = {
         id: '123',
         name: 'John Doe',
-        _encrypted: ['email', 'phone']
+        _encrypted: ['email', 'phone'],
       };
       const password = 'userPassword';
 
-      const decryptFieldsSpy = vi.spyOn(defaultEncryptionService, 'decryptFields').mockResolvedValue({
-        id: '123',
-        name: 'John Doe',
-        email: 'john@example.com',
-        phone: '+1234567890'
-      });
+      const decryptFieldsSpy = vi
+        .spyOn(defaultEncryptionService, 'decryptFields')
+        .mockResolvedValue({
+          id: '123',
+          name: 'John Doe',
+          email: 'john@example.com',
+          phone: '+1234567890',
+        });
 
       const result = await EncryptionUtils.decryptUserData(encryptedUserData, password);
 
@@ -455,7 +480,9 @@ describe('EncryptionUtils', () => {
 
   describe('Security Operations', () => {
     it('should generate session token', () => {
-      const generateTokenSpy = vi.spyOn(defaultEncryptionService, 'generateSecureToken').mockReturnValue('sessionToken123');
+      const generateTokenSpy = vi
+        .spyOn(defaultEncryptionService, 'generateSecureToken')
+        .mockReturnValue('sessionToken123');
 
       const token = EncryptionUtils.generateSessionToken();
 
@@ -481,7 +508,9 @@ describe('EncryptionUtils', () => {
       const hash = 'hashedPassword';
       const salt = 'randomSalt';
 
-      const generateHashSpy = vi.spyOn(defaultEncryptionService, 'generateHash').mockResolvedValue(hash);
+      const generateHashSpy = vi
+        .spyOn(defaultEncryptionService, 'generateHash')
+        .mockResolvedValue(hash);
 
       const isValid = await EncryptionUtils.verifyPassword(password, hash, salt);
 
@@ -496,10 +525,10 @@ describe('Integration Tests', () => {
     // This test would need a real crypto implementation
     // For now, we'll test the structure and flow
     const service = new AdvancedEncryptionService();
-    
+
     expect(service.getKeyVersion()).toBeDefined();
     expect(service.getStats()).toHaveProperty('algorithm');
-    
+
     // Test token generation (doesn't require crypto.subtle)
     const token = service.generateSecureToken(16);
     expect(typeof token).toBe('string');
@@ -507,7 +536,7 @@ describe('Integration Tests', () => {
 
   it('should handle error cases gracefully', async () => {
     const service = new AdvancedEncryptionService();
-    
+
     // Test decryption without key or password
     const encryptedData = {
       data: 'test',
@@ -515,9 +544,11 @@ describe('Integration Tests', () => {
       salt: 'test',
       algorithm: 'AES-GCM' as const,
       timestamp: Date.now(),
-      keyVersion: '1'
+      keyVersion: '1',
     };
 
-    await expect(service.decryptData(encryptedData)).rejects.toThrow('No key or password provided for decryption');
+    await expect(service.decryptData(encryptedData)).rejects.toThrow(
+      'No key or password provided for decryption',
+    );
   });
 });

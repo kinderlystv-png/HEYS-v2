@@ -4,47 +4,54 @@
 export { AnalyticsDashboard } from './components/AnalyticsDashboard';
 
 // Providers
-export { WebSocketProvider, useWebSocket, useWebSocketEvent, useRealTimeAnalytics, useRealTimeAlerts, useMetricDefinitions } from './providers/WebSocketProvider';
 export { MetricsProvider, useMetrics } from './providers/MetricsProvider';
+export {
+  WebSocketProvider,
+  useMetricDefinitions,
+  useRealTimeAlerts,
+  useRealTimeAnalytics,
+  useWebSocket,
+  useWebSocketEvent,
+} from './providers/WebSocketProvider';
 
 // Core engines
-export { MetricsEngine } from './core/MetricsEngine';
 export { BusinessROICalculator } from './core/BusinessROICalculator';
-export { UserExperienceScorer } from './core/UserExperienceScorer';
 export { ErrorImpactAnalyzer } from './core/ErrorImpactAnalyzer';
+export { MetricsEngine } from './core/MetricsEngine';
+export { UserExperienceScorer } from './core/UserExperienceScorer';
 
 // Types
 export type {
-  AnalyticsData,
-  MetricDefinition,
-  BusinessMetric,
-  UserExperienceMetric,
-  ErrorImpactData,
-  ROICalculation,
-  SystemStatusData,
-  DashboardConfig,
-  DashboardWidget,
-  DashboardFilter,
   AlertDefinition,
-  SystemStatus
+  AnalyticsData,
+  BusinessMetric,
+  DashboardConfig,
+  DashboardFilter,
+  DashboardWidget,
+  ErrorImpactData,
+  MetricDefinition,
+  ROICalculation,
+  SystemStatus,
+  SystemStatusData,
+  UserExperienceMetric,
 } from './types';
 
 // Utilities
 export {
-  formatMetricValue,
-  calculatePercentageChange,
   aggregateMetrics,
-  calculatePercentile,
-  formatDuration,
-  generateTimeRanges,
-  debounce,
-  throttle,
-  deepMerge,
-  generateChartColors,
-  formatLargeNumber,
   calculateMovingAverage,
+  calculatePercentageChange,
+  calculatePercentile,
+  debounce,
+  deepMerge,
   detectAnomalies,
-  groupByTimeInterval
+  formatDuration,
+  formatLargeNumber,
+  formatMetricValue,
+  generateChartColors,
+  generateTimeRanges,
+  groupByTimeInterval,
+  throttle,
 } from './utils';
 
 // Default export

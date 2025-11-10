@@ -179,9 +179,9 @@ describe('MobilePerformanceOptimizer', () => {
 
     it('should setup performance monitoring', async () => {
       optimizer = new MobilePerformanceOptimizer(config);
-      
+
       // Wait for async initialization to complete
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Verify performance observers are set up
       expect(global.PerformanceObserver).toHaveBeenCalled();
@@ -469,39 +469,33 @@ describe('MobilePerformanceOptimizer', () => {
 
       // Check that removeEventListener was called for all three touch events
       expect(mockDocument.removeEventListener).toHaveBeenCalledTimes(3);
-      
+
       // Check the call arguments - function references can be any function
       expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
         'touchstart',
-        expect.anything()
+        expect.anything(),
       );
-      expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
-        'touchmove',
-        expect.anything()
-      );
-      expect(mockDocument.removeEventListener).toHaveBeenCalledWith(
-        'touchend',
-        expect.anything()
-      );
+      expect(mockDocument.removeEventListener).toHaveBeenCalledWith('touchmove', expect.anything());
+      expect(mockDocument.removeEventListener).toHaveBeenCalledWith('touchend', expect.anything());
     });
 
     it('should stop performance monitoring on destroy', async () => {
       optimizer = new MobilePerformanceOptimizer(config);
-      
+
       // Wait for async initialization to complete
-      await new Promise(resolve => setTimeout(resolve, 10));
-      
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
       // The constructor should have created a PerformanceObserver
       expect(global.PerformanceObserver).toHaveBeenCalled();
-      
+
       // Get the most recent mock instance that was created
       const mockInstances = (global.PerformanceObserver as any).mock.results;
       const mockInstance = mockInstances[mockInstances.length - 1].value;
-      
+
       // Ensure disconnect method exists on the mock
       expect(mockInstance).toBeDefined();
       expect(mockInstance.disconnect).toBeDefined();
-      
+
       optimizer.destroy();
 
       expect(mockInstance.disconnect).toHaveBeenCalled();

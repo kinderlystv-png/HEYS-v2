@@ -438,7 +438,7 @@ export class HTTPCacheStrategy {
    */
   createCacheMiddleware() {
     const cacheStrategy = this;
-    
+
     return (req: any, res: any, next: any) => {
       const url = req.url;
       const method = req.method;

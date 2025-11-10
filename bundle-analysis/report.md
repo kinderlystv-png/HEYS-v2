@@ -1,15 +1,16 @@
 # Bundle Analysis Report
 
-**Date**: 03.09.2025, 17:56:02
-**Total Size**: 0.04 MB
+**Date**: 03.09.2025, 17:56:02 **Total Size**: 0.04 MB
 
 ## 📦 Largest Chunks
+
 - **assets\index-ba0dbd15.css**: 14.47 KB
 - **assets\core-4ed993c7.js**: 1 Bytes
 - **assets\features-4ed993c7.js**: 1 Bytes
 - **assets\vendor-4ed993c7.js**: 1 Bytes
 
-## 🔗 Heaviest Dependencies  
+## 🔗 Heaviest Dependencies
+
 - **typescript**: 22.54 MB
 - **lighthouse**: 18.7 MB
 - **happy-dom**: 13.22 MB
@@ -22,10 +23,13 @@
 - **@types/node**: 2.17 MB
 
 ## 💡 Recommendations
-- 🔗 Тяжелые зависимости: typescript, lighthouse, happy-dom - рассмотрите альтернативы
+
+- 🔗 Тяжелые зависимости: typescript, lighthouse, happy-dom - рассмотрите
+  альтернативы
 - 🌳 Много неиспользуемого кода - настройте tree shaking
 
 ## 🎯 Next Steps for Performance Sprint
+
 1. Implement tree shaking for unused code elimination
 2. Set up code splitting for large chunks (>500KB)
 3. Consider lazy loading for heavy dependencies

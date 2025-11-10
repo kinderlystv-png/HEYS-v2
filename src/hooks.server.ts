@@ -7,7 +7,7 @@ import { log } from '../src/lib/logger.js';
 export const handle: Handle = async ({ event, resolve }) => {
   // Добавляем логирование к каждому запросу
   const start = Date.now();
-  
+
   log.info('SvelteKit request started', {
     method: event.request.method,
     url: event.url.pathname,
@@ -47,11 +47,14 @@ export const handleError: HandleServerError = ({ error, event }) => {
   log.error('SvelteKit server error', {
     url: event.url.pathname,
     method: event.request.method,
-    error: error instanceof Error ? {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-    } : String(error),
+    error:
+      error instanceof Error
+        ? {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+          }
+        : String(error),
   });
 
   return {

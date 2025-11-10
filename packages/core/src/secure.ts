@@ -18,7 +18,7 @@ export class SecureUserManager extends HeysUser {
   /**
    * Create user with security validation
    */
-  async createUser(userData: unknown): Promise<any> {
+  override async createUser(userData: unknown): Promise<any> {
     const validation = await defaultValidator.validateSchema(userData, ValidationSchemas.user, {
       sanitize: true,
       strictMode: false, // Changed from true to false
@@ -34,7 +34,7 @@ export class SecureUserManager extends HeysUser {
   /**
    * Update user with security validation
    */
-  async updateUser(userId: string, updateData: unknown): Promise<any> {
+  override async updateUser(userId: string, updateData: unknown): Promise<any> {
     // Validate user ID
     const idValidation = await defaultValidator.validateSchema(
       userId,
@@ -62,7 +62,7 @@ export class SecureUserManager extends HeysUser {
   /**
    * Search users with input sanitization
    */
-  async searchUsers(query: unknown): Promise<any[]> {
+  override async searchUsers(query: unknown): Promise<any[]> {
     const validation = defaultValidator.validateInput(query, 'text', {
       sanitize: true,
       required: true,
@@ -72,7 +72,7 @@ export class SecureUserManager extends HeysUser {
       throw new SecurityError('Search query validation failed', validation.errors);
     }
 
-    return super.searchUsers(validation.sanitized || query);
+    return super.searchUsers((validation.sanitized as string) || (query as string));
   }
 }
 
@@ -83,7 +83,7 @@ export class SecureDayManager extends HeysDay {
   /**
    * Create day entry with validation
    */
-  async createDay(dayData: unknown): Promise<any> {
+  override async createDay(dayData: unknown): Promise<any> {
     // Create dynamic schema for day data
     const daySchema = ValidationSchemas.content.extend({
       date: ValidationSchemas.user.shape.createdAt,
@@ -105,7 +105,7 @@ export class SecureDayManager extends HeysDay {
   /**
    * Update day with security validation
    */
-  async updateDay(dayId: string, updateData: unknown): Promise<any> {
+  override async updateDay(dayId: string, updateData: unknown): Promise<any> {
     const validation = await defaultValidator.validateSchema(
       updateData,
       ValidationSchemas.content.partial(),
@@ -122,7 +122,7 @@ export class SecureDayManager extends HeysDay {
   /**
    * Get day content with XSS protection
    */
-  async getDayContent(dayId: string): Promise<any> {
+  override async getDayContent(dayId: string): Promise<any> {
     const content = await super.getDayContent(dayId);
 
     if (content && typeof content === 'object') {
@@ -145,7 +145,7 @@ export class SecureSessionManager extends HeysSession {
   /**
    * Create session with security validation
    */
-  async createSession(sessionData: unknown): Promise<any> {
+  override async createSession(sessionData: unknown): Promise<any> {
     const sessionSchema = ValidationSchemas.user
       .pick({
         id: true,
@@ -171,7 +171,7 @@ export class SecureSessionManager extends HeysSession {
   /**
    * Validate session token
    */
-  async validateSessionToken(token: unknown): Promise<boolean> {
+  override async validateSessionToken(token: unknown): Promise<boolean> {
     const validation = defaultValidator.validateInput(token, 'text', {
       required: true,
       sanitize: true,
@@ -181,7 +181,7 @@ export class SecureSessionManager extends HeysSession {
       return false;
     }
 
-    return super.validateSessionToken(validation.sanitized || token);
+    return super.validateSessionToken((validation.sanitized as string) || (token as string));
   }
 }
 

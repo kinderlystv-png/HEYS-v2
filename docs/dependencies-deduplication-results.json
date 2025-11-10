@@ -2,24 +2,12 @@
   "timestamp": "2025-09-04T07:41:32.085Z",
   "before": {
     "totalPackages": 78,
-    "duplicates": [
-      "typescript",
-      "vitest",
-      "@vitest/coverage-v8",
-      "zod",
-      "@supabase/supabase-js"
-    ],
+    "duplicates": ["typescript", "vitest", "@vitest/coverage-v8", "zod", "@supabase/supabase-js"],
     "duplicateCount": 5
   },
   "after": {
     "totalPackages": 78,
-    "duplicates": [
-      "typescript",
-      "vitest",
-      "@vitest/coverage-v8",
-      "zod",
-      "@supabase/supabase-js"
-    ],
+    "duplicates": ["typescript", "vitest", "@vitest/coverage-v8", "zod", "@supabase/supabase-js"],
     "duplicateCount": 5
   },
   "deduplicated": [],

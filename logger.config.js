@@ -6,10 +6,10 @@
 // Экспорт для ЭАП анализатора
 export default {
   // Основные настройки
-  appName: "HEYS Platform",
+  appName: 'HEYS Platform',
   enabled: true,
-  defaultLevel: process.env.LOG_LEVEL || "info",
-  environment: process.env.NODE_ENV || "development",
+  defaultLevel: process.env.LOG_LEVEL || 'info',
+  environment: process.env.NODE_ENV || 'development',
 
   // Уровни логирования
   levels: {
@@ -23,57 +23,57 @@ export default {
 
   // Цвета для консольного вывода
   colors: {
-    fatal: "magenta",
-    error: "red",
-    warn: "yellow", 
-    info: "green",
-    debug: "blue",
-    trace: "gray",
+    fatal: 'magenta',
+    error: 'red',
+    warn: 'yellow',
+    info: 'green',
+    debug: 'blue',
+    trace: 'gray',
   },
 
   // Конфигурация транспортов
   transports: {
     // Консольный транспорт
     console: {
-      enabled: process.env.LOG_CONSOLE !== "false",
-      level: process.env.NODE_ENV === "production" ? "warn" : "debug",
-      format: process.env.NODE_ENV === "production" ? "json" : "pretty",
-      colorize: process.env.NODE_ENV !== "production",
+      enabled: process.env.LOG_CONSOLE !== 'false',
+      level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug',
+      format: process.env.NODE_ENV === 'production' ? 'json' : 'pretty',
+      colorize: process.env.NODE_ENV !== 'production',
     },
 
     // Файловый транспорт
     file: {
-      enabled: process.env.LOG_FILE === "true" || process.env.NODE_ENV === "production",
-      level: "info",
-      path: process.env.LOG_PATH || "./logs",
-      filename: process.env.LOG_FILENAME || "heys-%DATE%.log",
-      datePattern: "YYYY-MM-DD",
-      maxSize: process.env.LOG_MAX_SIZE || "10m",
-      maxFiles: process.env.LOG_MAX_FILES || "14d",
-      compress: process.env.LOG_COMPRESS === "true",
+      enabled: process.env.LOG_FILE === 'true' || process.env.NODE_ENV === 'production',
+      level: 'info',
+      path: process.env.LOG_PATH || './logs',
+      filename: process.env.LOG_FILENAME || 'heys-%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      maxSize: process.env.LOG_MAX_SIZE || '10m',
+      maxFiles: process.env.LOG_MAX_FILES || '14d',
+      compress: process.env.LOG_COMPRESS === 'true',
     },
 
     // Файл ошибок
     error: {
       enabled: true,
-      level: "error",
-      path: process.env.LOG_PATH || "./logs",
-      filename: process.env.LOG_ERROR_FILENAME || "heys-error-%DATE%.log",
-      datePattern: "YYYY-MM-DD",
-      maxSize: "10m",
-      maxFiles: "30d",
+      level: 'error',
+      path: process.env.LOG_PATH || './logs',
+      filename: process.env.LOG_ERROR_FILENAME || 'heys-error-%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '10m',
+      maxFiles: '30d',
       handleExceptions: true,
       handleRejections: true,
     },
 
     // HTTP транспорт (для централизованного логирования)
     http: {
-      enabled: process.env.LOG_HTTP === "true",
-      level: "warn",
+      enabled: process.env.LOG_HTTP === 'true',
+      level: 'warn',
       endpoint: process.env.LOG_HTTP_ENDPOINT,
-      timeout: parseInt(process.env.LOG_HTTP_TIMEOUT || "5000"),
+      timeout: parseInt(process.env.LOG_HTTP_TIMEOUT || '5000'),
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: process.env.LOG_HTTP_AUTH,
       },
     },
@@ -81,9 +81,9 @@ export default {
 
   // Форматирование
   formatting: {
-    timestamp: "iso",
-    timezone: "UTC",
-    messageFormat: "[{service}] {level}: {message}",
+    timestamp: 'iso',
+    timezone: 'UTC',
+    messageFormat: '[{service}] {level}: {message}',
     includeStackTrace: true,
     maxMessageLength: 1000,
   },
@@ -91,48 +91,48 @@ export default {
   // Безопасность
   security: {
     redactFields: [
-      "password",
-      "token", 
-      "secret",
-      "authorization",
-      "cookie",
-      "session",
-      "apiKey",
-      "accessToken",
-      "refreshToken",
-      "creditCard",
-      "ssn",
-      "personalData",
+      'password',
+      'token',
+      'secret',
+      'authorization',
+      'cookie',
+      'session',
+      'apiKey',
+      'accessToken',
+      'refreshToken',
+      'creditCard',
+      'ssn',
+      'personalData',
     ],
-    maskingPattern: "[REDACTED]",
+    maskingPattern: '[REDACTED]',
   },
 
   // Производительность
   performance: {
     sampling: {
-      enabled: process.env.LOG_SAMPLING === "true",
-      rate: parseFloat(process.env.LOG_SAMPLING_RATE || "0.1"),
-      levels: ["debug", "trace"],
+      enabled: process.env.LOG_SAMPLING === 'true',
+      rate: parseFloat(process.env.LOG_SAMPLING_RATE || '0.1'),
+      levels: ['debug', 'trace'],
     },
     buffering: {
-      enabled: process.env.NODE_ENV === "production",
+      enabled: process.env.NODE_ENV === 'production',
       size: 100,
       flushInterval: 1000,
     },
     metrics: {
-      enabled: process.env.LOG_METRICS === "true",
-      slowRequestThreshold: parseInt(process.env.LOG_SLOW_THRESHOLD || "1000"),
+      enabled: process.env.LOG_METRICS === 'true',
+      slowRequestThreshold: parseInt(process.env.LOG_SLOW_THRESHOLD || '1000'),
     },
   },
 
   // Контексты логирования
   contexts: {
     http: {
-      includeHeaders: process.env.LOG_HTTP_HEADERS === "true",
-      includeBody: process.env.LOG_HTTP_BODY === "true",
+      includeHeaders: process.env.LOG_HTTP_HEADERS === 'true',
+      includeBody: process.env.LOG_HTTP_BODY === 'true',
       includeQuery: true,
       maxBodySize: 1024,
-      redactHeaders: ["authorization", "cookie"],
+      redactHeaders: ['authorization', 'cookie'],
     },
     error: {
       includeStackTrace: true,
@@ -154,10 +154,10 @@ export default {
     healthCheck: {
       enabled: true,
       interval: 30000,
-      endpoint: "/health/logging",
+      endpoint: '/health/logging',
     },
     alerts: {
-      enabled: process.env.LOG_ALERTS === "true",
+      enabled: process.env.LOG_ALERTS === 'true',
       errorThreshold: 10,
       timeWindow: 300000, // 5 минут
     },
@@ -165,11 +165,11 @@ export default {
 };
 
 // Экспорт конкретных функций для прямого использования
-export const createLogger = (serviceName = "heys-app") => {
+export const createLogger = (serviceName = 'heys-app') => {
   return {
     service: serviceName,
-    level: process.env.LOG_LEVEL || "info",
-    environment: process.env.NODE_ENV || "development",
+    level: process.env.LOG_LEVEL || 'info',
+    environment: process.env.NODE_ENV || 'development',
   };
 };
 
@@ -180,14 +180,14 @@ export const getTransportConfig = (transportName) => {
 
 // Дефолтный экспорт для обратной совместимости
 const loggingConfig = {
-  appName: "HEYS Platform",
+  appName: 'HEYS Platform',
   enabled: true,
-  defaultLevel: "info",
+  defaultLevel: 'info',
   // ... (все остальные настройки выше)
 };
 
 // CommonJS совместимость для анализатора
-if (typeof module !== "undefined" && module.exports) {
+if (typeof module !== 'undefined' && module.exports) {
   module.exports = loggingConfig;
   module.exports.default = loggingConfig;
   module.exports.createLogger = createLogger;

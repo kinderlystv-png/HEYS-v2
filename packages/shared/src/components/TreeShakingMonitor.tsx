@@ -9,8 +9,8 @@ import type { FC } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { getGlobalLogger } from '../monitoring/structured-logger';
-import { TreeShaker } from '../performance/TreeShaker';
 import type { TreeShakingAnalysis, UnusedExport } from '../performance/TreeShaker';
+import { TreeShaker } from '../performance/TreeShaker';
 
 interface TreeShakingMonitorProps {
   /** Путь к проекту для анализа */
@@ -63,10 +63,10 @@ export const TreeShakingMonitor: FC<TreeShakingMonitorProps> = ({
         metadata: { projectPath },
       });
       const result = await treeShaker.analyzeProject(projectPath);
-      
+
       setAnalysis(result);
       setLastAnalysisTime(new Date());
-      
+
       if (onAnalysisComplete) {
         onAnalysisComplete(result);
       }
@@ -124,8 +124,9 @@ export const TreeShakingMonitor: FC<TreeShakingMonitorProps> = ({
       };
     }
 
-    const totalExports = analysis.unusedExports.length + (analysis.totalFiles * 2); // Примерная оценка
-    const unusedPercentage = totalExports > 0 ? (analysis.unusedExports.length / totalExports) * 100 : 0;
+    const totalExports = analysis.unusedExports.length + analysis.totalFiles * 2; // Примерная оценка
+    const unusedPercentage =
+      totalExports > 0 ? (analysis.unusedExports.length / totalExports) * 100 : 0;
 
     return {
       totalFiles: analysis.totalFiles,
@@ -186,47 +187,55 @@ export const TreeShakingMonitor: FC<TreeShakingMonitorProps> = ({
   const healthColor = getHealthColor(stats.unusedPercentage);
 
   return (
-    <div style={{ 
-      fontFamily: 'Inter, system-ui, sans-serif',
-      padding: '20px',
-      backgroundColor: '#f8fafc',
-      borderRadius: '12px',
-      border: '1px solid #e2e8f0',
-      maxWidth: '1200px',
-      margin: '0 auto'
-    }}>
+    <div
+      style={{
+        fontFamily: 'Inter, system-ui, sans-serif',
+        padding: '20px',
+        backgroundColor: '#f8fafc',
+        borderRadius: '12px',
+        border: '1px solid #e2e8f0',
+        maxWidth: '1200px',
+        margin: '0 auto',
+      }}
+    >
       {/* Заголовок */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '24px' 
-      }}>
-        <h2 style={{ 
-          margin: 0, 
-          fontSize: '24px', 
-          fontWeight: 'bold',
-          color: '#1e293b',
+      <div
+        style={{
           display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '8px'
-        }}>
+          marginBottom: '24px',
+        }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            fontSize: '24px',
+            fontWeight: 'bold',
+            color: '#1e293b',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
           🌲 Tree Shaking Monitor
         </h2>
-        
+
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           {lastAnalysisTime && (
-            <span style={{ 
-              fontSize: '12px', 
-              color: '#64748b',
-              padding: '4px 8px',
-              backgroundColor: '#f1f5f9',
-              borderRadius: '6px'
-            }}>
+            <span
+              style={{
+                fontSize: '12px',
+                color: '#64748b',
+                padding: '4px 8px',
+                backgroundColor: '#f1f5f9',
+                borderRadius: '6px',
+              }}
+            >
               Последний анализ: {lastAnalysisTime.toLocaleTimeString()}
             </span>
           )}
-          
+
           <button
             onClick={performAnalysis}
             disabled={isAnalyzing}
@@ -241,7 +250,7 @@ export const TreeShakingMonitor: FC<TreeShakingMonitorProps> = ({
               fontWeight: '500',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
             }}
           >
             {isAnalyzing ? '🔄 Анализ...' : '▶️ Запустить анализ'}
@@ -251,27 +260,31 @@ export const TreeShakingMonitor: FC<TreeShakingMonitorProps> = ({
 
       {/* Ошибка */}
       {error && (
-        <div style={{
-          padding: '12px',
-          backgroundColor: '#fef2f2',
-          border: '1px solid #fecaca',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          color: '#dc2626'
-        }}>
+        <div
+          style={{
+            padding: '12px',
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            color: '#dc2626',
+          }}
+        >
           ❌ {error}
         </div>
       )}
 
       {/* Загрузка */}
       {isAnalyzing && (
-        <div style={{
-          padding: '40px',
-          textAlign: 'center',
-          backgroundColor: '#f1f5f9',
-          borderRadius: '8px',
-          marginBottom: '20px'
-        }}>
+        <div
+          style={{
+            padding: '40px',
+            textAlign: 'center',
+            backgroundColor: '#f1f5f9',
+            borderRadius: '8px',
+            marginBottom: '20px',
+          }}
+        >
           <div style={{ fontSize: '18px', marginBottom: '8px' }}>🔄</div>
           <div style={{ color: '#64748b' }}>Анализ tree shaking в процессе...</div>
         </div>
@@ -280,19 +293,23 @@ export const TreeShakingMonitor: FC<TreeShakingMonitorProps> = ({
       {/* Статистика */}
       {analysis && (
         <>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '16px', 
-            marginBottom: '24px' 
-          }}>
-            <div style={{
-              padding: '16px',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0',
-              textAlign: 'center'
-            }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '16px',
+              marginBottom: '24px',
+            }}
+          >
+            <div
+              style={{
+                padding: '16px',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                textAlign: 'center',
+              }}
+            >
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b' }}>
                 {stats.totalFiles}
               </div>
@@ -301,13 +318,15 @@ export const TreeShakingMonitor: FC<TreeShakingMonitorProps> = ({
               </div>
             </div>
 
-            <div style={{
-              padding: '16px',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0',
-              textAlign: 'center'
-            }}>
+            <div
+              style={{
+                padding: '16px',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                textAlign: 'center',
+              }}
+            >
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: healthColor }}>
                 {stats.unusedExports}
               </div>
@@ -316,13 +335,15 @@ export const TreeShakingMonitor: FC<TreeShakingMonitorProps> = ({
               </div>
             </div>
 
-            <div style={{
-              padding: '16px',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0',
-              textAlign: 'center'
-            }}>
+            <div
+              style={{
+                padding: '16px',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                textAlign: 'center',
+              }}
+            >
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: healthColor }}>
                 {stats.unusedPercentage.toFixed(1)}%
               </div>
@@ -331,13 +352,15 @@ export const TreeShakingMonitor: FC<TreeShakingMonitorProps> = ({
               </div>
             </div>
 
-            <div style={{
-              padding: '16px',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0',
-              textAlign: 'center'
-            }}>
+            <div
+              style={{
+                padding: '16px',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                textAlign: 'center',
+              }}
+            >
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#059669' }}>
                 {formatBytes(stats.potentialSavings)}
               </div>
@@ -348,75 +371,90 @@ export const TreeShakingMonitor: FC<TreeShakingMonitorProps> = ({
           </div>
 
           {/* Индикатор здоровья */}
-          <div style={{
-            padding: '16px',
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            border: '1px solid #e2e8f0',
-            marginBottom: '24px'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '8px'
-            }}>
-              <span style={{ fontWeight: '500', color: '#1e293b' }}>
-                Tree Shaking Health Score
-              </span>
-              <span style={{ 
-                fontSize: '14px', 
-                fontWeight: 'bold',
-                color: healthColor 
-              }}>
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+              marginBottom: '24px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '8px',
+              }}
+            >
+              <span style={{ fontWeight: '500', color: '#1e293b' }}>Tree Shaking Health Score</span>
+              <span
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  color: healthColor,
+                }}
+              >
                 {(100 - stats.unusedPercentage).toFixed(1)}%
               </span>
             </div>
-            
-            <div style={{
-              width: '100%',
-              height: '8px',
-              backgroundColor: '#f1f5f9',
-              borderRadius: '4px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                width: `${100 - stats.unusedPercentage}%`,
-                height: '100%',
-                backgroundColor: healthColor,
-                transition: 'width 0.3s ease'
-              }} />
+
+            <div
+              style={{
+                width: '100%',
+                height: '8px',
+                backgroundColor: '#f1f5f9',
+                borderRadius: '4px',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: `${100 - stats.unusedPercentage}%`,
+                  height: '100%',
+                  backgroundColor: healthColor,
+                  transition: 'width 0.3s ease',
+                }}
+              />
             </div>
           </div>
 
           {/* Рекомендации */}
           {analysis.recommendations.length > 0 && (
-            <div style={{
-              padding: '16px',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0',
-              marginBottom: '24px'
-            }}>
-              <h3 style={{ 
-                margin: '0 0 12px 0', 
-                fontSize: '18px', 
-                fontWeight: '600',
-                color: '#1e293b'
-              }}>
+            <div
+              style={{
+                padding: '16px',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                marginBottom: '24px',
+              }}
+            >
+              <h3
+                style={{
+                  margin: '0 0 12px 0',
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#1e293b',
+                }}
+              >
                 💡 Рекомендации по оптимизации
               </h3>
-              
+
               <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                 {analysis.recommendations.slice(0, 10).map((recommendation, index) => (
-                  <div key={index} style={{
-                    padding: '8px 12px',
-                    marginBottom: '4px',
-                    backgroundColor: '#f8fafc',
-                    borderLeft: '3px solid #3b82f6',
-                    fontSize: '14px',
-                    color: '#475569'
-                  }}>
+                  <div
+                    key={index}
+                    style={{
+                      padding: '8px 12px',
+                      marginBottom: '4px',
+                      backgroundColor: '#f8fafc',
+                      borderLeft: '3px solid #3b82f6',
+                      fontSize: '14px',
+                      color: '#475569',
+                    }}
+                  >
                     {recommendation}
                   </div>
                 ))}
@@ -426,128 +464,159 @@ export const TreeShakingMonitor: FC<TreeShakingMonitorProps> = ({
 
           {/* Детальная информация по файлам */}
           {showDetails && exportsByFile.size > 0 && (
-            <div style={{
-              padding: '16px',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0'
-            }}>
-              <h3 style={{ 
-                margin: '0 0 16px 0', 
-                fontSize: '18px', 
-                fontWeight: '600',
-                color: '#1e293b'
-              }}>
+            <div
+              style={{
+                padding: '16px',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+              }}
+            >
+              <h3
+                style={{
+                  margin: '0 0 16px 0',
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#1e293b',
+                }}
+              >
                 📋 Неиспользуемые экспорты по файлам
               </h3>
-              
+
               <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                 {Array.from(exportsByFile.entries())
                   .slice(0, maxDisplayItems)
                   .map(([fileName, unusedExports]) => (
-                  <div key={fileName} style={{
-                    marginBottom: '16px',
-                    padding: '12px',
-                    backgroundColor: '#f8fafc',
-                    borderRadius: '6px',
-                    border: '1px solid #e2e8f0'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '8px'
-                    }}>
-                      <span style={{ 
-                        fontWeight: '500', 
-                        color: '#1e293b',
-                        fontSize: '14px'
-                      }}>
-                        📄 {fileName}
-                      </span>
-                      <span style={{
-                        padding: '2px 8px',
-                        backgroundColor: '#fef3c7',
-                        color: '#92400e',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '500'
-                      }}>
-                        {unusedExports.length} экспортов
-                      </span>
+                    <div
+                      key={fileName}
+                      style={{
+                        marginBottom: '16px',
+                        padding: '12px',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '6px',
+                        border: '1px solid #e2e8f0',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '8px',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: '500',
+                            color: '#1e293b',
+                            fontSize: '14px',
+                          }}
+                        >
+                          📄 {fileName}
+                        </span>
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            backgroundColor: '#fef3c7',
+                            color: '#92400e',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                          }}
+                        >
+                          {unusedExports.length} экспортов
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                          gap: '4px',
+                        }}
+                      >
+                        {unusedExports
+                          .slice(0, 8)
+                          .map((unusedExport: UnusedExport, index: number) => (
+                            <div
+                              key={`${fileName}-${index}`}
+                              style={{
+                                padding: '4px 8px',
+                                backgroundColor: 'white',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                color: '#64748b',
+                                border: '1px solid #e2e8f0',
+                              }}
+                            >
+                              <span style={{ fontWeight: '500', color: '#ef4444' }}>
+                                {unusedExport.exportName}
+                              </span>
+                              <span style={{ color: '#9ca3af' }}> : {unusedExport.line}</span>
+                            </div>
+                          ))}
+                        {unusedExports.length > 8 && (
+                          <div
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#f1f5f9',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              color: '#64748b',
+                              textAlign: 'center',
+                            }}
+                          >
+                            +{unusedExports.length - 8} еще
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
-                      gap: '4px' 
-                    }}>
-                      {unusedExports.slice(0, 8).map((unusedExport: UnusedExport, index: number) => (
-                        <div key={`${fileName}-${index}`} style={{
-                          padding: '4px 8px',
-                          backgroundColor: 'white',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          color: '#64748b',
-                          border: '1px solid #e2e8f0'
-                        }}>
-                          <span style={{ fontWeight: '500', color: '#ef4444' }}>
-                            {unusedExport.exportName}
-                          </span>
-                          <span style={{ color: '#9ca3af' }}> : {unusedExport.line}</span>
-                        </div>
-                      ))}
-                      {unusedExports.length > 8 && (
-                        <div style={{
-                          padding: '4px 8px',
-                          backgroundColor: '#f1f5f9',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          color: '#64748b',
-                          textAlign: 'center'
-                        }}>
-                          +{unusedExports.length - 8} еще
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
           )}
 
           {/* Bundler оптимизации */}
           {analysis.bundlerOptimizations.length > 0 && (
-            <div style={{
-              padding: '16px',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0',
-              marginTop: '16px'
-            }}>
-              <h3 style={{ 
-                margin: '0 0 12px 0', 
-                fontSize: '18px', 
-                fontWeight: '600',
-                color: '#1e293b'
-              }}>
+            <div
+              style={{
+                padding: '16px',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                marginTop: '16px',
+              }}
+            >
+              <h3
+                style={{
+                  margin: '0 0 12px 0',
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#1e293b',
+                }}
+              >
                 ⚙️ Оптимизации bundler
               </h3>
-              
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-                gap: '8px' 
-              }}>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                  gap: '8px',
+                }}
+              >
                 {analysis.bundlerOptimizations.map((optimization, index) => (
-                  <div key={index} style={{
-                    padding: '8px 12px',
-                    backgroundColor: '#f0f9ff',
-                    borderLeft: '3px solid #0ea5e9',
-                    fontSize: '14px',
-                    color: '#0c4a6e',
-                    borderRadius: '4px'
-                  }}>
+                  <div
+                    key={index}
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: '#f0f9ff',
+                      borderLeft: '3px solid #0ea5e9',
+                      fontSize: '14px',
+                      color: '#0c4a6e',
+                      borderRadius: '4px',
+                    }}
+                  >
                     {optimization}
                   </div>
                 ))}
@@ -559,15 +628,19 @@ export const TreeShakingMonitor: FC<TreeShakingMonitorProps> = ({
 
       {/* Пустое состояние */}
       {!analysis && !isAnalyzing && !error && (
-        <div style={{
-          padding: '40px',
-          textAlign: 'center',
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          border: '1px solid #e2e8f0'
-        }}>
+        <div
+          style={{
+            padding: '40px',
+            textAlign: 'center',
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+          }}
+        >
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>🌲</div>
-          <div style={{ fontSize: '18px', fontWeight: '500', color: '#1e293b', marginBottom: '8px' }}>
+          <div
+            style={{ fontSize: '18px', fontWeight: '500', color: '#1e293b', marginBottom: '8px' }}
+          >
             Tree Shaking анализ не запущен
           </div>
           <div style={{ color: '#64748b', marginBottom: '20px' }}>

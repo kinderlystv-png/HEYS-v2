@@ -6,35 +6,21 @@
       "nodeModulesCount": 12,
       "dependencies": 3,
       "devDependencies": 5,
-      "dependencyList": [
-        "@heys/shared",
-        "date-fns",
-        "zod"
-      ]
+      "dependencyList": ["@heys/shared", "date-fns", "zod"]
     },
     "packages/ui": {
       "nodeModulesSize": 0,
       "nodeModulesCount": 13,
       "dependencies": 5,
       "devDependencies": 13,
-      "dependencyList": [
-        "@heys/core",
-        "@heys/shared",
-        "clsx",
-        "react",
-        "react-dom"
-      ]
+      "dependencyList": ["@heys/core", "@heys/shared", "clsx", "react", "react-dom"]
     },
     "packages/shared": {
       "nodeModulesSize": 0,
       "nodeModulesCount": 11,
       "dependencies": 3,
       "devDependencies": 3,
-      "dependencyList": [
-        "dompurify",
-        "zod",
-        "@supabase/supabase-js"
-      ]
+      "dependencyList": ["dompurify", "zod", "@supabase/supabase-js"]
     },
     "apps/web": {
       "nodeModulesSize": 0,
@@ -59,19 +45,14 @@
       "nodeModulesCount": 7,
       "dependencies": 1,
       "devDependencies": 3,
-      "dependencyList": [
-        "@heys/core"
-      ]
+      "dependencyList": ["@heys/core"]
     },
     "packages/search": {
       "nodeModulesSize": 0,
       "nodeModulesCount": 9,
       "dependencies": 2,
       "devDependencies": 4,
-      "dependencyList": [
-        "@heys/core",
-        "fuse.js"
-      ]
+      "dependencyList": ["@heys/core", "fuse.js"]
     }
   },
   "totalSize": 0,

@@ -1,20 +1,20 @@
 // filepath: apps/web/src/middleware/__tests__/security.test.ts
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { CORSConfig, SecurityConfig } from '../security';
 import {
-  SecurityMiddleware,
-  CORSMiddleware,
-  createSecurityMiddleware,
-  createCORSMiddleware,
-  createSecurityStack,
-  STRICT_SECURITY_CONFIG,
-  DEVELOPMENT_SECURITY_CONFIG,
+  basicCORS,
   basicSecurity,
-  strictSecurity,
+  CORSMiddleware,
+  createCORSMiddleware,
+  createSecurityMiddleware,
+  createSecurityStack,
+  DEVELOPMENT_SECURITY_CONFIG,
   developmentSecurity,
-  basicCORS
+  SecurityMiddleware,
+  STRICT_SECURITY_CONFIG,
+  strictSecurity,
 } from '../security';
-import type { SecurityConfig, CORSConfig } from '../security';
 
 describe('SecurityMiddleware', () => {
   let mockRes: any;
@@ -25,13 +25,13 @@ describe('SecurityMiddleware', () => {
     mockRes = {
       setHeader: vi.fn(),
       status: vi.fn().mockReturnThis(),
-      end: vi.fn()
+      end: vi.fn(),
     };
     mockReq = {
       method: 'GET',
       headers: {
-        origin: 'https://heys.app'
-      }
+        origin: 'https://heys.app',
+      },
     };
     mockNext = vi.fn();
   });
@@ -44,7 +44,10 @@ describe('SecurityMiddleware', () => {
       expect(mockRes.setHeader).toHaveBeenCalledWith('X-Content-Type-Options', 'nosniff');
       expect(mockRes.setHeader).toHaveBeenCalledWith('X-Frame-Options', 'DENY');
       expect(mockRes.setHeader).toHaveBeenCalledWith('X-XSS-Protection', '1; mode=block');
-      expect(mockRes.setHeader).toHaveBeenCalledWith('Referrer-Policy', 'strict-origin-when-cross-origin');
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Referrer-Policy',
+        'strict-origin-when-cross-origin',
+      );
       expect(mockRes.setHeader).toHaveBeenCalledWith('X-Powered-By', 'HEYS');
       expect(mockNext).toHaveBeenCalled();
     });
@@ -55,9 +58,9 @@ describe('SecurityMiddleware', () => {
           enabled: true,
           directives: {
             'default-src': ["'self'"],
-            'script-src': ["'self'", "'unsafe-inline'"]
-          }
-        }
+            'script-src': ["'self'", "'unsafe-inline'"],
+          },
+        },
       };
 
       const middleware = createSecurityMiddleware(config);
@@ -65,11 +68,11 @@ describe('SecurityMiddleware', () => {
 
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Content-Security-Policy',
-        expect.stringContaining("default-src 'self'")
+        expect.stringContaining("default-src 'self'"),
       );
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Content-Security-Policy',
-        expect.stringContaining("script-src 'self' 'unsafe-inline'")
+        expect.stringContaining("script-src 'self' 'unsafe-inline'"),
       );
     });
 
@@ -79,8 +82,8 @@ describe('SecurityMiddleware', () => {
           enabled: true,
           maxAge: 31536000,
           includeSubDomains: true,
-          preload: true
-        }
+          preload: true,
+        },
       };
 
       const middleware = createSecurityMiddleware(config);
@@ -88,17 +91,17 @@ describe('SecurityMiddleware', () => {
 
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Strict-Transport-Security',
-        'max-age=31536000; includeSubDomains; preload'
+        'max-age=31536000; includeSubDomains; preload',
       );
     });
 
     it('должен применять Permissions Policy', () => {
       const config: SecurityConfig = {
         permissionsPolicy: {
-          'camera': ['()'],
-          'microphone': ['()'],
-          'geolocation': ['()']
-        }
+          camera: ['()'],
+          microphone: ['()'],
+          geolocation: ['()'],
+        },
       };
 
       const middleware = createSecurityMiddleware(config);
@@ -106,7 +109,7 @@ describe('SecurityMiddleware', () => {
 
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Permissions-Policy',
-        'camera=(()), microphone=(()), geolocation=(())'
+        'camera=(()), microphone=(()), geolocation=(())',
       );
     });
 
@@ -116,21 +119,30 @@ describe('SecurityMiddleware', () => {
         frameguard: false,
         xssFilter: false,
         contentSecurityPolicy: {
-          enabled: false
+          enabled: false,
         },
         hsts: {
-          enabled: false
-        }
+          enabled: false,
+        },
       };
 
       const middleware = createSecurityMiddleware(config);
       middleware(mockReq, mockRes, mockNext);
 
-      expect(mockRes.setHeader).not.toHaveBeenCalledWith('X-Content-Type-Options', expect.any(String));
+      expect(mockRes.setHeader).not.toHaveBeenCalledWith(
+        'X-Content-Type-Options',
+        expect.any(String),
+      );
       expect(mockRes.setHeader).not.toHaveBeenCalledWith('X-Frame-Options', expect.any(String));
       expect(mockRes.setHeader).not.toHaveBeenCalledWith('X-XSS-Protection', expect.any(String));
-      expect(mockRes.setHeader).not.toHaveBeenCalledWith('Content-Security-Policy', expect.any(String));
-      expect(mockRes.setHeader).not.toHaveBeenCalledWith('Strict-Transport-Security', expect.any(String));
+      expect(mockRes.setHeader).not.toHaveBeenCalledWith(
+        'Content-Security-Policy',
+        expect.any(String),
+      );
+      expect(mockRes.setHeader).not.toHaveBeenCalledWith(
+        'Strict-Transport-Security',
+        expect.any(String),
+      );
     });
   });
 
@@ -151,9 +163,9 @@ describe('SecurityMiddleware', () => {
         contentSecurityPolicy: {
           enabled: true,
           directives: {
-            'script-src': ["'self'", 'https://custom.cdn.com']
-          }
-        }
+            'script-src': ["'self'", 'https://custom.cdn.com'],
+          },
+        },
       };
 
       const securityMiddleware = new SecurityMiddleware(customConfig);
@@ -164,7 +176,7 @@ describe('SecurityMiddleware', () => {
       expect(mockRes.setHeader).toHaveBeenCalledWith('X-Frame-Options', 'SAMEORIGIN');
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Content-Security-Policy',
-        expect.stringContaining("script-src 'self' https://custom.cdn.com")
+        expect.stringContaining("script-src 'self' https://custom.cdn.com"),
       );
     });
   });
@@ -174,10 +186,13 @@ describe('SecurityMiddleware', () => {
       const middleware = createCORSMiddleware();
       middleware(mockReq, mockRes, mockNext);
 
-      expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Origin', 'https://heys.app');
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Access-Control-Allow-Origin',
+        'https://heys.app',
+      );
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Access-Control-Allow-Methods',
-        'GET, POST, PUT, DELETE, OPTIONS'
+        'GET, POST, PUT, DELETE, OPTIONS',
       );
       expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Credentials', 'true');
       expect(mockNext).toHaveBeenCalled();
@@ -195,7 +210,7 @@ describe('SecurityMiddleware', () => {
 
     it('должен проверять разрешенные origins', () => {
       const config: CORSConfig = {
-        origin: ['https://heys.app', 'https://admin.heys.app']
+        origin: ['https://heys.app', 'https://admin.heys.app'],
       };
 
       const middleware = createCORSMiddleware(config);
@@ -203,7 +218,10 @@ describe('SecurityMiddleware', () => {
       // Разрешенный origin
       mockReq.headers.origin = 'https://heys.app';
       middleware(mockReq, mockRes, mockNext);
-      expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Origin', 'https://heys.app');
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Access-Control-Allow-Origin',
+        'https://heys.app',
+      );
 
       // Сброс моков
       mockRes.setHeader.mockClear();
@@ -211,19 +229,25 @@ describe('SecurityMiddleware', () => {
       // Неразрешенный origin
       mockReq.headers.origin = 'https://malicious.com';
       middleware(mockReq, mockRes, mockNext);
-      expect(mockRes.setHeader).not.toHaveBeenCalledWith('Access-Control-Allow-Origin', 'https://malicious.com');
+      expect(mockRes.setHeader).not.toHaveBeenCalledWith(
+        'Access-Control-Allow-Origin',
+        'https://malicious.com',
+      );
     });
 
     it('должен разрешать все origins в development режиме', () => {
       const config: CORSConfig = {
-        origin: true
+        origin: true,
       };
 
       const middleware = createCORSMiddleware(config);
       mockReq.headers.origin = 'http://localhost:3000';
       middleware(mockReq, mockRes, mockNext);
 
-      expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Origin', 'http://localhost:3000');
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Access-Control-Allow-Origin',
+        'http://localhost:3000',
+      );
     });
   });
 
@@ -242,7 +266,7 @@ describe('SecurityMiddleware', () => {
       const customConfig: CORSConfig = {
         methods: ['GET', 'POST'],
         credentials: false,
-        optionsSuccessStatus: 200
+        optionsSuccessStatus: 200,
       };
 
       const corsMiddleware = new CORSMiddleware(customConfig);
@@ -251,7 +275,10 @@ describe('SecurityMiddleware', () => {
       middleware(mockReq, mockRes, mockNext);
 
       expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Methods', 'GET, POST');
-      expect(mockRes.setHeader).not.toHaveBeenCalledWith('Access-Control-Allow-Credentials', expect.any(String));
+      expect(mockRes.setHeader).not.toHaveBeenCalledWith(
+        'Access-Control-Allow-Credentials',
+        expect.any(String),
+      );
 
       // Тест для OPTIONS
       mockReq.method = 'OPTIONS';
@@ -270,9 +297,15 @@ describe('SecurityMiddleware', () => {
       middleware(mockReq, mockRes, mockNext);
 
       // Проверяем что применяются и CORS и Security headers
-      expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Origin', 'https://heys.app');
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Access-Control-Allow-Origin',
+        'https://heys.app',
+      );
       expect(mockRes.setHeader).toHaveBeenCalledWith('X-Frame-Options', 'SAMEORIGIN');
-      expect(mockRes.setHeader).not.toHaveBeenCalledWith('Access-Control-Allow-Credentials', expect.any(String));
+      expect(mockRes.setHeader).not.toHaveBeenCalledWith(
+        'Access-Control-Allow-Credentials',
+        expect.any(String),
+      );
       expect(mockNext).toHaveBeenCalled();
     });
   });
@@ -284,11 +317,11 @@ describe('SecurityMiddleware', () => {
 
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Content-Security-Policy',
-        expect.stringContaining("default-src 'self'")
+        expect.stringContaining("default-src 'self'"),
       );
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Strict-Transport-Security',
-        'max-age=63072000; includeSubDomains; preload'
+        'max-age=63072000; includeSubDomains; preload',
       );
     });
 
@@ -298,10 +331,13 @@ describe('SecurityMiddleware', () => {
 
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Content-Security-Policy',
-        expect.stringContaining("'unsafe-eval'")
+        expect.stringContaining("'unsafe-eval'"),
       );
       expect(mockRes.setHeader).toHaveBeenCalledWith('X-Frame-Options', 'SAMEORIGIN');
-      expect(mockRes.setHeader).not.toHaveBeenCalledWith('Strict-Transport-Security', expect.any(String));
+      expect(mockRes.setHeader).not.toHaveBeenCalledWith(
+        'Strict-Transport-Security',
+        expect.any(String),
+      );
     });
   });
 
@@ -316,7 +352,7 @@ describe('SecurityMiddleware', () => {
       strictSecurity(mockReq, mockRes, mockNext);
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Strict-Transport-Security',
-        'max-age=63072000; includeSubDomains; preload'
+        'max-age=63072000; includeSubDomains; preload',
       );
       expect(mockNext).toHaveBeenCalled();
     });
@@ -329,7 +365,10 @@ describe('SecurityMiddleware', () => {
 
     it('basicCORS должен работать корректно', () => {
       basicCORS(mockReq, mockRes, mockNext);
-      expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Origin', 'https://heys.app');
+      expect(mockRes.setHeader).toHaveBeenCalledWith(
+        'Access-Control-Allow-Origin',
+        'https://heys.app',
+      );
       expect(mockNext).toHaveBeenCalled();
     });
   });
@@ -340,22 +379,28 @@ describe('SecurityMiddleware', () => {
       const middleware = createCORSMiddleware({ origin: ['https://heys.app'] });
       middleware(mockReq, mockRes, mockNext);
 
-      expect(mockRes.setHeader).not.toHaveBeenCalledWith('Access-Control-Allow-Origin', expect.any(String));
+      expect(mockRes.setHeader).not.toHaveBeenCalledWith(
+        'Access-Control-Allow-Origin',
+        expect.any(String),
+      );
       expect(mockNext).toHaveBeenCalled();
     });
 
     it('должен обрабатывать пустые директивы CSP', () => {
       const config: SecurityConfig = {
         contentSecurityPolicy: {
-          enabled: false // Отключаем CSP
-        }
+          enabled: false, // Отключаем CSP
+        },
       };
 
       const middleware = createSecurityMiddleware(config);
       middleware(mockReq, mockRes, mockNext);
 
       // CSP не должен быть установлен
-      expect(mockRes.setHeader).not.toHaveBeenCalledWith('Content-Security-Policy', expect.any(String));
+      expect(mockRes.setHeader).not.toHaveBeenCalledWith(
+        'Content-Security-Policy',
+        expect.any(String),
+      );
     });
 
     it('должен обрабатывать HSTS без дополнительных параметров', () => {
@@ -364,8 +409,8 @@ describe('SecurityMiddleware', () => {
           enabled: true,
           maxAge: 3600,
           includeSubDomains: false,
-          preload: false
-        }
+          preload: false,
+        },
       };
 
       const middleware = createSecurityMiddleware(config);
@@ -402,43 +447,49 @@ describe('Integration Tests', () => {
     mockRes = {
       setHeader: vi.fn(),
       status: vi.fn().mockReturnThis(),
-      end: vi.fn()
+      end: vi.fn(),
     };
     mockReq = {
       method: 'POST',
       headers: {
         origin: 'https://heys.app',
-        'content-type': 'application/json'
-      }
+        'content-type': 'application/json',
+      },
     };
     mockNext = vi.fn();
   });
 
   it('должен интегрироваться с HEYS API endpoints', () => {
-    const middleware = createSecurityStack(
-      STRICT_SECURITY_CONFIG,
-      { origin: ['https://heys.app'], credentials: true }
-    );
+    const middleware = createSecurityStack(STRICT_SECURITY_CONFIG, {
+      origin: ['https://heys.app'],
+      credentials: true,
+    });
 
     middleware(mockReq, mockRes, mockNext);
 
     // Проверяем критичные security headers для API
     expect(mockRes.setHeader).toHaveBeenCalledWith('X-Content-Type-Options', 'nosniff');
     expect(mockRes.setHeader).toHaveBeenCalledWith('X-Frame-Options', 'DENY');
-    expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Origin', 'https://heys.app');
+    expect(mockRes.setHeader).toHaveBeenCalledWith(
+      'Access-Control-Allow-Origin',
+      'https://heys.app',
+    );
     expect(mockRes.setHeader).toHaveBeenCalledWith('Access-Control-Allow-Credentials', 'true');
     expect(mockNext).toHaveBeenCalled();
   });
 
   it('должен блокировать подозрительные запросы', () => {
     const corsMiddleware = createCORSMiddleware({
-      origin: ['https://heys.app']
+      origin: ['https://heys.app'],
     });
 
     // Подозрительный origin
     mockReq.headers.origin = 'https://malicious-site.com';
     corsMiddleware(mockReq, mockRes, mockNext);
 
-    expect(mockRes.setHeader).not.toHaveBeenCalledWith('Access-Control-Allow-Origin', 'https://malicious-site.com');
+    expect(mockRes.setHeader).not.toHaveBeenCalledWith(
+      'Access-Control-Allow-Origin',
+      'https://malicious-site.com',
+    );
   });
 });

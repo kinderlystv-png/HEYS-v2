@@ -2,25 +2,26 @@
 
 ## 📋 Статус реализации
 
-| Компонент | Статус | Тесты | Описание |
-|-----------|--------|-------|----------|
-| **JWT Auth Middleware** | ✅ Ready | 15/15 | Production-ready аутентификация |
-| **Input Validation Utils** | ✅ Ready | ⚪ Created | Comprehensive валидация с Zod |
-| **Security Headers** | ✅ Ready | 26/26 | CSP, HSTS, CORS protection |
-| **Demo Integration** | ✅ Ready | ⚪ Demo | Примеры использования |
+| Компонент                  | Статус   | Тесты      | Описание                        |
+| -------------------------- | -------- | ---------- | ------------------------------- |
+| **JWT Auth Middleware**    | ✅ Ready | 15/15      | Production-ready аутентификация |
+| **Input Validation Utils** | ✅ Ready | ⚪ Created | Comprehensive валидация с Zod   |
+| **Security Headers**       | ✅ Ready | 26/26      | CSP, HSTS, CORS protection      |
+| **Demo Integration**       | ✅ Ready | ⚪ Demo    | Примеры использования           |
 
 ---
 
 ## 🔧 Использование
 
 ### 1. JWT Authentication
+
 ```typescript
 import { requireAuth, requireAdmin, optionalAuth } from './middleware/auth';
 
 // Защищенный endpoint
 app.get('/api/profile', requireAuth(), handler);
 
-// Только для админов  
+// Только для админов
 app.get('/api/admin/users', requireAdmin(), handler);
 
 // Опциональная авторизация
@@ -28,6 +29,7 @@ app.get('/api/public/stats', optionalAuth(), handler);
 ```
 
 ### 2. Input Validation
+
 ```typescript
 import { validateHeysData, ValidationSchemas } from './utils/validator';
 
@@ -35,17 +37,25 @@ import { validateHeysData, ValidationSchemas } from './utils/validator';
 app.post('/api/users', validateHeysData('user'), handler);
 
 // Кастомная валидация
-app.post('/api/login', validateAndSanitize({
-  body: {
-    email: ValidationSchemas.email,
-    password: ValidationSchemas.password
-  }
-}), handler);
+app.post(
+  '/api/login',
+  validateAndSanitize({
+    body: {
+      email: ValidationSchemas.email,
+      password: ValidationSchemas.password,
+    },
+  }),
+  handler,
+);
 ```
 
 ### 3. Security Headers
+
 ```typescript
-import { createSecurityStack, STRICT_SECURITY_CONFIG } from './middleware/security';
+import {
+  createSecurityStack,
+  STRICT_SECURITY_CONFIG,
+} from './middleware/security';
 
 // Применить ко всему приложению
 app.use(createSecurityStack(STRICT_SECURITY_CONFIG));
@@ -56,13 +66,15 @@ app.use(createSecurityStack(STRICT_SECURITY_CONFIG));
 ## 🧪 Тестирование
 
 ### ✅ JWT Auth Middleware (15 тестов)
+
 - Token validation
 - Role checking (admin/user)
 - Express middleware integration
 - Error handling
 - Authentication flows
 
-### ✅ Security Middleware (26 тестов)  
+### ✅ Security Middleware (26 тестов)
+
 - CSP headers configuration
 - HSTS settings
 - CORS origin validation
@@ -71,6 +83,7 @@ app.use(createSecurityStack(STRICT_SECURITY_CONFIG));
 - Performance tests
 
 ### 📝 Input Validation (Ready)
+
 - Zod schema validation
 - SQL injection detection
 - XSS protection
@@ -82,11 +95,13 @@ app.use(createSecurityStack(STRICT_SECURITY_CONFIG));
 ## 🚀 Production Readiness
 
 ### ✅ Готово к развертыванию:
+
 1. **Authentication система** - полностью протестирована
 2. **Security headers** - настроены для production
 3. **Input validation** - comprehensive защита
 
 ### 📋 Следующие шаги (КТ3):
+
 1. Применить middleware к существующим API routes
 2. Настроить RLS policies в Supabase
 3. Интегрировать в CI/CD pipeline
@@ -99,7 +114,7 @@ app.use(createSecurityStack(STRICT_SECURITY_CONFIG));
 apps/web/src/
 ├── middleware/
 │   ├── auth.ts              # JWT Authentication ✅
-│   ├── security.ts          # Security Headers ✅  
+│   ├── security.ts          # Security Headers ✅
 │   ├── demo-usage.ts        # Usage Examples ✅
 │   └── __tests__/
 │       ├── auth.test.ts     # 15/15 passed ✅
@@ -117,12 +132,14 @@ apps/web/src/
 ### Реализованные меры безопасности:
 
 #### 🛡️ **Input Protection**
+
 - SQL Injection detection & prevention
-- XSS attack blocking  
+- XSS attack blocking
 - Data sanitization (objects, strings, deep)
 - Type-safe validation with Zod
 
-#### 🔒 **HTTP Security**  
+#### 🔒 **HTTP Security**
+
 - Content Security Policy (CSP)
 - HTTP Strict Transport Security (HSTS)
 - Cross-Origin Resource Sharing (CORS)
@@ -131,6 +148,7 @@ apps/web/src/
 - Permissions Policy (browser APIs control)
 
 #### 🔑 **Authentication & Authorization**
+
 - JWT token validation
 - Role-based access control
 - Supabase integration
@@ -156,6 +174,6 @@ apps/web/src/
 ✅ **Production-ready** middleware  
 ✅ **Comprehensive защита** от основных угроз  
 ✅ **TypeScript support** с type safety  
-✅ **Express compatibility** для легкой интеграции  
+✅ **Express compatibility** для легкой интеграции
 
 **Готовы к переходу на КТ3: Supabase Security!** 🚀

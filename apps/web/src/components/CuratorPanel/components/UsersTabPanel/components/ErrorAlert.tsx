@@ -9,28 +9,17 @@ interface ErrorAlertProps {
   className?: string;
 }
 
-const ErrorAlert: React.FC<ErrorAlertProps> = ({ 
-  message, 
-  error, 
-  onRetry,
-  className = ''
-}) => {
+const ErrorAlert: React.FC<ErrorAlertProps> = ({ message, error, onRetry, className = '' }) => {
   return (
     <div className={`error-alert ${className}`} role="alert">
-      <div className="error-icon" aria-hidden="true">❌</div>
+      <div className="error-icon" aria-hidden="true">
+        ❌
+      </div>
       <div className="error-content">
         <h3 className="error-title">{message}</h3>
-        {error && (
-          <p className="error-details">
-            {error.message}
-          </p>
-        )}
+        {error && <p className="error-details">{error.message}</p>}
         {onRetry && (
-          <button 
-            type="button"
-            className="retry-button"
-            onClick={onRetry}
-          >
+          <button type="button" className="retry-button" onClick={onRetry}>
             Попробовать снова
           </button>
         )}

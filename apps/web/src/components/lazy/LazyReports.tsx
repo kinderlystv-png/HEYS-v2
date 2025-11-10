@@ -14,18 +14,18 @@ const ReportsGenerator = createChunkedLazyComponent(
   {
     retries: 3,
     timeout: 10000,
-    preloadOnHover: true
-  }
+    preloadOnHover: true,
+  },
 );
 
 const ReportsViewer = createChunkedLazyComponent(
   'PAGES',
-  'reports-viewer', 
+  'reports-viewer',
   () => Promise.resolve({ default: ReportsViewerComponent }),
   {
     retries: 2,
-    timeout: 8000
-  }
+    timeout: 8000,
+  },
 );
 
 const ReportsExporter = createChunkedLazyComponent(
@@ -34,18 +34,18 @@ const ReportsExporter = createChunkedLazyComponent(
   () => Promise.resolve({ default: ReportsExporterComponent }),
   {
     retries: 2,
-    timeout: 6000
-  }
+    timeout: 6000,
+  },
 );
 
 const ReportsHistory = createChunkedLazyComponent(
-  'PAGES', 
+  'PAGES',
   'reports-history',
   () => Promise.resolve({ default: ReportsHistoryComponent }),
   {
     retries: 2,
-    timeout: 5000
-  }
+    timeout: 5000,
+  },
 );
 
 interface LazyReportsProps {
@@ -72,7 +72,7 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
   filters,
   onGenerate,
   onExport,
-  onError
+  onError,
 }) => {
   const [activeTab, setActiveTab] = React.useState<string>(mode === 'full' ? 'generator' : mode);
   const [preloadedComponents, setPreloadedComponents] = React.useState<Set<string>>(new Set());
@@ -82,32 +82,33 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
     if (process.env.NODE_ENV === 'development') {
       // eslint-disable-next-line no-console
       if (process.env.NODE_ENV === 'development') {
-
         // eslint-disable-next-line no-console
 
         console.error(`❌ Failed to load Reports ${componentName}:`, error);
-    }
+      }
     }
     onError?.(error);
   }, []);
 
   // Preload при переключении табов
-  const handleTabHover = React.useCallback((tabName: string) => {
-    if (!preloadedComponents.has(tabName)) {
-      setPreloadedComponents(prev => new Set([...prev, tabName]));
-      
-      // Логируем preload
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
+  const handleTabHover = React.useCallback(
+    (tabName: string) => {
+      if (!preloadedComponents.has(tabName)) {
+        setPreloadedComponents((prev) => new Set([...prev, tabName]));
+
+        // Логируем preload
         if (process.env.NODE_ENV === 'development') {
-
           // eslint-disable-next-line no-console
+          if (process.env.NODE_ENV === 'development') {
+            // eslint-disable-next-line no-console
 
-          console.log(`🚀 Preloading reports ${tabName} component`);
-    }
+            console.log(`🚀 Preloading reports ${tabName} component`);
+          }
+        }
       }
-    }
-  }, [preloadedComponents]);
+    },
+    [preloadedComponents],
+  );
 
   // Single mode rendering
   if (mode !== 'full') {
@@ -116,45 +117,43 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
         case 'generator':
           return (
             <Suspense fallback={<ReportsSkeleton />}>
-              <ReportsGenerator 
+              <ReportsGenerator
                 onGenerate={onGenerate}
                 filters={filters}
                 onError={(error: Error) => handleComponentError(error, 'Generator')}
               />
             </Suspense>
           );
-        
+
         case 'viewer':
           return (
             <Suspense fallback={<ReportsSkeleton />}>
-              <ReportsViewer 
+              <ReportsViewer
                 data={reportsData}
                 filters={filters}
                 onError={(error: Error) => handleComponentError(error, 'Viewer')}
               />
             </Suspense>
           );
-        
+
         case 'exporter':
           return (
             <Suspense fallback={<ReportsSkeleton />}>
-              <ReportsExporter 
+              <ReportsExporter
                 data={reportsData}
                 onExport={onExport}
                 onError={(error: Error) => handleComponentError(error, 'Exporter')}
               />
             </Suspense>
           );
-        
+
         case 'history':
           return (
             <Suspense fallback={<ReportsSkeleton />}>
-              <ReportsHistory 
-                onError={(error: Error) => handleComponentError(error, 'History')}
-              />
+              <ReportsHistory onError={(error: Error) => handleComponentError(error, 'History')} />
             </Suspense>
           );
-        
+
         default:
           return <div>Unknown reports mode: {mode}</div>;
       }
@@ -167,17 +166,20 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
   return (
     <div className="lazy-reports-full">
       {/* Tab Navigation */}
-      <div style={{
-        display: 'flex',
-        borderBottom: '1px solid #e0e0e0',
-        marginBottom: '20px',
-        gap: '8px'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          borderBottom: '1px solid #e0e0e0',
+          marginBottom: '20px',
+          gap: '8px',
+        }}
+      >
         {[
           { key: 'generator', label: '📊 Генератор', icon: '⚡' },
           { key: 'viewer', label: '👁️ Просмотр', icon: '🔍' },
           { key: 'exporter', label: '📤 Экспорт', icon: '💾' },
-          { key: 'history', label: '📚 История', icon: '⏰' }].map((tab: unknown) => (
+          { key: 'history', label: '📚 История', icon: '⏰' },
+        ].map((tab: unknown) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -194,7 +196,7 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
               fontWeight: '500',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
             }}
           >
             <span>{tab.icon}</span>
@@ -210,7 +212,7 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
       <div className="reports-tab-content">
         {activeTab === 'generator' && (
           <Suspense fallback={<ReportsSkeleton />}>
-            <ReportsGenerator 
+            <ReportsGenerator
               onGenerate={onGenerate}
               filters={filters}
               onError={(error: Error) => handleComponentError(error, 'Generator')}
@@ -220,7 +222,7 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
 
         {activeTab === 'viewer' && (
           <Suspense fallback={<ReportsSkeleton />}>
-            <ReportsViewer 
+            <ReportsViewer
               data={reportsData}
               filters={filters}
               onError={(error: Error) => handleComponentError(error, 'Viewer')}
@@ -230,7 +232,7 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
 
         {activeTab === 'exporter' && (
           <Suspense fallback={<ReportsSkeleton />}>
-            <ReportsExporter 
+            <ReportsExporter
               data={reportsData}
               onExport={onExport}
               onError={(error: Error) => handleComponentError(error, 'Exporter')}
@@ -240,26 +242,26 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
 
         {activeTab === 'history' && (
           <Suspense fallback={<ReportsSkeleton />}>
-            <ReportsHistory 
-              onError={(error: Error) => handleComponentError(error, 'History')}
-            />
+            <ReportsHistory onError={(error: Error) => handleComponentError(error, 'History')} />
           </Suspense>
         )}
       </div>
 
       {/* Preload indicator */}
       {preloadedComponents.size > 0 && (
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          left: '20px',
-          padding: '8px 12px',
-          backgroundColor: '#059669',
-          color: 'white',
-          borderRadius: '4px',
-          fontSize: '12px',
-          zIndex: 1000
-        }}>
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            left: '20px',
+            padding: '8px 12px',
+            backgroundColor: '#059669',
+            color: 'white',
+            borderRadius: '4px',
+            fontSize: '12px',
+            zIndex: 1000,
+          }}
+        >
           🚀 Preloaded: {Array.from(preloadedComponents).join(', ')}
         </div>
       )}
@@ -278,35 +280,46 @@ const ReportsGeneratorComponent: React.FC<Record<string, unknown>> = ({ onGenera
   const handleGenerate = React.useCallback(async () => {
     setIsGenerating(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Симуляция генерации
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Симуляция генерации
       const reportConfig = { type: reportType, range: dateRange, filters };
       onGenerate?.(reportConfig);
       if (process.env.NODE_ENV === 'development') {
-
         // eslint-disable-next-line no-console
 
         console.log('✅ Report generated:', reportConfig);
-    }
+      }
     } catch (error) {
       onError?.(error as Error);
     } finally {
       setIsGenerating(false);
     }
-  }, [reportType, dateRange, filters, onGenerate,]);
+  }, [reportType, dateRange, filters, onGenerate]);
 
   return (
     <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
       <h2>📊 Генератор отчетов</h2>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '16px',
+          marginBottom: '20px',
+        }}
+      >
         <div>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
             Тип отчета:
           </label>
-          <select 
-            value={reportType} 
+          <select
+            value={reportType}
             onChange={(e) => setReportType(e.target.value)}
-            style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+            style={{
+              width: '100%',
+              padding: '8px',
+              border: '1px solid #d1d5db',
+              borderRadius: '4px',
+            }}
           >
             <option value="analytics">Analytics Report</option>
             <option value="performance">Performance Report</option>
@@ -314,15 +327,20 @@ const ReportsGeneratorComponent: React.FC<Record<string, unknown>> = ({ onGenera
             <option value="revenue">Revenue Report</option>
           </select>
         </div>
-        
+
         <div>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
             Период:
           </label>
-          <select 
-            value={dateRange} 
+          <select
+            value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
-            style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+            style={{
+              width: '100%',
+              padding: '8px',
+              border: '1px solid #d1d5db',
+              borderRadius: '4px',
+            }}
           >
             <option value="day">За день</option>
             <option value="week">За неделю</option>
@@ -342,12 +360,12 @@ const ReportsGeneratorComponent: React.FC<Record<string, unknown>> = ({ onGenera
           border: 'none',
           borderRadius: '4px',
           cursor: isGenerating ? 'not-allowed' : 'pointer',
-          fontWeight: '500'
+          fontWeight: '500',
         }}
       >
         {isGenerating ? '⏳ Генерация...' : '🚀 Сгенерировать отчет'}
       </button>
-      
+
       <div style={{ fontSize: '12px', color: '#666', marginTop: '16px' }}>
         Bundle: reports-generator.js | Filters: {JSON.stringify(filters)}
       </div>
@@ -366,9 +384,16 @@ const ReportsViewerComponent: React.FC<Record<string, unknown>> = ({ data, filte
 
   return (
     <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px',
+        }}
+      >
         <h2>👁️ Просмотр отчетов</h2>
-        
+
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={() => setViewMode('table')}
@@ -378,7 +403,7 @@ const ReportsViewerComponent: React.FC<Record<string, unknown>> = ({ data, filte
               color: viewMode === 'table' ? 'white' : '#666',
               border: '1px solid #d1d5db',
               borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             📊 Таблица
@@ -391,7 +416,7 @@ const ReportsViewerComponent: React.FC<Record<string, unknown>> = ({ data, filte
               color: viewMode === 'cards' ? 'white' : '#666',
               border: '1px solid #d1d5db',
               borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             🗃️ Карточки
@@ -419,27 +444,31 @@ const ReportsViewerComponent: React.FC<Record<string, unknown>> = ({ data, filte
                   <td style={{ padding: '12px 8px' }}>{report.name}</td>
                   <td style={{ padding: '12px 8px' }}>{report.date}</td>
                   <td style={{ padding: '12px 8px' }}>
-                    <span style={{
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      backgroundColor: report.status === 'Completed' ? '#dcfdf7' : '#fef3c7',
-                      color: report.status === 'Completed' ? '#059669' : '#d97706'
-                    }}>
+                    <span
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        backgroundColor: report.status === 'Completed' ? '#dcfdf7' : '#fef3c7',
+                        color: report.status === 'Completed' ? '#059669' : '#d97706',
+                      }}
+                    >
                       {report.status}
                     </span>
                   </td>
                   <td style={{ padding: '12px 8px' }}>{report.size}</td>
                   <td style={{ padding: '12px 8px' }}>
-                    <button style={{ 
-                      padding: '4px 8px', 
-                      fontSize: '12px',
-                      backgroundColor: '#2563eb',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}>
+                    <button
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                      }}
+                    >
                       📥 Скачать
                     </button>
                   </td>
@@ -449,35 +478,50 @@ const ReportsViewerComponent: React.FC<Record<string, unknown>> = ({ data, filte
           </table>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '16px',
+          }}
+        >
           {sampleData.map((report: unknown) => (
-            <div key={report.id} style={{
-              padding: '16px',
-              border: '1px solid #e0e0e0',
-              borderRadius: '8px',
-              backgroundColor: '#f8f9fa'
-            }}>
+            <div
+              key={report.id}
+              style={{
+                padding: '16px',
+                border: '1px solid #e0e0e0',
+                borderRadius: '8px',
+                backgroundColor: '#f8f9fa',
+              }}
+            >
               <h4>{report.name}</h4>
               <p style={{ color: '#666', marginBottom: '8px' }}>Дата: {report.date}</p>
               <p style={{ color: '#666', marginBottom: '8px' }}>Размер: {report.size}</p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  backgroundColor: report.status === 'Completed' ? '#dcfdf7' : '#fef3c7',
-                  color: report.status === 'Completed' ? '#059669' : '#d97706'
-                }}>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <span
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    backgroundColor: report.status === 'Completed' ? '#dcfdf7' : '#fef3c7',
+                    color: report.status === 'Completed' ? '#059669' : '#d97706',
+                  }}
+                >
                   {report.status}
                 </span>
-                <button style={{
-                  padding: '6px 12px',
-                  backgroundColor: '#2563eb',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}>
+                <button
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
                   📥 Скачать
                 </button>
               </div>
@@ -485,9 +529,9 @@ const ReportsViewerComponent: React.FC<Record<string, unknown>> = ({ data, filte
           ))}
         </div>
       )}
-      
+
       <div style={{ fontSize: '12px', color: '#666', marginTop: '16px' }}>
-        Bundle: reports-viewer.js | Active filters: {Object.keys(filters || {_}).length}
+        Bundle: reports-viewer.js | Active filters: {Object.keys(filters || { _ }).length}
       </div>
     </div>
   );
@@ -500,25 +544,24 @@ const ReportsExporterComponent: React.FC<Record<string, unknown>> = ({ data, onE
   const handleExport = React.useCallback(async () => {
     setIsExporting(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Симуляция экспорта
+      await new Promise((resolve) => setTimeout(resolve, 1500)); // Симуляция экспорта
       onExport?.(exportFormat, data);
       if (process.env.NODE_ENV === 'development') {
-
         // eslint-disable-next-line no-console
 
         console.log(`✅ Exported as ${exportFormat}:`, data);
-    }
+      }
     } catch (error) {
       onError?.(error as Error);
     } finally {
       setIsExporting(false);
     }
-  }, [exportFormat, data, onExport,]);
+  }, [exportFormat, data, onExport]);
 
   return (
     <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
       <h2>📤 Экспорт отчетов</h2>
-      
+
       <div style={{ marginBottom: '20px' }}>
         <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
           Формат экспорта:
@@ -548,61 +591,90 @@ const ReportsExporterComponent: React.FC<Record<string, unknown>> = ({ data, onE
           border: 'none',
           borderRadius: '4px',
           cursor: isExporting ? 'not-allowed' : 'pointer',
-          fontWeight: '500'
+          fontWeight: '500',
         }}
       >
         {isExporting ? '⏳ Экспорт...' : `📤 Экспорт в ${exportFormat.toUpperCase()}`}
       </button>
-      
+
       <div style={{ fontSize: '12px', color: '#666', marginTop: '16px' }}>
-        Bundle: reports-exporter.js | Data size: {JSON.stringify(data || {_}).length} bytes
+        Bundle: reports-exporter.js | Data size: {JSON.stringify(data || { _ }).length} bytes
       </div>
     </div>
   );
 };
 
-const ReportsHistoryComponent: React.FC<Record<string, unknown>> = ({_}) => {
+const ReportsHistoryComponent: React.FC<Record<string, unknown>> = ({ _ }) => {
   const [historyData] = React.useState([
-    { id: 1, action: 'Generated Analytics Report', user: 'admin', timestamp: '2025-09-04 10:30:00', status: 'success' },
-    { id: 2, action: 'Exported Performance Report', user: 'manager', timestamp: '2025-09-04 09:15:00', status: 'success' },
-    { id: 3, action: 'Failed to generate Users Report', user: 'analyst', timestamp: '2025-09-04 08:45:00', status: 'error' },
-    { id: 4, action: 'Generated Revenue Report', user: 'admin', timestamp: '2025-09-03 16:20:00', status: 'success' },
+    {
+      id: 1,
+      action: 'Generated Analytics Report',
+      user: 'admin',
+      timestamp: '2025-09-04 10:30:00',
+      status: 'success',
+    },
+    {
+      id: 2,
+      action: 'Exported Performance Report',
+      user: 'manager',
+      timestamp: '2025-09-04 09:15:00',
+      status: 'success',
+    },
+    {
+      id: 3,
+      action: 'Failed to generate Users Report',
+      user: 'analyst',
+      timestamp: '2025-09-04 08:45:00',
+      status: 'error',
+    },
+    {
+      id: 4,
+      action: 'Generated Revenue Report',
+      user: 'admin',
+      timestamp: '2025-09-03 16:20:00',
+      status: 'success',
+    },
   ]);
 
   return (
     <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
       <h2>📚 История отчетов</h2>
-      
+
       <div style={{ marginBottom: '20px' }}>
         {historyData.map((item: unknown) => (
-          <div key={item.id} style={{
-            padding: '12px',
-            border: '1px solid #f0f0f0',
-            borderRadius: '4px',
-            marginBottom: '8px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
+          <div
+            key={item.id}
+            style={{
+              padding: '12px',
+              border: '1px solid #f0f0f0',
+              borderRadius: '4px',
+              marginBottom: '8px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <div>
               <div style={{ fontWeight: '500', marginBottom: '4px' }}>{item.action}</div>
               <div style={{ fontSize: '12px', color: '#666' }}>
                 {item.user} • {item.timestamp}
               </div>
             </div>
-            <span style={{
-              padding: '2px 8px',
-              borderRadius: '12px',
-              fontSize: '12px',
-              backgroundColor: item.status === 'success' ? '#dcfdf7' : '#fef2f2',
-              color: item.status === 'success' ? '#059669' : '#dc2626'
-            }}>
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: '12px',
+                fontSize: '12px',
+                backgroundColor: item.status === 'success' ? '#dcfdf7' : '#fef2f2',
+                color: item.status === 'success' ? '#059669' : '#dc2626',
+              }}
+            >
               {item.status === 'success' ? '✅ Success' : '❌ Error'}
             </span>
           </div>
         ))}
       </div>
-      
+
       <div style={{ fontSize: '12px', color: '#666' }}>
         Bundle: reports-history.js | History entries: {historyData.length}
       </div>
@@ -611,9 +683,9 @@ const ReportsHistoryComponent: React.FC<Record<string, unknown>> = ({_}) => {
 };
 
 // Экспорт компонентов для testing
-export { 
-  ReportsGeneratorComponent, 
-  ReportsViewerComponent, 
-  ReportsExporterComponent, 
-  ReportsHistoryComponent 
+export {
+  ReportsExporterComponent,
+  ReportsGeneratorComponent,
+  ReportsHistoryComponent,
+  ReportsViewerComponent,
 };

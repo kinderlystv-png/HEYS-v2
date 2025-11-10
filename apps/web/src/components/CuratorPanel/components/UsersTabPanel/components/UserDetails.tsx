@@ -6,7 +6,10 @@ import { CuratorUser, CuratorUserRole } from '../../../types/curator.types';
 
 interface UserDetailsProps {
   user: CuratorUser;
-  onRoleUpdate: (userId: string, newRole: CuratorUserRole) => Promise<{ success: boolean; error?: string }>;
+  onRoleUpdate: (
+    userId: string,
+    newRole: CuratorUserRole,
+  ) => Promise<{ success: boolean; error?: string }>;
   onClose: () => void;
   className?: string;
 }
@@ -15,7 +18,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({
   user,
   onRoleUpdate,
   onClose,
-  className = ''
+  className = '',
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
@@ -26,7 +29,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     }).format(date);
   };
 
@@ -52,14 +55,14 @@ const UserDetails: React.FC<UserDetailsProps> = ({
     { value: 'admin', label: 'Администратор', description: 'Полный доступ ко всем функциям' },
     { value: 'curator', label: 'Куратор', description: 'Управление пользователями и контентом' },
     { value: 'moderator', label: 'Модератор', description: 'Модерация контента' },
-    { value: 'user', label: 'Пользователь', description: 'Базовые права пользователя' }
+    { value: 'user', label: 'Пользователь', description: 'Базовые права пользователя' },
   ];
 
   const getStatusColor = (status: string) => {
     const colors = {
       active: 'green',
       inactive: 'orange',
-      suspended: 'red'
+      suspended: 'red',
     };
     return colors[status as keyof typeof colors] || 'gray';
   };
@@ -85,23 +88,24 @@ const UserDetails: React.FC<UserDetailsProps> = ({
             {user.avatar ? (
               <img src={user.avatar} alt={`Аватар ${user.name}`} />
             ) : (
-              <div className="avatar-placeholder large">
-                {user.name.charAt(0).toUpperCase()}
-              </div>
+              <div className="avatar-placeholder large">{user.name.charAt(0).toUpperCase()}</div>
             )}
           </div>
-          
+
           <div className="profile-info">
             <h4 className="profile-name">{user.name}</h4>
             <p className="profile-email">{user.email}</p>
             <div className={`profile-status status-${user.status}`}>
-              <span 
-                className="status-indicator" 
+              <span
+                className="status-indicator"
                 style={{ backgroundColor: getStatusColor(user.status) }}
                 aria-hidden="true"
               ></span>
-              {user.status === 'active' ? 'Активен' : 
-               user.status === 'inactive' ? 'Неактивен' : 'Заблокирован'}
+              {user.status === 'active'
+                ? 'Активен'
+                : user.status === 'inactive'
+                  ? 'Неактивен'
+                  : 'Заблокирован'}
             </div>
           </div>
         </div>

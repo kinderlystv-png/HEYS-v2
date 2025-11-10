@@ -24,28 +24,28 @@ function createBundleAnalyzerConfig(options = {}) {
       new BundleAnalyzerPlugin({
         // Режим работы: 'server', 'static', 'json', 'disabled'
         analyzerMode,
-        
+
         // Порт для server режима
         analyzerPort: 8888,
-        
+
         // Автоматически открывать браузер
         openAnalyzer,
-        
+
         // Путь для статических отчетов
         reportFilename: path.join(outputDir, 'bundle-report.html'),
-        
+
         // Путь для JSON отчета
         statsFilename: path.join(outputDir, 'bundle-stats.json'),
-        
+
         // Генерировать stats файл
         generateStatsFile,
-        
+
         // Логирование
         logLevel: 'info',
-        
+
         // Размер по умолчанию для отображения
         defaultSizes: 'gzip',
-        
+
         // Исключить модули меньше указанного размера (в байтах)
         statsOptions: {
           source: false,

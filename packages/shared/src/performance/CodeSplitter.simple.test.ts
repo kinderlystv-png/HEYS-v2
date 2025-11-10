@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { CodeSplitter } from './CodeSplitter';
 
@@ -14,9 +14,9 @@ describe('CodeSplitter - Упрощенные тесты', () => {
       const customSplitter = new CodeSplitter({
         chunkSizeThreshold: 500,
         excludePatterns: ['custom'],
-        routeBasedSplitting: true
+        routeBasedSplitting: true,
       });
-      
+
       expect(customSplitter).toBeDefined();
     });
   });
@@ -24,7 +24,7 @@ describe('CodeSplitter - Упрощенные тесты', () => {
   describe('Обработка паттернов исключения', () => {
     it('должен корректно обрабатывать простые паттерны', () => {
       const shouldExclude = (codeSplitter as any).shouldExclude.bind(codeSplitter);
-      
+
       expect(shouldExclude('node_modules/package')).toBe(true);
       expect(shouldExclude('dist/bundle.js')).toBe(true);
       expect(shouldExclude('src/component.tsx')).toBe(false);
@@ -32,7 +32,7 @@ describe('CodeSplitter - Упрощенные тесты', () => {
 
     it('должен корректно обрабатывать wildcard паттерны', () => {
       const shouldExclude = (codeSplitter as any).shouldExclude.bind(codeSplitter);
-      
+
       expect(shouldExclude('src/component.test.ts')).toBe(true);
       expect(shouldExclude('src/component.spec.tsx')).toBe(true);
       expect(shouldExclude('src/component.tsx')).toBe(false);
@@ -42,7 +42,7 @@ describe('CodeSplitter - Упрощенные тесты', () => {
   describe('Определение релевантных файлов', () => {
     it('должен определять JavaScript файлы как релевантные', () => {
       const isRelevantFile = (codeSplitter as any).isRelevantFile.bind(codeSplitter);
-      
+
       expect(isRelevantFile('component.js')).toBe(true);
       expect(isRelevantFile('component.jsx')).toBe(true);
       expect(isRelevantFile('component.ts')).toBe(true);
@@ -51,7 +51,7 @@ describe('CodeSplitter - Упрощенные тесты', () => {
 
     it('должен исключать нерелевантные файлы', () => {
       const isRelevantFile = (codeSplitter as any).isRelevantFile.bind(codeSplitter);
-      
+
       expect(isRelevantFile('styles.css')).toBe(false);
       expect(isRelevantFile('readme.md')).toBe(false);
       expect(isRelevantFile('config.json')).toBe(false);
@@ -80,35 +80,39 @@ describe('CodeSplitter - Упрощенные тесты', () => {
 
   describe('Генерация рекомендаций', () => {
     it('должен генерировать рекомендации для разных типов разделения', () => {
-      const generateRecommendations = (codeSplitter as any).generateRecommendations.bind(codeSplitter);
-      
+      const generateRecommendations = (codeSplitter as any).generateRecommendations.bind(
+        codeSplitter,
+      );
+
       const mockSplitPoints = [
         { type: 'route', path: '/test/routes', reason: 'Route-based splitting opportunity' },
         { type: 'vendor', path: '/test/vendor', reason: 'Large vendor library detected' },
-        { type: 'component', path: '/test/component', reason: 'Large component detected' }
+        { type: 'component', path: '/test/component', reason: 'Large component detected' },
       ];
-      
+
       const recommendations = generateRecommendations(mockSplitPoints);
-      
+
       expect(recommendations).toBeDefined();
       expect(recommendations.length).toBeGreaterThan(0);
-      expect(recommendations.some((rec: any) => rec.includes('Route') || rec.includes('маршрут'))).toBe(true);
+      expect(
+        recommendations.some((rec: any) => rec.includes('Route') || rec.includes('маршрут')),
+      ).toBe(true);
     });
 
     it('должен рассчитывать потенциальную экономию', () => {
       const calculateSavings = (codeSplitter as any).calculatePotentialSavings.bind(codeSplitter);
-      
+
       const mockAnalysis = {
         totalFiles: 50,
         splitPoints: [
           { estimatedSize: 100000 },
           { estimatedSize: 200000 },
-          { estimatedSize: 300000 }
-        ]
+          { estimatedSize: 300000 },
+        ],
       };
-      
+
       const savings = calculateSavings(mockAnalysis);
-      
+
       expect(savings).toBeDefined();
       expect(savings.initialBundle).toBeDefined();
       expect(savings.averageChunk).toBeDefined();

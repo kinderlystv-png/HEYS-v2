@@ -18,7 +18,7 @@ const createConsoleReplacer = () => {
     time: console.time,
     timeEnd: console.timeEnd,
     count: console.count,
-    clear: console.clear
+    clear: console.clear,
   };
 
   // Счетчики использования
@@ -35,7 +35,7 @@ const createConsoleReplacer = () => {
     timeEnd: 0,
     count: 0,
     clear: 0,
-    total: 0
+    total: 0,
   };
 
   // Создаем предупреждающие заместители
@@ -43,24 +43,24 @@ const createConsoleReplacer = () => {
     return (...args) => {
       usageStats[methodName]++;
       usageStats.total++;
-      
+
       // В development показываем предупреждение
       if (process.env.NODE_ENV === 'development') {
         originalConsole.warn(
-          `⚠️  [HEYS Logger] console.${methodName}() used instead of logger.${methodName}()`
+          `⚠️  [HEYS Logger] console.${methodName}() used instead of logger.${methodName}()`,
         );
         originalConsole.warn(`   Use: import { logger } from '@heys/logger'`);
         originalConsole.warn(`   Then: logger.${methodName}(${args.map(() => '...').join(', ')})`);
         originalConsole.warn('   Stack trace:');
         originalConsole.trace();
       }
-      
+
       // В production полностью блокируем
       if (process.env.NODE_ENV === 'production') {
         // Не выводим ничего, только считаем статистику
         return;
       }
-      
+
       // В остальных случаях пропускаем через оригинальный метод
       return originalConsole[methodName](...args);
     };
@@ -94,7 +94,7 @@ const createConsoleReplacer = () => {
     },
 
     resetStats() {
-      Object.keys(usageStats).forEach(key => {
+      Object.keys(usageStats).forEach((key) => {
         usageStats[key] = 0;
       });
     },
@@ -103,18 +103,20 @@ const createConsoleReplacer = () => {
     auditCode(codeString) {
       const consoleUsage = [];
       const lines = codeString.split('\n');
-      
+
       lines.forEach((line, index) => {
-        const consoleMatch = line.match(/console\.(log|error|warn|info|debug|trace|group|groupEnd|time|timeEnd|count|clear)/g);
+        const consoleMatch = line.match(
+          /console\.(log|error|warn|info|debug|trace|group|groupEnd|time|timeEnd|count|clear)/g,
+        );
         if (consoleMatch) {
           consoleUsage.push({
             line: index + 1,
             content: line.trim(),
-            methods: consoleMatch
+            methods: consoleMatch,
           });
         }
       });
-      
+
       return consoleUsage;
     },
 
@@ -127,7 +129,7 @@ const createConsoleReplacer = () => {
         .replace(/console\.info\(/g, 'logger.info(')
         .replace(/console\.debug\(/g, 'logger.debug(')
         .replace(/console\.trace\(/g, 'logger.trace(');
-    }
+    },
   };
 };
 
@@ -142,7 +144,7 @@ if (process.env.NODE_ENV === 'production') {
 // Экспорты
 module.exports = {
   consoleReplacer,
-  createConsoleReplacer
+  createConsoleReplacer,
 };
 
 // ES6 экспорт

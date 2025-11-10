@@ -105,7 +105,7 @@ export interface SecurityMetrics {
   event_types: string[];
 }
 
-// Top Threats Response  
+// Top Threats Response
 export interface TopThreat {
   ioc_value: string;
   ioc_type: string;
@@ -125,7 +125,9 @@ export class DatabaseService {
   }
 
   // Security Events
-  async createSecurityEvent(event: Omit<SecurityEvent, 'id' | 'created_at' | 'updated_at'>): Promise<SecurityEvent> {
+  async createSecurityEvent(
+    event: Omit<SecurityEvent, 'id' | 'created_at' | 'updated_at'>,
+  ): Promise<SecurityEvent> {
     const { data, error } = await this.supabase
       .from('security_events')
       .insert(event)
@@ -140,7 +142,7 @@ export class DatabaseService {
     userId: string,
     clientId?: string,
     limit = 100,
-    offset = 0
+    offset = 0,
   ): Promise<SecurityEvent[]> {
     let query = this.supabase
       .from('security_events')
@@ -160,7 +162,9 @@ export class DatabaseService {
   }
 
   // Security Incidents
-  async createSecurityIncident(incident: Omit<SecurityIncident, 'id' | 'created_at' | 'updated_at'>): Promise<SecurityIncident> {
+  async createSecurityIncident(
+    incident: Omit<SecurityIncident, 'id' | 'created_at' | 'updated_at'>,
+  ): Promise<SecurityIncident> {
     const { data, error } = await this.supabase
       .from('security_incidents')
       .insert(incident)
@@ -174,7 +178,7 @@ export class DatabaseService {
   async getSecurityIncidents(
     userId: string,
     clientId?: string,
-    status?: SecurityIncident['status']
+    status?: SecurityIncident['status'],
   ): Promise<SecurityIncident[]> {
     let query = this.supabase
       .from('security_incidents')
@@ -197,8 +201,8 @@ export class DatabaseService {
   }
 
   async updateSecurityIncident(
-    id: string, 
-    updates: Partial<Omit<SecurityIncident, 'id' | 'created_at'>>
+    id: string,
+    updates: Partial<Omit<SecurityIncident, 'id' | 'created_at'>>,
   ): Promise<SecurityIncident> {
     const { data, error } = await this.supabase
       .from('security_incidents')
@@ -212,7 +216,9 @@ export class DatabaseService {
   }
 
   // Analytics Metrics
-  async createAnalyticsMetric(metric: Omit<AnalyticsMetric, 'id' | 'created_at'>): Promise<AnalyticsMetric> {
+  async createAnalyticsMetric(
+    metric: Omit<AnalyticsMetric, 'id' | 'created_at'>,
+  ): Promise<AnalyticsMetric> {
     const { data, error } = await this.supabase
       .from('analytics_metrics')
       .insert(metric)
@@ -229,7 +235,7 @@ export class DatabaseService {
     metricName?: string,
     period?: AnalyticsMetric['aggregation_period'],
     startDate?: string,
-    endDate?: string
+    endDate?: string,
   ): Promise<AnalyticsMetric[]> {
     let query = this.supabase
       .from('analytics_metrics')
@@ -284,14 +290,17 @@ export class DatabaseService {
       .eq('is_active', true)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = no rows returned
       throw new Error(`Failed to check IOC match: ${error.message}`);
     }
     return data;
   }
 
   // Guest Sessions
-  async createGuestSession(session: Omit<GuestSession, 'id' | 'created_at' | 'updated_at'>): Promise<GuestSession> {
+  async createGuestSession(
+    session: Omit<GuestSession, 'id' | 'created_at' | 'updated_at'>,
+  ): Promise<GuestSession> {
     const { data, error } = await this.supabase
       .from('guest_sessions')
       .insert(session)
@@ -320,67 +329,69 @@ export class DatabaseService {
     userId: string,
     clientId?: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
   ): Promise<SecurityMetrics> {
-    const { data, error } = await this.supabase
-      .rpc('get_security_metrics', {
-        p_user_id: userId,
-        p_client_id: clientId || null,
-        p_start_date: startDate || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        p_end_date: endDate || new Date().toISOString()
-      });
+    const { data, error } = await this.supabase.rpc('get_security_metrics', {
+      p_user_id: userId,
+      p_client_id: clientId || null,
+      p_start_date: startDate || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      p_end_date: endDate || new Date().toISOString(),
+    });
 
     if (error) throw new Error(`Failed to get security metrics: ${error.message}`);
-    return data || {
-      total_events: 0,
-      unique_ips: 0,
-      error_rate: 0,
-      avg_response_time: 0,
-      failed_attempts: 0,
-      event_types: []
-    };
+    return (
+      data || {
+        total_events: 0,
+        unique_ips: 0,
+        error_rate: 0,
+        avg_response_time: 0,
+        failed_attempts: 0,
+        event_types: [],
+      }
+    );
   }
 
   async getTopThreats(limit = 10): Promise<TopThreat[]> {
-    const { data, error } = await this.supabase
-      .rpc('get_top_threats', { p_limit: limit });
+    const { data, error } = await this.supabase.rpc('get_top_threats', { p_limit: limit });
 
     if (error) throw new Error(`Failed to get top threats: ${error.message}`);
     return data || [];
   }
 
   // Real-time subscriptions
-  subscribeToSecurityEvents(
-    userId: string,
-    callback: (event: SecurityEvent) => void
-  ) {
+  subscribeToSecurityEvents(userId: string, callback: (event: SecurityEvent) => void) {
     return this.supabase
       .channel('security_events')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'security_events',
-        filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        callback(payload.new as SecurityEvent);
-      })
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'security_events',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          callback(payload.new as SecurityEvent);
+        },
+      )
       .subscribe();
   }
 
-  subscribeToSecurityIncidents(
-    userId: string,
-    callback: (incident: SecurityIncident) => void
-  ) {
+  subscribeToSecurityIncidents(userId: string, callback: (incident: SecurityIncident) => void) {
     return this.supabase
       .channel('security_incidents')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'security_incidents',
-        filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        callback(payload.new as SecurityIncident);
-      })
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'security_incidents',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          callback(payload.new as SecurityIncident);
+        },
+      )
       .subscribe();
   }
 }

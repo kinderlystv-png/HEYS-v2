@@ -8,10 +8,10 @@ interface LoadingSpinnerProps {
   className?: string;
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   message = 'Загрузка...',
   size = 'medium',
-  className = ''
+  className = '',
 }) => {
   return (
     <div className={`loading-spinner ${size} ${className}`} role="status" aria-live="polite">

@@ -1,7 +1,7 @@
 /**
  * @fileoverview Конфигурация для Lighthouse анализа
  * Модуль обеспечивает настройку анализа производительности
- * 
+ *
  * @author AI Assistant
  * @version 1.0.0
  * @since 2024
@@ -23,7 +23,7 @@ export const LIGHTHOUSE_CONFIGS = {
       accessibility: 90,
       bestPractices: 85,
       seo: 90,
-      pwa: 80
+      pwa: 80,
     },
     optimizations: {
       enableCriticalResourceOptimization: true,
@@ -32,7 +32,7 @@ export const LIGHTHOUSE_CONFIGS = {
       enableCSSOptimization: true,
       enableCaching: false,
       enableCompression: true,
-      enableServiceWorker: false
+      enableServiceWorker: false,
     },
     performanceThresholds: {
       firstContentfulPaint: 2000,
@@ -40,14 +40,14 @@ export const LIGHTHOUSE_CONFIGS = {
       firstInputDelay: 150,
       cumulativeLayoutShift: 0.15,
       speedIndex: 4000,
-      totalBlockingTime: 300
+      totalBlockingTime: 300,
     },
     analysis: {
       runCount: 1,
       device: 'desktop' as const,
       throttling: 'none' as const,
-      enableSourceMaps: true
-    }
+      enableSourceMaps: true,
+    },
   },
 
   /**
@@ -60,7 +60,7 @@ export const LIGHTHOUSE_CONFIGS = {
       accessibility: 95,
       bestPractices: 90,
       seo: 95,
-      pwa: 85
+      pwa: 85,
     },
     optimizations: {
       enableCriticalResourceOptimization: true,
@@ -69,7 +69,7 @@ export const LIGHTHOUSE_CONFIGS = {
       enableCSSOptimization: true,
       enableCaching: true,
       enableCompression: true,
-      enableServiceWorker: true
+      enableServiceWorker: true,
     },
     performanceThresholds: {
       firstContentfulPaint: 1500,
@@ -77,14 +77,14 @@ export const LIGHTHOUSE_CONFIGS = {
       firstInputDelay: 100,
       cumulativeLayoutShift: 0.1,
       speedIndex: 3000,
-      totalBlockingTime: 200
+      totalBlockingTime: 200,
     },
     analysis: {
       runCount: 3,
       device: 'both' as const,
       throttling: 'simulated3G' as const,
-      enableSourceMaps: false
-    }
+      enableSourceMaps: false,
+    },
   },
 
   /**
@@ -97,7 +97,7 @@ export const LIGHTHOUSE_CONFIGS = {
       accessibility: 90,
       bestPractices: 85,
       seo: 90,
-      pwa: 75
+      pwa: 75,
     },
     optimizations: {
       enableCriticalResourceOptimization: true,
@@ -106,7 +106,7 @@ export const LIGHTHOUSE_CONFIGS = {
       enableCSSOptimization: true,
       enableCaching: true,
       enableCompression: true,
-      enableServiceWorker: false
+      enableServiceWorker: false,
     },
     performanceThresholds: {
       firstContentfulPaint: 1800,
@@ -114,15 +114,15 @@ export const LIGHTHOUSE_CONFIGS = {
       firstInputDelay: 120,
       cumulativeLayoutShift: 0.12,
       speedIndex: 3500,
-      totalBlockingTime: 250
+      totalBlockingTime: 250,
     },
     analysis: {
       runCount: 2,
       device: 'mobile' as const,
       throttling: 'simulated4G' as const,
-      enableSourceMaps: false
-    }
-  }
+      enableSourceMaps: false,
+    },
+  },
 } as const;
 
 /**
@@ -141,8 +141,8 @@ export const LIGHTHOUSE_CLI_CONFIG = {
       '--disable-setuid-sandbox',
       '--disable-background-timer-throttling',
       '--disable-backgrounding-occluded-windows',
-      '--disable-renderer-backgrounding'
-    ]
+      '--disable-renderer-backgrounding',
+    ],
   },
 
   /**
@@ -175,7 +175,7 @@ export const LIGHTHOUSE_CLI_CONFIG = {
       'unminified-javascript',
       'efficient-animated-content',
       'duplicated-javascript',
-      'legacy-javascript'
+      'legacy-javascript',
     ],
 
     /**
@@ -217,8 +217,8 @@ export const LIGHTHOUSE_CLI_CONFIG = {
       'td-headers-attr',
       'th-has-data-cells',
       'valid-lang',
-      'video-caption'
-    ]
+      'video-caption',
+    ],
   },
 
   /**
@@ -231,8 +231,8 @@ export const LIGHTHOUSE_CLI_CONFIG = {
     networkConditions: {
       offline: false,
       latency: 150,
-      downloadThroughput: 1.6 * 1024 * 1024 / 8,
-      uploadThroughput: 750 * 1024 / 8
+      downloadThroughput: (1.6 * 1024 * 1024) / 8,
+      uploadThroughput: (750 * 1024) / 8,
     },
 
     /**
@@ -247,8 +247,8 @@ export const LIGHTHOUSE_CLI_CONFIG = {
     maxWaitForFcp: 30000,
     pauseAfterLoadMs: 1000,
     networkQuietThresholdMs: 1000,
-    cpuQuietThresholdMs: 1000
-  }
+    cpuQuietThresholdMs: 1000,
+  },
 };
 
 /**
@@ -260,10 +260,10 @@ export const PERFORMANCE_THRESHOLDS = {
    */
   coreWebVitals: {
     lcp: { good: 2500, poor: 4000 }, // Largest Contentful Paint
-    fid: { good: 100, poor: 300 },   // First Input Delay
-    cls: { good: 0.1, poor: 0.25 },  // Cumulative Layout Shift
+    fid: { good: 100, poor: 300 }, // First Input Delay
+    cls: { good: 0.1, poor: 0.25 }, // Cumulative Layout Shift
     fcp: { good: 1800, poor: 3000 }, // First Contentful Paint
-    inp: { good: 200, poor: 500 }    // Interaction to Next Paint
+    inp: { good: 200, poor: 500 }, // Interaction to Next Paint
   },
 
   /**
@@ -272,7 +272,7 @@ export const PERFORMANCE_THRESHOLDS = {
   other: {
     speedIndex: { good: 3400, poor: 5800 },
     totalBlockingTime: { good: 200, poor: 600 },
-    timeToInteractive: { good: 3800, poor: 7300 }
+    timeToInteractive: { good: 3800, poor: 7300 },
   },
 
   /**
@@ -280,10 +280,10 @@ export const PERFORMANCE_THRESHOLDS = {
    */
   resources: {
     imageSize: { good: 500000, poor: 1000000 }, // 500KB / 1MB
-    jsSize: { good: 200000, poor: 500000 },     // 200KB / 500KB
-    cssSize: { good: 100000, poor: 200000 },    // 100KB / 200KB
-    fontSize: { good: 100000, poor: 300000 }    // 100KB / 300KB
-  }
+    jsSize: { good: 200000, poor: 500000 }, // 200KB / 500KB
+    cssSize: { good: 100000, poor: 200000 }, // 100KB / 200KB
+    fontSize: { good: 100000, poor: 300000 }, // 100KB / 300KB
+  },
 };
 
 /**
@@ -298,16 +298,16 @@ export const OPTIMIZATION_STRATEGIES = {
     compression: {
       jpeg: 80,
       png: 85,
-      webp: 80
+      webp: 80,
     },
     lazy: {
       threshold: '200px',
-      rootMargin: '50px'
+      rootMargin: '50px',
     },
     responsive: {
       breakpoints: [320, 640, 768, 1024, 1280, 1536],
-      sizes: '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
-    }
+      sizes: '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw',
+    },
   },
 
   /**
@@ -319,10 +319,10 @@ export const OPTIMIZATION_STRATEGIES = {
     splitting: {
       vendor: true,
       dynamic: true,
-      maxSize: 244000 // ~244KB
+      maxSize: 244000, // ~244KB
     },
     treeshaking: true,
-    deadCodeElimination: true
+    deadCodeElimination: true,
   },
 
   /**
@@ -336,9 +336,9 @@ export const OPTIMIZATION_STRATEGIES = {
       extract: true,
       dimensions: [
         { width: 1300, height: 900 },
-        { width: 375, height: 667 }
-      ]
-    }
+        { width: 375, height: 667 },
+      ],
+    },
   },
 
   /**
@@ -349,8 +349,8 @@ export const OPTIMIZATION_STRATEGIES = {
     dynamicContent: '1h',
     api: '5m',
     fonts: '1y',
-    images: '1y'
-  }
+    images: '1y',
+  },
 };
 
 /**
@@ -369,7 +369,7 @@ export class LighthouseConfigManager {
    */
   static createCustomConfig(
     baseConfig: keyof typeof LIGHTHOUSE_CONFIGS,
-    overrides: Partial<LighthouseConfig>
+    overrides: Partial<LighthouseConfig>,
   ): LighthouseConfig {
     const base = this.getConfig(baseConfig);
     return this.mergeConfigs(base, overrides);
@@ -380,7 +380,7 @@ export class LighthouseConfigManager {
    */
   private static mergeConfigs(
     base: LighthouseConfig,
-    overrides: Partial<LighthouseConfig>
+    overrides: Partial<LighthouseConfig>,
   ): LighthouseConfig {
     return {
       ...base,
@@ -388,7 +388,7 @@ export class LighthouseConfigManager {
       categoryTargets: { ...base.categoryTargets, ...overrides.categoryTargets },
       optimizations: { ...base.optimizations, ...overrides.optimizations },
       performanceThresholds: { ...base.performanceThresholds, ...overrides.performanceThresholds },
-      analysis: { ...base.analysis, ...overrides.analysis }
+      analysis: { ...base.analysis, ...overrides.analysis },
     };
   }
 
@@ -429,7 +429,7 @@ export class LighthouseConfigManager {
 
     return {
       valid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -438,7 +438,7 @@ export class LighthouseConfigManager {
    */
   static getRecommendedConfig(results: LighthouseResults): LighthouseConfig {
     const currentScore = results.overallScore;
-    
+
     if (currentScore < 50) {
       // Для очень низких скоров - фокус на критических оптимизациях
       return this.createCustomConfig('development', {
@@ -450,18 +450,18 @@ export class LighthouseConfigManager {
           enableCSSOptimization: true,
           enableCaching: false,
           enableCompression: true,
-          enableServiceWorker: false
-        }
+          enableServiceWorker: false,
+        },
       });
     } else if (currentScore < 75) {
       // Для средних скоров - сбалансированная оптимизация
       return this.createCustomConfig('development', {
-        targetScore: Math.min(85, currentScore + 15)
+        targetScore: Math.min(85, currentScore + 15),
       });
     } else {
       // Для высоких скоров - тонкая настройка
       return this.createCustomConfig('production', {
-        targetScore: Math.min(95, currentScore + 10)
+        targetScore: Math.min(95, currentScore + 10),
       });
     }
   }

@@ -63,11 +63,7 @@
   ],
   "imageUsagePatterns": {
     "totalImages": 11,
-    "imageExtensions": [
-      "webp",
-      "jpg",
-      "svg"
-    ],
+    "imageExtensions": ["webp", "jpg", "svg"],
     "lazyLoadingCandidates": 1,
     "formatOptimizationOpportunities": 9,
     "sizeOptimizationNeeded": 0,

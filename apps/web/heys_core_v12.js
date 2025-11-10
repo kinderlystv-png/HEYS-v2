@@ -58,15 +58,81 @@
   const React = global.React;
   const Store = (HEYS.store)||(HEYS.store={});
 
-  // ===== Utils =====
+  // ═══════════════════════════════════════════════════════════════════
+  // 🛠️ БАЗОВЫЕ УТИЛИТЫ
+  // ═══════════════════════════════════════════════════════════════════
+  
+  /** Регулярное выражение для невидимых символов (пробелы, zero-width и т.д.) */
   const INVIS = /[\u00A0\u1680\u180E\u2000-\u200A\u200B-\u200F\u202F\u205F\u3000\uFEFF]/g;
+  
+  /** Регулярное выражение для извлечения чисел (поддержка ',' и '.') */
   const NUM_RE = /[-+]?\d+(?:[\.,]\d+)?/g;
+  
+  /** Округление до 1 знака после запятой */
   const round1 = (v) => Math.round(v * 10) / 10;
+  
+  /** Генерация короткого уникального ID (8 символов) */
   const uuid = () => Math.random().toString(36).slice(2,10);
-  const toNum = (x) => { if (x===undefined || x===null) return 0; if (typeof x === 'number') return x; const s = String(x).trim().replace(',', '.'); const n = Number(s); return Number.isFinite(n) ? n : 0; };
-  const toNumInput = (v)=>{ const n = Number(String(v).replace(',', '.')); return Number.isFinite(n)?n:0; };
-  function computeDerived(p){ const carbs100 = toNum(p.simple100) + toNum(p.complex100); const fat100 = toNum(p.badFat100) + toNum(p.goodFat100) + toNum(p.trans100); const kcal100 = 4*(toNum(p.protein100) + carbs100) + 8*fat100; return { carbs100: round1(carbs100), fat100: round1(fat100), kcal100: round1(kcal100) }; }
-  function lsGet(key, def){ try{ const v = localStorage.getItem(key); return v? JSON.parse(v): def; }catch(e){ return def; } }
+  
+  /**
+   * Безопасное преобразование в число
+   * @param {*} x - Значение для преобразования
+   * @returns {number} Число или 0 при ошибке
+   */
+  const toNum = (x) => { 
+    if (x===undefined || x===null) return 0; 
+    if (typeof x === 'number') return x; 
+    const s = String(x).trim().replace(',', '.'); 
+    const n = Number(s); 
+    return Number.isFinite(n) ? n : 0; 
+  };
+  
+  /**
+   * Преобразование пользовательского ввода в число
+   * @param {string|number} v - Значение из input поля
+   * @returns {number} Число или 0
+   */
+  const toNumInput = (v)=>{ 
+    const n = Number(String(v).replace(',', '.')); 
+    return Number.isFinite(n)?n:0; 
+  };
+  
+  /**
+   * Вычисление производных значений продукта (углеводы, жиры, ккал)
+   * @param {Object} p - Объект продукта с полями *100 (на 100г)
+   * @returns {{carbs100: number, fat100: number, kcal100: number}}
+   */
+  function computeDerived(p){ 
+    const carbs100 = toNum(p.simple100) + toNum(p.complex100); 
+    const fat100 = toNum(p.badFat100) + toNum(p.goodFat100) + toNum(p.trans100); 
+    const kcal100 = 4*(toNum(p.protein100) + carbs100) + 8*fat100; 
+    return { 
+      carbs100: round1(carbs100), 
+      fat100: round1(fat100), 
+      kcal100: round1(kcal100) 
+    }; 
+  }
+  /**
+   * Получение данных из localStorage с JSON парсингом
+   * @param {string} key - Ключ для чтения
+   * @param {*} def - Значение по умолчанию при ошибке
+   * @returns {*} Распарсенное значение или def
+   */
+  function lsGet(key, def){ 
+    try{ 
+      const v = localStorage.getItem(key); 
+      return v? JSON.parse(v): def; 
+    }catch(e){ 
+      return def; 
+    } 
+  }
+  
+  /**
+   * Сохранение данных в localStorage с JSON сериализацией
+   * Автоматически вызывает window.HEYS.saveClientKey для синхронизации с облаком
+   * @param {string} key - Ключ для сохранения
+   * @param {*} val - Значение для сохранения
+   */
   function lsSet(key, val){ 
     try{ 
       // Логируем только важные операции, не данные пользователя
@@ -80,9 +146,56 @@
     } 
   }
 
-  function isHeaderLine(line){ const l=line.toLowerCase(); return l.includes('название') && (l.includes('ккал') || l.includes('калори') || l.includes('углевод')); }
-  function normalizeLine(raw){ let s = raw.replace(INVIS,' '); s = s.replace(/\u060C/g, ',').replace(/\u066B/g, ',').replace(/\u066C/g, ',').replace(/\u201A/g, ','); s = s.replace(/\u00B7/g, '.').replace(/[–—−]/g, '-').replace(/%/g, ''); s = s.replace(/\t+/g, ' ').replace(/\s+/g, ' ').trim(); return s; }
-  function findTokenPositions(s, tokens){ const positions=[]; let start=0; for(const tok of tokens){ const idx=s.indexOf(tok, start); positions.push(idx===-1?null:idx); if(idx!==-1) start=idx+tok.length; } return positions; }
+  // ═══════════════════════════════════════════════════════════════════
+  // 📄 ПАРСИНГ ВСТАВЛЕННЫХ ДАННЫХ
+  // ═══════════════════════════════════════════════════════════════════
+  
+  /**
+   * Проверка, является ли строка заголовком таблицы
+   * @param {string} line - Строка для проверки
+   * @returns {boolean} true если это заголовок
+   */
+  function isHeaderLine(line){ 
+    const l=line.toLowerCase(); 
+    return l.includes('название') && (l.includes('ккал') || l.includes('калори') || l.includes('углевод')); 
+  }
+  
+  /**
+   * Нормализация строки (удаление невидимых символов, замена разделителей)
+   * @param {string} raw - Исходная строка
+   * @returns {string} Нормализованная строка
+   */
+  function normalizeLine(raw){ 
+    let s = raw.replace(INVIS,' '); 
+    s = s.replace(/\u060C/g, ',').replace(/\u066B/g, ',').replace(/\u066C/g, ',').replace(/\u201A/g, ','); 
+    s = s.replace(/\u00B7/g, '.').replace(/[–—−]/g, '-').replace(/%/g, ''); 
+    s = s.replace(/\t+/g, ' ').replace(/\s+/g, ' ').trim(); 
+    return s; 
+  }
+  
+  /**
+   * Поиск позиций токенов в строке
+   * @param {string} s - Строка для поиска
+   * @param {string[]} tokens - Массив токенов
+   * @returns {(number|null)[]} Массив позиций (null если не найден)
+   */
+  function findTokenPositions(s, tokens){ 
+    const positions=[]; 
+    let start=0; 
+    for(const tok of tokens){ 
+      const idx=s.indexOf(tok, start); 
+      positions.push(idx===-1?null:idx); 
+      if(idx!==-1) start=idx+tok.length; 
+    } 
+    return positions; 
+  }
+  
+  /**
+   * Извлечение данных о продукте из строки таблицы
+   * Ожидается формат: "Название <12 числовых значений>"
+   * @param {string} raw - Исходная строка из вставленной таблицы
+   * @returns {{name: string, nums: number[]}|null} Объект с именем и массивом из 12 чисел, или null
+   */
   function extractRow(raw){ 
     DEV.log('🔍 [EXTRACT] Обрабатываем строку:', raw);
     

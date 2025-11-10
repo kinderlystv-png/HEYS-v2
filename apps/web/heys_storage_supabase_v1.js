@@ -61,27 +61,83 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const cloud = HEYS.cloud = HEYS.cloud || {};
 
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔧 КОНСТАНТЫ
+  // ═══════════════════════════════════════════════════════════════════
+  
+  /** Префиксы ключей для зеркалирования в cloud */
+  const KEY_PREFIXES = {
+    HEYS: 'heys_',
+    DAY: 'day'
+  };
+  
+  /** Ключи, требующие client-specific storage */
+  const CLIENT_SPECIFIC_KEYS = [
+    'heys_products',
+    'heys_profile',
+    'heys_hr_zones',
+    'heys_norms'
+  ];
+  
+  /** Префиксы для client-specific данных */
+  const CLIENT_KEY_PATTERNS = {
+    DAY_V2: 'dayv2_',
+    HEYS_CLIENT: 'heys_',
+    DAY_CLIENT: 'day_'
+  };
+  
+  /** Возможные статусы подключения */
+  const CONNECTION_STATUS = {
+    OFFLINE: 'offline',
+    SIGNIN: 'signin',
+    SYNC: 'sync',
+    ONLINE: 'online'
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 🌐 ГЛОБАЛЬНОЕ СОСТОЯНИЕ
+  // ═══════════════════════════════════════════════════════════════════
+  
   let client = null;
   cloud.client = null;
-  let status = 'offline'; // offline | signin | sync | online
+  let status = CONNECTION_STATUS.OFFLINE;
   let user = null;
   let muteMirror = false;
 
   function log(){ try{ console.log.apply(console, ['[HEYS.cloud]'].concat([].slice.call(arguments))); }catch(e){} }
   function err(){ try{ console.error.apply(console, ['[HEYS.cloud:ERR]'].concat([].slice.call(arguments))); }catch(e){} }
 
-  function tryParse(v){ try{return JSON.parse(v);}catch(e){ return v; } }
+  /**
+   * Безопасный парсинг JSON
+   * @param {string} v - Строка для парсинга
+   * @returns {*} Распарсенное значение или исходная строка при ошибке
+   */
+  function tryParse(v){ 
+    try{
+      return JSON.parse(v);
+    }catch(e){ 
+      return v; 
+    } 
+  }
 
-  // какие ключи мы зеркалим / чистим
+  /**
+   * Проверка, является ли ключ нашим (для зеркалирования/очистки)
+   * @param {string} k - Ключ для проверки
+   * @returns {boolean} true если это наш ключ
+   */
   function isOurKey(k){
     if (typeof k !== 'string') return false;
-    if (k.indexOf('heys_') === 0) return true;
+    if (k.indexOf(KEY_PREFIXES.HEYS) === 0) return true;
     // также разрешаем ключи дней
     const lower = k.toLowerCase();
-    if (lower.indexOf('day') >= 0) return true;
+    if (lower.indexOf(KEY_PREFIXES.DAY) >= 0) return true;
     return false;
   }
 
+  /**
+   * Очистка namespace в localStorage (наши ключи)
+   * @param {string} clientId - ID клиента для очистки специфичных ключей, или null для полной очистки
+   */
   function clearNamespace(clientId){
     try{
       const ls = global.localStorage;
@@ -89,52 +145,78 @@
         const k = ls.key(i);
         if (!k) continue;
         const lower = k.toLowerCase();
+        
         if (clientId) {
-          // clear only client-specific keys AND general heys_ keys
-          if (lower.indexOf(('heys_' + clientId + '_').toLowerCase()) === 0) { ls.removeItem(k); continue; }
-          if (lower.indexOf(('day_' + clientId + '_').toLowerCase()) === 0) { ls.removeItem(k); continue; }
+          // Очистка только client-specific ключей
+          const heysClientPrefix = (KEY_PREFIXES.HEYS + clientId + '_').toLowerCase();
+          const dayClientPrefix = (CLIENT_KEY_PATTERNS.DAY_CLIENT + clientId + '_').toLowerCase();
           
-          // Also clear general keys that should be client-specific
-          if (k === 'heys_products' || k === 'heys_profile' || k === 'heys_hr_zones' || k === 'heys_norms') {
+          if (lower.indexOf(heysClientPrefix) === 0) { 
+            ls.removeItem(k); 
+            continue; 
+          }
+          if (lower.indexOf(dayClientPrefix) === 0) { 
+            ls.removeItem(k); 
+            continue; 
+          }
+          
+          // Также очищаем общие ключи, которые должны быть client-specific
+          if (CLIENT_SPECIFIC_KEYS.includes(k)) {
             ls.removeItem(k);
             continue;
           }
         } else {
-          // clear all
+          // Полная очистка всех наших ключей
           if (isOurKey(k)) ls.removeItem(k);
         }
       }
-      // Убрано избыточное логирование local heys_*/day* cleared
-    }catch(e){ err('clearNamespace', e); }
+    }catch(e){ 
+      err('clearNamespace', e); 
+    }
   }
 
-  // intercept localStorage.setItem (зеркалим наши ключи)
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔄 ПЕРЕХВАТ LOCALSTORAGE
+  // ═══════════════════════════════════════════════════════════════════
+  
   let originalSetItem = null;
+  
+  /**
+   * Проверка, требует ли ключ client-specific хранилища
+   * @param {string} k - Ключ для проверки
+   * @returns {boolean} true если нужен client_kv_store
+   */
+  function needsClientStorage(k) {
+    if (!k) return false;
+    // Проверяем дни пользователя
+    if (k.includes(CLIENT_KEY_PATTERNS.DAY_V2)) return true;
+    // Проверяем общие client-specific ключи
+    return CLIENT_SPECIFIC_KEYS.includes(k);
+  }
+  
+  /**
+   * Перехват localStorage.setItem для автоматического зеркалирования в cloud
+   * Зеркалирует наши ключи (heys_*, day*) в Supabase
+   */
   function interceptSetItem(){
     try{
-      if (originalSetItem) return;
+      if (originalSetItem) return; // Защита от повторного перехвата
+      
       originalSetItem = global.localStorage.setItem.bind(global.localStorage);
       global.localStorage.setItem = function(k, v){
         originalSetItem(k, v);
+        
         if (!muteMirror && isOurKey(k)){
-          // Проверяем, нужно ли направить в client_kv_store
-          const needsClientStorage = (
-            (k && k.includes('dayv2_')) ||  // дни пользователя
-            (k === 'heys_profile') ||       // профиль
-            (k === 'heys_hr_zones') ||      // зоны пульса  
-            (k === 'heys_norms') ||         // нормы
-            (k === 'heys_products')         // продукты
-          );
-          
-          if (needsClientStorage) {
+          if (needsClientStorage(k)) {
             cloud.saveClientKey(k, tryParse(v));
           } else {
             cloud.saveKey(k, tryParse(v));
           }
         }
       };
-      // Убрано избыточное логирование localStorage.setItem intercepted
-    }catch(e){ err('intercept setItem failed', e); }
+    }catch(e){ 
+      err('intercept setItem failed', e); 
+    }
   }
 
   cloud.init = function({ url, anonKey }){

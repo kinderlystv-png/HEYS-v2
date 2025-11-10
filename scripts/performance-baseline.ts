@@ -1,8 +1,8 @@
 // filepath: scripts/performance-baseline.ts
-import lighthouse from 'lighthouse';
-import * as chromeLauncher from 'chrome-launcher';
 import chalk from 'chalk';
-import { writeFileSync, existsSync, mkdirSync } from 'fs';
+import * as chromeLauncher from 'chrome-launcher';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import lighthouse from 'lighthouse';
 import { join } from 'path';
 
 interface PerformanceMetrics {
@@ -37,7 +37,7 @@ interface PerformanceMetrics {
  */
 export class PerformanceBaselineMeasurement {
   private outputDir = 'performance-baseline';
-  
+
   constructor() {
     if (!existsSync(this.outputDir)) {
       mkdirSync(this.outputDir, { recursive: true });
@@ -49,10 +49,10 @@ export class PerformanceBaselineMeasurement {
    */
   async measurePerformance(url: string): Promise<PerformanceMetrics> {
     console.log(chalk.blue(`🚀 Measuring performance for: ${url}`));
-    
+
     // Запускаем Chrome
     const chrome = await chromeLauncher.launch({
-      chromeFlags: ['--headless', '--no-sandbox', '--disable-dev-shm-usage']
+      chromeFlags: ['--headless', '--no-sandbox', '--disable-dev-shm-usage'],
     });
 
     try {
@@ -66,7 +66,7 @@ export class PerformanceBaselineMeasurement {
 
       // Запускаем Lighthouse
       const runnerResult = await lighthouse(url, options);
-      
+
       if (!runnerResult) {
         throw new Error('Lighthouse failed to generate report');
       }
@@ -77,7 +77,6 @@ export class PerformanceBaselineMeasurement {
 
       console.log(chalk.green('✅ Performance measurement completed'));
       return metrics;
-
     } finally {
       await chrome.kill();
     }
@@ -131,7 +130,7 @@ export class PerformanceBaselineMeasurement {
    */
   private countUniqueHosts(networkItems: any[]): number {
     const hosts = new Set();
-    networkItems.forEach(item => {
+    networkItems.forEach((item) => {
       if (item.url) {
         try {
           const url = new URL(item.url);
@@ -150,7 +149,7 @@ export class PerformanceBaselineMeasurement {
   private generateRecommendations(
     scores: PerformanceMetrics['scores'],
     vitals: PerformanceMetrics['coreWebVitals'],
-    bundle: PerformanceMetrics['bundleMetrics']
+    bundle: PerformanceMetrics['bundleMetrics'],
   ): string[] {
     const recommendations: string[] = [];
 
@@ -235,7 +234,7 @@ export class PerformanceBaselineMeasurement {
 - **Number of Hosts**: ${metrics.bundleMetrics.numberOfHosts}
 
 ## 💡 Recommendations
-${metrics.recommendations.map(rec => `- ${rec}`).join('\n')}
+${metrics.recommendations.map((rec) => `- ${rec}`).join('\n')}
 
 ## 🎯 Sprint Goals
 Based on this baseline, the Performance Optimization Sprint should focus on:
@@ -271,13 +270,17 @@ Based on this baseline, the Performance Optimization Sprint should focus on:
 
     // Bundle Info
     console.log(chalk.blue('\n📦 Bundle Info:'));
-    console.log(chalk.gray(`   Transfer Size: ${(metrics.bundleMetrics.totalTransferSize / 1024 / 1024).toFixed(2)} MB`));
+    console.log(
+      chalk.gray(
+        `   Transfer Size: ${(metrics.bundleMetrics.totalTransferSize / 1024 / 1024).toFixed(2)} MB`,
+      ),
+    );
     console.log(chalk.gray(`   Requests: ${metrics.bundleMetrics.numberOfRequests}`));
     console.log(chalk.gray(`   Hosts: ${metrics.bundleMetrics.numberOfHosts}`));
 
     // Recommendations
     console.log(chalk.blue('\n💡 Key Recommendations:'));
-    metrics.recommendations.slice(0, 5).forEach(rec => {
+    metrics.recommendations.slice(0, 5).forEach((rec) => {
       console.log(chalk.yellow(`   ${rec}`));
     });
   }
@@ -286,12 +289,13 @@ Based on this baseline, the Performance Optimization Sprint should focus on:
 // CLI использование
 if (require.main === module) {
   const baseline = new PerformanceBaselineMeasurement();
-  
+
   // URL для тестирования (можно передать как аргумент)
   const testUrl = process.argv[2] || 'http://localhost:3001';
-  
-  baseline.measurePerformance(testUrl)
-    .then(metrics => {
+
+  baseline
+    .measurePerformance(testUrl)
+    .then((metrics) => {
       baseline.printResults(metrics);
       return baseline.saveBaseline(metrics);
     })
@@ -299,7 +303,7 @@ if (require.main === module) {
       console.log(chalk.green('\n✅ Baseline measurement complete!'));
       console.log(chalk.gray('Next: Run bundle analysis with `npm run analyze:bundle`'));
     })
-    .catch(error => {
+    .catch((error) => {
       console.error(chalk.red('❌ Baseline measurement failed:'), error);
       process.exit(1);
     });

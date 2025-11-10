@@ -8,6 +8,7 @@
 ## 📊 Результаты замены
 
 ### До замены:
+
 ```
 heys_performance_monitor.js    829 строк    32KB
 heys_analytics_ui.js            487 строк    28KB
@@ -16,6 +17,7 @@ heys_analytics_ui.js            487 строк    28KB
 ```
 
 ### После замены:
+
 ```
 heys_simple_analytics.js        217 строк     8KB
 ─────────────────────────────────────────────────
@@ -23,6 +25,7 @@ heys_simple_analytics.js        217 строк     8KB
 ```
 
 ### 💾 Экономия:
+
 - **-1099 строк кода** (-84%)
 - **-52KB bundle size** (-87%)
 - **-FPS counter overhead** (requestAnimationFrame loop удален)
@@ -70,12 +73,12 @@ HEYS.analytics = {
   trackApiCall(name, duration, success)    // ✅ Работает
   trackDataOperation(type, count)          // ✅ Работает
   trackError(error, source)                // ✅ Работает
-  
+
   // Утилиты
   getStats()                               // ✅ Работает
   exportMetrics()                          // ✅ Работает
   reset()                                  // ✅ Работает
-  
+
   // No-op aliases (для совместимости)
   trackModuleLoad()                        // no-op
   trackComponentRender()                   // no-op
@@ -90,9 +93,10 @@ HEYS.performance = HEYS.analytics;
 ```
 
 ### Debug функция:
+
 ```javascript
 // В консоли браузера:
-heysStats()  // Показать статистику сессии
+heysStats(); // Показать статистику сессии
 ```
 
 ---
@@ -100,24 +104,28 @@ heysStats()  // Показать статистику сессии
 ## 🔍 Что отслеживается
 
 ### ✅ Медленные поисковые запросы (>1s)
+
 ```javascript
 trackSearch('молоко', 15, 1200);
 // ⚠️ [HEYS Analytics] Медленный поиск: { query: 'молоко', duration: '1200ms', ... }
 ```
 
 ### ✅ Медленные API вызовы (>2s)
+
 ```javascript
 trackApiCall('bootstrapClientSync', 3500, true);
 // ⚠️ [HEYS Analytics] Медленный API: { api: 'bootstrapClientSync', duration: '3500ms', ... }
 ```
 
 ### ✅ Критически медленные API (>5s)
+
 ```javascript
 trackApiCall('parsePasted', 6000, false);
 // ❌ [HEYS Analytics] Критически медленный API: { ... }
 ```
 
 ### ✅ Cache эффективность
+
 ```javascript
 trackDataOperation('cache-hit');
 trackDataOperation('cache-miss');
@@ -127,6 +135,7 @@ heysStats();
 ```
 
 ### ✅ JavaScript ошибки
+
 ```javascript
 // Автоматически перехватываются:
 window.addEventListener('error', ...)
@@ -158,22 +167,22 @@ window.addEventListener('unhandledrejection', ...)
 
 ```javascript
 // Поиск продуктов
-HEYS.analytics.trackSearch(query, result.length, duration);          // 1 вызов
+HEYS.analytics.trackSearch(query, result.length, duration); // 1 вызов
 
-// Cache операции  
-HEYS.analytics.trackDataOperation('cache-hit');                       // 3 вызова
-HEYS.analytics.trackDataOperation('cache-miss');                      // 2 вызова
+// Cache операции
+HEYS.analytics.trackDataOperation('cache-hit'); // 3 вызова
+HEYS.analytics.trackDataOperation('cache-miss'); // 2 вызова
 
 // API вызовы
-HEYS.analytics.trackApiCall('bootstrapClientSync', duration, true);   // 1 вызов
-HEYS.analytics.trackApiCall('bootstrapClientSync', duration, false);  // 1 вызов
-HEYS.analytics.trackApiCall('parsePasted', duration, true);           // 2 вызова
-HEYS.analytics.trackApiCall('parsePasted', duration, false);          // 2 вызова
+HEYS.analytics.trackApiCall('bootstrapClientSync', duration, true); // 1 вызов
+HEYS.analytics.trackApiCall('bootstrapClientSync', duration, false); // 1 вызов
+HEYS.analytics.trackApiCall('parsePasted', duration, true); // 2 вызова
+HEYS.analytics.trackApiCall('parsePasted', duration, false); // 2 вызова
 
 // Загрузка данных
-HEYS.analytics.trackDataOperation('products-loaded', count);          // 4 вызова
-HEYS.analytics.trackDataOperation('cloud-sync');                      // 1 вызов
-HEYS.analytics.trackDataOperation('storage-op');                      // 2 вызова
+HEYS.analytics.trackDataOperation('products-loaded', count); // 4 вызова
+HEYS.analytics.trackDataOperation('cloud-sync'); // 1 вызов
+HEYS.analytics.trackDataOperation('storage-op'); // 2 вызова
 ```
 
 **Все методы полностью поддерживаются новой версией.**
@@ -183,6 +192,7 @@ HEYS.analytics.trackDataOperation('storage-op');                      // 2 вы�
 ## 🧪 Тестирование
 
 ### Автоматические проверки:
+
 ```bash
 ✓ Dev-сервер запускается без ошибок
 ✓ HTTP 200 на localhost:3001
@@ -192,6 +202,7 @@ HEYS.analytics.trackDataOperation('storage-op');                      // 2 вы�
 ```
 
 ### Ручное тестирование:
+
 ```javascript
 // 1. Откройте http://localhost:3001/
 // 2. Откройте DevTools Console
@@ -219,6 +230,7 @@ heysStats()
 ### Если нужен более серьезный мониторинг:
 
 1. **Настроить Sentry.io:**
+
    ```bash
    # Уже установлен: @sentry/browser
    # Нужно добавить DSN в конфиг
@@ -226,6 +238,7 @@ heysStats()
    ```
 
 2. **Или использовать Google Analytics:**
+
    ```html
    <script async src="https://www.googletagman.ics.com/analytics.js"></script>
    ```
@@ -263,7 +276,8 @@ rm apps/web/heys_simple_analytics.js
 - ✅ Совместимость с legacy кодом обеспечена
 - ✅ Приложение работает стабильно
 
-**Рекомендация:** Оставить в таком виде. Простой мониторинг полностью покрывает потребности nutrition tracker приложения.
+**Рекомендация:** Оставить в таком виде. Простой мониторинг полностью покрывает
+потребности nutrition tracker приложения.
 
 ---
 

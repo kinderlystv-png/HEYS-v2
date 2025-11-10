@@ -14,7 +14,7 @@ export interface SecurityConfig {
     enabled: boolean;
     directives?: Record<string, string[]>;
   };
-  
+
   // HSTS (HTTP Strict Transport Security)
   hsts?: {
     enabled: boolean;
@@ -47,25 +47,25 @@ const DEFAULT_CONFIG: SecurityConfig = {
       'frame-src': ["'none'"],
       'object-src': ["'none'"],
       'base-uri': ["'self'"],
-      'form-action': ["'self'"]
-    }
+      'form-action': ["'self'"],
+    },
   },
   hsts: {
     enabled: true,
     maxAge: 31536000, // 1 год
     includeSubDomains: true,
-    preload: true
+    preload: true,
   },
   noSniff: true,
   frameguard: 'deny',
   xssFilter: true,
   referrerPolicy: 'strict-origin-when-cross-origin',
   permissionsPolicy: {
-    'camera': ['()'],
-    'microphone': ['()'],
-    'geolocation': ['()'],
-    'interest-cohort': ['()'] // Блокировка FLoC
-  }
+    camera: ['()'],
+    microphone: ['()'],
+    geolocation: ['()'],
+    'interest-cohort': ['()'], // Блокировка FLoC
+  },
 };
 
 /**
@@ -151,15 +151,15 @@ export class SecurityMiddleware {
    */
   private buildHSTS(hsts: NonNullable<SecurityConfig['hsts']>): string {
     let value = `max-age=${hsts.maxAge || 31536000}`;
-    
+
     if (hsts.includeSubDomains) {
       value += '; includeSubDomains';
     }
-    
+
     if (hsts.preload) {
       value += '; preload';
     }
-    
+
     return value;
   }
 
@@ -179,14 +179,17 @@ export class SecurityMiddleware {
     const merged = { ...defaultConfig, ...userConfig };
 
     // Специальная обработка для CSP директив
-    if (defaultConfig.contentSecurityPolicy?.directives && userConfig.contentSecurityPolicy?.directives) {
+    if (
+      defaultConfig.contentSecurityPolicy?.directives &&
+      userConfig.contentSecurityPolicy?.directives
+    ) {
       merged.contentSecurityPolicy = {
         ...defaultConfig.contentSecurityPolicy,
         ...userConfig.contentSecurityPolicy,
         directives: {
           ...defaultConfig.contentSecurityPolicy.directives,
-          ...userConfig.contentSecurityPolicy.directives
-        }
+          ...userConfig.contentSecurityPolicy.directives,
+        },
       };
     }
 
@@ -213,9 +216,10 @@ export class CORSMiddleware {
 
   constructor(config: CORSConfig = {}) {
     this.config = {
-      origin: process.env.NODE_ENV === 'production' 
-        ? [process.env.NEXT_PUBLIC_APP_URL || 'https://heys.app']
-        : true,
+      origin:
+        process.env.NODE_ENV === 'production'
+          ? [process.env.NEXT_PUBLIC_APP_URL || 'https://heys.app']
+          : true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: [
         'Content-Type',
@@ -223,11 +227,11 @@ export class CORSMiddleware {
         'X-Requested-With',
         'Accept',
         'Origin',
-        'X-API-Key'
+        'X-API-Key',
       ],
       credentials: true,
       optionsSuccessStatus: 204,
-      ...config
+      ...config,
     };
   }
 
@@ -246,7 +250,7 @@ export class CORSMiddleware {
       // Остальные CORS headers
       res.setHeader('Access-Control-Allow-Methods', this.config.methods?.join(', ') || '*');
       res.setHeader('Access-Control-Allow-Headers', this.config.allowedHeaders?.join(', ') || '*');
-      
+
       if (this.config.credentials) {
         res.setHeader('Access-Control-Allow-Credentials', 'true');
       }
@@ -324,19 +328,19 @@ export const STRICT_SECURITY_CONFIG: SecurityConfig = {
       'img-src': ["'self'", 'data:', 'https:'],
       'connect-src': ["'self'", 'https://*.supabase.co'],
       'frame-src': ["'none'"],
-      'object-src': ["'none'"]
-    }
+      'object-src': ["'none'"],
+    },
   },
   hsts: {
     enabled: true,
     maxAge: 63072000, // 2 года
     includeSubDomains: true,
-    preload: true
+    preload: true,
   },
   noSniff: true,
   frameguard: 'deny',
   xssFilter: true,
-  referrerPolicy: 'strict-origin-when-cross-origin'
+  referrerPolicy: 'strict-origin-when-cross-origin',
 };
 
 /**
@@ -350,16 +354,16 @@ export const DEVELOPMENT_SECURITY_CONFIG: SecurityConfig = {
       'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https:', 'http:'],
       'style-src': ["'self'", "'unsafe-inline'", 'https:', 'http:'],
       'img-src': ["'self'", 'data:', 'https:', 'http:'],
-      'connect-src': ["'self'", '*']
-    }
+      'connect-src': ["'self'", '*'],
+    },
   },
   hsts: {
-    enabled: false // Обычно не нужен в development
+    enabled: false, // Обычно не нужен в development
   },
   noSniff: true,
   frameguard: 'sameorigin',
   xssFilter: true,
-  referrerPolicy: 'no-referrer-when-downgrade'
+  referrerPolicy: 'no-referrer-when-downgrade',
 };
 
 /**

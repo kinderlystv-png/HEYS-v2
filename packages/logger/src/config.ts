@@ -96,21 +96,21 @@ export const defaultConfig: AdvancedLoggerConfig = {
  */
 export function validateConfig(config: Partial<AdvancedLoggerConfig>): AdvancedLoggerConfig {
   const mergedConfig = { ...defaultConfig, ...config };
-  
+
   // Валидация уровня логирования
   if (!Object.values(LogLevel).includes(mergedConfig.level)) {
     mergedConfig.level = LogLevel.INFO;
   }
-  
+
   // Валидация файлового транспорта
   if (mergedConfig.transports.file.enabled && !mergedConfig.transports.file.path) {
     mergedConfig.transports.file.path = './logs';
   }
-  
+
   // Валидация сетевого транспорта
   if (mergedConfig.transports.network.enabled && !mergedConfig.transports.network.url) {
     mergedConfig.transports.network.enabled = false;
   }
-  
+
   return mergedConfig;
 }

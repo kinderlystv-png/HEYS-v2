@@ -12,14 +12,14 @@ const levels = {
   warn: 40,
   info: 30,
   debug: 20,
-  trace: 10
+  trace: 10,
 };
 
 // Базовая конфигурация Pino
 const baseConfig = {
   name: 'heys-platform',
   level: process.env.LOG_LEVEL || 'info',
-  
+
   // Форматтеры
   formatters: {
     level: (label, _number) => ({ level: label }),
@@ -27,8 +27,8 @@ const baseConfig = {
       pid: bindings.pid,
       hostname: bindings.hostname,
       service: 'heys-platform',
-      version: process.env.npm_package_version || '1.0.0'
-    })
+      version: process.env.npm_package_version || '1.0.0',
+    }),
   },
 
   // Timestamp
@@ -51,9 +51,9 @@ const baseConfig = {
       'personalData',
       'req.headers.authorization',
       'req.headers.cookie',
-      'res.headers["set-cookie"]'
+      'res.headers["set-cookie"]',
     ],
-    censor: '[REDACTED]'
+    censor: '[REDACTED]',
   },
 
   // Сериализаторы для объектов
@@ -64,19 +64,19 @@ const baseConfig = {
       headers: {
         'user-agent': req.headers['user-agent'],
         'content-type': req.headers['content-type'],
-        'accept': req.headers.accept
+        accept: req.headers.accept,
       },
       hostname: req.hostname,
       remoteAddress: req.remoteAddress,
-      remotePort: req.remotePort
+      remotePort: req.remotePort,
     }),
-    
+
     res: (res) => ({
       statusCode: res.statusCode,
       headers: res.getHeaders ? res.getHeaders() : res.headers,
-      responseTime: res.responseTime
+      responseTime: res.responseTime,
     }),
-    
+
     err: (err) => ({
       type: err.constructor.name,
       message: err.message,
@@ -84,23 +84,23 @@ const baseConfig = {
       code: err.code,
       errno: err.errno,
       syscall: err.syscall,
-      path: err.path
+      path: err.path,
     }),
 
     user: (user) => ({
       id: user.id,
       username: user.username,
       email: user.email?.replace(/(.{2}).*@/, '$1***@'), // Частичное маскирование email
-      role: user.role
-    })
-  }
+      role: user.role,
+    }),
+  },
 };
 
 // Конфигурация транспортов для разных окружений
 const getTransports = () => {
   const transports = [];
   const logDir = path.join(process.cwd(), 'logs');
-  
+
   // Создаем директорию логов
   require('fs').mkdirSync(logDir, { recursive: true });
 
@@ -114,8 +114,8 @@ const getTransports = () => {
         translateTime: 'yyyy-mm-dd HH:MM:ss',
         ignore: 'pid,hostname',
         messageFormat: '[{service}] {msg}',
-        singleLine: false
-      }
+        singleLine: false,
+      },
     });
   }
 
@@ -125,8 +125,8 @@ const getTransports = () => {
       target: 'pino/file',
       level: 'warn',
       options: {
-        destination: 1 // stdout
-      }
+        destination: 1, // stdout
+      },
     });
   }
 
@@ -138,8 +138,8 @@ const getTransports = () => {
       level: 'info',
       options: {
         destination: path.join(logDir, 'heys-app.log'),
-        mkdir: true
-      }
+        mkdir: true,
+      },
     },
 
     // Лог файл ошибок
@@ -148,19 +148,23 @@ const getTransports = () => {
       level: 'error',
       options: {
         destination: path.join(logDir, 'heys-error.log'),
-        mkdir: true
-      }
+        mkdir: true,
+      },
     },
 
     // Debug лог (только для development)
-    ...(process.env.NODE_ENV !== 'production' ? [{
-      target: 'pino/file',
-      level: 'debug',
-      options: {
-        destination: path.join(logDir, 'heys-debug.log'),
-        mkdir: true
-      }
-    }] : [])
+    ...(process.env.NODE_ENV !== 'production'
+      ? [
+          {
+            target: 'pino/file',
+            level: 'debug',
+            options: {
+              destination: path.join(logDir, 'heys-debug.log'),
+              mkdir: true,
+            },
+          },
+        ]
+      : []),
   );
 
   return transports;
@@ -170,8 +174,8 @@ const getTransports = () => {
 const pinoConfig = {
   ...baseConfig,
   transport: {
-    targets: getTransports()
-  }
+    targets: getTransports(),
+  },
 };
 
 // Конфигурация для HTTP логирования
@@ -180,7 +184,7 @@ const httpConfig = {
   genReqId: (req) => req.headers['x-request-id'] || require('crypto').randomUUID(),
   serializers: {
     req: baseConfig.serializers.req,
-    res: baseConfig.serializers.res
+    res: baseConfig.serializers.res,
   },
   customLogLevel: (req, res, err) => {
     if (res.statusCode >= 400 && res.statusCode < 500) return 'warn';
@@ -193,7 +197,7 @@ const httpConfig = {
   },
   customErrorMessage: (req, res, err) => {
     return `${req.method} ${req.url} - ${res.statusCode} Error: ${err.message}`;
-  }
+  },
 };
 
 // Конфигурации для разных окружений
@@ -207,24 +211,24 @@ const environments = {
         colorize: true,
         translateTime: 'yyyy-mm-dd HH:MM:ss',
         ignore: 'pid,hostname',
-        messageFormat: '[{service}] {msg}'
-      }
-    }
+        messageFormat: '[{service}] {msg}',
+      },
+    },
   },
 
   test: {
     ...pinoConfig,
     level: 'silent', // Отключаем логи в тестах
-    transport: undefined
+    transport: undefined,
   },
 
   production: {
     ...pinoConfig,
     level: 'warn',
     transport: {
-      targets: getTransports().filter(t => t.target !== 'pino-pretty')
-    }
-  }
+      targets: getTransports().filter((t) => t.target !== 'pino-pretty'),
+    },
+  },
 };
 
 // Дополнительные утилиты
@@ -241,23 +245,29 @@ const utils = {
       end: (metadata = {}) => {
         const duration = Date.now() - start;
         const level = duration > 1000 ? 'warn' : 'info';
-        logger[level]({
-          operation,
-          duration,
-          ...metadata
-        }, `Operation "${operation}" completed in ${duration}ms`);
+        logger[level](
+          {
+            operation,
+            duration,
+            ...metadata,
+          },
+          `Operation "${operation}" completed in ${duration}ms`,
+        );
         return duration;
-      }
+      },
     };
   },
 
   // Логирование ошибок с контекстом
   logError: (logger, error, context = {}) => {
-    logger.error({
-      err: error,
-      context,
-      timestamp: new Date().toISOString()
-    }, error.message);
+    logger.error(
+      {
+        err: error,
+        context,
+        timestamp: new Date().toISOString(),
+      },
+      error.message,
+    );
   },
 
   // Безопасное логирование объектов
@@ -268,7 +278,7 @@ const utils = {
       logger.error({ serialization_error: err.message }, 'Failed to serialize log object');
       logger[level](message);
     }
-  }
+  },
 };
 
 module.exports = {
@@ -278,7 +288,7 @@ module.exports = {
   environments,
   levels,
   utils,
-  
+
   // Получение конфигурации по окружению
   getConfig: (env = process.env.NODE_ENV || 'development') => {
     return environments[env] || environments.development;
@@ -290,18 +300,18 @@ module.exports = {
   // Валидация конфигурации
   validateConfig: (config) => {
     const required = ['name', 'level'];
-    const missing = required.filter(key => !config[key]);
-    
+    const missing = required.filter((key) => !config[key]);
+
     if (missing.length > 0) {
       throw new Error(`Missing required config keys: ${missing.join(', ')}`);
     }
-    
+
     if (!Object.keys(levels).includes(config.level)) {
       throw new Error(`Invalid log level: ${config.level}`);
     }
-    
+
     return true;
-  }
+  },
 };
 
 // Default export для ES6 совместимости

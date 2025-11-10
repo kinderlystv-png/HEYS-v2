@@ -9,8 +9,8 @@
     "build": "tsup src/index.ts --format esm",
     "build:types": "tsup src/index.ts --format esm --dts",
     "dev": "tsup src/index.ts --format esm --watch",
-    "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "pino": "^9.9.4",

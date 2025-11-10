@@ -30,21 +30,21 @@ const files = [];
 
 function scanDirectory(dir, prefix = '') {
   const items = fs.readdirSync(dir);
-  
-  items.forEach(item => {
+
+  items.forEach((item) => {
     const fullPath = path.join(dir, item);
     const stat = fs.statSync(fullPath);
-    
+
     if (stat.isDirectory()) {
       scanDirectory(fullPath, path.join(prefix, item));
     } else {
       const sizeKB = (stat.size / 1024).toFixed(2);
       const relativePath = path.join(prefix, item);
-      
+
       files.push({
         path: relativePath,
         size: parseFloat(sizeKB),
-        type: path.extname(item).slice(1) || 'other'
+        type: path.extname(item).slice(1) || 'other',
       });
     }
   });
@@ -60,7 +60,7 @@ const byType = files.reduce((acc, file) => {
 }, {});
 
 // Сортировка по размеру
-Object.keys(byType).forEach(type => {
+Object.keys(byType).forEach((type) => {
   byType[type].sort((a, b) => b.size - a.size);
 });
 
@@ -70,12 +70,12 @@ console.log('═'.repeat(60));
 Object.entries(byType).forEach(([type, typeFiles]) => {
   const totalSize = typeFiles.reduce((sum, file) => sum + file.size, 0);
   console.log(`\n📦 ${type.toUpperCase()} FILES (${totalSize.toFixed(2)}KB total):`);
-  
-  typeFiles.slice(0, 10).forEach(file => {
+
+  typeFiles.slice(0, 10).forEach((file) => {
     const indicator = file.size > 100 ? '🔴' : file.size > 50 ? '🟡' : '🟢';
     console.log(`  ${indicator} ${file.path.padEnd(40)} ${file.size.toFixed(2)}KB`);
   });
-  
+
   if (typeFiles.length > 10) {
     console.log(`  ... и ещё ${typeFiles.length - 10} файлов`);
   }
@@ -88,7 +88,9 @@ const largestFiles = files.sort((a, b) => b.size - a.size).slice(0, 10);
 
 largestFiles.forEach((file, i) => {
   const indicator = file.size > 200 ? '🔴' : file.size > 100 ? '🟡' : '🟢';
-  console.log(`${(i + 1).toString().padStart(2)}. ${indicator} ${file.path.padEnd(35)} ${file.size.toFixed(2)}KB`);
+  console.log(
+    `${(i + 1).toString().padStart(2)}. ${indicator} ${file.path.padEnd(35)} ${file.size.toFixed(2)}KB`,
+  );
 });
 
 // Общая статистика
@@ -100,9 +102,15 @@ const htmlSize = (byType.html || []).reduce((sum, file) => sum + file.size, 0);
 console.log('\n📊 SUMMARY:');
 console.log('─'.repeat(60));
 console.log(`📦 Total bundle size:    ${totalSize.toFixed(2)}KB`);
-console.log(`🟨 JavaScript:           ${jsSize.toFixed(2)}KB (${((jsSize/totalSize)*100).toFixed(1)}%)`);
-console.log(`🟦 CSS:                  ${cssSize.toFixed(2)}KB (${((cssSize/totalSize)*100).toFixed(1)}%)`);
-console.log(`🟩 HTML:                 ${htmlSize.toFixed(2)}KB (${((htmlSize/totalSize)*100).toFixed(1)}%)`);
+console.log(
+  `🟨 JavaScript:           ${jsSize.toFixed(2)}KB (${((jsSize / totalSize) * 100).toFixed(1)}%)`,
+);
+console.log(
+  `🟦 CSS:                  ${cssSize.toFixed(2)}KB (${((cssSize / totalSize) * 100).toFixed(1)}%)`,
+);
+console.log(
+  `🟩 HTML:                 ${htmlSize.toFixed(2)}KB (${((htmlSize / totalSize) * 100).toFixed(1)}%)`,
+);
 console.log(`📂 Total files:          ${files.length}`);
 
 // Рекомендации
@@ -119,7 +127,7 @@ if (cssSize > 100) {
   recommendations.push('CSS bundle >100KB - consider critical CSS extraction');
 }
 
-const largeJsFiles = (byType.js || []).filter(f => f.size > 100);
+const largeJsFiles = (byType.js || []).filter((f) => f.size > 100);
 if (largeJsFiles.length > 0) {
   recommendations.push(`${largeJsFiles.length} large JS files - review for optimization`);
 }
@@ -148,7 +156,7 @@ const results = {
   },
   files: files,
   byType: byType,
-  recommendations: recommendations
+  recommendations: recommendations,
 };
 
 fs.writeFileSync('docs/bundle-visualization.json', JSON.stringify(results, null, 2));

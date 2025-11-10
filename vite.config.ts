@@ -28,12 +28,7 @@ export default defineConfig({
 
   // Оптимизация зависимостей
   optimizeDeps: {
-    include: [
-      '@heys/logger',
-      '@heys/shared',
-      '@heys/core',
-      '@heys/ui',
-    ],
+    include: ['@heys/logger', '@heys/shared', '@heys/core', '@heys/ui'],
   },
 
   // Переменные окружения

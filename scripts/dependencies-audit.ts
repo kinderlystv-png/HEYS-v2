@@ -1,10 +1,10 @@
 // filepath: scripts/dependencies-audit.ts
 // Dependencies Audit для Performance Optimization Sprint День 2
 
-import { execSync } from 'child_process';
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
 import chalk from 'chalk';
+import { execSync } from 'child_process';
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 
 interface DependencyInfo {
   name: string;
@@ -30,10 +30,10 @@ class DependenciesAuditor {
 
     // Анализируем package.json
     await this.analyzePackageJson();
-    
+
     // Анализируем node_modules размеры
     await this.analyzeNodeModulesSizes();
-    
+
     // Генерируем отчет
     this.generateReport();
   }
@@ -43,14 +43,14 @@ class DependenciesAuditor {
    */
   private async analyzePackageJson(): Promise<void> {
     const packageJsonPath = join(this.workspaceRoot, 'package.json');
-    
+
     if (!existsSync(packageJsonPath)) {
       console.log(chalk.red('❌ package.json not found'));
       return;
     }
 
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-    
+
     // Обрабатываем dependencies
     if (packageJson.dependencies) {
       for (const [name, version] of Object.entries(packageJson.dependencies)) {
@@ -59,7 +59,7 @@ class DependenciesAuditor {
           version: version as string,
           size: 0,
           type: 'dependency',
-          bundled: true
+          bundled: true,
         });
       }
     }
@@ -72,7 +72,7 @@ class DependenciesAuditor {
           version: version as string,
           size: 0,
           type: 'devDependency',
-          bundled: false
+          bundled: false,
         });
       }
     }
@@ -88,12 +88,13 @@ class DependenciesAuditor {
 
     for (const dep of this.dependencies) {
       const depPath = join(this.workspaceRoot, 'node_modules', dep.name);
-      
+
       if (existsSync(depPath)) {
         try {
           // Используем du команду для получения размера (Windows/Unix совместимо)
-          const sizeOutput = execSync(`powershell -command "(Get-ChildItem '${depPath}' -Recurse | Measure-Object -Property Length -Sum).Sum"`, 
-            { encoding: 'utf-8', stdio: 'pipe' }
+          const sizeOutput = execSync(
+            `powershell -command "(Get-ChildItem '${depPath}' -Recurse | Measure-Object -Property Length -Sum).Sum"`,
+            { encoding: 'utf-8', stdio: 'pipe' },
           );
           dep.size = parseInt(sizeOutput.trim()) || 0;
         } catch (error) {
@@ -114,27 +115,31 @@ class DependenciesAuditor {
 
     // Сортируем по размеру (убывание)
     const sortedDeps = this.dependencies
-      .filter(dep => dep.size > 0)
+      .filter((dep) => dep.size > 0)
       .sort((a, b) => b.size - a.size);
 
     // Топ-10 самых тяжелых зависимостей
     console.log(chalk.yellow('🔥 TOP 10 HEAVIEST DEPENDENCIES:\n'));
-    
+
     const top10 = sortedDeps.slice(0, 10);
     top10.forEach((dep, index) => {
       const sizeInMB = (dep.size / 1024 / 1024).toFixed(2);
       const typeColor = dep.type === 'dependency' ? chalk.red : chalk.gray;
       const bundledIcon = dep.bundled ? '📦' : '🛠️';
-      
-      console.log(`${index + 1}. ${bundledIcon} ${chalk.bold(dep.name)} ${typeColor(`(${dep.type})`)} - ${chalk.cyan(sizeInMB + ' MB')}`);
+
+      console.log(
+        `${index + 1}. ${bundledIcon} ${chalk.bold(dep.name)} ${typeColor(`(${dep.type})`)} - ${chalk.cyan(sizeInMB + ' MB')}`,
+      );
     });
 
     // Анализ bundled dependencies
-    const bundledDeps = sortedDeps.filter(dep => dep.bundled);
+    const bundledDeps = sortedDeps.filter((dep) => dep.bundled);
     const totalBundledSize = bundledDeps.reduce((sum, dep) => sum + dep.size, 0);
-    
+
     console.log(chalk.blue(`\n📦 BUNDLED DEPENDENCIES ANALYSIS:`));
-    console.log(`Total bundled size: ${chalk.cyan((totalBundledSize / 1024 / 1024).toFixed(2) + ' MB')}`);
+    console.log(
+      `Total bundled size: ${chalk.cyan((totalBundledSize / 1024 / 1024).toFixed(2) + ' MB')}`,
+    );
     console.log(`Number of bundled deps: ${chalk.cyan(bundledDeps.length)}`);
 
     // Рекомендации по оптимизации
@@ -148,12 +153,12 @@ class DependenciesAuditor {
     console.log(chalk.blue('\n🎯 OPTIMIZATION RECOMMENDATIONS:\n'));
 
     const heavyBundledDeps = sortedDeps
-      .filter(dep => dep.bundled && dep.size > 5 * 1024 * 1024) // > 5MB
+      .filter((dep) => dep.bundled && dep.size > 5 * 1024 * 1024) // > 5MB
       .slice(0, 5);
 
     if (heavyBundledDeps.length > 0) {
       console.log(chalk.red('🚨 CRITICAL - Heavy bundled dependencies:'));
-      heavyBundledDeps.forEach(dep => {
+      heavyBundledDeps.forEach((dep) => {
         const sizeInMB = (dep.size / 1024 / 1024).toFixed(2);
         console.log(`   • ${dep.name} (${sizeInMB}MB) - Consider lazy loading or alternatives`);
       });
@@ -166,11 +171,11 @@ class DependenciesAuditor {
       '📦 Use dynamic imports for heavy components',
       '🔄 Replace heavy libraries with lighter alternatives',
       '📱 Split vendor and application bundles',
-      '⚡ Enable aggressive minification'
+      '⚡ Enable aggressive minification',
     ];
 
     console.log(chalk.green('💡 RECOMMENDED ACTIONS:'));
-    recommendations.forEach(rec => console.log(`   ${rec}`));
+    recommendations.forEach((rec) => console.log(`   ${rec}`));
 
     console.log(chalk.blue('\n🚀 NEXT STEPS FOR SPRINT:'));
     console.log('   1. Configure advanced tree shaking');

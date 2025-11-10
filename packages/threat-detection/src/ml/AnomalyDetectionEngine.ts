@@ -1,4 +1,9 @@
-import { AnomalyDetectionResult, AnomalyFeature, SecurityEvent, ThreatDetectionModel } from '../types';
+import {
+  AnomalyDetectionResult,
+  AnomalyFeature,
+  SecurityEvent,
+  ThreatDetectionModel,
+} from '../types';
 
 /**
  * ML-based Anomaly Detection Engine
@@ -11,11 +16,13 @@ export class AnomalyDetectionEngine {
   private threshold: number = 0.7;
   private isInitialized: boolean = false;
 
-  constructor(private config: {
-    anomalyThreshold?: number;
-    minTrainingSamples?: number;
-    retainedSamples?: number;
-  } = {}) {
+  constructor(
+    private config: {
+      anomalyThreshold?: number;
+      minTrainingSamples?: number;
+      retainedSamples?: number;
+    } = {},
+  ) {
     this.threshold = config.anomalyThreshold || 0.7;
     this.initializeDefaultFeatures();
   }
@@ -34,7 +41,7 @@ export class AnomalyDetectionEngine {
       'geo_distance',
       'device_changes',
       'privilege_access',
-      'failed_attempts'
+      'failed_attempts',
     ];
   }
 
@@ -62,19 +69,21 @@ export class AnomalyDetectionEngine {
       features: this.features,
       trainingData: {
         samples: trainingEvents.length,
-        startDate: Math.min(...trainingEvents.map(e => e.timestamp)),
-        endDate: Math.max(...trainingEvents.map(e => e.timestamp))
+        startDate: Math.min(...trainingEvents.map((e) => e.timestamp)),
+        endDate: Math.max(...trainingEvents.map((e) => e.timestamp)),
       },
       performance: await this.evaluateModel(featureMatrix),
       isActive: true,
       createdAt: Date.now(),
-      lastTrainedAt: Date.now()
+      lastTrainedAt: Date.now(),
     };
 
     this.models.set(model.id, model);
     this.isInitialized = true;
 
-    console.log(`✅ Model trained successfully with ${model.performance.accuracy.toFixed(3)} accuracy`);
+    console.log(
+      `✅ Model trained successfully with ${model.performance.accuracy.toFixed(3)} accuracy`,
+    );
     return model;
   }
 
@@ -82,36 +91,36 @@ export class AnomalyDetectionEngine {
    * Извлечение features из security event
    */
   private extractFeatures(events: SecurityEvent[]): number[][] {
-    return events.map(event => {
+    return events.map((event) => {
       const features: number[] = [];
-      
+
       // Feature 1: Request frequency (normalized)
       features.push(this.normalizeRequestFrequency(event));
-      
+
       // Feature 2: Session duration (if available)
       features.push(this.extractSessionDuration(event));
-      
+
       // Feature 3: Error rate context
       features.push(this.extractErrorRate(event));
-      
+
       // Feature 4: Response time pattern
       features.push(this.extractResponseTime(event));
-      
+
       // Feature 5: Data volume
       features.push(this.extractDataVolume(event));
-      
+
       // Feature 6: Unusual hours (0-1)
       features.push(this.extractUnusualHours(event.timestamp));
-      
+
       // Feature 7: Geographic distance
       features.push(this.extractGeoDistance(event));
-      
+
       // Feature 8: Device changes
       features.push(this.extractDeviceChanges(event));
-      
+
       // Feature 9: Privilege access level
       features.push(this.extractPrivilegeLevel(event));
-      
+
       // Feature 10: Failed attempts pattern
       features.push(this.extractFailedAttempts(event));
 
@@ -190,7 +199,7 @@ export class AnomalyDetectionEngine {
    */
   private extractPrivilegeLevel(event: SecurityEvent): number {
     const privLevel = event.metadata.privilegeLevel || 'user';
-    const levels = { 'user': 0.2, 'moderator': 0.5, 'admin': 0.8, 'superuser': 1.0 };
+    const levels = { user: 0.2, moderator: 0.5, admin: 0.8, superuser: 1.0 };
     return levels[privLevel as keyof typeof levels] || 0.2;
   }
 
@@ -233,7 +242,7 @@ export class AnomalyDetectionEngine {
       modelVersion: Array.from(this.models.values())[0]?.version || '1.0.0',
       detectionMethod: 'isolation_forest',
       explanation,
-      recommendations
+      recommendations,
     };
 
     if (isAnomaly) {
@@ -259,32 +268,32 @@ export class AnomalyDetectionEngine {
     for (let depth = 0; depth < 10 && currentData.length > 1; depth++) {
       const featureIndex = Math.floor(Math.random() * features.length);
       const splitValue = features[featureIndex];
-      
+
       if (splitValue === undefined) continue;
-      
-      const leftSplit = currentData.filter(sample => {
+
+      const leftSplit = currentData.filter((sample) => {
         const sampleValue = sample?.[featureIndex];
         return sampleValue !== undefined && sampleValue < splitValue;
       });
-      const rightSplit = currentData.filter(sample => {
+      const rightSplit = currentData.filter((sample) => {
         const sampleValue = sample?.[featureIndex];
         return sampleValue !== undefined && sampleValue >= splitValue;
       });
-      
+
       // Choose the split that isolates the point
       if (leftSplit.length < rightSplit.length) {
         currentData = leftSplit;
       } else {
         currentData = rightSplit;
       }
-      
+
       pathLength++;
     }
 
     // Normalize path length to anomaly score (0-1)
     const avgPathLength = this.calculateAveragePathLength(this.trainingData.length);
     const normalizedScore = Math.pow(2, -pathLength / avgPathLength);
-    
+
     return Math.max(0, Math.min(1, normalizedScore));
   }
 
@@ -293,7 +302,7 @@ export class AnomalyDetectionEngine {
    */
   private calculateAveragePathLength(sampleSize: number): number {
     if (sampleSize <= 1) return 0;
-    return 2 * (Math.log(sampleSize - 1) + 0.5772156649) - (2 * (sampleSize - 1) / sampleSize);
+    return 2 * (Math.log(sampleSize - 1) + 0.5772156649) - (2 * (sampleSize - 1)) / sampleSize;
   }
 
   /**
@@ -311,7 +320,7 @@ export class AnomalyDetectionEngine {
         value,
         importance,
         normalRange,
-        isOutlier
+        isOutlier,
       };
     });
   }
@@ -323,12 +332,16 @@ export class AnomalyDetectionEngine {
     // Simplified feature importance based on deviation from mean
     if (this.trainingData.length === 0) return 0.5;
 
-    const values = this.trainingData.map(sample => sample?.[featureIndex] ?? 0).filter(v => v !== undefined);
+    const values = this.trainingData
+      .map((sample) => sample?.[featureIndex] ?? 0)
+      .filter((v) => v !== undefined);
     if (values.length === 0) return 0.5;
 
     const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
-    const std = Math.sqrt(values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length);
-    
+    const std = Math.sqrt(
+      values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length,
+    );
+
     const deviation = Math.abs(value - mean);
     return Math.min(deviation / (std || 1), 1);
   }
@@ -339,15 +352,17 @@ export class AnomalyDetectionEngine {
   private calculateNormalRange(featureIndex: number): [number, number] {
     if (this.trainingData.length === 0) return [0, 1];
 
-    const values = this.trainingData.map(sample => sample?.[featureIndex] ?? 0).filter(v => v !== undefined);
+    const values = this.trainingData
+      .map((sample) => sample?.[featureIndex] ?? 0)
+      .filter((v) => v !== undefined);
     if (values.length === 0) return [0, 1];
 
     values.sort((a, b) => a - b);
-    
+
     const q1 = values[Math.floor(values.length * 0.25)] ?? 0;
     const q3 = values[Math.floor(values.length * 0.75)] ?? 1;
     const iqr = q3 - q1;
-    
+
     return [q1 - 1.5 * iqr, q3 + 1.5 * iqr];
   }
 
@@ -364,17 +379,15 @@ export class AnomalyDetectionEngine {
    * Генерация объяснения anomaly
    */
   private generateExplanation(features: AnomalyFeature[], score: number): string {
-    const outlierFeatures = features.filter(f => f.isOutlier);
-    
+    const outlierFeatures = features.filter((f) => f.isOutlier);
+
     if (outlierFeatures.length === 0) {
       return `Normal behavior detected (score: ${score.toFixed(3)})`;
     }
 
-    const topOutliers = outlierFeatures
-      .sort((a, b) => b.importance - a.importance)
-      .slice(0, 3);
+    const topOutliers = outlierFeatures.sort((a, b) => b.importance - a.importance).slice(0, 3);
 
-    const descriptions = topOutliers.map(f => {
+    const descriptions = topOutliers.map((f) => {
       const direction = f.value > f.normalRange[1] ? 'high' : 'low';
       return `${f.name} is unusually ${direction}`;
     });
@@ -391,7 +404,7 @@ export class AnomalyDetectionEngine {
     }
 
     const recommendations: string[] = [];
-    const outlierFeatures = features.filter(f => f.isOutlier);
+    const outlierFeatures = features.filter((f) => f.isOutlier);
 
     for (const feature of outlierFeatures) {
       switch (feature.name) {
@@ -444,7 +457,7 @@ export class AnomalyDetectionEngine {
     // Simplified model evaluation
     const sampleSize = Math.min(testData.length, 100);
     const testSample = testData.slice(0, sampleSize);
-    
+
     let correctPredictions = 0;
     const totalPredictions = testSample.length;
 
@@ -461,15 +474,15 @@ export class AnomalyDetectionEngine {
     return {
       accuracy,
       precision: 0.85 + Math.random() * 0.1, // Simulated
-      recall: 0.80 + Math.random() * 0.1,    // Simulated
-      f1Score: 0.82 + Math.random() * 0.1,   // Simulated
-      auc: 0.88 + Math.random() * 0.1,       // Simulated
+      recall: 0.8 + Math.random() * 0.1, // Simulated
+      f1Score: 0.82 + Math.random() * 0.1, // Simulated
+      auc: 0.88 + Math.random() * 0.1, // Simulated
       falsePositiveRate: 0.05 + Math.random() * 0.05,
       falseNegativeRate: 0.08 + Math.random() * 0.05,
       confusionMatrix: [
         [Math.floor(totalPredictions * 0.8), Math.floor(totalPredictions * 0.1)],
-        [Math.floor(totalPredictions * 0.05), Math.floor(totalPredictions * 0.05)]
-      ]
+        [Math.floor(totalPredictions * 0.05), Math.floor(totalPredictions * 0.05)],
+      ],
     };
   }
 
@@ -478,7 +491,7 @@ export class AnomalyDetectionEngine {
    */
   async detectAnomaliesBatch(events: SecurityEvent[]): Promise<AnomalyDetectionResult[]> {
     const results: AnomalyDetectionResult[] = [];
-    
+
     for (const event of events) {
       try {
         const result = await this.detectAnomaly(event);
@@ -488,7 +501,9 @@ export class AnomalyDetectionEngine {
       }
     }
 
-    console.log(`🔍 Processed ${results.length} events, found ${results.filter(r => r.isAnomaly).length} anomalies`);
+    console.log(
+      `🔍 Processed ${results.length} events, found ${results.filter((r) => r.isAnomaly).length} anomalies`,
+    );
     return results;
   }
 

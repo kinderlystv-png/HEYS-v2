@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { SecurityAnalyticsService } from '@heys/shared';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Simple mock implementation
 vi.mock('@heys/shared', () => ({
-  SecurityAnalyticsService: vi.fn()
+  SecurityAnalyticsService: vi.fn(),
 }));
 
 // Mock Supabase client
@@ -20,27 +20,27 @@ const mockSupabaseClient = {
   rpc: vi.fn(),
   channel: vi.fn().mockReturnThis(),
   on: vi.fn().mockReturnThis(),
-  subscribe: vi.fn()
+  subscribe: vi.fn(),
 };
 
 vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => mockSupabaseClient)
+  createClient: vi.fn(() => mockSupabaseClient),
 }));
 
 describe('Security Analytics Integration Tests', () => {
   let securityService: any;
   let mockServiceInstance: any;
-  
+
   const mockConfig = {
     supabaseUrl: 'https://test.supabase.co',
     supabaseKey: 'test-key',
     enableRealTimeProcessing: true,
-    enableAutomatedResponse: true
+    enableAutomatedResponse: true,
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Create mock service instance
     mockServiceInstance = {
       initialize: vi.fn().mockResolvedValue(undefined),
@@ -52,7 +52,7 @@ describe('Security Analytics Integration Tests', () => {
         if (event.metadata?.simulateError === 'threat-detection') {
           throw new Error('ML model error');
         }
-        
+
         return {
           id: 'event-123',
           ...event,
@@ -60,7 +60,7 @@ describe('Security Analytics Integration Tests', () => {
           updated_at: new Date().toISOString(),
           anomaly_score: 0.8,
           threat_level: 'high',
-          automated_response: []
+          automated_response: [],
         };
       }),
       getSecurityAnalytics: vi.fn().mockResolvedValue({
@@ -71,50 +71,54 @@ describe('Security Analytics Integration Tests', () => {
           avg_response_time: 120,
           failed_attempts: 15,
           event_types: ['login', 'api_call'],
-          risk_score: 0.75
+          risk_score: 0.75,
         },
-        threats: { 
-          top_threats: [{
-            ioc_value: '192.168.1.100',
-            ioc_type: 'ip',
-            threat_actor: 'APT29',
-            matches_count: 10,
-            last_seen: '2025-09-01T10:00:00Z'
-          }]
+        threats: {
+          top_threats: [
+            {
+              ioc_value: '192.168.1.100',
+              ioc_type: 'ip',
+              threat_actor: 'APT29',
+              matches_count: 10,
+              last_seen: '2025-09-01T10:00:00Z',
+            },
+          ],
         },
-        incidents: [{
-          id: '1',
-          title: 'Suspicious Activity',
-          severity: 'medium',
-          status: 'open',
-          created_at: '2025-09-01T09:00:00Z'
-        }],
+        incidents: [
+          {
+            id: '1',
+            title: 'Suspicious Activity',
+            severity: 'medium',
+            status: 'open',
+            created_at: '2025-09-01T09:00:00Z',
+          },
+        ],
         ml_stats: {
           totalEventsAnalyzed: 1000,
           anomalyScore: 0.23,
           threatsDetected: 15,
-          incidentsCreated: 3
-        }
+          incidentsCreated: 3,
+        },
       }),
       batchProcessEvents: vi.fn().mockImplementation(async (events: any[]) => {
         const results = [];
         let total = 0;
-        
+
         // Simulate batch processing
         for (let i = 0; i < events.length; i += 100) {
           const batch = events.slice(i, i + 100);
           total += batch.length;
-          
+
           const progressData = { processed: batch.length, total };
-          
+
           // Call stored progress callbacks
           if (mockServiceInstance._progressCallbacks) {
             mockServiceInstance._progressCallbacks.forEach((cb: any) => cb(progressData));
           }
-          
+
           results.push(progressData);
         }
-        
+
         return results;
       }),
       subscribeToRealTimeEvents: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
@@ -126,7 +130,7 @@ describe('Security Analytics Integration Tests', () => {
       }),
       emit: vi.fn(),
       _progressCallbacks: [],
-      
+
       // Mock for threat detection service access
       threatDetection: {
         initialize: vi.fn().mockResolvedValue(undefined),
@@ -134,20 +138,20 @@ describe('Security Analytics Integration Tests', () => {
           anomalyScore: 0.8,
           incidentCreated: false,
           findings: [],
-          iocMatches: []
+          iocMatches: [],
         }),
         getStatistics: vi.fn().mockResolvedValue({
           totalEventsAnalyzed: 1000,
           anomalyScore: 0.23,
           threatsDetected: 15,
-          incidentsCreated: 3
-        })
-      }
+          incidentsCreated: 3,
+        }),
+      },
     };
-    
+
     // Setup SecurityAnalyticsService mock to return our instance
     (SecurityAnalyticsService as any).mockImplementation(() => mockServiceInstance);
-    
+
     securityService = new SecurityAnalyticsService(mockConfig);
   });
 
@@ -178,8 +182,8 @@ describe('Security Analytics Integration Tests', () => {
           userAgent: 'Mozilla/5.0',
           sessionDuration: 300,
           errorRate: 0,
-          responseTime: 150
-        }
+          responseTime: 150,
+        },
       };
 
       const result = await securityService.processSecurityEvent(mockEvent);
@@ -190,9 +194,9 @@ describe('Security Analytics Integration Tests', () => {
         id: 'event-123',
         timestamp: expect.any(String),
         customAttributes: expect.objectContaining({
-          forwardedFor: "203.0.113.195",
-          userAgent: "Mozilla/5.0"
-        })
+          forwardedFor: '203.0.113.195',
+          userAgent: 'Mozilla/5.0',
+        }),
       });
     });
 
@@ -206,8 +210,8 @@ describe('Security Analytics Integration Tests', () => {
           userAgent: 'test-client/1.0',
           sessionDuration: 100,
           errorRate: 0,
-          responseTime: 50
-        }
+          responseTime: 50,
+        },
       };
 
       const result = await securityService.processSecurityEvent(mockEvent);
@@ -256,8 +260,8 @@ describe('Security Analytics Integration Tests', () => {
           userAgent: 'test-client/1.0',
           sessionDuration: 100 + (i % 200),
           errorRate: 0,
-          responseTime: 50 + (i % 100)
-        }
+          responseTime: 50 + (i % 100),
+        },
       }));
 
       const batchResults: any[] = [];
@@ -288,12 +292,13 @@ describe('Security Analytics Integration Tests', () => {
           sessionDuration: 200,
           errorRate: 0,
           responseTime: 100,
-          simulateError: 'database'
-        }
+          simulateError: 'database',
+        },
       };
 
-      await expect(securityService.processSecurityEvent(mockEvent))
-        .rejects.toThrow('Failed to create security event: Connection failed');
+      await expect(securityService.processSecurityEvent(mockEvent)).rejects.toThrow(
+        'Failed to create security event: Connection failed',
+      );
     });
 
     it('should handle threat detection errors', async () => {
@@ -307,12 +312,13 @@ describe('Security Analytics Integration Tests', () => {
           sessionDuration: 300,
           errorRate: 0,
           responseTime: 120,
-          simulateError: 'threat-detection'
-        }
+          simulateError: 'threat-detection',
+        },
       };
 
-      await expect(securityService.processSecurityEvent(mockEvent))
-        .rejects.toThrow('ML model error');
+      await expect(securityService.processSecurityEvent(mockEvent)).rejects.toThrow(
+        'ML model error',
+      );
     });
   });
 });

@@ -1,6 +1,6 @@
-import { vi, expect, beforeEach, afterEach } from 'vitest';
-import React, { type ComponentProps, type ReactElement } from 'react';
 import { render, type RenderOptions } from '@testing-library/react';
+import React, { type ComponentProps, type ReactElement } from 'react';
+import { afterEach, beforeEach, expect, vi } from 'vitest';
 
 /**
  * Test utilities and common mocks for HEYS testing
@@ -33,7 +33,7 @@ export const measureRenderTime = (renderFn: () => void) => {
 // Mock local storage
 export const mockLocalStorage = () => {
   const storage: Record<string, string> = {};
-  
+
   return {
     getItem: vi.fn((key: string) => storage[key] || null),
     setItem: vi.fn((key: string, value: string) => {
@@ -43,7 +43,7 @@ export const mockLocalStorage = () => {
       delete storage[key];
     }),
     clear: vi.fn(() => {
-      Object.keys(storage).forEach(key => delete storage[key]);
+      Object.keys(storage).forEach((key) => delete storage[key]);
     }),
   };
 };
@@ -65,10 +65,7 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   initialState?: any;
 }
 
-export const customRender = (
-  ui: ReactElement,
-  options: CustomRenderOptions = {}
-) => {
+export const customRender = (ui: ReactElement, options: CustomRenderOptions = {}) => {
   const { withRouter = false, withTheme = false, initialState = {}, ...renderOptions } = options;
 
   // This is a placeholder - in real implementation, wrap with actual providers
@@ -90,22 +87,22 @@ export const customRender = (
 // Async test helpers
 export const waitForAsyncOperation = async (operation: () => Promise<void>, timeout = 5000) => {
   const start = Date.now();
-  
+
   while (Date.now() - start < timeout) {
     try {
       await operation();
       return;
     } catch (error) {
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
   }
-  
+
   throw new Error(`Operation timed out after ${timeout}ms`);
 };
 
 // Component prop extraction utility
 export const getComponentProps = <T extends React.ComponentType<any>>(
-  Component: T
+  Component: T,
 ): ComponentProps<T> => {
   // This is a TypeScript utility for extracting component props
   return {} as ComponentProps<T>;
@@ -124,11 +121,11 @@ export const expectElementToHaveAccessibleName = (element: HTMLElement, name: st
 // Mock environment variables
 export const mockEnvironment = (env: Record<string, string>) => {
   const original = process.env;
-  
+
   beforeEach(() => {
     process.env = { ...original, ...env };
   });
-  
+
   afterEach(() => {
     process.env = original;
   });
@@ -144,7 +141,7 @@ export const mockBrowserAPIs = () => {
     search: '',
     hash: '',
   };
-  
+
   Object.defineProperty(window, 'location', {
     value: mockLocation,
     writable: true,
@@ -153,7 +150,7 @@ export const mockBrowserAPIs = () => {
   // Mock window.matchMedia
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: vi.fn().mockImplementation(query => ({
+    value: vi.fn().mockImplementation((query) => ({
       matches: false,
       media: query,
       onchange: null,

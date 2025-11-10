@@ -2,7 +2,9 @@
 
 ## Overview
 
-HEYS v2 — это web-приложение для учета питания с фокусом на безопасность данных пользователей. Проект использует Supabase для хранения данных с Row Level Security (RLS) политиками и следует современным практикам безопасности.
+HEYS v2 — это web-приложение для учета питания с фокусом на безопасность данных
+пользователей. Проект использует Supabase для хранения данных с Row Level
+Security (RLS) политиками и следует современным практикам безопасности.
 
 ## Supported Versions
 
@@ -17,9 +19,11 @@ HEYS v2 — это web-приложение для учета питания с 
 
 ### Процедура отчета
 
-Если вы обнаружили уязвимость безопасности, **НЕ создавайте публичный issue**. Вместо этого:
+Если вы обнаружили уязвимость безопасности, **НЕ создавайте публичный issue**.
+Вместо этого:
 
-1. **Email:** Отправьте описание на security@heys-app.example.com (замените на актуальный email)
+1. **Email:** Отправьте описание на security@heys-app.example.com (замените на
+   актуальный email)
 2. **Приватный issue:** Создайте приватный security advisory в GitHub
 3. **Telegram:** Свяжитесь с мейнтейнером напрямую
 
@@ -42,13 +46,14 @@ HEYS v2 — это web-приложение для учета питания с 
 
 ### Authentication & Authorization
 
-1. **Supabase Auth:** 
+1. **Supabase Auth:**
    - JWT-based authentication
    - Email/password authentication с secure hashing
    - Session management с automatic token refresh
    - Cookie-based authentication для безопасности
 
 2. **Row Level Security (RLS):**
+
    ```sql
    -- Пример RLS политики для таблицы clients
    CREATE POLICY "Users can access only their client data"
@@ -73,10 +78,11 @@ HEYS v2 — это web-приложение для учета питания с 
    - Content Security Policy (CSP) в production build
 
 3. **Sensitive Data Handling:**
+
    ```javascript
    // ❌ Плохо: Логирование sensitive data
    console.log('User password:', password);
-   
+
    // ✅ Хорошо: No sensitive data в логах
    DEV.log('User authenticated:', { userId: user.id });
    ```
@@ -103,28 +109,32 @@ HEYS v2 — это web-приложение для учета питания с 
 ### Code Security
 
 1. **Never commit secrets:**
+
    ```bash
    # Проверить перед коммитом
    git diff --staged | grep -i "password\|secret\|token\|key"
    ```
 
 2. **Use DEV.log for debugging:**
+
    ```javascript
    // ✅ Автоматически отключается в production
    DEV.log('[DEBUG] User data:', userData);
    ```
 
 3. **Validate user input:**
+
    ```typescript
    // ✅ Всегда валидируй и санитизируй
    const sanitized = validator.escape(userInput);
    ```
 
 4. **Avoid eval and Function():**
+
    ```javascript
    // ❌ Опасно
    eval(userCode);
-   
+
    // ✅ Безопасно
    JSON.parse(userJSON); // С try-catch
    ```
@@ -137,6 +147,7 @@ HEYS v2 — это web-приложение для учета питания с 
    - См. `database_clients_rls_policies.sql`
 
 2. **Use parameterized queries:**
+
    ```typescript
    // ✅ Supabase автоматически параметризует
    const { data } = await supabase
@@ -146,10 +157,11 @@ HEYS v2 — это web-приложение для учета питания с 
    ```
 
 3. **Limit data exposure:**
+
    ```typescript
    // ❌ Плохо: Возвращает все поля
    .select('*')
-   
+
    // ✅ Хорошо: Только нужные поля
    .select('id, name, kcal100')
    ```
@@ -165,10 +177,11 @@ HEYS v2 — это web-приложение для учета питания с 
    - Настройка в Supabase dashboard
 
 3. **Error Handling:**
+
    ```typescript
    // ❌ Плохо: Exposing internal details
    throw new Error(`SQL error: ${dbError}`);
-   
+
    // ✅ Хорошо: Generic error messages
    throw new Error('Failed to fetch data');
    ```
@@ -276,11 +289,12 @@ pnpm lint
 ## Contact
 
 **Security Team:**
+
 - Email: security@heys-app.example.com (replace with actual)
 - GitHub: [@maintainer-username](https://github.com/maintainer-username)
 
-**Bug Bounty Program:**
-Currently not available. Security research conducted responsibly is appreciated.
+**Bug Bounty Program:** Currently not available. Security research conducted
+responsibly is appreciated.
 
 ---
 

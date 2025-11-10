@@ -1,7 +1,7 @@
 // Core Threat Detection Components
+export { IncidentResponseManager } from './core/IncidentResponseManager';
 export { AnomalyDetectionEngine } from './ml/AnomalyDetectionEngine';
 export { ThreatIntelligenceEngine } from './ml/ThreatIntelligenceEngine';
-export { IncidentResponseManager } from './core/IncidentResponseManager';
 
 // Type exports
 export * from './types';
@@ -10,14 +10,14 @@ export * from './types';
 import { IncidentResponseManager } from './core/IncidentResponseManager';
 import { AnomalyDetectionEngine } from './ml/AnomalyDetectionEngine';
 import { ThreatIntelligenceEngine } from './ml/ThreatIntelligenceEngine';
-import { 
-  SecurityEvent, 
-  AnomalyDetectionResult, 
-  IOCMatch, 
-  SecurityIncident, 
+import {
+  AnomalyDetectionResult,
+  IncidentStatus,
+  IOCMatch,
+  SecurityEvent,
+  SecurityIncident,
   SecuritySeverity,
   ThreatDetectionModel,
-  IncidentStatus
 } from './types';
 
 // Main Threat Detection Service
@@ -27,11 +27,7 @@ export class ThreatDetectionService {
   private incidentManager: IncidentResponseManager;
   private isInitialized: boolean = false;
 
-  constructor(config?: {
-    anomaly?: any;
-    threatIntel?: any;
-    incident?: any;
-  }) {
+  constructor(config?: { anomaly?: any; threatIntel?: any; incident?: any }) {
     this.anomalyEngine = new AnomalyDetectionEngine(config?.anomaly);
     this.threatIntelligence = new ThreatIntelligenceEngine(config?.threatIntel);
     this.incidentManager = new IncidentResponseManager(config?.incident);
@@ -86,24 +82,27 @@ export class ThreatDetectionService {
       const shouldCreateIncident = this.shouldCreateIncident(event, anomaly, iocMatches);
 
       if (shouldCreateIncident) {
-        const { title, description, severity } = this.generateIncidentDetails(event, anomaly, iocMatches);
-        
+        const { title, description, severity } = this.generateIncidentDetails(
+          event,
+          anomaly,
+          iocMatches,
+        );
+
         incidentCreated = await this.incidentManager.createIncident(
           title,
           description,
           severity,
           event,
           anomaly || undefined,
-          iocMatches.length > 0 ? iocMatches : undefined
+          iocMatches.length > 0 ? iocMatches : undefined,
         );
       }
 
       return {
         anomaly,
         iocMatches,
-        incidentCreated
+        incidentCreated,
       };
-
     } catch (error) {
       console.error(`Error analyzing security event ${event.id}:`, error);
       throw error;
@@ -116,7 +115,7 @@ export class ThreatDetectionService {
   private shouldCreateIncident(
     event: SecurityEvent,
     anomaly: AnomalyDetectionResult | null,
-    iocMatches: IOCMatch[]
+    iocMatches: IOCMatch[],
   ): boolean {
     // High/Critical severity events always create incidents
     if (event.severity === 'high' || event.severity === 'critical') {
@@ -147,7 +146,7 @@ export class ThreatDetectionService {
   private generateIncidentDetails(
     event: SecurityEvent,
     anomaly: AnomalyDetectionResult | null,
-    iocMatches: IOCMatch[]
+    iocMatches: IOCMatch[],
   ): { title: string; description: string; severity: SecuritySeverity } {
     let title = `Security Event: ${event.type}`;
     let description = event.description;
@@ -158,10 +157,10 @@ export class ThreatDetectionService {
       const firstMatch = iocMatches[0];
       if (firstMatch) {
         title = `Threat Intelligence Match: ${firstMatch.category}`;
-        description = `IOC matches detected: ${iocMatches.map(m => `${m.iocType}:${m.matchedValue}`).join(', ')}. ${description}`;
-        
+        description = `IOC matches detected: ${iocMatches.map((m) => `${m.iocType}:${m.matchedValue}`).join(', ')}. ${description}`;
+
         // Escalate severity if IOC match is high confidence
-        const highConfidenceMatch = iocMatches.find(m => m.confidence > 0.8);
+        const highConfidenceMatch = iocMatches.find((m) => m.confidence > 0.8);
         if (highConfidenceMatch && highConfidenceMatch.severity === 'high') {
           severity = 'high';
         }
@@ -172,7 +171,7 @@ export class ThreatDetectionService {
     if (anomaly && anomaly.isAnomaly) {
       title = `Anomaly Detected: ${event.type}`;
       description = `${anomaly.explanation}. ${description}`;
-      
+
       // Escalate severity for high anomaly scores
       if (anomaly.anomalyScore > 0.9 && severity !== 'critical') {
         severity = severity === 'low' ? 'medium' : severity === 'medium' ? 'high' : severity;
@@ -206,28 +205,29 @@ export class ThreatDetectionService {
     for (const event of events) {
       try {
         const result = await this.analyzeSecurityEvent(event);
-        
+
         if (result.anomaly) {
           anomalies.push(result.anomaly);
         }
-        
+
         if (result.incidentCreated) {
           incidents.push(result.incidentCreated);
         }
-        
+
         allIOCMatches.push(...result.iocMatches);
-        
       } catch (error) {
         console.error(`Error processing event ${event.id}:`, error);
       }
     }
 
-    console.log(`✅ Batch analysis complete: ${anomalies.length} anomalies, ${incidents.length} incidents, ${allIOCMatches.length} IOC matches`);
+    console.log(
+      `✅ Batch analysis complete: ${anomalies.length} anomalies, ${incidents.length} incidents, ${allIOCMatches.length} IOC matches`,
+    );
 
     return {
       anomalies,
       incidents,
-      iocMatches: allIOCMatches
+      iocMatches: allIOCMatches,
     };
   }
 
@@ -242,7 +242,7 @@ export class ThreatDetectionService {
     return {
       threatIntel: this.threatIntelligence.getStatistics(),
       incidents: this.incidentManager.getIncidentStatistics(),
-      models: this.anomalyEngine.getModelInfo()
+      models: this.anomalyEngine.getModelInfo(),
     };
   }
 
@@ -273,7 +273,7 @@ export class ThreatDetectionService {
   async updateIncidentStatus(
     incidentId: string,
     status: IncidentStatus,
-    notes?: string
+    notes?: string,
   ): Promise<SecurityIncident> {
     return await this.incidentManager.updateIncidentStatus(incidentId, status, notes);
   }

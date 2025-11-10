@@ -36,7 +36,7 @@ export function LazyImage({
         placeholder={blurUp ? placeholder : 'empty'}
         className="lazy-image"
       />
-      
+
       <style>{`
         .lazy-image-wrapper {
           position: relative;

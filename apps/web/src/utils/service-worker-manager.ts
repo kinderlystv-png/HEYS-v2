@@ -45,17 +45,17 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
 
     try {
       console.log('🔧 SW Manager: Registering Service Worker...');
-      
+
       this.registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/',
-        updateViaCache: 'none' // Всегда проверяем обновления
+        updateViaCache: 'none', // Всегда проверяем обновления
       });
 
       console.log('✅ SW Manager: Service Worker registered:', this.registration.scope);
 
       // Слушаем обновления Service Worker
       this.setupUpdateListener();
-      
+
       // Слушаем сообщения от Service Worker
       this.setupMessageListener();
 
@@ -101,7 +101,7 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
     try {
       console.log('🔄 SW Manager: Checking for updates...');
       await this.registration.update();
-      
+
       if (this.registration.waiting) {
         this.sendMessage({ type: 'SKIP_WAITING' });
       }
@@ -122,10 +122,10 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
 
     try {
       console.log('🚀 SW Manager: Preloading resources:', urls.length);
-      
+
       this.sendMessage({
         type: 'PRELOAD_RESOURCES',
-        data: { urls }
+        data: { urls },
       });
     } catch (error) {
       console.error('❌ SW Manager: Preload failed:', error);
@@ -144,10 +144,10 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
 
     try {
       console.log('🧹 SW Manager: Clearing cache with pattern:', pattern);
-      
+
       this.sendMessage({
         type: 'CLEAR_CACHE',
-        data: { pattern }
+        data: { pattern },
       });
     } catch (error) {
       console.error('❌ SW Manager: Cache clear failed:', error);
@@ -165,7 +165,7 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
 
     return new Promise((resolve, reject) => {
       const channel = new MessageChannel();
-      
+
       channel.port1.onmessage = (event) => {
         resolve(event.data);
       };
@@ -173,9 +173,9 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
       try {
         this.sendMessage(
           {
-            type: 'GET_CACHE_STATUS'
+            type: 'GET_CACHE_STATUS',
           },
-          [channel.port2]
+          [channel.port2],
         );
 
         // Таймаут через 5 секунд
@@ -199,7 +199,7 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
     try {
       this.sendMessage({
         type: 'PERFORMANCE_REPORT',
-        data: metrics
+        data: metrics,
       });
 
       console.log('📊 SW Manager: Performance metrics sent:', metrics);
@@ -238,14 +238,14 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
 
     this.registration.addEventListener('updatefound', () => {
       const newWorker = this.registration!.installing;
-      
+
       if (newWorker) {
         console.log('🔄 SW Manager: New Service Worker installing...');
-        
+
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
             console.log('✅ SW Manager: New Service Worker installed, refresh to activate');
-            
+
             // Можно показать пользователю уведомление об обновлении
             this.showUpdateNotification();
           }
@@ -265,16 +265,16 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
         case 'CACHE_UPDATED':
           console.log('📦 SW Manager: Cache updated for:', data?.url);
           break;
-          
+
         case 'OFFLINE_FALLBACK':
           console.log('📱 SW Manager: Offline fallback activated');
           this.showOfflineNotification();
           break;
-          
+
         case 'PERFORMANCE_UPDATE':
           console.log('📊 SW Manager: Performance update:', data);
           break;
-          
+
         default:
           console.log('💬 SW Manager: Message from SW:', event.data);
       }
@@ -287,7 +287,7 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
   private showUpdateNotification(): void {
     // Интеграция с notification system
     console.log('🔔 SW Manager: App update available');
-    
+
     // Можно интегрировать с toast notifications:
     // showToast({
     //   title: 'App Update Available',
@@ -302,7 +302,7 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
    */
   private showOfflineNotification(): void {
     console.log('📱 SW Manager: App running in offline mode');
-    
+
     // Можно интегрировать с notification system:
     // showToast({
     //   title: 'Offline Mode',
@@ -317,7 +317,7 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
 const serviceWorkerManager = new ServiceWorkerManagerImpl();
 
 export { serviceWorkerManager };
-export type { ServiceWorkerManager, CacheStatus, PerformanceMetrics };
+export type { CacheStatus, PerformanceMetrics, ServiceWorkerManager };
 
 // Auto-register в development и production
 if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {

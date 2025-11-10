@@ -2,14 +2,14 @@
 /**
  * SAST (Static Application Security Testing) сканер
  * Автоматически анализирует код на предмет уязвимостей безопасности
- * 
+ *
  * @created КТ4 - Автоматизация безопасности
  * @author HEYS Security Team
  */
 
+import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,14 +19,14 @@ const __dirname = path.dirname(__filename);
 const SCAN_CONFIG = {
   projectRoot: path.resolve(__dirname, '../../'),
   outputDir: path.resolve(__dirname, '../../security-reports'),
-  
+
   // Паттерны файлов для сканирования
   scanPatterns: [
     'apps/**/*.{ts,tsx,js,jsx}',
     'packages/**/*.{ts,tsx,js,jsx}',
-    'src/**/*.{ts,tsx,js,jsx}'
+    'src/**/*.{ts,tsx,js,jsx}',
   ],
-  
+
   // Исключения из сканирования
   excludePatterns: [
     '**/node_modules/**',
@@ -34,9 +34,9 @@ const SCAN_CONFIG = {
     '**/build/**',
     '**/*.test.{ts,tsx,js,jsx}',
     '**/*.spec.{ts,tsx,js,jsx}',
-    '**/coverage/**'
+    '**/coverage/**',
   ],
-  
+
   // Правила безопасности
   securityRules: {
     // SQL Injection
@@ -48,12 +48,12 @@ const SCAN_CONFIG = {
         /SELECT.*\+.*\$\{/gi,
         /INSERT.*\+.*\$\{/gi,
         /UPDATE.*\+.*\$\{/gi,
-        /DELETE.*\+.*\$\{/gi
+        /DELETE.*\+.*\$\{/gi,
       ],
       severity: 'high',
-      description: 'Potential SQL Injection vulnerability'
+      description: 'Potential SQL Injection vulnerability',
     },
-    
+
     // XSS (Cross-Site Scripting)
     xss: {
       patterns: [
@@ -61,24 +61,24 @@ const SCAN_CONFIG = {
         /innerHTML\s*=\s*[^'"]*\$\{/gi,
         /document\.write\(/gi,
         /eval\s*\(/gi,
-        /new\s+Function\s*\(/gi
+        /new\s+Function\s*\(/gi,
       ],
       severity: 'high',
-      description: 'Potential XSS vulnerability'
+      description: 'Potential XSS vulnerability',
     },
-    
+
     // Небезопасные операции
     insecureOperations: {
       patterns: [
         /Math\.random\(\)/gi,
         /Date\.now\(\)/gi,
         /new\s+Date\(\)\.getTime\(\)/gi,
-        /crypto\.pseudoRandomBytes/gi
+        /crypto\.pseudoRandomBytes/gi,
       ],
       severity: 'medium',
-      description: 'Use of cryptographically insecure random number generation'
+      description: 'Use of cryptographically insecure random number generation',
     },
-    
+
     // Жестко заданные секреты
     hardcodedSecrets: {
       patterns: [
@@ -88,34 +88,34 @@ const SCAN_CONFIG = {
         /token\s*=\s*['"][^'"]+['"]/gi,
         /AKIA[0-9A-Z]{16}/gi, // AWS Access Key
         /sk_live_[0-9a-zA-Z]{24}/gi, // Stripe Secret Key
-        /ghp_[0-9a-zA-Z]{36}/gi // GitHub Personal Access Token
+        /ghp_[0-9a-zA-Z]{36}/gi, // GitHub Personal Access Token
       ],
       severity: 'critical',
-      description: 'Potential hardcoded secret or API key'
+      description: 'Potential hardcoded secret or API key',
     },
-    
+
     // Небезопасные HTTP запросы
     insecureHttp: {
       patterns: [
         /http:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0)/gi,
         /fetch\s*\(\s*['"]http:/gi,
-        /axios\.[get|post|put|delete]\s*\(\s*['"]http:/gi
+        /axios\.[get|post|put|delete]\s*\(\s*['"]http:/gi,
       ],
       severity: 'medium',
-      description: 'Use of insecure HTTP instead of HTTPS'
+      description: 'Use of insecure HTTP instead of HTTPS',
     },
-    
+
     // Небезопасные разрешения CORS
     insecureCors: {
       patterns: [
         /Access-Control-Allow-Origin\s*:\s*\*/gi,
         /cors\s*\(\s*\{\s*origin\s*:\s*true/gi,
-        /cors\s*\(\s*\{\s*origin\s*:\s*['"]?\*/gi
+        /cors\s*\(\s*\{\s*origin\s*:\s*['"]?\*/gi,
       ],
       severity: 'medium',
-      description: 'Insecure CORS configuration'
+      description: 'Insecure CORS configuration',
     },
-    
+
     // Отладочная информация
     debugInformation: {
       patterns: [
@@ -123,12 +123,12 @@ const SCAN_CONFIG = {
         /console\.log\s*\(.*token/gi,
         /console\.log\s*\(.*secret/gi,
         /console\.log\s*\(.*key/gi,
-        /alert\s*\(.*password/gi
+        /alert\s*\(.*password/gi,
       ],
       severity: 'low',
-      description: 'Potential information disclosure through debug output'
-    }
-  }
+      description: 'Potential information disclosure through debug output',
+    },
+  },
 };
 
 class SASTScanner {
@@ -142,8 +142,8 @@ class SASTScanner {
         high: 0,
         medium: 0,
         low: 0,
-        total: 0
-      }
+        total: 0,
+      },
     };
   }
 
@@ -152,29 +152,28 @@ class SASTScanner {
    */
   async runScan() {
     console.log('🛡️ Starting SAST Security Scan...\n');
-    
+
     try {
       // Создаем директорию для отчетов
       this.ensureOutputDirectory();
-      
+
       // Получаем файлы для сканирования
       const filesToScan = await this.getFilesToScan();
       console.log(`📁 Found ${filesToScan.length} files to scan`);
-      
+
       // Сканируем каждый файл
       for (const filePath of filesToScan) {
         await this.scanFile(filePath);
       }
-      
+
       // Генерируем отчет
       await this.generateReport();
-      
+
       // Выводим результаты
       this.printResults();
-      
+
       // Возвращаем код выхода
       return this.getExitCode();
-      
     } catch (error) {
       console.error('❌ SAST scan failed:', error.message);
       return 1;
@@ -186,23 +185,26 @@ class SASTScanner {
    */
   async getFilesToScan() {
     const files = [];
-    
+
     for (const pattern of SCAN_CONFIG.scanPatterns) {
       try {
-        const globFiles = execSync(`find ${SCAN_CONFIG.projectRoot} -name "${pattern}" -type f`, 
-          { encoding: 'utf8' }
-        ).trim().split('\n').filter(Boolean);
-        
+        const globFiles = execSync(`find ${SCAN_CONFIG.projectRoot} -name "${pattern}" -type f`, {
+          encoding: 'utf8',
+        })
+          .trim()
+          .split('\n')
+          .filter(Boolean);
+
         files.push(...globFiles);
       } catch (error) {
         // Игнорируем ошибки поиска файлов
       }
     }
-    
+
     // Фильтруем исключения
-    return files.filter(file => {
-      return !SCAN_CONFIG.excludePatterns.some(pattern => 
-        new RegExp(pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*')).test(file)
+    return files.filter((file) => {
+      return !SCAN_CONFIG.excludePatterns.some((pattern) =>
+        new RegExp(pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*')).test(file),
       );
     });
   }
@@ -214,17 +216,17 @@ class SASTScanner {
     try {
       const content = fs.readFileSync(filePath, 'utf8');
       const relativePath = path.relative(SCAN_CONFIG.projectRoot, filePath);
-      
+
       this.results.scannedFiles++;
-      
+
       // Применяем все правила безопасности
       for (const [ruleName, rule] of Object.entries(SCAN_CONFIG.securityRules)) {
         for (const pattern of rule.patterns) {
           const matches = [...content.matchAll(new RegExp(pattern, 'gi'))];
-          
+
           for (const match of matches) {
             const lineNumber = this.getLineNumber(content, match.index);
-            
+
             const vulnerability = {
               id: `${ruleName}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               file: relativePath,
@@ -234,16 +236,15 @@ class SASTScanner {
               description: rule.description,
               evidence: match[0].trim(),
               recommendation: this.getRecommendation(ruleName),
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
             };
-            
+
             this.results.vulnerabilities.push(vulnerability);
             this.results.summary[rule.severity]++;
             this.results.summary.total++;
           }
         }
       }
-      
     } catch (error) {
       console.warn(`⚠️ Failed to scan ${filePath}: ${error.message}`);
     }
@@ -268,9 +269,9 @@ class SASTScanner {
       hardcodedSecrets: 'Move secrets to environment variables or secure key management',
       insecureHttp: 'Use HTTPS for all external communications',
       insecureCors: 'Configure CORS with specific allowed origins',
-      debugInformation: 'Remove debug statements that expose sensitive information'
+      debugInformation: 'Remove debug statements that expose sensitive information',
     };
-    
+
     return recommendations[ruleName] || 'Review and fix the identified security issue';
   }
 
@@ -292,24 +293,24 @@ class SASTScanner {
       scanConfig: {
         patterns: SCAN_CONFIG.scanPatterns,
         excludes: SCAN_CONFIG.excludePatterns,
-        rules: Object.keys(SCAN_CONFIG.securityRules)
-      }
+        rules: Object.keys(SCAN_CONFIG.securityRules),
+      },
     };
-    
+
     // JSON отчет
     const jsonReportPath = path.join(SCAN_CONFIG.outputDir, 'sast-report.json');
     fs.writeFileSync(jsonReportPath, JSON.stringify(reportData, null, 2));
-    
+
     // HTML отчет
     const htmlReportPath = path.join(SCAN_CONFIG.outputDir, 'sast-report.html');
     const htmlContent = this.generateHtmlReport(reportData);
     fs.writeFileSync(htmlReportPath, htmlContent);
-    
+
     // SARIF отчет для GitHub
     const sarifReportPath = path.join(SCAN_CONFIG.outputDir, 'sast-report.sarif');
     const sarifContent = this.generateSarifReport(reportData);
     fs.writeFileSync(sarifReportPath, JSON.stringify(sarifContent, null, 2));
-    
+
     console.log(`📊 Reports generated:`);
     console.log(`   📄 JSON: ${jsonReportPath}`);
     console.log(`   🌐 HTML: ${htmlReportPath}`);
@@ -324,7 +325,7 @@ class SASTScanner {
       critical: '#dc2626',
       high: '#ea580c',
       medium: '#d97706',
-      low: '#65a30d'
+      low: '#65a30d',
     };
 
     return `
@@ -378,7 +379,9 @@ class SASTScanner {
         </div>
         
         <h2>Vulnerabilities</h2>
-        ${data.vulnerabilities.map(vuln => `
+        ${data.vulnerabilities
+          .map(
+            (vuln) => `
             <div class="vulnerability">
                 <div class="vuln-header severity-${vuln.severity}">
                     <h3 style="margin: 0;">${vuln.description}</h3>
@@ -389,7 +392,9 @@ class SASTScanner {
                     <p><strong>Recommendation:</strong> ${vuln.recommendation}</p>
                 </div>
             </div>
-        `).join('')}
+        `,
+          )
+          .join('')}
     </div>
 </body>
 </html>`;
@@ -400,39 +405,48 @@ class SASTScanner {
    */
   generateSarifReport(data) {
     return {
-      version: "2.1.0",
-      $schema: "https://json.schemastore.org/sarif-2.1.0.json",
-      runs: [{
-        tool: {
-          driver: {
-            name: "HEYS SAST Scanner",
-            version: "1.0.0",
-            informationUri: "https://github.com/kinderlystv-png/HEYS-v2"
-          }
-        },
-        results: data.vulnerabilities.map(vuln => ({
-          ruleId: vuln.rule,
-          level: vuln.severity === 'critical' ? 'error' : 
-                 vuln.severity === 'high' ? 'error' :
-                 vuln.severity === 'medium' ? 'warning' : 'note',
-          message: {
-            text: vuln.description
+      version: '2.1.0',
+      $schema: 'https://json.schemastore.org/sarif-2.1.0.json',
+      runs: [
+        {
+          tool: {
+            driver: {
+              name: 'HEYS SAST Scanner',
+              version: '1.0.0',
+              informationUri: 'https://github.com/kinderlystv-png/HEYS-v2',
+            },
           },
-          locations: [{
-            physicalLocation: {
-              artifactLocation: {
-                uri: vuln.file
+          results: data.vulnerabilities.map((vuln) => ({
+            ruleId: vuln.rule,
+            level:
+              vuln.severity === 'critical'
+                ? 'error'
+                : vuln.severity === 'high'
+                  ? 'error'
+                  : vuln.severity === 'medium'
+                    ? 'warning'
+                    : 'note',
+            message: {
+              text: vuln.description,
+            },
+            locations: [
+              {
+                physicalLocation: {
+                  artifactLocation: {
+                    uri: vuln.file,
+                  },
+                  region: {
+                    startLine: vuln.line,
+                    snippet: {
+                      text: vuln.evidence,
+                    },
+                  },
+                },
               },
-              region: {
-                startLine: vuln.line,
-                snippet: {
-                  text: vuln.evidence
-                }
-              }
-            }
-          }]
-        }))
-      }]
+            ],
+          })),
+        },
+      ],
     };
   }
 
@@ -448,18 +462,18 @@ class SASTScanner {
     console.log(`⚠️  High: ${this.results.summary.high}`);
     console.log(`📋 Medium: ${this.results.summary.medium}`);
     console.log(`ℹ️  Low: ${this.results.summary.low}`);
-    
+
     if (this.results.summary.total === 0) {
       console.log('\n🎉 No security vulnerabilities found!');
     } else {
       console.log('\n📊 Top vulnerabilities by type:');
       const ruleStats = {};
-      this.results.vulnerabilities.forEach(v => {
+      this.results.vulnerabilities.forEach((v) => {
         ruleStats[v.rule] = (ruleStats[v.rule] || 0) + 1;
       });
-      
+
       Object.entries(ruleStats)
-        .sort(([,a], [,b]) => b - a)
+        .sort(([, a], [, b]) => b - a)
         .slice(0, 5)
         .forEach(([rule, count]) => {
           console.log(`   ${rule}: ${count} issues`);
@@ -472,7 +486,7 @@ class SASTScanner {
    */
   getExitCode() {
     if (this.results.summary.critical > 0) return 2; // Критические уязвимости
-    if (this.results.summary.high > 0) return 1;     // Высокие уязвимости
+    if (this.results.summary.high > 0) return 1; // Высокие уязвимости
     return 0; // Нет критических или высоких уязвимостей
   }
 }
@@ -480,12 +494,15 @@ class SASTScanner {
 // Запуск сканирования, если скрипт выполняется напрямую
 if (import.meta.url === `file://${process.argv[1]}`) {
   const scanner = new SASTScanner();
-  scanner.runScan().then(exitCode => {
-    process.exit(exitCode);
-  }).catch(error => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-  });
+  scanner
+    .runScan()
+    .then((exitCode) => {
+      process.exit(exitCode);
+    })
+    .catch((error) => {
+      console.error('Fatal error:', error);
+      process.exit(1);
+    });
 }
 
 export default SASTScanner;

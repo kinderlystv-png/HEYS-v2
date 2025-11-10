@@ -5,7 +5,7 @@ declare const TEST_CONFIG: EnvironmentLoggingConfig;
 declare const STAGING_CONFIG: EnvironmentLoggingConfig;
 declare const PRODUCTION_CONFIG: EnvironmentLoggingConfig;
 
-export { DEVELOPMENT_CONFIG, TEST_CONFIG, STAGING_CONFIG, PRODUCTION_CONFIG };
+export { DEVELOPMENT_CONFIG, PRODUCTION_CONFIG, STAGING_CONFIG, TEST_CONFIG };
 
 export function getEnvironmentConfig(env?: string): EnvironmentLoggingConfig;
 export function createPinoConfig(env?: string): Record<string, unknown>;

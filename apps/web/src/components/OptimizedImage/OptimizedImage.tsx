@@ -1,12 +1,20 @@
 // filepath: apps/web/src/components/OptimizedImage/OptimizedImage.tsx
 
-import { useState, useEffect, useRef, ImgHTMLAttributes } from 'react';
+import { ImgHTMLAttributes, useEffect, useRef, useState } from 'react';
 
 import { useLazyLoad } from '../../hooks/useLazyLoad';
 import { usePerformanceMetrics } from '../../hooks/useServiceWorker';
-import { imageOptimizer, ImageOptimizationOptions, ImageMetadata } from '../../utils/image-optimizer';
+import {
+  ImageMetadata,
+  ImageOptimizationOptions,
+  imageOptimizer,
+} from '../../utils/image-optimizer';
 
-interface OptimizedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'width' | 'height' | 'onLoad' | 'onError'> {
+interface OptimizedImageProps
+  extends Omit<
+    ImgHTMLAttributes<HTMLImageElement>,
+    'src' | 'width' | 'height' | 'onLoad' | 'onError'
+  > {
   src: string;
   alt: string;
   width?: number;
@@ -41,7 +49,7 @@ export function OptimizedImage({
   ...imgProps
 }: OptimizedImageProps) {
   const { sendImageLoadMetrics, sendErrorMetrics } = usePerformanceMetrics();
-  
+
   const [imageState, setImageState] = useState<{
     src: string;
     metadata?: ImageMetadata;
@@ -52,7 +60,7 @@ export function OptimizedImage({
     src: placeholder === 'blur' ? generateBlurDataURL(width, height) : placeholder || '',
     isLoading: true,
     hasError: false,
-    isOptimized: false
+    isOptimized: false,
   });
 
   const imgRef = useRef<HTMLImageElement>(null);
@@ -67,7 +75,7 @@ export function OptimizedImage({
       if (lazy && !priority) {
         setShouldLoad(true);
       }
-    }
+    },
   });
 
   // Устанавливаем ref для intersection observer
@@ -86,7 +94,7 @@ export function OptimizedImage({
 
     const loadOptimizedImage = async () => {
       try {
-        setImageState(prev => ({ ...prev, isLoading: true, hasError: false }));
+        setImageState((prev) => ({ ...prev, isLoading: true, hasError: false }));
 
         // Применяем размеры из props к optimization options
         const optimizationOptions: ImageOptimizationOptions = {
@@ -95,7 +103,7 @@ export function OptimizedImage({
           ...(height && { height }),
           priority,
           preload: priority,
-          lazy: lazy && !priority
+          lazy: lazy && !priority,
         };
 
         // Получаем оптимизированное изображение
@@ -105,19 +113,19 @@ export function OptimizedImage({
 
         // Создаем новый Image для предзагрузки
         const img = new Image();
-        
+
         img.onload = () => {
           if (isCancelled) return;
-          
+
           const loadEndTime = performance.now();
           const loadTime = loadEndTime - loadStartTime;
-          
+
           setImageState({
             src: metadata.src,
             metadata,
             isLoading: false,
             hasError: false,
-            isOptimized: metadata.optimized
+            isOptimized: metadata.optimized,
           });
 
           // Отправляем метрики производительности в Service Worker
@@ -125,7 +133,7 @@ export function OptimizedImage({
             src,
             loadTime,
             loadTime < 50, // Предполагаем кэш если загрузка быстрая
-            metadata.size
+            metadata.size,
           );
 
           onLoad?.(metadata);
@@ -133,10 +141,10 @@ export function OptimizedImage({
 
         img.onerror = () => {
           if (isCancelled) return;
-          
+
           // Отправляем метрики об ошибке
           sendErrorMetrics('image_load_failed');
-          
+
           // Fallback к оригинальному изображению
           handleImageError(new Error('Optimized image failed to load'));
         };
@@ -144,7 +152,6 @@ export function OptimizedImage({
         const loadStartTime = performance.now();
 
         img.src = metadata.src;
-
       } catch (error) {
         if (isCancelled) return;
         handleImageError(error as Error);
@@ -154,38 +161,38 @@ export function OptimizedImage({
     const handleImageError = (error: Error) => {
       // Отправляем метрики об ошибке оптимизации
       sendErrorMetrics('image_optimization_failed');
-      
+
       if (process.env.NODE_ENV === 'development') {
         console.warn('Image optimization failed:', error);
       }
-      
+
       // Пробуем fallback или оригинальное изображение
       const fallbackSrc = fallback || src;
-      
+
       const img = new Image();
       img.onload = () => {
         if (isCancelled) return;
-        
+
         setImageState({
           src: fallbackSrc,
           isLoading: false,
           hasError: false,
-          isOptimized: false
+          isOptimized: false,
         });
       };
-      
+
       img.onerror = () => {
         if (isCancelled) return;
-        
-        setImageState(prev => ({
+
+        setImageState((prev) => ({
           ...prev,
           isLoading: false,
-          hasError: true
+          hasError: true,
         }));
-        
+
         onError?.(error);
       };
-      
+
       img.src = fallbackSrc;
     };
 
@@ -209,7 +216,7 @@ export function OptimizedImage({
   // Рендеринг состояний загрузки
   if (imageState.hasError) {
     return (
-      <div 
+      <div
         className={`optimized-image-error ${className}`}
         style={{ width, height }}
         role="img"
@@ -219,7 +226,7 @@ export function OptimizedImage({
           <span>⚠️ Image failed to load</span>
           <small>{alt}</small>
         </div>
-        
+
         <style>{`
           .optimized-image-error {
             display: flex;
@@ -268,25 +275,25 @@ export function OptimizedImage({
         `}
         {...imgProps}
       />
-      
+
       {/* Loading overlay */}
       {imageState.isLoading && (
         <div className="loading-overlay">
           <div className="loading-spinner" />
         </div>
       )}
-      
+
       {/* Optimization indicator для development */}
       {process.env.NODE_ENV === 'development' && imageState.metadata && (
         <div className="optimization-info">
           <small>
-            {imageState.metadata.format.toUpperCase()} • 
-            {imageState.metadata.optimized ? ' Optimized' : ' Original'} • 
+            {imageState.metadata.format.toUpperCase()} •
+            {imageState.metadata.optimized ? ' Optimized' : ' Original'} •
             {formatBytes(imageState.metadata.size)}
           </small>
         </div>
       )}
-      
+
       <style>{`
         .optimized-image-container {
           position: relative;
@@ -366,7 +373,7 @@ export function OptimizedImage({
 function generateBlurDataURL(width?: number, height?: number): string {
   const w = width || 400;
   const h = height || 300;
-  
+
   // Простой blur placeholder
   const svg = `
     <svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
@@ -377,10 +384,10 @@ function generateBlurDataURL(width?: number, height?: number): string {
         </linearGradient>
       </defs>
       <rect width="100%" height="100%" fill="url(#grad)" />
-      <circle cx="${w/2}" cy="${h/2}" r="20" fill="#d1d5db" opacity="0.5" />
+      <circle cx="${w / 2}" cy="${h / 2}" r="20" fill="#d1d5db" opacity="0.5" />
     </svg>
   `.trim();
-  
+
   return `data:image/svg+xml;base64,${btoa(svg)}`;
 }
 

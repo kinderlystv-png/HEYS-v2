@@ -24,17 +24,16 @@ const skeletonBaseClass = `
   bg-[length:200%_100%] rounded-md
 `;
 
-export function PageSkeleton({ 
+export function PageSkeleton({
   type = 'dashboard',
   showHeader = true,
   showSidebar = false,
   className = '',
-  listItems = 5
+  listItems = 5,
 }: PageSkeletonProps) {
-  
   const renderHeader = () => {
     if (!showHeader) return null;
-    
+
     return (
       <header className="mb-6">
         <div className={`h-8 w-64 ${skeletonBaseClass} mb-2`} />
@@ -42,10 +41,10 @@ export function PageSkeleton({
       </header>
     );
   };
-  
+
   const renderSidebar = () => {
     if (!showSidebar) return null;
-    
+
     return (
       <aside className="w-64 mr-6">
         <div className={`h-6 w-32 ${skeletonBaseClass} mb-4`} />
@@ -55,7 +54,7 @@ export function PageSkeleton({
       </aside>
     );
   };
-  
+
   const renderDashboard = () => (
     <div className="space-y-6">
       {/* Stats Cards */}
@@ -68,7 +67,7 @@ export function PageSkeleton({
           </div>
         ))}
       </div>
-      
+
       {/* Charts Area */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="p-4 border rounded-lg">
@@ -80,7 +79,7 @@ export function PageSkeleton({
           <div className={`h-64 w-full ${skeletonBaseClass}`} />
         </div>
       </div>
-      
+
       {/* Table Area */}
       <div className="p-4 border rounded-lg">
         <div className={`h-5 w-40 ${skeletonBaseClass} mb-4`} />
@@ -97,14 +96,14 @@ export function PageSkeleton({
       </div>
     </div>
   );
-  
+
   const renderList = () => (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div className={`h-6 w-48 ${skeletonBaseClass}`} />
         <div className={`h-10 w-32 ${skeletonBaseClass}`} />
       </div>
-      
+
       <div className="space-y-3">
         {[...Array(listItems)].map((_, i) => (
           <div key={i} className="flex items-center p-4 border rounded-lg">
@@ -119,7 +118,7 @@ export function PageSkeleton({
       </div>
     </div>
   );
-  
+
   const renderDetail = () => (
     <div className="space-y-6">
       {/* Hero Section */}
@@ -128,10 +127,10 @@ export function PageSkeleton({
         <div className={`h-4 w-full ${skeletonBaseClass}`} />
         <div className={`h-4 w-5/6 ${skeletonBaseClass}`} />
       </div>
-      
+
       {/* Image/Media */}
       <div className={`h-64 w-full ${skeletonBaseClass}`} />
-      
+
       {/* Content Sections */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
@@ -144,7 +143,7 @@ export function PageSkeleton({
             </div>
           ))}
         </div>
-        
+
         <div className="space-y-4">
           <div className={`h-5 w-32 ${skeletonBaseClass}`} />
           <div className="space-y-2">
@@ -156,25 +155,25 @@ export function PageSkeleton({
       </div>
     </div>
   );
-  
+
   const renderForm = () => (
     <div className="max-w-2xl space-y-6">
       <div className={`h-6 w-48 ${skeletonBaseClass} mb-6`} />
-      
+
       {[...Array(6)].map((_, i) => (
         <div key={i} className="space-y-2">
           <div className={`h-4 w-32 ${skeletonBaseClass}`} />
           <div className={`h-10 w-full ${skeletonBaseClass}`} />
         </div>
       ))}
-      
+
       <div className="flex space-x-4 pt-4">
         <div className={`h-10 w-24 ${skeletonBaseClass}`} />
         <div className={`h-10 w-24 ${skeletonBaseClass}`} />
       </div>
     </div>
   );
-  
+
   const renderAnalytics = () => (
     <div className="space-y-6">
       {/* Date Range Picker */}
@@ -182,7 +181,7 @@ export function PageSkeleton({
         <div className={`h-6 w-40 ${skeletonBaseClass}`} />
         <div className={`h-10 w-64 ${skeletonBaseClass}`} />
       </div>
-      
+
       {/* Key Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
@@ -192,7 +191,7 @@ export function PageSkeleton({
           </div>
         ))}
       </div>
-      
+
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {[...Array(4)].map((_, i) => (
@@ -202,7 +201,7 @@ export function PageSkeleton({
           </div>
         ))}
       </div>
-      
+
       {/* Data Table */}
       <div className="p-4 border rounded-lg">
         <div className={`h-5 w-40 ${skeletonBaseClass} mb-4`} />
@@ -223,18 +222,24 @@ export function PageSkeleton({
       </div>
     </div>
   );
-  
+
   const renderContent = () => {
     switch (type) {
-      case 'dashboard': return renderDashboard();
-      case 'list': return renderList();
-      case 'detail': return renderDetail();
-      case 'form': return renderForm();
-      case 'analytics': return renderAnalytics();
-      default: return renderDashboard();
+      case 'dashboard':
+        return renderDashboard();
+      case 'list':
+        return renderList();
+      case 'detail':
+        return renderDetail();
+      case 'form':
+        return renderForm();
+      case 'analytics':
+        return renderAnalytics();
+      default:
+        return renderDashboard();
     }
   };
-  
+
   return (
     <div className={`page-skeleton ${className}`} data-testid="page-skeleton">
       <style>{`
@@ -251,7 +256,7 @@ export function PageSkeleton({
           }
         }
       `}</style>
-      
+
       <div className="flex">
         {renderSidebar()}
         <main className="flex-1">

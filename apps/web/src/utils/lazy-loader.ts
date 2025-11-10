@@ -34,13 +34,9 @@ const lazyComponentRegistry = new Map<string, LazyComponentInfo>();
 export function createLazyComponent<T extends ComponentType<any>>(
   importFn: () => Promise<{ default: T }>,
   componentName: string,
-  options: LazyLoadOptions = {}
+  options: LazyLoadOptions = {},
 ): LazyExoticComponent<T> {
-  const {
-    preloadDelay = 0,
-    retryAttempts = 3,
-    timeout = 10000
-  } = options;
+  const { preloadDelay = 0, retryAttempts = 3, timeout = 10000 } = options;
 
   let loadPromise: Promise<{ default: T }> | null = null;
   let retryCount = 0;
@@ -55,7 +51,7 @@ export function createLazyComponent<T extends ComponentType<any>>(
 
       const result = await Promise.race([importFn(), timeoutPromise]);
       retryCount = 0; // Сбрасываем счётчик при успехе
-      
+
       // Обновляем статус в реестре
       const info = lazyComponentRegistry.get(componentName);
       if (info) {
@@ -66,17 +62,19 @@ export function createLazyComponent<T extends ComponentType<any>>(
       return result;
     } catch (error) {
       console.warn(`Failed to load component ${componentName}:`, error);
-      
+
       if (retryCount < retryAttempts) {
         retryCount++;
         console.log(`Retrying ${componentName} (attempt ${retryCount}/${retryAttempts})`);
-        
+
         // Экспоненциальная задержка для retry
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+        await new Promise((resolve) => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
         return loadWithRetry();
       }
-      
-      throw new Error(`Failed to load ${componentName} after ${retryAttempts} attempts: ${(error as Error).message || error}`);
+
+      throw new Error(
+        `Failed to load ${componentName} after ${retryAttempts} attempts: ${(error as Error).message || error}`,
+      );
     }
   };
 
@@ -84,7 +82,7 @@ export function createLazyComponent<T extends ComponentType<any>>(
   const preload = () => {
     if (!loadPromise) {
       loadPromise = loadWithRetry();
-      
+
       // Обновляем статус
       const info = lazyComponentRegistry.get(componentName);
       if (info) {
@@ -104,13 +102,13 @@ export function createLazyComponent<T extends ComponentType<any>>(
     component: LazyComponent,
     preload,
     isLoaded: false,
-    isLoading: false
+    isLoading: false,
   });
 
   // Автоматический preload с задержкой
   if (preloadDelay > 0) {
     setTimeout(() => {
-      preload().catch(error => {
+      preload().catch((error) => {
         console.warn(`Preload failed for ${componentName}:`, error);
       });
     }, preloadDelay);
@@ -134,10 +132,8 @@ export function preloadComponent(componentName: string): Promise<any> | null {
  * Preload нескольких компонентов
  */
 export async function preloadComponents(componentNames: string[]): Promise<void> {
-  const promises = componentNames
-    .map(name => preloadComponent(name))
-    .filter(Boolean);
-    
+  const promises = componentNames.map((name) => preloadComponent(name)).filter(Boolean);
+
   if (promises.length > 0) {
     try {
       await Promise.allSettled(promises);
@@ -153,15 +149,17 @@ export async function preloadComponents(componentNames: string[]): Promise<void>
  */
 export function getComponentStatus(componentName: string) {
   const info = lazyComponentRegistry.get(componentName);
-  return info ? {
-    isLoaded: info.isLoaded,
-    isLoading: info.isLoading,
-    isRegistered: true
-  } : {
-    isLoaded: false,
-    isLoading: false,
-    isRegistered: false
-  };
+  return info
+    ? {
+        isLoaded: info.isLoaded,
+        isLoading: info.isLoading,
+        isRegistered: true,
+      }
+    : {
+        isLoaded: false,
+        isLoading: false,
+        isRegistered: false,
+      };
 }
 
 /**
@@ -172,7 +170,7 @@ export function getAllComponentsStatus() {
   lazyComponentRegistry.forEach((info, name) => {
     status[name] = {
       isLoaded: info.isLoaded,
-      isLoading: info.isLoading
+      isLoading: info.isLoading,
     };
   });
   return status;
@@ -183,13 +181,13 @@ export function getAllComponentsStatus() {
  */
 export function withLazyLoad<P extends object>(
   componentName: string,
-  options: LazyLoadOptions & { rootMargin?: string } = {}
+  options: LazyLoadOptions & { rootMargin?: string } = {},
 ) {
   return function LazyLoadHOC(WrappedComponent: ComponentType<P>) {
     return createLazyComponent(
       () => Promise.resolve({ default: WrappedComponent }),
       componentName,
-      options
+      options,
     );
   };
 }
@@ -201,12 +199,12 @@ export const RouteComponents = {
   // Создание lazy route компонента
   createLazyRoute: <T extends ComponentType<any>>(
     importFn: () => Promise<{ default: T }>,
-    routeName: string
+    routeName: string,
   ) => {
     return createLazyComponent(importFn, `route-${routeName}`, {
       preloadDelay: 2000, // Preload через 2 секунды
       retryAttempts: 3,
-      timeout: 15000 // Больше времени для route компонентов
+      timeout: 15000, // Больше времени для route компонентов
     });
   },
 
@@ -214,9 +212,9 @@ export const RouteComponents = {
   preloadOnHover: (routeName: string) => {
     return {
       onMouseEnter: () => preloadComponent(`route-${routeName}`),
-      onFocus: () => preloadComponent(`route-${routeName}`)
+      onFocus: () => preloadComponent(`route-${routeName}`),
     };
-  }
+  },
 };
 
 export default {
@@ -226,5 +224,5 @@ export default {
   getComponentStatus,
   getAllComponentsStatus,
   withLazyLoad,
-  RouteComponents
+  RouteComponents,
 };

@@ -1,13 +1,16 @@
 # 🤖 РУКОВОДСТВО ПО ИНТЕГРАЦИИ ДЛЯ ИИ-АССИСТЕНТОВ
 
 ## 🎯 ЦЕЛЬ
-Полная автоматизация внедрения эталонной системы тестирования в любой проект с помощью ИИ-ассистента.
+
+Полная автоматизация внедрения эталонной системы тестирования в любой проект с
+помощью ИИ-ассистента.
 
 ## 📋 ЧЕКЛИСТ ИНТЕГРАЦИИ
 
 ### ✅ Этап 1: Анализ проекта
 
 1. **Определить фреймворк**
+
    ```bash
    # Поиск package.json
    find . -name "package.json" -type f
@@ -17,6 +20,7 @@
    ```
 
 2. **Проверить структуру**
+
    ```bash
    # Есть ли папка tests?
    ls -la | grep tests
@@ -34,6 +38,7 @@
 ### ✅ Этап 2: Подготовка окружения
 
 1. **Установка зависимостей**
+
    ```bash
    # Базовые пакеты
    npm install -D vitest @testing-library/jest-dom
@@ -69,6 +74,7 @@
 ### ✅ Этап 4: Создание базовых файлов
 
 1. **tests/utils/test-wrapper.js**
+
    ```javascript
    // Базовая версия - адаптировать под фреймворк
    export function renderWithProviders(component, options = {}) {
@@ -87,6 +93,7 @@
 ### ✅ Этап 5: Создание тестового примера
 
 1. **Простой тест**
+
    ```javascript
    // tests/example.test.js
    import { describe, it, expect } from 'vitest';
@@ -106,6 +113,7 @@
 ### ✅ Этап 6: Первый компонентный тест
 
 1. **Найти простой компонент**
+
    ```bash
    # Поиск кнопок/простых компонентов
    find src -name "*.jsx" -o -name "*.vue" -o -name "*.svelte" | head -5
@@ -118,6 +126,7 @@
 ## 🔧 ШАБЛОНЫ ПО ФРЕЙМВОРКАМ
 
 ### React/Next.js
+
 ```javascript
 // tests/utils/test-wrapper.js
 import { render } from '@testing-library/react';
@@ -141,6 +150,7 @@ describe('Button', () => {
 ```
 
 ### Vue/Nuxt
+
 ```javascript
 // tests/utils/test-wrapper.js
 import { render } from '@testing-library/vue';
@@ -164,6 +174,7 @@ describe('Button', () => {
 ```
 
 ### SvelteKit
+
 ```javascript
 // tests/utils/test-wrapper.js
 import { render } from '@testing-library/svelte';
@@ -189,6 +200,7 @@ describe('Button', () => {
 ## 🚨 КРИТИЧНЫЕ ПРОВЕРКИ
 
 ### 1. TypeScript Support
+
 ```bash
 # Если есть TypeScript
 npm install -D @types/jsdom
@@ -198,6 +210,7 @@ echo 'import "@testing-library/jest-dom";' > tests/types/test.d.ts
 ```
 
 ### 2. Path Aliases
+
 ```javascript
 // Проверить и адаптировать aliases в vitest.config.js
 resolve: {
@@ -210,11 +223,12 @@ resolve: {
 ```
 
 ### 3. Environment Variables
+
 ```javascript
 // vitest.config.js - если нужны env переменные
 test: {
   env: {
-    NODE_ENV: 'test'
+    NODE_ENV: 'test';
   }
 }
 ```
@@ -222,6 +236,7 @@ test: {
 ## 📊 ВАЛИДАЦИЯ ИНТЕГРАЦИИ
 
 ### Тесты должны проходить
+
 ```bash
 npm run test
 # ✓ tests/example.test.js (1)
@@ -230,12 +245,14 @@ npm run test
 ```
 
 ### Coverage должен работать
+
 ```bash
 npm run test:coverage
 # % Coverage report from v8
 ```
 
 ### TypeScript должен компилироваться
+
 ```bash
 npx tsc --noEmit
 # No errors
@@ -244,18 +261,21 @@ npx tsc --noEmit
 ## 🎭 ГОТОВЫЕ КОМАНДЫ ДЛЯ ИИ
 
 ### Полная установка React
+
 ```bash
 npm install -D vitest @testing-library/jest-dom @testing-library/react @testing-library/user-event @vitejs/plugin-react jsdom
 mkdir -p tests/{utils,fixtures,mocks,components} src/constants
 ```
 
 ### Полная установка Vue
+
 ```bash
 npm install -D vitest @testing-library/jest-dom @testing-library/vue @testing-library/user-event @vitejs/plugin-vue jsdom
 mkdir -p tests/{utils,fixtures,mocks,components} src/constants
 ```
 
 ### Полная установка Svelte
+
 ```bash
 npm install -D vitest @testing-library/jest-dom @testing-library/svelte @testing-library/user-event jsdom
 mkdir -p tests/{utils,fixtures,mocks,components} src/constants

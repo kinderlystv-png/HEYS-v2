@@ -14,22 +14,15 @@ export type { BundleAnalysis, PerformanceMetric, RuntimePerformance } from './pr
 
 // Bundle analysis (новая система)
 export { BundleAnalyzer, bundleAnalyzer } from './BundleAnalyzer';
-export type { BundleMetrics, BaselineMetrics } from './BundleAnalyzer';
+export type { BaselineMetrics, BundleMetrics } from './BundleAnalyzer';
 
 // Tree Shaking - удаление неиспользуемого кода
 export { TreeShaker, treeShaker } from './TreeShaker';
-export type {
-  UnusedExport,
-  TreeShakingAnalysis,
-  TreeShakingConfig
-} from './TreeShaker';
+export type { TreeShakingAnalysis, TreeShakingConfig, UnusedExport } from './TreeShaker';
 
 // Code Splitting - разделение кода на chunks
 export { CodeSplitter } from './CodeSplitter';
-export type {
-  SplitPoint,
-  CodeSplittingAnalysis
-} from './CodeSplitter';
+export type { CodeSplittingAnalysis, SplitPoint } from './CodeSplitter';
 
 // Lazy Loading - ленивая загрузка ресурсов (НОВОЕ)
 export { LazyLoader, LazyLoadingStrategy, ResourceType } from './LazyLoader';
@@ -40,48 +33,48 @@ export {
   aggressiveLazyConfig,
   balancedLazyConfig,
   conservativeLazyConfig,
-  mobileLazyConfig,
-  slowNetworkLazyConfig,
-  premiumLazyConfig,
-  lazyLoadingStrategies,
+  createLazyConfig,
   deviceSpecificConfigs,
-  lazyLoadingConfigs,
   LazyConfigDetector,
+  lazyLoadingConfigs,
   LazyLoadingHelpers,
-  createLazyConfig
+  lazyLoadingStrategies,
+  mobileLazyConfig,
+  premiumLazyConfig,
+  slowNetworkLazyConfig,
 } from './lazy-loading-config';
 
 // Lazy Loading компоненты
-export { 
-  LazyComponent, 
-  LazyComponentFactory, 
-  globalLazyComponent 
+export {
+  globalLazyComponent,
+  LazyComponent,
+  LazyComponentFactory,
 } from './components/LazyComponent';
 
 // Tree Shaking Configurations
 export {
-  viteTreeShakingConfig,
-  webpackTreeShakingConfig,
-  rollupTreeShakingConfig,
+  createTreeShakingConfig,
   esbuildTreeShakingConfig,
-  treeShakingPresets,
   getBundlerConfig,
   getTreeShakingPreset,
-  createTreeShakingConfig
+  rollupTreeShakingConfig,
+  treeShakingPresets,
+  viteTreeShakingConfig,
+  webpackTreeShakingConfig,
 } from './tree-shaking-config';
 
 // Code Splitting Configurations
 export {
-  viteCodeSplittingConfig,
-  webpackCodeSplittingConfig,
-  rollupCodeSplittingConfig,
   codeSplittingPresets,
   createCodeSplittingConfig,
-  reactSplittingHelpers
+  reactSplittingHelpers,
+  rollupCodeSplittingConfig,
+  viteCodeSplittingConfig,
+  webpackCodeSplittingConfig,
 } from './code-splitting-config';
 
 // Bundle analysis (legacy)
-export { BundleAnalyzer as LegacyBundleAnalyzer, defaultBundleAnalyzer } from './bundle-analyzer';
+export { defaultBundleAnalyzer, BundleAnalyzer as LegacyBundleAnalyzer } from './bundle-analyzer';
 
 export type { OptimizationRecommendation } from './bundle-analyzer';
 

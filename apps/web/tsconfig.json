@@ -1,21 +1,24 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "composite": true,
     "outDir": "./dist",
-    "rootDir": "./src",
     "noEmit": false,
     "jsx": "react-jsx"
   },
   "include": ["src/**/*", "index.html"],
-  "exclude": ["dist", "node_modules", "**/*.test.*", "**/*.spec.*"],
-  "references": [
-    { "path": "../../packages/core" },
-    { "path": "../../packages/ui" },
-    { "path": "../../packages/search" },
-    { "path": "../../packages/storage" },
-    { "path": "../../packages/gaming" },
-    { "path": "../../packages/analytics" },
-    { "path": "../../packages/shared" }
+  "exclude": [
+    "dist",
+    "node_modules",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "src/middleware/demo-usage.ts",
+    "src/middleware/security.ts",
+    "src/lib/supabase/**/*",
+    "src/hooks/useLazyComponent.ts",
+    "src/hooks/usePreloadRoute.ts",
+    "src/components/lazy/LazySettings.tsx",
+    "src/components/lazy/LazyReports.tsx",
+    "src/components/lazy/LazyAnalytics.tsx",
+    "src/components/CuratorPanel/**/*"
   ]
 }

@@ -15,62 +15,66 @@ export const ValidationSchemas = {
   email: z.string().email('Некорректный email адрес'),
 
   // Пароль (минимум 8 символов, буквы, цифры, спец. символы)
-  password: z.string()
+  password: z
+    .string()
     .min(8, 'Пароль должен содержать минимум 8 символов')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, 
-           'Пароль должен содержать строчные и заглавные буквы, цифры и специальные символы'),
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      'Пароль должен содержать строчные и заглавные буквы, цифры и специальные символы',
+    ),
 
   // UUID валидация
   uuid: z.string().uuid('Некорректный UUID'),
 
   // Текст с ограничением длины
-  text: (maxLength: number) => z.string()
-    .min(1, 'Поле не может быть пустым')
-    .max(maxLength, `Максимальная длина: ${maxLength} символов`)
-    .trim(),
+  text: (maxLength: number) =>
+    z
+      .string()
+      .min(1, 'Поле не может быть пустым')
+      .max(maxLength, `Максимальная длина: ${maxLength} символов`)
+      .trim(),
 
   // Числа в диапазоне
-  number: (min: number, max: number) => z.number()
-    .min(min, `Минимальное значение: ${min}`)
-    .max(max, `Максимальное значение: ${max}`),
+  number: (min: number, max: number) =>
+    z.number().min(min, `Минимальное значение: ${min}`).max(max, `Максимальное значение: ${max}`),
 
   // URL валидация (только HTTPS/HTTP)
-  url: z.string().url('Некорректный URL').refine(
-    url => url.startsWith('http://') || url.startsWith('https://'),
-    'URL должен начинаться с http:// или https://'
-  ),
+  url: z
+    .string()
+    .url('Некорректный URL')
+    .refine(
+      (url) => url.startsWith('http://') || url.startsWith('https://'),
+      'URL должен начинаться с http:// или https://',
+    ),
 
   // JSON валидация
-  json: z.any().refine(
-    value => {
-      try {
-        JSON.stringify(value);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    'Некорректный JSON'
-  ),
+  json: z.any().refine((value) => {
+    try {
+      JSON.stringify(value);
+      return true;
+    } catch {
+      return false;
+    }
+  }, 'Некорректный JSON'),
 
   // Дата валидация
-  date: z.date().refine(
-    date => !isNaN(date.getTime()),
-    'Некорректная дата'
-  ),
+  date: z.date().refine((date) => !isNaN(date.getTime()), 'Некорректная дата'),
 
   // Файл валидация
-  file: (maxSize: number, allowedTypes: string[]) => z.object({
-    name: z.string().min(1, 'Имя файла не может быть пустым'),
-    size: z.number().max(maxSize, `Максимальный размер файла: ${maxSize} байт`),
-    type: z.string().refine(
-      type => allowedTypes.includes(type),
-      `Разрешенные типы файлов: ${allowedTypes.join(', ')}`
-    )
-  }),
+  file: (maxSize: number, allowedTypes: string[]) =>
+    z.object({
+      name: z.string().min(1, 'Имя файла не может быть пустым'),
+      size: z.number().max(maxSize, `Максимальный размер файла: ${maxSize} байт`),
+      type: z
+        .string()
+        .refine(
+          (type) => allowedTypes.includes(type),
+          `Разрешенные типы файлов: ${allowedTypes.join(', ')}`,
+        ),
+    }),
 
   // Короткий текст
-  shortText: z.string().max(100, 'Слишком длинный текст').trim()
+  shortText: z.string().max(100, 'Слишком длинный текст').trim(),
 };
 
 /**
@@ -83,7 +87,7 @@ export const HeysValidationSchemas = {
     password: ValidationSchemas.password,
     firstName: ValidationSchemas.text(50),
     lastName: ValidationSchemas.text(50),
-    phone: z.string().optional()
+    phone: z.string().optional(),
   }),
 
   // Обновление пользователя
@@ -91,7 +95,7 @@ export const HeysValidationSchemas = {
     firstName: ValidationSchemas.text(50).optional(),
     lastName: ValidationSchemas.text(50).optional(),
     phone: z.string().optional(),
-    bio: ValidationSchemas.text(500).optional()
+    bio: ValidationSchemas.text(500).optional(),
   }),
 
   // Сессия
@@ -101,7 +105,7 @@ export const HeysValidationSchemas = {
     duration: ValidationSchemas.number(1, 7200), // до 2 часов
     mood: ValidationSchemas.number(1, 10),
     notes: ValidationSchemas.text(1000).optional(),
-    tags: z.array(ValidationSchemas.shortText).optional()
+    tags: z.array(ValidationSchemas.shortText).optional(),
   }),
 
   // Дневная запись
@@ -114,7 +118,7 @@ export const HeysValidationSchemas = {
     sleep: ValidationSchemas.number(0, 1440), // минуты в сутках
     notes: ValidationSchemas.text(1000).optional(),
     activities: z.array(ValidationSchemas.shortText).optional(),
-    gratitude: z.array(ValidationSchemas.text(200)).optional()
+    gratitude: z.array(ValidationSchemas.text(200)).optional(),
   }),
 
   // API запрос
@@ -123,8 +127,8 @@ export const HeysValidationSchemas = {
     method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']),
     params: z.record(z.unknown()).optional(),
     body: z.record(z.unknown()).optional(),
-    headers: z.record(z.string()).optional()
-  })
+    headers: z.record(z.string()).optional(),
+  }),
 };
 
 /**
@@ -155,16 +159,16 @@ export class InputValidator {
   validate<T>(data: unknown, schema: z.ZodSchema<T>): ValidationResult<T> {
     try {
       const result = schema.safeParse(data);
-      
+
       if (result.success) {
         return {
           success: true,
-          data: result.data
+          data: result.data,
         };
       }
 
       const errors: Record<string, string[]> = {};
-      result.error.issues.forEach(issue => {
+      result.error.issues.forEach((issue) => {
         const path = issue.path.join('.');
         if (!errors[path]) errors[path] = [];
         errors[path].push(issue.message);
@@ -172,12 +176,12 @@ export class InputValidator {
 
       return {
         success: false,
-        errors
+        errors,
       };
     } catch (error) {
       return {
         success: false,
-        errors: { _general: ['Ошибка валидации'] }
+        errors: { _general: ['Ошибка валидации'] },
       };
     }
   }
@@ -185,14 +189,17 @@ export class InputValidator {
   /**
    * Валидация нескольких полей
    */
-  validateMultiple(data: Record<string, unknown>, schemas: Record<string, z.ZodSchema>): ValidationResult {
+  validateMultiple(
+    data: Record<string, unknown>,
+    schemas: Record<string, z.ZodSchema>,
+  ): ValidationResult {
     const results: Record<string, any> = {};
     const errors: Record<string, string[]> = {};
     let hasErrors = false;
 
     for (const [field, schema] of Object.entries(schemas)) {
       const result = this.validate(data[field], schema);
-      
+
       if (result.success) {
         results[field] = result.data;
       } else {
@@ -204,7 +211,7 @@ export class InputValidator {
     return {
       success: !hasErrors,
       data: hasErrors ? undefined : results,
-      errors: hasErrors ? errors : undefined
+      errors: hasErrors ? errors : undefined,
     };
   }
 
@@ -214,17 +221,32 @@ export class InputValidator {
   sanitizeObject(obj: Record<string, any>): Record<string, any> {
     const sanitized: Record<string, any> = {};
     const dangerousKeys = [
-      '__proto__', 'prototype', 'constructor',
-      'eval', 'function', 'script', 'javascript',
-      'onload', 'onerror', 'onclick', 'onmouseover',
-      'DROP', 'DELETE', 'INSERT', 'UPDATE', 'UNION', 'SELECT'
+      '__proto__',
+      'prototype',
+      'constructor',
+      'eval',
+      'function',
+      'script',
+      'javascript',
+      'onload',
+      'onerror',
+      'onclick',
+      'onmouseover',
+      'DROP',
+      'DELETE',
+      'INSERT',
+      'UPDATE',
+      'UNION',
+      'SELECT',
     ];
 
     for (const [key, value] of Object.entries(obj)) {
       // Проверяем ключ на безопасность
       const keyLower = key.toLowerCase();
-      const isDangerous = dangerousKeys.some(dangerous => keyLower.includes(dangerous.toLowerCase()));
-      
+      const isDangerous = dangerousKeys.some((dangerous) =>
+        keyLower.includes(dangerous.toLowerCase()),
+      );
+
       if (!isDangerous && typeof key === 'string' && key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
         sanitized[key] = value;
       }
@@ -239,21 +261,23 @@ export class InputValidator {
   sanitizeString(input: string): string {
     if (typeof input !== 'string') return '';
 
-    return input
-      // Удаляем HTML теги
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-      .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
-      .replace(/<embed\b[^>]*>/gi, '')
-      .replace(/<link\b[^>]*>/gi, '')
-      .replace(/<meta\b[^>]*>/gi, '')
-      // Удаляем javascript: ссылки
-      .replace(/javascript:/gi, '')
-      // Удаляем SQL инъекции
-      .replace(/('\s*(OR|AND)\s*')/gi, '')
-      .replace(/(UNION\s+SELECT|DROP\s+TABLE|DELETE\s+FROM|INSERT\s+INTO)/gi, '')
-      // Обрезаем пробелы
-      .trim();
+    return (
+      input
+        // Удаляем HTML теги
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+        .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+        .replace(/<embed\b[^>]*>/gi, '')
+        .replace(/<link\b[^>]*>/gi, '')
+        .replace(/<meta\b[^>]*>/gi, '')
+        // Удаляем javascript: ссылки
+        .replace(/javascript:/gi, '')
+        // Удаляем SQL инъекции
+        .replace(/('\s*(OR|AND)\s*')/gi, '')
+        .replace(/(UNION\s+SELECT|DROP\s+TABLE|DELETE\s+FROM|INSERT\s+INTO)/gi, '')
+        // Обрезаем пробелы
+        .trim()
+    );
   }
 
   /**
@@ -261,7 +285,7 @@ export class InputValidator {
    */
   deepSanitize(obj: any, visited = new WeakSet()): any {
     if (obj === null || obj === undefined) return obj;
-    
+
     // Защита от циклических ссылок
     if (typeof obj === 'object' && visited.has(obj)) {
       return {};
@@ -272,18 +296,18 @@ export class InputValidator {
     }
 
     if (Array.isArray(obj)) {
-      return obj.map(item => this.deepSanitize(item, visited));
+      return obj.map((item) => this.deepSanitize(item, visited));
     }
 
     if (typeof obj === 'object') {
       visited.add(obj);
       const sanitized = this.sanitizeObject(obj);
       const result: Record<string, any> = {};
-      
+
       for (const [key, value] of Object.entries(sanitized)) {
         result[key] = this.deepSanitize(value, visited);
       }
-      
+
       visited.delete(obj);
       return result;
     }
@@ -305,10 +329,10 @@ export class InputValidator {
       /\/\*/,
       /\*\//,
       /;.*(--)|(\/\*)|(\*\/)/i,
-      /'\s*;\s*(drop|delete|insert|update)/i
+      /'\s*;\s*(drop|delete|insert|update)/i,
     ];
 
-    return sqlPatterns.some(pattern => pattern.test(input));
+    return sqlPatterns.some((pattern) => pattern.test(input));
   }
 
   /**
@@ -329,10 +353,10 @@ export class InputValidator {
       /eval\s*\(/i,
       /document\.cookie/i,
       /window\.location/i,
-      /alert\s*\(/i
+      /alert\s*\(/i,
     ];
 
-    return xssPatterns.some(pattern => pattern.test(input));
+    return xssPatterns.some((pattern) => pattern.test(input));
   }
 
   /**
@@ -348,13 +372,13 @@ export class InputValidator {
           threats.push('sql_injection');
           details[path] = 'Обнаружена потенциальная SQL инъекция';
         }
-        
+
         if (this.detectXSS(value)) {
           threats.push('xss');
           details[path] = 'Обнаружена потенциальная XSS атака';
         }
       }
-      
+
       if (typeof value === 'object' && value !== null) {
         for (const [key, val] of Object.entries(value)) {
           checkValue(val, `${path}.${key}`);
@@ -373,7 +397,7 @@ export class InputValidator {
     return {
       safe: threats.length === 0,
       threats: [...new Set(threats)], // убираем дубликаты
-      details: Object.keys(details).length > 0 ? details : undefined
+      details: Object.keys(details).length > 0 ? details : undefined,
     };
   }
 }
@@ -388,14 +412,14 @@ export class InputValidator {
 export function createValidationMiddleware(
   source: 'body' | 'query' | 'params',
   field: string,
-  schema: z.ZodSchema
+  schema: z.ZodSchema,
 ) {
   return (req: any, res: any, next: any) => {
     const validator = new InputValidator();
     const data = req[source]?.[field];
-    
+
     const result = validator.validate(data, schema);
-    
+
     if (result.success) {
       // Заменяем значение на валидированное
       if (req[source]) {
@@ -406,7 +430,7 @@ export function createValidationMiddleware(
       res.status(400).json({
         error: 'Validation failed',
         field,
-        details: result.errors
+        details: result.errors,
       });
     }
   };
@@ -457,7 +481,7 @@ export function validateAndSanitize(config: {
     if (Object.keys(errors).length > 0) {
       res.status(400).json({
         error: 'Validation failed',
-        details: errors
+        details: errors,
       });
     } else {
       next();
@@ -472,9 +496,9 @@ export function validateHeysData(schemaType: keyof typeof HeysValidationSchemas)
   return (req: any, res: any, next: any) => {
     const validator = new InputValidator();
     const schema = HeysValidationSchemas[schemaType] as z.ZodSchema;
-    
+
     const result = validator.validate(req.body, schema);
-    
+
     if (result.success) {
       req.body = validator.deepSanitize(result.data);
       next();
@@ -482,7 +506,7 @@ export function validateHeysData(schemaType: keyof typeof HeysValidationSchemas)
       res.status(400).json({
         error: 'Validation failed',
         schema: schemaType,
-        details: result.errors
+        details: result.errors,
       });
     }
   };
@@ -506,7 +530,7 @@ export function validateRequest(options: {
         return res.status(413).json({
           error: 'Request too large',
           maxSize: options.maxSize,
-          currentSize: size
+          currentSize: size,
         });
       }
     }
@@ -517,7 +541,7 @@ export function validateRequest(options: {
       return res.status(400).json({
         error: 'Security threat detected',
         threats: securityCheck.threats,
-        details: securityCheck.details
+        details: securityCheck.details,
       });
     }
 

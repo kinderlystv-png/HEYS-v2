@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ThreatDetectionService } from '../index';
 import { SecurityEvent } from '../types';
@@ -26,15 +26,15 @@ describe('ThreatDetectionService', () => {
       userAgent: 'Mozilla/5.0 Test',
       metadata: {
         requestCount: 1,
-        sessionDuration: 1000
+        sessionDuration: 1000,
       },
       riskScore: 50,
       isBlocked: false,
-      description: 'Test security event'
+      description: 'Test security event',
     };
 
     const result = await service.analyzeSecurityEvent(testEvent);
-    
+
     expect(result).toBeDefined();
     expect(result).toHaveProperty('anomaly');
     expect(result).toHaveProperty('iocMatches');
@@ -43,7 +43,7 @@ describe('ThreatDetectionService', () => {
 
   it('should get statistics', () => {
     const stats = service.getStatistics();
-    
+
     expect(stats).toBeDefined();
     expect(stats).toHaveProperty('threatIntel');
     expect(stats).toHaveProperty('incidents');

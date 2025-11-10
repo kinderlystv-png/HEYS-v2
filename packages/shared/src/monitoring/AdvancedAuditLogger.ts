@@ -10,20 +10,20 @@ import { performance } from 'perf_hooks';
 // Audit Event Types
 export enum AuditEventType {
   USER_ACTION = 'user_action',
-  SYSTEM_EVENT = 'system_event', 
+  SYSTEM_EVENT = 'system_event',
   SECURITY_EVENT = 'security_event',
   DATA_ACCESS = 'data_access',
   API_REQUEST = 'api_request',
   ERROR_EVENT = 'error_event',
-  COMPLIANCE_EVENT = 'compliance_event'
+  COMPLIANCE_EVENT = 'compliance_event',
 }
 
 // Audit Severity Levels
 export enum AuditSeverity {
   LOW = 'low',
-  MEDIUM = 'medium', 
+  MEDIUM = 'medium',
   HIGH = 'high',
-  CRITICAL = 'critical'
+  CRITICAL = 'critical',
 }
 
 // Audit Log Entry Interface
@@ -135,7 +135,7 @@ export class AdvancedAuditLogger extends EventEmitter {
 
   constructor(config: Partial<AuditLoggerConfig> = {}) {
     super();
-    
+
     this.config = {
       enableRealTimeAnalysis: true,
       bufferSize: 1000,
@@ -146,9 +146,9 @@ export class AdvancedAuditLogger extends EventEmitter {
       storage: 'memory',
       alertConfig: {
         enableAlerts: true,
-        criticalThreshold: 10
+        criticalThreshold: 10,
       },
-      ...config
+      ...config,
     };
 
     this.statistics = this.initializeStatistics();
@@ -163,10 +163,10 @@ export class AdvancedAuditLogger extends EventEmitter {
     eventType: AuditEventType,
     action: string,
     context: Partial<AuditLogEntry> = {},
-    complianceContext?: ComplianceContext
+    complianceContext?: ComplianceContext,
   ): Promise<string> {
     const startTime = performance.now();
-    
+
     try {
       const entry: AuditLogEntry = {
         id: this.generateId(),
@@ -180,7 +180,7 @@ export class AdvancedAuditLogger extends EventEmitter {
         success: context.success !== false,
         complianceFlags: this.extractComplianceFlags(complianceContext),
         gdprRelevant: complianceContext?.regulation === 'GDPR',
-        ...context
+        ...context,
       };
 
       // Add duration if not provided
@@ -195,7 +195,7 @@ export class AdvancedAuditLogger extends EventEmitter {
 
       // Add to buffer first
       this.buffer.push(entry);
-      
+
       this.updateStatistics(entry);
 
       // Check for immediate flush conditions
@@ -221,7 +221,7 @@ export class AdvancedAuditLogger extends EventEmitter {
     action: string,
     resource?: string,
     metadata: Record<string, unknown> = {},
-    request?: any
+    request?: any,
   ): Promise<string> {
     return this.logEvent(AuditEventType.USER_ACTION, action, {
       userId,
@@ -234,8 +234,8 @@ export class AdvancedAuditLogger extends EventEmitter {
       metadata: {
         ...metadata,
         httpMethod: request?.method,
-        url: request?.originalUrl
-      }
+        url: request?.originalUrl,
+      },
     });
   }
 
@@ -245,13 +245,13 @@ export class AdvancedAuditLogger extends EventEmitter {
   async logSecurityEvent(
     action: string,
     severity: AuditSeverity,
-    context: Partial<AuditLogEntry> = {}
+    context: Partial<AuditLogEntry> = {},
   ): Promise<string> {
     return this.logEvent(AuditEventType.SECURITY_EVENT, action, {
       ...context,
       severity,
       source: 'security_system',
-      complianceFlags: ['security_incident', ...(context.complianceFlags || [])]
+      complianceFlags: ['security_incident', ...(context.complianceFlags || [])],
     });
   }
 
@@ -264,26 +264,31 @@ export class AdvancedAuditLogger extends EventEmitter {
     action: string,
     dataCategory: string,
     lawfulBasis: string,
-    metadata: Record<string, unknown> = {}
+    metadata: Record<string, unknown> = {},
   ): Promise<string> {
     const complianceContext: ComplianceContext = {
       regulation: 'GDPR',
       dataCategory: dataCategory as any,
       lawfulBasis,
-      dataSubjectRights: ['access', 'rectification', 'erasure']
+      dataSubjectRights: ['access', 'rectification', 'erasure'],
     };
 
-    return this.logEvent(AuditEventType.DATA_ACCESS, action, {
-      userId,
-      dataSubjectId,
-      severity: AuditSeverity.HIGH,
-      source: 'data_processor',
-      metadata: {
-        ...metadata,
-        dataCategory,
-        lawfulBasis
-      }
-    }, complianceContext);
+    return this.logEvent(
+      AuditEventType.DATA_ACCESS,
+      action,
+      {
+        userId,
+        dataSubjectId,
+        severity: AuditSeverity.HIGH,
+        source: 'data_processor',
+        metadata: {
+          ...metadata,
+          dataCategory,
+          lawfulBasis,
+        },
+      },
+      complianceContext,
+    );
   }
 
   /**
@@ -292,51 +297,46 @@ export class AdvancedAuditLogger extends EventEmitter {
   async queryLogs(query: AuditQuery): Promise<{ logs: AuditLogEntry[]; total: number }> {
     try {
       // Use memoryStorage for memory-based storage, buffer for others
-      let allLogs = this.config.storage === 'memory' 
-        ? [...this.memoryStorage, ...this.buffer] 
-        : this.buffer;
+      let allLogs =
+        this.config.storage === 'memory' ? [...this.memoryStorage, ...this.buffer] : this.buffer;
 
       // Apply filters
       if (query.startTime) {
-        allLogs = allLogs.filter(log => 
-          new Date(log.timestamp) >= query.startTime!
-        );
+        allLogs = allLogs.filter((log) => new Date(log.timestamp) >= query.startTime!);
       }
 
       if (query.endTime) {
-        allLogs = allLogs.filter(log => 
-          new Date(log.timestamp) <= query.endTime!
-        );
+        allLogs = allLogs.filter((log) => new Date(log.timestamp) <= query.endTime!);
       }
 
       if (query.userId) {
-        allLogs = allLogs.filter(log => log.userId === query.userId);
+        allLogs = allLogs.filter((log) => log.userId === query.userId);
       }
 
       if (query.eventType) {
-        allLogs = allLogs.filter(log => log.eventType === query.eventType);
+        allLogs = allLogs.filter((log) => log.eventType === query.eventType);
       }
 
       if (query.severity) {
-        allLogs = allLogs.filter(log => log.severity === query.severity);
+        allLogs = allLogs.filter((log) => log.severity === query.severity);
       }
 
       if (query.action) {
-        allLogs = allLogs.filter(log => 
-          log.action.toLowerCase().includes(query.action!.toLowerCase())
+        allLogs = allLogs.filter((log) =>
+          log.action.toLowerCase().includes(query.action!.toLowerCase()),
         );
       }
 
       if (query.success !== undefined) {
-        allLogs = allLogs.filter(log => log.success === query.success);
+        allLogs = allLogs.filter((log) => log.success === query.success);
       }
 
       if (query.correlationId) {
-        allLogs = allLogs.filter(log => log.correlationId === query.correlationId);
+        allLogs = allLogs.filter((log) => log.correlationId === query.correlationId);
       }
 
       if (query.gdprRelevant !== undefined) {
-        allLogs = allLogs.filter(log => log.gdprRelevant === query.gdprRelevant);
+        allLogs = allLogs.filter((log) => log.gdprRelevant === query.gdprRelevant);
       }
 
       // Sort
@@ -344,13 +344,13 @@ export class AdvancedAuditLogger extends EventEmitter {
         allLogs.sort((a, b) => {
           const aVal = a[query.sortBy!];
           const bVal = b[query.sortBy!];
-          
+
           if (aVal === undefined && bVal === undefined) return 0;
           if (aVal === undefined) return 1;
           if (bVal === undefined) return -1;
-          
+
           const order = query.sortOrder === 'desc' ? -1 : 1;
-          
+
           // Special handling for severity (low < medium < high < critical)
           if (query.sortBy === 'severity') {
             const severityOrder = { low: 1, medium: 2, high: 3, critical: 4 };
@@ -358,7 +358,7 @@ export class AdvancedAuditLogger extends EventEmitter {
             const bOrder = severityOrder[bVal as keyof typeof severityOrder] || 0;
             return (aOrder - bOrder) * order;
           }
-          
+
           if (aVal < bVal) return -1 * order;
           if (aVal > bVal) return 1 * order;
           return 0;
@@ -392,12 +392,12 @@ export class AdvancedAuditLogger extends EventEmitter {
   async generateComplianceReport(
     regulation: 'GDPR' | 'CCPA' | 'HIPAA' | 'SOX' | 'PCI_DSS',
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): Promise<any> {
     const query: AuditQuery = {
       startTime: startDate,
       endTime: endDate,
-      complianceFlags: [regulation.toLowerCase()]
+      complianceFlags: [regulation.toLowerCase()],
     };
 
     const { logs } = await this.queryLogs(query);
@@ -406,22 +406,20 @@ export class AdvancedAuditLogger extends EventEmitter {
       regulation,
       period: { start: startDate, end: endDate },
       totalEvents: logs.length,
-      dataSubjects: [...new Set(logs.map(log => log.dataSubjectId).filter(Boolean))].length,
-      securityIncidents: logs.filter(log => log.eventType === AuditEventType.SECURITY_EVENT).length,
-      dataAccesses: logs.filter(log => log.eventType === AuditEventType.DATA_ACCESS).length,
-      failures: logs.filter(log => !log.success).length,
-      criticalEvents: logs.filter(log => log.severity === AuditSeverity.CRITICAL).length,
-      generatedAt: new Date().toISOString()
+      dataSubjects: [...new Set(logs.map((log) => log.dataSubjectId).filter(Boolean))].length,
+      securityIncidents: logs.filter((log) => log.eventType === AuditEventType.SECURITY_EVENT)
+        .length,
+      dataAccesses: logs.filter((log) => log.eventType === AuditEventType.DATA_ACCESS).length,
+      failures: logs.filter((log) => !log.success).length,
+      criticalEvents: logs.filter((log) => log.severity === AuditSeverity.CRITICAL).length,
+      generatedAt: new Date().toISOString(),
     };
   }
 
   /**
    * Export audit logs
    */
-  async exportLogs(
-    query: AuditQuery,
-    format: 'json' | 'csv' | 'xml' = 'json'
-  ): Promise<string> {
+  async exportLogs(query: AuditQuery, format: 'json' | 'csv' | 'xml' = 'json'): Promise<string> {
     const { logs } = await this.queryLogs(query);
 
     switch (format) {
@@ -490,7 +488,7 @@ export class AdvancedAuditLogger extends EventEmitter {
    */
   cleanupCorrelationIds(): void {
     // Keep only recent correlation IDs (last 1 hour)
-    const cutoff = Date.now() - (60 * 60 * 1000);
+    const cutoff = Date.now() - 60 * 60 * 1000;
     for (const [key] of this.correlationIdMap) {
       if (parseInt(key) < cutoff) {
         this.correlationIdMap.delete(key);
@@ -509,7 +507,7 @@ export class AdvancedAuditLogger extends EventEmitter {
     await this.flush();
     this.removeAllListeners();
     this.correlationIdMap.clear();
-    
+
     // Clear all stored data
     this.buffer = [];
     this.memoryStorage = [];
@@ -527,13 +525,13 @@ export class AdvancedAuditLogger extends EventEmitter {
         [AuditEventType.DATA_ACCESS]: 0,
         [AuditEventType.API_REQUEST]: 0,
         [AuditEventType.ERROR_EVENT]: 0,
-        [AuditEventType.COMPLIANCE_EVENT]: 0
+        [AuditEventType.COMPLIANCE_EVENT]: 0,
       },
       eventsBySeverity: {
         [AuditSeverity.LOW]: 0,
         [AuditSeverity.MEDIUM]: 0,
         [AuditSeverity.HIGH]: 0,
-        [AuditSeverity.CRITICAL]: 0
+        [AuditSeverity.CRITICAL]: 0,
       },
       successRate: 100,
       averageDuration: 0,
@@ -541,7 +539,7 @@ export class AdvancedAuditLogger extends EventEmitter {
       topUsers: [],
       topActions: [],
       complianceEvents: 0,
-      gdprEvents: 0
+      gdprEvents: 0,
     };
   }
 
@@ -567,20 +565,22 @@ export class AdvancedAuditLogger extends EventEmitter {
 
   private extractComplianceFlags(context?: ComplianceContext): string[] {
     if (!context) return [];
-    
+
     const flags = [context.regulation.toLowerCase()];
     if (context.dataCategory) flags.push(`data_${context.dataCategory}`);
     if (context.lawfulBasis) flags.push(`basis_${context.lawfulBasis}`);
-    
+
     return flags;
   }
 
   private async performRealTimeAnalysis(entry: AuditLogEntry): Promise<void> {
     // Check for security anomalies
-    if (entry.eventType === AuditEventType.SECURITY_EVENT && 
-        entry.severity === AuditSeverity.CRITICAL) {
+    if (
+      entry.eventType === AuditEventType.SECURITY_EVENT &&
+      entry.severity === AuditSeverity.CRITICAL
+    ) {
       this.emit('critical_security_event', entry);
-      
+
       if (this.config.alertConfig?.enableAlerts) {
         await this.sendAlert(entry);
       }
@@ -593,10 +593,11 @@ export class AdvancedAuditLogger extends EventEmitter {
 
     // Check for repeated failures
     if (!entry.success) {
-      const recentFailures = this.buffer.filter(log => 
-        log.userId === entry.userId && 
-        !log.success && 
-        new Date(log.timestamp) > new Date(Date.now() - 5 * 60 * 1000) // Last 5 minutes
+      const recentFailures = this.buffer.filter(
+        (log) =>
+          log.userId === entry.userId &&
+          !log.success &&
+          new Date(log.timestamp) > new Date(Date.now() - 5 * 60 * 1000), // Last 5 minutes
       ).length;
 
       if (recentFailures >= 5) {
@@ -619,18 +620,18 @@ export class AdvancedAuditLogger extends EventEmitter {
     this.statistics.eventsBySeverity[entry.severity]++;
 
     if (entry.success) {
-      this.statistics.successRate = 
-        (this.statistics.successRate * (this.statistics.totalEvents - 1) + 100) / 
+      this.statistics.successRate =
+        (this.statistics.successRate * (this.statistics.totalEvents - 1) + 100) /
         this.statistics.totalEvents;
     } else {
-      this.statistics.successRate = 
-        (this.statistics.successRate * (this.statistics.totalEvents - 1)) / 
+      this.statistics.successRate =
+        (this.statistics.successRate * (this.statistics.totalEvents - 1)) /
         this.statistics.totalEvents;
     }
 
     if (entry.duration) {
-      this.statistics.averageDuration = 
-        (this.statistics.averageDuration * (this.statistics.totalEvents - 1) + entry.duration) / 
+      this.statistics.averageDuration =
+        (this.statistics.averageDuration * (this.statistics.totalEvents - 1) + entry.duration) /
         this.statistics.totalEvents;
     }
 
@@ -678,22 +679,27 @@ export class AdvancedAuditLogger extends EventEmitter {
     if (!firstLog) return '';
 
     const headers = Object.keys(firstLog).join(',');
-    const rows = logs.map(log => 
-      Object.values(log).map(val => 
-        typeof val === 'object' ? JSON.stringify(val) : String(val)
-      ).join(',')
+    const rows = logs.map((log) =>
+      Object.values(log)
+        .map((val) => (typeof val === 'object' ? JSON.stringify(val) : String(val)))
+        .join(','),
     );
 
     return [headers, ...rows].join('\n');
   }
 
   private convertToXML(logs: AuditLogEntry[]): string {
-    const xmlEntries = logs.map(log => {
-      const entries = Object.entries(log).map(([key, value]) => 
-        `<${key}>${typeof value === 'object' ? JSON.stringify(value) : value}</${key}>`
-      ).join('');
-      return `<entry>${entries}</entry>`;
-    }).join('');
+    const xmlEntries = logs
+      .map((log) => {
+        const entries = Object.entries(log)
+          .map(
+            ([key, value]) =>
+              `<${key}>${typeof value === 'object' ? JSON.stringify(value) : value}</${key}>`,
+          )
+          .join('');
+        return `<entry>${entries}</entry>`;
+      })
+      .join('');
 
     return `<?xml version="1.0" encoding="UTF-8"?><audit_logs>${xmlEntries}</audit_logs>`;
   }
@@ -714,18 +720,18 @@ export function createAuditMiddleware(
     logResponses?: boolean;
     excludePaths?: string[];
     sensitiveHeaders?: string[];
-  } = {}
+  } = {},
 ) {
   const {
     logRequests = true,
     logResponses = false,
     excludePaths = ['/health', '/metrics'],
-    sensitiveHeaders = ['authorization', 'cookie', 'x-api-key']
+    sensitiveHeaders = ['authorization', 'cookie', 'x-api-key'],
   } = options;
 
   function sanitizeHeaders(headers: any, sensitiveHeaders: string[]): any {
     const sanitized = { ...headers };
-    sensitiveHeaders.forEach(header => {
+    sensitiveHeaders.forEach((header) => {
       if (sanitized[header]) {
         sanitized[header] = '[REDACTED]';
       }
@@ -735,14 +741,16 @@ export function createAuditMiddleware(
 
   return (req: any, res: any, next: any) => {
     const startTime = performance.now();
-    const correlationId = req.get('X-Correlation-ID') || `corr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+    const correlationId =
+      req.get('X-Correlation-ID') ||
+      `corr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
     // Set correlation ID for request tracking
     logger.setCorrelationId(req.sessionID || req.ip, correlationId);
     req.correlationId = correlationId;
 
     // Skip excluded paths
-    if (excludePaths.some(path => req.path.startsWith(path))) {
+    if (excludePaths.some((path) => req.path.startsWith(path))) {
       return next();
     }
 
@@ -759,16 +767,16 @@ export function createAuditMiddleware(
           method: req.method,
           url: req.originalUrl,
           query: req.query,
-          headers: sanitizeHeaders(req.headers, sensitiveHeaders)
-        }
+          headers: sanitizeHeaders(req.headers, sensitiveHeaders),
+        },
       });
     }
 
     if (logResponses) {
       const originalSend = res.send;
-      res.send = function(data: any) {
+      res.send = function (data: any) {
         const duration = performance.now() - startTime;
-        
+
         logger.logEvent(AuditEventType.API_REQUEST, `${req.method} ${req.path} - Response`, {
           correlationId,
           userId: req.user?.id,
@@ -779,8 +787,8 @@ export function createAuditMiddleware(
           duration,
           metadata: {
             statusCode: res.statusCode,
-            contentLength: data?.length || 0
-          }
+            contentLength: data?.length || 0,
+          },
         });
 
         return originalSend.call(this, data);
@@ -809,8 +817,8 @@ export class AuditLoggerUtils {
       storage: 'elasticsearch',
       alertConfig: {
         enableAlerts: true,
-        criticalThreshold: 5
-      }
+        criticalThreshold: 5,
+      },
     });
   }
 
@@ -828,8 +836,8 @@ export class AuditLoggerUtils {
       storage: 'memory',
       alertConfig: {
         enableAlerts: false,
-        criticalThreshold: 10
-      }
+        criticalThreshold: 10,
+      },
     });
   }
 
@@ -847,8 +855,8 @@ export class AuditLoggerUtils {
       storage: 'database',
       alertConfig: {
         enableAlerts: true,
-        criticalThreshold: 1 // Very strict for GDPR
-      }
+        criticalThreshold: 1, // Very strict for GDPR
+      },
     });
   }
 }

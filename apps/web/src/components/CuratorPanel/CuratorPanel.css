@@ -16,7 +16,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .panel-header h1 {
@@ -90,7 +90,7 @@
 }
 
 .tab-button.active .tab-badge {
-  background: rgba(255,255,255,0.3);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .loading-indicator {
@@ -107,8 +107,12 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Основной контент */
@@ -195,7 +199,7 @@
 .content-sidebar {
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: auto;
 }
 
@@ -244,7 +248,7 @@
 .filter-select:focus {
   outline: none;
   border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
 .clear-filters-button {
@@ -292,10 +296,18 @@
   border-left: 4px solid #dee2e6;
 }
 
-.stat-card.primary { border-left-color: #007bff; }
-.stat-card.success { border-left-color: #28a745; }
-.stat-card.warning { border-left-color: #ffc107; }
-.stat-card.danger { border-left-color: #dc3545; }
+.stat-card.primary {
+  border-left-color: #007bff;
+}
+.stat-card.success {
+  border-left-color: #28a745;
+}
+.stat-card.warning {
+  border-left-color: #ffc107;
+}
+.stat-card.danger {
+  border-left-color: #dc3545;
+}
 
 .stat-value {
   font-size: 2rem;
@@ -358,7 +370,7 @@
 .users-list {
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
@@ -483,14 +495,35 @@
   font-weight: 500;
 }
 
-.role-admin { background: #dc3545; color: white; }
-.role-curator { background: #007bff; color: white; }
-.role-moderator { background: #28a745; color: white; }
-.role-user { background: #6c757d; color: white; }
+.role-admin {
+  background: #dc3545;
+  color: white;
+}
+.role-curator {
+  background: #007bff;
+  color: white;
+}
+.role-moderator {
+  background: #28a745;
+  color: white;
+}
+.role-user {
+  background: #6c757d;
+  color: white;
+}
 
-.status-active { background: #d4edda; color: #155724; }
-.status-inactive { background: #fff3cd; color: #856404; }
-.status-suspended { background: #f8d7da; color: #721c24; }
+.status-active {
+  background: #d4edda;
+  color: #155724;
+}
+.status-inactive {
+  background: #fff3cd;
+  color: #856404;
+}
+.status-suspended {
+  background: #f8d7da;
+  color: #721c24;
+}
 
 .user-dates {
   font-size: 0.75rem;
@@ -657,7 +690,7 @@
   background: #f8f9fa;
 }
 
-.role-option input[type="radio"] {
+.role-option input[type='radio'] {
   margin-top: 0.125rem;
 }
 
@@ -796,16 +829,26 @@
   color: #6c757d;
 }
 
-.loading-spinner.small { padding: 1rem; }
-.loading-spinner.large { padding: 3rem; }
+.loading-spinner.small {
+  padding: 1rem;
+}
+.loading-spinner.large {
+  padding: 3rem;
+}
 
 .spinner-icon {
   margin-bottom: 1rem;
   font-size: 2rem;
 }
 
-.loading-spinner.small .spinner-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
-.loading-spinner.large .spinner-icon { font-size: 3rem; margin-bottom: 1.5rem; }
+.loading-spinner.small .spinner-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.loading-spinner.large .spinner-icon {
+  font-size: 3rem;
+  margin-bottom: 1.5rem;
+}
 
 .spinner-message {
   font-size: 0.875rem;
@@ -816,37 +859,37 @@
   .panel-header {
     padding: 1rem;
   }
-  
+
   .curator-tab-navigation {
     padding: 0 1rem;
   }
-  
+
   .panel-content {
     padding: 1rem;
   }
-  
+
   .content-layout {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
-  
+
   .filters-row {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .filter-group {
     min-width: auto;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .user-card {
     padding: 1rem;
   }
-  
+
   .user-profile {
     flex-direction: column;
     text-align: center;
@@ -858,21 +901,21 @@
     padding: 0.5rem 0.75rem;
     font-size: 0.8rem;
   }
-  
+
   .tab-label {
     display: none;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .user-card {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
   }
-  
+
   .user-info {
     width: 100%;
   }

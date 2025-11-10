@@ -16,10 +16,12 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const DATABASE_NAME = process.env.DATABASE_NAME || 'projectB';
 
 // Basic middleware
-app.use(cors({
-  origin: ['http://localhost:3001', 'http://localhost:3000'],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: ['http://localhost:3001', 'http://localhost:3000'],
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -31,7 +33,7 @@ app.get('/health', (req, res) => {
     environment: NODE_ENV,
     database: DATABASE_NAME,
     port: PORT,
-    uptime: process.uptime()
+    uptime: process.uptime(),
   });
 });
 
@@ -41,7 +43,7 @@ app.get('/api/version', (req, res) => {
     version: '1.0.0',
     name: 'HEYS API Server',
     database: DATABASE_NAME,
-    port: PORT
+    port: PORT,
   });
 });
 
@@ -62,7 +64,7 @@ app.use((req, res) => {
   res.status(404).json({
     error: 'Endpoint not found',
     method: req.method,
-    path: req.originalUrl
+    path: req.originalUrl,
   });
 });
 

@@ -1,8 +1,8 @@
 // filepath: apps/web/src/hooks/__tests__/useServiceWorker.test.ts
 // Тесты для Service Worker hooks - Performance Sprint Day 7
 
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock Service Worker Manager
 const mockServiceWorkerManager = {
@@ -12,17 +12,17 @@ const mockServiceWorkerManager = {
   preloadResources: vi.fn(),
   clearCache: vi.fn(),
   getCacheStatus: vi.fn(),
-  sendPerformanceMetrics: vi.fn()
+  sendPerformanceMetrics: vi.fn(),
 };
 
 vi.mock('../utils/service-worker-manager', () => ({
-  serviceWorkerManager: mockServiceWorkerManager
+  serviceWorkerManager: mockServiceWorkerManager,
 }));
 
 // Mock navigator
 Object.defineProperty(global.navigator, 'onLine', {
   writable: true,
-  value: true
+  value: true,
 });
 
 Object.defineProperty(global.navigator, 'serviceWorker', {
@@ -30,11 +30,11 @@ Object.defineProperty(global.navigator, 'serviceWorker', {
   value: {
     controller: {},
     register: vi.fn(),
-    addEventListener: vi.fn()
-  }
+    addEventListener: vi.fn(),
+  },
 });
 
-import { useServiceWorker, usePerformanceMetrics, useImagePreloading } from '../useServiceWorker';
+import { useImagePreloading, usePerformanceMetrics, useServiceWorker } from '../useServiceWorker';
 
 describe('useServiceWorker', () => {
   beforeEach(() => {
@@ -42,7 +42,7 @@ describe('useServiceWorker', () => {
     // Reset navigator.onLine
     Object.defineProperty(global.navigator, 'onLine', {
       writable: true,
-      value: true
+      value: true,
     });
   });
 
@@ -62,7 +62,7 @@ describe('useServiceWorker', () => {
 
     it('should register service worker successfully', async () => {
       mockServiceWorkerManager.register.mockResolvedValue({});
-      
+
       const { result } = renderHook(() => useServiceWorker());
 
       await act(async () => {
@@ -77,7 +77,7 @@ describe('useServiceWorker', () => {
     it('should handle registration error', async () => {
       const error = new Error('Registration failed');
       mockServiceWorkerManager.register.mockRejectedValue(error);
-      
+
       const { result } = renderHook(() => useServiceWorker());
 
       await act(async () => {
@@ -90,7 +90,7 @@ describe('useServiceWorker', () => {
 
     it('should unregister service worker', async () => {
       mockServiceWorkerManager.unregister.mockResolvedValue(true);
-      
+
       const { result } = renderHook(() => useServiceWorker());
 
       // First register
@@ -105,16 +105,16 @@ describe('useServiceWorker', () => {
 
     it('should preload images when registered', async () => {
       mockServiceWorkerManager.preloadResources.mockResolvedValue(undefined);
-      
+
       const { result } = renderHook(() => useServiceWorker());
-      
+
       // Set as registered
       act(() => {
         result.current.isRegistered = true;
       });
 
       const imageUrls = ['/image1.jpg', '/image2.png'];
-      
+
       await act(async () => {
         await result.current.preloadImages(imageUrls);
       });
@@ -124,9 +124,9 @@ describe('useServiceWorker', () => {
 
     it('should not preload when not registered', async () => {
       const { result } = renderHook(() => useServiceWorker());
-      
+
       const imageUrls = ['/image1.jpg', '/image2.png'];
-      
+
       await act(async () => {
         await result.current.preloadImages(imageUrls);
       });
@@ -143,9 +143,9 @@ describe('useServiceWorker', () => {
       act(() => {
         Object.defineProperty(global.navigator, 'onLine', {
           writable: true,
-          value: false
+          value: false,
         });
-        
+
         // Trigger offline event
         const offlineEvent = new Event('offline');
         window.dispatchEvent(offlineEvent);
@@ -163,8 +163,8 @@ describe('useServiceWorker', () => {
       vi.doMock('../useServiceWorker', () => ({
         useServiceWorker: () => ({
           sendMetrics: mockServiceWorkerManager.sendPerformanceMetrics,
-          isRegistered: true
-        })
+          isRegistered: true,
+        }),
       }));
 
       const { result } = renderHook(() => usePerformanceMetrics());
@@ -178,7 +178,7 @@ describe('useServiceWorker', () => {
         loadTime: 150,
         imageLoadTime: 150,
         cacheHitRate: 1,
-        errorCount: 0
+        errorCount: 0,
       });
     });
 
@@ -186,8 +186,8 @@ describe('useServiceWorker', () => {
       vi.doMock('../useServiceWorker', () => ({
         useServiceWorker: () => ({
           sendMetrics: mockServiceWorkerManager.sendPerformanceMetrics,
-          isRegistered: true
-        })
+          isRegistered: true,
+        }),
       }));
 
       const { result } = renderHook(() => usePerformanceMetrics());
@@ -201,7 +201,7 @@ describe('useServiceWorker', () => {
         loadTime: 0,
         imageLoadTime: 0,
         cacheHitRate: 0,
-        errorCount: 3
+        errorCount: 3,
       });
     });
   });
@@ -211,14 +211,14 @@ describe('useServiceWorker', () => {
       vi.doMock('../useServiceWorker', () => ({
         useServiceWorker: () => ({
           preloadImages: mockServiceWorkerManager.preloadResources,
-          isRegistered: true
-        })
+          isRegistered: true,
+        }),
       }));
 
       const { result } = renderHook(() => useImagePreloading());
 
       const urls = ['/image1.jpg', '/image2.png', '/script.js', '/image3.webp'];
-      
+
       await act(async () => {
         await result.current.preloadCriticalImages(urls);
       });
@@ -232,14 +232,14 @@ describe('useServiceWorker', () => {
       vi.doMock('../useServiceWorker', () => ({
         useServiceWorker: () => ({
           preloadImages: mockServiceWorkerManager.preloadResources,
-          isRegistered: true
-        })
+          isRegistered: true,
+        }),
       }));
 
       const { result } = renderHook(() => useImagePreloading());
 
       const urls = ['/hover-image.jpg'];
-      
+
       await act(async () => {
         await result.current.preloadImagesOnHover(urls);
       });
@@ -253,14 +253,14 @@ describe('useServiceWorker', () => {
       vi.doMock('../useServiceWorker', () => ({
         useServiceWorker: () => ({
           preloadImages: mockServiceWorkerManager.preloadResources,
-          isRegistered: true
-        })
+          isRegistered: true,
+        }),
       }));
 
       const { result } = renderHook(() => useImagePreloading());
 
       const urls = ['/script.js', '/style.css', '/data.json'];
-      
+
       await act(async () => {
         await result.current.preloadCriticalImages(urls);
       });
@@ -283,7 +283,7 @@ describe('useServiceWorker', () => {
 
     it('should handle cache status errors gracefully', async () => {
       mockServiceWorkerManager.getCacheStatus.mockRejectedValue(new Error('Cache error'));
-      
+
       const { result } = renderHook(() => useServiceWorker());
 
       // Set as registered

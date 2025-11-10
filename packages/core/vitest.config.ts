@@ -29,7 +29,7 @@ export default defineConfig({
       '@heys/analytics': path.resolve(__dirname, '../analytics/src'),
       '@heys/storage': path.resolve(__dirname, '../storage/src'),
       '@heys/search': path.resolve(__dirname, '../search/src'),
-      '@heys/gaming': path.resolve(__dirname, '../gaming/src')
+      '@heys/gaming': path.resolve(__dirname, '../gaming/src'),
     },
   },
 });

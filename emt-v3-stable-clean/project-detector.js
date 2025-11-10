@@ -20,11 +20,11 @@
  * @license MIT
  */
 
+import { execSync } from 'child_process';
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
-import crypto from 'crypto';
-import { execSync } from 'child_process';
 
 // ═══════════════════════════════════════════════════════════════
 // 🛡️ КРИТИЧЕСКИЕ ПРОВЕРКИ БЕЗОПАСНОСТИ
@@ -60,7 +60,7 @@ function parseArgs(argv = []) {
     fullReport: false,
     help: false,
     version: false,
-    installDeps: false  // Новая опция для автоматической установки зависимостей
+    installDeps: false, // Новая опция для автоматической установки зависимостей
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -125,9 +125,9 @@ function generateUUID() {
     return crypto.randomUUID();
   }
   // Fallback для старых версий Node.js
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
@@ -136,9 +136,16 @@ function generateUUID() {
 function findFiles(projectPath, pattern, options = {}) {
   const results = [];
   const ignoreDirs = [
-    '.git', '.next', 'node_modules', 'dist', 'build',
-    '.vercel', '.husky', 'coverage', '.nyc_output',
-    ...( options.ignore || [])
+    '.git',
+    '.next',
+    'node_modules',
+    'dist',
+    'build',
+    '.vercel',
+    '.husky',
+    'coverage',
+    '.nyc_output',
+    ...(options.ignore || []),
   ];
 
   function searchDir(dir) {
@@ -150,9 +157,12 @@ function findFiles(projectPath, pattern, options = {}) {
         const relativePath = path.relative(projectPath, fullPath);
 
         // Проверяем игнорируемые директории
-        if (ignoreDirs.some(ignoreDir =>
-          relativePath.startsWith(ignoreDir + path.sep) || relativePath === ignoreDir
-        )) {
+        if (
+          ignoreDirs.some(
+            (ignoreDir) =>
+              relativePath.startsWith(ignoreDir + path.sep) || relativePath === ignoreDir,
+          )
+        ) {
           continue;
         }
 
@@ -197,10 +207,7 @@ function detectBrowserAPIUsage(testFiles, projectPath) {
   const apis = new Set();
 
   // Анализируем все файлы в src и tests
-  const allFiles = [
-    ...testFiles,
-    ...findFiles(projectPath, /\.(js|jsx|ts|tsx)$/, { maxDepth: 3 })
-  ];
+  const allFiles = [...testFiles, ...findFiles(projectPath, /\.(js|jsx|ts|tsx)$/, { maxDepth: 3 })];
 
   for (const file of allFiles.slice(0, 20)) {
     try {
@@ -265,7 +272,7 @@ function detectMonorepoStructure(projectPath) {
       return {
         isMonorepo: true,
         type: 'npm-workspaces',
-        workspaces: Array.isArray(pkg.workspaces) ? pkg.workspaces : pkg.workspaces.packages || []
+        workspaces: Array.isArray(pkg.workspaces) ? pkg.workspaces : pkg.workspaces.packages || [],
       };
     }
 
@@ -274,7 +281,7 @@ function detectMonorepoStructure(projectPath) {
       return {
         isMonorepo: true,
         type: 'pnpm-workspaces',
-        workspaces: ['packages/*']
+        workspaces: ['packages/*'],
       };
     }
 
@@ -408,7 +415,7 @@ export function getProjectInfo(projectPath = process.cwd()) {
 
 export function runDiagnostics(projectPath = process.cwd()) {
   console.info('\n🔍 ДИАГНОСТИКА ЭМТ v3.0.1-enhanced');
-  console.info('=' .repeat(50));
+  console.info('='.repeat(50));
 
   const info = getProjectInfo(projectPath);
   const packageJsonPath = path.join(projectPath, 'package.json');
@@ -448,18 +455,24 @@ export function runDiagnostics(projectPath = process.cwd()) {
 
   // Анализ ESLint
   const eslintConfigs = [
-    '.eslintrc.js', '.eslintrc.json', '.eslintrc.yaml', '.eslintrc.yml',
-    'eslint.config.js', 'eslint.config.mjs'
+    '.eslintrc.js',
+    '.eslintrc.json',
+    '.eslintrc.yaml',
+    '.eslintrc.yml',
+    'eslint.config.js',
+    'eslint.config.mjs',
   ];
-  const eslintConfig = eslintConfigs.find(config =>
-    fs.existsSync(path.join(projectPath, config))
+  const eslintConfig = eslintConfigs.find((config) =>
+    fs.existsSync(path.join(projectPath, config)),
   );
 
   // Анализ конфигураций
-  const hasVitestConfig = fs.existsSync(path.join(projectPath, 'vitest.config.js')) ||
-                         fs.existsSync(path.join(projectPath, 'vitest.config.ts'));
-  const hasJestConfig = fs.existsSync(path.join(projectPath, 'jest.config.js')) ||
-                       fs.existsSync(path.join(projectPath, 'jest.config.ts'));
+  const hasVitestConfig =
+    fs.existsSync(path.join(projectPath, 'vitest.config.js')) ||
+    fs.existsSync(path.join(projectPath, 'vitest.config.ts'));
+  const hasJestConfig =
+    fs.existsSync(path.join(projectPath, 'jest.config.js')) ||
+    fs.existsSync(path.join(projectPath, 'jest.config.ts'));
 
   // Вывод результатов
   console.info('📊 Результаты анализа:');
@@ -469,7 +482,9 @@ export function runDiagnostics(projectPath = process.cwd()) {
   console.info(`🧪 Тестовый фреймворк: ${testFramework}`);
   console.info(`📋 Тестовых файлов: ${existingTests}`);
   console.info(`🏗️ Монорепозиторий: ${monorepoInfo.isMonorepo ? monorepoInfo.type : 'Нет'}`);
-  console.info(`🌐 Browser API: ${browserAPIs.length > 0 ? browserAPIs.join(', ') : 'Стандартные'}`);
+  console.info(
+    `🌐 Browser API: ${browserAPIs.length > 0 ? browserAPIs.join(', ') : 'Стандартные'}`,
+  );
   console.info(`🪝 Husky hooks: ${hasHusky ? 'Настроены' : 'Нет'}`);
   console.info(`✅ Pre-commit: ${hasPreCommit ? 'Да' : 'Нет'}`);
   console.info(`🔧 ESLint: ${eslintConfig ? `Найден (${eslintConfig})` : 'Не настроен'}`);
@@ -506,7 +521,9 @@ export function runDiagnostics(projectPath = process.cwd()) {
     console.info('• Web Workers обнаружены - будет добавлена поддержка @vitest/web-worker');
   }
   if (monorepoInfo.isMonorepo) {
-    console.info(`• Монорепозиторий ${monorepoInfo.type} - будет настроена интеграция для всех workspaces`);
+    console.info(
+      `• Монорепозиторий ${monorepoInfo.type} - будет настроена интеграция для всех workspaces`,
+    );
   }
 
   console.info('\n🎯 Готовность к интеграции ЭМТ: ');
@@ -529,7 +546,7 @@ export function runDiagnostics(projectPath = process.cwd()) {
     hasHusky,
     hasESLint: !!eslintConfig,
     hasVitestConfig,
-    hasJestConfig
+    hasJestConfig,
   };
 }
 
@@ -550,7 +567,7 @@ export function getFrameworkConfig(framework, projectPath = process.cwd()) {
         '@testing-library/jest-dom',
         '@testing-library/react',
         '@testing-library/user-event',
-        '@vitejs/plugin-react'
+        '@vitejs/plugin-react',
       ],
       vitestConfig: `import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
@@ -583,7 +600,7 @@ export default defineConfig({
       '@/lib': path.resolve(__dirname, './src/lib')
     }
   }
-});`
+});`,
     },
 
     react: {
@@ -594,7 +611,7 @@ export default defineConfig({
         '@testing-library/jest-dom',
         '@testing-library/react',
         '@testing-library/user-event',
-        '@vitejs/plugin-react'
+        '@vitejs/plugin-react',
       ],
       vitestConfig: `import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
@@ -610,7 +627,7 @@ export default defineConfig({
       reporter: ['text', 'json', 'html']
     }
   }
-});`
+});`,
     },
 
     vue: {
@@ -621,7 +638,7 @@ export default defineConfig({
         '@testing-library/jest-dom',
         '@testing-library/vue',
         '@testing-library/user-event',
-        '@vitejs/plugin-vue'
+        '@vitejs/plugin-vue',
       ],
       vitestConfig: `import { defineConfig } from 'vitest/config';
 import vue from '@vitejs/plugin-vue';
@@ -633,7 +650,7 @@ export default defineConfig({
     globals: true,
     setupFiles: './tests/setup.${ext}'
   }
-});`
+});`,
     },
 
     svelte: {
@@ -644,7 +661,7 @@ export default defineConfig({
         '@testing-library/jest-dom',
         '@testing-library/svelte',
         '@testing-library/user-event',
-        '@sveltejs/vite-plugin-svelte'
+        '@sveltejs/vite-plugin-svelte',
       ],
       vitestConfig: `import { defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
@@ -656,7 +673,7 @@ export default defineConfig({
     globals: true,
     setupFiles: './tests/setup.${ext}'
   }
-});`
+});`,
     },
 
     angular: {
@@ -666,7 +683,7 @@ export default defineConfig({
         'jsdom',
         '@testing-library/angular',
         '@testing-library/jest-dom',
-        '@testing-library/user-event'
+        '@testing-library/user-event',
       ],
       vitestConfig: `import { defineConfig } from 'vitest/config';
 
@@ -676,7 +693,7 @@ export default defineConfig({
     globals: true,
     setupFiles: './tests/setup.${ext}'
   }
-});`
+});`,
     },
 
     vanilla: {
@@ -686,7 +703,7 @@ export default defineConfig({
         'jsdom',
         '@testing-library/jest-dom',
         '@testing-library/dom',
-        '@testing-library/user-event'
+        '@testing-library/user-event',
       ],
       vitestConfig: `import { defineConfig } from 'vitest/config';
 
@@ -696,8 +713,8 @@ export default defineConfig({
     globals: true,
     setupFiles: './tests/setup.${ext}'
   }
-});`
-    }
+});`,
+    },
   };
 
   return configs[framework] || configs.vanilla;
@@ -710,9 +727,14 @@ export default defineConfig({
 function safeInstallDependencies(dependencies, packageManager, projectPath) {
   if (!dependencies || dependencies.length === 0) return false;
 
-  const pmInstall = packageManager === 'pnpm' ? 'pnpm add -D' :
-                   packageManager === 'yarn' ? 'yarn add -D' :
-                   packageManager === 'bun'  ? 'bun add -d'  : 'npm install -D';
+  const pmInstall =
+    packageManager === 'pnpm'
+      ? 'pnpm add -D'
+      : packageManager === 'yarn'
+        ? 'yarn add -D'
+        : packageManager === 'bun'
+          ? 'bun add -d'
+          : 'npm install -D';
 
   const command = `${pmInstall} ${dependencies.join(' ')}`;
   console.info(`📦 Установка зависимостей: ${command}`);
@@ -749,7 +771,7 @@ export async function setupTestingEnvironment(projectPath = process.cwd(), optio
     if (options.fullReport) {
       const info = getProjectInfo(actualProjectPath);
       console.info('🎯 ЭМТ v3.0-stable - Статус проекта');
-      console.info('=' .repeat(40));
+      console.info('='.repeat(40));
       console.info(`🎨 Фреймворк: ${info.type}`);
       console.info('\\n🎉 ЭМТ готов к интеграции!');
       console.info('💡 Для полной диагностики используйте: --diagnose');
@@ -769,12 +791,10 @@ export async function setupTestingEnvironment(projectPath = process.cwd(), optio
     if (options.interactive && process.stdin.isTTY) {
       const rl = readline.createInterface({
         input: process.stdin,
-        output: process.stdout
+        output: process.stdout,
       });
 
-      const question = (query) => new Promise(resolve =>
-        rl.question(query, resolve)
-      );
+      const question = (query) => new Promise((resolve) => rl.question(query, resolve));
 
       try {
         console.info('🤖 Интерактивная настройка ЭМТ\\n');
@@ -808,22 +828,26 @@ export async function setupTestingEnvironment(projectPath = process.cwd(), optio
     }
 
     // 1. Создание vitest.config.js
-    writeFileSafe(
-      path.join(actualProjectPath, 'vitest.config.js'),
-      config.vitestConfig,
-      options
-    );
+    writeFileSafe(path.join(actualProjectPath, 'vitest.config.js'), config.vitestConfig, options);
 
     // 2. Setup файл с Browser API моками (v3.0.1+)
     const browserAPIMocks = generateBrowserAPIMocks(browserAPIs);
-    const setupContent = `import '@testing-library/jest-dom';${browserAPIs.includes('URL.createObjectURL') || browserAPIs.includes('WebWorkers') ? `
-import { vi } from 'vitest';` : ''}${browserAPIMocks}
-${framework === 'react' || framework === 'nextjs' ? `import { cleanup } from '@testing-library/react';
+    const setupContent = `import '@testing-library/jest-dom';${
+      browserAPIs.includes('URL.createObjectURL') || browserAPIs.includes('WebWorkers')
+        ? `
+import { vi } from 'vitest';`
+        : ''
+    }${browserAPIMocks}
+${
+  framework === 'react' || framework === 'nextjs'
+    ? `import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
 
 afterEach(() => {
   cleanup();
-});` : ''}
+});`
+    : ''
+}
 
 // Глобальные моки для DOM API
 global.ResizeObserver = class ResizeObserver {
@@ -842,15 +866,12 @@ global.IntersectionObserver = class IntersectionObserver {
 console.info('✅ ЭМТ v3.0.1-enhanced test environment loaded${browserAPIs.length > 0 ? ` with ${browserAPIs.join(', ')} mocks` : ''}');
 `;
 
-    writeFileSafe(
-      path.join(actualProjectPath, 'tests', `setup.${ext}`),
-      setupContent,
-      options
-    );
+    writeFileSafe(path.join(actualProjectPath, 'tests', `setup.${ext}`), setupContent, options);
 
     // 3. Test utilities
-    const utilsContent = framework === 'react' || framework === 'nextjs'
-      ? `import { render } from '@testing-library/react';
+    const utilsContent =
+      framework === 'react' || framework === 'nextjs'
+        ? `import { render } from '@testing-library/react';
 
 export function renderWithProviders(ui, options = {}) {
   return render(ui, {
@@ -860,13 +881,13 @@ export function renderWithProviders(ui, options = {}) {
 
 export * from '@testing-library/react';
 export { renderWithProviders as render };`
-      : `// ЭМТ v3.0-stable test utilities
+        : `// ЭМТ v3.0-stable test utilities
 export {};`;
 
     writeFileSafe(
       path.join(actualProjectPath, 'tests/utils', `test-wrapper.${ext}`),
       utilsContent,
-      options
+      options,
     );
 
     // 4. Data factories
@@ -891,14 +912,16 @@ export const postFactory = (overrides = {}) => ({
     writeFileSafe(
       path.join(actualProjectPath, 'tests/fixtures', `factories.${ext}`),
       factoriesContent,
-      options
+      options,
     );
 
     // 5. Пример теста
     const exampleTestContent = `import { describe, it, expect } from 'vitest';
-${framework === 'react' || framework === 'nextjs'
-  ? `import { render, screen } from '../utils/test-wrapper';`
-  : ''}
+${
+  framework === 'react' || framework === 'nextjs'
+    ? `import { render, screen } from '../utils/test-wrapper';`
+    : ''
+}
 import { userFactory } from '../fixtures/factories';
 
 describe('ЭМТ v3.0-stable Example Tests', () => {
@@ -913,12 +936,16 @@ describe('ЭМТ v3.0-stable Example Tests', () => {
     expect(user.id).toBeDefined();
   });
 
-  ${framework === 'react' || framework === 'nextjs' ? `
+  ${
+    framework === 'react' || framework === 'nextjs'
+      ? `
   it('should render React component', () => {
     render(<div data-testid="example">Hello ЭМТ!</div>);
     expect(screen.getByTestId('example')).toBeInTheDocument();
     expect(screen.getByText('Hello ЭМТ!')).toBeVisible();
-  });` : ''}
+  });`
+      : ''
+  }
 
   it('should handle async operations', async () => {
     const promise = Promise.resolve('async result');
@@ -930,7 +957,7 @@ describe('ЭМТ v3.0-stable Example Tests', () => {
     writeFileSafe(
       path.join(actualProjectPath, 'tests', `example.test.${ext}x`),
       exampleTestContent,
-      options
+      options,
     );
 
     // 6. Test IDs константы
@@ -967,7 +994,7 @@ export type TestId = typeof TEST_IDS[keyof typeof TEST_IDS];`;
     writeFileSafe(
       path.join(actualProjectPath, 'src/constants', `test-ids.${ext}`),
       testIdsContent,
-      options
+      options,
     );
 
     // 7. MSW setup (если включено)
@@ -1021,12 +1048,22 @@ export type TestId = typeof TEST_IDS[keyof typeof TEST_IDS];`;
     console.info('\n📋 Следующие шаги:');
 
     const { packageManager } = getProjectInfo(actualProjectPath);
-    const pmInstall = packageManager === 'pnpm' ? 'pnpm add -D' :
-                     packageManager === 'yarn' ? 'yarn add -D' :
-                     packageManager === 'bun'  ? 'bun add -d' : 'npm install -D';
-    const pmRun = packageManager === 'pnpm' ? 'pnpm' :
-                  packageManager === 'yarn' ? 'yarn' :
-                  packageManager === 'bun'  ? 'bun' : 'npm';
+    const pmInstall =
+      packageManager === 'pnpm'
+        ? 'pnpm add -D'
+        : packageManager === 'yarn'
+          ? 'yarn add -D'
+          : packageManager === 'bun'
+            ? 'bun add -d'
+            : 'npm install -D';
+    const pmRun =
+      packageManager === 'pnpm'
+        ? 'pnpm'
+        : packageManager === 'yarn'
+          ? 'yarn'
+          : packageManager === 'bun'
+            ? 'bun'
+            : 'npm';
 
     const extraDeps = [];
     if (options.msw) extraDeps.push('msw');
@@ -1074,7 +1111,6 @@ export type TestId = typeof TEST_IDS[keyof typeof TEST_IDS];`;
     }
 
     return { framework, dependencies: deps, success: true };
-
   } catch (error) {
     console.error('❌ Ошибка при настройке ЭМТ:', error.message);
     return { success: false, error: error.message };
@@ -1132,11 +1168,7 @@ export const handlers = [
 
 export const server = setupServer(...handlers);`;
 
-  writeFileSafe(
-    path.join(projectPath, 'tests/mocks', `server.${ext}`),
-    mswSetupContent,
-    options
-  );
+  writeFileSafe(path.join(projectPath, 'tests/mocks', `server.${ext}`), mswSetupContent, options);
 
   // Интеграция с setup файлом
   const setupPath = path.join(projectPath, 'tests', `setup.${ext}`);
@@ -1170,11 +1202,7 @@ export function setupGitHooks(projectPath = process.cwd(), options = {}) {
   ]
 }`;
 
-  writeFileSafe(
-    path.join(projectPath, '.lintstagedrc.json'),
-    lintStagedConfig,
-    options
-  );
+  writeFileSafe(path.join(projectPath, '.lintstagedrc.json'), lintStagedConfig, options);
 
   const preCommitHook = `#!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
@@ -1186,17 +1214,9 @@ npx lint-staged`;
 
 npx vitest run --coverage=false`;
 
-  writeFileSafe(
-    path.join(projectPath, '.husky/pre-commit'),
-    preCommitHook,
-    options
-  );
+  writeFileSafe(path.join(projectPath, '.husky/pre-commit'), preCommitHook, options);
 
-  writeFileSafe(
-    path.join(projectPath, '.husky/pre-push'),
-    prePushHook,
-    options
-  );
+  writeFileSafe(path.join(projectPath, '.husky/pre-push'), prePushHook, options);
 
   console.info('✅ Git hooks настроены');
 }
@@ -1204,10 +1224,14 @@ npx vitest run --coverage=false`;
 export function setupGithubActions(projectPath = process.cwd(), options = {}) {
   const { packageManager } = getProjectInfo(projectPath);
 
-  const installCmd = packageManager === 'npm' ? 'npm ci' :
-                    packageManager === 'yarn' ? 'yarn install --frozen-lockfile' :
-                    packageManager === 'pnpm' ? 'pnpm install --frozen-lockfile' :
-                    'bun install';
+  const installCmd =
+    packageManager === 'npm'
+      ? 'npm ci'
+      : packageManager === 'yarn'
+        ? 'yarn install --frozen-lockfile'
+        : packageManager === 'pnpm'
+          ? 'pnpm install --frozen-lockfile'
+          : 'bun install';
 
   const runCmd = packageManager;
   const cacheType = packageManager === 'npm' ? 'npm' : packageManager;
@@ -1255,11 +1279,8 @@ jobs:
       with:
         file: ./coverage/coverage-final.json
         flags: unittests
-        name: codecov-umbrella`;  writeFileSafe(
-    path.join(projectPath, '.github/workflows/test.yml'),
-    workflow,
-    options
-  );
+        name: codecov-umbrella`;
+  writeFileSafe(path.join(projectPath, '.github/workflows/test.yml'), workflow, options);
 
   console.info('✅ GitHub Actions workflow создан');
 }
@@ -1389,10 +1410,12 @@ async function main() {
 }
 
 // Запуск если вызван напрямую
-if (import.meta.url && process.argv[1] && (
-  process.argv[1].includes('project-detector-v3.0-stable') ||
-  process.argv[1].includes('project-detector')
-)) {
+if (
+  import.meta.url &&
+  process.argv[1] &&
+  (process.argv[1].includes('project-detector-v3.0-stable') ||
+    process.argv[1].includes('project-detector'))
+) {
   main().catch(console.error);
 }
 

@@ -2,25 +2,25 @@
 /**
  * Сервис для работы с профилями пользователей через RLS политики
  * Обеспечивает безопасный доступ к пользовательским данным
- * 
+ *
  * @created КТ3 - Supabase Security
  * @author HEYS Security Team
  */
 
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import {
-  UserProfile,
+  CreateUserPreference,
   CreateUserProfile,
+  DatabaseListResponse,
+  DatabaseResponse,
+  Permission,
+  PermissionError,
+  ProfileFilter,
+  RLSError,
   UpdateUserProfile,
   UserPreference,
-  CreateUserPreference,
-  ProfileFilter,
-  DatabaseResponse,
-  DatabaseListResponse,
+  UserProfile,
   UserRole,
-  Permission,
-  RLSError,
-  PermissionError
 } from './rls-policies';
 
 export class ProfileService {
@@ -34,10 +34,7 @@ export class ProfileService {
    */
   async getCurrentProfile(): Promise<DatabaseResponse<UserProfile>> {
     try {
-      const { data, error } = await this.supabase
-        .from('user_profiles')
-        .select('*')
-        .single();
+      const { data, error } = await this.supabase.from('user_profiles').select('*').single();
 
       if (error) {
         throw new RLSError('Ошибка получения профиля', 'PROFILE_FETCH_ERROR', { error });
@@ -45,9 +42,9 @@ export class ProfileService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -72,9 +69,9 @@ export class ProfileService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -84,9 +81,7 @@ export class ProfileService {
    */
   async getProfiles(filter?: ProfileFilter): Promise<DatabaseListResponse<UserProfile>> {
     try {
-      let query = this.supabase
-        .from('user_profiles')
-        .select('*', { count: 'exact' });
+      let query = this.supabase.from('user_profiles').select('*', { count: 'exact' });
 
       // Применяем фильтры
       if (filter) {
@@ -112,7 +107,9 @@ export class ProfileService {
           query = query.gte('last_activity_at', filter.last_activity_after);
         }
         if (filter.search) {
-          query = query.or(`display_name.ilike.%${filter.search}%,first_name.ilike.%${filter.search}%,last_name.ilike.%${filter.search}%`);
+          query = query.or(
+            `display_name.ilike.%${filter.search}%,first_name.ilike.%${filter.search}%,last_name.ilike.%${filter.search}%`,
+          );
         }
       }
 
@@ -127,10 +124,10 @@ export class ProfileService {
 
       return { data, error: null, count: count || 0 };
     } catch (error) {
-      return { 
-        data: null, 
+      return {
+        data: null,
         error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
-        count: 0
+        count: 0,
       };
     }
   }
@@ -152,9 +149,9 @@ export class ProfileService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -176,9 +173,9 @@ export class ProfileService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -186,7 +183,10 @@ export class ProfileService {
   /**
    * Обновить профиль по ID (только для администраторов)
    */
-  async updateProfileById(id: string, updates: UpdateUserProfile): Promise<DatabaseResponse<UserProfile>> {
+  async updateProfileById(
+    id: string,
+    updates: UpdateUserProfile,
+  ): Promise<DatabaseResponse<UserProfile>> {
     try {
       const { data, error } = await this.supabase
         .from('user_profiles')
@@ -204,9 +204,9 @@ export class ProfileService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -230,10 +230,10 @@ export class ProfileService {
 
       return { data, error: null, count: count || 0 };
     } catch (error) {
-      return { 
-        data: null, 
+      return {
+        data: null,
         error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
-        count: 0
+        count: 0,
       };
     }
   }
@@ -250,15 +250,17 @@ export class ProfileService {
         .order('key', { ascending: true });
 
       if (error) {
-        throw new RLSError('Ошибка получения настроек категории', 'PREFERENCES_FETCH_ERROR', { error });
+        throw new RLSError('Ошибка получения настроек категории', 'PREFERENCES_FETCH_ERROR', {
+          error,
+        });
       }
 
       return { data, error: null, count: count || 0 };
     } catch (error) {
-      return { 
-        data: null, 
+      return {
+        data: null,
         error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
-        count: 0
+        count: 0,
       };
     }
   }
@@ -284,9 +286,9 @@ export class ProfileService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -299,7 +301,7 @@ export class ProfileService {
       const { data, error } = await this.supabase
         .from('user_preferences')
         .upsert(preference, {
-          onConflict: 'user_id,category,key'
+          onConflict: 'user_id,category,key',
         })
         .select()
         .single();
@@ -310,9 +312,9 @@ export class ProfileService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -334,9 +336,9 @@ export class ProfileService {
 
       return { data: true, error: null };
     } catch (error) {
-      return { 
-        data: false, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: false,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -362,7 +364,7 @@ export class ProfileService {
     try {
       const { data } = await this.getCurrentProfile();
       if (!data) return false;
-      
+
       return data.permissions.includes(permission);
     } catch {
       return false;
@@ -372,11 +374,14 @@ export class ProfileService {
   /**
    * Установить 2FA для текущего пользователя
    */
-  async enableTwoFactor(secret: string, backupCodes: string[]): Promise<DatabaseResponse<UserProfile>> {
+  async enableTwoFactor(
+    secret: string,
+    backupCodes: string[],
+  ): Promise<DatabaseResponse<UserProfile>> {
     return this.updateProfile({
       two_factor_enabled: true,
       two_factor_secret: secret,
-      backup_codes: backupCodes
+      backup_codes: backupCodes,
     });
   }
 
@@ -387,7 +392,7 @@ export class ProfileService {
     return this.updateProfile({
       two_factor_enabled: false,
       two_factor_secret: null,
-      backup_codes: null
+      backup_codes: null,
     });
   }
 
@@ -397,7 +402,7 @@ export class ProfileService {
   async updateLastActivity(): Promise<void> {
     try {
       await this.updateProfile({
-        last_activity_at: new Date().toISOString()
+        last_activity_at: new Date().toISOString(),
       });
     } catch {
       // Игнорируем ошибки обновления активности
@@ -407,10 +412,14 @@ export class ProfileService {
   /**
    * Заблокировать пользователя (только для администраторов)
    */
-  async suspendUser(userId: string, reason: string, until?: string): Promise<DatabaseResponse<UserProfile>> {
+  async suspendUser(
+    userId: string,
+    reason: string,
+    until?: string,
+  ): Promise<DatabaseResponse<UserProfile>> {
     const updates: UpdateUserProfile = {
       is_suspended: true,
-      suspension_reason: reason
+      suspension_reason: reason,
     };
     if (until) {
       updates.suspension_until = until;
@@ -425,7 +434,7 @@ export class ProfileService {
     return this.updateProfileById(userId, {
       is_suspended: false,
       suspension_reason: null,
-      suspension_until: null
+      suspension_until: null,
     });
   }
 }

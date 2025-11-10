@@ -11,11 +11,13 @@
 ### Обнаруженные компоненты:
 
 #### 1. **Legacy файлы (apps/web/)**
+
 - `heys_performance_monitor.js` - **829 строк, 32KB**
 - `heys_analytics_ui.js` - **487 строк, 28KB**
 - **Итого legacy:** 1316 строк, **60KB** JavaScript кода
 
 #### 2. **Modern TypeScript модули (packages/shared/src/)**
+
 - `performance/real-time-performance-monitor.ts` - 1077 строк
 - `performance/performance-analytics-dashboard.ts`
 - `performance/performance-test-framework.ts`
@@ -25,11 +27,13 @@
 - `monitoring/performance.ts`
 
 #### 3. **Отдельные пакеты (packages/)**
+
 - `@heys/analytics` - практически пустой (3 строки кода)
 - `@heys/analytics-dashboard` - пустой каркас
 - `@heys/threat-detection` - не используется
 
 #### 4. **Скрипты и тесты**
+
 - `scripts/performance-*.js/ts` - минимум 6 файлов
 - `TESTS/e2e/performance-analytics.spec.ts`
 - **Общий объем кода:** ~11,500+ строк
@@ -77,6 +81,7 @@
 ### 📈 Интеграция:
 
 **В `heys_core_v12.js` используется:**
+
 ```javascript
 window.HEYS.analytics.trackSearch(query, result.length, duration);
 window.HEYS.analytics.trackApiCall('bootstrapClientSync', duration, true);
@@ -85,6 +90,7 @@ window.HEYS.analytics.trackDataOperation('cache-hit');
 ```
 
 **В `index.html`:**
+
 - Загружается с `fetchpriority="high"` и `defer`
 - Preload директива
 - **НО**: UI компонент `AnalyticsModal` НИКОГДА НЕ ИСПОЛЬЗУЕТСЯ
@@ -111,9 +117,11 @@ window.HEYS.analytics.trackDataOperation('cache-hit');
    - Для приложения учета питания FPS НЕ критичен
 
 4. **Monkey patching:**
+
    ```javascript
    document.createElement = function(tagName) { ... }
    ```
+
    - Переопределяет нативный `document.createElement`
    - Потенциальные конфликты с библиотеками
    - Anti-pattern
@@ -186,6 +194,7 @@ window.HEYS.analytics.trackDataOperation('cache-hit');
 ### Вариант 1: **Радикальное упрощение (рекомендуется)**
 
 **Что оставить:**
+
 ```javascript
 // Минимальный performance tracker (50-100 строк)
 HEYS.analytics = {
@@ -197,11 +206,12 @@ HEYS.analytics = {
   },
   trackError: (error) => {
     // Базовый error logging
-  }
+  },
 };
 ```
 
 **Что удалить:**
+
 - ✂️ `heys_performance_monitor.js` (829 строк) → замена на 50-100 строк
 - ✂️ `heys_analytics_ui.js` (487 строк) → полное удаление
 - ✂️ `packages/shared/src/performance/*` → перенести в archive
@@ -210,6 +220,7 @@ HEYS.analytics = {
 - ✂️ `@sentry/browser` dependency (если не планируете настраивать)
 
 **Экономия:**
+
 - **-60KB** bundle size на клиенте
 - **-11,500** строк кода для поддержки
 - **-Performance overhead** от FPS counter и observers
@@ -219,22 +230,31 @@ HEYS.analytics = {
 ### Вариант 2: **Pragmatic упрощение**
 
 **Оставить только используемые части:**
+
 1. Базовый tracking в `heys_core_v12.js` (уже работает)
 2. Удалить UI (`heys_analytics_ui.js`)
 3. Удалить FPS counter и observers
 4. Оставить структуру для будущего (если планируете real monitoring)
 
 **Что делать:**
+
 ```javascript
 // Упростить heys_performance_monitor.js до:
 class SimpleAnalytics {
-  trackSearch(query, count, duration) { /* localStorage или API */ }
-  trackApiCall(name, duration, success) { /* только если duration > 2000ms */ }
-  trackError(error) { /* console.error + localStorage */ }
+  trackSearch(query, count, duration) {
+    /* localStorage или API */
+  }
+  trackApiCall(name, duration, success) {
+    /* только если duration > 2000ms */
+  }
+  trackError(error) {
+    /* console.error + localStorage */
+  }
 }
 ```
 
 **Экономия:**
+
 - **-40KB** bundle size
 - **-~1000** строк в main monitor
 - Сохранение архитектуры для масштабирования
@@ -246,6 +266,7 @@ class SimpleAnalytics {
 **Если вы действительно хотите production monitoring:**
 
 1. **Настройте Sentry:**
+
    ```bash
    SENTRY_DSN=https://xxx@sentry.io/yyy
    ```
@@ -267,18 +288,19 @@ class SimpleAnalytics {
 
 ### Текущее состояние: **🔴 Критически избыточно**
 
-| Метрика | Значение | Оценка |
-|---------|----------|--------|
-| Объем кода | ~11,500 строк | 🔴 Чрезмерно |
-| Bundle size | 60KB+ | 🔴 Много |
-| Performance overhead | FPS loop + observers | 🔴 Ненужно |
-| Реальное использование | 3-4 метода из 50+ | 🔴 1-5% |
-| UI использование | 0% (мертвый код) | 🔴 Не используется |
-| Архитектура | Дублирование (Legacy + Modern) | 🔴 Конфликт |
+| Метрика                | Значение                       | Оценка             |
+| ---------------------- | ------------------------------ | ------------------ |
+| Объем кода             | ~11,500 строк                  | 🔴 Чрезмерно       |
+| Bundle size            | 60KB+                          | 🔴 Много           |
+| Performance overhead   | FPS loop + observers           | 🔴 Ненужно         |
+| Реальное использование | 3-4 метода из 50+              | 🔴 1-5%            |
+| UI использование       | 0% (мертвый код)               | 🔴 Не используется |
+| Архитектура            | Дублирование (Legacy + Modern) | 🔴 Конфликт        |
 
 ### Рекомендация: **⚡ РАДИКАЛЬНОЕ УПРОЩЕНИЕ**
 
 **Действия:**
+
 1. ✅ Создать `apps/web/heys_simple_analytics.js` (~100 строк)
 2. ✅ Удалить `heys_performance_monitor.js` (829 строк)
 3. ✅ Удалить `heys_analytics_ui.js` (487 строк)
@@ -288,6 +310,7 @@ class SimpleAnalytics {
 7. ✅ Убрать `@sentry/browser` из dependencies (пока не нужен)
 
 **Результат:**
+
 - 💾 Экономия ~60KB bundle size
 - 🚀 Устранение performance overhead
 - 🧹 Чистая кодовая база (-11,400 строк)
@@ -299,37 +322,39 @@ class SimpleAnalytics {
 ## 🛠️ План миграции (если принято решение упростить)
 
 ### Фаза 1: Создание Simple Analytics (1 час)
+
 ```javascript
 // apps/web/heys_simple_analytics.js
-(function(global) {
-  const HEYS = global.HEYS = global.HEYS || {};
-  
+(function (global) {
+  const HEYS = (global.HEYS = global.HEYS || {});
+
   HEYS.analytics = {
     trackSearch: (query, count, duration) => {
       if (duration > 1000) console.warn('[HEYS] Slow search:', query, duration);
     },
-    
+
     trackApiCall: (name, duration, success) => {
       if (duration > 2000) console.warn('[HEYS] Slow API:', name, duration);
       if (!success) console.error('[HEYS] API failed:', name);
     },
-    
+
     trackDataOperation: (type, count) => {
       // Optional: localStorage metrics
     },
-    
+
     trackError: (error) => {
       console.error('[HEYS] Error:', error);
-    }
+    },
   };
 })(window);
 ```
 
 ### Фаза 2: Обновление index.html (5 минут)
+
 ```html
 <!-- Удалить -->
-<link rel="preload" href="heys_performance_monitor.js" ...>
-<link rel="preload" href="heys_analytics_ui.js" ...>
+<link rel="preload" href="heys_performance_monitor.js" ... />
+<link rel="preload" href="heys_analytics_ui.js" ... />
 <script defer src="heys_performance_monitor.js" ...></script>
 <script defer src="heys_analytics_ui.js" ...></script>
 
@@ -338,6 +363,7 @@ class SimpleAnalytics {
 ```
 
 ### Фаза 3: Архивирование (10 минут)
+
 ```bash
 mkdir -p archive/performance-monitoring-v1
 mv apps/web/heys_performance_monitor.js archive/performance-monitoring-v1/
@@ -347,11 +373,13 @@ mv packages/shared/src/monitoring archive/performance-monitoring-v1/
 ```
 
 ### Фаза 4: Очистка package.json (5 минут)
+
 ```bash
 pnpm remove @sentry/browser
 ```
 
 ### Фаза 5: Тестирование (15 минут)
+
 - Проверить что search работает
 - Проверить что API calls трекаются
 - Проверить что нет ошибок в консоли
@@ -385,9 +413,13 @@ pnpm remove @sentry/browser
 
 ---
 
-**Финальный вердикт:** 🔴 **УБРАТЬ** и заменить на минимальную версию (~100 строк)
+**Финальный вердикт:** 🔴 **УБРАТЬ** и заменить на минимальную версию (~100
+строк)
 
-**Обоснование:** Текущая реализация performance monitoring является классическим примером over-engineering для проекта уровня HEYS. 11,500+ строк кода для мониторинга в приложении учета питания - это неоправданная сложность, которая:
+**Обоснование:** Текущая реализация performance monitoring является классическим
+примером over-engineering для проекта уровня HEYS. 11,500+ строк кода для
+мониторинга в приложении учета питания - это неоправданная сложность, которая:
+
 - Увеличивает bundle size на 60KB+
 - Создает performance overhead (FPS counter loop)
 - Усложняет поддержку (дублирование Legacy/Modern)

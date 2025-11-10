@@ -3,7 +3,7 @@ import pino from 'pino';
 import { LEVEL_METHODS, LEVEL_VALUES } from '../../../levels.config.js';
 
 import { defaultConfig, validateConfig, type AdvancedLoggerConfig } from './config.js';
-import { createTransports, createFormatters, createSerializers } from './transports.js';
+import { createFormatters, createSerializers, createTransports } from './transports.js';
 
 /**
  * Уровни логирования для HEYS системы (обновленные)
@@ -51,8 +51,8 @@ export interface LoggerConfig {
 }
 
 // Экспортируем новые типы
-export type { AdvancedLoggerConfig };
 export { defaultConfig, validateConfig };
+export type { AdvancedLoggerConfig };
 
 /**
  * Создает настроенный логгер для HEYS системы (legacy версия)
@@ -61,7 +61,7 @@ export function createLogger(config: LoggerConfig = {}) {
   const {
     level = LogLevel.INFO,
     service = 'heys-app',
-    environment = process.env.NODE_ENV || 'development'
+    environment = process.env.NODE_ENV || 'development',
   } = config;
 
   const isProduction = environment === 'production';
@@ -73,14 +73,14 @@ export function createLogger(config: LoggerConfig = {}) {
       service,
       environment,
       pid: process.pid,
-      hostname: process.env.HOSTNAME || 'unknown'
+      hostname: process.env.HOSTNAME || 'unknown',
     },
     timestamp: pino.stdTimeFunctions.isoTime,
     formatters: {
       level: (label: string) => {
         return { level: label };
-      }
-    }
+      },
+    },
   };
 
   // Конфигурация для разработки - красивый формат
@@ -88,7 +88,7 @@ export function createLogger(config: LoggerConfig = {}) {
     level,
     base: {
       service,
-      environment
+      environment,
     },
     transport: {
       target: 'pino-pretty',
@@ -96,9 +96,9 @@ export function createLogger(config: LoggerConfig = {}) {
         colorize: true,
         ignore: 'pid,hostname',
         translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
-        messageFormat: '[{service}] {msg}'
-      }
-    }
+        messageFormat: '[{service}] {msg}',
+      },
+    },
   };
 
   return pino(isProduction ? productionConfig : developmentConfig);
@@ -118,27 +118,27 @@ export function createAdvancedLogger(config: Partial<AdvancedLoggerConfig> = {})
     base: {
       service: validatedConfig.service,
       environment: validatedConfig.environment,
-      version: process.env.npm_package_version || '1.0.0'
+      version: process.env.npm_package_version || '1.0.0',
     },
     timestamp: pino.stdTimeFunctions.isoTime,
     formatters,
     serializers,
     redact: {
       paths: validatedConfig.redact,
-      censor: '[REDACTED]'
-    }
+      censor: '[REDACTED]',
+    },
   };
 
   // Если есть несколько стримов, используем multistream
   if (streams.length > 1) {
     return pino(options, pino.multistream(streams));
   }
-  
+
   // Если только один стрим, используем его напрямую
   if (streams.length === 1 && streams[0]) {
     return pino(options, streams[0].stream);
   }
-  
+
   // Fallback на стандартный вывод
   return pino(options);
 }
@@ -148,7 +148,7 @@ export function createAdvancedLogger(config: Partial<AdvancedLoggerConfig> = {})
  */
 export const logger = createAdvancedLogger({
   service: 'heys-system',
-  level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO
+  level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
 });
 
 /**
@@ -164,11 +164,27 @@ export function createContextLogger(context: RequestContext, service?: string) {
  */
 export function createHttpLogger(service?: string) {
   const httpLogger = service ? createLogger({ service }) : logger;
-  
-  return (req: { headers: Record<string, string>; method: string; url: string; ip?: string; connection?: { remoteAddress?: string }; logger?: pino.Logger }, res: { statusCode: number; get: (header: string) => string | number; on: (event: string, callback: () => void) => void }, next: () => void) => {
+
+  return (
+    req: {
+      headers: Record<string, string>;
+      method: string;
+      url: string;
+      ip?: string;
+      connection?: { remoteAddress?: string };
+      logger?: pino.Logger;
+    },
+    res: {
+      statusCode: number;
+      get: (header: string) => string | number;
+      on: (event: string, callback: () => void) => void;
+    },
+    next: () => void,
+  ) => {
     const start = Date.now();
-    const requestId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+    const requestId =
+      req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
     const context: RequestContext = {
       requestId,
       method: req.method,
@@ -186,16 +202,19 @@ export function createHttpLogger(service?: string) {
     }
 
     req.logger = httpLogger.child(context);
-    
+
     req.logger.info('Request started');
 
     res.on('finish', () => {
       const duration = Date.now() - start;
-      req.logger?.info({
-        statusCode: res.statusCode,
-        duration,
-        responseSize: res.get('content-length') || 0
-      }, 'Request completed');
+      req.logger?.info(
+        {
+          statusCode: res.statusCode,
+          duration,
+          responseSize: res.get('content-length') || 0,
+        },
+        'Request completed',
+      );
     });
 
     next();
@@ -218,14 +237,17 @@ export const log = {
  * Функция для логирования ошибок с полным стеком
  */
 export function logError(error: Error, context?: Record<string, unknown>) {
-  logger.error({
-    error: {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
+  logger.error(
+    {
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      },
+      ...context,
     },
-    ...context
-  }, 'Error occurred');
+    'Error occurred',
+  );
 }
 
 export default logger;

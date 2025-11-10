@@ -33,7 +33,7 @@ class ImageOptimizer {
   private cache = new Map<string, ImageMetadata>();
   private loadingPromises = new Map<string, Promise<ImageMetadata>>();
   private supportedFormats: Set<string> = new Set();
-  
+
   constructor() {
     this.detectSupportedFormats();
     this.setupCacheCleanup();
@@ -42,10 +42,7 @@ class ImageOptimizer {
   /**
    * Основной метод оптимизации изображения
    */
-  async optimizeImage(
-    src: string, 
-    options: ImageOptimizationOptions = {}
-  ): Promise<ImageMetadata> {
+  async optimizeImage(src: string, options: ImageOptimizationOptions = {}): Promise<ImageMetadata> {
     const {
       quality = 85,
       format = 'auto',
@@ -54,12 +51,12 @@ class ImageOptimizer {
       fit = 'cover',
       blur = false,
       priority = false,
-      preload = false
+      preload = false,
     } = options;
 
     // Создаем уникальный ключ для кэширования
     const cacheKey = this.generateCacheKey(src, options);
-    
+
     // Проверяем кэш
     if (this.cache.has(cacheKey)) {
       const cached = this.cache.get(cacheKey)!;
@@ -82,22 +79,22 @@ class ImageOptimizer {
       fit,
       blur,
       priority,
-      preload
+      preload,
     });
 
     this.loadingPromises.set(cacheKey, optimizationPromise);
 
     try {
       const result = await optimizationPromise;
-      
+
       // Кэшируем результат
       this.cache.set(cacheKey, result);
-      
+
       // Preload если требуется
       if (preload || priority) {
         this.preloadImage(result.src);
       }
-      
+
       return result;
     } finally {
       this.loadingPromises.delete(cacheKey);
@@ -109,16 +106,16 @@ class ImageOptimizer {
    */
   private async performOptimization(
     src: string,
-    options: Required<Omit<ImageOptimizationOptions, 'placeholder' | 'lazy'>>
+    options: Required<Omit<ImageOptimizationOptions, 'placeholder' | 'lazy'>>,
   ): Promise<ImageMetadata> {
     try {
       // Определяем оптимальный формат
       const targetFormat = this.selectOptimalFormat(options.format);
-      
+
       // Создаем optimized URL
       const optimizedSrc = this.buildOptimizedUrl(src, {
         ...options,
-        format: targetFormat as any
+        format: targetFormat as any,
       });
 
       // Получаем метаданные изображения
@@ -132,14 +129,14 @@ class ImageOptimizer {
         size: metadata.size,
         optimized: true,
         cached: false,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
     } catch (error) {
       console.warn('Image optimization failed, falling back to original:', error);
-      
+
       // Fallback к оригинальному изображению
       const fallbackMetadata = await this.getImageMetadata(src);
-      
+
       return {
         src,
         width: fallbackMetadata.width,
@@ -148,7 +145,7 @@ class ImageOptimizer {
         size: fallbackMetadata.size,
         optimized: false,
         cached: false,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
     }
   }
@@ -176,7 +173,7 @@ class ImageOptimizer {
    */
   private buildOptimizedUrl(
     src: string,
-    options: Required<Omit<ImageOptimizationOptions, 'placeholder' | 'lazy'>>
+    options: Required<Omit<ImageOptimizationOptions, 'placeholder' | 'lazy'>>,
   ): string {
     // Если это уже оптимизированный URL, возвращаем как есть
     if (src.includes('_optimized') || src.includes('w_') || src.includes('f_')) {
@@ -210,22 +207,22 @@ class ImageOptimizer {
   }> {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      
+
       img.onload = () => {
         // Приблизительная оценка размера файла
         const estimatedSize = this.estimateImageSize(img.naturalWidth, img.naturalHeight);
-        
+
         resolve({
           width: img.naturalWidth,
           height: img.naturalHeight,
-          size: estimatedSize
+          size: estimatedSize,
         });
       };
-      
+
       img.onerror = () => {
         reject(new Error(`Failed to load image: ${src}`));
       };
-      
+
       img.src = src;
     });
   }
@@ -239,7 +236,7 @@ class ImageOptimizer {
     link.rel = 'preload';
     link.as = 'image';
     link.href = src;
-    
+
     // Добавляем в head если еще не существует
     const existing = document.querySelector(`link[href="${src}"]`);
     if (!existing) {
@@ -280,7 +277,8 @@ class ImageOptimizer {
       // AVIF не поддерживается
     };
     // Tiny AVIF image data URL
-    avif.src = 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAEAAAABAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQAMAAAAABNjb2xybmNseAACAAIABoAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgABogQEAwgMg8f8D///8WfhwB8+ErK42A=';
+    avif.src =
+      'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAEAAAABAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQAMAAAAABNjb2xybmNseAACAAIABoAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgABogQEAwgMg8f8D///8WfhwB8+ErK42A=';
   }
 
   /**
@@ -314,16 +312,20 @@ class ImageOptimizer {
    */
   private setupCacheCleanup(): void {
     // Очистка кэша каждые 30 минут
-    setInterval(() => {
-      this.cleanupCache();
-    }, 30 * 60 * 1000);
+    setInterval(
+      () => {
+        this.cleanupCache();
+      },
+      30 * 60 * 1000,
+    );
 
     // Очистка при превышении лимита памяти
     if ('memory' in performance) {
       setInterval(() => {
         // @ts-ignore - экспериментальное API
         const memInfo = (performance as any).memory;
-        if (memInfo && memInfo.usedJSHeapSize > 50 * 1024 * 1024) { // 50MB
+        if (memInfo && memInfo.usedJSHeapSize > 50 * 1024 * 1024) {
+          // 50MB
           this.cleanupCache(true);
         }
       }, 60 * 1000);
@@ -336,7 +338,7 @@ class ImageOptimizer {
   private cleanupCache(aggressive = false): void {
     const now = Date.now();
     const maxAge = aggressive ? 5 * 60 * 1000 : 30 * 60 * 1000; // 5 или 30 минут
-    
+
     for (const [key, metadata] of this.cache.entries()) {
       if (now - metadata.timestamp > maxAge) {
         this.cache.delete(key);
@@ -345,9 +347,10 @@ class ImageOptimizer {
 
     // Если кэш все еще большой, удаляем самые старые
     if (this.cache.size > 100) {
-      const entries = Array.from(this.cache.entries())
-        .sort((a, b) => a[1].timestamp - b[1].timestamp);
-      
+      const entries = Array.from(this.cache.entries()).sort(
+        (a, b) => a[1].timestamp - b[1].timestamp,
+      );
+
       const toDelete = entries.slice(0, this.cache.size - 100);
       toDelete.forEach(([key]) => this.cache.delete(key));
     }
@@ -364,15 +367,14 @@ class ImageOptimizer {
   } {
     const entries = Array.from(this.cache.values());
     const totalSize = entries.reduce((sum, entry) => sum + entry.size, 0);
-    const oldestEntry = entries.length > 0 
-      ? Math.min(...entries.map(e => e.timestamp))
-      : Date.now();
+    const oldestEntry =
+      entries.length > 0 ? Math.min(...entries.map((e) => e.timestamp)) : Date.now();
 
     return {
       size: this.cache.size,
       totalSize,
       hitRate: 0, // TODO: implement hit rate tracking
-      oldestEntry
+      oldestEntry,
     };
   }
 
@@ -389,5 +391,5 @@ class ImageOptimizer {
 export const imageOptimizer = new ImageOptimizer();
 
 // Export types
-export type { ImageOptimizationOptions, ImageMetadata };
+export type { ImageMetadata, ImageOptimizationOptions };
 export default ImageOptimizer;

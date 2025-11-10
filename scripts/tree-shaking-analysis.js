@@ -17,9 +17,9 @@ async function importTreeShaker() {
       compilerOptions: {
         module: 'commonjs',
         target: 'es2020',
-      }
+      },
     });
-    
+
     const { TreeShaker } = require('../packages/shared/src/performance/TreeShaker.ts');
     return TreeShaker;
   } catch (error) {
@@ -46,12 +46,12 @@ const defaultConfig = {
 async function analyzeFileSystem(rootPath, config = {}) {
   console.log('🌲 Запуск анализа tree shaking...');
   console.log(`📁 Анализируемая директория: ${rootPath}`);
-  
+
   const startTime = Date.now();
-  
+
   try {
     const TreeShaker = await importTreeShaker();
-    
+
     // Создаем экземпляр с конфигурацией
     const treeShaker = new TreeShaker({
       bundler: config.bundler || 'vite',
@@ -65,16 +65,16 @@ async function analyzeFileSystem(rootPath, config = {}) {
         '**/node_modules/**',
         '**/coverage/**',
         '**/dist/**',
-        '**/build/**'
-      ]
+        '**/build/**',
+      ],
     });
-    
+
     // Выполняем анализ
     const analysis = await treeShaker.analyzeProject(rootPath);
-    
+
     const duration = Date.now() - startTime;
     console.log(`⚡ Анализ завершен за ${duration}ms`);
-    
+
     return { treeShaker, analysis };
   } catch (error) {
     console.error('❌ Ошибка при анализе:', error);
@@ -88,7 +88,7 @@ async function analyzeFileSystem(rootPath, config = {}) {
 function saveReport(treeShaker, analysis, outputPath, format = 'text') {
   try {
     let content = '';
-    
+
     switch (format) {
       case 'text':
         content = treeShaker.generateReport();
@@ -100,19 +100,19 @@ function saveReport(treeShaker, analysis, outputPath, format = 'text') {
         // Сохраняем оба формата
         const textContent = treeShaker.generateReport();
         const jsonContent = treeShaker.exportToJson();
-        
+
         const baseName = path.basename(outputPath, path.extname(outputPath));
         const dir = path.dirname(outputPath);
-        
+
         fs.writeFileSync(path.join(dir, `${baseName}.txt`), textContent, 'utf8');
         fs.writeFileSync(path.join(dir, `${baseName}.json`), jsonContent, 'utf8');
-        
+
         console.log(`💾 Отчеты сохранены:`);
         console.log(`   📄 ${baseName}.txt`);
         console.log(`   📋 ${baseName}.json`);
         return;
     }
-    
+
     fs.writeFileSync(outputPath, content, 'utf8');
     console.log(`💾 Отчет сохранен: ${outputPath}`);
   } catch (error) {
@@ -128,11 +128,11 @@ function printSummary(analysis) {
   console.log('========================');
   console.log(`📁 Проанализировано файлов: ${analysis.totalFiles}`);
   console.log(`🔍 Найдено неиспользуемых экспортов: ${analysis.unusedExports.length}`);
-  
+
   if (analysis.potentialSavings > 0) {
     console.log(`💾 Потенциальная экономия: ${formatBytes(analysis.potentialSavings)}`);
   }
-  
+
   // Топ файлов с неиспользуемыми экспортами
   if (analysis.unusedExports.length > 0) {
     const fileGroups = analysis.unusedExports.reduce((acc, exp) => {
@@ -141,27 +141,29 @@ function printSummary(analysis) {
       acc[fileName].push(exp);
       return acc;
     }, {});
-    
+
     const topFiles = Object.entries(fileGroups)
-      .sort(([,a], [,b]) => b.length - a.length)
+      .sort(([, a], [, b]) => b.length - a.length)
       .slice(0, 5);
-    
+
     if (topFiles.length > 0) {
       console.log('\n🔝 ТОП ФАЙЛОВ С НЕИСПОЛЬЗУЕМЫМИ ЭКСПОРТАМИ:');
       topFiles.forEach(([fileName, exports], index) => {
         const totalSize = exports.reduce((sum, exp) => sum + exp.size, 0);
-        console.log(`   ${index + 1}. ${fileName}: ${exports.length} экспортов (${formatBytes(totalSize)})`);
+        console.log(
+          `   ${index + 1}. ${fileName}: ${exports.length} экспортов (${formatBytes(totalSize)})`,
+        );
       });
     }
   }
-  
+
   // Рекомендации (первые 3)
   if (analysis.recommendations.length > 0) {
     console.log('\n💡 ГЛАВНЫЕ РЕКОМЕНДАЦИИ:');
-    analysis.recommendations.slice(0, 3).forEach(rec => {
+    analysis.recommendations.slice(0, 3).forEach((rec) => {
       console.log(`   ${rec}`);
     });
-    
+
     if (analysis.recommendations.length > 3) {
       console.log(`   ... и еще ${analysis.recommendations.length - 3} рекомендаций`);
     }
@@ -185,10 +187,10 @@ function formatBytes(bytes) {
 function parseArguments() {
   const args = process.argv.slice(2);
   const config = { ...defaultConfig };
-  
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
+
     switch (arg) {
       case '--path':
       case '-p':
@@ -231,7 +233,7 @@ function parseArguments() {
         break;
     }
   }
-  
+
   return config;
 }
 
@@ -277,39 +279,39 @@ function printHelp() {
 async function main() {
   try {
     const config = parseArguments();
-    
+
     if (config.verbose) {
       console.log('🔧 Конфигурация:', JSON.stringify(config, null, 2));
     }
-    
+
     // Проверяем существование пути
     if (!fs.existsSync(config.rootPath)) {
       console.error(`❌ Путь не существует: ${config.rootPath}`);
       process.exit(1);
     }
-    
+
     // Выполняем анализ
     const { treeShaker, analysis } = await analyzeFileSystem(config.rootPath, config);
-    
+
     // Выводим краткую статистику
     printSummary(analysis);
-    
+
     // Сохраняем отчет
     if (config.outputFile) {
       saveReport(treeShaker, analysis, config.outputFile, config.format);
     }
-    
+
     // Выводим полный отчет в консоль если не сохраняем в файл
     if (!config.outputFile || config.verbose) {
       console.log('\n' + treeShaker.generateReport());
     }
-    
+
     // Проверяем критические проблемы
     if (analysis.unusedExports.length > 100) {
       console.log('\n⚠️  ВНИМАНИЕ: Найдено много неиспользуемых экспортов!');
       console.log('   Рекомендуется провести рефакторинг для улучшения производительности.');
     }
-    
+
     process.exit(0);
   } catch (error) {
     console.error('❌ Критическая ошибка:', error);

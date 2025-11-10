@@ -41,14 +41,16 @@ export class BundleAnalyzer {
    */
   async measureCurrentMetrics(): Promise<BundleMetrics> {
     const startTime = performance.now();
-    
+
     // Получаем размеры ресурсов
     const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
-    const navigationEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-    
+    const navigationEntry = performance.getEntriesByType(
+      'navigation',
+    )[0] as PerformanceNavigationTiming;
+
     // Анализируем размеры чанков
     const chunkSizes = this.analyzeChunkSizes(resources);
-    
+
     // Вычисляем общий размер
     const totalSize = resources.reduce((total, resource) => {
       return total + (resource.transferSize || 0);
@@ -63,7 +65,7 @@ export class BundleAnalyzer {
       largestContentfulPaint: this.getLargestContentfulPaint(),
       timeToInteractive: this.getTimeToInteractive(navigationEntry),
       chunkSizes,
-      unusedCode: await this.analyzeUnusedCode()
+      unusedCode: await this.analyzeUnusedCode(),
     };
 
     this.currentMetrics = metrics;
@@ -83,16 +85,16 @@ export class BundleAnalyzer {
       version,
       metrics: { ...this.currentMetrics },
       lighthouseScore,
-      performanceGrade: this.calculatePerformanceGrade(lighthouseScore)
+      performanceGrade: this.calculatePerformanceGrade(lighthouseScore),
     };
 
     this.baselineHistory.push(baseline);
     this.saveToStorage(baseline);
-    
+
     console.log(`📊 Baseline сохранен для версии ${version}:`, {
       totalSize: this.formatBytes(baseline.metrics.totalSize),
       lighthouseScore: baseline.lighthouseScore,
-      grade: baseline.performanceGrade
+      grade: baseline.performanceGrade,
     });
   }
 
@@ -101,7 +103,7 @@ export class BundleAnalyzer {
    */
   compareWithBaseline(): {
     improvement: boolean;
-    changes: Record<string, { current: number; baseline: number; change: number; }>;
+    changes: Record<string, { current: number; baseline: number; change: number }>;
     summary: string;
   } | null {
     const lastBaseline = this.getLastBaseline();
@@ -113,18 +115,27 @@ export class BundleAnalyzer {
       totalSize: {
         current: this.currentMetrics.totalSize,
         baseline: lastBaseline.metrics.totalSize,
-        change: ((this.currentMetrics.totalSize - lastBaseline.metrics.totalSize) / lastBaseline.metrics.totalSize) * 100
+        change:
+          ((this.currentMetrics.totalSize - lastBaseline.metrics.totalSize) /
+            lastBaseline.metrics.totalSize) *
+          100,
       },
       loadTime: {
         current: this.currentMetrics.loadTime,
         baseline: lastBaseline.metrics.loadTime,
-        change: ((this.currentMetrics.loadTime - lastBaseline.metrics.loadTime) / lastBaseline.metrics.loadTime) * 100
+        change:
+          ((this.currentMetrics.loadTime - lastBaseline.metrics.loadTime) /
+            lastBaseline.metrics.loadTime) *
+          100,
       },
       firstContentfulPaint: {
         current: this.currentMetrics.firstContentfulPaint,
         baseline: lastBaseline.metrics.firstContentfulPaint,
-        change: ((this.currentMetrics.firstContentfulPaint - lastBaseline.metrics.firstContentfulPaint) / lastBaseline.metrics.firstContentfulPaint) * 100
-      }
+        change:
+          ((this.currentMetrics.firstContentfulPaint - lastBaseline.metrics.firstContentfulPaint) /
+            lastBaseline.metrics.firstContentfulPaint) *
+          100,
+      },
     };
 
     const totalSizeImproved = changes.totalSize.change < 0;
@@ -145,8 +156,8 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
    */
   private analyzeChunkSizes(resources: PerformanceResourceTiming[]): Record<string, number> {
     const chunkSizes: Record<string, number> = {};
-    
-    resources.forEach(resource => {
+
+    resources.forEach((resource) => {
       if (resource.name.includes('.js') || resource.name.includes('.css')) {
         const fileName = resource.name.split('/').pop() || 'unknown';
         chunkSizes[fileName] = resource.transferSize || 0;
@@ -164,7 +175,7 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
     const totalTransferSize = resources.reduce((total, resource) => {
       return total + (resource.transferSize || 0);
     }, 0);
-    
+
     return Math.round(totalTransferSize * 0.7); // Примерно 70% от original size
   }
 
@@ -173,7 +184,7 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
    */
   private getFirstContentfulPaint(): number {
     const paintEntries = performance.getEntriesByType('paint');
-    const fcpEntry = paintEntries.find(entry => entry.name === 'first-contentful-paint');
+    const fcpEntry = paintEntries.find((entry) => entry.name === 'first-contentful-paint');
     return fcpEntry?.startTime || 0;
   }
 
@@ -190,7 +201,7 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
           observer.disconnect();
         });
         observer.observe({ entryTypes: ['largest-contentful-paint'] });
-        
+
         // Fallback через 3 секунды
         setTimeout(() => {
           observer.disconnect();
@@ -219,7 +230,7 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
     return {
       'unused-utilities': 0,
       'unused-components': 0,
-      'dead-code': 0
+      'dead-code': 0,
     };
   }
 
@@ -249,12 +260,12 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
       const stored = localStorage.getItem('heys-performance-baselines');
       const baselines = stored ? JSON.parse(stored) : [];
       baselines.push(baseline);
-      
+
       // Оставляем только последние 10 baseline
       if (baselines.length > 10) {
         baselines.splice(0, baselines.length - 10);
       }
-      
+
       localStorage.setItem('heys-performance-baselines', JSON.stringify(baselines));
     } catch (error) {
       console.warn('Не удалось сохранить baseline в localStorage:', error);
@@ -294,7 +305,7 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
     baseline: BaselineMetrics | null;
     comparison: {
       improvement: boolean;
-      changes: Record<string, { current: number; baseline: number; change: number; }>;
+      changes: Record<string, { current: number; baseline: number; change: number }>;
       summary: string;
     } | null;
     recommendations: string[];
@@ -306,7 +317,7 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
       current: this.currentMetrics,
       baseline: this.getLastBaseline(),
       comparison,
-      recommendations
+      recommendations,
     };
   }
 
@@ -315,25 +326,30 @@ FCP: ${changes.firstContentfulPaint.change < 0 ? '✅' : '❌'} ${changes.firstC
    */
   private generateRecommendations(): string[] {
     const recommendations: string[] = [];
-    
+
     if (!this.currentMetrics) return recommendations;
 
     // Рекомендации по размеру bundle
-    if (this.currentMetrics.totalSize > 500000) { // 500KB
+    if (this.currentMetrics.totalSize > 500000) {
+      // 500KB
       recommendations.push('📦 Bundle размер превышает 500KB - рассмотрите code splitting');
     }
 
     // Рекомендации по времени загрузки
-    if (this.currentMetrics.firstContentfulPaint > 1800) { // 1.8s
+    if (this.currentMetrics.firstContentfulPaint > 1800) {
+      // 1.8s
       recommendations.push('⚡ FCP превышает 1.8s - оптимизируйте критический путь рендеринга');
     }
 
     // Рекомендации по чанкам
-    const largeChunks = Object.entries(this.currentMetrics.chunkSizes)
-      .filter(([, size]) => size > 100000); // 100KB
-    
+    const largeChunks = Object.entries(this.currentMetrics.chunkSizes).filter(
+      ([, size]) => size > 100000,
+    ); // 100KB
+
     if (largeChunks.length > 0) {
-      recommendations.push(`🔧 Найдены большие чанки: ${largeChunks.map(([name]) => name).join(', ')}`);
+      recommendations.push(
+        `🔧 Найдены большие чанки: ${largeChunks.map(([name]) => name).join(', ')}`,
+      );
     }
 
     return recommendations;

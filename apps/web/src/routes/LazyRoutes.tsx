@@ -5,7 +5,7 @@ import { Suspense } from 'react';
 /**
  * Lazy-loaded route компоненты для оптимизации bundle
  * Route-based code splitting с intelligent preloading
- * 
+ *
  * ПРИМЕЧАНИЕ: Эти импорты будут работать после создания соответствующих страниц
  * Сейчас они закомментированы для избежания ошибок компиляции
  */
@@ -87,19 +87,15 @@ interface LazyRouteWrapperProps {
   skeletonType?: 'dashboard' | 'list' | 'detail' | 'form' | 'analytics';
 }
 
-export function LazyRouteWrapper({ 
-  children, 
-  fallback, 
-  skeletonType = 'dashboard' 
+export function LazyRouteWrapper({
+  children,
+  fallback,
+  skeletonType = 'dashboard',
 }: LazyRouteWrapperProps) {
   // const defaultFallback = <PageSkeleton type={skeletonType} />;
   const defaultFallback = <div>Loading {skeletonType}...</div>;
-  
-  return (
-    <Suspense fallback={fallback || defaultFallback}>
-      {children}
-    </Suspense>
-  );
+
+  return <Suspense fallback={fallback || defaultFallback}>{children}</Suspense>;
 }
 
 /*

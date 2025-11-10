@@ -12,7 +12,7 @@ export class UserExperienceScorer {
     firstContentfulPaint: 0.15,
     largestContentfulPaint: 0.15,
     errorRate: 0.1,
-    sessionDepth: 0.05
+    sessionDepth: 0.05,
   };
 
   /**
@@ -26,7 +26,7 @@ export class UserExperienceScorer {
       firstContentfulPaint: this.scoreFCP(metric.firstContentfulPaint),
       largestContentfulPaint: this.scoreLCP(metric.largestContentfulPaint),
       errorRate: this.scoreErrorRate(metric.errorCount, metric.sessionDuration),
-      sessionDepth: this.scoreSessionDepth(metric.clickDepth, metric.sessionDuration)
+      sessionDepth: this.scoreSessionDepth(metric.clickDepth, metric.sessionDuration),
     };
 
     let totalScore = 0;
@@ -51,11 +51,11 @@ export class UserExperienceScorer {
         averageScore: 0,
         distribution: [],
         trendAnalysis: [],
-        insights: ['No data available for analysis']
+        insights: ['No data available for analysis'],
       };
     }
 
-    const scores = metrics.map(m => this.calculateScore(m));
+    const scores = metrics.map((m) => this.calculateScore(m));
     const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
 
     // Score distribution
@@ -71,7 +71,7 @@ export class UserExperienceScorer {
       averageScore: Math.round(averageScore * 100) / 100,
       distribution,
       trendAnalysis,
-      insights
+      insights,
     };
   }
 
@@ -99,7 +99,7 @@ export class UserExperienceScorer {
 
     // Analyze page load time
     const avgPageLoadTime = metrics.reduce((sum, m) => sum + m.pageLoadTime, 0) / metrics.length;
-    const slowPageLoads = metrics.filter(m => m.pageLoadTime > 3000).length;
+    const slowPageLoads = metrics.filter((m) => m.pageLoadTime > 3000).length;
     if (avgPageLoadTime > 2000) {
       problems.push({
         area: 'Page Load Time',
@@ -111,14 +111,14 @@ export class UserExperienceScorer {
           'Optimize image sizes and formats',
           'Implement code splitting and lazy loading',
           'Enable compression and caching',
-          'Optimize database queries'
-        ]
+          'Optimize database queries',
+        ],
       });
     }
 
     // Analyze Largest Contentful Paint
     const avgLCP = metrics.reduce((sum, m) => sum + m.largestContentfulPaint, 0) / metrics.length;
-    const slowLCP = metrics.filter(m => m.largestContentfulPaint > 2500).length;
+    const slowLCP = metrics.filter((m) => m.largestContentfulPaint > 2500).length;
     if (avgLCP > 2500) {
       problems.push({
         area: 'Largest Contentful Paint',
@@ -130,14 +130,14 @@ export class UserExperienceScorer {
           'Optimize largest image or text block',
           'Improve server response times',
           'Remove blocking resources',
-          'Use faster hosting'
-        ]
+          'Use faster hosting',
+        ],
       });
     }
 
     // Analyze Cumulative Layout Shift
     const avgCLS = metrics.reduce((sum, m) => sum + m.cumulativeLayoutShift, 0) / metrics.length;
-    const highCLS = metrics.filter(m => m.cumulativeLayoutShift > 0.1).length;
+    const highCLS = metrics.filter((m) => m.cumulativeLayoutShift > 0.1).length;
     if (avgCLS > 0.1) {
       problems.push({
         area: 'Cumulative Layout Shift',
@@ -149,14 +149,16 @@ export class UserExperienceScorer {
           'Add size attributes to images and videos',
           'Reserve space for dynamic content',
           'Avoid inserting content above existing content',
-          'Use transform animations instead of changing layout properties'
-        ]
+          'Use transform animations instead of changing layout properties',
+        ],
       });
     }
 
     // Analyze error rate
-    const avgErrorRate = metrics.reduce((sum, m) => sum + (m.errorCount / (m.sessionDuration / 60000)), 0) / metrics.length;
-    const highErrorSessions = metrics.filter(m => m.errorCount > 2).length;
+    const avgErrorRate =
+      metrics.reduce((sum, m) => sum + m.errorCount / (m.sessionDuration / 60000), 0) /
+      metrics.length;
+    const highErrorSessions = metrics.filter((m) => m.errorCount > 2).length;
     if (avgErrorRate > 0.5) {
       problems.push({
         area: 'Error Rate',
@@ -168,8 +170,8 @@ export class UserExperienceScorer {
           'Implement comprehensive error handling',
           'Add input validation',
           'Improve API error responses',
-          'Add user-friendly error messages'
-        ]
+          'Add user-friendly error messages',
+        ],
       });
     }
 
@@ -200,7 +202,7 @@ export class UserExperienceScorer {
       effort: 'low' | 'medium' | 'high';
     }[] = [];
 
-    problems.forEach(problem => {
+    problems.forEach((problem) => {
       problem.suggestions.forEach((suggestion, index) => {
         recommendations.push({
           priority: index === 0 ? problem.impact : 'medium',
@@ -208,7 +210,7 @@ export class UserExperienceScorer {
           title: suggestion,
           description: `Addressing ${problem.area.toLowerCase()} issues affecting ${problem.affectedSessions} sessions`,
           estimatedImpact: problem.impact === 'high' ? '+15-25 UX score' : '+5-15 UX score',
-          effort: index === 0 ? 'medium' : 'high'
+          effort: index === 0 ? 'medium' : 'high',
         });
       });
     });
@@ -226,34 +228,34 @@ export class UserExperienceScorer {
   private scorePageLoadTime(loadTime: number): number {
     // Excellent: <1s = 100, Good: <2s = 80, Needs improvement: <4s = 60, Poor: >4s = 0
     if (loadTime < 1000) return 100;
-    if (loadTime < 2000) return 80 + (1000 - (loadTime - 1000)) / 1000 * 20;
-    if (loadTime < 4000) return 60 + (2000 - (loadTime - 2000)) / 2000 * 20;
+    if (loadTime < 2000) return 80 + ((1000 - (loadTime - 1000)) / 1000) * 20;
+    if (loadTime < 4000) return 60 + ((2000 - (loadTime - 2000)) / 2000) * 20;
     return Math.max(0, 60 - ((loadTime - 4000) / 2000) * 60);
   }
 
   private scoreTimeToInteractive(tti: number): number {
     if (tti < 2000) return 100;
-    if (tti < 4000) return 80 + (2000 - (tti - 2000)) / 2000 * 20;
-    if (tti < 6000) return 60 + (4000 - (tti - 4000)) / 2000 * 20;
+    if (tti < 4000) return 80 + ((2000 - (tti - 2000)) / 2000) * 20;
+    if (tti < 6000) return 60 + ((4000 - (tti - 4000)) / 2000) * 20;
     return Math.max(0, 60 - ((tti - 6000) / 3000) * 60);
   }
 
   private scoreCLS(cls: number): number {
     // Good: <0.1 = 100, Needs improvement: <0.25 = 60, Poor: >0.25 = 0
     if (cls < 0.1) return 100;
-    if (cls < 0.25) return 60 + (0.1 - (cls - 0.1)) / 0.15 * 40;
+    if (cls < 0.25) return 60 + ((0.1 - (cls - 0.1)) / 0.15) * 40;
     return Math.max(0, 60 - ((cls - 0.25) / 0.25) * 60);
   }
 
   private scoreFCP(fcp: number): number {
     if (fcp < 1800) return 100;
-    if (fcp < 3000) return 80 + (1800 - (fcp - 1800)) / 1200 * 20;
+    if (fcp < 3000) return 80 + ((1800 - (fcp - 1800)) / 1200) * 20;
     return Math.max(0, 80 - ((fcp - 3000) / 2000) * 80);
   }
 
   private scoreLCP(lcp: number): number {
     if (lcp < 2500) return 100;
-    if (lcp < 4000) return 80 + (2500 - (lcp - 2500)) / 1500 * 20;
+    if (lcp < 4000) return 80 + ((2500 - (lcp - 2500)) / 1500) * 20;
     return Math.max(0, 80 - ((lcp - 4000) / 2000) * 80);
   }
 
@@ -273,30 +275,34 @@ export class UserExperienceScorer {
     return Math.max(0, 100 - (clicksPerMinute - 3) * 20);
   }
 
-  private calculateScoreDistribution(scores: number[]): { range: string; count: number; percentage: number }[] {
+  private calculateScoreDistribution(
+    scores: number[],
+  ): { range: string; count: number; percentage: number }[] {
     const ranges = [
       { range: '90-100', min: 90, max: 100 },
       { range: '80-89', min: 80, max: 89 },
       { range: '70-79', min: 70, max: 79 },
       { range: '60-69', min: 60, max: 69 },
-      { range: '0-59', min: 0, max: 59 }
+      { range: '0-59', min: 0, max: 59 },
     ];
 
-    return ranges.map(range => {
-      const count = scores.filter(score => score >= range.min && score <= range.max).length;
+    return ranges.map((range) => {
+      const count = scores.filter((score) => score >= range.min && score <= range.max).length;
       return {
         range: range.range,
         count,
-        percentage: Math.round((count / scores.length) * 100 * 100) / 100
+        percentage: Math.round((count / scores.length) * 100 * 100) / 100,
       };
     });
   }
 
-  private calculateTrendAnalysis(metrics: UserExperienceMetric[]): { timePoint: number; score: number }[] {
+  private calculateTrendAnalysis(
+    metrics: UserExperienceMetric[],
+  ): { timePoint: number; score: number }[] {
     // Group by hour
     const hourlyData = new Map<number, UserExperienceMetric[]>();
-    
-    metrics.forEach(metric => {
+
+    metrics.forEach((metric) => {
       const hour = Math.floor(metric.timestamp / (1000 * 60 * 60));
       if (!hourlyData.has(hour)) {
         hourlyData.set(hour, []);
@@ -305,12 +311,13 @@ export class UserExperienceScorer {
     });
 
     const trendPoints: { timePoint: number; score: number }[] = [];
-    
+
     for (const [hour, hourMetrics] of hourlyData) {
-      const averageScore = hourMetrics.reduce((sum, m) => sum + this.calculateScore(m), 0) / hourMetrics.length;
+      const averageScore =
+        hourMetrics.reduce((sum, m) => sum + this.calculateScore(m), 0) / hourMetrics.length;
       trendPoints.push({
         timePoint: hour * 1000 * 60 * 60, // Convert back to timestamp
-        score: Math.round(averageScore * 100) / 100
+        score: Math.round(averageScore * 100) / 100,
       });
     }
 
@@ -331,14 +338,20 @@ export class UserExperienceScorer {
     }
 
     // Mobile vs Desktop analysis
-    const mobileMetrics = metrics.filter(m => /Mobile|Android|iPhone/.test(m.userAgent));
+    const mobileMetrics = metrics.filter((m) => /Mobile|Android|iPhone/.test(m.userAgent));
     if (mobileMetrics.length > 0) {
-      const mobileScore = mobileMetrics.reduce((sum, m) => sum + this.calculateScore(m), 0) / mobileMetrics.length;
-      const desktopScore = metrics.filter(m => !/Mobile|Android|iPhone/.test(m.userAgent))
-        .reduce((sum, m) => sum + this.calculateScore(m), 0) / (metrics.length - mobileMetrics.length);
-      
+      const mobileScore =
+        mobileMetrics.reduce((sum, m) => sum + this.calculateScore(m), 0) / mobileMetrics.length;
+      const desktopScore =
+        metrics
+          .filter((m) => !/Mobile|Android|iPhone/.test(m.userAgent))
+          .reduce((sum, m) => sum + this.calculateScore(m), 0) /
+        (metrics.length - mobileMetrics.length);
+
       if (mobileScore < desktopScore - 10) {
-        insights.push('Mobile experience is significantly worse than desktop. Focus on mobile optimization.');
+        insights.push(
+          'Mobile experience is significantly worse than desktop. Focus on mobile optimization.',
+        );
       }
     }
 
@@ -353,21 +366,26 @@ export class UserExperienceScorer {
 
   private identifyPeakPerformanceIssues(metrics: UserExperienceMetric[]): string[] {
     const hourlyProblems = new Map<number, number>();
-    
-    metrics.forEach(metric => {
+
+    metrics.forEach((metric) => {
       const hour = new Date(metric.timestamp).getHours();
       const score = this.calculateScore(metric);
-      
-      if (score < 70) { // Consider scores below 70 as problematic
+
+      if (score < 70) {
+        // Consider scores below 70 as problematic
         hourlyProblems.set(hour, (hourlyProblems.get(hour) || 0) + 1);
       }
     });
 
-    const totalProblems = Array.from(hourlyProblems.values()).reduce((sum, count) => sum + count, 0);
+    const totalProblems = Array.from(hourlyProblems.values()).reduce(
+      (sum, count) => sum + count,
+      0,
+    );
     const problemHours: string[] = [];
 
     for (const [hour, count] of hourlyProblems) {
-      if (count / totalProblems > 0.15) { // If more than 15% of problems occur in this hour
+      if (count / totalProblems > 0.15) {
+        // If more than 15% of problems occur in this hour
         problemHours.push(`${hour}:00-${hour + 1}:00`);
       }
     }

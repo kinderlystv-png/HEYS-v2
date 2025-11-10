@@ -16,11 +16,7 @@ interface UsersStatsProps {
   className?: string;
 }
 
-const UsersStats: React.FC<UsersStatsProps> = ({ 
-  stats, 
-  isLoading = false,
-  className = ''
-}) => {
+const UsersStats: React.FC<UsersStatsProps> = ({ stats, isLoading = false, className = '' }) => {
   if (isLoading) {
     return (
       <div className={`users-stats loading ${className}`}>
@@ -40,23 +36,23 @@ const UsersStats: React.FC<UsersStatsProps> = ({
           <div className="stat-value">{stats.total}</div>
           <div className="stat-label">Всего пользователей</div>
         </div>
-        
+
         <div className="stat-card success">
           <div className="stat-value">{stats.active}</div>
           <div className="stat-label">Активные</div>
         </div>
-        
+
         <div className="stat-card warning">
           <div className="stat-value">{stats.inactive}</div>
           <div className="stat-label">Неактивные</div>
         </div>
-        
+
         <div className="stat-card danger">
           <div className="stat-value">{stats.suspended}</div>
           <div className="stat-label">Заблокированные</div>
         </div>
       </div>
-      
+
       {roleEntries.length > 0 && (
         <div className="roles-breakdown">
           <h4>По ролям:</h4>

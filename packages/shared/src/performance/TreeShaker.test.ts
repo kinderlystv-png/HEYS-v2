@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { TreeShaker } from './TreeShaker';
 
@@ -8,7 +8,7 @@ describe('TreeShaker - Упрощенные тесты', () => {
   beforeEach(() => {
     treeShaker = new TreeShaker({
       include: ['src/**/*.ts'],
-      exclude: ['**/*.test.*', '**/*.spec.*']
+      exclude: ['**/*.test.*', '**/*.spec.*'],
     });
   });
 
@@ -22,9 +22,9 @@ describe('TreeShaker - Упрощенные тесты', () => {
       const customTreeShaker = new TreeShaker({
         bundler: 'webpack',
         aggressive: true,
-        preserveTypes: false
+        preserveTypes: false,
       });
-      
+
       expect(customTreeShaker).toBeDefined();
     });
   });
@@ -67,14 +67,14 @@ describe('TreeShaker - Упрощенные тесты', () => {
   describe('Генерация отчетов', () => {
     it('должен генерировать базовый отчет', () => {
       const report = treeShaker.generateReport();
-      
+
       expect(report).toBeDefined();
       expect(typeof report).toBe('string');
     });
 
     it('должен содержать информацию в отчете', () => {
       const report = treeShaker.generateReport();
-      
+
       expect(report).toBeDefined();
       expect(report.length).toBeGreaterThan(0);
     });

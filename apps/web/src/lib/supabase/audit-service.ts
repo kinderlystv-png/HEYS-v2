@@ -2,7 +2,7 @@
 /**
  * Сервис для работы с логами аудита через RLS политики
  * Обеспечивает безопасное логирование и просмотр действий пользователей
- * 
+ *
  * @created КТ3 - Supabase Security
  * @author HEYS Security Team
  */
@@ -11,11 +11,11 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import {
   AuditLog,
   AuditLogFilter,
-  DatabaseResponse,
   DatabaseListResponse,
+  DatabaseResponse,
   Permission,
+  PermissionError,
   RLSError,
-  PermissionError
 } from './rls-policies';
 
 export class AuditService {
@@ -32,7 +32,7 @@ export class AuditService {
     resourceId?: string,
     metadata: Record<string, any> = {},
     oldValues?: Record<string, any>,
-    newValues?: Record<string, any>
+    newValues?: Record<string, any>,
   ): Promise<DatabaseResponse<AuditLog>> {
     try {
       const logEntry: Omit<AuditLog, 'id' | 'created_at'> = {
@@ -45,7 +45,7 @@ export class AuditService {
         success: true,
         ip_address: await this.getCurrentIP(),
         user_agent: navigator.userAgent,
-        request_id: this.generateRequestId()
+        request_id: this.generateRequestId(),
       };
 
       const { data, error } = await this.supabase
@@ -60,9 +60,9 @@ export class AuditService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -75,7 +75,7 @@ export class AuditService {
     resourceType: string,
     errorMessage: string,
     metadata: Record<string, any> = {},
-    responseTimeMs?: number
+    responseTimeMs?: number,
   ): Promise<DatabaseResponse<AuditLog>> {
     try {
       const logEntry: Omit<AuditLog, 'id' | 'created_at'> = {
@@ -87,7 +87,7 @@ export class AuditService {
         response_time_ms: responseTimeMs || null,
         ip_address: await this.getCurrentIP(),
         user_agent: navigator.userAgent,
-        request_id: this.generateRequestId()
+        request_id: this.generateRequestId(),
       };
 
       const { data, error } = await this.supabase
@@ -102,9 +102,9 @@ export class AuditService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -128,10 +128,10 @@ export class AuditService {
 
       return { data, error: null, count: count || 0 };
     } catch (error) {
-      return { 
-        data: null, 
+      return {
+        data: null,
         error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
-        count: 0
+        count: 0,
       };
     }
   }
@@ -139,11 +139,12 @@ export class AuditService {
   /**
    * Получить логи аудита с фильтрацией (только для администраторов)
    */
-  async getAuditLogs(filter?: AuditLogFilter, limit: number = 100): Promise<DatabaseListResponse<AuditLog>> {
+  async getAuditLogs(
+    filter?: AuditLogFilter,
+    limit: number = 100,
+  ): Promise<DatabaseListResponse<AuditLog>> {
     try {
-      let query = this.supabase
-        .from('audit_logs')
-        .select('*', { count: 'exact' });
+      let query = this.supabase.from('audit_logs').select('*', { count: 'exact' });
 
       // Применяем фильтры
       if (filter) {
@@ -181,10 +182,10 @@ export class AuditService {
 
       return { data, error: null, count: count || 0 };
     } catch (error) {
-      return { 
-        data: null, 
+      return {
+        data: null,
         error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
-        count: 0
+        count: 0,
       };
     }
   }
@@ -209,9 +210,9 @@ export class AuditService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -221,14 +222,16 @@ export class AuditService {
   /**
    * Получить статистику активности пользователей
    */
-  async getActivityStats(days: number = 30): Promise<DatabaseResponse<{
-    total_actions: number;
-    successful_actions: number;
-    failed_actions: number;
-    by_action: Record<string, number>;
-    by_resource: Record<string, number>;
-    by_day: Array<{ date: string; count: number }>;
-  }>> {
+  async getActivityStats(days: number = 30): Promise<
+    DatabaseResponse<{
+      total_actions: number;
+      successful_actions: number;
+      failed_actions: number;
+      by_action: Record<string, number>;
+      by_resource: Record<string, number>;
+      by_day: Array<{ date: string; count: number }>;
+    }>
+  > {
     try {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
@@ -251,7 +254,7 @@ export class AuditService {
         failed_actions: 0,
         by_action: {} as Record<string, number>,
         by_resource: {} as Record<string, number>,
-        by_day: [] as Array<{ date: string; count: number }>
+        by_day: [] as Array<{ date: string; count: number }>,
       };
 
       // Подготовка статистики по дням
@@ -294,9 +297,9 @@ export class AuditService {
 
       return { data: stats, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -320,15 +323,19 @@ export class AuditService {
         if (error.code === 'PGRST116') {
           throw new PermissionError(Permission.VIEW_SECURITY_EVENTS);
         }
-        throw new RLSError('Ошибка получения подозрительной активности', 'SUSPICIOUS_ACTIVITY_ERROR', { error });
+        throw new RLSError(
+          'Ошибка получения подозрительной активности',
+          'SUSPICIOUS_ACTIVITY_ERROR',
+          { error },
+        );
       }
 
       return { data, error: null, count: count || 0 };
     } catch (error) {
-      return { 
-        data: null, 
+      return {
+        data: null,
         error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
-        count: 0
+        count: 0,
       };
     }
   }
@@ -338,10 +345,13 @@ export class AuditService {
   /**
    * Записать лог входа пользователя
    */
-  async logLogin(sessionId?: string, deviceInfo?: Record<string, any>): Promise<DatabaseResponse<AuditLog>> {
+  async logLogin(
+    sessionId?: string,
+    deviceInfo?: Record<string, any>,
+  ): Promise<DatabaseResponse<AuditLog>> {
     return this.logAction('login', 'user_session', sessionId, {
       ...deviceInfo,
-      login_time: new Date().toISOString()
+      login_time: new Date().toISOString(),
     });
   }
 
@@ -351,7 +361,7 @@ export class AuditService {
   async logLogout(sessionId?: string, reason?: string): Promise<DatabaseResponse<AuditLog>> {
     return this.logAction('logout', 'user_session', sessionId, {
       logout_time: new Date().toISOString(),
-      reason: reason || 'user_logout'
+      reason: reason || 'user_logout',
     });
   }
 
@@ -361,12 +371,19 @@ export class AuditService {
   async logProfileUpdate(
     profileId: string,
     oldValues: Record<string, any>,
-    newValues: Record<string, any>
+    newValues: Record<string, any>,
   ): Promise<DatabaseResponse<AuditLog>> {
-    return this.logAction('update', 'user_profile', profileId, {
-      fields_changed: Object.keys(newValues),
-      update_time: new Date().toISOString()
-    }, oldValues, newValues);
+    return this.logAction(
+      'update',
+      'user_profile',
+      profileId,
+      {
+        fields_changed: Object.keys(newValues),
+        update_time: new Date().toISOString(),
+      },
+      oldValues,
+      newValues,
+    );
   }
 
   /**
@@ -375,13 +392,13 @@ export class AuditService {
   async logSecurityEvent(
     eventType: string,
     severity: 'low' | 'medium' | 'high' | 'critical',
-    details: Record<string, any>
+    details: Record<string, any>,
   ): Promise<DatabaseResponse<AuditLog>> {
     return this.logAction('create', 'security_event', undefined, {
       event_type: eventType,
       severity,
       details,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 
@@ -430,9 +447,9 @@ export class AuditService {
 
       return { data: data?.length || 0, error: null };
     } catch (error) {
-      return { 
-        data: 0, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: 0,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -443,40 +460,51 @@ export class AuditService {
   async exportLogs(filter?: AuditLogFilter): Promise<DatabaseResponse<string>> {
     try {
       const { data: logs } = await this.getAuditLogs(filter, 10000);
-      
+
       if (!logs || logs.length === 0) {
         return { data: '', error: null };
       }
 
       // Создание CSV заголовков
       const headers = [
-        'id', 'user_id', 'session_id', 'action', 'resource_type', 'resource_id',
-        'success', 'error_message', 'ip_address', 'user_agent', 'created_at'
+        'id',
+        'user_id',
+        'session_id',
+        'action',
+        'resource_type',
+        'resource_id',
+        'success',
+        'error_message',
+        'ip_address',
+        'user_agent',
+        'created_at',
       ];
 
       // Создание CSV строк
       const csvRows = [
         headers.join(','),
-        ...logs.map(log => [
-          log.id,
-          log.user_id || '',
-          log.session_id || '',
-          log.action,
-          log.resource_type,
-          log.resource_id || '',
-          log.success,
-          log.error_message || '',
-          log.ip_address || '',
-          (log.user_agent || '').replace(/,/g, ';'),
-          log.created_at
-        ].join(','))
+        ...logs.map((log) =>
+          [
+            log.id,
+            log.user_id || '',
+            log.session_id || '',
+            log.action,
+            log.resource_type,
+            log.resource_id || '',
+            log.success,
+            log.error_message || '',
+            log.ip_address || '',
+            (log.user_agent || '').replace(/,/g, ';'),
+            log.created_at,
+          ].join(','),
+        ),
       ];
 
       return { data: csvRows.join('\n'), error: null };
     } catch (error) {
-      return { 
-        data: '', 
-        error: error instanceof Error ? error : new Error('Ошибка экспорта логов') 
+      return {
+        data: '',
+        error: error instanceof Error ? error : new Error('Ошибка экспорта логов'),
       };
     }
   }

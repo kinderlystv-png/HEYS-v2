@@ -19,5 +19,5 @@ export const TEST_IDS = {
   // Навигация
   NAV_HOME: 'nav-home',
   NAV_PROFILE: 'nav-profile',
-  NAV_LOGOUT: 'nav-logout'
+  NAV_LOGOUT: 'nav-logout',
 };

@@ -17,7 +17,7 @@ class LazyLoadingAnalyzer {
       lazyScripts: 0,
       lazyStyles: 0,
       lazyIframes: 0,
-      opportunities: []
+      opportunities: [],
     };
   }
 
@@ -26,7 +26,7 @@ class LazyLoadingAnalyzer {
    */
   async analyze(directory = './') {
     console.log('🚀 Анализ возможностей для ленивой загрузки...\n');
-    
+
     const absoluteDir = path.resolve(directory);
     console.log(`📁 Анализируемая директория: ${absoluteDir}\n`);
 
@@ -43,18 +43,18 @@ class LazyLoadingAnalyzer {
 
     try {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
-        
+
         if (entry.isDirectory()) {
           // Пропускаем служебные директории
           if (this.shouldSkipDirectory(entry.name)) continue;
-          
+
           await this.scanDirectory(fullPath, depth + 1);
         } else if (entry.isFile()) {
           this.stats.totalFiles++;
-          
+
           if (this.shouldAnalyzeFile(entry.name)) {
             await this.analyzeFile(fullPath);
             this.stats.processedFiles++;
@@ -71,8 +71,16 @@ class LazyLoadingAnalyzer {
    */
   shouldSkipDirectory(name) {
     const skipDirs = [
-      'node_modules', '.git', '.vscode', 'dist', 'build', 
-      'coverage', '.next', '.nuxt', 'out', 'public/static'
+      'node_modules',
+      '.git',
+      '.vscode',
+      'dist',
+      'build',
+      'coverage',
+      '.next',
+      '.nuxt',
+      'out',
+      'public/static',
     ];
     return skipDirs.includes(name) || name.startsWith('.');
   }
@@ -82,7 +90,7 @@ class LazyLoadingAnalyzer {
    */
   shouldAnalyzeFile(filename) {
     const extensions = ['.html', '.htm', '.jsx', '.tsx', '.vue', '.svelte', '.php'];
-    return extensions.some(ext => filename.toLowerCase().endsWith(ext));
+    return extensions.some((ext) => filename.toLowerCase().endsWith(ext));
   }
 
   /**
@@ -92,14 +100,13 @@ class LazyLoadingAnalyzer {
     try {
       const content = fs.readFileSync(filePath, 'utf8');
       const relativePath = path.relative(process.cwd(), filePath);
-      
+
       // Анализируем различные типы ресурсов
       this.analyzeImages(content, relativePath);
       this.analyzeScripts(content, relativePath);
       this.analyzeStyles(content, relativePath);
       this.analyzeIframes(content, relativePath);
       this.analyzeComponents(content, relativePath);
-      
     } catch (error) {
       console.warn(`⚠️  Ошибка при анализе ${filePath}: ${error.message}`);
     }
@@ -112,26 +119,26 @@ class LazyLoadingAnalyzer {
     // Регулярное выражение для поиска img тегов
     const imgRegex = /<img[^>]*src\s*=\s*["']([^"']*?)["'][^>]*>/gi;
     const lazyImgRegex = /<img[^>]*(?:data-src|loading\s*=\s*["']lazy["'])[^>]*>/gi;
-    
+
     let match;
     const images = [];
     const lazyImages = [];
-    
+
     // Находим все изображения
     while ((match = imgRegex.exec(content)) !== null) {
       images.push({
         src: match[1],
         fullMatch: match[0],
-        index: match.index
+        index: match.index,
       });
     }
-    
+
     // Находим уже lazy изображения
     while ((match = lazyImgRegex.exec(content)) !== null) {
       lazyImages.push(match[0]);
       this.stats.lazyImages++;
     }
-    
+
     // Анализируем возможности оптимизации
     const nonLazyImages = images.length - lazyImages.length;
     if (nonLazyImages > 0) {
@@ -141,7 +148,7 @@ class LazyLoadingAnalyzer {
         count: nonLazyImages,
         total: images.length,
         impact: this.calculateImageImpact(images),
-        details: images.slice(0, 5).map(img => img.src) // Первые 5 для примера
+        details: images.slice(0, 5).map((img) => img.src), // Первые 5 для примера
       });
     }
   }
@@ -152,23 +159,23 @@ class LazyLoadingAnalyzer {
   analyzeScripts(content, filePath) {
     const scriptRegex = /<script[^>]*src\s*=\s*["']([^"']*?)["'][^>]*>/gi;
     const lazyScriptRegex = /<script[^>]*(?:data-src|defer|async)[^>]*>/gi;
-    
+
     let match;
     const scripts = [];
     const lazyScripts = [];
-    
+
     while ((match = scriptRegex.exec(content)) !== null) {
       scripts.push({
         src: match[1],
-        fullMatch: match[0]
+        fullMatch: match[0],
       });
     }
-    
+
     while ((match = lazyScriptRegex.exec(content)) !== null) {
       lazyScripts.push(match[0]);
       this.stats.lazyScripts++;
     }
-    
+
     const nonLazyScripts = scripts.length - lazyScripts.length;
     if (nonLazyScripts > 0) {
       this.stats.opportunities.push({
@@ -177,7 +184,7 @@ class LazyLoadingAnalyzer {
         count: nonLazyScripts,
         total: scripts.length,
         impact: this.calculateScriptImpact(scripts),
-        details: scripts.slice(0, 3).map(script => script.src)
+        details: scripts.slice(0, 3).map((script) => script.src),
       });
     }
   }
@@ -188,23 +195,23 @@ class LazyLoadingAnalyzer {
   analyzeStyles(content, filePath) {
     const linkRegex = /<link[^>]*href\s*=\s*["']([^"']*\.css[^"']*?)["'][^>]*>/gi;
     const lazyStyleRegex = /<link[^>]*(?:data-href|media\s*=\s*["']print["'])[^>]*>/gi;
-    
+
     let match;
     const styles = [];
     const lazyStyles = [];
-    
+
     while ((match = linkRegex.exec(content)) !== null) {
       styles.push({
         href: match[1],
-        fullMatch: match[0]
+        fullMatch: match[0],
       });
     }
-    
+
     while ((match = lazyStyleRegex.exec(content)) !== null) {
       lazyStyles.push(match[0]);
       this.stats.lazyStyles++;
     }
-    
+
     const nonLazyStyles = styles.length - lazyStyles.length;
     if (nonLazyStyles > 0) {
       this.stats.opportunities.push({
@@ -213,7 +220,7 @@ class LazyLoadingAnalyzer {
         count: nonLazyStyles,
         total: styles.length,
         impact: 'medium',
-        details: styles.slice(0, 3).map(style => style.href)
+        details: styles.slice(0, 3).map((style) => style.href),
       });
     }
   }
@@ -224,23 +231,23 @@ class LazyLoadingAnalyzer {
   analyzeIframes(content, filePath) {
     const iframeRegex = /<iframe[^>]*src\s*=\s*["']([^"']*?)["'][^>]*>/gi;
     const lazyIframeRegex = /<iframe[^>]*(?:data-src|loading\s*=\s*["']lazy["'])[^>]*>/gi;
-    
+
     let match;
     const iframes = [];
     const lazyIframes = [];
-    
+
     while ((match = iframeRegex.exec(content)) !== null) {
       iframes.push({
         src: match[1],
-        fullMatch: match[0]
+        fullMatch: match[0],
       });
     }
-    
+
     while ((match = lazyIframeRegex.exec(content)) !== null) {
       lazyIframes.push(match[0]);
       this.stats.lazyIframes++;
     }
-    
+
     const nonLazyIframes = iframes.length - lazyIframes.length;
     if (nonLazyIframes > 0) {
       this.stats.opportunities.push({
@@ -249,7 +256,7 @@ class LazyLoadingAnalyzer {
         count: nonLazyIframes,
         total: iframes.length,
         impact: 'high',
-        details: iframes.slice(0, 3).map(iframe => iframe.src)
+        details: iframes.slice(0, 3).map((iframe) => iframe.src),
       });
     }
   }
@@ -263,19 +270,19 @@ class LazyLoadingAnalyzer {
       /import\s+[^}]*\s+from\s+["']([^"']*?)["']/gi, // ES6 imports
       /const\s+\w+\s*=\s*lazy\s*\(/gi, // React.lazy
       /defineAsyncComponent\s*\(/gi, // Vue async components
-      /<script[^>]*type\s*=\s*["']module["'][^>]*>/gi // ES modules
+      /<script[^>]*type\s*=\s*["']module["'][^>]*>/gi, // ES modules
     ];
-    
+
     let componentImports = 0;
     let lazyComponents = 0;
-    
-    componentPatterns.forEach(pattern => {
+
+    componentPatterns.forEach((pattern) => {
       const matches = content.match(pattern);
       if (matches) {
         componentImports += matches.length;
-        
+
         // Проверяем на ленивые компоненты
-        matches.forEach(match => {
+        matches.forEach((match) => {
           if (match.includes('lazy') || match.includes('async') || match.includes('dynamic')) {
             lazyComponents++;
             this.stats.lazyComponents++;
@@ -283,7 +290,7 @@ class LazyLoadingAnalyzer {
         });
       }
     });
-    
+
     const nonLazyComponents = componentImports - lazyComponents;
     if (nonLazyComponents > 0) {
       this.stats.opportunities.push({
@@ -292,7 +299,7 @@ class LazyLoadingAnalyzer {
         count: nonLazyComponents,
         total: componentImports,
         impact: 'high',
-        details: ['Component imports found']
+        details: ['Component imports found'],
       });
     }
   }
@@ -302,10 +309,10 @@ class LazyLoadingAnalyzer {
    */
   calculateImageImpact(images) {
     const largeImageExtensions = ['.png', '.jpg', '.jpeg', '.gif'];
-    const hasLargeImages = images.some(img => 
-      largeImageExtensions.some(ext => img.src.toLowerCase().includes(ext))
+    const hasLargeImages = images.some((img) =>
+      largeImageExtensions.some((ext) => img.src.toLowerCase().includes(ext)),
     );
-    
+
     if (images.length > 10) return 'high';
     if (images.length > 5 || hasLargeImages) return 'medium';
     return 'low';
@@ -315,12 +322,13 @@ class LazyLoadingAnalyzer {
    * Расчет влияния оптимизации скриптов
    */
   calculateScriptImpact(scripts) {
-    const heavyScripts = scripts.filter(script => 
-      script.src.includes('bundle') || 
-      script.src.includes('vendor') ||
-      script.src.includes('chunk')
+    const heavyScripts = scripts.filter(
+      (script) =>
+        script.src.includes('bundle') ||
+        script.src.includes('vendor') ||
+        script.src.includes('chunk'),
     );
-    
+
     if (heavyScripts.length > 3) return 'high';
     if (scripts.length > 5) return 'medium';
     return 'low';
@@ -332,18 +340,18 @@ class LazyLoadingAnalyzer {
   generateReport() {
     const endTime = performance.now();
     const analysisTime = ((endTime - this.startTime) / 1000).toFixed(2);
-    
+
     console.log('📊 ОТЧЕТ ПО АНАЛИЗУ ЛЕНИВОЙ ЗАГРУЗКИ');
     console.log('='.repeat(50));
     console.log();
-    
+
     // Общая статистика
     console.log('📈 Общая статистика:');
     console.log(`   • Всего файлов: ${this.stats.totalFiles}`);
     console.log(`   • Проанализировано: ${this.stats.processedFiles}`);
     console.log(`   • Время анализа: ${analysisTime}с`);
     console.log();
-    
+
     // Текущее состояние lazy loading
     console.log('✅ Уже используется ленивая загрузка:');
     console.log(`   • Изображения: ${this.stats.lazyImages}`);
@@ -352,51 +360,52 @@ class LazyLoadingAnalyzer {
     console.log(`   • Компоненты: ${this.stats.lazyComponents}`);
     console.log(`   • Iframe: ${this.stats.lazyIframes}`);
     console.log();
-    
+
     // Возможности для оптимизации
     if (this.stats.opportunities.length > 0) {
       console.log('🎯 Возможности для оптимизации:');
       console.log();
-      
+
       const groupedOpportunities = this.groupOpportunities();
-      
+
       Object.entries(groupedOpportunities).forEach(([type, opportunities]) => {
         const totalCount = opportunities.reduce((sum, opp) => sum + opp.count, 0);
         const impactLevel = this.getOverallImpact(opportunities);
-        
+
         console.log(`${this.getTypeIcon(type)} ${this.getTypeName(type)}:`);
         console.log(`   • Найдено файлов с возможностями: ${opportunities.length}`);
         console.log(`   • Общее количество элементов: ${totalCount}`);
-        console.log(`   • Потенциальное влияние: ${this.getImpactEmoji(impactLevel)} ${impactLevel.toUpperCase()}`);
-        
+        console.log(
+          `   • Потенциальное влияние: ${this.getImpactEmoji(impactLevel)} ${impactLevel.toUpperCase()}`,
+        );
+
         // Топ файлов для оптимизации
-        const topFiles = opportunities
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 3);
-          
+        const topFiles = opportunities.sort((a, b) => b.count - a.count).slice(0, 3);
+
         if (topFiles.length > 0) {
           console.log('   • Топ файлов для оптимизации:');
-          topFiles.forEach(file => {
+          topFiles.forEach((file) => {
             console.log(`     - ${file.file} (${file.count} элементов)`);
           });
         }
         console.log();
       });
-      
+
       // Общая оценка потенциала
       const totalImpact = this.calculateTotalImpact();
       console.log('💡 Общая оценка потенциала оптимизации:');
-      console.log(`   ${this.getImpactEmoji(totalImpact.level)} ${totalImpact.level.toUpperCase()} - ${totalImpact.description}`);
+      console.log(
+        `   ${this.getImpactEmoji(totalImpact.level)} ${totalImpact.level.toUpperCase()} - ${totalImpact.description}`,
+      );
       console.log();
-      
+
       // Рекомендации
       this.generateRecommendations();
-      
     } else {
       console.log('🎉 Отлично! Ленивая загрузка уже хорошо оптимизирована!');
       console.log('   Дополнительных возможностей для оптимизации не найдено.');
     }
-    
+
     console.log('='.repeat(50));
   }
 
@@ -405,14 +414,14 @@ class LazyLoadingAnalyzer {
    */
   groupOpportunities() {
     const grouped = {};
-    
-    this.stats.opportunities.forEach(opp => {
+
+    this.stats.opportunities.forEach((opp) => {
       if (!grouped[opp.type]) {
         grouped[opp.type] = [];
       }
       grouped[opp.type].push(opp);
     });
-    
+
     return grouped;
   }
 
@@ -420,8 +429,8 @@ class LazyLoadingAnalyzer {
    * Получение общего влияния для типа
    */
   getOverallImpact(opportunities) {
-    const impacts = opportunities.map(opp => opp.impact);
-    
+    const impacts = opportunities.map((opp) => opp.impact);
+
     if (impacts.includes('high')) return 'high';
     if (impacts.includes('medium')) return 'medium';
     return 'low';
@@ -432,30 +441,32 @@ class LazyLoadingAnalyzer {
    */
   calculateTotalImpact() {
     const totalOpportunities = this.stats.opportunities.length;
-    const highImpactCount = this.stats.opportunities.filter(opp => opp.impact === 'high').length;
-    const mediumImpactCount = this.stats.opportunities.filter(opp => opp.impact === 'medium').length;
-    
+    const highImpactCount = this.stats.opportunities.filter((opp) => opp.impact === 'high').length;
+    const mediumImpactCount = this.stats.opportunities.filter(
+      (opp) => opp.impact === 'medium',
+    ).length;
+
     if (totalOpportunities === 0) {
       return { level: 'none', description: 'Все уже оптимизировано' };
     }
-    
+
     if (highImpactCount > 5 || totalOpportunities > 20) {
-      return { 
-        level: 'high', 
-        description: `Много возможностей для оптимизации (${totalOpportunities} файлов)` 
+      return {
+        level: 'high',
+        description: `Много возможностей для оптимизации (${totalOpportunities} файлов)`,
       };
     }
-    
+
     if (highImpactCount > 2 || mediumImpactCount > 5) {
-      return { 
-        level: 'medium', 
-        description: `Умеренные возможности для оптимизации (${totalOpportunities} файлов)` 
+      return {
+        level: 'medium',
+        description: `Умеренные возможности для оптимизации (${totalOpportunities} файлов)`,
       };
     }
-    
-    return { 
-      level: 'low', 
-      description: `Небольшие возможности для оптимизации (${totalOpportunities} файлов)` 
+
+    return {
+      level: 'low',
+      description: `Небольшие возможности для оптимизации (${totalOpportunities} файлов)`,
     };
   }
 
@@ -465,9 +476,9 @@ class LazyLoadingAnalyzer {
   generateRecommendations() {
     console.log('💡 Рекомендации по оптимизации:');
     console.log();
-    
+
     const groupedOpportunities = this.groupOpportunities();
-    
+
     if (groupedOpportunities.images) {
       console.log('🖼️  Изображения:');
       console.log('   • Добавьте loading="lazy" к img тегам');
@@ -475,7 +486,7 @@ class LazyLoadingAnalyzer {
       console.log('   • Рассмотрите использование современных форматов (WebP, AVIF)');
       console.log();
     }
-    
+
     if (groupedOpportunities.scripts) {
       console.log('📜 Скрипты:');
       console.log('   • Используйте dynamic imports для компонентов');
@@ -483,7 +494,7 @@ class LazyLoadingAnalyzer {
       console.log('   • Реализуйте code splitting для больших бандлов');
       console.log();
     }
-    
+
     if (groupedOpportunities.components) {
       console.log('🧩 Компоненты:');
       console.log('   • React: используйте React.lazy() и Suspense');
@@ -491,7 +502,7 @@ class LazyLoadingAnalyzer {
       console.log('   • Реализуйте route-based code splitting');
       console.log();
     }
-    
+
     if (groupedOpportunities.iframes) {
       console.log('🖼️  Iframe:');
       console.log('   • Добавьте loading="lazy" к iframe элементам');
@@ -499,7 +510,7 @@ class LazyLoadingAnalyzer {
       console.log('   • Рассмотрите ленивую загрузку карт и виджетов');
       console.log();
     }
-    
+
     console.log('🔧 Инструменты для реализации:');
     console.log('   • Используйте готовый LazyLoader из этого пакета');
     console.log('   • Настройте bundler для автоматического code splitting');
@@ -516,7 +527,7 @@ class LazyLoadingAnalyzer {
       scripts: '📜',
       styles: '🎨',
       components: '🧩',
-      iframes: '🖼️ '
+      iframes: '🖼️ ',
     };
     return icons[type] || '📄';
   }
@@ -530,7 +541,7 @@ class LazyLoadingAnalyzer {
       scripts: 'Скрипты',
       styles: 'Стили',
       components: 'Компоненты',
-      iframes: 'Iframe элементы'
+      iframes: 'Iframe элементы',
     };
     return names[type] || type;
   }
@@ -543,7 +554,7 @@ class LazyLoadingAnalyzer {
       high: '🔥',
       medium: '⚡',
       low: '💡',
-      none: '✅'
+      none: '✅',
     };
     return emojis[impact] || '❓';
   }
@@ -553,8 +564,8 @@ class LazyLoadingAnalyzer {
 if (require.main === module) {
   const analyzer = new LazyLoadingAnalyzer();
   const directory = process.argv[2] || './';
-  
-  analyzer.analyze(directory).catch(error => {
+
+  analyzer.analyze(directory).catch((error) => {
     console.error('❌ Ошибка при анализе:', error.message);
     process.exit(1);
   });

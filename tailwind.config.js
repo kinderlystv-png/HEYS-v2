@@ -4,7 +4,7 @@ export default {
     './src/**/*.{html,js,svelte,ts}',
     './apps/**/*.{html,js,svelte,ts}',
     './packages/**/*.{html,js,svelte,ts}',
-    './apps/web/src/**/*.{html,js,svelte,ts}'
+    './apps/web/src/**/*.{html,js,svelte,ts}',
   ],
   theme: {
     extend: {
@@ -17,19 +17,17 @@ export default {
           warning: '#d97706',
           error: '#dc2626',
           surface: '#f8fafc',
-          'surface-dark': '#1e293b'
-        }
+          'surface-dark': '#1e293b',
+        },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif']
+        sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       spacing: {
-        '18': '4.5rem',
-        '88': '22rem'
-      }
+        18: '4.5rem',
+        88: '22rem',
+      },
     },
   },
-  plugins: [
-    '@tailwindcss/forms'
-  ],
-}
+  plugins: ['@tailwindcss/forms'],
+};

@@ -14,31 +14,31 @@ class ServiceWorkerAnalyzer {
         exists: false,
         size: 0,
         features: [],
-        cacheStrategies: []
+        cacheStrategies: [],
       },
       registration: {
         exists: false,
         location: null,
-        autoRegister: false
+        autoRegister: false,
       },
       integration: {
         hooks: [],
         components: [],
-        utilities: []
+        utilities: [],
       },
       features: {
         imageOptimization: false,
         cacheManagement: false,
         performanceMetrics: false,
         offlineSupport: false,
-        preloading: false
+        preloading: false,
       },
       analysis: {
         totalFiles: 0,
         swSize: 0,
         integrationPoints: 0,
-        cacheStrategies: 0
-      }
+        cacheStrategies: 0,
+      },
     };
   }
 
@@ -51,16 +51,15 @@ class ServiceWorkerAnalyzer {
     try {
       // Анализируем основной Service Worker
       await this.analyzeServiceWorker();
-      
+
       // Анализируем registration логику
       await this.analyzeServiceWorkerRegistration();
-      
+
       // Анализируем интеграционные хуки и компоненты
       await this.analyzeIntegration();
-      
+
       // Финальная оценка
       this.generateReport();
-      
     } catch (error) {
       console.error('❌ Service Worker Analysis failed:', error);
       throw error;
@@ -72,7 +71,7 @@ class ServiceWorkerAnalyzer {
    */
   async analyzeServiceWorker() {
     const swPath = path.join(WEB_APP_PATH, 'public', 'sw.js');
-    
+
     if (!fs.existsSync(swPath)) {
       console.log('❌ Service Worker: File not found at public/sw.js');
       return;
@@ -104,22 +103,25 @@ class ServiceWorkerAnalyzer {
     const registrationPaths = [
       path.join(WEB_APP_PATH, 'src', 'utils', 'service-worker-manager.ts'),
       path.join(WEB_APP_PATH, 'src', 'main.tsx'),
-      path.join(WEB_APP_PATH, 'src', 'App.tsx')
+      path.join(WEB_APP_PATH, 'src', 'App.tsx'),
     ];
 
     for (const regPath of registrationPaths) {
       if (!fs.existsSync(regPath)) continue;
 
       const content = fs.readFileSync(regPath, 'utf8');
-      
+
       if (content.includes('serviceWorker.register') || content.includes('ServiceWorkerManager')) {
         this.results.registration.exists = true;
         this.results.registration.location = path.relative(WEB_APP_PATH, regPath);
-        
-        if (content.includes('window.addEventListener(\'load\'') || content.includes('auto-register')) {
+
+        if (
+          content.includes("window.addEventListener('load'") ||
+          content.includes('auto-register')
+        ) {
           this.results.registration.autoRegister = true;
         }
-        
+
         console.log(`✅ SW Registration: Found in ${this.results.registration.location}`);
         break;
       }
@@ -137,15 +139,15 @@ class ServiceWorkerAnalyzer {
     const integrationPaths = {
       hooks: path.join(WEB_APP_PATH, 'src', 'hooks'),
       components: path.join(WEB_APP_PATH, 'src', 'components'),
-      utils: path.join(WEB_APP_PATH, 'src', 'utils')
+      utils: path.join(WEB_APP_PATH, 'src', 'utils'),
     };
 
     // Анализируем хуки
     await this.analyzeHooksIntegration(integrationPaths.hooks);
-    
+
     // Анализируем компоненты
     await this.analyzeComponentsIntegration(integrationPaths.components);
-    
+
     // Анализируем утилиты
     await this.analyzeUtilsIntegration(integrationPaths.utils);
   }
@@ -156,9 +158,9 @@ class ServiceWorkerAnalyzer {
   async analyzeHooksIntegration(hooksPath) {
     if (!fs.existsSync(hooksPath)) return;
 
-    const files = fs.readdirSync(hooksPath).filter(file => 
-      file.endsWith('.ts') || file.endsWith('.tsx')
-    );
+    const files = fs
+      .readdirSync(hooksPath)
+      .filter((file) => file.endsWith('.ts') || file.endsWith('.tsx'));
 
     for (const file of files) {
       const filePath = path.join(hooksPath, file);
@@ -167,7 +169,7 @@ class ServiceWorkerAnalyzer {
       if (content.includes('useServiceWorker') || content.includes('serviceWorkerManager')) {
         this.results.integration.hooks.push({
           file,
-          features: this.extractHookFeatures(content)
+          features: this.extractHookFeatures(content),
         });
       }
     }
@@ -183,23 +185,24 @@ class ServiceWorkerAnalyzer {
 
     const findIntegratedComponents = (dir) => {
       const items = fs.readdirSync(dir);
-      
+
       for (const item of items) {
         const itemPath = path.join(dir, item);
         const stat = fs.statSync(itemPath);
-        
+
         if (stat.isDirectory()) {
           findIntegratedComponents(itemPath);
         } else if (item.endsWith('.tsx') || item.endsWith('.ts')) {
           const content = fs.readFileSync(itemPath, 'utf8');
-          
-          if (content.includes('useServiceWorker') || 
-              content.includes('usePerformanceMetrics') ||
-              content.includes('serviceWorkerManager')) {
-            
+
+          if (
+            content.includes('useServiceWorker') ||
+            content.includes('usePerformanceMetrics') ||
+            content.includes('serviceWorkerManager')
+          ) {
             this.results.integration.components.push({
               file: path.relative(componentsPath, itemPath),
-              features: this.extractComponentFeatures(content)
+              features: this.extractComponentFeatures(content),
             });
           }
         }
@@ -207,7 +210,9 @@ class ServiceWorkerAnalyzer {
     };
 
     findIntegratedComponents(componentsPath);
-    console.log(`✅ SW Components: ${this.results.integration.components.length} components with integration`);
+    console.log(
+      `✅ SW Components: ${this.results.integration.components.length} components with integration`,
+    );
   }
 
   /**
@@ -216,10 +221,12 @@ class ServiceWorkerAnalyzer {
   async analyzeUtilsIntegration(utilsPath) {
     if (!fs.existsSync(utilsPath)) return;
 
-    const files = fs.readdirSync(utilsPath).filter(file => 
-      (file.endsWith('.ts') || file.endsWith('.tsx')) && 
-      file.includes('service-worker')
-    );
+    const files = fs
+      .readdirSync(utilsPath)
+      .filter(
+        (file) =>
+          (file.endsWith('.ts') || file.endsWith('.tsx')) && file.includes('service-worker'),
+      );
 
     for (const file of files) {
       const filePath = path.join(utilsPath, file);
@@ -228,7 +235,7 @@ class ServiceWorkerAnalyzer {
       this.results.integration.utilities.push({
         file,
         size: fs.statSync(filePath).size,
-        features: this.extractUtilFeatures(content)
+        features: this.extractUtilFeatures(content),
       });
     }
 
@@ -251,7 +258,7 @@ class ServiceWorkerAnalyzer {
       'Resource Preloading': /preloadResources|preload/g,
       'Error Handling': /catch\s*\(|\.catch\(/g,
       'Message Channel': /MessageChannel|postMessage/g,
-      'Dynamic Imports': /importScripts|import\(/g
+      'Dynamic Imports': /importScripts|import\(/g,
     };
 
     for (const [feature, pattern] of Object.entries(featurePatterns)) {
@@ -259,7 +266,7 @@ class ServiceWorkerAnalyzer {
       if (matches) {
         features.push({
           name: feature,
-          occurrences: matches.length
+          occurrences: matches.length,
         });
       }
     }
@@ -278,7 +285,7 @@ class ServiceWorkerAnalyzer {
       'Network First': /fetch.*cache\.match/s,
       'Stale While Revalidate': /stale.*revalidate|cachedResponse.*fetch/s,
       'Cache Only': /cache\.match(?!.*fetch)/g,
-      'Network Only': /fetch(?!.*cache)/g
+      'Network Only': /fetch(?!.*cache)/g,
     };
 
     for (const [strategy, pattern] of Object.entries(strategyPatterns)) {
@@ -295,13 +302,13 @@ class ServiceWorkerAnalyzer {
    */
   extractHookFeatures(content) {
     const features = [];
-    
+
     if (content.includes('register')) features.push('Registration');
     if (content.includes('preload')) features.push('Preloading');
     if (content.includes('clearCache')) features.push('Cache Management');
     if (content.includes('metrics')) features.push('Performance Metrics');
     if (content.includes('online')) features.push('Online Status');
-    
+
     return features;
   }
 
@@ -310,12 +317,12 @@ class ServiceWorkerAnalyzer {
    */
   extractComponentFeatures(content) {
     const features = [];
-    
+
     if (content.includes('usePerformanceMetrics')) features.push('Performance Tracking');
     if (content.includes('preload')) features.push('Resource Preloading');
     if (content.includes('cache')) features.push('Cache Integration');
     if (content.includes('offline')) features.push('Offline Support');
-    
+
     return features;
   }
 
@@ -324,13 +331,13 @@ class ServiceWorkerAnalyzer {
    */
   extractUtilFeatures(content) {
     const features = [];
-    
+
     if (content.includes('class')) features.push('OOP Implementation');
     if (content.includes('async')) features.push('Async Operations');
     if (content.includes('Promise')) features.push('Promise Handling');
     if (content.includes('Error')) features.push('Error Handling');
     if (content.includes('interface')) features.push('TypeScript Types');
-    
+
     return features;
   }
 
@@ -352,20 +359,23 @@ class ServiceWorkerAnalyzer {
     if (this.results.serviceWorker.exists) {
       console.log('\n📦 SIZE METRICS:');
       console.log(`   Service Worker: ${(this.results.serviceWorker.size / 1024).toFixed(1)}KB`);
-      
-      const totalUtilsSize = this.results.integration.utilities.reduce((sum, util) => sum + util.size, 0);
+
+      const totalUtilsSize = this.results.integration.utilities.reduce(
+        (sum, util) => sum + util.size,
+        0,
+      );
       console.log(`   Utils Integration: ${(totalUtilsSize / 1024).toFixed(1)}KB`);
     }
 
     // Функциональность
     console.log('\n⚡ FEATURES ANALYSIS:');
-    this.results.serviceWorker.features.forEach(feature => {
+    this.results.serviceWorker.features.forEach((feature) => {
       console.log(`   ✅ ${feature.name}: ${feature.occurrences} occurrences`);
     });
 
     // Стратегии кэширования
     console.log('\n🗂️ CACHE STRATEGIES:');
-    this.results.serviceWorker.cacheStrategies.forEach(strategy => {
+    this.results.serviceWorker.cacheStrategies.forEach((strategy) => {
       console.log(`   📋 ${strategy}`);
     });
 
@@ -378,14 +388,14 @@ class ServiceWorkerAnalyzer {
     // Детали интеграции
     if (this.results.integration.hooks.length > 0) {
       console.log('\n🪝 HOOKS INTEGRATION:');
-      this.results.integration.hooks.forEach(hook => {
+      this.results.integration.hooks.forEach((hook) => {
         console.log(`   📄 ${hook.file}: ${hook.features.join(', ')}`);
       });
     }
 
     if (this.results.integration.components.length > 0) {
       console.log('\n🧩 COMPONENTS INTEGRATION:');
-      this.results.integration.components.forEach(comp => {
+      this.results.integration.components.forEach((comp) => {
         console.log(`   📄 ${comp.file}: ${comp.features.join(', ')}`);
       });
     }
@@ -441,7 +451,7 @@ class ServiceWorkerAnalyzer {
       implementation,
       features,
       integration,
-      total: implementation + features + integration
+      total: implementation + features + integration,
     };
   }
 }

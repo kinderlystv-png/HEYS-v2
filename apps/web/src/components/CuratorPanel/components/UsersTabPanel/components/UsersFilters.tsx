@@ -42,7 +42,7 @@ const UsersFilters: React.FC<UsersFiltersProps> = ({
   sortOptions,
   onClearFilters,
   disabled = false,
-  className = ''
+  className = '',
 }) => {
   const hasActiveFilters = searchTerm || roleFilter !== 'all' || statusFilter !== 'all';
 

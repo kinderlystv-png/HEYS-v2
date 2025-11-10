@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { AnomalyDetectionEngine } from '../ml/AnomalyDetectionEngine';
 import { SecurityEvent } from '../types';
@@ -9,18 +9,18 @@ describe('AnomalyDetectionEngine', () => {
   beforeEach(() => {
     engine = new AnomalyDetectionEngine({
       anomalyThreshold: 0.8, // Higher threshold for more stable tests
-      minTrainingSamples: 100
+      minTrainingSamples: 100,
     });
   });
 
   it('should train model with sufficient data', async () => {
     // Generate consistent training data
     const trainingEvents: SecurityEvent[] = [];
-    
+
     for (let i = 0; i < 100; i++) {
       trainingEvents.push({
         id: `normal_${i}`,
-        timestamp: Date.now() - (i * 60000),
+        timestamp: Date.now() - i * 60000,
         type: 'login_attempt',
         severity: 'low',
         source: 'web_app',
@@ -31,16 +31,16 @@ describe('AnomalyDetectionEngine', () => {
           sessionDuration: 1000 + (i % 1000), // 1000-2000ms
           bytesTransferred: 1024 + (i % 512),
           errorCount: 0,
-          geolocation: { country: 'US', city: 'New York' }
+          geolocation: { country: 'US', city: 'New York' },
         },
         riskScore: 10 + (i % 10), // 10-19 risk score
         isBlocked: false,
-        description: 'Normal login attempt'
+        description: 'Normal login attempt',
       });
     }
 
     const model = await engine.trainModel(trainingEvents);
-    
+
     expect(model).toBeDefined();
     expect(model.id).toBeDefined();
     expect(model.type).toBe('anomaly_detection');
@@ -51,7 +51,7 @@ describe('AnomalyDetectionEngine', () => {
     // Train with normal data
     const trainingEvents: SecurityEvent[] = Array.from({ length: 100 }, (_, i) => ({
       id: `train_${i}`,
-      timestamp: Date.now() - (i * 60000),
+      timestamp: Date.now() - i * 60000,
       type: 'login_attempt',
       severity: 'low',
       source: 'web_app',
@@ -59,11 +59,11 @@ describe('AnomalyDetectionEngine', () => {
       userAgent: 'Mozilla/5.0',
       metadata: {
         requestCount: 1 + (i % 2), // 1-2 requests
-        sessionDuration: 1000 + (i % 500) // 1000-1500ms
+        sessionDuration: 1000 + (i % 500), // 1000-1500ms
       },
       riskScore: 10 + (i % 5), // 10-14
       isBlocked: false,
-      description: 'Normal event'
+      description: 'Normal event',
     }));
 
     await engine.trainModel(trainingEvents);
@@ -79,15 +79,15 @@ describe('AnomalyDetectionEngine', () => {
       userAgent: 'Mozilla/5.0',
       metadata: {
         requestCount: 1,
-        sessionDuration: 1200
+        sessionDuration: 1200,
       },
       riskScore: 12,
       isBlocked: false,
-      description: 'Similar event'
+      description: 'Similar event',
     };
 
     const result = await engine.detectAnomaly(similarEvent);
-    
+
     expect(result).toBeDefined();
     expect(result.id).toBeDefined();
     expect(result.isAnomaly).toBeDefined();
@@ -100,7 +100,7 @@ describe('AnomalyDetectionEngine', () => {
     // Train model first
     const trainingEvents: SecurityEvent[] = Array.from({ length: 100 }, (_, i) => ({
       id: `train_${i}`,
-      timestamp: Date.now() - (i * 60000),
+      timestamp: Date.now() - i * 60000,
       type: 'login_attempt',
       severity: 'low',
       source: 'web_app',
@@ -109,7 +109,7 @@ describe('AnomalyDetectionEngine', () => {
       metadata: { requestCount: 1, sessionDuration: 1000 },
       riskScore: 10,
       isBlocked: false,
-      description: 'Training event'
+      description: 'Training event',
     }));
 
     await engine.trainModel(trainingEvents);
@@ -127,7 +127,7 @@ describe('AnomalyDetectionEngine', () => {
         metadata: { requestCount: 1, sessionDuration: 1000 },
         riskScore: 10,
         isBlocked: false,
-        description: 'Normal event'
+        description: 'Normal event',
       },
       {
         id: 'batch_2',
@@ -140,22 +140,22 @@ describe('AnomalyDetectionEngine', () => {
         metadata: { requestCount: 1, sessionDuration: 1000 },
         riskScore: 10,
         isBlocked: false,
-        description: 'Another normal event'
-      }
+        description: 'Another normal event',
+      },
     ];
 
     const results = await engine.detectAnomaliesBatch(testEvents);
-    
+
     expect(results).toHaveLength(2);
     expect(results[0]).toBeDefined();
     expect(results[1]).toBeDefined();
-    expect(results.every(r => r.id && r.confidence >= 0)).toBe(true);
+    expect(results.every((r) => r.id && r.confidence >= 0)).toBe(true);
   });
 
   it('should provide model information', async () => {
     const trainingEvents: SecurityEvent[] = Array.from({ length: 100 }, (_, i) => ({
       id: `info_${i}`,
-      timestamp: Date.now() - (i * 60000),
+      timestamp: Date.now() - i * 60000,
       type: 'login_attempt',
       severity: 'low',
       source: 'web_app',
@@ -164,13 +164,13 @@ describe('AnomalyDetectionEngine', () => {
       metadata: { requestCount: 1, sessionDuration: 1000 },
       riskScore: 10,
       isBlocked: false,
-      description: 'Training event'
+      description: 'Training event',
     }));
 
     await engine.trainModel(trainingEvents);
-    
+
     const models = engine.getModelInfo();
-    
+
     expect(models).toBeDefined();
     expect(Array.isArray(models)).toBe(true);
   });

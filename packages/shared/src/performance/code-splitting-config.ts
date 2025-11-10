@@ -19,55 +19,48 @@ export const viteCodeSplittingConfig = {
           'vendor-ui': ['@mui/material', '@emotion/react', '@emotion/styled'],
           'vendor-utils': ['lodash', 'moment', 'date-fns'],
           'vendor-charts': ['chart.js', 'react-chartjs-2', 'recharts'],
-          
+
           // Специфичные для проекта chunks
           'core-auth': ['./src/auth/', './src/user/'],
           'core-api': ['./src/api/', './src/services/'],
           'features-dashboard': ['./src/dashboard/', './src/analytics/'],
-          'features-admin': ['./src/admin/', './src/management/']
+          'features-admin': ['./src/admin/', './src/management/'],
         },
         // Настройка именования файлов
         chunkFileNames: (chunkInfo: any) => {
-          const facadeModuleId = chunkInfo.facadeModuleId 
-            ? chunkInfo.facadeModuleId.split('/').pop()?.replace('.tsx', '').replace('.ts', '') 
+          const facadeModuleId = chunkInfo.facadeModuleId
+            ? chunkInfo.facadeModuleId.split('/').pop()?.replace('.tsx', '').replace('.ts', '')
             : 'chunk';
           return `chunks/${facadeModuleId}-[hash].js`;
         },
         entryFileNames: 'entries/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
-      }
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+      },
     },
     // Настройки размера chunks
     chunkSizeWarningLimit: 500, // 500KB warning
     target: 'esnext',
     sourcemap: true,
-    
+
     // Минификация с оптимизацией для chunks
     minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: true,
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info']
+        pure_funcs: ['console.log', 'console.info'],
       },
       mangle: {
-        safari10: true
-      }
-    }
+        safari10: true,
+      },
+    },
   },
-  
+
   // Оптимизация dependency
   optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react-router-dom'
-    ],
-    exclude: [
-      '@vite/client',
-      '@vite/env'
-    ]
-  }
+    include: ['react', 'react-dom', 'react-router-dom'],
+    exclude: ['@vite/client', '@vite/env'],
+  },
 };
 
 /**
@@ -84,59 +77,59 @@ export const webpackCodeSplittingConfig = {
           name: 'vendors',
           chunks: 'all',
           priority: 10,
-          reuseExistingChunk: true
+          reuseExistingChunk: true,
         },
-        
+
         // React ecosystem
         react: {
           test: /[\\/]node_modules[\\/](react|react-dom|react-router)[\\/]/,
           name: 'react',
           chunks: 'all',
-          priority: 20
+          priority: 20,
         },
-        
+
         // UI libraries
         ui: {
           test: /[\\/]node_modules[\\/](@mui|@emotion|antd|bootstrap)[\\/]/,
           name: 'ui-libs',
           chunks: 'all',
-          priority: 15
+          priority: 15,
         },
-        
+
         // Utility libraries
         utils: {
           test: /[\\/]node_modules[\\/](lodash|moment|date-fns|uuid)[\\/]/,
           name: 'utils',
           chunks: 'all',
-          priority: 12
+          priority: 12,
         },
-        
+
         // Application specific
         common: {
           test: /[\\/]src[\\/](shared|common|utils)[\\/]/,
           name: 'common',
           chunks: 'all',
           priority: 8,
-          minChunks: 2
-        }
+          minChunks: 2,
+        },
       },
-      
+
       // Настройки размеров
       maxInitialRequests: 20,
       maxAsyncRequests: 20,
-      minSize: 20000,    // 20KB
-      maxSize: 250000,   // 250KB
-      
+      minSize: 20000, // 20KB
+      maxSize: 250000, // 250KB
+
       // Автоматическое именование
       automaticNameDelimiter: '-',
-      enforceSizeThreshold: 50000
+      enforceSizeThreshold: 50000,
     },
-    
+
     // Runtime chunk
     runtimeChunk: {
-      name: 'runtime'
-    }
-  }
+      name: 'runtime',
+    },
+  },
 };
 
 /**
@@ -151,47 +144,47 @@ export const rollupCodeSplittingConfig = {
         if (id.includes('react') || id.includes('react-dom')) {
           return 'react';
         }
-        
+
         // Router
         if (id.includes('router')) {
           return 'router';
         }
-        
+
         // UI libraries
         if (id.includes('@mui') || id.includes('@emotion')) {
           return 'ui';
         }
-        
+
         // Utilities
         if (id.includes('lodash') || id.includes('moment')) {
           return 'utils';
         }
-        
+
         // Other vendors
         return 'vendor';
       }
-      
+
       // Application code
       if (id.includes('src/auth') || id.includes('src/user')) {
         return 'auth';
       }
-      
+
       if (id.includes('src/admin') || id.includes('src/management')) {
         return 'admin';
       }
-      
+
       if (id.includes('src/dashboard') || id.includes('src/analytics')) {
         return 'dashboard';
       }
-      
+
       // Default chunk
       return undefined;
     },
-    
+
     chunkFileNames: 'chunks/[name]-[hash].js',
     entryFileNames: 'entries/[name]-[hash].js',
-    assetFileNames: 'assets/[name]-[hash].[ext]'
-  }
+    assetFileNames: 'assets/[name]-[hash].[ext]',
+  },
 };
 
 /**
@@ -204,35 +197,35 @@ export const codeSplittingPresets = {
     chunkSizeWarningLimit: 300,
     maxChunks: 50,
     minChunkSize: 10000, // 10KB
-    features: ['route-splitting', 'component-splitting', 'vendor-splitting', 'feature-splitting']
+    features: ['route-splitting', 'component-splitting', 'vendor-splitting', 'feature-splitting'],
   },
-  
+
   // Сбалансированное разделение
   balanced: {
     description: 'Оптимальный баланс между количеством chunks и производительностью',
     chunkSizeWarningLimit: 500,
     maxChunks: 20,
     minChunkSize: 30000, // 30KB
-    features: ['route-splitting', 'vendor-splitting']
+    features: ['route-splitting', 'vendor-splitting'],
   },
-  
+
   // Консервативное разделение
   conservative: {
     description: 'Минимальное разделение для небольших проектов',
     chunkSizeWarningLimit: 800,
     maxChunks: 10,
     minChunkSize: 100000, // 100KB
-    features: ['vendor-splitting']
+    features: ['vendor-splitting'],
   },
-  
+
   // Оптимизация для мобильных устройств
   mobile: {
     description: 'Оптимизация для мобильных устройств с медленным интернетом',
     chunkSizeWarningLimit: 200,
     maxChunks: 15,
     minChunkSize: 15000, // 15KB
-    features: ['route-splitting', 'lazy-loading', 'preload-critical']
-  }
+    features: ['route-splitting', 'lazy-loading', 'preload-critical'],
+  },
 };
 
 /**
@@ -241,10 +234,10 @@ export const codeSplittingPresets = {
 export function createCodeSplittingConfig(
   bundler: 'vite' | 'webpack' | 'rollup',
   preset: keyof typeof codeSplittingPresets = 'balanced',
-  customOptions: any = {}
+  customOptions: any = {},
 ) {
   const presetConfig = codeSplittingPresets[preset];
-  
+
   switch (bundler) {
     case 'vite':
       return {
@@ -252,10 +245,10 @@ export function createCodeSplittingConfig(
         build: {
           ...viteCodeSplittingConfig.build,
           chunkSizeWarningLimit: presetConfig.chunkSizeWarningLimit,
-          ...customOptions
-        }
+          ...customOptions,
+        },
       };
-      
+
     case 'webpack':
       return {
         ...webpackCodeSplittingConfig,
@@ -265,17 +258,17 @@ export function createCodeSplittingConfig(
             ...webpackCodeSplittingConfig.optimization.splitChunks,
             maxAsyncRequests: presetConfig.maxChunks,
             minSize: presetConfig.minChunkSize,
-            ...customOptions.splitChunks
-          }
-        }
+            ...customOptions.splitChunks,
+          },
+        },
       };
-      
+
     case 'rollup':
       return {
         ...rollupCodeSplittingConfig,
-        ...customOptions
+        ...customOptions,
       };
-      
+
     default:
       throw new Error(`Неподдерживаемый бандлер: ${bundler}`);
   }
@@ -299,7 +292,7 @@ function App() {
     </React.Suspense>
   );
 }`,
-    
+
     // Пример 2: Route-based splitting
     routeSplitting: `
 const HomePage = React.lazy(() => import('./pages/Home'));
@@ -317,7 +310,7 @@ function App() {
     </Router>
   );
 }`,
-    
+
     // Пример 3: Условный lazy loading
     conditionalLazy: `
 function FeatureComponent({ showAdvanced }: { showAdvanced: boolean }) {
@@ -337,9 +330,9 @@ function FeatureComponent({ showAdvanced }: { showAdvanced: boolean }) {
       {AdvancedComponent && <AdvancedComponent />}
     </div>
   );
-}`
+}`,
   },
-  
+
   // Утилиты для preloading
   preloadUtils: {
     // Preload критических компонентов
@@ -353,7 +346,7 @@ const preloadComponent = (importFn: () => Promise<any>) => {
 
 // Использование
 onMouseEnter={() => preloadComponent(() => import('./ExpensiveComponent'))}`,
-    
+
     // Intersection Observer для lazy loading
     intersectionObserver: `
 const LazySection = ({ children }: { children: React.ReactNode }) => {
@@ -383,13 +376,13 @@ const LazySection = ({ children }: { children: React.ReactNode }) => {
       {isVisible ? children : <div>Loading section...</div>}
     </div>
   );
-};`
-  }
+};`,
+  },
 };
 
 // Re-export всех конфигураций
 export {
+  rollupCodeSplittingConfig as rollup,
   viteCodeSplittingConfig as vite,
   webpackCodeSplittingConfig as webpack,
-  rollupCodeSplittingConfig as rollup
 };
