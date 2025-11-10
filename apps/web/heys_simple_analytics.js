@@ -48,7 +48,7 @@
     
     if (duration > THRESHOLDS.SLOW_SEARCH) {
       stats.searches.slow++;
-      console.warn('[HEYS Analytics] Медленный поиск:', {
+      DEV.warn('[HEYS Analytics] Медленный поиск:', {
         query: query,
         duration: `${duration.toFixed(0)}ms`,
         results: resultsCount,
@@ -82,7 +82,7 @@
       });
     } else if (duration > THRESHOLDS.SLOW_API) {
       stats.apiCalls.slow++;
-      console.warn('[HEYS Analytics] Медленный API:', {
+      DEV.warn('[HEYS Analytics] Медленный API:', {
         api: apiName,
         duration: `${duration.toFixed(0)}ms`,
         threshold: `${THRESHOLDS.SLOW_API}ms`
@@ -165,7 +165,7 @@
    */
   function exportMetrics() {
     const metrics = getStats();
-    console.log('[HEYS Analytics] Статистика сессии:', metrics);
+    DEV.log('[HEYS Analytics] Статистика сессии:', metrics);
     return metrics;
   }
   
@@ -224,7 +224,7 @@
     }
   };
   
-  console.log('[HEYS Simple Analytics] Инициализирован ✓');
+  DEV.log('[HEYS Simple Analytics] Инициализирован ✓');
   
   // Debug: экспорт статистики в глобальный scope для отладки
   global.heysStats = getStats;

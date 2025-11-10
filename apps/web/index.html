@@ -70,6 +70,7 @@
     <script defer src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js" fetchpriority="low" crossorigin="anonymous"></script>
     
     <!-- app modules with defer and optimized priority -->
+    <script defer src="heys_dev_utils.js" fetchpriority="high"></script>
     <script defer src="heys_simple_analytics.js" fetchpriority="high"></script>
     <script defer src="heys_core_v12.js" fetchpriority="high"></script>
     <script defer src="heys_storage_supabase_v1.js?v=15" fetchpriority="low"></script>
@@ -95,9 +96,10 @@
 
       (function () {
         window.HEYS = window.HEYS || {};
-        // Wait for React to load
+        // Wait for React and HEYS components to load
         let reactCheckCount = 0;
         function initializeApp() {
+          // Проверяем загрузку React
           if (!window.React || !window.ReactDOM) {
             reactCheckCount++;
             if (reactCheckCount === 1 || reactCheckCount % 10 === 0) {
@@ -107,7 +109,23 @@
             return;
           }
           
-          console.log('✅ React loaded, initializing app...');
+          // Проверяем загрузку критичных HEYS компонентов
+          const heysReady = window.HEYS && 
+                           window.HEYS.DayTab && 
+                           window.HEYS.Ration && 
+                           window.HEYS.UserTab &&
+                           window.HEYS.ReportsTab;
+          
+          if (!heysReady) {
+            reactCheckCount++;
+            if (reactCheckCount === 1 || reactCheckCount % 10 === 0) {
+              console.log('⏳ Waiting for HEYS components to load...');
+            }
+            setTimeout(initializeApp, 100);
+            return;
+          }
+          
+          console.log('✅ React and HEYS components loaded, initializing app...');
           const React = window.React,
             ReactDOM = window.ReactDOM;
           const { useState, useEffect } = React;
@@ -152,6 +170,14 @@
               { className: 'muted', style: { padding: 24 } },
               'Загрузка данных клиента...',
             );
+          // Проверяем что DayTab загружен
+          if (!window.HEYS || !window.HEYS.DayTab) {
+            return React.createElement(
+              'div',
+              { className: 'muted', style: { padding: 24 } },
+              '⏳ Загрузка компонента...',
+            );
+          }
           return React.createElement(window.HEYS.DayTab, { products });
         }
 
@@ -189,6 +215,14 @@
               { className: 'muted', style: { padding: 24 } },
               'Загрузка продуктов клиента...',
             );
+          // Проверяем что Ration загружен
+          if (!window.HEYS || !window.HEYS.Ration) {
+            return React.createElement(
+              'div',
+              { className: 'muted', style: { padding: 24 } },
+              '⏳ Загрузка компонента...',
+            );
+          }
           return React.createElement(window.HEYS.Ration, { products, setProducts });
         }
 
@@ -220,6 +254,14 @@
               { className: 'muted', style: { padding: 24 } },
               'Загрузка профиля клиента...',
             );
+          // Проверяем что UserTab загружен
+          if (!window.HEYS || !window.HEYS.UserTab) {
+            return React.createElement(
+              'div',
+              { className: 'muted', style: { padding: 24 } },
+              '⏳ Загрузка компонента...',
+            );
+          }
           return React.createElement(window.HEYS.UserTab, {});
         }
 
@@ -427,6 +469,7 @@
           const [clientId, setClientId] = useState('');
           const [newName, setNewName] = useState('');
           const [cloudUser, setCloudUser] = useState(null);
+          const [isInitializing, setIsInitializing] = useState(true); // Флаг начальной загрузки
 
           // Получить клиентов куратора из Supabase
           async function fetchClientsFromCloud(curatorId) {
@@ -625,15 +668,25 @@
                 React.createElement(
                   'div',
                   { className: 'modal' },
-                  React.createElement(
-                    'div',
-                    {
-                      className: 'row',
-                      style: { justifyContent: 'space-between', marginBottom: '6px' },
-                    },
-                    React.createElement('div', { style: { fontWeight: 600 } }, 'Выберите клиента'),
-                    React.createElement('span', { className: 'muted' }, `Всего: ${clients.length}`),
-                  ),
+                  isInitializing
+                    ? React.createElement(
+                        'div',
+                        { style: { textAlign: 'center', padding: '40px 20px' } },
+                        React.createElement('div', { style: { fontSize: 18, marginBottom: 12 } }, '⏳ Загрузка...'),
+                        React.createElement('div', { className: 'muted' }, 'Подключение к серверу')
+                      )
+                    : React.createElement(
+                        React.Fragment,
+                        null,
+                        React.createElement(
+                          'div',
+                          {
+                            className: 'row',
+                            style: { justifyContent: 'space-between', marginBottom: '6px' },
+                          },
+                          React.createElement('div', { style: { fontWeight: 600 } }, 'Выберите клиента'),
+                          React.createElement('span', { className: 'muted' }, `Всего: ${clients.length}`),
+                        ),
                   React.createElement(
                     'div',
                     { style: { maxHeight: 260, overflow: 'auto', marginBottom: 8 } },
@@ -719,6 +772,7 @@
                       'Создать тестовых клиентов',
                     ),
                   ),
+                      ) // ← Закрываем React.Fragment
                 ),
               )
             : null;
@@ -727,7 +781,7 @@
           const [pwd, setPwd] = useState('007670');
 
           useEffect(() => {
-            // Инициализация локальных данных
+            // Инициализация локальных данных (только если нет облака)
             const initLocalData = () => {
               // Загружаем продукты из localStorage или создаём пустой массив
               const storedProducts = U.lsGet('heys_products', []);
@@ -740,7 +794,7 @@
               if (Array.isArray(storedClients) && storedClients.length > 0) {
                 setClients(storedClients);
               } else {
-                // Создаём тестовых клиентов для начала
+                // Создаём тестовых клиентов только в offline режиме
                 const defaultClients = [
                   { id: 'local-user-001', name: 'Иван Петров' },
                   { id: 'local-user-002', name: 'Анна Сидорова' }
@@ -755,7 +809,6 @@
               if (currentClient && storedClientsArray.some(c => c.id === currentClient)) {
                 setClientId(currentClient);
               }
-              // Если нет currentClient - покажется modal выбора клиента
               
               setStatus('offline');
               setSyncVer((v) => v + 1);
@@ -763,20 +816,75 @@
             
             // Пробуем подключиться к облаку если доступно
             if (cloud && typeof cloud.bootstrapSync === 'function') {
-              cloud
-                .bootstrapSync()
-                .then(() => {
-                  setStatus(typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'online');
+              // ВАЖНО: Сначала нужен signIn, ПОТОМ bootstrapSync!
+              console.log('[HEYS] 🚀 Starting auto sign-in...');
+              
+              // Пытаемся автоматический вход с сохранёнными credentials
+              const savedEmail = 'poplanton@mail.ru'; // TODO: взять из настроек
+              const savedPwd = '007670'; // TODO: взять из настроек
+              
+              cloud.signIn(savedEmail, savedPwd)
+                .then(async (result) => {
+                  console.log('[HEYS] ✅ Auto sign-in completed, user:', result.user?.email);
+                  
+                  if (result.error) {
+                    console.error('[HEYS] ❌ Sign-in failed:', result.error);
+                    initLocalData();
+                    setIsInitializing(false);
+                    return;
+                  }
+                  
+                  // Теперь пользователь залогинен, можно устанавливать cloudUser
+                  const user = result.user || (cloud.getUser && cloud.getUser());
+                  if (user) {
+                    setCloudUser(user);
+                    setStatus('online');
+                    
+                    // Загружаем НАСТОЯЩИХ клиентов из Supabase таблицы clients
+                    try {
+                      const realClients = await fetchClientsFromCloud(user.id);
+                      if (realClients && realClients.length > 0) {
+                        setClients(realClients);
+                        U.lsSet('heys_clients', realClients); // Сохраняем в localStorage
+                        
+                        // НЕ автоматически выбираем клиента — пусть пользователь выберет сам
+                        // Модальное окно покажется, потому что clientId === ''
+                        console.log('[HEYS] ✅ Loaded', realClients.length, 'clients from Supabase');
+                      } else {
+                        // Если нет клиентов в Supabase — fallback на localStorage
+                        const localClients = U.lsGet('heys_clients', []).filter(c => !c.id?.startsWith('local-user'));
+                        if (localClients.length > 0) {
+                          setClients(localClients);
+                        } else {
+                          initLocalData(); // Создаём тестовые только если совсем ничего нет
+                        }
+                      }
+                    } catch (error) {
+                      console.error('[HEYS] Error loading clients:', error);
+                      initLocalData();
+                    }
+                  } else {
+                    // Нет пользователя после signIn — используем offline
+                    console.warn('[HEYS] ⚠️ No user after signIn, using offline mode');
+                    initLocalData();
+                  }
+                  
                   setProducts(
                     Array.isArray(U.lsGet('heys_products', [])) ? U.lsGet('heys_products', []) : [],
                   );
                   setSyncVer((v) => v + 1);
+                  console.log('[HEYS] 🎯 Setting isInitializing = false, clients.length:', clients.length);
+                  setIsInitializing(false); // ✅ Инициализация завершена
                 })
-                .catch(() => {
+                .catch((error) => {
+                  console.error('[HEYS] ❌ Auto sign-in failed:', error);
                   initLocalData();
+                  setIsInitializing(false); // ✅ Инициализация завершена (offline)
                 });
             } else {
+              console.log('[HEYS] ⚠️ No cloud available, using offline mode');
               initLocalData();
+              setIsInitializing(false); // ✅ Инициализация завершена (no cloud)
             }
           }, []);
 
@@ -1006,11 +1114,17 @@
                       ? React.createElement(AnalyticsTab, {
                           key: 'analytics' + syncVer,
                         })
-                      : React.createElement(window.HEYS.ReportsTab, {
-                        key:
-                          'reports' + syncVer + '_' + String(clientId || '') + '_' + reportsRefresh,
-                        products,
-                      }),
+                      : window.HEYS && window.HEYS.ReportsTab
+                        ? React.createElement(window.HEYS.ReportsTab, {
+                            key:
+                              'reports' + syncVer + '_' + String(clientId || '') + '_' + reportsRefresh,
+                            products,
+                          })
+                        : React.createElement(
+                            'div',
+                            { className: 'muted', style: { padding: 24 } },
+                            '⏳ Загрузка компонента отчётов...',
+                          ),
             ),
           );
         }

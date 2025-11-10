@@ -207,6 +207,22 @@
 
   cloud.bootstrapClientSync = async function(client_id){
     if (!client || !user || !client_id) return;
+    
+    // КРИТИЧЕСКАЯ ПРОВЕРКА: синхронизировать только текущего клиента
+    let currentClientId = global.localStorage.getItem('heys_client_current');
+    // Распарсить JSON если это строка в кавычках
+    if (currentClientId) {
+      try {
+        currentClientId = JSON.parse(currentClientId);
+      } catch(e) {
+        // Уже простая строка, не JSON
+      }
+    }
+    if (currentClientId && client_id !== currentClientId) {
+      log('client bootstrap skipped (not current client)', client_id, 'current:', currentClientId);
+      return;
+    }
+    
     const now = Date.now();
     
     // Увеличиваем throttling с 4 до 30 секунд для снижения нагрузки
@@ -250,8 +266,22 @@
       }
       
       // Теперь загружаем полные данные только если есть обновления
+      log('🔄 [CLIENT_SYNC] Loading data for client:', client_id);
       const { data, error } = await client.from('client_kv_store').select('k,v,updated_at').eq('client_id', client_id);
       if (error) { err('client bootstrap select', error); return; }
+      
+      log('✅ [CLIENT_SYNC] Loaded', data?.length || 0, 'keys from Supabase');
+      
+      // Детальное логирование каждого ключа
+      (data||[]).forEach((row, idx) => {
+        const keyType = row.k === 'heys_products' ? '📦 PRODUCTS' :
+                       row.k.includes('dayv2_') ? '📅 DAY' :
+                       row.k.includes('_profile') ? '👤 PROFILE' :
+                       row.k.includes('_norms') ? '🎯 NORMS' : '📝 OTHER';
+        const dataSize = JSON.stringify(row.v).length;
+        const itemsCount = Array.isArray(row.v) ? row.v.length : 'N/A';
+        log(`  ${idx+1}. ${keyType} | key: ${row.k} | size: ${dataSize}b | items: ${itemsCount}`);
+      });
       
       const ls = global.localStorage;
       muteMirror = true;
@@ -260,9 +290,21 @@
       
       (data||[]).forEach(row => {
         try {
-          // row.k is stored in DB as the original key; when using client-scoped storage,
-          // DB should contain keys already scoped for the client (heys_<cid>_... or day_<cid>_...)
-          const key = row.k;
+          // row.k is stored in DB as the original key
+          // For client-scoped keys like 'heys_products', we need to store them with client_id prefix
+          let key = row.k;
+          
+          // Если ключ 'heys_products' (без client_id), добавляем client_id
+          if (key === 'heys_products' || (key.startsWith('heys_') && !key.includes(client_id))) {
+            // Преобразуем в scoped key для localStorage
+            if (key.startsWith('heys_')) {
+              key = 'heys_' + client_id + '_' + key.substring('heys_'.length);
+            } else {
+              key = 'heys_' + client_id + '_' + key;
+            }
+            log(`  📝 [MIGRATION] Mapped '${row.k}' → '${key}'`);
+          }
+          
           // Конфликт: если в локальном есть ревизия, сравнить и взять более свежую
           let local = null;
           try { local = JSON.parse(ls.getItem(key)); } catch(e){}
@@ -274,6 +316,7 @@
             return;
           }
           ls.setItem(key, JSON.stringify(row.v));
+          log(`  ✅ Saved to localStorage: ${key}`);
           
           // Уведомляем приложение об обновлении продуктов
           if (key === 'heys_products' && row.v) {
@@ -288,9 +331,9 @@
       
       muteMirror = false;
       cloud._lastClientSync = { clientId: client_id, ts: now };
-      // Убрано избыточное логирование client bootstrap synced keys
+      log('✅ [CLIENT_SYNC] Sync completed for client:', client_id);
     }catch(e){ 
-      err('client bootstrap exception', e); 
+      err('❌ [CLIENT_SYNC] Exception:', e); 
       muteMirror=false; 
     }
   };
@@ -401,6 +444,14 @@
             return;
         }
 
+        // НЕ сохраняем в Supabase, если используется дефолтный client_id (пользователь еще не выбрал клиента)
+        if (client_id && client_id.startsWith('00000000-')) {
+            if (window.DEV) {
+                log(`⚠️ [SAVE BLOCKED] Skipping save for key '${k}' - default client_id (user hasn't selected client yet)`);
+            }
+            return; // Тихий пропуск сохранения до выбора реального клиента
+        }
+
         if (!user || !user.id) {
             return;
         }
@@ -419,6 +470,13 @@
             v: value,
             updated_at: (new Date()).toISOString(),
         };
+
+        // Логирование сохранения
+        const dataType = k === 'heys_products' ? '📦 PRODUCTS' :
+                        k.includes('dayv2_') ? '📅 DAY' :
+                        k.includes('_profile') ? '👤 PROFILE' : '📝 OTHER';
+        const itemsCount = Array.isArray(value) ? value.length : 'N/A';
+        log(`💾 [SAVE] ${dataType} | key: ${k} | items: ${itemsCount} | client: ${client_id.substring(0, 8)}...`);
 
         // Добавляем в очередь вместо немедленной отправки
         clientUpsertQueue.push(upsertObj);

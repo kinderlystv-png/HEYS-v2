@@ -120,7 +120,7 @@
     
     // Minimal logging for critical updates only
     if (key === 'height' || key === 'weight' || key === 'firstName' || key === 'lastName') {
-      console.log(`[Profile] ${key} updated:`, value);
+      DEV.log(`[Profile] ${key} updated:`, value);
     }
   }
     function updateZone(i, patch){ setZones(zones.map((z, idx)=> idx===i ? { ...z, ...patch } : z)); }

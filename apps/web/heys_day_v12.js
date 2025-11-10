@@ -400,7 +400,7 @@
               return smartResult.results;
             }
           } catch (error) {
-            console.warn('[HEYS] Ошибка умного поиска, используем обычный:', error);
+            DEV.warn('[HEYS] Ошибка умного поиска, используем обычный:', error);
           }
         }
         
@@ -541,7 +541,7 @@
             return smartResult.results;
           }
         } catch (error) {
-          console.warn('[HEYS] Ошибка умного поиска, используем обычный:', error);
+          DEV.warn('[HEYS] Ошибка умного поиска, используем обычный:', error);
         }
       }
       
