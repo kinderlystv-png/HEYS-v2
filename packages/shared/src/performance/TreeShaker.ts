@@ -44,7 +44,7 @@ export class TreeShaker {
       bundler: 'vite',
       aggressive: false,
       preserveTypes: true,
-      ...config
+      ...config,
     };
   }
 
@@ -64,9 +64,9 @@ export class TreeShaker {
       try {
         const unused = await this.analyzeFile(file, files);
         unusedExports.push(...unused);
-        
+
         // Приблизительный расчет потенциальной экономии
-        unused.forEach(exp => {
+        unused.forEach((exp) => {
           potentialSavings += exp.size;
         });
       } catch (error) {
@@ -83,7 +83,7 @@ export class TreeShaker {
       unusedExports,
       potentialSavings,
       recommendations,
-      bundlerOptimizations
+      bundlerOptimizations,
     };
 
     console.log(`✅ Анализ завершен: найдено ${unusedExports.length} неиспользуемых экспортов`);
@@ -95,8 +95,8 @@ export class TreeShaker {
    */
   private async findSourceFiles(rootPath: string): Promise<string[]> {
     const files: string[] = [];
-    
-    const searchPaths = this.config.include.map(pattern => {
+
+    const searchPaths = this.config.include.map((pattern) => {
       // Упрощенная обработка glob паттернов
       const basePath = pattern.replace(/\/\*\*\/\*\.\{.*\}$/, '');
       return path.join(rootPath, basePath);
@@ -109,8 +109,8 @@ export class TreeShaker {
     }
 
     // Фильтруем исключения
-    return files.filter(file => {
-      return !this.config.exclude.some(excludePattern => {
+    return files.filter((file) => {
+      return !this.config.exclude.some((excludePattern) => {
         return file.includes(excludePattern.replace(/\*\*/g, ''));
       });
     });
@@ -138,7 +138,7 @@ export class TreeShaker {
    */
   private isSourceFile(fileName: string): boolean {
     const extensions = ['.ts', '.tsx', '.js', '.jsx'];
-    return extensions.some(ext => fileName.endsWith(ext));
+    return extensions.some((ext) => fileName.endsWith(ext));
   }
 
   /**
@@ -151,7 +151,7 @@ export class TreeShaker {
 
     for (const exportItem of exports) {
       const isUsed = await this.isExportUsed(exportItem, filePath, allFiles);
-      
+
       if (!isUsed) {
         unusedExports.push(exportItem);
       }
@@ -170,33 +170,34 @@ export class TreeShaker {
     lines.forEach((line, index) => {
       // Ищем различные паттерны экспортов
       const patterns = [
-        /export\s+(?:const|let|var)\s+(\w+)/g,           // export const name
-        /export\s+function\s+(\w+)/g,                    // export function name
-        /export\s+class\s+(\w+)/g,                       // export class name
-        /export\s+interface\s+(\w+)/g,                   // export interface name
-        /export\s+type\s+(\w+)/g,                        // export type name
-        /export\s+enum\s+(\w+)/g,                        // export enum name
-        /export\s*{\s*([^}]+)\s*}/g,                     // export { name1, name2 }
+        /export\s+(?:const|let|var)\s+(\w+)/g, // export const name
+        /export\s+function\s+(\w+)/g, // export function name
+        /export\s+class\s+(\w+)/g, // export class name
+        /export\s+interface\s+(\w+)/g, // export interface name
+        /export\s+type\s+(\w+)/g, // export type name
+        /export\s+enum\s+(\w+)/g, // export enum name
+        /export\s*{\s*([^}]+)\s*}/g, // export { name1, name2 }
       ];
 
-      patterns.forEach(pattern => {
+      patterns.forEach((pattern) => {
         let match;
         while ((match = pattern.exec(line)) !== null) {
           const exportName = match[1];
-          
+
           if (!exportName) continue; // Пропускаем если имя не найдено
-          
+
           // Для export { } нужна дополнительная обработка
           if (pattern.source.includes('{')) {
-            const namedExports = exportName.split(',').map(n => n.trim());
-            namedExports.forEach(name => {
-              if (name && !name.includes('as')) { // Пропускаем переименования
+            const namedExports = exportName.split(',').map((n) => n.trim());
+            namedExports.forEach((name) => {
+              if (name && !name.includes('as')) {
+                // Пропускаем переименования
                 exports.push({
                   file: filePath,
                   exportName: name,
                   line: index + 1,
                   size: this.estimateExportSize(line),
-                  type: this.detectExportType(line, name)
+                  type: this.detectExportType(line, name),
                 });
               }
             });
@@ -206,7 +207,7 @@ export class TreeShaker {
               exportName,
               line: index + 1,
               size: this.estimateExportSize(line),
-              type: this.detectExportType(line, exportName)
+              type: this.detectExportType(line, exportName),
             });
           }
         }
@@ -219,28 +220,33 @@ export class TreeShaker {
   /**
    * Проверяет, используется ли экспорт в других файлах
    */
-  private async isExportUsed(exportItem: UnusedExport, sourceFile: string, allFiles: string[]): Promise<boolean> {
+  private async isExportUsed(
+    exportItem: UnusedExport,
+    sourceFile: string,
+    allFiles: string[],
+  ): Promise<boolean> {
     // Исключаем сам файл из поиска
-    const otherFiles = allFiles.filter(file => file !== sourceFile);
+    const otherFiles = allFiles.filter((file) => file !== sourceFile);
 
     for (const file of otherFiles) {
       try {
         const content = fs.readFileSync(file, 'utf8');
-        
+
         // Ищем импорты этого экспорта
         const importPatterns = [
           new RegExp(`import\\s+\\{[^}]*\\b${exportItem.exportName}\\b[^}]*\\}`, 'g'),
           new RegExp(`import\\s+${exportItem.exportName}\\b`, 'g'),
-          new RegExp(`import\\s*\\*\\s+as\\s+\\w+\\s+from\\s+['"][^'"]*${path.basename(sourceFile, path.extname(sourceFile))}['"]`, 'g'),
+          new RegExp(
+            `import\\s*\\*\\s+as\\s+\\w+\\s+from\\s+['"][^'"]*${path.basename(sourceFile, path.extname(sourceFile))}['"]`,
+            'g',
+          ),
         ];
 
         // Также ищем прямые использования (для динамических импортов)
-        const usagePatterns = [
-          new RegExp(`\\b${exportItem.exportName}\\b`, 'g'),
-        ];
+        const usagePatterns = [new RegExp(`\\b${exportItem.exportName}\\b`, 'g')];
 
-        const isImported = importPatterns.some(pattern => pattern.test(content));
-        const isUsed = usagePatterns.some(pattern => {
+        const isImported = importPatterns.some((pattern) => pattern.test(content));
+        const isUsed = usagePatterns.some((pattern) => {
           const matches = content.match(pattern);
           return matches && matches.length > 1; // Больше 1, так как один может быть объявлением
         });
@@ -302,22 +308,29 @@ export class TreeShaker {
     }
 
     // Группируем по файлам
-    const byFile = unusedExports.reduce((acc, exp) => {
-      if (!acc[exp.file]) acc[exp.file] = [];
-      acc[exp.file]!.push(exp);
-      return acc;
-    }, {} as Record<string, UnusedExport[]>);
+    const byFile = unusedExports.reduce(
+      (acc, exp) => {
+        if (!acc[exp.file]) acc[exp.file] = [];
+        acc[exp.file]!.push(exp);
+        return acc;
+      },
+      {} as Record<string, UnusedExport[]>,
+    );
 
     // Рекомендации по файлам
     Object.entries(byFile).forEach(([file, exports]) => {
       const fileName = path.basename(file);
       const totalSize = exports.reduce((sum, exp) => sum + exp.size, 0);
-      
+
       if (exports.length > 5) {
-        recommendations.push(`📁 ${fileName}: ${exports.length} неиспользуемых экспортов (${this.formatBytes(totalSize)})`);
+        recommendations.push(
+          `📁 ${fileName}: ${exports.length} неиспользуемых экспортов (${this.formatBytes(totalSize)})`,
+        );
       } else {
-        exports.forEach(exp => {
-          recommendations.push(`🔹 ${fileName}:${exp.line} - удалить '${exp.exportName}' (${exp.type})`);
+        exports.forEach((exp) => {
+          recommendations.push(
+            `🔹 ${fileName}:${exp.line} - удалить '${exp.exportName}' (${exp.type})`,
+          );
         });
       }
     });
@@ -327,11 +340,14 @@ export class TreeShaker {
     recommendations.push(`💾 Потенциальная экономия: ${this.formatBytes(totalSize)}`);
 
     // Рекомендации по типам
-    const typeGroups = unusedExports.reduce((acc, exp) => {
-      if (!acc[exp.type]) acc[exp.type] = 0;
-      acc[exp.type]!++;
-      return acc;
-    }, {} as Record<string, number>);
+    const typeGroups = unusedExports.reduce(
+      (acc, exp) => {
+        if (!acc[exp.type]) acc[exp.type] = 0;
+        acc[exp.type]!++;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     Object.entries(typeGroups).forEach(([type, count]) => {
       if (count > 3) {
@@ -396,7 +412,8 @@ export class TreeShaker {
       return 'Анализ не выполнен. Запустите analyzeProject() сначала.';
     }
 
-    const { totalFiles, unusedExports, potentialSavings, recommendations, bundlerOptimizations } = this.analysis;
+    const { totalFiles, unusedExports, potentialSavings, recommendations, bundlerOptimizations } =
+      this.analysis;
 
     let report = '🌲 ОТЧЕТ TREE SHAKING АНАЛИЗА\n';
     report += '================================\n\n';
@@ -408,7 +425,7 @@ export class TreeShaker {
 
     if (recommendations.length > 0) {
       report += `💡 Рекомендации:\n`;
-      recommendations.forEach(rec => {
+      recommendations.forEach((rec) => {
         report += `   ${rec}\n`;
       });
       report += '\n';
@@ -416,7 +433,7 @@ export class TreeShaker {
 
     if (bundlerOptimizations.length > 0) {
       report += `⚙️ Оптимизации bundler (${this.config.bundler}):\n`;
-      bundlerOptimizations.forEach(opt => {
+      bundlerOptimizations.forEach((opt) => {
         report += `   ${opt}\n`;
       });
       report += '\n';
@@ -425,11 +442,11 @@ export class TreeShaker {
     // Детальный список неиспользуемых экспортов (первые 10)
     if (unusedExports.length > 0) {
       report += `📋 Неиспользуемые экспорты (показано первые 10):\n`;
-      unusedExports.slice(0, 10).forEach(exp => {
+      unusedExports.slice(0, 10).forEach((exp) => {
         const fileName = path.basename(exp.file);
         report += `   ${fileName}:${exp.line} - ${exp.exportName} (${exp.type}, ${this.formatBytes(exp.size)})\n`;
       });
-      
+
       if (unusedExports.length > 10) {
         report += `   ... и еще ${unusedExports.length - 10} экспортов\n`;
       }

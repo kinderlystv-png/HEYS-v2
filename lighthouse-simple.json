@@ -573,9 +573,7 @@
       "errorMessage": "The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)",
       "errorStack": "LighthouseError: NO_FCP\n    at Timeout.<anonymous> (file:///C:/!%20HEYS%202/node_modules/.pnpm/lighthouse@12.8.2/node_modules/lighthouse/core/gather/driver/wait-for-condition.js:85:14)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)",
       "guidanceLevel": 3,
-      "replacesAudits": [
-        "uses-long-cache-ttl"
-      ]
+      "replacesAudits": ["uses-long-cache-ttl"]
     },
     "cls-culprits-insight": {
       "id": "cls-culprits-insight",
@@ -586,11 +584,7 @@
       "errorMessage": "The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)",
       "errorStack": "LighthouseError: NO_FCP\n    at Timeout.<anonymous> (file:///C:/!%20HEYS%202/node_modules/.pnpm/lighthouse@12.8.2/node_modules/lighthouse/core/gather/driver/wait-for-condition.js:85:14)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)",
       "guidanceLevel": 3,
-      "replacesAudits": [
-        "layout-shifts",
-        "non-composited-animations",
-        "unsized-images"
-      ]
+      "replacesAudits": ["layout-shifts", "non-composited-animations", "unsized-images"]
     },
     "document-latency-insight": {
       "id": "document-latency-insight",
@@ -601,11 +595,7 @@
       "errorMessage": "The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)",
       "errorStack": "LighthouseError: NO_FCP\n    at Timeout.<anonymous> (file:///C:/!%20HEYS%202/node_modules/.pnpm/lighthouse@12.8.2/node_modules/lighthouse/core/gather/driver/wait-for-condition.js:85:14)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)",
       "guidanceLevel": 3,
-      "replacesAudits": [
-        "redirects",
-        "server-response-time",
-        "uses-text-compression"
-      ]
+      "replacesAudits": ["redirects", "server-response-time", "uses-text-compression"]
     },
     "dom-size-insight": {
       "id": "dom-size-insight",
@@ -616,9 +606,7 @@
       "errorMessage": "The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)",
       "errorStack": "LighthouseError: NO_FCP\n    at Timeout.<anonymous> (file:///C:/!%20HEYS%202/node_modules/.pnpm/lighthouse@12.8.2/node_modules/lighthouse/core/gather/driver/wait-for-condition.js:85:14)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)",
       "guidanceLevel": 3,
-      "replacesAudits": [
-        "dom-size"
-      ]
+      "replacesAudits": ["dom-size"]
     },
     "duplicated-javascript-insight": {
       "id": "duplicated-javascript-insight",
@@ -629,9 +617,7 @@
       "errorMessage": "The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)",
       "errorStack": "LighthouseError: NO_FCP\n    at Timeout.<anonymous> (file:///C:/!%20HEYS%202/node_modules/.pnpm/lighthouse@12.8.2/node_modules/lighthouse/core/gather/driver/wait-for-condition.js:85:14)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)",
       "guidanceLevel": 2,
-      "replacesAudits": [
-        "duplicated-javascript"
-      ]
+      "replacesAudits": ["duplicated-javascript"]
     },
     "font-display-insight": {
       "id": "font-display-insight",
@@ -642,9 +628,7 @@
       "errorMessage": "The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)",
       "errorStack": "LighthouseError: NO_FCP\n    at Timeout.<anonymous> (file:///C:/!%20HEYS%202/node_modules/.pnpm/lighthouse@12.8.2/node_modules/lighthouse/core/gather/driver/wait-for-condition.js:85:14)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)",
       "guidanceLevel": 3,
-      "replacesAudits": [
-        "font-display"
-      ]
+      "replacesAudits": ["font-display"]
     },
     "forced-reflow-insight": {
       "id": "forced-reflow-insight",
@@ -681,9 +665,7 @@
       "errorMessage": "The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)",
       "errorStack": "LighthouseError: NO_FCP\n    at Timeout.<anonymous> (file:///C:/!%20HEYS%202/node_modules/.pnpm/lighthouse@12.8.2/node_modules/lighthouse/core/gather/driver/wait-for-condition.js:85:14)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)",
       "guidanceLevel": 3,
-      "replacesAudits": [
-        "work-during-interaction"
-      ]
+      "replacesAudits": ["work-during-interaction"]
     },
     "lcp-breakdown-insight": {
       "id": "lcp-breakdown-insight",
@@ -694,9 +676,7 @@
       "errorMessage": "The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)",
       "errorStack": "LighthouseError: NO_FCP\n    at Timeout.<anonymous> (file:///C:/!%20HEYS%202/node_modules/.pnpm/lighthouse@12.8.2/node_modules/lighthouse/core/gather/driver/wait-for-condition.js:85:14)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)",
       "guidanceLevel": 3,
-      "replacesAudits": [
-        "largest-contentful-paint-element"
-      ]
+      "replacesAudits": ["largest-contentful-paint-element"]
     },
     "lcp-discovery-insight": {
       "id": "lcp-discovery-insight",
@@ -707,10 +687,7 @@
       "errorMessage": "The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)",
       "errorStack": "LighthouseError: NO_FCP\n    at Timeout.<anonymous> (file:///C:/!%20HEYS%202/node_modules/.pnpm/lighthouse@12.8.2/node_modules/lighthouse/core/gather/driver/wait-for-condition.js:85:14)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)",
       "guidanceLevel": 3,
-      "replacesAudits": [
-        "prioritize-lcp-image",
-        "lcp-lazy-loaded"
-      ]
+      "replacesAudits": ["prioritize-lcp-image", "lcp-lazy-loaded"]
     },
     "legacy-javascript-insight": {
       "id": "legacy-javascript-insight",
@@ -741,10 +718,7 @@
       "errorMessage": "The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)",
       "errorStack": "LighthouseError: NO_FCP\n    at Timeout.<anonymous> (file:///C:/!%20HEYS%202/node_modules/.pnpm/lighthouse@12.8.2/node_modules/lighthouse/core/gather/driver/wait-for-condition.js:85:14)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)",
       "guidanceLevel": 1,
-      "replacesAudits": [
-        "critical-request-chains",
-        "uses-rel-preconnect"
-      ]
+      "replacesAudits": ["critical-request-chains", "uses-rel-preconnect"]
     },
     "render-blocking-insight": {
       "id": "render-blocking-insight",
@@ -755,9 +729,7 @@
       "errorMessage": "The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)",
       "errorStack": "LighthouseError: NO_FCP\n    at Timeout.<anonymous> (file:///C:/!%20HEYS%202/node_modules/.pnpm/lighthouse@12.8.2/node_modules/lighthouse/core/gather/driver/wait-for-condition.js:85:14)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)",
       "guidanceLevel": 3,
-      "replacesAudits": [
-        "render-blocking-resources"
-      ]
+      "replacesAudits": ["render-blocking-resources"]
     },
     "third-parties-insight": {
       "id": "third-parties-insight",
@@ -768,9 +740,7 @@
       "errorMessage": "The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)",
       "errorStack": "LighthouseError: NO_FCP\n    at Timeout.<anonymous> (file:///C:/!%20HEYS%202/node_modules/.pnpm/lighthouse@12.8.2/node_modules/lighthouse/core/gather/driver/wait-for-condition.js:85:14)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)",
       "guidanceLevel": 3,
-      "replacesAudits": [
-        "third-party-summary"
-      ]
+      "replacesAudits": ["third-party-summary"]
     },
     "viewport-insight": {
       "id": "viewport-insight",
@@ -781,15 +751,11 @@
       "errorMessage": "The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)",
       "errorStack": "LighthouseError: NO_FCP\n    at Timeout.<anonymous> (file:///C:/!%20HEYS%202/node_modules/.pnpm/lighthouse@12.8.2/node_modules/lighthouse/core/gather/driver/wait-for-condition.js:85:14)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)",
       "guidanceLevel": 3,
-      "replacesAudits": [
-        "viewport"
-      ]
+      "replacesAudits": ["viewport"]
     }
   },
   "configSettings": {
-    "output": [
-      "json"
-    ],
+    "output": ["json"],
     "maxWaitForFcp": 30000,
     "maxWaitForLoad": 45000,
     "pauseAfterFcpMs": 1000,
@@ -816,12 +782,7 @@
     "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
     "auditMode": false,
     "gatherMode": false,
-    "clearStorageTypes": [
-      "file_systems",
-      "shader_cache",
-      "service_workers",
-      "cache_storage"
-    ],
+    "clearStorageTypes": ["file_systems", "shader_cache", "service_workers", "cache_storage"],
     "disableStorageReset": false,
     "debugNavigation": false,
     "channel": "cli",
@@ -836,19 +797,13 @@
     "extraHeaders": null,
     "precomputedLanternData": null,
     "onlyAudits": null,
-    "onlyCategories": [
-      "performance"
-    ],
+    "onlyCategories": ["performance"],
     "skipAudits": null
   },
   "categories": {
     "performance": {
       "title": "Performance",
-      "supportedModes": [
-        "navigation",
-        "timespan",
-        "snapshot"
-      ],
+      "supportedModes": ["navigation", "timespan", "snapshot"],
       "auditRefs": [
         {
           "id": "first-contentful-paint",
@@ -2356,297 +2311,121 @@
           "path": "audits[viewport-insight].errorMessage"
         }
       ],
-      "core/audits/viewport.js | title": [
-        "audits.viewport.title"
-      ],
-      "core/audits/viewport.js | description": [
-        "audits.viewport.description"
-      ],
-      "core/lib/i18n/i18n.js | firstContentfulPaintMetric": [
-        "audits[first-contentful-paint].title"
-      ],
-      "core/audits/metrics/first-contentful-paint.js | description": [
-        "audits[first-contentful-paint].description"
-      ],
-      "core/lib/i18n/i18n.js | largestContentfulPaintMetric": [
-        "audits[largest-contentful-paint].title"
-      ],
-      "core/audits/metrics/largest-contentful-paint.js | description": [
-        "audits[largest-contentful-paint].description"
-      ],
-      "core/lib/i18n/i18n.js | firstMeaningfulPaintMetric": [
-        "audits[first-meaningful-paint].title"
-      ],
-      "core/audits/metrics/first-meaningful-paint.js | description": [
-        "audits[first-meaningful-paint].description"
-      ],
-      "core/lib/i18n/i18n.js | speedIndexMetric": [
-        "audits[speed-index].title"
-      ],
-      "core/audits/metrics/speed-index.js | description": [
-        "audits[speed-index].description"
-      ],
-      "core/lib/i18n/i18n.js | totalBlockingTimeMetric": [
-        "audits[total-blocking-time].title"
-      ],
-      "core/audits/metrics/total-blocking-time.js | description": [
-        "audits[total-blocking-time].description"
-      ],
-      "core/lib/i18n/i18n.js | maxPotentialFIDMetric": [
-        "audits[max-potential-fid].title"
-      ],
-      "core/audits/metrics/max-potential-fid.js | description": [
-        "audits[max-potential-fid].description"
-      ],
-      "core/lib/i18n/i18n.js | cumulativeLayoutShiftMetric": [
-        "audits[cumulative-layout-shift].title"
-      ],
-      "core/audits/metrics/cumulative-layout-shift.js | description": [
-        "audits[cumulative-layout-shift].description"
-      ],
-      "core/audits/server-response-time.js | title": [
-        "audits[server-response-time].title"
-      ],
-      "core/audits/server-response-time.js | description": [
-        "audits[server-response-time].description"
-      ],
-      "core/lib/i18n/i18n.js | interactiveMetric": [
-        "audits.interactive.title"
-      ],
-      "core/audits/metrics/interactive.js | description": [
-        "audits.interactive.description"
-      ],
-      "core/audits/user-timings.js | title": [
-        "audits[user-timings].title"
-      ],
-      "core/audits/user-timings.js | description": [
-        "audits[user-timings].description"
-      ],
-      "core/audits/critical-request-chains.js | title": [
-        "audits[critical-request-chains].title"
-      ],
-      "core/audits/critical-request-chains.js | description": [
-        "audits[critical-request-chains].description"
-      ],
-      "core/audits/redirects.js | title": [
-        "audits.redirects.title"
-      ],
-      "core/audits/redirects.js | description": [
-        "audits.redirects.description"
-      ],
-      "core/audits/mainthread-work-breakdown.js | title": [
-        "audits[mainthread-work-breakdown].title"
-      ],
-      "core/audits/mainthread-work-breakdown.js | description": [
-        "audits[mainthread-work-breakdown].description"
-      ],
-      "core/audits/bootup-time.js | title": [
-        "audits[bootup-time].title"
-      ],
-      "core/audits/bootup-time.js | description": [
-        "audits[bootup-time].description"
-      ],
-      "core/audits/uses-rel-preconnect.js | title": [
-        "audits[uses-rel-preconnect].title"
-      ],
-      "core/audits/uses-rel-preconnect.js | description": [
-        "audits[uses-rel-preconnect].description"
-      ],
-      "core/audits/font-display.js | title": [
-        "audits[font-display].title"
-      ],
-      "core/audits/font-display.js | description": [
-        "audits[font-display].description"
-      ],
-      "core/audits/network-rtt.js | title": [
-        "audits[network-rtt].title"
-      ],
-      "core/audits/network-rtt.js | description": [
-        "audits[network-rtt].description"
-      ],
-      "core/audits/network-server-latency.js | title": [
-        "audits[network-server-latency].title"
-      ],
-      "core/audits/network-server-latency.js | description": [
-        "audits[network-server-latency].description"
-      ],
-      "core/audits/third-party-summary.js | title": [
-        "audits[third-party-summary].title"
-      ],
-      "core/audits/third-party-summary.js | description": [
-        "audits[third-party-summary].description"
-      ],
-      "core/audits/third-party-facades.js | title": [
-        "audits[third-party-facades].title"
-      ],
-      "core/audits/third-party-facades.js | description": [
-        "audits[third-party-facades].description"
-      ],
-      "core/audits/largest-contentful-paint-element.js | title": [
-        "audits[largest-contentful-paint-element].title"
-      ],
+      "core/audits/viewport.js | title": ["audits.viewport.title"],
+      "core/audits/viewport.js | description": ["audits.viewport.description"],
+      "core/lib/i18n/i18n.js | firstContentfulPaintMetric": ["audits[first-contentful-paint].title"],
+      "core/audits/metrics/first-contentful-paint.js | description": ["audits[first-contentful-paint].description"],
+      "core/lib/i18n/i18n.js | largestContentfulPaintMetric": ["audits[largest-contentful-paint].title"],
+      "core/audits/metrics/largest-contentful-paint.js | description": ["audits[largest-contentful-paint].description"],
+      "core/lib/i18n/i18n.js | firstMeaningfulPaintMetric": ["audits[first-meaningful-paint].title"],
+      "core/audits/metrics/first-meaningful-paint.js | description": ["audits[first-meaningful-paint].description"],
+      "core/lib/i18n/i18n.js | speedIndexMetric": ["audits[speed-index].title"],
+      "core/audits/metrics/speed-index.js | description": ["audits[speed-index].description"],
+      "core/lib/i18n/i18n.js | totalBlockingTimeMetric": ["audits[total-blocking-time].title"],
+      "core/audits/metrics/total-blocking-time.js | description": ["audits[total-blocking-time].description"],
+      "core/lib/i18n/i18n.js | maxPotentialFIDMetric": ["audits[max-potential-fid].title"],
+      "core/audits/metrics/max-potential-fid.js | description": ["audits[max-potential-fid].description"],
+      "core/lib/i18n/i18n.js | cumulativeLayoutShiftMetric": ["audits[cumulative-layout-shift].title"],
+      "core/audits/metrics/cumulative-layout-shift.js | description": ["audits[cumulative-layout-shift].description"],
+      "core/audits/server-response-time.js | title": ["audits[server-response-time].title"],
+      "core/audits/server-response-time.js | description": ["audits[server-response-time].description"],
+      "core/lib/i18n/i18n.js | interactiveMetric": ["audits.interactive.title"],
+      "core/audits/metrics/interactive.js | description": ["audits.interactive.description"],
+      "core/audits/user-timings.js | title": ["audits[user-timings].title"],
+      "core/audits/user-timings.js | description": ["audits[user-timings].description"],
+      "core/audits/critical-request-chains.js | title": ["audits[critical-request-chains].title"],
+      "core/audits/critical-request-chains.js | description": ["audits[critical-request-chains].description"],
+      "core/audits/redirects.js | title": ["audits.redirects.title"],
+      "core/audits/redirects.js | description": ["audits.redirects.description"],
+      "core/audits/mainthread-work-breakdown.js | title": ["audits[mainthread-work-breakdown].title"],
+      "core/audits/mainthread-work-breakdown.js | description": ["audits[mainthread-work-breakdown].description"],
+      "core/audits/bootup-time.js | title": ["audits[bootup-time].title"],
+      "core/audits/bootup-time.js | description": ["audits[bootup-time].description"],
+      "core/audits/uses-rel-preconnect.js | title": ["audits[uses-rel-preconnect].title"],
+      "core/audits/uses-rel-preconnect.js | description": ["audits[uses-rel-preconnect].description"],
+      "core/audits/font-display.js | title": ["audits[font-display].title"],
+      "core/audits/font-display.js | description": ["audits[font-display].description"],
+      "core/audits/network-rtt.js | title": ["audits[network-rtt].title"],
+      "core/audits/network-rtt.js | description": ["audits[network-rtt].description"],
+      "core/audits/network-server-latency.js | title": ["audits[network-server-latency].title"],
+      "core/audits/network-server-latency.js | description": ["audits[network-server-latency].description"],
+      "core/audits/third-party-summary.js | title": ["audits[third-party-summary].title"],
+      "core/audits/third-party-summary.js | description": ["audits[third-party-summary].description"],
+      "core/audits/third-party-facades.js | title": ["audits[third-party-facades].title"],
+      "core/audits/third-party-facades.js | description": ["audits[third-party-facades].description"],
+      "core/audits/largest-contentful-paint-element.js | title": ["audits[largest-contentful-paint-element].title"],
       "core/audits/largest-contentful-paint-element.js | description": [
         "audits[largest-contentful-paint-element].description"
       ],
-      "core/audits/lcp-lazy-loaded.js | title": [
-        "audits[lcp-lazy-loaded].title"
-      ],
-      "core/audits/lcp-lazy-loaded.js | description": [
-        "audits[lcp-lazy-loaded].description"
-      ],
-      "core/audits/layout-shifts.js | title": [
-        "audits[layout-shifts].title"
-      ],
-      "core/audits/layout-shifts.js | description": [
-        "audits[layout-shifts].description"
-      ],
-      "core/audits/long-tasks.js | title": [
-        "audits[long-tasks].title"
-      ],
-      "core/audits/long-tasks.js | description": [
-        "audits[long-tasks].description"
-      ],
-      "core/audits/non-composited-animations.js | title": [
-        "audits[non-composited-animations].title"
-      ],
-      "core/audits/non-composited-animations.js | description": [
-        "audits[non-composited-animations].description"
-      ],
-      "core/audits/unsized-images.js | title": [
-        "audits[unsized-images].title"
-      ],
-      "core/audits/unsized-images.js | description": [
-        "audits[unsized-images].description"
-      ],
-      "core/audits/prioritize-lcp-image.js | title": [
-        "audits[prioritize-lcp-image].title"
-      ],
-      "core/audits/prioritize-lcp-image.js | description": [
-        "audits[prioritize-lcp-image].description"
-      ],
-      "core/audits/byte-efficiency/uses-long-cache-ttl.js | title": [
-        "audits[uses-long-cache-ttl].title"
-      ],
-      "core/audits/byte-efficiency/uses-long-cache-ttl.js | description": [
-        "audits[uses-long-cache-ttl].description"
-      ],
-      "core/audits/byte-efficiency/total-byte-weight.js | title": [
-        "audits[total-byte-weight].title"
-      ],
-      "core/audits/byte-efficiency/total-byte-weight.js | description": [
-        "audits[total-byte-weight].description"
-      ],
-      "core/audits/byte-efficiency/offscreen-images.js | title": [
-        "audits[offscreen-images].title"
-      ],
-      "core/audits/byte-efficiency/offscreen-images.js | description": [
-        "audits[offscreen-images].description"
-      ],
-      "core/audits/byte-efficiency/render-blocking-resources.js | title": [
-        "audits[render-blocking-resources].title"
-      ],
+      "core/audits/lcp-lazy-loaded.js | title": ["audits[lcp-lazy-loaded].title"],
+      "core/audits/lcp-lazy-loaded.js | description": ["audits[lcp-lazy-loaded].description"],
+      "core/audits/layout-shifts.js | title": ["audits[layout-shifts].title"],
+      "core/audits/layout-shifts.js | description": ["audits[layout-shifts].description"],
+      "core/audits/long-tasks.js | title": ["audits[long-tasks].title"],
+      "core/audits/long-tasks.js | description": ["audits[long-tasks].description"],
+      "core/audits/non-composited-animations.js | title": ["audits[non-composited-animations].title"],
+      "core/audits/non-composited-animations.js | description": ["audits[non-composited-animations].description"],
+      "core/audits/unsized-images.js | title": ["audits[unsized-images].title"],
+      "core/audits/unsized-images.js | description": ["audits[unsized-images].description"],
+      "core/audits/prioritize-lcp-image.js | title": ["audits[prioritize-lcp-image].title"],
+      "core/audits/prioritize-lcp-image.js | description": ["audits[prioritize-lcp-image].description"],
+      "core/audits/byte-efficiency/uses-long-cache-ttl.js | title": ["audits[uses-long-cache-ttl].title"],
+      "core/audits/byte-efficiency/uses-long-cache-ttl.js | description": ["audits[uses-long-cache-ttl].description"],
+      "core/audits/byte-efficiency/total-byte-weight.js | title": ["audits[total-byte-weight].title"],
+      "core/audits/byte-efficiency/total-byte-weight.js | description": ["audits[total-byte-weight].description"],
+      "core/audits/byte-efficiency/offscreen-images.js | title": ["audits[offscreen-images].title"],
+      "core/audits/byte-efficiency/offscreen-images.js | description": ["audits[offscreen-images].description"],
+      "core/audits/byte-efficiency/render-blocking-resources.js | title": ["audits[render-blocking-resources].title"],
       "core/audits/byte-efficiency/render-blocking-resources.js | description": [
         "audits[render-blocking-resources].description"
       ],
-      "core/audits/byte-efficiency/unminified-css.js | title": [
-        "audits[unminified-css].title"
-      ],
-      "core/audits/byte-efficiency/unminified-css.js | description": [
-        "audits[unminified-css].description"
-      ],
-      "core/audits/byte-efficiency/unminified-javascript.js | title": [
-        "audits[unminified-javascript].title"
-      ],
+      "core/audits/byte-efficiency/unminified-css.js | title": ["audits[unminified-css].title"],
+      "core/audits/byte-efficiency/unminified-css.js | description": ["audits[unminified-css].description"],
+      "core/audits/byte-efficiency/unminified-javascript.js | title": ["audits[unminified-javascript].title"],
       "core/audits/byte-efficiency/unminified-javascript.js | description": [
         "audits[unminified-javascript].description"
       ],
-      "core/audits/byte-efficiency/unused-css-rules.js | title": [
-        "audits[unused-css-rules].title"
-      ],
-      "core/audits/byte-efficiency/unused-css-rules.js | description": [
-        "audits[unused-css-rules].description"
-      ],
-      "core/audits/byte-efficiency/unused-javascript.js | title": [
-        "audits[unused-javascript].title"
-      ],
-      "core/audits/byte-efficiency/unused-javascript.js | description": [
-        "audits[unused-javascript].description"
-      ],
-      "core/audits/byte-efficiency/modern-image-formats.js | title": [
-        "audits[modern-image-formats].title"
-      ],
-      "core/audits/byte-efficiency/modern-image-formats.js | description": [
-        "audits[modern-image-formats].description"
-      ],
-      "core/audits/byte-efficiency/uses-optimized-images.js | title": [
-        "audits[uses-optimized-images].title"
-      ],
+      "core/audits/byte-efficiency/unused-css-rules.js | title": ["audits[unused-css-rules].title"],
+      "core/audits/byte-efficiency/unused-css-rules.js | description": ["audits[unused-css-rules].description"],
+      "core/audits/byte-efficiency/unused-javascript.js | title": ["audits[unused-javascript].title"],
+      "core/audits/byte-efficiency/unused-javascript.js | description": ["audits[unused-javascript].description"],
+      "core/audits/byte-efficiency/modern-image-formats.js | title": ["audits[modern-image-formats].title"],
+      "core/audits/byte-efficiency/modern-image-formats.js | description": ["audits[modern-image-formats].description"],
+      "core/audits/byte-efficiency/uses-optimized-images.js | title": ["audits[uses-optimized-images].title"],
       "core/audits/byte-efficiency/uses-optimized-images.js | description": [
         "audits[uses-optimized-images].description"
       ],
-      "core/audits/byte-efficiency/uses-text-compression.js | title": [
-        "audits[uses-text-compression].title"
-      ],
+      "core/audits/byte-efficiency/uses-text-compression.js | title": ["audits[uses-text-compression].title"],
       "core/audits/byte-efficiency/uses-text-compression.js | description": [
         "audits[uses-text-compression].description"
       ],
-      "core/audits/byte-efficiency/uses-responsive-images.js | title": [
-        "audits[uses-responsive-images].title"
-      ],
+      "core/audits/byte-efficiency/uses-responsive-images.js | title": ["audits[uses-responsive-images].title"],
       "core/audits/byte-efficiency/uses-responsive-images.js | description": [
         "audits[uses-responsive-images].description"
       ],
-      "core/audits/byte-efficiency/efficient-animated-content.js | title": [
-        "audits[efficient-animated-content].title"
-      ],
+      "core/audits/byte-efficiency/efficient-animated-content.js | title": ["audits[efficient-animated-content].title"],
       "core/audits/byte-efficiency/efficient-animated-content.js | description": [
         "audits[efficient-animated-content].description"
       ],
-      "core/audits/byte-efficiency/duplicated-javascript.js | title": [
-        "audits[duplicated-javascript].title"
-      ],
+      "core/audits/byte-efficiency/duplicated-javascript.js | title": ["audits[duplicated-javascript].title"],
       "core/audits/byte-efficiency/duplicated-javascript.js | description": [
         "audits[duplicated-javascript].description"
       ],
-      "core/audits/byte-efficiency/legacy-javascript.js | title": [
-        "audits[legacy-javascript].title"
-      ],
-      "core/audits/byte-efficiency/legacy-javascript.js | description": [
-        "audits[legacy-javascript].description"
-      ],
-      "core/audits/dobetterweb/dom-size.js | title": [
-        "audits[dom-size].title"
-      ],
-      "core/audits/dobetterweb/dom-size.js | description": [
-        "audits[dom-size].description"
-      ],
-      "core/audits/dobetterweb/no-document-write.js | title": [
-        "audits[no-document-write].title"
-      ],
-      "core/audits/dobetterweb/no-document-write.js | description": [
-        "audits[no-document-write].description"
-      ],
-      "core/audits/dobetterweb/uses-http2.js | title": [
-        "audits[uses-http2].title"
-      ],
-      "core/audits/dobetterweb/uses-http2.js | description": [
-        "audits[uses-http2].description"
-      ],
-      "core/audits/dobetterweb/uses-passive-event-listeners.js | title": [
-        "audits[uses-passive-event-listeners].title"
-      ],
+      "core/audits/byte-efficiency/legacy-javascript.js | title": ["audits[legacy-javascript].title"],
+      "core/audits/byte-efficiency/legacy-javascript.js | description": ["audits[legacy-javascript].description"],
+      "core/audits/dobetterweb/dom-size.js | title": ["audits[dom-size].title"],
+      "core/audits/dobetterweb/dom-size.js | description": ["audits[dom-size].description"],
+      "core/audits/dobetterweb/no-document-write.js | title": ["audits[no-document-write].title"],
+      "core/audits/dobetterweb/no-document-write.js | description": ["audits[no-document-write].description"],
+      "core/audits/dobetterweb/uses-http2.js | title": ["audits[uses-http2].title"],
+      "core/audits/dobetterweb/uses-http2.js | description": ["audits[uses-http2].description"],
+      "core/audits/dobetterweb/uses-passive-event-listeners.js | title": ["audits[uses-passive-event-listeners].title"],
       "core/audits/dobetterweb/uses-passive-event-listeners.js | description": [
         "audits[uses-passive-event-listeners].description"
       ],
-      "core/audits/bf-cache.js | title": [
-        "audits[bf-cache].title"
-      ],
-      "core/audits/bf-cache.js | description": [
-        "audits[bf-cache].description"
-      ],
-      "node_modules/@paulirish/trace_engine/models/trace/insights/Cache.js | title": [
-        "audits[cache-insight].title"
-      ],
+      "core/audits/bf-cache.js | title": ["audits[bf-cache].title"],
+      "core/audits/bf-cache.js | description": ["audits[bf-cache].description"],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/Cache.js | title": ["audits[cache-insight].title"],
       "node_modules/@paulirish/trace_engine/models/trace/insights/Cache.js | description": [
         "audits[cache-insight].description"
       ],
@@ -2746,102 +2525,52 @@
       "node_modules/@paulirish/trace_engine/models/trace/insights/Viewport.js | description": [
         "audits[viewport-insight].description"
       ],
-      "core/config/default-config.js | performanceCategoryTitle": [
-        "categories.performance.title"
-      ],
-      "core/config/default-config.js | metricGroupTitle": [
-        "categoryGroups.metrics.title"
-      ],
-      "core/config/default-config.js | insightsGroupTitle": [
-        "categoryGroups.insights.title"
-      ],
-      "core/config/default-config.js | insightsGroupDescription": [
-        "categoryGroups.insights.description"
-      ],
-      "core/config/default-config.js | diagnosticsGroupTitle": [
-        "categoryGroups.diagnostics.title"
-      ],
-      "core/config/default-config.js | diagnosticsGroupDescription": [
-        "categoryGroups.diagnostics.description"
-      ],
-      "core/config/default-config.js | a11yBestPracticesGroupTitle": [
-        "categoryGroups[a11y-best-practices].title"
-      ],
+      "core/config/default-config.js | performanceCategoryTitle": ["categories.performance.title"],
+      "core/config/default-config.js | metricGroupTitle": ["categoryGroups.metrics.title"],
+      "core/config/default-config.js | insightsGroupTitle": ["categoryGroups.insights.title"],
+      "core/config/default-config.js | insightsGroupDescription": ["categoryGroups.insights.description"],
+      "core/config/default-config.js | diagnosticsGroupTitle": ["categoryGroups.diagnostics.title"],
+      "core/config/default-config.js | diagnosticsGroupDescription": ["categoryGroups.diagnostics.description"],
+      "core/config/default-config.js | a11yBestPracticesGroupTitle": ["categoryGroups[a11y-best-practices].title"],
       "core/config/default-config.js | a11yBestPracticesGroupDescription": [
         "categoryGroups[a11y-best-practices].description"
       ],
-      "core/config/default-config.js | a11yColorContrastGroupTitle": [
-        "categoryGroups[a11y-color-contrast].title"
-      ],
+      "core/config/default-config.js | a11yColorContrastGroupTitle": ["categoryGroups[a11y-color-contrast].title"],
       "core/config/default-config.js | a11yColorContrastGroupDescription": [
         "categoryGroups[a11y-color-contrast].description"
       ],
-      "core/config/default-config.js | a11yNamesLabelsGroupTitle": [
-        "categoryGroups[a11y-names-labels].title"
-      ],
+      "core/config/default-config.js | a11yNamesLabelsGroupTitle": ["categoryGroups[a11y-names-labels].title"],
       "core/config/default-config.js | a11yNamesLabelsGroupDescription": [
         "categoryGroups[a11y-names-labels].description"
       ],
-      "core/config/default-config.js | a11yNavigationGroupTitle": [
-        "categoryGroups[a11y-navigation].title"
-      ],
-      "core/config/default-config.js | a11yNavigationGroupDescription": [
-        "categoryGroups[a11y-navigation].description"
-      ],
-      "core/config/default-config.js | a11yAriaGroupTitle": [
-        "categoryGroups[a11y-aria].title"
-      ],
-      "core/config/default-config.js | a11yAriaGroupDescription": [
-        "categoryGroups[a11y-aria].description"
-      ],
-      "core/config/default-config.js | a11yLanguageGroupTitle": [
-        "categoryGroups[a11y-language].title"
-      ],
-      "core/config/default-config.js | a11yLanguageGroupDescription": [
-        "categoryGroups[a11y-language].description"
-      ],
-      "core/config/default-config.js | a11yAudioVideoGroupTitle": [
-        "categoryGroups[a11y-audio-video].title"
-      ],
+      "core/config/default-config.js | a11yNavigationGroupTitle": ["categoryGroups[a11y-navigation].title"],
+      "core/config/default-config.js | a11yNavigationGroupDescription": ["categoryGroups[a11y-navigation].description"],
+      "core/config/default-config.js | a11yAriaGroupTitle": ["categoryGroups[a11y-aria].title"],
+      "core/config/default-config.js | a11yAriaGroupDescription": ["categoryGroups[a11y-aria].description"],
+      "core/config/default-config.js | a11yLanguageGroupTitle": ["categoryGroups[a11y-language].title"],
+      "core/config/default-config.js | a11yLanguageGroupDescription": ["categoryGroups[a11y-language].description"],
+      "core/config/default-config.js | a11yAudioVideoGroupTitle": ["categoryGroups[a11y-audio-video].title"],
       "core/config/default-config.js | a11yAudioVideoGroupDescription": [
         "categoryGroups[a11y-audio-video].description"
       ],
-      "core/config/default-config.js | a11yTablesListsVideoGroupTitle": [
-        "categoryGroups[a11y-tables-lists].title"
-      ],
+      "core/config/default-config.js | a11yTablesListsVideoGroupTitle": ["categoryGroups[a11y-tables-lists].title"],
       "core/config/default-config.js | a11yTablesListsVideoGroupDescription": [
         "categoryGroups[a11y-tables-lists].description"
       ],
-      "core/config/default-config.js | seoMobileGroupTitle": [
-        "categoryGroups[seo-mobile].title"
-      ],
-      "core/config/default-config.js | seoMobileGroupDescription": [
-        "categoryGroups[seo-mobile].description"
-      ],
-      "core/config/default-config.js | seoContentGroupTitle": [
-        "categoryGroups[seo-content].title"
-      ],
-      "core/config/default-config.js | seoContentGroupDescription": [
-        "categoryGroups[seo-content].description"
-      ],
-      "core/config/default-config.js | seoCrawlingGroupTitle": [
-        "categoryGroups[seo-crawl].title"
-      ],
-      "core/config/default-config.js | seoCrawlingGroupDescription": [
-        "categoryGroups[seo-crawl].description"
-      ],
+      "core/config/default-config.js | seoMobileGroupTitle": ["categoryGroups[seo-mobile].title"],
+      "core/config/default-config.js | seoMobileGroupDescription": ["categoryGroups[seo-mobile].description"],
+      "core/config/default-config.js | seoContentGroupTitle": ["categoryGroups[seo-content].title"],
+      "core/config/default-config.js | seoContentGroupDescription": ["categoryGroups[seo-content].description"],
+      "core/config/default-config.js | seoCrawlingGroupTitle": ["categoryGroups[seo-crawl].title"],
+      "core/config/default-config.js | seoCrawlingGroupDescription": ["categoryGroups[seo-crawl].description"],
       "core/config/default-config.js | bestPracticesTrustSafetyGroupTitle": [
         "categoryGroups[best-practices-trust-safety].title"
       ],
-      "core/config/default-config.js | bestPracticesUXGroupTitle": [
-        "categoryGroups[best-practices-ux].title"
-      ],
+      "core/config/default-config.js | bestPracticesUXGroupTitle": ["categoryGroups[best-practices-ux].title"],
       "core/config/default-config.js | bestPracticesBrowserCompatGroupTitle": [
         "categoryGroups[best-practices-browser-compat].title"
       ],
-      "core/config/default-config.js | bestPracticesGeneralGroupTitle": [
-        "categoryGroups[best-practices-general].title"
-      ]
+      "core/config/default-config.js | bestPracticesGeneralGroupTitle": ["categoryGroups[best-practices-general].title"]
     }
   }
 }

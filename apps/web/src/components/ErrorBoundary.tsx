@@ -15,7 +15,7 @@ interface State {
 
 /**
  * React Error Boundary для перехвата ошибок в дереве компонентов
- * 
+ *
  * @example
  * <ErrorBoundary fallback={<CustomError />}>
  *   <App />
@@ -104,11 +104,10 @@ export class ErrorBoundary extends Component<Props, State> {
           }}
         >
           <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
-          <h2 style={{ color: '#d32f2f', marginBottom: '10px' }}>
-            Что-то пошло не так
-          </h2>
+          <h2 style={{ color: '#d32f2f', marginBottom: '10px' }}>Что-то пошло не так</h2>
           <p style={{ color: '#666', marginBottom: '30px', lineHeight: '1.6' }}>
-            Произошла непредвиденная ошибка. Мы уже получили уведомление и работаем над исправлением.
+            Произошла непредвиденная ошибка. Мы уже получили уведомление и работаем над
+            исправлением.
           </p>
 
           {process.env.NODE_ENV !== 'production' && this.state.error && (
@@ -236,4 +235,3 @@ declare global {
     };
   }
 }
-

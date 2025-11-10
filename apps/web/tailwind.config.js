@@ -1,9 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    './src/**/*.{html,js,ts,tsx}',
-    './index.html'
-  ],
+  content: ['./src/**/*.{html,js,ts,tsx}', './index.html'],
   theme: {
     extend: {
       colors: {
@@ -15,10 +12,10 @@ export default {
           warning: '#d97706',
           error: '#dc2626',
           surface: '#f8fafc',
-          'surface-dark': '#1e293b'
-        }
-      }
+          'surface-dark': '#1e293b',
+        },
+      },
     },
   },
   plugins: [],
-}
+};

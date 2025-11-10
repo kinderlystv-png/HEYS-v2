@@ -57,27 +57,26 @@ function showHelp() {
 async function measureCommand() {
   try {
     log('📊 Измерение метрик производительности...', 'blue');
-    
+
     // Измеряем метрики из файловой системы
     const metrics = await measureFromFileSystem();
-    
+
     log('✅ Метрики измерены:', 'green');
     log(`📦 Общий размер: ${formatBytes(metrics.totalSize)}`, 'white');
     log(`🗜️  Gzip размер: ${formatBytes(metrics.gzippedSize)}`, 'white');
     log(`📁 Количество чанков: ${Object.keys(metrics.chunkSizes).length}`, 'white');
-    
+
     // Показываем топ-5 самых больших чанков
     const sortedChunks = Object.entries(metrics.chunkSizes)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5);
-    
+
     if (sortedChunks.length > 0) {
       log('🔝 Крупнейшие чанки:', 'yellow');
       sortedChunks.forEach(([name, size]) => {
         log(`   ${name}: ${formatBytes(size)}`, 'white');
       });
     }
-    
   } catch (error) {
     log(`❌ Ошибка при измерении: ${error.message}`, 'red');
     process.exit(1);
@@ -103,13 +102,12 @@ async function baselineCommand(version, score) {
   try {
     // Сначала измеряем метрики
     await measureFromFileSystem();
-    
+
     // Сохраняем baseline
     bundleAnalyzer.saveBaseline(version, lighthouseScore);
-    
+
     log(`✅ Baseline сохранен для версии ${version}`, 'green');
     log(`📊 Lighthouse Score: ${lighthouseScore}`, 'white');
-    
   } catch (error) {
     log(`❌ Ошибка при сохранении baseline: ${error.message}`, 'red');
     process.exit(1);
@@ -123,9 +121,9 @@ async function compareCommand() {
   try {
     bundleAnalyzer.loadFromStorage();
     await measureFromFileSystem();
-    
+
     const comparison = bundleAnalyzer.compareWithBaseline();
-    
+
     if (!comparison) {
       log('⚠️  Нет baseline для сравнения', 'yellow');
       log('   Создайте baseline командой: baseline <version> <score>', 'cyan');
@@ -134,20 +132,19 @@ async function compareCommand() {
 
     log('📈 Сравнение с baseline:', 'blue');
     log('');
-    
+
     const improvement = comparison.improvement ? '✅ Улучшение' : '❌ Ухудшение';
     log(improvement, comparison.improvement ? 'green' : 'red');
     log('');
-    
+
     // Показываем детали изменений
     Object.entries(comparison.changes).forEach(([metric, data]) => {
       const symbol = data.change < 0 ? '⬇️' : '⬆️';
       const color = data.change < 0 ? 'green' : 'red';
       const changeStr = `${data.change > 0 ? '+' : ''}${data.change.toFixed(1)}%`;
-      
+
       log(`${symbol} ${metric}: ${changeStr}`, color);
     });
-    
   } catch (error) {
     log(`❌ Ошибка при сравнении: ${error.message}`, 'red');
     process.exit(1);
@@ -161,13 +158,13 @@ async function reportCommand() {
   try {
     bundleAnalyzer.loadFromStorage();
     await measureFromFileSystem();
-    
+
     const report = bundleAnalyzer.generateReport();
-    
+
     log('📋 Отчет о производительности', 'cyan');
     log('==============================', 'cyan');
     log('');
-    
+
     // Текущие метрики
     if (report.current) {
       log('📊 Текущие метрики:', 'blue');
@@ -176,7 +173,7 @@ async function reportCommand() {
       log(`   Chunks: ${Object.keys(report.current.chunkSizes).length}`, 'white');
       log('');
     }
-    
+
     // Baseline
     if (report.baseline) {
       log('📌 Последний baseline:', 'blue');
@@ -186,7 +183,7 @@ async function reportCommand() {
       log(`   Grade: ${report.baseline.performanceGrade}`, 'white');
       log('');
     }
-    
+
     // Сравнение
     if (report.comparison) {
       log('📈 Сравнение:', 'blue');
@@ -194,21 +191,20 @@ async function reportCommand() {
       log(`   Status: ${status}`, report.comparison.improvement ? 'green' : 'red');
       log('');
     }
-    
+
     // Рекомендации
     if (report.recommendations.length > 0) {
       log('💡 Рекомендации:', 'yellow');
-      report.recommendations.forEach(rec => {
+      report.recommendations.forEach((rec) => {
         log(`   ${rec}`, 'white');
       });
       log('');
     }
-    
+
     // Сохраняем отчет в файл
     const reportPath = 'performance-report.json';
     fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
     log(`💾 Отчет сохранен: ${reportPath}`, 'green');
-    
   } catch (error) {
     log(`❌ Ошибка при создании отчета: ${error.message}`, 'red');
     process.exit(1);
@@ -227,10 +223,10 @@ async function analyzeCommand(statsPath = 'dist/stats.json') {
 
   try {
     log('🔍 Анализ webpack stats...', 'blue');
-    
+
     const statsData = JSON.parse(fs.readFileSync(statsPath, 'utf8'));
     const analysis = analyzeWebpackStats(statsData);
-    
+
     log('✅ Анализ завершен:', 'green');
     log('');
     log('📦 Статистика bundle:', 'yellow');
@@ -239,24 +235,23 @@ async function analyzeCommand(statsPath = 'dist/stats.json') {
     log(`   Количество чанков: ${analysis.chunksCount}`, 'white');
     log(`   Количество модулей: ${analysis.modulesCount}`, 'white');
     log('');
-    
+
     // Топ чанки
     if (analysis.topChunks.length > 0) {
       log('🔝 Крупнейшие чанки:', 'yellow');
-      analysis.topChunks.forEach(chunk => {
+      analysis.topChunks.forEach((chunk) => {
         log(`   ${chunk.name}: ${formatBytes(chunk.size)}`, 'white');
       });
       log('');
     }
-    
+
     // Рекомендации
     if (analysis.recommendations.length > 0) {
       log('💡 Рекомендации:', 'yellow');
-      analysis.recommendations.forEach(rec => {
+      analysis.recommendations.forEach((rec) => {
         log(`   ${rec}`, 'white');
       });
     }
-    
   } catch (error) {
     log(`❌ Ошибка при анализе: ${error.message}`, 'red');
     process.exit(1);
@@ -270,7 +265,7 @@ function historyCommand() {
   try {
     bundleAnalyzer.loadFromStorage();
     const history = bundleAnalyzer.baselineHistory || [];
-    
+
     if (history.length === 0) {
       log('📝 История baseline пуста', 'yellow');
       return;
@@ -278,7 +273,7 @@ function historyCommand() {
 
     log('📚 История baseline:', 'cyan');
     log('');
-    
+
     history.forEach((baseline, index) => {
       const date = new Date(baseline.timestamp).toLocaleDateString();
       log(`${index + 1}. ${baseline.version} (${date})`, 'white');
@@ -286,7 +281,6 @@ function historyCommand() {
       log(`   Size: ${formatBytes(baseline.metrics.totalSize)}`, 'white');
       log('');
     });
-    
   } catch (error) {
     log(`❌ Ошибка при загрузке истории: ${error.message}`, 'red');
     process.exit(1);
@@ -307,17 +301,20 @@ async function measureFromFileSystem() {
       // Обрабатываем паттерны с *
       const basePath = distPattern.split('*')[0];
       if (fs.existsSync(basePath)) {
-        const dirs = fs.readdirSync(basePath, { withFileTypes: true })
-          .filter(dirent => dirent.isDirectory())
-          .map(dirent => path.join(basePath, dirent.name, 'dist'));
-        
+        const dirs = fs
+          .readdirSync(basePath, { withFileTypes: true })
+          .filter((dirent) => dirent.isDirectory())
+          .map((dirent) => path.join(basePath, dirent.name, 'dist'));
+
         for (const dir of dirs) {
           if (fs.existsSync(dir)) {
             const files = fs.readdirSync(dir);
-            files.forEach(file => {
+            files.forEach((file) => {
               const filePath = path.join(dir, file);
-              if (fs.statSync(filePath).isFile() && 
-                  (file.endsWith('.js') || file.endsWith('.css'))) {
+              if (
+                fs.statSync(filePath).isFile() &&
+                (file.endsWith('.js') || file.endsWith('.css'))
+              ) {
                 const size = fs.statSync(filePath).size;
                 chunkSizes[file] = size;
                 totalSize += size;
@@ -330,10 +327,9 @@ async function measureFromFileSystem() {
       // Обычные пути
       if (fs.existsSync(distPattern)) {
         const files = fs.readdirSync(distPattern);
-        files.forEach(file => {
+        files.forEach((file) => {
           const filePath = path.join(distPattern, file);
-          if (fs.statSync(filePath).isFile() && 
-              (file.endsWith('.js') || file.endsWith('.css'))) {
+          if (fs.statSync(filePath).isFile() && (file.endsWith('.js') || file.endsWith('.css'))) {
             const size = fs.statSync(filePath).size;
             chunkSizes[file] = size;
             totalSize += size;
@@ -368,7 +364,7 @@ function analyzeWebpackStats(statsData) {
   let totalSize = 0;
   const topChunks = [];
 
-  assets.forEach(asset => {
+  assets.forEach((asset) => {
     if (asset.name.endsWith('.js') || asset.name.endsWith('.css')) {
       totalSize += asset.size;
       topChunks.push({ name: asset.name, size: asset.size });
@@ -380,13 +376,15 @@ function analyzeWebpackStats(statsData) {
 
   // Генерируем рекомендации
   const recommendations = [];
-  
+
   if (totalSize > 500000) {
     recommendations.push('📦 Bundle размер превышает 500KB - рассмотрите code splitting');
   }
-  
+
   if (topChunks.length > 0 && topChunks[0].size > 100000) {
-    recommendations.push(`🔧 Крупный чанк найден: ${topChunks[0].name} (${formatBytes(topChunks[0].size)})`);
+    recommendations.push(
+      `🔧 Крупный чанк найден: ${topChunks[0].name} (${formatBytes(topChunks[0].size)})`,
+    );
   }
 
   return {

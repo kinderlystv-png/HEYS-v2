@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { execSync } from 'child_process';
-import { existsSync, statSync, readdirSync, writeFileSync, readFileSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 interface BundleStats {
@@ -60,17 +60,17 @@ function performDetailedAnalysis(): DetailedBundleAnalysis {
     chunkSizes: {},
     dependencies: {},
     timestamp: new Date().toISOString(),
-    recommendations: []
+    recommendations: [],
   };
 
   // Анализируем dist директорию в веб-приложении
   const distPath = join(process.cwd(), 'apps', 'web', 'dist');
   if (existsSync(distPath)) {
     analysis.totalSize = getDirectorySize(distPath);
-    
+
     // Анализируем отдельные чанки
     const files = getJSFiles(distPath);
-    files.forEach(file => {
+    files.forEach((file) => {
       const filePath = join(distPath, file);
       const size = statSync(filePath).size;
       analysis.chunkSizes[file] = size;
@@ -81,9 +81,9 @@ function performDetailedAnalysis(): DetailedBundleAnalysis {
   const packageJsonPath = join(process.cwd(), 'package.json');
   if (existsSync(packageJsonPath)) {
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-    const deps = { ...packageJson.dependencies || {}, ...packageJson.devDependencies || {} };
-    
-    Object.keys(deps).forEach(dep => {
+    const deps = { ...(packageJson.dependencies || {}), ...(packageJson.devDependencies || {}) };
+
+    Object.keys(deps).forEach((dep) => {
       const depPath = join(process.cwd(), 'node_modules', dep);
       if (existsSync(depPath)) {
         analysis.dependencies[dep] = getDirectorySize(depPath);
@@ -99,17 +99,17 @@ function performDetailedAnalysis(): DetailedBundleAnalysis {
 
 function getJSFiles(dirPath: string): string[] {
   if (!existsSync(dirPath)) return [];
-  
+
   const files: string[] = [];
-  
+
   function scanDir(currentPath: string, relativePath = '') {
     const items = readdirSync(currentPath);
-    
+
     for (const item of items) {
       const fullPath = join(currentPath, item);
       const relativeFilePath = join(relativePath, item);
       const stat = statSync(fullPath);
-      
+
       if (stat.isDirectory()) {
         scanDir(fullPath, relativeFilePath);
       } else if (item.endsWith('.js') || item.endsWith('.mjs') || item.endsWith('.css')) {
@@ -117,7 +117,7 @@ function getJSFiles(dirPath: string): string[] {
       }
     }
   }
-  
+
   scanDir(dirPath);
   return files;
 }
@@ -125,7 +125,7 @@ function getJSFiles(dirPath: string): string[] {
 function generateRecommendations(analysis: DetailedBundleAnalysis): string[] {
   const recommendations: string[] = [];
   const totalSizeMB = analysis.totalSize / 1024 / 1024;
-  
+
   // Анализ общего размера
   if (totalSizeMB > 2) {
     recommendations.push('🚨 Bundle слишком большой (>2MB) - критично нужен code splitting');
@@ -134,18 +134,21 @@ function generateRecommendations(analysis: DetailedBundleAnalysis): string[] {
   }
 
   // Анализ чанков
-  const largeChunks = Object.entries(analysis.chunkSizes).filter(([,size]) => size > 500 * 1024);
+  const largeChunks = Object.entries(analysis.chunkSizes).filter(([, size]) => size > 500 * 1024);
   if (largeChunks.length > 0) {
     recommendations.push(`📦 Найдено ${largeChunks.length} чанков >500KB - разделите их`);
   }
 
   // Анализ зависимостей
   const heavyDeps = Object.entries(analysis.dependencies)
-    .filter(([,size]) => size > 10 * 1024 * 1024)
-    .sort(([,a], [,b]) => b - a);
-    
+    .filter(([, size]) => size > 10 * 1024 * 1024)
+    .sort(([, a], [, b]) => b - a);
+
   if (heavyDeps.length > 0) {
-    const topHeavy = heavyDeps.slice(0, 3).map(([name]) => name).join(', ');
+    const topHeavy = heavyDeps
+      .slice(0, 3)
+      .map(([name]) => name)
+      .join(', ');
     recommendations.push(`🔗 Тяжелые зависимости: ${topHeavy} - рассмотрите альтернативы`);
   }
 
@@ -180,11 +183,11 @@ function saveAnalysisReport(analysis: DetailedBundleAnalysis) {
 function generateHumanReadableReport(analysis: DetailedBundleAnalysis): string {
   const totalSizeMB = (analysis.totalSize / 1024 / 1024).toFixed(2);
   const largestChunks = Object.entries(analysis.chunkSizes)
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 10);
-  
+
   const largestDeps = Object.entries(analysis.dependencies)
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 10);
 
   return `# Bundle Analysis Report
@@ -199,7 +202,7 @@ ${largestChunks.map(([name, size]) => `- **${name}**: ${formatBytes(size)}`).joi
 ${largestDeps.map(([name, size]) => `- **${name}**: ${formatBytes(size)}`).join('\n')}
 
 ## 💡 Recommendations
-${analysis.recommendations.map(rec => `- ${rec}`).join('\n')}
+${analysis.recommendations.map((rec) => `- ${rec}`).join('\n')}
 
 ## 🎯 Next Steps for Performance Sprint
 1. Implement tree shaking for unused code elimination
@@ -232,11 +235,13 @@ function analyzeBundles() {
   // Выводим результаты в консоль
   console.log(chalk.blue.bold('\n📦 CURRENT BUNDLE STATE:\n'));
   console.log(chalk.cyan(`📊 Total Size: ${formatBytes(detailedAnalysis.totalSize)}`));
-  console.log(chalk.cyan(`📁 Number of chunks: ${Object.keys(detailedAnalysis.chunkSizes).length}`));
+  console.log(
+    chalk.cyan(`📁 Number of chunks: ${Object.keys(detailedAnalysis.chunkSizes).length}`),
+  );
 
   // Показываем самые большие чанки
   const largestChunks = Object.entries(detailedAnalysis.chunkSizes)
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 5);
 
   console.log(chalk.blue.bold('\n📦 LARGEST CHUNKS:'));
@@ -246,13 +251,13 @@ function analyzeBundles() {
     console.log(
       chalk.cyan(`   ${name.padEnd(30)}`),
       chalk.yellow(`${formatBytes(size).padStart(10)}`),
-      chalk.gray(bar)
+      chalk.gray(bar),
     );
   });
 
   // Показываем самые тяжелые зависимости
   const heaviestDeps = Object.entries(detailedAnalysis.dependencies)
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 5);
 
   console.log(chalk.blue.bold('\n🔗 HEAVIEST DEPENDENCIES:'));
@@ -263,7 +268,7 @@ function analyzeBundles() {
 
   // Показываем рекомендации
   console.log(chalk.blue.bold('\n💡 OPTIMIZATION RECOMMENDATIONS:'));
-  detailedAnalysis.recommendations.forEach(rec => {
+  detailedAnalysis.recommendations.forEach((rec) => {
     console.log(chalk.yellow(`   ${rec}`));
   });
 
@@ -275,7 +280,9 @@ function analyzeBundles() {
   if (totalSizeMB > BUDGET_LIMIT_MB) {
     console.log(chalk.red(`❌ Over budget: ${totalSizeMB.toFixed(2)}MB > ${BUDGET_LIMIT_MB}MB`));
   } else {
-    console.log(chalk.green(`✅ Within budget: ${totalSizeMB.toFixed(2)}MB ≤ ${BUDGET_LIMIT_MB}MB`));
+    console.log(
+      chalk.green(`✅ Within budget: ${totalSizeMB.toFixed(2)}MB ≤ ${BUDGET_LIMIT_MB}MB`),
+    );
   }
 
   // Сохраняем детальный отчет
@@ -289,8 +296,10 @@ function analyzeBundles() {
   console.log(chalk.gray('   4. 📝 Set up Core Web Vitals monitoring'));
   console.log(chalk.gray('   5. 🎨 Extract critical CSS for above-the-fold content'));
 
-  console.log(chalk.green('\n✅ Baseline analysis complete! Check bundle-analysis/ for detailed reports.'));
-  
+  console.log(
+    chalk.green('\n✅ Baseline analysis complete! Check bundle-analysis/ for detailed reports.'),
+  );
+
   return detailedAnalysis;
 }
 

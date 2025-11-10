@@ -1,7 +1,7 @@
 /**
  * @fileoverview Advanced Data Encryption System
  * Enterprise-grade encryption for data at rest and in transit
- * 
+ *
  * Features:
  * - AES-256-GCM encryption for symmetric operations
  * - RSA-OAEP for asymmetric key exchange
@@ -9,7 +9,7 @@
  * - Field-level encryption for sensitive data
  * - Automatic key rotation and management
  * - Zero-knowledge encryption patterns
- * 
+ *
  * @version 2.0.0
  * @since Phase 2 Week 2
  */
@@ -32,13 +32,13 @@ export interface EncryptionConfig {
  * Encrypted data container
  */
 export interface EncryptedData {
-  data: string;           // Base64 encoded encrypted data
-  iv: string;             // Base64 encoded initialization vector
-  salt: string;           // Base64 encoded salt
-  tag?: string;           // Base64 encoded authentication tag (GCM mode)
-  algorithm: string;      // Algorithm used for encryption
-  timestamp: number;      // Encryption timestamp
-  keyVersion?: string;    // Key version for rotation
+  data: string; // Base64 encoded encrypted data
+  iv: string; // Base64 encoded initialization vector
+  salt: string; // Base64 encoded salt
+  tag?: string; // Base64 encoded authentication tag (GCM mode)
+  algorithm: string; // Algorithm used for encryption
+  timestamp: number; // Encryption timestamp
+  keyVersion?: string; // Key version for rotation
 }
 
 /**
@@ -57,7 +57,9 @@ export class AdvancedEncryptionService {
   private readonly keyCache: Map<string, CryptoKey> = new Map();
   private readonly keyRotationInterval: number = 24 * 60 * 60 * 1000; // 24 hours
   private currentKeyVersion: string = '1';
-  private static readonly baseLogger = getGlobalLogger().child({ component: 'AdvancedEncryptionService' });
+  private static readonly baseLogger = getGlobalLogger().child({
+    component: 'AdvancedEncryptionService',
+  });
   private readonly logger = AdvancedEncryptionService.baseLogger;
 
   constructor(config?: Partial<EncryptionConfig>) {
@@ -68,7 +70,7 @@ export class AdvancedEncryptionService {
       iterations: 100000,
       tagLength: 16,
       ivLength: 12,
-      ...config
+      ...config,
     };
 
     // Start automatic key rotation
@@ -86,10 +88,10 @@ export class AdvancedEncryptionService {
     return crypto.subtle.generateKey(
       {
         name: 'AES-GCM',
-        length: this.config.keyLength
+        length: this.config.keyLength,
       },
       true, // extractable
-      ['encrypt', 'decrypt']
+      ['encrypt', 'decrypt'],
     );
   }
 
@@ -99,20 +101,16 @@ export class AdvancedEncryptionService {
   async deriveKeyFromPassword(password: string, salt?: Uint8Array): Promise<CryptoKey> {
     const encoder = new TextEncoder();
     const passwordBuffer = encoder.encode(password);
-    
+
     // Generate salt if not provided
     if (!salt) {
       salt = crypto.getRandomValues(new Uint8Array(this.config.saltLength));
     }
 
     // Import password as raw key material
-    const keyMaterial = await crypto.subtle.importKey(
-      'raw',
-      passwordBuffer,
-      'PBKDF2',
-      false,
-      ['deriveKey']
-    );
+    const keyMaterial = await crypto.subtle.importKey('raw', passwordBuffer, 'PBKDF2', false, [
+      'deriveKey',
+    ]);
 
     // Derive key using PBKDF2
     return crypto.subtle.deriveKey(
@@ -120,15 +118,15 @@ export class AdvancedEncryptionService {
         name: 'PBKDF2',
         salt: salt as BufferSource,
         iterations: this.config.iterations,
-        hash: 'SHA-256'
+        hash: 'SHA-256',
       },
       keyMaterial,
       {
         name: 'AES-GCM',
-        length: this.config.keyLength
+        length: this.config.keyLength,
       },
       false, // not extractable
-      ['encrypt', 'decrypt']
+      ['encrypt', 'decrypt'],
     );
   }
 
@@ -160,10 +158,10 @@ export class AdvancedEncryptionService {
       {
         name: this.config.algorithm,
         iv,
-        tagLength: this.config.tagLength || 128
+        tagLength: this.config.tagLength || 128,
       },
       encryptionKey,
-      dataBuffer
+      dataBuffer,
     );
 
     // Extract encrypted data and tag (for GCM mode)
@@ -185,7 +183,7 @@ export class AdvancedEncryptionService {
       salt: salt ? this.arrayBufferToBase64(salt.buffer) : '',
       algorithm: this.config.algorithm,
       timestamp: Date.now(),
-      keyVersion: this.currentKeyVersion
+      keyVersion: this.currentKeyVersion,
     };
 
     if (tag) {
@@ -198,10 +196,14 @@ export class AdvancedEncryptionService {
   /**
    * Decrypt data with symmetric encryption
    */
-  async decryptData(encryptedData: EncryptedData, key?: CryptoKey, password?: string): Promise<string> {
+  async decryptData(
+    encryptedData: EncryptedData,
+    key?: CryptoKey,
+    password?: string,
+  ): Promise<string> {
     const iv = this.base64ToArrayBuffer(encryptedData.iv);
     const data = this.base64ToArrayBuffer(encryptedData.data);
-    
+
     // Reconstruct encrypted buffer (for GCM mode with tag)
     let encryptedBuffer: ArrayBuffer;
     if (encryptedData.tag && encryptedData.algorithm === 'AES-GCM') {
@@ -216,7 +218,7 @@ export class AdvancedEncryptionService {
 
     // Generate or derive key
     let decryptionKey: CryptoKey;
-    
+
     if (password) {
       const salt = this.base64ToArrayBuffer(encryptedData.salt);
       decryptionKey = await this.deriveKeyFromPassword(password, new Uint8Array(salt));
@@ -231,10 +233,10 @@ export class AdvancedEncryptionService {
       {
         name: encryptedData.algorithm,
         iv: new Uint8Array(iv),
-        tagLength: this.config.tagLength || 128
+        tagLength: this.config.tagLength || 128,
       },
       decryptionKey,
-      encryptedBuffer
+      encryptedBuffer,
     );
 
     const decoder = new TextDecoder();
@@ -250,15 +252,15 @@ export class AdvancedEncryptionService {
         name: 'RSA-OAEP',
         modulusLength: this.config.keyLength as 2048 | 4096,
         publicExponent: new Uint8Array([1, 0, 1]),
-        hash: 'SHA-256'
+        hash: 'SHA-256',
       },
       true, // extractable
-      ['encrypt', 'decrypt']
+      ['encrypt', 'decrypt'],
     );
 
     return {
       publicKey: keyPair.publicKey,
-      privateKey: keyPair.privateKey
+      privateKey: keyPair.privateKey,
     };
   }
 
@@ -271,10 +273,10 @@ export class AdvancedEncryptionService {
 
     const encryptedBuffer = await crypto.subtle.encrypt(
       {
-        name: 'RSA-OAEP'
+        name: 'RSA-OAEP',
       },
       publicKey,
-      dataBuffer
+      dataBuffer,
     );
 
     return this.arrayBufferToBase64(encryptedBuffer);
@@ -288,10 +290,10 @@ export class AdvancedEncryptionService {
 
     const decryptedBuffer = await crypto.subtle.decrypt(
       {
-        name: 'RSA-OAEP'
+        name: 'RSA-OAEP',
       },
       privateKey,
-      dataBuffer
+      dataBuffer,
     );
 
     const decoder = new TextDecoder();
@@ -305,7 +307,7 @@ export class AdvancedEncryptionService {
     obj: T,
     fieldsToEncrypt: (keyof T)[],
     key?: CryptoKey,
-    password?: string
+    password?: string,
   ): Promise<T & { _encrypted: string[] }> {
     const result = { ...obj, _encrypted: [] as string[] } as T & { _encrypted: string[] };
 
@@ -328,7 +330,7 @@ export class AdvancedEncryptionService {
   async decryptFields<T extends Record<string, unknown> & { _encrypted?: string[] }>(
     obj: T,
     key?: CryptoKey,
-    password?: string
+    password?: string,
   ): Promise<Omit<T, '_encrypted'>> {
     const result: Record<string, unknown> = { ...obj };
     const encryptedFields = Array.isArray(obj._encrypted) ? obj._encrypted : [];
@@ -338,7 +340,7 @@ export class AdvancedEncryptionService {
       if (currentValue && typeof currentValue === 'object') {
         const encryptedData = currentValue as EncryptedData;
         const decryptedValue = await this.decryptData(encryptedData, key, password);
-        
+
         try {
           // Try to parse as JSON first
           result[field] = JSON.parse(decryptedValue);
@@ -365,26 +367,20 @@ export class AdvancedEncryptionService {
    * Import key from JWK format
    */
   async importKey(keyData: JsonWebKey, algorithm: string): Promise<CryptoKey> {
-    const keyUsage: KeyUsage[] = algorithm === 'RSA-OAEP' 
-      ? ['encrypt', 'decrypt'] 
-      : ['encrypt', 'decrypt'];
+    const keyUsage: KeyUsage[] =
+      algorithm === 'RSA-OAEP' ? ['encrypt', 'decrypt'] : ['encrypt', 'decrypt'];
 
-    const algorithmConfig = algorithm === 'RSA-OAEP'
-      ? {
-          name: 'RSA-OAEP',
-          hash: 'SHA-256'
-        }
-      : {
-          name: 'AES-GCM'
-        };
+    const algorithmConfig =
+      algorithm === 'RSA-OAEP'
+        ? {
+            name: 'RSA-OAEP',
+            hash: 'SHA-256',
+          }
+        : {
+            name: 'AES-GCM',
+          };
 
-    return crypto.subtle.importKey(
-      'jwk',
-      keyData,
-      algorithmConfig,
-      true,
-      keyUsage
-    );
+    return crypto.subtle.importKey('jwk', keyData, algorithmConfig, true, keyUsage);
   }
 
   /**
@@ -402,7 +398,7 @@ export class AdvancedEncryptionService {
   private async rotateKeys(): Promise<void> {
     const newVersion = (parseInt(this.currentKeyVersion) + 1).toString();
     this.currentKeyVersion = newVersion;
-    
+
     // Clear old keys from cache
     this.keyCache.clear();
 
@@ -489,7 +485,7 @@ export class AdvancedEncryptionService {
       keyVersion: this.currentKeyVersion,
       cachedKeys: this.keyCache.size,
       algorithm: this.config.algorithm,
-      keyLength: this.config.keyLength
+      keyLength: this.config.keyLength,
     };
   }
 }
@@ -562,7 +558,7 @@ export const EncryptionUtils = {
     const combined = password + salt;
     const computedHash = await defaultEncryptionService.generateHash(combined);
     return computedHash === hash;
-  }
+  },
 };
 
 export default AdvancedEncryptionService;

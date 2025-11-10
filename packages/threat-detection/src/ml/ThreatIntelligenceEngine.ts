@@ -1,4 +1,11 @@
-import { ThreatIntelligence, IOCMatch, IOCType, SecurityEvent, ThreatActor, AttackPattern } from '../types';
+import {
+  AttackPattern,
+  IOCMatch,
+  IOCType,
+  SecurityEvent,
+  ThreatActor,
+  ThreatIntelligence,
+} from '../types';
 
 /**
  * Threat Intelligence Engine
@@ -11,11 +18,13 @@ export class ThreatIntelligenceEngine {
   private isInitialized: boolean = false;
   private lastUpdateTime: number = 0;
 
-  constructor(private config: {
-    updateInterval?: number;
-    maxIOCs?: number;
-    confidenceThreshold?: number;
-  } = {}) {
+  constructor(
+    private config: {
+      updateInterval?: number;
+      maxIOCs?: number;
+      confidenceThreshold?: number;
+    } = {},
+  ) {
     this.initializeDefaultIOCs();
     this.initializeDefaultThreatActors();
     this.initializeDefaultAttackPatterns();
@@ -41,7 +50,7 @@ export class ThreatIntelligenceEngine {
         references: ['https://check.torproject.org/'],
         ttl: 7 * 24 * 60 * 60 * 1000, // 7 days
         indicator: '185.220.100.240',
-        iocs: []
+        iocs: [],
       },
       {
         id: 'ioc_2',
@@ -58,7 +67,7 @@ export class ThreatIntelligenceEngine {
         references: ['https://phishing.database.example.com/'],
         ttl: 30 * 24 * 60 * 60 * 1000, // 30 days
         indicator: 'malicious-phishing-site.com',
-        iocs: []
+        iocs: [],
       },
       {
         id: 'ioc_3',
@@ -75,12 +84,13 @@ export class ThreatIntelligenceEngine {
         references: ['https://malware.analysis.example.com/'],
         ttl: 90 * 24 * 60 * 60 * 1000, // 90 days
         indicator: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        iocs: []
+        iocs: [],
       },
       {
         id: 'ioc_4',
         type: 'user_agent',
-        value: 'Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)',
+        value:
+          'Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)',
         source: 'bot_detection',
         category: 'bot',
         confidence: 0.8,
@@ -91,12 +101,13 @@ export class ThreatIntelligenceEngine {
         lastSeen: Date.now(),
         references: ['https://help.baidu.com/robots/'],
         ttl: 365 * 24 * 60 * 60 * 1000, // 1 year
-        indicator: 'Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)',
-        iocs: []
-      }
+        indicator:
+          'Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)',
+        iocs: [],
+      },
     ];
 
-    defaultIOCs.forEach(ioc => {
+    defaultIOCs.forEach((ioc) => {
       this.iocDatabase.set(ioc.value, ioc);
     });
 
@@ -120,7 +131,7 @@ export class ThreatIntelligenceEngine {
         confidence: 0.9,
         firstSeen: Date.now() - 365 * 24 * 60 * 60 * 1000,
         lastSeen: Date.now() - 86400000,
-        references: ['https://attack.mitre.org/groups/G0016/']
+        references: ['https://attack.mitre.org/groups/G0016/'],
       },
       {
         id: 'ransomware_1',
@@ -134,11 +145,11 @@ export class ThreatIntelligenceEngine {
         confidence: 0.85,
         firstSeen: Date.now() - 730 * 24 * 60 * 60 * 1000,
         lastSeen: Date.now() - 172800000,
-        references: ['https://www.cisa.gov/conti-ransomware']
-      }
+        references: ['https://www.cisa.gov/conti-ransomware'],
+      },
     ];
 
-    defaultActors.forEach(actor => {
+    defaultActors.forEach((actor) => {
       this.threatActors.set(actor.id, actor);
     });
 
@@ -155,28 +166,30 @@ export class ThreatIntelligenceEngine {
         name: 'Spearphishing Attachment',
         technique: 'Initial Access',
         tactic: 'TA0001',
-        description: 'Adversaries may send spearphishing emails with a malicious attachment in an attempt to gain access to victim systems.',
+        description:
+          'Adversaries may send spearphishing emails with a malicious attachment in an attempt to gain access to victim systems.',
         indicators: ['suspicious_attachments', 'phishing_emails', 'social_engineering'],
         mitigation: ['user_training', 'email_filtering', 'attachment_scanning'],
         confidence: 0.9,
         frequency: 'high',
-        references: ['https://attack.mitre.org/techniques/T1566/001/']
+        references: ['https://attack.mitre.org/techniques/T1566/001/'],
       },
       {
         id: 'T1190',
         name: 'Exploit Public-Facing Application',
         technique: 'Initial Access',
         tactic: 'TA0001',
-        description: 'Adversaries may attempt to take advantage of a weakness in an Internet-facing computer or program using software, data, or commands in order to cause unintended or unanticipated behavior.',
+        description:
+          'Adversaries may attempt to take advantage of a weakness in an Internet-facing computer or program using software, data, or commands in order to cause unintended or unanticipated behavior.',
         indicators: ['vulnerability_scanning', 'exploitation_attempts', 'unusual_web_requests'],
         mitigation: ['patch_management', 'web_application_firewall', 'vulnerability_scanning'],
         confidence: 0.85,
         frequency: 'very_high',
-        references: ['https://attack.mitre.org/techniques/T1190/']
-      }
+        references: ['https://attack.mitre.org/techniques/T1190/'],
+      },
     ];
 
-    defaultPatterns.forEach(pattern => {
+    defaultPatterns.forEach((pattern) => {
       this.attackPatterns.set(pattern.id, pattern);
     });
 
@@ -241,7 +254,11 @@ export class ThreatIntelligenceEngine {
   /**
    * Создание IOC match object
    */
-  private createIOCMatch(ioc: ThreatIntelligence, event: SecurityEvent, matchedValue: string): IOCMatch {
+  private createIOCMatch(
+    ioc: ThreatIntelligence,
+    event: SecurityEvent,
+    matchedValue: string,
+  ): IOCMatch {
     return {
       id: `match_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: Date.now(),
@@ -259,8 +276,8 @@ export class ThreatIntelligenceEngine {
         eventType: event.type,
         sourceIP: event.sourceIP || undefined,
         userAgent: event.metadata.userAgent || undefined,
-        userId: event.userId || undefined
-      }
+        userId: event.userId || undefined,
+      },
     };
   }
 
@@ -269,13 +286,13 @@ export class ThreatIntelligenceEngine {
    */
   private extractIPs(event: SecurityEvent): string[] {
     const ips: string[] = [];
-    
+
     if (event.sourceIP) {
       ips.push(event.sourceIP);
     }
 
     if (event.metadata.forwardedFor) {
-      ips.push(...event.metadata.forwardedFor.split(',').map(ip => ip.trim()));
+      ips.push(...event.metadata.forwardedFor.split(',').map((ip) => ip.trim()));
     }
 
     if (event.metadata.remoteAddr) {
@@ -318,11 +335,14 @@ export class ThreatIntelligenceEngine {
     }
 
     // Domain regex для поиска в других полях
-    const domainRegex = /\b[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\b/g;
+    const domainRegex =
+      /\b[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\b/g;
     const eventString = JSON.stringify(event);
     const matches = eventString.match(domainRegex);
     if (matches) {
-      domains.push(...matches.filter(domain => domain.includes('.') && !domain.match(/^\d+(\.\d+)*$/)));
+      domains.push(
+        ...matches.filter((domain) => domain.includes('.') && !domain.match(/^\d+(\.\d+)*$/)),
+      );
     }
 
     return [...new Set(domains)]; // Remove duplicates
@@ -354,7 +374,7 @@ export class ThreatIntelligenceEngine {
    */
   async addIOC(ioc: ThreatIntelligence): Promise<void> {
     // Проверяем TTL
-    if (ioc.ttl && (Date.now() - ioc.firstSeen) > ioc.ttl) {
+    if (ioc.ttl && Date.now() - ioc.firstSeen > ioc.ttl) {
       console.warn(`⚠️ IOC ${ioc.id} has expired, skipping`);
       return;
     }
@@ -393,7 +413,7 @@ export class ThreatIntelligenceEngine {
     let cleaned = 0;
 
     for (const [value, ioc] of this.iocDatabase.entries()) {
-      if (ioc.ttl && (now - ioc.firstSeen) > ioc.ttl) {
+      if (ioc.ttl && now - ioc.firstSeen > ioc.ttl) {
         this.iocDatabase.delete(value);
         cleaned++;
       }
@@ -425,10 +445,14 @@ export class ThreatIntelligenceEngine {
    */
   findAttackPattern(event: SecurityEvent): AttackPattern | null {
     // Simplified pattern matching
-    if (event.type === 'authentication' && event.metadata.failedAttempts && event.metadata.failedAttempts > 3) {
+    if (
+      event.type === 'authentication' &&
+      event.metadata.failedAttempts &&
+      event.metadata.failedAttempts > 3
+    ) {
       return this.attackPatterns.get('T1110') || null; // Brute Force
     }
-    
+
     if (event.type === 'web_request' && event.metadata.suspiciousPayload) {
       return this.attackPatterns.get('T1190') || null; // Exploit Public-Facing Application
     }
@@ -455,7 +479,7 @@ export class ThreatIntelligenceEngine {
       byType: {} as Record<string, number>,
       bySource: {} as Record<string, number>,
       bySeverity: {} as Record<string, number>,
-      lastUpdate: this.lastUpdateTime
+      lastUpdate: this.lastUpdateTime,
     };
 
     for (const ioc of this.iocDatabase.values()) {
@@ -472,7 +496,7 @@ export class ThreatIntelligenceEngine {
    */
   async updateFeeds(): Promise<void> {
     console.log('🔄 Updating threat intelligence feeds...');
-    
+
     // В реальной системе здесь будет интеграция с внешними feeds
     // Для демо добавляем несколько новых IOCs
     const newIOCs: ThreatIntelligence[] = [
@@ -491,13 +515,13 @@ export class ThreatIntelligenceEngine {
         references: [],
         ttl: 24 * 60 * 60 * 1000, // 24 hours
         indicator: '192.168.1.100',
-        iocs: []
-      }
+        iocs: [],
+      },
     ];
 
     await this.addIOCsBatch(newIOCs);
     this.lastUpdateTime = Date.now();
-    
+
     console.log('✅ Threat intelligence feeds updated');
   }
 }

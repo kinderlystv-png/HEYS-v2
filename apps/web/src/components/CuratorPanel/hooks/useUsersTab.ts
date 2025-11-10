@@ -1,6 +1,6 @@
 // hooks/useUsersTab.ts - Хук для управления вкладкой пользователей
 
-import { useState, useMemo, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { useCuratorContext } from '../context/CuratorContext';
 import { CuratorUserRole } from '../types/curator.types';
@@ -8,24 +8,24 @@ import { CuratorUserRole } from '../types/curator.types';
 export const useUsersTab = () => {
   const { curatorData, refreshData, updateUserRole } = useCuratorContext();
   const { users, isLoading, error } = curatorData;
-  
+
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'email' | 'createdAt' | 'lastActivity'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  
+
   // Фильтрация и сортировка пользователей
   const filteredAndSortedUsers = useMemo(() => {
-    let filtered = users.filter(user => {
-      const matchesSearch = 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    let filtered = users.filter((user) => {
+      const matchesSearch =
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
       const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-      
+
       return matchesSearch && matchesRole && matchesStatus;
     });
 
@@ -63,24 +63,27 @@ export const useUsersTab = () => {
 
     return filtered;
   }, [users, searchTerm, roleFilter, statusFilter, sortBy, sortOrder]);
-  
+
   // Получить выбранного пользователя
   const selectedUser = useMemo(() => {
     if (!selectedUserId) return null;
-    return users.find(user => user.id === selectedUserId) || null;
+    return users.find((user) => user.id === selectedUserId) || null;
   }, [users, selectedUserId]);
-  
+
   // Статистика пользователей
   const userStats = useMemo(() => {
     const total = filteredAndSortedUsers.length;
-    const active = filteredAndSortedUsers.filter(user => user.status === 'active').length;
-    const inactive = filteredAndSortedUsers.filter(user => user.status === 'inactive').length;
-    const suspended = filteredAndSortedUsers.filter(user => user.status === 'suspended').length;
-    
-    const byRole = filteredAndSortedUsers.reduce((acc, user) => {
-      acc[user.role] = (acc[user.role] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const active = filteredAndSortedUsers.filter((user) => user.status === 'active').length;
+    const inactive = filteredAndSortedUsers.filter((user) => user.status === 'inactive').length;
+    const suspended = filteredAndSortedUsers.filter((user) => user.status === 'suspended').length;
+
+    const byRole = filteredAndSortedUsers.reduce(
+      (acc, user) => {
+        acc[user.role] = (acc[user.role] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return {
       total,
@@ -90,28 +93,31 @@ export const useUsersTab = () => {
       byRole,
     };
   }, [filteredAndSortedUsers]);
-  
+
   // Обработчики
   const handleUserSelect = useCallback((userId: string) => {
-    setSelectedUserId(prevId => prevId === userId ? null : userId);
+    setSelectedUserId((prevId) => (prevId === userId ? null : userId));
   }, []);
-  
-  const handleRoleUpdate = useCallback(async (userId: string, newRole: CuratorUserRole) => {
-    try {
-      const result = await updateUserRole(userId, newRole);
-      if (result.success) {
-        // Обновление прошло успешно, данные уже обновлены через refreshData
-        return { success: true };
-      } else {
-        return { success: false, error: result.error || 'Неизвестная ошибка' };
+
+  const handleRoleUpdate = useCallback(
+    async (userId: string, newRole: CuratorUserRole) => {
+      try {
+        const result = await updateUserRole(userId, newRole);
+        if (result.success) {
+          // Обновление прошло успешно, данные уже обновлены через refreshData
+          return { success: true };
+        } else {
+          return { success: false, error: result.error || 'Неизвестная ошибка' };
+        }
+      } catch (err) {
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Неизвестная ошибка',
+        };
       }
-    } catch (err) {
-      return { 
-        success: false, 
-        error: err instanceof Error ? err.message : 'Неизвестная ошибка' 
-      };
-    }
-  }, [updateUserRole]);
+    },
+    [updateUserRole],
+  );
 
   const clearFilters = useCallback(() => {
     setSearchTerm('');
@@ -136,26 +142,32 @@ export const useUsersTab = () => {
 
   // Доступные опции для фильтров
   const roleOptions = useMemo(() => {
-    const roles = Array.from(new Set(users.map(user => user.role)));
+    const roles = Array.from(new Set(users.map((user) => user.role)));
     return [
       { value: 'all', label: 'Все роли' },
-      ...roles.map(role => ({ value: role, label: role }))
+      ...roles.map((role) => ({ value: role, label: role })),
     ];
   }, [users]);
 
-  const statusOptions = useMemo(() => [
-    { value: 'all', label: 'Все статусы' },
-    { value: 'active', label: 'Активные' },
-    { value: 'inactive', label: 'Неактивные' },
-    { value: 'suspended', label: 'Заблокированные' }
-  ], []);
+  const statusOptions = useMemo(
+    () => [
+      { value: 'all', label: 'Все статусы' },
+      { value: 'active', label: 'Активные' },
+      { value: 'inactive', label: 'Неактивные' },
+      { value: 'suspended', label: 'Заблокированные' },
+    ],
+    [],
+  );
 
-  const sortOptions = useMemo(() => [
-    { value: 'name', label: 'По имени' },
-    { value: 'email', label: 'По email' },
-    { value: 'createdAt', label: 'По дате создания' },
-    { value: 'lastActivity', label: 'По последней активности' }
-  ], []);
+  const sortOptions = useMemo(
+    () => [
+      { value: 'name', label: 'По имени' },
+      { value: 'email', label: 'По email' },
+      { value: 'createdAt', label: 'По дате создания' },
+      { value: 'lastActivity', label: 'По последней активности' },
+    ],
+    [],
+  );
 
   return {
     // Данные
@@ -164,7 +176,7 @@ export const useUsersTab = () => {
     userStats,
     isLoading,
     error,
-    
+
     // Фильтры и сортировка
     searchTerm,
     setSearchTerm,
@@ -176,12 +188,12 @@ export const useUsersTab = () => {
     setSortBy: handleSortByChange,
     sortOrder,
     setSortOrder: handleSortOrderChange,
-    
+
     // Опции для фильтров
     roleOptions,
     statusOptions,
     sortOptions,
-    
+
     // Действия
     handleUserSelect,
     handleRoleUpdate,

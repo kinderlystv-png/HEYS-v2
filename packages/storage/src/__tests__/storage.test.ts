@@ -59,8 +59,8 @@ describe('MemoryStorageAdapter', () => {
     const original = await adapter.get('update-key');
 
     // Small delay to ensure different timestamp
-    await new Promise(resolve => setTimeout(resolve, 10));
-    
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
     await adapter.set('update-key', 'updated');
     const updated = await adapter.get('update-key');
 

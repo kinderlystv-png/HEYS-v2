@@ -33,7 +33,7 @@ const mockIndexedDBRequest = {
   error: null,
   onsuccess: null,
   onerror: null,
-  onupgradeneeded: null
+  onupgradeneeded: null,
 };
 
 const mockObjectStore = {
@@ -44,29 +44,29 @@ const mockObjectStore = {
   clear: vi.fn().mockReturnValue(mockIndexedDBRequest),
   createIndex: vi.fn(),
   index: vi.fn().mockReturnValue({
-    get: vi.fn().mockReturnValue(mockIndexedDBRequest)
-  })
+    get: vi.fn().mockReturnValue(mockIndexedDBRequest),
+  }),
 };
 
 const mockTransaction = {
   objectStore: vi.fn().mockReturnValue(mockObjectStore),
   oncomplete: null,
   onerror: null,
-  onabort: null
+  onabort: null,
 };
 
 const mockDatabase = {
   createObjectStore: vi.fn().mockReturnValue(mockObjectStore),
   transaction: vi.fn().mockReturnValue(mockTransaction),
   close: vi.fn(),
-  deleteObjectStore: vi.fn()
+  deleteObjectStore: vi.fn(),
 };
 
 global.indexedDB = {
   open: vi.fn().mockImplementation(() => {
     const request = {
       ...mockIndexedDBRequest,
-      result: mockDatabase
+      result: mockDatabase,
     };
     // Simulate successful open
     setTimeout(() => {
@@ -78,7 +78,7 @@ global.indexedDB = {
   }),
   deleteDatabase: vi.fn().mockReturnValue(mockIndexedDBRequest),
   cmp: vi.fn(),
-  databases: vi.fn().mockResolvedValue([])
+  databases: vi.fn().mockResolvedValue([]),
 } as any;
 
 // Mock browser APIs

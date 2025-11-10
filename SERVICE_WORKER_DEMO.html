@@ -1,305 +1,312 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>🚀 Service Worker Performance Sprint Demo</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-            min-height: 100vh;
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+        min-height: 100vh;
+      }
+      .container {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      .header h1 {
+        color: #4a5568;
+        margin-bottom: 10px;
+        font-size: 2.5em;
+      }
+      .sprint-badge {
+        background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+        color: white;
+        padding: 8px 20px;
+        border-radius: 25px;
+        font-weight: bold;
+        display: inline-block;
+        margin: 10px 0;
+      }
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin: 30px 0;
+      }
+      .feature-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        border-left: 4px solid #667eea;
+      }
+      .feature-card h3 {
+        color: #4a5568;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .status {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: bold;
+      }
+      .status.complete {
+        background: #d4edda;
+        color: #155724;
+      }
+      .metrics {
+        background: #e3f2fd;
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      .metric-row {
+        display: flex;
+        justify-content: space-between;
+        margin: 10px 0;
+        padding: 10px;
+        background: white;
+        border-radius: 5px;
+      }
+      .metric-value {
+        font-weight: bold;
+        color: #1976d2;
+      }
+      .demo-section {
+        background: #fff3cd;
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px 0;
+        border: 2px dashed #ffc107;
+      }
+      .btn {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        margin: 5px;
+        transition: all 0.3s ease;
+      }
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      }
+      .console {
+        background: #1a1a1a;
+        color: #00ff00;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        margin: 15px 0;
+        height: 200px;
+        overflow-y: auto;
+      }
+      .loading {
+        display: inline-block;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
         }
-        .container {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        100% {
+          transform: rotate(360deg);
         }
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        .header h1 {
-            color: #4a5568;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-        }
-        .sprint-badge {
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            color: white;
-            padding: 8px 20px;
-            border-radius: 25px;
-            font-weight: bold;
-            display: inline-block;
-            margin: 10px 0;
-        }
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-        .feature-card {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            border-left: 4px solid #667eea;
-        }
-        .feature-card h3 {
-            color: #4a5568;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .status {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            font-weight: bold;
-        }
-        .status.complete {
-            background: #d4edda;
-            color: #155724;
-        }
-        .metrics {
-            background: #e3f2fd;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 10px 0;
-            padding: 10px;
-            background: white;
-            border-radius: 5px;
-        }
-        .metric-value {
-            font-weight: bold;
-            color: #1976d2;
-        }
-        .demo-section {
-            background: #fff3cd;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-            border: 2px dashed #ffc107;
-        }
-        .btn {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            margin: 5px;
-            transition: all 0.3s ease;
-        }
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        .console {
-            background: #1a1a1a;
-            color: #00ff00;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            margin: 15px 0;
-            height: 200px;
-            overflow-y: auto;
-        }
-        .loading {
-            display: inline-block;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1>🚀 Service Worker Performance Sprint</h1>
-            <div class="sprint-badge">Days 1-7 COMPLETE!</div>
-            <p>Advanced Service Worker Implementation with React Integration</p>
+      <div class="header">
+        <h1>🚀 Service Worker Performance Sprint</h1>
+        <div class="sprint-badge">Days 1-7 COMPLETE!</div>
+        <p>Advanced Service Worker Implementation with React Integration</p>
+      </div>
+
+      <!-- Sprint Results -->
+      <div class="metrics">
+        <h2>📊 Performance Sprint Results</h2>
+        <div class="metric-row">
+          <span>Bundle Size Reduction:</span>
+          <span class="metric-value">189KB → 138KB (-27%)</span>
         </div>
-
-        <!-- Sprint Results -->
-        <div class="metrics">
-            <h2>📊 Performance Sprint Results</h2>
-            <div class="metric-row">
-                <span>Bundle Size Reduction:</span>
-                <span class="metric-value">189KB → 138KB (-27%)</span>
-            </div>
-            <div class="metric-row">
-                <span>Service Worker Score:</span>
-                <span class="metric-value">75/100 (Excellent)</span>
-            </div>
-            <div class="metric-row">
-                <span>Cache Strategies:</span>
-                <span class="metric-value">5 Types</span>
-            </div>
-            <div class="metric-row">
-                <span>Implementation Coverage:</span>
-                <span class="metric-value">100%</span>
-            </div>
+        <div class="metric-row">
+          <span>Service Worker Score:</span>
+          <span class="metric-value">75/100 (Excellent)</span>
         </div>
-
-        <!-- Feature Grid -->
-        <div class="feature-grid">
-            <div class="feature-card">
-                <h3>🗂️ Cache Management <span class="status complete">✅ Complete</span></h3>
-                <ul>
-                    <li>Cache First Strategy</li>
-                    <li>Network First Strategy</li>
-                    <li>Stale-while-revalidate</li>
-                    <li>Cache Only & Network Only</li>
-                    <li>Intelligent cache selection</li>
-                </ul>
-            </div>
-
-            <div class="feature-card">
-                <h3>⚛️ React Integration <span class="status complete">✅ Complete</span></h3>
-                <ul>
-                    <li>useServiceWorker hook</li>
-                    <li>usePerformanceMetrics hook</li>
-                    <li>useImagePreloading hook</li>
-                    <li>Component integration</li>
-                    <li>Real-time metrics</li>
-                </ul>
-            </div>
-
-            <div class="feature-card">
-                <h3>📈 Performance Monitoring <span class="status complete">✅ Complete</span></h3>
-                <ul>
-                    <li>Load time tracking</li>
-                    <li>Cache hit rate monitoring</li>
-                    <li>Error tracking</li>
-                    <li>Network status detection</li>
-                    <li>Real-time reporting</li>
-                </ul>
-            </div>
-
-            <div class="feature-card">
-                <h3>🖼️ Image Optimization <span class="status complete">✅ Complete</span></h3>
-                <ul>
-                    <li>Service Worker caching</li>
-                    <li>Performance metrics</li>
-                    <li>Lazy loading support</li>
-                    <li>Error handling</li>
-                    <li>Fallback strategies</li>
-                </ul>
-            </div>
+        <div class="metric-row">
+          <span>Cache Strategies:</span>
+          <span class="metric-value">5 Types</span>
         </div>
-
-        <!-- Demo Section -->
-        <div class="demo-section">
-            <h2>🎮 Service Worker Demo</h2>
-            <p>Test the Service Worker functionality in a real browser environment!</p>
-            
-            <button class="btn" onclick="registerServiceWorker()">🔧 Register Service Worker</button>
-            <button class="btn" onclick="testCaching()">🗂️ Test Caching</button>
-            <button class="btn" onclick="testPerformance()">📈 Test Performance</button>
-            <button class="btn" onclick="clearCache()">🧹 Clear Cache</button>
-            
-            <div class="console" id="console">
-                > Service Worker Demo Console Ready...<br>
-                > Click buttons above to test functionality<br>
-            </div>
+        <div class="metric-row">
+          <span>Implementation Coverage:</span>
+          <span class="metric-value">100%</span>
         </div>
+      </div>
 
-        <!-- Technical Details -->
+      <!-- Feature Grid -->
+      <div class="feature-grid">
         <div class="feature-card">
-            <h3>🛠️ Technical Implementation</h3>
-            <p><strong>Service Worker:</strong> 11.3KB with 7 advanced features</p>
-            <p><strong>Manager:</strong> 9.6KB TypeScript utility with auto-registration</p>
-            <p><strong>Hooks:</strong> React integration with performance monitoring</p>
-            <p><strong>Testing:</strong> Comprehensive test suite with mocking</p>
-            <p><strong>Analysis:</strong> Automated tools with scoring system</p>
+          <h3>🗂️ Cache Management <span class="status complete">✅ Complete</span></h3>
+          <ul>
+            <li>Cache First Strategy</li>
+            <li>Network First Strategy</li>
+            <li>Stale-while-revalidate</li>
+            <li>Cache Only & Network Only</li>
+            <li>Intelligent cache selection</li>
+          </ul>
         </div>
 
-        <div class="header" style="margin-top: 40px;">
-            <h2>🎯 Mission Accomplished!</h2>
-            <p>Performance Sprint Days 1-7 completed successfully with production-ready Service Worker infrastructure</p>
+        <div class="feature-card">
+          <h3>⚛️ React Integration <span class="status complete">✅ Complete</span></h3>
+          <ul>
+            <li>useServiceWorker hook</li>
+            <li>usePerformanceMetrics hook</li>
+            <li>useImagePreloading hook</li>
+            <li>Component integration</li>
+            <li>Real-time metrics</li>
+          </ul>
         </div>
+
+        <div class="feature-card">
+          <h3>📈 Performance Monitoring <span class="status complete">✅ Complete</span></h3>
+          <ul>
+            <li>Load time tracking</li>
+            <li>Cache hit rate monitoring</li>
+            <li>Error tracking</li>
+            <li>Network status detection</li>
+            <li>Real-time reporting</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <h3>🖼️ Image Optimization <span class="status complete">✅ Complete</span></h3>
+          <ul>
+            <li>Service Worker caching</li>
+            <li>Performance metrics</li>
+            <li>Lazy loading support</li>
+            <li>Error handling</li>
+            <li>Fallback strategies</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Demo Section -->
+      <div class="demo-section">
+        <h2>🎮 Service Worker Demo</h2>
+        <p>Test the Service Worker functionality in a real browser environment!</p>
+
+        <button class="btn" onclick="registerServiceWorker()">🔧 Register Service Worker</button>
+        <button class="btn" onclick="testCaching()">🗂️ Test Caching</button>
+        <button class="btn" onclick="testPerformance()">📈 Test Performance</button>
+        <button class="btn" onclick="clearCache()">🧹 Clear Cache</button>
+
+        <div class="console" id="console">
+          > Service Worker Demo Console Ready...<br />
+          > Click buttons above to test functionality<br />
+        </div>
+      </div>
+
+      <!-- Technical Details -->
+      <div class="feature-card">
+        <h3>🛠️ Technical Implementation</h3>
+        <p><strong>Service Worker:</strong> 11.3KB with 7 advanced features</p>
+        <p><strong>Manager:</strong> 9.6KB TypeScript utility with auto-registration</p>
+        <p><strong>Hooks:</strong> React integration with performance monitoring</p>
+        <p><strong>Testing:</strong> Comprehensive test suite with mocking</p>
+        <p><strong>Analysis:</strong> Automated tools with scoring system</p>
+      </div>
+
+      <div class="header" style="margin-top: 40px">
+        <h2>🎯 Mission Accomplished!</h2>
+        <p>
+          Performance Sprint Days 1-7 completed successfully with production-ready Service Worker
+          infrastructure
+        </p>
+      </div>
     </div>
 
     <script>
-        function log(message) {
-            const console = document.getElementById('console');
-            const timestamp = new Date().toLocaleTimeString();
-            console.innerHTML += `> [${timestamp}] ${message}<br>`;
-            console.scrollTop = console.scrollHeight;
-        }
+      function log(message) {
+        const console = document.getElementById('console');
+        const timestamp = new Date().toLocaleTimeString();
+        console.innerHTML += `> [${timestamp}] ${message}<br>`;
+        console.scrollTop = console.scrollHeight;
+      }
 
-        async function registerServiceWorker() {
-            log('🔧 Attempting Service Worker registration...');
-            
-            if ('serviceWorker' in navigator) {
-                try {
-                    // Note: This would work with actual SW file
-                    log('✅ Service Worker support detected');
-                    log('📁 Looking for sw.js in /apps/web/public/');
-                    log('⚙️ Service Worker registration logic ready');
-                    log('🎯 In production: auto-registration with update checks');
-                } catch (error) {
-                    log(`❌ Registration failed: ${error.message}`);
-                }
-            } else {
-                log('❌ Service Worker not supported in this browser');
-            }
-        }
+      async function registerServiceWorker() {
+        log('🔧 Attempting Service Worker registration...');
 
-        async function testCaching() {
-            log('🗂️ Testing cache strategies...');
-            log('📋 Cache First: Static assets');
-            log('🌐 Network First: API calls');
-            log('🔄 Stale-while-revalidate: Dynamic content');
-            log('💾 Cache Only: Offline resources');
-            log('🌍 Network Only: Real-time data');
-            log('✅ All 5 cache strategies implemented');
+        if ('serviceWorker' in navigator) {
+          try {
+            // Note: This would work with actual SW file
+            log('✅ Service Worker support detected');
+            log('📁 Looking for sw.js in /apps/web/public/');
+            log('⚙️ Service Worker registration logic ready');
+            log('🎯 In production: auto-registration with update checks');
+          } catch (error) {
+            log(`❌ Registration failed: ${error.message}`);
+          }
+        } else {
+          log('❌ Service Worker not supported in this browser');
         }
+      }
 
-        async function testPerformance() {
-            log('📈 Running performance tests...');
-            
-            // Simulate performance metrics
-            const loadTime = Math.random() * 100 + 50;
-            const cacheHitRate = Math.random() * 30 + 70;
-            
-            log(`⏱️ Average load time: ${loadTime.toFixed(1)}ms`);
-            log(`🎯 Cache hit rate: ${cacheHitRate.toFixed(1)}%`);
-            log('📊 Performance metrics collection active');
-            log('🔍 Real-time monitoring enabled');
-            log('✅ Performance tracking operational');
-        }
+      async function testCaching() {
+        log('🗂️ Testing cache strategies...');
+        log('📋 Cache First: Static assets');
+        log('🌐 Network First: API calls');
+        log('🔄 Stale-while-revalidate: Dynamic content');
+        log('💾 Cache Only: Offline resources');
+        log('🌍 Network Only: Real-time data');
+        log('✅ All 5 cache strategies implemented');
+      }
 
-        async function clearCache() {
-            log('🧹 Clearing cache...');
-            log('🗑️ Static cache cleared');
-            log('🗑️ Dynamic cache cleared');
-            log('🗑️ Image cache cleared');
-            log('✅ All caches cleared successfully');
-        }
+      async function testPerformance() {
+        log('📈 Running performance tests...');
 
-        // Auto-start demo
-        window.addEventListener('load', () => {
-            log('🚀 Service Worker Demo initialized');
-            log('📦 Bundle optimized: 189KB → 138KB (-27%)');
-            log('🏆 Service Worker score: 75/100 (Excellent)');
-            log('🔧 Ready for testing!');
-        });
+        // Simulate performance metrics
+        const loadTime = Math.random() * 100 + 50;
+        const cacheHitRate = Math.random() * 30 + 70;
+
+        log(`⏱️ Average load time: ${loadTime.toFixed(1)}ms`);
+        log(`🎯 Cache hit rate: ${cacheHitRate.toFixed(1)}%`);
+        log('📊 Performance metrics collection active');
+        log('🔍 Real-time monitoring enabled');
+        log('✅ Performance tracking operational');
+      }
+
+      async function clearCache() {
+        log('🧹 Clearing cache...');
+        log('🗑️ Static cache cleared');
+        log('🗑️ Dynamic cache cleared');
+        log('🗑️ Image cache cleared');
+        log('✅ All caches cleared successfully');
+      }
+
+      // Auto-start demo
+      window.addEventListener('load', () => {
+        log('🚀 Service Worker Demo initialized');
+        log('📦 Bundle optimized: 189KB → 138KB (-27%)');
+        log('🏆 Service Worker score: 75/100 (Excellent)');
+        log('🔧 Ready for testing!');
+      });
     </script>
-</body>
+  </body>
 </html>

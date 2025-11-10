@@ -7,7 +7,9 @@
 
 ## 📋 Overview
 
-HEYS Platform provides a comprehensive RESTful API for diary tracking, nutrition management, training sessions, and analytics. The API is built on modern TypeScript/Node.js stack with Supabase backend integration.
+HEYS Platform provides a comprehensive RESTful API for diary tracking, nutrition
+management, training sessions, and analytics. The API is built on modern
+TypeScript/Node.js stack with Supabase backend integration.
 
 **Base URL:** `https://api.heys.app/v1`  
 **Authentication:** Bearer JWT tokens via Supabase Auth  

@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
-import { AnalyticsData, MetricDefinition, SystemStatus, AlertDefinition } from '../types';
+import { AlertDefinition, AnalyticsData, MetricDefinition, SystemStatus } from '../types';
 
 interface WebSocketContextType {
   socket: WebSocket | null;
@@ -29,20 +29,22 @@ interface WebSocketProviderProps {
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
   children,
   url = 'ws://localhost:3001',
-  options = {}
+  options = {},
 }) => {
   const {
     autoReconnect = true,
     reconnectInterval = 3000,
     maxReconnectAttempts = 5,
-    heartbeatInterval = 30000
+    heartbeatInterval = 30000,
   } = options;
 
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<
+    'connecting' | 'connected' | 'disconnected' | 'error'
+  >('disconnected');
   const [lastHeartbeat, setLastHeartbeat] = useState<number | null>(null);
-  
+
   const reconnectAttempts = useRef(0);
   const heartbeatTimer = useRef<NodeJS.Timeout>();
   const subscriptions = useRef<Map<string, Set<(data: any) => void>>>(new Map());
@@ -53,7 +55,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
     }
 
     setConnectionStatus('connecting');
-    
+
     try {
       const newSocket = new WebSocket(url);
 
@@ -68,7 +70,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
         if (heartbeatTimer.current) {
           clearInterval(heartbeatTimer.current);
         }
-        
+
         heartbeatTimer.current = setInterval(() => {
           if (newSocket.readyState === WebSocket.OPEN) {
             newSocket.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
@@ -81,7 +83,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
         console.log('❌ WebSocket disconnected');
         setIsConnected(false);
         setConnectionStatus('disconnected');
-        
+
         if (heartbeatTimer.current) {
           clearInterval(heartbeatTimer.current);
         }
@@ -99,7 +101,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
         console.error('🔥 WebSocket connection error');
         setConnectionStatus('error');
         reconnectAttempts.current++;
-        
+
         if (reconnectAttempts.current >= maxReconnectAttempts) {
           console.error('Max reconnection attempts reached');
           newSocket.close();
@@ -109,7 +111,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
       newSocket.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          
+
           // Handle heartbeat response
           if (message.type === 'pong') {
             setLastHeartbeat(Date.now());
@@ -119,7 +121,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
           // Emit to subscribers
           const eventCallbacks = subscriptions.current.get(message.type);
           if (eventCallbacks) {
-            eventCallbacks.forEach(callback => {
+            eventCallbacks.forEach((callback) => {
               try {
                 callback(message.data);
               } catch (error) {
@@ -145,7 +147,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
       setSocket(null);
       setIsConnected(false);
       setConnectionStatus('disconnected');
-      
+
       if (heartbeatTimer.current) {
         clearInterval(heartbeatTimer.current);
       }
@@ -156,7 +158,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
     if (!subscriptions.current.has(event)) {
       subscriptions.current.set(event, new Set());
     }
-    
+
     subscriptions.current.get(event)!.add(callback);
 
     // Return unsubscribe function
@@ -171,13 +173,16 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
     };
   }, []);
 
-  const emit = useCallback((event: string, data: any) => {
-    if (socket?.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type: event, data }));
-    } else {
-      console.warn('Cannot emit event: WebSocket not connected');
-    }
-  }, [socket]);
+  const emit = useCallback(
+    (event: string, data: any) => {
+      if (socket?.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: event, data }));
+      } else {
+        console.warn('Cannot emit event: WebSocket not connected');
+      }
+    },
+    [socket],
+  );
 
   useEffect(() => {
     connect();
@@ -195,14 +200,10 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
     connect,
     disconnect,
     subscribe,
-    emit
+    emit,
   };
 
-  return (
-    <WebSocketContext.Provider value={contextValue}>
-      {children}
-    </WebSocketContext.Provider>
-  );
+  return <WebSocketContext.Provider value={contextValue}>{children}</WebSocketContext.Provider>;
 };
 
 export const useWebSocket = (): WebSocketContextType => {
@@ -214,18 +215,17 @@ export const useWebSocket = (): WebSocketContextType => {
 };
 
 // Hook for specific event subscriptions
-export const useWebSocketEvent = <T = any>(
+export const useWebSocketEvent = <T = any,>(
   event: string,
   callback: (data: T) => void,
-  dependencies: React.DependencyList = []
+  dependencies: React.DependencyList = [],
 ) => {
   const { subscribe } = useWebSocket();
 
   useEffect(() => {
     const unsubscribe = subscribe(event, callback);
     return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event, subscribe, ...dependencies]);
+  }, [event, subscribe, callback, ...dependencies]);
 };
 
 // Hook for real-time analytics data
@@ -238,11 +238,11 @@ export const useRealTimeAnalytics = () => {
     cpuUsage: 0,
     diskUsage: 0,
     activeConnections: 0,
-    lastHealthCheck: Date.now()
+    lastHealthCheck: Date.now(),
   });
 
   useWebSocketEvent<AnalyticsData>('analytics:data', (data) => {
-    setAnalyticsData(prev => [...prev.slice(-999), data]); // Keep last 1000 entries
+    setAnalyticsData((prev) => [...prev.slice(-999), data]); // Keep last 1000 entries
   });
 
   useWebSocketEvent<SystemStatus>('system:status', (status) => {
@@ -251,7 +251,7 @@ export const useRealTimeAnalytics = () => {
 
   return {
     analyticsData,
-    systemStatus
+    systemStatus,
   };
 };
 
@@ -261,12 +261,12 @@ export const useRealTimeAlerts = () => {
   const [alertHistory, setAlertHistory] = useState<AlertDefinition[]>([]);
 
   useWebSocketEvent<AlertDefinition>('alert:triggered', (alert) => {
-    setActiveAlerts(prev => [...prev, alert]);
-    setAlertHistory(prev => [...prev.slice(-99), alert]); // Keep last 100 alerts
+    setActiveAlerts((prev) => [...prev, alert]);
+    setAlertHistory((prev) => [...prev.slice(-99), alert]); // Keep last 100 alerts
   });
 
   useWebSocketEvent<{ alertId: string }>('alert:resolved', ({ alertId }) => {
-    setActiveAlerts(prev => prev.filter(alert => alert.id !== alertId));
+    setActiveAlerts((prev) => prev.filter((alert) => alert.id !== alertId));
   });
 
   useWebSocketEvent<AlertDefinition[]>('alerts:sync', (alerts) => {
@@ -275,7 +275,7 @@ export const useRealTimeAlerts = () => {
 
   return {
     activeAlerts,
-    alertHistory
+    alertHistory,
   };
 };
 
@@ -288,20 +288,20 @@ export const useMetricDefinitions = () => {
   });
 
   useWebSocketEvent<MetricDefinition>('metric:definition:updated', (definition) => {
-    setMetricDefinitions(prev => 
-      prev.map(def => def.id === definition.id ? definition : def)
+    setMetricDefinitions((prev) =>
+      prev.map((def) => (def.id === definition.id ? definition : def)),
     );
   });
 
   useWebSocketEvent<MetricDefinition>('metric:definition:added', (definition) => {
-    setMetricDefinitions(prev => [...prev, definition]);
+    setMetricDefinitions((prev) => [...prev, definition]);
   });
 
   useWebSocketEvent<{ metricId: string }>('metric:definition:removed', ({ metricId }) => {
-    setMetricDefinitions(prev => prev.filter(def => def.id !== metricId));
+    setMetricDefinitions((prev) => prev.filter((def) => def.id !== metricId));
   });
 
   return {
-    metricDefinitions
+    metricDefinitions,
   };
 };

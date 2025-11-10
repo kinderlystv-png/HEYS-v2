@@ -1,6 +1,6 @@
 # 🚀 HEYS v2 - Modern Productiv## 🎯 Quick Start
 
-```bash
+````bash
 # Clone repository
 git clone https://github.com/kinderlystv-png/HEYS-v2.git
 cd HEYS-v2
@@ -40,13 +40,13 @@ pnpm dev:desktop  # Desktop app
 
 ## ✨ Features
 
-🥗 **Nutrition Tracking** - Smart calorie and macro management  
-�️ **Training Plans** - Customizable workout routines  
-📊 **Analytics** - Performance insights and progress tracking  
-🎮 **Gamification** - Achievement system and progress rewards  
-🔍 **Smart Search** - AI-powered content discovery  
-📱 **Multi-Platform** - Web, mobile, and desktop applications  
-🔐 **Security** - Enterprise-grade data protection  
+🥗 **Nutrition Tracking** - Smart calorie and macro management
+�️ **Training Plans** - Customizable workout routines
+📊 **Analytics** - Performance insights and progress tracking
+🎮 **Gamification** - Achievement system and progress rewards
+🔍 **Smart Search** - AI-powered content discovery
+📱 **Multi-Platform** - Web, mobile, and desktop applications
+🔐 **Security** - Enterprise-grade data protection
 ☁️ **Cloud Sync** - Real-time synchronization across devices
 
 ## �🎯 Quick Start
@@ -75,7 +75,7 @@ pnpm test:unit    # Unit tests only
 # Build for production
 pnpm build        # Build all packages
 pnpm build:web    # Build web app only
-```
+````
 
 ## 🏗️ Architecture
 

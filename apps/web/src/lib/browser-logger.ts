@@ -13,7 +13,7 @@ export interface Logger {
 
 const createBrowserLogger = (): Logger => {
   const noop = () => {};
-  
+
   if (typeof window === 'undefined') {
     return {
       trace: noop,

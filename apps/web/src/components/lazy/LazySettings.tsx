@@ -14,8 +14,8 @@ const GeneralSettings = createChunkedLazyComponent(
   {
     retries: 2,
     timeout: 6000,
-    preloadOnHover: true
-  }
+    preloadOnHover: true,
+  },
 );
 
 const PerformanceSettings = createChunkedLazyComponent(
@@ -24,8 +24,8 @@ const PerformanceSettings = createChunkedLazyComponent(
   () => Promise.resolve({ default: PerformanceSettingsComponent }),
   {
     retries: 2,
-    timeout: 6000
-  }
+    timeout: 6000,
+  },
 );
 
 const SecuritySettings = createChunkedLazyComponent(
@@ -34,8 +34,8 @@ const SecuritySettings = createChunkedLazyComponent(
   () => Promise.resolve({ default: SecuritySettingsComponent }),
   {
     retries: 3,
-    timeout: 8000
-  }
+    timeout: 8000,
+  },
 );
 
 const NotificationSettings = createChunkedLazyComponent(
@@ -44,8 +44,8 @@ const NotificationSettings = createChunkedLazyComponent(
   () => Promise.resolve({ default: NotificationSettingsComponent }),
   {
     retries: 2,
-    timeout: 5000
-  }
+    timeout: 5000,
+  },
 );
 
 const AdvancedSettings = createChunkedLazyComponent(
@@ -54,8 +54,8 @@ const AdvancedSettings = createChunkedLazyComponent(
   () => Promise.resolve({ default: AdvancedSettingsComponent }),
   {
     retries: 2,
-    timeout: 7000
-  }
+    timeout: 7000,
+  },
 );
 
 interface LazySettingsProps {
@@ -78,13 +78,15 @@ interface LazySettingsProps {
  */
 export const LazySettings: React.FC<LazySettingsProps> = ({
   category = 'all',
-  currentSettings = {_},
+  currentSettings = { _ },
   onSettingsChange,
   onSave,
   _onError,
-  readonly = false
+  readonly = false,
 }) => {
-  const [activeCategory, setActiveCategory] = React.useState<string>(category === 'all' ? 'general' : category);
+  const [activeCategory, setActiveCategory] = React.useState<string>(
+    category === 'all' ? 'general' : category,
+  );
   const [preloadQueue, setPreloadQueue] = React.useState<Set<string>>(new Set());
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
 
@@ -94,13 +96,12 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
     { key: 'performance', label: '⚡ Производительность', icon: '🚀', priority: 'high' },
     { key: 'security', label: '🔐 Безопасность', icon: '🛡️', priority: 'medium' },
     { key: 'notifications', label: '🔔 Уведомления', icon: '📢', priority: 'low' },
-    { key: 'advanced', label: '🛠️ Расширенные', icon: '⚙️', priority: 'low' }
+    { key: 'advanced', label: '🛠️ Расширенные', icon: '⚙️', priority: 'low' },
   ];
 
   // Error handling
   const handleComponentError = React.useCallback((error: Error, componentName: string) => {
     if (process.env.NODE_ENV === 'development') {
-
       // eslint-disable-next-line no-console
 
       console.error(`❌ Failed to load Settings ${componentName}:`, error);
@@ -109,34 +110,38 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
   }, []);
 
   // Settings change handler
-  const handleSettingChange = React.useCallback((categoryKey: string, settingKey: string, value: unknown) => {
-    if (_) return;
-    
-    setHasUnsavedChanges(true);
-    onSettingsChange?.(categoryKey, settingKey, value);
-  }, [__readonly, onSettingsChange]);
+  const handleSettingChange = React.useCallback(
+    (categoryKey: string, settingKey: string, value: unknown) => {
+      if (_) return;
+
+      setHasUnsavedChanges(true);
+      onSettingsChange?.(categoryKey, settingKey, value);
+    },
+    [__readonly, onSettingsChange],
+  );
 
   // Preload on hover
-  const handleCategoryHover = React.useCallback((categoryKey: string) => {
-    if (!preloadQueue.has(categoryKey)) {
-      setPreloadQueue(prev => new Set([...prev, categoryKey]));
-      if (process.env.NODE_ENV === 'development') {
+  const handleCategoryHover = React.useCallback(
+    (categoryKey: string) => {
+      if (!preloadQueue.has(categoryKey)) {
+        setPreloadQueue((prev) => new Set([...prev, categoryKey]));
+        if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
 
-        // eslint-disable-next-line no-console
-
-        console.log(`🚀 Preloading settings ${categoryKey} component`);
-    }
-    }
-  }, [preloadQueue]);
+          console.log(`🚀 Preloading settings ${categoryKey} component`);
+        }
+      }
+    },
+    [preloadQueue],
+  );
 
   // Save settings
   const handleSave = React.useCallback(() => {
     if (_) return;
-    
+
     setHasUnsavedChanges(false);
     onSave?.(currentSettings);
     if (process.env.NODE_ENV === 'development') {
-
       // eslint-disable-next-line no-console
 
       console.log('💾 Settings saved:', currentSettings);
@@ -150,7 +155,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
         settings: currentSettings,
         onChange: handleSettingChange,
         _readonly,
-        onError: (error: Error) => handleComponentError(error, category)
+        onError: (error: Error) => handleComponentError(error, category),
       };
 
       switch (category) {
@@ -196,16 +201,20 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
   return (
     <div className="lazy-settings-full" style={{ display: 'flex', minHeight: '600px' }}>
       {/* Sidebar Navigation */}
-      <div style={{
-        width: '240px',
-        borderRight: '1px solid #e0e0e0',
-        padding: '20px 0',
-        backgroundColor: '#f8f9fa'
-      }}>
-        <h3 style={{ padding: '0 20px', marginBottom: '20px', fontSize: '16px', fontWeight: '600' }}>
+      <div
+        style={{
+          width: '240px',
+          borderRight: '1px solid #e0e0e0',
+          padding: '20px 0',
+          backgroundColor: '#f8f9fa',
+        }}
+      >
+        <h3
+          style={{ padding: '0 20px', marginBottom: '20px', fontSize: '16px', fontWeight: '600' }}
+        >
           ⚙️ Настройки
         </h3>
-        
+
         {settingsCategories.map((cat: unknown) => (
           <button
             key={cat.key}
@@ -223,7 +232,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
               fontSize: '14px',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
             }}
           >
             <span>{cat.icon}</span>
@@ -247,7 +256,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
                 border: 'none',
                 borderRadius: '4px',
                 cursor: 'pointer',
-                fontWeight: '500'
+                fontWeight: '500',
               }}
             >
               💾 Сохранить
@@ -260,7 +269,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
       <div style={{ flex: 1, padding: '20px' }}>
         {activeCategory === 'general' && (
           <Suspense fallback={<SettingsSkeleton />}>
-            <GeneralSettings 
+            <GeneralSettings
               settings={currentSettings}
               onChange={handleSettingChange}
               readonly={readonly}
@@ -271,7 +280,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
 
         {activeCategory === 'performance' && (
           <Suspense fallback={<SettingsSkeleton />}>
-            <PerformanceSettings 
+            <PerformanceSettings
               settings={currentSettings}
               onChange={handleSettingChange}
               readonly={readonly}
@@ -282,7 +291,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
 
         {activeCategory === 'security' && (
           <Suspense fallback={<SettingsSkeleton />}>
-            <SecuritySettings 
+            <SecuritySettings
               settings={currentSettings}
               onChange={handleSettingChange}
               readonly={readonly}
@@ -293,7 +302,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
 
         {activeCategory === 'notifications' && (
           <Suspense fallback={<SettingsSkeleton />}>
-            <NotificationSettings 
+            <NotificationSettings
               settings={currentSettings}
               onChange={handleSettingChange}
               readonly={readonly}
@@ -304,7 +313,7 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
 
         {activeCategory === 'advanced' && (
           <Suspense fallback={<SettingsSkeleton />}>
-            <AdvancedSettings 
+            <AdvancedSettings
               settings={currentSettings}
               onChange={handleSettingChange}
               readonly={readonly}
@@ -316,17 +325,19 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
 
       {/* Preload indicator */}
       {preloadQueue.size > 0 && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          padding: '8px 12px',
-          backgroundColor: '#2563eb',
-          color: 'white',
-          borderRadius: '4px',
-          fontSize: '12px',
-          zIndex: 1000
-        }}>
+        <div
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '8px 12px',
+            backgroundColor: '#2563eb',
+            color: 'white',
+            borderRadius: '4px',
+            fontSize: '12px',
+            zIndex: 1000,
+          }}
+        >
           🚀 Preloaded: {preloadQueue.size}/{settingsCategories.length}
         </div>
       )}
@@ -336,33 +347,42 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
 
 // Settings Components (заглушки для демонстрации)
 
-const GeneralSettingsComponent: React.FC<Record<string, unknown>> = ({ _settings, _onChange, readonly }) => {
+const GeneralSettingsComponent: React.FC<Record<string, unknown>> = ({
+  _settings,
+  _onChange,
+  readonly,
+}) => {
   const [localSettings, setLocalSettings] = React.useState({
     language: settings?.language || 'ru',
     theme: settings?.theme || 'light',
     timezone: settings?.timezone || 'Europe/Moscow',
-    dateFormat: settings?.dateFormat || 'DD.MM.YYYY'
+    dateFormat: settings?.dateFormat || 'DD.MM.YYYY',
   });
 
   const handleChange = (key: string, value: unknown) => {
-    setLocalSettings(prev => ({ ...prev, [key]: value }));
+    setLocalSettings((prev) => ({ ...prev, [key]: value }));
     onChange?.('general', key, value);
   };
 
   return (
     <div>
       <h2>⚙️ Общие настройки</h2>
-      
+
       <div style={{ display: 'grid', gap: '20px', maxWidth: '600px' }}>
         <div>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
             Язык интерфейса:
           </label>
-          <select 
+          <select
             value={localSettings.language}
             onChange={(e) => handleChange('language', e.target.value)}
             disabled={readonly}
-            style={{ width: '200px', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+            style={{
+              width: '200px',
+              padding: '8px',
+              border: '1px solid #d1d5db',
+              borderRadius: '4px',
+            }}
           >
             <option value="ru">Русский</option>
             <option value="en">English</option>
@@ -394,11 +414,16 @@ const GeneralSettingsComponent: React.FC<Record<string, unknown>> = ({ _settings
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
             Часовой пояс:
           </label>
-          <select 
+          <select
             value={localSettings.timezone}
             onChange={(e) => handleChange('timezone', e.target.value)}
             disabled={readonly}
-            style={{ width: '250px', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+            style={{
+              width: '250px',
+              padding: '8px',
+              border: '1px solid #d1d5db',
+              borderRadius: '4px',
+            }}
           >
             <option value="Europe/Moscow">Moscow (UTC+3)</option>
             <option value="Europe/London">London (UTC+0)</option>
@@ -406,7 +431,7 @@ const GeneralSettingsComponent: React.FC<Record<string, unknown>> = ({ _settings
           </select>
         </div>
       </div>
-      
+
       <div style={{ fontSize: '12px', color: '#666', marginTop: '20px' }}>
         Bundle: settings-general.js
       </div>
@@ -414,28 +439,34 @@ const GeneralSettingsComponent: React.FC<Record<string, unknown>> = ({ _settings
   );
 };
 
-const PerformanceSettingsComponent: React.FC<Record<string, unknown>> = ({ _settings, _onChange, readonly }) => {
+const PerformanceSettingsComponent: React.FC<Record<string, unknown>> = ({
+  _settings,
+  _onChange,
+  readonly,
+}) => {
   const [localSettings, setLocalSettings] = React.useState({
     enableCaching: settings?.enableCaching ?? true,
     lazyLoading: settings?.lazyLoading ?? true,
     compressionLevel: settings?.compressionLevel || 'medium',
-    maxConcurrentRequests: settings?.maxConcurrentRequests || 5
+    maxConcurrentRequests: settings?.maxConcurrentRequests || 5,
   });
 
   const handleChange = (key: string, value: unknown) => {
-    setLocalSettings(prev => ({ ...prev, [key]: value }));
+    setLocalSettings((prev) => ({ ...prev, [key]: value }));
     onChange?.('performance', key, value);
   };
 
   return (
     <div>
       <h2>⚡ Настройки производительности</h2>
-      
+
       <div style={{ display: 'grid', gap: '20px', maxWidth: '600px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontWeight: '500' }}>Включить кэширование</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>Кэширование ресурсов для быстрой загрузки</div>
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              Кэширование ресурсов для быстрой загрузки
+            </div>
           </div>
           <input
             type="checkbox"
@@ -448,7 +479,9 @@ const PerformanceSettingsComponent: React.FC<Record<string, unknown>> = ({ _sett
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontWeight: '500' }}>Ленивая загрузка</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>Загрузка компонентов по требованию</div>
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              Загрузка компонентов по требованию
+            </div>
           </div>
           <input
             type="checkbox"
@@ -462,11 +495,16 @@ const PerformanceSettingsComponent: React.FC<Record<string, unknown>> = ({ _sett
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
             Уровень сжатия:
           </label>
-          <select 
+          <select
             value={localSettings.compressionLevel}
             onChange={(e) => handleChange('compressionLevel', e.target.value)}
             disabled={readonly}
-            style={{ width: '200px', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+            style={{
+              width: '200px',
+              padding: '8px',
+              border: '1px solid #d1d5db',
+              borderRadius: '4px',
+            }}
           >
             <option value="low">Низкий</option>
             <option value="medium">Средний</option>
@@ -489,7 +527,7 @@ const PerformanceSettingsComponent: React.FC<Record<string, unknown>> = ({ _sett
           />
         </div>
       </div>
-      
+
       <div style={{ fontSize: '12px', color: '#666', marginTop: '20px' }}>
         Bundle: settings-performance.js
       </div>
@@ -497,17 +535,28 @@ const PerformanceSettingsComponent: React.FC<Record<string, unknown>> = ({ _sett
   );
 };
 
-const SecuritySettingsComponent: React.FC<Record<string, unknown>> = ({ _settings, _onChange, readonly }) => {
+const SecuritySettingsComponent: React.FC<Record<string, unknown>> = ({
+  _settings,
+  _onChange,
+  readonly,
+}) => {
   return (
     <div>
       <h2>🔐 Настройки безопасности</h2>
-      <div style={{ padding: '20px', backgroundColor: '#fef3c7', borderRadius: '8px', marginBottom: '20px' }}>
+      <div
+        style={{
+          padding: '20px',
+          backgroundColor: '#fef3c7',
+          borderRadius: '8px',
+          marginBottom: '20px',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span>🛡️</span>
           <span style={{ fontWeight: '500' }}>Безопасность включена</span>
         </div>
       </div>
-      
+
       <div style={{ fontSize: '12px', color: '#666', marginTop: '20px' }}>
         Bundle: settings-security.js (Heavy component - loaded on demand)
       </div>
@@ -515,14 +564,25 @@ const SecuritySettingsComponent: React.FC<Record<string, unknown>> = ({ _setting
   );
 };
 
-const NotificationSettingsComponent: React.FC<Record<string, unknown>> = ({ _settings, _onChange, readonly }) => {
+const NotificationSettingsComponent: React.FC<Record<string, unknown>> = ({
+  _settings,
+  _onChange,
+  readonly,
+}) => {
   return (
     <div>
       <h2>🔔 Настройки уведомлений</h2>
-      <div style={{ padding: '20px', backgroundColor: '#f0f9ff', borderRadius: '8px', marginBottom: '20px' }}>
+      <div
+        style={{
+          padding: '20px',
+          backgroundColor: '#f0f9ff',
+          borderRadius: '8px',
+          marginBottom: '20px',
+        }}
+      >
         <div>📢 Уведомления настроены</div>
       </div>
-      
+
       <div style={{ fontSize: '12px', color: '#666', marginTop: '20px' }}>
         Bundle: settings-notifications.js
       </div>
@@ -530,14 +590,25 @@ const NotificationSettingsComponent: React.FC<Record<string, unknown>> = ({ _set
   );
 };
 
-const AdvancedSettingsComponent: React.FC<Record<string, unknown>> = ({ _settings, _onChange, readonly }) => {
+const AdvancedSettingsComponent: React.FC<Record<string, unknown>> = ({
+  _settings,
+  _onChange,
+  readonly,
+}) => {
   return (
     <div>
       <h2>🛠️ Расширенные настройки</h2>
-      <div style={{ padding: '20px', backgroundColor: '#fef2f2', borderRadius: '8px', marginBottom: '20px' }}>
+      <div
+        style={{
+          padding: '20px',
+          backgroundColor: '#fef2f2',
+          borderRadius: '8px',
+          marginBottom: '20px',
+        }}
+      >
         <div style={{ color: '#dc2626' }}>⚠️ Осторожно: расширенные настройки</div>
       </div>
-      
+
       <div style={{ fontSize: '12px', color: '#666', marginTop: '20px' }}>
         Bundle: settings-advanced.js (Low priority loading)
       </div>
@@ -545,10 +616,10 @@ const AdvancedSettingsComponent: React.FC<Record<string, unknown>> = ({ _setting
   );
 };
 
-export { 
-  GeneralSettingsComponent, 
-  PerformanceSettingsComponent, 
-  SecuritySettingsComponent, 
-  NotificationSettingsComponent, 
-  AdvancedSettingsComponent 
+export {
+  AdvancedSettingsComponent,
+  GeneralSettingsComponent,
+  NotificationSettingsComponent,
+  PerformanceSettingsComponent,
+  SecuritySettingsComponent,
 };

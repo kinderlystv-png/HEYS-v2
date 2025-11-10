@@ -43,9 +43,9 @@ export async function renderWithProviders(component, options = {}) {
     case 'vue':
       return lib.render(component, {
         global: {
-          plugins: options.plugins || []
+          plugins: options.plugins || [],
         },
-        ...options
+        ...options,
       });
 
     case 'svelte':
@@ -66,7 +66,7 @@ export const universalMocks = {
     replace: vi.fn(),
     pathname: '/',
     query: {},
-    asPath: '/'
+    asPath: '/',
   },
 
   // Мок для API запросов
@@ -74,35 +74,43 @@ export const universalMocks = {
     ok: status >= 200 && status < 300,
     status,
     json: async () => data,
-    text: async () => JSON.stringify(data)
+    text: async () => JSON.stringify(data),
   }),
 
   // Мок для localStorage
   localStorage: () => {
     const store = {};
     return {
-      getItem: vi.fn(key => store[key] || null),
-      setItem: vi.fn((key, value) => { store[key] = value; }),
-      removeItem: vi.fn(key => { delete store[key]; }),
-      clear: vi.fn(() => { Object.keys(store).forEach(key => delete store[key]); })
+      getItem: vi.fn((key) => store[key] || null),
+      setItem: vi.fn((key, value) => {
+        store[key] = value;
+      }),
+      removeItem: vi.fn((key) => {
+        delete store[key];
+      }),
+      clear: vi.fn(() => {
+        Object.keys(store).forEach((key) => delete store[key]);
+      }),
     };
   },
 
   // Мок для IntersectionObserver
-  intersectionObserver: () => vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn()
-  })),
+  intersectionObserver: () =>
+    vi.fn().mockImplementation(() => ({
+      observe: vi.fn(),
+      unobserve: vi.fn(),
+      disconnect: vi.fn(),
+    })),
 
   // Мок для matchMedia
-  matchMedia: () => vi.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn()
-  }))
+  matchMedia: () =>
+    vi.fn().mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
 };
 
 /**
@@ -118,11 +126,14 @@ export const testHelpers = {
   // Поиск элемента с повторными попытками
   findElement: async (selector, timeout = 5000) => {
     const { lib } = await getTestingLibrary();
-    return lib.waitFor(() => {
-      const element = lib.screen.getByTestId(selector);
-      if (!element) throw new Error(`Элемент ${selector} не найден`);
-      return element;
-    }, { timeout });
+    return lib.waitFor(
+      () => {
+        const element = lib.screen.getByTestId(selector);
+        if (!element) throw new Error(`Элемент ${selector} не найден`);
+        return element;
+      },
+      { timeout },
+    );
   },
 
   // Симуляция пользовательского ввода
@@ -138,7 +149,7 @@ export const testHelpers = {
     const userEvent = await import('@testing-library/user-event');
     const user = userEvent.default.setup();
     await user.click(element);
-  }
+  },
 };
 
 /**
@@ -149,7 +160,7 @@ export const frameworkSpecific = {
   react: {
     mockNextRouter: () => {
       vi.mock('next/router', () => ({
-        useRouter: () => universalMocks.router
+        useRouter: () => universalMocks.router,
       }));
     },
 
@@ -157,25 +168,25 @@ export const frameworkSpecific = {
       vi.mock('next/image', () => ({
         default: ({ src, alt, ...props }) => ({
           type: 'img',
-          props: { src, alt, ...props }
-        })
+          props: { src, alt, ...props },
+        }),
       }));
-    }
+    },
   },
 
   // Vue/Nuxt специфичные моки
   vue: {
     mockNuxtRouter: () => {
       global.$nuxt = {
-        $router: universalMocks.router
+        $router: universalMocks.router,
       };
     },
 
     createMockStore: (initialState = {}) => ({
       state: initialState,
       commit: vi.fn(),
-      dispatch: vi.fn()
-    })
+      dispatch: vi.fn(),
+    }),
   },
 
   // SvelteKit специфичные моки
@@ -184,15 +195,15 @@ export const frameworkSpecific = {
       const { readable } = await import('svelte/store');
       return readable({
         url: new URL('http://localhost'),
-        params: {}
+        params: {},
       });
     },
 
     mockNavigationStore: () => ({
       goto: vi.fn(),
-      invalidate: vi.fn()
-    })
-  }
+      invalidate: vi.fn(),
+    }),
+  },
 };
 
 /**
@@ -219,7 +230,7 @@ export const testDataUtils = {
       mock.mockReturnValueOnce(value);
     });
     return mock;
-  }
+  },
 };
 
 /**
@@ -231,7 +242,7 @@ export const customMatchers = {
     const isVisible = element.offsetParent !== null;
     return {
       pass: isVisible,
-      message: () => `Элемент ${isVisible ? 'видим' : 'не видим'}`
+      message: () => `Элемент ${isVisible ? 'видим' : 'не видим'}`,
     };
   },
 
@@ -240,9 +251,9 @@ export const customMatchers = {
     const hasClass = element.classList.contains(className);
     return {
       pass: hasClass,
-      message: () => `Элемент ${hasClass ? 'имеет' : 'не имеет'} класс ${className}`
+      message: () => `Элемент ${hasClass ? 'имеет' : 'не имеет'} класс ${className}`,
     };
-  }
+  },
 };
 
 /**
@@ -255,10 +266,10 @@ export async function setupFrameworkMocks() {
   global.IntersectionObserver = universalMocks.intersectionObserver();
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: universalMocks.matchMedia()
+    value: universalMocks.matchMedia(),
   });
   Object.defineProperty(window, 'localStorage', {
-    value: universalMocks.localStorage()
+    value: universalMocks.localStorage(),
   });
 
   // Фреймворк-специфичные моки
@@ -301,7 +312,7 @@ const testingUtils = {
   frameworkSpecific,
   testDataUtils,
   customMatchers,
-  setupTestEnvironment
+  setupTestEnvironment,
 };
 
 export default testingUtils;

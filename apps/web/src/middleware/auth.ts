@@ -70,7 +70,7 @@ export class JWTAuthMiddleware {
     this.config = {
       allowAnonymous: false,
       skipPaths: ['/api/health', '/api/public', '/auth/login', '/auth/register'],
-      ...config
+      ...config,
     };
   }
 
@@ -78,9 +78,7 @@ export class JWTAuthMiddleware {
    * Проверить, нужно ли пропустить аутентификацию для данного пути
    */
   private shouldSkipAuth(path: string): boolean {
-    return this.config.skipPaths?.some(skipPath => 
-      path.startsWith(skipPath)
-    ) || false;
+    return this.config.skipPaths?.some((skipPath) => path.startsWith(skipPath)) || false;
   }
 
   /**
@@ -116,7 +114,7 @@ export class JWTAuthMiddleware {
         return {
           success: false,
           error: 'Invalid token format',
-          statusCode: 401
+          statusCode: 401,
         };
       }
 
@@ -126,18 +124,18 @@ export class JWTAuthMiddleware {
         return {
           success: false,
           error: 'Invalid token payload',
-          statusCode: 401
+          statusCode: 401,
         };
       }
-      
+
       const payload = JSON.parse(atob(payloadBase64));
-      
+
       // Проверяем expiration
       if (payload.exp && Date.now() >= payload.exp * 1000) {
         return {
           success: false,
           error: 'Token expired',
-          statusCode: 401
+          statusCode: 401,
         };
       }
 
@@ -148,7 +146,7 @@ export class JWTAuthMiddleware {
           return {
             success: false,
             error: 'Insufficient permissions',
-            statusCode: 403
+            statusCode: 403,
           };
         }
       }
@@ -159,16 +157,15 @@ export class JWTAuthMiddleware {
           id: payload.sub || payload.user_id || '',
           email: payload.email || '',
           role: payload.role || payload.user_metadata?.role,
-          aud: payload.aud || 'authenticated'
-        }
+          aud: payload.aud || 'authenticated',
+        },
       };
-
     } catch (error) {
       console.error('JWT validation error:', error);
       return {
         success: false,
         error: 'Token validation failed',
-        statusCode: 401
+        statusCode: 401,
       };
     }
   }
@@ -195,7 +192,7 @@ export class JWTAuthMiddleware {
       return {
         success: false,
         error: 'Authentication required',
-        statusCode: 401
+        statusCode: 401,
       };
     }
 
@@ -213,7 +210,7 @@ export class JWTAuthMiddleware {
       if (!authResult.success) {
         return res.status(authResult.statusCode || 401).json({
           error: authResult.error,
-          message: 'Authentication failed'
+          message: 'Authentication failed',
         });
       }
 
@@ -234,7 +231,7 @@ export function createAuthMiddleware(config?: AuthMiddlewareConfig) {
   const authMiddleware = new JWTAuthMiddleware({
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || undefined,
     supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || undefined,
-    ...config
+    ...config,
   });
 
   return authMiddleware.createExpressMiddleware();
@@ -262,7 +259,7 @@ export function getUserFromRequest(request: any): AuthenticatedUser | null {
     id: userId,
     email: userEmail,
     role: userRole || undefined,
-    aud: 'authenticated'
+    aud: 'authenticated',
   };
 }
 
@@ -271,7 +268,7 @@ export function getUserFromRequest(request: any): AuthenticatedUser | null {
  */
 export const requireAuth = createAuthMiddleware({
   allowAnonymous: false,
-  skipPaths: ['/api/health', '/api/public']
+  skipPaths: ['/api/health', '/api/public'],
 });
 
 /**
@@ -280,7 +277,7 @@ export const requireAuth = createAuthMiddleware({
 export const requireAdmin = createAuthMiddleware({
   requiredRole: 'admin',
   allowAnonymous: false,
-  skipPaths: ['/api/health']
+  skipPaths: ['/api/health'],
 });
 
 /**
@@ -288,7 +285,7 @@ export const requireAdmin = createAuthMiddleware({
  */
 export const optionalAuth = createAuthMiddleware({
   allowAnonymous: true,
-  skipPaths: ['/api/health', '/api/public']
+  skipPaths: ['/api/health', '/api/public'],
 });
 
 export default JWTAuthMiddleware;

@@ -31,9 +31,10 @@ Object.defineProperty(global, 'navigator', {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     },
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    userAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     platform: 'Win32',
-  }
+  },
 });
 
 Object.defineProperty(global, 'PerformanceObserver', {
@@ -41,7 +42,7 @@ Object.defineProperty(global, 'PerformanceObserver', {
   value: vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
     disconnect: vi.fn(),
-  }))
+  })),
 });
 
 // Mock IndexedDB
@@ -63,7 +64,7 @@ Object.defineProperty(global, 'indexedDB', {
         })),
       },
     })),
-  }
+  },
 });
 
 // Mock localStorage
@@ -74,10 +75,10 @@ Object.defineProperty(global, 'localStorage', {
     setItem: vi.fn(),
     removeItem: vi.fn(),
     clear: vi.fn(),
-  }
+  },
 });
 
-// Mock sessionStorage  
+// Mock sessionStorage
 Object.defineProperty(global, 'sessionStorage', {
   writable: true,
   value: {
@@ -85,7 +86,7 @@ Object.defineProperty(global, 'sessionStorage', {
     setItem: vi.fn(),
     removeItem: vi.fn(),
     clear: vi.fn(),
-  }
+  },
 });
 
 // Mock URL.createObjectURL
@@ -110,7 +111,7 @@ Object.defineProperty(global, 'performance', {
       totalJSHeapSize: 2000000,
       jsHeapSizeLimit: 4000000,
     },
-  }
+  },
 });
 
 // Mock URL API
@@ -289,7 +290,7 @@ describe('PerformanceProfiler', () => {
     // Test that decorator function exists
     expect(measurePerformance).toBeDefined();
     expect(typeof measurePerformance).toBe('function');
-    
+
     // Test function execution
     const result = testFunction();
     expect(result).toBe('test result');
@@ -382,45 +383,45 @@ describe('SmartCacheManager', () => {
 
     // Mock the implementation to avoid async issues
     vi.spyOn(cacheManager, 'getAllStats').mockResolvedValue({
-      memory: { 
-        totalEntries: 1, 
-        hitRate: 100, 
-        missRate: 0, 
+      memory: {
+        totalEntries: 1,
+        hitRate: 100,
+        missRate: 0,
         totalSize: 100,
         averageAccessTime: 10,
         oldestEntry: Date.now(),
         newestEntry: Date.now(),
-        compressionRatio: 1
+        compressionRatio: 1,
       },
-      localStorage: { 
-        totalEntries: 0, 
-        hitRate: 0, 
+      localStorage: {
+        totalEntries: 0,
+        hitRate: 0,
         missRate: 0,
         totalSize: 0,
         averageAccessTime: 0,
         oldestEntry: 0,
         newestEntry: 0,
-        compressionRatio: 1
+        compressionRatio: 1,
       },
-      sessionStorage: { 
-        totalEntries: 0, 
-        hitRate: 0, 
+      sessionStorage: {
+        totalEntries: 0,
+        hitRate: 0,
         missRate: 0,
         totalSize: 0,
         averageAccessTime: 0,
         oldestEntry: 0,
         newestEntry: 0,
-        compressionRatio: 1
+        compressionRatio: 1,
       },
-      indexedDB: { 
-        totalEntries: 0, 
-        hitRate: 0, 
+      indexedDB: {
+        totalEntries: 0,
+        hitRate: 0,
         missRate: 0,
         totalSize: 0,
         averageAccessTime: 0,
         oldestEntry: 0,
         newestEntry: 0,
-        compressionRatio: 1
+        compressionRatio: 1,
       },
     });
 
@@ -599,7 +600,7 @@ describe('PerformanceManager', () => {
       caching: { hitRate: 85, totalEntries: 10 },
       network: { averageResponseTime: 100, totalRequests: 5 },
       mobile: { deviceType: 'desktop', optimizationsApplied: [] },
-      recommendations: ['Enable compression', 'Use CDN']
+      recommendations: ['Enable compression', 'Use CDN'],
     });
 
     const report = await manager.getPerformanceReport();
@@ -645,9 +646,9 @@ describe('PerformanceManager', () => {
       caching: { hitRate: 90, totalEntries: 15 },
       network: { averageResponseTime: 75, totalRequests: 8 },
       mobile: { deviceType: 'desktop', optimizationsApplied: ['compression'] },
-      recommendations: ['Optimize images', 'Use service worker']
+      recommendations: ['Optimize images', 'Use service worker'],
     });
-    
+
     const mockDuration = 50; // 50ms instead of long duration
     const report = await manager.analyzePerformance(mockDuration);
 
@@ -687,7 +688,7 @@ describe('Performance Integration', () => {
       caching: { hitRate: 88, totalEntries: 20 },
       network: { averageResponseTime: 95, totalRequests: 6 },
       mobile: { deviceType: 'desktop', optimizationsApplied: ['batching'] },
-      recommendations: ['Optimize network calls', 'Implement lazy loading']
+      recommendations: ['Optimize network calls', 'Implement lazy loading'],
     });
 
     // Test cache integration

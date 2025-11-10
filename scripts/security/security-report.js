@@ -2,14 +2,13 @@
 /**
  * Система консолидированной отчетности по безопасности
  * Объединяет результаты всех сканирований в единый отчет
- * 
+ *
  * @created КТ4 - Автоматизация безопасности
  * @author HEYS Security Team
  */
 
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,32 +19,32 @@ const REPORT_CONFIG = {
   projectRoot: path.resolve(__dirname, '../../'),
   reportsDir: path.resolve(__dirname, '../../security-reports'),
   outputDir: path.resolve(__dirname, '../../security-reports/consolidated'),
-  
+
   // Источники отчетов
   reportSources: {
     sast: 'sast-report.json',
     dependencies: 'dependency-security-report.json',
     secrets: 'secrets-scan-results.json',
     docker: 'docker-security-report.json',
-    api: 'api-security-report.json'
+    api: 'api-security-report.json',
   },
-  
+
   // Настройки оценки безопасности
   scoring: {
     critical: { weight: 10, impact: 'immediate' },
     high: { weight: 7, impact: 'urgent' },
     moderate: { weight: 4, impact: 'medium' },
     low: { weight: 1, impact: 'low' },
-    info: { weight: 0, impact: 'informational' }
+    info: { weight: 0, impact: 'informational' },
   },
-  
+
   // Пороги безопасности
   thresholds: {
-    securityScore: 85,        // Минимальный балл безопасности
-    criticalVulns: 0,         // Максимум критических уязвимостей
-    highVulns: 5,             // Максимум высоких уязвимостей
-    totalVulns: 50            // Максимум общих уязвимостей
-  }
+    securityScore: 85, // Минимальный балл безопасности
+    criticalVulns: 0, // Максимум критических уязвимостей
+    highVulns: 5, // Максимум высоких уязвимостей
+    totalVulns: 50, // Максимум общих уязвимостей
+  },
 };
 
 class SecurityReportConsolidator {
@@ -56,9 +55,9 @@ class SecurityReportConsolidator {
         reportVersion: '1.0.0',
         projectInfo: {},
         scanners: [],
-        duration: 0
+        duration: 0,
       },
-      
+
       summary: {
         securityScore: 0,
         riskLevel: 'unknown',
@@ -68,31 +67,31 @@ class SecurityReportConsolidator {
           high: 0,
           moderate: 0,
           low: 0,
-          info: 0
+          info: 0,
         },
         coverage: {
           sastCoverage: false,
           dependencyCoverage: false,
           secretsCoverage: false,
           dockerCoverage: false,
-          apiCoverage: false
-        }
+          apiCoverage: false,
+        },
       },
-      
+
       scanResults: {
         sast: null,
         dependencies: null,
         secrets: null,
         docker: null,
-        api: null
+        api: null,
       },
-      
+
       vulnerabilities: [],
       recommendations: [],
       complianceStatus: {},
-      trendAnalysis: {}
+      trendAnalysis: {},
     };
-    
+
     this.startTime = Date.now();
   }
 
@@ -101,37 +100,36 @@ class SecurityReportConsolidator {
    */
   async consolidateReports() {
     console.log('📊 Starting Security Report Consolidation...\n');
-    
+
     try {
       // Инициализация проекта
       await this.initializeProject();
-      
+
       // Загрузка отчетов от различных сканеров
       await this.loadScanResults();
-      
+
       // Консолидация уязвимостей
       await this.consolidateVulnerabilities();
-      
+
       // Расчет безопасности
       await this.calculateSecurityScore();
-      
+
       // Генерация рекомендаций
       await this.generateConsolidatedRecommendations();
-      
+
       // Анализ соответствия стандартам
       await this.analyzeCompliance();
-      
+
       // Анализ трендов
       await this.analyzeTrends();
-      
+
       // Создание отчетов
       await this.generateConsolidatedReports();
-      
+
       // Вывод результатов
       this.printConsolidatedResults();
-      
+
       return this.getSecurityVerdict();
-      
     } catch (error) {
       console.error('❌ Report consolidation failed:', error.message);
       return 1;
@@ -145,27 +143,27 @@ class SecurityReportConsolidator {
    */
   async initializeProject() {
     console.log('📋 Initializing project information...');
-    
+
     // Читаем package.json для информации о проекте
     const packageJsonPath = path.join(REPORT_CONFIG.projectRoot, 'package.json');
     if (fs.existsSync(packageJsonPath)) {
       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-      
+
       this.consolidatedReport.metadata.projectInfo = {
         name: packageJson.name || 'unknown',
         version: packageJson.version || '0.0.0',
         description: packageJson.description || '',
         repository: packageJson.repository || {},
         author: packageJson.author || '',
-        license: packageJson.license || 'unlicensed'
+        license: packageJson.license || 'unlicensed',
       };
     }
-    
+
     // Создаем директории для отчетов
     if (!fs.existsSync(REPORT_CONFIG.outputDir)) {
       fs.mkdirSync(REPORT_CONFIG.outputDir, { recursive: true });
     }
-    
+
     console.log(`   📦 Project: ${this.consolidatedReport.metadata.projectInfo.name}`);
     console.log(`   🏷️ Version: ${this.consolidatedReport.metadata.projectInfo.version}`);
   }
@@ -175,17 +173,17 @@ class SecurityReportConsolidator {
    */
   async loadScanResults() {
     console.log('\n🔍 Loading scan results...');
-    
+
     for (const [scanType, filename] of Object.entries(REPORT_CONFIG.reportSources)) {
       const reportPath = path.join(REPORT_CONFIG.reportsDir, filename);
-      
+
       if (fs.existsSync(reportPath)) {
         try {
           const reportData = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
           this.consolidatedReport.scanResults[scanType] = reportData;
           this.consolidatedReport.metadata.scanners.push(scanType);
           this.consolidatedReport.summary.coverage[`${scanType}Coverage`] = true;
-          
+
           console.log(`   ✅ Loaded ${scanType} report (${filename})`);
         } catch (error) {
           console.log(`   ⚠️ Failed to load ${scanType} report: ${error.message}`);
@@ -196,8 +194,10 @@ class SecurityReportConsolidator {
         this.consolidatedReport.scanResults[scanType] = null;
       }
     }
-    
-    console.log(`\n   📊 Loaded ${this.consolidatedReport.metadata.scanners.length} scanner reports`);
+
+    console.log(
+      `\n   📊 Loaded ${this.consolidatedReport.metadata.scanners.length} scanner reports`,
+    );
   }
 
   /**
@@ -205,96 +205,96 @@ class SecurityReportConsolidator {
    */
   async consolidateVulnerabilities() {
     console.log('\n🔄 Consolidating vulnerabilities...');
-    
+
     const allVulnerabilities = [];
-    
+
     // Обрабатываем SAST результаты
     if (this.consolidatedReport.scanResults.sast) {
       const sastVulns = this.consolidatedReport.scanResults.sast.vulnerabilities || [];
-      sastVulns.forEach(vuln => {
+      sastVulns.forEach((vuln) => {
         allVulnerabilities.push({
           ...vuln,
           source: 'sast',
           category: 'code-analysis',
-          uniqueId: `sast-${vuln.rule}-${vuln.file}-${vuln.line}`
+          uniqueId: `sast-${vuln.rule}-${vuln.file}-${vuln.line}`,
         });
       });
     }
-    
+
     // Обрабатываем зависимости
     if (this.consolidatedReport.scanResults.dependencies) {
       const depVulns = this.consolidatedReport.scanResults.dependencies.vulnerabilities || [];
-      depVulns.forEach(vuln => {
+      depVulns.forEach((vuln) => {
         allVulnerabilities.push({
           ...vuln,
           source: 'dependencies',
           category: 'third-party',
-          uniqueId: `dep-${vuln.id}-${vuln.package}`
+          uniqueId: `dep-${vuln.id}-${vuln.package}`,
         });
       });
     }
-    
+
     // Обрабатываем секреты
     if (this.consolidatedReport.scanResults.secrets) {
       const secretVulns = this.consolidatedReport.scanResults.secrets.findings || [];
-      secretVulns.forEach(vuln => {
+      secretVulns.forEach((vuln) => {
         allVulnerabilities.push({
           ...vuln,
           source: 'secrets',
           category: 'credential-exposure',
           severity: 'critical', // Все найденные секреты критичны
-          uniqueId: `secret-${vuln.type}-${vuln.file}-${vuln.line}`
+          uniqueId: `secret-${vuln.type}-${vuln.file}-${vuln.line}`,
         });
       });
     }
-    
+
     // Обрабатываем Docker безопасность
     if (this.consolidatedReport.scanResults.docker) {
       const dockerVulns = this.consolidatedReport.scanResults.docker.vulnerabilities || [];
-      dockerVulns.forEach(vuln => {
+      dockerVulns.forEach((vuln) => {
         allVulnerabilities.push({
           ...vuln,
           source: 'docker',
           category: 'infrastructure',
-          uniqueId: `docker-${vuln.id || vuln.rule}`
+          uniqueId: `docker-${vuln.id || vuln.rule}`,
         });
       });
     }
-    
+
     // Обрабатываем API безопасность
     if (this.consolidatedReport.scanResults.api) {
       const apiVulns = this.consolidatedReport.scanResults.api.vulnerabilities || [];
-      apiVulns.forEach(vuln => {
+      apiVulns.forEach((vuln) => {
         allVulnerabilities.push({
           ...vuln,
           source: 'api',
           category: 'web-security',
-          uniqueId: `api-${vuln.type || vuln.endpoint}`
+          uniqueId: `api-${vuln.type || vuln.endpoint}`,
         });
       });
     }
-    
+
     // Удаляем дубликаты
     const uniqueVulnerabilities = this.deduplicateVulnerabilities(allVulnerabilities);
-    
+
     // Сортируем по критичности
     uniqueVulnerabilities.sort((a, b) => {
       const severityOrder = { critical: 4, high: 3, moderate: 2, low: 1, info: 0 };
       return (severityOrder[b.severity] || 0) - (severityOrder[a.severity] || 0);
     });
-    
+
     this.consolidatedReport.vulnerabilities = uniqueVulnerabilities;
-    
+
     // Подсчет по типам
-    uniqueVulnerabilities.forEach(vuln => {
+    uniqueVulnerabilities.forEach((vuln) => {
       const severity = vuln.severity || 'info';
       if (this.consolidatedReport.summary.issuesBySeverity[severity] !== undefined) {
         this.consolidatedReport.summary.issuesBySeverity[severity]++;
       }
     });
-    
+
     this.consolidatedReport.summary.totalIssues = uniqueVulnerabilities.length;
-    
+
     console.log(`   🔍 Consolidated ${uniqueVulnerabilities.length} unique vulnerabilities`);
     console.log(`   🔴 Critical: ${this.consolidatedReport.summary.issuesBySeverity.critical}`);
     console.log(`   🟠 High: ${this.consolidatedReport.summary.issuesBySeverity.high}`);
@@ -307,17 +307,17 @@ class SecurityReportConsolidator {
   deduplicateVulnerabilities(vulnerabilities) {
     const seen = new Set();
     const unique = [];
-    
-    vulnerabilities.forEach(vuln => {
+
+    vulnerabilities.forEach((vuln) => {
       // Создаем уникальный отпечаток уязвимости
       const fingerprint = this.createVulnerabilityFingerprint(vuln);
-      
+
       if (!seen.has(fingerprint)) {
         seen.add(fingerprint);
         unique.push(vuln);
       }
     });
-    
+
     return unique;
   }
 
@@ -330,9 +330,9 @@ class SecurityReportConsolidator {
       vuln.title || vuln.message || vuln.description || '',
       vuln.file || vuln.package || vuln.component || '',
       vuln.line || vuln.version || '',
-      vuln.severity || 'unknown'
+      vuln.severity || 'unknown',
     ];
-    
+
     return parts.join('|').toLowerCase();
   }
 
@@ -341,13 +341,13 @@ class SecurityReportConsolidator {
    */
   async calculateSecurityScore() {
     console.log('\n📊 Calculating security score...');
-    
+
     const { issuesBySeverity } = this.consolidatedReport.summary;
     const { scoring } = REPORT_CONFIG;
-    
+
     // Базовый балл
     let baseScore = 100;
-    
+
     // Вычитаем баллы за уязвимости
     let penaltyScore = 0;
     Object.entries(issuesBySeverity).forEach(([severity, count]) => {
@@ -355,20 +355,20 @@ class SecurityReportConsolidator {
         penaltyScore += count * scoring[severity].weight;
       }
     });
-    
+
     // Финальный балл
     const securityScore = Math.max(0, baseScore - penaltyScore);
     this.consolidatedReport.summary.securityScore = Math.round(securityScore);
-    
+
     // Определение уровня риска
     let riskLevel;
     if (securityScore >= 90) riskLevel = 'low';
     else if (securityScore >= 70) riskLevel = 'medium';
     else if (securityScore >= 50) riskLevel = 'high';
     else riskLevel = 'critical';
-    
+
     this.consolidatedReport.summary.riskLevel = riskLevel;
-    
+
     console.log(`   🎯 Security Score: ${securityScore}/100`);
     console.log(`   ⚠️ Risk Level: ${riskLevel.toUpperCase()}`);
   }
@@ -378,10 +378,10 @@ class SecurityReportConsolidator {
    */
   async generateConsolidatedRecommendations() {
     console.log('\n💡 Generating consolidated recommendations...');
-    
+
     const recommendations = [];
     const { issuesBySeverity } = this.consolidatedReport.summary;
-    
+
     // Критические рекомендации
     if (issuesBySeverity.critical > 0) {
       recommendations.push({
@@ -392,13 +392,13 @@ class SecurityReportConsolidator {
         actions: [
           'Stop deployment to production until critical issues are resolved',
           'Patch or mitigate critical vulnerabilities within 24 hours',
-          'Review security incident response procedures'
+          'Review security incident response procedures',
         ],
         impact: 'System compromise, data breach risk',
-        timeframe: 'Immediate (0-24 hours)'
+        timeframe: 'Immediate (0-24 hours)',
       });
     }
-    
+
     // Высокоприоритетные рекомендации
     if (issuesBySeverity.high > 0) {
       recommendations.push({
@@ -409,30 +409,30 @@ class SecurityReportConsolidator {
         actions: [
           'Schedule security updates within 48-72 hours',
           'Implement temporary mitigations if patches unavailable',
-          'Increase monitoring for affected components'
+          'Increase monitoring for affected components',
         ],
         impact: 'Potential security compromise',
-        timeframe: 'Urgent (24-72 hours)'
+        timeframe: 'Urgent (24-72 hours)',
       });
     }
-    
+
     // Рекомендации по покрытию сканирования
     const missingCoverage = Object.entries(this.consolidatedReport.summary.coverage)
       .filter(([, covered]) => !covered)
       .map(([type]) => type.replace('Coverage', ''));
-    
+
     if (missingCoverage.length > 0) {
       recommendations.push({
         priority: 3,
         category: 'improvement',
         title: 'Expand Security Scanning Coverage',
         description: `Missing security scans: ${missingCoverage.join(', ')}`,
-        actions: missingCoverage.map(type => `Implement ${type} security scanning`),
+        actions: missingCoverage.map((type) => `Implement ${type} security scanning`),
         impact: 'Reduced visibility into security posture',
-        timeframe: 'Medium term (1-2 weeks)'
+        timeframe: 'Medium term (1-2 weeks)',
       });
     }
-    
+
     // Рекомендации по улучшению процесса
     if (this.consolidatedReport.summary.totalIssues > REPORT_CONFIG.thresholds.totalVulns) {
       recommendations.push({
@@ -444,15 +444,15 @@ class SecurityReportConsolidator {
           'Implement security training for development team',
           'Add security gates to CI/CD pipeline',
           'Establish regular security review processes',
-          'Consider shift-left security practices'
+          'Consider shift-left security practices',
         ],
         impact: 'Long-term security posture improvement',
-        timeframe: 'Long term (1-3 months)'
+        timeframe: 'Long term (1-3 months)',
       });
     }
-    
+
     this.consolidatedReport.recommendations = recommendations;
-    
+
     console.log(`   📝 Generated ${recommendations.length} consolidated recommendations`);
   }
 
@@ -461,10 +461,10 @@ class SecurityReportConsolidator {
    */
   async analyzeCompliance() {
     console.log('\n📋 Analyzing compliance status...');
-    
+
     const { issuesBySeverity, securityScore } = this.consolidatedReport.summary;
     const { thresholds } = REPORT_CONFIG;
-    
+
     // OWASP Top 10 соответствие
     const owaspCompliance = {
       standard: 'OWASP Top 10 2021',
@@ -473,10 +473,10 @@ class SecurityReportConsolidator {
       recommendations: [
         'Implement secure coding practices',
         'Regular security training',
-        'Automated security testing'
-      ]
+        'Automated security testing',
+      ],
     };
-    
+
     // CIS Controls соответствие
     const cisCompliance = {
       standard: 'CIS Controls v8',
@@ -485,22 +485,25 @@ class SecurityReportConsolidator {
       recommendations: [
         'Complete security control implementation',
         'Regular vulnerability assessments',
-        'Incident response procedures'
-      ]
+        'Incident response procedures',
+      ],
     };
-    
+
     // SOC 2 соответствие
     const soc2Compliance = {
       standard: 'SOC 2 Type II',
-      score: issuesBySeverity.critical === 0 && issuesBySeverity.high <= 3 ? 'compliant' : 'non-compliant',
+      score:
+        issuesBySeverity.critical === 0 && issuesBySeverity.high <= 3
+          ? 'compliant'
+          : 'non-compliant',
       controlsAssessed: ['security', 'availability', 'confidentiality'],
       recommendations: [
         'Document security controls',
         'Implement monitoring and logging',
-        'Regular compliance assessments'
-      ]
+        'Regular compliance assessments',
+      ],
     };
-    
+
     this.consolidatedReport.complianceStatus = {
       owasp: owaspCompliance,
       cis: cisCompliance,
@@ -508,10 +511,10 @@ class SecurityReportConsolidator {
       summary: {
         overallCompliance: securityScore >= thresholds.securityScore ? 'passing' : 'failing',
         criticalGaps: issuesBySeverity.critical + issuesBySeverity.high,
-        nextReview: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      }
+        nextReview: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      },
     };
-    
+
     console.log(`   📊 OWASP Top 10: ${owaspCompliance.score}`);
     console.log(`   🔍 CIS Controls: ${cisCompliance.score}`);
     console.log(`   📋 SOC 2: ${soc2Compliance.score}`);
@@ -531,13 +534,13 @@ class SecurityReportConsolidator {
       'A07:2021 – Identification and Authentication Failures': 0,
       'A08:2021 – Software and Data Integrity Failures': 0,
       'A09:2021 – Security Logging and Monitoring Failures': 0,
-      'A10:2021 – Server-Side Request Forgery': 0
+      'A10:2021 – Server-Side Request Forgery': 0,
     };
-    
+
     // Простое маппинг на основе типов уязвимостей
-    this.consolidatedReport.vulnerabilities.forEach(vuln => {
+    this.consolidatedReport.vulnerabilities.forEach((vuln) => {
       const title = (vuln.title || vuln.message || '').toLowerCase();
-      
+
       if (title.includes('injection') || title.includes('sql') || title.includes('xss')) {
         owaspCategories['A03:2021 – Injection']++;
       } else if (title.includes('dependency') || title.includes('outdated')) {
@@ -550,7 +553,7 @@ class SecurityReportConsolidator {
         owaspCategories['A05:2021 – Security Misconfiguration']++;
       }
     });
-    
+
     return owaspCategories;
   }
 
@@ -561,9 +564,9 @@ class SecurityReportConsolidator {
     const coverage = this.consolidatedReport.summary.coverage;
     const coveredControls = Object.values(coverage).filter(Boolean).length;
     const totalControls = Object.keys(coverage).length;
-    
+
     const compliancePercentage = (coveredControls / totalControls) * 100;
-    
+
     if (compliancePercentage >= 90) return 'advanced';
     if (compliancePercentage >= 70) return 'intermediate';
     if (compliancePercentage >= 50) return 'basic';
@@ -575,46 +578,47 @@ class SecurityReportConsolidator {
    */
   async analyzeTrends() {
     console.log('\n📈 Analyzing security trends...');
-    
+
     // Загружаем исторические данные если доступны
     const historicalReportsDir = path.join(REPORT_CONFIG.outputDir, 'historical');
     const trends = {
       vulnerabilityTrend: 'unknown',
       scoreTrend: 'unknown',
       riskTrend: 'unknown',
-      recommendations: []
+      recommendations: [],
     };
-    
+
     if (fs.existsSync(historicalReportsDir)) {
       try {
-        const historicalFiles = fs.readdirSync(historicalReportsDir)
-          .filter(file => file.endsWith('.json'))
+        const historicalFiles = fs
+          .readdirSync(historicalReportsDir)
+          .filter((file) => file.endsWith('.json'))
           .sort()
           .slice(-5); // Последние 5 отчетов
-        
+
         if (historicalFiles.length > 1) {
-          const historicalData = historicalFiles.map(file => {
+          const historicalData = historicalFiles.map((file) => {
             const data = JSON.parse(fs.readFileSync(path.join(historicalReportsDir, file), 'utf8'));
             return {
               date: data.metadata.timestamp,
               score: data.summary.securityScore,
               totalIssues: data.summary.totalIssues,
               critical: data.summary.issuesBySeverity.critical,
-              high: data.summary.issuesBySeverity.high
+              high: data.summary.issuesBySeverity.high,
             };
           });
-          
-          trends.vulnerabilityTrend = this.calculateTrend(historicalData.map(d => d.totalIssues));
-          trends.scoreTrend = this.calculateTrend(historicalData.map(d => d.score));
+
+          trends.vulnerabilityTrend = this.calculateTrend(historicalData.map((d) => d.totalIssues));
+          trends.scoreTrend = this.calculateTrend(historicalData.map((d) => d.score));
           trends.historicalData = historicalData;
         }
       } catch (error) {
         console.log('   ⚠️ Could not analyze historical trends:', error.message);
       }
     }
-    
+
     this.consolidatedReport.trendAnalysis = trends;
-    
+
     console.log(`   📊 Vulnerability trend: ${trends.vulnerabilityTrend}`);
     console.log(`   📈 Security score trend: ${trends.scoreTrend}`);
   }
@@ -624,12 +628,12 @@ class SecurityReportConsolidator {
    */
   calculateTrend(values) {
     if (values.length < 2) return 'insufficient-data';
-    
+
     const recent = values[values.length - 1];
     const previous = values[values.length - 2];
-    
+
     const change = ((recent - previous) / previous) * 100;
-    
+
     if (Math.abs(change) < 5) return 'stable';
     return change > 0 ? 'improving' : 'declining';
   }
@@ -639,31 +643,34 @@ class SecurityReportConsolidator {
    */
   async generateConsolidatedReports() {
     console.log('\n📊 Generating consolidated reports...');
-    
+
     // JSON отчет
     const jsonReportPath = path.join(REPORT_CONFIG.outputDir, 'consolidated-security-report.json');
     fs.writeFileSync(jsonReportPath, JSON.stringify(this.consolidatedReport, null, 2));
-    
+
     // Исполнительный отчет
-    const executiveReportPath = path.join(REPORT_CONFIG.outputDir, 'executive-security-summary.json');
+    const executiveReportPath = path.join(
+      REPORT_CONFIG.outputDir,
+      'executive-security-summary.json',
+    );
     const executiveSummary = this.generateExecutiveSummary();
     fs.writeFileSync(executiveReportPath, JSON.stringify(executiveSummary, null, 2));
-    
+
     // HTML дашборд
     const htmlDashboardPath = path.join(REPORT_CONFIG.outputDir, 'security-dashboard.html');
     const htmlContent = this.generateSecurityDashboard();
     fs.writeFileSync(htmlDashboardPath, htmlContent);
-    
+
     // Сохранение в историю
     const historicalDir = path.join(REPORT_CONFIG.outputDir, 'historical');
     if (!fs.existsSync(historicalDir)) {
       fs.mkdirSync(historicalDir, { recursive: true });
     }
-    
+
     const timestamp = new Date().toISOString().split('T')[0];
     const historicalPath = path.join(historicalDir, `security-report-${timestamp}.json`);
     fs.writeFileSync(historicalPath, JSON.stringify(this.consolidatedReport, null, 2));
-    
+
     console.log(`   📄 Consolidated Report: ${jsonReportPath}`);
     console.log(`   👔 Executive Summary: ${executiveReportPath}`);
     console.log(`   🌐 Security Dashboard: ${htmlDashboardPath}`);
@@ -677,38 +684,38 @@ class SecurityReportConsolidator {
     return {
       projectName: this.consolidatedReport.metadata.projectInfo.name,
       assessmentDate: this.consolidatedReport.metadata.timestamp,
-      
+
       keyFindings: {
         securityScore: this.consolidatedReport.summary.securityScore,
         riskLevel: this.consolidatedReport.summary.riskLevel,
         criticalIssues: this.consolidatedReport.summary.issuesBySeverity.critical,
         highIssues: this.consolidatedReport.summary.issuesBySeverity.high,
-        totalIssues: this.consolidatedReport.summary.totalIssues
+        totalIssues: this.consolidatedReport.summary.totalIssues,
       },
-      
+
       businessImpact: this.assessBusinessImpact(),
-      
+
       immediateActions: this.consolidatedReport.recommendations
-        .filter(rec => rec.priority <= 2)
-        .map(rec => ({
+        .filter((rec) => rec.priority <= 2)
+        .map((rec) => ({
           action: rec.title,
           timeframe: rec.timeframe,
-          impact: rec.impact
+          impact: rec.impact,
         })),
-      
+
       complianceStatus: {
         owasp: this.consolidatedReport.complianceStatus?.owasp?.score || 'unknown',
-        overall: this.consolidatedReport.complianceStatus?.summary?.overallCompliance || 'unknown'
+        overall: this.consolidatedReport.complianceStatus?.summary?.overallCompliance || 'unknown',
       },
-      
+
       trendAnalysis: this.consolidatedReport.trendAnalysis,
-      
+
       nextSteps: [
         'Review and prioritize security recommendations',
         'Implement immediate fixes for critical vulnerabilities',
         'Schedule regular security assessments',
-        'Update security policies and procedures'
-      ]
+        'Update security policies and procedures',
+      ],
     };
   }
 
@@ -717,20 +724,22 @@ class SecurityReportConsolidator {
    */
   assessBusinessImpact() {
     const { critical, high } = this.consolidatedReport.summary.issuesBySeverity;
-    
+
     if (critical > 0) {
       return {
         level: 'high',
-        description: 'Critical vulnerabilities pose immediate risk to business operations and data security.',
-        financialRisk: 'High potential for data breach costs, regulatory fines, and business disruption.',
+        description:
+          'Critical vulnerabilities pose immediate risk to business operations and data security.',
+        financialRisk:
+          'High potential for data breach costs, regulatory fines, and business disruption.',
         recommendations: [
           'Immediate security team mobilization',
           'Consider production deployment freeze',
-          'Prepare incident response procedures'
-        ]
+          'Prepare incident response procedures',
+        ],
       };
     }
-    
+
     if (high > 5) {
       return {
         level: 'medium',
@@ -739,11 +748,11 @@ class SecurityReportConsolidator {
         recommendations: [
           'Accelerated security patching schedule',
           'Enhanced monitoring and detection',
-          'Security team resource allocation'
-        ]
+          'Security team resource allocation',
+        ],
       };
     }
-    
+
     return {
       level: 'low',
       description: 'Security posture is acceptable with manageable risks.',
@@ -751,8 +760,8 @@ class SecurityReportConsolidator {
       recommendations: [
         'Continue regular security maintenance',
         'Monitor for emerging threats',
-        'Maintain security best practices'
-      ]
+        'Maintain security best practices',
+      ],
     };
   }
 
@@ -768,11 +777,18 @@ class SecurityReportConsolidator {
    */
   generateSecurityDashboard() {
     const riskColors = {
-      low: '#10b981', medium: '#f59e0b', high: '#ef4444', critical: '#dc2626'
+      low: '#10b981',
+      medium: '#f59e0b',
+      high: '#ef4444',
+      critical: '#dc2626',
     };
-    
+
     const severityColors = {
-      critical: '#dc2626', high: '#ea580c', moderate: '#d97706', low: '#65a30d', info: '#3b82f6'
+      critical: '#dc2626',
+      high: '#ea580c',
+      moderate: '#d97706',
+      low: '#65a30d',
+      info: '#3b82f6',
     };
 
     return `
@@ -835,12 +851,16 @@ class SecurityReportConsolidator {
             <div class="card">
                 <h2>Coverage Status</h2>
                 <div style="margin-top: 15px;">
-                    ${Object.entries(this.consolidatedReport.summary.coverage).map(([type, covered]) => `
+                    ${Object.entries(this.consolidatedReport.summary.coverage)
+                      .map(
+                        ([type, covered]) => `
                         <div style="display: flex; justify-content: space-between; margin: 8px 0;">
                             <span>${type.replace('Coverage', '').toUpperCase()}</span>
                             <span class="badge" style="background: ${covered ? '#10b981' : '#ef4444'};">${covered ? 'COVERED' : 'MISSING'}</span>
                         </div>
-                    `).join('')}
+                    `,
+                      )
+                      .join('')}
                 </div>
             </div>
         </div>
@@ -849,12 +869,16 @@ class SecurityReportConsolidator {
         <div class="card" style="margin-bottom: 20px;">
             <h2>Vulnerability Overview</h2>
             <div class="stat-grid" style="margin-top: 15px;">
-                ${Object.entries(this.consolidatedReport.summary.issuesBySeverity).map(([severity, count]) => `
+                ${Object.entries(this.consolidatedReport.summary.issuesBySeverity)
+                  .map(
+                    ([severity, count]) => `
                     <div class="stat-item">
                         <h3 style="color: ${severityColors[severity] || '#6b7280'};">${count}</h3>
                         <p>${severity.charAt(0).toUpperCase() + severity.slice(1)}</p>
                     </div>
-                `).join('')}
+                `,
+                  )
+                  .join('')}
             </div>
         </div>
         
@@ -863,45 +887,67 @@ class SecurityReportConsolidator {
             <div class="card">
                 <h2>Top Vulnerabilities</h2>
                 <div class="vulnerability-list">
-                    ${this.consolidatedReport.vulnerabilities.slice(0, 10).map(vuln => `
+                    ${this.consolidatedReport.vulnerabilities
+                      .slice(0, 10)
+                      .map(
+                        (vuln) => `
                         <div class="vulnerability-item ${vuln.severity}" style="border-left-color: ${severityColors[vuln.severity]};">
                             <h4>${vuln.title || vuln.message || 'Security Issue'}</h4>
                             <p class="meta">${vuln.source?.toUpperCase()} | ${vuln.severity?.toUpperCase()} | ${vuln.file || vuln.package || vuln.component || 'Unknown location'}</p>
                         </div>
-                    `).join('')}
+                    `,
+                      )
+                      .join('')}
                 </div>
             </div>
             
             <div class="card">
                 <h2>Priority Recommendations</h2>
                 <div>
-                    ${this.consolidatedReport.recommendations.slice(0, 5).map(rec => `
+                    ${this.consolidatedReport.recommendations
+                      .slice(0, 5)
+                      .map(
+                        (rec) => `
                         <div class="recommendation-item">
                             <h4>${rec.title}</h4>
                             <p>${rec.description}</p>
                             <p class="meta">Priority: ${rec.priority} | ${rec.timeframe}</p>
                         </div>
-                    `).join('')}
+                    `,
+                      )
+                      .join('')}
                 </div>
             </div>
             
             <div class="card">
                 <h2>Compliance Status</h2>
                 <div style="margin-top: 15px;">
-                    ${this.consolidatedReport.complianceStatus ? Object.entries(this.consolidatedReport.complianceStatus).slice(0, 3).map(([standard, status]) => `
+                    ${
+                      this.consolidatedReport.complianceStatus
+                        ? Object.entries(this.consolidatedReport.complianceStatus)
+                            .slice(0, 3)
+                            .map(
+                              ([standard, status]) => `
                         <div style="margin: 10px 0; padding: 10px; background: #f8fafc; border-radius: 6px;">
                             <strong>${standard.toUpperCase()}</strong><br>
                             <span class="badge" style="background: ${status.score === 'compliant' ? '#10b981' : '#ef4444'}; margin-top: 5px;">
                                 ${status.score || 'Unknown'}
                             </span>
                         </div>
-                    `).join('') : '<p class="meta">Compliance data not available</p>'}
+                    `,
+                            )
+                            .join('')
+                        : '<p class="meta">Compliance data not available</p>'
+                    }
                 </div>
             </div>
         </div>
         
         <!-- Trend Analysis -->
-        ${this.consolidatedReport.trendAnalysis && this.consolidatedReport.trendAnalysis.historicalData ? `
+        ${
+          this.consolidatedReport.trendAnalysis &&
+          this.consolidatedReport.trendAnalysis.historicalData
+            ? `
         <div class="card" style="margin-top: 20px;">
             <h2>Security Trends</h2>
             <div class="grid grid-3" style="margin-top: 15px;">
@@ -919,7 +965,9 @@ class SecurityReportConsolidator {
                 </div>
             </div>
         </div>
-        ` : ''}
+        `
+            : ''
+        }
     </div>
 </body>
 </html>`;
@@ -940,10 +988,14 @@ class SecurityReportConsolidator {
    */
   getTrendIcon(trend) {
     switch (trend) {
-      case 'improving': return '📈';
-      case 'declining': return '📉';
-      case 'stable': return '➡️';
-      default: return '❓';
+      case 'improving':
+        return '📈';
+      case 'declining':
+        return '📉';
+      case 'stable':
+        return '➡️';
+      default:
+        return '❓';
     }
   }
 
@@ -958,26 +1010,46 @@ class SecurityReportConsolidator {
       green: '\x1b[32m',
       yellow: '\x1b[33m',
       blue: '\x1b[34m',
-      cyan: '\x1b[36m'
+      cyan: '\x1b[36m',
     };
-    
+
     console.log('\n🛡️  CONSOLIDATED SECURITY REPORT');
     console.log('='.repeat(50));
-    console.log(`${colors.bright}Project:${colors.reset} ${this.consolidatedReport.metadata.projectInfo.name}`);
-    console.log(`${colors.bright}Assessment Date:${colors.reset} ${new Date(this.consolidatedReport.metadata.timestamp).toLocaleDateString()}`);
-    console.log(`${colors.bright}Scanners Used:${colors.reset} ${this.consolidatedReport.metadata.scanners.join(', ')}`);
-    console.log(`${colors.bright}Report Duration:${colors.reset} ${(this.consolidatedReport.metadata.duration / 1000).toFixed(2)}s`);
-    
+    console.log(
+      `${colors.bright}Project:${colors.reset} ${this.consolidatedReport.metadata.projectInfo.name}`,
+    );
+    console.log(
+      `${colors.bright}Assessment Date:${colors.reset} ${new Date(this.consolidatedReport.metadata.timestamp).toLocaleDateString()}`,
+    );
+    console.log(
+      `${colors.bright}Scanners Used:${colors.reset} ${this.consolidatedReport.metadata.scanners.join(', ')}`,
+    );
+    console.log(
+      `${colors.bright}Report Duration:${colors.reset} ${(this.consolidatedReport.metadata.duration / 1000).toFixed(2)}s`,
+    );
+
     console.log('\n📊 SECURITY METRICS');
     console.log('-'.repeat(30));
-    const scoreColor = this.consolidatedReport.summary.securityScore >= 70 ? colors.green : 
-                      this.consolidatedReport.summary.securityScore >= 50 ? colors.yellow : colors.red;
-    console.log(`Security Score: ${scoreColor}${this.consolidatedReport.summary.securityScore}/100${colors.reset}`);
-    
-    const riskColor = this.consolidatedReport.summary.riskLevel === 'low' ? colors.green :
-                     this.consolidatedReport.summary.riskLevel === 'medium' ? colors.yellow : colors.red;
-    console.log(`Risk Level: ${riskColor}${this.consolidatedReport.summary.riskLevel.toUpperCase()}${colors.reset}`);
-    
+    const scoreColor =
+      this.consolidatedReport.summary.securityScore >= 70
+        ? colors.green
+        : this.consolidatedReport.summary.securityScore >= 50
+          ? colors.yellow
+          : colors.red;
+    console.log(
+      `Security Score: ${scoreColor}${this.consolidatedReport.summary.securityScore}/100${colors.reset}`,
+    );
+
+    const riskColor =
+      this.consolidatedReport.summary.riskLevel === 'low'
+        ? colors.green
+        : this.consolidatedReport.summary.riskLevel === 'medium'
+          ? colors.yellow
+          : colors.red;
+    console.log(
+      `Risk Level: ${riskColor}${this.consolidatedReport.summary.riskLevel.toUpperCase()}${colors.reset}`,
+    );
+
     console.log('\n🔍 VULNERABILITY BREAKDOWN');
     console.log('-'.repeat(30));
     const { issuesBySeverity } = this.consolidatedReport.summary;
@@ -986,21 +1058,25 @@ class SecurityReportConsolidator {
     console.log(`${colors.cyan}Moderate: ${issuesBySeverity.moderate}${colors.reset}`);
     console.log(`${colors.blue}Low: ${issuesBySeverity.low}${colors.reset}`);
     console.log(`${colors.reset}Info: ${issuesBySeverity.info}${colors.reset}`);
-    console.log(`${colors.bright}Total Issues: ${this.consolidatedReport.summary.totalIssues}${colors.reset}`);
-    
+    console.log(
+      `${colors.bright}Total Issues: ${this.consolidatedReport.summary.totalIssues}${colors.reset}`,
+    );
+
     console.log('\n💡 TOP RECOMMENDATIONS');
     console.log('-'.repeat(30));
     this.consolidatedReport.recommendations.slice(0, 3).forEach((rec, index) => {
       console.log(`${index + 1}. [${rec.category.toUpperCase()}] ${rec.title}`);
       console.log(`   ⏱️ ${rec.timeframe}`);
     });
-    
+
     if (this.consolidatedReport.summary.totalIssues === 0) {
       console.log(`\n${colors.green}🎉 No security vulnerabilities found!${colors.reset}`);
     } else {
       const criticalHigh = issuesBySeverity.critical + issuesBySeverity.high;
       if (criticalHigh > 0) {
-        console.log(`\n${colors.red}⚠️  IMMEDIATE ACTION REQUIRED: ${criticalHigh} high-priority vulnerabilities${colors.reset}`);
+        console.log(
+          `\n${colors.red}⚠️  IMMEDIATE ACTION REQUIRED: ${criticalHigh} high-priority vulnerabilities${colors.reset}`,
+        );
       }
     }
   }
@@ -1011,22 +1087,22 @@ class SecurityReportConsolidator {
   getSecurityVerdict() {
     const { critical, high } = this.consolidatedReport.summary.issuesBySeverity;
     const { securityScore } = this.consolidatedReport.summary;
-    
+
     if (critical > 0) {
       console.log('\n🚨 SECURITY VERDICT: FAIL - Critical vulnerabilities detected');
       return 2;
     }
-    
+
     if (high > REPORT_CONFIG.thresholds.highVulns) {
       console.log('\n⚠️ SECURITY VERDICT: WARNING - Too many high-severity vulnerabilities');
       return 1;
     }
-    
+
     if (securityScore < REPORT_CONFIG.thresholds.securityScore) {
       console.log('\n⚠️ SECURITY VERDICT: WARNING - Security score below threshold');
       return 1;
     }
-    
+
     console.log('\n✅ SECURITY VERDICT: PASS - Security posture acceptable');
     return 0;
   }
@@ -1035,12 +1111,15 @@ class SecurityReportConsolidator {
 // Запуск если вызван напрямую
 if (import.meta.url === `file://${process.argv[1]}`) {
   const consolidator = new SecurityReportConsolidator();
-  consolidator.consolidateReports().then(exitCode => {
-    process.exit(exitCode);
-  }).catch(error => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-  });
+  consolidator
+    .consolidateReports()
+    .then((exitCode) => {
+      process.exit(exitCode);
+    })
+    .catch((error) => {
+      console.error('Fatal error:', error);
+      process.exit(1);
+    });
 }
 
 export default SecurityReportConsolidator;

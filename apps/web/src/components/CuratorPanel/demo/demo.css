@@ -36,9 +36,15 @@
   color: white;
 }
 
-.badge.success { background: #48bb78; }
-.badge.info { background: #4299e1; }
-.badge.primary { background: #667eea; }
+.badge.success {
+  background: #48bb78;
+}
+.badge.info {
+  background: #4299e1;
+}
+.badge.primary {
+  background: #667eea;
+}
 
 .demo-description {
   background: rgba(255, 255, 255, 0.9);
@@ -88,15 +94,15 @@
   .demo-header {
     padding: 1rem;
   }
-  
+
   .demo-header h1 {
     font-size: 1.5rem;
   }
-  
+
   .demo-badges {
     gap: 0.5rem;
   }
-  
+
   .demo-description,
   .demo-panel,
   .demo-footer {

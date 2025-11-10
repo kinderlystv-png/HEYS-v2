@@ -1,13 +1,13 @@
-import { 
-  SecurityIncident, 
-  SecurityEvent, 
-  AnomalyDetectionResult, 
+import {
+  AnomalyDetectionResult,
+  ContainmentStatus,
   IOCMatch,
-  IncidentStatus, 
-  SecuritySeverity, 
   IncidentImpact,
   IncidentResponse,
-  ContainmentStatus
+  IncidentStatus,
+  SecurityEvent,
+  SecurityIncident,
+  SecuritySeverity,
 } from '../types';
 
 /**
@@ -17,15 +17,17 @@ import {
 export class IncidentResponseManager {
   private incidents: Map<string, SecurityIncident> = new Map();
   private escalationRules: Map<SecuritySeverity, number> = new Map();
-  private automatedActions: Map<string, Function> = new Map(); // eslint-disable-line @typescript-eslint/ban-types
+  private automatedActions: Map<string, Function> = new Map();
   private responseTeam: string[] = [];
 
-  constructor(private config: {
-    autoEscalationEnabled?: boolean;
-    escalationTimeouts?: Record<SecuritySeverity, number>;
-    enableAutomatedActions?: boolean;
-    slackIntegration?: boolean;
-  } = {}) {
+  constructor(
+    private config: {
+      autoEscalationEnabled?: boolean;
+      escalationTimeouts?: Record<SecuritySeverity, number>;
+      enableAutomatedActions?: boolean;
+      slackIntegration?: boolean;
+    } = {},
+  ) {
     this.initializeEscalationRules();
     this.initializeAutomatedActions();
     this.initializeResponseTeam();
@@ -36,10 +38,10 @@ export class IncidentResponseManager {
    */
   private initializeEscalationRules(): void {
     // Время в минутах для эскалации по severity
-    this.escalationRules.set('low', 240);      // 4 часа
-    this.escalationRules.set('medium', 120);   // 2 часа
-    this.escalationRules.set('high', 30);      // 30 минут
-    this.escalationRules.set('critical', 15);  // 15 минут
+    this.escalationRules.set('low', 240); // 4 часа
+    this.escalationRules.set('medium', 120); // 2 часа
+    this.escalationRules.set('high', 30); // 30 минут
+    this.escalationRules.set('critical', 15); // 15 минут
 
     console.log('⏰ Escalation rules initialized');
   }
@@ -67,7 +69,7 @@ export class IncidentResponseManager {
       'security_analyst_2',
       'incident_commander',
       'threat_hunter',
-      'forensics_specialist'
+      'forensics_specialist',
     ];
 
     console.log(`👥 Response team initialized with ${this.responseTeam.length} members`);
@@ -82,10 +84,10 @@ export class IncidentResponseManager {
     severity: SecuritySeverity,
     triggerEvent: SecurityEvent,
     anomalyResult?: AnomalyDetectionResult,
-    iocMatches?: IOCMatch[]
+    iocMatches?: IOCMatch[],
   ): Promise<SecurityIncident> {
     const incidentId = `incident_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const incident: SecurityIncident = {
       id: incidentId,
       title,
@@ -102,13 +104,13 @@ export class IncidentResponseManager {
           action: 'incident_created',
           description: `Incident created: ${title}`,
           actor: 'system',
-          evidence: []
-        }
+          evidence: [],
+        },
       ],
       impact: this.assessImpact(severity, triggerEvent),
       response: this.initializeResponse(severity),
       containment: [],
-      lessons: []
+      lessons: [],
     };
 
     // Добавляем anomaly data если есть
@@ -118,7 +120,7 @@ export class IncidentResponseManager {
         action: 'anomaly_detected',
         description: `Anomaly detected: ${anomalyResult.explanation}`,
         actor: 'ml_engine',
-        evidence: [`anomaly_score: ${anomalyResult.anomalyScore}`]
+        evidence: [`anomaly_score: ${anomalyResult.anomalyScore}`],
       });
     }
 
@@ -129,7 +131,7 @@ export class IncidentResponseManager {
         action: 'ioc_matches_found',
         description: `${iocMatches.length} IOC matches found`,
         actor: 'threat_intelligence',
-        evidence: iocMatches.map(match => `${match.iocType}:${match.matchedValue}`)
+        evidence: iocMatches.map((match) => `${match.iocType}:${match.matchedValue}`),
       });
     }
 
@@ -149,7 +151,7 @@ export class IncidentResponseManager {
     incidentId: string,
     status: IncidentStatus,
     notes?: string,
-    actor?: string
+    actor?: string,
   ): Promise<SecurityIncident> {
     const incident = this.incidents.get(incidentId);
     if (!incident) {
@@ -166,7 +168,7 @@ export class IncidentResponseManager {
       action: 'status_updated',
       description: `Status changed from ${previousStatus} to ${status}${notes ? ': ' + notes : ''}`,
       actor: actor || 'system',
-      evidence: []
+      evidence: [],
     });
 
     // Trigger actions based on status change
@@ -193,7 +195,7 @@ export class IncidentResponseManager {
       action: 'event_added',
       description: `Related event added: ${event.type} from ${event.source}`,
       actor: 'correlation_engine',
-      evidence: [event.id]
+      evidence: [event.id],
     });
 
     // Re-assess severity if needed
@@ -238,13 +240,13 @@ export class IncidentResponseManager {
         const action = this.automatedActions.get(actionName);
         if (action) {
           await action(incident);
-          
+
           incident.timeline.push({
             timestamp: Date.now(),
             action: 'automated_action',
             description: `Executed automated action: ${actionName}`,
             actor: 'automation',
-            evidence: []
+            evidence: [],
           });
         }
       } catch (error) {
@@ -260,7 +262,7 @@ export class IncidentResponseManager {
     const sourceIP = incident.events[0]?.sourceIP || incident.events[0]?.ipAddress;
     if (sourceIP) {
       console.log(`🛡️ Blocking IP address: ${sourceIP}`);
-      
+
       incident.containment.push({
         id: `block_ip_${Date.now()}`,
         type: 'network_isolation',
@@ -269,7 +271,7 @@ export class IncidentResponseManager {
         status: 'in_progress' as ContainmentStatus,
         actor: 'automation',
         target: sourceIP,
-        duration: 24 * 60 * 60 * 1000 // 24 hours
+        duration: 24 * 60 * 60 * 1000, // 24 hours
       });
     }
   }
@@ -278,7 +280,7 @@ export class IncidentResponseManager {
     const userId = incident.events[0]?.userId;
     if (userId) {
       console.log(`👤 Disabling user account: ${userId}`);
-      
+
       incident.containment.push({
         id: `disable_user_${Date.now()}`,
         type: 'account_disable',
@@ -287,7 +289,7 @@ export class IncidentResponseManager {
         status: 'active',
         actor: 'automation',
         target: userId,
-        duration: 4 * 60 * 60 * 1000 // 4 hours
+        duration: 4 * 60 * 60 * 1000, // 4 hours
       });
     }
   }
@@ -296,7 +298,7 @@ export class IncidentResponseManager {
     const sessionId = incident.events[0]?.sessionId;
     if (sessionId) {
       console.log(`🔒 Isolating session: ${sessionId}`);
-      
+
       incident.containment.push({
         id: `isolate_session_${Date.now()}`,
         type: 'session_isolation',
@@ -305,7 +307,7 @@ export class IncidentResponseManager {
         status: 'active',
         actor: 'automation',
         target: sessionId,
-        duration: 2 * 60 * 60 * 1000 // 2 hours
+        duration: 2 * 60 * 60 * 1000, // 2 hours
       });
     }
   }
@@ -314,7 +316,7 @@ export class IncidentResponseManager {
     const fileHash = incident.events[0]?.metadata?.fileHash;
     if (fileHash) {
       console.log(`📁 Quarantining file: ${fileHash}`);
-      
+
       incident.containment.push({
         id: `quarantine_file_${Date.now()}`,
         type: 'file_quarantine',
@@ -323,7 +325,7 @@ export class IncidentResponseManager {
         status: 'active',
         actor: 'automation',
         target: fileHash,
-        duration: 7 * 24 * 60 * 60 * 1000 // 7 days
+        duration: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
     }
   }
@@ -332,7 +334,7 @@ export class IncidentResponseManager {
     const userId = incident.events[0]?.userId;
     if (userId) {
       console.log(`🔑 Forcing password reset for user: ${userId}`);
-      
+
       incident.containment.push({
         id: `reset_password_${Date.now()}`,
         type: 'credential_reset',
@@ -341,23 +343,24 @@ export class IncidentResponseManager {
         status: 'active',
         actor: 'automation',
         target: userId,
-        duration: 0 // Immediate, one-time action
+        duration: 0, // Immediate, one-time action
       });
     }
   }
 
   private async notifySecurityTeam(incident: SecurityIncident): Promise<void> {
     console.log(`📢 Notifying security team about incident: ${incident.id}`);
-    
+
     // В реальной системе здесь будет отправка уведомлений через Slack, email, etc.
     const notification = {
       channel: '#security-alerts',
-      message: `🚨 *New ${incident.severity.toUpperCase()} Incident*\n` +
-               `*ID:* ${incident.id}\n` +
-               `*Title:* ${incident.title}\n` +
-               `*Description:* ${incident.description}\n` +
-               `*Assigned to:* ${incident.assignedTo}\n` +
-               `*Created:* ${new Date(incident.createdAt).toISOString()}`
+      message:
+        `🚨 *New ${incident.severity.toUpperCase()} Incident*\n` +
+        `*ID:* ${incident.id}\n` +
+        `*Title:* ${incident.title}\n` +
+        `*Description:* ${incident.description}\n` +
+        `*Assigned to:* ${incident.assignedTo}\n` +
+        `*Created:* ${new Date(incident.createdAt).toISOString()}`,
     };
 
     incident.timeline.push({
@@ -365,7 +368,7 @@ export class IncidentResponseManager {
       action: 'team_notified',
       description: 'Security team notified via Slack',
       actor: 'notification_system',
-      evidence: [JSON.stringify(notification)]
+      evidence: [JSON.stringify(notification)],
     });
   }
 
@@ -374,7 +377,14 @@ export class IncidentResponseManager {
    */
   private assessImpact(severity: SecuritySeverity, event: SecurityEvent): IncidentImpact {
     return {
-      scope: severity === 'critical' ? 'critical' : severity === 'high' ? 'extensive' : severity === 'medium' ? 'moderate' : 'limited',
+      scope:
+        severity === 'critical'
+          ? 'critical'
+          : severity === 'high'
+            ? 'extensive'
+            : severity === 'medium'
+              ? 'moderate'
+              : 'limited',
       confidentiality: this.calculateImpactScore(severity, 'confidentiality'),
       integrity: this.calculateImpactScore(severity, 'integrity'),
       availability: this.calculateImpactScore(severity, 'availability'),
@@ -383,7 +393,14 @@ export class IncidentResponseManager {
       businessImpact: this.assessBusinessImpact(severity),
       estimatedCost: this.estimateCost(severity),
       dataCompromised: false, // Default, will be updated during investigation
-      reputationImpact: severity === 'critical' ? 'severe' : severity === 'high' ? 'significant' : severity === 'medium' ? 'moderate' : 'minimal'
+      reputationImpact:
+        severity === 'critical'
+          ? 'severe'
+          : severity === 'high'
+            ? 'significant'
+            : severity === 'medium'
+              ? 'moderate'
+              : 'minimal',
     };
   }
 
@@ -392,10 +409,10 @@ export class IncidentResponseManager {
    */
   private calculateImpactScore(severity: SecuritySeverity, _dimension: string): number {
     const baseScores = {
-      'low': 1,
-      'medium': 3,
-      'high': 7,
-      'critical': 10
+      low: 1,
+      medium: 3,
+      high: 7,
+      critical: 10,
     };
     return baseScores[severity];
   }
@@ -405,10 +422,10 @@ export class IncidentResponseManager {
    */
   private assessBusinessImpact(severity: SecuritySeverity): string {
     const impacts = {
-      'low': 'Minimal business impact expected',
-      'medium': 'Limited business operations may be affected',
-      'high': 'Significant business impact likely',
-      'critical': 'Severe business disruption possible'
+      low: 'Minimal business impact expected',
+      medium: 'Limited business operations may be affected',
+      high: 'Significant business impact likely',
+      critical: 'Severe business disruption possible',
     };
     return impacts[severity];
   }
@@ -418,10 +435,10 @@ export class IncidentResponseManager {
    */
   private estimateCost(severity: SecuritySeverity): number {
     const costs = {
-      'low': 1000,
-      'medium': 5000,
-      'high': 25000,
-      'critical': 100000
+      low: 1000,
+      medium: 5000,
+      high: 25000,
+      critical: 100000,
     };
     return costs[severity];
   }
@@ -442,7 +459,7 @@ export class IncidentResponseManager {
       eradicationActions: [],
       recoveryActions: [],
       forensicsRequired: severity === 'critical' || severity === 'high',
-      legalNotificationRequired: severity === 'critical'
+      legalNotificationRequired: severity === 'critical',
     };
   }
 
@@ -451,10 +468,10 @@ export class IncidentResponseManager {
    */
   private getResponsePlan(severity: SecuritySeverity): string {
     const plans = {
-      'low': 'Standard incident response procedure',
-      'medium': 'Enhanced monitoring and investigation',
-      'high': 'Immediate containment and forensic analysis',
-      'critical': 'Emergency response protocol with executive notification'
+      low: 'Standard incident response procedure',
+      medium: 'Enhanced monitoring and investigation',
+      high: 'Immediate containment and forensic analysis',
+      critical: 'Emergency response protocol with executive notification',
     };
     return plans[severity];
   }
@@ -462,7 +479,7 @@ export class IncidentResponseManager {
   /**
    * Get communication plan
    */
-  private getCommunicationPlan(_severity: SecuritySeverity): any[] { // eslint-disable-line @typescript-eslint/no-explicit-any
+  private getCommunicationPlan(_severity: SecuritySeverity): any[] {
     return []; // Simplified for now
   }
 
@@ -471,10 +488,10 @@ export class IncidentResponseManager {
    */
   private getEscalationPath(severity: SecuritySeverity): string[] {
     const paths = {
-      'low': ['security_analyst', 'security_lead'],
-      'medium': ['security_analyst', 'security_lead', 'security_manager'],
-      'high': ['security_analyst', 'security_lead', 'security_manager', 'ciso'],
-      'critical': ['security_analyst', 'security_lead', 'security_manager', 'ciso', 'ceo']
+      low: ['security_analyst', 'security_lead'],
+      medium: ['security_analyst', 'security_lead', 'security_manager'],
+      high: ['security_analyst', 'security_lead', 'security_manager', 'ciso'],
+      critical: ['security_analyst', 'security_lead', 'security_manager', 'ciso', 'ceo'],
     };
     return paths[severity];
   }
@@ -483,7 +500,10 @@ export class IncidentResponseManager {
    * Get next available analyst
    */
   private getNextAvailableAnalyst(): string {
-    return this.responseTeam[Math.floor(Math.random() * this.responseTeam.length)] || 'security_analyst_1';
+    return (
+      this.responseTeam[Math.floor(Math.random() * this.responseTeam.length)] ||
+      'security_analyst_1'
+    );
   }
 
   /**
@@ -492,7 +512,7 @@ export class IncidentResponseManager {
   private async handleStatusChange(
     incident: SecurityIncident,
     from: IncidentStatus,
-    to: IncidentStatus
+    to: IncidentStatus,
   ): Promise<void> {
     switch (to) {
       case 'investigating':
@@ -515,7 +535,7 @@ export class IncidentResponseManager {
    */
   private async startInvestigation(incident: SecurityIncident): Promise<void> {
     console.log(`🔍 Starting investigation for incident ${incident.id}`);
-    
+
     // Assign additional resources for high/critical incidents
     if (incident.severity === 'high' || incident.severity === 'critical') {
       incident.response.teamMembers.push('forensics_specialist', 'threat_hunter');
@@ -527,7 +547,7 @@ export class IncidentResponseManager {
    */
   private async confirmContainment(incident: SecurityIncident): Promise<void> {
     console.log(`🛡️ Confirming containment for incident ${incident.id}`);
-    
+
     // Verify all containment actions are effective
     for (const action of incident.containment) {
       if (action.status === 'active') {
@@ -541,7 +561,7 @@ export class IncidentResponseManager {
    */
   private async confirmEradication(incident: SecurityIncident): Promise<void> {
     console.log(`🧹 Confirming eradication for incident ${incident.id}`);
-    
+
     // Begin recovery planning
     incident.response.actions.push('begin_recovery_planning');
   }
@@ -551,10 +571,10 @@ export class IncidentResponseManager {
    */
   private async closeIncident(incident: SecurityIncident): Promise<void> {
     console.log(`✅ Closing incident ${incident.id}`);
-    
+
     // Generate lessons learned
     incident.lessons = this.generateLessonsLearned(incident);
-    
+
     // Remove temporary containment actions
     for (const action of incident.containment) {
       if (action.type === 'session_isolation' || action.type === 'account_disable') {
@@ -568,15 +588,15 @@ export class IncidentResponseManager {
    */
   private generateLessonsLearned(incident: SecurityIncident): string[] {
     const lessons: string[] = [];
-    
+
     lessons.push(`Detection method: ${incident.events[0]?.type} event triggered the incident`);
     lessons.push(`Response time: ${this.calculateResponseTime(incident)} minutes`);
     lessons.push(`Containment effectiveness: ${incident.containment.length} actions taken`);
-    
+
     if (incident.severity === 'critical') {
       lessons.push('Consider implementing additional preventive controls');
     }
-    
+
     return lessons;
   }
 
@@ -585,12 +605,14 @@ export class IncidentResponseManager {
    */
   private calculateResponseTime(incident: SecurityIncident): number {
     const created = incident.createdAt;
-    const investigating = incident.timeline.find(entry => entry.action === 'status_updated' && entry.description.includes('investigating'));
-    
+    const investigating = incident.timeline.find(
+      (entry) => entry.action === 'status_updated' && entry.description.includes('investigating'),
+    );
+
     if (investigating) {
       return Math.round((investigating.timestamp - created) / (1000 * 60)); // minutes
     }
-    
+
     return 0;
   }
 
@@ -599,35 +621,38 @@ export class IncidentResponseManager {
    */
   private recalculateSeverity(incident: SecurityIncident): SecuritySeverity {
     // Simplified severity calculation
-    const criticalEvents = incident.events.filter(e => e.severity === 'critical').length;
-    const highEvents = incident.events.filter(e => e.severity === 'high').length;
-    
+    const criticalEvents = incident.events.filter((e) => e.severity === 'critical').length;
+    const highEvents = incident.events.filter((e) => e.severity === 'high').length;
+
     if (criticalEvents > 0) return 'critical';
     if (highEvents > 2) return 'high';
     if (incident.events.length > 10) return 'high';
-    
+
     return incident.severity; // Keep current if no escalation needed
   }
 
   /**
    * Escalate incident
    */
-  private async escalateIncident(incident: SecurityIncident, newSeverity: SecuritySeverity): Promise<void> {
+  private async escalateIncident(
+    incident: SecurityIncident,
+    newSeverity: SecuritySeverity,
+  ): Promise<void> {
     const oldSeverity = incident.severity;
     incident.severity = newSeverity;
     incident.updatedAt = Date.now();
-    
+
     incident.timeline.push({
       timestamp: Date.now(),
       action: 'severity_escalated',
       description: `Severity escalated from ${oldSeverity} to ${newSeverity}`,
       actor: 'correlation_engine',
-      evidence: [`event_count: ${incident.events.length}`]
+      evidence: [`event_count: ${incident.events.length}`],
     });
-    
+
     // Trigger additional response actions
     await this.triggerInitialResponse(incident);
-    
+
     console.log(`⬆️ Incident ${incident.id} escalated: ${oldSeverity} → ${newSeverity}`);
   }
 
@@ -642,32 +667,33 @@ export class IncidentResponseManager {
     openIncidents: number;
   } {
     const incidents = Array.from(this.incidents.values());
-    
+
     const stats = {
       total: incidents.length,
       byStatus: {} as Record<IncidentStatus, number>,
       bySeverity: {} as Record<SecuritySeverity, number>,
       averageResponseTime: 0,
-      openIncidents: 0
+      openIncidents: 0,
     };
-    
-    incidents.forEach(incident => {
+
+    incidents.forEach((incident) => {
       // Count by status
       stats.byStatus[incident.status] = (stats.byStatus[incident.status] || 0) + 1;
-      
+
       // Count by severity
       stats.bySeverity[incident.severity] = (stats.bySeverity[incident.severity] || 0) + 1;
-      
+
       // Count open incidents
       if (['new', 'investigating', 'contained'].includes(incident.status)) {
         stats.openIncidents++;
       }
     });
-    
+
     // Calculate average response time
-    const responseTimes = incidents.map(incident => this.calculateResponseTime(incident));
-    stats.averageResponseTime = responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length || 0;
-    
+    const responseTimes = incidents.map((incident) => this.calculateResponseTime(incident));
+    stats.averageResponseTime =
+      responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length || 0;
+
     return stats;
   }
 

@@ -17,7 +17,7 @@ export const aggressiveLazyConfig: LazyLoadingConfig = {
   maxConcurrentLoads: 10,
   loadTimeout: 5000,
   enableMetrics: true,
-  debounceDelay: 50
+  debounceDelay: 50,
 };
 
 /**
@@ -31,7 +31,7 @@ export const balancedLazyConfig: LazyLoadingConfig = {
   maxConcurrentLoads: 5,
   loadTimeout: 10000,
   enableMetrics: true,
-  debounceDelay: 100
+  debounceDelay: 100,
 };
 
 /**
@@ -45,7 +45,7 @@ export const conservativeLazyConfig: LazyLoadingConfig = {
   maxConcurrentLoads: 2,
   loadTimeout: 15000,
   enableMetrics: false,
-  debounceDelay: 200
+  debounceDelay: 200,
 };
 
 /**
@@ -59,7 +59,7 @@ export const mobileLazyConfig: LazyLoadingConfig = {
   maxConcurrentLoads: 3,
   loadTimeout: 20000,
   enableMetrics: true,
-  debounceDelay: 150
+  debounceDelay: 150,
 };
 
 /**
@@ -73,7 +73,7 @@ export const slowNetworkLazyConfig: LazyLoadingConfig = {
   maxConcurrentLoads: 1,
   loadTimeout: 30000,
   enableMetrics: true,
-  debounceDelay: 300
+  debounceDelay: 300,
 };
 
 /**
@@ -87,7 +87,7 @@ export const premiumLazyConfig: LazyLoadingConfig = {
   maxConcurrentLoads: 15,
   loadTimeout: 3000,
   enableMetrics: true,
-  debounceDelay: 25
+  debounceDelay: 25,
 };
 
 /**
@@ -103,11 +103,12 @@ export const lazyLoadingStrategies = {
       rootMargin: '50px',
       threshold: 0.1,
       enablePreloading: true,
-      maxConcurrentLoads: 6
+      maxConcurrentLoads: 6,
     },
     fallbackSizes: ['small', 'medium', 'large'],
     formats: ['webp', 'avif', 'jpg', 'png'],
-    placeholder: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB2aWV3Qm94PSIwIDAgMSAxIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNGNUY1RjUiLz48L3N2Zz4='
+    placeholder:
+      'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB2aWV3Qm94PSIwIDAgMSAxIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNGNUY1RjUiLz48L3N2Zz4=',
   },
 
   /**
@@ -119,10 +120,10 @@ export const lazyLoadingStrategies = {
       rootMargin: '100px',
       threshold: 0.5,
       enablePreloading: false,
-      maxConcurrentLoads: 2
+      maxConcurrentLoads: 2,
     },
     autoplay: false,
-    preload: 'metadata'
+    preload: 'metadata',
   },
 
   /**
@@ -134,9 +135,9 @@ export const lazyLoadingStrategies = {
       rootMargin: '150px',
       threshold: 0.1,
       enablePreloading: true,
-      maxConcurrentLoads: 8
+      maxConcurrentLoads: 8,
     },
-    chunkPriority: ['critical', 'important', 'normal', 'low']
+    chunkPriority: ['critical', 'important', 'normal', 'low'],
   },
 
   /**
@@ -148,10 +149,10 @@ export const lazyLoadingStrategies = {
       rootMargin: '50px',
       threshold: 0.3,
       enablePreloading: false,
-      maxConcurrentLoads: 3
+      maxConcurrentLoads: 3,
     },
     placeholder: true,
-    sandboxAttributes: ['allow-scripts', 'allow-same-origin']
+    sandboxAttributes: ['allow-scripts', 'allow-same-origin'],
   },
 
   /**
@@ -162,12 +163,12 @@ export const lazyLoadingStrategies = {
     config: {
       enablePreloading: true,
       maxConcurrentLoads: 4,
-      loadTimeout: 15000
+      loadTimeout: 15000,
     },
     defer: true,
     async: true,
-    priority: ['critical', 'analytics', 'features', 'optional']
-  }
+    priority: ['critical', 'analytics', 'features', 'optional'],
+  },
 };
 
 /**
@@ -181,7 +182,7 @@ export const deviceSpecificConfigs = {
     ...balancedLazyConfig,
     rootMargin: '100px',
     maxConcurrentLoads: 8,
-    loadTimeout: 8000
+    loadTimeout: 8000,
   },
 
   /**
@@ -191,7 +192,7 @@ export const deviceSpecificConfigs = {
     ...balancedLazyConfig,
     rootMargin: '75px',
     maxConcurrentLoads: 6,
-    loadTimeout: 12000
+    loadTimeout: 12000,
   },
 
   /**
@@ -207,7 +208,7 @@ export const deviceSpecificConfigs = {
   /**
    * Конфигурация для быстрых соединений
    */
-  fastConnection: premiumLazyConfig
+  fastConnection: premiumLazyConfig,
 };
 
 /**
@@ -267,15 +268,15 @@ export class LazyConfigDetector {
    */
   private static getDeviceType(): 'desktop' | 'tablet' | 'mobile' {
     const userAgent = navigator.userAgent.toLowerCase();
-    
+
     if (/tablet|ipad/.test(userAgent)) {
       return 'tablet';
     }
-    
+
     if (/mobile|android|iphone/.test(userAgent)) {
       return 'mobile';
     }
-    
+
     return 'desktop';
   }
 
@@ -294,7 +295,7 @@ export class LazyConfigDetector {
     return {
       webp: this.canUseWebP(),
       avif: this.canUseAVIF(),
-      jp2: this.canUseJP2()
+      jp2: this.canUseJP2(),
     };
   }
 
@@ -348,13 +349,13 @@ export class LazyLoadingHelpers {
     breakpoints: Record<string, number> = {
       mobile: 768,
       tablet: 1024,
-      desktop: 1200
-    }
+      desktop: 1200,
+    },
   ) {
     const currentWidth = window.innerWidth;
-    
+
     let deviceType: 'mobile' | 'tablet' | 'desktop' = 'desktop';
-    
+
     if (currentWidth <= (breakpoints.mobile ?? 768)) {
       deviceType = 'mobile';
     } else if (currentWidth <= (breakpoints.tablet ?? 1024)) {
@@ -364,7 +365,7 @@ export class LazyLoadingHelpers {
     return {
       ...deviceSpecificConfigs[deviceType],
       rootMargin: deviceType === 'mobile' ? '30px' : '50px',
-      threshold: deviceType === 'mobile' ? 0.2 : 0.1
+      threshold: deviceType === 'mobile' ? 0.2 : 0.1,
     };
   }
 
@@ -373,7 +374,7 @@ export class LazyLoadingHelpers {
    */
   static createPerformanceBasedConfig() {
     const performanceScore = this.calculateDevicePerformance();
-    
+
     if (performanceScore < 30) {
       return conservativeLazyConfig;
     } else if (performanceScore > 70) {
@@ -388,17 +389,17 @@ export class LazyLoadingHelpers {
    */
   private static calculateDevicePerformance(): number {
     let score = 50; // Базовый score
-    
+
     // Количество ядер процессора
     const cores = navigator.hardwareConcurrency || 4;
     score += Math.min(cores * 5, 25);
-    
+
     // Объем памяти
     if ('deviceMemory' in navigator) {
       const memory = (navigator as any).deviceMemory;
       score += Math.min(memory * 10, 25);
     }
-    
+
     // Тип соединения
     if ('connection' in navigator) {
       const connection = (navigator as any).connection;
@@ -415,18 +416,14 @@ export class LazyLoadingHelpers {
   /**
    * Создание placeholder для изображений
    */
-  static createImagePlaceholder(
-    width: number,
-    height: number,
-    color: string = '#f0f0f0'
-  ): string {
+  static createImagePlaceholder(width: number, height: number, color: string = '#f0f0f0'): string {
     const svg = `
       <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="${width}" height="${height}" fill="${color}"/>
-        <circle cx="${width/2}" cy="${height/2}" r="20" fill="#ccc"/>
+        <circle cx="${width / 2}" cy="${height / 2}" r="20" fill="#ccc"/>
       </svg>
     `;
-    
+
     return `data:image/svg+xml;base64,${btoa(svg)}`;
   }
 
@@ -436,17 +433,17 @@ export class LazyLoadingHelpers {
   static createVideoPlaceholder(
     width: number,
     height: number,
-    title: string = 'Click to play'
+    title: string = 'Click to play',
   ): string {
     const svg = `
       <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="${width}" height="${height}" fill="#000" opacity="0.8"/>
-        <circle cx="${width/2}" cy="${height/2}" r="30" fill="#fff" opacity="0.9"/>
-        <polygon points="${width/2-10},${height/2-12} ${width/2-10},${height/2+12} ${width/2+15},${height/2}" fill="#000"/>
-        <text x="${width/2}" y="${height*0.8}" text-anchor="middle" fill="#fff" font-size="14">${title}</text>
+        <circle cx="${width / 2}" cy="${height / 2}" r="30" fill="#fff" opacity="0.9"/>
+        <polygon points="${width / 2 - 10},${height / 2 - 12} ${width / 2 - 10},${height / 2 + 12} ${width / 2 + 15},${height / 2}" fill="#000"/>
+        <text x="${width / 2}" y="${height * 0.8}" text-anchor="middle" fill="#fff" font-size="14">${title}</text>
       </svg>
     `;
-    
+
     return `data:image/svg+xml;base64,${btoa(svg)}`;
   }
 }
@@ -460,7 +457,7 @@ export const lazyLoadingConfigs = {
   conservative: conservativeLazyConfig,
   mobile: mobileLazyConfig,
   slowNetwork: slowNetworkLazyConfig,
-  premium: premiumLazyConfig
+  premium: premiumLazyConfig,
 };
 
 /**
@@ -468,10 +465,10 @@ export const lazyLoadingConfigs = {
  */
 export function createLazyConfig(
   preset: keyof typeof lazyLoadingConfigs = 'balanced',
-  overrides: Partial<LazyLoadingConfig> = {}
+  overrides: Partial<LazyLoadingConfig> = {},
 ): LazyLoadingConfig {
   return {
     ...lazyLoadingConfigs[preset],
-    ...overrides
+    ...overrides,
   };
 }

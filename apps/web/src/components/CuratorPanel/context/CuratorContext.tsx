@@ -1,6 +1,6 @@
 // context/CuratorContext.tsx - Контекст для общих данных панели куратора
 
-import React, { createContext, useContext, useMemo, ReactNode, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useMemo, useState } from 'react';
 
 import { useCuratorData } from '../hooks/useCuratorData';
 import { CuratorData, TabId } from '../types/curator.types';
@@ -10,8 +10,14 @@ interface CuratorContextValue {
   activeTab: TabId;
   setActiveTab: (tab: TabId) => void;
   refreshData: () => Promise<void>;
-  updateUserRole: (userId: string, newRole: string) => Promise<{ success: boolean; error?: string }>;
-  updateTaskStatus: (taskId: string, newStatus: string) => Promise<{ success: boolean; error?: string }>;
+  updateUserRole: (
+    userId: string,
+    newRole: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  updateTaskStatus: (
+    taskId: string,
+    newStatus: string,
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 const CuratorContext = createContext<CuratorContextValue | undefined>(undefined);
@@ -26,14 +32,8 @@ export const CuratorProvider: React.FC<CuratorProviderProps> = ({
   initialTab = 'users',
 }) => {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
-  const { 
-    data, 
-    isLoading, 
-    error, 
-    refreshData, 
-    updateUserRole, 
-    updateTaskStatus 
-  } = useCuratorData();
+  const { data, isLoading, error, refreshData, updateUserRole, updateTaskStatus } =
+    useCuratorData();
 
   const curatorData: CuratorData = useMemo(
     () => ({
@@ -51,7 +51,7 @@ export const CuratorProvider: React.FC<CuratorProviderProps> = ({
         usersByRole: {},
         tasksByStatus: {},
         tasksByPriority: {},
-        recentActivity: []
+        recentActivity: [],
       },
       settings: data?.settings || {
         notifications: {
@@ -72,12 +72,12 @@ export const CuratorProvider: React.FC<CuratorProviderProps> = ({
           canModifyRoles: false,
           canViewAnalytics: false,
           canExportData: false,
-        }
+        },
       },
       isLoading,
       error,
     }),
-    [data, isLoading, error]
+    [data, isLoading, error],
   );
 
   const value = useMemo(
@@ -89,7 +89,7 @@ export const CuratorProvider: React.FC<CuratorProviderProps> = ({
       updateUserRole,
       updateTaskStatus,
     }),
-    [curatorData, activeTab, refreshData, updateUserRole, updateTaskStatus]
+    [curatorData, activeTab, refreshData, updateUserRole, updateTaskStatus],
   );
 
   return <CuratorContext.Provider value={value}>{children}</CuratorContext.Provider>;

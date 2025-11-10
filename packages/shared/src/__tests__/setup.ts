@@ -3,7 +3,7 @@
  * Provides browser API mocks for Node.js test environment
  */
 
-import { vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, vi } from 'vitest';
 
 // Mock IndexedDB
 const mockIndexedDB = {
@@ -16,7 +16,7 @@ const mockIndexedDB = {
       onerror: null as any,
       onupgradeneeded: null as any,
       addEventListener: vi.fn(),
-      removeEventListener: vi.fn()
+      removeEventListener: vi.fn(),
     };
 
     // Simulate async operation
@@ -32,7 +32,7 @@ const mockIndexedDB = {
           put: vi.fn().mockResolvedValue(undefined),
           delete: vi.fn().mockResolvedValue(undefined),
           clear: vi.fn().mockResolvedValue(undefined),
-          createIndex: vi.fn()
+          createIndex: vi.fn(),
         }),
         transaction: vi.fn().mockReturnValue({
           objectStore: vi.fn().mockReturnValue({
@@ -42,13 +42,13 @@ const mockIndexedDB = {
             delete: vi.fn().mockReturnValue({ onsuccess: null, onerror: null }),
             clear: vi.fn().mockReturnValue({ onsuccess: null, onerror: null }),
             openCursor: vi.fn().mockReturnValue({ onsuccess: null, onerror: null }),
-            count: vi.fn().mockReturnValue({ onsuccess: null, onerror: null })
+            count: vi.fn().mockReturnValue({ onsuccess: null, onerror: null }),
           }),
           oncomplete: null,
           onerror: null,
-          onabort: null
+          onabort: null,
         }),
-        close: vi.fn()
+        close: vi.fn(),
       };
 
       request.result = db;
@@ -60,7 +60,7 @@ const mockIndexedDB = {
 
     return request;
   }),
-  deleteDatabase: vi.fn()
+  deleteDatabase: vi.fn(),
 };
 
 // Mock URL.createObjectURL and revokeObjectURL
@@ -73,7 +73,7 @@ const mockURL = {
     } catch {
       return null;
     }
-  })
+  }),
 };
 
 // Extend global URL with our mocks
@@ -86,14 +86,14 @@ const mockWorker = vi.fn().mockImplementation(() => ({
   addEventListener: vi.fn(),
   removeEventListener: vi.fn(),
   onerror: null,
-  onmessage: null
+  onmessage: null,
 }));
 
 // Mock PerformanceObserver
 const mockPerformanceObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   disconnect: vi.fn(),
-  takeRecords: vi.fn().mockReturnValue([])
+  takeRecords: vi.fn().mockReturnValue([]),
 }));
 
 // Mock localStorage and sessionStorage
@@ -104,8 +104,10 @@ const createMockStorage = () => {
     setItem: vi.fn((key: string, value: string) => store.set(key, value)),
     removeItem: vi.fn((key: string) => store.delete(key)),
     clear: vi.fn(() => store.clear()),
-    get length() { return store.size; },
-    key: vi.fn((index: number) => Array.from(store.keys())[index] || null)
+    get length() {
+      return store.size;
+    },
+    key: vi.fn((index: number) => Array.from(store.keys())[index] || null),
   };
 };
 
@@ -122,23 +124,23 @@ const mockNavigator = {
     downlink: 10,
     rtt: 50,
     addEventListener: vi.fn(),
-    removeEventListener: vi.fn()
+    removeEventListener: vi.fn(),
   },
   serviceWorker: {
     register: vi.fn().mockResolvedValue({
       scope: '/',
-      active: { postMessage: vi.fn() }
+      active: { postMessage: vi.fn() },
     }),
     ready: Promise.resolve({
-      active: { postMessage: vi.fn() }
-    })
+      active: { postMessage: vi.fn() },
+    }),
   },
   getBattery: vi.fn().mockResolvedValue({
     level: 0.8,
     charging: true,
     dischargingTime: Infinity,
-    chargingTime: 0
-  })
+    chargingTime: 0,
+  }),
 };
 
 // Mock fetch for browser environment
@@ -149,12 +151,12 @@ const mockFetch = vi.fn().mockResolvedValue({
   headers: new Map([
     ['content-type', 'application/json'],
     ['etag', '"mock-etag"'],
-    ['last-modified', new Date().toUTCString()]
+    ['last-modified', new Date().toUTCString()],
   ]),
   json: vi.fn().mockResolvedValue({}),
   text: vi.fn().mockResolvedValue(''),
   blob: vi.fn().mockResolvedValue(new Blob()),
-  clone: vi.fn().mockReturnThis()
+  clone: vi.fn().mockReturnThis(),
 });
 
 // Mock performance
@@ -165,7 +167,7 @@ const mockPerformance = {
   getEntriesByType: vi.fn().mockReturnValue([]),
   getEntriesByName: vi.fn().mockReturnValue([]),
   clearMarks: vi.fn(),
-  clearMeasures: vi.fn()
+  clearMeasures: vi.fn(),
 };
 
 // Apply mocks to global scope
@@ -191,28 +193,28 @@ beforeEach(() => {
   (global as any).URL.revokeObjectURL = mockURL.revokeObjectURL;
   (global as any).Worker = mockWorker;
   (global as any).PerformanceObserver = mockPerformanceObserver;
-  
+
   // Use Object.defineProperty for readonly properties
   try {
     Object.defineProperty(global, 'localStorage', {
       value: mockLocalStorage,
       writable: true,
-      configurable: true
+      configurable: true,
     });
   } catch (e) {
     // Already exists, try to override
   }
-  
+
   try {
     Object.defineProperty(global, 'sessionStorage', {
       value: mockSessionStorage,
       writable: true,
-      configurable: true
+      configurable: true,
     });
   } catch (e) {
     // Already exists, try to override
   }
-  
+
   (global as any).navigator = mockNavigator;
   (global as any).fetch = mockFetch;
   (global as any).performance = mockPerformance;
@@ -227,8 +229,8 @@ beforeEach(() => {
       removeEventListener: vi.fn(),
       createElement: vi.fn().mockReturnValue({
         addEventListener: vi.fn(),
-        removeEventListener: vi.fn()
-      })
+        removeEventListener: vi.fn(),
+      }),
     };
   }
 
@@ -249,13 +251,13 @@ afterEach(() => {
 });
 
 export {
+  mockFetch,
   mockIndexedDB,
+  mockLocalStorage,
+  mockNavigator,
+  mockPerformance,
+  mockPerformanceObserver,
+  mockSessionStorage,
   mockURL,
   mockWorker,
-  mockPerformanceObserver,
-  mockLocalStorage,
-  mockSessionStorage,
-  mockNavigator,
-  mockFetch,
-  mockPerformance
 };

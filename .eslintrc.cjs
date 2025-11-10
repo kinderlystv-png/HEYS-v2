@@ -41,25 +41,26 @@ module.exports = {
     'no-console': 'error', // ЭАП требует error для production
     'no-debugger': 'error',
     'no-var': 'error',
-    
+
     // Console logging rules - расширенный контроль
     'no-restricted-globals': [
       'error',
       {
         name: 'console',
-        message: 'Use logger instead of console for production code. Import logger from @heys/logger'
-      }
+        message:
+          'Use logger instead of console for production code. Import logger from @heys/logger',
+      },
     ],
     'no-restricted-syntax': [
       'error',
       {
         selector: "CallExpression[callee.object.name='console']",
-        message: 'Console methods are not allowed. Use logger from @heys/logger instead.'
+        message: 'Console methods are not allowed. Use logger from @heys/logger instead.',
       },
       {
         selector: "MemberExpression[object.name='console']",
-        message: 'Console object access is not allowed. Use logger from @heys/logger instead.'
-      }
+        message: 'Console object access is not allowed. Use logger from @heys/logger instead.',
+      },
     ],
   },
   overrides: [
@@ -99,7 +100,7 @@ module.exports = {
         'no-restricted-syntax': 'off',
       },
     },
-    
+
     // Development/debugging files - разрешаем console для отладки
     {
       files: ['**/debug/**/*.{ts,js}', '**/*.debug.{ts,js}', '**/scripts/**/*.{ts,js}'],
@@ -109,7 +110,7 @@ module.exports = {
         'no-restricted-syntax': 'warn',
       },
     },
-    
+
     // Demo files - разрешаем console в демо приложениях
     {
       files: ['**/demo*.{ts,tsx,js,jsx}', '**/*Demo*.{ts,tsx,js,jsx}', '**/*-demo.{ts,tsx,js,jsx}'],
@@ -120,7 +121,7 @@ module.exports = {
         '@typescript-eslint/no-explicit-any': 'warn',
       },
     },
-    
+
     // Console replacer files - разрешаем console для создания заместителей
     {
       files: ['**/console-replacer.{ts,js}', '**/console-replacement.{ts,js}'],
@@ -130,7 +131,7 @@ module.exports = {
         'no-restricted-syntax': 'off',
       },
     },
-    
+
     // Configuration files - разрешаем console в конфигах
     {
       files: ['*.config.{ts,js}', '**/config/**/*.{ts,js}', '.eslintrc.cjs'],

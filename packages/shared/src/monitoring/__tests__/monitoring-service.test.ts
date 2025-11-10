@@ -247,13 +247,13 @@ describe('MonitoringService', () => {
     test('should log messages with different levels', () => {
       // Reset the log mock before testing
       mockConsole.log.mockReset();
-      
+
       // Initialize monitoring service properly
       monitoringService = new MonitoringService({
         enabled: true,
-        logging: { enabled: true, config: { level: 'debug' } }
+        logging: { enabled: true, config: { level: 'debug' } },
       });
-      
+
       monitoringService.log('info', 'Test info message', { key: 'value' });
       monitoringService.log('warn', 'Test warning message');
       monitoringService.log('error', 'Test error message');

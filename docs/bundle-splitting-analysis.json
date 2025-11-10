@@ -2,35 +2,14 @@
   "timestamp": "2025-09-04T07:46:51.495Z",
   "currentChunks": {},
   "optimizedChunks": {
-    "vendor": [
-      "react",
-      "react-dom",
-      "react/jsx-runtime"
-    ],
-    "ui": [
-      "@heys/ui",
-      "@heys/shared"
-    ],
-    "core": [
-      "@heys/core"
-    ],
-    "analytics": [
-      "@heys/analytics"
-    ],
-    "search": [
-      "@heys/search"
-    ],
-    "gaming": [
-      "@heys/gaming"
-    ],
-    "storage": [
-      "@heys/storage",
-      "@supabase/supabase-js"
-    ],
-    "utils": [
-      "zod",
-      "date-fns"
-    ]
+    "vendor": ["react", "react-dom", "react/jsx-runtime"],
+    "ui": ["@heys/ui", "@heys/shared"],
+    "core": ["@heys/core"],
+    "analytics": ["@heys/analytics"],
+    "search": ["@heys/search"],
+    "gaming": ["@heys/gaming"],
+    "storage": ["@heys/storage", "@supabase/supabase-js"],
+    "utils": ["zod", "date-fns"]
   },
   "chunkSizeAnalysis": {
     "core-4ed993c7.js": {

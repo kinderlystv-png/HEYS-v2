@@ -5,7 +5,7 @@
  * Handles dynamic imports with intelligent preloading and caching
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface ImportCache {
   [key: string]: {
@@ -32,14 +32,14 @@ export async function dynamicImport<T = any>(
     timeout?: number;
     retries?: number;
     cacheable?: boolean;
-  } = {}
+  } = {},
 ): Promise<T> {
   const { timeout = 10000, retries = 2, cacheable = true } = options;
-  
+
   // Проверяем кэш
   if (cacheable && importCache[importPath]) {
     const cached = importCache[importPath];
-    
+
     // Проверяем актуальность кэша
     if (Date.now() - cached.timestamp < CACHE_DURATION) {
       if (cached.result) {
@@ -55,66 +55,65 @@ export async function dynamicImport<T = any>(
       delete importCache[importPath];
     }
   }
-  
+
   // Функция импорта с retry
   const performImport = async (attempt: number = 1): Promise<T> => {
     try {
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error(`Import timeout: ${importPath}`)), timeout);
       });
-      
+
       // Динамический импорт (webpack/vite magic comments support)
       const importPromise = import(/* webpackChunkName: "[request]" */ importPath);
-      
+
       const result = await Promise.race([importPromise, timeoutPromise]);
-      
+
       // Кэшируем результат
       if (cacheable) {
         importCache[importPath] = {
           promise: Promise.resolve(result),
           result,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
-        
+
         // Очищаем кэш если он слишком большой
         cleanupCache();
       }
-      
+
       return result as T;
-      
     } catch (error) {
       console.warn(`Dynamic import failed (attempt ${attempt}/${retries + 1}):`, importPath, error);
-      
+
       if (attempt <= retries) {
         // Экспоненциальная задержка
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 500));
+        await new Promise((resolve) => setTimeout(resolve, Math.pow(2, attempt) * 500));
         return performImport(attempt + 1);
       }
-      
+
       // Кэшируем ошибку
       const finalError = new Error(`Failed to import ${importPath}: ${(error as Error).message}`);
       if (cacheable) {
         importCache[importPath] = {
           promise: Promise.reject(finalError),
           error: finalError,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
       }
-      
+
       throw finalError;
     }
   };
-  
+
   const importPromise = performImport();
-  
+
   // Кэшируем promise
   if (cacheable) {
     importCache[importPath] = {
       promise: importPromise,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
-  
+
   return importPromise;
 }
 
@@ -123,7 +122,7 @@ export async function dynamicImport<T = any>(
  */
 function cleanupCache(): void {
   const entries = Object.entries(importCache);
-  
+
   // Удаляем устаревшие записи
   const now = Date.now();
   entries.forEach(([path, cached]) => {
@@ -131,7 +130,7 @@ function cleanupCache(): void {
       delete importCache[path];
     }
   });
-  
+
   // Если кэш всё ещё слишком большой, удаляем самые старые
   const remaining = Object.entries(importCache);
   if (remaining.length > MAX_CACHE_SIZE) {
@@ -151,17 +150,17 @@ export class ModulePreloader {
     priority: number;
     options?: any;
   }> = [];
-  
+
   private isProcessing = false;
-  
+
   /**
    * Добавить модуль в очередь preload
    */
   add(path: string, priority: number = 1, options?: any): void {
     // Проверяем, что модуль не загружен и не в очереди
     if (importCache[path]?.result) return;
-    
-    const existing = this.preloadQueue.findIndex(item => item.path === path);
+
+    const existing = this.preloadQueue.findIndex((item) => item.path === path);
     if (existing !== -1) {
       // Обновляем приоритет если он выше
       const existingItem = this.preloadQueue[existing];
@@ -171,14 +170,14 @@ export class ModulePreloader {
       }
       return;
     }
-    
+
     this.preloadQueue.push({ path, priority, options });
     this.sortQueue();
-    
+
     // Запускаем обработку очереди
     this.processQueue();
   }
-  
+
   /**
    * Preload модулей по массиву путей
    */
@@ -187,49 +186,49 @@ export class ModulePreloader {
       this.add(path, priority, options);
     });
   }
-  
+
   /**
    * Сортировка очереди по приоритету
    */
   private sortQueue(): void {
     this.preloadQueue.sort((a, b) => b.priority - a.priority);
   }
-  
+
   /**
    * Обработка очереди preload
    */
   private async processQueue(): Promise<void> {
     if (this.isProcessing || this.preloadQueue.length === 0) return;
-    
+
     this.isProcessing = true;
-    
+
     while (this.preloadQueue.length > 0) {
       const item = this.preloadQueue.shift()!;
-      
+
       try {
         await dynamicImport(item.path, {
           cacheable: true,
-          ...item.options
+          ...item.options,
         });
         console.log(`✅ Preloaded: ${item.path}`);
       } catch (error) {
         console.warn(`❌ Failed to preload: ${item.path}`, error);
       }
-      
+
       // Небольшая задержка между загрузками чтобы не блокировать UI
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    
+
     this.isProcessing = false;
   }
-  
+
   /**
    * Очистить очередь
    */
   clear(): void {
     this.preloadQueue = [];
   }
-  
+
   /**
    * Получить статус очереди
    */
@@ -237,7 +236,7 @@ export class ModulePreloader {
     return {
       queueLength: this.preloadQueue.length,
       isProcessing: this.isProcessing,
-      cacheSize: Object.keys(importCache).length
+      cacheSize: Object.keys(importCache).length,
     };
   }
 }
@@ -251,9 +250,9 @@ export const modulePreloader = new ModulePreloader();
 export class ModuleGroup {
   private modules: string[] = [];
   private loaded = new Set<string>();
-  
+
   constructor(private name: string) {}
-  
+
   /**
    * Добавить модуль в группу
    */
@@ -261,7 +260,7 @@ export class ModuleGroup {
     this.modules.push(modulePath);
     return this;
   }
-  
+
   /**
    * Загрузить всю группу
    */
@@ -276,19 +275,19 @@ export class ModuleGroup {
         throw error;
       }
     });
-    
+
     return Promise.allSettled(promises);
   }
-  
+
   /**
    * Preload всей группы
    */
   preloadAll(priority: number = 1): void {
-    this.modules.forEach(path => {
+    this.modules.forEach((path) => {
       modulePreloader.add(path, priority);
     });
   }
-  
+
   /**
    * Проверить статус загрузки группы
    */
@@ -296,8 +295,8 @@ export class ModuleGroup {
     return {
       total: this.modules.length,
       loaded: this.loaded.size,
-      pending: this.modules.filter(path => !this.loaded.has(path)),
-      isComplete: this.loaded.size === this.modules.length
+      pending: this.modules.filter((path) => !this.loaded.has(path)),
+      isComplete: this.loaded.size === this.modules.length,
     };
   }
 }
@@ -310,21 +309,17 @@ export const FeatureImports = {
   analytics: new ModuleGroup('analytics')
     .add('@heys/analytics')
     .add('../components/Analytics/Dashboard'),
-  
+
   // Поиск
-  search: new ModuleGroup('search')
-    .add('@heys/search')
-    .add('../components/Search/SearchInterface'),
-  
+  search: new ModuleGroup('search').add('@heys/search').add('../components/Search/SearchInterface'),
+
   // Игры
-  gaming: new ModuleGroup('gaming')
-    .add('@heys/gaming')
-    .add('../components/Gaming/GameInterface'),
-  
+  gaming: new ModuleGroup('gaming').add('@heys/gaming').add('../components/Gaming/GameInterface'),
+
   // Отчёты
   reports: new ModuleGroup('reports')
     .add('../components/Reports/ReportGenerator')
-    .add('../components/Reports/Charts')
+    .add('../components/Reports/Charts'),
 };
 
 /**
@@ -336,10 +331,10 @@ export function useDynamicImport<T = any>(
     immediate?: boolean;
     timeout?: number;
     retries?: number;
-  }
+  },
 ) {
   const { immediate = false } = options || {};
-  
+
   const [state, setState] = useState<{
     data: T | null;
     loading: boolean;
@@ -347,12 +342,12 @@ export function useDynamicImport<T = any>(
   }>({
     data: null,
     loading: immediate,
-    error: null
+    error: null,
   });
-  
+
   const load = useCallback(async () => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
-    
+    setState((prev) => ({ ...prev, loading: true, error: null }));
+
     try {
       const result = await dynamicImport<T>(importPath, options);
       setState({ data: result, loading: false, error: null });
@@ -362,26 +357,26 @@ export function useDynamicImport<T = any>(
       throw error;
     }
   }, [importPath]);
-  
+
   useEffect(() => {
     if (immediate) {
       load().catch(() => {}); // Ошибка уже обработана в setState
     }
   }, [immediate, load]);
-  
+
   return {
     ...state,
-    load
+    load,
   };
 }
 
 // Re-export для удобства
-export { importCache, cleanupCache };
+export { cleanupCache, importCache };
 
 export default {
   dynamicImport,
   modulePreloader,
   ModuleGroup,
   FeatureImports,
-  useDynamicImport
+  useDynamicImport,
 };

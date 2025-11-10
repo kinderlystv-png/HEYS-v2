@@ -14,30 +14,30 @@ const AnalyticsDashboard = createChunkedLazyComponent(
   {
     retries: 2,
     timeout: 8000,
-    preloadOnHover: true
-  }
+    preloadOnHover: true,
+  },
 );
 
 // Lazy load графиков
 const AnalyticsCharts = createChunkedLazyComponent(
-  'ANALYTICS', 
+  'ANALYTICS',
   'charts',
   () => Promise.resolve({ default: AnalyticsChartsComponent }),
   {
     retries: 2,
-    timeout: 5000
-  }
+    timeout: 5000,
+  },
 );
 
 // Lazy load таблицы данных
 const AnalyticsDataTable = createChunkedLazyComponent(
   'ANALYTICS',
-  'data-table', 
+  'data-table',
   () => Promise.resolve({ default: AnalyticsDataTableComponent }),
   {
     retries: 2,
-    timeout: 5000
-  }
+    timeout: 5000,
+  },
 );
 
 interface LazyAnalyticsProps {
@@ -52,32 +52,30 @@ interface LazyAnalyticsProps {
 /**
  * Lazy loaded Analytics компонент с прогрессивной загрузкой
  */
-export const LazyAnalytics: React.FC<LazyAnalyticsProps> = ({
-  view = 'full',
-  data,
-  onError
-}) => {
+export const LazyAnalytics: React.FC<LazyAnalyticsProps> = ({ view = 'full', data, onError }) => {
   const [loadingComponent, setLoadingComponent] = React.useState<string | null>(null);
 
   // Error boundary для lazy компонентов
-  const handleError = React.useCallback((error: Error, componentName: string) => {
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
+  const handleError = React.useCallback(
+    (error: Error, componentName: string) => {
       if (process.env.NODE_ENV === 'development') {
-
         // eslint-disable-next-line no-console
+        if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
 
-        console.error(`❌ Failed to load ${componentName}:`, error);
-    }
-    }
-    setLoadingComponent(null);
-    onError?.(error);
-  }, [onError]);
+          console.error(`❌ Failed to load ${componentName}:`, error);
+        }
+      }
+      setLoadingComponent(null);
+      onError?.(error);
+    },
+    [onError],
+  );
 
   // Preload компонентов при hover
   const handlePreload = React.useCallback((componentName: string) => {
     setLoadingComponent(componentName);
-    
+
     // Преждевременная загрузка при наведении
     setTimeout(() => {
       setLoadingComponent(null);
@@ -88,7 +86,7 @@ export const LazyAnalytics: React.FC<LazyAnalyticsProps> = ({
     return (
       <Suspense fallback={<AnalyticsSkeleton />}>
         <div onMouseEnter={() => handlePreload('dashboard')}>
-          <AnalyticsDashboard 
+          <AnalyticsDashboard
             data={data}
             onError={(error: Error) => handleError(error, 'AnalyticsDashboard')}
           />
@@ -101,7 +99,7 @@ export const LazyAnalytics: React.FC<LazyAnalyticsProps> = ({
     return (
       <Suspense fallback={<AnalyticsSkeleton />}>
         <div onMouseEnter={() => handlePreload('charts')}>
-          <AnalyticsCharts 
+          <AnalyticsCharts
             data={data}
             onError={(error: Error) => handleError(error, 'AnalyticsCharts')}
           />
@@ -114,7 +112,7 @@ export const LazyAnalytics: React.FC<LazyAnalyticsProps> = ({
     return (
       <Suspense fallback={<AnalyticsSkeleton />}>
         <div onMouseEnter={() => handlePreload('table')}>
-          <AnalyticsDataTable 
+          <AnalyticsDataTable
             data={data}
             onError={(error: Error) => handleError(error, 'AnalyticsDataTable')}
           />
@@ -128,23 +126,29 @@ export const LazyAnalytics: React.FC<LazyAnalyticsProps> = ({
     <div>
       {/* Dashboard компонент загружается первым */}
       <Suspense fallback={<AnalyticsSkeleton />}>
-        <AnalyticsDashboard 
+        <AnalyticsDashboard
           data={data}
           onError={(error: Error) => handleError(error, 'AnalyticsDashboard')}
         />
       </Suspense>
 
       {/* Charts загружаются после dashboard */}
-      <Suspense fallback={<div style={{ padding: '20px', textAlign: 'center' }}>Загрузка графиков...</div>}>
-        <AnalyticsCharts 
+      <Suspense
+        fallback={<div style={{ padding: '20px', textAlign: 'center' }}>Загрузка графиков...</div>}
+      >
+        <AnalyticsCharts
           data={data}
           onError={(error: Error) => handleError(error, 'AnalyticsCharts')}
         />
       </Suspense>
 
       {/* Data table загружается последним */}
-      <Suspense fallback={<div style={{ padding: '20px', textAlign: 'center' }}>Загрузка таблицы данных...</div>}>
-        <AnalyticsDataTable 
+      <Suspense
+        fallback={
+          <div style={{ padding: '20px', textAlign: 'center' }}>Загрузка таблицы данных...</div>
+        }
+      >
+        <AnalyticsDataTable
           data={data}
           onError={(error: Error) => handleError(error, 'AnalyticsDataTable')}
         />
@@ -152,17 +156,19 @@ export const LazyAnalytics: React.FC<LazyAnalyticsProps> = ({
 
       {/* Индикатор загрузки */}
       {loadingComponent && (
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          padding: '8px 16px',
-          backgroundColor: '#2563eb',
-          color: 'white',
-          borderRadius: '4px',
-          fontSize: '12px',
-          zIndex: 1000
-        }}>
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            padding: '8px 16px',
+            backgroundColor: '#2563eb',
+            color: 'white',
+            borderRadius: '4px',
+            fontSize: '12px',
+            zIndex: 1000,
+          }}
+        >
           Предзагрузка {loadingComponent}...
         </div>
       )}
@@ -182,7 +188,14 @@ const AnalyticsDashboardComponent: React.FC<Record<string, unknown>> = ({ data, 
   }, [onError]);
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px', marginBottom: '20px' }}>
+    <div
+      style={{
+        padding: '20px',
+        border: '1px solid #e0e0e0',
+        borderRadius: '8px',
+        marginBottom: '20px',
+      }}
+    >
       <h2>📊 Analytics Dashboard</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
         <div style={{ padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
@@ -198,21 +211,45 @@ const AnalyticsDashboardComponent: React.FC<Record<string, unknown>> = ({ data, 
           <div style={{ fontSize: '14px', color: '#666' }}>Avg Response</div>
         </div>
       </div>
-      {data && <pre style={{ marginTop: '16px', fontSize: '12px' }}>{JSON.stringify(data, null, 2).slice(0, 200)}...</pre>}
+      {data && (
+        <pre style={{ marginTop: '16px', fontSize: '12px' }}>
+          {JSON.stringify(data, null, 2).slice(0, 200)}...
+        </pre>
+      )}
     </div>
   );
 };
 
 const AnalyticsChartsComponent: React.FC<Record<string, unknown>> = ({ data }) => {
   return (
-    <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px', marginBottom: '20px' }}>
+    <div
+      style={{
+        padding: '20px',
+        border: '1px solid #e0e0e0',
+        borderRadius: '8px',
+        marginBottom: '20px',
+      }}
+    >
       <h3>📈 Performance Charts</h3>
-      <div style={{ height: '300px', backgroundColor: '#f8f9fa', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          height: '300px',
+          backgroundColor: '#f8f9fa',
+          borderRadius: '4px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <div style={{ textAlign: 'center', color: '#666' }}>
           <div style={{ fontSize: '48px', marginBottom: '8px' }}>📊</div>
           <div>Charts component loaded</div>
           <div style={{ fontSize: '12px', marginTop: '4px' }}>Bundle: analytics-charts.js</div>
-          {data && <div style={{ fontSize: '10px', marginTop: '4px' }}>Data: {JSON.stringify(data).slice(0, 50)}...</div>}
+          {data && (
+            <div style={{ fontSize: '10px', marginTop: '4px' }}>
+              Data: {JSON.stringify(data).slice(0, 50)}...
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -240,13 +277,15 @@ const AnalyticsDataTableComponent: React.FC<Record<string, unknown>> = ({ data }
                 <td style={{ padding: '8px' }}>Item {i + 1}</td>
                 <td style={{ padding: '8px' }}>{Math.round(Math.random() * 1000)}</td>
                 <td style={{ padding: '8px' }}>
-                  <span style={{ 
-                    padding: '2px 8px', 
-                    borderRadius: '12px', 
-                    fontSize: '12px',
-                    backgroundColor: i % 2 ? '#dcfdf7' : '#fef3c7',
-                    color: i % 2 ? '#059669' : '#d97706'
-                  }}>
+                  <span
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      backgroundColor: i % 2 ? '#dcfdf7' : '#fef3c7',
+                      color: i % 2 ? '#059669' : '#d97706',
+                    }}
+                  >
                     {i % 2 ? 'Active' : 'Pending'}
                   </span>
                 </td>
@@ -263,4 +302,4 @@ const AnalyticsDataTableComponent: React.FC<Record<string, unknown>> = ({ data }
 };
 
 // Экспорт компонентов для создания отдельных файлов
-export { AnalyticsDashboardComponent, AnalyticsChartsComponent, AnalyticsDataTableComponent };
+export { AnalyticsChartsComponent, AnalyticsDashboardComponent, AnalyticsDataTableComponent };

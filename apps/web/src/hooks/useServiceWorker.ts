@@ -2,9 +2,13 @@
 // React hook для интеграции Service Worker с image optimization
 // Performance Sprint Day 7
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-import { serviceWorkerManager, type CacheStatus, type PerformanceMetrics } from '../utils/service-worker-manager';
+import {
+  serviceWorkerManager,
+  type CacheStatus,
+  type PerformanceMetrics,
+} from '../utils/service-worker-manager';
 
 interface ServiceWorkerState {
   isRegistered: boolean;
@@ -33,28 +37,28 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
     isOnline: navigator.onLine,
     cacheStatus: null,
     lastUpdate: null,
-    error: null
+    error: null,
   });
 
   // Регистрация Service Worker
   const register = useCallback(async () => {
     try {
-      setState(prev => ({ ...prev, error: null }));
-      
+      setState((prev) => ({ ...prev, error: null }));
+
       const registration = await serviceWorkerManager.register();
-      
-      setState(prev => ({
+
+      setState((prev) => ({
         ...prev,
         isRegistered: !!registration,
-        lastUpdate: new Date()
+        lastUpdate: new Date(),
       }));
 
       console.log('✅ useServiceWorker: Service Worker registered');
     } catch (error) {
       console.error('❌ useServiceWorker: Registration failed:', error);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Registration failed'
+        error: error instanceof Error ? error.message : 'Registration failed',
       }));
     }
   }, []);
@@ -63,20 +67,20 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
   const unregister = useCallback(async () => {
     try {
       const success = await serviceWorkerManager.unregister();
-      
-      setState(prev => ({
+
+      setState((prev) => ({
         ...prev,
         isRegistered: !success,
         cacheStatus: null,
-        lastUpdate: success ? new Date() : prev.lastUpdate
+        lastUpdate: success ? new Date() : prev.lastUpdate,
       }));
 
       console.log('🗑️ useServiceWorker: Service Worker unregistered');
     } catch (error) {
       console.error('❌ useServiceWorker: Unregistration failed:', error);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Unregistration failed'
+        error: error instanceof Error ? error.message : 'Unregistration failed',
       }));
     }
   }, []);
@@ -85,35 +89,38 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
   const update = useCallback(async () => {
     try {
       await serviceWorkerManager.update();
-      setState(prev => ({ ...prev, lastUpdate: new Date() }));
+      setState((prev) => ({ ...prev, lastUpdate: new Date() }));
       console.log('🔄 useServiceWorker: Service Worker updated');
     } catch (error) {
       console.error('❌ useServiceWorker: Update failed:', error);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Update failed'
+        error: error instanceof Error ? error.message : 'Update failed',
       }));
     }
   }, []);
 
   // Предзагрузка изображений через Service Worker
-  const preloadImages = useCallback(async (urls: string[]) => {
-    if (!state.isRegistered) {
-      console.warn('⚠️ useServiceWorker: Cannot preload - SW not registered');
-      return;
-    }
+  const preloadImages = useCallback(
+    async (urls: string[]) => {
+      if (!state.isRegistered) {
+        console.warn('⚠️ useServiceWorker: Cannot preload - SW not registered');
+        return;
+      }
 
-    try {
-      await serviceWorkerManager.preloadResources(urls);
-      console.log(`🚀 useServiceWorker: Preloaded ${urls.length} images`);
-    } catch (error) {
-      console.error('❌ useServiceWorker: Image preload failed:', error);
-      setState(prev => ({
-        ...prev,
-        error: error instanceof Error ? error.message : 'Preload failed'
-      }));
-    }
-  }, [state.isRegistered]);
+      try {
+        await serviceWorkerManager.preloadResources(urls);
+        console.log(`🚀 useServiceWorker: Preloaded ${urls.length} images`);
+      } catch (error) {
+        console.error('❌ useServiceWorker: Image preload failed:', error);
+        setState((prev) => ({
+          ...prev,
+          error: error instanceof Error ? error.message : 'Preload failed',
+        }));
+      }
+    },
+    [state.isRegistered],
+  );
 
   // Очистка кэша изображений
   const clearImageCache = useCallback(async () => {
@@ -128,34 +135,37 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
       await serviceWorkerManager.clearCache('.png');
       await serviceWorkerManager.clearCache('.webp');
       await serviceWorkerManager.clearCache('.avif');
-      
+
       // Обновляем статус кэша
       await refreshCacheStatus();
-      
+
       console.log('🧹 useServiceWorker: Image cache cleared');
     } catch (error) {
       console.error('❌ useServiceWorker: Cache clear failed:', error);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Cache clear failed'
+        error: error instanceof Error ? error.message : 'Cache clear failed',
       }));
     }
   }, [state.isRegistered]);
 
   // Отправка метрик производительности
-  const sendMetrics = useCallback((metrics: PerformanceMetrics) => {
-    if (!state.isRegistered) {
-      console.warn('⚠️ useServiceWorker: Cannot send metrics - SW not registered');
-      return;
-    }
+  const sendMetrics = useCallback(
+    (metrics: PerformanceMetrics) => {
+      if (!state.isRegistered) {
+        console.warn('⚠️ useServiceWorker: Cannot send metrics - SW not registered');
+        return;
+      }
 
-    try {
-      serviceWorkerManager.sendPerformanceMetrics(metrics);
-      console.log('📊 useServiceWorker: Metrics sent:', metrics);
-    } catch (error) {
-      console.error('❌ useServiceWorker: Failed to send metrics:', error);
-    }
-  }, [state.isRegistered]);
+      try {
+        serviceWorkerManager.sendPerformanceMetrics(metrics);
+        console.log('📊 useServiceWorker: Metrics sent:', metrics);
+      } catch (error) {
+        console.error('❌ useServiceWorker: Failed to send metrics:', error);
+      }
+    },
+    [state.isRegistered],
+  );
 
   // Обновление статуса кэша
   const refreshCacheStatus = useCallback(async () => {
@@ -165,7 +175,7 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
 
     try {
       const cacheStatus = await serviceWorkerManager.getCacheStatus();
-      setState(prev => ({ ...prev, cacheStatus }));
+      setState((prev) => ({ ...prev, cacheStatus }));
       console.log('📊 useServiceWorker: Cache status updated:', cacheStatus);
     } catch (error) {
       console.error('❌ useServiceWorker: Failed to get cache status:', error);
@@ -175,12 +185,12 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
   // Слушаем изменения online/offline статуса
   useEffect(() => {
     const handleOnline = () => {
-      setState(prev => ({ ...prev, isOnline: true }));
+      setState((prev) => ({ ...prev, isOnline: true }));
       console.log('🌐 useServiceWorker: Back online');
     };
 
     const handleOffline = () => {
-      setState(prev => ({ ...prev, isOnline: false }));
+      setState((prev) => ({ ...prev, isOnline: false }));
       console.log('📱 useServiceWorker: Gone offline');
     };
 
@@ -197,8 +207,8 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
   useEffect(() => {
     // Проверяем, уже ли зарегистрирован Service Worker
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      setState(prev => ({ ...prev, isRegistered: true }));
-      
+      setState((prev) => ({ ...prev, isRegistered: true }));
+
       // Сразу получаем статус кэша
       refreshCacheStatus();
     }
@@ -223,7 +233,7 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
     preloadImages,
     clearImageCache,
     sendMetrics,
-    refreshCacheStatus
+    refreshCacheStatus,
   };
 }
 
@@ -233,46 +243,49 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
 export function usePerformanceMetrics() {
   const { sendMetrics, isRegistered } = useServiceWorker();
 
-  const sendImageLoadMetrics = useCallback((
-    imageUrl: string,
-    loadTime: number,
-    fromCache: boolean,
-    size?: number
-  ) => {
-    if (!isRegistered) return;
+  const sendImageLoadMetrics = useCallback(
+    (imageUrl: string, loadTime: number, fromCache: boolean, size?: number) => {
+      if (!isRegistered) return;
 
-    const metrics: PerformanceMetrics = {
-      bundleSize: size || 0,
-      loadTime,
-      imageLoadTime: loadTime,
-      cacheHitRate: fromCache ? 1 : 0,
-      errorCount: 0
-    };
+      const metrics: PerformanceMetrics = {
+        bundleSize: size || 0,
+        loadTime,
+        imageLoadTime: loadTime,
+        cacheHitRate: fromCache ? 1 : 0,
+        errorCount: 0,
+      };
 
-    sendMetrics(metrics);
-    
-    console.log(`📊 Performance: Image loaded - ${imageUrl} (${loadTime}ms, ${fromCache ? 'cache' : 'network'})`);
-  }, [sendMetrics, isRegistered]);
+      sendMetrics(metrics);
 
-  const sendErrorMetrics = useCallback((errorType: string, errorCount = 1) => {
-    if (!isRegistered) return;
+      console.log(
+        `📊 Performance: Image loaded - ${imageUrl} (${loadTime}ms, ${fromCache ? 'cache' : 'network'})`,
+      );
+    },
+    [sendMetrics, isRegistered],
+  );
 
-    const metrics: PerformanceMetrics = {
-      bundleSize: 0,
-      loadTime: 0,
-      imageLoadTime: 0,
-      cacheHitRate: 0,
-      errorCount
-    };
+  const sendErrorMetrics = useCallback(
+    (errorType: string, errorCount = 1) => {
+      if (!isRegistered) return;
 
-    sendMetrics(metrics);
-    
-    console.log(`📊 Performance: Error reported - ${errorType} (${errorCount})`);
-  }, [sendMetrics, isRegistered]);
+      const metrics: PerformanceMetrics = {
+        bundleSize: 0,
+        loadTime: 0,
+        imageLoadTime: 0,
+        cacheHitRate: 0,
+        errorCount,
+      };
+
+      sendMetrics(metrics);
+
+      console.log(`📊 Performance: Error reported - ${errorType} (${errorCount})`);
+    },
+    [sendMetrics, isRegistered],
+  );
 
   return {
     sendImageLoadMetrics,
-    sendErrorMetrics
+    sendErrorMetrics,
   };
 }
 
@@ -282,42 +295,44 @@ export function usePerformanceMetrics() {
 export function useImagePreloading() {
   const { preloadImages, isRegistered } = useServiceWorker();
 
-  const preloadCriticalImages = useCallback(async (urls: string[]) => {
-    if (!isRegistered || urls.length === 0) return;
+  const preloadCriticalImages = useCallback(
+    async (urls: string[]) => {
+      if (!isRegistered || urls.length === 0) return;
 
-    // Фильтруем только изображения
-    const imageUrls = urls.filter(url => 
-      /\.(jpg|jpeg|png|gif|webp|avif|svg)$/i.test(url)
-    );
+      // Фильтруем только изображения
+      const imageUrls = urls.filter((url) => /\.(jpg|jpeg|png|gif|webp|avif|svg)$/i.test(url));
 
-    if (imageUrls.length === 0) return;
+      if (imageUrls.length === 0) return;
 
-    try {
-      await preloadImages(imageUrls);
-      console.log(`🚀 Image Preloading: ${imageUrls.length} images queued for preload`);
-    } catch (error) {
-      console.error('❌ Image Preloading failed:', error);
-    }
-  }, [preloadImages, isRegistered]);
+      try {
+        await preloadImages(imageUrls);
+        console.log(`🚀 Image Preloading: ${imageUrls.length} images queued for preload`);
+      } catch (error) {
+        console.error('❌ Image Preloading failed:', error);
+      }
+    },
+    [preloadImages, isRegistered],
+  );
 
-  const preloadImagesOnHover = useCallback(async (urls: string[]) => {
-    // Предзагрузка с меньшим приоритетом для hover events
-    if (!isRegistered) return;
+  const preloadImagesOnHover = useCallback(
+    async (urls: string[]) => {
+      // Предзагрузка с меньшим приоритетом для hover events
+      if (!isRegistered) return;
 
-    const imageUrls = urls.filter(url => 
-      /\.(jpg|jpeg|png|gif|webp|avif)$/i.test(url)
-    );
+      const imageUrls = urls.filter((url) => /\.(jpg|jpeg|png|gif|webp|avif)$/i.test(url));
 
-    if (imageUrls.length === 0) return;
+      if (imageUrls.length === 0) return;
 
-    // Добавляем небольшую задержку для hover preloading
-    setTimeout(() => {
-      preloadImages(imageUrls).catch(console.error);
-    }, 100);
-  }, [preloadImages, isRegistered]);
+      // Добавляем небольшую задержку для hover preloading
+      setTimeout(() => {
+        preloadImages(imageUrls).catch(console.error);
+      }, 100);
+    },
+    [preloadImages, isRegistered],
+  );
 
   return {
     preloadCriticalImages,
-    preloadImagesOnHover
+    preloadImagesOnHover,
   };
 }

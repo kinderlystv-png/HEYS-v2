@@ -41,8 +41,8 @@ const UsersTabPanel: React.FC = () => {
   if (error) {
     return (
       <div className="users-tab-panel">
-        <ErrorAlert 
-          message="Не удалось загрузить данные пользователей" 
+        <ErrorAlert
+          message="Не удалось загрузить данные пользователей"
           error={error}
           onRetry={refreshData}
         />
@@ -76,24 +76,24 @@ const UsersTabPanel: React.FC = () => {
           disabled={isLoading}
         />
       </div>
-      
+
       <div className="panel-content">
         {isLoading ? (
           <LoadingSpinner message="Загрузка пользователей..." />
         ) : (
           <div className="content-layout">
             <div className="content-main">
-              <UsersList 
+              <UsersList
                 users={users}
                 selectedUserId={selectedUser?.id || null}
                 onUserSelect={handleUserSelect}
                 _onRoleUpdate={handleRoleUpdate}
               />
             </div>
-            
+
             {selectedUser && (
               <div className="content-sidebar">
-                <UserDetails 
+                <UserDetails
                   user={selectedUser}
                   onRoleUpdate={handleRoleUpdate}
                   onClose={clearSelection}

@@ -8,11 +8,11 @@
 
 ## 📋 Таблицы на удаление
 
-| # | Таблица | Статус | Причина удаления |
-|---|---------|--------|------------------|
-| 1 | `heys_day_stats` | ❌ Не используется | Данные в `client_kv_store` с ключом `dayv2_YYYY-MM-DD` |
-| 2 | `heys_ration` | ❌ Не используется | Данные в `client_kv_store` с ключом `dayv2_YYYY-MM-DD` |
-| 3 | `heys_user_params` | ❌ Не используется | Данные в `client_kv_store` с ключом `heys_profile` |
+| #   | Таблица            | Статус             | Причина удаления                                       |
+| --- | ------------------ | ------------------ | ------------------------------------------------------ |
+| 1   | `heys_day_stats`   | ❌ Не используется | Данные в `client_kv_store` с ключом `dayv2_YYYY-MM-DD` |
+| 2   | `heys_ration`      | ❌ Не используется | Данные в `client_kv_store` с ключом `dayv2_YYYY-MM-DD` |
+| 3   | `heys_user_params` | ❌ Не используется | Данные в `client_kv_store` с ключом `heys_profile`     |
 
 ---
 
@@ -31,7 +31,8 @@ UNION ALL
 SELECT 'heys_user_params', COUNT(*) FROM heys_user_params;
 ```
 
-**Ожидаемый результат:** 0 строк в каждой таблице (или малое количество устаревших данных)
+**Ожидаемый результат:** 0 строк в каждой таблице (или малое количество
+устаревших данных)
 
 ---
 
@@ -72,9 +73,9 @@ supabase db execute --file database/cleanup_legacy_tables.sql
 
 ```sql
 -- Убедитесь, что таблицы удалены
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
   AND table_name IN ('heys_day_stats', 'heys_ration', 'heys_user_params');
 ```
 
@@ -122,7 +123,7 @@ CREATE TABLE public.heys_day_stats (
   stats jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now(),
   constraint heys_day_stats_pkey primary key (user_id, client_id, d),
-  constraint heys_day_stats_user_id_fkey foreign key (user_id) 
+  constraint heys_day_stats_user_id_fkey foreign key (user_id)
     references auth.users (id) on delete cascade
 );
 
@@ -134,7 +135,7 @@ CREATE TABLE public.heys_ration (
   products jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now(),
   constraint heys_ration_pkey primary key (user_id, client_id, d),
-  constraint heys_ration_user_id_fkey foreign key (user_id) 
+  constraint heys_ration_user_id_fkey foreign key (user_id)
     references auth.users (id) on delete cascade
 );
 
@@ -145,7 +146,7 @@ CREATE TABLE public.heys_user_params (
   params jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now(),
   constraint heys_user_params_pkey primary key (user_id, client_id),
-  constraint heys_user_params_user_id_fkey foreign key (user_id) 
+  constraint heys_user_params_user_id_fkey foreign key (user_id)
     references auth.users (id) on delete cascade
 );
 ```
@@ -155,11 +156,13 @@ CREATE TABLE public.heys_user_params (
 ## 📊 Экономия ресурсов
 
 ### **До очистки:**
+
 - Таблиц: 6
 - Индексов: 9+
 - Maintenance overhead: высокий
 
 ### **После очистки:**
+
 - Таблиц: 3 ✅
 - Индексов: 5 ✅
 - Maintenance overhead: минимальный ✅
@@ -168,12 +171,12 @@ CREATE TABLE public.heys_user_params (
 
 ## 🎯 Итоги
 
-| Метрика | Результат |
-|---------|-----------|
-| **Удалено таблиц** | 3 |
-| **Удалено индексов** | 3 |
-| **Риск потери данных** | ❌ Нет (всё в `client_kv_store`) |
-| **Упрощение схемы** | ✅ Да |
+| Метрика                | Результат                                    |
+| ---------------------- | -------------------------------------------- |
+| **Удалено таблиц**     | 3                                            |
+| **Удалено индексов**   | 3                                            |
+| **Риск потери данных** | ❌ Нет (всё в `client_kv_store`)             |
+| **Упрощение схемы**    | ✅ Да                                        |
 | **Производительность** | ✅ Улучшена (меньше таблиц для сканирования) |
 
 ---
@@ -185,5 +188,5 @@ CREATE TABLE public.heys_user_params (
 - [ ] Таблицы удалены
 - [ ] Проверка результата выполнена
 
-**Выполнил:** _________________  
-**Дата:** _________________
+**Выполнил:** **\*\*\*\***\_**\*\*\*\***  
+**Дата:** **\*\*\*\***\_**\*\*\*\***

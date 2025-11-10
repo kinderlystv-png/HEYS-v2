@@ -15,7 +15,9 @@ const UsersTabPanel = lazy(() => import('./components/UsersTabPanel'));
 const LoadingFallback: React.FC = () => (
   <div className="tab-loading" role="status" aria-live="polite">
     <div className="loading-spinner">
-      <div className="spinner-circle" aria-hidden="true">⟳</div>
+      <div className="spinner-circle" aria-hidden="true">
+        ⟳
+      </div>
       <span>Загрузка вкладки...</span>
     </div>
   </div>
@@ -30,7 +32,7 @@ const PlaceholderTab: React.FC<{ tabName: string }> = ({ tabName }) => (
 
 const CuratorPanelContent: React.FC = () => {
   const { activeTab, curatorData } = useCuratorContext();
-  
+
   return (
     <div className="curator-panel">
       <header className="panel-header">
@@ -43,9 +45,9 @@ const CuratorPanelContent: React.FC = () => {
           )}
         </div>
       </header>
-      
+
       <TabNavigation />
-      
+
       <main className="panel-main">
         <div className="tab-content">
           <Suspense fallback={<LoadingFallback />}>

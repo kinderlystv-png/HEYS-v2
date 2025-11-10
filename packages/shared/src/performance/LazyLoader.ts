@@ -62,7 +62,7 @@ export enum LazyLoadingStrategy {
   SCROLL_BASED = 'scroll-based',
   TIME_BASED = 'time-based',
   USER_INTERACTION = 'user-interaction',
-  NETWORK_BASED = 'network-based'
+  NETWORK_BASED = 'network-based',
 }
 
 /**
@@ -74,7 +74,7 @@ export enum ResourceType {
   SCRIPT = 'script',
   STYLE = 'style',
   DATA = 'data',
-  IFRAME = 'iframe'
+  IFRAME = 'iframe',
 }
 
 /**
@@ -103,7 +103,7 @@ export class LazyLoader {
       loadTimeout: 10000,
       enableMetrics: true,
       debounceDelay: 100,
-      ...config
+      ...config,
     };
 
     this.metrics = {
@@ -114,7 +114,7 @@ export class LazyLoader {
       totalLoadTime: 0,
       memoryUsage: 0,
       observerInstances: 1,
-      performanceScore: 100
+      performanceScore: 100,
     };
 
     this.initializeObserver();
@@ -134,8 +134,8 @@ export class LazyLoader {
       {
         root: this.config.root,
         rootMargin: this.config.rootMargin,
-        threshold: this.config.threshold
-      }
+        threshold: this.config.threshold,
+      },
     );
   }
 
@@ -174,7 +174,7 @@ export class LazyLoader {
       preload: options.preload || false,
       loaded: false,
       loading: false,
-      error: false
+      error: false,
     };
 
     // Предзагрузка для высокоприоритетных элементов
@@ -206,12 +206,12 @@ export class LazyLoader {
       await this.waitForSlot();
     }
 
-    const lazyElement = this.loadQueue.find(item => item.element === element);
+    const lazyElement = this.loadQueue.find((item) => item.element === element);
     if (!lazyElement) return;
 
     this.loadingElements.add(element);
     this.currentLoads++;
-    
+
     const startTime = this.config.enableMetrics ? performance.now() : 0;
     lazyElement.loadStartTime = startTime;
     lazyElement.loading = true;
@@ -219,7 +219,7 @@ export class LazyLoader {
     try {
       const loadPromise = this.performLoad(lazyElement);
       this.loadPromises.set(element, loadPromise);
-      
+
       // Таймаут для загрузки
       const timeoutPromise = new Promise<void>((_, reject) => {
         setTimeout(() => reject(new Error('Load timeout')), this.config.loadTimeout);
@@ -231,7 +231,7 @@ export class LazyLoader {
       this.loadedElements.add(element);
       lazyElement.loaded = true;
       lazyElement.loading = false;
-      
+
       if (this.config.enableMetrics) {
         const endTime = performance.now();
         lazyElement.loadEndTime = endTime;
@@ -240,14 +240,13 @@ export class LazyLoader {
       }
 
       this.metrics.loadedItems++;
-
     } catch (error) {
       // Ошибка загрузки
       this.errorElements.add(element);
       lazyElement.error = true;
       lazyElement.loading = false;
       this.metrics.failedItems++;
-      
+
       console.warn(`⚠️ Ошибка ленивой загрузки:`, error);
     } finally {
       this.loadingElements.delete(element);
@@ -275,23 +274,23 @@ export class LazyLoader {
       case ResourceType.IMAGE:
         await this.loadImage(element as HTMLImageElement, src);
         break;
-        
+
       case ResourceType.IFRAME:
         await this.loadIframe(element as HTMLIFrameElement, src);
         break;
-        
+
       case ResourceType.SCRIPT:
         await this.loadScript(element as HTMLScriptElement, src);
         break;
-        
+
       case ResourceType.STYLE:
         await this.loadStyle(element as HTMLLinkElement, src);
         break;
-        
+
       case ResourceType.COMPONENT:
         await this.loadComponent(element, src);
         break;
-        
+
       default:
         // Универсальная загрузка атрибута src
         if (src) {
@@ -306,18 +305,18 @@ export class LazyLoader {
   private loadImage(img: HTMLImageElement, src?: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const newImg = new Image();
-      
+
       newImg.onload = () => {
         img.src = newImg.src;
         img.classList.add('lazy-loaded');
         resolve();
       };
-      
+
       newImg.onerror = () => {
         img.classList.add('lazy-error');
         reject(new Error('Image load failed'));
       };
-      
+
       const imageSrc = src || img.dataset.src || img.dataset.lazySrc;
       if (imageSrc) {
         newImg.src = imageSrc;
@@ -333,7 +332,7 @@ export class LazyLoader {
   private loadIframe(iframe: HTMLIFrameElement, src?: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const iframeSrc = src || iframe.dataset.src || iframe.dataset.lazySrc;
-      
+
       if (!iframeSrc) {
         reject(new Error('No iframe source found'));
         return;
@@ -343,12 +342,12 @@ export class LazyLoader {
         iframe.classList.add('lazy-loaded');
         resolve();
       };
-      
+
       iframe.onerror = () => {
         iframe.classList.add('lazy-error');
         reject(new Error('Iframe load failed'));
       };
-      
+
       iframe.src = iframeSrc;
     });
   }
@@ -359,7 +358,7 @@ export class LazyLoader {
   private loadScript(script: HTMLScriptElement, src?: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const scriptSrc = src || script.dataset.src || script.dataset.lazySrc;
-      
+
       if (!scriptSrc) {
         reject(new Error('No script source found'));
         return;
@@ -370,12 +369,12 @@ export class LazyLoader {
         script.classList.add('lazy-loaded');
         resolve();
       };
-      
+
       newScript.onerror = () => {
         script.classList.add('lazy-error');
         reject(new Error('Script load failed'));
       };
-      
+
       newScript.src = scriptSrc;
       newScript.async = true;
       document.head.appendChild(newScript);
@@ -388,7 +387,7 @@ export class LazyLoader {
   private loadStyle(link: HTMLLinkElement, src?: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const styleSrc = src || link.dataset.href || link.dataset.lazySrc;
-      
+
       if (!styleSrc) {
         reject(new Error('No style source found'));
         return;
@@ -398,12 +397,12 @@ export class LazyLoader {
         link.classList.add('lazy-loaded');
         resolve();
       };
-      
+
       link.onerror = () => {
         link.classList.add('lazy-error');
         reject(new Error('Style load failed'));
       };
-      
+
       link.href = styleSrc;
     });
   }
@@ -414,15 +413,15 @@ export class LazyLoader {
   private async loadComponent(element: Element, src?: string): Promise<void> {
     // Базовая реализация для загрузки компонентов
     // Может быть расширена для конкретных фреймворков
-    
+
     const componentName = (element as HTMLElement).dataset?.component;
     const componentSrc = src || (element as HTMLElement).dataset?.src;
-    
+
     if (componentName && componentSrc) {
       try {
         const module = await import(componentSrc);
         const Component = module.default || module[componentName];
-        
+
         if (Component) {
           element.classList.add('lazy-loaded');
           // Здесь можно добавить рендеринг компонента
@@ -439,25 +438,25 @@ export class LazyLoader {
    */
   private preloadResource(lazyElement: LazyLoadableElement): void {
     const { element, src } = lazyElement;
-    
+
     if (!src || this.preloadedItems.has(src)) return;
-    
+
     const resourceType = this.getResourceType(element);
-    
+
     switch (resourceType) {
       case ResourceType.IMAGE:
         this.preloadImage(src);
         break;
-        
+
       case ResourceType.SCRIPT:
         this.preloadScript(src);
         break;
-        
+
       case ResourceType.STYLE:
         this.preloadStyle(src);
         break;
     }
-    
+
     this.preloadedItems.add(src);
   }
 
@@ -499,7 +498,7 @@ export class LazyLoader {
    */
   private getResourceType(element: Element): ResourceType {
     const tagName = element.tagName.toLowerCase();
-    
+
     switch (tagName) {
       case 'img':
         return ResourceType.IMAGE;
@@ -510,7 +509,9 @@ export class LazyLoader {
       case 'link':
         return ResourceType.STYLE;
       default:
-        return (element as HTMLElement).dataset?.component ? ResourceType.COMPONENT : ResourceType.DATA;
+        return (element as HTMLElement).dataset?.component
+          ? ResourceType.COMPONENT
+          : ResourceType.DATA;
     }
   }
 
@@ -551,13 +552,14 @@ export class LazyLoader {
 
     this.metrics.totalLoadTime += loadTime;
     this.metrics.averageLoadTime = this.metrics.totalLoadTime / this.metrics.loadedItems;
-    
+
     // Расчет производительности
-    const successRate = this.metrics.loadedItems / (this.metrics.loadedItems + this.metrics.failedItems);
-    const avgTimeScore = Math.max(0, 100 - (this.metrics.averageLoadTime / 100));
-    
-    this.metrics.performanceScore = Math.round((successRate * 70) + (avgTimeScore * 30));
-    
+    const successRate =
+      this.metrics.loadedItems / (this.metrics.loadedItems + this.metrics.failedItems);
+    const avgTimeScore = Math.max(0, 100 - this.metrics.averageLoadTime / 100);
+
+    this.metrics.performanceScore = Math.round(successRate * 70 + avgTimeScore * 30);
+
     // Обновление использования памяти (приблизительно)
     if ((performance as any).memory) {
       this.metrics.memoryUsage = (performance as any).memory.usedJSHeapSize;
@@ -569,7 +571,7 @@ export class LazyLoader {
    */
   private debounce<T extends (...args: any[]) => any>(
     func: T,
-    delay: number
+    delay: number,
   ): (...args: Parameters<T>) => void {
     let timeoutId: NodeJS.Timeout;
     return (...args: Parameters<T>) => {
@@ -590,9 +592,9 @@ export class LazyLoader {
    */
   async loadAll(): Promise<void> {
     const loadPromises = this.loadQueue
-      .filter(item => !item.loaded && !item.loading)
-      .map(item => this.loadElement(item.element));
-    
+      .filter((item) => !item.loaded && !item.loading)
+      .map((item) => this.loadElement(item.element));
+
     await Promise.allSettled(loadPromises);
   }
 
@@ -612,7 +614,11 @@ export class LazyLoader {
       loaded: this.loadedElements.size,
       loading: this.loadingElements.size,
       error: this.errorElements.size,
-      pending: this.loadQueue.length - this.loadedElements.size - this.loadingElements.size - this.errorElements.size
+      pending:
+        this.loadQueue.length -
+        this.loadedElements.size -
+        this.loadingElements.size -
+        this.errorElements.size,
     };
   }
 
@@ -624,7 +630,7 @@ export class LazyLoader {
       this.observer.disconnect();
       this.observer = null;
     }
-    
+
     this.loadQueue = [];
     this.loadedElements.clear();
     this.loadingElements.clear();
@@ -637,11 +643,7 @@ export class LazyLoader {
    * Проверка поддержки браузера
    */
   static isSupported(): boolean {
-    return (
-      'IntersectionObserver' in window &&
-      'Promise' in window &&
-      'performance' in window
-    );
+    return 'IntersectionObserver' in window && 'Promise' in window && 'performance' in window;
   }
 }
 

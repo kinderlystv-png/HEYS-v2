@@ -1,15 +1,15 @@
 import { ComponentSkeleton, SkeletonVariants } from './ComponentSkeleton';
 import { PageSkeleton } from './PageSkeleton';
 
-export { PageSkeleton } from './PageSkeleton';
 export { ComponentSkeleton, SkeletonVariants } from './ComponentSkeleton';
+export { PageSkeleton } from './PageSkeleton';
 
 /**
  * Centralized loading states management
- * 
+ *
  * Usage:
  * import { PageSkeleton, ComponentSkeleton, SkeletonVariants } from '@/components/LoadingStates';
- * 
+ *
  * Examples:
  * - <PageSkeleton type="dashboard" />
  * - <ComponentSkeleton type="card" variant="detailed" />
@@ -19,7 +19,7 @@ export { ComponentSkeleton, SkeletonVariants } from './ComponentSkeleton';
 export const LoadingStates = {
   Page: PageSkeleton,
   Component: ComponentSkeleton,
-  Variants: SkeletonVariants
+  Variants: SkeletonVariants,
 };
 
 export default LoadingStates;

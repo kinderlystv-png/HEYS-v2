@@ -1,23 +1,33 @@
 {
   "name": "@heys/analytics-dashboard",
   "version": "0.1.0",
-  "description": "Business Intelligence MVP - Real-time analytics dashboard for HEYS v2",
   "private": true,
+  "description": "Business Intelligence MVP - Real-time analytics dashboard for HEYS v2",
+  "keywords": [
+    "analytics",
+    "dashboard",
+    "business-intelligence",
+    "real-time",
+    "metrics",
+    "heys"
+  ],
+  "license": "MIT",
+  "author": "HEYS v2 Development Team",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup src/index.ts --dts --format cjs,esm",
-    "dev": "vite --config vite.config.dev.ts",
-    "demo": "vite --config vite.config.dev.ts",
     "build:demo": "vite build --config vite.config.dev.ts",
-    "test": "vitest",
-    "test:watch": "vitest --watch",
-    "test:visual": "playwright test",
-    "test:visual:ui": "playwright test --ui",
-    "test:visual:headed": "playwright test --headed",
-    "test:visual:update": "playwright test --update-snapshots",
+    "demo": "vite --config vite.config.dev.ts",
+    "dev": "vite --config vite.config.dev.ts",
     "lint": "eslint src --ext .ts,.tsx",
+    "test": "vitest",
+    "test:visual": "playwright test",
+    "test:visual:headed": "playwright test --headed",
+    "test:visual:ui": "playwright test --ui",
+    "test:visual:update": "playwright test --update-snapshots",
+    "test:watch": "vitest --watch",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -49,15 +59,5 @@
   },
   "peerDependencies": {
     "@heys/shared": "workspace:*"
-  },
-  "keywords": [
-    "analytics",
-    "dashboard",
-    "business-intelligence",
-    "real-time",
-    "metrics",
-    "heys"
-  ],
-  "author": "HEYS v2 Development Team",
-  "license": "MIT"
+  }
 }

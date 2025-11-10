@@ -13,7 +13,7 @@ const consoleUsageStats = {
   errorCalls: 0,
   warnCalls: 0,
   infoCalls: 0,
-  debugCalls: 0
+  debugCalls: 0,
 };
 
 // Контролируемые методы console
@@ -23,12 +23,12 @@ const CONTROLLED_METHODS = ['log', 'error', 'warn', 'info', 'debug', 'trace'];
 const controlConsoleUsage = () => {
   // В production блокируем console
   if (isProduction) {
-    CONTROLLED_METHODS.forEach(method => {
+    CONTROLLED_METHODS.forEach((method) => {
       if (console[method]) {
         console[method] = (..._args) => {
           consoleUsageStats.totalCalls++;
           consoleUsageStats[`${method}Calls`] = (consoleUsageStats[`${method}Calls`] || 0) + 1;
-          
+
           // В production ничего не выводим
           // Только собираем статистику
         };
@@ -42,7 +42,7 @@ const getConsoleStats = () => ({ ...consoleUsageStats });
 
 // Сброс статистики
 const resetConsoleStats = () => {
-  Object.keys(consoleUsageStats).forEach(key => {
+  Object.keys(consoleUsageStats).forEach((key) => {
     consoleUsageStats[key] = 0;
   });
 };
@@ -57,7 +57,7 @@ module.exports = {
   controlConsoleUsage,
   getConsoleStats,
   resetConsoleStats,
-  CONTROLLED_METHODS
+  CONTROLLED_METHODS,
 };
 
 // ES6 default export
@@ -68,6 +68,6 @@ if (typeof exports === 'object') {
     controlConsoleUsage,
     getConsoleStats,
     resetConsoleStats,
-    CONTROLLED_METHODS
+    CONTROLLED_METHODS,
   };
 }

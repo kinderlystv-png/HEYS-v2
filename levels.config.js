@@ -12,65 +12,65 @@ export const LOG_LEVELS = {
     name: 'fatal',
     color: 'magenta',
     symbol: '💀',
-    description: 'Критическая ошибка, приводящая к завершению приложения'
+    description: 'Критическая ошибка, приводящая к завершению приложения',
   },
   error: {
     value: 50,
     name: 'error',
     color: 'red',
     symbol: '❌',
-    description: 'Ошибка, требующая немедленного внимания'
+    description: 'Ошибка, требующая немедленного внимания',
   },
-  
+
   // Предупреждения
   warn: {
     value: 40,
     name: 'warn',
     color: 'yellow',
     symbol: '⚠️',
-    description: 'Предупреждение о потенциальной проблеме'
+    description: 'Предупреждение о потенциальной проблеме',
   },
-  
+
   // Информационные
   info: {
     value: 30,
     name: 'info',
     color: 'green',
     symbol: 'ℹ️',
-    description: 'Общая информация о работе приложения'
+    description: 'Общая информация о работе приложения',
   },
   http: {
     value: 29,
     name: 'http',
     color: 'cyan',
     symbol: '🌐',
-    description: 'HTTP запросы и ответы'
+    description: 'HTTP запросы и ответы',
   },
-  
+
   // Отладочные
   debug: {
     value: 20,
     name: 'debug',
     color: 'blue',
     symbol: '🔍',
-    description: 'Отладочная информация для разработки'
+    description: 'Отладочная информация для разработки',
   },
   trace: {
     value: 10,
     name: 'trace',
     color: 'gray',
     symbol: '🔬',
-    description: 'Детальная трассировка выполнения'
+    description: 'Детальная трассировка выполнения',
   },
-  
+
   // Специальные
   silent: {
     value: Infinity,
     name: 'silent',
     color: 'white',
     symbol: '🔇',
-    description: 'Отключение всех логов'
-  }
+    description: 'Отключение всех логов',
+  },
 };
 
 // Алиасы для совместимости
@@ -80,17 +80,17 @@ export const LEVEL_ALIASES = {
   information: 'info',
   verbose: 'debug',
   silly: 'trace',
-  off: 'silent'
+  off: 'silent',
 };
 
 // Цвета для консольного вывода
 export const LEVEL_COLORS = Object.fromEntries(
-  Object.entries(LOG_LEVELS).map(([key, level]) => [key, level.color])
+  Object.entries(LOG_LEVELS).map(([key, level]) => [key, level.color]),
 );
 
 // Только значения уровней для Pino/Winston
 export const LEVEL_VALUES = Object.fromEntries(
-  Object.entries(LOG_LEVELS).map(([key, level]) => [key, level.value])
+  Object.entries(LOG_LEVELS).map(([key, level]) => [key, level.value]),
 );
 
 // Маппинг уровней на методы
@@ -105,63 +105,63 @@ export const ENVIRONMENT_CONFIGS = {
       level: 'debug',
       colorize: true,
       timestamp: true,
-      prettyPrint: true
+      prettyPrint: true,
     },
     file: {
       enabled: true,
       level: 'info',
-      rotation: false
+      rotation: false,
     },
     performance: {
       logSlowOperations: true,
-      threshold: 100 // ms
-    }
+      threshold: 100, // ms
+    },
   },
-  
+
   test: {
     defaultLevel: 'error',
     console: {
       enabled: false,
-      level: 'silent'
+      level: 'silent',
     },
     file: {
       enabled: true,
       level: 'error',
-      path: './logs/test'
+      path: './logs/test',
     },
     performance: {
-      logSlowOperations: false
-    }
+      logSlowOperations: false,
+    },
   },
-  
+
   staging: {
     defaultLevel: 'info',
     console: {
       enabled: true,
       level: 'warn',
       colorize: false,
-      format: 'json'
+      format: 'json',
     },
     file: {
       enabled: true,
       level: 'info',
       rotation: true,
       maxSize: '50m',
-      maxFiles: '7d'
+      maxFiles: '7d',
     },
     performance: {
       logSlowOperations: true,
-      threshold: 500
-    }
+      threshold: 500,
+    },
   },
-  
+
   production: {
     defaultLevel: 'warn',
     console: {
       enabled: true,
       level: 'error',
       colorize: false,
-      format: 'json'
+      format: 'json',
     },
     file: {
       enabled: true,
@@ -169,18 +169,18 @@ export const ENVIRONMENT_CONFIGS = {
       rotation: true,
       maxSize: '100m',
       maxFiles: '30d',
-      compress: true
+      compress: true,
     },
     performance: {
       logSlowOperations: true,
-      threshold: 1000
+      threshold: 1000,
     },
     security: {
       sanitizeHeaders: true,
       maskPasswords: true,
-      auditLevel: 'warn'
-    }
-  }
+      auditLevel: 'warn',
+    },
+  },
 };
 
 // Форматтеры для разных уровней
@@ -191,7 +191,7 @@ export const LEVEL_FORMATTERS = {
   info: (message, _meta) => `ℹ️  INFO: ${message}`,
   http: (message, _meta) => `🌐 HTTP: ${message}`,
   debug: (message, meta) => `🔍 DEBUG: ${message} ${meta ? JSON.stringify(meta) : ''}`,
-  trace: (message, meta) => `🔬 TRACE: ${message} ${meta ? JSON.stringify(meta) : ''}`
+  trace: (message, meta) => `🔬 TRACE: ${message} ${meta ? JSON.stringify(meta) : ''}`,
 };
 
 // Предикаты для фильтрации
@@ -201,7 +201,7 @@ export const LEVEL_PREDICATES = {
   isInfo: (level) => ['info', 'http'].includes(level),
   isDebug: (level) => ['debug', 'trace'].includes(level),
   isCritical: (level) => ['fatal', 'error', 'warn'].includes(level),
-  isProduction: (level) => ['fatal', 'error', 'warn', 'info'].includes(level)
+  isProduction: (level) => ['fatal', 'error', 'warn', 'info'].includes(level),
 };
 
 // Конфигурация ротации для каждого уровня
@@ -212,7 +212,7 @@ export const ROTATION_CONFIG = {
   info: { maxSize: '200m', maxFiles: '7d', compress: false },
   http: { maxSize: '500m', maxFiles: '3d', compress: false },
   debug: { maxSize: '100m', maxFiles: '1d', compress: false },
-  trace: { maxSize: '50m', maxFiles: '6h', compress: false }
+  trace: { maxSize: '50m', maxFiles: '6h', compress: false },
 };
 
 // Дефолтная конфигурация
@@ -221,29 +221,29 @@ export const DEFAULT_CONFIG = {
   levels: LEVEL_VALUES,
   colors: LEVEL_COLORS,
   environment: process.env.NODE_ENV || 'development',
-  
+
   // Получить конфигурацию для текущего окружения
   getEnvironmentConfig() {
     return ENVIRONMENT_CONFIGS[this.environment] || ENVIRONMENT_CONFIGS.development;
   },
-  
+
   // Проверить, включен ли уровень
   isLevelEnabled(level, currentLevel = this.level) {
     const levelValue = LOG_LEVELS[level]?.value || 0;
     const currentValue = LOG_LEVELS[currentLevel]?.value || 30;
     return levelValue >= currentValue;
   },
-  
+
   // Получить форматтер для уровня
   getFormatter(level) {
     return LEVEL_FORMATTERS[level] || LEVEL_FORMATTERS.info;
   },
-  
+
   // Нормализовать имя уровня
   normalizeLevel(level) {
     const normalized = level.toLowerCase();
     return LEVEL_ALIASES[normalized] || normalized;
-  }
+  },
 };
 
 // CommonJS совместимость
@@ -259,6 +259,6 @@ if (typeof module !== 'undefined' && module.exports) {
     LEVEL_PREDICATES,
     ROTATION_CONFIG,
     DEFAULT_CONFIG,
-    default: DEFAULT_CONFIG
+    default: DEFAULT_CONFIG,
   };
 }

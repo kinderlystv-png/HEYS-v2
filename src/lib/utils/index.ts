@@ -8,7 +8,7 @@ export function formatDate(date: Date | string): string {
   return d.toLocaleDateString('ru-RU', {
     year: 'numeric',
     month: 'long',
-    day: 'numeric'
+    day: 'numeric',
   });
 }
 
@@ -25,15 +25,15 @@ export function generateId(): string {
 export function safeGet<T>(obj: Record<string, unknown>, path: string, defaultValue: T): T {
   const keys = path.split('.');
   let current = obj;
-  
+
   for (const key of keys) {
     if (current === null || current === undefined || typeof current !== 'object') {
       return defaultValue;
     }
     current = current[key] as Record<string, unknown>;
   }
-  
-  return current as T ?? defaultValue;
+
+  return (current as T) ?? defaultValue;
 }
 
 /**
@@ -41,10 +41,10 @@ export function safeGet<T>(obj: Record<string, unknown>, path: string, defaultVa
  */
 export function debounce<T extends (...args: Parameters<T>) => ReturnType<T>>(
   func: T,
-  delay: number
+  delay: number,
 ): (...args: Parameters<T>) => void {
   let timeoutId: NodeJS.Timeout;
-  
+
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func(...args), delay);

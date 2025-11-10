@@ -1,13 +1,13 @@
 // hooks/useCuratorData.ts - Основной хук для работы с данными куратора
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-import { 
-  CuratorUser, 
-  CuratorTask, 
-  CuratorStats, 
+import {
+  ApiResponse,
   CuratorSettings,
-  ApiResponse 
+  CuratorStats,
+  CuratorTask,
+  CuratorUser,
 } from '../types/curator.types';
 import { logger } from '../utils/logger';
 
@@ -22,8 +22,8 @@ interface CuratorDataResponse {
 const mockApi = {
   async get<T>(url: string): Promise<ApiResponse<T>> {
     // Симуляция API задержки
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
     // Мок данные
     const mockData: Record<string, unknown> = {
       '/curator/users': [
@@ -39,7 +39,7 @@ const mockApi = {
           lastActivity: new Date('2024-09-04'),
         },
         {
-          id: '2', 
+          id: '2',
           name: 'Мария Сидорова',
           email: 'maria@example.com',
           role: 'curator',
@@ -52,16 +52,16 @@ const mockApi = {
         {
           id: '3',
           name: 'Алексей Смирнов',
-          email: 'alexey@example.com', 
+          email: 'alexey@example.com',
           role: 'moderator',
           permissions: ['read'],
           status: 'inactive',
           createdAt: new Date('2023-06-10'),
           updatedAt: new Date('2024-08-25'),
           lastActivity: new Date('2024-08-25'),
-        }
+        },
       ] as CuratorUser[],
-      
+
       '/curator/tasks': [
         {
           id: '1',
@@ -80,7 +80,7 @@ const mockApi = {
           id: '2',
           title: 'Обновить политику безопасности',
           description: 'Пересмотреть и обновить документы по безопасности',
-          status: 'in-progress', 
+          status: 'in-progress',
           priority: 'medium',
           assignedTo: '1',
           assignedBy: '1',
@@ -101,9 +101,9 @@ const mockApi = {
           createdAt: new Date('2024-08-20'),
           updatedAt: new Date('2024-09-01'),
           tags: ['reports', 'analytics'],
-        }
+        },
       ] as CuratorTask[],
-      
+
       '/curator/stats': {
         totalUsers: 150,
         activeUsers: 127,
@@ -117,20 +117,20 @@ const mockApi = {
           admin: 2,
           curator: 8,
           moderator: 15,
-          user: 125
+          user: 125,
         },
         tasksByStatus: {
           pending: 8,
           'in-progress': 5,
           completed: 32,
           rejected: 0,
-          cancelled: 0
+          cancelled: 0,
         },
         tasksByPriority: {
           low: 12,
           medium: 18,
           high: 13,
-          critical: 2
+          critical: 2,
         },
         recentActivity: [
           {
@@ -147,9 +147,9 @@ const mockApi = {
             description: 'Создан новый пользователь "Елена Новикова"',
             timestamp: new Date('2024-09-03T09:15:00'),
           },
-        ]
+        ],
       } as CuratorStats,
-      
+
       '/curator/settings': {
         notifications: {
           email: true,
@@ -169,31 +169,31 @@ const mockApi = {
           canModifyRoles: true,
           canViewAnalytics: true,
           canExportData: true,
-        }
-      } as CuratorSettings
+        },
+      } as CuratorSettings,
     };
-    
+
     const data = mockData[url];
     if (!data) {
       throw new Error(`API endpoint ${url} not found`);
     }
-    
+
     return {
       data: data as T,
       success: true,
-      message: 'Data fetched successfully'
+      message: 'Data fetched successfully',
     };
   },
-  
+
   async put<T>(_url: string, _body: unknown): Promise<ApiResponse<T>> {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
     // Logger будет добавлен в utils для production logging
     return {
       data: {} as T,
       success: true,
-      message: 'Data updated successfully'
+      message: 'Data updated successfully',
     };
-  }
+  },
 };
 
 export const useCuratorData = () => {
@@ -204,14 +204,14 @@ export const useCuratorData = () => {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       logger.info('🔄 Загрузка данных куратора...');
-      
+
       // Объединяем запросы для оптимизации
       const [usersResponse, tasksResponse, statsResponse, settingsResponse] = await Promise.all([
         mockApi.get<CuratorUser[]>('/curator/users'),
-        mockApi.get<CuratorTask[]>('/curator/tasks'), 
+        mockApi.get<CuratorTask[]>('/curator/tasks'),
         mockApi.get<CuratorStats>('/curator/stats'),
         mockApi.get<CuratorSettings>('/curator/settings'),
       ]);
@@ -225,7 +225,6 @@ export const useCuratorData = () => {
 
       setData(fetchedData);
       logger.info('✅ Данные куратора загружены:', fetchedData);
-      
     } catch (err) {
       const errorMessage = err instanceof Error ? err : new Error('Unknown error occurred');
       setError(errorMessage);
@@ -244,27 +243,33 @@ export const useCuratorData = () => {
     return fetchData();
   }, [fetchData]);
 
-  const updateUserRole = useCallback(async (userId: string, newRole: string) => {
-    try {
-      await mockApi.put(`/curator/users/${userId}`, { role: newRole });
-      await refreshData();
-      return { success: true };
-    } catch (err) {
-      logger.error('Ошибка обновления роли пользователя:', err);
-      return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
-    }
-  }, [refreshData]);
+  const updateUserRole = useCallback(
+    async (userId: string, newRole: string) => {
+      try {
+        await mockApi.put(`/curator/users/${userId}`, { role: newRole });
+        await refreshData();
+        return { success: true };
+      } catch (err) {
+        logger.error('Ошибка обновления роли пользователя:', err);
+        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      }
+    },
+    [refreshData],
+  );
 
-  const updateTaskStatus = useCallback(async (taskId: string, newStatus: string) => {
-    try {
-      await mockApi.put(`/curator/tasks/${taskId}`, { status: newStatus });
-      await refreshData();
-      return { success: true };
-    } catch (err) {
-      logger.error('Ошибка обновления статуса задачи:', err);
-      return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
-    }
-  }, [refreshData]);
+  const updateTaskStatus = useCallback(
+    async (taskId: string, newStatus: string) => {
+      try {
+        await mockApi.put(`/curator/tasks/${taskId}`, { status: newStatus });
+        await refreshData();
+        return { success: true };
+      } catch (err) {
+        logger.error('Ошибка обновления статуса задачи:', err);
+        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+      }
+    },
+    [refreshData],
+  );
 
   return {
     data,

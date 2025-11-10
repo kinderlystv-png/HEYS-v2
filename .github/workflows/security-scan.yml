@@ -1,31 +1,31 @@
 # GitHub Actions Workflow для автоматического сканирования безопасности
 # Интегрирует SAST (Static Application Security Testing) в CI/CD пайплайн
-# 
-# @created КТ4 - Автоматизация безопасности  
+#
+# @created КТ4 - Автоматизация безопасности
 # @author HEYS Security Team
 
 name: 🛡️ Security Scan & SAST
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - '**/*.ts'
-      - '**/*.tsx'
-      - '**/*.js'
-      - '**/*.jsx'
-      - '**/package.json'
-      - '**/pnpm-lock.yaml'
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "**/package.json"
+      - "**/pnpm-lock.yaml"
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
     types: [opened, synchronize, reopened]
   schedule:
     # Ежедневное сканирование в 2:00 UTC
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
 
 env:
-  NODE_VERSION: '18.x'
-  PNPM_VERSION: '8.x'
+  NODE_VERSION: "18.x"
+  PNPM_VERSION: "8.x"
 
 jobs:
   # ==================== СТАТИЧЕСКИЙ АНАЛИЗ БЕЗОПАСНОСТИ ====================
@@ -41,13 +41,13 @@ jobs:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Полная история для анализа
+          fetch-depth: 0 # Полная история для анализа
 
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v2
@@ -84,7 +84,7 @@ jobs:
   dependency-security:
     name: 📦 Dependency Security
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
@@ -118,7 +118,7 @@ jobs:
     needs: [sast-analysis, dependency-security]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4

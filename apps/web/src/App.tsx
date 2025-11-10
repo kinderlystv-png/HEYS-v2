@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { log, logError } from './lib/browser-logger';
 import './App.css';
+import { log, logError } from './lib/browser-logger';
 
 // Типы для HEYS глобального объекта
 declare global {
@@ -80,9 +80,7 @@ export function App() {
 
         <div className="meals-section">
           <h3>🍽️ Приёмы пищи</h3>
-          <p className="info-text">
-            Здесь будет отображаться список приёмов пищи за день
-          </p>
+          <p className="info-text">Здесь будет отображаться список приёмов пищи за день</p>
           <button className="add-meal-btn">+ Добавить приём пищи</button>
         </div>
 
@@ -127,7 +125,7 @@ export function App() {
     return (
       <div className="user-tab">
         <h2>👤 Профиль пользователя</h2>
-        
+
         <div className="profile-section">
           <h3>📋 Основные данные</h3>
           <div className="form-grid">
@@ -188,7 +186,7 @@ export function App() {
     return (
       <div className="reports-tab">
         <h2>📈 Отчёты и статистика</h2>
-        
+
         <div className="reports-section">
           <h3>📊 Недельная статистика</h3>
           <p className="info-text">Здесь будут отображаться графики и аналитика</p>
@@ -264,7 +262,9 @@ export function App() {
       <footer className="app-footer">
         <div className="footer-content">
           <p>HEYS Platform v2.0 — База продуктов: {products.length} шт.</p>
-          <p className="footer-note">Последнее обновление: {new Date().toLocaleDateString('ru-RU')}</p>
+          <p className="footer-note">
+            Последнее обновление: {new Date().toLocaleDateString('ru-RU')}
+          </p>
         </div>
       </footer>
     </div>

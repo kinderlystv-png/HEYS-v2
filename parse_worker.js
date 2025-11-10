@@ -1,10 +1,10 @@
 // parse_worker.js — Web Worker для тяжёлого парсинга pasted текста
 self.onmessage = function (e) {
   console.log('👷 [WORKER] Получено сообщение:', e.data);
-  
+
   const { text } = e.data;
   console.log('📊 [WORKER] Длина текста:', text?.length || 0);
-  
+
   try {
     const result = parsePastedInWorker(text);
     console.log('✅ [WORKER] Парсинг завершен, продуктов:', result.rows?.length || 0);
@@ -17,7 +17,7 @@ self.onmessage = function (e) {
 
 function parsePastedInWorker(text) {
   console.log('🔍 [WORKER] Начинаем парсинг в worker');
-  
+
   // Вставляем синхронную логику парсинга из heys_core_v12.js
   function isHeaderLine(line) {
     const l = line.toLowerCase();
@@ -88,35 +88,34 @@ function parsePastedInWorker(text) {
   function parsePastedSync(text) {
     console.log('🔍 [WORKER] Синхронный парсинг в worker');
     console.log('📊 [WORKER] Длина текста:', text?.length || 0);
-    
+
     if (!text || typeof text !== 'string') {
       console.warn('⚠️ [WORKER] Пустой или некорректный текст');
       return [];
     }
-    
+
     const lines = text
       .split(/\r?\n/)
       .map((l) => l.trim())
       .filter((l) => l.length > 0 && !isHeaderLine(l));
-      
+
     console.log('📄 [WORKER] Количество строк после фильтрации:', lines.length);
     console.log('📝 [WORKER] Первые 3 строки:', lines.slice(0, 3));
-    
+
     const rows = [];
     for (let i = 0; i < lines.length; i++) {
       const raw = lines[i];
       console.log(`🔍 [WORKER] Обрабатываем строку ${i + 1}:`, raw.substring(0, 50) + '...');
-      
+
       const st = extractRow(raw);
       if (!st) {
         console.warn(`⚠️ [WORKER] Не удалось извлечь данные из строки ${i + 1}:`, raw);
         continue;
       }
-      
+
       console.log(`✅ [WORKER] Извлечены данные из строки ${i + 1}:`, st.name, st.nums);
-      
-      const [, , simple, complex, protein, , bad, good, trans, fiber, gi, harm] =
-        st.nums;
+
+      const [, , simple, complex, protein, , bad, good, trans, fiber, gi, harm] = st.nums;
       const base = {
         id: Math.random().toString(36).slice(2, 10),
         name: st.name,
@@ -130,7 +129,7 @@ function parsePastedInWorker(text) {
         gi: gi,
         harmScore: harm,
       };
-      
+
       try {
         const d = computeDerived(base);
         const product = {
@@ -147,10 +146,10 @@ function parsePastedInWorker(text) {
         console.error(`❌ [WORKER] Ошибка при создании продукта ${i + 1}:`, error);
       }
     }
-    
+
     console.log('✅ [WORKER] Парсинг в worker завершен, создано продуктов:', rows.length);
     return rows;
   }
-  
+
   return { rows: parsePastedSync(text) };
 }

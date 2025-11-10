@@ -383,7 +383,10 @@ export class MobilePerformanceOptimizer {
 
     const width = window.screen?.width ?? screen?.width ?? 1920;
     const height = window.screen?.height ?? screen?.height ?? 1080;
-    const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window && window.ontouchstart !== undefined;
+    const isTouchDevice =
+      typeof window !== 'undefined' &&
+      'ontouchstart' in window &&
+      window.ontouchstart !== undefined;
 
     if (!isTouchDevice) {
       return 'desktop';
@@ -853,8 +856,8 @@ export class MobilePerformanceOptimizer {
 
         // Observe multiple entry types with a single observer
         try {
-          this.performanceObserver.observe({ 
-            entryTypes: ['paint', 'largest-contentful-paint', 'layout-shift', 'first-input'] 
+          this.performanceObserver.observe({
+            entryTypes: ['paint', 'largest-contentful-paint', 'layout-shift', 'first-input'],
           });
         } catch (error) {
           // Fallback: observe individual types if combined observation fails

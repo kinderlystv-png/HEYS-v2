@@ -10,7 +10,7 @@ const LOG_LEVELS = {
   warn: 40,
   info: 30,
   debug: 20,
-  trace: 10
+  trace: 10,
 };
 
 // Текущий уровень логирования
@@ -41,7 +41,7 @@ module.exports = {
   isLevelEnabled,
   setLevel,
   getLevel,
-  currentLevel
+  currentLevel,
 };
 
 // ES6 default export
@@ -51,6 +51,6 @@ if (typeof exports === 'object') {
     isLevelEnabled,
     setLevel,
     getLevel,
-    currentLevel
+    currentLevel,
   };
 }

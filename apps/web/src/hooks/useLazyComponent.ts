@@ -1,7 +1,7 @@
 // filepath: apps/web/src/hooks/useLazyComponent.ts
 // Lazy Component Hook - Performance Sprint Day 3
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { createLazyComponent, ImportOptions } from '../utils/dynamicImport';
 
@@ -32,21 +32,16 @@ interface LazyComponentOptions extends ImportOptions {
  */
 export function useLazyComponent<T extends React.ComponentType<unknown>>(
   importFunction: () => Promise<{ default: T }>,
-  options: LazyComponentOptions = {}
+  options: LazyComponentOptions = {},
 ) {
-  const {
-    autoLoad = false,
-    preloadOnHover = false,
-    verbose = false,
-    ...importOptions
-  } = options;
+  const { autoLoad = false, preloadOnHover = false, verbose = false, ...importOptions } = options;
 
   const [state, setState] = useState<LazyComponentState>({
     isLoaded: false,
     isLoading: false,
     error: null,
     loadTime: null,
-    wasPreloaded: false
+    wasPreloaded: false,
   });
 
   const componentRef = useRef<T | null>(null);
@@ -54,9 +49,7 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
   const preloadPromiseRef = useRef<Promise<{ default: T }> | null>(null);
 
   // Создаем lazy компонент
-  const LazyComponent = useRef(
-    createLazyComponent(importFunction, importOptions)
-  ).current;
+  const LazyComponent = useRef(createLazyComponent(importFunction, importOptions)).current;
 
   // Функция загрузки компонента
   const loadComponent = useCallback(async (): Promise<T | null> => {
@@ -80,7 +73,7 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
       });
     }
 
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
     startTimeRef.current = performance.now();
 
     try {
@@ -90,22 +83,20 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
       if (preloadPromiseRef.current) {
         if (verbose) {
           if (process.env.NODE_ENV === 'development') {
-
             // eslint-disable-next-line no-console
 
             console.log('🚀 Using preloaded component');
-    }
+          }
         }
         componentModule = await preloadPromiseRef.current;
-        setState(prev => ({ ...prev, wasPreloaded: true }));
+        setState((prev) => ({ ...prev, wasPreloaded: true }));
       } else {
         if (verbose) {
           if (process.env.NODE_ENV === 'development') {
-
             // eslint-disable-next-line no-console
 
             console.log('📥 Loading component on demand');
-    }
+          }
         }
         componentModule = await importFunction();
       }
@@ -113,42 +104,39 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
       componentRef.current = componentModule.default;
       const loadTime = performance.now() - startTimeRef.current;
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         isLoaded: true,
         isLoading: false,
         loadTime,
-        error: null
+        error: null,
       }));
 
       if (verbose) {
         if (process.env.NODE_ENV === 'development') {
-
           // eslint-disable-next-line no-console
 
           console.log(`✅ Component loaded in ${loadTime.toFixed(2)}ms`);
-    }
+        }
       }
 
       return componentRef.current;
-
     } catch (error) {
       const loadTime = performance.now() - startTimeRef.current;
-      
-      setState(prev => ({
+
+      setState((prev) => ({
         ...prev,
         isLoading: false,
         error: error as Error,
-        loadTime
+        loadTime,
       }));
 
       if (verbose) {
         if (process.env.NODE_ENV === 'development') {
-
           // eslint-disable-next-line no-console
 
           console.error(`❌ Component failed to load after ${loadTime.toFixed(2)}ms:`, error);
-    }
+        }
       }
 
       return null;
@@ -163,34 +151,31 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
 
     if (verbose) {
       if (process.env.NODE_ENV === 'development') {
-
         // eslint-disable-next-line no-console
 
         console.log('🚀 Preloading component...');
-    }
+      }
     }
 
     preloadPromiseRef.current = importFunction();
-    
+
     try {
       await preloadPromiseRef.current;
       if (verbose) {
         if (process.env.NODE_ENV === 'development') {
-
           // eslint-disable-next-line no-console
 
           console.log('✅ Component preloaded successfully');
-    }
+        }
       }
     } catch (error) {
       preloadPromiseRef.current = null;
       if (verbose) {
         if (process.env.NODE_ENV === 'development') {
-
           // eslint-disable-next-line no-console
 
           console.warn('⚠️ Component preload failed:', error);
-    }
+        }
       }
     }
   }, [state.isLoaded, importFunction, verbose]);
@@ -215,7 +200,7 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
       isLoading: false,
       error: null,
       loadTime: null,
-      wasPreloaded: false
+      wasPreloaded: false,
     });
     componentRef.current = null;
     preloadPromiseRef.current = null;
@@ -225,19 +210,19 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
   return {
     // State
     ...state,
-    
+
     // Component
     LazyComponent,
     Component: componentRef.current,
-    
+
     // Actions
     load: loadComponent,
     preload: preloadComponent,
     reset,
-    
+
     // Event handlers
     eventHandlers,
-    
+
     // Utilities
     isReady: state.isLoaded && !state.error,
     isPending: state.isLoading || preloadPromiseRef.current !== null,
@@ -245,22 +230,27 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
       loadTime: state.loadTime,
       wasPreloaded: state.wasPreloaded,
       hasError: state.error !== null,
-      errorMessage: state.error?.message
-    })
+      errorMessage: state.error?.message,
+    }),
   };
 }
 
 /**
  * Hook для управления группой lazy компонентов
  */
-export function useLazyComponents<T extends Record<string, React.ComponentType<Record<string, unknown>>>>(
+export function useLazyComponents<
+  T extends Record<string, React.ComponentType<Record<string, unknown>>>,
+>(
   components: Record<keyof T, () => Promise<{ default: T[keyof T] }>>,
-  options: LazyComponentOptions = {}
+  options: LazyComponentOptions = {},
 ) {
-  const componentHooks = Object.entries(components).reduce((acc, [name, importFn]) => {
-    acc[name] = useLazyComponent(importFn as any, options);
-    return acc;
-  }, {} as Record<string, ReturnType<typeof useLazyComponent>>);
+  const componentHooks = Object.entries(components).reduce(
+    (acc, [name, importFn]) => {
+      acc[name] = useLazyComponent(importFn as any, options);
+      return acc;
+    },
+    {} as Record<string, ReturnType<typeof useLazyComponent>>,
+  );
 
   // Загрузка всех компонентов
   const loadAll = useCallback(async () => {
@@ -277,24 +267,24 @@ export function useLazyComponents<T extends Record<string, React.ComponentType<R
   // Общее состояние
   const getOverallState = useCallback(() => {
     const hooks = Object.values(componentHooks);
-    
+
     return {
       totalComponents: hooks.length,
-      loadedCount: hooks.filter(h => h.isLoaded).length,
-      loadingCount: hooks.filter(h => h.isLoading).length,
-      errorCount: hooks.filter(h => h.error !== null).length,
-      isAllLoaded: hooks.every(h => h.isLoaded),
-      hasAnyErrors: hooks.some(h => h.error !== null),
-      averageLoadTime: hooks
-        .filter(h => h.loadTime !== null)
-        .reduce((sum, h) => sum + (h.loadTime || 0), 0) / hooks.length || 0,
-      preloadedCount: hooks.filter(h => h.wasPreloaded).length
+      loadedCount: hooks.filter((h) => h.isLoaded).length,
+      loadingCount: hooks.filter((h) => h.isLoading).length,
+      errorCount: hooks.filter((h) => h.error !== null).length,
+      isAllLoaded: hooks.every((h) => h.isLoaded),
+      hasAnyErrors: hooks.some((h) => h.error !== null),
+      averageLoadTime:
+        hooks.filter((h) => h.loadTime !== null).reduce((sum, h) => sum + (h.loadTime || 0), 0) /
+          hooks.length || 0,
+      preloadedCount: hooks.filter((h) => h.wasPreloaded).length,
     };
   }, [componentHooks]);
 
   // Reset всех компонентов
   const resetAll = useCallback(() => {
-    Object.values(componentHooks).forEach(hook => hook.reset());
+    Object.values(componentHooks).forEach((hook) => hook.reset());
   }, [componentHooks]);
 
   return {
@@ -303,12 +293,12 @@ export function useLazyComponents<T extends Record<string, React.ComponentType<R
     preloadAll,
     resetAll,
     getOverallState,
-    
+
     // Доступ к отдельным компонентам
     getComponent: (name: string) => componentHooks[name],
     isComponentLoaded: (name: string) => componentHooks[name]?.isLoaded || false,
     loadComponent: (name: string) => componentHooks[name]?.load(),
-    preloadComponent: (name: string) => componentHooks[name]?.preload()
+    preloadComponent: (name: string) => componentHooks[name]?.preload(),
   };
 }
 
@@ -318,11 +308,11 @@ export function useLazyComponents<T extends Record<string, React.ComponentType<R
 export function useConditionalLazyComponent<T extends React.ComponentType<Record<string, unknown>>>(
   importFunction: () => Promise<{ default: T }>,
   condition: boolean,
-  options: LazyComponentOptions = {}
+  options: LazyComponentOptions = {},
 ) {
   const lazyHook = useLazyComponent(importFunction, {
     ...options,
-    autoLoad: false // Отключаем autoLoad, контролируем вручную
+    autoLoad: false, // Отключаем autoLoad, контролируем вручную
   });
 
   // Загружаем только при выполнении условия
@@ -335,7 +325,7 @@ export function useConditionalLazyComponent<T extends React.ComponentType<Record
   return {
     ...lazyHook,
     shouldLoad: condition,
-    conditionalLoad: () => condition ? lazyHook.load() : Promise.resolve(null)
+    conditionalLoad: () => (condition ? lazyHook.load() : Promise.resolve(null)),
   };
 }
 
@@ -345,37 +335,37 @@ export function useConditionalLazyComponent<T extends React.ComponentType<Record
 export function useBatchLazyLoading<T extends React.ComponentType<Record<string, unknown>>>(
   importFunctions: Array<() => Promise<{ default: T }>>,
   batchSize: number = 3,
-  options: LazyComponentOptions = {}
+  options: LazyComponentOptions = {},
 ) {
   const [currentBatch, setCurrentBatch] = useState(0);
-  const componentHooks = importFunctions.map((importFn: unknown) => 
-    useLazyComponent(importFn, { ...options, autoLoad: false })
+  const componentHooks = importFunctions.map((importFn: unknown) =>
+    useLazyComponent(importFn, { ...options, autoLoad: false }),
   );
 
   // Загрузка батча
-  const loadBatch = useCallback(async (batchIndex: number) => {
-    const startIndex = batchIndex * batchSize;
-    const endIndex = Math.min(startIndex + batchSize, componentHooks.length);
-    
-    const batchHooks = componentHooks.slice(startIndex, endIndex);
-    const promises = batchHooks.map((hook: unknown) => hook.load());
-    
-    await Promise.allSettled(promises);
-    
-    if (process.env.NODE_ENV === 'development') {
+  const loadBatch = useCallback(
+    async (batchIndex: number) => {
+      const startIndex = batchIndex * batchSize;
+      const endIndex = Math.min(startIndex + batchSize, componentHooks.length);
 
-    
-      // eslint-disable-next-line no-console
+      const batchHooks = componentHooks.slice(startIndex, endIndex);
+      const promises = batchHooks.map((hook: unknown) => hook.load());
 
-    
-      console.log(`✅ Batch ${batchIndex + 1} loaded (${batchHooks.length} components)`);
-    }
-  }, [componentHooks, batchSize]);
+      await Promise.allSettled(promises);
+
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+
+        console.log(`✅ Batch ${batchIndex + 1} loaded (${batchHooks.length} components)`);
+      }
+    },
+    [componentHooks, batchSize],
+  );
 
   // Загрузка следующего батча
   const loadNextBatch = useCallback(async () => {
     const totalBatches = Math.ceil(componentHooks.length / batchSize);
-    
+
     if (currentBatch < totalBatches - 1) {
       const nextBatch = currentBatch + 1;
       await loadBatch(nextBatch);
@@ -386,29 +376,29 @@ export function useBatchLazyLoading<T extends React.ComponentType<Record<string,
   // Загрузка всех батчей
   const loadAllBatches = useCallback(async () => {
     const totalBatches = Math.ceil(componentHooks.length / batchSize);
-    
+
     for (let i = 0; i < totalBatches; i++) {
       await loadBatch(i);
       setCurrentBatch(i);
-      
+
       // Небольшая задержка между батчами
       if (i < totalBatches - 1) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
   }, [componentHooks.length, batchSize, loadBatch]);
 
   const getBatchInfo = useCallback(() => {
     const totalBatches = Math.ceil(componentHooks.length / batchSize);
-    const loadedComponents = componentHooks.filter(h => h.isLoaded).length;
-    
+    const loadedComponents = componentHooks.filter((h) => h.isLoaded).length;
+
     return {
       currentBatch: currentBatch + 1,
       totalBatches,
       loadedComponents,
       totalComponents: componentHooks.length,
       progress: (loadedComponents / componentHooks.length) * 100,
-      isComplete: loadedComponents === componentHooks.length
+      isComplete: loadedComponents === componentHooks.length,
     };
   }, [currentBatch, componentHooks, batchSize]);
 
@@ -418,6 +408,6 @@ export function useBatchLazyLoading<T extends React.ComponentType<Record<string,
     loadNextBatch,
     loadAllBatches,
     getBatchInfo,
-    hasNextBatch: currentBatch < Math.ceil(componentHooks.length / batchSize) - 1
+    hasNextBatch: currentBatch < Math.ceil(componentHooks.length / batchSize) - 1,
   };
 }

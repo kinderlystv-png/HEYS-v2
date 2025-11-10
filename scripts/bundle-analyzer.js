@@ -14,7 +14,7 @@ const results = {
   timestamp: new Date().toISOString(),
   packages: {},
   totalSize: 0,
-  recommendations: []
+  recommendations: [],
 };
 
 // Список пакетов для анализа
@@ -24,7 +24,7 @@ const packages = [
   'packages/shared',
   'apps/web',
   'packages/analytics',
-  'packages/search'
+  'packages/search',
 ];
 
 /**
@@ -32,16 +32,18 @@ const packages = [
  */
 function analyzeNodeModules(packagePath) {
   const nodeModulesPath = path.join(packagePath, 'node_modules');
-  
+
   if (!fs.existsSync(nodeModulesPath)) {
     return { size: 0, count: 0 };
   }
 
   try {
-    const stats = execSync(`du -sh "${nodeModulesPath}" 2>/dev/null || echo "0M"`, { encoding: 'utf8' });
+    const stats = execSync(`du -sh "${nodeModulesPath}" 2>/dev/null || echo "0M"`, {
+      encoding: 'utf8',
+    });
     const sizeMatch = stats.match(/(\d+(?:\.\d+)?)[MG]/);
     const size = sizeMatch ? parseFloat(sizeMatch[1]) * (sizeMatch[0].includes('G') ? 1000 : 1) : 0;
-    
+
     const dirs = fs.readdirSync(nodeModulesPath);
     return { size, count: dirs.length };
   } catch {
@@ -54,7 +56,7 @@ function analyzeNodeModules(packagePath) {
  */
 function analyzeDependencies(packagePath) {
   const packageJsonPath = path.join(packagePath, 'package.json');
-  
+
   if (!fs.existsSync(packageJsonPath)) {
     return { deps: 0, devDeps: 0, dependencies: [] };
   }
@@ -63,11 +65,11 @@ function analyzeDependencies(packagePath) {
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
     const deps = packageJson.dependencies || {};
     const devDeps = packageJson.devDependencies || {};
-    
+
     return {
       deps: Object.keys(deps).length,
       devDeps: Object.keys(devDeps).length,
-      dependencies: Object.keys(deps)
+      dependencies: Object.keys(deps),
     };
   } catch {
     return { deps: 0, devDeps: 0, dependencies: [] };
@@ -81,9 +83,9 @@ function findDuplicateDependencies() {
   const allDeps = new Map();
   const duplicates = new Set();
 
-  packages.forEach(pkg => {
+  packages.forEach((pkg) => {
     const { dependencies } = analyzeDependencies(pkg);
-    dependencies.forEach(dep => {
+    dependencies.forEach((dep) => {
       if (allDeps.has(dep)) {
         duplicates.add(dep);
       } else {
@@ -98,27 +100,27 @@ function findDuplicateDependencies() {
 // Выполнение анализа для каждого пакета
 console.log('📦 Analyzing packages...\n');
 
-packages.forEach(pkg => {
+packages.forEach((pkg) => {
   if (!fs.existsSync(pkg)) {
     console.log(`⚠️  Package not found: ${pkg}`);
     return;
   }
 
   console.log(`🔍 Analyzing: ${pkg}`);
-  
+
   const nodeModules = analyzeNodeModules(pkg);
   const deps = analyzeDependencies(pkg);
-  
+
   results.packages[pkg] = {
     nodeModulesSize: nodeModules.size,
     nodeModulesCount: nodeModules.count,
     dependencies: deps.deps,
     devDependencies: deps.devDeps,
-    dependencyList: deps.dependencies
+    dependencyList: deps.dependencies,
   };
-  
+
   results.totalSize += nodeModules.size;
-  
+
   console.log(`  📁 Node modules: ${nodeModules.size}MB (${nodeModules.count} packages)`);
   console.log(`  📋 Dependencies: ${deps.deps} prod, ${deps.devDeps} dev\n`);
 });
@@ -129,7 +131,7 @@ const duplicates = findDuplicateDependencies();
 
 if (duplicates.length > 0) {
   console.log('⚠️  Found duplicate dependencies:');
-  duplicates.forEach(dep => {
+  duplicates.forEach((dep) => {
     console.log(`  - ${dep}`);
     results.recommendations.push(`Remove duplicate dependency: ${dep}`);
   });
@@ -139,12 +141,19 @@ if (duplicates.length > 0) {
 // Анализ больших dependencies
 console.log('📊 Large dependencies analysis...\n');
 const heavyDependencies = [
-  'react', 'react-dom', 'lodash', 'moment', 'date-fns',
-  'axios', 'webpack', 'typescript', '@types/node'
+  'react',
+  'react-dom',
+  'lodash',
+  'moment',
+  'date-fns',
+  'axios',
+  'webpack',
+  'typescript',
+  '@types/node',
 ];
 
-Object.values(results.packages).forEach(pkg => {
-  pkg.dependencyList.forEach(dep => {
+Object.values(results.packages).forEach((pkg) => {
+  pkg.dependencyList.forEach((dep) => {
     if (heavyDependencies.includes(dep.split('/')[0])) {
       results.recommendations.push(`Review large dependency: ${dep}`);
     }

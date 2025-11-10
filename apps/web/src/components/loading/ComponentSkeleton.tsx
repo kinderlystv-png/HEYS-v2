@@ -24,7 +24,7 @@ export const ComponentSkeleton: React.FC<SkeletonProps> = ({
   width = '100%',
   height = '20px',
   className = '',
-  lines = 3
+  lines = 3,
 }) => {
   const baseStyles: React.CSSProperties = {
     backgroundColor: '#f0f0f0',
@@ -71,10 +71,13 @@ export const ComponentSkeleton: React.FC<SkeletonProps> = ({
 
   if (variant === 'card') {
     return (
-      <div className={className} style={{ padding: '16px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+      <div
+        className={className}
+        style={{ padding: '16px', border: '1px solid #e0e0e0', borderRadius: '8px' }}
+      >
         {/* Header */}
         <div style={{ ...baseStyles, height: '24px', marginBottom: '12px', width: '60%' }} />
-        
+
         {/* Content lines */}
         <div style={{ ...baseStyles, height: '16px', marginBottom: '8px' }} />
         <div style={{ ...baseStyles, height: '16px', marginBottom: '8px', width: '80%' }} />
@@ -94,9 +97,15 @@ export const DashboardSkeleton: React.FC = () => (
   <div style={{ padding: '20px' }}>
     {/* Header skeleton */}
     <ComponentSkeleton variant="rectangular" height="60px" className="mb-4" />
-    
+
     {/* Cards grid skeleton */}
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: '16px',
+      }}
+    >
       {Array.from({ length: 4 }, (_, index) => (
         <ComponentSkeleton key={index} variant="card" />
       ))}
@@ -108,14 +117,21 @@ export const AnalyticsSkeleton: React.FC = () => (
   <div style={{ padding: '20px' }}>
     {/* Charts area skeleton */}
     <ComponentSkeleton variant="rectangular" height="300px" className="mb-4" />
-    
+
     {/* Stats grid */}
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '16px',
+        marginBottom: '20px',
+      }}
+    >
       {Array.from({ length: 3 }, (_, index) => (
         <ComponentSkeleton key={index} variant="rectangular" height="100px" />
       ))}
     </div>
-    
+
     {/* Table skeleton */}
     <ComponentSkeleton variant="rectangular" height="200px" />
   </div>
@@ -129,10 +145,18 @@ export const ReportsSkeleton: React.FC = () => (
       <ComponentSkeleton variant="rectangular" width="150px" height="40px" />
       <ComponentSkeleton variant="rectangular" width="100px" height="40px" />
     </div>
-    
+
     {/* Report list skeleton */}
     {Array.from({ length: 5 }, (_, index) => (
-      <div key={index} style={{ marginBottom: '16px', padding: '16px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+      <div
+        key={index}
+        style={{
+          marginBottom: '16px',
+          padding: '16px',
+          border: '1px solid #e0e0e0',
+          borderRadius: '8px',
+        }}
+      >
         <ComponentSkeleton variant="text" lines={2} />
       </div>
     ))}
@@ -146,10 +170,18 @@ export const SettingsSkeleton: React.FC = () => (
       <div key={sectionIndex} style={{ marginBottom: '32px' }}>
         {/* Section title */}
         <ComponentSkeleton variant="text" lines={1} width="200px" className="mb-3" />
-        
+
         {/* Settings items */}
         {Array.from({ length: 4 }, (_, itemIndex) => (
-          <div key={itemIndex} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div
+            key={itemIndex}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
+            }}
+          >
             <ComponentSkeleton variant="text" lines={1} width="250px" />
             <ComponentSkeleton variant="rectangular" width="60px" height="32px" />
           </div>

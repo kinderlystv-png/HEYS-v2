@@ -23,7 +23,7 @@ let totalReplacements = 0;
 
 FILES_TO_UPDATE.forEach((filename) => {
   const filePath = path.join(APPS_WEB_DIR, filename);
-  
+
   if (!fs.existsSync(filePath)) {
     console.log(`⚠️  ${filename} not found, skipping`);
     return;
@@ -34,23 +34,23 @@ FILES_TO_UPDATE.forEach((filename) => {
 
   // Replace console.log → DEV.log
   content = content.replace(/console\.log\(/g, 'DEV.log(');
-  
+
   // Replace console.warn → DEV.warn
   content = content.replace(/console\.warn\(/g, 'DEV.warn(');
-  
+
   // Replace console.info → DEV.info
   content = content.replace(/console\.info\(/g, 'DEV.info(');
-  
+
   // Replace console.debug → DEV.debug
   content = content.replace(/console\.debug\(/g, 'DEV.debug(');
 
   if (content !== originalContent) {
     fs.writeFileSync(filePath, content, 'utf8');
-    
+
     // Count replacements
     const replacements = (originalContent.match(/console\.(log|warn|info|debug)\(/g) || []).length;
     totalReplacements += replacements;
-    
+
     console.log(`✅ ${filename} - ${replacements} replacements`);
   } else {
     console.log(`   ${filename} - no changes needed`);

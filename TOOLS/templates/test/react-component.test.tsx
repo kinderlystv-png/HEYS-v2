@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ComponentName } from '../ComponentName';
 
 describe('ComponentName', () => {
@@ -26,9 +26,9 @@ describe('ComponentName', () => {
     it('should render with custom props', () => {
       const props = {
         title: 'Custom Title',
-        value: 'Custom Value'
+        value: 'Custom Value',
       };
-      
+
       render(<ComponentName {...props} />);
       expect(screen.getByText(props.title)).toBeInTheDocument();
     });
@@ -38,30 +38,30 @@ describe('ComponentName', () => {
     it('should handle click events', () => {
       const mockOnClick = vi.fn();
       render(<ComponentName onClick={mockOnClick} />);
-      
+
       const button = screen.getByRole('button');
       fireEvent.click(button);
-      
+
       expect(mockOnClick).toHaveBeenCalledTimes(1);
     });
 
     it('should handle input changes', () => {
       const mockOnChange = vi.fn();
       render(<ComponentName onChange={mockOnChange} />);
-      
+
       const input = screen.getByRole('textbox');
       fireEvent.change(input, { target: { value: 'new value' } });
-      
+
       expect(mockOnChange).toHaveBeenCalledWith('new value');
     });
 
     it('should handle form submission', () => {
       const mockOnSubmit = vi.fn();
       render(<ComponentName onSubmit={mockOnSubmit} />);
-      
+
       const form = screen.getByRole('form');
       fireEvent.submit(form);
-      
+
       expect(mockOnSubmit).toHaveBeenCalled();
     });
   });
@@ -69,20 +69,20 @@ describe('ComponentName', () => {
   describe('State Management', () => {
     it('should update state correctly', () => {
       render(<ComponentName />);
-      
+
       const button = screen.getByRole('button');
       fireEvent.click(button);
-      
+
       // Assert state changes are reflected in the UI
       expect(screen.getByText('Updated State')).toBeInTheDocument();
     });
 
     it('should reset state when needed', () => {
       render(<ComponentName />);
-      
+
       const resetButton = screen.getByText('Reset');
       fireEvent.click(resetButton);
-      
+
       // Assert state is reset to initial values
       expect(screen.getByText('Initial State')).toBeInTheDocument();
     });
@@ -104,23 +104,23 @@ describe('ComponentName', () => {
   describe('Accessibility', () => {
     it('should have proper ARIA attributes', () => {
       render(<ComponentName />);
-      
+
       const element = screen.getByRole('component');
       expect(element).toHaveAttribute('aria-label');
     });
 
     it('should support keyboard navigation', () => {
       render(<ComponentName />);
-      
+
       const element = screen.getByRole('button');
       element.focus();
-      
+
       expect(element).toHaveFocus();
     });
 
     it('should announce changes to screen readers', () => {
       render(<ComponentName />);
-      
+
       const element = screen.getByRole('status');
       expect(element).toHaveAttribute('aria-live', 'polite');
     });
@@ -129,26 +129,26 @@ describe('ComponentName', () => {
   describe('Performance', () => {
     it('should not cause unnecessary re-renders', () => {
       const renderSpy = vi.fn();
-      
+
       // Mock component to track renders
       const TestComponent = () => {
         renderSpy();
         return <ComponentName />;
       };
-      
+
       const { rerender } = render(<TestComponent />);
       rerender(<TestComponent />);
-      
+
       expect(renderSpy).toHaveBeenCalledTimes(2);
     });
 
     it('should handle large datasets efficiently', () => {
       const largeDataset = Array.from({ length: 1000 }, (_, i) => ({ id: i, name: `Item ${i}` }));
-      
+
       const start = performance.now();
       render(<ComponentName data={largeDataset} />);
       const end = performance.now();
-      
+
       expect(end - start).toBeLessThan(100); // 100ms threshold
     });
   });

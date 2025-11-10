@@ -18,7 +18,5 @@
     "src/performance/**",
     "src/user/**"
   ],
-  "references": [
-    { "path": "../core" }
-  ]
+  "references": [{ "path": "../core" }]
 }

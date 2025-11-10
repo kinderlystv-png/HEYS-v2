@@ -30,8 +30,8 @@ export class LazyComponent {
    */
   register(config: LazyComponentConfig): void {
     const elements = document.querySelectorAll(config.selector);
-    
-    elements.forEach(element => {
+
+    elements.forEach((element) => {
       this.components.set(element, config);
       this.setupPlaceholder(element, config.placeholder);
       this.lazyLoader.observe(element);
@@ -52,15 +52,14 @@ export class LazyComponent {
 
       // Загружаем компонент
       const component = await config.componentLoader();
-      
+
       // Рендерим компонент
       this.renderComponent(element, component);
-      
+
       // Отмечаем как загруженный
       this.loadedComponents.add(element);
       element.classList.remove('lazy-component-loading');
       element.classList.add('lazy-component-loaded');
-
     } catch (error) {
       console.error('Failed to load lazy component:', error);
       this.renderError(element, config.errorPlaceholder);
@@ -134,23 +133,23 @@ export class LazyComponent {
    */
   autoRegister(): number {
     let registeredCount = 0;
-    
+
     // Поиск элементов с data-lazy-component
     const lazyElements = document.querySelectorAll('[data-lazy-component]');
-    
-    lazyElements.forEach(element => {
+
+    lazyElements.forEach((element) => {
       const componentName = element.getAttribute('data-lazy-component');
       const componentPath = element.getAttribute('data-component-path');
-      
+
       if (componentName && componentPath) {
         const placeholderAttr = element.getAttribute('data-placeholder');
         const errorPlaceholderAttr = element.getAttribute('data-error-placeholder');
-        
+
         this.register({
           selector: `[data-lazy-component="${componentName}"]`,
           componentLoader: () => this.dynamicImport(componentPath),
           ...(placeholderAttr && { placeholder: placeholderAttr }),
-          ...(errorPlaceholderAttr && { errorPlaceholder: errorPlaceholderAttr })
+          ...(errorPlaceholderAttr && { errorPlaceholder: errorPlaceholderAttr }),
         });
         registeredCount++;
       }
@@ -190,7 +189,7 @@ export class LazyComponent {
       totalComponents,
       loadedComponents,
       failedComponents,
-      loadingComponents
+      loadingComponents,
     };
   }
 
@@ -211,28 +210,32 @@ export class LazyComponentFactory {
   /**
    * Создание lazy image компонента
    */
-  static createImageComponent(src: string, alt: string, options: {
-    placeholder?: string;
-    className?: string;
-    width?: number;
-    height?: number;
-  } = {}): HTMLImageElement {
+  static createImageComponent(
+    src: string,
+    alt: string,
+    options: {
+      placeholder?: string;
+      className?: string;
+      width?: number;
+      height?: number;
+    } = {},
+  ): HTMLImageElement {
     const img = document.createElement('img');
     img.setAttribute('data-src', src);
     img.alt = alt;
-    
+
     if (options.placeholder) {
       img.src = options.placeholder;
     }
-    
+
     if (options.className) {
       img.className = options.className;
     }
-    
+
     if (options.width) {
       img.width = options.width;
     }
-    
+
     if (options.height) {
       img.height = options.height;
     }
@@ -244,26 +247,29 @@ export class LazyComponentFactory {
   /**
    * Создание lazy video компонента
    */
-  static createVideoComponent(src: string, options: {
-    poster?: string;
-    controls?: boolean;
-    autoplay?: boolean;
-    muted?: boolean;
-    loop?: boolean;
-    className?: string;
-  } = {}): HTMLVideoElement {
+  static createVideoComponent(
+    src: string,
+    options: {
+      poster?: string;
+      controls?: boolean;
+      autoplay?: boolean;
+      muted?: boolean;
+      loop?: boolean;
+      className?: string;
+    } = {},
+  ): HTMLVideoElement {
     const video = document.createElement('video');
     video.setAttribute('data-src', src);
-    
+
     if (options.poster) {
       video.poster = options.poster;
     }
-    
+
     video.controls = options.controls ?? true;
     video.autoplay = options.autoplay ?? false;
     video.muted = options.muted ?? false;
     video.loop = options.loop ?? false;
-    
+
     if (options.className) {
       video.className = options.className;
     }
@@ -275,32 +281,35 @@ export class LazyComponentFactory {
   /**
    * Создание lazy iframe компонента
    */
-  static createIframeComponent(src: string, options: {
-    width?: number | string;
-    height?: number | string;
-    title?: string;
-    className?: string;
-    sandbox?: string;
-  } = {}): HTMLIFrameElement {
+  static createIframeComponent(
+    src: string,
+    options: {
+      width?: number | string;
+      height?: number | string;
+      title?: string;
+      className?: string;
+      sandbox?: string;
+    } = {},
+  ): HTMLIFrameElement {
     const iframe = document.createElement('iframe');
     iframe.setAttribute('data-src', src);
-    
+
     if (options.width) {
       iframe.width = options.width.toString();
     }
-    
+
     if (options.height) {
       iframe.height = options.height.toString();
     }
-    
+
     if (options.title) {
       iframe.title = options.title;
     }
-    
+
     if (options.className) {
       iframe.className = options.className;
     }
-    
+
     if (options.sandbox) {
       iframe.sandbox.value = options.sandbox;
     }

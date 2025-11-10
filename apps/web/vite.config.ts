@@ -119,11 +119,7 @@ export default defineConfig({
   },
   // Предварительная оптимизация зависимостей - Performance Sprint
   optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react/jsx-runtime',
-    ],
+    include: ['react', 'react-dom', 'react/jsx-runtime'],
     // Force re-optimization
     force: process.env.NODE_ENV === 'development',
   },

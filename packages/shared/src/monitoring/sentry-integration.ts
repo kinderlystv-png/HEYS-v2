@@ -392,10 +392,10 @@ export function MonitorPerformance(operationName?: string) {
     }
 
     const targetName =
-      typeof target === 'function' ? target.name : target.constructor?.name ?? 'Anonymous';
+      typeof target === 'function' ? target.name : (target.constructor?.name ?? 'Anonymous');
     const resolvedName = operationName ?? `${targetName}.${String(propertyKey)}`;
 
-    descriptor.value = (async function (
+    descriptor.value = async function (
       this: unknown,
       ...args: Parameters<T>
     ): Promise<Awaited<ReturnType<T>>> {
@@ -403,22 +403,21 @@ export function MonitorPerformance(operationName?: string) {
 
       if (!monitoring) {
         sentryLoggerInstance.warn('Performance monitoring skipped: Sentry not initialized', {
-            metadata: { operation: resolvedName },
-          });
+          metadata: { operation: resolvedName },
+        });
         const result = await Promise.resolve(originalMethod.apply(this, args));
         return result as Awaited<ReturnType<T>>;
       }
 
       return monitoring.measurePerformance<Awaited<ReturnType<T>>>(
         resolvedName,
-        () =>
-          Promise.resolve(originalMethod.apply(this, args)) as Promise<Awaited<ReturnType<T>>>,
+        () => Promise.resolve(originalMethod.apply(this, args)) as Promise<Awaited<ReturnType<T>>>,
         {
           class: targetName,
           method: String(propertyKey),
         },
       );
-    }) as unknown as T;
+    } as unknown as T;
 
     return descriptor;
   };
@@ -437,10 +436,10 @@ export function CaptureErrors(context?: Partial<ErrorContext>) {
     }
 
     const targetName =
-      typeof target === 'function' ? target.name : target.constructor?.name ?? 'Anonymous';
+      typeof target === 'function' ? target.name : (target.constructor?.name ?? 'Anonymous');
     const actionName = String(propertyKey);
 
-    descriptor.value = (async function (
+    descriptor.value = async function (
       this: unknown,
       ...args: Parameters<T>
     ): Promise<Awaited<ReturnType<T>>> {
@@ -469,7 +468,7 @@ export function CaptureErrors(context?: Partial<ErrorContext>) {
 
         throw error;
       }
-    }) as unknown as T;
+    } as unknown as T;
 
     return descriptor;
   };

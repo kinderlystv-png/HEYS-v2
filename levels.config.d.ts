@@ -1,4 +1,12 @@
-export type LogLevelName = 'fatal' | 'error' | 'warn' | 'info' | 'http' | 'debug' | 'trace' | 'silent';
+export type LogLevelName =
+  | 'fatal'
+  | 'error'
+  | 'warn'
+  | 'info'
+  | 'http'
+  | 'debug'
+  | 'trace'
+  | 'silent';
 
 export interface LogLevelConfig {
   value: number;
@@ -50,7 +58,10 @@ export const LEVEL_METHODS: LogLevelName[];
 export const ENVIRONMENT_CONFIGS: Record<string, EnvironmentLoggingConfig>;
 export const LEVEL_FORMATTERS: Record<LogLevelName, (message: string, meta?: unknown) => string>;
 export const LEVEL_PREDICATES: Record<string, (level: LogLevelName) => boolean>;
-export const ROTATION_CONFIG: Record<LogLevelName, { maxSize?: string; maxFiles?: string; compress?: boolean }>;
+export const ROTATION_CONFIG: Record<
+  LogLevelName,
+  { maxSize?: string; maxFiles?: string; compress?: boolean }
+>;
 export const DEFAULT_CONFIG: {
   level: LogLevelName;
   levels: Record<LogLevelName, number>;

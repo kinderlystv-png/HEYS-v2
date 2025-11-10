@@ -3,15 +3,15 @@
  * Comprehensive test suite for enterprise-grade audit logging
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { 
-  AdvancedAuditLogger, 
-  AuditEventType, 
+import {
+  AdvancedAuditLogger,
+  AuditEventType,
+  AuditLoggerUtils,
   AuditSeverity,
   createAuditMiddleware,
-  AuditLoggerUtils,
-  defaultAuditLogger
+  defaultAuditLogger,
 } from './AdvancedAuditLogger';
 
 describe('AdvancedAuditLogger', () => {
@@ -26,8 +26,8 @@ describe('AdvancedAuditLogger', () => {
       storage: 'memory',
       alertConfig: {
         enableAlerts: true,
-        criticalThreshold: 3
-      }
+        criticalThreshold: 3,
+      },
     });
   });
 
@@ -40,18 +40,14 @@ describe('AdvancedAuditLogger', () => {
 
   describe('Basic Audit Logging', () => {
     it('should log a basic audit event', async () => {
-      const eventId = await auditLogger.logEvent(
-        AuditEventType.USER_ACTION,
-        'login',
-        {
-          userId: 'user123',
-          severity: AuditSeverity.MEDIUM,
-          metadata: { source: 'web' }
-        }
-      );
+      const eventId = await auditLogger.logEvent(AuditEventType.USER_ACTION, 'login', {
+        userId: 'user123',
+        severity: AuditSeverity.MEDIUM,
+        metadata: { source: 'web' },
+      });
 
       expect(eventId).toMatch(/^audit_/);
-      
+
       const stats = auditLogger.getStatistics();
       expect(stats.totalEvents).toBe(1);
       expect(stats.eventsByType[AuditEventType.USER_ACTION]).toBe(1);
@@ -61,7 +57,7 @@ describe('AdvancedAuditLogger', () => {
     it('should generate unique event IDs', async () => {
       const id1 = await auditLogger.logEvent(AuditEventType.SYSTEM_EVENT, 'test1');
       const id2 = await auditLogger.logEvent(AuditEventType.SYSTEM_EVENT, 'test2');
-      
+
       expect(id1).not.toBe(id2);
       expect(id1).toMatch(/^audit_/);
       expect(id2).toMatch(/^audit_/);
@@ -71,7 +67,7 @@ describe('AdvancedAuditLogger', () => {
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'user_action');
       await auditLogger.logEvent(AuditEventType.SECURITY_EVENT, 'security_event');
       await auditLogger.logEvent(AuditEventType.DATA_ACCESS, 'data_access');
-      
+
       const stats = auditLogger.getStatistics();
       expect(stats.totalEvents).toBe(3);
       expect(stats.eventsByType[AuditEventType.USER_ACTION]).toBe(1);
@@ -87,7 +83,7 @@ describe('AdvancedAuditLogger', () => {
         method: 'POST',
         originalUrl: '/api/login',
         sessionID: 'session123',
-        get: vi.fn().mockReturnValue('Mozilla/5.0')
+        get: vi.fn().mockReturnValue('Mozilla/5.0'),
       };
 
       const eventId = await auditLogger.logUserAction(
@@ -95,11 +91,11 @@ describe('AdvancedAuditLogger', () => {
         'login',
         '/auth/login',
         { loginMethod: 'password' },
-        mockRequest
+        mockRequest,
       );
 
       expect(eventId).toMatch(/^audit_/);
-      
+
       const query = await auditLogger.queryLogs({ userId: 'user123' });
       expect(query.logs).toHaveLength(1);
       const logEntry = query.logs[0];
@@ -115,12 +111,12 @@ describe('AdvancedAuditLogger', () => {
         AuditSeverity.CRITICAL,
         {
           userId: 'user123',
-          metadata: { attemptCount: 5 }
-        }
+          metadata: { attemptCount: 5 },
+        },
       );
 
       expect(eventId).toMatch(/^audit_/);
-      
+
       const query = await auditLogger.queryLogs({ severity: AuditSeverity.CRITICAL });
       expect(query.logs).toHaveLength(1);
       expect(query.logs[0]?.eventType).toBe(AuditEventType.SECURITY_EVENT);
@@ -134,11 +130,11 @@ describe('AdvancedAuditLogger', () => {
         'subject456',
         'read_personal_data',
         'personal',
-        'consent'
+        'consent',
       );
 
       expect(eventId).toMatch(/^audit_/);
-      
+
       const query = await auditLogger.queryLogs({ gdprRelevant: true });
       expect(query.logs).toHaveLength(1);
       expect(query.logs[0]?.eventType).toBe(AuditEventType.DATA_ACCESS);
@@ -154,14 +150,14 @@ describe('AdvancedAuditLogger', () => {
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'login', {
         userId: 'user1',
         severity: AuditSeverity.LOW,
-        success: true
+        success: true,
       });
-      
+
       const result = await auditLogger.queryLogs({ userId: 'user1' });
-      
+
       expect(result.total).toBe(1);
       expect(result.logs).toHaveLength(1);
-      expect(result.logs.every(log => log.userId === 'user1')).toBe(true);
+      expect(result.logs.every((log) => log.userId === 'user1')).toBe(true);
     });
 
     it('should query logs by event type', async () => {
@@ -169,11 +165,11 @@ describe('AdvancedAuditLogger', () => {
       await auditLogger.logEvent(AuditEventType.SECURITY_EVENT, 'failed_login', {
         userId: 'user1',
         severity: AuditSeverity.HIGH,
-        success: false
+        success: false,
       });
-      
+
       const result = await auditLogger.queryLogs({ eventType: AuditEventType.SECURITY_EVENT });
-      
+
       expect(result.total).toBe(1);
       expect(result.logs).toHaveLength(1);
       expect(result.logs[0]?.eventType).toBe(AuditEventType.SECURITY_EVENT);
@@ -184,11 +180,11 @@ describe('AdvancedAuditLogger', () => {
       await auditLogger.logEvent(AuditEventType.DATA_ACCESS, 'read_data', {
         userId: 'user2',
         severity: AuditSeverity.HIGH,
-        success: true
+        success: true,
       });
-      
+
       const result = await auditLogger.queryLogs({ severity: AuditSeverity.HIGH });
-      
+
       expect(result.total).toBe(1);
       expect(result.logs).toHaveLength(1);
       expect(result.logs[0]?.severity).toBe(AuditSeverity.HIGH);
@@ -199,10 +195,10 @@ describe('AdvancedAuditLogger', () => {
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'success_action1', { success: true });
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'success_action2', { success: true });
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'fail_action', { success: false });
-      
+
       const successResult = await auditLogger.queryLogs({ success: true });
       const failResult = await auditLogger.queryLogs({ success: false });
-      
+
       expect(successResult.total).toBe(2);
       expect(failResult.total).toBe(1);
     });
@@ -212,10 +208,10 @@ describe('AdvancedAuditLogger', () => {
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'action1');
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'action2');
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'action3');
-      
+
       const page1 = await auditLogger.queryLogs({ limit: 2, offset: 0 });
       const page2 = await auditLogger.queryLogs({ limit: 2, offset: 2 });
-      
+
       expect(page1.logs).toHaveLength(2);
       expect(page2.logs).toHaveLength(1);
       expect(page1.total).toBe(3);
@@ -225,20 +221,20 @@ describe('AdvancedAuditLogger', () => {
     it('should support sorting', async () => {
       // Create test data with specific severities
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'low_action', {
-        severity: AuditSeverity.LOW
+        severity: AuditSeverity.LOW,
       });
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'medium_action', {
-        severity: AuditSeverity.MEDIUM
+        severity: AuditSeverity.MEDIUM,
       });
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'high_action', {
-        severity: AuditSeverity.HIGH
+        severity: AuditSeverity.HIGH,
       });
-      
-      const ascResult = await auditLogger.queryLogs({ 
-        sortBy: 'severity', 
-        sortOrder: 'asc' 
+
+      const ascResult = await auditLogger.queryLogs({
+        sortBy: 'severity',
+        sortOrder: 'asc',
       });
-      
+
       expect(ascResult.logs[0]?.severity).toBe(AuditSeverity.LOW);
       expect(ascResult.logs[2]?.severity).toBe(AuditSeverity.HIGH);
     });
@@ -249,12 +245,12 @@ describe('AdvancedAuditLogger', () => {
       // Setup test data for statistics
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'action1', { success: true });
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'action2', { success: false });
-      await auditLogger.logEvent(AuditEventType.SECURITY_EVENT, 'security1', { 
-        severity: AuditSeverity.CRITICAL 
+      await auditLogger.logEvent(AuditEventType.SECURITY_EVENT, 'security1', {
+        severity: AuditSeverity.CRITICAL,
       });
-      
+
       const stats = auditLogger.getStatistics();
-      
+
       expect(stats.totalEvents).toBe(3);
       expect(stats.eventsByType[AuditEventType.USER_ACTION]).toBe(2);
       expect(stats.eventsByType[AuditEventType.SECURITY_EVENT]).toBe(1);
@@ -264,10 +260,10 @@ describe('AdvancedAuditLogger', () => {
 
     it('should track critical events in last 24h', async () => {
       // Setup test data
-      await auditLogger.logEvent(AuditEventType.SECURITY_EVENT, 'security1', { 
-        severity: AuditSeverity.CRITICAL 
+      await auditLogger.logEvent(AuditEventType.SECURITY_EVENT, 'security1', {
+        severity: AuditSeverity.CRITICAL,
       });
-      
+
       const stats = auditLogger.getStatistics();
       expect(stats.criticalEventsLast24h).toBe(1);
     });
@@ -281,20 +277,18 @@ describe('AdvancedAuditLogger', () => {
         'subject456',
         'read_personal_data',
         'personal',
-        'consent'
+        'consent',
       );
-      
-      await auditLogger.logSecurityEvent(
-        'unauthorized_access',
-        AuditSeverity.HIGH,
-        { userId: 'user123' }
-      );
-      
+
+      await auditLogger.logSecurityEvent('unauthorized_access', AuditSeverity.HIGH, {
+        userId: 'user123',
+      });
+
       const startDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const endDate = new Date();
-      
+
       const report = await auditLogger.generateComplianceReport('GDPR', startDate, endDate);
-      
+
       expect(report.regulation).toBe('GDPR');
       expect(report.totalEvents).toBeGreaterThan(0);
       expect(report.dataSubjects).toBe(1);
@@ -309,14 +303,14 @@ describe('AdvancedAuditLogger', () => {
       // Create a single test record for export
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'test_action', {
         userId: 'user123',
-        metadata: { test: true }
+        metadata: { test: true },
       });
-      
+
       // Force flush to storage
       await auditLogger.flush();
-      
+
       const exported = await auditLogger.exportLogs({}, 'json');
-      
+
       expect(() => JSON.parse(exported)).not.toThrow();
       const parsed = JSON.parse(exported);
       expect(Array.isArray(parsed)).toBe(true);
@@ -328,14 +322,14 @@ describe('AdvancedAuditLogger', () => {
       // Create a single test record for CSV export
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'test_action', {
         userId: 'user123',
-        metadata: { test: true }
+        metadata: { test: true },
       });
-      
+
       // Force flush to storage
       await auditLogger.flush();
-      
+
       const exported = await auditLogger.exportLogs({}, 'csv');
-      
+
       expect(typeof exported).toBe('string');
       expect(exported).toContain('id,timestamp,correlationId');
       expect(exported).toContain('test_action');
@@ -345,14 +339,14 @@ describe('AdvancedAuditLogger', () => {
       // Create a single test record for XML export
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'test_action', {
         userId: 'user123',
-        metadata: { test: true }
+        metadata: { test: true },
       });
-      
+
       // Force flush to storage
       await auditLogger.flush();
-      
+
       const exported = await auditLogger.exportLogs({}, 'xml');
-      
+
       expect(typeof exported).toBe('string');
       expect(exported).toContain('<?xml version="1.0" encoding="UTF-8"?>');
       expect(exported).toContain('<audit_logs>');
@@ -360,16 +354,16 @@ describe('AdvancedAuditLogger', () => {
     });
 
     it('should throw error for unsupported format', async () => {
-      await expect(
-        auditLogger.exportLogs({}, 'invalid' as any)
-      ).rejects.toThrow('Unsupported export format');
+      await expect(auditLogger.exportLogs({}, 'invalid' as any)).rejects.toThrow(
+        'Unsupported export format',
+      );
     });
   });
 
   describe('Correlation ID Management', () => {
     it('should set and get correlation IDs', () => {
       auditLogger.setCorrelationId('session123', 'corr123');
-      
+
       const retrieved = auditLogger.getCorrelationId('session123');
       expect(retrieved).toBe('corr123');
     });
@@ -382,7 +376,7 @@ describe('AdvancedAuditLogger', () => {
     it('should cleanup old correlation IDs', () => {
       auditLogger.setCorrelationId('old_session', 'corr123');
       auditLogger.cleanupCorrelationIds();
-      
+
       // Since cleanup is time-based, we just ensure it doesn't throw
       expect(() => auditLogger.cleanupCorrelationIds()).not.toThrow();
     });
@@ -392,39 +386,36 @@ describe('AdvancedAuditLogger', () => {
     it('should emit audit_event when logging', async () => {
       const eventSpy = vi.fn();
       auditLogger.on('audit_event', eventSpy);
-      
+
       await auditLogger.logEvent(AuditEventType.USER_ACTION, 'test_action');
-      
+
       expect(eventSpy).toHaveBeenCalledOnce();
       expect(eventSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           eventType: AuditEventType.USER_ACTION,
-          action: 'test_action'
-        })
+          action: 'test_action',
+        }),
       );
     });
 
     it('should emit critical_security_event for critical security events', async () => {
       const criticalSpy = vi.fn();
       auditLogger.on('critical_security_event', criticalSpy);
-      
-      await auditLogger.logSecurityEvent(
-        'critical_breach',
-        AuditSeverity.CRITICAL
-      );
-      
+
+      await auditLogger.logSecurityEvent('critical_breach', AuditSeverity.CRITICAL);
+
       expect(criticalSpy).toHaveBeenCalledOnce();
     });
 
     it('should emit gdpr_concern for high-severity GDPR events', async () => {
       const gdprSpy = vi.fn();
       auditLogger.on('gdpr_concern', gdprSpy);
-      
+
       await auditLogger.logEvent(AuditEventType.DATA_ACCESS, 'sensitive_access', {
         severity: AuditSeverity.HIGH,
-        gdprRelevant: true
+        gdprRelevant: true,
       });
-      
+
       expect(gdprSpy).toHaveBeenCalledOnce();
     });
   });
@@ -433,30 +424,28 @@ describe('AdvancedAuditLogger', () => {
     it('should handle logging errors gracefully', async () => {
       const errorSpy = vi.fn();
       auditLogger.on('error', errorSpy);
-      
+
       // Force an error by providing invalid input
       const invalidLogger = new AdvancedAuditLogger();
-      
+
       // Mock a method to throw error
-      vi.spyOn(invalidLogger as any, 'performRealTimeAnalysis')
-        .mockRejectedValue(new Error('Analysis failed'));
-      
-      await expect(
-        invalidLogger.logEvent(AuditEventType.USER_ACTION, 'test')
-      ).rejects.toThrow();
+      vi.spyOn(invalidLogger as any, 'performRealTimeAnalysis').mockRejectedValue(
+        new Error('Analysis failed'),
+      );
+
+      await expect(invalidLogger.logEvent(AuditEventType.USER_ACTION, 'test')).rejects.toThrow();
     });
 
     it('should handle flush errors gracefully', async () => {
       const errorSpy = vi.fn();
       auditLogger.on('error', errorSpy);
-      
+
       // Mock flush to fail
-      vi.spyOn(auditLogger as any, 'writeToFile')
-        .mockRejectedValue(new Error('Write failed'));
-      
+      vi.spyOn(auditLogger as any, 'writeToFile').mockRejectedValue(new Error('Write failed'));
+
       // This should not throw but emit an error
       await auditLogger.flush();
-      
+
       // The error should be handled internally
       expect(() => auditLogger.flush()).not.toThrow();
     });
@@ -471,7 +460,7 @@ describe('Audit Middleware', () => {
 
   beforeEach(() => {
     auditLogger = new AdvancedAuditLogger({ storage: 'memory' });
-    
+
     mockReq = {
       method: 'GET',
       path: '/api/test',
@@ -481,14 +470,14 @@ describe('Audit Middleware', () => {
       query: { param: 'value' },
       headers: { 'user-agent': 'test-browser' },
       get: vi.fn().mockReturnValue('test-browser'),
-      user: { id: 'user123' }
+      user: { id: 'user123' },
     };
-    
+
     mockRes = {
       statusCode: 200,
-      send: vi.fn()
+      send: vi.fn(),
     };
-    
+
     mockNext = vi.fn();
   });
 
@@ -498,57 +487,57 @@ describe('Audit Middleware', () => {
 
   it('should create middleware with default options', () => {
     const middleware = createAuditMiddleware(auditLogger);
-    
+
     expect(typeof middleware).toBe('function');
     expect(middleware.length).toBe(3); // req, res, next
   });
 
   it('should log API requests', async () => {
     const middleware = createAuditMiddleware(auditLogger, { logRequests: true });
-    
+
     middleware(mockReq, mockRes, mockNext);
-    
+
     expect(mockNext).toHaveBeenCalledOnce();
     expect(mockReq.correlationId).toBeDefined();
-    
+
     // Wait a bit for async logging to complete
-    await new Promise(resolve => setTimeout(resolve, 10));
-    
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
     // Check if event was logged
-    const query = await auditLogger.queryLogs({ 
-      eventType: AuditEventType.API_REQUEST 
+    const query = await auditLogger.queryLogs({
+      eventType: AuditEventType.API_REQUEST,
     });
     expect(query.logs).toHaveLength(1);
     expect(query.logs[0]?.action).toBe('GET /api/test');
   });
 
   it('should skip excluded paths', async () => {
-    const middleware = createAuditMiddleware(auditLogger, { 
-      excludePaths: ['/health'] 
+    const middleware = createAuditMiddleware(auditLogger, {
+      excludePaths: ['/health'],
     });
-    
+
     mockReq.path = '/health';
     middleware(mockReq, mockRes, mockNext);
-    
+
     expect(mockNext).toHaveBeenCalledOnce();
-    
+
     const query = await auditLogger.queryLogs({});
     expect(query.logs).toHaveLength(0);
   });
 
   it('should sanitize sensitive headers', async () => {
     mockReq.headers.authorization = 'Bearer secret-token';
-    
-    const middleware = createAuditMiddleware(auditLogger, { 
+
+    const middleware = createAuditMiddleware(auditLogger, {
       logRequests: true,
-      sensitiveHeaders: ['authorization']
+      sensitiveHeaders: ['authorization'],
     });
-    
+
     middleware(mockReq, mockRes, mockNext);
-    
+
     // Wait a bit for async logging to complete
-    await new Promise(resolve => setTimeout(resolve, 10));
-    
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
     const query = await auditLogger.queryLogs({});
     const logEntry = query.logs[0];
     expect(logEntry).toBeDefined();
@@ -560,10 +549,10 @@ describe('Audit Middleware', () => {
       if (header === 'X-Correlation-ID') return 'existing-correlation-id';
       return 'test-browser';
     });
-    
+
     const middleware = createAuditMiddleware(auditLogger);
     middleware(mockReq, mockRes, mockNext);
-    
+
     expect(mockReq.correlationId).toBe('existing-correlation-id');
   });
 });
@@ -571,21 +560,21 @@ describe('Audit Middleware', () => {
 describe('AuditLoggerUtils', () => {
   it('should create production logger with correct config', () => {
     const logger = AuditLoggerUtils.createProductionLogger();
-    
+
     expect(logger).toBeInstanceOf(AdvancedAuditLogger);
     expect(logger.getStatistics()).toBeDefined();
   });
 
   it('should create development logger with correct config', () => {
     const logger = AuditLoggerUtils.createDevelopmentLogger();
-    
+
     expect(logger).toBeInstanceOf(AdvancedAuditLogger);
     expect(logger.getStatistics()).toBeDefined();
   });
 
   it('should create GDPR logger with correct config', () => {
     const logger = AuditLoggerUtils.createGDPRLogger();
-    
+
     expect(logger).toBeInstanceOf(AdvancedAuditLogger);
     expect(logger.getStatistics()).toBeDefined();
   });

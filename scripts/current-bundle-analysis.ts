@@ -1,9 +1,9 @@
 // filepath: scripts/current-bundle-analysis.ts
 // Анализ текущего состояния bundle - Performance Sprint Day 2
 
-import { readFileSync, statSync, readdirSync, existsSync } from 'fs';
-import { join } from 'path';
 import chalk from 'chalk';
+import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
+import { join } from 'path';
 
 class CurrentBundleAnalyzer {
   private workspaceRoot: string;
@@ -32,7 +32,7 @@ class CurrentBundleAnalyzer {
 
   private analyzeHtmlFile(): void {
     const htmlPath = join(this.webPath, 'dist', 'index.html');
-    
+
     if (!existsSync(htmlPath)) {
       console.log(chalk.red('❌ No dist/index.html found'));
       return;
@@ -48,9 +48,9 @@ class CurrentBundleAnalyzer {
       // Анализ script тегов
       const scriptMatches = htmlContent.match(/<script[^>]*>/g) || [];
       const scriptCount = scriptMatches.length;
-      
+
       // Анализ external scripts
-      const externalScripts = scriptMatches.filter(tag => tag.includes('src='));
+      const externalScripts = scriptMatches.filter((tag) => tag.includes('src='));
       const inlineScripts = scriptCount - externalScripts.length;
 
       console.log(`   Script tags: ${chalk.cyan(scriptCount)} total`);
@@ -60,20 +60,19 @@ class CurrentBundleAnalyzer {
       // Анализ CSS
       const styleMatches = htmlContent.match(/<style[^>]*>[\s\S]*?<\/style>/g) || [];
       const linkMatches = htmlContent.match(/<link[^>]*rel="stylesheet"[^>]*>/g) || [];
-      
+
       console.log(`   Inline CSS blocks: ${chalk.cyan(styleMatches.length)}`);
       console.log(`   External CSS files: ${chalk.cyan(linkMatches.length)}`);
 
       // Анализ performance hints
       const preloadLinks = htmlContent.match(/<link[^>]*rel="preload"[^>]*>/g) || [];
       const preconnectLinks = htmlContent.match(/<link[^>]*rel="preconnect"[^>]*>/g) || [];
-      
+
       console.log(`   Preload hints: ${chalk.cyan(preloadLinks.length)}`);
       console.log(`   Preconnect hints: ${chalk.cyan(preconnectLinks.length)}`);
 
       // Оценка оптимизации HTML
       this.evaluateHtmlOptimization(scriptCount, externalScripts.length, preloadLinks.length);
-
     } catch (error) {
       console.log(chalk.red(`❌ Error analyzing HTML: ${error}`));
     }
@@ -81,7 +80,7 @@ class CurrentBundleAnalyzer {
 
   private analyzeStaticAssets(): void {
     const publicPath = join(this.webPath, 'public');
-    
+
     if (!existsSync(publicPath)) {
       console.log(chalk.yellow('⚠️ No public folder found'));
       return;
@@ -92,19 +91,19 @@ class CurrentBundleAnalyzer {
     try {
       const files = readdirSync(publicPath);
       let totalSize = 0;
-      const assetTypes: Record<string, {count: number, size: number}> = {};
+      const assetTypes: Record<string, { count: number; size: number }> = {};
 
-      files.forEach(file => {
+      files.forEach((file) => {
         const filePath = join(publicPath, file);
         const stats = statSync(filePath);
-        
+
         if (stats.isFile()) {
           const ext = file.split('.').pop()?.toLowerCase() || 'unknown';
-          
+
           if (!assetTypes[ext]) {
             assetTypes[ext] = { count: 0, size: 0 };
           }
-          
+
           assetTypes[ext].count++;
           assetTypes[ext].size += stats.size;
           totalSize += stats.size;
@@ -116,11 +115,12 @@ class CurrentBundleAnalyzer {
 
       // Показываем breakdown по типам
       Object.entries(assetTypes)
-        .sort(([,a], [,b]) => b.size - a.size)
+        .sort(([, a], [, b]) => b.size - a.size)
         .forEach(([ext, data]) => {
-          console.log(`   ${ext.toUpperCase()}: ${data.count} files, ${this.formatBytes(data.size)}`);
+          console.log(
+            `   ${ext.toUpperCase()}: ${data.count} files, ${this.formatBytes(data.size)}`,
+          );
         });
-
     } catch (error) {
       console.log(chalk.red(`❌ Error analyzing assets: ${error}`));
     }
@@ -128,7 +128,7 @@ class CurrentBundleAnalyzer {
 
   private analyzeDependencies(): void {
     const packagePath = join(this.webPath, 'package.json');
-    
+
     if (!existsSync(packagePath)) {
       console.log(chalk.yellow('⚠️ No package.json found in web app'));
       return;
@@ -138,31 +138,30 @@ class CurrentBundleAnalyzer {
 
     try {
       const packageContent = JSON.parse(readFileSync(packagePath, 'utf-8'));
-      
+
       const dependencies = Object.keys(packageContent.dependencies || {});
       const devDependencies = Object.keys(packageContent.devDependencies || {});
-      
+
       console.log(`   Production dependencies: ${chalk.cyan(dependencies.length)}`);
       console.log(`   Development dependencies: ${chalk.cyan(devDependencies.length)}`);
 
       // Анализируем потенциально тяжелые зависимости
-      const heavyDeps = dependencies.filter(dep => 
-        ['react', 'lodash', 'moment', 'antd', 'material-ui'].some(heavy => dep.includes(heavy))
+      const heavyDeps = dependencies.filter((dep) =>
+        ['react', 'lodash', 'moment', 'antd', 'material-ui'].some((heavy) => dep.includes(heavy)),
       );
 
       if (heavyDeps.length > 0) {
         console.log(`   Potentially heavy deps: ${chalk.yellow(heavyDeps.join(', '))}`);
       }
-
     } catch (error) {
       console.log(chalk.red(`❌ Error analyzing dependencies: ${error}`));
     }
   }
 
   private evaluateHtmlOptimization(
-    totalScripts: number, 
-    externalScripts: number, 
-    preloadHints: number
+    totalScripts: number,
+    externalScripts: number,
+    preloadHints: number,
   ): void {
     console.log(chalk.blue('\n🎯 HTML OPTIMIZATION EVALUATION:'));
 
@@ -201,10 +200,10 @@ class CurrentBundleAnalyzer {
       '🔄 Use dynamic imports for non-critical features',
       '📱 Optimize for mobile performance',
       '🎯 Implement lazy loading for images',
-      '⚡ Use service worker for caching'
+      '⚡ Use service worker for caching',
     ];
 
-    recommendations.forEach(rec => console.log(`   ${rec}`));
+    recommendations.forEach((rec) => console.log(`   ${rec}`));
 
     console.log(chalk.blue('\n📈 SPRINT DAY 2 GOALS:'));
     console.log(`   🎯 Target: Reduce bundle size by 10-15%`);

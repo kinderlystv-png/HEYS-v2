@@ -1,401 +1,412 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🛡️ HEYS v2 - Security Analytics Dashboard</title>
-  <meta name="description" content="HEYS v2 Enterprise Security Analytics Dashboard - Real-time threat detection and analytics">
-  <meta name="keywords" content="security, analytics, threat detection, HEYS v2, enterprise">
-  
-  <!-- Preconnect for performance -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  
-  <!-- Enhanced styles for enterprise dashboard -->
-  <style>
-    :root {
-      --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      --success-color: #48bb78;
-      --warning-color: #ed8936;
-      --error-color: #f56565;
-      --info-color: #4299e1;
-      --text-light: #f7fafc;
-      --text-dark: #2d3748;
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      --border-radius: 12px;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🛡️ HEYS v2 - Security Analytics Dashboard</title>
+    <meta
+      name="description"
+      content="HEYS v2 Enterprise Security Analytics Dashboard - Real-time threat detection and analytics"
+    />
+    <meta name="keywords" content="security, analytics, threat detection, HEYS v2, enterprise" />
 
-    * {
-      box-sizing: border-box;
-    }
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-      background: var(--primary-gradient);
-      min-height: 100vh;
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-    
-    .loading {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      color: var(--text-light);
-      font-size: 1.2rem;
-      font-weight: 500;
-    }
+    <!-- Enhanced styles for enterprise dashboard -->
+    <style>
+      :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-color: #48bb78;
+        --warning-color: #ed8936;
+        --error-color: #f56565;
+        --info-color: #4299e1;
+        --text-light: #f7fafc;
+        --text-dark: #2d3748;
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --border-radius: 12px;
+      }
 
-    .loading::before {
-      content: '';
-      width: 40px;
-      height: 40px;
-      border: 4px solid rgba(255, 255, 255, 0.3);
-      border-top: 4px solid white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-right: 16px;
-    }
+      * {
+        box-sizing: border-box;
+      }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    .dashboard-wrapper {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 20px;
-    }
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+          sans-serif;
+        background: var(--primary-gradient);
+        min-height: 100vh;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
 
-    .enterprise-header {
-      text-align: center;
-      padding: 3rem 2rem;
-      color: var(--text-light);
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      border-radius: var(--border-radius);
-      margin-bottom: 2rem;
-      box-shadow: var(--shadow-lg);
-    }
-    
-    .enterprise-header h1 {
-      margin: 0 0 1rem 0;
-      font-size: clamp(2rem, 4vw, 3rem);
-      font-weight: 700;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    .enterprise-header p {
-      margin: 0.5rem 0;
-      font-size: 1.2rem;
-      opacity: 0.9;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
-    }
+      .loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        color: var(--text-light);
+        font-size: 1.2rem;
+        font-weight: 500;
+      }
 
-    .version-badge {
-      display: inline-block;
-      background: var(--success-color);
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      margin-top: 1rem;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
+      .loading::before {
+        content: '';
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 16px;
+      }
 
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1.5rem;
-      margin: 2rem 0;
-    }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
 
-    .feature-card {
-      background: rgba(255, 255, 255, 0.95);
-      padding: 1.5rem;
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow-lg);
-      color: var(--text-dark);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .feature-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
-
-    .feature-icon {
-      font-size: 2rem;
-      margin-bottom: 1rem;
-    }
-
-    .feature-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      color: var(--text-dark);
-    }
-
-    .feature-description {
-      color: #718096;
-      font-size: 0.9rem;
-      line-height: 1.5;
-    }
-
-    .status-indicator {
-      display: inline-block;
-      padding: 0.25rem 0.75rem;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .status-ready {
-      background: #c6f6d5;
-      color: #22543d;
-    }
-
-    .status-beta {
-      background: #bee3f8;
-      color: #2a69ac;
-    }
-
-    .status-development {
-      background: #faf089;
-      color: #744210;
-    }
-
-    .enterprise-footer {
-      padding: 2rem;
-      text-align: center;
-      color: var(--text-light);
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: var(--border-radius);
-      margin-top: 3rem;
-      backdrop-filter: blur(5px);
-    }
-    
-    .enterprise-footer p {
-      margin: 0.5rem 0;
-      opacity: 0.9;
-    }
-
-    .tech-stack {
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-
-    .tech-badge {
-      background: rgba(255, 255, 255, 0.2);
-      color: var(--text-light);
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 500;
-      backdrop-filter: blur(5px);
-    }
-
-    /* Responsive design */
-    @media (max-width: 768px) {
       .dashboard-wrapper {
-        padding: 15px;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
       }
 
       .enterprise-header {
-        padding: 2rem 1rem;
+        text-align: center;
+        padding: 3rem 2rem;
+        color: var(--text-light);
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: var(--border-radius);
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-lg);
+      }
+
+      .enterprise-header h1 {
+        margin: 0 0 1rem 0;
+        font-size: clamp(2rem, 4vw, 3rem);
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .enterprise-header p {
+        margin: 0.5rem 0;
+        font-size: 1.2rem;
+        opacity: 0.9;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .version-badge {
+        display: inline-block;
+        background: var(--success-color);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-top: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
 
       .features-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+      }
+
+      .feature-card {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-lg);
+        color: var(--text-dark);
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+
+      .feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow:
+          0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      }
+
+      .feature-icon {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+      }
+
+      .feature-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-dark);
+      }
+
+      .feature-description {
+        color: #718096;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      .status-indicator {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .status-ready {
+        background: #c6f6d5;
+        color: #22543d;
+      }
+
+      .status-beta {
+        background: #bee3f8;
+        color: #2a69ac;
+      }
+
+      .status-development {
+        background: #faf089;
+        color: #744210;
+      }
+
+      .enterprise-footer {
+        padding: 2rem;
+        text-align: center;
+        color: var(--text-light);
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: var(--border-radius);
+        margin-top: 3rem;
+        backdrop-filter: blur(5px);
+      }
+
+      .enterprise-footer p {
+        margin: 0.5rem 0;
+        opacity: 0.9;
       }
 
       .tech-stack {
+        display: flex;
         justify-content: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1rem;
       }
 
       .tech-badge {
-        font-size: 0.8rem;
-        padding: 0.4rem 0.8rem;
+        background: rgba(255, 255, 255, 0.2);
+        color: var(--text-light);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        backdrop-filter: blur(5px);
       }
-    }
 
-    /* Loading animation improvements */
-    .loading-enhanced {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      border-radius: var(--border-radius);
-      padding: 2rem;
-      margin: 2rem auto;
-      max-width: 400px;
-      box-shadow: var(--shadow-lg);
-    }
+      /* Responsive design */
+      @media (max-width: 768px) {
+        .dashboard-wrapper {
+          padding: 15px;
+        }
 
-    /* Security indicator */
-    .security-status {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: var(--success-color);
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      z-index: 1000;
-      box-shadow: var(--shadow-lg);
-    }
+        .enterprise-header {
+          padding: 2rem 1rem;
+        }
 
-    .security-status.secure::before {
-      content: '🔒 ';
-    }
-  </style>
-</head>
-<body>
-  <!-- Security Status Indicator -->
-  <div class="security-status secure">
-    Enterprise Security Active
-  </div>
+        .features-grid {
+          grid-template-columns: 1fr;
+          gap: 1rem;
+        }
 
-  <div id="root">
-    <div class="dashboard-wrapper">
-      <!-- Enhanced loading state -->
-      <div class="loading loading-enhanced">
-        🛡️ Инициализация HEYS v2 Security Analytics Dashboard...
-      </div>
+        .tech-stack {
+          justify-content: center;
+        }
 
-      <!-- Enhanced header -->
-      <div class="enterprise-header">
-        <h1>🛡️ HEYS v2 Security Analytics</h1>
-        <p>Enterprise-grade Real-time Security Monitoring & Threat Detection Platform</p>
-        <span class="version-badge">v2.0 Production Ready</span>
-      </div>
-
-      <!-- Features showcase -->
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon">🔒</div>
-          <div class="feature-title">Enterprise Security</div>
-          <div class="feature-description">
-            Advanced rate limiting, encryption, audit logging, and threat detection systems.
-          </div>
-          <span class="status-indicator status-ready">Production Ready</span>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">📊</div>
-          <div class="feature-title">Business Intelligence</div>
-          <div class="feature-description">
-            Real-time analytics dashboard with ML-powered insights and automated reporting.
-          </div>
-          <span class="status-indicator status-beta">85% Complete</span>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">🤖</div>
-          <div class="feature-title">AI Threat Detection</div>
-          <div class="feature-description">
-            Machine learning-based anomaly detection and automated incident response.
-          </div>
-          <span class="status-indicator status-ready">Active</span>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">⚡</div>
-          <div class="feature-title">Performance Monitoring</div>
-          <div class="feature-description">
-            Real-time performance profiling, caching, and mobile optimization.
-          </div>
-          <span class="status-indicator status-ready">Operational</span>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">🔄</div>
-          <div class="feature-title">Real-time Sync</div>
-          <div class="feature-description">
-            Cloud synchronization with Supabase, offline capabilities, and data encryption.
-          </div>
-          <span class="status-indicator status-ready">Active</span>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">🎨</div>
-          <div class="feature-title">Modern UI/UX</div>
-          <div class="feature-description">
-            Responsive design, accessibility compliance, and modern component library.
-          </div>
-          <span class="status-indicator status-development">Planning</span>
-        </div>
-      </div>
-
-      <!-- Enhanced footer -->
-      <div class="enterprise-footer">
-        <p><strong>🚀 HEYS v2:</strong> Готов к enterprise deployment</p>
-        <p><strong>📈 Прогресс:</strong> 92% завершено | 494/501 тестов (98.6% success rate)</p>
-        <p><strong>🔒 Безопасность:</strong> SOC2 Type II ready | GDPR compliant</p>
-        
-        <div class="tech-stack">
-          <span class="tech-badge">React + TypeScript</span>
-          <span class="tech-badge">Supabase</span>
-          <span class="tech-badge">TensorFlow.js</span>
-          <span class="tech-badge">Web Workers</span>
-          <span class="tech-badge">IndexedDB</span>
-          <span class="tech-badge">Service Workers</span>
-          <span class="tech-badge">Playwright E2E</span>
-        </div>
-        
-        <p style="margin-top: 1.5rem; font-size: 0.9rem; opacity: 0.8;">
-          Последнее обновление: 2 сентября 2025 | 
-          Среда: Development Demo
-        </p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Load the enhanced demo application -->
-  <script type="module" src="/src/demo-app.tsx"></script>
-  
-  <!-- Enhanced error handling -->
-  <script>
-    window.addEventListener('error', function(e) {
-      console.error('Dashboard Error:', e.error);
-      document.querySelector('.loading').innerHTML = 
-        '❌ Ошибка загрузки dashboard. Проверьте консоль для деталей.';
-    });
-
-    // Security CSP reporting
-    window.addEventListener('securitypolicyviolation', function(e) {
-      console.warn('Security Policy Violation:', e);
-    });
-
-    // Performance monitoring
-    window.addEventListener('load', function() {
-      if (window.performance) {
-        const loadTime = window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
-        console.log(`Dashboard загружен за ${loadTime}ms`);
-        
-        // Report to analytics if available
-        if (window.HEYS && window.HEYS.analytics) {
-          window.HEYS.analytics.trackEvent('dashboard_load_time', { duration: loadTime });
+        .tech-badge {
+          font-size: 0.8rem;
+          padding: 0.4rem 0.8rem;
         }
       }
-    });
-  </script>
-</body>
+
+      /* Loading animation improvements */
+      .loading-enhanced {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin: 2rem auto;
+        max-width: 400px;
+        box-shadow: var(--shadow-lg);
+      }
+
+      /* Security indicator */
+      .security-status {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--success-color);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        z-index: 1000;
+        box-shadow: var(--shadow-lg);
+      }
+
+      .security-status.secure::before {
+        content: '🔒 ';
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Security Status Indicator -->
+    <div class="security-status secure">Enterprise Security Active</div>
+
+    <div id="root">
+      <div class="dashboard-wrapper">
+        <!-- Enhanced loading state -->
+        <div class="loading loading-enhanced">
+          🛡️ Инициализация HEYS v2 Security Analytics Dashboard...
+        </div>
+
+        <!-- Enhanced header -->
+        <div class="enterprise-header">
+          <h1>🛡️ HEYS v2 Security Analytics</h1>
+          <p>Enterprise-grade Real-time Security Monitoring & Threat Detection Platform</p>
+          <span class="version-badge">v2.0 Production Ready</span>
+        </div>
+
+        <!-- Features showcase -->
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <div class="feature-title">Enterprise Security</div>
+            <div class="feature-description">
+              Advanced rate limiting, encryption, audit logging, and threat detection systems.
+            </div>
+            <span class="status-indicator status-ready">Production Ready</span>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <div class="feature-title">Business Intelligence</div>
+            <div class="feature-description">
+              Real-time analytics dashboard with ML-powered insights and automated reporting.
+            </div>
+            <span class="status-indicator status-beta">85% Complete</span>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🤖</div>
+            <div class="feature-title">AI Threat Detection</div>
+            <div class="feature-description">
+              Machine learning-based anomaly detection and automated incident response.
+            </div>
+            <span class="status-indicator status-ready">Active</span>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <div class="feature-title">Performance Monitoring</div>
+            <div class="feature-description">
+              Real-time performance profiling, caching, and mobile optimization.
+            </div>
+            <span class="status-indicator status-ready">Operational</span>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🔄</div>
+            <div class="feature-title">Real-time Sync</div>
+            <div class="feature-description">
+              Cloud synchronization with Supabase, offline capabilities, and data encryption.
+            </div>
+            <span class="status-indicator status-ready">Active</span>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🎨</div>
+            <div class="feature-title">Modern UI/UX</div>
+            <div class="feature-description">
+              Responsive design, accessibility compliance, and modern component library.
+            </div>
+            <span class="status-indicator status-development">Planning</span>
+          </div>
+        </div>
+
+        <!-- Enhanced footer -->
+        <div class="enterprise-footer">
+          <p><strong>🚀 HEYS v2:</strong> Готов к enterprise deployment</p>
+          <p><strong>📈 Прогресс:</strong> 92% завершено | 494/501 тестов (98.6% success rate)</p>
+          <p><strong>🔒 Безопасность:</strong> SOC2 Type II ready | GDPR compliant</p>
+
+          <div class="tech-stack">
+            <span class="tech-badge">React + TypeScript</span>
+            <span class="tech-badge">Supabase</span>
+            <span class="tech-badge">TensorFlow.js</span>
+            <span class="tech-badge">Web Workers</span>
+            <span class="tech-badge">IndexedDB</span>
+            <span class="tech-badge">Service Workers</span>
+            <span class="tech-badge">Playwright E2E</span>
+          </div>
+
+          <p style="margin-top: 1.5rem; font-size: 0.9rem; opacity: 0.8">
+            Последнее обновление: 2 сентября 2025 | Среда: Development Demo
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Load the enhanced demo application -->
+    <script type="module" src="/src/demo-app.tsx"></script>
+
+    <!-- Enhanced error handling -->
+    <script>
+      window.addEventListener('error', function (e) {
+        console.error('Dashboard Error:', e.error);
+        document.querySelector('.loading').innerHTML =
+          '❌ Ошибка загрузки dashboard. Проверьте консоль для деталей.';
+      });
+
+      // Security CSP reporting
+      window.addEventListener('securitypolicyviolation', function (e) {
+        console.warn('Security Policy Violation:', e);
+      });
+
+      // Performance monitoring
+      window.addEventListener('load', function () {
+        if (window.performance) {
+          const loadTime =
+            window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
+          console.log(`Dashboard загружен за ${loadTime}ms`);
+
+          // Report to analytics if available
+          if (window.HEYS && window.HEYS.analytics) {
+            window.HEYS.analytics.trackEvent('dashboard_load_time', { duration: loadTime });
+          }
+        }
+      });
+    </script>
+  </body>
 </html>

@@ -14,27 +14,27 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ className = '' }) => {
   const { isLoading } = curatorData;
 
   const tabs: Array<{ id: TabId; label: string; icon: string; badge?: number }> = [
-    { 
-      id: 'users', 
-      label: 'Пользователи', 
+    {
+      id: 'users',
+      label: 'Пользователи',
       icon: '👥',
-      ...(curatorData.stats.totalUsers > 0 && { badge: curatorData.stats.totalUsers })
+      ...(curatorData.stats.totalUsers > 0 && { badge: curatorData.stats.totalUsers }),
     },
-    { 
-      id: 'tasks', 
-      label: 'Задачи', 
+    {
+      id: 'tasks',
+      label: 'Задачи',
       icon: '📋',
-      ...(curatorData.stats.pendingTasks > 0 && { badge: curatorData.stats.pendingTasks })
+      ...(curatorData.stats.pendingTasks > 0 && { badge: curatorData.stats.pendingTasks }),
     },
-    { 
-      id: 'statistics', 
-      label: 'Статистика', 
-      icon: '📊' 
+    {
+      id: 'statistics',
+      label: 'Статистика',
+      icon: '📊',
     },
-    { 
-      id: 'settings', 
-      label: 'Настройки', 
-      icon: '⚙️' 
+    {
+      id: 'settings',
+      label: 'Настройки',
+      icon: '⚙️',
     },
   ];
 
@@ -71,11 +71,13 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ className = '' }) => {
           </button>
         ))}
       </div>
-      
+
       {isLoading && (
         <div className="loading-indicator" aria-live="polite">
           <span className="loading-text">Загрузка данных...</span>
-          <div className="loading-spinner" aria-hidden="true">⟳</div>
+          <div className="loading-spinner" aria-hidden="true">
+            ⟳
+          </div>
         </div>
       )}
     </nav>

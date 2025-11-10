@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, RefObject } from 'react';
+import { RefObject, useEffect, useRef, useState } from 'react';
 
 interface UseLazyLoadOptions {
   threshold?: number;
@@ -27,7 +27,7 @@ export function useLazyLoad(options: UseLazyLoadOptions = {}): UseLazyLoadReturn
     triggerOnce = true,
     fallbackDelay = 300,
     onIntersect,
-    onLeave
+    onLeave,
   } = options;
 
   const [isVisible, setIsVisible] = useState(false);
@@ -58,14 +58,14 @@ export function useLazyLoad(options: UseLazyLoadOptions = {}): UseLazyLoadReturn
       (entries) => {
         entries.forEach((entry) => {
           const isCurrentlyIntersecting = entry.isIntersecting;
-          
+
           setIsIntersecting(isCurrentlyIntersecting);
-          
+
           if (isCurrentlyIntersecting) {
             setIsVisible(true);
             setHasIntersected(true);
             onIntersect?.();
-            
+
             // Если triggerOnce = true, отключаем observer после первого пересечения
             if (triggerOnce && observerRef.current) {
               observerRef.current.unobserve(element);
@@ -78,8 +78,8 @@ export function useLazyLoad(options: UseLazyLoadOptions = {}): UseLazyLoadReturn
       },
       {
         threshold,
-        rootMargin
-      }
+        rootMargin,
+      },
     );
 
     observerRef.current.observe(element);
@@ -104,7 +104,7 @@ export function useLazyLoad(options: UseLazyLoadOptions = {}): UseLazyLoadReturn
     ref,
     isVisible,
     isIntersecting,
-    hasIntersected
+    hasIntersected,
   };
 }
 
@@ -112,10 +112,7 @@ export function useLazyLoad(options: UseLazyLoadOptions = {}): UseLazyLoadReturn
  * Hook для preloading компонентов на основе scroll position
  * Загружает компоненты заранее для smooth UX
  */
-export function usePreloadOnScroll(
-  preloadDistance = 200,
-  onPreload?: () => void
-) {
+export function usePreloadOnScroll(preloadDistance = 200, onPreload?: () => void) {
   const [shouldPreload, setShouldPreload] = useState(false);
   const ref = useRef<HTMLElement>(null);
 
@@ -126,7 +123,7 @@ export function usePreloadOnScroll(
       const element = ref.current;
       const rect = element.getBoundingClientRect();
       const windowHeight = window.innerHeight;
-      
+
       // Preload если элемент приближается к viewport
       if (rect.top <= windowHeight + preloadDistance) {
         setShouldPreload(true);
@@ -136,7 +133,7 @@ export function usePreloadOnScroll(
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleScroll, { passive: true });
-    
+
     // Проверяем сразу при mount
     handleScroll();
 
@@ -157,11 +154,11 @@ export function useLazyImage(src: string, placeholder?: string) {
   const [imageSrc, setImageSrc] = useState(placeholder || '');
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  
+
   const { ref, isVisible } = useLazyLoad({
     threshold: 0.1,
     rootMargin: '100px',
-    triggerOnce: true
+    triggerOnce: true,
   });
 
   useEffect(() => {
@@ -171,17 +168,17 @@ export function useLazyImage(src: string, placeholder?: string) {
     setHasError(false);
 
     const img = new Image();
-    
+
     img.onload = () => {
       setImageSrc(src);
       setIsLoading(false);
     };
-    
+
     img.onerror = () => {
       setHasError(true);
       setIsLoading(false);
     };
-    
+
     img.src = src;
   }, [isVisible, src]);
 
@@ -190,7 +187,7 @@ export function useLazyImage(src: string, placeholder?: string) {
     src: imageSrc,
     isLoading,
     hasError,
-    isVisible
+    isVisible,
   };
 }
 
@@ -198,21 +195,17 @@ export function useLazyImage(src: string, placeholder?: string) {
  * Hook для батчинга lazy load операций
  * Группирует операции для лучшей производительности
  */
-export function useBatchedLazyLoad<T>(
-  items: T[],
-  batchSize = 5,
-  delay = 100
-) {
+export function useBatchedLazyLoad<T>(items: T[], batchSize = 5, delay = 100) {
   const [loadedBatches, setLoadedBatches] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const loadNextBatch = () => {
     if (isLoading || loadedBatches * batchSize >= items.length) return;
-    
+
     setIsLoading(true);
-    
+
     setTimeout(() => {
-      setLoadedBatches(prev => prev + 1);
+      setLoadedBatches((prev) => prev + 1);
       setIsLoading(false);
     }, delay);
   };
@@ -225,7 +218,7 @@ export function useBatchedLazyLoad<T>(
     hasMore,
     isLoading,
     loadNextBatch,
-    progress: items.length > 0 ? (visibleItems.length / items.length) * 100 : 0
+    progress: items.length > 0 ? (visibleItems.length / items.length) * 100 : 0,
   };
 }
 

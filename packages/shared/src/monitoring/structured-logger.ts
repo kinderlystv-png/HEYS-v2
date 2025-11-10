@@ -3,8 +3,8 @@
  * Provides centralized, structured logging with multiple outputs
  */
 
-import pino from 'pino';
 import type { LogDescriptor } from 'pino';
+import pino from 'pino';
 import { z } from 'zod';
 
 // Log level configuration
@@ -129,7 +129,7 @@ export class StructuredLogger {
             const levelLabel =
               typeof levelValue === 'string'
                 ? levelValue
-                : pino.levels.labels[levelValue ?? 30] ?? 'info';
+                : (pino.levels.labels[levelValue ?? 30] ?? 'info');
 
             const consoleMethodName = levelToConsoleMethod[levelLabel] ?? 'log';
             const consoleMethod = consoleApi[consoleMethodName];
@@ -450,10 +450,7 @@ export class StructuredLogger {
   public isLevelEnabled(level: LogLevel): boolean {
     return this.logger.isLevelEnabled(level);
   }
-  private mergeContexts(
-    base: Partial<LogContext>,
-    context?: LogContext,
-  ): LogContext {
+  private mergeContexts(base: Partial<LogContext>, context?: LogContext): LogContext {
     const combinedMetadata: Record<string, unknown> = {
       ...(base.metadata ?? {}),
       ...(context?.metadata ?? {}),
@@ -502,10 +499,7 @@ export class StructuredLogger {
     return result;
   }
 
-  private mergeTags(
-    baseTags?: string[],
-    additionalTags?: string[],
-  ): string[] {
+  private mergeTags(baseTags?: string[], additionalTags?: string[]): string[] {
     const combined = [...(baseTags ?? []), ...(additionalTags ?? [])];
     return Array.from(new Set(combined));
   }
@@ -524,10 +518,10 @@ export function LogPerformance(operation?: string) {
     }
 
     const targetName =
-      typeof target === 'function' ? target.name : target.constructor?.name ?? 'Anonymous';
+      typeof target === 'function' ? target.name : (target.constructor?.name ?? 'Anonymous');
     const operationName = operation ?? `${targetName}.${String(propertyKey)}`;
 
-    descriptor.value = (async function (
+    descriptor.value = async function (
       this: unknown,
       ...args: Parameters<T>
     ): Promise<Awaited<ReturnType<T>>> {
@@ -547,7 +541,7 @@ export function LogPerformance(operation?: string) {
         });
         throw error;
       }
-    }) as unknown as T;
+    } as unknown as T;
 
     return descriptor;
   };
@@ -566,10 +560,10 @@ export function LogErrors(component?: string) {
     }
 
     const targetName =
-      typeof target === 'function' ? target.name : target.constructor?.name ?? 'Anonymous';
+      typeof target === 'function' ? target.name : (target.constructor?.name ?? 'Anonymous');
     const componentName = component ?? targetName;
 
-    descriptor.value = (async function (
+    descriptor.value = async function (
       this: unknown,
       ...args: Parameters<T>
     ): Promise<Awaited<ReturnType<T>>> {
@@ -588,7 +582,7 @@ export function LogErrors(component?: string) {
 
         throw error;
       }
-    }) as unknown as T;
+    } as unknown as T;
 
     return descriptor;
   };

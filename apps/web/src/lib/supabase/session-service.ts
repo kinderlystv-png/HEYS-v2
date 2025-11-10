@@ -2,22 +2,22 @@
 /**
  * Сервис для работы с пользовательскими сессиями через RLS политики
  * Обеспечивает безопасный мониторинг и управление активными сессиями
- * 
+ *
  * @created КТ3 - Supabase Security
  * @author HEYS Security Team
  */
 
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import {
-  UserSession,
   CreateUserSession,
-  UpdateUserSession,
-  SessionFilter,
-  DatabaseResponse,
   DatabaseListResponse,
+  DatabaseResponse,
   Permission,
+  PermissionError,
   RLSError,
-  PermissionError
+  SessionFilter,
+  UpdateUserSession,
+  UserSession,
 } from './rls-policies';
 
 export class SessionService {
@@ -42,10 +42,10 @@ export class SessionService {
 
       return { data, error: null, count: count || 0 };
     } catch (error) {
-      return { 
-        data: null, 
+      return {
+        data: null,
         error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
-        count: 0
+        count: 0,
       };
     }
   }
@@ -55,9 +55,7 @@ export class SessionService {
    */
   async getSessions(filter?: SessionFilter): Promise<DatabaseListResponse<UserSession>> {
     try {
-      let query = this.supabase
-        .from('user_sessions')
-        .select('*', { count: 'exact' });
+      let query = this.supabase.from('user_sessions').select('*', { count: 'exact' });
 
       // Применяем фильтры
       if (filter) {
@@ -95,10 +93,10 @@ export class SessionService {
 
       return { data, error: null, count: count || 0 };
     } catch (error) {
-      return { 
-        data: null, 
+      return {
+        data: null,
         error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
-        count: 0
+        count: 0,
       };
     }
   }
@@ -123,9 +121,9 @@ export class SessionService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -140,7 +138,7 @@ export class SessionService {
         .insert({
           ...sessionData,
           created_at: new Date().toISOString(),
-          last_activity_at: new Date().toISOString()
+          last_activity_at: new Date().toISOString(),
         })
         .select()
         .single();
@@ -151,9 +149,9 @@ export class SessionService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -161,12 +159,14 @@ export class SessionService {
   /**
    * Обновить текущую сессию
    */
-  async updateCurrentSession(updates: Partial<UpdateUserSession>): Promise<DatabaseResponse<UserSession>> {
+  async updateCurrentSession(
+    updates: Partial<UpdateUserSession>,
+  ): Promise<DatabaseResponse<UserSession>> {
     try {
       // Обновляем время последней активности
       const updatesWithActivity = {
         ...updates,
-        last_activity_at: new Date().toISOString()
+        last_activity_at: new Date().toISOString(),
       };
 
       const { data, error } = await this.supabase
@@ -182,9 +182,9 @@ export class SessionService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -192,7 +192,10 @@ export class SessionService {
   /**
    * Обновить сессию по ID (только для администраторов)
    */
-  async updateSessionById(id: string, updates: UpdateUserSession): Promise<DatabaseResponse<UserSession>> {
+  async updateSessionById(
+    id: string,
+    updates: UpdateUserSession,
+  ): Promise<DatabaseResponse<UserSession>> {
     try {
       const { data, error } = await this.supabase
         .from('user_sessions')
@@ -210,9 +213,9 @@ export class SessionService {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -226,9 +229,9 @@ export class SessionService {
     try {
       const { error } = await this.supabase
         .from('user_sessions')
-        .update({ 
+        .update({
           is_active: false,
-          last_activity_at: new Date().toISOString()
+          last_activity_at: new Date().toISOString(),
         })
         .eq('is_active', true);
 
@@ -238,9 +241,9 @@ export class SessionService {
 
       return { data: true, error: null };
     } catch (error) {
-      return { 
-        data: false, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: false,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -252,9 +255,9 @@ export class SessionService {
     try {
       const { error } = await this.supabase
         .from('user_sessions')
-        .update({ 
+        .update({
           is_active: false,
-          last_activity_at: new Date().toISOString()
+          last_activity_at: new Date().toISOString(),
         })
         .eq('id', id);
 
@@ -267,9 +270,9 @@ export class SessionService {
 
       return { data: true, error: null };
     } catch (error) {
-      return { 
-        data: false, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: false,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -281,9 +284,9 @@ export class SessionService {
     try {
       const { data, error } = await this.supabase
         .from('user_sessions')
-        .update({ 
+        .update({
           is_active: false,
-          last_activity_at: new Date().toISOString()
+          last_activity_at: new Date().toISOString(),
         })
         .neq('id', currentSessionId)
         .eq('is_active', true)
@@ -295,9 +298,9 @@ export class SessionService {
 
       return { data: data?.length || 0, error: null };
     } catch (error) {
-      return { 
-        data: 0, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: 0,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -308,7 +311,7 @@ export class SessionService {
   async markSessionSuspicious(id: string, flags: string[]): Promise<DatabaseResponse<UserSession>> {
     return this.updateSessionById(id, {
       is_suspicious: true,
-      security_flags: flags
+      security_flags: flags,
     });
   }
 
@@ -318,7 +321,7 @@ export class SessionService {
   async clearSessionFlags(id: string): Promise<DatabaseResponse<UserSession>> {
     return this.updateSessionById(id, {
       is_suspicious: false,
-      security_flags: []
+      security_flags: [],
     });
   }
 
@@ -327,12 +330,14 @@ export class SessionService {
   /**
    * Получить статистику активных сессий
    */
-  async getActiveSessionsStats(): Promise<DatabaseResponse<{
-    total: number;
-    by_device: Record<string, number>;
-    by_country: Record<string, number>;
-    suspicious: number;
-  }>> {
+  async getActiveSessionsStats(): Promise<
+    DatabaseResponse<{
+      total: number;
+      by_device: Record<string, number>;
+      by_country: Record<string, number>;
+      suspicious: number;
+    }>
+  > {
     try {
       const { data: sessions, error } = await this.supabase
         .from('user_sessions')
@@ -347,10 +352,10 @@ export class SessionService {
         total: sessions?.length || 0,
         by_device: {} as Record<string, number>,
         by_country: {} as Record<string, number>,
-        suspicious: 0
+        suspicious: 0,
       };
 
-      sessions?.forEach(session => {
+      sessions?.forEach((session) => {
         // Статистика по устройствам
         if (session.device_type) {
           stats.by_device[session.device_type] = (stats.by_device[session.device_type] || 0) + 1;
@@ -369,9 +374,9 @@ export class SessionService {
 
       return { data: stats, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: null,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }
@@ -379,7 +384,9 @@ export class SessionService {
   /**
    * Получить сессии, которые скоро истекут
    */
-  async getExpiringSessions(hoursBeforeExpiry: number = 24): Promise<DatabaseListResponse<UserSession>> {
+  async getExpiringSessions(
+    hoursBeforeExpiry: number = 24,
+  ): Promise<DatabaseListResponse<UserSession>> {
     try {
       const expiryThreshold = new Date();
       expiryThreshold.setHours(expiryThreshold.getHours() + hoursBeforeExpiry);
@@ -393,15 +400,17 @@ export class SessionService {
         .order('expires_at', { ascending: true });
 
       if (error) {
-        throw new RLSError('Ошибка получения истекающих сессий', 'EXPIRING_SESSIONS_ERROR', { error });
+        throw new RLSError('Ошибка получения истекающих сессий', 'EXPIRING_SESSIONS_ERROR', {
+          error,
+        });
       }
 
       return { data, error: null, count: count || 0 };
     } catch (error) {
-      return { 
-        data: null, 
+      return {
+        data: null,
         error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
-        count: 0
+        count: 0,
       };
     }
   }
@@ -426,9 +435,9 @@ export class SessionService {
 
       return { data: data?.length || 0, error: null };
     } catch (error) {
-      return { 
-        data: 0, 
-        error: error instanceof Error ? error : new Error('Неизвестная ошибка') 
+      return {
+        data: 0,
+        error: error instanceof Error ? error : new Error('Неизвестная ошибка'),
       };
     }
   }

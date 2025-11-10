@@ -28,8 +28,8 @@ import '@testing-library/jest-dom';
 export default defineConfig({
   test: {
     environment: 'jsdom',
-    globals: true
-  }
+    globals: true,
+  },
 });
 ```
 
@@ -46,9 +46,9 @@ import path from 'path';
 export default defineConfig({
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
-    }
-  }
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
 });
 ```
 
@@ -65,8 +65,8 @@ Object.defineProperty(window, 'location', {
     pathname: '/',
     search: '',
     hash: '',
-    href: 'http://localhost:3000'
-  }
+    href: 'http://localhost:3000',
+  },
 });
 ```
 
@@ -81,7 +81,7 @@ Object.defineProperty(window, 'location', {
 global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
-  disconnect: vi.fn()
+  disconnect: vi.fn(),
 }));
 ```
 
@@ -95,12 +95,12 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
 // tests/setup.ts
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     addEventListener: vi.fn(),
-    removeEventListener: vi.fn()
-  }))
+    removeEventListener: vi.fn(),
+  })),
 });
 ```
 
@@ -119,11 +119,11 @@ export const mockRouter = {
   replace: vi.fn(),
   pathname: '/',
   query: {},
-  asPath: '/'
+  asPath: '/',
 };
 
 vi.mock('next/router', () => ({
-  useRouter: () => mockRouter
+  useRouter: () => mockRouter,
 }));
 ```
 
@@ -133,16 +133,16 @@ vi.mock('next/router', () => ({
 // vitest.config.js
 export default defineConfig({
   test: {
-    setupFiles: ['./tests/setup.ts']
-  }
+    setupFiles: ['./tests/setup.ts'],
+  },
 });
 
 // tests/setup.ts
 vi.mock('next/image', () => ({
   default: ({ src, alt, ...props }) => ({
     type: 'img',
-    props: { src, alt, ...props }
-  })
+    props: { src, alt, ...props },
+  }),
 }));
 ```
 
@@ -158,9 +158,11 @@ import { createApp } from 'vue';
 export function renderWithProviders(component, options = {}) {
   return render(component, {
     global: {
-      plugins: [/* ваши плагины */]
+      plugins: [
+        /* ваши плагины */
+      ],
     },
-    ...options
+    ...options,
   });
 }
 ```
@@ -172,8 +174,8 @@ export function renderWithProviders(component, options = {}) {
 global.$nuxt = {
   $router: {
     push: vi.fn(),
-    replace: vi.fn()
-  }
+    replace: vi.fn(),
+  },
 };
 ```
 
@@ -186,9 +188,9 @@ global.$nuxt = {
 export default defineConfig({
   test: {
     alias: {
-      '$app': '@sveltejs/kit/app'
-    }
-  }
+      $app: '@sveltejs/kit/app',
+    },
+  },
 });
 ```
 
@@ -200,7 +202,7 @@ import { readable } from 'svelte/store';
 
 export const page = readable({
   url: new URL('http://localhost'),
-  params: {}
+  params: {},
 });
 ```
 
@@ -310,14 +312,14 @@ export default defineConfig({
     pool: 'threads',
     poolOptions: {
       threads: {
-        singleThread: false
-      }
+        singleThread: false,
+      },
     },
 
     // Таймауты
     testTimeout: 10000,
-    hookTimeout: 10000
-  }
+    hookTimeout: 10000,
+  },
 });
 ```
 
@@ -326,7 +328,7 @@ export default defineConfig({
 ```javascript
 // Ленивый импорт моков
 vi.mock('@/lib/api', () => ({
-  apiCall: vi.fn()
+  apiCall: vi.fn(),
 }));
 
 // Очистка после каждого теста

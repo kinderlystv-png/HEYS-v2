@@ -61,7 +61,7 @@ export class CodeSplitter {
       routeBasedSplitting: true,
       vendorSplitting: true,
       componentSplitting: true,
-      ...config
+      ...config,
     };
   }
 
@@ -70,7 +70,7 @@ export class CodeSplitter {
    */
   async analyzeProject(): Promise<CodeSplittingAnalysis> {
     console.log('🔍 Начинаем анализ возможностей разделения кода...');
-    
+
     const allFiles = this.findAllFiles(this.config.projectRoot);
     const analysis: CodeSplittingAnalysis = {
       totalFiles: allFiles.length,
@@ -80,8 +80,8 @@ export class CodeSplitter {
       potentialSavings: {
         initialBundle: 0,
         averageChunk: 0,
-        estimatedImprovement: '0%'
-      }
+        estimatedImprovement: '0%',
+      },
     };
 
     // Анализируем файлы и находим точки разделения
@@ -121,7 +121,7 @@ export class CodeSplitter {
         reason: 'Route-based splitting - файл маршрута',
         estimatedSize: fileSize,
         priority: 'high',
-        type: 'route'
+        type: 'route',
       });
     }
 
@@ -132,7 +132,7 @@ export class CodeSplitter {
         reason: `Большой компонент (${Math.round(fileSize / 1024)}KB)`,
         estimatedSize: fileSize,
         priority: fileSize > this.config.chunkSizeThreshold * 1024 ? 'high' : 'medium',
-        type: 'component'
+        type: 'component',
       });
     }
 
@@ -144,7 +144,7 @@ export class CodeSplitter {
         reason: `Содержит тяжелые импорты: ${heavyImports.join(', ')}`,
         estimatedSize: fileSize,
         priority: 'medium',
-        type: 'vendor'
+        type: 'vendor',
       });
     }
 
@@ -155,7 +155,7 @@ export class CodeSplitter {
         reason: 'Feature module - независимый модуль функций',
         estimatedSize: fileSize,
         priority: 'medium',
-        type: 'feature'
+        type: 'feature',
       });
     }
 
@@ -167,7 +167,7 @@ export class CodeSplitter {
         reason: `Возможности динамических импортов: ${dynamicOpportunities.join(', ')}`,
         estimatedSize: fileSize,
         priority: 'low',
-        type: 'dynamic'
+        type: 'dynamic',
       });
     }
 
@@ -185,21 +185,22 @@ export class CodeSplitter {
       /app\/.*\/page\.(tsx?|jsx?)$/,
       /<Route\s+/,
       /useRouter\(/,
-      /router\.(push|replace)/
+      /router\.(push|replace)/,
     ];
 
-    return routePatterns.some(pattern => 
-      pattern.test(content) || pattern.test(filePath)
-    );
+    return routePatterns.some((pattern) => pattern.test(content) || pattern.test(filePath));
   }
 
   /**
    * Проверяет, является ли компонент большим
    */
   private isLargeComponent(content: string, fileSize: number): boolean {
-    const isComponent = /(?:export\s+(?:default\s+)?(?:function|const)\s+[A-Z]\w*)|(?:class\s+[A-Z]\w*\s+extends\s+(?:React\.)?Component)/.test(content);
-    const isLarge = fileSize > (this.config.chunkSizeThreshold * 1024 * 0.5); // 50% от threshold
-    
+    const isComponent =
+      /(?:export\s+(?:default\s+)?(?:function|const)\s+[A-Z]\w*)|(?:class\s+[A-Z]\w*\s+extends\s+(?:React\.)?Component)/.test(
+        content,
+      );
+    const isLarge = fileSize > this.config.chunkSizeThreshold * 1024 * 0.5; // 50% от threshold
+
     return isComponent && isLarge;
   }
 
@@ -208,14 +209,23 @@ export class CodeSplitter {
    */
   private hasHeavyImports(content: string): boolean {
     const heavyLibraries = [
-      'lodash', 'moment', 'three', 'chartjs', 'monaco-editor',
-      '@aws-sdk', 'fabric', 'pdf-lib', 'mammoth', 'xlsx'
+      'lodash',
+      'moment',
+      'three',
+      'chartjs',
+      'monaco-editor',
+      '@aws-sdk',
+      'fabric',
+      'pdf-lib',
+      'mammoth',
+      'xlsx',
     ];
 
-    return heavyLibraries.some(lib => 
-      content.includes(`from '${lib}'`) || 
-      content.includes(`require('${lib}')`) ||
-      content.includes(`import('${lib}')`)
+    return heavyLibraries.some(
+      (lib) =>
+        content.includes(`from '${lib}'`) ||
+        content.includes(`require('${lib}')`) ||
+        content.includes(`import('${lib}')`),
     );
   }
 
@@ -224,8 +234,8 @@ export class CodeSplitter {
    */
   private extractHeavyImports(content: string): string[] {
     const heavyLibraries = ['lodash', 'moment', 'three', 'chartjs', 'monaco-editor'];
-    return heavyLibraries.filter(lib => 
-      content.includes(`'${lib}'`) || content.includes(`"${lib}"`)
+    return heavyLibraries.filter(
+      (lib) => content.includes(`'${lib}'`) || content.includes(`"${lib}"`),
     );
   }
 
@@ -237,12 +247,12 @@ export class CodeSplitter {
       /features\/\w+/,
       /modules\/\w+/,
       /pages\/\w+/,
-      /components\/\w+\/index/
+      /components\/\w+\/index/,
     ];
 
-    const hasFeatureStructure = featurePatterns.some(pattern => pattern.test(filePath));
+    const hasFeatureStructure = featurePatterns.some((pattern) => pattern.test(filePath));
     const hasMultipleExports = (content.match(/export/g) || []).length > 3;
-    
+
     return hasFeatureStructure && hasMultipleExports;
   }
 
@@ -280,26 +290,34 @@ export class CodeSplitter {
    */
   private generateRecommendations(splitPoints: SplitPoint[]): string[] {
     const recommendations: string[] = [];
-    
-    const routePoints = splitPoints.filter(p => p.type === 'route');
-    const componentPoints = splitPoints.filter(p => p.type === 'component');
-    const vendorPoints = splitPoints.filter(p => p.type === 'vendor');
+
+    const routePoints = splitPoints.filter((p) => p.type === 'route');
+    const componentPoints = splitPoints.filter((p) => p.type === 'component');
+    const vendorPoints = splitPoints.filter((p) => p.type === 'vendor');
 
     if (routePoints.length > 0) {
-      recommendations.push(`🛣️ Реализуйте route-based splitting для ${routePoints.length} маршрутов`);
+      recommendations.push(
+        `🛣️ Реализуйте route-based splitting для ${routePoints.length} маршрутов`,
+      );
     }
 
     if (componentPoints.length > 0) {
-      recommendations.push(`🧩 Разделите ${componentPoints.length} больших компонентов с помощью React.lazy()`);
+      recommendations.push(
+        `🧩 Разделите ${componentPoints.length} больших компонентов с помощью React.lazy()`,
+      );
     }
 
     if (vendorPoints.length > 0) {
-      recommendations.push(`📦 Вынесите vendor библиотеки в отдельные chunks (${vendorPoints.length} файлов)`);
+      recommendations.push(
+        `📦 Вынесите vendor библиотеки в отдельные chunks (${vendorPoints.length} файлов)`,
+      );
     }
 
-    const highPriorityPoints = splitPoints.filter(p => p.priority === 'high');
+    const highPriorityPoints = splitPoints.filter((p) => p.priority === 'high');
     if (highPriorityPoints.length > 0) {
-      recommendations.push(`⚡ Приоритет HIGH: начните с ${highPriorityPoints.length} критичных точек`);
+      recommendations.push(
+        `⚡ Приоритет HIGH: начните с ${highPriorityPoints.length} критичных точек`,
+      );
     }
 
     if (splitPoints.length === 0) {
@@ -314,17 +332,21 @@ export class CodeSplitter {
    */
   private calculatePotentialSavings(analysis: CodeSplittingAnalysis): any {
     const totalSize = analysis.totalSize;
-    const splitPointsSize = analysis.splitPoints.reduce((sum, point) => sum + point.estimatedSize, 0);
-    
+    const splitPointsSize = analysis.splitPoints.reduce(
+      (sum, point) => sum + point.estimatedSize,
+      0,
+    );
+
     const initialBundleReduction = Math.round((splitPointsSize / totalSize) * 100);
-    const averageChunkSize = analysis.splitPoints.length > 0 
-      ? Math.round(splitPointsSize / analysis.splitPoints.length / 1024) 
-      : 0;
+    const averageChunkSize =
+      analysis.splitPoints.length > 0
+        ? Math.round(splitPointsSize / analysis.splitPoints.length / 1024)
+        : 0;
 
     return {
       initialBundle: Math.round(totalSize / 1024), // KB
       averageChunk: averageChunkSize, // KB
-      estimatedImprovement: `${Math.min(initialBundleReduction, 70)}%` // Максимум 70%
+      estimatedImprovement: `${Math.min(initialBundleReduction, 70)}%`, // Максимум 70%
     };
   }
 
@@ -333,15 +355,15 @@ export class CodeSplitter {
    */
   private findAllFiles(rootPath: string): string[] {
     const files: string[] = [];
-    
+
     const traverse = (currentPath: string) => {
       try {
         const items = fs.readdirSync(currentPath);
-        
+
         for (const item of items) {
           const fullPath = path.join(currentPath, item);
           const stat = fs.statSync(fullPath);
-          
+
           if (stat.isDirectory()) {
             const relativePath = path.relative(rootPath, fullPath);
             if (!this.shouldExclude(relativePath)) {
@@ -364,12 +386,12 @@ export class CodeSplitter {
    * Проверяет, должен ли путь быть исключен
    */
   private shouldExclude(relativePath: string): boolean {
-    return this.config.excludePatterns.some(pattern => {
+    return this.config.excludePatterns.some((pattern) => {
       // Если паттерн содержит wildcard, преобразуем в регулярку
       if (pattern.includes('*')) {
         const regexPattern = pattern
-          .replace(/\./g, '\\.')  // экранируем точки
-          .replace(/\*/g, '.*');  // заменяем * на .*
+          .replace(/\./g, '\\.') // экранируем точки
+          .replace(/\*/g, '.*'); // заменяем * на .*
         try {
           return new RegExp(regexPattern).test(relativePath);
         } catch {
@@ -386,9 +408,11 @@ export class CodeSplitter {
    */
   private isRelevantFile(filePath: string): boolean {
     const extensions = ['.ts', '.tsx', '.js', '.jsx', '.vue', '.svelte'];
-    return extensions.some(ext => filePath.endsWith(ext)) && 
-           !filePath.includes('.test.') && 
-           !filePath.includes('.spec.');
+    return (
+      extensions.some((ext) => filePath.endsWith(ext)) &&
+      !filePath.includes('.test.') &&
+      !filePath.includes('.spec.')
+    );
   }
 
   /**

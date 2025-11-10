@@ -1,7 +1,12 @@
 // filepath: apps/web/src/middleware/__tests__/auth.test.ts
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { JWTAuthMiddleware, AuthMiddlewareConfig, createAuthMiddleware, getUserFromRequest } from '../auth';
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  AuthMiddlewareConfig,
+  createAuthMiddleware,
+  getUserFromRequest,
+  JWTAuthMiddleware,
+} from '../auth';
 
 describe('JWTAuthMiddleware', () => {
   let middleware: JWTAuthMiddleware;
@@ -12,7 +17,7 @@ describe('JWTAuthMiddleware', () => {
       allowAnonymous: false,
       skipPaths: ['/api/health', '/api/public'],
       supabaseUrl: 'https://test.supabase.co',
-      supabaseAnonKey: 'test-anon-key'
+      supabaseAnonKey: 'test-anon-key',
     };
     middleware = new JWTAuthMiddleware(config);
   });
@@ -20,7 +25,7 @@ describe('JWTAuthMiddleware', () => {
   describe('Authentication', () => {
     it('should skip authentication for excluded paths', async () => {
       const request = new Request('https://test.com/api/health', {
-        method: 'GET'
+        method: 'GET',
       });
 
       const result = await middleware.authenticate(request, '/api/health');
@@ -29,7 +34,7 @@ describe('JWTAuthMiddleware', () => {
 
     it('should require authentication for protected paths', async () => {
       const request = new Request('https://test.com/api/users', {
-        method: 'GET'
+        method: 'GET',
       });
 
       const result = await middleware.authenticate(request, '/api/users');
@@ -40,11 +45,11 @@ describe('JWTAuthMiddleware', () => {
 
     it('should allow anonymous access when configured', async () => {
       const anonymousMiddleware = new JWTAuthMiddleware({
-        allowAnonymous: true
+        allowAnonymous: true,
       });
 
       const request = new Request('https://test.com/api/users', {
-        method: 'GET'
+        method: 'GET',
       });
 
       const result = await anonymousMiddleware.authenticate(request, '/api/users');
@@ -57,7 +62,7 @@ describe('JWTAuthMiddleware', () => {
         sub: 'user-123',
         email: 'test@example.com',
         aud: 'authenticated',
-        exp: Math.floor(Date.now() / 1000) + 3600 // Expires in 1 hour
+        exp: Math.floor(Date.now() / 1000) + 3600, // Expires in 1 hour
       };
 
       // Простая base64 кодировка для тестов
@@ -69,8 +74,8 @@ describe('JWTAuthMiddleware', () => {
       const request = new Request('https://test.com/api/users', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const result = await middleware.authenticate(request, '/api/users');
@@ -85,7 +90,7 @@ describe('JWTAuthMiddleware', () => {
         sub: 'user-123',
         email: 'test@example.com',
         aud: 'authenticated',
-        exp: Math.floor(Date.now() / 1000) - 3600 // Expired 1 hour ago
+        exp: Math.floor(Date.now() / 1000) - 3600, // Expired 1 hour ago
       };
 
       const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -96,8 +101,8 @@ describe('JWTAuthMiddleware', () => {
       const request = new Request('https://test.com/api/users', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const result = await middleware.authenticate(request, '/api/users');
@@ -110,8 +115,8 @@ describe('JWTAuthMiddleware', () => {
       const request = new Request('https://test.com/api/users', {
         method: 'GET',
         headers: {
-          'Authorization': 'Bearer invalid-token'
-        }
+          Authorization: 'Bearer invalid-token',
+        },
       });
 
       const result = await middleware.authenticate(request, '/api/users');
@@ -122,7 +127,7 @@ describe('JWTAuthMiddleware', () => {
 
     it('should check required role', async () => {
       const roleMiddleware = new JWTAuthMiddleware({
-        requiredRole: 'admin'
+        requiredRole: 'admin',
       });
 
       // Создаем токен с ролью пользователя
@@ -131,7 +136,7 @@ describe('JWTAuthMiddleware', () => {
         email: 'test@example.com',
         role: 'user',
         aud: 'authenticated',
-        exp: Math.floor(Date.now() / 1000) + 3600
+        exp: Math.floor(Date.now() / 1000) + 3600,
       };
 
       const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -142,8 +147,8 @@ describe('JWTAuthMiddleware', () => {
       const request = new Request('https://test.com/api/admin', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const result = await roleMiddleware.authenticate(request, '/api/admin');
@@ -154,7 +159,7 @@ describe('JWTAuthMiddleware', () => {
 
     it('should allow access with correct role', async () => {
       const roleMiddleware = new JWTAuthMiddleware({
-        requiredRole: 'admin'
+        requiredRole: 'admin',
       });
 
       // Создаем токен с ролью админа
@@ -163,7 +168,7 @@ describe('JWTAuthMiddleware', () => {
         email: 'admin@example.com',
         role: 'admin',
         aud: 'authenticated',
-        exp: Math.floor(Date.now() / 1000) + 3600
+        exp: Math.floor(Date.now() / 1000) + 3600,
       };
 
       const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -174,8 +179,8 @@ describe('JWTAuthMiddleware', () => {
       const request = new Request('https://test.com/api/admin', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const result = await roleMiddleware.authenticate(request, '/api/admin');
@@ -195,7 +200,7 @@ describe('JWTAuthMiddleware', () => {
         sub: 'user-123',
         email: 'test@example.com',
         aud: 'authenticated',
-        exp: Math.floor(Date.now() / 1000) + 3600
+        exp: Math.floor(Date.now() / 1000) + 3600,
       };
 
       const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -206,15 +211,15 @@ describe('JWTAuthMiddleware', () => {
       const mockReq = {
         path: '/api/users',
         headers: {
-          get: (name: string) => name === 'authorization' ? `Bearer ${token}` : null
+          get: (name: string) => (name === 'authorization' ? `Bearer ${token}` : null),
         },
-        url: 'https://test.com/api/users'
+        url: 'https://test.com/api/users',
       };
 
       const mockRes = {
         status: (code: number) => ({
-          json: (data: any) => ({ status: code, data })
-        })
+          json: (data: any) => ({ status: code, data }),
+        }),
       };
 
       const mockNext = () => {};
@@ -236,7 +241,7 @@ describe('JWTAuthMiddleware', () => {
     it('should create auth middleware with custom config', () => {
       const customMiddleware = createAuthMiddleware({
         allowAnonymous: true,
-        requiredRole: 'user'
+        requiredRole: 'user',
       });
       expect(typeof customMiddleware).toBe('function');
     });
@@ -248,7 +253,7 @@ describe('JWTAuthMiddleware', () => {
         sub: 'user-123',
         email: 'test@example.com',
         aud: 'authenticated',
-        exp: Math.floor(Date.now() / 1000) + 3600
+        exp: Math.floor(Date.now() / 1000) + 3600,
       };
 
       const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -259,8 +264,8 @@ describe('JWTAuthMiddleware', () => {
       const request = new Request('https://test.com/api/users', {
         method: 'GET',
         headers: {
-          'Cookie': `supabase-auth-token=${token}; other-cookie=value`
-        }
+          Cookie: `supabase-auth-token=${token}; other-cookie=value`,
+        },
       });
 
       const result = await middleware.authenticate(request, '/api/users');
@@ -277,11 +282,11 @@ describe('Utility Functions', () => {
       id: 'user-123',
       email: 'test@example.com',
       role: 'user',
-      aud: 'authenticated'
+      aud: 'authenticated',
     };
 
     const mockRequest = {
-      user: mockUser
+      user: mockUser,
     };
 
     const result = getUserFromRequest(mockRequest);

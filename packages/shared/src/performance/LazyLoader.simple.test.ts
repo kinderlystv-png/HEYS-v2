@@ -1,6 +1,6 @@
 // filepath: packages/shared/src/performance/LazyLoader.simple.test.ts
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { balancedLazyConfig } from './lazy-loading-config';
 import { LazyLoader } from './LazyLoader';
@@ -34,9 +34,9 @@ Object.defineProperty(window, 'performance', {
     memory: {
       usedJSHeapSize: 1000000,
       totalJSHeapSize: 2000000,
-      jsHeapSizeLimit: 4000000
-    }
-  }
+      jsHeapSizeLimit: 4000000,
+    },
+  },
 });
 
 describe('LazyLoader - Основные функции', () => {
@@ -45,7 +45,7 @@ describe('LazyLoader - Основные функции', () => {
 
   beforeEach(() => {
     lazyLoader = new LazyLoader(balancedLazyConfig);
-    
+
     // Создаем mock элемент
     mockElement = document.createElement('img');
     mockElement.setAttribute('data-src', 'test-image.jpg');
@@ -82,7 +82,7 @@ describe('LazyLoader - Основные функции', () => {
         totalLoadTime: expect.any(Number),
         memoryUsage: expect.any(Number),
         observerInstances: expect.any(Number),
-        performanceScore: expect.any(Number)
+        performanceScore: expect.any(Number),
       });
     });
 
@@ -97,7 +97,7 @@ describe('LazyLoader - Основные функции', () => {
     it('должен обрабатывать изображения', () => {
       const img = document.createElement('img');
       img.setAttribute('data-src', 'test.jpg');
-      
+
       lazyLoader.observe(img);
       expect(mockObserve).toHaveBeenCalledWith(img);
     });
@@ -105,7 +105,7 @@ describe('LazyLoader - Основные функции', () => {
     it('должен обрабатывать видео', () => {
       const video = document.createElement('video');
       video.setAttribute('data-src', 'test.mp4');
-      
+
       lazyLoader.observe(video);
       expect(mockObserve).toHaveBeenCalledWith(video);
     });
@@ -113,7 +113,7 @@ describe('LazyLoader - Основные функции', () => {
     it('должен обрабатывать скрипты', () => {
       const script = document.createElement('script');
       script.setAttribute('data-src', 'test.js');
-      
+
       lazyLoader.observe(script);
       expect(mockObserve).toHaveBeenCalledWith(script);
     });
@@ -129,7 +129,7 @@ describe('LazyLoader - Основные функции', () => {
         maxConcurrentLoads: 3,
         loadTimeout: 10000,
         enableMetrics: true,
-        debounceDelay: 200
+        debounceDelay: 200,
       };
 
       const customLoader = new LazyLoader(customConfig);
@@ -141,7 +141,7 @@ describe('LazyLoader - Основные функции', () => {
       const minimalConfig = {
         root: null,
         rootMargin: '50px',
-        threshold: 0.1
+        threshold: 0.1,
       };
 
       const minimalLoader = new LazyLoader(minimalConfig);
@@ -154,7 +154,7 @@ describe('LazyLoader - Основные функции', () => {
     it('должен собирать метрики производительности', () => {
       const img = document.createElement('img');
       img.setAttribute('data-src', 'test.jpg');
-      
+
       lazyLoader.observe(img);
 
       const metrics = lazyLoader.getMetrics();
@@ -177,14 +177,14 @@ describe('LazyLoader - Основные функции', () => {
   describe('Edge cases и обработка ошибок', () => {
     it('должен обрабатывать элементы без атрибутов lazy loading', () => {
       const div = document.createElement('div');
-      
+
       expect(() => lazyLoader.observe(div)).not.toThrow();
     });
 
     it('должен обрабатывать пустые URL', () => {
       const img = document.createElement('img');
       img.setAttribute('data-src', '');
-      
+
       expect(() => lazyLoader.observe(img)).not.toThrow();
     });
 
@@ -207,7 +207,7 @@ describe('LazyLoader - Основные функции', () => {
       });
 
       expect(() => {
-        elements.forEach(el => lazyLoader.observe(el));
+        elements.forEach((el) => lazyLoader.observe(el));
       }).not.toThrow();
 
       expect(mockObserve).toHaveBeenCalledTimes(100);
@@ -216,7 +216,7 @@ describe('LazyLoader - Основные функции', () => {
     it('должен корректно обрабатывать быстрые последовательные вызовы', () => {
       const img = document.createElement('img');
       img.setAttribute('data-src', 'test.jpg');
-      
+
       // Множественные вызовы observe
       lazyLoader.observe(img);
       lazyLoader.observe(img);
@@ -246,15 +246,15 @@ describe('LazyLoader - Основные функции', () => {
       // Временно ограничиваем Performance API
       const originalPerformance = window.performance;
       (window as any).performance = {
-        now: () => Date.now()
+        now: () => Date.now(),
       };
 
       const loader = new LazyLoader(balancedLazyConfig);
       const metrics = loader.getMetrics();
-      
+
       expect(metrics).toBeDefined();
       expect(typeof metrics.memoryUsage).toBe('number');
-      
+
       loader.destroy();
 
       // Восстанавливаем Performance API

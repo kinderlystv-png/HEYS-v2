@@ -1,8 +1,8 @@
 // heys_error_boundary_v1.ts — Error Boundary для React (TypeScript version)
 
 import React from 'react';
-import type { ErrorBoundaryProps, HEYSGlobal } from './types/heys';
 import { getGlobalLogger } from '../monitoring/structured-logger';
+import type { ErrorBoundaryProps, HEYSGlobal } from './types/heys';
 
 // Error Boundary State
 interface ErrorBoundaryState {
@@ -139,307 +139,307 @@ if (runtimeWindow) {
       }
     }
 
-  // Enhanced Error Boundary Component
-  class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-    private retryTimeout: number | null = null;
+    // Enhanced Error Boundary Component
+    class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+      private retryTimeout: number | null = null;
 
-    constructor(props: ErrorBoundaryProps) {
-      super(props);
-      this.state = {
-        hasError: false,
-        error: null,
-        errorInfo: null,
-        errorId: null,
-        retryCount: 0,
-      };
-    }
-
-    static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-      const errorId = 'error_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-
-      return {
-        hasError: true,
-        error,
-        errorId,
-      };
-    }
-
-    override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-      this.setState({ errorInfo });
-
-      // Call custom error handler if provided
-      if (this.props.onError) {
-        try {
-          this.props.onError(error, errorInfo);
-        } catch (handlerError) {
-          logger.error('Error in custom error handler', {
-            metadata: {
-              handlerError: serializeError(handlerError as Error),
-            },
-          });
-        }
+      constructor(props: ErrorBoundaryProps) {
+        super(props);
+        this.state = {
+          hasError: false,
+          error: null,
+          errorInfo: null,
+          errorId: null,
+          retryCount: 0,
+        };
       }
 
-      logError(error, errorInfo, {
-        retryCount: this.state.retryCount,
-        component: 'ErrorBoundary',
-      });
-    }
+      static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+        const errorId = 'error_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
-    handleRetry = (): void => {
-      const newRetryCount = this.state.retryCount + 1;
+        return {
+          hasError: true,
+          error,
+          errorId,
+        };
+      }
 
-      // Limit retry attempts
-      if (newRetryCount > 3) {
-        logger.warn('Maximum retry attempts reached', {
-          metadata: { retryCount: newRetryCount },
+      override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+        this.setState({ errorInfo });
+
+        // Call custom error handler if provided
+        if (this.props.onError) {
+          try {
+            this.props.onError(error, errorInfo);
+          } catch (handlerError) {
+            logger.error('Error in custom error handler', {
+              metadata: {
+                handlerError: serializeError(handlerError as Error),
+              },
+            });
+          }
+        }
+
+        logError(error, errorInfo, {
+          retryCount: this.state.retryCount,
+          component: 'ErrorBoundary',
         });
-        return;
       }
 
-      this.setState({
-        hasError: false,
-        error: null,
-        errorInfo: null,
-        errorId: null,
-        retryCount: newRetryCount,
-      });
+      handleRetry = (): void => {
+        const newRetryCount = this.state.retryCount + 1;
 
-      // Auto-retry after delay for first few attempts
-      if (newRetryCount <= 2) {
-        this.retryTimeout = window.setTimeout(() => {
-          // Additional cleanup or state reset if needed
-        }, 1000);
-      }
-    };
-
-    handleReload = (): void => {
-      window.location.reload();
-    };
-
-    override componentWillUnmount(): void {
-      if (this.retryTimeout) {
-        clearTimeout(this.retryTimeout);
-      }
-    }
-
-    override render(): React.ReactNode {
-      if (this.state.hasError) {
-        const { error, errorInfo, errorId, retryCount } = this.state;
-
-        // Use custom fallback if provided
-        if (this.props.fallback) {
-          const FallbackComponent = this.props.fallback;
-          return React.createElement(FallbackComponent, { error: error! });
+        // Limit retry attempts
+        if (newRetryCount > 3) {
+          logger.warn('Maximum retry attempts reached', {
+            metadata: { retryCount: newRetryCount },
+          });
+          return;
         }
 
-        // Default error UI
-        return React.createElement(
-          'div',
-          {
-            className: 'error-boundary',
-            style: {
-              padding: '20px',
-              margin: '20px',
-              border: '2px solid #ff6b6b',
-              borderRadius: '8px',
-              backgroundColor: '#ffe0e0',
-              color: '#721c24',
-              fontFamily: 'Arial, sans-serif',
-            },
-          },
-          React.createElement(
-            'h2',
-            {
-              style: { color: '#d63031', marginTop: 0 },
-            },
-            '🚨 Произошла ошибка',
-          ),
+        this.setState({
+          hasError: false,
+          error: null,
+          errorInfo: null,
+          errorId: null,
+          retryCount: newRetryCount,
+        });
 
-          React.createElement(
-            'p',
-            null,
-            'Извините, что-то пошло не так. Мы зафиксировали эту ошибку и работаем над её исправлением.',
-          ),
+        // Auto-retry after delay for first few attempts
+        if (newRetryCount <= 2) {
+          this.retryTimeout = window.setTimeout(() => {
+            // Additional cleanup or state reset if needed
+          }, 1000);
+        }
+      };
 
-          React.createElement(
-            'details',
+      handleReload = (): void => {
+        window.location.reload();
+      };
+
+      override componentWillUnmount(): void {
+        if (this.retryTimeout) {
+          clearTimeout(this.retryTimeout);
+        }
+      }
+
+      override render(): React.ReactNode {
+        if (this.state.hasError) {
+          const { error, errorInfo, errorId, retryCount } = this.state;
+
+          // Use custom fallback if provided
+          if (this.props.fallback) {
+            const FallbackComponent = this.props.fallback;
+            return React.createElement(FallbackComponent, { error: error! });
+          }
+
+          // Default error UI
+          return React.createElement(
+            'div',
             {
-              style: { marginTop: '15px', marginBottom: '15px' },
+              className: 'error-boundary',
+              style: {
+                padding: '20px',
+                margin: '20px',
+                border: '2px solid #ff6b6b',
+                borderRadius: '8px',
+                backgroundColor: '#ffe0e0',
+                color: '#721c24',
+                fontFamily: 'Arial, sans-serif',
+              },
             },
             React.createElement(
-              'summary',
+              'h2',
               {
-                style: { cursor: 'pointer', fontWeight: 'bold' },
+                style: { color: '#d63031', marginTop: 0 },
               },
-              'Техническая информация',
+              '🚨 Произошла ошибка',
             ),
+
+            React.createElement(
+              'p',
+              null,
+              'Извините, что-то пошло не так. Мы зафиксировали эту ошибку и работаем над её исправлением.',
+            ),
+
+            React.createElement(
+              'details',
+              {
+                style: { marginTop: '15px', marginBottom: '15px' },
+              },
+              React.createElement(
+                'summary',
+                {
+                  style: { cursor: 'pointer', fontWeight: 'bold' },
+                },
+                'Техническая информация',
+              ),
+              React.createElement(
+                'div',
+                {
+                  style: {
+                    marginTop: '10px',
+                    padding: '10px',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                  },
+                },
+                React.createElement('div', null, `Error ID: ${errorId}`),
+                React.createElement('div', null, `Error: ${error?.name}: ${error?.message}`),
+                errorInfo &&
+                  React.createElement(
+                    'div',
+                    null,
+                    `Component: ${errorInfo.componentStack?.split('\n')[1]?.trim() || 'Unknown'}`,
+                  ),
+                React.createElement('div', null, `Retry Count: ${retryCount}`),
+              ),
+            ),
+
             React.createElement(
               'div',
               {
-                style: {
-                  marginTop: '10px',
-                  padding: '10px',
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontFamily: 'monospace',
-                },
+                style: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
               },
-              React.createElement('div', null, `Error ID: ${errorId}`),
-              React.createElement('div', null, `Error: ${error?.name}: ${error?.message}`),
-              errorInfo &&
+              retryCount < 3 &&
                 React.createElement(
-                  'div',
-                  null,
-                  `Component: ${errorInfo.componentStack?.split('\n')[1]?.trim() || 'Unknown'}`,
+                  'button',
+                  {
+                    onClick: this.handleRetry,
+                    style: {
+                      padding: '8px 16px',
+                      backgroundColor: '#74b9ff',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                    },
+                  },
+                  `Попробовать снова ${retryCount > 0 ? `(${retryCount}/3)` : ''}`,
                 ),
-              React.createElement('div', null, `Retry Count: ${retryCount}`),
-            ),
-          ),
 
-          React.createElement(
-            'div',
-            {
-              style: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
-            },
-            retryCount < 3 &&
               React.createElement(
                 'button',
                 {
-                  onClick: this.handleRetry,
+                  onClick: this.handleReload,
                   style: {
                     padding: '8px 16px',
-                    backgroundColor: '#74b9ff',
+                    backgroundColor: '#fd79a8',
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
                     cursor: 'pointer',
                   },
                 },
-                `Попробовать снова ${retryCount > 0 ? `(${retryCount}/3)` : ''}`,
+                'Перезагрузить страницу',
               ),
 
-            React.createElement(
-              'button',
-              {
-                onClick: this.handleReload,
-                style: {
-                  padding: '8px 16px',
-                  backgroundColor: '#fd79a8',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                },
-              },
-              'Перезагрузить страницу',
-            ),
-
-            React.createElement(
-              'button',
-              {
-                onClick: () => {
-                  const clipboard = global.navigator?.clipboard;
-                  if (clipboard) {
-                    const errorText = `Error ID: ${errorId}\nError: ${error?.name}: ${error?.message}\nURL: ${global.location?.href ?? 'unknown'}\nTime: ${new Date().toISOString()}`;
-                    clipboard
-                      .writeText(errorText)
-                      .then(() => {
-                        global.alert?.('Информация об ошибке скопирована в буфер обмена');
-                      })
-                      .catch((clipboardError) => {
-                        logger.warn('Clipboard write failed', {
-                          metadata: { clipboardError: serializeError(clipboardError as Error) },
+              React.createElement(
+                'button',
+                {
+                  onClick: () => {
+                    const clipboard = global.navigator?.clipboard;
+                    if (clipboard) {
+                      const errorText = `Error ID: ${errorId}\nError: ${error?.name}: ${error?.message}\nURL: ${global.location?.href ?? 'unknown'}\nTime: ${new Date().toISOString()}`;
+                      clipboard
+                        .writeText(errorText)
+                        .then(() => {
+                          global.alert?.('Информация об ошибке скопирована в буфер обмена');
+                        })
+                        .catch((clipboardError) => {
+                          logger.warn('Clipboard write failed', {
+                            metadata: { clipboardError: serializeError(clipboardError as Error) },
+                          });
                         });
-                      });
-                  } else {
-                    logger.warn('Clipboard API is not available for copying error details');
-                  }
+                    } else {
+                      logger.warn('Clipboard API is not available for copying error details');
+                    }
+                  },
+                  style: {
+                    padding: '8px 16px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  },
                 },
-                style: {
-                  padding: '8px 16px',
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                },
-              },
-              'Скопировать ошибку',
+                'Скопировать ошибку',
+              ),
             ),
-          ),
-        );
+          );
+        }
+
+        return this.props.children;
       }
-
-      return this.props.children;
     }
-  }
 
-  // Simple Error Boundary for minimal use cases
-  const SimpleErrorBoundary: React.FC<{ children: React.ReactNode; message?: string }> = ({
-    children,
-    message = 'Произошла ошибка',
-  }) => {
-    return React.createElement(ErrorBoundary, {
+    // Simple Error Boundary for minimal use cases
+    const SimpleErrorBoundary: React.FC<{ children: React.ReactNode; message?: string }> = ({
       children,
-      fallback: ({ error }) =>
-        React.createElement(
-          'div',
-          {
-            style: {
-              padding: '10px',
-              backgroundColor: '#ffebee',
-              border: '1px solid #ffcdd2',
-              borderRadius: '4px',
-              color: '#c62828',
-            },
-          },
-          `${message}: ${error.message}`,
-        ),
-    });
-  };
-
-  // HOC for wrapping components with error boundary
-  function withErrorBoundary<P extends object>(
-    Component: React.ComponentType<P>,
-    fallbackComponent?: React.ComponentType<{ error: Error }>,
-  ): React.ComponentType<P> {
-    const WrappedComponent: React.FC<P> = (props) => {
+      message = 'Произошла ошибка',
+    }) => {
       return React.createElement(ErrorBoundary, {
-        fallback: fallbackComponent,
-        children: React.createElement(Component, props),
+        children,
+        fallback: ({ error }) =>
+          React.createElement(
+            'div',
+            {
+              style: {
+                padding: '10px',
+                backgroundColor: '#ffebee',
+                border: '1px solid #ffcdd2',
+                borderRadius: '4px',
+                color: '#c62828',
+              },
+            },
+            `${message}: ${error.message}`,
+          ),
       });
     };
 
-    WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`;
-    return WrappedComponent;
-  }
+    // HOC for wrapping components with error boundary
+    function withErrorBoundary<P extends object>(
+      Component: React.ComponentType<P>,
+      fallbackComponent?: React.ComponentType<{ error: Error }>,
+    ): React.ComponentType<P> {
+      const WrappedComponent: React.FC<P> = (props) => {
+        return React.createElement(ErrorBoundary, {
+          fallback: fallbackComponent,
+          children: React.createElement(Component, props),
+        });
+      };
 
-  // Error reporting utilities
-  const ErrorReporting = {
-    getRecentErrors: (): ErrorReport[] => {
-      try {
-        return JSON.parse(localStorage.getItem('heys_recent_errors') || '[]');
-      } catch (e) {
-        return [];
-      }
-    },
+      WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`;
+      return WrappedComponent;
+    }
 
-    clearErrors: (): void => {
-      try {
-        localStorage.removeItem('heys_recent_errors');
-      } catch (e) {
-        console.warn('Could not clear error storage:', e);
-      }
-    },
+    // Error reporting utilities
+    const ErrorReporting = {
+      getRecentErrors: (): ErrorReport[] => {
+        try {
+          return JSON.parse(localStorage.getItem('heys_recent_errors') || '[]');
+        } catch (e) {
+          return [];
+        }
+      },
 
-    reportError: (error: Error, context?: string): void => {
-      logError(error, undefined, { context, manual: true });
-    },
-  };
+      clearErrors: (): void => {
+        try {
+          localStorage.removeItem('heys_recent_errors');
+        } catch (e) {
+          console.warn('Could not clear error storage:', e);
+        }
+      },
 
-  // Global error handler for unhandled errors
+      reportError: (error: Error, context?: string): void => {
+        logError(error, undefined, { context, manual: true });
+      },
+    };
+
+    // Global error handler for unhandled errors
     global.addEventListener('error', (event) => {
       const globalError = new Error(event.message);
       logError(globalError, undefined, {

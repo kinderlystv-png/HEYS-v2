@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { MetricsProvider, useMetrics } from '../providers/MetricsProvider';
 import { WebSocketProvider, useWebSocket } from '../providers/WebSocketProvider';
-import { formatMetricValue, formatDuration, generateTimeRanges } from '../utils';
+import { formatDuration, formatMetricValue, generateTimeRanges } from '../utils';
 
 interface AnalyticsDashboardProps {
   title?: string;
@@ -24,9 +24,7 @@ const DashboardHeader: React.FC<{
         <div className="connection-status">
           <div className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}>
             <span className="status-dot"></span>
-            <span className="status-text">
-              {isConnected ? 'Connected' : connectionStatus}
-            </span>
+            <span className="status-text">{isConnected ? 'Connected' : connectionStatus}</span>
           </div>
           {lastUpdate && (
             <div className="last-update">
@@ -120,7 +118,8 @@ const AlertsList: React.FC<{
           <div className="alert-content">
             <h4 className="alert-title">{alert.name || alert.message || 'Alert'}</h4>
             <p className="alert-description">
-              {alert.description || `Triggered at ${new Date(alert.triggeredAt || alert.timestamp).toLocaleTimeString()}`}
+              {alert.description ||
+                `Triggered at ${new Date(alert.triggeredAt || alert.timestamp).toLocaleTimeString()}`}
             </p>
           </div>
           <div className="alert-meta">
@@ -131,24 +130,18 @@ const AlertsList: React.FC<{
         </div>
       ))}
       {alerts.length > maxVisible && (
-        <div className="alerts-more">
-          +{alerts.length - maxVisible} more alerts
-        </div>
+        <div className="alerts-more">+{alerts.length - maxVisible} more alerts</div>
       )}
     </div>
   );
 };
 
-const DashboardContent: React.FC<{ selectedTimeRange: string }> = ({ selectedTimeRange: _selectedTimeRange }) => {
+const DashboardContent: React.FC<{ selectedTimeRange: string }> = ({
+  selectedTimeRange: _selectedTimeRange,
+}) => {
   const { isConnected, connectionStatus, lastHeartbeat } = useWebSocket();
-  const { 
-    metrics, 
-    uxMetrics, 
-    errorImpacts, 
-    roiCalculations, 
-    isProcessing,
-    getBusinessInsights 
-  } = useMetrics();
+  const { metrics, uxMetrics, errorImpacts, roiCalculations, isProcessing, getBusinessInsights } =
+    useMetrics();
 
   const [insights, setInsights] = useState<any>(null);
 
@@ -161,18 +154,21 @@ const DashboardContent: React.FC<{ selectedTimeRange: string }> = ({ selectedTim
   // Calculate key metrics from current data
   const keyMetrics = React.useMemo(() => {
     const recentMetrics = metrics.slice(-100);
-    const totalUsers = recentMetrics.filter(m => m.source === 'user').length;
-    const avgPageLoad = recentMetrics
-      .filter(m => m.source === 'performance')
-      .reduce((sum, m) => sum + m.value, 0) / Math.max(recentMetrics.length, 1);
+    const totalUsers = recentMetrics.filter((m) => m.source === 'user').length;
+    const avgPageLoad =
+      recentMetrics.filter((m) => m.source === 'performance').reduce((sum, m) => sum + m.value, 0) /
+      Math.max(recentMetrics.length, 1);
     const errorRate = (errorImpacts.length / Math.max(metrics.length, 1)) * 100;
     const totalROI = roiCalculations.reduce((sum, roi) => sum + roi.roi, 0);
 
     return {
       users: { value: totalUsers, trend: insights?.trends?.users?.changePercent || 0 },
-      pageLoad: { value: avgPageLoad || 0, trend: insights?.trends?.performance?.changePercent || 0 },
+      pageLoad: {
+        value: avgPageLoad || 0,
+        trend: insights?.trends?.performance?.changePercent || 0,
+      },
       errorRate: { value: errorRate, trend: insights?.trends?.errors?.changePercent || 0 },
-      roi: { value: totalROI, trend: 0 }
+      roi: { value: totalROI, trend: 0 },
     };
   }, [metrics, errorImpacts, roiCalculations, insights]);
 
@@ -275,11 +271,21 @@ const DashboardContent: React.FC<{ selectedTimeRange: string }> = ({ selectedTim
               <div className="ux-metrics">
                 <div className="ux-metric">
                   <span>Avg Page Load:</span>
-                  <span>{(uxMetrics.reduce((sum, m) => sum + m.pageLoadTime, 0) / uxMetrics.length).toFixed(0)}ms</span>
+                  <span>
+                    {(
+                      uxMetrics.reduce((sum, m) => sum + m.pageLoadTime, 0) / uxMetrics.length
+                    ).toFixed(0)}
+                    ms
+                  </span>
                 </div>
                 <div className="ux-metric">
                   <span>Avg CLS:</span>
-                  <span>{(uxMetrics.reduce((sum, m) => sum + m.cumulativeLayoutShift, 0) / uxMetrics.length).toFixed(3)}</span>
+                  <span>
+                    {(
+                      uxMetrics.reduce((sum, m) => sum + m.cumulativeLayoutShift, 0) /
+                      uxMetrics.length
+                    ).toFixed(3)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -327,7 +333,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   title = 'HEYS Analytics Dashboard',
   refreshInterval: _refreshInterval = 5000,
   webSocketUrl = 'ws://localhost:3001',
-  className = ''
+  className = '',
 }) => {
   const [selectedTimeRange, setSelectedTimeRange] = useState('1h');
 
@@ -342,7 +348,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               connectionStatus="Connected"
               lastUpdate={Date.now()}
             />
-            
+
             <div className="dashboard-controls">
               <TimeRangeSelector
                 selectedRange={selectedTimeRange}

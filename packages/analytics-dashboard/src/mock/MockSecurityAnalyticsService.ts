@@ -12,8 +12,8 @@ export class MockSecurityAnalyticsService {
 
   async getSecurityAnalytics() {
     // Симуляция загрузки данных
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     return {
       overview: {
         total_events: 15847,
@@ -21,38 +21,44 @@ export class MockSecurityAnalyticsService {
         error_rate: 2.3,
         avg_response_time: 145,
         failed_attempts: 89,
-        event_types: ['authentication_failure', 'suspicious_request', 'data_access', 'sql_injection', 'xss_attempt'],
+        event_types: [
+          'authentication_failure',
+          'suspicious_request',
+          'data_access',
+          'sql_injection',
+          'xss_attempt',
+        ],
         risk_score: 0.73,
         active_incidents: 7,
-        total_incidents: 23
+        total_incidents: 23,
       },
       threats: {
         top_threats: [
-          { 
-            ioc_value: '192.168.1.100', 
-            ioc_type: 'ip', 
-            threat_actor: 'APT29', 
+          {
+            ioc_value: '192.168.1.100',
+            ioc_type: 'ip',
+            threat_actor: 'APT29',
             matches_count: 156,
             severity: 'critical',
-            last_seen: new Date().toISOString()
+            last_seen: new Date().toISOString(),
           },
-          { 
-            ioc_value: 'malware.exe', 
-            ioc_type: 'filename', 
-            threat_actor: 'Lazarus', 
+          {
+            ioc_value: 'malware.exe',
+            ioc_type: 'filename',
+            threat_actor: 'Lazarus',
             matches_count: 89,
             severity: 'high',
-            last_seen: new Date(Date.now() - 3600000).toISOString()
+            last_seen: new Date(Date.now() - 3600000).toISOString(),
           },
-          { 
-            ioc_value: 'evil.domain.com', 
-            ioc_type: 'domain', 
-            threat_actor: 'APT1', 
+          {
+            ioc_value: 'evil.domain.com',
+            ioc_type: 'domain',
+            threat_actor: 'APT1',
             matches_count: 45,
             severity: 'medium',
-            last_seen: new Date(Date.now() - 7200000).toISOString()
-          }
-        ]
+            last_seen: new Date(Date.now() - 7200000).toISOString(),
+          },
+        ],
       },
       incidents: [
         {
@@ -62,16 +68,16 @@ export class MockSecurityAnalyticsService {
           status: 'investigating' as const,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          description: 'Multiple failed login attempts from suspicious IP addresses'
+          description: 'Multiple failed login attempts from suspicious IP addresses',
         },
         {
-          id: 'inc-002', 
+          id: 'inc-002',
           title: 'Unusual Data Access Pattern',
           severity: 'medium' as const,
           status: 'resolved' as const,
           created_at: new Date(Date.now() - 3600000).toISOString(),
           updated_at: new Date(Date.now() - 1800000).toISOString(),
-          description: 'Unusual data access patterns detected in user activity'
+          description: 'Unusual data access patterns detected in user activity',
         },
         {
           id: 'inc-003',
@@ -80,8 +86,8 @@ export class MockSecurityAnalyticsService {
           status: 'open' as const,
           created_at: new Date(Date.now() - 1800000).toISOString(),
           updated_at: new Date(Date.now() - 900000).toISOString(),
-          description: 'Automated SQL injection attempts blocked by WAF'
-        }
+          description: 'Automated SQL injection attempts blocked by WAF',
+        },
       ],
       events: [
         {
@@ -91,7 +97,7 @@ export class MockSecurityAnalyticsService {
           user_id: 'user-123',
           source_ip: '192.168.1.100',
           severity: 'high' as const,
-          metadata: { attempt_count: 5, user_agent: 'Suspicious Bot' }
+          metadata: { attempt_count: 5, user_agent: 'Suspicious Bot' },
         },
         {
           id: 'event-002',
@@ -100,8 +106,8 @@ export class MockSecurityAnalyticsService {
           user_id: 'user-456',
           source_ip: '10.0.0.15',
           severity: 'medium' as const,
-          metadata: { endpoint: '/admin/users', method: 'POST' }
-        }
+          metadata: { endpoint: '/admin/users', method: 'POST' },
+        },
       ],
       ml_stats: {
         totalEventsAnalyzed: 15847,
@@ -109,20 +115,26 @@ export class MockSecurityAnalyticsService {
         modelAccuracy: 0.94,
         lastTraining: new Date().toISOString(),
         processingTime: 145,
-        threatLevel: 'medium' as const
-      }
+        threatLevel: 'medium' as const,
+      },
     };
   }
 
   async subscribeToEvents(callback: SubscriberCallback) {
     console.log('🔔 Subscribing to real-time security events');
-    
+
     this.subscribers.push(callback);
 
     // Симулируем real-time события
-    const eventTypes = ['authentication_failure', 'suspicious_request', 'data_access', 'sql_injection', 'xss_attempt'];
+    const eventTypes = [
+      'authentication_failure',
+      'suspicious_request',
+      'data_access',
+      'sql_injection',
+      'xss_attempt',
+    ];
     const severities = ['low', 'medium', 'high', 'critical'];
-    
+
     this.updateInterval = setInterval(() => {
       const event = {
         id: `event-${Date.now()}`,
@@ -131,15 +143,15 @@ export class MockSecurityAnalyticsService {
         user_id: `user-${Math.floor(Math.random() * 1000)}`,
         source_ip: `192.168.1.${Math.floor(Math.random() * 255)}`,
         severity: severities[Math.floor(Math.random() * severities.length)],
-        metadata: { 
+        metadata: {
           simulated: true,
           demo_mode: true,
-          random_data: Math.random() 
-        }
+          random_data: Math.random(),
+        },
       };
-      
+
       // Уведомляем всех подписчиков
-      this.subscribers.forEach(subscriber => {
+      this.subscribers.forEach((subscriber) => {
         try {
           subscriber(event);
         } catch (error) {
@@ -163,16 +175,16 @@ export class MockSecurityAnalyticsService {
 
   async processSecurityEvent(event: any) {
     console.log('🔍 Processing security event:', event.event_type);
-    
+
     // Симуляция обработки
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     return {
       ...event,
       anomaly_score: Math.random() * 0.5 + 0.5, // 0.5-1.0
       threat_level: Math.random() > 0.7 ? 'high' : 'medium',
       automated_response: ['logged', 'alerted'],
-      processed_at: new Date().toISOString()
+      processed_at: new Date().toISOString(),
     };
   }
 

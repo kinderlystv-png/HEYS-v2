@@ -1,7 +1,7 @@
 /**
  * @fileoverview Lighthouse Score Optimizer - Система оптимизации производительности
  * Комплексная система для анализа и улучшения Lighthouse Score
- * 
+ *
  * @author AI Assistant
  * @version 1.0.0
  * @since 2024
@@ -17,7 +17,7 @@ export interface LighthouseConfig {
    * Целевой общий Lighthouse Score (0-100)
    */
   targetScore: number;
-  
+
   /**
    * Детальные цели по категориям
    */
@@ -28,7 +28,7 @@ export interface LighthouseConfig {
     seo: number;
     pwa?: number;
   };
-  
+
   /**
    * Настройки оптимизации
    */
@@ -41,19 +41,19 @@ export interface LighthouseConfig {
     enableCompression: boolean;
     enableServiceWorker: boolean;
   };
-  
+
   /**
    * Пороговые значения для метрик
    */
   performanceThresholds: {
-    firstContentfulPaint: number;    // ms
-    largestContentfulPaint: number;  // ms
-    firstInputDelay: number;         // ms
-    cumulativeLayoutShift: number;   // score
-    speedIndex: number;              // ms
-    totalBlockingTime: number;       // ms
+    firstContentfulPaint: number; // ms
+    largestContentfulPaint: number; // ms
+    firstInputDelay: number; // ms
+    cumulativeLayoutShift: number; // score
+    speedIndex: number; // ms
+    totalBlockingTime: number; // ms
   };
-  
+
   /**
    * Настройки для анализа
    */
@@ -73,7 +73,7 @@ export interface LighthouseResults {
    * Общий скор (0-100)
    */
   overallScore: number;
-  
+
   /**
    * Скоры по категориям
    */
@@ -84,7 +84,7 @@ export interface LighthouseResults {
     seo: number;
     pwa?: number;
   };
-  
+
   /**
    * Метрики производительности
    */
@@ -97,7 +97,7 @@ export interface LighthouseResults {
     totalBlockingTime: number;
     timeToInteractive: number;
   };
-  
+
   /**
    * Возможности для улучшения
    */
@@ -110,7 +110,7 @@ export interface LighthouseResults {
     displayValue: string;
     details?: any;
   }>;
-  
+
   /**
    * Диагностические данные
    */
@@ -122,7 +122,7 @@ export interface LighthouseResults {
     displayValue: string;
     details?: any;
   }>;
-  
+
   /**
    * Мета-информация
    */
@@ -235,34 +235,34 @@ export class LighthouseOptimizer {
    * Выполнение оптимизации по плану
    */
   async executeOptimization(
-    plan: OptimizationPlan[], 
-    progressCallback?: (progress: ProgressCallback) => void
+    plan: OptimizationPlan[],
+    progressCallback?: (progress: ProgressCallback) => void,
   ): Promise<OptimizationResults> {
     const startTime = performance.now();
-    
+
     try {
       // Симуляция выполнения оптимизации
       for (let i = 0; i < plan.length; i++) {
         const task = plan[i];
-        
+
         if (progressCallback && task) {
           progressCallback({
             step: i + 1,
             total: plan.length,
             task: task.description,
-            progress: ((i + 1) / plan.length) * 100
+            progress: ((i + 1) / plan.length) * 100,
           });
         }
 
         // Симуляция времени выполнения задачи
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
       // Запуск повторного аудита для получения результатов
       if (this.baseline) {
         const finalResults = await this.runLighthouseAudit(this.baseline.meta.url);
         this.currentResults = finalResults;
-        
+
         const improvements = this.calculateImprovements();
         const executionTime = performance.now() - startTime;
 
@@ -270,7 +270,7 @@ export class LighthouseOptimizer {
           success: true,
           finalResults,
           improvements,
-          executionTime
+          executionTime,
         };
       }
 
@@ -279,7 +279,7 @@ export class LighthouseOptimizer {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-        executionTime: performance.now() - startTime
+        executionTime: performance.now() - startTime,
       };
     }
   }
@@ -289,13 +289,13 @@ export class LighthouseOptimizer {
    */
   async runLighthouseAudit(url: string): Promise<LighthouseResults> {
     this.validateUrl(url);
-    
+
     console.log(`🔍 Запуск Lighthouse аудита для ${url}...`);
-    
+
     try {
       // Симуляция запуска Lighthouse
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
       // Мок результатов (в реальной реализации здесь будет вызов Lighthouse API)
       const mockResults: LighthouseResults = {
         overallScore: Math.floor(Math.random() * 40) + 50, // 50-89
@@ -304,7 +304,7 @@ export class LighthouseOptimizer {
           accessibility: Math.floor(Math.random() * 20) + 75,
           bestPractices: Math.floor(Math.random() * 25) + 70,
           seo: Math.floor(Math.random() * 20) + 80,
-          pwa: Math.floor(Math.random() * 30) + 50
+          pwa: Math.floor(Math.random() * 30) + 50,
         },
         metrics: {
           firstContentfulPaint: Math.floor(Math.random() * 1000) + 1500,
@@ -313,7 +313,7 @@ export class LighthouseOptimizer {
           cumulativeLayoutShift: Math.random() * 0.2 + 0.1,
           speedIndex: Math.floor(Math.random() * 1500) + 3000,
           totalBlockingTime: Math.floor(Math.random() * 300) + 200,
-          timeToInteractive: Math.floor(Math.random() * 2000) + 4000
+          timeToInteractive: Math.floor(Math.random() * 2000) + 4000,
         },
         opportunities: [
           {
@@ -323,7 +323,7 @@ export class LighthouseOptimizer {
             scoreDisplayMode: 'numeric',
             numericValue: Math.floor(Math.random() * 500) + 200,
             displayValue: '500ms',
-            details: { items: [] }
+            details: { items: [] },
           },
           {
             id: 'unused-javascript',
@@ -332,8 +332,8 @@ export class LighthouseOptimizer {
             scoreDisplayMode: 'numeric',
             numericValue: Math.floor(Math.random() * 800) + 300,
             displayValue: '800ms',
-            details: { items: [] }
-          }
+            details: { items: [] },
+          },
         ],
         diagnostics: [
           {
@@ -342,24 +342,25 @@ export class LighthouseOptimizer {
             description: 'Используйте современные форматы изображений',
             scoreDisplayMode: 'binary',
             displayValue: '1.2s',
-            details: { items: [] }
-          }
+            details: { items: [] },
+          },
         ],
         meta: {
           timestamp: Date.now(),
           url,
           device: this.config.analysis.device === 'both' ? 'desktop' : this.config.analysis.device,
           userAgent: 'Chrome/120.0.0.0',
-          lighthouseVersion: '11.0.0'
-        }
+          lighthouseVersion: '11.0.0',
+        },
       };
 
       console.log(`✅ Аудит завершен. Скор: ${mockResults.overallScore}`);
       return mockResults;
-
     } catch (error) {
       console.error('❌ Ошибка запуска Lighthouse:', error);
-      throw new Error(`Ошибка Lighthouse аудита: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+      throw new Error(
+        `Ошибка Lighthouse аудита: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+      );
     }
   }
 
@@ -368,7 +369,7 @@ export class LighthouseOptimizer {
    */
   private createOptimizationPlanInternal(results: LighthouseResults): OptimizationPlan[] {
     const plan: OptimizationPlan[] = [];
-    
+
     // Анализируем opportunities для создания плана
     for (const opportunity of results.opportunities) {
       let impact: 'high' | 'medium' | 'low' = 'low';
@@ -400,7 +401,7 @@ export class LighthouseOptimizer {
         description: 'Оптимизация изображений (WebP, сжатие, lazy loading)',
         impact: 'high',
         category: 'performance',
-        estimatedImprovement: 12
+        estimatedImprovement: 12,
       });
     }
 
@@ -410,7 +411,7 @@ export class LighthouseOptimizer {
         description: 'Оптимизация критических ресурсов',
         impact: 'high',
         category: 'performance',
-        estimatedImprovement: 10
+        estimatedImprovement: 10,
       });
     }
 
@@ -420,7 +421,7 @@ export class LighthouseOptimizer {
         description: 'Минификация и сжатие JavaScript',
         impact: 'medium',
         category: 'performance',
-        estimatedImprovement: 8
+        estimatedImprovement: 8,
       });
     }
 
@@ -430,7 +431,7 @@ export class LighthouseOptimizer {
         description: 'Минификация и очистка CSS',
         impact: 'medium',
         category: 'performance',
-        estimatedImprovement: 6
+        estimatedImprovement: 6,
       });
     }
 
@@ -440,7 +441,7 @@ export class LighthouseOptimizer {
         description: 'Настройка Service Worker для кэширования',
         impact: 'medium',
         category: 'pwa',
-        estimatedImprovement: 5
+        estimatedImprovement: 5,
       });
     }
 
@@ -455,46 +456,46 @@ export class LighthouseOptimizer {
    * Создание задачи оптимизации на основе Lighthouse opportunity
    */
   private createOptimizationTask(
-    opportunityId: string, 
-    impact: 'high' | 'medium' | 'low', 
-    estimatedImprovement: number
+    opportunityId: string,
+    impact: 'high' | 'medium' | 'low',
+    estimatedImprovement: number,
   ): OptimizationPlan | null {
     const taskMap: Record<string, { step: string; description: string; category: string }> = {
       'unused-css-rules': {
         step: 'remove-unused-css',
         description: 'Удаление неиспользуемых CSS правил',
-        category: 'performance'
+        category: 'performance',
       },
       'unused-javascript': {
         step: 'remove-unused-js',
         description: 'Удаление неиспользуемого JavaScript',
-        category: 'performance'
+        category: 'performance',
       },
       'uses-optimized-images': {
         step: 'optimize-images',
         description: 'Конвертация изображений в современные форматы',
-        category: 'performance'
+        category: 'performance',
       },
       'render-blocking-resources': {
         step: 'eliminate-render-blocking',
         description: 'Устранение блокирующих рендеринг ресурсов',
-        category: 'performance'
+        category: 'performance',
       },
       'unminified-css': {
         step: 'minify-css',
         description: 'Минификация CSS файлов',
-        category: 'performance'
+        category: 'performance',
       },
       'unminified-javascript': {
         step: 'minify-js',
         description: 'Минификация JavaScript файлов',
-        category: 'performance'
+        category: 'performance',
       },
       'uses-text-compression': {
         step: 'enable-compression',
         description: 'Включение сжатия текстовых ресурсов',
-        category: 'performance'
-      }
+        category: 'performance',
+      },
     };
 
     const taskTemplate = taskMap[opportunityId];
@@ -505,7 +506,7 @@ export class LighthouseOptimizer {
     return {
       ...taskTemplate,
       impact,
-      estimatedImprovement
+      estimatedImprovement,
     };
   }
 
@@ -519,36 +520,48 @@ export class LighthouseOptimizer {
 
     const improvements = this.calculateImprovements();
     const currentScore = this.currentResults?.overallScore || this.baseline.overallScore;
-    
+
     let report = '# 📊 Отчет об оптимизации Lighthouse Score\n\n';
-    
+
     // Общая информация
     report += '## 📈 Общие результаты\n\n';
     report += `- **Исходный скор:** ${this.baseline.overallScore}\n`;
     report += `- **Текущий скор:** ${currentScore}\n`;
     report += `- **Целевой скор:** ${this.config.targetScore}\n`;
     report += `- **Улучшение:** ${currentScore - this.baseline.overallScore} баллов\n\n`;
-    
+
     // Детали по категориям
     report += '## 🎯 Результаты по категориям\n\n';
     report += '| Категория | Исходно | Текущий | Цель | Статус |\n';
     report += '|-----------|---------|---------|------|--------|\n';
-    
+
     const categories = [
       { key: 'performance', name: 'Performance', target: this.config.categoryTargets.performance },
-      { key: 'accessibility', name: 'Accessibility', target: this.config.categoryTargets.accessibility },
-      { key: 'bestPractices', name: 'Best Practices', target: this.config.categoryTargets.bestPractices },
-      { key: 'seo', name: 'SEO', target: this.config.categoryTargets.seo }
+      {
+        key: 'accessibility',
+        name: 'Accessibility',
+        target: this.config.categoryTargets.accessibility,
+      },
+      {
+        key: 'bestPractices',
+        name: 'Best Practices',
+        target: this.config.categoryTargets.bestPractices,
+      },
+      { key: 'seo', name: 'SEO', target: this.config.categoryTargets.seo },
     ];
 
     for (const category of categories) {
-      const baselineScore = this.baseline.categories[category.key as keyof typeof this.baseline.categories];
-      const currentScoreForCategory = this.currentResults?.categories[category.key as keyof typeof this.currentResults.categories] ?? baselineScore;
+      const baselineScore =
+        this.baseline.categories[category.key as keyof typeof this.baseline.categories];
+      const currentScoreForCategory =
+        this.currentResults?.categories[
+          category.key as keyof typeof this.currentResults.categories
+        ] ?? baselineScore;
       const status = (currentScoreForCategory ?? 0) >= category.target ? '✅' : '⚠️';
-      
+
       report += `| ${category.name} | ${baselineScore} | ${currentScoreForCategory} | ${category.target} | ${status} |\n`;
     }
-    
+
     // Улучшения метрик
     if (improvements.length > 0) {
       report += '\n## 🚀 Улучшения метрик\n\n';
@@ -557,17 +570,18 @@ export class LighthouseOptimizer {
         report += `- **${improvement.metric}:** ${sign}${improvement.improvement.toFixed(1)}%\n`;
       }
     }
-    
+
     // Рекомендации
     report += '\n## 💡 Рекомендации для дальнейшего улучшения\n\n';
-    
+
     if (currentScore < this.config.targetScore) {
       const gap = this.config.targetScore - currentScore;
       report += `Для достижения целевого скора необходимо улучшить результат на ${gap} баллов.\n\n`;
-      
+
       // Специфичные рекомендации
       if (this.baseline.categories.performance < this.config.categoryTargets.performance) {
-        report += '- 🔧 **Performance:** Рассмотрите дополнительную оптимизацию изображений и JavaScript\n';
+        report +=
+          '- 🔧 **Performance:** Рассмотрите дополнительную оптимизацию изображений и JavaScript\n';
       }
       if (this.baseline.categories.accessibility < this.config.categoryTargets.accessibility) {
         report += '- ♿ **Accessibility:** Улучшите доступность интерфейса\n';
@@ -581,7 +595,7 @@ export class LighthouseOptimizer {
     } else {
       report += '🎉 Поздравляем! Целевой скор достигнут!\n';
     }
-    
+
     return report;
   }
 
@@ -594,7 +608,7 @@ export class LighthouseOptimizer {
     }
 
     const improvements = [];
-    
+
     // Сравниваем основные метрики
     const metrics = [
       { key: 'firstContentfulPaint', name: 'First Contentful Paint', invert: true },
@@ -602,22 +616,23 @@ export class LighthouseOptimizer {
       { key: 'firstInputDelay', name: 'First Input Delay', invert: true },
       { key: 'cumulativeLayoutShift', name: 'Cumulative Layout Shift', invert: true },
       { key: 'speedIndex', name: 'Speed Index', invert: true },
-      { key: 'totalBlockingTime', name: 'Total Blocking Time', invert: true }
+      { key: 'totalBlockingTime', name: 'Total Blocking Time', invert: true },
     ];
 
     for (const metric of metrics) {
       const baseValue = this.baseline.metrics[metric.key as keyof typeof this.baseline.metrics];
-      const currentValue = this.currentResults.metrics[metric.key as keyof typeof this.currentResults.metrics];
-      
+      const currentValue =
+        this.currentResults.metrics[metric.key as keyof typeof this.currentResults.metrics];
+
       if (baseValue && currentValue) {
         let improvement = ((baseValue - currentValue) / baseValue) * 100;
         if (!metric.invert) {
           improvement = -improvement;
         }
-        
+
         improvements.push({
           metric: metric.name,
-          improvement
+          improvement,
         });
       }
     }
@@ -630,13 +645,13 @@ export class LighthouseOptimizer {
    */
   getProgress(): OptimizationProgress {
     const currentScore = this.currentResults?.overallScore || this.baseline?.overallScore || 0;
-    const improvements = this.calculateImprovements().map(imp => ({
+    const improvements = this.calculateImprovements().map((imp) => ({
       metric: imp.metric,
       beforeValue: this.baseline?.overallScore || 0,
       afterValue: this.currentResults?.overallScore || 0,
-      improvement: imp.improvement
+      improvement: imp.improvement,
     }));
-    
+
     return {
       currentStep: 'Анализ результатов',
       completedSteps: ['Baseline создан', 'План оптимизации готов'],
@@ -644,7 +659,7 @@ export class LighthouseOptimizer {
       estimatedTimeRemaining: 120, // секунды
       currentScore,
       targetScore: this.config.targetScore,
-      improvementsSinceStart: improvements
+      improvementsSinceStart: improvements,
     };
   }
 

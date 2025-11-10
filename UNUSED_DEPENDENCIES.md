@@ -1,8 +1,9 @@
 # Найденные неиспользуемые зависимости (по результатам depcheck):
 
 ## Production dependencies (можно удалить если не используются):
+
 - @sentry/browser
-- @sentry/integrations  
+- @sentry/integrations
 - @sentry/node
 - @types/dompurify
 - compression
@@ -15,6 +16,7 @@
 - zod
 
 ## Dev dependencies (можно удалить):
+
 - @axe-core/playwright
 - @changesets/changelog-github
 - @commitlint/cli
@@ -38,5 +40,4 @@
 - vite-plugin-pwa
 - workbox-window
 
-Для удаления выполните:
-pnpm remove [package-name]
+Для удаления выполните: pnpm remove [package-name]

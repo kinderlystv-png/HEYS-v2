@@ -1,17 +1,20 @@
 # 🎯 ЭТАЛОННАЯ СИСТЕМА ТЕСТИРОВАНИЯ - УНИВЕРСАЛЬНЫЙ СТАНДАРТ
 
 ## ПРОВЕРЕННЫЕ РЕЗУЛЬТАТЫ
+
 - **React/Next.js**: 472/472 тестов (100% успех)
 - **SvelteKit**: Успешно адаптирована
 - **Vue/Nuxt/Angular**: Полная поддержка
 
 ## 1. ФИЛОСОФИЯ
+
 - Тестируем поведение, а не реализацию
 - Изоляция тестов друг от друга
 - Использование data-testid вместо текста
 - Универсальность для любого фреймворка
 
 ## 2. СТРУКТУРА ПАПОК
+
 ```
 tests/
 ├── utils/          # Утилиты тестирования
@@ -22,6 +25,7 @@ tests/
 ```
 
 ## 3. КОНСТАНТЫ СЕЛЕКТОРОВ
+
 ```javascript
 // src/constants/test-ids.js
 export const TEST_IDS = {
@@ -33,13 +37,14 @@ export const TEST_IDS = {
   // Компоненты приложения
   CREATE_EVENT_FORM: 'create-event-form',
   FIELD_EVENT_TITLE: 'field-event-title',
-  FIELD_CLIENT_NAME: 'field-client-name'
+  FIELD_CLIENT_NAME: 'field-client-name',
 };
 ```
 
 ## 4. КОНФИГУРАЦИЯ VITEST
 
 ### Универсальная конфигурация
+
 ```javascript
 // vitest.config.js
 import { defineConfig } from 'vitest/config';
@@ -52,19 +57,20 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'tests/', '*.config.*']
-    }
+      exclude: ['node_modules/', 'tests/', '*.config.*'],
+    },
   },
   resolve: {
     alias: {
       '@': './src',
-      '@tests': './tests'
-    }
-  }
+      '@tests': './tests',
+    },
+  },
 });
 ```
 
 ## 5. SETUP ФАЙЛ
+
 ```javascript
 // tests/setup.ts
 import '@testing-library/jest-dom';
@@ -79,24 +85,25 @@ beforeAll(() => {
   global.IntersectionObserver = vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
     unobserve: vi.fn(),
-    disconnect: vi.fn()
+    disconnect: vi.fn(),
   }));
 
   // Mock window.matchMedia
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: vi.fn().mockImplementation(query => ({
+    value: vi.fn().mockImplementation((query) => ({
       matches: false,
       media: query,
       onchange: null,
       addEventListener: vi.fn(),
-      removeEventListener: vi.fn()
-    }))
+      removeEventListener: vi.fn(),
+    })),
   });
 });
 ```
 
 ## 6. ФАБРИКИ ДАННЫХ
+
 ```javascript
 // tests/fixtures/factories.js
 export const dataFactory = {
@@ -105,7 +112,7 @@ export const dataFactory = {
     email: `test-${Date.now()}@example.com`,
     name: 'Test User',
     role: 'client',
-    ...overrides
+    ...overrides,
   }),
 
   event: (overrides = {}) => ({
@@ -113,12 +120,13 @@ export const dataFactory = {
     title: 'Test Event',
     date: new Date().toISOString(),
     status: 'draft',
-    ...overrides
-  })
+    ...overrides,
+  }),
 };
 ```
 
 ## 7. УНИВЕРСАЛЬНАЯ ОБЕРТКА
+
 ```javascript
 // tests/utils/test-wrapper.js
 export function renderWithProviders(component, options = {}) {
@@ -132,6 +140,7 @@ export function renderWithProviders(component, options = {}) {
 ```
 
 ## 8. ПРИМЕР ТЕСТА
+
 ```javascript
 // tests/components/Button.test.jsx
 import { describe, it, expect, vi } from 'vitest';
@@ -144,9 +153,11 @@ describe('Button Component', () => {
     const handleClick = vi.fn();
     const user = userEvent.setup();
 
-    render(<Button onClick={handleClick} data-testid={TEST_IDS.BUTTON_SUBMIT}>
-      Click me
-    </Button>);
+    render(
+      <Button onClick={handleClick} data-testid={TEST_IDS.BUTTON_SUBMIT}>
+        Click me
+      </Button>,
+    );
 
     await user.click(screen.getByTestId(TEST_IDS.BUTTON_SUBMIT));
 
@@ -157,14 +168,12 @@ describe('Button Component', () => {
 
 ## 9. GIT HOOKS ОПТИМИЗАЦИЯ
 
-
 ### Pre-commit hook (Husky v9/v10)
 
 ```bash
 # .husky/pre-commit
 npx lint-staged
 ```
-
 
 ### Pre-push hook (Husky v9/v10)
 
@@ -173,8 +182,9 @@ npx lint-staged
 npx vitest run --coverage=false
 ```
 
-> Примечание: Начиная с Husky v10 строки с `husky.sh` больше не требуются и вызывают предупреждения. Используйте минимальные команды, как в примерах выше. Скрипт `prepare` в package.json должен быть `"husky"`.
-
+> Примечание: Начиная с Husky v10 строки с `husky.sh` больше не требуются и
+> вызывают предупреждения. Используйте минимальные команды, как в примерах выше.
+> Скрипт `prepare` в package.json должен быть `"husky"`.
 
 ## 10. СКРИПТЫ В PACKAGE.JSON
 
@@ -193,7 +203,6 @@ npx vitest run --coverage=false
 
 ## 11. КОНФИГУРАЦИИ ПО ФРЕЙМВОРКАМ
 
-
 ### React/Next.js
 
 ```javascript
@@ -207,16 +216,15 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./tests/setup.ts']
+    setupFiles: ['./tests/setup.ts'],
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
-    }
-  }
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
 });
 ```
-
 
 ### SvelteKit
 
@@ -232,13 +240,12 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
     alias: {
-      '$lib': './src/lib',
-      '$app': '@sveltejs/kit/app'
-    }
-  }
+      $lib: './src/lib',
+      $app: '@sveltejs/kit/app',
+    },
+  },
 });
 ```
-
 
 ### Vue/Nuxt
 
@@ -252,11 +259,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./tests/setup.ts']
-  }
+    setupFiles: ['./tests/setup.ts'],
+  },
 });
 ```
-
 
 ## 12. КРИТИЧНЫЕ ТИПЫ TypeScript
 
@@ -274,7 +280,6 @@ declare global {
 
 ## 13. ПРИНЦИПЫ НАПИСАНИЯ ТЕСТОВ
 
-
 ### ✅ Правильно
 
 ```javascript
@@ -291,7 +296,6 @@ it('should create event when form is submitted', async () => {
 });
 ```
 
-
 ### ❌ Неправильно
 
 ```javascript
@@ -307,10 +311,9 @@ it('should call setState when button clicked', () => {
 });
 ```
 
-
 ## 14. СТАНДАРТНЫЕ МОКИ
 
-```javascript
+````javascript
 // tests/mocks/api.js
 export const mockApiResponse = (data, status = 200) => ({
   ok: status >= 200 && status < 300,
@@ -343,6 +346,6 @@ export const mockLocalStorage = () => {
 Test Files  1 passed (1)
      Tests  1 passed (1)
      Time   xxx ms
-```
+````
 
 **Система готова к использованию в любом проекте!**

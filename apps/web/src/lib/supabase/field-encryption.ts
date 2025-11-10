@@ -2,7 +2,7 @@
 /**
  * Proof-of-concept реализация шифрования полей для Supabase
  * Обеспечивает защиту чувствительных данных на уровне приложения
- * 
+ *
  * @created КТ3 - Supabase Security
  * @author HEYS Security Team
  */
@@ -14,7 +14,8 @@ class FieldEncryption {
 
   constructor(key?: string) {
     // В продакшене ключ должен браться из переменных окружения
-    this.encryptionKey = key || process.env.NEXT_PUBLIC_ENCRYPTION_KEY || 'default-key-change-in-production';
+    this.encryptionKey =
+      key || process.env.NEXT_PUBLIC_ENCRYPTION_KEY || 'default-key-change-in-production';
   }
 
   /**
@@ -64,14 +65,14 @@ class FieldEncryption {
     // В продакшене использовать криптографически стойкие алгоритмы
     const key = this.encryptionKey;
     let result = '';
-    
+
     for (let i = 0; i < text.length; i++) {
       const charCode = text.charCodeAt(i);
       const keyChar = key.charCodeAt(i % key.length);
       const encrypted = charCode ^ keyChar;
       result += encrypted.toString(16).padStart(2, '0');
     }
-    
+
     return btoa(result); // Base64 encoding
   }
 
@@ -83,7 +84,7 @@ class FieldEncryption {
       const hexString = atob(encryptedText); // Base64 decoding
       const key = this.encryptionKey;
       let result = '';
-      
+
       for (let i = 0; i < hexString.length; i += 2) {
         const hexChar = hexString.substr(i, 2);
         const encrypted = parseInt(hexChar, 16);
@@ -91,7 +92,7 @@ class FieldEncryption {
         const decrypted = encrypted ^ keyChar;
         result += String.fromCharCode(decrypted);
       }
-      
+
       return result;
     } catch (error) {
       throw new Error('Ошибка расшифровки: поврежденные данные');
@@ -107,7 +108,7 @@ const fieldEncryption = new FieldEncryption();
 export interface EncryptableUserProfile {
   id: string;
   user_id: string;
-  
+
   // Обычные поля
   display_name?: string;
   avatar_url?: string;
@@ -117,14 +118,14 @@ export interface EncryptableUserProfile {
   theme: 'light' | 'dark' | 'auto';
   role: string;
   permissions: string[];
-  
+
   // Шифруемые поля
-  encrypted_phone?: string;        // Зашифрованный телефон
-  encrypted_address?: string;      // Зашифрованный адрес (JSON)
-  encrypted_first_name?: string;   // Зашифрованное имя
-  encrypted_last_name?: string;    // Зашифрованная фамилия
+  encrypted_phone?: string; // Зашифрованный телефон
+  encrypted_address?: string; // Зашифрованный адрес (JSON)
+  encrypted_first_name?: string; // Зашифрованное имя
+  encrypted_last_name?: string; // Зашифрованная фамилия
   encrypted_security_questions?: string; // Зашифрованные секретные вопросы
-  
+
   // Метаданные
   created_at: string;
   updated_at: string;
@@ -215,15 +216,21 @@ export class EncryptedProfileService {
       }
 
       if (encryptedProfile.encrypted_first_name) {
-        decryptedData.first_name = await this.encryption.decrypt(encryptedProfile.encrypted_first_name);
+        decryptedData.first_name = await this.encryption.decrypt(
+          encryptedProfile.encrypted_first_name,
+        );
       }
 
       if (encryptedProfile.encrypted_last_name) {
-        decryptedData.last_name = await this.encryption.decrypt(encryptedProfile.encrypted_last_name);
+        decryptedData.last_name = await this.encryption.decrypt(
+          encryptedProfile.encrypted_last_name,
+        );
       }
 
       if (encryptedProfile.encrypted_security_questions) {
-        const questionsJson = await this.encryption.decrypt(encryptedProfile.encrypted_security_questions);
+        const questionsJson = await this.encryption.decrypt(
+          encryptedProfile.encrypted_security_questions,
+        );
         decryptedData.security_questions = JSON.parse(questionsJson);
       }
 
@@ -238,8 +245,8 @@ export class EncryptedProfileService {
    * Обновить зашифрованные поля профиля
    */
   async updateEncryptedProfile(
-    profileId: string, 
-    updates: Partial<DecryptedUserData & Record<string, any>>
+    profileId: string,
+    updates: Partial<DecryptedUserData & Record<string, any>>,
   ): Promise<Record<string, any>> {
     // Разделяем обновления на шифруемые и обычные
     const sensitiveFields = ['phone', 'address', 'first_name', 'last_name', 'security_questions'];
@@ -260,7 +267,7 @@ export class EncryptedProfileService {
     // Объединяем с обычными обновлениями
     return {
       ...normalUpdates,
-      ...encryptedData
+      ...encryptedData,
     };
   }
 
@@ -269,7 +276,7 @@ export class EncryptedProfileService {
    */
   async searchEncryptedField(
     fieldName: 'phone' | 'first_name' | 'last_name',
-    searchValue: string
+    searchValue: string,
   ): Promise<string> {
     // Для поиска по зашифрованным полям нужно зашифровать поисковый запрос
     // Это работает только для точного совпадения
@@ -290,24 +297,27 @@ export class EncryptedPreferencesService {
   /**
    * Зашифровать значение настройки
    */
-  async encryptPreferenceValue(value: any, shouldEncrypt: boolean = false): Promise<{
+  async encryptPreferenceValue(
+    value: any,
+    shouldEncrypt: boolean = false,
+  ): Promise<{
     value: any;
     is_encrypted: boolean;
   }> {
     if (!shouldEncrypt) {
       return {
         value,
-        is_encrypted: false
+        is_encrypted: false,
       };
     }
 
     try {
       const valueString = typeof value === 'string' ? value : JSON.stringify(value);
       const encryptedValue = await this.encryption.encrypt(valueString);
-      
+
       return {
         value: encryptedValue,
-        is_encrypted: true
+        is_encrypted: true,
       };
     } catch (error) {
       console.error('Preference encryption error:', error);
@@ -325,7 +335,7 @@ export class EncryptedPreferencesService {
 
     try {
       const decryptedString = await this.encryption.decrypt(encryptedValue);
-      
+
       // Пытаемся распарсить как JSON, если не получается - возвращаем строку
       try {
         return JSON.parse(decryptedString);
@@ -344,11 +354,11 @@ export class EncryptedPreferencesService {
   shouldEncryptPreference(category: string, key: string): boolean {
     // Определяем чувствительные настройки
     const sensitivePreferences: Record<string, string[]> = {
-      'security': ['backup_email', 'recovery_phone', 'emergency_contact'],
-      'personal': ['ssn', 'passport', 'driver_license'],
-      'payment': ['card_number', 'bank_account', 'crypto_wallet'],
-      'medical': ['allergies', 'conditions', 'medications'],
-      'private': ['notes', 'diary', 'secrets']
+      security: ['backup_email', 'recovery_phone', 'emergency_contact'],
+      personal: ['ssn', 'passport', 'driver_license'],
+      payment: ['card_number', 'bank_account', 'crypto_wallet'],
+      medical: ['allergies', 'conditions', 'medications'],
+      private: ['notes', 'diary', 'secrets'],
     };
 
     return sensitivePreferences[category]?.includes(key) || false;
@@ -376,28 +386,30 @@ export const EncryptionUtils = {
   /**
    * Получить статистику шифрования профиля
    */
-  getEncryptionStats: (profile: EncryptableUserProfile): {
+  getEncryptionStats: (
+    profile: EncryptableUserProfile,
+  ): {
     total_fields: number;
     encrypted_fields: number;
     encryption_percentage: number;
   } => {
     const encryptedFields = [
       'encrypted_phone',
-      'encrypted_address', 
+      'encrypted_address',
       'encrypted_first_name',
       'encrypted_last_name',
-      'encrypted_security_questions'
+      'encrypted_security_questions',
     ];
 
     const totalFields = encryptedFields.length;
-    const actualEncrypted = encryptedFields.filter(field => 
-      profile[field as keyof EncryptableUserProfile]
+    const actualEncrypted = encryptedFields.filter(
+      (field) => profile[field as keyof EncryptableUserProfile],
     ).length;
 
     return {
       total_fields: totalFields,
       encrypted_fields: actualEncrypted,
-      encryption_percentage: totalFields > 0 ? (actualEncrypted / totalFields) * 100 : 0
+      encryption_percentage: totalFields > 0 ? (actualEncrypted / totalFields) * 100 : 0,
     };
   },
 
@@ -406,5 +418,5 @@ export const EncryptionUtils = {
    */
   validateEncryptionKey: (key: string): boolean => {
     return key.length >= 16; // Минимальная длина ключа
-  }
+  },
 };

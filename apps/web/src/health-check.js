@@ -42,7 +42,9 @@ async function healthCheck() {
     log.debug('Health check passed', healthData);
     return healthData;
   } catch (error) {
-    log.error('Health check failed', { error: error instanceof Error ? error.message : String(error) });
+    log.error('Health check failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     throw error;
   }
 }
@@ -70,11 +72,13 @@ if (process.env.HEALTH_SERVER === 'true') {
         res.end(JSON.stringify(healthData, null, 2));
       } catch (error) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          status: 'unhealthy',
-          error: error instanceof Error ? error.message : String(error),
-          timestamp: new Date().toISOString(),
-        }));
+        res.end(
+          JSON.stringify({
+            status: 'unhealthy',
+            error: error instanceof Error ? error.message : String(error),
+            timestamp: new Date().toISOString(),
+          }),
+        );
       }
     } else {
       res.writeHead(404);

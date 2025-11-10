@@ -19,7 +19,7 @@ const customLevels = {
     warn: 2,
     info: 3,
     debug: 4,
-    trace: 5
+    trace: 5,
   },
   colors: {
     fatal: 'red',
@@ -27,8 +27,8 @@ const customLevels = {
     warn: 'yellow',
     info: 'green',
     debug: 'blue',
-    trace: 'gray'
-  }
+    trace: 'gray',
+  },
 };
 
 // Добавляем цвета в winston
@@ -41,7 +41,7 @@ const consoleFormat = winston.format.combine(
   winston.format.printf(({ timestamp, level, message, service, ...meta }) => {
     const metaString = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
     return `${timestamp} [${service || 'HEYS'}] ${level}: ${message} ${metaString}`;
-  })
+  }),
 );
 
 const fileFormat = winston.format.combine(
@@ -54,15 +54,15 @@ const fileFormat = winston.format.combine(
       level,
       service: service || 'heys-platform',
       message,
-      ...meta
+      ...meta,
     };
-    
+
     if (stack) {
       logEntry.stack = stack;
     }
-    
+
     return JSON.stringify(logEntry);
-  })
+  }),
 );
 
 // Конфигурация транспортов
@@ -72,7 +72,7 @@ const transports = [
     level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug',
     format: process.env.NODE_ENV === 'production' ? fileFormat : consoleFormat,
     handleExceptions: true,
-    handleRejections: true
+    handleRejections: true,
   }),
 
   // Combined log file
@@ -82,7 +82,7 @@ const transports = [
     format: fileFormat,
     maxsize: 10485760, // 10MB
     maxFiles: 5,
-    tailable: true
+    tailable: true,
   }),
 
   // Error log file
@@ -93,19 +93,21 @@ const transports = [
     maxsize: 5242880, // 5MB
     maxFiles: 3,
     handleExceptions: true,
-    handleRejections: true
+    handleRejections: true,
   }),
 
   // Debug log file (только для development)
-  ...(process.env.NODE_ENV !== 'production' ? [
-    new winston.transports.File({
-      filename: path.join(logDir, 'heys-debug.log'),
-      level: 'debug',
-      format: fileFormat,
-      maxsize: 10485760,
-      maxFiles: 2
-    })
-  ] : [])
+  ...(process.env.NODE_ENV !== 'production'
+    ? [
+        new winston.transports.File({
+          filename: path.join(logDir, 'heys-debug.log'),
+          level: 'debug',
+          format: fileFormat,
+          maxsize: 10485760,
+          maxFiles: 2,
+        }),
+      ]
+    : []),
 ];
 
 // Основная конфигурация Winston
@@ -116,25 +118,25 @@ const winstonConfig = {
   defaultMeta: {
     service: 'heys-platform',
     version: process.env.npm_package_version || '1.0.0',
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
   },
   exitOnError: false,
-  
+
   // Exception handling
   exceptionHandlers: [
     new winston.transports.File({
       filename: path.join(logDir, 'heys-exceptions.log'),
-      format: fileFormat
-    })
+      format: fileFormat,
+    }),
   ],
 
   // Rejection handling
   rejectionHandlers: [
     new winston.transports.File({
       filename: path.join(logDir, 'heys-rejections.log'),
-      format: fileFormat
-    })
-  ]
+      format: fileFormat,
+    }),
+  ],
 };
 
 // Создаем основной логгер
@@ -147,21 +149,21 @@ logger.fatal = (message, meta) => logger.log('fatal', message, meta);
 // HTTP request logger middleware
 logger.httpLogger = (req, res, next) => {
   const start = Date.now();
-  
+
   res.on('finish', () => {
     const duration = Date.now() - start;
     const logLevel = res.statusCode >= 400 ? 'error' : 'info';
-    
+
     logger.log(logLevel, 'HTTP Request', {
       method: req.method,
       url: req.url,
       statusCode: res.statusCode,
       duration,
       userAgent: req.get('User-Agent'),
-      ip: req.ip || req.connection.remoteAddress
+      ip: req.ip || req.connection.remoteAddress,
     });
   });
-  
+
   if (next) next();
 };
 
@@ -171,16 +173,16 @@ logger.errorHandler = (err, req, res, next) => {
     error: {
       message: err.message,
       stack: err.stack,
-      code: err.code
+      code: err.code,
     },
     request: {
       method: req.method,
       url: req.url,
       headers: req.headers,
-      body: req.body
-    }
+      body: req.body,
+    },
   });
-  
+
   if (next) next(err);
 };
 
@@ -190,7 +192,7 @@ logger.performance = (operation, duration, metadata = {}) => {
   logger.log(level, `Performance: ${operation}`, {
     operation,
     duration,
-    ...metadata
+    ...metadata,
   });
 };
 
@@ -199,7 +201,7 @@ logger.security = (event, details = {}) => {
   logger.warn('Security Event', {
     event,
     timestamp: new Date().toISOString(),
-    ...details
+    ...details,
   });
 };
 
@@ -210,7 +212,7 @@ logger.audit = (action, user, resource, details = {}) => {
     user,
     resource,
     timestamp: new Date().toISOString(),
-    ...details
+    ...details,
   });
 };
 
@@ -221,7 +223,7 @@ logger.healthCheck = () => {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       transports: logger.transports.length,
-      level: logger.level
+      level: logger.level,
     });
     return true;
   } catch (error) {
@@ -237,18 +239,18 @@ module.exports = {
   levels: customLevels.levels,
   colors: customLevels.colors,
   transports,
-  
+
   // Функции создания логгеров
   createLogger: (service) => {
     return winston.createLogger({
       ...winstonConfig,
       defaultMeta: {
         ...winstonConfig.defaultMeta,
-        service
-      }
+        service,
+      },
     });
   },
-  
+
   // Получение конфигурации по окружению
   getConfig: (env = process.env.NODE_ENV) => {
     const configs = {
@@ -256,25 +258,25 @@ module.exports = {
         level: 'debug',
         console: true,
         file: true,
-        colorize: true
+        colorize: true,
       },
       test: {
         level: 'error',
         console: false,
         file: true,
-        colorize: false
+        colorize: false,
       },
       production: {
         level: 'warn',
         console: true,
         file: true,
         colorize: false,
-        json: true
-      }
+        json: true,
+      },
     };
-    
+
     return configs[env] || configs.development;
-  }
+  },
 };
 
 // Default export для ES6 модулей

@@ -1,8 +1,4 @@
-import { 
-  SecurityEvent, 
-  SecuritySeverity, 
-  SecurityEventType
-} from './types';
+import { SecurityEvent, SecurityEventType, SecuritySeverity } from './types';
 
 import { ThreatDetectionService } from './index';
 
@@ -28,11 +24,11 @@ const demoEvents: SecurityEvent[] = [
       responseTime: 200,
       geoDistance: 5000,
       deviceChanged: true,
-      privilegeLevel: 'admin'
+      privilegeLevel: 'admin',
     },
     riskScore: 85,
     isBlocked: false,
-    description: 'Multiple failed login attempts from suspicious IP'
+    description: 'Multiple failed login attempts from suspicious IP',
   },
   {
     id: 'evt_2',
@@ -44,18 +40,19 @@ const demoEvents: SecurityEvent[] = [
     userId: 'user_789',
     sessionId: 'sess_789',
     ipAddress: '192.168.1.50',
-    userAgent: 'Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)',
+    userAgent:
+      'Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)',
     metadata: {
       requestCount: 500,
       sessionDuration: 3600000,
       errorRate: 0.1,
       dataSize: 5000000,
-      unusual_hours: 1
+      unusual_hours: 1,
     },
     riskScore: 65,
     isBlocked: false,
-    description: 'Unusual API access pattern detected'
-  }
+    description: 'Unusual API access pattern detected',
+  },
 ];
 
 /**
@@ -82,12 +79,12 @@ export async function runThreatDetectionDemo(): Promise<void> {
       console.log(`🔍 Analyzing event: ${event.id} (${event.type})`);
       console.log(`   Source: ${event.source}, IP: ${event.sourceIP}`);
       console.log(`   Severity: ${event.severity}, Risk Score: ${event.riskScore}`);
-      
+
       const result = await threatDetection.analyzeSecurityEvent(event);
-      
+
       // Выводим результаты анализа
       console.log('\n📊 Analysis Results:');
-      
+
       if (result.anomaly) {
         console.log(`   🎯 Anomaly detected: ${result.anomaly.explanation}`);
         console.log(`   📈 Anomaly score: ${result.anomaly.anomalyScore.toFixed(3)}`);
@@ -95,16 +92,16 @@ export async function runThreatDetectionDemo(): Promise<void> {
       } else {
         console.log('   ✅ No anomaly detected');
       }
-      
+
       if (result.iocMatches.length > 0) {
         console.log(`   🎯 IOC matches found: ${result.iocMatches.length}`);
-        result.iocMatches.forEach(match => {
+        result.iocMatches.forEach((match) => {
           console.log(`      - ${match.iocType}: ${match.matchedValue} (${match.category})`);
         });
       } else {
         console.log('   ✅ No IOC matches');
       }
-      
+
       if (result.incidentCreated) {
         console.log(`   🚨 INCIDENT CREATED: ${result.incidentCreated.id}`);
         console.log(`      Title: ${result.incidentCreated.title}`);
@@ -114,7 +111,7 @@ export async function runThreatDetectionDemo(): Promise<void> {
       } else {
         console.log('   ℹ️ No incident created');
       }
-      
+
       console.log('\n' + '─'.repeat(80) + '\n');
     }
 
@@ -124,9 +121,8 @@ export async function runThreatDetectionDemo(): Promise<void> {
     console.log(`   Threat Intelligence IOCs: ${stats.threatIntel.totalIOCs}`);
     console.log(`   Active Incidents: ${stats.incidents.openIncidents}`);
     console.log(`   ML Models: ${stats.models.length}`);
-    
-    console.log('\n🎉 Demo completed successfully!');
 
+    console.log('\n🎉 Demo completed successfully!');
   } catch (error) {
     console.error('❌ Demo failed:', error);
   }
@@ -137,7 +133,7 @@ export async function runThreatDetectionDemo(): Promise<void> {
  */
 function generateTrainingData(count: number): SecurityEvent[] {
   const events: SecurityEvent[] = [];
-  
+
   for (let i = 0; i < count; i++) {
     events.push({
       id: `training_${i}`,
@@ -156,19 +152,24 @@ function generateTrainingData(count: number): SecurityEvent[] {
         geoDistance: Math.floor(Math.random() * 1000),
         deviceChanged: Math.random() > 0.8,
         privilegeLevel: Math.random() > 0.7 ? 'admin' : 'user',
-        failedAttempts: Math.floor(Math.random() * 5)
+        failedAttempts: Math.floor(Math.random() * 5),
       },
       riskScore: Math.floor(Math.random() * 60) + 20, // 20-80 for normal events
       isBlocked: false,
-      description: `Training event ${i}`
+      description: `Training event ${i}`,
     });
   }
-  
+
   return events;
 }
 
 function getRandomEventType(): SecurityEventType {
-  const types: SecurityEventType[] = ['login_attempt', 'suspicious_request', 'data_exfiltration', 'anomalous_behavior'];
+  const types: SecurityEventType[] = [
+    'login_attempt',
+    'suspicious_request',
+    'data_exfiltration',
+    'anomalous_behavior',
+  ];
   return types[Math.floor(Math.random() * types.length)] || 'login_attempt';
 }
 

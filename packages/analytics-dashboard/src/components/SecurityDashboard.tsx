@@ -1,5 +1,5 @@
-import { SecurityAnalyticsService, IntegratedSecurityEvent } from '@heys/shared';
-import React, { useState, useEffect, useCallback } from 'react';
+import { IntegratedSecurityEvent, SecurityAnalyticsService } from '@heys/shared';
+import React, { useCallback, useEffect, useState } from 'react';
 
 export interface SecurityDashboardProps {
   userId: string;
@@ -51,7 +51,7 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({
   supabaseUrl,
   supabaseKey,
   timeRange = 'day',
-  enableRealTime = true
+  enableRealTime = true,
 }) => {
   const [analytics, setAnalytics] = useState<SecurityAnalytics | null>(null);
   const [realtimeEvents, setRealtimeEvents] = useState<IntegratedSecurityEvent[]>([]);
@@ -67,7 +67,7 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({
           supabaseUrl,
           supabaseKey,
           enableRealTimeProcessing: enableRealTime,
-          enableAutomatedResponse: true
+          enableAutomatedResponse: true,
         });
 
         await service.initialize();
@@ -76,7 +76,7 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({
         // Подписка на real-time события
         if (enableRealTime) {
           service.on('eventProcessed', (event: IntegratedSecurityEvent) => {
-            setRealtimeEvents(prev => [event, ...prev.slice(0, 99)]); // последние 100 событий
+            setRealtimeEvents((prev) => [event, ...prev.slice(0, 99)]); // последние 100 событий
           });
 
           service.on('incidentCreated', (incident: any) => {
@@ -149,8 +149,8 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({
         <h2>🛡️ Security Dashboard</h2>
         <div className="time-range-selector">
           <label>Time Range: </label>
-          <select 
-            value={timeRange} 
+          <select
+            value={timeRange}
             onChange={() => window.location.reload()} // Simplified for demo
           >
             <option value="hour">Last Hour</option>
@@ -215,9 +215,7 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({
               </div>
               <div className="threat-stats">
                 <span className="matches">{threat.matches_count} matches</span>
-                <span className="last-seen">
-                  {new Date(threat.last_seen).toLocaleDateString()}
-                </span>
+                <span className="last-seen">{new Date(threat.last_seen).toLocaleDateString()}</span>
               </div>
             </div>
           ))}
@@ -231,10 +229,10 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({
           {analytics.threats.threat_distribution.map((item, index) => (
             <div key={index} className="distribution-item">
               <div className="distribution-bar">
-                <div 
+                <div
                   className="distribution-fill"
-                  style={{ 
-                    width: `${(item.count / (analytics.threats.threat_distribution[0]?.count || 1) * 100) || 0}%` 
+                  style={{
+                    width: `${(item.count / (analytics.threats.threat_distribution[0]?.count || 1)) * 100 || 0}%`,
                   }}
                 />
               </div>
@@ -282,9 +280,7 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({
           <div className="realtime-events">
             {realtimeEvents.slice(0, 10).map((event, index) => (
               <div key={index} className={`realtime-event threat-${event.threat_level}`}>
-                <div className="event-time">
-                  {new Date(event.created_at).toLocaleTimeString()}
-                </div>
+                <div className="event-time">{new Date(event.created_at).toLocaleTimeString()}</div>
                 <div className="event-type">{event.event_type}</div>
                 <div className="event-ip">{event.source_ip}</div>
                 {event.anomaly_score && (

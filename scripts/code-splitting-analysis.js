@@ -3,10 +3,10 @@
 /**
  * CLI для анализа возможностей code splitting
  * Полнофункциональная версия с TypeScript поддержкой
- * 
+ *
  * Использование:
  * node scripts/code-splitting-analysis.js [путь] [опции]
- * 
+ *
  * Опции:
  * --preset <тип>     - Пресет конфигурации (aggressive|balanced|conservative|mobile)
  * --bundler <тип>    - Целевой бандлер (vite|webpack|rollup)
@@ -34,14 +34,14 @@ let options = {
   output: null,
   json: false,
   verbose: false,
-  help: false
+  help: false,
 };
 
 // Парсинг аргументов
 for (let i = 1; i < args.length; i++) {
   const arg = args[i];
   const nextArg = args[i + 1];
-  
+
   switch (arg) {
     case '--preset':
       options.preset = nextArg;
@@ -119,7 +119,7 @@ class SimpleCodeSplitter {
       preset: config.preset || 'balanced',
       bundler: config.bundler || 'vite',
       verbose: config.verbose || false,
-      ...config
+      ...config,
     };
   }
 
@@ -136,11 +136,11 @@ class SimpleCodeSplitter {
 
     const files = this.findRelevantFiles(projectPath);
     const analysis = this.analyzeFiles(files);
-    
+
     return {
       ...analysis,
       config: this.config,
-      recommendations: this.generateRecommendations(analysis)
+      recommendations: this.generateRecommendations(analysis),
     };
   }
 
@@ -149,27 +149,27 @@ class SimpleCodeSplitter {
    */
   findRelevantFiles(rootPath) {
     const files = [];
-    
+
     const traverse = (currentPath) => {
       try {
         const items = fs.readdirSync(currentPath);
-        
+
         for (const item of items) {
           const fullPath = path.join(currentPath, item);
           const relativePath = path.relative(rootPath, fullPath);
-          
+
           // Проверяем исключения
           if (this.shouldExclude(relativePath)) continue;
-          
+
           const stat = fs.statSync(fullPath);
-          
+
           if (stat.isDirectory()) {
             traverse(fullPath);
           } else if (this.isRelevantFile(fullPath)) {
             files.push({
               path: fullPath,
               relativePath,
-              size: stat.size
+              size: stat.size,
             });
           }
         }
@@ -197,31 +197,30 @@ class SimpleCodeSplitter {
       routeFiles: [],
       componentFiles: [],
       vendorImports: new Set(),
-      potentialChunks: {}
+      potentialChunks: {},
     };
 
     // Анализируем каждый файл
     for (const file of files) {
       analysis.totalSize += file.size;
-      
+
       try {
         const content = fs.readFileSync(file.path, 'utf-8');
         const fileAnalysis = this.analyzeFile(file, content);
-        
+
         // Собираем статистику
         analysis.splitPoints.push(...fileAnalysis.splitPoints);
-        
+
         if (fileAnalysis.isRoute) {
           analysis.routeFiles.push(file);
         }
-        
+
         if (fileAnalysis.isComponent && file.size > this.config.chunkSizeThreshold) {
           analysis.largeFiles.push(file);
         }
-        
+
         // Vendor импорты
-        fileAnalysis.vendorImports.forEach(imp => analysis.vendorImports.add(imp));
-        
+        fileAnalysis.vendorImports.forEach((imp) => analysis.vendorImports.add(imp));
       } catch (error) {
         if (this.config.verbose) {
           console.warn(`⚠️ Ошибка анализа файла ${file.relativePath}:`, error.message);
@@ -238,14 +237,15 @@ class SimpleCodeSplitter {
   analyzeFile(file, content) {
     const splitPoints = [];
     const vendorImports = [];
-    
+
     // Паттерны для определения типов файлов
-    const isRoute = /(?:pages?|routes?)\//.test(file.relativePath) || 
-                   /(?:useRouter|Router|Route)/.test(content);
-    
-    const isComponent = /\.(?:tsx?|jsx?)$/.test(file.path) && 
-                       /(?:export\s+(?:default\s+)?(?:function|const)\s+[A-Z]|class\s+[A-Z])/.test(content);
-    
+    const isRoute =
+      /(?:pages?|routes?)\//.test(file.relativePath) || /(?:useRouter|Router|Route)/.test(content);
+
+    const isComponent =
+      /\.(?:tsx?|jsx?)$/.test(file.path) &&
+      /(?:export\s+(?:default\s+)?(?:function|const)\s+[A-Z]|class\s+[A-Z])/.test(content);
+
     // Route-based splitting
     if (isRoute) {
       splitPoints.push({
@@ -253,7 +253,7 @@ class SimpleCodeSplitter {
         type: 'route',
         reason: 'Route-based splitting opportunity',
         size: file.size,
-        priority: 'high'
+        priority: 'high',
       });
     }
 
@@ -264,13 +264,13 @@ class SimpleCodeSplitter {
         type: 'component',
         reason: `Large component (${Math.round(file.size / 1024)}KB)`,
         size: file.size,
-        priority: file.size > this.config.chunkSizeThreshold * 2 ? 'high' : 'medium'
+        priority: file.size > this.config.chunkSizeThreshold * 2 ? 'high' : 'medium',
       });
     }
 
     // Vendor imports
     const heavyLibraries = ['lodash', 'moment', 'three', 'chart', '@mui', '@material-ui', 'antd'];
-    heavyLibraries.forEach(lib => {
+    heavyLibraries.forEach((lib) => {
       if (content.includes(`'${lib}'`) || content.includes(`"${lib}"`)) {
         vendorImports.push(lib);
         splitPoints.push({
@@ -278,20 +278,20 @@ class SimpleCodeSplitter {
           type: 'vendor',
           reason: `Heavy library import: ${lib}`,
           size: file.size,
-          priority: 'medium'
+          priority: 'medium',
         });
       }
     });
 
     // Dynamic import opportunities
     const dynamicOpportunities = this.findDynamicOpportunities(content);
-    dynamicOpportunities.forEach(opportunity => {
+    dynamicOpportunities.forEach((opportunity) => {
       splitPoints.push({
         file: file.relativePath,
         type: 'dynamic',
         reason: `Dynamic import opportunity: ${opportunity}`,
         size: file.size,
-        priority: 'low'
+        priority: 'low',
       });
     });
 
@@ -299,7 +299,7 @@ class SimpleCodeSplitter {
       isRoute,
       isComponent,
       splitPoints,
-      vendorImports
+      vendorImports,
     };
   }
 
@@ -337,7 +337,7 @@ class SimpleCodeSplitter {
    */
   generateRecommendations(analysis) {
     const recommendations = [];
-    
+
     // Route splitting
     if (analysis.routeFiles.length > 0) {
       recommendations.push({
@@ -345,7 +345,7 @@ class SimpleCodeSplitter {
         priority: 'high',
         impact: 'high',
         description: `Implement route-based code splitting for ${analysis.routeFiles.length} route files`,
-        implementation: 'Use React.lazy() and dynamic imports for route components'
+        implementation: 'Use React.lazy() and dynamic imports for route components',
       });
     }
 
@@ -356,7 +356,7 @@ class SimpleCodeSplitter {
         priority: 'medium',
         impact: 'medium',
         description: `Split ${analysis.largeFiles.length} large components into separate chunks`,
-        implementation: 'Use React.lazy() for heavy components'
+        implementation: 'Use React.lazy() for heavy components',
       });
     }
 
@@ -367,7 +367,7 @@ class SimpleCodeSplitter {
         priority: 'medium',
         impact: 'high',
         description: `Separate vendor libraries: ${Array.from(analysis.vendorImports).join(', ')}`,
-        implementation: 'Configure manual chunks in bundler for vendor dependencies'
+        implementation: 'Configure manual chunks in bundler for vendor dependencies',
       });
     }
 
@@ -378,8 +378,8 @@ class SimpleCodeSplitter {
    * Проверка исключений
    */
   shouldExclude(relativePath) {
-    return this.config.excludePatterns.some(pattern => 
-      relativePath.includes(pattern) || new RegExp(pattern).test(relativePath)
+    return this.config.excludePatterns.some(
+      (pattern) => relativePath.includes(pattern) || new RegExp(pattern).test(relativePath),
     );
   }
 
@@ -388,9 +388,11 @@ class SimpleCodeSplitter {
    */
   isRelevantFile(filePath) {
     const extensions = ['.ts', '.tsx', '.js', '.jsx', '.vue'];
-    return extensions.some(ext => filePath.endsWith(ext)) && 
-           !filePath.includes('.test.') && 
-           !filePath.includes('.spec.');
+    return (
+      extensions.some((ext) => filePath.endsWith(ext)) &&
+      !filePath.includes('.test.') &&
+      !filePath.includes('.spec.')
+    );
   }
 }
 
@@ -403,7 +405,7 @@ function formatReport(analysis, options) {
   }
 
   const { splitPoints, totalFiles, totalSize, recommendations } = analysis;
-  
+
   let report = `
 🚀 HEYS Code Splitting Analysis Report
 =====================================
@@ -423,24 +425,23 @@ function formatReport(analysis, options) {
   }, {});
 
   Object.entries(byType).forEach(([type, count]) => {
-    const emoji = {
-      route: '🛣️',
-      component: '🧩',
-      vendor: '📦',
-      dynamic: '⚡'
-    }[type] || '📁';
-    
+    const emoji =
+      {
+        route: '🛣️',
+        component: '🧩',
+        vendor: '📦',
+        dynamic: '⚡',
+      }[type] || '📁';
+
     report += `${emoji} ${type}: ${count} файлов\n`;
   });
 
   // Топ файлов для разделения
-  const topFiles = splitPoints
-    .filter(p => p.priority === 'high')
-    .slice(0, 5);
+  const topFiles = splitPoints.filter((p) => p.priority === 'high').slice(0, 5);
 
   if (topFiles.length > 0) {
     report += `\n🔝 ТОП ПРИОРИТЕТНЫХ ФАЙЛОВ:\n`;
-    topFiles.forEach(point => {
+    topFiles.forEach((point) => {
       report += `• ${point.file} (${point.reason})\n`;
     });
   }
@@ -465,11 +466,14 @@ function formatReport(analysis, options) {
  * Генерация конфигурации для бандлера
  */
 function generateBundlerConfig(bundler, splitPoints) {
-  const vendorLibs = [...new Set(splitPoints
-    .filter(p => p.type === 'vendor')
-    .map(p => p.reason.match(/: (\w+)/)?.[1])
-    .filter(Boolean)
-  )];
+  const vendorLibs = [
+    ...new Set(
+      splitPoints
+        .filter((p) => p.type === 'vendor')
+        .map((p) => p.reason.match(/: (\w+)/)?.[1])
+        .filter(Boolean),
+    ),
+  ];
 
   switch (bundler) {
     case 'vite':
@@ -532,7 +536,6 @@ async function main() {
     }
 
     console.log('\n✅ Анализ завершен успешно!');
-    
   } catch (error) {
     console.error('❌ Ошибка анализа:', error.message);
     if (options.verbose) {

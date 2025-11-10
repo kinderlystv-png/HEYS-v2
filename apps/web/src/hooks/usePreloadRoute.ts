@@ -29,14 +29,14 @@ interface PreloadState {
  */
 export function usePreloadRoute(
   importFunction: () => Promise<{ default: unknown }>,
-  options: PreloadOptions = {}
+  options: PreloadOptions = {},
 ) {
   const {
     delay = 0,
     onHover = false,
     onIdle = true,
     onVisible = false,
-    priority = 'medium'
+    priority = 'medium',
   } = options;
 
   const preloadRef = useRef<{
@@ -48,64 +48,60 @@ export function usePreloadRoute(
       isPreloaded: false,
       isPreloading: false,
       error: null,
-      preloadedAt: null
-    }
+      preloadedAt: null,
+    },
   });
 
   // Функция preload
-  const preload = useCallback(async (force = false): Promise<void> => {
-    const current = preloadRef.current;
-    
-    // Если уже preloaded или preloading, возвращаем существующий promise
-    if ((current.state.isPreloaded || current.state.isPreloading) && !force) {
-      return current.promise || Promise.resolve();
-    }
+  const preload = useCallback(
+    async (force = false): Promise<void> => {
+      const current = preloadRef.current;
 
-    // Устанавливаем состояние preloading
-    current.state.isPreloading = true;
-    current.state.error = null;
-
-    try {
-      // Добавляем delay если нужен
-      if (delay > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
+      // Если уже preloaded или preloading, возвращаем существующий promise
+      if ((current.state.isPreloaded || current.state.isPreloading) && !force) {
+        return current.promise || Promise.resolve();
       }
 
-      // Создаем promise для preload
-      const preloadPromise = preloadComponent(importFunction);
-      current.promise = preloadPromise;
+      // Устанавливаем состояние preloading
+      current.state.isPreloading = true;
+      current.state.error = null;
 
-      await preloadPromise;
+      try {
+        // Добавляем delay если нужен
+        if (delay > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
 
-      // Успешный preload
-      current.state.isPreloaded = true;
-      current.state.isPreloading = false;
-      current.state.preloadedAt = Date.now();
+        // Создаем promise для preload
+        const preloadPromise = preloadComponent(importFunction);
+        current.promise = preloadPromise;
 
-      if (process.env.NODE_ENV === 'development') {
+        await preloadPromise;
 
+        // Успешный preload
+        current.state.isPreloaded = true;
+        current.state.isPreloading = false;
+        current.state.preloadedAt = Date.now();
 
-        // eslint-disable-next-line no-console
+        if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
 
+          console.log(`✅ Route preloaded successfully (priority: ${priority})`);
+        }
+      } catch (error) {
+        // Ошибка preload
+        current.state.isPreloading = false;
+        current.state.error = error as Error;
 
-        console.log(`✅ Route preloaded successfully (priority: ${priority})`);
-    }
+        if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
 
-    } catch (error) {
-      // Ошибка preload
-      current.state.isPreloading = false;
-      current.state.error = error as Error;
-      
-      if (process.env.NODE_ENV === 'development') {
-
-      
-        // eslint-disable-next-line no-console
-
-      
-        console.warn(`⚠️ Route preload failed (priority: ${priority}):`, error);
-    }
-    }
-  }, [importFunction, delay, priority]);
+          console.warn(`⚠️ Route preload failed (priority: ${priority}):`, error);
+        }
+      }
+    },
+    [importFunction, delay, priority],
+  );
 
   // Preload при idle состоянии
   useEffect(() => {
@@ -114,9 +110,12 @@ export function usePreloadRoute(
     const handleIdle = () => {
       // Используем requestIdleCallback если доступен
       if ('requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(() => {
-          preload();
-        }, { timeout: 5000 });
+        (window as any).requestIdleCallback(
+          () => {
+            preload();
+          },
+          { timeout: 5000 },
+        );
       } else {
         // Fallback для браузеров без requestIdleCallback
         setTimeout(() => {
@@ -127,7 +126,7 @@ export function usePreloadRoute(
 
     // Запускаем после монтирования
     const timer = setTimeout(handleIdle, 100);
-    
+
     return () => clearTimeout(timer);
   }, [onIdle, preload]);
 
@@ -138,25 +137,28 @@ export function usePreloadRoute(
   };
 
   // Intersection Observer для onVisible
-  const visibilityRef = useCallback((node: HTMLElement | null) => {
-    if (!onVisible || !node) return;
+  const visibilityRef = useCallback(
+    (node: HTMLElement | null) => {
+      if (!onVisible || !node) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            preload();
-            observer.disconnect(); // Preload только один раз
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              preload();
+              observer.disconnect(); // Preload только один раз
+            }
+          });
+        },
+        { threshold: 0.1 },
+      );
 
-    observer.observe(node);
+      observer.observe(node);
 
-    return () => observer.disconnect();
-  }, [onVisible, preload]);
+      return () => observer.disconnect();
+    },
+    [onVisible, preload],
+  );
 
   return {
     preload,
@@ -170,11 +172,11 @@ export function usePreloadRoute(
         isPreloaded: false,
         isPreloading: false,
         error: null,
-        preloadedAt: null
+        preloadedAt: null,
       };
     },
     isReady: preloadRef.current.state.isPreloaded,
-    hasError: preloadRef.current.state.error !== null
+    hasError: preloadRef.current.state.error !== null,
   };
 }
 
@@ -186,10 +188,10 @@ export function usePreloadRoutes(
     name: string;
     importFunction: () => Promise<{ default: unknown }>;
     options?: PreloadOptions;
-  }>
+  }>,
 ) {
-  const preloaders = routes.map((route: unknown) => 
-    usePreloadRoute(route.importFunction, route.options)
+  const preloaders = routes.map((route: unknown) =>
+    usePreloadRoute(route.importFunction, route.options),
   );
 
   const preloadAll = useCallback(async () => {
@@ -202,7 +204,7 @@ export function usePreloadRoutes(
     const priorityGroups = {
       high: [] as Array<{ preload: () => Promise<void> }>,
       medium: [] as Array<{ preload: () => Promise<void> }>,
-      low: [] as Array<{ preload: () => Promise<void> }>
+      low: [] as Array<{ preload: () => Promise<void> }>,
     };
 
     routes.forEach((route, index) => {
@@ -217,21 +219,18 @@ export function usePreloadRoutes(
     for (const [priority, group] of Object.entries(priorityGroups)) {
       if (group.length > 0) {
         if (process.env.NODE_ENV === 'development') {
-
           // eslint-disable-next-line no-console
 
           console.log(`🚀 Preloading ${priority} priority routes (${group.length} routes)`);
-    }
-        
-        await Promise.allSettled(
-          group.map((preloader: unknown) => preloader.preload())
-        );
+        }
+
+        await Promise.allSettled(group.map((preloader: unknown) => preloader.preload()));
 
         // Задержка между группами приоритета
         if (priority === 'high') {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
         } else if (priority === 'medium') {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise((resolve) => setTimeout(resolve, 500));
         }
       }
     }
@@ -239,15 +238,15 @@ export function usePreloadRoutes(
 
   const getOverallState = () => {
     const states = preloaders.map((p: unknown) => p.state);
-    
+
     return {
       totalRoutes: routes.length,
-      preloadedCount: states.filter(s => s.isPreloaded).length,
-      preloadingCount: states.filter(s => s.isPreloading).length,
-      errorCount: states.filter(s => s.error !== null).length,
-      isAllPreloaded: states.every(s => s.isPreloaded),
-      hasAnyErrors: states.some(s => s.error !== null),
-      progress: states.filter(s => s.isPreloaded).length / routes.length * 100
+      preloadedCount: states.filter((s) => s.isPreloaded).length,
+      preloadingCount: states.filter((s) => s.isPreloading).length,
+      errorCount: states.filter((s) => s.error !== null).length,
+      isAllPreloaded: states.every((s) => s.isPreloaded),
+      hasAnyErrors: states.some((s) => s.error !== null),
+      progress: (states.filter((s) => s.isPreloaded).length / routes.length) * 100,
     };
   };
 
@@ -258,9 +257,9 @@ export function usePreloadRoutes(
     state: getOverallState(),
     // Individual route access
     getPreloader: (routeName: string) => {
-      const index = routes.findIndex(r => r.name === routeName);
+      const index = routes.findIndex((r) => r.name === routeName);
       return index >= 0 ? preloaders[index] : null;
-    }
+    },
   };
 }
 
@@ -281,44 +280,39 @@ export function usePreloadPerformance() {
   }>({
     preloadTimes: [],
     totalPreloaded: 0,
-    totalErrors: 0
+    totalErrors: 0,
   });
 
-  const recordPreload = useCallback((
-    name: string,
-    startTime: number,
-    endTime: number,
-    success: boolean
-  ) => {
-    const duration = endTime - startTime;
-    
-    performanceRef.current.preloadTimes.push({
-      name,
-      startTime,
-      endTime, 
-      duration,
-      success
-    });
+  const recordPreload = useCallback(
+    (name: string, startTime: number, endTime: number, success: boolean) => {
+      const duration = endTime - startTime;
 
-    if (success) {
-      performanceRef.current.totalPreloaded++;
-    } else {
-      performanceRef.current.totalErrors++;
-    }
+      performanceRef.current.preloadTimes.push({
+        name,
+        startTime,
+        endTime,
+        duration,
+        success,
+      });
 
-    if (process.env.NODE_ENV === 'development') {
+      if (success) {
+        performanceRef.current.totalPreloaded++;
+      } else {
+        performanceRef.current.totalErrors++;
+      }
 
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
 
-      // eslint-disable-next-line no-console
-
-
-      console.log(`📊 Preload ${name}: ${duration}ms (${success ? 'success' : 'error'})`);
-    }
-  }, []);
+        console.log(`📊 Preload ${name}: ${duration}ms (${success ? 'success' : 'error'})`);
+      }
+    },
+    [],
+  );
 
   const getPerformanceReport = useCallback(() => {
     const { preloadTimes, totalPreloaded, totalErrors } = performanceRef.current;
-    
+
     if (preloadTimes.length === 0) {
       return {
         totalPreloads: 0,
@@ -327,25 +321,25 @@ export function usePreloadPerformance() {
         slowestPreload: null,
         successRate: 0,
         totalPreloaded,
-        totalErrors
+        totalErrors,
       };
     }
 
-    const successfulPreloads = preloadTimes.filter(p => p.success);
+    const successfulPreloads = preloadTimes.filter((p) => p.success);
     const durations = successfulPreloads.map((p: unknown) => p.duration);
-    
+
     return {
       totalPreloads: preloadTimes.length,
       averageDuration: durations.reduce((a, b) => a + b, 0) / durations.length || 0,
-      fastestPreload: successfulPreloads.reduce((fastest, current) => 
-        current.duration < fastest.duration ? current : fastest
+      fastestPreload: successfulPreloads.reduce((fastest, current) =>
+        current.duration < fastest.duration ? current : fastest,
       ),
-      slowestPreload: successfulPreloads.reduce((slowest, current) => 
-        current.duration > slowest.duration ? current : slowest
+      slowestPreload: successfulPreloads.reduce((slowest, current) =>
+        current.duration > slowest.duration ? current : slowest,
       ),
       successRate: (successfulPreloads.length / preloadTimes.length) * 100,
       totalPreloaded,
-      totalErrors
+      totalErrors,
     };
   }, []);
 
@@ -353,7 +347,7 @@ export function usePreloadPerformance() {
     performanceRef.current = {
       preloadTimes: [],
       totalPreloaded: 0,
-      totalErrors: 0
+      totalErrors: 0,
     };
   }, []);
 
@@ -361,6 +355,6 @@ export function usePreloadPerformance() {
     recordPreload,
     getPerformanceReport,
     reset,
-    getPreloadHistory: () => performanceRef.current.preloadTimes
+    getPreloadHistory: () => performanceRef.current.preloadTimes,
   };
 }

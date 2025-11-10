@@ -236,7 +236,7 @@ export class BundleOptimizer {
     } catch (error) {
       this.loadingPromises.delete(moduleName);
       console.error(`Failed to load module '${moduleName}':`, error);
-      
+
       return {
         module: null as T,
         loadTime: Math.max(performance.now() - startTime, 0.1),

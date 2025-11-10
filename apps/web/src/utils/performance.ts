@@ -107,13 +107,15 @@ export function optimizeResourceLoading() {
 // Memory usage monitoring
 export function monitorMemoryUsage() {
   if ('memory' in performance) {
-    const memory = (performance as Performance & { 
-      memory: { 
-        usedJSHeapSize: number; 
-        totalJSHeapSize: number; 
-        jsHeapSizeLimit: number; 
-      } 
-    }).memory;
+    const memory = (
+      performance as Performance & {
+        memory: {
+          usedJSHeapSize: number;
+          totalJSHeapSize: number;
+          jsHeapSizeLimit: number;
+        };
+      }
+    ).memory;
     const memoryInfo = {
       used: Math.round(memory.usedJSHeapSize / 1048576), // MB
       total: Math.round(memory.totalJSHeapSize / 1048576), // MB
@@ -152,9 +154,9 @@ export function setupPerformanceObserver() {
     // Monitor First Input Delay
     const fidObserver = new PerformanceObserver((list) => {
       list.getEntries().forEach((entry) => {
-        const fidEntry = entry as PerformanceEntry & { 
-          processingStart?: number; 
-          startTime: number; 
+        const fidEntry = entry as PerformanceEntry & {
+          processingStart?: number;
+          startTime: number;
         }; // First Input Delay entry
         if (fidEntry.processingStart) {
           const fid = fidEntry.processingStart - fidEntry.startTime;
