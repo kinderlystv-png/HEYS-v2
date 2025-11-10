@@ -52,7 +52,10 @@
       "@heys/analytics": ["./packages/analytics/src"],
       "@heys/shared": ["./packages/shared/src"],
       "@heys/logger": ["./packages/logger/src"]
-    }
+    },
+
+    // TS7 deprecation guard for baseUrl
+    "ignoreDeprecations": "6.0"
   },
 
   // Workspace references
