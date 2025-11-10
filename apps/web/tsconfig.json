@@ -3,7 +3,8 @@
   "compilerOptions": {
     "outDir": "./dist",
     "noEmit": false,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "composite": true
   },
   "include": ["src/**/*", "index.html"],
   "exclude": [
