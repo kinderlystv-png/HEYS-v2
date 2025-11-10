@@ -64,8 +64,8 @@ importers:
         specifier: ^19.8.1
         version: 19.8.1
       '@playwright/test':
-        specifier: ^1.55.0
-        version: 1.55.0
+        specifier: ^1.56.1
+        version: 1.56.1
       '@sentry/browser':
         specifier: ^10.8.0
         version: 10.8.0
@@ -139,8 +139,8 @@ importers:
         specifier: ^5.2.0
         version: 5.2.0(eslint@8.57.1)
       happy-dom:
-        specifier: ^18.0.1
-        version: 18.0.1
+        specifier: ^20.0.10
+        version: 20.0.10
       husky:
         specifier: ^8.0.3
         version: 8.0.3
@@ -203,7 +203,7 @@ importers:
         version: 5.1.4(typescript@5.9.2)(vite@6.3.5)
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
+        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
       web-vitals:
         specifier: 3.4.0
         version: 3.4.0
@@ -264,13 +264,16 @@ importers:
         version: 4.5.14(@types/node@20.19.11)(terser@5.44.0)
       vitest:
         specifier: ^0.34.0
-        version: 0.34.6(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(terser@5.44.0)
+        version: 0.34.6(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(terser@5.44.0)
 
   packages/analytics:
     dependencies:
       '@heys/core':
         specifier: workspace:*
         version: link:../core
+      '@heys/logger':
+        specifier: workspace:*
+        version: link:../logger
     devDependencies:
       tsup:
         specifier: ^7.2.0
@@ -280,7 +283,7 @@ importers:
         version: 5.9.2
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
+        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
 
   packages/analytics-dashboard:
     dependencies:
@@ -356,7 +359,7 @@ importers:
         version: 5.4.19(@types/node@20.19.11)(terser@5.44.0)
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@24.1.3)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
+        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@24.1.3)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
 
   packages/core:
     dependencies:
@@ -384,7 +387,7 @@ importers:
         version: 5.9.2
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
+        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
 
   packages/gaming:
     dependencies:
@@ -400,7 +403,7 @@ importers:
         version: 5.9.2
       vitest:
         specifier: ^0.34.0
-        version: 0.34.6(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(terser@5.44.0)
+        version: 0.34.6(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(terser@5.44.0)
 
   packages/logger:
     dependencies:
@@ -444,7 +447,7 @@ importers:
         version: 5.9.2
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
+        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
 
   packages/shared:
     dependencies:
@@ -475,7 +478,7 @@ importers:
         version: 5.9.2
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
+        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
 
   packages/storage:
     dependencies:
@@ -491,7 +494,7 @@ importers:
         version: 5.9.2
       vitest:
         specifier: ^0.34.0
-        version: 0.34.6(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(terser@5.44.0)
+        version: 0.34.6(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(terser@5.44.0)
 
   packages/threat-detection:
     dependencies:
@@ -542,8 +545,8 @@ importers:
         specifier: ^5.0.0
         version: 5.2.0(eslint@8.57.1)
       happy-dom:
-        specifier: ^18.0.1
-        version: 18.0.1
+        specifier: ^20.0.10
+        version: 20.0.10
       tsup:
         specifier: ^8.3.5
         version: 8.5.0(@swc/core@1.13.5)(postcss@8.5.6)(tsx@4.20.5)(typescript@5.9.2)
@@ -555,7 +558,7 @@ importers:
         version: 6.3.5(@types/node@20.19.11)(terser@5.44.0)(tsx@4.20.5)
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
+        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
 
   packages/ui:
     dependencies:
@@ -613,7 +616,7 @@ importers:
         version: 5.9.2
       vitest:
         specifier: ^3.2.4
-        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
+        version: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
 
 packages:
 
@@ -1796,6 +1799,11 @@ packages:
     resolution: {integrity: sha512-9uIQ10o0WGdpP6GDhXcdOJPJuDgFtIDtN/9+ArJQ2NAfAmiuhTQdzkaTGR33v43GYS2UrSA0eX2pPPHoFVvpxA==}
     engines: {node: '>=6.9.0'}
 
+  /@babel/runtime@7.28.4:
+    resolution: {integrity: sha512-Q/N6JNWvIvPnLDvjlE1OUBLPQHH6l3CltCEsHIujp45zQUSSh8K+gHnaEX45yAT1nyngnINhvWtzN+Nb9D8RAQ==}
+    engines: {node: '>=6.9.0'}
+    dev: true
+
   /@babel/template@7.27.2:
     resolution: {integrity: sha512-LPDZ85aEJyYSd18/DkjNh4/y1ntkE5KwUHWTiqgRxruuZL2F1yuHligVHLvcHY2vMHXttKFpJn6LwfI7cw7ODw==}
     engines: {node: '>=6.9.0'}
@@ -2247,8 +2255,8 @@ packages:
     engines: {node: '>=10.0.0'}
     dev: true
 
-  /@emnapi/core@1.5.0:
-    resolution: {integrity: sha512-sbP8GzB1WDzacS8fgNPpHlp6C9VZe+SJP3F90W9rLemaQj2PzIuTEl1qDOYQf58YIpyjViI24y9aPWCjEzY2cg==}
+  /@emnapi/core@1.7.0:
+    resolution: {integrity: sha512-pJdKGq/1iquWYtv1RRSljZklxHCOCAJFJrImO5ZLKPJVJlVUcs8yFwNQlqS0Lo8xT1VAXXTCZocF9n26FWEKsw==}
     requiresBuild: true
     dependencies:
       '@emnapi/wasi-threads': 1.1.0
@@ -2256,8 +2264,8 @@ packages:
     dev: true
     optional: true
 
-  /@emnapi/runtime@1.5.0:
-    resolution: {integrity: sha512-97/BJ3iXHww3djw6hYIfErCZFee7qCtrneuLa20UXFCOTCfBM2cvQHjWJ2EG0s0MtdNwInarqCTz35i4wWXHsQ==}
+  /@emnapi/runtime@1.7.0:
+    resolution: {integrity: sha512-oAYoQnCYaQZKVS53Fq23ceWMRxq5EhQsE0x0RdQ55jT7wagMu5k+fS39v1fiSLrtrLQlXwVINenqhLMtTrV/1Q==}
     requiresBuild: true
     dependencies:
       tslib: 2.8.1
@@ -3372,7 +3380,7 @@ packages:
     cpu: [wasm32]
     requiresBuild: true
     dependencies:
-      '@emnapi/runtime': 1.5.0
+      '@emnapi/runtime': 1.7.0
     dev: true
     optional: true
 
@@ -3666,9 +3674,9 @@ packages:
     resolution: {integrity: sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ==}
     requiresBuild: true
     dependencies:
-      '@emnapi/core': 1.5.0
-      '@emnapi/runtime': 1.5.0
-      '@tybys/wasm-util': 0.10.0
+      '@emnapi/core': 1.7.0
+      '@emnapi/runtime': 1.7.0
+      '@tybys/wasm-util': 0.10.1
     dev: true
     optional: true
 
@@ -3736,6 +3744,14 @@ packages:
       playwright: 1.55.0
     dev: true
 
+  /@playwright/test@1.56.1:
+    resolution: {integrity: sha512-vSMYtL/zOcFpvJCW71Q/OEGQb7KYBPAdKh35WNSkaZA75JlAO8ED8UN6GUNTm3drWomcbcqRPFqQbLae8yBTdg==}
+    engines: {node: '>=18'}
+    hasBin: true
+    dependencies:
+      playwright: 1.56.1
+    dev: true
+
   /@polka/url@1.0.0-next.29:
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
@@ -3752,6 +3768,7 @@ packages:
       unbzip2-stream: 1.4.3
       yargs: 17.7.2
     transitivePeerDependencies:
+      - bare-abort-controller
       - supports-color
     dev: true
 
@@ -3768,6 +3785,7 @@ packages:
       tar-fs: 3.1.0
       yargs: 17.7.2
     transitivePeerDependencies:
+      - bare-abort-controller
       - bare-buffer
       - supports-color
     dev: true
@@ -5216,7 +5234,7 @@ packages:
       '@storybook/node-logger': 7.6.20
       '@storybook/types': 7.6.20
       '@types/find-cache-dir': 3.2.1
-      '@types/node': 18.19.123
+      '@types/node': 18.19.130
       '@types/node-fetch': 2.6.13
       '@types/pretty-hrtime': 1.0.3
       chalk: 4.1.2
@@ -5265,7 +5283,7 @@ packages:
       '@storybook/telemetry': 7.6.20
       '@storybook/types': 7.6.20
       '@types/detect-port': 1.3.5
-      '@types/node': 18.19.123
+      '@types/node': 18.19.130
       '@types/pretty-hrtime': 1.0.3
       '@types/semver': 7.7.0
       better-opn: 3.0.2
@@ -6056,7 +6074,7 @@ packages:
     engines: {node: '>=18'}
     dependencies:
       '@babel/code-frame': 7.27.1
-      '@babel/runtime': 7.28.3
+      '@babel/runtime': 7.28.4
       '@types/aria-query': 5.0.4
       aria-query: 5.3.0
       dom-accessibility-api: 0.5.16
@@ -6164,8 +6182,8 @@ packages:
       - supports-color
     dev: true
 
-  /@tybys/wasm-util@0.10.0:
-    resolution: {integrity: sha512-VyyPYFlOMNylG45GoAe0xDoLwWuowvf92F9kySqzYh8vmYm7D2u4iUJKa1tOUpS70Ku13ASrOkS4ScXFsTaCNQ==}
+  /@tybys/wasm-util@0.10.1:
+    resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
     requiresBuild: true
     dependencies:
       tslib: 2.8.1
@@ -6571,6 +6589,12 @@ packages:
 
   /@types/node@18.19.123:
     resolution: {integrity: sha512-K7DIaHnh0mzVxreCR9qwgNxp3MH9dltPNIEddW9MYUlcKAzm+3grKNSTe2vCJHI1FaLpvpL5JGJrz1UZDKYvDg==}
+    dependencies:
+      undici-types: 5.26.5
+    dev: true
+
+  /@types/node@18.19.130:
+    resolution: {integrity: sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg==}
     dependencies:
       undici-types: 5.26.5
     dev: true
@@ -7087,7 +7111,7 @@ packages:
       std-env: 3.9.0
       test-exclude: 7.0.1
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
+      vitest: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -7190,7 +7214,7 @@ packages:
       sirv: 3.0.1
       tinyglobby: 0.2.14
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
+      vitest: 3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5)
     dev: true
 
   /@vitest/utils@0.34.6:
@@ -7703,8 +7727,19 @@ packages:
     dev: true
     optional: true
 
-  /bare-fs@4.2.3:
-    resolution: {integrity: sha512-1aGs5pRVLToMQ79elP+7cc0u0s/wXAzfBv/7hDloT7WFggLqECCas5qqPky7WHCFdsBH5WDq6sD4fAoz5sJbtA==}
+  /bare-events@2.8.2:
+    resolution: {integrity: sha512-riJjyv1/mHLIPX4RwiK+oW9/4c3TEUeORHKefKAKnZ5kyslbN+HXowtbaVEqt4IMUB7OXlfixcs6gsFeo/jhiQ==}
+    requiresBuild: true
+    peerDependencies:
+      bare-abort-controller: '*'
+    peerDependenciesMeta:
+      bare-abort-controller:
+        optional: true
+    dev: true
+    optional: true
+
+  /bare-fs@4.5.0:
+    resolution: {integrity: sha512-GljgCjeupKZJNetTqxKaQArLK10vpmK28or0+RwWjEl5Rk+/xG3wkpmkv+WrcBm3q1BwHKlnhXzR8O37kcvkXQ==}
     engines: {bare: '>=1.16.0'}
     requiresBuild: true
     peerDependencies:
@@ -7716,6 +7751,10 @@ packages:
       bare-events: 2.6.1
       bare-path: 3.0.0
       bare-stream: 2.7.0(bare-events@2.6.1)
+      bare-url: 2.3.2
+      fast-fifo: 1.3.2
+    transitivePeerDependencies:
+      - bare-abort-controller
     dev: true
     optional: true
 
@@ -7748,6 +7787,16 @@ packages:
     dependencies:
       bare-events: 2.6.1
       streamx: 2.22.1
+    transitivePeerDependencies:
+      - bare-abort-controller
+    dev: true
+    optional: true
+
+  /bare-url@2.3.2:
+    resolution: {integrity: sha512-ZMq4gd9ngV5aTMa5p9+UfY0b3skwhHELaDkhEHetMdX0LRkW9kzaym4oo/Eh+Ghm0CCDuMTsRIGM/ytUc1ZYmw==}
+    requiresBuild: true
+    dependencies:
+      bare-path: 3.0.0
     dev: true
     optional: true
 
@@ -10520,8 +10569,8 @@ packages:
       uglify-js: 3.19.3
     dev: true
 
-  /happy-dom@18.0.1:
-    resolution: {integrity: sha512-qn+rKOW7KWpVTtgIUi6RVmTBZJSe2k0Db0vh1f7CWrWclkkc7/Q+FrOfkZIb2eiErLyqu5AXEzE7XthO9JVxRA==}
+  /happy-dom@20.0.10:
+    resolution: {integrity: sha512-6umCCHcjQrhP5oXhrHQQvLB0bwb1UzHAHdsXy+FjtKoYjUhmNZsQL8NivwM1vDvNEChJabVrUYxUnp/ZdYmy2g==}
     engines: {node: '>=20.0.0'}
     dependencies:
       '@types/node': 20.19.11
@@ -11594,6 +11643,7 @@ packages:
       yargs: 17.7.2
       yargs-parser: 21.1.1
     transitivePeerDependencies:
+      - bare-abort-controller
       - bufferutil
       - encoding
       - supports-color
@@ -13088,12 +13138,28 @@ packages:
     hasBin: true
     dev: true
 
+  /playwright-core@1.56.1:
+    resolution: {integrity: sha512-hutraynyn31F+Bifme+Ps9Vq59hKuUCz7H1kDOcBs+2oGguKkWTU50bBWrtz34OUWmIwpBTWDxaRPXrIXkgvmQ==}
+    engines: {node: '>=18'}
+    hasBin: true
+    dev: true
+
   /playwright@1.55.0:
     resolution: {integrity: sha512-sdCWStblvV1YU909Xqx0DhOjPZE4/5lJsIS84IfN9dAZfcl/CIZ5O8l3o0j7hPMjDvqoTF8ZUcc+i/GL5erstA==}
     engines: {node: '>=18'}
     hasBin: true
     dependencies:
       playwright-core: 1.55.0
+    optionalDependencies:
+      fsevents: 2.3.2
+    dev: true
+
+  /playwright@1.56.1:
+    resolution: {integrity: sha512-aFi5B0WovBHTEvpM3DzXTUaeN6eN0qWnTkKx4NQaH4Wvcmc153PdaY2UBdSYKaGYw+UyWXSVyxDUg5DoPEttjw==}
+    engines: {node: '>=18'}
+    hasBin: true
+    dependencies:
+      playwright-core: 1.56.1
     optionalDependencies:
       fsevents: 2.3.2
     dev: true
@@ -13376,6 +13442,7 @@ packages:
       devtools-protocol: 0.0.1232444
       ws: 8.16.0
     transitivePeerDependencies:
+      - bare-abort-controller
       - bufferutil
       - encoding
       - supports-color
@@ -13393,6 +13460,7 @@ packages:
       typed-query-selector: 2.12.0
       ws: 8.18.3
     transitivePeerDependencies:
+      - bare-abort-controller
       - bare-buffer
       - bufferutil
       - supports-color
@@ -13412,6 +13480,7 @@ packages:
       puppeteer-core: 24.18.0
       typed-query-selector: 2.12.0
     transitivePeerDependencies:
+      - bare-abort-controller
       - bare-buffer
       - bufferutil
       - supports-color
@@ -14539,7 +14608,9 @@ packages:
       fast-fifo: 1.3.2
       text-decoder: 1.2.3
     optionalDependencies:
-      bare-events: 2.6.1
+      bare-events: 2.8.2
+    transitivePeerDependencies:
+      - bare-abort-controller
     dev: true
 
   /strict-event-emitter@0.5.1:
@@ -14799,6 +14870,8 @@ packages:
       mkdirp-classic: 0.5.3
       pump: 3.0.3
       tar-stream: 3.1.7
+    transitivePeerDependencies:
+      - bare-abort-controller
     dev: true
 
   /tar-fs@3.1.0:
@@ -14807,9 +14880,10 @@ packages:
       pump: 3.0.3
       tar-stream: 3.1.7
     optionalDependencies:
-      bare-fs: 4.2.3
+      bare-fs: 4.5.0
       bare-path: 3.0.0
     transitivePeerDependencies:
+      - bare-abort-controller
       - bare-buffer
     dev: true
 
@@ -14830,6 +14904,8 @@ packages:
       b4a: 1.6.7
       fast-fifo: 1.3.2
       streamx: 2.22.1
+    transitivePeerDependencies:
+      - bare-abort-controller
     dev: true
 
   /tar@6.2.1:
@@ -15914,7 +15990,7 @@ packages:
       vite: 6.3.5(@types/node@20.19.11)(terser@5.44.0)(tsx@4.20.5)
     dev: false
 
-  /vitest@0.34.6(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(terser@5.44.0):
+  /vitest@0.34.6(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(terser@5.44.0):
     resolution: {integrity: sha512-+5CALsOvbNKnS+ZHMXtuUC7nL8/7F1F2DnHGjSsszX8zCjWSSviphCb/NuS9Nzf4Q03KyyDRBAXhF/8lffME4Q==}
     engines: {node: '>=v14.18.0'}
     hasBin: true
@@ -15959,7 +16035,7 @@ packages:
       cac: 6.7.14
       chai: 4.5.0
       debug: 4.4.1
-      happy-dom: 18.0.1
+      happy-dom: 20.0.10
       jsdom: 26.1.0
       local-pkg: 0.4.3
       magic-string: 0.30.18
@@ -15983,7 +16059,7 @@ packages:
       - terser
     dev: true
 
-  /vitest@3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@24.1.3)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5):
+  /vitest@3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@24.1.3)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5):
     resolution: {integrity: sha512-LUCP5ev3GURDysTWiP47wRRUpLKMOfPh+yKTx3kVIEiu5KOMeqzpnYNsKyOoVrULivR8tLcks4+lga33Whn90A==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
@@ -16024,7 +16100,7 @@ packages:
       chai: 5.3.3
       debug: 4.4.1
       expect-type: 1.2.2
-      happy-dom: 18.0.1
+      happy-dom: 20.0.10
       jsdom: 24.1.3
       magic-string: 0.30.18
       pathe: 2.0.3
@@ -16053,7 +16129,7 @@ packages:
       - yaml
     dev: true
 
-  /vitest@3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@18.0.1)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5):
+  /vitest@3.2.4(@types/node@20.19.11)(@vitest/ui@3.2.4)(happy-dom@20.0.10)(jsdom@26.1.0)(msw@2.11.1)(terser@5.44.0)(tsx@4.20.5):
     resolution: {integrity: sha512-LUCP5ev3GURDysTWiP47wRRUpLKMOfPh+yKTx3kVIEiu5KOMeqzpnYNsKyOoVrULivR8tLcks4+lga33Whn90A==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
@@ -16094,7 +16170,7 @@ packages:
       chai: 5.3.3
       debug: 4.4.1
       expect-type: 1.2.2
-      happy-dom: 18.0.1
+      happy-dom: 20.0.10
       jsdom: 26.1.0
       magic-string: 0.30.18
       pathe: 2.0.3
