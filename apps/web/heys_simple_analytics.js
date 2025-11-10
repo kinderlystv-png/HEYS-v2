@@ -22,11 +22,18 @@
   
   const HEYS = global.HEYS = global.HEYS || {};
   
-  // Пороги для предупреждений
+  // ==================== КОНСТАНТЫ ====================
+  
+  // Пороги для предупреждений о медленных операциях (в миллисекундах)
   const THRESHOLDS = {
     SLOW_SEARCH: 1000,      // 1 секунда
     SLOW_API: 2000,         // 2 секунды
     CRITICAL_API: 5000      // 5 секунд
+  };
+  
+  // Конвертация единиц измерения
+  const CONVERSION = {
+    MS_TO_SECONDS: 1000     // миллисекунды → секунды
   };
   
   // Счетчики для статистики
@@ -39,9 +46,19 @@
     sessionStart: Date.now()
   };
   
+  // ==================== CORE ФУНКЦИИ ====================
+  
   /**
    * Трекинг поисковых запросов
    * Логирует медленные поиски для оптимизации
+   * 
+   * @param {string} query - Поисковый запрос пользователя
+   * @param {number} resultsCount - Количество найденных результатов
+   * @param {number} duration - Время выполнения запроса в миллисекундах
+   * 
+   * @example
+   * trackSearch('творог', 15, 450); // Быстрый поиск, не логируется
+   * trackSearch('молоко', 120, 1500); // Медленный поиск, логируется предупреждение
    */
   function trackSearch(query, resultsCount, duration) {
     stats.searches.total++;
@@ -60,6 +77,15 @@
   /**
    * Трекинг API вызовов (Supabase, парсинг и т.д.)
    * Помогает выявить проблемы с сетью или backend
+   * 
+   * @param {string} apiName - Название API метода (например, 'supabase.products.list')
+   * @param {number} duration - Время выполнения запроса в миллисекундах
+   * @param {boolean} [success=true] - Успешность выполнения запроса
+   * 
+   * @example
+   * trackApiCall('supabase.signin', 800, true); // Быстрый успешный вызов
+   * trackApiCall('fdc.search', 3000, true); // Медленный, но успешный
+   * trackApiCall('fdc.search', 500, false); // Быстрая ошибка
    */
   function trackApiCall(apiName, duration, success = true) {
     stats.apiCalls.total++;
@@ -93,6 +119,14 @@
   /**
    * Трекинг операций с данными
    * Помогает оценить эффективность кеширования
+   * 
+   * @param {string} operationType - Тип операции: 'cache-hit' | 'cache-miss'
+   * @param {number} [count=1] - Количество операций (для batch операций)
+   * 
+   * @example
+   * trackDataOperation('cache-hit'); // Найдено в кеше
+   * trackDataOperation('cache-miss'); // Загрузка из источника
+   * trackDataOperation('cache-hit', 50); // Batch операция
    */
   function trackDataOperation(operationType, count = 1) {
     switch(operationType) {
@@ -111,6 +145,13 @@
   /**
    * Базовый error tracking
    * Перехватывает необработанные JavaScript ошибки
+   * 
+   * @param {Error|string} error - Объект ошибки или строка с описанием
+   * @param {string} [source='unknown'] - Источник ошибки (модуль, функция)
+   * 
+   * @example
+   * trackError(new Error('Failed to fetch'), 'ProductsManager.search');
+   * trackError('Invalid JSON format', 'localStorage.parse');
    */
   function trackError(error, source = 'unknown') {
     stats.errors.total++;
@@ -123,6 +164,14 @@
   
   /**
    * Получить текущую статистику сессии
+   * Возвращает агрегированные метрики по поиску, API, кешу и ошибкам
+   * 
+   * @returns {Object} Статистика сессии с метриками производительности
+   * 
+   * @example
+   * const stats = getStats();
+   * console.log(stats.searches.slowRate); // "15.5%"
+   * console.log(stats.cache.hitRate); // "87.3%"
    */
   function getStats() {
     const sessionDuration = Date.now() - stats.sessionStart;
@@ -133,7 +182,7 @@
     
     return {
       session: {
-        duration: `${(sessionDuration / 1000).toFixed(0)}s`,
+        duration: `${(sessionDuration / CONVERSION.MS_TO_SECONDS).toFixed(0)}s`,
         start: new Date(stats.sessionStart).toISOString()
       },
       searches: {
@@ -161,7 +210,14 @@
   }
   
   /**
-   * Экспорт метрик (для debug в консоли)
+   * Экспорт метрик для отладки в консоли браузера
+   * Вызывается через heysStats() в DevTools
+   * 
+   * @returns {Object} Полная статистика сессии
+   * 
+   * @example
+   * // В консоли браузера:
+   * heysStats(); // Выведет полную статистику
    */
   function exportMetrics() {
     const metrics = getStats();
