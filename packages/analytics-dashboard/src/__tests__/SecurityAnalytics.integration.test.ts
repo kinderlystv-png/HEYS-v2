@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SecurityAnalyticsService } from '@heys/shared';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Simple mock implementation
 vi.mock('@heys/shared', () => ({
@@ -266,7 +266,7 @@ describe('Security Analytics Integration Tests', () => {
         }
       }));
 
-      let batchResults: any[] = [];
+      const batchResults: any[] = [];
       securityService.on('batchProgress', (progress: any) => {
         batchResults.push(progress);
       });

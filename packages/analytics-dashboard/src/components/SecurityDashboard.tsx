@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
 import { SecurityAnalyticsService, IntegratedSecurityEvent } from '@heys/shared';
+import React, { useState, useEffect, useCallback } from 'react';
 
 export interface SecurityDashboardProps {
   userId: string;

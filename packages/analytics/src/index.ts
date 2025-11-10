@@ -1,2 +1,5 @@
 // Analytics placeholder
-export const trackEvent = (event: string, data?: any) => console.log('Track:', event, data);
+import { logger } from '@heys/logger';
+
+export const trackEvent = (event: string, data?: Record<string, unknown>) => 
+  logger.info('Track:', { event, data });
