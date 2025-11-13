@@ -39,6 +39,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@heys/logger": "workspace:*",
     "@heys/shared": "workspace:*",
     "date-fns": "^2.30.0",
     "zod": "^3.25.76"

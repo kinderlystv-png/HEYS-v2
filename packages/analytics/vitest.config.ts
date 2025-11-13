@@ -20,6 +20,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@heys/logger': path.resolve(__dirname, '../logger/src'),
       '@heys': path.resolve(__dirname, '../..'),
     },
   },

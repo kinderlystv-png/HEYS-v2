@@ -1,5 +1,7 @@
 // Performance utilities for HEYS web app
 
+import { log } from '../lib/browser-logger';
+
 // Preload критических ресурсов
 export function preloadCriticalAssets() {
   const criticalAssets = ['/fonts/inter-var.woff2', '/icons/sprite.svg'];
@@ -67,7 +69,7 @@ export function reportWebVitals(metric: Metric) {
 
   // Логирование в консоль для dev
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[Web Vital] ${metric.name}:`, metric.value);
+    log.debug('Web Vital metric', { name: metric.name, value: metric.value, id: metric.id });
   }
 }
 
@@ -79,11 +81,14 @@ export function measurePerformance(name: string, fn: () => void | Promise<void>)
     const end = performance.now();
     const duration = end - start;
 
-    console.log(`[Performance] ${name}: ${duration.toFixed(2)}ms`);
+    log.info('Performance measurement', { name, duration: Number(duration.toFixed(2)) });
 
     // Report long tasks (>50ms)
     if (duration > 50) {
-      console.warn(`[Performance] Long task detected: ${name} took ${duration.toFixed(2)}ms`);
+      log.warn('Performance: long task detected', {
+        name,
+        duration: Number(duration.toFixed(2)),
+      });
     }
 
     return duration;
@@ -122,11 +127,11 @@ export function monitorMemoryUsage() {
       limit: Math.round(memory.jsHeapSizeLimit / 1048576), // MB
     };
 
-    console.log('[Memory]', memoryInfo);
+    log.debug('Memory usage snapshot', memoryInfo);
 
     // Warn if memory usage is high
     if (memoryInfo.used / memoryInfo.limit > 0.8) {
-      console.warn('[Memory] High memory usage detected');
+      log.warn('Memory: high usage detected', memoryInfo);
     }
 
     return memoryInfo;
@@ -141,7 +146,9 @@ export function setupPerformanceObserver() {
     // Monitor Long Tasks
     const longTaskObserver = new PerformanceObserver((list) => {
       list.getEntries().forEach((entry) => {
-        console.warn(`[Long Task] ${entry.duration.toFixed(2)}ms`);
+        log.warn('Performance observer: long task', {
+          duration: Number(entry.duration.toFixed(2)),
+        });
       });
     });
 
@@ -160,7 +167,9 @@ export function setupPerformanceObserver() {
         }; // First Input Delay entry
         if (fidEntry.processingStart) {
           const fid = fidEntry.processingStart - fidEntry.startTime;
-          console.log(`[FID] ${fid.toFixed(2)}ms`);
+          log.info('Performance observer: FID measured', {
+            fid: Number(fid.toFixed(2)),
+          });
         }
       });
     });

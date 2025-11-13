@@ -10,39 +10,36 @@
 [34mCLI[39m Cleaning output folder
 [34mCJS[39m Build start
 [34mESM[39m Build start
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "@heys/logger"[0m
 
-[43m[30m WARN [39m[49m [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe CommonJS "module" variable is treated as a global variable in an ECMAScript module and may not work as expected[0m [commonjs-variable-in-esm]
+    src/services/analytics.ts:1:20:
+[37m      1 │ import { log } from [32m'@heys/logger'[37m;
+        ╵                     [32m~~~~~~~~~~~~~~[0m
 
-    ../../levels.config.js:251:2:
-[37m      251 │   [32mmodule[37m.exports = {
-          ╵   [32m~~~~~~[0m
+  You can mark the path "@heys/logger" as external to exclude it from the bundle, which
+  will remove this error and leave the unresolved path in the bundle.
 
-  This file is considered to be an ECMAScript module because of the "export" keyword here:
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "@heys/logger"[0m
 
-    ../../levels.config.js:219:0:
-[37m      219 │ [32mexport[37m const DEFAULT_CONFIG = {
-          ╵ [32m~~~~~~[0m
+    src/services/analytics.ts:1:20:
+[37m      1 │ import { log } from [32m'@heys/logger'[37m;
+        ╵                     [32m~~~~~~~~~~~~~~[0m
 
+  You can mark the path "@heys/logger" as external to exclude it from the bundle, which
+  will remove this error and leave the unresolved path in the bundle.
 
-
-
-[43m[30m WARN [39m[49m [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe CommonJS "module" variable is treated as a global variable in an ECMAScript module and may not work as expected[0m [commonjs-variable-in-esm]
-
-    ../../levels.config.js:251:2:
-[37m      251 │   [32mmodule[37m.exports = {
-          ╵   [32m~~~~~~[0m
-
-  This file is considered to be an ECMAScript module because of the "export" keyword here:
-
-    ../../levels.config.js:219:0:
-[37m      219 │ [32mexport[37m const DEFAULT_CONFIG = {
-          ╵ [32m~~~~~~[0m
-
-
-
-[32mESM[39m [1mdist/index.mjs     [22m[32m79.05 KB[39m
-[32mESM[39m [1mdist/index.mjs.map [22m[32m291.46 KB[39m
-[32mESM[39m ⚡️ Build success in 1538ms
-[32mCJS[39m [1mdist/index.js     [22m[32m79.98 KB[39m
-[32mCJS[39m [1mdist/index.js.map [22m[32m291.46 KB[39m
-[32mCJS[39m ⚡️ Build success in 1540ms
+[31mCJS[39m [31mBuild failed[39m
+[31mESM[39m [31mBuild failed[39m
+[31mError: Build failed with 1 error:
+src/services/analytics.ts:1:20: ERROR: Could not resolve "@heys/logger"
+    at failureErrorWithLog (/Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:1651:15)
+    at /Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:1059:25
+    at runOnEndCallbacks (/Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:1486:45)
+    at buildResponseToResult (/Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:1057:7)
+    at /Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:1086:16
+    at responseCallbacks.<computed> (/Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:704:9)
+    at handleIncomingPacket (/Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:764:9)
+    at Socket.readFromStdout (/Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:680:7)
+    at Socket.emit (node:events:508:28)
+    at addChunk (node:internal/streams/readable:559:12)[39m
+[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 1.[39m

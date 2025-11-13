@@ -7,6 +7,8 @@
 
 import { ComponentType, LazyExoticComponent, lazy } from 'react';
 
+import { log } from '../lib/browser-logger';
+
 interface LazyLoadOptions {
   /** Preload the component after a delay (ms) */
   preloadDelay?: number;
@@ -61,11 +63,15 @@ export function createLazyComponent<T extends ComponentType<any>>(
 
       return result;
     } catch (error) {
-      console.warn(`Failed to load component ${componentName}:`, error);
+      log.warn('LazyLoader: component load failed', { componentName, error });
 
       if (retryCount < retryAttempts) {
         retryCount++;
-        console.log(`Retrying ${componentName} (attempt ${retryCount}/${retryAttempts})`);
+        log.info('LazyLoader: retrying component load', {
+          componentName,
+          attempt: retryCount,
+          retryAttempts,
+        });
 
         // Экспоненциальная задержка для retry
         await new Promise((resolve) => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
@@ -109,7 +115,7 @@ export function createLazyComponent<T extends ComponentType<any>>(
   if (preloadDelay > 0) {
     setTimeout(() => {
       preload().catch((error) => {
-        console.warn(`Preload failed for ${componentName}:`, error);
+        log.warn('LazyLoader: preload failed', { componentName, error });
       });
     }, preloadDelay);
   }
@@ -137,9 +143,9 @@ export async function preloadComponents(componentNames: string[]): Promise<void>
   if (promises.length > 0) {
     try {
       await Promise.allSettled(promises);
-      console.log(`Preloaded ${promises.length} components`);
+      log.debug('LazyLoader: components preloaded', { count: promises.length });
     } catch (error) {
-      console.warn('Some components failed to preload:', error);
+      log.warn('LazyLoader: some components failed to preload', { error });
     }
   }
 }

@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { log } from '../lib/browser-logger';
 import { createLazyComponent, ImportOptions } from '../utils/dynamicImport';
 
 interface LazyComponentState {
@@ -51,6 +52,15 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
   // Создаем lazy компонент
   const LazyComponent = useRef(createLazyComponent(importFunction, importOptions)).current;
 
+  const logContextBase = {
+    delay: importOptions.delay,
+    retries: importOptions.retries,
+    timeout: importOptions.timeout,
+    autoLoad,
+    preloadOnHover,
+    verbose,
+  };
+
   // Функция загрузки компонента
   const loadComponent = useCallback(async (): Promise<T | null> => {
     if (state.isLoaded && componentRef.current) {
@@ -81,22 +91,20 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
 
       // Используем preload promise если есть
       if (preloadPromiseRef.current) {
-        if (verbose) {
-          if (process.env.NODE_ENV === 'development') {
-            // eslint-disable-next-line no-console
-
-            console.log('🚀 Using preloaded component');
-          }
+        if (verbose && process.env.NODE_ENV === 'development') {
+          log.debug('Using preloaded lazy component', {
+            ...logContextBase,
+            wasPreloaded: true,
+          });
         }
         componentModule = await preloadPromiseRef.current;
         setState((prev) => ({ ...prev, wasPreloaded: true }));
       } else {
-        if (verbose) {
-          if (process.env.NODE_ENV === 'development') {
-            // eslint-disable-next-line no-console
-
-            console.log('📥 Loading component on demand');
-          }
+        if (verbose && process.env.NODE_ENV === 'development') {
+          log.debug('Loading lazy component on demand', {
+            ...logContextBase,
+            wasPreloaded: false,
+          });
         }
         componentModule = await importFunction();
       }
@@ -112,12 +120,12 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
         error: null,
       }));
 
-      if (verbose) {
-        if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-
-          console.log(`✅ Component loaded in ${loadTime.toFixed(2)}ms`);
-        }
+      if (verbose && process.env.NODE_ENV === 'development') {
+        log.info('Lazy component loaded', {
+          ...logContextBase,
+          loadTimeMs: loadTime,
+          wasPreloaded: state.wasPreloaded,
+        });
       }
 
       return componentRef.current;
@@ -131,12 +139,12 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
         loadTime,
       }));
 
-      if (verbose) {
-        if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-
-          console.error(`❌ Component failed to load after ${loadTime.toFixed(2)}ms:`, error);
-        }
+      if (verbose && process.env.NODE_ENV === 'development') {
+        log.error('Lazy component failed to load', {
+          ...logContextBase,
+          loadTimeMs: loadTime,
+          error,
+        });
       }
 
       return null;
@@ -149,33 +157,24 @@ export function useLazyComponent<T extends React.ComponentType<unknown>>(
       return;
     }
 
-    if (verbose) {
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-
-        console.log('🚀 Preloading component...');
-      }
+    if (verbose && process.env.NODE_ENV === 'development') {
+      log.debug('Preloading lazy component', logContextBase);
     }
 
     preloadPromiseRef.current = importFunction();
 
     try {
       await preloadPromiseRef.current;
-      if (verbose) {
-        if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-
-          console.log('✅ Component preloaded successfully');
-        }
+      if (verbose && process.env.NODE_ENV === 'development') {
+        log.info('Lazy component preloaded', logContextBase);
       }
     } catch (error) {
       preloadPromiseRef.current = null;
-      if (verbose) {
-        if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-
-          console.warn('⚠️ Component preload failed:', error);
-        }
+      if (verbose && process.env.NODE_ENV === 'development') {
+        log.warn('Lazy component preload failed', {
+          ...logContextBase,
+          error,
+        });
       }
     }
   }, [state.isLoaded, importFunction, verbose]);
@@ -354,9 +353,12 @@ export function useBatchLazyLoading<T extends React.ComponentType<Record<string,
       await Promise.allSettled(promises);
 
       if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-
-        console.log(`✅ Batch ${batchIndex + 1} loaded (${batchHooks.length} components)`);
+        log.info('Lazy component batch loaded', {
+          ...logContextBase,
+          batch: batchIndex + 1,
+          batchSize: batchHooks.length,
+          totalComponents: componentHooks.length,
+        });
       }
     },
     [componentHooks, batchSize],

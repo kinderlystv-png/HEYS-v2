@@ -4,6 +4,7 @@
  * Advanced Image Optimization System для Days 5-6 Performance Sprint
  * Обеспечивает intelligent image loading, format conversion, и caching
  */
+import { log } from '../lib/browser-logger';
 
 interface ImageOptimizationOptions {
   quality?: number;
@@ -132,7 +133,11 @@ class ImageOptimizer {
         timestamp: Date.now(),
       };
     } catch (error) {
-      console.warn('Image optimization failed, falling back to original:', error);
+      log.warn('Image optimization failed, fallback to original', {
+        source: src,
+        requestedOptions: options,
+        error,
+      });
 
       // Fallback к оригинальному изображению
       const fallbackMetadata = await this.getImageMetadata(src);

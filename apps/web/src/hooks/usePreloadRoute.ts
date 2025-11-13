@@ -2,6 +2,8 @@
 // Route Preloading Hook - Performance Sprint Day 3
 
 import { useCallback, useEffect, useRef } from 'react';
+
+import { log } from '../lib/browser-logger';
 import { preloadComponent } from '../utils/dynamicImport';
 
 interface PreloadOptions {
@@ -38,6 +40,14 @@ export function usePreloadRoute(
     onVisible = false,
     priority = 'medium',
   } = options;
+
+  const logContextBase = {
+    delay,
+    onHover,
+    onIdle,
+    onVisible,
+    priority,
+  };
 
   const preloadRef = useRef<{
     promise: Promise<void> | null;
@@ -84,9 +94,10 @@ export function usePreloadRoute(
         current.state.preloadedAt = Date.now();
 
         if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-
-          console.log(`✅ Route preloaded successfully (priority: ${priority})`);
+          log.info('Route preloaded successfully', {
+            ...logContextBase,
+            preloadedAt: current.state.preloadedAt,
+          });
         }
       } catch (error) {
         // Ошибка preload
@@ -94,9 +105,10 @@ export function usePreloadRoute(
         current.state.error = error as Error;
 
         if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-
-          console.warn(`⚠️ Route preload failed (priority: ${priority}):`, error);
+          log.warn('Route preload failed', {
+            ...logContextBase,
+            error,
+          });
         }
       }
     },
@@ -219,9 +231,10 @@ export function usePreloadRoutes(
     for (const [priority, group] of Object.entries(priorityGroups)) {
       if (group.length > 0) {
         if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-
-          console.log(`🚀 Preloading ${priority} priority routes (${group.length} routes)`);
+          log.info('Preloading routes by priority', {
+            priority,
+            total: group.length,
+          });
         }
 
         await Promise.allSettled(group.map((preloader: unknown) => preloader.preload()));
@@ -302,9 +315,13 @@ export function usePreloadPerformance() {
       }
 
       if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-
-        console.log(`📊 Preload ${name}: ${duration}ms (${success ? 'success' : 'error'})`);
+        log.debug('Route preload performance recorded', {
+          name,
+          duration,
+          success,
+          startTime,
+          endTime,
+        });
       }
     },
     [],

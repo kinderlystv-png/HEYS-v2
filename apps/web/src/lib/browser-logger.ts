@@ -1,71 +1,110 @@
 /**
- * Browser-friendly logger for @heys/logger
+ * Browser-friendly logger that делает безопасный бридж к window.HEYS.logger
+ * и аккуратно буферизует сообщения, пока реальный логгер недоступен.
  */
 
+type LogMethod = (message: string, context?: Record<string, unknown>) => void;
+
 export interface Logger {
-  trace: (message: string, ...args: unknown[]) => void;
-  debug: (message: string, ...args: unknown[]) => void;
-  info: (message: string, ...args: unknown[]) => void;
-  warn: (message: string, ...args: unknown[]) => void;
-  error: (message: string, ...args: unknown[]) => void;
-  fatal: (message: string, ...args: unknown[]) => void;
+  trace: LogMethod;
+  debug: LogMethod;
+  info: LogMethod;
+  warn: LogMethod;
+  error: LogMethod;
+  fatal: LogMethod;
 }
 
-const createBrowserLogger = (): Logger => {
-  const noop = () => {};
+type ExternalLogger = Partial<Record<keyof Logger, LogMethod>>;
 
+interface LogEntry {
+  level: keyof Logger;
+  message: string;
+  context?: Record<string, unknown>;
+  timestamp: number;
+}
+
+const LOG_LEVELS: Array<keyof Logger> = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'];
+const BUFFER_LIMIT = 200;
+
+const logBuffer: LogEntry[] = [];
+
+const readGlobalLogger = (): ExternalLogger | undefined => {
   if (typeof window === 'undefined') {
-    return {
-      trace: noop,
-      debug: noop,
-      info: noop,
-      warn: noop,
-      error: noop,
-      fatal: noop,
-    };
+    return undefined;
   }
 
-  return {
-    trace: (message: string, ...args: unknown[]) => {
-      // eslint-disable-next-line no-console
-      console.debug(`[TRACE] ${message}`, ...args);
-    },
-    debug: (message: string, ...args: unknown[]) => {
-      // eslint-disable-next-line no-console
-      console.debug(`[DEBUG] ${message}`, ...args);
-    },
-    info: (message: string, ...args: unknown[]) => {
-      // eslint-disable-next-line no-console
-      console.info(`[INFO] ${message}`, ...args);
-    },
-    warn: (message: string, ...args: unknown[]) => {
-      // eslint-disable-next-line no-console
-      console.warn(`[WARN] ${message}`, ...args);
-    },
-    error: (message: string, ...args: unknown[]) => {
-      // eslint-disable-next-line no-console
-      console.error(`[ERROR] ${message}`, ...args);
-    },
-    fatal: (message: string, ...args: unknown[]) => {
-      // eslint-disable-next-line no-console
-      console.error(`[FATAL] ${message}`, ...args);
-    },
-  };
+  const heysNamespace = (window as unknown as { HEYS?: { logger?: ExternalLogger } }).HEYS;
+  return heysNamespace?.logger;
 };
+
+const pushToBuffer = (entry: LogEntry) => {
+  if (logBuffer.length >= BUFFER_LIMIT) {
+    logBuffer.shift();
+  }
+
+  logBuffer.push(entry);
+};
+
+const flushBuffer = (target: ExternalLogger | undefined) => {
+  if (!target) {
+    return;
+  }
+
+  while (logBuffer.length > 0) {
+    const entry = logBuffer.shift();
+    if (!entry) {
+      continue;
+    }
+
+    target[entry.level]?.(entry.message, entry.context);
+  }
+};
+
+const emit = (level: keyof Logger, message: string, context?: Record<string, unknown>) => {
+  const target = readGlobalLogger();
+
+  if (target && typeof target[level] === 'function') {
+    target[level]?.(message, context);
+    if (logBuffer.length > 0) {
+      flushBuffer(target);
+    }
+    return;
+  }
+
+  pushToBuffer({
+    level,
+    message,
+    context,
+    timestamp: Date.now(),
+  });
+};
+
+const createBrowserLogger = (): Logger =>
+  LOG_LEVELS.reduce((acc, level) => {
+    acc[level] = (message: string, context?: Record<string, unknown>) =>
+      emit(level, message, context);
+    return acc;
+  }, {} as Record<keyof Logger, LogMethod>) as Logger;
 
 export const log = createBrowserLogger();
 
 export const logError = (error: Error, context?: Record<string, unknown>) => {
-  // eslint-disable-next-line no-console
-  console.error('[ERROR]', error.message, context || {}, error);
+  const payload = {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+    ...context,
+  };
+
+  emit('error', 'Browser error captured', payload);
 };
 
 export const logWarning = (message: string, context?: Record<string, unknown>) => {
-  // eslint-disable-next-line no-console
-  console.warn('[WARN]', message, context || {});
+  emit('warn', message, context);
 };
 
 export const logInfo = (message: string, context?: Record<string, unknown>) => {
-  // eslint-disable-next-line no-console
-  console.info('[INFO]', message, context || {});
+  emit('info', message, context);
 };
+
+export const getBufferedLogs = () => logBuffer.slice();

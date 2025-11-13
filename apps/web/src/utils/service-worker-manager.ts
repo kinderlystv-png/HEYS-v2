@@ -2,6 +2,8 @@
 // Service Worker Manager для Performance Sprint Day 7
 // Регистрация, управление и интеграция с image optimization
 
+import { log } from '../lib/browser-logger';
+
 interface ServiceWorkerManager {
   register(): Promise<ServiceWorkerRegistration | null>;
   unregister(): Promise<boolean>;
@@ -39,19 +41,19 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
    */
   async register(): Promise<ServiceWorkerRegistration | null> {
     if (!this.isSupported) {
-      console.warn('⚠️ SW Manager: Service Workers not supported');
+      log.warn('SW Manager: Service Workers not supported');
       return null;
     }
 
     try {
-      console.log('🔧 SW Manager: Registering Service Worker...');
+      log.info('SW Manager: Registering Service Worker');
 
       this.registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/',
         updateViaCache: 'none', // Всегда проверяем обновления
       });
 
-      console.log('✅ SW Manager: Service Worker registered:', this.registration.scope);
+      log.info('SW Manager: Service Worker registered', { scope: this.registration.scope });
 
       // Слушаем обновления Service Worker
       this.setupUpdateListener();
@@ -66,7 +68,7 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
 
       return this.registration;
     } catch (error) {
-      console.error('❌ SW Manager: Registration failed:', error);
+      log.error('SW Manager: Registration failed', { error });
       return null;
     }
   }
@@ -81,11 +83,11 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
 
     try {
       const result = await this.registration.unregister();
-      console.log('🗑️ SW Manager: Service Worker unregistered:', result);
+      log.info('SW Manager: Service Worker unregistered', { result });
       this.registration = null;
       return result;
     } catch (error) {
-      console.error('❌ SW Manager: Unregistration failed:', error);
+      log.error('SW Manager: Unregistration failed', { error });
       return false;
     }
   }
@@ -99,14 +101,14 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
     }
 
     try {
-      console.log('🔄 SW Manager: Checking for updates...');
+      log.debug('SW Manager: Checking for updates');
       await this.registration.update();
 
       if (this.registration.waiting) {
         this.sendMessage({ type: 'SKIP_WAITING' });
       }
     } catch (error) {
-      console.error('❌ SW Manager: Update failed:', error);
+      log.error('SW Manager: Update failed', { error });
       throw error;
     }
   }
@@ -116,19 +118,19 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
    */
   async preloadResources(urls: string[]): Promise<void> {
     if (!this.isServiceWorkerReady()) {
-      console.warn('⚠️ SW Manager: Service Worker not ready for preloading');
+      log.warn('SW Manager: Service Worker not ready for preloading');
       return;
     }
 
     try {
-      console.log('🚀 SW Manager: Preloading resources:', urls.length);
+      log.info('SW Manager: Preloading resources', { count: urls.length });
 
       this.sendMessage({
         type: 'PRELOAD_RESOURCES',
         data: { urls },
       });
     } catch (error) {
-      console.error('❌ SW Manager: Preload failed:', error);
+      log.error('SW Manager: Preload failed', { error, urls });
       throw error;
     }
   }
@@ -138,19 +140,19 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
    */
   async clearCache(pattern = ''): Promise<void> {
     if (!this.isServiceWorkerReady()) {
-      console.warn('⚠️ SW Manager: Service Worker not ready for cache cleanup');
+      log.warn('SW Manager: Service Worker not ready for cache cleanup');
       return;
     }
 
     try {
-      console.log('🧹 SW Manager: Clearing cache with pattern:', pattern);
+      log.info('SW Manager: Clearing cache', { pattern });
 
       this.sendMessage({
         type: 'CLEAR_CACHE',
         data: { pattern },
       });
     } catch (error) {
-      console.error('❌ SW Manager: Cache clear failed:', error);
+      log.error('SW Manager: Cache clear failed', { error, pattern });
       throw error;
     }
   }
@@ -202,9 +204,9 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
         data: metrics,
       });
 
-      console.log('📊 SW Manager: Performance metrics sent:', metrics);
+      log.debug('SW Manager: Performance metrics sent', { metrics });
     } catch (error) {
-      console.error('❌ SW Manager: Failed to send metrics:', error);
+      log.error('SW Manager: Failed to send metrics', { error, metrics });
     }
   }
 
@@ -240,11 +242,11 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
       const newWorker = this.registration!.installing;
 
       if (newWorker) {
-        console.log('🔄 SW Manager: New Service Worker installing...');
+        log.info('SW Manager: New Service Worker installing');
 
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            console.log('✅ SW Manager: New Service Worker installed, refresh to activate');
+            log.info('SW Manager: New Service Worker installed');
 
             // Можно показать пользователю уведомление об обновлении
             this.showUpdateNotification();
@@ -263,20 +265,20 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
 
       switch (type) {
         case 'CACHE_UPDATED':
-          console.log('📦 SW Manager: Cache updated for:', data?.url);
+          log.debug('SW Manager: Cache updated', { url: data?.url });
           break;
 
         case 'OFFLINE_FALLBACK':
-          console.log('📱 SW Manager: Offline fallback activated');
+          log.warn('SW Manager: Offline fallback activated');
           this.showOfflineNotification();
           break;
 
         case 'PERFORMANCE_UPDATE':
-          console.log('📊 SW Manager: Performance update:', data);
+          log.debug('SW Manager: Performance update', { data });
           break;
 
         default:
-          console.log('💬 SW Manager: Message from SW:', event.data);
+          log.debug('SW Manager: Message from Service Worker', { payload: event.data });
       }
     });
   }
@@ -286,7 +288,7 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
    */
   private showUpdateNotification(): void {
     // Интеграция с notification system
-    console.log('🔔 SW Manager: App update available');
+    log.info('SW Manager: App update available');
 
     // Можно интегрировать с toast notifications:
     // showToast({
@@ -301,7 +303,7 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
    * Показ уведомления об offline режиме (заглушка для UI integration)
    */
   private showOfflineNotification(): void {
-    console.log('📱 SW Manager: App running in offline mode');
+    log.info('SW Manager: App running in offline mode');
 
     // Можно интегрировать с notification system:
     // showToast({
@@ -323,6 +325,8 @@ export type { CacheStatus, PerformanceMetrics, ServiceWorkerManager };
 if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
   // Регистрируем после загрузки страницы
   window.addEventListener('load', () => {
-    serviceWorkerManager.register().catch(console.error);
+    serviceWorkerManager.register().catch((error) => {
+      log.error('SW Manager: Auto registration failed', { error });
+    });
   });
 }

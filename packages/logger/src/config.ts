@@ -1,4 +1,4 @@
-import { LogLevel } from './index.js';
+import { LogLevel } from './log-level';
 
 /**
  * Конфигурация транспортов для логирования

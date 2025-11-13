@@ -7,6 +7,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { log } from '../lib/browser-logger';
+
 interface ImportCache {
   [key: string]: {
     promise: Promise<any>;
@@ -80,9 +82,20 @@ export async function dynamicImport<T = any>(
         cleanupCache();
       }
 
+      log.debug('Dynamic import completed', {
+        importPath,
+        cacheable,
+        cached: cacheable ? !!importCache[importPath] : false,
+      });
+
       return result as T;
     } catch (error) {
-      console.warn(`Dynamic import failed (attempt ${attempt}/${retries + 1}):`, importPath, error);
+      log.warn('Dynamic import attempt failed', {
+        importPath,
+        attempt,
+        retries,
+        error,
+      });
 
       if (attempt <= retries) {
         // Экспоненциальная задержка
@@ -210,9 +223,16 @@ export class ModulePreloader {
           cacheable: true,
           ...item.options,
         });
-        console.log(`✅ Preloaded: ${item.path}`);
+        log.info('Module preloaded', {
+          importPath: item.path,
+          queueLength: this.preloadQueue.length,
+        });
       } catch (error) {
-        console.warn(`❌ Failed to preload: ${item.path}`, error);
+        log.warn('Failed to preload module', {
+          importPath: item.path,
+          queueLength: this.preloadQueue.length,
+          error,
+        });
       }
 
       // Небольшая задержка между загрузками чтобы не блокировать UI
@@ -269,9 +289,17 @@ export class ModuleGroup {
       try {
         const result = await dynamicImport(path);
         this.loaded.add(path);
+        log.info('Module preloaded', {
+          importPath: item.path,
+          queueLength: this.preloadQueue.length,
+        });
         return result;
       } catch (error) {
-        console.warn(`Failed to load module ${path} from group ${this.name}:`, error);
+        log.warn('Failed to load module from group', {
+          group: this.name,
+          importPath: path,
+          error,
+        });
         throw error;
       }
     });

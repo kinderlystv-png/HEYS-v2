@@ -1,3 +1,5 @@
+import { log } from '../lib/browser-logger';
+
 // filepath: apps/web/src/middleware/auth.ts
 
 /**
@@ -161,7 +163,9 @@ export class JWTAuthMiddleware {
         },
       };
     } catch (error) {
-      console.error('JWT validation error:', error);
+      log.error('JWT validation error', {
+        error,
+      });
       return {
         success: false,
         error: 'Token validation failed',

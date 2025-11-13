@@ -1,32 +1,37 @@
+import { log } from '@heys/logger';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { trackEvent } from '../index.js';
 
 describe('Analytics', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
+  let loggerSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    loggerSpy = vi.spyOn(log, 'debug').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    consoleSpy.mockRestore();
+    loggerSpy.mockRestore();
   });
+
+  const expectLogCall = (event: string, data?: unknown) => {
+    expect(loggerSpy).toHaveBeenCalledWith('Analytics track event', { event, data });
+  };
 
   describe('trackEvent', () => {
     it('should track event with name only', () => {
       trackEvent('user_login');
 
-      expect(consoleSpy).toHaveBeenCalledWith('Track:', 'user_login', undefined);
-      expect(consoleSpy).toHaveBeenCalledTimes(1);
+      expectLogCall('user_login');
+      expect(loggerSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should track event with name and data', () => {
       const eventData = { userId: '123', timestamp: Date.now() };
       trackEvent('user_action', eventData);
 
-      expect(consoleSpy).toHaveBeenCalledWith('Track:', 'user_action', eventData);
-      expect(consoleSpy).toHaveBeenCalledTimes(1);
+      expectLogCall('user_action', eventData);
+      expect(loggerSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should handle different event names', () => {
@@ -34,10 +39,10 @@ describe('Analytics', () => {
 
       events.forEach((eventName) => {
         trackEvent(eventName);
-        expect(consoleSpy).toHaveBeenCalledWith('Track:', eventName, undefined);
+        expectLogCall(eventName);
       });
 
-      expect(consoleSpy).toHaveBeenCalledTimes(events.length);
+      expect(loggerSpy).toHaveBeenCalledTimes(events.length);
     });
 
     it('should handle different data types', () => {
@@ -52,18 +57,18 @@ describe('Analytics', () => {
       ];
 
       testCases.forEach(({ event, data }) => {
-        trackEvent(event, data);
-        expect(consoleSpy).toHaveBeenCalledWith('Track:', event, data);
+        trackEvent(event, data as Record<string, unknown>);
+        expectLogCall(event, data);
       });
 
-      expect(consoleSpy).toHaveBeenCalledTimes(testCases.length);
+      expect(loggerSpy).toHaveBeenCalledTimes(testCases.length);
     });
 
     it('should handle empty string event', () => {
       trackEvent('');
 
-      expect(consoleSpy).toHaveBeenCalledWith('Track:', '', undefined);
-      expect(consoleSpy).toHaveBeenCalledTimes(1);
+      expectLogCall('');
+      expect(loggerSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should handle complex nested data', () => {
@@ -90,8 +95,8 @@ describe('Analytics', () => {
 
       trackEvent('complex_interaction', complexData);
 
-      expect(consoleSpy).toHaveBeenCalledWith('Track:', 'complex_interaction', complexData);
-      expect(consoleSpy).toHaveBeenCalledTimes(1);
+      expectLogCall('complex_interaction', complexData);
+      expect(loggerSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should handle special characters in event names', () => {
@@ -107,10 +112,10 @@ describe('Analytics', () => {
 
       specialEvents.forEach((eventName) => {
         trackEvent(eventName);
-        expect(consoleSpy).toHaveBeenCalledWith('Track:', eventName, undefined);
+        expectLogCall(eventName);
       });
 
-      expect(consoleSpy).toHaveBeenCalledTimes(specialEvents.length);
+      expect(loggerSpy).toHaveBeenCalledTimes(specialEvents.length);
     });
 
     it('should handle unicode characters', () => {
@@ -118,19 +123,19 @@ describe('Analytics', () => {
 
       unicodeEvents.forEach((eventName) => {
         trackEvent(eventName);
-        expect(consoleSpy).toHaveBeenCalledWith('Track:', eventName, undefined);
+        expectLogCall(eventName);
       });
 
-      expect(consoleSpy).toHaveBeenCalledTimes(unicodeEvents.length);
+      expect(loggerSpy).toHaveBeenCalledTimes(unicodeEvents.length);
     });
 
     it('should not throw errors with any input', () => {
       expect(() => trackEvent('normal_event')).not.toThrow();
-      expect(() => trackEvent('', null)).not.toThrow();
+      expect(() => trackEvent('', null as unknown as Record<string, unknown>)).not.toThrow();
       expect(() => trackEvent('event', { circular: {} })).not.toThrow();
 
       // Создаем циклическую ссылку
-      const circularObj: any = { name: 'test' };
+      const circularObj: Record<string, unknown> & { self?: unknown } = { name: 'test' };
       circularObj.self = circularObj;
       expect(() => trackEvent('circular', circularObj)).not.toThrow();
     });
@@ -146,7 +151,7 @@ describe('Analytics', () => {
       const results = [
         trackEvent('event1'),
         trackEvent('event2', { data: 'test' }),
-        trackEvent('event3', null),
+        trackEvent('event3', null as unknown as Record<string, unknown>),
       ];
 
       results.forEach((result) => {
@@ -161,11 +166,17 @@ describe('Analytics', () => {
         trackEvent(`rapid_event_${i}`, { index: i });
       }
 
-      expect(consoleSpy).toHaveBeenCalledTimes(100);
+      expect(loggerSpy).toHaveBeenCalledTimes(100);
 
       // Проверяем первый и последний вызовы
-      expect(consoleSpy).toHaveBeenNthCalledWith(1, 'Track:', 'rapid_event_0', { index: 0 });
-      expect(consoleSpy).toHaveBeenNthCalledWith(100, 'Track:', 'rapid_event_99', { index: 99 });
+      expect(loggerSpy).toHaveBeenNthCalledWith(1, 'Analytics track event', {
+        event: 'rapid_event_0',
+        data: { index: 0 },
+      });
+      expect(loggerSpy).toHaveBeenNthCalledWith(100, 'Analytics track event', {
+        event: 'rapid_event_99',
+        data: { index: 99 },
+      });
     });
 
     it('should work with real-world analytics scenarios', () => {
@@ -177,9 +188,9 @@ describe('Analytics', () => {
       trackEvent('data_saved', { type: 'meal', id: '123' });
       trackEvent('notification_sent', { type: 'success', message: 'Meal saved' });
 
-      expect(consoleSpy).toHaveBeenCalledTimes(6);
-      expect(consoleSpy).toHaveBeenCalledWith('Track:', 'app_opened', undefined);
-      expect(consoleSpy).toHaveBeenCalledWith('Track:', 'data_saved', { type: 'meal', id: '123' });
+      expect(loggerSpy).toHaveBeenCalledTimes(6);
+      expectLogCall('app_opened');
+      expectLogCall('data_saved', { type: 'meal', id: '123' });
     });
 
     it('should handle error tracking scenarios', () => {
@@ -193,8 +204,8 @@ describe('Analytics', () => {
 
       trackEvent('error_occurred', errorData);
 
-      expect(consoleSpy).toHaveBeenCalledWith('Track:', 'error_occurred', errorData);
-      expect(consoleSpy).toHaveBeenCalledTimes(1);
+      expectLogCall('error_occurred', errorData);
+      expect(loggerSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

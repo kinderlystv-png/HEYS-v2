@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { log } from '../lib/browser-logger';
 import { ImageMetadata, ImageOptimizationOptions, imageOptimizer } from '../utils/image-optimizer';
 
 interface UseImageOptimizationOptions extends ImageOptimizationOptions {
@@ -97,7 +98,11 @@ export function useImageOptimization(
       });
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
-        console.warn('Image preload failed:', error);
+        log.warn('Image preload failed in development mode', {
+          source: src,
+          options: optimizationOptions,
+          error,
+        });
       }
     }
   }, [src, optimizationOptions]);
@@ -234,7 +239,12 @@ export function useImagePreloading(
             priority,
           });
         } catch (error) {
-          console.warn('Image preload failed:', error);
+          log.warn('Image preload failed', {
+            source: src,
+            options: imageOptions,
+            priority,
+            error,
+          });
         }
       };
 

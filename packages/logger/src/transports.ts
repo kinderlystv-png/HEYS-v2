@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import pino from 'pino';
 
-import { AdvancedLoggerConfig } from './config.js';
+import { AdvancedLoggerConfig } from './config';
 
 const resolveStreamLevel = (level: AdvancedLoggerConfig['level']): pino.Level | null => {
   if (level === 'silent') {
