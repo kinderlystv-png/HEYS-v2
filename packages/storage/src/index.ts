@@ -1,11 +1,57 @@
 // Storage service with multiple adapters and validation
 import { z } from 'zod';
 
+import { log as systemLog } from '@heys/logger';
+
+type BrowserLogger = {
+  warn?: (details: Record<string, unknown>, message?: string) => void;
+  error?: (details: Record<string, unknown>, message?: string) => void;
+};
+
+const storageLog = {
+  warn(message: string, context?: Record<string, unknown>) {
+    if (typeof window !== 'undefined') {
+      const heysLogger = (window as unknown as { HEYS?: { logger?: BrowserLogger } }).HEYS?.logger;
+      if (heysLogger?.warn) {
+        heysLogger.warn(context ?? {}, message);
+        return;
+      }
+    }
+
+    try {
+      systemLog.warn(message, context ?? {});
+    } catch {
+      if (typeof globalThis !== 'undefined' && globalThis.console?.warn) {
+        // eslint-disable-next-line no-console
+        globalThis.console.warn(`[storage] ${message}`, context);
+      }
+    }
+  },
+  error(message: string, context?: Record<string, unknown>) {
+    if (typeof window !== 'undefined') {
+      const heysLogger = (window as unknown as { HEYS?: { logger?: BrowserLogger } }).HEYS?.logger;
+      if (heysLogger?.error) {
+        heysLogger.error(context ?? {}, message);
+        return;
+      }
+    }
+
+    try {
+      systemLog.error(message, context ?? {});
+    } catch {
+      if (typeof globalThis !== 'undefined' && globalThis.console?.error) {
+        // eslint-disable-next-line no-console
+        globalThis.console.error(`[storage] ${message}`, context);
+      }
+    }
+  },
+};
+
 export interface StorageItem {
   id: string;
   key: string;
   value: unknown;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
   expiresAt?: Date;
@@ -61,7 +107,10 @@ export class StorageService {
       try {
         return schema.parse(item.value);
       } catch (error) {
-        console.warn(`Storage validation failed for key ${key}:`, error);
+        storageLog.warn('Storage validation failed for key', {
+          key,
+          error,
+        });
         return null;
       }
     }
@@ -260,7 +309,7 @@ export class LocalStorageAdapter implements StorageAdapter {
 
       return item;
     } catch (error) {
-      console.error('LocalStorage get error:', error);
+      storageLog.error('LocalStorage get error', { error, key });
       return null;
     }
   }
@@ -282,7 +331,7 @@ export class LocalStorageAdapter implements StorageAdapter {
 
       localStorage.setItem(this.getKey(key), JSON.stringify(item));
     } catch (error) {
-      console.error('LocalStorage set error:', error);
+      storageLog.error('LocalStorage set error', { error, key });
       throw error;
     }
   }
@@ -329,7 +378,7 @@ if (typeof window !== 'undefined' && window.localStorage) {
   try {
     storage.addAdapter('localStorage', new LocalStorageAdapter());
   } catch (error) {
-    console.warn('Failed to initialize LocalStorage adapter:', error);
+    storageLog.warn('Failed to initialize LocalStorage adapter', { error });
   }
 }
 

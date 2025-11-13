@@ -55,7 +55,7 @@
     },
 
     // TS7 deprecation guard for baseUrl
-    "ignoreDeprecations": "6.0"
+    "ignoreDeprecations": "5.0"
   },
 
   // Workspace references

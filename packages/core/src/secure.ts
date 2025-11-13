@@ -11,6 +11,22 @@ import { defaultValidator, SecurityError, ValidationSchemas } from '@heys/shared
 
 import { HeysDay, HeysSession, HeysUser } from './legacy/index';
 
+type UserCreationResult = Awaited<ReturnType<HeysUser['createUser']>>;
+type UserUpdateResult = Awaited<ReturnType<HeysUser['updateUser']>>;
+type UserSearchResult = Awaited<ReturnType<HeysUser['searchUsers']>>;
+type DayCreationResult = Awaited<ReturnType<HeysDay['createDay']>>;
+type DayUpdateResult = Awaited<ReturnType<HeysDay['updateDay']>>;
+type DayContentResult = Awaited<ReturnType<HeysDay['getDayContent']>>;
+type SessionCreationResult = Awaited<ReturnType<HeysSession['createSession']>>;
+
+interface SanitizedApiRequest {
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  path: string;
+  query?: Record<string, unknown>;
+  body?: unknown;
+  headers?: Record<string, unknown>;
+}
+
 /**
  * Security-enhanced user manager
  */
@@ -18,7 +34,7 @@ export class SecureUserManager extends HeysUser {
   /**
    * Create user with security validation
    */
-  override async createUser(userData: unknown): Promise<any> {
+  override async createUser(userData: unknown): Promise<UserCreationResult> {
     const validation = await defaultValidator.validateSchema(userData, ValidationSchemas.user, {
       sanitize: true,
       strictMode: false, // Changed from true to false
@@ -28,13 +44,13 @@ export class SecureUserManager extends HeysUser {
       throw new SecurityError('User validation failed', validation.errors);
     }
 
-    return super.createUser(validation.sanitized || userData);
+    return (await super.createUser(validation.sanitized || userData)) as UserCreationResult;
   }
 
   /**
    * Update user with security validation
    */
-  override async updateUser(userId: string, updateData: unknown): Promise<any> {
+  override async updateUser(userId: string, updateData: unknown): Promise<UserUpdateResult> {
     // Validate user ID
     const idValidation = await defaultValidator.validateSchema(
       userId,
@@ -56,13 +72,13 @@ export class SecureUserManager extends HeysUser {
       throw new SecurityError('Update data validation failed', dataValidation.errors);
     }
 
-    return super.updateUser(userId, dataValidation.sanitized || updateData);
+    return (await super.updateUser(userId, dataValidation.sanitized || updateData)) as UserUpdateResult;
   }
 
   /**
    * Search users with input sanitization
    */
-  override async searchUsers(query: unknown): Promise<any[]> {
+  override async searchUsers(query: unknown): Promise<UserSearchResult> {
     const validation = defaultValidator.validateInput(query, 'text', {
       sanitize: true,
       required: true,
@@ -72,7 +88,7 @@ export class SecureUserManager extends HeysUser {
       throw new SecurityError('Search query validation failed', validation.errors);
     }
 
-    return super.searchUsers((validation.sanitized as string) || (query as string));
+    return (await super.searchUsers((validation.sanitized as string) || (query as string))) as UserSearchResult;
   }
 }
 
@@ -83,7 +99,7 @@ export class SecureDayManager extends HeysDay {
   /**
    * Create day entry with validation
    */
-  override async createDay(dayData: unknown): Promise<any> {
+  override async createDay(dayData: unknown): Promise<DayCreationResult> {
     // Create dynamic schema for day data
     const daySchema = ValidationSchemas.content.extend({
       date: ValidationSchemas.user.shape.createdAt,
@@ -99,13 +115,13 @@ export class SecureDayManager extends HeysDay {
       throw new SecurityError('Day data validation failed', validation.errors);
     }
 
-    return super.createDay(validation.sanitized || dayData);
+    return (await super.createDay(validation.sanitized || dayData)) as DayCreationResult;
   }
 
   /**
    * Update day with security validation
    */
-  override async updateDay(dayId: string, updateData: unknown): Promise<any> {
+  override async updateDay(dayId: string, updateData: unknown): Promise<DayUpdateResult> {
     const validation = await defaultValidator.validateSchema(
       updateData,
       ValidationSchemas.content.partial(),
@@ -116,14 +132,14 @@ export class SecureDayManager extends HeysDay {
       throw new SecurityError('Day update validation failed', validation.errors);
     }
 
-    return super.updateDay(dayId, validation.sanitized || updateData);
+    return (await super.updateDay(dayId, validation.sanitized || updateData)) as DayUpdateResult;
   }
 
   /**
    * Get day content with XSS protection
    */
-  override async getDayContent(dayId: string): Promise<any> {
-    const content = await super.getDayContent(dayId);
+  override async getDayContent(dayId: string): Promise<DayContentResult> {
+    const content = (await super.getDayContent(dayId)) as DayContentResult;
 
     if (content && typeof content === 'object') {
       // Sanitize content before returning
@@ -145,7 +161,7 @@ export class SecureSessionManager extends HeysSession {
   /**
    * Create session with security validation
    */
-  override async createSession(sessionData: unknown): Promise<any> {
+  override async createSession(sessionData: unknown): Promise<SessionCreationResult> {
     const sessionSchema = ValidationSchemas.user
       .pick({
         id: true,
@@ -165,7 +181,7 @@ export class SecureSessionManager extends HeysSession {
       throw new SecurityError('Session validation failed', validation.errors);
     }
 
-    return super.createSession(validation.sanitized || sessionData);
+    return (await super.createSession(validation.sanitized || sessionData)) as SessionCreationResult;
   }
 
   /**
@@ -222,7 +238,7 @@ export class SecureHeysCore {
   /**
    * Secure API endpoint handler
    */
-  async handleApiRequest(request: unknown): Promise<any> {
+  async handleApiRequest(request: unknown): Promise<unknown> {
     const validation = await defaultValidator.validateSchema(
       request,
       ValidationSchemas.apiRequest,
@@ -233,7 +249,7 @@ export class SecureHeysCore {
       throw new SecurityError('API request validation failed', validation.errors);
     }
 
-    const sanitizedRequest = validation.sanitized as any;
+    const sanitizedRequest = validation.sanitized as SanitizedApiRequest;
 
     // Route request based on method and path
     switch (sanitizedRequest.method) {
@@ -250,18 +266,20 @@ export class SecureHeysCore {
     }
   }
 
-  private async handleGetRequest(request: any): Promise<any> {
+  private async handleGetRequest(request: SanitizedApiRequest): Promise<unknown> {
     // Handle GET requests with path routing
     if (request.path.startsWith('/users')) {
-      return this.users.searchUsers(request.query?.q || '');
+      const query = typeof request.query?.q === 'string' ? request.query.q : '';
+      return this.users.searchUsers(query);
     }
     if (request.path.startsWith('/days')) {
-      return this.days.getDayContent(request.query?.id);
+      const dayId = typeof request.query?.id === 'string' ? request.query.id : '';
+      return this.days.getDayContent(dayId);
     }
     throw new SecurityError('Unknown GET endpoint', []);
   }
 
-  private async handlePostRequest(request: any): Promise<any> {
+  private async handlePostRequest(request: SanitizedApiRequest): Promise<unknown> {
     // Handle POST requests
     if (request.path === '/users') {
       return this.users.createUser(request.body);
@@ -275,7 +293,7 @@ export class SecureHeysCore {
     throw new SecurityError('Unknown POST endpoint', []);
   }
 
-  private async handlePutRequest(request: any): Promise<any> {
+  private async handlePutRequest(request: SanitizedApiRequest): Promise<unknown> {
     // Handle PUT requests
     const pathParts = request.path.split('/');
     if (pathParts[1] === 'users' && pathParts[2]) {
@@ -287,11 +305,12 @@ export class SecureHeysCore {
     throw new SecurityError('Unknown PUT endpoint', []);
   }
 
-  private async handleDeleteRequest(request: any): Promise<any> {
+  private async handleDeleteRequest(request: SanitizedApiRequest): Promise<unknown> {
     // Handle DELETE requests with security checks
 
     // Validate that user has permission to delete
-    if (!request.headers?.authorization) {
+    const authorizationHeader = request.headers?.authorization;
+    if (typeof authorizationHeader !== 'string' || authorizationHeader.length === 0) {
       throw new SecurityError('Authorization required for DELETE operations', []);
     }
 

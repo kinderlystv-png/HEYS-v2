@@ -1,7 +1,9 @@
+import { log } from '@heys/logger';
+
 // Analytics service
 export interface AnalyticsEvent {
   name: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
   timestamp?: number;
   userId?: string;
   sessionId?: string;
@@ -9,7 +11,7 @@ export interface AnalyticsEvent {
 
 export interface AnalyticsProvider {
   track(event: AnalyticsEvent): Promise<void>;
-  identify(userId: string, traits?: Record<string, any>): Promise<void>;
+  identify(userId: string, traits?: Record<string, unknown>): Promise<void>;
 }
 
 export class AnalyticsService {
@@ -26,7 +28,7 @@ export class AnalyticsService {
     this.providers.push(provider);
   }
 
-  async track(name: string, properties?: Record<string, any>): Promise<void> {
+  async track(name: string, properties?: Record<string, unknown>): Promise<void> {
     const event: AnalyticsEvent = {
       name,
       timestamp: Date.now(),
@@ -45,19 +47,21 @@ export class AnalyticsService {
 
     // Send to all providers
     const promises = this.providers.map((provider) =>
-      provider.track(event).catch((error) => console.error('Analytics provider error:', error)),
+      provider.track(event).catch((error) => {
+        log.error('Analytics provider error', { error, provider: provider.constructor.name });
+      }),
     );
 
     await Promise.allSettled(promises);
   }
 
-  async identify(userId: string, traits?: Record<string, any>): Promise<void> {
+  async identify(userId: string, traits?: Record<string, unknown>): Promise<void> {
     this.userId = userId;
 
     const promises = this.providers.map((provider) =>
-      provider
-        .identify(userId, traits)
-        .catch((error) => console.error('Analytics identify error:', error)),
+      provider.identify(userId, traits).catch((error) => {
+        log.error('Analytics identify error', { error, provider: provider.constructor.name });
+      }),
     );
 
     await Promise.allSettled(promises);

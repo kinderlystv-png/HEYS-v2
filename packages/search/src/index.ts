@@ -12,7 +12,7 @@ export interface SearchConfig {
   debugMode: boolean;
 }
 
-export interface SearchResult<T = any> {
+export interface SearchResult<T = Record<string, unknown>> {
   items: T[];
   query: string;
   suggestions: string[];
@@ -28,9 +28,9 @@ export interface SearchMetrics {
   typoCorrections: number;
 }
 
-export class SmartSearchEngine<T = any> {
+export class SmartSearchEngine<TItem extends Record<string, unknown> = Record<string, unknown>> {
   private config: SearchConfig;
-  private cache = new Map<string, { result: SearchResult<T>; timestamp: number }>();
+  private cache = new Map<string, { result: SearchResult<TItem>; timestamp: number }>();
   private metrics: SearchMetrics = {
     totalSearches: 0,
     averageSearchTime: 0,
@@ -105,27 +105,31 @@ export class SmartSearchEngine<T = any> {
    * Calculate Levenshtein distance between two strings
    */
   private levenshteinDistance(str1: string, str2: string): number {
-    const matrix: number[][] = Array(str2.length + 1)
-      .fill(null)
-      .map(() => Array(str1.length + 1).fill(0));
+    const matrix: number[][] = Array.from({ length: str2.length + 1 }, () =>
+      Array<number>(str1.length + 1).fill(0),
+    );
 
-    for (let i = 0; i <= str1.length; i++) matrix[0]![i] = i;
-    for (let j = 0; j <= str2.length; j++) matrix[j]![0] = j;
+    for (let i = 0; i <= str1.length; i += 1) {
+      matrix[0][i] = i;
+    }
+    for (let j = 0; j <= str2.length; j += 1) {
+      matrix[j][0] = j;
+    }
 
-    for (let j = 1; j <= str2.length; j++) {
-      for (let i = 1; i <= str1.length; i++) {
+    for (let j = 1; j <= str2.length; j += 1) {
+      for (let i = 1; i <= str1.length; i += 1) {
         const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
-        const row = matrix[j]!;
-        const prevRow = matrix[j - 1]!;
+        const row = matrix[j];
+        const prevRow = matrix[j - 1];
         row[i] = Math.min(
-          row[i - 1]! + 1, // deletion
-          prevRow[i]! + 1, // insertion
-          prevRow[i - 1]! + indicator, // substitution
+          row[i - 1] + 1, // deletion
+          prevRow[i] + 1, // insertion
+          prevRow[i - 1] + indicator, // substitution
         );
       }
     }
 
-    return matrix[str2.length]![str1.length]!;
+    return matrix[str2.length][str1.length];
   }
 
   /**
@@ -187,7 +191,7 @@ export class SmartSearchEngine<T = any> {
   /**
    * Search function with fuzzy matching
    */
-  search<TItem extends Record<string, any>>(
+  search(
     items: TItem[],
     query: string,
     searchFields: (keyof TItem)[],
@@ -223,11 +227,16 @@ export class SmartSearchEngine<T = any> {
     const synonyms = this.findSynonyms(normalizedQuery);
     const maxDistance = this.getMaxTypoDistance(normalizedQuery.length);
 
-    const matches: Array<{ item: TItem; score: number; field: string }> = [];
+    const matches: Array<{ item: TItem; score: number; field: keyof TItem }> = [];
 
     for (const item of items) {
       for (const field of searchFields) {
-        const fieldValue = String(item[field]).toLowerCase();
+        const rawFieldValue = item[field];
+        if (rawFieldValue === undefined || rawFieldValue === null) {
+          continue;
+        }
+
+        const fieldValue = String(rawFieldValue).toLowerCase();
         const phoneticValue = this.phoneticTransform(fieldValue);
 
         // Direct match
@@ -264,7 +273,7 @@ export class SmartSearchEngine<T = any> {
         }
 
         if (distance <= maxDistance || score > 0.3) {
-          matches.push({ item, score, field: String(field) });
+          matches.push({ item, score, field });
         }
       }
     }
@@ -305,9 +314,9 @@ export class SmartSearchEngine<T = any> {
     return 3;
   }
 
-  private generateSuggestions<TItem>(
+  private generateSuggestions(
     query: string,
-    matches: Array<{ item: TItem; score: number; field: string }>,
+    matches: Array<{ item: TItem; score: number; field: keyof TItem }>,
   ): string[] {
     // Extract unique suggestions from field values
     const suggestions = new Set<string>();
@@ -315,7 +324,12 @@ export class SmartSearchEngine<T = any> {
     for (const match of matches.slice(0, this.config.maxSuggestions)) {
       if (match.score < 1.0) {
         // Only suggest if not exact match
-        const fieldValue = String((match.item as any)[match.field]);
+        const rawValue = match.item[match.field];
+        if (rawValue === undefined || rawValue === null) {
+          continue;
+        }
+
+        const fieldValue = String(rawValue);
         if (fieldValue.toLowerCase() !== query) {
           suggestions.add(fieldValue);
         }
@@ -325,10 +339,8 @@ export class SmartSearchEngine<T = any> {
     return Array.from(suggestions).slice(0, this.config.maxSuggestions);
   }
 
-  private getCachedResult<TItem>(query: string): SearchResult<TItem> | null {
-    const cached = this.cache.get(query) as
-      | { result: SearchResult<TItem>; timestamp: number }
-      | undefined;
+  private getCachedResult(query: string): SearchResult<TItem> | null {
+    const cached = this.cache.get(query);
     if (!cached) return null;
 
     const isExpired = Date.now() - cached.timestamp > this.config.cacheTimeout;
@@ -340,9 +352,9 @@ export class SmartSearchEngine<T = any> {
     return cached.result;
   }
 
-  private cacheResult<TItem>(query: string, result: SearchResult<TItem>): void {
+  private cacheResult(query: string, result: SearchResult<TItem>): void {
     this.cache.set(query, {
-      result: result as unknown as SearchResult<T>,
+      result,
       timestamp: Date.now(),
     });
 

@@ -5,6 +5,32 @@ import React, { Suspense } from 'react';
 
 import { createChunkedLazyComponent } from '../../utils/dynamicImport';
 import { ReportsSkeleton } from '../loading/ComponentSkeleton';
+import { log } from '../../lib/browser-logger';
+
+const reportsTabs = [
+  { key: 'generator', label: '📊 Генератор', icon: '⚡' },
+  { key: 'viewer', label: '👁️ Просмотр', icon: '🔍' },
+  { key: 'exporter', label: '📤 Экспорт', icon: '💾' },
+  { key: 'history', label: '📚 История', icon: '⏰' },
+] as const;
+
+type ReportsTabKey = (typeof reportsTabs)[number]['key'];
+
+interface ReportConfig {
+  type: string;
+  range: string;
+  filters?: Record<string, unknown>;
+}
+
+interface ReportEntry {
+  id: number;
+  name: string;
+  date: string;
+  status: string;
+  size: string;
+}
+
+type ExportFormat = 'pdf' | 'excel' | 'csv' | 'json';
 
 // Lazy load отчетов с разными типами
 const ReportsGenerator = createChunkedLazyComponent(
@@ -52,13 +78,13 @@ interface LazyReportsProps {
   /** Режим отображения отчетов */
   mode?: 'generator' | 'viewer' | 'exporter' | 'history' | 'full';
   /** Данные отчетов */
-  reportsData?: unknown;
+  reportsData?: ReportEntry[];
   /** Фильтры для отчетов */
   filters?: Record<string, unknown>;
   /** Колбэк при генерации отчета */
-  onGenerate?: (reportConfig: unknown) => void;
+  onGenerate?: (reportConfig: ReportConfig) => void;
   /** Колбэк при экспорте */
-  onExport?: (exportConfig: unknown) => void;
+  onExport?: (format: ExportFormat, data?: ReportEntry[]) => void;
   /** Колбэк при ошибке */
   onError?: (error: Error) => void;
 }
@@ -74,41 +100,34 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
   onExport,
   onError,
 }) => {
-  const [activeTab, setActiveTab] = React.useState<string>(mode === 'full' ? 'generator' : mode);
-  const [preloadedComponents, setPreloadedComponents] = React.useState<Set<string>>(new Set());
+  const initialTab: ReportsTabKey = mode === 'full' ? 'generator' : mode;
+  const [activeTab, setActiveTab] = React.useState<ReportsTabKey>(initialTab);
+  const [preloadedComponents, setPreloadedComponents] = React.useState<Set<ReportsTabKey>>(
+    new Set(),
+  );
 
   // Error handling
-  const handleComponentError = React.useCallback((error: Error, componentName: string) => {
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-
-        console.error(`❌ Failed to load Reports ${componentName}:`, error);
-      }
-    }
-    onError?.(error);
-  }, []);
+  const handleComponentError = React.useCallback(
+    (error: Error, componentName: string) => {
+      log.error(`Lazy reports component failed: ${componentName}`, { error });
+      onError?.(error);
+    },
+    [onError],
+  );
 
   // Preload при переключении табов
-  const handleTabHover = React.useCallback(
-    (tabName: string) => {
-      if (!preloadedComponents.has(tabName)) {
-        setPreloadedComponents((prev) => new Set([...prev, tabName]));
-
-        // Логируем preload
-        if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-          if (process.env.NODE_ENV === 'development') {
-            // eslint-disable-next-line no-console
-
-            console.log(`🚀 Preloading reports ${tabName} component`);
-          }
-        }
+  const handleTabHover = React.useCallback((tabName: ReportsTabKey) => {
+    setPreloadedComponents((prev) => {
+      if (prev.has(tabName)) {
+        return prev;
       }
-    },
-    [preloadedComponents],
-  );
+
+      const updated = new Set(prev);
+      updated.add(tabName);
+      log.info('Preloading reports component', { tabName });
+      return updated;
+    });
+  }, []);
 
   // Single mode rendering
   if (mode !== 'full') {
@@ -174,12 +193,7 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
           gap: '8px',
         }}
       >
-        {[
-          { key: 'generator', label: '📊 Генератор', icon: '⚡' },
-          { key: 'viewer', label: '👁️ Просмотр', icon: '🔍' },
-          { key: 'exporter', label: '📤 Экспорт', icon: '💾' },
-          { key: 'history', label: '📚 История', icon: '⏰' },
-        ].map((tab: unknown) => (
+        {reportsTabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -272,7 +286,17 @@ export const LazyReports: React.FC<LazyReportsProps> = ({
 // Компоненты-заглушки для демонстрации lazy loading
 // В production это должны быть отдельные файлы
 
-const ReportsGeneratorComponent: React.FC<Record<string, unknown>> = ({ onGenerate, filters }) => {
+interface ReportsGeneratorProps {
+  onGenerate?: (config: ReportConfig) => void;
+  filters?: Record<string, unknown>;
+  onError?: (error: Error) => void;
+}
+
+const ReportsGeneratorComponent: React.FC<ReportsGeneratorProps> = ({
+  onGenerate,
+  filters,
+  onError,
+}) => {
   const [reportType, setReportType] = React.useState('analytics');
   const [dateRange, setDateRange] = React.useState('week');
   const [isGenerating, setIsGenerating] = React.useState(false);
@@ -283,17 +307,17 @@ const ReportsGeneratorComponent: React.FC<Record<string, unknown>> = ({ onGenera
       await new Promise((resolve) => setTimeout(resolve, 2000)); // Симуляция генерации
       const reportConfig = { type: reportType, range: dateRange, filters };
       onGenerate?.(reportConfig);
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-
-        console.log('✅ Report generated:', reportConfig);
-      }
+      log.info('Report generated', reportConfig);
     } catch (error) {
-      onError?.(error as Error);
+      if (error instanceof Error) {
+        onError?.(error);
+      } else {
+        onError?.(new Error('Report generation failed'));
+      }
     } finally {
       setIsGenerating(false);
     }
-  }, [reportType, dateRange, filters, onGenerate]);
+  }, [reportType, dateRange, filters, onGenerate, onError]);
 
   return (
     <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
@@ -367,20 +391,55 @@ const ReportsGeneratorComponent: React.FC<Record<string, unknown>> = ({ onGenera
       </button>
 
       <div style={{ fontSize: '12px', color: '#666', marginTop: '16px' }}>
-        Bundle: reports-generator.js | Filters: {JSON.stringify(filters)}
+        Bundle: reports-generator.js | Filters: {JSON.stringify(filters ?? {})}
       </div>
     </div>
   );
 };
 
-const ReportsViewerComponent: React.FC<Record<string, unknown>> = ({ data, filters }) => {
-  const [viewMode, setViewMode] = React.useState('table');
+interface ReportsViewerProps {
+  data?: ReportEntry[];
+  filters?: Record<string, unknown>;
+  onError?: (error: Error) => void;
+}
 
-  const sampleData = data || [
-    { id: 1, name: 'Performance Report', date: '2025-09-04', status: 'Completed', size: '2.3MB' },
-    { id: 2, name: 'Analytics Report', date: '2025-09-03', status: 'In Progress', size: '1.8MB' },
-    { id: 3, name: 'Users Report', date: '2025-09-02', status: 'Completed', size: '945KB' },
-  ];
+const ReportsViewerComponent: React.FC<ReportsViewerProps> = ({ data, filters, onError }) => {
+  const [viewMode, setViewMode] = React.useState<'table' | 'cards'>('table');
+
+  const fallbackData: ReportEntry[] = React.useMemo(
+    () => [
+      {
+        id: 1,
+        name: 'Performance Report',
+        date: '2025-09-04',
+        status: 'Completed',
+        size: '2.3MB',
+      },
+      {
+        id: 2,
+        name: 'Analytics Report',
+        date: '2025-09-03',
+        status: 'In Progress',
+        size: '1.8MB',
+      },
+      {
+        id: 3,
+        name: 'Users Report',
+        date: '2025-09-02',
+        status: 'Completed',
+        size: '945KB',
+      },
+    ],
+    [],
+  );
+
+  const sampleData = data ?? fallbackData;
+
+  React.useEffect(() => {
+    if (data && data.length === 0) {
+      onError?.(new Error('Нет данных для отображения отчетов'));
+    }
+  }, [data, onError]);
 
   return (
     <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
@@ -438,7 +497,7 @@ const ReportsViewerComponent: React.FC<Record<string, unknown>> = ({ data, filte
               </tr>
             </thead>
             <tbody>
-              {sampleData.map((report: unknown) => (
+              {sampleData.map((report) => (
                 <tr key={report.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                   <td style={{ padding: '12px 8px' }}>{report.id}</td>
                   <td style={{ padding: '12px 8px' }}>{report.name}</td>
@@ -485,7 +544,7 @@ const ReportsViewerComponent: React.FC<Record<string, unknown>> = ({ data, filte
             gap: '16px',
           }}
         >
-          {sampleData.map((report: unknown) => (
+          {sampleData.map((report) => (
             <div
               key={report.id}
               style={{
@@ -531,32 +590,43 @@ const ReportsViewerComponent: React.FC<Record<string, unknown>> = ({ data, filte
       )}
 
       <div style={{ fontSize: '12px', color: '#666', marginTop: '16px' }}>
-        Bundle: reports-viewer.js | Active filters: {Object.keys(filters || { _ }).length}
+        Bundle: reports-viewer.js | Active filters: {Object.keys(filters ?? {}).length}
       </div>
     </div>
   );
 };
 
-const ReportsExporterComponent: React.FC<Record<string, unknown>> = ({ data, onExport }) => {
-  const [exportFormat, setExportFormat] = React.useState('pdf');
+interface ReportsExporterProps {
+  data?: ReportEntry[];
+  onExport?: (format: ExportFormat, data?: ReportEntry[]) => void;
+  onError?: (error: Error) => void;
+}
+
+const ReportsExporterComponent: React.FC<ReportsExporterProps> = ({ data, onExport, onError }) => {
+  const [exportFormat, setExportFormat] = React.useState<ExportFormat>('pdf');
   const [isExporting, setIsExporting] = React.useState(false);
+
+  const exportFormats: ExportFormat[] = React.useMemo(
+    () => ['pdf', 'excel', 'csv', 'json'],
+    [],
+  );
 
   const handleExport = React.useCallback(async () => {
     setIsExporting(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500)); // Симуляция экспорта
       onExport?.(exportFormat, data);
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-
-        console.log(`✅ Exported as ${exportFormat}:`, data);
-      }
+      log.info(`Report exported as ${exportFormat.toUpperCase()}`, { format: exportFormat, data });
     } catch (error) {
-      onError?.(error as Error);
+      if (error instanceof Error) {
+        onError?.(error);
+      } else {
+        onError?.(new Error('Report export failed'));
+      }
     } finally {
       setIsExporting(false);
     }
-  }, [exportFormat, data, onExport]);
+  }, [exportFormat, data, onExport, onError]);
 
   return (
     <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
@@ -567,13 +637,13 @@ const ReportsExporterComponent: React.FC<Record<string, unknown>> = ({ data, onE
           Формат экспорта:
         </label>
         <div style={{ display: 'flex', gap: '12px' }}>
-          {['pdf', 'excel', 'csv', 'json'].map((format: unknown) => (
+          {exportFormats.map((format) => (
             <label key={format} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <input
                 type="radio"
                 value={format}
                 checked={exportFormat === format}
-                onChange={(e) => setExportFormat(e.target.value)}
+                onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
               />
               <span style={{ textTransform: 'uppercase' }}>{format}</span>
             </label>
@@ -598,50 +668,71 @@ const ReportsExporterComponent: React.FC<Record<string, unknown>> = ({ data, onE
       </button>
 
       <div style={{ fontSize: '12px', color: '#666', marginTop: '16px' }}>
-        Bundle: reports-exporter.js | Data size: {JSON.stringify(data || { _ }).length} bytes
+        Bundle: reports-exporter.js | Data size: {JSON.stringify(data ?? []).length} bytes
       </div>
     </div>
   );
 };
 
-const ReportsHistoryComponent: React.FC<Record<string, unknown>> = ({ _ }) => {
-  const [historyData] = React.useState([
-    {
-      id: 1,
-      action: 'Generated Analytics Report',
-      user: 'admin',
-      timestamp: '2025-09-04 10:30:00',
-      status: 'success',
-    },
-    {
-      id: 2,
-      action: 'Exported Performance Report',
-      user: 'manager',
-      timestamp: '2025-09-04 09:15:00',
-      status: 'success',
-    },
-    {
-      id: 3,
-      action: 'Failed to generate Users Report',
-      user: 'analyst',
-      timestamp: '2025-09-04 08:45:00',
-      status: 'error',
-    },
-    {
-      id: 4,
-      action: 'Generated Revenue Report',
-      user: 'admin',
-      timestamp: '2025-09-03 16:20:00',
-      status: 'success',
-    },
-  ]);
+interface ReportsHistoryProps {
+  onError?: (error: Error) => void;
+}
+
+interface ReportHistoryEntry {
+  id: number;
+  action: string;
+  user: string;
+  timestamp: string;
+  status: 'success' | 'error';
+}
+
+const ReportsHistoryComponent: React.FC<ReportsHistoryProps> = ({ onError }) => {
+  const historyData = React.useMemo<ReportHistoryEntry[]>(
+    () => [
+      {
+        id: 1,
+        action: 'Generated Analytics Report',
+        user: 'admin',
+        timestamp: '2025-09-04 10:30:00',
+        status: 'success',
+      },
+      {
+        id: 2,
+        action: 'Exported Performance Report',
+        user: 'manager',
+        timestamp: '2025-09-04 09:15:00',
+        status: 'success',
+      },
+      {
+        id: 3,
+        action: 'Failed to generate Users Report',
+        user: 'analyst',
+        timestamp: '2025-09-04 08:45:00',
+        status: 'error',
+      },
+      {
+        id: 4,
+        action: 'Generated Revenue Report',
+        user: 'admin',
+        timestamp: '2025-09-03 16:20:00',
+        status: 'success',
+      },
+    ],
+    [],
+  );
+
+  React.useEffect(() => {
+    if (historyData.length === 0) {
+      onError?.(new Error('История отчетов пуста'));
+    }
+  }, [historyData, onError]);
 
   return (
     <div style={{ padding: '20px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
       <h2>📚 История отчетов</h2>
 
       <div style={{ marginBottom: '20px' }}>
-        {historyData.map((item: unknown) => (
+        {historyData.map((item) => (
           <div
             key={item.id}
             style={{
@@ -657,7 +748,7 @@ const ReportsHistoryComponent: React.FC<Record<string, unknown>> = ({ _ }) => {
             <div>
               <div style={{ fontWeight: '500', marginBottom: '4px' }}>{item.action}</div>
               <div style={{ fontSize: '12px', color: '#666' }}>
-                {item.user} • {item.timestamp}
+                {`${item.user} • ${item.timestamp}`}
               </div>
             </div>
             <span

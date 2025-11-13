@@ -160,6 +160,7 @@ module.exports = {
         'packages/threat-detection/**/*.{ts,tsx}', // новый пакет в разработке
         'apps/web/**/*.{ts,tsx}', // legacy v12 web app
       ],
+      excludedFiles: ['**/*.test.{ts,tsx,js,jsx}', '**/*.spec.{ts,tsx,js,jsx}'],
       rules: {
         '@typescript-eslint/no-explicit-any': 'warn',
         '@typescript-eslint/no-unused-vars': 'warn',

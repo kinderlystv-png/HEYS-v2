@@ -8,7 +8,33 @@
  */
 
 import { defaultValidator, SecurityError, ValidationSchemas } from '@heys/shared';
+import { log as systemLog } from '@heys/logger';
 import React, { useCallback, useMemo } from 'react';
+
+type BrowserLogger = {
+  error?: (details: Record<string, unknown>, message?: string) => void;
+};
+
+const uiLog = {
+  error(message: string, context?: Record<string, unknown>) {
+    if (typeof window !== 'undefined') {
+      const heysLogger = (window as unknown as { HEYS?: { logger?: BrowserLogger } }).HEYS?.logger;
+      if (heysLogger?.error) {
+        heysLogger.error(context ?? {}, message);
+        return;
+      }
+    }
+
+    try {
+      systemLog.error(message, context ?? {});
+    } catch {
+      if (typeof globalThis !== 'undefined' && globalThis.console?.error) {
+        // eslint-disable-next-line no-console
+        globalThis.console.error(`[ui-security] ${message}`, context);
+      }
+    }
+  },
+};
 
 /**
  * Security-enhanced form input component
@@ -63,7 +89,7 @@ export const SecureInput: React.FC<SecureInputProps> = ({
 
       onChange(newValue);
     },
-    [onChange, type, required, maxLength, sanitize, validateOnChange],
+    [onChange, type, required, sanitize, validateOnChange],
   );
 
   return (
@@ -104,7 +130,7 @@ export const SecureContent: React.FC<SecureContentProps> = ({
     });
 
     return (validation.sanitized as string) || content;
-  }, [content, maxLength]);
+  }, [content]);
 
   if (allowHtml) {
     return (
@@ -126,27 +152,27 @@ export const SecureContent: React.FC<SecureContentProps> = ({
 /**
  * Security-enhanced form component
  */
-export interface SecureFormProps {
-  onSubmit: (data: Record<string, any>) => Promise<void>;
+export interface SecureFormProps<T extends Record<string, unknown> = Record<string, unknown>> {
+  onSubmit: (data: T) => Promise<void>;
   children: React.ReactNode;
-  validationSchema?: any;
+  validationSchema?: unknown;
   className?: string;
   'data-testid'?: string;
 }
 
-export const SecureForm: React.FC<SecureFormProps> = ({
+export const SecureForm = <T extends Record<string, unknown> = Record<string, unknown>>({
   onSubmit,
   children,
   validationSchema,
   className,
   'data-testid': testId,
-}) => {
+}: SecureFormProps<T>) => {
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
 
       const formData = new FormData(event.currentTarget);
-      const data: Record<string, any> = {};
+      const data: Record<string, unknown> = {};
 
       // Extract form data
       for (const [key, value] of formData.entries()) {
@@ -165,10 +191,12 @@ export const SecureForm: React.FC<SecureFormProps> = ({
         }
 
         // Use sanitized data
-        Object.assign(data, validation.sanitized || {});
+        if (validation.sanitized && typeof validation.sanitized === 'object') {
+          Object.assign(data, validation.sanitized as Record<string, unknown>);
+        }
       }
 
-      await onSubmit(data);
+      await onSubmit(data as T);
     },
     [onSubmit, validationSchema],
   );
@@ -183,15 +211,17 @@ export const SecureForm: React.FC<SecureFormProps> = ({
 /**
  * Security-enhanced user profile component
  */
+export interface SecureUserProfileData {
+  id: string;
+  email: string;
+  username: string;
+  avatar?: string;
+  bio?: string;
+}
+
 export interface SecureUserProfileProps {
-  user: {
-    id: string;
-    email: string;
-    username: string;
-    avatar?: string;
-    bio?: string;
-  };
-  onUpdate?: (user: any) => Promise<void>;
+  user: SecureUserProfileData;
+  onUpdate?: (user: SecureUserProfileData) => Promise<void>;
   editable?: boolean;
   className?: string;
 }
@@ -291,23 +321,39 @@ export const SecureUserProfile: React.FC<SecureUserProfileProps> = ({
 /**
  * Security-enhanced search component
  */
-export interface SecureSearchProps {
-  onSearch: (query: string) => Promise<any[]>;
+export interface SecureSearchProps<T extends Record<string, unknown> = Record<string, unknown>> {
+  onSearch: (query: string) => Promise<T[]>;
   placeholder?: string;
   debounceMs?: number;
   maxLength?: number;
   className?: string;
 }
 
-export const SecureSearch: React.FC<SecureSearchProps> = ({
+const formatSearchResult = (result: Record<string, unknown>): string => {
+  if (typeof result.title === 'string') {
+    return result.title;
+  }
+
+  if (typeof result.name === 'string') {
+    return result.name;
+  }
+
+  if (typeof result.label === 'string') {
+    return result.label;
+  }
+
+  return JSON.stringify(result);
+};
+
+export const SecureSearch = <T extends Record<string, unknown> = Record<string, unknown>>({
   onSearch,
   placeholder = 'Search...',
   debounceMs = 300,
   maxLength = 100,
   className,
-}) => {
+}: SecureSearchProps<T>) => {
   const [query, setQuery] = React.useState('');
-  const [results, setResults] = React.useState<any[]>([]);
+  const [results, setResults] = React.useState<T[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
   // Debounced search
@@ -327,11 +373,12 @@ export const SecureSearch: React.FC<SecureSearchProps> = ({
         });
 
         if (validation.isValid) {
-          const searchResults = await onSearch((validation.sanitized as string) || query);
+          const sanitizedQuery = (validation.sanitized as string) || query;
+          const searchResults = await onSearch(sanitizedQuery);
           setResults(searchResults);
         }
       } catch (error) {
-        console.error('Search error:', error);
+        uiLog.error('SecureSearch query failed', { error, query });
         setResults([]);
       } finally {
         setIsLoading(false);
@@ -339,7 +386,7 @@ export const SecureSearch: React.FC<SecureSearchProps> = ({
     }, debounceMs);
 
     return () => clearTimeout(timeoutId);
-  }, [query, onSearch, debounceMs, maxLength]);
+  }, [query, onSearch, debounceMs]);
 
   return (
     <div className={className} data-testid="secure-search">
@@ -353,11 +400,17 @@ export const SecureSearch: React.FC<SecureSearchProps> = ({
       />
       {isLoading && <div data-testid="search-loading">Loading...</div>}
       <div data-testid="search-results">
-        {results.map((result, index) => (
-          <div key={result.id || index} data-testid={`search-result-${index}`}>
-            <SecureContent content={result.title || result.name || String(result)} />
+        {results.map((result, index) => {
+          const record = result as Record<string, unknown>;
+          const resultId = (record.id as string | number | undefined) ?? index;
+          const displayValue = formatSearchResult(record);
+
+          return (
+            <div key={resultId} data-testid={`search-result-${index}`}>
+              <SecureContent content={displayValue} />
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
