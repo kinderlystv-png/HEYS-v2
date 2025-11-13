@@ -14,6 +14,7 @@
     "verbatimModuleSyntax": false,
     "allowImportingTsExtensions": false,
     "resolveJsonModule": true,
+    "typeRoots": ["./types", "./node_modules/@types"],
 
     // Type Checking
     "strict": true,
@@ -54,12 +55,13 @@
       "@heys/logger": ["./packages/logger/src"]
     },
 
-    // TS7 deprecation guard for baseUrl
-    "ignoreDeprecations": "6.0"
+    // TODO: migrate away from deprecated config options before TS 7.0
+    "ignoreDeprecations": "5.0"
   },
 
   // Workspace references
   "references": [
+    { "path": "./packages/logger" },
     { "path": "./packages/core" },
     { "path": "./packages/ui" },
     { "path": "./packages/search" },

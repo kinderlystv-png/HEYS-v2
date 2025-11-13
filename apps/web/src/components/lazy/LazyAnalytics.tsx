@@ -5,6 +5,7 @@ import React, { Suspense } from 'react';
 
 import { createChunkedLazyComponent } from '../../utils/dynamicImport';
 import { AnalyticsSkeleton } from '../loading/ComponentSkeleton';
+import { log } from '../../lib/browser-logger';
 
 // Lazy load основного компонента аналитики
 const AnalyticsDashboard = createChunkedLazyComponent(
@@ -58,14 +59,7 @@ export const LazyAnalytics: React.FC<LazyAnalyticsProps> = ({ view = 'full', dat
   // Error boundary для lazy компонентов
   const handleError = React.useCallback(
     (error: Error, componentName: string) => {
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-
-          console.error(`❌ Failed to load ${componentName}:`, error);
-        }
-      }
+      log.error(`Lazy analytics component failed: ${componentName}`, { error });
       setLoadingComponent(null);
       onError?.(error);
     },
@@ -182,7 +176,7 @@ export const LazyAnalytics: React.FC<LazyAnalyticsProps> = ({ view = 'full', dat
 const AnalyticsDashboardComponent: React.FC<Record<string, unknown>> = ({ data, onError }) => {
   React.useEffect(() => {
     // Симуляция возможной ошибки
-    if (Math.random() < 0.01 && _onError) {
+    if (Math.random() < 0.01 && onError) {
       onError(new Error('Random analytics error'));
     }
   }, [onError]);

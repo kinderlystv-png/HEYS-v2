@@ -23,6 +23,7 @@ export default defineConfig({
     alias: {
       '@heys/shared': path.resolve(__dirname, '../shared/src'),
       '@heys/core': path.resolve(__dirname, './src'),
+      '@heys/logger': path.resolve(__dirname, '../logger/src'),
       '@heys': path.resolve(__dirname, '../..'),
       // Дополнительные workspace aliases
       '@heys/threat-detection': path.resolve(__dirname, '../threat-detection/src'),

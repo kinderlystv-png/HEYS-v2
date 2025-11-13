@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationMap": false,
+    "sourceMap": false,
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*", "../../levels.config.d.ts", "config/**/*.d.ts"],
+  "files": [
+    "src/index.ts",
+    "src/config.ts",
+    "src/transports.ts",
+    "src/LevelManager.ts",
+    "src/log-level.ts"
+  ]
+}

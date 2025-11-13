@@ -1,6 +1,8 @@
 /* eslint-disable */
 import { Component, ErrorInfo, ReactNode } from 'react';
 
+import { log } from '../lib/browser-logger';
+
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
@@ -60,7 +62,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
     // Console error для development
     if (process.env.NODE_ENV !== 'production') {
-      console.error('React Error Boundary caught an error:', error, errorInfo);
+      log.error('React Error Boundary caught an error', {
+        message: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack,
+      });
     }
 
     // Custom error handler

@@ -2,3 +2,72 @@
 > @heys/analytics@14.0.0 type-check /Users/poplavskijanton/HEYS-v2/packages/analytics
 > tsc --noEmit
 
+[96msrc/index.ts[0m:[93m1[0m:[93m21[0m - [91merror[0m[90m TS6059: [0mFile '/Users/poplavskijanton/HEYS-v2/packages/logger/src/index.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/analytics'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via '@heys/logger' from file '/Users/poplavskijanton/HEYS-v2/packages/analytics/src/index.ts'
+    Imported via './index.js' from file '/Users/poplavskijanton/HEYS-v2/packages/logger/src/config.ts'
+
+[7m1[0m import { log } from '@heys/logger';
+[7m [0m [91m                    ~~~~~~~~~~~~~~[0m
+
+  [96m../logger/src/config.ts[0m:[93m1[0m:[93m26[0m
+    [7m1[0m import { LogLevel } from './index.js';
+    [7m [0m [96m                         ~~~~~~~~~~~~[0m
+    File is included via import here.
+
+[96msrc/index.ts[0m:[93m1[0m:[93m21[0m - [91merror[0m[90m TS6307: [0mFile '/Users/poplavskijanton/HEYS-v2/packages/logger/src/index.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/analytics/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via '@heys/logger' from file '/Users/poplavskijanton/HEYS-v2/packages/analytics/src/index.ts'
+    Imported via './index.js' from file '/Users/poplavskijanton/HEYS-v2/packages/logger/src/config.ts'
+
+[7m1[0m import { log } from '@heys/logger';
+[7m [0m [91m                    ~~~~~~~~~~~~~~[0m
+
+  [96m../logger/src/config.ts[0m:[93m1[0m:[93m26[0m
+    [7m1[0m import { LogLevel } from './index.js';
+    [7m [0m [96m                         ~~~~~~~~~~~~[0m
+    File is included via import here.
+
+[96m../logger/src/index.ts[0m:[93m5[0m:[93m74[0m - [91merror[0m[90m TS6059: [0mFile '/Users/poplavskijanton/HEYS-v2/packages/logger/src/config.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/analytics'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via './config.js' from file '/Users/poplavskijanton/HEYS-v2/packages/logger/src/index.ts'
+    Imported via './config.js' from file '/Users/poplavskijanton/HEYS-v2/packages/logger/src/transports.ts'
+
+[7m5[0m import { defaultConfig, validateConfig, type AdvancedLoggerConfig } from './config.js';
+[7m [0m [91m                                                                         ~~~~~~~~~~~~~[0m
+
+  [96m../logger/src/transports.ts[0m:[93m6[0m:[93m38[0m
+    [7m6[0m import { AdvancedLoggerConfig } from './config.js';
+    [7m [0m [96m                                     ~~~~~~~~~~~~~[0m
+    File is included via import here.
+
+[96m../logger/src/index.ts[0m:[93m5[0m:[93m74[0m - [91merror[0m[90m TS6307: [0mFile '/Users/poplavskijanton/HEYS-v2/packages/logger/src/config.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/analytics/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via './config.js' from file '/Users/poplavskijanton/HEYS-v2/packages/logger/src/index.ts'
+    Imported via './config.js' from file '/Users/poplavskijanton/HEYS-v2/packages/logger/src/transports.ts'
+
+[7m5[0m import { defaultConfig, validateConfig, type AdvancedLoggerConfig } from './config.js';
+[7m [0m [91m                                                                         ~~~~~~~~~~~~~[0m
+
+  [96m../logger/src/transports.ts[0m:[93m6[0m:[93m38[0m
+    [7m6[0m import { AdvancedLoggerConfig } from './config.js';
+    [7m [0m [96m                                     ~~~~~~~~~~~~~[0m
+    File is included via import here.
+
+[96m../logger/src/index.ts[0m:[93m6[0m:[93m71[0m - [91merror[0m[90m TS6059: [0mFile '/Users/poplavskijanton/HEYS-v2/packages/logger/src/transports.ts' is not under 'rootDir' '/Users/poplavskijanton/HEYS-v2/packages/analytics'. 'rootDir' is expected to contain all source files.
+
+[7m6[0m import { createFormatters, createSerializers, createTransports } from './transports.js';
+[7m [0m [91m                                                                      ~~~~~~~~~~~~~~~~~[0m
+
+[96m../logger/src/index.ts[0m:[93m6[0m:[93m71[0m - [91merror[0m[90m TS6307: [0mFile '/Users/poplavskijanton/HEYS-v2/packages/logger/src/transports.ts' is not listed within the file list of project '/Users/poplavskijanton/HEYS-v2/packages/analytics/tsconfig.json'. Projects must list all files or use an 'include' pattern.
+
+[7m6[0m import { createFormatters, createSerializers, createTransports } from './transports.js';
+[7m [0m [91m                                                                      ~~~~~~~~~~~~~~~~~[0m
+
+
+Found 6 errors in 2 files.
+
+Errors  Files
+     2  src/index.ts[90m:1[0m
+     4  ../logger/src/index.ts[90m:5[0m
+[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 2.[39m

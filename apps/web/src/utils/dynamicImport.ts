@@ -7,6 +7,8 @@
 
 import { ComponentType, lazy, LazyExoticComponent } from 'react';
 
+import { log } from '../lib/browser-logger';
+
 // Типы для динамического импорта
 export interface ImportOptions {
   /** Задержка перед загрузкой (для preloading) */
@@ -56,15 +58,17 @@ export function createLazyComponent<T extends ComponentType<unknown>>(
 
         // Логируем успешную загрузку для мониторинга
         if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-          console.log(`✅ Component loaded successfully (attempt ${i + 1})`);
+          log.debug('Dynamic import success', { attempt: i + 1 });
         }
         return result;
       } catch (error) {
         lastError = error as Error;
         if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-          console.warn(`⚠️ Import failed (attempt ${i + 1}/${retries + 1}):`, error);
+          log.warn('Dynamic import failed', {
+            attempt: i + 1,
+            retries: retries + 1,
+            error,
+          });
         }
 
         // Экспоненциальная задержка между попытками
@@ -76,8 +80,7 @@ export function createLazyComponent<T extends ComponentType<unknown>>(
 
     // Если все попытки неудачны
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.error('❌ All import attempts failed:', lastError);
+      log.error('Dynamic import exhausted retries', { error: lastError });
     }
     throw lastError;
   };
@@ -94,14 +97,12 @@ export function preloadComponent(
   return importFunc()
     .then(() => {
       if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.log('🚀 Component preloaded successfully');
+        log.debug('Component preloaded successfully');
       }
     })
     .catch((error) => {
       if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.warn('⚠️ Component preload failed:', error);
+        log.warn('Component preload failed', { error });
       }
     });
 }

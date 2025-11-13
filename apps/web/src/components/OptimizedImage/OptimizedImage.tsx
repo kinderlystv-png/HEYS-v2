@@ -2,6 +2,7 @@
 
 import { ImgHTMLAttributes, useEffect, useRef, useState } from 'react';
 
+import { log } from '../../lib/browser-logger';
 import { useLazyLoad } from '../../hooks/useLazyLoad';
 import { usePerformanceMetrics } from '../../hooks/useServiceWorker';
 import {
@@ -163,7 +164,12 @@ export function OptimizedImage({
       sendErrorMetrics('image_optimization_failed');
 
       if (process.env.NODE_ENV === 'development') {
-        console.warn('Image optimization failed:', error);
+        log.warn('Optimized image fallback triggered', {
+          source: src,
+          fallback: fallback || src,
+          priority,
+          error,
+        });
       }
 
       // Пробуем fallback или оригинальное изображение

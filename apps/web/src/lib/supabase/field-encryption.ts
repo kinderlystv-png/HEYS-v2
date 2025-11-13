@@ -7,6 +7,8 @@
  * @author HEYS Security Team
  */
 
+import { log } from '../browser-logger';
+
 // Utility функции для базового шифрования (в продакшене использовать crypto-js или similar)
 class FieldEncryption {
   private readonly encryptionKey: string;
@@ -27,7 +29,10 @@ class FieldEncryption {
       const encrypted = this.simpleEncrypt(plaintext);
       return `enc:${encrypted}`;
     } catch (error) {
-      console.error('Encryption error:', error);
+      log.error('Field encryption failed', {
+        operation: 'encrypt',
+        error,
+      });
       throw new Error('Ошибка шифрования данных');
     }
   }
@@ -45,7 +50,10 @@ class FieldEncryption {
       const ciphertext = encryptedText.substring(4);
       return this.simpleDecrypt(ciphertext);
     } catch (error) {
-      console.error('Decryption error:', error);
+      log.error('Field decryption failed', {
+        operation: 'decrypt',
+        error,
+      });
       throw new Error('Ошибка расшифровки данных');
     }
   }
@@ -193,7 +201,11 @@ export class EncryptedProfileService {
 
       return encryptedData;
     } catch (error) {
-      console.error('Profile encryption error:', error);
+      log.error('Profile encryption error', {
+        operation: 'encryptProfileData',
+        fields: Object.keys(profileData),
+        error,
+      });
       throw new Error('Ошибка шифрования данных профиля');
     }
   }
@@ -236,7 +248,11 @@ export class EncryptedProfileService {
 
       return decryptedData;
     } catch (error) {
-      console.error('Profile decryption error:', error);
+      log.error('Profile decryption error', {
+        operation: 'decryptProfileData',
+        profileId: encryptedProfile.id,
+        error,
+      });
       throw new Error('Ошибка расшифровки данных профиля');
     }
   }
@@ -283,7 +299,11 @@ export class EncryptedProfileService {
     try {
       return await this.encryption.encrypt(searchValue);
     } catch (error) {
-      console.error('Search encryption error:', error);
+      log.error('Search encryption error', {
+        operation: 'searchEncryptedField',
+        fieldName,
+        error,
+      });
       throw new Error('Ошибка подготовки поискового запроса');
     }
   }
@@ -320,7 +340,11 @@ export class EncryptedPreferencesService {
         is_encrypted: true,
       };
     } catch (error) {
-      console.error('Preference encryption error:', error);
+      log.error('Preference encryption error', {
+        operation: 'encryptPreferenceValue',
+        isSensitive: shouldEncrypt,
+        error,
+      });
       throw new Error('Ошибка шифрования настройки');
     }
   }
@@ -343,7 +367,11 @@ export class EncryptedPreferencesService {
         return decryptedString;
       }
     } catch (error) {
-      console.error('Preference decryption error:', error);
+      log.error('Preference decryption error', {
+        operation: 'decryptPreferenceValue',
+        isEncrypted,
+        error,
+      });
       throw new Error('Ошибка расшифровки настройки');
     }
   }

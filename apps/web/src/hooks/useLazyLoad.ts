@@ -1,5 +1,7 @@
 import { RefObject, useEffect, useRef, useState } from 'react';
 
+import { log } from '../lib/browser-logger';
+
 interface UseLazyLoadOptions {
   threshold?: number;
   rootMargin?: string;
@@ -42,7 +44,7 @@ export function useLazyLoad(options: UseLazyLoadOptions = {}): UseLazyLoadReturn
 
     // Fallback для браузеров без Intersection Observer
     if (typeof IntersectionObserver === 'undefined') {
-      console.warn('IntersectionObserver not supported, using fallback');
+      log.warn('IntersectionObserver not supported, using fallback');
       const fallbackTimer = setTimeout(() => {
         setIsVisible(true);
         setIsIntersecting(true);

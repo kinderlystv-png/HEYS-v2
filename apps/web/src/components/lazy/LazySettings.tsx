@@ -3,6 +3,7 @@
 
 import React, { Suspense } from 'react';
 
+import { log } from '../../lib/browser-logger';
 import { createChunkedLazyComponent } from '../../utils/dynamicImport';
 import { SettingsSkeleton } from '../loading/ComponentSkeleton';
 
@@ -102,9 +103,10 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
   // Error handling
   const handleComponentError = React.useCallback((error: Error, componentName: string) => {
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-
-      console.error(`❌ Failed to load Settings ${componentName}:`, error);
+      log.error('Lazy settings component failed to load', {
+        component: componentName,
+        error,
+      });
     }
     onError?.(error);
   }, []);
@@ -126,9 +128,9 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
       if (!preloadQueue.has(categoryKey)) {
         setPreloadQueue((prev) => new Set([...prev, categoryKey]));
         if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-
-          console.log(`🚀 Preloading settings ${categoryKey} component`);
+          log.debug('Preloading settings component', {
+            category: categoryKey,
+          });
         }
       }
     },
@@ -142,9 +144,10 @@ export const LazySettings: React.FC<LazySettingsProps> = ({
     setHasUnsavedChanges(false);
     onSave?.(currentSettings);
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-
-      console.log('💾 Settings saved:', currentSettings);
+      log.info('Settings saved', {
+        categories: Object.keys(currentSettings || {}),
+        isReadonly: readonly,
+      });
     }
   }, [__readonly, currentSettings, onSave]);
 

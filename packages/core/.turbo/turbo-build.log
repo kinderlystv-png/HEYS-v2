@@ -2,17 +2,44 @@
 > @heys/core@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/core
 > tsup
 
-CLI Building entry: src/index.ts
-CLI Using tsconfig: tsconfig.json
-CLI tsup v7.3.0
-CLI Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/core/tsup.config.ts
-CLI Target: es2022
-CLI Cleaning output folder
-CJS Build start
-ESM Build start
-ESM dist/index.mjs     9.52 KB
-ESM dist/index.mjs.map 30.83 KB
-ESM ⚡️ Build success in 247ms
-CJS dist/index.js     10.03 KB
-CJS dist/index.js.map 30.83 KB
-CJS ⚡️ Build success in 252ms
+[34mCLI[39m Building entry: src/index.ts
+[34mCLI[39m Using tsconfig: tsconfig.json
+[34mCLI[39m tsup v7.3.0
+[34mCLI[39m Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/core/tsup.config.ts
+[34mCLI[39m Target: es2022
+[34mCLI[39m Cleaning output folder
+[34mCJS[39m Build start
+[34mESM[39m Build start
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "@heys/logger"[0m
+
+    src/services/analytics.ts:1:20:
+[37m      1 │ import { log } from [32m'@heys/logger'[37m;
+        ╵                     [32m~~~~~~~~~~~~~~[0m
+
+  You can mark the path "@heys/logger" as external to exclude it from the bundle, which
+  will remove this error and leave the unresolved path in the bundle.
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "@heys/logger"[0m
+
+    src/services/analytics.ts:1:20:
+[37m      1 │ import { log } from [32m'@heys/logger'[37m;
+        ╵                     [32m~~~~~~~~~~~~~~[0m
+
+  You can mark the path "@heys/logger" as external to exclude it from the bundle, which
+  will remove this error and leave the unresolved path in the bundle.
+
+[31mCJS[39m [31mBuild failed[39m
+[31mESM[39m [31mBuild failed[39m
+[31mError: Build failed with 1 error:
+src/services/analytics.ts:1:20: ERROR: Could not resolve "@heys/logger"
+    at failureErrorWithLog (/Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:1651:15)
+    at /Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:1059:25
+    at runOnEndCallbacks (/Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:1486:45)
+    at buildResponseToResult (/Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:1057:7)
+    at /Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:1086:16
+    at responseCallbacks.<computed> (/Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:704:9)
+    at handleIncomingPacket (/Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:764:9)
+    at Socket.readFromStdout (/Users/poplavskijanton/HEYS-v2/node_modules/.pnpm/esbuild@0.19.12/node_modules/esbuild/lib/main.js:680:7)
+    at Socket.emit (node:events:508:28)
+    at addChunk (node:internal/streams/readable:559:12)[39m
+[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 1.[39m

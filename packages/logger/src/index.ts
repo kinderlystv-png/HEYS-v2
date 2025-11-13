@@ -2,22 +2,9 @@ import pino from 'pino';
 
 import { LEVEL_METHODS, LEVEL_VALUES } from '../../../levels.config.js';
 
-import { defaultConfig, validateConfig, type AdvancedLoggerConfig } from './config.js';
-import { createFormatters, createSerializers, createTransports } from './transports.js';
-
-/**
- * Уровни логирования для HEYS системы (обновленные)
- */
-export enum LogLevel {
-  TRACE = 'trace',
-  DEBUG = 'debug',
-  INFO = 'info',
-  HTTP = 'http',
-  WARN = 'warn',
-  ERROR = 'error',
-  FATAL = 'fatal',
-  SILENT = 'silent',
-}
+import { defaultConfig, validateConfig, type AdvancedLoggerConfig } from './config';
+import { LogLevel } from './log-level';
+import { createFormatters, createSerializers, createTransports } from './transports';
 
 /**
  * Расширенные уровни с поддержкой новой конфигурации
@@ -53,6 +40,7 @@ export interface LoggerConfig {
 // Экспортируем новые типы
 export { defaultConfig, validateConfig };
 export type { AdvancedLoggerConfig };
+export { LogLevel };
 
 /**
  * Создает настроенный логгер для HEYS системы (legacy версия)

@@ -16,7 +16,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@heys/core": "workspace:*"
+    "@heys/core": "workspace:*",
+    "@heys/logger": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^7.2.0",
