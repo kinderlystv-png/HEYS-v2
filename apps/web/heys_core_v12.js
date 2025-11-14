@@ -683,6 +683,19 @@
         alert('Не удалось распознать данные'); 
         return; 
       }
+
+      if (window.HEYS && window.HEYS.backupManager && typeof window.HEYS.backupManager.backupAll === 'function') {
+        try {
+          await window.HEYS.backupManager.backupAll({
+            reason: 'import_replace',
+            keys: ['heys_products'],
+            includeDays: false,
+            silent: true,
+          });
+        } catch (backupError) {
+          console.error('⚠️ [IMPORT] Ошибка создания бэкапа перед заменой:', backupError);
+        }
+      }
       
       DEV.log('💾 [IMPORT] Заменяем все продукты');
       DEV.log('📊 [IMPORT] Было продуктов:', products.length);

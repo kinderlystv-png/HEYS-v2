@@ -46,28 +46,35 @@ export interface AdvancedLoggerConfig {
 /**
  * Конфигурация по умолчанию
  */
+const getEnv = (key: string, fallback: string = ''): string => {
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key] || fallback;
+  }
+  return fallback;
+};
+
 export const defaultConfig: AdvancedLoggerConfig = {
-  level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
-  service: process.env.SERVICE_NAME || 'heys-app',
-  environment: process.env.NODE_ENV || 'development',
+  level: (getEnv('LOG_LEVEL') as LogLevel) || LogLevel.INFO,
+  service: getEnv('SERVICE_NAME', 'heys-app'),
+  environment: getEnv('NODE_ENV', 'development'),
   transports: {
     console: {
-      enabled: process.env.LOG_CONSOLE !== 'false',
-      pretty: process.env.NODE_ENV !== 'production',
-      colorize: process.env.NODE_ENV !== 'production',
+      enabled: getEnv('LOG_CONSOLE') !== 'false',
+      pretty: getEnv('NODE_ENV') !== 'production',
+      colorize: getEnv('NODE_ENV') !== 'production',
     },
     file: {
-      enabled: process.env.LOG_FILE === 'true' || process.env.NODE_ENV === 'production',
-      path: process.env.LOG_PATH || './logs',
-      maxSize: process.env.LOG_MAX_SIZE || '10MB',
-      maxFiles: parseInt(process.env.LOG_MAX_FILES || '5'),
-      compress: process.env.LOG_COMPRESS === 'true',
+      enabled: getEnv('LOG_FILE') === 'true' || getEnv('NODE_ENV') === 'production',
+      path: getEnv('LOG_PATH', './logs'),
+      maxSize: getEnv('LOG_MAX_SIZE', '10MB'),
+      maxFiles: parseInt(getEnv('LOG_MAX_FILES', '5')),
+      compress: getEnv('LOG_COMPRESS') === 'true',
     },
     network: {
-      enabled: process.env.LOG_NETWORK === 'true',
+      enabled: getEnv('LOG_NETWORK') === 'true',
       // Avoid assigning explicit undefined to satisfy exactOptionalPropertyTypes
-      url: process.env.LOG_NETWORK_URL ? process.env.LOG_NETWORK_URL : undefined,
-      apiKey: process.env.LOG_API_KEY ? process.env.LOG_API_KEY : undefined,
+      url: getEnv('LOG_NETWORK_URL') ? getEnv('LOG_NETWORK_URL') : undefined,
+      apiKey: getEnv('LOG_API_KEY') ? getEnv('LOG_API_KEY') : undefined,
     },
   },
   redact: [
@@ -82,12 +89,12 @@ export const defaultConfig: AdvancedLoggerConfig = {
     'refreshToken',
   ],
   sampling: {
-    enabled: process.env.LOG_SAMPLING === 'true',
-    rate: parseFloat(process.env.LOG_SAMPLING_RATE || '0.1'),
+    enabled: getEnv('LOG_SAMPLING') === 'true',
+    rate: parseFloat(getEnv('LOG_SAMPLING_RATE', '0.1')),
   },
   performance: {
-    enabled: process.env.LOG_PERFORMANCE === 'true',
-    threshold: parseInt(process.env.LOG_PERFORMANCE_THRESHOLD || '1000'),
+    enabled: getEnv('LOG_PERFORMANCE') === 'true',
+    threshold: parseInt(getEnv('LOG_PERFORMANCE_THRESHOLD', '1000')),
   },
 };
 

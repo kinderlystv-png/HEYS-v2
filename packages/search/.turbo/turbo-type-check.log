@@ -2,3 +2,17 @@
 > @heys/search@14.0.0 type-check /Users/poplavskijanton/HEYS-v2/packages/search
 > tsc --noEmit
 
+src/index.ts(113,7): error TS2532: Object is possibly 'undefined'.
+src/index.ts(116,7): error TS2532: Object is possibly 'undefined'.
+src/index.ts(124,9): error TS18048: 'row' is possibly 'undefined'.
+src/index.ts(125,11): error TS18048: 'row' is possibly 'undefined'.
+src/index.ts(125,11): error TS2532: Object is possibly 'undefined'.
+src/index.ts(126,11): error TS18048: 'prevRow' is possibly 'undefined'.
+src/index.ts(126,11): error TS2532: Object is possibly 'undefined'.
+src/index.ts(127,11): error TS18048: 'prevRow' is possibly 'undefined'.
+src/index.ts(127,11): error TS2532: Object is possibly 'undefined'.
+src/index.ts(132,5): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/index.ts(132,12): error TS2532: Object is possibly 'undefined'.
+src/index.ts(204,43): error TS2558: Expected 0 type arguments, but got 1.
+ ELIFECYCLE  Command failed with exit code 2.

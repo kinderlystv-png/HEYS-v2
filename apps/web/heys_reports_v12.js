@@ -68,6 +68,8 @@
   function round1(x){ return Math.round((+x||0)*10)/10; }
   function toNum(x){ const v = +x; return Number.isFinite(v) ? v : 0; }
   function pct(part, total){ if (!total) return 0; return Math.round((part/total)*1000)/10; }
+  // Точная копия r1 из heys_day_v12.js для идентичных округлений
+  const r1=v=>Math.round((+v||0)*10)/10;
 
   // Функции для работы со временем сна
   function parseTime(timeStr){ 
@@ -162,31 +164,11 @@
   }
   
   function getCachedDay(dateStr, prodIndex, profile, zones, products) {
-    const key = getCacheKey(dateStr, products, profile, zones);
-    
-    if (dayCache.has(key)) {
-      if (window.HEYS && window.HEYS.performance) {
-        window.HEYS.performance.increment('cacheHits');
-      }
-      return dayCache.get(key);
-    }
-    
-    if (window.HEYS && window.HEYS.performance) {
-      window.HEYS.performance.increment('cacheMisses');
-    }
-    
-    const result = (window.HEYS && window.HEYS.performance && window.HEYS.performance.measure)
+    // Для абсолютной синхронизации со «Статистикой дня» отключаем кэш:
+    // всегда пересчитываем день из актуального объекта heys_dayv2_YYYY-MM-DD.
+    return (window.HEYS && window.HEYS.performance && window.HEYS.performance.measure)
       ? window.HEYS.performance.measure('reportCalculation', () => collectDayInternal(dateStr, prodIndex, profile, zones))
       : collectDayInternal(dateStr, prodIndex, profile, zones);
-    
-    // Управляем размером кэша
-    if (dayCache.size >= maxCacheSize) {
-      const firstKey = dayCache.keys().next().value;
-      dayCache.delete(firstKey);
-    }
-    
-    dayCache.set(key, result);
-    return result;
   }
 
   // ---------- Индекс продуктов ----------
@@ -282,43 +264,112 @@
 
   // ---------- Сбор по дню (внутренняя функция) ----------
   function collectDayInternal(dateStr, prodIndex, profile, zones){
-    const meals  = loadMealsForDate(dateStr) || [];
-    const totals = aggregateDay(meals, prodIndex);
-
+    // Жёстко синхронизируемся с тем же самым объектом дня, который использует вкладка «Статистика дня»
+    // 1) всегда читаем day из того же ключа, что и DayTab: heys_dayv2_YYYY-MM-DD
     const U = (global.HEYS && HEYS.utils) || { lsGet:(k,d)=>d };
-    const dayObj = U.lsGet('heys_dayv2_'+dateStr, {date:dateStr, meals:[], activities:[], steps:0, householdMin:0, weightMorning: profile.weight});
+    const dayKey = 'heys_dayv2_'+dateStr;
+    const storedDay = U.lsGet(dayKey, null);
+
+    // 2) Если дня нет, создаём минимальный объект так же, как это делает DayTab (ensureDay с пустыми полями)
+    const baseDay = storedDay && storedDay.date ? storedDay : {
+      date: dateStr,
+      meals: [],
+      trainings: [{ z:[0,0,0,0] },{ z:[0,0,0,0] }],
+      steps: 0,
+      householdMin: 0,
+      weightMorning: profile.weight,
+      sleepStart: '',
+      sleepEnd: '',
+      sleepQuality: '',
+      sleepNote: '',
+      dayScore: '',
+      moodAvg: '',
+      wellbeingAvg: '',
+      stressAvg: '',
+      dayComment: ''
+    };
+
+    const dayObj = baseDay;
+
+    // 3) Еду агрегируем только из dayObj.meals (а не из отдельных старых ключей),
+    //    чтобы отчётность в точности повторяла суммарные калории из вкладки дня
+    const meals  = (dayObj && Array.isArray(dayObj.meals)) ? dayObj.meals : [];
+    const totals = aggregateDay(meals, prodIndex);
     
     // Убеждаемся, что deficitPct есть (для старых дней)
     if (dayObj.deficitPct == null) {
       dayObj.deficitPct = -14; // значение по умолчанию
     }
 
-    // Точная копия логики из фиолетовой таблицы (heys_day_v12.js)
-    const weight = toNum(dayObj.weightMorning || profile.weight || 70);
+    // =========================================================================
+    // ТОЧНАЯ КОПИЯ логики расчёта энергозатрат из heys_day_v12.js
+    // Все переменные, порядок операций и округления должны совпадать дословно
+    // =========================================================================
     
-    // Используем точно такую же функцию calcBMR как в фиолетовой таблице
+    const weight = toNum(dayObj.weightMorning || profile.weight || 70);
     const prof = {height: profile.height||175, age: profile.age||30, sex: profile.sex||'male'};
+    
+    // Функция calcBMR из heys_day_v12.js:
+    // function calcBMR(w,prof){ const h=+prof.height||175,a=+prof.age||30,sex=(prof.sex||'male'); return Math.round(10*(+w||0)+6.25*h-5*a+(sex==='female'?-161:5)); }
     const bmr = Math.round(10*(+weight||0) + 6.25*(+prof.height||175) - 5*(+prof.age||30) + ((prof.sex||'male')==='female'?-161:5));
     
-    // Используем точно такие же функции расчета как в фиолетовой таблице
+    // Функция kcalPerMin из heys_day_v12.js:
+    // function kcalPerMin(met,w){ return Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10; }
     const kcalPerMin = (met,w) => Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10;
+    
+    // Функция stepsKcal из heys_day_v12.js:
+    // function stepsKcal(steps,w,sex,len){ const coef=(sex==='female'?0.5:0.57); const km=(+steps||0)*(len||0.7)/1000; return Math.round(coef*(+w||0)*km*10)/10; }
     const stepsKcal = (steps,w,sex,len) => { const coef=(sex==='female'?0.5:0.57); const km=(+steps||0)*(len||0.7)/1000; return Math.round(coef*(+w||0)*km*10)/10; };
     
-    // Используем точно такие же MET зоны как в фиолетовой таблице
-    const z = (zones||[]).map(x => +x.MET||0); 
+    // Зоны и их kcal/мин из heys_day_v12.js:
+    // const z= (lsGet('heys_hr_zones',[]).map(x=>+x.MET||0)); const mets=[2.5,6,8,10].map((_,i)=>z[i]||[2.5,6,8,10][i]);
+    // ТОЧНО ТАК ЖЕ, как в heys_day_v12.js: всегда берём из localStorage, игнорируем переданные zones
+    const z = (U.lsGet ? U.lsGet('heys_hr_zones', []) : []).map(x => (+x.MET||0));
     const mets = [2.5,6,8,10].map((_,i) => z[i]||[2.5,6,8,10][i]);
     const kcalMin = mets.map(m => kcalPerMin(m, weight));
     
-    // Точная копия функции trainK из фиолетовой таблицы
-    const trainK = t => (t.z||[0,0,0,0]).reduce((s,min,i) => s + Math.round(((+min||0)*(kcalMin[i]||0))*10)/10, 0);
+    // Функция trainK из heys_day_v12.js:
+    // const trainK= t=>(t.z||[0,0,0,0]).reduce((s,min,i)=> s+r1((+min||0)*(kcalMin[i]||0)),0);
+    // ВАЖНО: используем r1 внутри reduce, как в DayTab
+    const trainK = t => (t.z||[0,0,0,0]).reduce((s,min,i) => s+r1((+min||0)*(kcalMin[i]||0)), 0);
+    
+    // Тренировки из heys_day_v12.js:
+    // const TR=(day.trainings&&Array.isArray(day.trainings)&&day.trainings.length>=2)?day.trainings:[{z:[0,0,0,0]},{z:[0,0,0,0]}];
     const TR = (dayObj.trainings && Array.isArray(dayObj.trainings) && dayObj.trainings.length >= 2) ? 
                dayObj.trainings : [{z:[0,0,0,0]},{z:[0,0,0,0]}];
-    const train1k = trainK(TR[0]), train2k = trainK(TR[1]);
+    const train1k = trainK(TR[0]);
+    const train2k = trainK(TR[1]);
     
-    const stepsK = stepsKcal(dayObj.steps||0, weight, profile.sex||'male', 0.7);
-    const householdK = Math.round(((+dayObj.householdMin||0) * kcalPerMin(2.5, weight))*10)/10;
-    const actTotal = Math.round((train1k + train2k + stepsK + householdK)*10)/10;
-    const dailyExp = Math.round((bmr + actTotal)*10)/10; // это и есть tdee из фиолетовой таблицы
+    // Шаги и быт из heys_day_v12.js:
+    // const stepsK=stepsKcal(day.steps||0,weight,prof.sex,0.7);
+    // const householdK=r1((+day.householdMin||0)*kcalPerMin(2.5,weight));
+    const stepsK = stepsKcal(dayObj.steps||0, weight, prof.sex||'male', 0.7);
+    const householdK = r1((+dayObj.householdMin||0) * kcalPerMin(2.5, weight));
+    
+    // Итоговые затраты из heys_day_v12.js:
+    // const actTotal=r1(train1k+train2k+stepsK+householdK);
+    // const tdee=r1(bmr+actTotal);
+    const actTotal = r1(train1k + train2k + stepsK + householdK);
+    const dailyExp = r1(bmr + actTotal); // это и есть tdee из фиолетовой таблицы
+
+    // Диагностический лог для отладки расхождений между Днём и Отчётностью
+    if (window._HEYS_DEBUG_TDEE) {
+      console.group('HEYS_TDEE_DEBUG [REPORTS] Расчёт для', dateStr);
+      console.log('HEYS_TDEE_DEBUG [REPORTS] Входные данные:');
+      console.log('HEYS_TDEE_DEBUG [REPORTS]   dayObj.weightMorning:', dayObj.weightMorning, '| профиль weight:', profile.weight, '| итог weight:', weight);
+      console.log('HEYS_TDEE_DEBUG [REPORTS]   steps:', dayObj.steps, '| householdMin:', dayObj.householdMin);
+      console.log('HEYS_TDEE_DEBUG [REPORTS]   trainings:', JSON.stringify(TR));
+      console.log('HEYS_TDEE_DEBUG [REPORTS]   HR zones (MET):', JSON.stringify(z));
+      console.log('HEYS_TDEE_DEBUG [REPORTS] Промежуточные расчёты:');
+      console.log('HEYS_TDEE_DEBUG [REPORTS]   BMR:', bmr);
+      console.log('HEYS_TDEE_DEBUG [REPORTS]   train1k:', train1k, '| train2k:', train2k);
+      console.log('HEYS_TDEE_DEBUG [REPORTS]   stepsK:', stepsK, '| householdK:', householdK);
+      console.log('HEYS_TDEE_DEBUG [REPORTS]   actTotal:', actTotal);
+      console.log('HEYS_TDEE_DEBUG [REPORTS] Итоговые значения:');
+      console.log('HEYS_TDEE_DEBUG [REPORTS]   dailyExp (Общие затраты):', dailyExp);
+      console.log('HEYS_TDEE_DEBUG [REPORTS]   totals.kcal (съедено):', round1(totals.kcal));
+      console.groupEnd();
+    }
 
     const energy = totals.prot*4 + totals.carbs*4 + totals.fat*9;
     const carbsPct = pct(totals.carbs*4, energy);

@@ -1,9 +1,55 @@
-import { EventEmitter } from 'events';
-
 import { DatabaseService, SecurityEvent, SecurityIncident } from '../database/DatabaseService';
 import { getGlobalLogger } from '../monitoring/structured-logger';
 
 import { ThreatDetectionService } from './threat-detection-bridge';
+
+type Listener = (...args: any[]) => void;
+
+class LightweightEventEmitter {
+  private listeners = new Map<string, Set<Listener>>();
+
+  on(event: string, listener: Listener): this {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event)!.add(listener);
+    return this;
+  }
+
+  off(event: string, listener: Listener): this {
+    const handlers = this.listeners.get(event);
+    if (handlers) {
+      handlers.delete(listener);
+      if (handlers.size === 0) {
+        this.listeners.delete(event);
+      }
+    }
+    return this;
+  }
+
+  once(event: string, listener: Listener): this {
+    const wrapper: Listener = (...args) => {
+      this.off(event, wrapper);
+      listener(...args);
+    };
+    return this.on(event, wrapper);
+  }
+
+  emit(event: string, ...args: any[]): boolean {
+    const handlers = this.listeners.get(event);
+    if (!handlers || handlers.size === 0) {
+      return false;
+    }
+    handlers.forEach((handler) => {
+      try {
+        handler(...args);
+      } catch (error) {
+        console.error(`Error in listener for ${event}`, error);
+      }
+    });
+    return true;
+  }
+}
 
 export interface IntegratedSecurityEvent extends SecurityEvent {
   // Дополнительные поля для интеграции
@@ -40,7 +86,7 @@ export interface SecurityAnalyticsConfig {
  * Integrated Security Analytics Service
  * Объединяет threat detection, database storage и real-time analytics
  */
-export class SecurityAnalyticsService extends EventEmitter {
+export class SecurityAnalyticsService extends LightweightEventEmitter {
   private threatDetection: InstanceType<typeof ThreatDetectionService>;
   private database: DatabaseService;
   private processingQueue: SecurityEvent[] = [];
