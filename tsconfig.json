@@ -61,7 +61,7 @@
         "./packages/shared/src"
       ],
       "@heys/logger": [
-        "./packages/logger/src"
+        "./packages/logger/dist"
       ]
     },
     "ignoreDeprecations": "5.0"

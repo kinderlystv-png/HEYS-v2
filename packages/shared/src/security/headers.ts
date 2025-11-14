@@ -489,11 +489,11 @@ export class CORSManager {
  * Default security headers manager instance
  */
 export const defaultSecurityHeaders = SecurityHeadersManager.forEnvironment(
-  process.env.NODE_ENV === 'production' ? 'production' : 'development',
+  (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') ? 'production' : 'development',
 );
 
 /**
  * Default CORS manager instance
  */
 export const defaultCORS =
-  process.env.NODE_ENV === 'production' ? CORSManager.secure([]) : CORSManager.development();
+  (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') ? CORSManager.secure([]) : CORSManager.development();
