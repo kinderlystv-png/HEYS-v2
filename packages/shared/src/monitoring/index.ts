@@ -35,11 +35,28 @@ export {
 import type { MonitoringConfig } from './performance';
 import { measure, measureAsync, monitor, recordError, recordMetric } from './performance';
 
+/**
+ * Универсальная проверка production-окружения (Node.js + Browser)
+ */
+const isProductionEnvironment = (): boolean => {
+  // Vite / современные фронтенд-сборщики
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.MODE === 'production') {
+    return true;
+  }
+  
+  // Node.js / Webpack
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+    return true;
+  }
+  
+  return false;
+};
+
 // Monitoring utilities
 export const createMonitoringConfig = (
   config: Partial<MonitoringConfig> = {},
 ): MonitoringConfig => ({
-  enabled: process.env.NODE_ENV === 'production',
+  enabled: isProductionEnvironment(),
   batchSize: 100,
   flushInterval: 30000,
   enableRealtime: false,

@@ -232,9 +232,22 @@ export class PerformanceMonitor {
   }
 }
 
+/**
+ * Проверка production-окружения
+ */
+const isProductionEnvironment = (): boolean => {
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.MODE === 'production') {
+    return true;
+  }
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+    return true;
+  }
+  return false;
+};
+
 // Default instance
 export const monitor = new PerformanceMonitor({
-  enabled: process.env.NODE_ENV === 'production',
+  enabled: isProductionEnvironment(),
   batchSize: 100,
   flushInterval: 30000, // 30 seconds
   enableRealtime: false,

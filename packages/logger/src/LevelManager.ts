@@ -36,7 +36,7 @@ export class LevelManager {
   private levelHistory: LevelChangeEvent[] = [];
 
   constructor(options: LevelManagerOptions = {}) {
-    this.environment = options.environment || process.env.NODE_ENV || 'development';
+    this.environment = options.environment || (typeof process !== 'undefined' && process.env?.NODE_ENV) || 'development';
     this.autoAdjust = options.autoAdjust ?? true;
     this.persistLevel = options.persistLevel ?? false;
 
@@ -290,7 +290,11 @@ export class LevelManager {
   }
 
   private setupAutoAdjustment(): void {
-    // Автоматическая настройка уровня при изменении NODE_ENV
+    // Автоматическая настройка уровня при изменении NODE_ENV (только в Node.js окружении)
+    if (typeof process === 'undefined') {
+      return; // В браузере auto-adjustment не работает
+    }
+    
     const originalEnv = process.env.NODE_ENV;
 
     // Проверяем изменения каждые 30 секунд в development
@@ -350,7 +354,7 @@ export class LevelManager {
 
 // Синглтон для глобального использования
 export const globalLevelManager = new LevelManager({
-  environment: process.env.NODE_ENV || 'development',
+  environment: (typeof process !== 'undefined' && process.env?.NODE_ENV) || 'development',
   autoAdjust: true,
   persistLevel: false,
 });

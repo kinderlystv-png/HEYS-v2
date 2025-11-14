@@ -62,11 +62,24 @@ export {
 import type { MonitoringConfig as LegacyMonitoringConfig } from './performance';
 import { measure, measureAsync, monitor, recordError, recordMetric } from './performance';
 
+/**
+ * Проверка production-окружения (Browser + Node.js)
+ */
+const isProductionEnvironment = (): boolean => {
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.MODE === 'production') {
+    return true;
+  }
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+    return true;
+  }
+  return false;
+};
+
 // Monitoring utilities
 export const createMonitoringConfig = (
   config: Partial<LegacyMonitoringConfig> = {},
 ): LegacyMonitoringConfig => ({
-  enabled: process.env.NODE_ENV === 'production',
+  enabled: isProductionEnvironment(),
   batchSize: 100,
   flushInterval: 30000,
   enableRealtime: false,

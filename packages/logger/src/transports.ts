@@ -1,9 +1,24 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 import pino from 'pino';
 
 import { AdvancedLoggerConfig } from './config';
+
+// Проверка окружения: Node.js или браузер
+const isNodeEnvironment = typeof process !== 'undefined' && typeof process.stdout !== 'undefined';
+
+// Динамические импорты Node.js модулей (только в Node окружении)
+let fs: any;
+let path: any;
+
+if (isNodeEnvironment) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    fs = require('node:fs');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    path = require('node:path');
+  } catch {
+    // Модули недоступны, файловые транспорты не будут работать
+  }
+}
 
 const resolveStreamLevel = (level: AdvancedLoggerConfig['level']): pino.Level | null => {
   if (level === 'silent') {
@@ -19,8 +34,13 @@ const resolveStreamLevel = (level: AdvancedLoggerConfig['level']): pino.Level | 
 
 /**
  * Создает транспорты для логирования на основе конфигурации
+ * В браузере возвращает пустой массив (транспорты не поддерживаются)
  */
 export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry[] {
+  if (!isNodeEnvironment) {
+    return [];
+  }
+
   const streams: pino.StreamEntry[] = [];
 
   // Консольный транспорт
@@ -28,7 +48,7 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
     const streamLevel = resolveStreamLevel(config.level);
 
     if (streamLevel !== null) {
-      if (config.transports.console.pretty) {
+      if (config.transports.console.pretty && typeof pino.transport === 'function') {
         streams.push({
           level: streamLevel,
           stream: pino.transport({
@@ -51,8 +71,8 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
     }
   }
 
-  // Файловый транспорт
-  if (config.transports.file.enabled) {
+  // Файловый транспорт (только в Node.js)
+  if (config.transports.file.enabled && path) {
     ensureLogDirectory(config.transports.file.path);
 
     // Основной лог файл
@@ -79,8 +99,8 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
     });
   }
 
-  // Сетевой транспорт (для centralized logging)
-  if (config.transports.network.enabled && config.transports.network.url) {
+  // Сетевой транспорт (для centralized logging, только в Node.js)
+  if (config.transports.network.enabled && config.transports.network.url && typeof pino.transport === 'function') {
     const networkLevel = resolveStreamLevel(config.level);
 
     if (networkLevel !== null) {
@@ -102,10 +122,10 @@ export function createTransports(config: AdvancedLoggerConfig): pino.StreamEntry
 }
 
 /**
- * Создает ротирующийся файловый транспорт
+ * Создает ротирующийся файловый транспорт (только для Node.js)
  */
 export function createRotatingFileTransport(config: AdvancedLoggerConfig) {
-  if (!config.transports.file.enabled) {
+  if (!config.transports.file.enabled || !path || typeof pino.transport !== 'function') {
     return null;
   }
 
@@ -123,16 +143,19 @@ export function createRotatingFileTransport(config: AdvancedLoggerConfig) {
 }
 
 /**
- * Обеспечивает существование директории для логов
+ * Обеспечивает существование директории для логов (только Node.js)
  */
 function ensureLogDirectory(logPath: string): void {
+  if (!fs || !isNodeEnvironment) {
+    return;
+  }
+  
   try {
     if (!fs.existsSync(logPath)) {
       fs.mkdirSync(logPath, { recursive: true });
     }
-  } catch (error) {
-    // Если не можем создать директорию, используем текущую
-    // Избегаем console.error из-за линтера
+  } catch {
+    // Если не можем создать директорию, продолжаем работу
   }
 }
 
@@ -145,7 +168,7 @@ export function createFormatters(config: AdvancedLoggerConfig) {
     bindings: (bindings: Record<string, unknown>) => ({
       service: config.service,
       environment: config.environment,
-      version: process.env.npm_package_version || '1.0.0',
+      version: (typeof process !== 'undefined' && process.env?.npm_package_version) || '1.0.0',
       ...bindings,
     }),
     log: (object: Record<string, unknown>) => {

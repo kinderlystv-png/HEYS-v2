@@ -49,7 +49,7 @@ export function createLogger(config: LoggerConfig = {}) {
   const {
     level = LogLevel.INFO,
     service = 'heys-app',
-    environment = process.env.NODE_ENV || 'development',
+    environment = (typeof process !== 'undefined' && process.env?.NODE_ENV) || 'development',
   } = config;
 
   const isProduction = environment === 'production';
@@ -60,8 +60,8 @@ export function createLogger(config: LoggerConfig = {}) {
     base: {
       service,
       environment,
-      pid: process.pid,
-      hostname: process.env.HOSTNAME || 'unknown',
+      pid: typeof process !== 'undefined' ? process.pid : 0,
+      hostname: (typeof process !== 'undefined' && process.env?.HOSTNAME) || 'browser',
     },
     timestamp: pino.stdTimeFunctions.isoTime,
     formatters: {
@@ -94,9 +94,31 @@ export function createLogger(config: LoggerConfig = {}) {
 
 /**
  * Создает расширенный логгер с поддержкой мультистрим транспортов
+ * В браузере возвращает упрощённый logger с console выводом
  */
 export function createAdvancedLogger(config: Partial<AdvancedLoggerConfig> = {}): pino.Logger {
   const validatedConfig = validateConfig(config);
+  
+  const isBrowser = typeof process === 'undefined' || typeof process.stdout === 'undefined';
+  
+  // Browser mode: используем pino browser API
+  if (isBrowser) {
+    return pino({
+      level: validatedConfig.level,
+      browser: {
+        asObject: false,
+        write: {
+          info: (o: any) => console.info(o),
+          error: (o: any) => console.error(o),
+          warn: (o: any) => console.warn(o),
+          debug: (o: any) => console.debug(o),
+          trace: (o: any) => console.trace(o),
+        },
+      },
+    });
+  }
+
+  // Node.js mode: полная версия с транспортами
   const streams = createTransports(validatedConfig);
   const formatters = createFormatters(validatedConfig);
   const serializers = createSerializers();
@@ -106,7 +128,7 @@ export function createAdvancedLogger(config: Partial<AdvancedLoggerConfig> = {})
     base: {
       service: validatedConfig.service,
       environment: validatedConfig.environment,
-      version: process.env.npm_package_version || '1.0.0',
+      version: (typeof process !== 'undefined' && process.env?.npm_package_version) || '1.0.0',
     },
     timestamp: pino.stdTimeFunctions.isoTime,
     formatters,
@@ -136,7 +158,7 @@ export function createAdvancedLogger(config: Partial<AdvancedLoggerConfig> = {})
  */
 export const logger = createAdvancedLogger({
   service: 'heys-system',
-  level: (process.env.LOG_LEVEL as LogLevel) || LogLevel.INFO,
+  level: (typeof process !== 'undefined' && process.env?.LOG_LEVEL as LogLevel) || LogLevel.INFO,
 });
 
 /**

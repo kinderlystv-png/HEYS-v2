@@ -508,6 +508,27 @@
   const eatenKcal=(day.meals||[]).reduce((a,m)=>{ const t=(M.mealTotals? M.mealTotals(m,pIndex): {kcal:0}); return a+(t.kcal||0); },0);
   const factDefPct = tdee? r1(((eatenKcal - tdee)/tdee)*100) : 0; // <0 значит дефицит
 
+  // Диагностический лог для отладки расхождений между Днём и Отчётностью
+  if (window._HEYS_DEBUG_TDEE) {
+    console.group('HEYS_TDEE_DEBUG [DAY] Расчёт для', day.date);
+    console.log('HEYS_TDEE_DEBUG [DAY] Входные данные:');
+    console.log('HEYS_TDEE_DEBUG [DAY]   weightMorning:', day.weightMorning, '| профиль weight:', prof.weight, '| итог weight:', weight);
+    console.log('HEYS_TDEE_DEBUG [DAY]   steps:', day.steps, '| householdMin:', day.householdMin);
+    console.log('HEYS_TDEE_DEBUG [DAY]   trainings:', JSON.stringify(TR));
+    console.log('HEYS_TDEE_DEBUG [DAY]   HR zones (MET):', JSON.stringify(z));
+    console.log('HEYS_TDEE_DEBUG [DAY] Промежуточные расчёты:');
+    console.log('HEYS_TDEE_DEBUG [DAY]   BMR:', bmr);
+    console.log('HEYS_TDEE_DEBUG [DAY]   train1k:', train1k, '| train2k:', train2k);
+    console.log('HEYS_TDEE_DEBUG [DAY]   stepsK:', stepsK, '| householdK:', householdK);
+    console.log('HEYS_TDEE_DEBUG [DAY]   actTotal:', actTotal);
+    console.log('HEYS_TDEE_DEBUG [DAY] Итоговые значения:');
+    console.log('HEYS_TDEE_DEBUG [DAY]   tdee (Общие затраты):', tdee);
+    console.log('HEYS_TDEE_DEBUG [DAY]   eatenKcal (съедено):', r1(eatenKcal));
+    console.log('HEYS_TDEE_DEBUG [DAY]   optimum (нужно съесть):', optimum);
+    console.log('HEYS_TDEE_DEBUG [DAY]   factDefPct:', factDefPct + '%');
+    console.groupEnd();
+  }
+
     function updateTraining(i,zi,mins){
       const arr=(day.trainings||[{z:[0,0,0,0]},{z:[0,0,0,0]}]).map((t,idx)=> idx===i? {z:t.z.map((v,j)=> j===zi?(+mins||0):v)}:t);
       const newDay = {...day, trainings:arr};

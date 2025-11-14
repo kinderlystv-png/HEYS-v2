@@ -367,8 +367,9 @@
       
       const ls = global.localStorage;
       muteMirror = true;
-      // clear only keys that belong to the requested client to avoid wiping other clients' data
-      clearNamespace(client_id);
+      // ❌ КРИТИЧНО: НЕ ОЧИЩАЕМ ВСЁ ПРОСТРАНСТВО КЛИЕНТА
+      // clearNamespace стирал все локальные данные, включая продукты!
+      // Теперь просто перезаписываем только те ключи, что пришли с сервера
       
       (data||[]).forEach(row => {
         try {
@@ -397,6 +398,55 @@
             log('conflict: keep local', key);
             return;
           }
+          
+          // ЗАЩИТА: не затираем локальные продукты пустым массивом из Supabase
+          if (key.includes('_products')) {
+            console.log(`🔍 [PRODUCTS CHECK] key: ${key}`);
+            console.log(`🔍 [PRODUCTS CHECK] row.v is array: ${Array.isArray(row.v)}, length: ${Array.isArray(row.v) ? row.v.length : 'N/A'}`);
+            
+            // Читаем актуальное локальное значение по scoped ключу
+            let currentLocal = null;
+            try { 
+              const rawLocal = ls.getItem(key);
+              if (rawLocal) currentLocal = JSON.parse(rawLocal);
+              console.log(`🔍 [PRODUCTS CHECK] currentLocal is array: ${Array.isArray(currentLocal)}, length: ${Array.isArray(currentLocal) ? currentLocal.length : 'N/A'}`);
+            } catch(e) {
+              console.warn('Failed to parse local products:', e);
+            }
+            
+            // КРИТИЧЕСКАЯ ЗАЩИТА: НЕ ЗАТИРАЕМ непустые продукты пустым массивом
+            if (Array.isArray(row.v) && row.v.length === 0) {
+              if (Array.isArray(currentLocal) && currentLocal.length > 0) {
+                console.warn(`⚠️ [PRODUCTS PROTECTION] BLOCKED: Refusing to overwrite ${currentLocal.length} local products with empty cloud array`);
+                return; // Пропускаем сохранение
+              } else {
+                // 🚨 АВТОВОССТАНОВЛЕНИЕ: Оба пусты - пытаемся восстановить из backup
+                console.warn(`⚠️ [PRODUCTS] Both cloud and local are empty - attempting backup restore`);
+                const backupKey = key.replace('_products', '_products_backup');
+                const backupRaw = ls.getItem(backupKey);
+                if (backupRaw) {
+                  try {
+                    const backupData = JSON.parse(backupRaw);
+                    if (Array.isArray(backupData) && backupData.length > 0) {
+                      console.log(`✅ [RECOVERY] Restored ${backupData.length} products from backup: ${backupKey}`);
+                      ls.setItem(key, JSON.stringify(backupData));
+                      // Обновляем cloud данными из backup
+                      muteMirror = false;
+                      setTimeout(() => cloud.saveClientKey(client_id, 'heys_products', backupData), 500);
+                      muteMirror = true;
+                      return; // Восстановлено из backup
+                    }
+                  } catch(e) {
+                    console.error(`❌ [RECOVERY] Failed to parse backup:`, e);
+                  }
+                }
+                console.log(`ℹ️ [PRODUCTS] No backup found, accepting empty state`);
+              }
+            } else {
+              console.log(`✅ [PRODUCTS] Loading ${Array.isArray(row.v) ? row.v.length : 'N/A'} products from cloud`);
+            }
+          }
+          
           ls.setItem(key, JSON.stringify(row.v));
           log(`  ✅ Saved to localStorage: ${key}`);
           
@@ -552,6 +602,12 @@
             v: value,
             updated_at: (new Date()).toISOString(),
         };
+
+        // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем пустые массивы продуктов в Supabase
+        if (k === 'heys_products' && Array.isArray(value) && value.length === 0) {
+            log(`🚫 [SAVE BLOCKED] Refused to save empty products array to Supabase (key: ${k})`);
+            return; // Блокируем затирание реальных данных пустым массивом
+        }
 
         // Логирование сохранения
         const dataType = k === 'heys_products' ? '📦 PRODUCTS' :

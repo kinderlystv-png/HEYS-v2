@@ -8,6 +8,8 @@
 const cors = require('cors');
 const express = require('express');
 
+const { serverRouter } = require('../dist/server/router.js');
+
 const app = express();
 
 // Configuration from environment
@@ -18,7 +20,7 @@ const DATABASE_NAME = process.env.DATABASE_NAME || 'projectB';
 // Basic middleware
 app.use(
   cors({
-    origin: ['http://localhost:3001', 'http://localhost:3000'],
+    origin: ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:3002', 'http://localhost:3003'],
     credentials: true,
   }),
 );
@@ -58,6 +60,8 @@ app.get('/api/training', (req, res) => {
 app.get('/api/analytics', (req, res) => {
   res.json({ message: 'Analytics API endpoint', database: DATABASE_NAME });
 });
+
+app.use(serverRouter);
 
 // 404 handler
 app.use((req, res) => {

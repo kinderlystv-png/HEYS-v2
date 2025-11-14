@@ -332,10 +332,14 @@ export class RealtimeMonitor {
 }
 
 // Default instance for real-time monitoring
-export const realtimeMonitor = new RealtimeMonitor(
-  process.env.MONITORING_WS_URL ||
-    (typeof window !== 'undefined' ? 'ws://localhost:8080/monitoring' : undefined),
-);
+const DEFAULT_WS_URL = (() => {
+  if (typeof process !== 'undefined' && process?.env?.MONITORING_WS_URL) {
+    return typeof process !== 'undefined' ? process.env?.MONITORING_WS_URL : undefined;
+  }
+  return undefined;
+})();
+
+export const realtimeMonitor = new RealtimeMonitor(DEFAULT_WS_URL);
 
 // Convenient helper functions
 export const addAlert = (rule: Omit<AlertRule, 'id'>) => realtimeMonitor.addAlertRule(rule);
