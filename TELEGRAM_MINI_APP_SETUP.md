@@ -113,16 +113,55 @@ VITE_USE_CLIENT_MOCKS=false
 
 ### 4.2. Запуск dev-сервера mini-app
 
+**Вариант 1: через VS Code task (рекомендуется)**
+
+Запустите task `Start TG Mini (Port 3002)` через интерфейс VS Code (Terminal → Run Task…).
+
+**Вариант 2: вручную из терминала**
+
 ```bash
-cd /Users/poplavskijanton/HEYS-v2/apps/tg-mini
-VITE_API_URL=http://localhost:4001 VITE_USE_CLIENT_MOCKS=false pnpm dev -- --port 3002
+cd /Users/poplavskijanton/HEYS-v2
+pnpm run dev:tg-mini
 ```
 
-После старта dev-сервер будет доступен по адресу:
+Или напрямую:
 
-- `http://localhost:3002`
+```bash
+cd /Users/poplavskijanton/HEYS-v2
+pnpm --filter @heys/tg-mini run dev
+```
 
-Для Telegram WebApp понадобится внешний URL (через ngrok или другой туннель), который будет проксировать этот порт.
+После старта dev-сервер будет доступен по адресу `http://localhost:3002`.
+
+### 4.3. Настройка ngrok для доступа из Telegram
+
+Для Telegram WebApp нужен внешний HTTPS URL. Используйте ngrok:
+
+```bash
+# Установка (если не установлен)
+brew install ngrok
+
+# Авторизация (получите токен на https://dashboard.ngrok.com/get-started/your-authtoken)
+ngrok config add-authtoken YOUR_NGROK_TOKEN
+
+# Запуск туннеля
+ngrok http 3002
+```
+
+Скопируйте публичный URL (например, `https://abc123.ngrok-free.dev`).
+
+**Важно:** Добавьте ngrok-домен в `apps/tg-mini/vite.config.ts`:
+
+```ts
+server: {
+  port: 3002,
+  host: true,
+  strictPort: false,
+  allowedHosts: ['your-ngrok-domain.ngrok-free.dev'], // замените на ваш домен
+},
+```
+
+Перезапустите mini-app после изменения конфига.
 
 ## 5. Проверка интеграции
 
@@ -150,21 +189,49 @@ VITE_API_URL=http://localhost:4001 VITE_USE_CLIENT_MOCKS=false pnpm dev -- --por
 
 - Для продакшн-среды используйте секреты CI/CD или переменные окружения на сервере.
 
-## 7. Краткая памятка команд
+## 7. Настройка бота в BotFather
+
+После запуска ngrok:
+
+1. Откройте `@BotFather` в Telegram
+2. Напишите `/mybots` → выберите вашего бота
+3. **Bot Settings** → **Menu Button** → **Edit Menu Button URL**
+4. Вставьте ngrok URL: `https://your-domain.ngrok-free.dev`
+5. **Configure Menu Button** → введите название кнопки (например, "Панель куратора")
+
+Теперь в чате с ботом появится кнопка меню, которая откроет mini-app.
+
+## 8. Краткая памятка команд
 
 ```bash
 # Установить зависимости
 cd /Users/poplavskijanton/HEYS-v2
 pnpm install
 
-# Запустить backend (через task или вручную)
-# Task: Start API Server (Port 4001)
+# Запустить backend (через VS Code task "Start API Server (Port 4001)")
 # Либо вручную:
 API_PORT=4001 DATABASE_NAME=projectB node packages/core/src/server.js
 
-# Запустить Telegram mini-app (dev)
-cd /Users/poplavskijanton/HEYS-v2/apps/tg-mini
-VITE_API_URL=http://localhost:4001 VITE_USE_CLIENT_MOCKS=false pnpm dev -- --port 3002
+# Запустить Telegram mini-app (через VS Code task "Start TG Mini (Port 3002)")
+# Либо вручную:
+pnpm run dev:tg-mini
+
+# Запустить ngrok
+ngrok http 3002
 ```
+
+## 9. Текущий статус (14 ноября 2025)
+
+✅ **Работает:**
+- Backend API на `localhost:4001`
+- Mini-app frontend на `localhost:3002`
+- Telegram WebApp интеграция (initData передаётся)
+- Ngrok туннель для доступа из Telegram
+- CORS настроен для локальной разработки
+
+⚠️ **В разработке:**
+- Backend авторизация через `initData` (проверка HMAC подписи)
+- Реальные данные клиентов вместо моков
+- Whitelist разрешённых кураторов через `TELEGRAM_ALLOWED_USER_IDS`
 
 Этого минимального набора шагов достаточно, чтобы развернуть и протестировать Telegram mini-app локально, не храня секреты в репозитории и не полагаясь на память.
