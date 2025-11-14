@@ -18,17 +18,25 @@
     },
     "android": {
       "package": "com.heys.mobile.dev",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
+      "router": {
+        "appRoot": "./app"
+      },
       "eas": {
         "projectId": "863ddd39-1876-4b1a-8d6a-26a225543352"
       }

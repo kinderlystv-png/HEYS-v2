@@ -1,22 +1,24 @@
 {
   "compilerOptions": {
-    // Language and Environment
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
-
-    // Module Resolution
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": false,
     "allowImportingTsExtensions": false,
     "resolveJsonModule": true,
-    "typeRoots": ["./types", "./node_modules/@types"],
-
-    // Type Checking
+    "typeRoots": [
+      "./types",
+      "./node_modules/@types"
+    ],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -26,53 +28,73 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "useUnknownInCatchVariables": true,
-
-    // Emit
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "removeComments": false,
     "noEmit": true,
     "isolatedModules": true,
-
-    // Interop Constraints
     "allowJs": false,
     "checkJs": false,
-
-    // Completeness
     "skipLibCheck": true,
-
-    // Paths for monorepo
     "baseUrl": ".",
     "paths": {
-      "@heys/core": ["./packages/core/src"],
-      "@heys/ui": ["./packages/ui/src"],
-      "@heys/search": ["./packages/search/src"],
-      "@heys/storage": ["./packages/storage/src"],
-      "@heys/gaming": ["./packages/gaming/src"],
-      "@heys/analytics": ["./packages/analytics/src"],
-      "@heys/shared": ["./packages/shared/src"],
-      "@heys/logger": ["./packages/logger/src"]
+      "@heys/core": [
+        "./packages/core/src"
+      ],
+      "@heys/ui": [
+        "./packages/ui/src"
+      ],
+      "@heys/search": [
+        "./packages/search/src"
+      ],
+      "@heys/storage": [
+        "./packages/storage/src"
+      ],
+      "@heys/gaming": [
+        "./packages/gaming/src"
+      ],
+      "@heys/analytics": [
+        "./packages/analytics/src"
+      ],
+      "@heys/shared": [
+        "./packages/shared/src"
+      ],
+      "@heys/logger": [
+        "./packages/logger/src"
+      ]
     },
-
-    // TODO: migrate away from deprecated config options before TS 7.0
     "ignoreDeprecations": "5.0"
   },
-
-  // Workspace references
   "references": [
-    { "path": "./packages/logger" },
-    { "path": "./packages/core" },
-    { "path": "./packages/ui" },
-    { "path": "./packages/search" },
-    { "path": "./packages/storage" },
-    { "path": "./packages/gaming" },
-    { "path": "./packages/analytics" },
-    { "path": "./packages/shared" },
-    { "path": "./apps/web" }
+    {
+      "path": "./packages/logger"
+    },
+    {
+      "path": "./packages/core"
+    },
+    {
+      "path": "./packages/ui"
+    },
+    {
+      "path": "./packages/search"
+    },
+    {
+      "path": "./packages/storage"
+    },
+    {
+      "path": "./packages/gaming"
+    },
+    {
+      "path": "./packages/analytics"
+    },
+    {
+      "path": "./packages/shared"
+    },
+    {
+      "path": "./apps/web"
+    }
   ],
-
-  // Files to include/exclude
   "include": [
     "packages/*/src/**/*",
     "apps/*/src/**/*",
@@ -86,11 +108,11 @@
     "build",
     "coverage",
     "*.min.js",
-    // Legacy files
     "heys_*.js",
     "heys_*.ts",
     "temp",
     "TESTS",
     "старые МЕТОДОЛОГИИ И ИНСТРУКЦИИ ДЛЯ ИИ"
-  ]
+  ],
+  "extends": "expo/tsconfig.base"
 }

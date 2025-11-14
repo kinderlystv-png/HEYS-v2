@@ -4,3 +4,38 @@
 ../../apps/web
 ../../archive
 ../../.git
+../../.github
+../../docs
+../../tests
+../../.turbo
+../../dist
+../../build
+../../coverage
+
+# КРИТИЧНО: Игнорируем корневой package.json с workspaces
+../../package.json
+../../pnpm-lock.yaml
+../../pnpm-workspace.yaml
+
+# Dev-файлы из корня
+../../.eslintrc*
+../../.prettierrc*
+../../jest.config.*
+../../playwright.config.*
+../../tsconfig.json
+../../turbo.json
+
+# Батники и скрипты
+../../*.bat
+../../*.ps1
+../../*.sh
+
+# Конфиги
+../../docker-compose*.yml
+../../Dockerfile
+../../*.config.js
+../../*.config.ts
+../../*.config.json
+
+# Документация
+../../*.md
