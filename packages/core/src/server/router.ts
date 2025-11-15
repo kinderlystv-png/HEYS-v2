@@ -21,6 +21,7 @@ interface ActiveSession {
   allowedClientIds: string[];
 }
 
+const NODE_ENV = process.env.NODE_ENV || 'development';
 const TELEGRAM_ALLOWED_IDS = (process.env.TELEGRAM_ALLOWED_USER_IDS || '')
   .split(',')
   .map((id) => Number(id.trim()))
@@ -62,7 +63,9 @@ serverRouter.post('/api/telegram/auth/verify', express.json(), (req, res) => {
     return res.status(403).json({ error: 'initData не содержит данных пользователя' });
   }
 
-  const allowedCheck = ensureUserAllowed(userPayload.id, TELEGRAM_ALLOWED_IDS);
+  const allowedCheck = ensureUserAllowed(userPayload.id, TELEGRAM_ALLOWED_IDS, {
+    allowEmptyList: NODE_ENV !== 'production'
+  });
   if (!allowedCheck.ok) {
     log.warn('Telegram auth rejected: user not allowed', {
       ...requestMeta,

@@ -26,6 +26,11 @@ export interface VerifyTelegramResult {
   error?: string;
 }
 
+export interface EnsureAllowedOptions {
+  /** Разрешить пустой whitelist (например, в dev-режиме) */
+  allowEmptyList?: boolean;
+}
+
 export function parseInitData(input: string): Record<string, string> {
   const result: Record<string, string> = {};
 
@@ -96,9 +101,17 @@ export function verifyTelegramInitData(initData: string, botToken: string): Veri
   return { ok: true, user };
 }
 
-export function ensureUserAllowed(telegramId: number, allowedIds: number[]): VerifyTelegramResult {
+export function ensureUserAllowed(
+  telegramId: number,
+  allowedIds: number[],
+  options: EnsureAllowedOptions = {}
+): VerifyTelegramResult {
   if (!allowedIds.length) {
-    return { ok: true };
+    if (options.allowEmptyList) {
+      return { ok: true };
+    }
+
+    return { ok: false, error: 'TELEGRAM_ALLOWED_USER_IDS не настроен' };
   }
 
   if (!allowedIds.includes(telegramId)) {

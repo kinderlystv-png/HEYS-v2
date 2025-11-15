@@ -16,11 +16,32 @@ const app = express();
 const PORT = process.env.API_PORT || process.env.PORT || 4001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const DATABASE_NAME = process.env.DATABASE_NAME || 'projectB';
+const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:3001',
+  'http://localhost:3000',
+  'http://localhost:3002',
+  'http://localhost:3003'
+];
+const ALLOWED_ORIGINS = (process.env.API_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter((origin) => Boolean(origin));
+const EFFECTIVE_ORIGINS = ALLOWED_ORIGINS.length ? ALLOWED_ORIGINS : DEFAULT_ALLOWED_ORIGINS;
 
 // Basic middleware
 app.use(
   cors({
-    origin: ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:3002', 'http://localhost:3003'],
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (EFFECTIVE_ORIGINS.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    },
     credentials: true,
   }),
 );
