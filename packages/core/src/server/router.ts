@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 
+import { log } from '@heys/logger';
 import express from 'express';
 
 import type { CuratorClientRecord } from './curatorData';
@@ -34,23 +35,39 @@ export const serverRouter = express.Router();
 
 serverRouter.post('/api/telegram/auth/verify', express.json(), (req, res) => {
   const { initData } = req.body ?? {};
+  const requestMeta = {
+    ip: req.ip,
+    userAgent: req.get('user-agent'),
+    hasInitData: typeof initData === 'string',
+    allowedListConfigured: TELEGRAM_ALLOWED_IDS.length > 0
+  };
 
   if (!initData || typeof initData !== 'string') {
+    log.warn('Telegram auth rejected: initData missing', requestMeta);
     return res.status(400).json({ error: 'initData обязателен' });
   }
 
   const verification = verifyTelegramInitData(initData, TELEGRAM_BOT_TOKEN);
   if (!verification.ok) {
+    log.warn('Telegram auth rejected: verification failed', {
+      ...requestMeta,
+      reason: verification.error
+    });
     return res.status(401).json({ error: verification.error });
   }
 
   const userPayload = verification.user;
   if (!userPayload) {
+    log.warn('Telegram auth rejected: no user payload', requestMeta);
     return res.status(403).json({ error: 'initData не содержит данных пользователя' });
   }
 
   const allowedCheck = ensureUserAllowed(userPayload.id, TELEGRAM_ALLOWED_IDS);
   if (!allowedCheck.ok) {
+    log.warn('Telegram auth rejected: user not allowed', {
+      ...requestMeta,
+      userId: userPayload.id
+    });
     return res.status(403).json({ error: allowedCheck.error });
   }
 
@@ -59,6 +76,12 @@ serverRouter.post('/api/telegram/auth/verify', express.json(), (req, res) => {
   activeSessions.set(sessionPayload.token, {
     session: sessionPayload,
     allowedClientIds
+  });
+
+  log.info('Telegram auth verified successfully', {
+    ...requestMeta,
+    userId: userPayload.id,
+    sessionExpiresAt: sessionPayload.expiresAt
   });
 
   return res.json(sessionPayload);

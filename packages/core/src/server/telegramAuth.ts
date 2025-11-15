@@ -1,5 +1,8 @@
 import crypto from 'node:crypto';
 
+const MAX_INITDATA_AGE_SECONDS = 120; // 2 минуты
+const MAX_CLOCK_SKEW_SECONDS = 30;
+
 export interface TelegramUserInfo {
   id: number;
   first_name?: string;
@@ -55,6 +58,17 @@ export function verifyTelegramInitData(initData: string, botToken: string): Veri
   const authDate = Number(parsed.auth_date);
   if (!authDate || Number.isNaN(authDate)) {
     return { ok: false, error: 'Некорректный auth_date' };
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const ageSeconds = nowSeconds - authDate;
+
+  if (ageSeconds > MAX_INITDATA_AGE_SECONDS) {
+    return { ok: false, error: 'initData устарел — требуется повторная авторизация' };
+  }
+
+  if (ageSeconds < -MAX_CLOCK_SKEW_SECONDS) {
+    return { ok: false, error: 'initData имеет некорректное время (слишком далеко в будущем)' };
   }
 
   const dataCheckString = Object.entries(parsed)
