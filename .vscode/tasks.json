@@ -87,7 +87,11 @@
         "env": {
           "PORT": "4001",
           "API_PORT": "4001",
-          "DATABASE_NAME": "projectB"
+          "DATABASE_NAME": "projectB",
+          "NODE_ENV": "development",
+          "TELEGRAM_BOT_TOKEN": "${env:TELEGRAM_BOT_TOKEN}",
+          "TELEGRAM_ALLOWED_USER_IDS": "1393964759",
+          "API_ALLOWED_ORIGINS": "https://tressy-cotyledonoid-vergie.ngrok-free.dev"
         }
       },
       "presentation": {

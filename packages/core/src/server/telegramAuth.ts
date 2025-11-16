@@ -1,5 +1,8 @@
 import crypto from 'node:crypto';
 
+const MAX_INITDATA_AGE_SECONDS = 120; // 2 минуты
+const MAX_CLOCK_SKEW_SECONDS = 30;
+
 export interface TelegramUserInfo {
   id: number;
   first_name?: string;
@@ -21,6 +24,11 @@ export interface VerifyTelegramResult {
   ok: boolean;
   user?: TelegramUserInfo;
   error?: string;
+}
+
+export interface EnsureAllowedOptions {
+  /** Разрешить пустой whitelist (например, в dev-режиме) */
+  allowEmptyList?: boolean;
 }
 
 export function parseInitData(input: string): Record<string, string> {
@@ -57,6 +65,17 @@ export function verifyTelegramInitData(initData: string, botToken: string): Veri
     return { ok: false, error: 'Некорректный auth_date' };
   }
 
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const ageSeconds = nowSeconds - authDate;
+
+  if (ageSeconds > MAX_INITDATA_AGE_SECONDS) {
+    return { ok: false, error: 'initData устарел — требуется повторная авторизация' };
+  }
+
+  if (ageSeconds < -MAX_CLOCK_SKEW_SECONDS) {
+    return { ok: false, error: 'initData имеет некорректное время (слишком далеко в будущем)' };
+  }
+
   const dataCheckString = Object.entries(parsed)
     .filter(([key]) => key !== 'hash')
     .sort(([a], [b]) => a.localeCompare(b))
@@ -82,9 +101,17 @@ export function verifyTelegramInitData(initData: string, botToken: string): Veri
   return { ok: true, user };
 }
 
-export function ensureUserAllowed(telegramId: number, allowedIds: number[]): VerifyTelegramResult {
+export function ensureUserAllowed(
+  telegramId: number,
+  allowedIds: number[],
+  options: EnsureAllowedOptions = {}
+): VerifyTelegramResult {
   if (!allowedIds.length) {
-    return { ok: true };
+    if (options.allowEmptyList) {
+      return { ok: true };
+    }
+
+    return { ok: false, error: 'TELEGRAM_ALLOWED_USER_IDS не настроен' };
   }
 
   if (!allowedIds.includes(telegramId)) {

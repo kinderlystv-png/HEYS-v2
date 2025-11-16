@@ -2,11 +2,13 @@ import React from 'react';
 
 import { verifyTelegramSession } from './api/auth';
 import { setCuratorSessionToken, setTelegramAuthPayload } from './api/httpClient';
+import { DebugPanel } from './components/DebugPanel';
 import { useTelegramWebApp } from './hooks/useTelegramWebApp';
 import { ClientDayScreen } from './screens/ClientDayScreen';
 import { ClientListScreen } from './screens/ClientListScreen';
 import type { MiniAppScreen } from './types/navigation';
 import type { CuratorClient, CuratorSession } from './types/api';
+import { debugLogger } from './utils/debugLogger';
 
 const USE_MOCKS = import.meta.env.VITE_USE_CLIENT_MOCKS === 'true';
 
@@ -30,6 +32,7 @@ function App() {
 
   const runTelegramVerification = React.useCallback(async () => {
     if (!initData) {
+      debugLogger.error('Telegram initData недоступна');
       setAuthState('error');
       setAuthError('Telegram initData недоступна. Откройте mini-app из Telegram.');
       setSession(null);
@@ -38,20 +41,24 @@ function App() {
       return;
     }
 
+    debugLogger.info('Начинаем верификацию Telegram', { initDataLength: initData.length });
     setAuthState('checking');
     setAuthError(null);
 
     try {
       const verifiedSession = await verifyTelegramSession(initData);
+      debugLogger.success('Авторизация успешна', { curatorId: verifiedSession.curatorId });
       setTelegramAuthPayload(initData);
       setSession(verifiedSession);
       setAuthState('authorized');
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка авторизации';
+      debugLogger.error('Ошибка авторизации', { error: errorMessage });
       setSession(null);
       setTelegramAuthPayload(null);
       setCuratorSessionToken(null);
       setAuthState('error');
-      setAuthError(error instanceof Error ? error.message : 'Неизвестная ошибка авторизации');
+      setAuthError(errorMessage);
     }
   }, [initData]);
 
@@ -69,8 +76,15 @@ function App() {
     }
 
     // Dev-mode: работаем на моках, без реального API
-    if (USE_MOCKS || isDevMode) {
+    // Также включаем для случая когда initData пустой (например Telegram Desktop)
+    if (USE_MOCKS || isDevMode || !initData || initData.includes('dev_mode_hash')) {
       if (authState !== 'authorized' || !session?.isDevFallback) {
+        debugLogger.info('Активирован браузерный режим (моки)', { 
+          USE_MOCKS, 
+          isDevMode, 
+          hasInitData: Boolean(initData),
+          initDataPreview: initData?.substring(0, 50) 
+        });
         setSession(buildDevSession());
         setAuthState('authorized');
         setAuthError(null);
@@ -85,7 +99,7 @@ function App() {
     }
 
     runTelegramVerification();
-  }, [authState, buildDevSession, isDevMode, isReady, runTelegramVerification, session?.isDevFallback]);
+  }, [authState, buildDevSession, isDevMode, isReady, runTelegramVerification, session?.isDevFallback, initData]);
 
   const resolvedTelegramUser = React.useMemo(() => {
     if (session) {
@@ -182,19 +196,21 @@ function App() {
   }
 
   return (
-    <div style={{ marginTop: '24px' }}>
-      {/* Статус интеграции */}
-      <div style={{ 
-        padding: '16px', 
-        background: webApp ? '#4CAF50' : '#FF9800',
-        color: 'white',
-        borderRadius: '8px',
-        marginBottom: '16px',
-        fontSize: '14px',
-        fontWeight: '600'
-      }}>
-        {webApp ? '✅ Telegram WebApp подключен' : '⚠️ Браузерный режим (без Telegram)'}
-      </div>
+    <>
+      <DebugPanel />
+      <div style={{ marginTop: '24px' }}>
+        {/* Статус интеграции */}
+        <div style={{ 
+          padding: '16px', 
+          background: webApp ? '#4CAF50' : '#FF9800',
+          color: 'white',
+          borderRadius: '8px',
+          marginBottom: '16px',
+          fontSize: '14px',
+          fontWeight: '600'
+        }}>
+          {webApp ? '✅ Telegram WebApp подключен' : '⚠️ Браузерный режим (без Telegram)'}
+        </div>
 
       <div style={{
         padding: '16px',
@@ -316,10 +332,15 @@ function App() {
         )}
 
         {screen === 'clientDay' && selectedClient && (
-          <ClientDayScreen clientId={selectedClient.id} client={selectedClient} onBack={handleBackToList} />
+          <ClientDayScreen 
+            clientId={selectedClient.id} 
+            client={selectedClient} 
+            onBack={handleBackToList}
+          />
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

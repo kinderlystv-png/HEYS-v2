@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#2B5278" />
-    <title>HEYS Curator Panel</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>HEYS Curator Panel v2</title>
     
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -60,15 +63,38 @@
       
       <div class="status">
         <div class="status-item">
-          <span class="label">Версия:</span> v1.0.0
+          <span class="label">Версия:</span> v2.0 (no-cache)
         </div>
         <div class="status-item">
-          <span class="label">Статус:</span> Итерация 1 — базовая оболочка
+          <span class="label">Статус:</span> Cache-busting активен ✅
         </div>
         <div class="status-item">
           <span class="label">Entry‑point:</span> apps/tg-mini/
         </div>
+        <div class="status-item">
+          <span class="label">Timestamp:</span> <span id="timestamp"></span>
+        </div>
       </div>
+      
+      <script>
+        document.getElementById('timestamp').textContent = new Date().toLocaleTimeString('ru-RU');
+        
+        // Регистрируем Service Worker ТОЛЬКО в production для отключения кэша
+        // В dev он мешает HMR и загрузке модулей Vite
+        if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('[SW] Registered:', reg.scope))
+            .catch(err => console.error('[SW] Registration failed:', err));
+        } else if ('serviceWorker' in navigator) {
+          // В dev удаляем старый SW если он был
+          navigator.serviceWorker.getRegistrations().then(registrations => {
+            registrations.forEach(reg => {
+              console.log('[SW] Unregistering old worker:', reg.scope);
+              reg.unregister();
+            });
+          });
+        }
+      </script>
       
       <div id="root"></div>
     </div>
