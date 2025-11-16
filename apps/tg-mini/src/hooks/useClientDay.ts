@@ -36,7 +36,9 @@ export interface MealProductDraft {
   fat: number;
 }
 
-export function useClientDay(clientId: string | null): UseClientDayResult {
+export function useClientDay(
+  clientId: string | null
+): UseClientDayResult {
   const [client, setClient] = useState<ClientDetails | null>(null);
   const [dayData, setDayData] = useState<ClientDayData | null>(null);
   const [isLoading, setIsLoading] = useState(true);

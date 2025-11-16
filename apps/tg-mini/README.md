@@ -40,3 +40,7 @@ apps/tg-mini/
 3. Добавить кнопку открытия mini-app в боте
 
 Документация: https://core.telegram.org/bots/webapps
+
+## Production
+
+Чек-лист для боевого деплоя описан в `../../TELEGRAM_MINI_APP_PRODUCTION.md`.

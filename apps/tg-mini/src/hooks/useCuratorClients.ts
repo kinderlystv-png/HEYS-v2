@@ -76,12 +76,15 @@ export function useCuratorClients(options?: UseCuratorClientsOptions): UseCurato
       return;
     }
 
+    // В dev-режиме (isDevFallback) сразу идём в моки, не дергая API
+    const skipApi = session?.isDevFallback || useMocks;
+
     try {
       setIsLoading(true);
       setIsError(false);
       setErrorMessage(null);
 
-      const response = await fetchCuratorClients(params);
+      const response = await fetchCuratorClients(params, { skipApi });
       setClients(response.clients);
       const pagination = response.pagination ?? {
         page: 1,
@@ -98,7 +101,7 @@ export function useCuratorClients(options?: UseCuratorClientsOptions): UseCurato
     } finally {
       setIsLoading(false);
     }
-  }, [enabled, params, perPage, sessionToken, useMocks]);
+  }, [enabled, params, perPage, session?.isDevFallback, sessionToken, useMocks]);
 
   useEffect(() => {
     loadClients();

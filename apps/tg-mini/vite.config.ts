@@ -18,11 +18,35 @@ export default defineConfig({
     strictPort: false,
     // Разрешаем доступ к dev-серверу через публичный ngrok-домен
     allowedHosts: ['tressy-cotyledonoid-vergie.ngrok-free.dev'],
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
+    // Проксируем API запросы на локальный backend
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4001',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/health': {
+        target: 'http://localhost:4001',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   build: {
     outDir: 'dist',
     sourcemap: true,
     minify: 'esbuild',
     target: 'es2020',
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+      },
+    },
   },
+  publicDir: 'public',
 });

@@ -241,8 +241,17 @@ const fallbackDay: ClientDayData = {
   }
 };
 
-export async function fetchClientDetails(clientId: string): Promise<ClientDetails> {
-  if (USE_MOCKS) {
+export async function fetchClientDetails(
+  clientId: string
+): Promise<ClientDetails> {
+  // Используем моки если:
+  // 1. Явно включено VITE_USE_CLIENT_MOCKS
+  // 2. Или работаем без реального backend (localhost/dev без токена)
+  const shouldUseMocks = USE_MOCKS || 
+    (import.meta.env.DEV && window.location.hostname === 'localhost');
+  
+  if (shouldUseMocks) {
+    console.log('[clientDay] 🎭 Используем моковые данные клиента (браузерный режим)');
     const client = mockClientDetails[clientId];
     if (!client) {
       throw new Error('Клиент не найден (mock)');
@@ -251,14 +260,32 @@ export async function fetchClientDetails(clientId: string): Promise<ClientDetail
   }
 
   const response = await httpRequest(`/api/curator/clients/${clientId}`);
+  
   if (!response.ok) {
+    // Если 401 в dev-режиме, переключаемся на моки
+    if (response.status === 401 && import.meta.env.DEV) {
+      console.warn('[clientDay] ⚠️ API вернул 401, переключаемся на моки (детали)');
+      const client = mockClientDetails[clientId] || mockClientDetails['demo-anna'];
+      return client;
+    }
     throw new Error(`Не удалось получить данные клиента (код ${response.status})`);
   }
+
   return response.json() as Promise<ClientDetails>;
 }
 
-export async function fetchClientDayData(clientId: string, date: string): Promise<ClientDayData> {
-  if (USE_MOCKS) {
+export async function fetchClientDayData(
+  clientId: string,
+  date: string
+): Promise<ClientDayData> {
+  // Используем моки если:
+  // 1. Явно включено VITE_USE_CLIENT_MOCKS
+  // 2. Или работаем без реального backend (localhost/dev без токена)
+  const shouldUseMocks = USE_MOCKS || 
+    (import.meta.env.DEV && window.location.hostname === 'localhost');
+  
+  if (shouldUseMocks) {
+    console.log('[clientDay] 🎭 Используем моковые данные дня (браузерный режим)');
     const dayData = mockDayData[clientId]?.[date];
     if (dayData) {
       return dayData;
@@ -267,8 +294,19 @@ export async function fetchClientDayData(clientId: string, date: string): Promis
   }
 
   const response = await httpRequest(`/api/curator/clients/${clientId}/day/${date}`);
+  
   if (!response.ok) {
+    // Если 401 в dev-режиме, переключаемся на моки
+    if (response.status === 401 && import.meta.env.DEV) {
+      console.warn('[clientDay] ⚠️ API вернул 401, переключаемся на моки (день)');
+      const dayData = mockDayData[clientId]?.[date];
+      if (dayData) {
+        return dayData;
+      }
+      return { ...fallbackDay, clientId, date };
+    }
     throw new Error(`Не удалось получить данные дня (код ${response.status})`);
   }
+
   return response.json() as Promise<ClientDayData>;
 }

@@ -107,15 +107,32 @@ function buildQueryString(params?: GetClientsParams) {
   return qs ? `?${qs}` : '';
 }
 
-export async function fetchCuratorClients(params?: GetClientsParams): Promise<GetClientsResponse> {
-  if (USE_MOCKS) {
+export async function fetchCuratorClients(
+  params?: GetClientsParams, 
+  options?: { skipApi?: boolean }
+): Promise<GetClientsResponse> {
+  // Используем моки если:
+  // 1. Явно включено VITE_USE_CLIENT_MOCKS
+  // 2. Или работаем без реального backend (localhost/dev без токена)
+  // 3. Или явно передан флаг skipApi (для браузерного режима)
+  const shouldUseMocks = USE_MOCKS || 
+    (import.meta.env.DEV && window.location.hostname === 'localhost') ||
+    options?.skipApi;
+  
+  if (shouldUseMocks) {
     // Простая фильтрация по имени/email на клиенте в моках
+    console.log('[clients] 🎭 Используем моковые данные (браузерный режим)');
     return filterMockClients(params);
   }
 
   const response = await httpRequest(`/api/curator/clients${buildQueryString(params)}`);
 
   if (!response.ok) {
+    // Если 401 в dev-режиме, переключаемся на моки
+    if (response.status === 401 && import.meta.env.DEV) {
+      console.warn('[clients] ⚠️ API вернул 401, переключаемся на моки');
+      return filterMockClients(params);
+    }
     throw new ApiError('Не удалось загрузить список клиентов', response.status);
   }
 
