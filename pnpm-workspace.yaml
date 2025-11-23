@@ -4,7 +4,9 @@ packages:
   - 'packages/*'
 
   # Applications
-  - 'apps/*'
+  - 'apps/web'
+  # - 'apps/*' # Temporarily disabled other apps
+
 
   # Development tools
   - 'tools/*'
