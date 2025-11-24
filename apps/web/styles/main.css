@@ -9,6 +9,12 @@
   /* Add more variables as needed */
 }
 
+html,
+body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* === common.css === */
 body {
   margin: 0;
@@ -33,11 +39,14 @@ body {
   box-sizing: border-box;
 }
 .btn {
-  padding: 6px 10px;
+  min-height: 44px;
+  padding: 10px 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
+  touch-action: manipulation;
+  user-select: none;
 }
 .btn.acc {
   background: var(--acc);
@@ -47,6 +56,22 @@ body {
 }
 .btn.ghost {
   background: transparent;
+}
+.btn:active {
+  transform: scale(0.98);
+  opacity: 0.8;
+}
+.tab:active {
+  transform: scale(0.98);
+}
+input:active,
+textarea:active,
+select:active {
+  border-color: var(--acc);
+}
+.card.clickable:active {
+  transform: scale(0.99);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 .section-title {
   font-weight: 600;
@@ -65,10 +90,12 @@ select {
   background: #fff;
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 6px 8px;
-  border-radius: 8px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 10px;
   outline: none;
-  font-size: 13px;
+  font-size: 16px;
+  touch-action: manipulation;
 }
 input:focus,
 textarea:focus,
@@ -434,6 +461,12 @@ td:first-child input {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-left))
+    max(12px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-right));
+  box-sizing: border-box;
   margin-bottom: 12px;
 }
 .hdr .login {
@@ -459,7 +492,11 @@ td:first-child input {
 .tabs {
   display: flex;
   gap: 6px;
-  padding: 0 18px 12px;
+  padding:
+    max(10px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-left))
+    max(10px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-right));
   margin: 0 0 14px;
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -469,11 +506,13 @@ td:first-child input {
 }
 .tab {
   cursor: pointer;
-  padding: 8px 14px;
+  padding: 12px 18px;
+  min-height: 44px;
   border-radius: 10px;
   font-weight: 500;
   color: var(--muted);
   user-select: none;
+  touch-action: manipulation;
   transition:
     0.15s background,
     0.15s color;
@@ -488,7 +527,11 @@ td:first-child input {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 .page {
-  padding: 0 18px 32px;
+  padding:
+    max(0px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-left))
+    max(32px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-right));
 }
 
 /* === grid layout for day page === */
@@ -1042,4 +1085,69 @@ td:first-child input {
   height: 15px;
   min-height: 15px;
   line-height: 15px;
+}
+
+/* === MOBILE OPTIMIZATION === */
+@media (max-width: 640px) {
+  .hdr {
+    padding: 12px 12px 8px;
+  }
+
+  .tabs {
+    padding: 8px 8px 8px;
+    gap: 4px;
+  }
+
+  .tab {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .page {
+    padding: 0 12px 24px;
+  }
+
+  .day-layout {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
+  th,
+  td {
+    padding: 8px 6px;
+    font-size: 13px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .modal-backdrop {
+    padding: 40px 12px;
+    align-items: flex-start;
+  }
+
+  .modal {
+    width: 90%;
+    max-width: none;
+    max-height: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .tab {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
 }

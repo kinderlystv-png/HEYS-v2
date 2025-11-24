@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
@@ -15,10 +11,7 @@
     "verbatimModuleSyntax": false,
     "allowImportingTsExtensions": false,
     "resolveJsonModule": true,
-    "typeRoots": [
-      "./types",
-      "./node_modules/@types"
-    ],
+    "typeRoots": ["./types", "./node_modules/@types"],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -39,30 +32,14 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@heys/core": [
-        "./packages/core/src"
-      ],
-      "@heys/ui": [
-        "./packages/ui/src"
-      ],
-      "@heys/search": [
-        "./packages/search/src"
-      ],
-      "@heys/storage": [
-        "./packages/storage/src"
-      ],
-      "@heys/gaming": [
-        "./packages/gaming/src"
-      ],
-      "@heys/analytics": [
-        "./packages/analytics/src"
-      ],
-      "@heys/shared": [
-        "./packages/shared/src"
-      ],
-      "@heys/logger": [
-        "./packages/logger/dist"
-      ]
+      "@heys/core": ["./packages/core/src"],
+      "@heys/ui": ["./packages/ui/src"],
+      "@heys/search": ["./packages/search/src"],
+      "@heys/storage": ["./packages/storage/src"],
+      "@heys/gaming": ["./packages/gaming/src"],
+      "@heys/analytics": ["./packages/analytics/src"],
+      "@heys/shared": ["./packages/shared/src"],
+      "@heys/logger": ["./packages/logger/dist"]
     },
     "ignoreDeprecations": "5.0"
   },
@@ -113,6 +90,5 @@
     "temp",
     "TESTS",
     "старые МЕТОДОЛОГИИ И ИНСТРУКЦИИ ДЛЯ ИИ"
-  ],
-  "extends": "expo/tsconfig.base"
+  ]
 }
