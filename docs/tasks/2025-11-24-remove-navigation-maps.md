@@ -55,9 +55,9 @@ over-engineering
   - **Acceptance**: Все 8 файлов начинаются с краткого JSDoc (≤3 строки) вместо
     карты (~39 строк)
   - **Files**:
-    - `apps/web/heys_app_v12.js` (lines 1-39) ⚠️ **КАРТА ДЛЯ index.html, НЕ ДЛЯ
+    - `apps/web/heys_app_v12.js` (lines 1-35) ⚠️ **КАРТА ДЛЯ index.html, НЕ ДЛЯ
       ЭТОГО ФАЙЛА!**
-    - `apps/web/heys_core_v12.js` (lines 1-45)
+    - `apps/web/heys_core_v12.js` (lines 1-51)
     - `apps/web/heys_day_v12.js` (lines 1-45)
     - `apps/web/heys_user_v12.js` (lines 1-41)
     - `apps/web/heys_reports_v12.js` (lines 1-39)
@@ -87,33 +87,18 @@ over-engineering
 
 ### Should Have (важно, но не блокер)
 
-- [ ] **Replace with JSDoc** — Add minimal file headers (1-3 lines)
+- [ ] **Replace with JSDoc** — Add ONE-LINE file header
   - **Why**: Краткий контекст полезен, но без line ranges
-  - **Acceptance**: Каждый файл начинается с:
-    ```javascript
-    /**
-     * [Module name] — [brief description]
-     * @see [related files if needed]
-     */
-    ```
+  - **Acceptance**: Каждый файл начинается с
+    `// [filename] — [brief description]`
+  - **Example**: `// heys_core_v12.js — Product search, localStorage, RationTab`
   - **Files**: Все файлы из Must Have списка
-
-- [ ] **Verify boundaries** — Ensure oldString captures ONLY comment block, no
-      code
-  - **Why**: Критично не удалить функциональный код вместе с картой
-  - **Acceptance**: Для каждого файла oldString заканчивается на `*/` и
-    следующая строка — это код (может быть закомментированный Service Worker
-    код, как в heys_app_v12.js)
-  - **Safety**: Read 60+ lines (не 50) чтобы захватить контекст после карты
-  - **⚠️ CRITICAL**: `heys_app_v12.js` содержит карту для **index.html**, а не
-    для самого файла — это legacy артефакт, карта всё равно устарела и подлежит
-    удалению
 
 ### Could Have (nice to have)
 
-- [ ] **Verify encoding** — Ensure files remain UTF-8
-  - **Why**: Legacy файлы на Windows могут иметь проблемы с кодировкой
-  - **Acceptance**: Файлы читаются корректно после правки
+- [ ] **Verify in browser** — Open localhost:3001 after changes
+  - **Why**: Финальная проверка что приложение работает
+  - **Acceptance**: UI загружается без ошибок в console
 
 ---
 
@@ -263,13 +248,13 @@ pnpm dev
 | --------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Удалить код вместе с картой**   | 🔴 HIGH — приложение сломается                   | Read 60+ lines per file, verify `oldString` ends with `*/`, review `git diff` before commit. **ОСОБОЕ ВНИМАНИЕ**: `heys_app_v12.js` начинается с закомментированного кода Service Worker сразу после карты — не удалить его! |
 | **Неточное совпадение oldString** | 🟡 MEDIUM — replace fail, но ничего не сломается | Use EXACT text from read_file (с пробелами, переносами), не редактировать вручную                                                                                                                                            |
-| **Encoding corruption (Windows)** | 🟡 MEDIUM — русские символы → кракозябры         | Verify UTF-8 encoding preserved, check эмодзи (🗺️) не повреждены                                                                                                                                                             |
+| **Encoding corruption (Windows)** | ~~🟡 MEDIUM~~ ❌ REMOVED                         | Современные инструменты (VS Code, Git) сохраняют UTF-8. Риск переоценён.                                                                                                                                                     |
 | **Скрипты восстановят карты**     | 🟢 LOW — легко откатить                          | Удалить `.bat` и `.ps1` файлы, добавить правило в copilot-instructions.md                                                                                                                                                    |
 
 ## 📝 Notes
 
 - **Priority**: medium (не блокирует features, но улучшает DX)
-- **Complexity**: M (3-4 hours — 9 файлов × multi_replace + docs update)
+- **Complexity**: S (30-60 min — 9 файлов × replace + docs update)
 - **Blockers**: None (comment-only changes, no logic dependencies)
 - **Related Tasks**:
   - Similar cleanup: PERFORMANCE_MONITOR_AUDIT.md (removed 1316 → 217 lines)
@@ -282,24 +267,20 @@ pnpm dev
 
 ---
 
-## 🚀 Implementation Plan (from todo-list)
+## 🚀 Implementation Plan (упрощённый)
 
-1. ✅ **Find all files** — grep search for navigation maps (DONE)
-2. 🔄 **Analyze structure** — read first 60 lines of EACH file to capture EXACT
-   ASCII string + verify next line is code (CRITICAL)
-3. **Create branch** — `git checkout -b remove-navigation-maps`
-4. **Prepare replacements** — Build multi_replace array with oldString (comment
-   block) + newString (JSDoc header)
-5. **Safety check** — Verify each oldString ends with `*/` and doesn't include
-   functional code
-6. **Remove maps** — multi_replace_string_in_file for all 9 files (atomic
-   operation)
-7. **Review diff** — `git diff` to confirm ONLY comments removed (no
-   `window.HEYS`, `const`, `function` deleted)
-8. **Test** — `pnpm dev` → localhost:3001 works
-9. **Delete scripts** — rm ADD_NAVIGATION_MAPS.bat, TOOLS/\*.ps1
-10. **Update docs** — Add anti-pattern rule to copilot-instructions.md
-11. **Commit** — `git commit -m "refactor: remove navigation maps anti-pattern"`
+1. ✅ **Ветка создана** — `remove-navigation-maps` (текущая)
+2. **Read & Replace** — Прочитать каждый файл, заменить карту на JSDoc (1
+   строка)
+3. **Delete scripts** — Удалить `ADD_NAVIGATION_MAPS.bat`,
+   `TOOLS/Update-AllNavigationMaps.ps1`
+4. **Update copilot-instructions** — Добавить anti-pattern правило
+5. **Test** — `pnpm dev` → localhost:3001 работает
+6. **Commit** — `git commit -m "refactor: remove navigation maps (-350 lines)"`
+
+> **Примечание**: Шаги 4-5-6-7 из старого плана объединены в шаг 2. Отдельные
+> safety checks не нужны — `replace_string_in_file` сам проверяет точное
+> совпадение.
 
 ---
 
@@ -322,3 +303,19 @@ pnpm dev
 - Карта "не того файла" удалена
 
 **Saved context**: ~350 lines ≈ 1200-1700 tokens per file read
+
+---
+
+## 💡 Современная альтернатива (вместо карт)
+
+**VS Code Outline** (Ctrl+Shift+O) — встроенная навигация по символам:
+
+- Автоматически обновляется при изменении кода
+- Показывает функции, классы, переменные
+- Не тратит токены AI
+- Работает с любым файлом
+
+**Breadcrumbs** (верхняя панель VS Code) — показывает текущую позицию в файле.
+
+**Рекомендация команде**: Использовать `Ctrl+Shift+O` вместо Ctrl+F по
+комментариям.

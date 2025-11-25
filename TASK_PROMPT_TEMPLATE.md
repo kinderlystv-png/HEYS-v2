@@ -1,11 +1,14 @@
 ---
-template-version: 3.1.0
+template-version: 3.3.0
 created: 2025-11-24
-updated: 2025-11-24
+updated: 2025-11-25
 purpose: Task-First template — business logic focus, actionable checklist
 optimization: Adapted for HEYS-v2 (Legacy + Modern Monorepo)
 changelog:
-  v3.1.0 — Added Quick Wins, Quick Reference, consolidated Testing Strategy
+  v3.3.0 — Synced with copilot-instructions v2.1.0, added HEYS.store pattern,
+  pnpm lint v3.2.0 — Added UI Testing section, aligned with copilot-instructions
+  v2.0.0 v3.1.0 — Added Quick Wins, Quick Reference, consolidated Testing
+  Strategy
 ---
 
 > **📖 HOW TO USE**:
@@ -106,6 +109,24 @@ explanations]
 - [ ] **Tests**: `pnpm test:all` PASS
 - [ ] **Build**: `pnpm build` PASS
 
+### UI Testing (для UI задач)
+
+**Mobile (Chrome DevTools → iPhone SE):**
+
+- [ ] Основной функционал работает
+- [ ] Touch targets ≥44px (`min-h-11`)
+- [ ] Интерактивные элементы не конфликтуют
+- [ ] Анимации плавные
+
+**Desktop (>768px):**
+
+- [ ] Hover-эффекты работают
+- [ ] Keyboard навигация (Enter, Escape)
+
+**Общее:**
+
+- [ ] Нет ошибок в console
+
 ### Performance
 
 - [ ] **Bundle**: No significant size increase in legacy JS (<50KB per file
@@ -138,9 +159,10 @@ explanations]
 
 ### 🔑 Key Patterns
 
-- **Storage**: `U.lsSet('heys_key', val)` → auto-adds clientId
+- **Storage (Legacy)**: `U.lsSet('heys_key', val)` → auto-adds clientId
+- **Storage (Modern)**: `HEYS.store.set('key', val)` → cache + watchers
 - **Supabase**: Use `DatabaseService.ts` (Modern) or `cloud.*` (Legacy)
-- **Analytics**: `HEYS.analytics.trackSearch()` (simple, 217 lines)
+- **Analytics**: `HEYS.analytics.trackSearch()` (simple)
 
 ---
 
@@ -148,9 +170,11 @@ explanations]
 
 ### File Locations
 
-- **Legacy App**: `apps/web/` — `index.html`, `heys_core_v12.js`,
-  `heys_day_v12.js`, `heys_user_v12.js`
-- **Modern Packages**: `packages/core/`, `packages/shared/`, `packages/logger/`
+- **Legacy App**: `apps/web/` — `index.html`, `heys_app_v12.js`,
+  `heys_core_v12.js`, `heys_day_v12.js`, `heys_user_v12.js`,
+  `heys_models_v1.js`, `heys_storage_layer_v1.js`
+- **Modern Packages**: `packages/core/`, `packages/shared/`,
+  `packages/storage/`, `...`
 
 ### Commands
 
@@ -165,7 +189,7 @@ pnpm test:all      # Run all tests
 pnpm build         # Production build
 
 # Quick Check (перед коммитом)
-pnpm type-check && pnpm test:all && pnpm build
+pnpm type-check && pnpm lint && pnpm build
 ```
 
 ### Key Docs
@@ -196,9 +220,8 @@ pnpm type-check && pnpm test:all && pnpm build
 
 ---
 
-**Version**: 3.1.0 | **Updated**: 2025-11-24  
-**Changes**: Added Quick Wins hint, consolidated Testing Strategy into Quality
-Gates, simplified AI Context (removed `<details>`), added Quick Reference with
-commands
+**Version**: 3.3.0 | **Updated**: 2025-11-25  
+**Changes**: v3.3.0 — Synced with copilot-instructions v2.1.0 (Storage patterns,
+pnpm lint)
 
 ---

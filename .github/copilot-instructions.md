@@ -1,59 +1,107 @@
+---
+description: HEYS v2 — AI Development Guide v2.1.0
+applyTo: '**/*'
+---
+
 # HEYS v2 – AI Development Guide
 
-## 🗣️ Communication
+> 🇷🇺 Ответы · EN Code · v2.1.0
 
-**Русский язык** для всех ответов и комментариев. Технические термины и имена
-файлов — по-английски.
+---
 
-## 🏗️ Architecture Overview
+## 1. Базовое поведение
+
+1. Отвечай **по-русски**
+2. Предлагай следующий шаг в конце
+3. **ИИ не делает** `git commit/push/merge` без просьбы
+4. HMR работает — НЕ перезапускай сервер без причины
+
+---
+
+## 2. Запрещено → Правильно
+
+| 🚫 Запрещено                      | ✅ Правильно                                 |
+| --------------------------------- | -------------------------------------------- |
+| `console.log/warn/error` напрямую | `HEYS.analytics.trackError()` или минимально |
+| `localStorage.setItem` напрямую   | `U.lsSet('heys_key', val)` — auto clientId   |
+| Monkey patching `console.*`       | Простой wrapper если нужен                   |
+| FPS/memory profiling              | Это nutrition app, не game engine            |
+| Переписывать Legacy JS → TS       | Только по явному запросу                     |
+| `select('*')` в Supabase          | `select('id, name, ...')` — конкретные поля  |
+| Глобальные listeners без cleanup  | `addEventListener` + cleanup в unmount       |
+| ASCII navigation maps в JS        | 1-line JSDoc: `// file.js — description`     |
+
+---
+
+## 3. Частые ошибки HEYS
+
+| Код  | Ошибка                | Причина                 | Решение                                          |
+| ---- | --------------------- | ----------------------- | ------------------------------------------------ |
+| E001 | Данные не сохраняются | Неверный clientId       | Проверь `U.lsSet()` вместо `localStorage`        |
+| E002 | Поиск не работает     | searchIndex не обновлён | Вызови `buildSearchIndex()` после добавления     |
+| E003 | Supabase RLS denied   | Нет политики            | Добавь RLS в `database_clients_rls_policies.sql` |
+| E004 | React не обновляет UI | Мутация объекта         | Создай новый объект `{...old, newProp}`          |
+| E005 | Analytics не трекает  | Неверный метод          | Используй `trackSearch/trackApiCall/trackError`  |
+
+---
+
+## 4. Архитектура
 
 ```
 HEYS-v2/
 ├── apps/web/              # Legacy v12 app (standalone HTML + inline React)
 │   ├── index.html         # Main entry point, React components inline
+│   ├── heys_app_v12.js    # Main app orchestration
 │   ├── heys_core_v12.js   # Product search, localStorage management
 │   ├── heys_day_v12.js    # Day statistics, meal tracking
 │   ├── heys_user_v12.js   # User profile management
 │   ├── heys_reports_v12.js # Reports and analytics
-│   └── heys_simple_analytics.js # Minimal performance tracking (217 lines)
+│   ├── heys_models_v1.js  # Data models (Product, Meal, etc.)
+│   ├── heys_storage_layer_v1.js # Storage layer (HEYS.store)
+│   ├── heys_storage_supabase_v1.js # Cloud sync (Supabase)
+│   └── heys_simple_analytics.js # Minimal performance tracking
 ├── packages/              # Modern TypeScript packages
 │   ├── core/             # Core business logic
 │   ├── shared/           # Shared utilities
-│   └── logger/           # Logging infrastructure
+│   ├── storage/          # Storage services
+│   └── ...               # analytics, search, ui, logger
 └── archive/              # Deprecated code (DO NOT USE)
 ```
 
 **Key principle:** Legacy v12 код в `apps/web/` — это production runtime. Modern
 TS в `packages/` — для переиспользования и типизации.
 
-## 🚀 Quick Start
+---
+
+## 5. Quick Start
 
 ```bash
 pnpm install           # Bootstrap (Node ≥18, pnpm ≥8)
 pnpm dev              # Dev server → localhost:3001
 pnpm build            # Production build (Turbo)
 pnpm type-check       # TypeScript validation
+pnpm lint             # ESLint check
 ```
 
-## 📝 Development Rules
+---
 
-### 1. Legacy v12 Files (`apps/web/*.js`)
+## 6. Development Rules
+
+### Legacy v12 Files (`apps/web/*.js`)
 
 - ✅ **EDIT:** Когда пользователь работает с UI/UX, добавляет фичи в web app
 - ❌ **DON'T:** Переписывать на TypeScript без явного запроса
 - ⚠️ **WATCH OUT:** React компоненты inline в HTML, используют CDN React 18
 - 🔍 **Pattern:** `window.HEYS.ModuleName` для глобальных объектов
 
-### 2. Analytics & Performance
+### Analytics & Performance
 
-- **MINIMAL:** `heys_simple_analytics.js` (217 строк) заменил 1316 строк legacy
-  кода
+- **MINIMAL:** `heys_simple_analytics.js` — заменил 1316 строк legacy
 - **Methods:** `trackSearch()`, `trackApiCall()`, `trackDataOperation()`,
   `trackError()`
-- **Aliases:** `HEYS.performance.increment()`, `HEYS.performance.measure()`
-- ❌ **NEVER:** Добавлять сложный performance monitoring без обсуждения
+- См. секцию 2 "Запрещено→Правильно" для anti-patterns
 
-### 3. Supabase Integration
+### Supabase Integration
 
 - **Auth:** `heys_storage_supabase_v1.js` → `cloud.signIn(email, password)`
 - **Data:** `DatabaseService` →
@@ -62,26 +110,31 @@ pnpm type-check       # TypeScript validation
   (`database_clients_rls_policies.sql`)
 - **Local mode:** Приложение работает offline через `localStorage`
 
-### 4. Storage Pattern
+### Storage Pattern
 
 ```javascript
-// Client-specific storage
+// Legacy API (в heys_core_v12.js) — с clientId namespace
 U.lsSet('heys_products', products); // Автоматически добавляет clientId
 U.lsGet('heys_products', []);
 
-// Global storage
+// Modern API (в heys_storage_layer_v1.js) — с кэшем и watchers
+HEYS.store.set('key', value); // Сохранение + notify watchers
+HEYS.store.get('key', defaultVal); // Получение из cache/localStorage
+
+// Global storage (без namespace)
 localStorage.setItem('heys_client_current', clientId);
 ```
 
-### 5. Code Style
+### Code Style
 
 - **Russian comments** в legacy JS файлах
 - **English comments** в TypeScript packages
-- **No over-engineering:** Простота > сложность (см.
-  `PERFORMANCE_MONITOR_AUDIT.md`)
+- **No over-engineering:** Простота > сложность
 - **YAGNI:** Не добавляй функциональность "на будущее"
 
-## 🔧 Common Tasks
+---
+
+## 7. Common Tasks
 
 ### Add new product field
 
@@ -101,71 +154,128 @@ localStorage.setItem('heys_client_current', clientId);
 2. Add RLS policies (см. `database_clients_rls_policies.sql`)
 3. Update `DatabaseService.ts` если нужен TypeScript access
 
-### Archive old code
+---
 
-```bash
-mv apps/web/old_module.js archive/legacy-v12/
-git add archive/ && git commit -m "chore: archive old_module.js"
-```
-
-## ⚡ Performance Guidelines
+## 8. Performance Guidelines
 
 - **Bundle size:** Keep legacy JS < 50KB per file
 - **localStorage:** Clear old data periodically (>100KB warning)
 - **Supabase:** Используй `select('id, name')` вместо `select('*')`
 - **React:** Мемоизация через `useMemo()` для тяжелых вычислений
 
-## 🐛 Debugging Patterns
+---
 
-### Check analytics stats
+## 9. Debugging Patterns
 
 ```javascript
 // В browser console:
 heysStats(); // Shows session statistics
-```
+window.HEYS.cloud.getStatus(); // 'online' | 'offline'
 
-### Inspect localStorage
-
-```javascript
+// Inspect localStorage
 Object.keys(localStorage).filter((k) => k.startsWith('heys_'));
 ```
 
-### Supabase connection issues
+---
 
-```javascript
-// Check cloud status
-window.HEYS.cloud.getStatus(); // 'online' | 'offline'
+## 10. Промпты (Prompt Files)
+
+При запросе **"сделай промпт"** / **"создай промпт"** → использовать шаблон:
+
+**Шаблон**: `TASK_PROMPT_TEMPLATE.md` — использовать как образец структуры
+
+**Расположение**: `docs/tasks/YYYY-MM-DD-slug.md`
+
+**Правила**:
+
+- Конкретные файлы и пути
+- **НЕ писать примеры кода** — AI агент сам сгенерирует
+- Русский язык для описаний
+
+**При выполнении промпта**:
+
+- Отмечать `[x]` задачи по мере выполнения
+- После всех задач → `pnpm type-check && pnpm build`
+- Перенести выполненный промпт: `docs/tasks/` → `docs/tasks/archive/`
+
+---
+
+## 11. Аудит промпта (Deep Audit)
+
+При запросе **"сделай аудит промпта"** / **"проверь промпт"** / **"глубокий
+аудит"**:
+
+### Обязательный чеклист (выполнить ДО правок):
+
+1. **Прочитать ВСЕ файлы** из таблицы "Ключевые файлы" целиком (параллельно!)
+2. **Найти существующие паттерны** — `semantic_search` для похожих решений
+3. **Посмотреть шире на контекст** — какие связанные компоненты могут быть
+   затронуты
+4. **Проверить на оверкилл** — убрать лишние шаги, которые усложняют без пользы
+
+### Анти-оверкилл проверка:
+
+Для каждого шага в промпте спросить:
+
+- ❓ Это **необходимо** для MVP или nice-to-have?
+- ❓ Можно ли **упростить** без потери функционала?
+- ❓ Есть ли **готовый паттерн** в проекте вместо нового решения?
+- ❓ Не **дублирует** ли это существующий функционал?
+
+**Признаки оверкилла:**
+
+- Создание отдельного файла для <50 строк кода
+- Новый state когда можно использовать существующий
+- Сложная анимация когда хватит CSS transition
+- Кастомный хук для одноразовой логики
+
+### Формат аудита:
+
+```markdown
+## 🔴 Критические (ломают функционал)
+
+- [ ] Проблема 1 → Решение
+
+## 🟡 Важные (могут вызвать баги)
+
+- [ ] Проблема 2 → Решение
+
+## 🟢 Улучшения (nice to have)
+
+- [ ] Проблема 3 → Решение
+
+## ✅ Проверено и ОК
+
+- Пункт 1
 ```
 
-## 📦 Package Dependencies
+---
 
-- **Legacy JS:** React 18 (CDN), Supabase JS (CDN)
-- **Modern TS:** Built with `tsup`, published to `dist/`
-- **Shared config:** `tsconfig.json` (root), `levels.config.js`,
-  `logger.config.*`
+## 12. Ручное тестирование UI
 
-## 🚫 Anti-Patterns (DO NOT)
+При завершении UI задач проверить:
 
-1. ❌ Monkey patching `document.createElement` или `console.*`
-2. ❌ FPS tracking, детальный memory profiling для nutrition app
-3. ❌ Глобальные event listeners без cleanup
-4. ❌ Избыточная типизация в legacy JS (используй JSDoc по минимуму)
-5. ❌ Преждевременная оптимизация
+**Mobile (Chrome DevTools → iPhone SE):**
 
-## 📚 Documentation
+- [ ] Основной функционал работает
+- [ ] Touch targets ≥44px (`min-h-11`)
+- [ ] Интерактивные элементы не конфликтуют
+- [ ] Анимации плавные
 
-- **Architecture:** `docs/ARCHITECTURE.md`
-- **Performance audit:** `PERFORMANCE_MONITOR_AUDIT.md`
-- **Security:** `docs/SECURITY.md`, `database_clients_rls_policies.sql`
-- **Legacy navigation:** Navigation maps in repo root (для больших HTML файлов)
+**Desktop (>768px):**
 
-## 🎯 Project Philosophy
+- [ ] Hover-эффекты работают
+- [ ] Keyboard навигация (Enter, Escape)
 
-**"Минимализм и практичность"** — HEYS это приложение учета питания, не
-enterprise monitoring platform. Код должен быть простым, понятным и решать
-конкретные задачи пользователей.
+**Общее:**
 
-## 🤝 Commit Style
+- [ ] `pnpm type-check` проходит
+- [ ] `pnpm build` проходит
+- [ ] Нет ошибок в console
+
+---
+
+## 13. Commit Style
 
 ```bash
 feat: add client selection modal
@@ -175,23 +285,39 @@ chore: archive legacy performance monitor
 docs: update architecture diagram
 ```
 
-**Всегда тестируй изменения:**
+---
 
-```bash
-pnpm dev  # Проверь localhost:3001
-# Убедись что нет ошибок в console
-# Проверь что данные сохраняются в localStorage
-```
+## 14. AI Workflow Rules
 
-## 🤖 AI Workflow Rules
+1. **HMR работает** — Vite автоматически применяет изменения
+2. **Коммиты только по запросу** — жди команды "коммит" или "пуш"
+3. **Минимум шагов** — используй HMR, не делай лишних действий
+4. **Task Prompt Template** — для многошаговых задач используй
+   `TASK_PROMPT_TEMPLATE.md`
 
-1. **HMR работает** - Vite автоматически применяет изменения, НЕ перезапускай
-   сервер без причины
-2. **Коммиты только по запросу** - показывай изменения, жди команды "коммит" или
-   "пуш"
-3. **Минимум шагов** - используй HMR, не делай лишних действий
-4. **Task Prompt Template обязателен** — перед созданием любого нового промпта
-   для задач копируй `TASK_PROMPT_TEMPLATE.md` →
-   `docs/tasks/YYYY-MM-DD-slug.md`, заполняй все обязательные блоки (WHY, Output
-   Preferences, чек-лист, Done, Notes) и указывай ссылку на итоговый файл в
-   описании PR.
+---
+
+## 15. Documentation
+
+- **Architecture:** `docs/ARCHITECTURE.md`
+- **Performance audit:** `PERFORMANCE_MONITOR_AUDIT.md`
+- **Security:** `docs/SECURITY.md`, `database_clients_rls_policies.sql`
+- **Task Template:** `TASK_PROMPT_TEMPLATE.md`
+
+---
+
+## 🎯 Project Philosophy
+
+**"Минимализм и практичность"** — HEYS это приложение учета питания, не
+enterprise monitoring platform. Код должен быть простым, понятным и решать
+конкретные задачи пользователей.
+
+---
+
+## Changelog
+
+| Версия | Дата       | Изменения                                                                                                                           |
+| ------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 2.1.0  | 2025-11-25 | Аудит: добавлены недостающие файлы в архитектуру, уточнён Storage Pattern (U.lsSet vs HEYS.store), добавлен pnpm lint, убраны дубли |
+| 2.0.0  | 2025-11-25 | Реструктуризация: добавлены секции "Запрещено→Правильно", "Частые ошибки", "Аудит промпта", "Ручное тестирование UI", Changelog     |
+| 1.0.0  | 2025-11-XX | Первоначальная версия                                                                                                               |

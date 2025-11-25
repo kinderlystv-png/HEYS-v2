@@ -1,5 +1,5 @@
 
-> @heys/search@14.0.0 type-check /Users/poplavskijanton/HEYS-v2/packages/search
+> @heys/search@14.0.0 type-check C:\Users\Ant\HEYS-v2\packages\search
 > tsc --noEmit
 
 src/index.ts(113,7): error TS2532: Object is possibly 'undefined'.

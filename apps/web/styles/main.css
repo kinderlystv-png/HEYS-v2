@@ -9,6 +9,33 @@
   /* Add more variables as needed */
 }
 
+/* === MODERN POLISH === */
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Focus states для accessibility */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+/* Брендированный selection */
+::selection {
+  background: var(--acc);
+  color: white;
+}
+
 html,
 body {
   overscroll-behavior-y: none;
@@ -1108,7 +1135,8 @@ td:first-child input {
   }
 
   .day-layout {
-    grid-template-columns: 1fr;
+    display: flex !important;
+    flex-direction: column !important;
     gap: 8px;
   }
 
@@ -1378,6 +1406,385 @@ td:first-child input {
   /* 11. Контейнер overflow убираем */
   .meal-card > div[style*='overflow'] {
     overflow-x: visible !important;
+  }
+
+  /* === ФИОЛЕТОВАЯ ТАБЛИЦА СТАТИСТИКИ === */
+  .area-main.card.tone-violet,
+  .card.tone-violet {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .tone-violet table,
+  .violet-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  .tone-violet td,
+  .tone-violet th {
+    padding: 6px 4px !important;
+    font-size: 12px !important;
+    word-break: break-word !important;
+  }
+
+  .tone-violet input {
+    width: 100% !important;
+    max-width: 70px !important;
+    padding: 6px !important;
+    font-size: 14px !important;
+  }
+
+  /* === УБИРАЕМ ГОРИЗОНТАЛЬНЫЙ СКРОЛЛ ВЕЗДЕ === */
+  .page,
+  .page-day,
+  .day-layout,
+  .card {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Все div с inline overflow:auto */
+  div[style*="overflow"] {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  /* === СУТОЧНАЯ СВОДКА (daily-summary) === */
+  .daily-summary {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .daily-summary thead {
+    display: none !important;
+  }
+
+  .daily-summary tbody {
+    display: block !important;
+  }
+
+  .daily-summary tbody tr {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 4px !important;
+    padding: 8px !important;
+    border-bottom: 1px solid #e5e7eb !important;
+  }
+
+  .daily-summary tbody tr td {
+    display: block !important;
+    text-align: center !important;
+    font-size: 12px !important;
+    padding: 4px !important;
+  }
+
+  /* Скрываем лишние колонки в сводке */
+  .daily-summary tbody tr td:nth-child(n+5) {
+    display: none !important;
+  }
+
+  /* Первые 4 оставляем: Label, Ккал, Б, Ж, У */
+  .daily-summary tbody tr td:nth-child(1),
+  .daily-summary tbody tr td:nth-child(2),
+  .daily-summary tbody tr td:nth-child(3),
+  .daily-summary tbody tr td:nth-child(4) {
+    display: block !important;
+  }
+
+  /* === ПРАВАЯ КОЛОНКА (сон, оценка, тренировки) === */
+  .area-side,
+  .area-side.right-col {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .side-row {
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .side-col {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: none !important;
+  }
+
+  .side-compare {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Зелёные карточки (сон, оценка дня) */
+  .side-col .card.tone-green,
+  .card.tone-green {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .tone-green .grid,
+  .tone-green .grid-2 {
+    width: 100% !important;
+    max-width: 100% !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Все grid-2 — одна колонка на mobile */
+  .grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .tone-green .grid > div {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .tone-green label {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .tone-green textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .tone-green input {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Тренировки — в колонку на mobile */
+  .trainings-wrap,
+  .trainings-wrap.under-calendar {
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .trainings-wrap .card,
+  .under-calendar .card,
+  .card.tone-amber {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: none !important;
+    box-sizing: border-box !important;
+  }
+
+  .card.tone-amber .section-title,
+  .card.tone-amber .train-grid,
+  .card.tone-amber .train-row,
+  .card.tone-amber .train-total {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .train-row {
+    flex-wrap: wrap !important;
+  }
+
+  /* ========================================
+     КРИТИЧНО: Принудительное ограничение ВСЕХ элементов
+     ======================================== */
+  
+  /* Все карточки — максимум ширина экрана */
+  .card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  /* Все таблицы — ужимаются */
+  table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+  }
+
+  /* Все ячейки таблиц — без min-width */
+  td, th {
+    min-width: 0 !important;
+    max-width: none !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Все input'ы — гибкие */
+  input, select, textarea {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Таблицы зон (Зона 1-4) — уменьшаем input'ы */
+  .train-grid input,
+  .under-calendar input {
+    width: 28px !important;
+    min-width: 0 !important;
+    padding: 1px 2px !important;
+    font-size: 10px !important;
+  }
+
+  /* Grid-контейнеры — в одну колонку или сжатые */
+  .grid, .grid-2, .grid-3, .grid-4,
+  .train-grid, .main-stats-grid {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Суточные итоги — violet table */
+  .violet-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 11px !important;
+  }
+
+  .violet-table td:first-child {
+    max-width: 80px !important;
+    font-size: 10px !important;
+    word-wrap: break-word !important;
+  }
+
+  .violet-table input {
+    width: 40px !important;
+    min-width: 0 !important;
+    font-size: 11px !important;
+    padding: 2px !important;
+  }
+
+  /* Фиксируем ширину контейнеров страницы */
+  .page, .page-day, .wrap {
+    width: 100% !important;
+    max-width: 100vw !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  /* Убираем padding от body если есть */
+  body {
+    overflow-x: hidden !important;
+  }
+
+  /* ===========================================
+     ФАЗА 2: КОМПАКТНОСТЬ
+     =========================================== */
+  
+  /* Компактные карточки */
+  .card {
+    padding: 8px !important;
+  }
+  
+  .day-layout {
+    gap: 6px;
+  }
+  
+  .section-title {
+    margin-bottom: 4px !important;
+    font-size: 13px !important;
+  }
+  
+  /* Компактные поля ввода */
+  input,
+  select,
+  textarea {
+    min-height: 36px !important;
+    padding: 6px 10px !important;
+    font-size: 14px !important;
+  }
+  
+  /* Кнопки — чуть компактнее */
+  .btn {
+    min-height: 40px !important;
+    padding: 8px 12px !important;
+  }
+  
+  /* Зоны тренировок — компактнее */
+  .train-row {
+    gap: 4px !important;
+    margin-bottom: 2px !important;
+  }
+  
+  .train-grid input {
+    width: 36px !important;
+    height: 28px !important;
+    font-size: 12px !important;
+    padding: 2px 4px !important;
+    min-height: 28px !important;
+  }
+  
+  .card.tone-amber {
+    padding: 6px 8px !important;
+  }
+  
+  .card.tone-amber .section-title {
+    font-size: 12px !important;
+    margin-bottom: 4px !important;
+  }
+  
+  /* Суточные итоги — компактнее */
+  .violet-table td,
+  .violet-table th {
+    padding: 4px 3px !important;
+    font-size: 11px !important;
+  }
+  
+  .violet-table input {
+    width: 45px !important;
+    height: 24px !important;
+    font-size: 12px !important;
+    padding: 2px 4px !important;
+    min-height: 24px !important;
+  }
+  
+  /* Зелёные карточки — меньше gap */
+  .card.tone-green {
+    padding: 8px !important;
+  }
+  
+  .tone-green .grid {
+    gap: 6px !important;
+  }
+  
+  .tone-green label {
+    font-size: 11px !important;
+    margin-bottom: 2px !important;
+  }
+  
+  .tone-green input,
+  .tone-green textarea {
+    min-height: 32px !important;
+    font-size: 13px !important;
+  }
+  
+  .tone-green textarea {
+    min-height: 50px !important;
   }
 }
 
