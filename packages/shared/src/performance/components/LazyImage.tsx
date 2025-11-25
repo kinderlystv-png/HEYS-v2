@@ -68,6 +68,7 @@ export const LazyImage: React.FC<LazyImageProps> = memo(
           imgElement.removeEventListener('error', handleError);
         };
       }
+      return undefined;
     }, [src, loading, lazyLoader, onLoad, onError]);
 
     useEffect(() => {

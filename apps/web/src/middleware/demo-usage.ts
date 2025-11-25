@@ -6,7 +6,9 @@
  */
 
 import express from 'express';
+
 import { validateAndSanitize, validateHeysData, ValidationSchemas } from '../utils/validator';
+
 import { optionalAuth, requireAdmin, requireAuth } from './auth';
 import { createSecurityStack, STRICT_SECURITY_CONFIG } from './security';
 

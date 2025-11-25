@@ -4,12 +4,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { log } from '../lib/browser-logger';
 import {
   serviceWorkerManager,
   type CacheStatus,
   type PerformanceMetrics,
 } from '../utils/service-worker-manager';
-import { log } from '../lib/browser-logger';
 
 interface ServiceWorkerState {
   isRegistered: boolean;

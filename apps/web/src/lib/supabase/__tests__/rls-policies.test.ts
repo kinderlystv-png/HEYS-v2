@@ -8,6 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+
 import { AuditService } from '../audit-service';
 import { EncryptedProfileService, encryptedPreferencesService } from '../field-encryption';
 import { ProfileService } from '../profile-service';

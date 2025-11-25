@@ -63,12 +63,12 @@
            * 📅 КОМПОНЕНТ: DayTabWithCloudSync (строки 142-181)
            * ───────────────────────────────────────────────────────────────────────────────
            * Обёртка для heys_day_v12.js с синхронизацией из облака
-           * Props: { clientId, products }
+           * Props: { clientId, products, selectedDate, setSelectedDate }
            * Dependencies: window.HEYS.cloud.bootstrapClientSync, window.HEYS.DayTab
            * ═══════════════════════════════════════════════════════════════════════════════
            */
           function DayTabWithCloudSync(props) {
-            const { clientId, products } = props;
+            const { clientId, products, selectedDate, setSelectedDate } = props;
             const [loading, setLoading] = React.useState(true);
             React.useEffect(() => {
               let cancelled = false;
@@ -106,7 +106,7 @@
                 '⏳ Загрузка компонента...',
               );
             }
-            return React.createElement(window.HEYS.DayTab, { products });
+            return React.createElement(window.HEYS.DayTab, { products, selectedDate, setSelectedDate });
           }
 
           /* ═══════════════════════════════════════════════════════════════════════════════
@@ -561,6 +561,13 @@
             const U = window.HEYS.utils || { lsGet: (k, d) => d, lsSet: () => {} };
             const [products, setProducts] = useState([]);
             const [reportsRefresh, setReportsRefresh] = useState(0);
+            
+            // Дата для DayTab (поднятый state для DatePicker в шапке)
+            const todayISO = () => {
+              const d = new Date();
+              return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            };
+            const [selectedDate, setSelectedDate] = useState(todayISO());
 
             const cloud = window.HEYS.cloud || {};
             const [status, setStatus] = useState(
@@ -1473,6 +1480,18 @@
               setSyncVer((v) => v + 1);
             }
 
+            // Получаем инициалы клиента для аватара
+            const getClientInitials = (name) => {
+              if (!name) return '?';
+              const parts = name.trim().split(' ');
+              if (parts.length >= 2) {
+                return (parts[0][0] + parts[1][0]).toUpperCase();
+              }
+              return name.slice(0, 2).toUpperCase();
+            };
+
+            const currentClientName = clients.find((c) => c.id === clientId)?.name || 'Выберите клиента';
+
             return React.createElement(
               React.Fragment,
               null,
@@ -1483,134 +1502,137 @@
                 React.createElement(
                   'div',
                   { className: 'hdr' },
-                  React.createElement('div', null, 'HEYS — панель куратора'),
-                  ONE_CURATOR_MODE
-                    ? React.createElement(
-                        'div',
-                        { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                        React.createElement(
-                          'span',
-                          { className: 'status ' + (status === 'online' ? 'ok' : 'err') },
-                          'cloud: ' + String(status || ''),
-                        ),
-                        window.HEYS.analyticsUI
-                          ? React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
-                          : null,
-                      )
-                    : React.createElement(
-                        'div',
-                        { className: 'login' },
-                        React.createElement('input', {
-                          placeholder: 'email',
-                          value: email,
-                          onChange: (e) => setEmail(e.target.value),
-                        }),
-                        React.createElement('input', {
-                          placeholder: 'пароль',
-                          type: 'password',
-                          value: pwd,
-                          onChange: (e) => setPwd(e.target.value),
-                        }),
-                        React.createElement(
-                          'button',
-                          { className: 'btn', onClick: doSignIn },
-                          'Войти',
-                        ),
-                        React.createElement(
-                          'button',
-                          { className: 'btn secondary', onClick: doSignOut },
-                          'Выйти',
-                        ),
-                        React.createElement(
-                          'span',
-                          { className: 'status ' + (status === 'online' ? 'ok' : 'err') },
-                          String(status || ''),
-                        ),
-                        window.HEYS.analyticsUI
-                          ? React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
-                          : null,
-                      ),
+                  // === ВЕРХНЯЯ ЛИНИЯ: Логотип + Статус ===
                   React.createElement(
                     'div',
-                    { className: 'row' },
-                    clientId
-                      ? React.createElement(
-                          React.Fragment,
-                          null,
-                          React.createElement(
-                            'span',
-                            { className: 'muted', style: { marginRight: 8 } },
-                            'Клиент:',
-                          ),
-                          React.createElement(
-                            'span',
-                            { style: { fontWeight: 600, marginRight: 8 } },
-                            clients.find((c) => c.id === clientId)?.name || clientId,
-                          ),
-                          React.createElement(
+                    { className: 'hdr-top' },
+                    React.createElement(
+                      'div',
+                      { className: 'hdr-logo' },
+                      React.createElement('div', { className: 'hdr-logo-icon' }, '🥗'),
+                      React.createElement(
+                        'div',
+                        null,
+                        React.createElement('div', { className: 'hdr-logo-text' }, 'HEYS'),
+                        React.createElement('div', { className: 'hdr-logo-sub' }, 'Панель куратора'),
+                      ),
+                    ),
+                    React.createElement(
+                      'div',
+                      { className: 'hdr-status' },
+                      React.createElement(
+                        'span',
+                        { className: 'status ' + (status === 'online' ? 'ok' : 'err') },
+                        status === 'online' ? 'Онлайн' : 'Офлайн',
+                      ),
+                      clientId
+                        ? React.createElement(
                             'button',
                             {
-                              className: 'btn',
+                              className: 'hdr-switch-btn',
                               onClick: () => {
-                                // Очищаем сохранённый выбор клиента
                                 localStorage.removeItem('heys_client_current');
                                 window.HEYS = window.HEYS || {};
                                 window.HEYS.currentClientId = null;
                                 setClientId('');
-                                console.log('[HEYS] 🔄 Client selection cleared, showing selector');
                               },
+                              title: 'Сменить клиента',
                             },
-                            'Сменить',
-                          ),
-                        )
-                      : null,
+                            '↻ Сменить',
+                          )
+                        : null,
+                      window.HEYS.analyticsUI
+                        ? React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
+                        : null,
+                    ),
                   ),
+                  // === НИЖНЯЯ ЛИНИЯ: Клиент + Действия ===
                   clientId
                     ? React.createElement(
                         'div',
-                        {
-                          className: 'row',
-                          style: {
-                            marginTop: 8,
-                            flexWrap: 'wrap',
-                            gap: 8,
-                            alignItems: 'center',
-                          },
-                        },
+                        { className: 'hdr-bottom' },
+                        // Информация о клиенте + DatePicker
                         React.createElement(
-                          'button',
-                          {
-                            className: 'btn',
-                            onClick: handleManualBackup,
-                            disabled: backupBusy,
-                          },
-                          backupBusy ? 'Сохраняем…' : 'Сделать бэкап',
+                          'div',
+                          { className: 'hdr-client' },
+                          React.createElement(
+                            'div',
+                            { className: 'hdr-client-avatar' },
+                            getClientInitials(currentClientName),
+                          ),
+                          React.createElement(
+                            'div',
+                            { className: 'hdr-client-info' },
+                            React.createElement('span', { className: 'hdr-client-label' }, 'Клиент'),
+                            React.createElement('span', { className: 'hdr-client-name' }, currentClientName),
+                          ),
+                          // DatePicker рядом с именем клиента
+                          (tab === 'day' || tab === 'reports') && window.HEYS.DatePicker
+                            ? React.createElement(window.HEYS.DatePicker, {
+                                valueISO: selectedDate,
+                                onSelect: setSelectedDate,
+                                onRemove: () => {
+                                  setSelectedDate(todayISO());
+                                }
+                              })
+                            : null,
                         ),
+                        // Действия
                         React.createElement(
-                          'button',
-                          {
-                            className: 'btn',
-                            onClick: handleExportBackup,
-                            disabled: backupBusy,
-                          },
-                          'Экспорт .json',
-                        ),
-                        React.createElement(
-                          'button',
-                          { className: 'btn secondary', onClick: handleRestoreProducts },
-                          'Восстановить продукты',
-                        ),
-                        React.createElement(
-                          'button',
-                          { className: 'btn secondary', onClick: handleRestoreAll },
-                          'Восстановить всё',
-                        ),
-                        React.createElement(
-                          'span',
-                          { className: 'muted', style: { marginLeft: 'auto' } },
+                          'div',
+                          { className: 'hdr-actions' },
+                          React.createElement(
+                            'button',
+                            {
+                              className: 'hdr-btn primary',
+                              onClick: handleManualBackup,
+                              disabled: backupBusy,
+                              title: 'Создать резервную копию',
+                            },
+                            React.createElement('span', { className: 'hdr-btn-icon' }, '💾'),
+                            backupBusy ? 'Сохраняем…' : 'Бэкап',
+                          ),
+                          React.createElement(
+                            'button',
+                            {
+                              className: 'hdr-btn',
+                              onClick: handleExportBackup,
+                              disabled: backupBusy,
+                              title: 'Скачать JSON файл',
+                            },
+                            React.createElement('span', { className: 'hdr-btn-icon' }, '📥'),
+                            'Экспорт',
+                          ),
+                          React.createElement('div', { className: 'hdr-divider' }),
+                          React.createElement(
+                            'button',
+                            {
+                              className: 'hdr-btn',
+                              onClick: handleRestoreProducts,
+                              title: 'Восстановить список продуктов',
+                            },
+                            React.createElement('span', { className: 'hdr-btn-icon' }, '🍎'),
+                            'Продукты',
+                          ),
+                          React.createElement(
+                            'button',
+                            {
+                              className: 'hdr-btn',
+                              onClick: handleRestoreAll,
+                              title: 'Восстановить все данные',
+                            },
+                            React.createElement('span', { className: 'hdr-btn-icon' }, '♻️'),
+                            'Восстановить',
+                          ),
+                          // Backup info — компактный
                           backupMeta
-                            ? `Последний бэкап: ${formatBackupTime(backupMeta)}`
-                            : 'Бэкап ещё не создавался',
+                            ? React.createElement(
+                                'div',
+                                { className: 'hdr-backup-info compact', title: 'Последнее сохранение: ' + formatBackupTime(backupMeta) },
+                                React.createElement('span', { className: 'hdr-backup-dot' }),
+                                React.createElement('span', { className: 'hdr-backup-time' }, formatBackupTime(backupMeta).split(' ').pop()),
+                              )
+                            : null,
                         ),
                       )
                     : null,
@@ -1624,7 +1646,8 @@
                       className: 'tab ' + (tab === 'ration' ? 'active' : ''),
                       onClick: () => setTab('ration'),
                     },
-                    'Рацион',
+                    React.createElement('span', { className: 'tab-icon' }, '🍽️'),
+                    React.createElement('span', { className: 'tab-text' }, 'Рацион'),
                   ),
                   React.createElement(
                     'div',
@@ -1632,7 +1655,8 @@
                       className: 'tab ' + (tab === 'day' ? 'active' : ''),
                       onClick: () => setTab('day'),
                     },
-                    'Статистика дня',
+                    React.createElement('span', { className: 'tab-icon' }, '📊'),
+                    React.createElement('span', { className: 'tab-text' }, 'День'),
                   ),
                   React.createElement(
                     'div',
@@ -1652,7 +1676,8 @@
                         setReportsRefresh(Date.now());
                       },
                     },
-                    'Отчётность',
+                    React.createElement('span', { className: 'tab-icon' }, '📈'),
+                    React.createElement('span', { className: 'tab-text' }, 'Отчёты'),
                   ),
                   React.createElement(
                     'div',
@@ -1660,7 +1685,8 @@
                       className: 'tab ' + (tab === 'user' ? 'active' : ''),
                       onClick: () => setTab('user'),
                     },
-                    'Данные пользователя',
+                    React.createElement('span', { className: 'tab-icon' }, '👤'),
+                    React.createElement('span', { className: 'tab-text' }, 'Профиль'),
                   ),
                   React.createElement(
                     'div',
@@ -1668,7 +1694,8 @@
                       className: 'tab ' + (tab === 'analytics' ? 'active' : ''),
                       onClick: () => setTab('analytics'),
                     },
-                    '📊 Аналитика',
+                    React.createElement('span', { className: 'tab-icon' }, '⚡'),
+                    React.createElement('span', { className: 'tab-text' }, 'Аналитика'),
                   ),
                 ),
                 tab === 'ration'
@@ -1680,9 +1707,11 @@
                     })
                   : tab === 'day'
                     ? React.createElement(DayTabWithCloudSync, {
-                        key: 'day' + syncVer + '_' + String(clientId || ''),
+                        key: 'day' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
                         products,
                         clientId,
+                        selectedDate,
+                        setSelectedDate,
                       })
                     : tab === 'user'
                       ? React.createElement(UserTabWithCloudSync, {

@@ -3,9 +3,9 @@
 
 import React, { Suspense } from 'react';
 
+import { log } from '../../lib/browser-logger';
 import { createChunkedLazyComponent } from '../../utils/dynamicImport';
 import { ReportsSkeleton } from '../loading/ComponentSkeleton';
-import { log } from '../../lib/browser-logger';
 
 const reportsTabs = [
   { key: 'generator', label: '📊 Генератор', icon: '⚡' },

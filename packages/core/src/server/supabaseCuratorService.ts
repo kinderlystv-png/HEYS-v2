@@ -106,7 +106,7 @@ export class SupabaseCuratorService {
 
     const supabase = this.ensureClient();
     const { data, error } = await supabase
-      .from<SupabaseClientRow>('clients')
+      .from('clients')
       .select('id,name,email,status,created_at,updated_at,last_activity_at')
       .eq('curator_id', curatorId)
       .order('created_at', { ascending: true });
@@ -136,7 +136,7 @@ export class SupabaseCuratorService {
 
     const supabase = this.ensureClient();
     const { data, error } = await supabase
-      .from<SupabaseClientRow>('clients')
+      .from('clients')
       .select('id,name,email,status,created_at,updated_at,last_activity_at,curator_id')
       .eq('curator_id', curatorId)
       .eq('id', clientId)
@@ -175,7 +175,7 @@ export class SupabaseCuratorService {
 
     const supabase = this.ensureClient();
     let query = supabase
-      .from<SupabaseKvRow>('client_kv_store')
+      .from('client_kv_store')
       .select('client_id,k,v,updated_at')
       .eq('client_id', clientId)
       .limit(1);
@@ -240,7 +240,7 @@ export class SupabaseCuratorService {
   private async assertClientAccess(curatorId: string, clientId: string): Promise<void> {
     const supabase = this.ensureClient();
     const { data, error } = await supabase
-      .from<SupabaseClientRow>('clients')
+      .from('clients')
       .select('id')
       .eq('curator_id', curatorId)
       .eq('id', clientId)
@@ -303,7 +303,7 @@ export class SupabaseCuratorService {
     const keyVariants = buildVariantList(includeKeys);
     if (keyVariants.length) {
       const { data, error } = await supabase
-        .from<SupabaseKvRow>('client_kv_store')
+        .from('client_kv_store')
         .select('client_id,k,v,updated_at')
         .in('client_id', clientIds)
         .in('k', keyVariants);
@@ -323,7 +323,7 @@ export class SupabaseCuratorService {
 
       if (orFilter) {
         const { data, error } = await supabase
-          .from<SupabaseKvRow>('client_kv_store')
+          .from('client_kv_store')
           .select('client_id,k,v,updated_at')
           .in('client_id', clientIds)
           .or(orFilter);
@@ -441,3 +441,4 @@ function bucketToRecord(bucket?: ClientKvRecord[]): Record<string, ClientKvRecor
 function escapeLikePattern(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 }
+

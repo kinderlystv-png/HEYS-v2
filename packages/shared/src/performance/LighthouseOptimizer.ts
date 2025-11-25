@@ -607,7 +607,7 @@ export class LighthouseOptimizer {
       return [];
     }
 
-    const improvements = [];
+    const improvements: Array<{ metric: string; improvement: number }> = [];
 
     // Сравниваем основные метрики
     const metrics = [

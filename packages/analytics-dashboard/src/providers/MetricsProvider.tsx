@@ -85,7 +85,7 @@ export const MetricsProvider: React.FC<MetricsProviderProps> = ({
 
   // Subscriptions
   const subscriptions = useRef<Map<string, Set<(data: any) => void>>>(new Map());
-  const processingTimer = useRef<NodeJS.Timeout>();
+  const processingTimer = useRef<ReturnType<typeof setTimeout>>();
 
   // Add metric to the system
   const addMetric = useCallback(

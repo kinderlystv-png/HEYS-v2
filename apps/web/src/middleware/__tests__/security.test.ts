@@ -1,6 +1,7 @@
 // filepath: apps/web/src/middleware/__tests__/security.test.ts
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { CORSConfig, SecurityConfig } from '../security';
 import {
   basicCORS,

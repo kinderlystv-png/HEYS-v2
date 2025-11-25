@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
 import { log } from '@heys/logger';
-import express from 'express';
+import express, { type Router } from 'express';
 
 import type { ClientDayRecord, CuratorClientRecord } from './curatorData';
 import { CURATOR_CLIENTS, findClientRecord, getAllowedClients, getClientDayRecord } from './curatorData';
@@ -41,7 +41,7 @@ const activeSessions = new Map<string, ActiveSession>();
 const supabaseCuratorService = getSupabaseCuratorService();
 const TELEGRAM_CURATOR_MAP = parseTelegramCuratorMap(process.env.TELEGRAM_CURATOR_MAP ?? '');
 
-export const serverRouter = express.Router();
+export const serverRouter: Router = express.Router();
 
 serverRouter.post('/api/telegram/auth/verify', express.json(), async (req, res) => {
   const { initData } = req.body ?? {};

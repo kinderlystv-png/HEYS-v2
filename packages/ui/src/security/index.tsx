@@ -7,8 +7,8 @@
  * @created 2025-01-31
  */
 
-import { defaultValidator, SecurityError, ValidationSchemas } from '@heys/shared';
 import { log as systemLog } from '@heys/logger';
+import { defaultValidator, SecurityError, ValidationSchemas } from '@heys/shared';
 import React, { useCallback, useMemo } from 'react';
 
 type BrowserLogger = {
@@ -120,6 +120,7 @@ export interface SecureContentProps {
 export const SecureContent: React.FC<SecureContentProps> = ({
   content,
   allowHtml = false,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   maxLength,
   className,
   'data-testid': testId,

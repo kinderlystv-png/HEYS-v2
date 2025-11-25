@@ -1,6 +1,7 @@
 // filepath: apps/web/src/middleware/__tests__/auth.test.ts
 
 import { beforeEach, describe, expect, it } from 'vitest';
+
 import {
   AuthMiddlewareConfig,
   createAuthMiddleware,

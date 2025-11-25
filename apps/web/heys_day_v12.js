@@ -229,6 +229,127 @@
   function parseTime(t){ if(!t||typeof t!=='string'||!t.includes(':')) return null; const [hh,mm]=t.split(':').map(x=>parseInt(x,10)); if(isNaN(hh)||isNaN(mm)) return null; return {hh:clamp(hh,0,23),mm:clamp(mm,0,59)}; }
   function sleepHours(a,b){ const s=parseTime(a),e=parseTime(b); if(!s||!e) return 0; let sh=s.hh+s.mm/60,eh=e.hh+e.mm/60; let d=eh-sh; if(d<0) d+=24; return r1(d); }
 
+  // Форматирование даты для отображения
+  function formatDateDisplay(isoDate) {
+    const d = parseISO(isoDate);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const isToday = d.toDateString() === today.toDateString();
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+    
+    const dayName = d.toLocaleDateString('ru-RU', { weekday: 'short' });
+    const dayNum = d.getDate();
+    const month = d.toLocaleDateString('ru-RU', { month: 'short' });
+    
+    if (isToday) return { label: 'Сегодня', sub: `${dayNum} ${month}` };
+    if (isYesterday) return { label: 'Вчера', sub: `${dayNum} ${month}` };
+    return { label: `${dayNum} ${month}`, sub: dayName };
+  }
+
+  // Компактный DatePicker с dropdown
+  function DatePicker({valueISO, onSelect, onRemove}) {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const [cur, setCur] = React.useState(parseISO(valueISO || todayISO()));
+    const wrapperRef = React.useRef(null);
+    
+    React.useEffect(() => { setCur(parseISO(valueISO || todayISO())); }, [valueISO]);
+    
+    // Закрытие при клике вне
+    React.useEffect(() => {
+      function handleClickOutside(e) {
+        if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+          setIsOpen(false);
+        }
+      }
+      if (isOpen) {
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+      }
+    }, [isOpen]);
+    
+    const y = cur.getFullYear(), m = cur.getMonth();
+    const first = new Date(y, m, 1), start = (first.getDay() + 6) % 7;
+    const dim = new Date(y, m + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < start; i++) cells.push(null);
+    for (let d = 1; d <= dim; d++) cells.push(new Date(y, m, d));
+    
+    function same(a, b) {
+      return a && b && a.getFullYear() === b.getFullYear() && 
+             a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    }
+    
+    const sel = parseISO(valueISO || todayISO());
+    const today = new Date(); today.setHours(12);
+    const dateInfo = formatDateDisplay(valueISO || todayISO());
+    const isToday = sel.toDateString() === today.toDateString();
+    
+    return React.createElement('div', { className: 'date-picker', ref: wrapperRef },
+      // Кнопка-триггер
+      React.createElement('button', {
+        className: 'date-picker-trigger' + (isOpen ? ' open' : ''),
+        onClick: () => setIsOpen(!isOpen)
+      },
+        React.createElement('span', { className: 'date-picker-icon' }, '📅'),
+        React.createElement('span', { className: 'date-picker-text' },
+          React.createElement('span', { className: 'date-picker-main' }, dateInfo.label),
+          React.createElement('span', { className: 'date-picker-sub' }, dateInfo.sub)
+        ),
+        React.createElement('span', { className: 'date-picker-arrow' }, isOpen ? '▲' : '▼')
+      ),
+      // Dropdown с календарём
+      isOpen && React.createElement('div', { className: 'date-picker-dropdown' },
+        React.createElement('div', { className: 'date-picker-header' },
+          React.createElement('button', { 
+            className: 'date-picker-nav', 
+            onClick: () => setCur(new Date(y, m - 1, 1)) 
+          }, '‹'),
+          React.createElement('span', { className: 'date-picker-title' },
+            cur.toLocaleString('ru-RU', { month: 'long', year: 'numeric' })
+          ),
+          React.createElement('button', { 
+            className: 'date-picker-nav', 
+            onClick: () => setCur(new Date(y, m + 1, 1)) 
+          }, '›')
+        ),
+        React.createElement('div', { className: 'date-picker-weekdays' },
+          ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(d => 
+            React.createElement('div', { key: d, className: 'date-picker-weekday' }, d)
+          )
+        ),
+        React.createElement('div', { className: 'date-picker-days' },
+          cells.map((dt, i) => dt == null
+            ? React.createElement('div', { key: 'e' + i, className: 'date-picker-day empty' })
+            : React.createElement('div', {
+                key: dt.toISOString(),
+                className: [
+                  'date-picker-day',
+                  same(dt, sel) ? 'selected' : '',
+                  same(dt, today) ? 'today' : ''
+                ].join(' ').trim(),
+                onClick: () => { onSelect(fmtDate(dt)); setIsOpen(false); }
+              }, dt.getDate())
+          )
+        ),
+        React.createElement('div', { className: 'date-picker-footer' },
+          React.createElement('button', {
+            className: 'date-picker-btn today-btn',
+            onClick: () => { onSelect(todayISO()); setIsOpen(false); }
+          }, '📍 Сегодня'),
+          React.createElement('button', {
+            className: 'date-picker-btn delete-btn',
+            onClick: () => { onRemove(); setIsOpen(false); }
+          }, '🗑️ Очистить')
+        )
+      )
+    );
+  }
+
+  // Экспортируем DatePicker для использования в шапке
+  HEYS.DatePicker = DatePicker;
+
   function Calendar({valueISO,onSelect,onRemove}){
     const [cur,setCur]=React.useState(parseISO(valueISO||todayISO()));
     React.useEffect(()=>{ setCur(parseISO(valueISO||todayISO())); },[valueISO]);
@@ -253,6 +374,9 @@
 
   HEYS.DayTab=function DayTab(props){
   const {useState,useMemo,useEffect}=React;
+  
+  // Дата приходит из шапки App (DatePicker в header)
+  const { selectedDate, setSelectedDate } = props;
   
   // Трекинг просмотра дня
   useEffect(() => {
@@ -329,16 +453,18 @@
     }
   }, [window.HEYS && window.HEYS.currentClientId]);
   const prof=getProfile();
-  const [date,setDate]=useState(lsGet('heys_dayv2_date',todayISO()));
+  // date приходит из props (selectedDate из App header)
+  const date = selectedDate || todayISO();
+  const setDate = setSelectedDate;
   const [day,setDay]=useState(()=>{ 
-    const key = 'heys_dayv2_'+(lsGet('heys_dayv2_date',todayISO()));
+    const key = 'heys_dayv2_'+date;
     const v=lsGet(key,null); 
     if (v && v.date) {
       return ensureDay(v, prof);
     } else {
       // Для нового дня устанавливаем пустые значения
       return ensureDay({
-        date: lsGet('heys_dayv2_date', todayISO()),
+        date: date,
         meals: [],
         trainings: [{ z: [0,0,0,0] }, { z: [0,0,0,0] }],
         sleepStart: '',
@@ -353,6 +479,33 @@
       }, prof);
     }
   });
+
+  // Обновлять day при смене даты (из DatePicker в шапке)
+  useEffect(() => {
+    const key = 'heys_dayv2_' + date;
+    const v = lsGet(key, null);
+    const profNow = getProfile();
+    if (v && v.date) {
+      setDay(ensureDay(v, profNow));
+    } else {
+      setDay(ensureDay({ 
+        date: date, 
+        meals: (loadMealsForDate(date) || []), 
+        trainings: [{ z:[0,0,0,0] }, { z:[0,0,0,0] }],
+        weightMorning: '',
+        deficitPct: '',
+        sleepStart: '',
+        sleepEnd: '',
+        sleepQuality: '',
+        sleepNote: '',
+        dayScore: '',
+        moodAvg: '',
+        wellbeingAvg: '',
+        stressAvg: '',
+        dayComment: ''
+      }, profNow));
+    }
+  }, [date]);
 
     const { flush } = useDayAutosave({ day, date, lsSet, lsGetFn: lsGet });
 
@@ -900,50 +1053,63 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
 );
 
 
-    const trainingsBlock = React.createElement('div',{className:'trainings-wrap under-calendar'},
-      [0,1].map((ti)=>{ const T=TR[ti]||{z:[0,0,0,0]}; const kcalZ=i=>r1((+T.z[i]||0)*(kcalMin[i]||0)); const total=r1(kcalZ(0)+kcalZ(1)+kcalZ(2)+kcalZ(3));
-        return React.createElement('div',{key:'tr'+ti,className:'card tone-amber'},
-          React.createElement('div',{className:'section-title'},'Тренировка '+(ti+1)),
-          React.createElement('div',{className:'train-grid'},
-            [0,1,2,3].map((zi)=> React.createElement('div',{key:'z'+zi,className:'train-row'},
-              React.createElement('div',{className:'muted'},'Зона '+(zi+1)),
-              React.createElement('input',{className:'readOnly',value:kcalZ(zi),disabled:true,title:'ккал'}),
-              React.createElement('input',{type:'number',value:+T.z[zi]||0,onChange:e=>updateTraining(ti,zi,e.target.value),title:'мин'})
+    // Компактные тренировки в SaaS стиле
+    const trainingsBlock = React.createElement('div', { className: 'compact-trainings' },
+      [0, 1].map((ti) => {
+        const T = TR[ti] || { z: [0, 0, 0, 0] };
+        const kcalZ = i => r1((+T.z[i] || 0) * (kcalMin[i] || 0));
+        const total = r1(kcalZ(0) + kcalZ(1) + kcalZ(2) + kcalZ(3));
+        return React.createElement('div', { key: 'tr' + ti, className: 'compact-card compact-train' },
+          React.createElement('div', { className: 'compact-train-header' },
+            React.createElement('span', { className: 'compact-train-icon' }, ti === 0 ? '🏃' : '🚴'),
+            React.createElement('span', null, 'Тренировка ' + (ti + 1)),
+            React.createElement('span', { className: 'compact-badge train' }, total + ' ккал'),
+          ),
+          React.createElement('div', { className: 'compact-train-zones' },
+            [0, 1, 2, 3].map((zi) => React.createElement('div', { key: 'z' + zi, className: 'compact-zone' },
+              React.createElement('span', { className: 'compact-zone-label' }, 'Z' + (zi + 1)),
+              React.createElement('input', { 
+                className: 'compact-input tiny', 
+                type: 'number', 
+                value: +T.z[zi] || '', 
+                placeholder: '0',
+                onChange: e => updateTraining(ti, zi, e.target.value), 
+                title: 'Минут в зоне ' + (zi + 1) 
+              }),
             )),
-            React.createElement('div',{className:'train-total'},'Итого: '+total+' ккал')
-          )
+          ),
         );
       })
     );
 
+  // Компактные блоки сна и оценки дня в SaaS стиле
   const sideBlock = React.createElement('div',{className:'area-side right-col'},
-      React.createElement('div', { className: 'side-row' },
-        React.createElement('div', { className: 'side-col' },
-          React.createElement('div',{className:'card tone-green'},
-            React.createElement('div',{className:'grid grid-2'},
-              React.createElement('div',null,React.createElement('label',null,'Лёг спать'),React.createElement('input',{type:'time',value:day.sleepStart||'',onChange:e=>setDay({...day,sleepStart:e.target.value})})),
-              React.createElement('div',null,React.createElement('label',null,'Проснулся'),React.createElement('input',{type:'time',value:day.sleepEnd||'',onChange:e=>setDay({...day,sleepEnd:e.target.value})})),
-              React.createElement('div',null,React.createElement('label',null,'Спал (часов)'),React.createElement('input',{value:sleepH||'',disabled:true})),
-              React.createElement('div',null,React.createElement('label',null,'Качество'),React.createElement('input',{type:'number',step:'0.5',value:day.sleepQuality||'',onChange:e=>setDay({...day,sleepQuality:+e.target.value||0})})),
-              React.createElement('div',{style:{gridColumn:'1 / -1'}},React.createElement('label',null,'Комментарий'),React.createElement('textarea',{value:day.sleepNote||'',onChange:e=>setDay({...day,sleepNote:e.target.value})}))
-            )
-          )
+      // Блок СОН — компактный
+      React.createElement('div', { className: 'compact-card' },
+        React.createElement('div', { className: 'compact-card-header' }, '😴 Сон'),
+        React.createElement('div', { className: 'compact-row' },
+          React.createElement('label', { className: 'compact-label' }, 'Лёг'),
+          React.createElement('input', { className: 'compact-input time', type: 'time', value: day.sleepStart || '', onChange: e => setDay({...day, sleepStart: e.target.value}) }),
+          React.createElement('label', { className: 'compact-label' }, '→'),
+          React.createElement('input', { className: 'compact-input time', type: 'time', value: day.sleepEnd || '', onChange: e => setDay({...day, sleepEnd: e.target.value}) }),
+          React.createElement('span', { className: 'compact-badge' }, sleepH ? sleepH + 'ч' : '—'),
+          React.createElement('input', { className: 'compact-input tiny', type: 'number', step: '0.5', placeholder: '★', title: 'Качество сна', value: day.sleepQuality || '', onChange: e => setDay({...day, sleepQuality: +e.target.value || 0}) }),
         ),
-        React.createElement('div', { className: 'side-col' },
-          React.createElement('div',{className:'card tone-green'},
-            React.createElement('div',{className:'grid grid-2'},
-              React.createElement('div',null,React.createElement('label',null,'Оценка дня'),React.createElement('input',{type:'number',value:day.dayScore||'',onChange:e=>setDay({...day,dayScore:+e.target.value||0})})),
-              React.createElement('div',null,React.createElement('label',null,'Ср. настроение'),React.createElement('input',{type:'number',value:day.moodAvg||'',disabled:true,style:{backgroundColor:'#f5f5f5'}})),
-              React.createElement('div',null,React.createElement('label',null,'Ср. самочувствие'),React.createElement('input',{type:'number',value:day.wellbeingAvg||'',disabled:true,style:{backgroundColor:'#f5f5f5'}})),
-              React.createElement('div',null,React.createElement('label',null,'Ср. стресс'),React.createElement('input',{type:'number',value:day.stressAvg||'',disabled:true,style:{backgroundColor:'#f5f5f5'}})),
-              React.createElement('div',{style:{gridColumn:'1 / -1'}},React.createElement('label',null,'Комментарий дня'),React.createElement('textarea',{value:day.dayComment||'',onChange:e=>setDay({...day,dayComment:e.target.value})}))
-            )
-          )
-        )
+        React.createElement('input', { className: 'compact-note', type: 'text', placeholder: 'Заметка о сне...', value: day.sleepNote || '', onChange: e => setDay({...day, sleepNote: e.target.value}) }),
       ),
-      React.createElement('div', { className: 'side-compare' },
-        trainingsBlock
-      )
+      // Блок ОЦЕНКА ДНЯ — компактный  
+      React.createElement('div', { className: 'compact-card' },
+        React.createElement('div', { className: 'compact-card-header' }, '📊 День'),
+        React.createElement('div', { className: 'compact-row' },
+          React.createElement('input', { className: 'compact-input tiny', type: 'number', placeholder: '★', title: 'Оценка дня', value: day.dayScore || '', onChange: e => setDay({...day, dayScore: +e.target.value || 0}) }),
+          React.createElement('span', { className: 'compact-stat', title: 'Настроение' }, '😊', React.createElement('span', null, day.moodAvg || '—')),
+          React.createElement('span', { className: 'compact-stat', title: 'Самочувствие' }, '💪', React.createElement('span', null, day.wellbeingAvg || '—')),
+          React.createElement('span', { className: 'compact-stat', title: 'Стресс' }, '😰', React.createElement('span', null, day.stressAvg || '—')),
+        ),
+        React.createElement('input', { className: 'compact-note', type: 'text', placeholder: 'Заметка о дне...', value: day.dayComment || '', onChange: e => setDay({...day, dayComment: e.target.value}) }),
+      ),
+      // Тренировки — компактные
+      trainingsBlock
     );
 
   // compareBlock удалён по требованию
@@ -1199,14 +1365,268 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
 
     // Выравнивание высоты фиолетового блока с блоком тренировок справа
   // (авто-высота убрана; таблица сама уменьшена по строкам / высоте инпутов)
-    return React.createElement('div',{className:'page page-day'},
-      React.createElement('div',{className:'day-layout compact-4col'},
-        React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
-          calendarBlock
-        ),
-        mainBlock,
-        sideBlock
+  
+    // DatePicker теперь в шапке App (heys_app_v12.js)
+    // Тренировки выводятся в sideBlock (side-compare)
+
+    // === HERO METRICS CARDS ===
+    const remainingKcal = r1(optimum - eatenKcal); // сколько ещё можно съесть
+    
+    // Цвета для карточек
+    function getEatenColor() {
+      const ratio = eatenKcal / (optimum || 1);
+      if (ratio < 0.7) return { bg: '#dcfce7', text: '#065f46', border: '#86efac' }; // зелёный
+      if (ratio <= 1.0) return { bg: '#fef9c3', text: '#854d0e', border: '#fde047' }; // жёлтый
+      return { bg: '#fee2e2', text: '#b91c1c', border: '#fecaca' }; // красный
+    }
+    function getRemainingColor() {
+      if (remainingKcal > 100) return { bg: '#dcfce7', text: '#065f46', border: '#86efac' };
+      if (remainingKcal >= 0) return { bg: '#fef9c3', text: '#854d0e', border: '#fde047' };
+      return { bg: '#fee2e2', text: '#b91c1c', border: '#fecaca' };
+    }
+    function getDeficitColor() {
+      // factDefPct отрицательный = дефицит (хорошо), положительный = профицит (плохо)
+      const target = dayTargetDef; // отрицательное значение
+      if (factDefPct <= target) return { bg: '#dcfce7', text: '#065f46', border: '#86efac' };
+      return { bg: '#fee2e2', text: '#b91c1c', border: '#fecaca' };
+    }
+    
+    const eatenCol = getEatenColor();
+    const remainCol = getRemainingColor();
+    const defCol = getDeficitColor();
+    
+    // Progress bar для дефицита (ширина = |factDefPct| / 50 * 100%, макс 100%)
+    const deficitProgress = Math.min(100, Math.abs(factDefPct) / 50 * 100);
+    
+    // Вычисление тренда веса за последние 7 дней
+    const weightTrend = React.useMemo(() => {
+      try {
+        const today = new Date(date);
+        const weights = [];
+        
+        // Собираем вес за последние 7 дней (включая сегодня)
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = fmtDate(d);
+          const dayKey = 'heys_dayv2_' + dateStr;
+          const dayData = lsGet(dayKey, null);
+          
+          if (dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0) {
+            weights.push({ date: dateStr, weight: +dayData.weightMorning });
+          }
+        }
+        
+        // Нужно минимум 2 точки для тренда
+        if (weights.length < 2) return null;
+        
+        // Сортируем по дате (от старой к новой)
+        weights.sort((a, b) => a.date.localeCompare(b.date));
+        
+        // Вычисляем изменение: последний - первый
+        const firstWeight = weights[0].weight;
+        const lastWeight = weights[weights.length - 1].weight;
+        const diff = lastWeight - firstWeight;
+        const diffAbs = Math.abs(diff);
+        
+        // Определяем направление
+        let arrow = '→';
+        if (diff > 0.2) arrow = '⬆️';
+        else if (diff < -0.2) arrow = '⬇️';
+        
+        // Форматируем текст
+        const sign = diff > 0 ? '+' : '';
+        const text = arrow + ' ' + sign + r1(diff) + ' кг';
+        
+        return { text, diff };
+      } catch (e) {
+        return null;
+      }
+    }, [date]);
+    
+    const metricsCards = React.createElement('div', { className: 'metrics-cards' },
+      // Затраты (TDEE) с трендом веса
+      React.createElement('div', { 
+        className: 'metrics-card',
+        style: { background: '#f8fafc', borderColor: '#e2e8f0' },
+        title: 'Затраты: ' + tdee + ' ккал (BMR ' + bmr + ' + активность ' + r1(actTotal) + ')' + 
+               (weightTrend ? '\nТренд веса за 7 дней: ' + weightTrend.text : '')
+      },
+        React.createElement('div', { className: 'metrics-icon' }, '⚡'),
+        React.createElement('div', { className: 'metrics-value', style: { color: '#64748b' } }, tdee),
+        React.createElement('div', { className: 'metrics-label' }, 'Затраты'),
+        // Тренд веса под основным значением
+        weightTrend && React.createElement('div', { 
+          className: 'metrics-trend',
+          style: { 
+            fontSize: '11px', 
+            color: '#94a3b8', 
+            marginTop: '2px',
+            fontWeight: 500
+          } 
+        }, weightTrend.text)
       ),
+      // Цель (optimum с указанием целевого дефицита) - кликабельна для редактирования
+      React.createElement('div', { 
+        className: 'metrics-card metrics-card-clickable',
+        style: { background: '#f0f9ff', borderColor: '#bae6fd', cursor: 'pointer' },
+        title: 'Цель: ' + optimum + ' ккал (затраты ' + tdee + ' − ' + Math.abs(dayTargetDef) + '% дефицит)\nКликни для изменения целевого дефицита',
+        onClick: () => {
+          const newDef = prompt('Целевой дефицит (отрицательное число для дефицита, положительное для профицита):', dayTargetDef);
+          if (newDef !== null && !isNaN(+newDef)) {
+            setDay({...day, deficitPct: +newDef});
+          }
+        }
+      },
+        React.createElement('div', { className: 'metrics-icon' }, '🎯'),
+        React.createElement('div', { className: 'metrics-value', style: { color: '#0369a1' } }, optimum),
+        React.createElement('div', { className: 'metrics-label' }, 'Цель (' + dayTargetDef + '%)')
+      ),
+      // Съедено
+      React.createElement('div', { 
+        className: 'metrics-card',
+        style: { background: eatenCol.bg, borderColor: eatenCol.border },
+        title: 'Съедено: ' + r1(eatenKcal) + ' ккал (' + (remainingKcal >= 0 ? 'осталось ' + remainingKcal : 'перебор ' + Math.abs(remainingKcal)) + ')'
+      },
+        React.createElement('div', { className: 'metrics-icon' }, '🍽️'),
+        React.createElement('div', { className: 'metrics-value', style: { color: eatenCol.text } }, r1(eatenKcal)),
+        React.createElement('div', { className: 'metrics-label' }, 'Съедено')
+      ),
+      // Осталось / Перебор - кликабельно для фокуса в поиск
+      React.createElement('div', { 
+        className: 'metrics-card metrics-card-clickable',
+        style: { background: remainCol.bg, borderColor: remainCol.border, cursor: 'pointer' },
+        title: remainingKcal >= 0 
+          ? 'Сколько ещё можно съесть до нормы\nКликни для добавления продукта'
+          : 'Перебор от целевой калорийности: ' + Math.abs(remainingKcal) + ' ккал\n' + 
+            (Math.abs(remainingKcal) > 200 
+              ? 'Совет: добавь ' + Math.round(Math.abs(remainingKcal) / 7) + ' мин ходьбы или вычти из следующего приёма'
+              : 'Небольшой перебор, не критично'),
+        onClick: () => {
+          // Фокус на первый input поиска продукта
+          const firstSearchInput = document.querySelector('.suggest-wrap input[placeholder*="Поиск"]');
+          if (firstSearchInput) {
+            firstSearchInput.focus();
+            firstSearchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      },
+        React.createElement('div', { className: 'metrics-icon' }, remainingKcal >= 0 ? '🎯' : '🚫'),
+        React.createElement('div', { className: 'metrics-value', style: { color: remainCol.text } }, 
+          remainingKcal >= 0 ? remainingKcal : Math.abs(remainingKcal)
+        ),
+        React.createElement('div', { className: 'metrics-label' }, 
+          remainingKcal >= 0 ? 'Осталось' : 'Перебор'
+        ),
+        // Умная подсказка при переборе
+        (remainingKcal < -200) && React.createElement('div', { className: 'metrics-hint' }, 
+          '+' + Math.round(Math.abs(remainingKcal) / 7) + ' мин 🚶'
+        )
+      ),
+      // Дефицит с progress bar и понятным текстом
+      React.createElement('div', { 
+        className: 'metrics-card metrics-card-wide',
+        style: { background: defCol.bg, borderColor: defCol.border },
+        title: factDefPct <= dayTargetDef 
+          ? 'Ещё можно съесть до целевого дефицита'
+          : 'Перебор от целевого дефицита'
+      },
+        React.createElement('div', { className: 'metrics-icon' }, factDefPct <= dayTargetDef ? '✅' : '⚠️'),
+        React.createElement('div', { className: 'metrics-value', style: { color: defCol.text } }, 
+          (factDefPct > 0 ? '+' : '') + factDefPct + '%'
+        ),
+        React.createElement('div', { className: 'metrics-label' }, 
+          factDefPct <= dayTargetDef ? 'Ещё до цели' : 'Перебор'
+        ),
+        React.createElement('div', { className: 'metrics-progress' },
+          React.createElement('div', { 
+            className: 'metrics-progress-bar', 
+            style: { width: deficitProgress + '%', background: defCol.text } 
+          })
+        )
+      )
+    );
+
+    // === COMPACT ACTIVITY INPUT ===
+    const compactActivity = React.createElement('div', { className: 'compact-activity compact-card' },
+      React.createElement('div', { className: 'compact-card-header' }, '📏 Активность'),
+      // Первая строка: инпуты
+      React.createElement('div', { className: 'compact-activity-inputs' },
+        // Вес
+        React.createElement('div', { className: 'compact-activity-field' },
+          React.createElement('span', { className: 'compact-activity-label' }, 'Вес'),
+          React.createElement('input', { 
+            className: 'compact-input', 
+            type: 'number', 
+            step: '0.1',
+            value: day.weightMorning ? Math.round(day.weightMorning * 10) / 10 : '',
+            placeholder: '0',
+            onChange: e => {
+              const newWeight = +e.target.value || '';
+              const prof = getProfile();
+              const shouldSetDeficit = (!day.weightMorning || day.weightMorning === '') && newWeight && (!day.deficitPct && day.deficitPct !== 0);
+              setDay({
+                ...day,
+                weightMorning: newWeight,
+                deficitPct: shouldSetDeficit ? (prof.deficitPctTarget || 0) : day.deficitPct
+              });
+            }
+          }),
+          React.createElement('span', { className: 'compact-activity-unit' }, 'кг')
+        ),
+        // Шаги
+        React.createElement('div', { className: 'compact-activity-field' },
+          React.createElement('span', { className: 'compact-activity-label' }, 'Шаги'),
+          React.createElement('input', { 
+            className: 'compact-input', 
+            type: 'number',
+            value: day.steps || '',
+            placeholder: '0',
+            onChange: e => setDay({...day, steps: +e.target.value || 0})
+          })
+        ),
+        // Быт
+        React.createElement('div', { className: 'compact-activity-field' },
+          React.createElement('span', { className: 'compact-activity-label' }, 'Быт'),
+          React.createElement('input', { 
+            className: 'compact-input', 
+            type: 'number',
+            value: day.householdMin || '',
+            placeholder: '0',
+            onChange: e => setDay({...day, householdMin: +e.target.value || 0})
+          }),
+          React.createElement('span', { className: 'compact-activity-unit' }, 'мин')
+        ),
+        // Цель дефицита %
+        React.createElement('div', { className: 'compact-activity-field' },
+          React.createElement('span', { className: 'compact-activity-label' }, 'Цель деф.'),
+          React.createElement('input', { 
+            className: 'compact-input', 
+            type: 'number',
+            value: day.deficitPct || 0,
+            onChange: e => setDay({...day, deficitPct: Number(e.target.value) || 0})
+          }),
+          React.createElement('span', { className: 'compact-activity-unit' }, '%')
+        )
+      ),
+      // Вторая строка: расчётные значения
+      React.createElement('div', { className: 'compact-activity-stats' },
+        React.createElement('span', { title: 'Базовый метаболизм' }, 'BMR: ', React.createElement('b', null, bmr)),
+        React.createElement('span', { title: 'Калории от шагов' }, '→ ', React.createElement('b', null, r1(stepsK)), ' ккал'),
+        React.createElement('span', { title: 'Калории от бытовой активности' }, '→ ', React.createElement('b', null, householdK), ' ккал'),
+        React.createElement('span', { title: 'Целевая калорийность' }, 'Цель: ', React.createElement('b', null, optimum))
+      ),
+      // Третья строка: тренировки (если есть)
+      (train1k + train2k > 0) && React.createElement('div', { className: 'compact-activity-stats secondary' },
+        React.createElement('span', null, 'Тренировки: ', React.createElement('b', null, r1(train1k + train2k)), ' ккал'),
+        React.createElement('span', null, '• Всего активность: ', React.createElement('b', null, r1(actTotal)), ' ккал')
+      )
+    );
+  
+    return React.createElement('div',{className:'page page-day'},
+      metricsCards,
+      compactActivity,
+      sideBlock,
       daySummary,
       mealsUI,
       React.createElement('div',{className:'row',style:{justifyContent:'flex-start',marginTop:'8px'}}, React.createElement('button',{className:'btn',onClick:addMeal},'+ Приём'))

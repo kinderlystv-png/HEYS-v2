@@ -1,6 +1,7 @@
 // filepath: apps/web/src/utils/__tests__/validator.test.ts
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import {
   HeysValidationSchemas,
   InputValidator,
@@ -674,7 +675,7 @@ describe('Edge Cases и Performance', () => {
   });
 
   it('должен обрабатывать глубоко вложенные объекты', () => {
-    let deepObj: any = {};
+    const deepObj: any = {};
     let current = deepObj;
 
     // Создаем объект с вложенностью 50 уровней

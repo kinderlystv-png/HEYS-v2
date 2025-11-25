@@ -110,26 +110,26 @@ export class SmartSearchEngine<TItem extends Record<string, unknown> = Record<st
     );
 
     for (let i = 0; i <= str1.length; i += 1) {
-      matrix[0][i] = i;
+      matrix[0]![i] = i;
     }
     for (let j = 0; j <= str2.length; j += 1) {
-      matrix[j][0] = j;
+      matrix[j]![0] = j;
     }
 
     for (let j = 1; j <= str2.length; j += 1) {
       for (let i = 1; i <= str1.length; i += 1) {
         const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
-        const row = matrix[j];
-        const prevRow = matrix[j - 1];
+        const row = matrix[j]!;
+        const prevRow = matrix[j - 1]!;
         row[i] = Math.min(
-          row[i - 1] + 1, // deletion
-          prevRow[i] + 1, // insertion
-          prevRow[i - 1] + indicator, // substitution
+          row[i - 1]! + 1, // deletion
+          prevRow[i]! + 1, // insertion
+          prevRow[i - 1]! + indicator, // substitution
         );
       }
     }
 
-    return matrix[str2.length][str1.length];
+    return matrix[str2.length]![str1.length]!;
   }
 
   /**
@@ -201,7 +201,7 @@ export class SmartSearchEngine<TItem extends Record<string, unknown> = Record<st
 
     // Check cache first
     if (this.config.cacheEnabled) {
-      const cached = this.getCachedResult<TItem>(normalizedQuery);
+      const cached = this.getCachedResult(normalizedQuery) as SearchResult<TItem> | null;
       if (cached) {
         this.metrics.cacheHitRate =
           (this.metrics.cacheHitRate * this.metrics.totalSearches + 1) /

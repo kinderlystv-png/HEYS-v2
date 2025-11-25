@@ -46,7 +46,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
   const [lastHeartbeat, setLastHeartbeat] = useState<number | null>(null);
 
   const reconnectAttempts = useRef(0);
-  const heartbeatTimer = useRef<NodeJS.Timeout>();
+  const heartbeatTimer = useRef<ReturnType<typeof setTimeout>>();
   const subscriptions = useRef<Map<string, Set<(data: any) => void>>>(new Map());
 
   const connect = useCallback(() => {

@@ -1,7 +1,7 @@
 // Storage service with multiple adapters and validation
+import { log as systemLog } from '@heys/logger';
 import { z } from 'zod';
 
-import { log as systemLog } from '@heys/logger';
 
 type BrowserLogger = {
   warn?: (details: Record<string, unknown>, message?: string) => void;

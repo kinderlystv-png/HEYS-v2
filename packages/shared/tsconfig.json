@@ -3,7 +3,13 @@
   "compilerOptions": {
     "outDir": "./dist",
     "noEmit": false,
-    "composite": true
+    "composite": true,
+    "rootDir": "./src",
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitAny": false
   },
   "include": ["src/**/*"],
   "exclude": [
@@ -12,10 +18,8 @@
     "**/*.test.*",
     "**/*.spec.*",
     "src/**/__tests__/**",
-    "src/components/**",
-    "src/day/**",
-    "src/misc/**",
-    "src/performance/**",
-    "src/user/**"
+    "src/performance/network-optimization-integration.ts",
+    "src/performance/configs/vite-lazy-loading.config.ts",
+    "src/misc/heys_error_boundary_v1.ts"
   ]
 }

@@ -67,6 +67,7 @@ describe('MemoryStorageAdapter', () => {
     expect(updated?.value).toBe('updated');
     expect(updated?.id).toBe(original?.id); // Same ID
     expect(updated?.createdAt).toEqual(original?.createdAt); // Same creation time
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     expect(updated?.updatedAt.getTime()).toBeGreaterThan(original!.updatedAt.getTime());
   });
 

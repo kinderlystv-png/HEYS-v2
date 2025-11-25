@@ -2,3 +2,8 @@
 > @heys/ui@14.0.0 type-check C:\Users\Ant\HEYS-v2\packages\ui
 > tsc --noEmit
 
+src/security/index.tsx(10,34): error TS2307: Cannot find module '@heys/logger' or its corresponding type declarations.
+src/security/index.tsx(11,68): error TS7016: Could not find a declaration file for module '@heys/shared'. 'C:/Users/Ant/HEYS-v2/packages/shared/dist/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/heys__shared` if it exists or add a new declaration (.d.ts) file containing `declare module '@heys/shared';`
+src/security/index.tsx(124,3): error TS6133: 'maxLength' is declared but its value is never read.
+ ELIFECYCLE  Command failed with exit code 2.

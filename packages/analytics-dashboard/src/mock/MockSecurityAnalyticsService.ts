@@ -2,7 +2,7 @@
 type SubscriberCallback = (data: unknown) => void;
 
 export class MockSecurityAnalyticsService {
-  private updateInterval?: NodeJS.Timeout;
+  private updateInterval?: ReturnType<typeof setTimeout>;
   private subscribers: SubscriberCallback[] = [];
 
   async initialize() {

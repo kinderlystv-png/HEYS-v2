@@ -2,9 +2,9 @@
 
 import { ImgHTMLAttributes, useEffect, useRef, useState } from 'react';
 
-import { log } from '../../lib/browser-logger';
 import { useLazyLoad } from '../../hooks/useLazyLoad';
 import { usePerformanceMetrics } from '../../hooks/useServiceWorker';
+import { log } from '../../lib/browser-logger';
 import {
   ImageMetadata,
   ImageOptimizationOptions,

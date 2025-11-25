@@ -156,7 +156,9 @@ describe('Gaming System', () => {
       });
 
       // Имитируем разблокировку
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       achievements[0]!.unlocked = true; // Первый логин
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       achievements[2]!.unlocked = true; // Логирование первого приема пищи
 
       expect(achievements[0]?.unlocked).toBe(true);
@@ -174,7 +176,9 @@ describe('Gaming System', () => {
       ];
 
       // Разблокируем некоторые
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       allAchievements[0]!.unlocked = true;
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       allAchievements[1]!.unlocked = true;
 
       // Фильтрация разблокированных

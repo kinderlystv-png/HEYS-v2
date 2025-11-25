@@ -3,9 +3,9 @@
 
 import React, { Suspense } from 'react';
 
+import { log } from '../../lib/browser-logger';
 import { createChunkedLazyComponent } from '../../utils/dynamicImport';
 import { AnalyticsSkeleton } from '../loading/ComponentSkeleton';
-import { log } from '../../lib/browser-logger';
 
 // Lazy load основного компонента аналитики
 const AnalyticsDashboard = createChunkedLazyComponent(
