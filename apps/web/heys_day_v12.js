@@ -829,6 +829,9 @@
       // Проверка мобильного viewport
       const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
       
+      // Флаг: показываем частые продукты (когда поле пустое)
+      const showingFrequent = !lc;
+      
       // Выпадающий список — рендерится через Portal только на мобильных
       const dropdownContent = open && candidates.length > 0 ? React.createElement('div', {
         className: 'suggest-list' + (isMobile ? ' suggest-list-portal' : ''),
@@ -840,6 +843,10 @@
           zIndex: 9999
         } : undefined
       },
+        // Заголовок "Частые продукты" когда поле пустое
+        showingFrequent && React.createElement('div', { className: 'suggest-header' }, 
+          '⭐ Частые продукты'
+        ),
         (candidates||[]).map((p, index) => React.createElement('div', {
           key:(p.id||p.name),
           className: `suggest-item ${index === selectedIndex ? 'selected' : ''}`,
@@ -926,6 +933,38 @@
     const [gramsInputValue, setGramsInputValue] = useState(''); // для ручного ввода
     // Генерируем значения от 1 до 500 с шагом 1
     const gramsValues = useMemo(() => Array.from({length: 500}, (_, i) => String(i + 1)), []);
+    
+    // === Weight Picker Modal ===
+    const [showWeightPicker, setShowWeightPicker] = useState(false);
+    const [pendingWeightKg, setPendingWeightKg] = useState(70); // целые кг (40-150)
+    const [pendingWeightG, setPendingWeightG] = useState(0); // десятые (0-9)
+    const weightKgValues = useMemo(() => Array.from({length: 111}, (_, i) => String(40 + i)), []); // 40-150 кг
+    const weightGValues = useMemo(() => Array.from({length: 10}, (_, i) => String(i)), []); // 0-9
+    
+    function openWeightPicker() {
+      const currentWeight = day.weightMorning || 70;
+      const kg = Math.floor(currentWeight);
+      const g = Math.round((currentWeight - kg) * 10);
+      setPendingWeightKg(Math.max(0, Math.min(110, kg - 40))); // индекс от 0 (40кг) до 110 (150кг)
+      setPendingWeightG(g);
+      setShowWeightPicker(true);
+    }
+    
+    function confirmWeightPicker() {
+      const newWeight = (40 + pendingWeightKg) + pendingWeightG / 10;
+      const prof = getProfile();
+      const shouldSetDeficit = (!day.weightMorning || day.weightMorning === '') && newWeight && (!day.deficitPct && day.deficitPct !== 0);
+      setDay({
+        ...day,
+        weightMorning: newWeight,
+        deficitPct: shouldSetDeficit ? (prof.deficitPctTarget || 0) : day.deficitPct
+      });
+      setShowWeightPicker(false);
+    }
+    
+    function cancelWeightPicker() {
+      setShowWeightPicker(false);
+    }
     
     function openGramsPicker(mealIndex, itemId, currentGrams) {
       const gramsNum = parseInt(currentGrams) || 100;
@@ -2040,26 +2079,110 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           '+' + Math.round(Math.abs(remainingKcal) / 7) + ' мин 🚶'
         )
       ),
-      // Дефицит с progress bar и понятным текстом
-      React.createElement('div', { 
-        className: 'metrics-card metrics-card-wide',
-        style: { background: defCol.bg, borderColor: defCol.border },
-        title: factDefPct <= dayTargetDef 
-          ? 'Ещё можно съесть до целевого дефицита'
-          : 'Перебор от целевого дефицита'
-      },
-        React.createElement('div', { className: 'metrics-icon' }, factDefPct <= dayTargetDef ? '✅' : '⚠️'),
-        React.createElement('div', { className: 'metrics-value', style: { color: defCol.text } }, 
-          (factDefPct > 0 ? '+' : '') + factDefPct + '%'
+      // Статус-бар прогресса к цели
+      React.createElement('div', { className: 'goal-progress-bar' },
+        React.createElement('div', { className: 'goal-progress-header' },
+          React.createElement('span', { className: 'goal-progress-title' }, 
+            eatenKcal <= optimum ? '🎯 До цели' : '⚠️ Перебор'
+          ),
+          React.createElement('span', { className: 'goal-progress-stats' },
+            React.createElement('span', { className: 'goal-eaten' }, r1(eatenKcal)),
+            React.createElement('span', { className: 'goal-divider' }, '/'),
+            React.createElement('span', { className: 'goal-target' }, optimum),
+            React.createElement('span', { className: 'goal-unit' }, 'ккал')
+          )
         ),
-        React.createElement('div', { className: 'metrics-label' }, 
-          factDefPct <= dayTargetDef ? 'Ещё до цели' : 'Перебор'
-        ),
-        React.createElement('div', { className: 'metrics-progress' },
+        React.createElement('div', { className: 'goal-progress-track' },
           React.createElement('div', { 
-            className: 'metrics-progress-bar', 
-            style: { width: deficitProgress + '%', background: defCol.text } 
-          })
+            className: 'goal-progress-fill' + (eatenKcal > optimum ? ' over' : ''),
+            style: { width: Math.min(100, (eatenKcal / optimum) * 100) + '%' }
+          }),
+          // Маркер цели на 100%
+          React.createElement('div', { className: 'goal-marker' })
+        ),
+        React.createElement('div', { className: 'goal-progress-footer' },
+          eatenKcal <= optimum 
+            ? React.createElement('span', { className: 'goal-remaining' }, 
+                'Осталось ', React.createElement('b', null, remainingKcal), ' ккал'
+              )
+            : React.createElement('span', { className: 'goal-over' }, 
+                'Превышение на ', React.createElement('b', null, Math.abs(remainingKcal)), ' ккал'
+              )
+        )
+      ),
+      // Контейнер: Макро-кольца + Плашка веса
+      React.createElement('div', { className: 'macro-weight-row' },
+        // Макро-бар БЖУ (в стиле Apple Watch колец)
+        React.createElement('div', { className: 'macro-rings' },
+          // Белки
+          React.createElement('div', { className: 'macro-ring-item' },
+            React.createElement('div', { className: 'macro-ring protein' },
+              React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
+                React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
+                React.createElement('circle', { 
+                  className: 'macro-ring-fill', 
+                  cx: 18, cy: 18, r: 15.9,
+                  style: { strokeDasharray: Math.min(100, ((dayTot.prot || 0) / (normAbs.prot || 1)) * 100) + ' 100' }
+                })
+              ),
+              React.createElement('span', { className: 'macro-ring-value' }, Math.round(dayTot.prot || 0))
+            ),
+            React.createElement('span', { className: 'macro-ring-label' }, 'Белки'),
+            React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.prot || 0) + 'г')
+          ),
+          // Жиры
+          React.createElement('div', { className: 'macro-ring-item' },
+            React.createElement('div', { className: 'macro-ring fat' },
+              React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
+                React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
+              React.createElement('circle', { 
+                className: 'macro-ring-fill', 
+                cx: 18, cy: 18, r: 15.9,
+                style: { strokeDasharray: Math.min(100, ((dayTot.fat || 0) / (normAbs.fat || 1)) * 100) + ' 100' }
+              })
+            ),
+            React.createElement('span', { className: 'macro-ring-value' }, Math.round(dayTot.fat || 0))
+          ),
+          React.createElement('span', { className: 'macro-ring-label' }, 'Жиры'),
+          React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.fat || 0) + 'г')
+        ),
+        // Углеводы
+        React.createElement('div', { className: 'macro-ring-item' },
+          React.createElement('div', { className: 'macro-ring carbs' },
+            React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
+              React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
+              React.createElement('circle', { 
+                className: 'macro-ring-fill', 
+                cx: 18, cy: 18, r: 15.9,
+                style: { strokeDasharray: Math.min(100, ((dayTot.carbs || 0) / (normAbs.carbs || 1)) * 100) + ' 100' }
+              })
+            ),
+            React.createElement('span', { className: 'macro-ring-value' }, Math.round(dayTot.carbs || 0))
+          ),
+          React.createElement('span', { className: 'macro-ring-label' }, 'Углеводы'),
+          React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.carbs || 0) + 'г')
+        )
+        ),
+        // Плашка веса - кликабельная целиком
+        React.createElement('div', { 
+          className: 'weight-card-modern' + (day.weightMorning ? '' : ' weight-card-empty'),
+          onClick: openWeightPicker
+        },
+          // Лейбл "Вес" сверху
+          React.createElement('span', { className: 'weight-card-label' }, 'Вес'),
+          // Значение и динамика
+          React.createElement('div', { className: 'weight-card-row' },
+            React.createElement('span', { className: 'weight-value-number' }, 
+              day.weightMorning ? r1(day.weightMorning) : '—'
+            ),
+            React.createElement('span', { className: 'weight-value-unit' }, 'кг'),
+            weightTrend && day.weightMorning && React.createElement('span', { 
+              className: 'weight-card-trend ' + (weightTrend.direction === 'down' ? 'trend-down' : weightTrend.direction === 'up' ? 'trend-up' : 'trend-same')
+            }, 
+              React.createElement('span', { className: 'trend-arrow' }, weightTrend.direction === 'down' ? '↓' : weightTrend.direction === 'up' ? '↑' : ''),
+              weightTrend.text.replace(/[^а-яА-Я0-9.,\-+\s]/g, '').trim()
+            )
+          )
         )
       )
     );
@@ -2069,28 +2192,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       React.createElement('div', { className: 'compact-card-header' }, '📏 Активность'),
       // Первая строка: инпуты
       React.createElement('div', { className: 'compact-activity-inputs' },
-        // Вес
-        React.createElement('div', { className: 'compact-activity-field' },
-          React.createElement('span', { className: 'compact-activity-label' }, 'Вес'),
-          React.createElement('input', { 
-            className: 'compact-input', 
-            type: 'number', 
-            step: '0.1',
-            value: day.weightMorning ? Math.round(day.weightMorning * 10) / 10 : '',
-            placeholder: '0',
-            onChange: e => {
-              const newWeight = +e.target.value || '';
-              const prof = getProfile();
-              const shouldSetDeficit = (!day.weightMorning || day.weightMorning === '') && newWeight && (!day.deficitPct && day.deficitPct !== 0);
-              setDay({
-                ...day,
-                weightMorning: newWeight,
-                deficitPct: shouldSetDeficit ? (prof.deficitPctTarget || 0) : day.deficitPct
-              });
-            }
-          }),
-          React.createElement('span', { className: 'compact-activity-unit' }, 'кг')
-        ),
         // Шаги
         React.createElement('div', { className: 'compact-activity-field' },
           React.createElement('span', { className: 'compact-activity-label' }, 'Шаги'),
@@ -2146,7 +2247,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       sideBlock,
       daySummary,
       mealsUI,
-      React.createElement('div',{className:'row',style:{justifyContent:'flex-start',marginTop:'8px'}}, React.createElement('button',{className:'btn',onClick:addMeal},'+ Приём')),
+      React.createElement('div',{className:'row desktop-only',style:{justifyContent:'flex-start',marginTop:'8px'}}, React.createElement('button',{className:'btn',onClick:addMeal},'+ Приём')),
+      
+      // FAB - Floating Action Button (только mobile)
+      React.createElement('button', {
+        className: 'fab-add-meal mobile-only',
+        onClick: addMeal,
+        title: 'Добавить приём пищи'
+      }, '+'),
       
       // Meal Creation/Edit Modal (mobile only)
       showTimePicker && ReactDOM.createPortal(
@@ -2228,6 +2336,34 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   React.createElement('div', { className: 'mood-label' }, 'Стресс')
                 )
               )
+            )
+          )
+        ),
+        document.body
+      ),
+      
+      // Weight Picker Modal
+      showWeightPicker && ReactDOM.createPortal(
+        React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelWeightPicker },
+          React.createElement('div', { className: 'time-picker-modal weight-picker-modal', onClick: e => e.stopPropagation() },
+            React.createElement('div', { className: 'time-picker-header' },
+              React.createElement('button', { className: 'time-picker-cancel', onClick: cancelWeightPicker }, 'Отмена'),
+              React.createElement('span', { className: 'time-picker-title' }, '⚖️ Вес'),
+              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmWeightPicker }, 'Готово')
+            ),
+            React.createElement('div', { className: 'time-picker-wheels weight-wheels' },
+              React.createElement(WheelColumn, {
+                values: weightKgValues,
+                selected: pendingWeightKg,
+                onChange: (i) => setPendingWeightKg(i)
+              }),
+              React.createElement('div', { className: 'weight-picker-dot' }, '.'),
+              React.createElement(WheelColumn, {
+                values: weightGValues,
+                selected: pendingWeightG,
+                onChange: (i) => setPendingWeightG(i)
+              }),
+              React.createElement('span', { className: 'weight-picker-unit' }, 'кг')
             )
           )
         ),
