@@ -191,94 +191,6 @@ td:first-child input {
   width: 1.5cm;
 }
 
-/* === trainings.css === */
-.under-calendar {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  gap: 4px;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  overflow-x: auto;
-  margin-left: 0;
-  margin-right: 0;
-  justify-content: flex-start;
-}
-.under-calendar .card {
-  min-width: 120px;
-  max-width: 120px;
-  flex: 0 0 120px;
-}
-.under-calendar .card.tone-amber {
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-  box-shadow: none;
-  padding: 8px 10px;
-}
-.under-calendar .section-title {
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: #b45309;
-  text-align: center;
-}
-.under-calendar .train-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 2px 0;
-}
-.under-calendar .train-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 2px;
-}
-.under-calendar .muted {
-  color: #b45309;
-  font-size: 12px;
-  align-self: center;
-}
-.under-calendar input[type='number'],
-.under-calendar input.readOnly {
-  width: 34px;
-  height: 20px;
-  font-size: 11px;
-  padding: 1px 3px;
-  border-radius: 5px;
-  border: 1px solid #f9c58d;
-  background: #fff;
-  text-align: center;
-}
-.under-calendar .train-total {
-  grid-column: 1 / -1;
-  font-size: 11px;
-  color: #b45309;
-  font-weight: 600;
-  margin-top: 4px;
-  text-align: right;
-}
-/* keep two training cards in one row inside widened 300px column */
-.under-calendar .card {
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: none;
-  padding: 6px 8px;
-}
-.under-calendar {
-  margin-top: 6px;
-}
-.under-calendar .section-title {
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-.under-calendar .train-row {
-  gap: 4px;
-  margin-bottom: 1px;
-}
-
 /* === day-stats.css === */
 .card.tone-violet.main-violet {
   --tb-b: #dad5ff;
@@ -455,15 +367,6 @@ td:first-child input {
   display: flex;
   flex-direction: column;
   gap: 0;
-}
-.side-compare {
-  width: 100%;
-  margin-top: 0;
-}
-.side-compare .card.tone-slate {
-  width: 100%;
-  min-width: 0;
-  margin: 0;
 }
 
 /* === COMPACT CARDS (SaaS style) === */
@@ -1406,25 +1309,6 @@ td:first-child input {
     max(18px, env(safe-area-inset-right));
 }
 
-/* === grid layout for day page === */
-.day-layout {
-  display: grid;
-  grid-template-columns: 300px minmax(400px, 1fr) 460px;
-  gap: 10px;
-  align-items: start;
-}
-.day-layout.compact-4col {
-  grid-template-columns: 300px minmax(330px, 1fr) 440px;
-} /* widened calendar col */
-
-/* New 2-column layout без календаря */
-.day-layout-2col {
-  display: grid;
-  grid-template-columns: minmax(400px, 1fr) 460px;
-  gap: 14px;
-  align-items: start;
-}
-
 /* Day header with DatePicker and trainings */
 .day-header {
   display: flex;
@@ -1446,8 +1330,7 @@ td:first-child input {
 
 .area-cal,
 .area-main,
-.area-side,
-.area-compare {
+.area-side {
   min-width: 0;
 }
 .area-side .side-row:last-child {
@@ -1874,28 +1757,8 @@ td:first-child input {
   margin-top: 4px;
 }
 
-/* compare block */
-.area-compare .tbl td,
-.area-compare .tbl th {
-  white-space: nowrap;
-}
-
 /* responsive tweaks */
-@media (max-width: 1400px) {
-  .day-layout {
-    grid-template-columns: 260px minmax(380px, 1fr) 420px;
-  }
-  .day-layout-2col {
-    grid-template-columns: minmax(350px, 1fr) 400px;
-  }
-}
 @media (max-width: 1200px) {
-  .day-layout {
-    grid-template-columns: 260px 1fr;
-  }
-  .day-layout-2col {
-    grid-template-columns: 1fr;
-  }
   .area-side {
     grid-column: 1 / -1;
     display: grid;
@@ -1913,13 +1776,6 @@ td:first-child input {
   .page {
     padding: 0 12px 32px;
   }
-  .day-layout {
-    grid-template-columns: 1fr;
-  }
-  .day-layout-2col {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
   .day-header {
     flex-direction: column;
     gap: 10px;
@@ -1935,9 +1791,6 @@ td:first-child input {
   }
   .area-side {
     order: 3;
-  }
-  .area-compare {
-    order: 4;
   }
   .wrap {
     padding: 12px 14px 80px;
@@ -2118,12 +1971,6 @@ td:first-child input {
     padding: 0 12px 24px;
   }
 
-  .day-layout {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px;
-  }
-
   .card {
     padding: 12px;
   }
@@ -2163,47 +2010,32 @@ td:first-child input {
     width: 100%;
   }
 
-  /* 1. Скрываем колонки "на 100г" (столбцы 3-12) */
-  .meals-table thead th.per100-col,
-  .meals-table tbody td:nth-child(3),
-  .meals-table tbody td:nth-child(4),
-  .meals-table tbody td:nth-child(5),
-  .meals-table tbody td:nth-child(6),
-  .meals-table tbody td:nth-child(7),
-  .meals-table tbody td:nth-child(8),
-  .meals-table tbody td:nth-child(9),
-  .meals-table tbody td:nth-child(10),
-  .meals-table tbody td:nth-child(11),
-  .meals-table tbody td:nth-child(12) {
+  /* ========== MOBILE MEAL CARDS (data-cell based) ========== */
+  
+  /* 1. Скрытые ячейки: per100 и hidden */
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="per100"],
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="hidden"] {
     display: none !important;
   }
 
-  /* Скрываем продвинутые метрики (15, 16, 19-24) */
-  .meals-table tbody td:nth-child(15), /* Simple */
-  .meals-table tbody td:nth-child(16), /* Complex */
-  .meals-table tbody td:nth-child(19), /* Bad */
-  .meals-table tbody td:nth-child(20), /* Good */
-  .meals-table tbody td:nth-child(21), /* Trans */
-  .meals-table tbody td:nth-child(22), /* Fiber */
-  .meals-table tbody td:nth-child(23), /* GI */
-  .meals-table tbody td:nth-child(24)  /* Harm */
-  {
+  /* Скрываем per-100g заголовки в thead */
+  .meals-table thead th.per100-col {
     display: none !important;
   }
 
-  /* 2. Превращаем thead в скрытый (оставляем для структуры) */
+  /* 2. Скрываем thead */
   .meals-table thead {
     display: none;
   }
 
-  /* 3. Таблица приёмов пищи - скрываем стандартный вид */
+  /* 3. Таблица = block layout */
   .meals-table:not(.daily-summary) {
     display: block !important;
     width: 100% !important;
   }
 
   .meals-table:not(.daily-summary) thead {
-    display: none !important; /* Прячем заголовки на мобильных */
+    display: none !important;
   }
 
   .meals-table:not(.daily-summary) tbody {
@@ -2211,12 +2043,12 @@ td:first-child input {
     width: 100% !important;
   }
 
-  /* 4. Каждая строка продукта = вертикальная карточка (ТОЛЬКО для списков продуктов, не для итогов) */
+  /* 4. Каждая строка продукта = карточка */
   .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) {
     display: grid !important;
-    grid-template-columns: 1fr auto !important;
+    grid-template-columns: 1fr 1fr !important;
     grid-template-rows: auto auto auto !important;
-    gap: 8px !important;
+    gap: 6px 8px !important;
     padding: 12px !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 8px !important;
@@ -2224,21 +2056,28 @@ td:first-child input {
     background: white !important;
     width: 100% !important;
     position: relative !important;
+    z-index: 1 !important;
   }
 
-  /* RESET ALL TDs in product rows to behave like blocks */
+  /* Dropdown поиска поверх карточек */
+  .suggest-wrap {
+    z-index: 100 !important;
+  }
+  
+  .suggest-list {
+    z-index: 100 !important;
+  }
+
+  /* RESET all visible TDs */
   .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td {
     display: block !important;
-    width: auto !important;
-    max-width: none !important;
-    min-width: 0 !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
   }
 
-  /* 5. Название продукта — первая строка на всю ширину (Index 1) */
-  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td:nth-child(1) {
+  /* 5. Название — row 1, full width */
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="name"] {
     grid-column: 1 / -1 !important;
     grid-row: 1 !important;
     font-weight: 600 !important;
@@ -2246,20 +2085,19 @@ td:first-child input {
     text-align: left !important;
     white-space: normal !important;
     word-break: break-word !important;
-    padding-right: 40px !important; /* Space for delete button */
+    padding-right: 40px !important;
   }
 
-  /* 6. Поле "Граммы" — слева во второй строке (Index 2) */
-  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td:nth-child(2) {
+  /* 6. Граммы — row 2, left */
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="grams"] {
     grid-column: 1 !important;
     grid-row: 2 !important;
   }
 
-  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td:nth-child(2) input {
-    width: 100% !important;
-    max-width: 100px !important;
-    padding: 8px 12px !important;
-    height: 44px !important;
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="grams"] input {
+    width: 80px !important;
+    padding: 6px 10px !important;
+    height: 40px !important;
     font-size: 16px !important;
     border: 1px solid #cbd5e1 !important;
     border-radius: 6px !important;
@@ -2267,70 +2105,76 @@ td:first-child input {
     box-sizing: border-box !important;
   }
 
-  /* 7. Калории — справа во второй строке (Index 13) */
-  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td:nth-child(13) {
+  /* 7. Калории — row 2, right */
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="kcal"] {
     grid-column: 2 !important;
     grid-row: 2 !important;
     font-weight: 700 !important;
-    font-size: 18px !important;
+    font-size: 16px !important;
     text-align: right !important;
-    align-self: center !important;
     display: flex !important;
     align-items: center !important;
     justify-content: flex-end !important;
   }
   
-  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td:nth-child(13)::after {
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="kcal"]::after {
     content: ' ккал';
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 400;
     color: #6b7280;
-    margin-left: 4px;
+    margin-left: 2px;
   }
 
-  /* 8. БЖУ — третья строка (Index 14=Carbs, 17=Prot, 18=Fat) */
-  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td:nth-child(14),
-  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td:nth-child(17),
-  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td:nth-child(18) {
+  /* 8. БЖУ — row 3, full width, inline */
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="carbs"],
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="prot"],
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="fat"] {
     grid-row: 3 !important;
     display: inline-flex !important;
     align-items: center !important;
-    margin-right: 16px !important;
-    font-size: 14px !important;
-    width: auto !important;
+    font-size: 13px !important;
     color: #374151 !important;
   }
+  
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="carbs"] {
+    grid-column: 1 !important;
+  }
+  
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="prot"] {
+    grid-column: 1 !important;
+    margin-left: 50px !important;
+  }
+  
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="fat"] {
+    grid-column: 2 !important;
+  }
+  
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="carbs"]::before {
+    content: 'У: ';
+    color: #6b7280;
+    font-weight: 500;
+  }
+  
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="prot"]::before {
+    content: 'Б: ';
+    color: #6b7280;
+    font-weight: 500;
+  }
+  
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="fat"]::before {
+    content: 'Ж: ';
+    color: #6b7280;
+    font-weight: 500;
+  }
 
-  /* Метки для БЖУ */
-  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td:nth-child(14)::before { 
-    content: 'У: '; 
-    color: #6b7280; 
-    font-weight: 500;
-    margin-right: 4px; 
-  }
-  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td:nth-child(17)::before { 
-    content: 'Б: '; 
-    color: #6b7280; 
-    font-weight: 500;
-    margin-right: 4px; 
-  }
-  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td:nth-child(18)::before { 
-    content: 'Ж: '; 
-    color: #6b7280; 
-    font-weight: 500;
-    margin-right: 4px; 
-  }
-
-  /* 9. Кнопка удаления — правый верхний угол карточки */
-  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td:last-child {
+  /* 9. Кнопка удаления — правый верхний угол */
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="delete"] {
     position: absolute !important;
     top: 12px !important;
     right: 12px !important;
-    grid-column: auto !important;
-    grid-row: auto !important;
   }
 
-  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td:last-child button {
+  .meals-table:not(.daily-summary) tbody tr:not(.tr-sum) td[data-cell="delete"] button {
     padding: 0 !important;
     font-size: 20px !important;
     line-height: 1 !important;
@@ -2374,18 +2218,8 @@ td:first-child input {
     display: none !important; /* Hide separator bar on mobile */
   }
 
-  /* 10. Итоговая строка остаётся как таблица */
-  .meals-table .tr-sum {
-    display: table-row !important;
-  }
-
-  .meals-table .tr-sum td {
-    display: table-cell !important;
-    background: #eef2ff !important;
-    font-weight: 600 !important;
-    padding: 8px 4px !important;
-    font-size: 13px !important;
-  }
+  /* NOTE: Убран конфликтующий блок .meals-table .tr-sum (был display: table-row)
+     Правило выше (.meals-table:not(.daily-summary) tbody tr.tr-sum) уже задаёт flex layout */
 
   /* 11. Контейнер overflow убираем */
   .meal-card > div[style*='overflow'] {
@@ -2503,12 +2337,6 @@ td:first-child input {
     flex: none !important;
   }
 
-  .side-compare {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-  }
-
   /* Зелёные карточки (сон, оценка дня) */
   .side-col .card.tone-green,
   .card.tone-green {
@@ -2556,8 +2384,7 @@ td:first-child input {
   }
 
   /* Тренировки — в колонку на mobile */
-  .trainings-wrap,
-  .trainings-wrap.under-calendar {
+  .trainings-wrap {
     flex-direction: column !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -2565,7 +2392,6 @@ td:first-child input {
   }
 
   .trainings-wrap .card,
-  .under-calendar .card,
   .card.tone-amber {
     width: 100% !important;
     max-width: 100% !important;
@@ -2624,8 +2450,7 @@ td:first-child input {
   }
 
   /* Таблицы зон (Зона 1-4) — уменьшаем input'ы */
-  .train-grid input,
-  .under-calendar input {
+  .train-grid input {
     width: 28px !important;
     min-width: 0 !important;
     padding: 1px 2px !important;
