@@ -4,6 +4,47 @@
 ;(function(global){
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
+  
+  // === Haptic Feedback ===
+  const haptic = {
+    light: () => {
+      if (navigator.vibrate) navigator.vibrate(5);
+    },
+    medium: () => {
+      if (navigator.vibrate) navigator.vibrate(10);
+    },
+    tick: () => {
+      if (navigator.vibrate) navigator.vibrate(3);
+    }
+  };
+  
+  // === Click Sound (lazy-loaded) ===
+  let tickSound = null;
+  const playTick = () => {
+    try {
+      if (!tickSound) {
+        // Создаём короткий звук через Web Audio API
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        tickSound = { ctx: audioCtx };
+      }
+      const ctx = tickSound.ctx;
+      if (ctx.state === 'suspended') ctx.resume();
+      
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.frequency.value = 1200; // Высокий тон
+      gain.gain.setValueAtTime(0.03, ctx.currentTime); // Тихо
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+      
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.05);
+    } catch (e) {
+      // Audio API не доступен
+    }
+  };
 
   /**
    * WheelColumn — iOS-style wheel picker с инерционным скроллом
@@ -32,7 +73,8 @@
       lastTime: 0,
       velocityY: 0,
       isTracking: false,
-      animationId: null
+      animationId: null,
+      lastTickIndex: selected // Для отслеживания пересечения элементов
     });
     
     // Синхронизация offset с selected при открытии
@@ -69,6 +111,7 @@
           } else {
             setOffset(targetOffset);
             if (clampedIndex !== selected) {
+              haptic.medium(); // Haptic при финальном snap
               onChange(clampedIndex);
             }
           }
@@ -78,6 +121,7 @@
       } else {
         setOffset(targetOffset);
         if (clampedIndex !== selected) {
+          haptic.medium();
           onChange(clampedIndex);
         }
       }
@@ -134,6 +178,14 @@
         
         setOffset(clampedOffset);
         
+        // Проверяем пересечение границы элемента
+        const currentIndex = getIndexFromOffset(clampedOffset);
+        if (currentIndex !== touchState.current.lastTickIndex) {
+          touchState.current.lastTickIndex = currentIndex;
+          haptic.tick();
+          playTick();
+        }
+        
         touchState.current.lastY = touch.clientY;
         touchState.current.lastTime = now;
       };
@@ -172,6 +224,14 @@
           }
           
           setOffset(currentOffset);
+          
+          // Tick при пересечении элемента во время momentum
+          const currentIndex = getIndexFromOffset(currentOffset);
+          if (currentIndex !== touchState.current.lastTickIndex) {
+            touchState.current.lastTickIndex = currentIndex;
+            haptic.tick();
+            playTick();
+          }
           
           if (Math.abs(currentVelocity) > 0.5) {
             touchState.current.animationId = requestAnimationFrame(animate);

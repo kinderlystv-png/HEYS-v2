@@ -372,6 +372,39 @@
     );
   }
 
+  // Хук для централизованной детекции мобильных устройств с поддержкой ротации
+  function useMobileDetection(breakpoint = 768) {
+    const [isMobile, setIsMobile] = React.useState(() => {
+      if (typeof window === 'undefined') return false;
+      return window.innerWidth <= breakpoint;
+    });
+
+    React.useEffect(() => {
+      if (typeof window === 'undefined' || !window.matchMedia) return;
+      
+      const mediaQuery = window.matchMedia(`(max-width: ${breakpoint}px)`);
+      
+      const handleChange = (e) => {
+        setIsMobile(e.matches);
+      };
+      
+      // Начальное значение
+      setIsMobile(mediaQuery.matches);
+      
+      // Подписка на изменения (поддержка ротации экрана)
+      if (mediaQuery.addEventListener) {
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+      } else {
+        // Fallback для старых браузеров
+        mediaQuery.addListener(handleChange);
+        return () => mediaQuery.removeListener(handleChange);
+      }
+    }, [breakpoint]);
+
+    return isMobile;
+  }
+
   HEYS.DayTab=function DayTab(props){
   const {useState,useMemo,useEffect}=React;
   
@@ -456,8 +489,24 @@
   // date приходит из props (selectedDate из App header)
   const date = selectedDate || todayISO();
   const setDate = setSelectedDate;
-  // State for collapsed/expanded meals (mobile) - последний развёрнут
-  const [expandedMeals, setExpandedMeals] = useState({});
+  // State for collapsed/expanded meals (mobile) - с кэшированием в sessionStorage
+  const expandedMealsKey = 'heys_expandedMeals_' + date;
+  const [expandedMeals, setExpandedMeals] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem(expandedMealsKey);
+      return cached ? JSON.parse(cached) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+  
+  // Сохраняем состояние при изменении
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(expandedMealsKey, JSON.stringify(expandedMeals));
+    } catch (e) {}
+  }, [expandedMeals, expandedMealsKey]);
+  
   const toggleMealExpand = (mealIndex) => {
     setExpandedMeals(prev => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
   };
@@ -468,6 +517,9 @@
     newState[mealIndex] = true;
     setExpandedMeals(newState);
   };
+  
+  // Централизованная детекция мобильного устройства (с поддержкой ротации)
+  const isMobile = useMobileDetection(768);
   
   // Проверка: развёрнут ли приём (последний по умолчанию развёрнут)
   const isMealExpanded = (mealIndex, totalMeals) => {
@@ -867,6 +919,55 @@
     const [editingMealIndex, setEditingMealIndex] = useState(null); // null = новый, число = редактирование
     const [editMode, setEditMode] = useState('new'); // 'new' | 'time' | 'mood'
     
+    // === Grams Picker Modal (mobile only) ===
+    const [showGramsPicker, setShowGramsPicker] = useState(false);
+    const [gramsPickerTarget, setGramsPickerTarget] = useState(null); // {mealIndex, itemId, currentGrams}
+    const [pendingGrams, setPendingGrams] = useState(99); // индекс 99 = 100г
+    const [gramsInputValue, setGramsInputValue] = useState(''); // для ручного ввода
+    // Генерируем значения от 1 до 500 с шагом 1
+    const gramsValues = useMemo(() => Array.from({length: 500}, (_, i) => String(i + 1)), []);
+    
+    function openGramsPicker(mealIndex, itemId, currentGrams) {
+      const gramsNum = parseInt(currentGrams) || 100;
+      // Индекс = значение - 1 (т.к. начинаем с 1)
+      const closestIdx = Math.max(0, Math.min(499, gramsNum - 1));
+      
+      setGramsPickerTarget({ mealIndex, itemId, currentGrams: gramsNum });
+      setPendingGrams(closestIdx);
+      setGramsInputValue(String(gramsNum)); // синхронизируем input
+      setShowGramsPicker(true);
+    }
+    
+    // Обработка ручного ввода граммов
+    function handleGramsInput(e) {
+      const val = e.target.value.replace(/[^0-9]/g, ''); // только цифры
+      setGramsInputValue(val);
+      const num = parseInt(val) || 0;
+      if (num >= 1 && num <= 500) {
+        setPendingGrams(num - 1); // синхронизируем wheel
+      }
+    }
+    
+    // Синхронизация input при изменении wheel
+    function handleGramsWheelChange(idx) {
+      setPendingGrams(idx);
+      setGramsInputValue(gramsValues[idx]);
+    }
+    
+    function confirmGramsPicker() {
+      if (gramsPickerTarget) {
+        const newGrams = parseInt(gramsValues[pendingGrams]) || 100;
+        setGrams(gramsPickerTarget.mealIndex, gramsPickerTarget.itemId, newGrams);
+      }
+      setShowGramsPicker(false);
+      setGramsPickerTarget(null);
+    }
+    
+    function cancelGramsPicker() {
+      setShowGramsPicker(false);
+      setGramsPickerTarget(null);
+    }
+    
     // Используем глобальный WheelColumn
     const WheelColumn = HEYS.WheelColumn;
     
@@ -922,11 +1023,16 @@
       setShowTimePicker(true);
     }
     
+    // Направление анимации: 'forward' или 'back'
+    const [animDirection, setAnimDirection] = useState('forward');
+    
     function goToMoodStep() {
+      setAnimDirection('forward');
       setPickerStep(2);
     }
     
     function goBackToTimeStep() {
+      setAnimDirection('back');
       setPickerStep(1);
     }
     
@@ -1001,7 +1107,6 @@
 
     // addMeal теперь открывает модалку на мобильных
     function addMeal(){ 
-      const isMobile = window.innerWidth <= 768;
       if (isMobile) {
         openTimePickerForNewMeal();
       } else {
@@ -1425,9 +1530,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('tbody',null,
             (meal.items||[]).map(pRow),
             React.createElement('tr',{className:'tr-sum'},
-              React.createElement('td',{style:{fontWeight:600}},''),
+              React.createElement('td',{className:'fw-600'},''),
               React.createElement('td',null,''),
-              React.createElement('td',{colSpan:10},React.createElement('div',{style:{height:'4px',background:'#d1d5db',borderRadius:'6px',width:'100%'}})),
+              React.createElement('td',{colSpan:10},React.createElement('div',{className:'table-divider'})),
               React.createElement('td',null,fmtVal('kcal', totals.kcal)),
               React.createElement('td',null,fmtVal('carbs', totals.carbs)),
               React.createElement('td',null,fmtVal('simple', totals.simple)),
@@ -1461,26 +1566,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             const per = per100(p);
             const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
             const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
-            return React.createElement('div', { key: it.id, className: 'mpc' },
-              // Row 1: name + grams + delete
+            
+            // Контент карточки
+            const cardContent = React.createElement('div', { className: 'mpc' },
+              // Row 1: name + grams (без кнопки delete — удаление свайпом)
               React.createElement('div', { className: 'mpc-row1' },
                 React.createElement('span', { className: 'mpc-name' }, p.name),
-                React.createElement('input', {
-                  type: 'number',
-                  className: 'mpc-grams',
-                  value: G,
-                  onChange: e => setGrams(mi, it.id, e.target.value),
-                  onFocus: e => e.target.select(),
-                  onKeyDown: e => { if (e.key === 'Enter') e.target.blur(); },
-                  'data-grams-input': true,
-                  'data-meal-index': mi,
-                  'data-item-id': it.id,
-                  inputMode: 'decimal'
-                }),
+                // На мобильных — кнопка открывает wheel picker
                 React.createElement('button', {
-                  className: 'mpc-delete',
-                  onClick: () => removeItem(mi, it.id)
-                }, '×')
+                  className: 'mpc-grams-btn',
+                  onClick: (e) => { e.stopPropagation(); openGramsPicker(mi, it.id, G); }
+                }, G + 'г')
               ),
               // Row 2: header labels (grid)
               React.createElement('div', { className: 'mpc-grid mpc-header' },
@@ -1507,11 +1603,64 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('span', null, harmVal != null ? fmtVal('harm', harmVal) : '-')
               )
             );
+            
+            // На мобильных — оборачиваем в SwipeableRow
+            if (isMobile && HEYS.SwipeableRow) {
+              return React.createElement(HEYS.SwipeableRow, {
+                key: it.id,
+                onDelete: () => removeItem(mi, it.id)
+              }, cardContent);
+            }
+            
+            // На десктопе — обычная карточка с кнопкой удаления
+            return React.createElement('div', { key: it.id, className: 'mpc', style: { marginBottom: '6px' } },
+              React.createElement('div', { className: 'mpc-row1' },
+                React.createElement('span', { className: 'mpc-name' }, p.name),
+                React.createElement('input', {
+                  type: 'number',
+                  className: 'mpc-grams',
+                  value: G,
+                  onChange: e => setGrams(mi, it.id, e.target.value),
+                  onFocus: e => e.target.select(),
+                  onKeyDown: e => { if (e.key === 'Enter') e.target.blur(); },
+                  'data-grams-input': true,
+                  'data-meal-index': mi,
+                  'data-item-id': it.id,
+                  inputMode: 'decimal'
+                }),
+                React.createElement('button', {
+                  className: 'mpc-delete',
+                  onClick: () => removeItem(mi, it.id)
+                }, '×')
+              ),
+              React.createElement('div', { className: 'mpc-grid mpc-header' },
+                React.createElement('span', null, 'ккал'),
+                React.createElement('span', null, 'У'),
+                React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
+                React.createElement('span', null, 'Б'),
+                React.createElement('span', null, 'Ж'),
+                React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
+                React.createElement('span', null, 'Кл'),
+                React.createElement('span', null, 'ГИ'),
+                React.createElement('span', null, 'Вр')
+              ),
+              React.createElement('div', { className: 'mpc-grid mpc-values' },
+                React.createElement('span', null, Math.round(scale(per.kcal100, G))),
+                React.createElement('span', null, Math.round(scale(per.carbs100, G))),
+                React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.simple100, G)) + '/' + Math.round(scale(per.complex100, G))),
+                React.createElement('span', null, Math.round(scale(per.prot100, G))),
+                React.createElement('span', null, Math.round(scale(per.fat100, G))),
+                React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.bad100, G)) + '/' + Math.round(scale(per.good100, G)) + '/' + Math.round(scale(per.trans100 || 0, G))),
+                React.createElement('span', null, Math.round(scale(per.fiber100, G))),
+                React.createElement('span', null, giVal != null ? Math.round(giVal) : '-'),
+                React.createElement('span', null, harmVal != null ? fmtVal('harm', harmVal) : '-')
+              )
+            );
           }),
           // Компактный блок: время + настроение + самочувствие + стресс (SaaS стиль)
           React.createElement('div', { className: 'meal-meta-row' },
             // На мобильных — кнопка редактирования времени, на десктопе — input
-            window.innerWidth <= 768
+            isMobile
               ? React.createElement('button', { 
                   className: 'compact-input time mobile-time-btn', 
                   onClick: () => openTimeEditor(mi),
@@ -1519,7 +1668,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 }, meal.time || '—:—')
               : React.createElement('input', { className: 'compact-input time', type: 'time', title: 'Время приёма', value: meal.time || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, time: e.target.value} : m); setDay({...day, meals}); } }),
             // На мобильных — кнопка редактирования оценок, на десктопе — inputs
-            window.innerWidth <= 768
+            isMobile
               ? React.createElement('button', {
                   className: 'mobile-mood-btn',
                   onClick: () => openMoodEditor(mi),
@@ -2005,7 +2154,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('div', { className: 'time-picker-modal', onClick: e => e.stopPropagation() },
             
             // Step 1: Время (показывается при editMode='new' или 'time')
-            pickerStep === 1 && React.createElement(React.Fragment, null,
+            pickerStep === 1 && React.createElement('div', { 
+              className: 'time-picker-step' + (animDirection === 'back' ? ' back' : ''),
+              key: 'step1'
+            },
               React.createElement('div', { className: 'time-picker-header' },
                 React.createElement('button', { className: 'time-picker-cancel', onClick: cancelTimePicker }, 'Отмена'),
                 React.createElement('span', { className: 'time-picker-title' }, editMode === 'time' ? 'Изменить время' : 'Время приёма'),
@@ -2032,7 +2184,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             ),
             
             // Step 2: Самочувствие (показывается при editMode='new' или 'mood')
-            pickerStep === 2 && React.createElement(React.Fragment, null,
+            pickerStep === 2 && React.createElement('div', { 
+              className: 'time-picker-step' + (animDirection === 'forward' ? '' : ' back'),
+              key: 'step2'
+            },
               React.createElement('div', { className: 'time-picker-header' },
                 // Если редактируем только оценки — "Отмена", если новый — "← Назад"
                 editMode === 'mood'
@@ -2073,6 +2228,41 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   React.createElement('div', { className: 'mood-label' }, 'Стресс')
                 )
               )
+            )
+          )
+        ),
+        document.body
+      ),
+      
+      // Grams Picker Modal (mobile only)
+      showGramsPicker && ReactDOM.createPortal(
+        React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelGramsPicker },
+          React.createElement('div', { className: 'time-picker-modal grams-picker-modal', onClick: e => e.stopPropagation() },
+            React.createElement('div', { className: 'time-picker-header' },
+              React.createElement('button', { className: 'time-picker-cancel', onClick: cancelGramsPicker }, 'Отмена'),
+              React.createElement('span', { className: 'time-picker-title' }, 'Граммы'),
+              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmGramsPicker }, 'Готово')
+            ),
+            // Input для быстрого ввода
+            React.createElement('div', { className: 'grams-input-row' },
+              React.createElement('input', {
+                type: 'text',
+                inputMode: 'numeric',
+                pattern: '[0-9]*',
+                className: 'grams-manual-input',
+                value: gramsInputValue,
+                onChange: handleGramsInput,
+                onFocus: e => e.target.select(),
+                placeholder: '100'
+              }),
+              React.createElement('span', { className: 'grams-input-suffix' }, 'г')
+            ),
+            React.createElement('div', { className: 'time-picker-wheels grams-wheels' },
+              React.createElement(WheelColumn, {
+                values: gramsValues.map(v => v + 'г'),
+                selected: pendingGrams,
+                onChange: handleGramsWheelChange
+              })
             )
           )
         ),

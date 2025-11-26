@@ -1,4 +1,4 @@
 
-> @heys/analytics@14.0.0 type-check C:\Users\Ant\HEYS-v2\packages\analytics
+> @heys/analytics@14.0.0 type-check /Users/poplavskijanton/HEYS-v2/packages/analytics
 > tsc --noEmit
 
