@@ -25,9 +25,6 @@
 
 
 
-[32mCJS[39m [1mdist\index.cjs     [22m[32m76.15 KB[39m
-[32mCJS[39m [1mdist\index.cjs.map [22m[32m278.84 KB[39m
-[32mCJS[39m ⚡️ Build success in 2638ms
 
  WARN  [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe CommonJS "module" variable is treated as a global variable in an ECMAScript module and may not work as expected[0m [commonjs-variable-in-esm]
 
@@ -43,6 +40,9 @@
 
 
 
+[32mCJS[39m [1mdist\index.cjs     [22m[32m76.15 KB[39m
+[32mCJS[39m [1mdist\index.cjs.map [22m[32m278.84 KB[39m
+[32mCJS[39m ⚡️ Build success in 1527ms
 [32mESM[39m [1mdist\index.js     [22m[32m75.55 KB[39m
 [32mESM[39m [1mdist\index.js.map [22m[32m278.84 KB[39m
-[32mESM[39m ⚡️ Build success in 3444ms
+[32mESM[39m ⚡️ Build success in 1526ms

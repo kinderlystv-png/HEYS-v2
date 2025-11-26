@@ -20,10 +20,10 @@
 [34mESM[39m Build start
 [32mCJS[39m [1mdist\index.cjs     [22m[32m108.91 KB[39m
 [32mCJS[39m [1mdist\index.cjs.map [22m[32m400.06 KB[39m
-[32mCJS[39m ⚡️ Build success in 953ms
+[32mCJS[39m ⚡️ Build success in 1041ms
 [32mESM[39m [1mdist\index.js     [22m[32m107.71 KB[39m
 [32mESM[39m [1mdist\index.js.map [22m[32m400.06 KB[39m
-[32mESM[39m ⚡️ Build success in 955ms
+[32mESM[39m ⚡️ Build success in 1041ms
 
 > @heys/storage@14.0.0 build C:\Users\Ant\HEYS-v2\packages\storage
 > tsup
@@ -36,13 +36,43 @@
 [34mCLI[39m Cleaning output folder
 [34mCJS[39m Build start
 [34mESM[39m Build start
+
+ WARN  [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe CommonJS "module" variable is treated as a global variable in an ECMAScript module and may not work as expected[0m [commonjs-variable-in-esm]
+
+    ../logger/dist/index.js:226:2:
+[37m      226 │   [32mmodule[37m.exports = {
+          ╵   [32m~~~~~~[0m
+
+  This file is considered to be an ECMAScript module because of the "export" keyword here:
+
+    ../logger/dist/index.js:598:0:
+[37m      598 │ [32mexport[37m {
+          ╵ [32m~~~~~~[0m
+
+
+
+
+ WARN  [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe CommonJS "module" variable is treated as a global variable in an ECMAScript module and may not work as expected[0m [commonjs-variable-in-esm]
+
+    ../logger/dist/index.js:226:2:
+[37m      226 │   [32mmodule[37m.exports = {
+          ╵   [32m~~~~~~[0m
+
+  This file is considered to be an ECMAScript module because of the "export" keyword here:
+
+    ../logger/dist/index.js:598:0:
+[37m      598 │ [32mexport[37m {
+          ╵ [32m~~~~~~[0m
+
+
+
 Entry module "dist/index.cjs" is using named and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
-[32mESM[39m [1mdist\index.js     [22m[32m71.65 KB[39m
-[32mESM[39m [1mdist\index.js.map [22m[32m273.19 KB[39m
-[32mESM[39m ⚡️ Build success in 676ms
-[32mCJS[39m [1mdist\index.cjs     [22m[32m71.76 KB[39m
-[32mCJS[39m [1mdist\index.cjs.map [22m[32m273.19 KB[39m
-[32mCJS[39m ⚡️ Build success in 677ms
+[32mESM[39m [1mdist\index.js     [22m[32m74.16 KB[39m
+[32mESM[39m [1mdist\index.js.map [22m[32m275.24 KB[39m
+[32mESM[39m ⚡️ Build success in 940ms
+[32mCJS[39m [1mdist\index.cjs     [22m[32m74.26 KB[39m
+[32mCJS[39m [1mdist\index.cjs.map [22m[32m275.24 KB[39m
+[32mCJS[39m ⚡️ Build success in 942ms
 
 > @heys/core@14.0.0 build C:\Users\Ant\HEYS-v2\packages\core
 > tsup
@@ -55,16 +85,16 @@ Entry module "dist/index.cjs" is using named and default exports together. Consu
 [34mCLI[39m Cleaning output folder
 [34mCJS[39m Build start
 [34mESM[39m Build start
-[32mESM[39m [1mdist\index.mjs             [22m[32m9.68 KB[39m
-[32mESM[39m [1mdist\server\router.mjs     [22m[32m20.90 KB[39m
-[32mESM[39m [1mdist\index.mjs.map         [22m[32m34.09 KB[39m
-[32mESM[39m [1mdist\server\router.mjs.map [22m[32m67.96 KB[39m
-[32mESM[39m ⚡️ Build success in 318ms
 [32mCJS[39m [1mdist\server\router.js     [22m[32m21.25 KB[39m
 [32mCJS[39m [1mdist\index.js             [22m[32m10.37 KB[39m
 [32mCJS[39m [1mdist\server\router.js.map [22m[32m67.96 KB[39m
 [32mCJS[39m [1mdist\index.js.map         [22m[32m34.09 KB[39m
-[32mCJS[39m ⚡️ Build success in 320ms
+[32mCJS[39m ⚡️ Build success in 391ms
+[32mESM[39m [1mdist\server\router.mjs     [22m[32m20.90 KB[39m
+[32mESM[39m [1mdist\index.mjs             [22m[32m9.68 KB[39m
+[32mESM[39m [1mdist\server\router.mjs.map [22m[32m67.96 KB[39m
+[32mESM[39m [1mdist\index.mjs.map         [22m[32m34.09 KB[39m
+[32mESM[39m ⚡️ Build success in 391ms
 
 > @heys/search@14.0.0 build C:\Users\Ant\HEYS-v2\packages\search
 > tsup
@@ -77,12 +107,12 @@ Entry module "dist/index.cjs" is using named and default exports together. Consu
 [34mCLI[39m Cleaning output folder
 [34mCJS[39m Build start
 [34mESM[39m Build start
-[32mCJS[39m [1mdist\index.cjs     [22m[32m5.88 KB[39m
-[32mCJS[39m [1mdist\index.cjs.map [22m[32m17.54 KB[39m
-[32mCJS[39m ⚡️ Build success in 107ms
 [32mESM[39m [1mdist\index.js     [22m[32m5.87 KB[39m
 [32mESM[39m [1mdist\index.js.map [22m[32m17.54 KB[39m
-[32mESM[39m ⚡️ Build success in 107ms
+[32mESM[39m ⚡️ Build success in 161ms
+[32mCJS[39m [1mdist\index.cjs     [22m[32m5.88 KB[39m
+[32mCJS[39m [1mdist\index.cjs.map [22m[32m17.54 KB[39m
+[32mCJS[39m ⚡️ Build success in 162ms
 
 > @heys/analytics@14.0.0 build C:\Users\Ant\HEYS-v2\packages\analytics
 > tsup
@@ -95,12 +125,12 @@ Entry module "dist/index.cjs" is using named and default exports together. Consu
 [34mCLI[39m Cleaning output folder
 [34mCJS[39m Build start
 [34mESM[39m Build start
-[32mCJS[39m [1mdist\index.cjs     [22m[32m279.00 B[39m
-[32mCJS[39m [1mdist\index.cjs.map [22m[32m586.00 B[39m
-[32mCJS[39m ⚡️ Build success in 52ms
 [32mESM[39m [1mdist\index.js     [22m[32m258.00 B[39m
 [32mESM[39m [1mdist\index.js.map [22m[32m586.00 B[39m
-[32mESM[39m ⚡️ Build success in 52ms
+[32mESM[39m ⚡️ Build success in 72ms
+[32mCJS[39m [1mdist\index.cjs     [22m[32m279.00 B[39m
+[32mCJS[39m [1mdist\index.cjs.map [22m[32m586.00 B[39m
+[32mCJS[39m ⚡️ Build success in 73ms
 
 > @heys/gaming@14.0.0 build C:\Users\Ant\HEYS-v2\packages\gaming
 > tsup
@@ -113,12 +143,12 @@ Entry module "dist/index.cjs" is using named and default exports together. Consu
 [34mCLI[39m Cleaning output folder
 [34mCJS[39m Build start
 [34mESM[39m Build start
-[32mESM[39m [1mdist\index.js     [22m[32m137.00 B[39m
-[32mESM[39m [1mdist\index.js.map [22m[32m280.00 B[39m
-[32mESM[39m ⚡️ Build success in 54ms
 [32mCJS[39m [1mdist\index.cjs     [22m[32m149.00 B[39m
 [32mCJS[39m [1mdist\index.cjs.map [22m[32m280.00 B[39m
-[32mCJS[39m ⚡️ Build success in 54ms
+[32mCJS[39m ⚡️ Build success in 57ms
+[32mESM[39m [1mdist\index.js     [22m[32m137.00 B[39m
+[32mESM[39m [1mdist\index.js.map [22m[32m280.00 B[39m
+[32mESM[39m ⚡️ Build success in 56ms
 
 > @heys/ui@14.0.0 build C:\Users\Ant\HEYS-v2\packages\ui
 > tsup
@@ -131,12 +161,42 @@ Entry module "dist/index.cjs" is using named and default exports together. Consu
 [34mCLI[39m Cleaning output folder
 [34mCJS[39m Build start
 [34mESM[39m Build start
-[32mESM[39m [1mdist\index.js     [22m[32m73.04 KB[39m
-[32mESM[39m [1mdist\index.js.map [22m[32m276.66 KB[39m
-[32mESM[39m ⚡️ Build success in 899ms
-[32mCJS[39m [1mdist\index.cjs     [22m[32m73.65 KB[39m
-[32mCJS[39m [1mdist\index.cjs.map [22m[32m276.66 KB[39m
-[32mCJS[39m ⚡️ Build success in 899ms
+
+ WARN  [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe CommonJS "module" variable is treated as a global variable in an ECMAScript module and may not work as expected[0m [commonjs-variable-in-esm]
+
+    ../logger/dist/index.js:226:2:
+[37m      226 │   [32mmodule[37m.exports = {
+          ╵   [32m~~~~~~[0m
+
+  This file is considered to be an ECMAScript module because of the "export" keyword here:
+
+    ../logger/dist/index.js:598:0:
+[37m      598 │ [32mexport[37m {
+          ╵ [32m~~~~~~[0m
+
+
+
+
+ WARN  [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe CommonJS "module" variable is treated as a global variable in an ECMAScript module and may not work as expected[0m [commonjs-variable-in-esm]
+
+    ../logger/dist/index.js:226:2:
+[37m      226 │   [32mmodule[37m.exports = {
+          ╵   [32m~~~~~~[0m
+
+  This file is considered to be an ECMAScript module because of the "export" keyword here:
+
+    ../logger/dist/index.js:598:0:
+[37m      598 │ [32mexport[37m {
+          ╵ [32m~~~~~~[0m
+
+
+
+[32mESM[39m [1mdist\index.js     [22m[32m75.55 KB[39m
+[32mESM[39m [1mdist\index.js.map [22m[32m278.84 KB[39m
+[32mESM[39m ⚡️ Build success in 948ms
+[32mCJS[39m [1mdist\index.cjs     [22m[32m76.15 KB[39m
+[32mCJS[39m [1mdist\index.cjs.map [22m[32m278.84 KB[39m
+[32mCJS[39m ⚡️ Build success in 950ms
 
 > @heys/logger@1.0.0 build C:\Users\Ant\HEYS-v2\packages\logger
 > pnpm run build:js && pnpm run build:types
@@ -151,7 +211,7 @@ Entry module "dist/index.cjs" is using named and default exports together. Consu
 [34mCLI[39m Target: es2022
 [34mESM[39m Build start
 [32mESM[39m [1mdist\index.js [22m[32m16.27 KB[39m
-[32mESM[39m ⚡️ Build success in 49ms
+[32mESM[39m ⚡️ Build success in 55ms
 
 > @heys/logger@1.0.0 build:types C:\Users\Ant\HEYS-v2\packages\logger
 > pnpm exec tsc --project tsconfig.build.json
@@ -181,34 +241,9 @@ computing gzip size...
 [2mdist/[22m[32massets/heys_simple_analytics-90db0f96.js     [39m[1m[2m10.58 kB[22m[1m[22m
 [2mdist/[22m[32massets/heys_storage_supabase_v1-56be3f0b.js  [39m[1m[2m29.74 kB[22m[1m[22m
 [2mdist/[22m[32massets/heys_core_v12-8e98e987.js             [39m[1m[2m44.83 kB[22m[1m[22m
-[2mdist/[22m[35massets/index-ca8b7c27.css                    [39m[1m[2m41.26 kB[22m[1m[22m[2m │ gzip: 7.98 kB[22m
+[2mdist/[22m[35massets/index-cbbda81a.css                    [39m[1m[2m38.21 kB[22m[1m[22m[2m │ gzip: 7.55 kB[22m
+[2mdist/[22m[36massets/features-4ed993c7.js                  [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
+[2mdist/[22m[36massets/vendor-4ed993c7.js                    [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
 [2mdist/[22m[36massets/core-4ed993c7.js                      [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
 [2mdist/[22m[36massets/react-4ed993c7.js                     [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
-[2mdist/[22m[36massets/vendor-4ed993c7.js                    [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
-[2mdist/[22m[36massets/features-4ed993c7.js                  [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
-[32m✓ built in 1.84s[39m
-" can't be bundled without type="module" attribute
-<script src="heys_storage_layer_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_day_v12.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_user_v12.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_reports_v12.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_app_v12.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-transforming...
-[32m✓[39m 3 modules transformed.
-Generated an empty chunk: "react".
-Generated an empty chunk: "vendor".
-Generated an empty chunk: "features".
-Generated an empty chunk: "core".
-rendering chunks...
-computing gzip size...
-[2mdist/[22m[32mindex.html                                   [39m[1m[2m 3.40 kB[22m[1m[22m[2m │ gzip: 0.99 kB[22m
-[2mdist/[22m[32massets/heys_models_v1-b3088dc8.js            [39m[1m[2m 8.09 kB[22m[1m[22m
-[2mdist/[22m[32massets/heys_simple_analytics-90db0f96.js     [39m[1m[2m10.58 kB[22m[1m[22m
-[2mdist/[22m[32massets/heys_storage_supabase_v1-56be3f0b.js  [39m[1m[2m29.74 kB[22m[1m[22m
-[2mdist/[22m[32massets/heys_core_v12-8e98e987.js             [39m[1m[2m44.83 kB[22m[1m[22m
-[2mdist/[22m[35massets/index-ca8b7c27.css                    [39m[1m[2m41.26 kB[22m[1m[22m[2m │ gzip: 7.98 kB[22m
-[2mdist/[22m[36massets/features-4ed993c7.js                  [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
-[2mdist/[22m[36massets/core-4ed993c7.js                      [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
-[2mdist/[22m[36massets/react-4ed993c7.js                     [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
-[2mdist/[22m[36massets/vendor-4ed993c7.js                    [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip: 0.02 kB[22m[2m │ map: 0.10 kB[22m
-[32m✓ built in 3.66s[39m
+[32m✓ built in 3.25s[39m

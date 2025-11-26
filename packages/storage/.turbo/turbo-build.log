@@ -25,7 +25,6 @@
 
 
 
-Entry module "dist/index.cjs" is using named and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
 
  WARN  [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe CommonJS "module" variable is treated as a global variable in an ECMAScript module and may not work as expected[0m [commonjs-variable-in-esm]
 
@@ -41,9 +40,10 @@ Entry module "dist/index.cjs" is using named and default exports together. Consu
 
 
 
-[32mESM[39m [1mdist\index.js     [22m[32m74.16 KB[39m
-[32mESM[39m [1mdist\index.js.map [22m[32m275.24 KB[39m
-[32mESM[39m ⚡️ Build success in 2228ms
+Entry module "dist/index.cjs" is using named and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
 [32mCJS[39m [1mdist\index.cjs     [22m[32m74.26 KB[39m
 [32mCJS[39m [1mdist\index.cjs.map [22m[32m275.24 KB[39m
-[32mCJS[39m ⚡️ Build success in 2228ms
+[32mCJS[39m ⚡️ Build success in 1565ms
+[32mESM[39m [1mdist\index.js     [22m[32m74.16 KB[39m
+[32mESM[39m [1mdist\index.js.map [22m[32m275.24 KB[39m
+[32mESM[39m ⚡️ Build success in 1564ms

@@ -1161,8 +1161,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
   const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
     return React.createElement('tr',{key:it.id},
-      React.createElement('td',null,p.name),
-      React.createElement('td',null,React.createElement('input',{
+      React.createElement('td',{'data-cell':'name'},p.name),
+      React.createElement('td',{'data-cell':'grams'},React.createElement('input',{
         type:'number',
         value:G,
         'data-grams-input': true,
@@ -1178,29 +1178,29 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         placeholder:'грамм',
         style:{textAlign:'center'}
       })),
-      React.createElement('td',null, fmtVal('kcal100', per.kcal100)),
-      React.createElement('td',null, fmtVal('carbs100', per.carbs100)),
-      React.createElement('td',null, fmtVal('simple100', per.simple100)),
-      React.createElement('td',null, fmtVal('complex100', per.complex100)),
-      React.createElement('td',null, fmtVal('prot100', per.prot100)),
-      React.createElement('td',null, fmtVal('fat100', per.fat100)),
-      React.createElement('td',null, fmtVal('bad', per.bad100)),
-      React.createElement('td',null, fmtVal('good100', per.good100)),
-      React.createElement('td',null, fmtVal('trans100', per.trans100)),
-      React.createElement('td',null, fmtVal('fiber100', per.fiber100)),
-      React.createElement('td',null, fmtVal('kcal', row.kcal)),
-      React.createElement('td',null, fmtVal('carbs', row.carbs)),
-      React.createElement('td',null, fmtVal('simple', row.simple)),
-      React.createElement('td',null, fmtVal('complex', row.complex)),
-      React.createElement('td',null, fmtVal('prot', row.prot)),
-      React.createElement('td',null, fmtVal('fat', row.fat)),
-      React.createElement('td',null, fmtVal('bad', row.bad)),
-      React.createElement('td',null, fmtVal('good', row.good)),
-      React.createElement('td',null, fmtVal('trans', row.trans)),
-      React.createElement('td',null, fmtVal('fiber', row.fiber)),
-      React.createElement('td',null, fmtVal('gi', giVal)),
-      React.createElement('td',null, fmtVal('harm', harmVal)),
-      React.createElement('td',null,React.createElement('button',{className:'btn secondary',onClick:()=>removeItem(mi,it.id)},'×'))
+      React.createElement('td',{'data-cell':'per100'},fmtVal('kcal100', per.kcal100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('carbs100', per.carbs100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('simple100', per.simple100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('complex100', per.complex100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('prot100', per.prot100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('fat100', per.fat100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('bad', per.bad100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('good100', per.good100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('trans100', per.trans100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('fiber100', per.fiber100)),
+      React.createElement('td',{'data-cell':'kcal'},fmtVal('kcal', row.kcal)),
+      React.createElement('td',{'data-cell':'carbs'},fmtVal('carbs', row.carbs)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('simple', row.simple)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('complex', row.complex)),
+      React.createElement('td',{'data-cell':'prot'},fmtVal('prot', row.prot)),
+      React.createElement('td',{'data-cell':'fat'},fmtVal('fat', row.fat)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('bad', row.bad)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('good', row.good)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('trans', row.trans)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('fiber', row.fiber)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('gi', giVal)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('harm', harmVal)),
+      React.createElement('td',{'data-cell':'delete'},React.createElement('button',{className:'btn secondary',onClick:()=>removeItem(mi,it.id)},'×'))
     );
   }
   function mTotals(m){
