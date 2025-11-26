@@ -456,11 +456,27 @@
   // date приходит из props (selectedDate из App header)
   const date = selectedDate || todayISO();
   const setDate = setSelectedDate;
-  // State for collapsed/expanded meals (mobile)
+  // State for collapsed/expanded meals (mobile) - последний развёрнут
   const [expandedMeals, setExpandedMeals] = useState({});
   const toggleMealExpand = (mealIndex) => {
-    console.log('toggleMealExpand called', mealIndex, expandedMeals);
     setExpandedMeals(prev => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+  };
+  
+  // Функция для разворачивания нового приёма и сворачивания остальных
+  const expandOnlyMeal = (mealIndex) => {
+    const newState = {};
+    newState[mealIndex] = true;
+    setExpandedMeals(newState);
+  };
+  
+  // Проверка: развёрнут ли приём (последний по умолчанию развёрнут)
+  const isMealExpanded = (mealIndex, totalMeals) => {
+    // Если есть явное состояние — используем его
+    if (expandedMeals.hasOwnProperty(mealIndex)) {
+      return expandedMeals[mealIndex];
+    }
+    // Иначе последний развёрнут по умолчанию
+    return mealIndex === totalMeals - 1;
   };
   const [day,setDay]=useState(()=>{ 
     const key = 'heys_dayv2_'+date;
@@ -640,7 +656,29 @@
       const [search, setSearch] = React.useState('');
       const [open, setOpen] = React.useState(false);
       const [selectedIndex, setSelectedIndex] = React.useState(-1);
+      const [dropdownPos, setDropdownPos] = React.useState({top:0, left:0, width:0});
       const inputRef = React.useRef(null);
+      
+      // Обновление позиции выпадашки
+      const updateDropdownPos = React.useCallback(() => {
+        if (inputRef.current) {
+          const rect = inputRef.current.getBoundingClientRect();
+          setDropdownPos({top: rect.bottom + 4, left: rect.left, width: rect.width});
+        }
+      }, []);
+      
+      // Слушаем скролл и ресайз когда открыто
+      React.useEffect(() => {
+        if (!open) return;
+        updateDropdownPos();
+        const handleScroll = () => updateDropdownPos();
+        window.addEventListener('scroll', handleScroll, true); // capture для вложенных скроллов
+        window.addEventListener('resize', handleScroll);
+        return () => {
+          window.removeEventListener('scroll', handleScroll, true);
+          window.removeEventListener('resize', handleScroll);
+        };
+      }, [open, updateDropdownPos]);
       
       const top20 = React.useMemo(()=>computePopularProducts(products,date),[prodSig,date.slice(0,7)]);
       const lc = String(search||'').trim().toLowerCase();
@@ -736,6 +774,36 @@
         }
       }, [open, candidates, selectedIndex, addProductAndFocusGrams]);
       
+      // Проверка мобильного viewport
+      const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+      
+      // Выпадающий список — рендерится через Portal только на мобильных
+      const dropdownContent = open && candidates.length > 0 ? React.createElement('div', {
+        className: 'suggest-list' + (isMobile ? ' suggest-list-portal' : ''),
+        style: isMobile && dropdownPos.width > 0 ? {
+          position: 'fixed',
+          top: dropdownPos.top,
+          left: dropdownPos.left,
+          width: dropdownPos.width,
+          zIndex: 9999
+        } : undefined
+      },
+        (candidates||[]).map((p, index) => React.createElement('div', {
+          key:(p.id||p.name),
+          className: `suggest-item ${index === selectedIndex ? 'selected' : ''}`,
+          onMouseDown:()=>{ addProductAndFocusGrams(p); },
+          onMouseEnter:()=>{ setSelectedIndex(index); },
+          ref: index === selectedIndex ? (el) => {
+            if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          } : null
+        }, 
+        React.createElement('span', null, p.name),
+        React.createElement('small', {style:{color:'var(--muted)', fontSize:'11px', marginLeft:'8px', fontWeight:'normal'}}, 
+          `${Math.round((p.kcal100 || 0))} ккал/100г`
+        )
+        ))
+      ) : null;
+      
       return React.createElement('div', {className:'row suggest-wrap', style:{flex:1, position:'relative'}},
         React.createElement('div', {style:{width:'100%', position:'relative'}},
           React.createElement('input', {
@@ -759,59 +827,11 @@
               pointerEvents:'none'
             }
           }, `${candidates.length} найдено`),
-          open ? React.createElement('div', {className:'suggest-list'},
-            (candidates||[]).map((p, index) => React.createElement('div', {
-              key:(p.id||p.name),
-              className: `suggest-item ${index === selectedIndex ? 'selected' : ''}`,
-              onMouseDown:()=>{ addProductAndFocusGrams(p); },
-              onMouseEnter:()=>{ setSelectedIndex(index); }, // Синхронизация с мышью
-              ref: index === selectedIndex ? (el) => {
-                // Автоскролл к выбранному элементу
-                if (el) {
-                  el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-                }
-              } : null
-            }, 
-            React.createElement('span', null, p.name),
-            React.createElement('small', {style:{color:'var(--muted)', fontSize:'11px', marginLeft:'8px', fontWeight:'normal'}}, 
-              `${Math.round((p.kcal100 || 0))} ккал/100г`
-            )
-            ))
-          ) : null
+          // На мобильных — Portal в body, на десктопе — обычный dropdown
+          isMobile && dropdownContent ? ReactDOM.createPortal(dropdownContent, document.body) : dropdownContent
         )
       );
     }
-
-    const [search,setSearch]=useState(''); const [open,setOpen]=useState(false);
-    const top20=useMemo(()=>computePopularProducts(products,date),[prodSig,date.slice(0,7)]);
-    const lc=String(search||'').trim().toLowerCase();
-    
-    // Используем умный поиск с исправлением опечаток если доступен
-    const candidates = useMemo(() => {
-      if (!lc) {
-        return top20 && top20.length ? top20 : products.slice(0,20);
-      }
-      
-      // Если доступен умный поиск, используем его
-      if (window.HEYS && window.HEYS.SmartSearchWithTypos) {
-        try {
-          const smartResult = window.HEYS.SmartSearchWithTypos.search(lc, products, {
-            enablePhonetic: true,
-            enableSynonyms: true,
-            maxSuggestions: 20
-          });
-          
-          if (smartResult && smartResult.results && smartResult.results.length > 0) {
-            return smartResult.results;
-          }
-        } catch (error) {
-          DEV.warn('[HEYS] Ошибка умного поиска, используем обычный:', error);
-        }
-      }
-      
-      // Fallback к обычному поиску
-      return products.filter(p=>String(p.name||'').toLowerCase().includes(lc)).slice(0,20);
-    }, [lc, products, top20]);
 
     // Функция для вычисления средних оценок из приёмов пищи
     function calculateMealAverages(meals) {
@@ -841,13 +861,163 @@
       }
     }, [day.meals?.map(m => `${m.mood}-${m.wellbeing}-${m.stress}`).join('|')]);
 
-    function addMeal(){ 
-      setDay({...day, meals:[...day.meals,{id:uid('m_'),name:'Приём',time:'',mood:'',wellbeing:'',stress:'',items:[]}]}); 
+    // === iOS-style Time Picker Modal (mobile only) ===
+    const [showTimePicker, setShowTimePicker] = useState(false);
+    const [pendingMealTime, setPendingMealTime] = useState({hours: 12, minutes: 0});
+    const [editingMealIndex, setEditingMealIndex] = useState(null); // null = новый, число = редактирование
+    const [editMode, setEditMode] = useState('new'); // 'new' | 'time' | 'mood'
+    
+    // Используем глобальный WheelColumn
+    const WheelColumn = HEYS.WheelColumn;
+    
+    // Генерация значений для часов, минут и оценок 1-10
+    const hoursValues = WheelColumn.presets.hours;
+    const minutesValues = WheelColumn.presets.minutes;
+    const ratingValues = WheelColumn.presets.rating;
+    
+    // Состояние для второго слайда (самочувствие)
+    const [pickerStep, setPickerStep] = useState(1); // 1 = время, 2 = самочувствие
+    const [pendingMealMood, setPendingMealMood] = useState({mood: 5, wellbeing: 5, stress: 5});
+    
+    // Открыть модалку для нового приёма
+    function openTimePickerForNewMeal() {
+      const now = new Date();
+      setPendingMealTime({ hours: now.getHours(), minutes: now.getMinutes() });
+      setPendingMealMood({ mood: 5, wellbeing: 5, stress: 5 });
+      setEditingMealIndex(null);
+      setEditMode('new');
+      setPickerStep(1);
+      setShowTimePicker(true);
+    }
+    
+    // Открыть модалку для редактирования только времени
+    function openTimeEditor(mealIndex) {
+      const meal = day.meals[mealIndex];
+      if (!meal) return;
+      
+      const timeParts = (meal.time || '').split(':');
+      const hours = parseInt(timeParts[0]) || new Date().getHours();
+      const minutes = parseInt(timeParts[1]) || 0;
+      
+      setPendingMealTime({ hours, minutes });
+      setEditingMealIndex(mealIndex);
+      setEditMode('time');
+      setPickerStep(1);
+      setShowTimePicker(true);
+    }
+    
+    // Открыть модалку для редактирования только оценок
+    function openMoodEditor(mealIndex) {
+      const meal = day.meals[mealIndex];
+      if (!meal) return;
+      
+      setPendingMealMood({
+        mood: meal.mood ? ratingValues.indexOf(String(meal.mood)) : 5,
+        wellbeing: meal.wellbeing ? ratingValues.indexOf(String(meal.wellbeing)) : 5,
+        stress: meal.stress ? ratingValues.indexOf(String(meal.stress)) : 5
+      });
+      setEditingMealIndex(mealIndex);
+      setEditMode('mood');
+      setPickerStep(2);
+      setShowTimePicker(true);
+    }
+    
+    function goToMoodStep() {
+      setPickerStep(2);
+    }
+    
+    function goBackToTimeStep() {
+      setPickerStep(1);
+    }
+    
+    // Подтверждение только времени (для редактирования)
+    function confirmTimeEdit() {
+      const timeStr = pad2(pendingMealTime.hours) + ':' + pad2(pendingMealTime.minutes);
+      const updatedMeals = day.meals.map((m, i) => 
+        i === editingMealIndex ? { ...m, time: timeStr } : m
+      );
+      setDay({ ...day, meals: updatedMeals });
+      setShowTimePicker(false);
+      setEditingMealIndex(null);
+    }
+    
+    // Подтверждение только оценок (для редактирования)
+    function confirmMoodEdit() {
+      const moodVal = pendingMealMood.mood === 0 ? '' : pendingMealMood.mood;
+      const wellbeingVal = pendingMealMood.wellbeing === 0 ? '' : pendingMealMood.wellbeing;
+      const stressVal = pendingMealMood.stress === 0 ? '' : pendingMealMood.stress;
+      const updatedMeals = day.meals.map((m, i) => 
+        i === editingMealIndex ? { ...m, mood: moodVal, wellbeing: wellbeingVal, stress: stressVal } : m
+      );
+      setDay({ ...day, meals: updatedMeals });
+      setShowTimePicker(false);
+      setEditingMealIndex(null);
+    }
+    
+    function confirmMealCreation() {
+      const timeStr = pad2(pendingMealTime.hours) + ':' + pad2(pendingMealTime.minutes);
+      const moodVal = pendingMealMood.mood === 0 ? '' : pendingMealMood.mood;
+      const wellbeingVal = pendingMealMood.wellbeing === 0 ? '' : pendingMealMood.wellbeing;
+      const stressVal = pendingMealMood.stress === 0 ? '' : pendingMealMood.stress;
+      
+      if (editingMealIndex !== null) {
+        // Этот кейс теперь только для нового приёма после 2х шагов
+        const updatedMeals = day.meals.map((m, i) => 
+          i === editingMealIndex 
+            ? { ...m, time: timeStr, mood: moodVal, wellbeing: wellbeingVal, stress: stressVal }
+            : m
+        );
+        setDay({ ...day, meals: updatedMeals });
+      } else {
+        // Создание нового
+        const newMealIndex = day.meals.length;
+        setDay({...day, meals:[...day.meals, {
+          id: uid('m_'), 
+          name: 'Приём', 
+          time: timeStr, 
+          mood: moodVal, 
+          wellbeing: wellbeingVal, 
+          stress: stressVal, 
+          items: []
+        }]});
+        // Разворачиваем только новый приём
+        expandOnlyMeal(newMealIndex);
+      }
+      
+      setShowTimePicker(false);
+      setPickerStep(1);
+      setEditingMealIndex(null);
       if (window.HEYS && window.HEYS.analytics) {
-        window.HEYS.analytics.trackDataOperation('meal-created');
+        window.HEYS.analytics.trackDataOperation(editingMealIndex !== null ? 'meal-updated' : 'meal-created');
       }
     }
-    function removeMeal(i){ const meals=day.meals.filter((_,idx)=>idx!==i); setDay({...day, meals:meals.length?meals:[{id:uid('m_'), name:'Приём пищи', time:'', mood:'', wellbeing:'', stress:'', items:[]} ]}); }
+    
+    function cancelTimePicker() {
+      setShowTimePicker(false);
+      setPickerStep(1);
+      setEditingMealIndex(null);
+      setEditMode('new');
+    }
+
+    // addMeal теперь открывает модалку на мобильных
+    function addMeal(){ 
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) {
+        openTimePickerForNewMeal();
+      } else {
+        // Десктоп — старое поведение
+        const newMealIndex = day.meals.length;
+        setDay({...day, meals:[...day.meals,{id:uid('m_'),name:'Приём',time:'',mood:'',wellbeing:'',stress:'',items:[]}]}); 
+        expandOnlyMeal(newMealIndex);
+        if (window.HEYS && window.HEYS.analytics) {
+          window.HEYS.analytics.trackDataOperation('meal-created');
+        }
+      }
+    }
+    function removeMeal(i){ 
+      const meals = day.meals.filter((_, idx) => idx !== i); 
+      setDay({...day, meals}); 
+    }
     function addProductToMeal(mi,p){ 
       const item={id:uid('it_'), product_id:p.id??p.product_id, name:p.name, grams:100}; 
       const meals=day.meals.map((m,i)=> i===mi? {...m, items:[...(m.items||[]), item]}:m); 
@@ -1278,14 +1448,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         React.createElement('div', { className: 'mobile-products-list' },
           // Expandable products section
           (meal.items || []).length > 0 && React.createElement('div', { 
-            className: 'mpc-products-toggle' + (expandedMeals[mi] ? ' expanded' : ''),
+            className: 'mpc-products-toggle' + (isMealExpanded(mi, (day.meals||[]).length) ? ' expanded' : ''),
             onClick: () => toggleMealExpand(mi)
           },
-            React.createElement('span', null, expandedMeals[mi] ? '▼' : '▶'),
+            React.createElement('span', null, isMealExpanded(mi, (day.meals||[]).length) ? '▼' : '▶'),
             React.createElement('span', null, (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов'))
           ),
           // Products list (shown when expanded)
-          expandedMeals[mi] && (meal.items || []).map(it => {
+          isMealExpanded(mi, (day.meals||[]).length) && (meal.items || []).map(it => {
             const p = getProductFromItem(it, pIndex) || { name: it.name || '?' };
             const G = +it.grams || 0;
             const per = per100(p);
@@ -1340,10 +1510,30 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }),
           // Компактный блок: время + настроение + самочувствие + стресс (SaaS стиль)
           React.createElement('div', { className: 'meal-meta-row' },
-            React.createElement('input', { className: 'compact-input time', type: 'time', title: 'Время приёма', value: meal.time || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, time: e.target.value} : m); setDay({...day, meals}); } }),
-            React.createElement('span', { className: 'meal-meta-field' }, '😊', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Настроение', value: meal.mood || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, mood: +e.target.value || ''} : m); setDay({...day, meals}); } })),
-            React.createElement('span', { className: 'meal-meta-field' }, '💪', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Самочувствие', value: meal.wellbeing || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, wellbeing: +e.target.value || ''} : m); setDay({...day, meals}); } })),
-            React.createElement('span', { className: 'meal-meta-field' }, '😰', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Стресс', value: meal.stress || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, stress: +e.target.value || ''} : m); setDay({...day, meals}); } })),
+            // На мобильных — кнопка редактирования времени, на десктопе — input
+            window.innerWidth <= 768
+              ? React.createElement('button', { 
+                  className: 'compact-input time mobile-time-btn', 
+                  onClick: () => openTimeEditor(mi),
+                  title: 'Изменить время'
+                }, meal.time || '—:—')
+              : React.createElement('input', { className: 'compact-input time', type: 'time', title: 'Время приёма', value: meal.time || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, time: e.target.value} : m); setDay({...day, meals}); } }),
+            // На мобильных — кнопка редактирования оценок, на десктопе — inputs
+            window.innerWidth <= 768
+              ? React.createElement('button', {
+                  className: 'mobile-mood-btn',
+                  onClick: () => openMoodEditor(mi),
+                  title: 'Изменить оценки'
+                },
+                  React.createElement('span', { className: 'meal-meta-display' }, '😊', React.createElement('span', { className: 'meta-value' }, meal.mood || '—')),
+                  React.createElement('span', { className: 'meal-meta-display' }, '💪', React.createElement('span', { className: 'meta-value' }, meal.wellbeing || '—')),
+                  React.createElement('span', { className: 'meal-meta-display' }, '😰', React.createElement('span', { className: 'meta-value' }, meal.stress || '—'))
+                )
+              : React.createElement(React.Fragment, null,
+                  React.createElement('span', { className: 'meal-meta-field' }, '😊', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Настроение', value: meal.mood || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, mood: +e.target.value || ''} : m); setDay({...day, meals}); } })),
+                  React.createElement('span', { className: 'meal-meta-field' }, '💪', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Самочувствие', value: meal.wellbeing || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, wellbeing: +e.target.value || ''} : m); setDay({...day, meals}); } })),
+                  React.createElement('span', { className: 'meal-meta-field' }, '😰', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Стресс', value: meal.stress || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, stress: +e.target.value || ''} : m); setDay({...day, meals}); } }))
+                ),
             React.createElement('button', { className: 'meal-delete-btn', onClick: () => removeMeal(mi), title: 'Удалить приём' }, '🗑')
           )
         )
@@ -1807,7 +1997,87 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       sideBlock,
       daySummary,
       mealsUI,
-      React.createElement('div',{className:'row',style:{justifyContent:'flex-start',marginTop:'8px'}}, React.createElement('button',{className:'btn',onClick:addMeal},'+ Приём'))
+      React.createElement('div',{className:'row',style:{justifyContent:'flex-start',marginTop:'8px'}}, React.createElement('button',{className:'btn',onClick:addMeal},'+ Приём')),
+      
+      // Meal Creation/Edit Modal (mobile only)
+      showTimePicker && ReactDOM.createPortal(
+        React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelTimePicker },
+          React.createElement('div', { className: 'time-picker-modal', onClick: e => e.stopPropagation() },
+            
+            // Step 1: Время (показывается при editMode='new' или 'time')
+            pickerStep === 1 && React.createElement(React.Fragment, null,
+              React.createElement('div', { className: 'time-picker-header' },
+                React.createElement('button', { className: 'time-picker-cancel', onClick: cancelTimePicker }, 'Отмена'),
+                React.createElement('span', { className: 'time-picker-title' }, editMode === 'time' ? 'Изменить время' : 'Время приёма'),
+                // Если редактируем только время — "Готово", если новый — "Далее"
+                editMode === 'time'
+                  ? React.createElement('button', { className: 'time-picker-confirm', onClick: confirmTimeEdit }, 'Готово')
+                  : React.createElement('button', { className: 'time-picker-confirm', onClick: goToMoodStep }, 'Далее')
+              ),
+              React.createElement('div', { className: 'time-picker-wheels' },
+                React.createElement(WheelColumn, {
+                  values: hoursValues,
+                  selected: pendingMealTime.hours,
+                  onChange: (i) => setPendingMealTime(prev => ({...prev, hours: i})),
+                  label: 'Часы'
+                }),
+                React.createElement('div', { className: 'time-picker-separator' }, ':'),
+                React.createElement(WheelColumn, {
+                  values: minutesValues,
+                  selected: pendingMealTime.minutes,
+                  onChange: (i) => setPendingMealTime(prev => ({...prev, minutes: i})),
+                  label: 'Минуты'
+                })
+              )
+            ),
+            
+            // Step 2: Самочувствие (показывается при editMode='new' или 'mood')
+            pickerStep === 2 && React.createElement(React.Fragment, null,
+              React.createElement('div', { className: 'time-picker-header' },
+                // Если редактируем только оценки — "Отмена", если новый — "← Назад"
+                editMode === 'mood'
+                  ? React.createElement('button', { className: 'time-picker-cancel', onClick: cancelTimePicker }, 'Отмена')
+                  : React.createElement('button', { className: 'time-picker-cancel', onClick: goBackToTimeStep }, '← Назад'),
+                React.createElement('span', { className: 'time-picker-title' }, editMode === 'mood' ? 'Оценки' : 'Самочувствие'),
+                // Если редактируем только оценки — confirmMoodEdit, если новый — confirmMealCreation
+                editMode === 'mood'
+                  ? React.createElement('button', { className: 'time-picker-confirm', onClick: confirmMoodEdit }, 'Готово')
+                  : React.createElement('button', { className: 'time-picker-confirm', onClick: confirmMealCreation }, 'Готово')
+              ),
+              React.createElement('div', { className: 'time-picker-wheels mood-wheels' },
+                React.createElement('div', { className: 'mood-column' },
+                  React.createElement('div', { className: 'mood-emoji' }, '😊'),
+                  React.createElement(WheelColumn, {
+                    values: ratingValues,
+                    selected: pendingMealMood.mood,
+                    onChange: (i) => setPendingMealMood(prev => ({...prev, mood: i}))
+                  }),
+                  React.createElement('div', { className: 'mood-label' }, 'Настроение')
+                ),
+                React.createElement('div', { className: 'mood-column' },
+                  React.createElement('div', { className: 'mood-emoji' }, '💪'),
+                  React.createElement(WheelColumn, {
+                    values: ratingValues,
+                    selected: pendingMealMood.wellbeing,
+                    onChange: (i) => setPendingMealMood(prev => ({...prev, wellbeing: i}))
+                  }),
+                  React.createElement('div', { className: 'mood-label' }, 'Самочувствие')
+                ),
+                React.createElement('div', { className: 'mood-column' },
+                  React.createElement('div', { className: 'mood-emoji' }, '😰'),
+                  React.createElement(WheelColumn, {
+                    values: ratingValues,
+                    selected: pendingMealMood.stress,
+                    onChange: (i) => setPendingMealMood(prev => ({...prev, stress: i}))
+                  }),
+                  React.createElement('div', { className: 'mood-label' }, 'Стресс')
+                )
+              )
+            )
+          )
+        ),
+        document.body
+      )
     );
   };
 
