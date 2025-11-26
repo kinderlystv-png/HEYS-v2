@@ -456,6 +456,12 @@
   // date приходит из props (selectedDate из App header)
   const date = selectedDate || todayISO();
   const setDate = setSelectedDate;
+  // State for collapsed/expanded meals (mobile)
+  const [expandedMeals, setExpandedMeals] = useState({});
+  const toggleMealExpand = (mealIndex) => {
+    console.log('toggleMealExpand called', mealIndex, expandedMeals);
+    setExpandedMeals(prev => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+  };
   const [day,setDay]=useState(()=>{ 
     const key = 'heys_dayv2_'+date;
     const v=lsGet(key,null); 
@@ -1210,6 +1216,31 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       return React.createElement(React.Fragment,{key:meal.id},
         React.createElement('div',{className:'meal-sep'},'ПРИЕМ '+(mi+1)),
         React.createElement('div',{className:'card tone-blue meal-card',style:{marginTop:'4px', width: '100%'}},
+        // MOBILE: Meal totals at top (before search)
+        (meal.items || []).length > 0 && React.createElement('div', { className: 'mpc-totals-wrap mobile-only' },
+          React.createElement('div', { className: 'mpc-grid mpc-header' },
+            React.createElement('span', null, 'ккал'),
+            React.createElement('span', null, 'У'),
+            React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
+            React.createElement('span', null, 'Б'),
+            React.createElement('span', null, 'Ж'),
+            React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
+            React.createElement('span', null, 'Кл'),
+            React.createElement('span', null, 'ГИ'),
+            React.createElement('span', null, 'Вр')
+          ),
+          React.createElement('div', { className: 'mpc-grid mpc-totals-values' },
+            React.createElement('span', null, Math.round(totals.kcal)),
+            React.createElement('span', null, Math.round(totals.carbs)),
+            React.createElement('span', { className: 'mpc-dim' }, Math.round(totals.simple || 0) + '/' + Math.round(totals.complex || 0)),
+            React.createElement('span', null, Math.round(totals.prot)),
+            React.createElement('span', null, Math.round(totals.fat)),
+            React.createElement('span', { className: 'mpc-dim' }, Math.round(totals.bad || 0) + '/' + Math.round(totals.good || 0) + '/' + Math.round(totals.trans || 0)),
+            React.createElement('span', null, Math.round(totals.fiber || 0)),
+            React.createElement('span', null, Math.round(totals.gi || 0)),
+            React.createElement('span', null, fmtVal('harm', totals.harm || 0))
+          )
+        ),
         React.createElement('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center'}},
           React.createElement('div',{className:'section-title'},'Добавить продукт'),
           React.createElement(MealAddProduct, {mi})
@@ -1243,26 +1274,78 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             )
           )
         )),
-        React.createElement('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center',marginTop:'8px'}},
-          React.createElement('div',{className:'row',style:{gap:'12px',alignItems:'center'}},
-            React.createElement('div',{className:'row',style:{gap:'4px',alignItems:'center'}},
-              React.createElement('div',null,'Время:'),
-              React.createElement('input',{type:'time',style:{width:'100px'},value:meal.time||'',onChange:e=>{ const meals=day.meals.map((m,i)=> i===mi? {...m,time:e.target.value}:m); setDay({...day,meals}); }})
-            ),
-            React.createElement('div',{className:'row',style:{gap:'4px',alignItems:'center'}},
-              React.createElement('div',null,'Настроение:'),
-              React.createElement('input',{type:'number',min:'1',max:'10',step:'1',style:{width:'60px'},value:meal.mood||'',placeholder:'1-10',onChange:e=>{ const meals=day.meals.map((m,i)=> i===mi? {...m,mood:+e.target.value||''}:m); setDay({...day,meals}); }})
-            ),
-            React.createElement('div',{className:'row',style:{gap:'4px',alignItems:'center'}},
-              React.createElement('div',null,'Самочувствие:'),
-              React.createElement('input',{type:'number',min:'1',max:'10',step:'1',style:{width:'60px'},value:meal.wellbeing||'',placeholder:'1-10',onChange:e=>{ const meals=day.meals.map((m,i)=> i===mi? {...m,wellbeing:+e.target.value||''}:m); setDay({...day,meals}); }})
-            ),
-            React.createElement('div',{className:'row',style:{gap:'4px',alignItems:'center'}},
-              React.createElement('div',null,'Стресс:'),
-              React.createElement('input',{type:'number',min:'1',max:'10',step:'1',style:{width:'60px'},value:meal.stress||'',placeholder:'1-10',onChange:e=>{ const meals=day.meals.map((m,i)=> i===mi? {...m,stress:+e.target.value||''}:m); setDay({...day,meals}); }})
-            )
+        // MOBILE CARDS — компактный вид с grid-сеткой (collapsible)
+        React.createElement('div', { className: 'mobile-products-list' },
+          // Expandable products section
+          (meal.items || []).length > 0 && React.createElement('div', { 
+            className: 'mpc-products-toggle' + (expandedMeals[mi] ? ' expanded' : ''),
+            onClick: () => toggleMealExpand(mi)
+          },
+            React.createElement('span', null, expandedMeals[mi] ? '▼' : '▶'),
+            React.createElement('span', null, (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов'))
           ),
-          React.createElement('button',{className:'btn secondary',onClick:()=>removeMeal(mi)},'Удалить приём')
+          // Products list (shown when expanded)
+          expandedMeals[mi] && (meal.items || []).map(it => {
+            const p = getProductFromItem(it, pIndex) || { name: it.name || '?' };
+            const G = +it.grams || 0;
+            const per = per100(p);
+            const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
+            const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
+            return React.createElement('div', { key: it.id, className: 'mpc' },
+              // Row 1: name + grams + delete
+              React.createElement('div', { className: 'mpc-row1' },
+                React.createElement('span', { className: 'mpc-name' }, p.name),
+                React.createElement('input', {
+                  type: 'number',
+                  className: 'mpc-grams',
+                  value: G,
+                  onChange: e => setGrams(mi, it.id, e.target.value),
+                  onFocus: e => e.target.select(),
+                  onKeyDown: e => { if (e.key === 'Enter') e.target.blur(); },
+                  'data-grams-input': true,
+                  'data-meal-index': mi,
+                  'data-item-id': it.id,
+                  inputMode: 'decimal'
+                }),
+                React.createElement('button', {
+                  className: 'mpc-delete',
+                  onClick: () => removeItem(mi, it.id)
+                }, '×')
+              ),
+              // Row 2: header labels (grid)
+              React.createElement('div', { className: 'mpc-grid mpc-header' },
+                React.createElement('span', null, 'ккал'),
+                React.createElement('span', null, 'У'),
+                React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
+                React.createElement('span', null, 'Б'),
+                React.createElement('span', null, 'Ж'),
+                React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
+                React.createElement('span', null, 'Кл'),
+                React.createElement('span', null, 'ГИ'),
+                React.createElement('span', null, 'Вр')
+              ),
+              // Row 3: values (grid) - абсолютные значения в граммах
+              React.createElement('div', { className: 'mpc-grid mpc-values' },
+                React.createElement('span', null, Math.round(scale(per.kcal100, G))),
+                React.createElement('span', null, Math.round(scale(per.carbs100, G))),
+                React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.simple100, G)) + '/' + Math.round(scale(per.complex100, G))),
+                React.createElement('span', null, Math.round(scale(per.prot100, G))),
+                React.createElement('span', null, Math.round(scale(per.fat100, G))),
+                React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.bad100, G)) + '/' + Math.round(scale(per.good100, G)) + '/' + Math.round(scale(per.trans100 || 0, G))),
+                React.createElement('span', null, Math.round(scale(per.fiber100, G))),
+                React.createElement('span', null, giVal != null ? Math.round(giVal) : '-'),
+                React.createElement('span', null, harmVal != null ? fmtVal('harm', harmVal) : '-')
+              )
+            );
+          }),
+          // Компактный блок: время + настроение + самочувствие + стресс (SaaS стиль)
+          React.createElement('div', { className: 'meal-meta-row' },
+            React.createElement('input', { className: 'compact-input time', type: 'time', title: 'Время приёма', value: meal.time || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, time: e.target.value} : m); setDay({...day, meals}); } }),
+            React.createElement('span', { className: 'meal-meta-field' }, '😊', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Настроение', value: meal.mood || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, mood: +e.target.value || ''} : m); setDay({...day, meals}); } })),
+            React.createElement('span', { className: 'meal-meta-field' }, '💪', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Самочувствие', value: meal.wellbeing || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, wellbeing: +e.target.value || ''} : m); setDay({...day, meals}); } })),
+            React.createElement('span', { className: 'meal-meta-field' }, '😰', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Стресс', value: meal.stress || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, stress: +e.target.value || ''} : m); setDay({...day, meals}); } })),
+            React.createElement('button', { className: 'meal-delete-btn', onClick: () => removeMeal(mi), title: 'Удалить приём' }, '🗑')
+          )
         )
         )
       );
@@ -1325,6 +1408,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     function normVal(k){ const n=+normAbs[k]||0; return n?fmtVal(k,n):'-'; }
   const per100Head = ['','','','','','','','','','']; // 10 per100 columns blank (соответствует таблице приёма)
   const factHead = ['ккал','У','Прост','Сл','Б','Ж','ВрЖ','ПолЖ','СупЖ','Клет','ГИ','Вред','']; // последний пустой (кнопка)
+  // Helper: calc percent of part from total (for mobile summary)
+  const pct = (part, total) => total > 0 ? Math.round((part / total) * 100) : 0;
     const daySummary = React.createElement('div',{className:'card tone-slate',style:{marginTop:'16px',overflowX:'auto'}},
       React.createElement('div',{className:'section-title',style:{marginBottom:'4px'}},'СУТОЧНЫЕ ИТОГИ'),
       React.createElement('table',{className:'tbl meals-table daily-summary'},
@@ -1359,6 +1444,99 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             factKeys.map(k=>devCell(k)),
             React.createElement('td',null,'')
           )
+        )
+      ),
+      // MOBILE: compact daily summary with column headers
+      React.createElement('div', { className: 'mobile-daily-summary' },
+        // Header row
+        React.createElement('div', { className: 'mds-header' },
+          React.createElement('span', { className: 'mds-label' }, ''),
+          React.createElement('span', null, 'ккал'),
+          React.createElement('span', null, 'У'),
+          React.createElement('span', { className: 'mds-dim' }, 'пр/сл'),
+          React.createElement('span', null, 'Б'),
+          React.createElement('span', null, 'Ж'),
+          React.createElement('span', { className: 'mds-dim' }, 'вр/пол/суп'),
+          React.createElement('span', null, 'Кл'),
+          React.createElement('span', null, 'ГИ'),
+          React.createElement('span', null, 'Вр')
+        ),
+        // Fact row
+        React.createElement('div', { className: 'mds-row' },
+          React.createElement('span', { className: 'mds-label' }, 'Факт'),
+          React.createElement('span', null, Math.round(dayTot.kcal)),
+          React.createElement('span', null, Math.round(dayTot.carbs)),
+          React.createElement('span', { className: 'mds-dim' }, pct(dayTot.simple, dayTot.carbs) + '/' + pct(dayTot.complex, dayTot.carbs)),
+          React.createElement('span', null, Math.round(dayTot.prot)),
+          React.createElement('span', null, Math.round(dayTot.fat)),
+          React.createElement('span', { className: 'mds-dim' }, pct(dayTot.bad, dayTot.fat) + '/' + pct(dayTot.good, dayTot.fat) + '/' + pct(dayTot.trans || 0, dayTot.fat)),
+          React.createElement('span', null, Math.round(dayTot.fiber)),
+          React.createElement('span', null, Math.round(dayTot.gi || 0)),
+          React.createElement('span', null, fmtVal('harm', dayTot.harm || 0))
+        ),
+        // Norm row
+        React.createElement('div', { className: 'mds-row' },
+          React.createElement('span', { className: 'mds-label' }, 'Норма'),
+          React.createElement('span', null, Math.round(normAbs.kcal || 0)),
+          React.createElement('span', null, Math.round(normAbs.carbs || 0)),
+          React.createElement('span', { className: 'mds-dim' }, pct(normAbs.simple || 0, normAbs.carbs || 1) + '/' + pct(normAbs.complex || 0, normAbs.carbs || 1)),
+          React.createElement('span', null, Math.round(normAbs.prot || 0)),
+          React.createElement('span', null, Math.round(normAbs.fat || 0)),
+          React.createElement('span', { className: 'mds-dim' }, pct(normAbs.bad || 0, normAbs.fat || 1) + '/' + pct(normAbs.good || 0, normAbs.fat || 1) + '/' + pct(normAbs.trans || 0, normAbs.fat || 1)),
+          React.createElement('span', null, Math.round(normAbs.fiber || 0)),
+          React.createElement('span', null, Math.round(normAbs.gi || 0)),
+          React.createElement('span', null, fmtVal('harm', normAbs.harm || 0))
+        ),
+        // Deviation row - custom layout matching header columns
+        React.createElement('div', { className: 'mds-row mds-dev' },
+          React.createElement('span', { className: 'mds-label' }, 'Откл'),
+          // kcal
+          (() => { const n = normAbs.kcal || 0, f = dayTot.kcal || 0; if (!n) return React.createElement('span', { key: 'dev-kcal' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-kcal', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })(),
+          // carbs
+          (() => { const n = normAbs.carbs || 0, f = dayTot.carbs || 0; if (!n) return React.createElement('span', { key: 'dev-carbs' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-carbs', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })(),
+          // simple/complex (combined)
+          (() => {
+            const ns = normAbs.simple || 0, fs = dayTot.simple || 0;
+            const nc = normAbs.complex || 0, fc = dayTot.complex || 0;
+            const ds = ns ? Math.round(((fs - ns) / ns) * 100) : 0;
+            const dc = nc ? Math.round(((fc - nc) / nc) * 100) : 0;
+            const cs = ds > 0 ? '#dc2626' : ds < 0 ? '#059669' : '#6b7280';
+            const cc = dc > 0 ? '#dc2626' : dc < 0 ? '#059669' : '#6b7280';
+            return React.createElement('span', { key: 'dev-sc', className: 'mds-dim' },
+              React.createElement('span', { style: { color: cs } }, (ds > 0 ? '+' : '') + ds),
+              '/',
+              React.createElement('span', { style: { color: cc } }, (dc > 0 ? '+' : '') + dc)
+            );
+          })(),
+          // prot
+          (() => { const n = normAbs.prot || 0, f = dayTot.prot || 0; if (!n) return React.createElement('span', { key: 'dev-prot' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-prot', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })(),
+          // fat
+          (() => { const n = normAbs.fat || 0, f = dayTot.fat || 0; if (!n) return React.createElement('span', { key: 'dev-fat' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-fat', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })(),
+          // bad/good/trans (combined)
+          (() => {
+            const nb = normAbs.bad || 0, fb = dayTot.bad || 0;
+            const ng = normAbs.good || 0, fg = dayTot.good || 0;
+            const nt = normAbs.trans || 0, ft = dayTot.trans || 0;
+            const db = nb ? Math.round(((fb - nb) / nb) * 100) : 0;
+            const dg = ng ? Math.round(((fg - ng) / ng) * 100) : 0;
+            const dt = nt ? Math.round(((ft - nt) / nt) * 100) : 0;
+            const cb = db > 0 ? '#dc2626' : db < 0 ? '#059669' : '#6b7280';
+            const cg = dg > 0 ? '#dc2626' : dg < 0 ? '#059669' : '#6b7280';
+            const ct = dt > 0 ? '#dc2626' : dt < 0 ? '#059669' : '#6b7280';
+            return React.createElement('span', { key: 'dev-bgt', className: 'mds-dim' },
+              React.createElement('span', { style: { color: cb } }, (db > 0 ? '+' : '') + db),
+              '/',
+              React.createElement('span', { style: { color: cg } }, (dg > 0 ? '+' : '') + dg),
+              '/',
+              React.createElement('span', { style: { color: ct } }, (dt > 0 ? '+' : '') + dt)
+            );
+          })(),
+          // fiber
+          (() => { const n = normAbs.fiber || 0, f = dayTot.fiber || 0; if (!n) return React.createElement('span', { key: 'dev-fiber' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-fiber', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })(),
+          // gi
+          (() => { const n = normAbs.gi || 0, f = dayTot.gi || 0; if (!n) return React.createElement('span', { key: 'dev-gi' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-gi', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })(),
+          // harm
+          (() => { const n = normAbs.harm || 0, f = dayTot.harm || 0; if (!n) return React.createElement('span', { key: 'dev-harm' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-harm', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })()
         )
       )
     );
