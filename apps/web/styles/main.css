@@ -2312,8 +2312,7 @@ td:first-child input {
   }
 
   /* === ПРАВАЯ КОЛОНКА (сон, оценка, тренировки) === */
-  .area-side,
-  .area-side.right-col {
+  .area-side {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
@@ -2337,17 +2336,8 @@ td:first-child input {
     flex: none !important;
   }
 
-  /* Зелёные карточки (сон, оценка дня) */
-  .side-col .card.tone-green,
-  .card.tone-green {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  .tone-green .grid,
-  .tone-green .grid-2 {
+  /* Зелёные карточки и grid */
+  .tone-green .grid {
     width: 100% !important;
     max-width: 100% !important;
     grid-template-columns: 1fr !important;
