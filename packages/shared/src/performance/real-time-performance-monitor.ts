@@ -374,7 +374,7 @@ export class RealTimePerformanceMonitor {
 
     let totalDataTransferred = 0;
     let totalLatency = 0;
-    let requestCount = resourceEntries.length;
+    const requestCount = resourceEntries.length;
 
     resourceEntries.forEach((entry) => {
       const resourceEntry = entry as PerformanceResourceTiming;

@@ -290,8 +290,8 @@ export class ModuleGroup {
         const result = await dynamicImport(path);
         this.loaded.add(path);
         log.info('Module preloaded', {
-          importPath: item.path,
-          queueLength: this.preloadQueue.length,
+          importPath: path,
+          group: this.name,
         });
         return result;
       } catch (error) {

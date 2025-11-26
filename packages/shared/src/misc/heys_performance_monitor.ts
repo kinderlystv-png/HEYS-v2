@@ -552,7 +552,7 @@ declare global {
     getStorageSize(): number {
       try {
         let total = 0;
-        for (let key in localStorage) {
+        for (const key in localStorage) {
           if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
             total += localStorage.getItem(key)?.length || 0;
           }

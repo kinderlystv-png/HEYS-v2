@@ -1,6 +1,7 @@
 // heys_day_v12.ts — вкладка «День» (TypeScript version)
 
 import React from 'react';
+
 import type {
   DayRecord,
   DayTabProps,

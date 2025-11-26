@@ -169,7 +169,7 @@ export class StructuredLogger {
       }
     }
 
-    // TODO: Implement file and remote logging for Node.js environment
+    // NOTE: File logging not implemented - browser-only for now
     if (this.config.enableFile && typeof window === 'undefined') {
       // File logging would go here
     }

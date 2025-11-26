@@ -19,7 +19,7 @@ type ExternalLogger = Partial<Record<keyof Logger, LogMethod>>;
 interface LogEntry {
   level: keyof Logger;
   message: string;
-  context?: Record<string, unknown>;
+  context: Record<string, unknown> | undefined;
   timestamp: number;
 }
 

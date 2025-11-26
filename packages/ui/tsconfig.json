@@ -2,10 +2,13 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "noEmit": false,
     "jsx": "react-jsx",
-    "composite": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@heys/shared": ["../shared/src"],
+      "@heys/logger": ["../logger/dist"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["dist", "node_modules", "**/*.test.*", "**/*.spec.*", "**/*.stories.*"]

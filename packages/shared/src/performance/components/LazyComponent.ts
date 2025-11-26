@@ -1,7 +1,7 @@
 // filepath: packages/shared/src/performance/components/LazyComponent.ts
 
-import { LazyLoader } from '../LazyLoader';
 import { balancedLazyConfig } from '../lazy-loading-config';
+import { LazyLoader } from '../LazyLoader';
 
 interface LazyComponentConfig {
   selector: string;

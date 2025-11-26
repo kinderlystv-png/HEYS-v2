@@ -1,7 +1,9 @@
 // heys_error_boundary_v1.ts — Error Boundary для React (TypeScript version)
 
 import React from 'react';
+
 import { getGlobalLogger } from '../monitoring/structured-logger';
+
 import type { ErrorBoundaryProps, HEYSGlobal } from './types/heys';
 
 // Error Boundary State

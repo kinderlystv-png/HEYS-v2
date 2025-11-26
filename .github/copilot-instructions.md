@@ -182,7 +182,7 @@ Object.keys(localStorage).filter((k) => k.startsWith('heys_'));
 
 При запросе **"сделай промпт"** / **"создай промпт"** → использовать шаблон:
 
-**Шаблон**: `TASK_PROMPT_TEMPLATE.md` — использовать как образец структуры
+**Шаблон**: `docs/TASK_PROMPT_TEMPLATE.md` — использовать как образец структуры
 
 **Расположение**: `docs/tasks/YYYY-MM-DD-slug.md`
 
@@ -306,7 +306,7 @@ docs: update architecture diagram
 2. **Коммиты только по запросу** — жди команды "коммит" или "пуш"
 3. **Минимум шагов** — используй HMR, не делай лишних действий
 4. **Task Prompt Template** — для многошаговых задач используй
-   `TASK_PROMPT_TEMPLATE.md`
+   `docs/TASK_PROMPT_TEMPLATE.md`
 
 ---
 
@@ -315,7 +315,7 @@ docs: update architecture diagram
 - **Architecture:** `docs/ARCHITECTURE.md`
 - **Performance audit:** `PERFORMANCE_MONITOR_AUDIT.md`
 - **Security:** `docs/SECURITY.md`, `database_clients_rls_policies.sql`
-- **Task Template:** `TASK_PROMPT_TEMPLATE.md`
+- **Task Template:** `docs/TASK_PROMPT_TEMPLATE.md`
 
 ---
 

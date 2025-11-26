@@ -1,6 +1,7 @@
 // heys_user_v12.ts — вкладка «Данные пользователя» (TypeScript version)
 
 import React from 'react';
+
 import type { HEYSGlobal, PulseZone, UserProfile, UserTabProps } from './types/heys';
 
 // Declare global types

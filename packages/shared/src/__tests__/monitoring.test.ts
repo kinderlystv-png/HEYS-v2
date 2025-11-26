@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { PerformanceMonitor, recordError, recordMetric } from '../monitoring/performance';
 
 describe('Performance Monitoring', () => {

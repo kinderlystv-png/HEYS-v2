@@ -45,6 +45,7 @@ pnpm run dev:api
 ```
 
 **Проверка:**
+
 ```bash
 curl http://localhost:4001/health
 # Должно вернуть: {"status":"OK",...}
@@ -53,11 +54,13 @@ curl http://localhost:4001/health
 ### Вариант 2: Использовать моки (для тестирования без backend)
 
 Измените `.env.telegram`:
+
 ```env
 VITE_USE_CLIENT_MOCKS=true  # Включить моки
 ```
 
 Перезапустите mini-app:
+
 ```bash
 pnpm --filter @heys/tg-mini dev
 ```
@@ -128,7 +131,7 @@ pnpm --filter @heys/tg-mini dev
 2. **Нажми на иконку 🐛** внизу справа
 3. **Смотри логи в реальном времени:**
    - 🔵 **INFO** — обычные события
-   - ✅ **SUCCESS** — успешные операции  
+   - ✅ **SUCCESS** — успешные операции
    - ⚠️ **WARN** — предупреждения
    - ❌ **ERROR** — ошибки
 
@@ -284,16 +287,16 @@ NODE_ENV=development
 // Backend: packages/core/src/server/router.ts
 serverRouter.post('/api/telegram/auth/verify', async (req, res) => {
   const { initData } = req.body;
-  
+
   // 1. Проверяем подпись HMAC-SHA256
   const verification = verifyTelegramInitData(initData, TELEGRAM_BOT_TOKEN);
-  
+
   // 2. Проверяем user в whitelist
   const allowedCheck = ensureUserAllowed(userPayload.id, TELEGRAM_ALLOWED_IDS);
-  
+
   // 3. Создаем сессию
   const sessionPayload = createSessionPayload(userPayload);
-  
+
   return res.json(sessionPayload);
 });
 ```
@@ -370,6 +373,7 @@ API_ALLOWED_ORIGINS=https://tressy-cotyledonoid-vergie.ngrok-free.dev
 ### Проблема: Debug console не появляется
 
 **Проверь:**
+
 1. `<DebugPanel />` добавлен в `App.tsx`
 2. HMR обновил компонент (перезагрузи страницу)
 3. Иконка 🐛 видна внизу справа
@@ -378,9 +382,11 @@ API_ALLOWED_ORIGINS=https://tressy-cotyledonoid-vergie.ngrok-free.dev
 
 ## ✅ Резюме
 
-**Главная проблема:** API сервер не запущен → fetch() не может подключиться к `localhost:4001`
+**Главная проблема:** API сервер не запущен → fetch() не может подключиться к
+`localhost:4001`
 
 **Решение:**
+
 1. Запустить `pnpm run dev:api`
 2. Использовать Debug Console 🐛 для отладки
 3. Проверять логи HTTP запросов в реальном времени

@@ -245,20 +245,3 @@ export const DEFAULT_CONFIG = {
     return LEVEL_ALIASES[normalized] || normalized;
   },
 };
-
-// CommonJS совместимость
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    LOG_LEVELS,
-    LEVEL_ALIASES,
-    LEVEL_COLORS,
-    LEVEL_VALUES,
-    LEVEL_METHODS,
-    ENVIRONMENT_CONFIGS,
-    LEVEL_FORMATTERS,
-    LEVEL_PREDICATES,
-    ROTATION_CONFIG,
-    DEFAULT_CONFIG,
-    default: DEFAULT_CONFIG,
-  };
-}

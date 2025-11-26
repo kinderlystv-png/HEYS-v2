@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { LighthouseConfig, LighthouseResults, OptimizationPlan } from './LighthouseOptimizer';
 import { LighthouseOptimizer } from './LighthouseOptimizer';
 

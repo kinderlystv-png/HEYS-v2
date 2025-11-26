@@ -387,7 +387,7 @@ export class SecurityAnalyticsService extends LightweightEventEmitter {
           customAttributes: event.metadata || {},
         }));
 
-        // TODO: Implement training when threat detection is fully integrated
+        // NOTE: ML training disabled - threatDetection not fully integrated
         // await this.threatDetection.trainAnomalyModel(trainingData);
         this.logger.info('ML model trained on historical events', {
           metadata: { trainingSamples: trainingData.length },

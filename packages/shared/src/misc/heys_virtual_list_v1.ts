@@ -1,6 +1,7 @@
 // heys_virtual_list_v1.ts — простая виртуализация длинных списков для React (TypeScript version)
 
 import React from 'react';
+
 import type { HEYSGlobal } from './types/heys';
 
 // VirtualList component types

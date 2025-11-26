@@ -1,11 +1,14 @@
 # 🚨 ЭКСТРЕННОЕ ВОССТАНОВЛЕНИЕ ПРОДУКТОВ
 
 ## Проблема
-В Supabase записан **пустой массив** `[]` для `heys_products`, который затирает все локальные данные при каждом hard reload.
+
+В Supabase записан **пустой массив** `[]` для `heys_products`, который затирает
+все локальные данные при каждом hard reload.
 
 ## ✅ Что уже исправлено (код)
 
-1. **Блокировка записи пустых массивов** в Supabase (строка 607 в `heys_storage_supabase_v1.js`)
+1. **Блокировка записи пустых массивов** в Supabase (строка 607 в
+   `heys_storage_supabase_v1.js`)
 2. **Автовосстановление из backup** при синхронизации (строка 424)
 3. **Защита от перезаписи** непустых локальных данных (строка 419)
 
@@ -21,7 +24,10 @@ console.log('Backup products:', backup ? backup.length : 'NOT FOUND');
 
 // Если backup есть - восстанавливаем
 if (backup && backup.length > 0) {
-  localStorage.setItem('heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products', JSON.stringify(backup));
+  localStorage.setItem(
+    'heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products',
+    JSON.stringify(backup),
+  );
   console.log('✅ Restored', backup.length, 'products from backup');
   location.reload();
 }
@@ -31,18 +37,30 @@ if (backup && backup.length > 0) {
 
 1. Нажми F12 → Console
 2. Проверь все ключи с backup:
+
 ```javascript
-Object.keys(localStorage).filter(k => k.includes('backup') && k.includes('products'))
+Object.keys(localStorage).filter(
+  (k) => k.includes('backup') && k.includes('products'),
+);
 ```
 
 3. Если нашёл старый backup - используй его:
+
 ```javascript
-const oldBackup = 'heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products_backup_backup'; // Используй найденный ключ
+const oldBackup =
+  'heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products_backup_backup'; // Используй найденный ключ
 const data = JSON.parse(localStorage.getItem(oldBackup));
 if (data && data.length > 0) {
-  localStorage.setItem('heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products', JSON.stringify(data));
+  localStorage.setItem(
+    'heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products',
+    JSON.stringify(data),
+  );
   // Сохраняем в Supabase через cloud API
-  HEYS.cloud.saveClientKey('73a55ec7-2b48-47de-8308-06d7bec4259a', 'heys_products', data);
+  HEYS.cloud.saveClientKey(
+    '73a55ec7-2b48-47de-8308-06d7bec4259a',
+    'heys_products',
+    data,
+  );
   console.log('✅ Recovered', data.length, 'products and saved to Supabase');
 }
 ```
@@ -64,25 +82,33 @@ const productsKey = `heys_${clientId}_products`;
 const backupKey = `${productsKey}_backup`;
 
 console.log('=== ТЕКУЩЕЕ СОСТОЯНИЕ ===');
-console.log('Products:', JSON.parse(localStorage.getItem(productsKey) || '[]').length);
-console.log('Backup:', JSON.parse(localStorage.getItem(backupKey) || '[]').length);
+console.log(
+  'Products:',
+  JSON.parse(localStorage.getItem(productsKey) || '[]').length,
+);
+console.log(
+  'Backup:',
+  JSON.parse(localStorage.getItem(backupKey) || '[]').length,
+);
 
 // Ищем все backup'ы
 const allBackups = Object.keys(localStorage)
-  .filter(k => k.includes(clientId) && k.includes('products'))
-  .map(k => ({
+  .filter((k) => k.includes(clientId) && k.includes('products'))
+  .map((k) => ({
     key: k,
-    length: JSON.parse(localStorage.getItem(k) || '[]').length
+    length: JSON.parse(localStorage.getItem(k) || '[]').length,
   }));
 console.table(allBackups);
 ```
 
 ## ⚙️ Почему это случилось
 
-1. **Race condition**: При инициализации приложения `products` стейт начинается с `[]`
+1. **Race condition**: При инициализации приложения `products` стейт начинается
+   с `[]`
 2. **useEffect срабатывает** до завершения `bootstrapClientSync`
 3. **Пустой массив записывается** в Supabase, затирая реальные данные
-4. **При каждом reload** пустой массив из Supabase перезаписывает локальные данные
+4. **При каждом reload** пустой массив из Supabase перезаписывает локальные
+   данные
 
 ## 🛡️ Что защищает теперь
 

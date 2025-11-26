@@ -121,7 +121,7 @@ export const SecureContent: React.FC<SecureContentProps> = ({
   content,
   allowHtml = false,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  maxLength,
+  maxLength: _maxLength,
   className,
   'data-testid': testId,
 }) => {
@@ -182,7 +182,8 @@ export const SecureForm = <T extends Record<string, unknown> = Record<string, un
 
       // Validate if schema provided
       if (validationSchema) {
-        const validation = await defaultValidator.validateSchema(data, validationSchema, {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const validation = await defaultValidator.validateSchema(data, validationSchema as any, {
           sanitize: true,
           strictMode: true,
         });
@@ -249,7 +250,7 @@ export const SecureUserProfile: React.FC<SecureUserProfileProps> = ({
       throw new SecurityError('User profile validation failed', validation.errors);
     }
 
-    await onUpdate(validation.sanitized || formData);
+    await onUpdate((validation.sanitized as SecureUserProfileData) || formData);
     setIsEditing(false);
   }, [formData, onUpdate]);
 

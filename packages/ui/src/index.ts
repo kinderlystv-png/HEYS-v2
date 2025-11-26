@@ -6,7 +6,3 @@ export type { ButtonProps } from './components/Button/Button';
 
 // Security components
 export * from './security';
-
-// TODO: Add more components
-// export { Input } from './components/Input/Input';
-// export { Card } from './components/Card/Card';
