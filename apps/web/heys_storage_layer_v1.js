@@ -140,10 +140,6 @@
     const sk=scoped(k);
     memory.set(sk,v);
     rawSet(sk,v);
-    // DEBUG: логируем сохранение профиля
-    if (k.includes('profile')) {
-      console.log('[Store.set] 🔵 PROFILE SAVE | key: ' + k + ' | scoped: ' + sk + ' | stepsGoal: ' + (v?.stepsGoal || 'NONE') + ' | full: ' + JSON.stringify(v));
-    }
     if(watchers.has(sk)) watchers.get(sk).forEach(fn=>{ try{ fn(v); }catch(e){} });
     try{
       if(global.HEYS && typeof global.HEYS.saveClientKey==='function'){
@@ -153,18 +149,12 @@
           // sk уже содержит heys_<clientId>_<key>
           // Не отправлять в облако если v не объект (например, строка совпадает с ключом)
           if (typeof v !== 'object' || v === null) {
-            if (k.includes('profile')) console.log('[Store.set] ⚠️ PROFILE skipped (not object)');
             return;
           }
-          console.log('[Store.set] 🚀 Calling saveClientKey | cid: ' + cid + ' | sk: ' + sk);
           global.HEYS.saveClientKey(cid, sk, v);
-        } else {
-          if (k.includes('profile')) console.log('[Store.set] ⚠️ PROFILE no cid');
         }
-      } else {
-        if (k.includes('profile')) console.log('[Store.set] ⚠️ PROFILE no saveClientKey function');
       }
-    }catch(e){ console.log('[Store.set] ❌ ERROR: ' + e.message); }
+    }catch(e){}
   };
 
   Store.watch = function(k, fn){ const sk=scoped(k); if(!watchers.has(sk)) watchers.set(sk,new Set()); watchers.get(sk).add(fn); return ()=>{ const set=watchers.get(sk); if(set){ set.delete(fn); if(!set.size) watchers.delete(sk); } }; };

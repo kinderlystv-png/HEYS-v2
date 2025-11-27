@@ -501,23 +501,10 @@
             return;
         }
 
-        // DEBUG: Лог входящих аргументов для профиля
-        if (args.some(a => typeof a === 'string' && a.includes('profile'))) {
-          console.log('[saveClientKey] 🔍 PROFILE ENTRY | args.length:', args.length, 
-            '| args[0]:', args[0], 
-            '| args[1]:', args[1], 
-            '| args[2]:', JSON.stringify(args[2] || null).substring(0, 200));
-        }
-
         if (args.length === 3) {
             client_id = args[0];
             k = args[1];
             value = args[2];
-            
-            // DEBUG: после парсинга для профиля
-            if (k && k.includes('profile')) {
-              console.log('[saveClientKey] 🔍 PROFILE PARSED (3 args) | client_id:', client_id, '| k:', k, '| value.stepsGoal:', value?.stepsGoal);
-            }
         } else if (args.length === 2) {
             k = args[0];
             value = args[1];
@@ -563,10 +550,6 @@
         }
 
         if (!user || !user.id) {
-            // DEBUG: лог если user отсутствует для профиля
-            if (k && k.includes('profile')) {
-                console.log('[saveClientKey] ❌ BLOCKED - no user | key:', k);
-            }
             return;
         }
 
@@ -619,11 +602,6 @@
                         k.includes('_profile') ? '👤 PROFILE' : '📝 OTHER';
         const itemsCount = Array.isArray(value) ? value.length : 'N/A';
         log(`💾 [SAVE] ${dataType} | key: ${k} | items: ${itemsCount} | client: ${client_id.substring(0, 8)}...`);
-        
-        // DEBUG: детальный лог для профиля
-        if (k.includes('profile')) {
-          console.log('[saveClientKey] 🟢 PROFILE TO SUPABASE | key:', k, '| stepsGoal:', value?.stepsGoal, '| full:', JSON.stringify(value));
-        }
 
         // Добавляем в очередь вместо немедленной отправки
         clientUpsertQueue.push(upsertObj);
