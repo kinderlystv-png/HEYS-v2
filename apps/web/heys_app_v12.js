@@ -1590,63 +1590,6 @@
                               })
                             : null,
                         ),
-                        // Действия
-                        React.createElement(
-                          'div',
-                          { className: 'hdr-actions' },
-                          React.createElement(
-                            'button',
-                            {
-                              className: 'hdr-btn primary',
-                              onClick: handleManualBackup,
-                              disabled: backupBusy,
-                              title: 'Создать резервную копию',
-                            },
-                            React.createElement('span', { className: 'hdr-btn-icon' }, '💾'),
-                            backupBusy ? 'Сохраняем…' : 'Бэкап',
-                          ),
-                          React.createElement(
-                            'button',
-                            {
-                              className: 'hdr-btn',
-                              onClick: handleExportBackup,
-                              disabled: backupBusy,
-                              title: 'Скачать JSON файл',
-                            },
-                            React.createElement('span', { className: 'hdr-btn-icon' }, '📥'),
-                            'Экспорт',
-                          ),
-                          React.createElement('div', { className: 'hdr-divider' }),
-                          React.createElement(
-                            'button',
-                            {
-                              className: 'hdr-btn',
-                              onClick: handleRestoreProducts,
-                              title: 'Восстановить список продуктов',
-                            },
-                            React.createElement('span', { className: 'hdr-btn-icon' }, '🍎'),
-                            'Продукты',
-                          ),
-                          React.createElement(
-                            'button',
-                            {
-                              className: 'hdr-btn',
-                              onClick: handleRestoreAll,
-                              title: 'Восстановить все данные',
-                            },
-                            React.createElement('span', { className: 'hdr-btn-icon' }, '♻️'),
-                            'Восстановить',
-                          ),
-                          // Backup info — компактный
-                          backupMeta
-                            ? React.createElement(
-                                'div',
-                                { className: 'hdr-backup-info compact', title: 'Последнее сохранение: ' + formatBackupTime(backupMeta) },
-                                React.createElement('span', { className: 'hdr-backup-dot' }),
-                                React.createElement('span', { className: 'hdr-backup-time' }, formatBackupTime(backupMeta).split(' ').pop()),
-                              )
-                            : null,
-                        ),
                       )
                     : null,
                 ),
@@ -1701,15 +1644,6 @@
                     React.createElement('span', { className: 'tab-icon' }, '👤'),
                     React.createElement('span', { className: 'tab-text' }, 'Профиль'),
                   ),
-                  React.createElement(
-                    'div',
-                    {
-                      className: 'tab ' + (tab === 'analytics' ? 'active' : ''),
-                      onClick: () => setTab('analytics'),
-                    },
-                    React.createElement('span', { className: 'tab-icon' }, '⚡'),
-                    React.createElement('span', { className: 'tab-text' }, 'Аналитика'),
-                  ),
                 ),
                 tab === 'ration'
                   ? React.createElement(RationTabWithCloudSync, {
@@ -1731,11 +1665,7 @@
                           key: 'user' + syncVer + '_' + String(clientId || ''),
                           clientId,
                         })
-                      : tab === 'analytics'
-                        ? React.createElement(AnalyticsTab, {
-                            key: 'analytics' + syncVer,
-                          })
-                        : window.HEYS && window.HEYS.ReportsTab
+                      : window.HEYS && window.HEYS.ReportsTab
                           ? React.createElement(window.HEYS.ReportsTab, {
                               key:
                                 'reports' +

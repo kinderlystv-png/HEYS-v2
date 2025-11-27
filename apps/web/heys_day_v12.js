@@ -676,11 +676,11 @@
     const z= (lsGet('heys_hr_zones',[]).map(x=>+x.MET||0)); const mets=[2.5,6,8,10].map((_,i)=>z[i]||[2.5,6,8,10][i]);
     const weight=+day.weightMorning||+prof.weight||70; const kcalMin=mets.map(m=>kcalPerMin(m,weight));
     const trainK= t=>(t.z||[0,0,0,0]).reduce((s,min,i)=> s+r0((+min||0)*(kcalMin[i]||0)),0);
-    const TR=(day.trainings&&Array.isArray(day.trainings)&&day.trainings.length>=2)?day.trainings:[{z:[0,0,0,0]},{z:[0,0,0,0]}];
-  const train1k=trainK(TR[0]), train2k=trainK(TR[1]);
+    const TR=(day.trainings&&Array.isArray(day.trainings)&&day.trainings.length>=1)?day.trainings:[{z:[0,0,0,0]},{z:[0,0,0,0]},{z:[0,0,0,0]}];
+  const train1k=trainK(TR[0]||{z:[0,0,0,0]}), train2k=trainK(TR[1]||{z:[0,0,0,0]}), train3k=trainK(TR[2]||{z:[0,0,0,0]});
   const stepsK=r0(stepsKcal(day.steps||0,weight,prof.sex,0.7));
   const householdK=r0((+day.householdMin||0)*kcalPerMin(2.5,weight));
-  const actTotal=r0(train1k+train2k+stepsK+householdK);
+  const actTotal=r0(train1k+train2k+train3k+stepsK+householdK);
   const bmr=calcBMR(weight,prof), tdee=r0(bmr+actTotal);
   const profileTargetDef=(lsGet('heys_profile',{}).deficitPctTarget||0); // отрицательное число для дефицита
   const dayTargetDef = (day.deficitPct != null ? day.deficitPct : profileTargetDef); // используем дефицит дня, если есть
@@ -939,13 +939,35 @@
     const [editingMealIndex, setEditingMealIndex] = useState(null); // null = новый, число = редактирование
     const [editMode, setEditMode] = useState('new'); // 'new' | 'time' | 'mood'
     
+    // === Тренировки: количество видимых блоков ===
+    const [visibleTrainings, setVisibleTrainings] = useState(() => {
+      // Автоопределяем сколько тренировок показывать на основе данных
+      const tr = day.trainings || [];
+      const hasData = (t) => t && t.z && t.z.some(v => +v > 0);
+      if (tr[2] && hasData(tr[2])) return 3;
+      if (tr[1] && hasData(tr[1])) return 2;
+      return 1;
+    });
+    
+    // === Toast для подсказок БЖУ ===
+    const [toastVisible, setToastVisible] = useState(false);
+    const [toastDismissed, setToastDismissed] = useState(false);
+    const toastTimeoutRef = React.useRef(null);
+    
     // === Grams Picker Modal (mobile only) ===
     const [showGramsPicker, setShowGramsPicker] = useState(false);
     const [gramsPickerTarget, setGramsPickerTarget] = useState(null); // {mealIndex, itemId, currentGrams}
     const [pendingGrams, setPendingGrams] = useState(99); // индекс 99 = 100г
     const [gramsInputValue, setGramsInputValue] = useState(''); // для ручного ввода
-    // Генерируем значения от 1 до 500 с шагом 1
-    const gramsValues = useMemo(() => Array.from({length: 500}, (_, i) => String(i + 1)), []);
+    // Генерируем значения от 1 до 2000 с шагом 1
+    const gramsValues = useMemo(() => Array.from({length: 2000}, (_, i) => String(i + 1)), []);
+    
+    // === Zone Minutes Picker Modal ===
+    const [showZonePicker, setShowZonePicker] = useState(false);
+    const [zonePickerTarget, setZonePickerTarget] = useState(null); // {trainingIndex, zoneIndex}
+    const [pendingZoneMinutes, setPendingZoneMinutes] = useState(0);
+    // Значения минут: 0-120
+    const zoneMinutesValues = useMemo(() => Array.from({length: 121}, (_, i) => String(i)), []);
     
     // === Weight Picker Modal ===
     const [showWeightPicker, setShowWeightPicker] = useState(false);
@@ -1104,7 +1126,7 @@
     function openGramsPicker(mealIndex, itemId, currentGrams) {
       const gramsNum = parseInt(currentGrams) || 100;
       // Индекс = значение - 1 (т.к. начинаем с 1)
-      const closestIdx = Math.max(0, Math.min(499, gramsNum - 1));
+      const closestIdx = Math.max(0, Math.min(1999, gramsNum - 1));
       
       setGramsPickerTarget({ mealIndex, itemId, currentGrams: gramsNum });
       setPendingGrams(closestIdx);
@@ -1117,7 +1139,7 @@
       const val = e.target.value.replace(/[^0-9]/g, ''); // только цифры
       setGramsInputValue(val);
       const num = parseInt(val) || 0;
-      if (num >= 1 && num <= 500) {
+      if (num >= 1 && num <= 2000) {
         setPendingGrams(num - 1); // синхронизируем wheel
       }
     }
@@ -1140,6 +1162,28 @@
     function cancelGramsPicker() {
       setShowGramsPicker(false);
       setGramsPickerTarget(null);
+    }
+    
+    // === Zone Minutes Picker functions ===
+    function openZonePicker(trainingIndex, zoneIndex) {
+      const T = TR[trainingIndex] || { z: [0, 0, 0, 0] };
+      const currentMinutes = +T.z[zoneIndex] || 0;
+      setZonePickerTarget({ trainingIndex, zoneIndex });
+      setPendingZoneMinutes(currentMinutes);
+      setShowZonePicker(true);
+    }
+    
+    function confirmZonePicker() {
+      if (zonePickerTarget) {
+        updateTraining(zonePickerTarget.trainingIndex, zonePickerTarget.zoneIndex, pendingZoneMinutes);
+      }
+      setShowZonePicker(false);
+      setZonePickerTarget(null);
+    }
+    
+    function cancelZonePicker() {
+      setShowZonePicker(false);
+      setZonePickerTarget(null);
     }
     
     // Используем глобальный WheelColumn
@@ -1507,30 +1551,54 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
   )
 );
 
+    // Иконки для тренировок
+    const trainIcons = ['🏃', '🚴', '🏊'];
+    
+    // Удаление тренировки (скрытие + очистка данных)
+    const removeTraining = (ti) => {
+      const newTrainings = [...(day.trainings || [{z:[0,0,0,0]},{z:[0,0,0,0]},{z:[0,0,0,0]}])];
+      newTrainings[ti] = {z:[0,0,0,0]}; // очищаем данные
+      setDay({...day, trainings: newTrainings});
+      setVisibleTrainings(Math.max(0, visibleTrainings - 1)); // можно удалить до 0
+    };
 
     // Компактные тренировки в SaaS стиле
     const trainingsBlock = React.createElement('div', { className: 'compact-trainings' },
-      [0, 1].map((ti) => {
+      // Пустое состояние когда нет видимых тренировок
+      visibleTrainings === 0 && React.createElement('div', { className: 'empty-trainings' },
+        React.createElement('span', { className: 'empty-trainings-icon' }, '🏃‍♂️'),
+        React.createElement('span', { className: 'empty-trainings-text' }, 'Нет тренировок')
+      ),
+      // Показываем только видимые тренировки
+      Array.from({length: visibleTrainings}, (_, ti) => {
         const T = TR[ti] || { z: [0, 0, 0, 0] };
         const kcalZ = i => r0((+T.z[i] || 0) * (kcalMin[i] || 0));
         const total = r0(kcalZ(0) + kcalZ(1) + kcalZ(2) + kcalZ(3));
-        return React.createElement('div', { key: 'tr' + ti, className: 'compact-card compact-train' },
+        return React.createElement('div', { 
+          key: 'tr' + ti, 
+          className: 'compact-card compact-train'
+        },
           React.createElement('div', { className: 'compact-train-header' },
-            React.createElement('span', { className: 'compact-train-icon' }, ti === 0 ? '🏃' : '🚴'),
+            React.createElement('span', { className: 'compact-train-icon' }, trainIcons[ti] || '💪'),
             React.createElement('span', null, 'Тренировка ' + (ti + 1)),
             React.createElement('span', { className: 'compact-badge train' }, total + ' ккал'),
+            // Кнопка удаления (всегда показываем)
+            React.createElement('button', {
+              className: 'compact-train-remove',
+              onClick: () => removeTraining(ti),
+              title: 'Убрать тренировку'
+            }, '×')
           ),
           React.createElement('div', { className: 'compact-train-zones' },
-            [0, 1, 2, 3].map((zi) => React.createElement('div', { key: 'z' + zi, className: 'compact-zone' },
+            [0, 1, 2, 3].map((zi) => React.createElement('div', { 
+              key: 'z' + zi, 
+              className: 'compact-zone zone-clickable',
+              onClick: () => openZonePicker(ti, zi)
+            },
               React.createElement('span', { className: 'compact-zone-label' }, 'Z' + (zi + 1)),
-              React.createElement('input', { 
-                className: 'compact-input tiny', 
-                type: 'number', 
-                value: +T.z[zi] || '', 
-                placeholder: '0',
-                onChange: e => updateTraining(ti, zi, e.target.value), 
-                title: 'Минут в зоне ' + (zi + 1) 
-              }),
+              React.createElement('span', { className: 'compact-zone-value' }, +T.z[zi] || '—'),
+              // Показываем ккал если есть значение
+              +T.z[zi] > 0 && React.createElement('span', { className: 'compact-zone-kcal' }, kcalZ(zi) + ' ккал'),
             )),
           ),
         );
@@ -1562,9 +1630,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('span', { className: 'compact-stat', title: 'Стресс' }, '😰', React.createElement('span', null, day.stressAvg || '—')),
         ),
         React.createElement('input', { className: 'compact-note', type: 'text', placeholder: 'Заметка о дне...', value: day.dayComment || '', onChange: e => setDay({...day, dayComment: e.target.value}) }),
-      ),
-      // Тренировки — компактные
-      trainingsBlock
+      )
     );
 
   // compareBlock удалён по требованию
@@ -1742,13 +1808,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
             
             // Контент карточки
+            // Определяем цвет граммов
+            const gramsClass = G > 500 ? 'grams-danger' : G > 300 ? 'grams-warn' : '';
+            
             const cardContent = React.createElement('div', { className: 'mpc' },
               // Row 1: name + grams (без кнопки delete — удаление свайпом)
               React.createElement('div', { className: 'mpc-row1' },
                 React.createElement('span', { className: 'mpc-name' }, p.name),
                 // На мобильных — кнопка открывает wheel picker
                 React.createElement('button', {
-                  className: 'mpc-grams-btn',
+                  className: 'mpc-grams-btn ' + gramsClass,
                   onClick: (e) => { e.stopPropagation(); openGramsPicker(mi, it.id, G); }
                 }, G + 'г')
               ),
@@ -2136,84 +2205,292 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       }
     }, [date, day.weightMorning]);
     
-    const metricsCards = React.createElement('div', { className: 'metrics-cards' },
-      // Затраты (TDEE) с трендом веса
-      React.createElement('div', { 
-        className: 'metrics-card',
-        style: { background: '#f8fafc', borderColor: '#e2e8f0' },
-        title: 'Затраты: ' + tdee + ' ккал (BMR ' + bmr + ' + активность ' + actTotal + ')' + 
-               (weightTrend ? '\nТренд веса за 7 дней: ' + weightTrend.text : '')
-      },
-        React.createElement('div', { className: 'metrics-icon' }, '⚡'),
-        React.createElement('div', { className: 'metrics-value', style: { color: '#64748b' } }, tdee),
-        React.createElement('div', { className: 'metrics-label' }, 'Затраты'),
-        // Тренд веса под основным значением
-        weightTrend && React.createElement('div', { 
-          className: 'metrics-trend',
-          style: { 
-            fontSize: '11px', 
-            color: '#94a3b8', 
-            marginTop: '2px',
-            fontWeight: 500
-          } 
-        }, weightTrend.text)
-      ),
-      // Цель (optimum с указанием целевого дефицита) - кликабельна для редактирования
-      React.createElement('div', { 
-        className: 'metrics-card metrics-card-clickable',
-        style: { background: '#f0f9ff', borderColor: '#bae6fd', cursor: 'pointer' },
-        title: 'Цель: ' + optimum + ' ккал (затраты ' + tdee + ' − ' + Math.abs(dayTargetDef) + '% дефицит)\nКликни для изменения целевого дефицита',
-        onClick: () => {
-          const newDef = prompt('Целевой дефицит (отрицательное число для дефицита, положительное для профицита):', dayTargetDef);
-          if (newDef !== null && !isNaN(+newDef)) {
-            setDay({...day, deficitPct: +newDef});
+    // Данные для sparkline калорий за 7 дней
+    const sparklineData = React.useMemo(() => {
+      try {
+        const today = new Date(date);
+        const days = [];
+        const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
+        
+        // Получаем продукты для вычисления калорий
+        let productsMap = new Map();
+        try {
+          const productsKey = clientId 
+            ? 'heys_' + clientId + '_products' 
+            : 'heys_products';
+          const productsRaw = localStorage.getItem(productsKey);
+          if (productsRaw) {
+            let products = [];
+            if (productsRaw.startsWith('¤Z¤')) {
+              let str = productsRaw.substring(3);
+              const patterns = {
+                '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+                '¤c¤': '"carbs100"', '¤f¤': '"fat100"', '¤s¤': '"simple100"',
+                '¤x¤': '"complex100"', '¤b¤': '"badFat100"', '¤g¤': '"goodFat100"',
+                '¤t¤': '"trans100"', '¤i¤': '"fiber100"', '¤G¤': '"gi"', '¤h¤': '"harmScore"'
+              };
+              for (const [code, pattern] of Object.entries(patterns)) {
+                str = str.split(code).join(pattern);
+              }
+              products = JSON.parse(str);
+            } else {
+              products = JSON.parse(productsRaw);
+            }
+            (products || []).forEach(p => { if(p.id) productsMap.set(p.id, p); });
+          }
+        } catch(e) {}
+        
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = fmtDate(d);
+          const isToday = i === 0;
+          
+          // Для сегодня используем eatenKcal напрямую
+          if (isToday) {
+            days.push({ date: dateStr, kcal: Math.round(eatenKcal || 0), isToday: true });
+            continue;
+          }
+          
+          // Для прошлых дней читаем напрямую из localStorage
+          let dayData = null;
+          try {
+            const scopedKey = clientId 
+              ? 'heys_' + clientId + '_dayv2_' + dateStr 
+              : 'heys_dayv2_' + dateStr;
+            const raw = localStorage.getItem(scopedKey);
+            if (raw) {
+              if (raw.startsWith('¤Z¤')) {
+                let str = raw.substring(3);
+                const patterns = { '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"', '¤c¤': '"carbs100"', '¤f¤': '"fat100"' };
+                for (const [code, pattern] of Object.entries(patterns)) str = str.split(code).join(pattern);
+                dayData = JSON.parse(str);
+              } else {
+                dayData = JSON.parse(raw);
+              }
+            }
+          } catch(e) {}
+          
+          if (dayData && dayData.meals) {
+            // Вычисляем калории через продукты
+            let totalKcal = 0;
+            (dayData.meals || []).forEach(meal => {
+              (meal.items || []).forEach(item => {
+                const grams = +item.grams || 0;
+                const product = productsMap.get(item.product_id);
+                if (product && grams > 0) {
+                  const kcal100 = +product.kcal100 || 0;
+                  totalKcal += (kcal100 * grams / 100);
+                }
+              });
+            });
+            days.push({ date: dateStr, kcal: Math.round(totalKcal), isToday: false });
+          } else {
+            days.push({ date: dateStr, kcal: 0, isToday: false });
           }
         }
+        
+        return days;
+      } catch (e) {
+        return [];
+      }
+    }, [date, eatenKcal]);
+    
+    // Умные подсказки по БЖУ
+    const macroTip = React.useMemo(() => {
+      const proteinPct = (dayTot.protein || 0) / (normAbs.protein || 1);
+      const fatPct = (dayTot.fat || 0) / (normAbs.fat || 1);
+      const carbsPct = (dayTot.carbs || 0) / (normAbs.carbs || 1);
+      
+      // Проверяем в порядке приоритета
+      if (proteinPct < 0.5 && fatPct >= 0.5 && carbsPct >= 0.5) {
+        return { icon: '🥩', text: 'Добавь белка: творог, яйца, курица', type: 'protein' };
+      }
+      if (fatPct < 0.5 && proteinPct >= 0.5 && carbsPct >= 0.5) {
+        return { icon: '🥑', text: 'Мало жиров: орехи, авокадо, масло', type: 'fat' };
+      }
+      if (carbsPct < 0.5 && proteinPct >= 0.5 && fatPct >= 0.5) {
+        return { icon: '🍞', text: 'Добавь углеводов: каша, хлеб, фрукты', type: 'carbs' };
+      }
+      if (proteinPct >= 0.8 && fatPct >= 0.8 && carbsPct >= 0.8) {
+        return { icon: '✅', text: 'Отлично! Все макросы в балансе', type: 'success' };
+      }
+      // Не показываем подсказку если день пустой или всё слишком мало
+      return null;
+    }, [dayTot.protein, dayTot.fat, dayTot.carbs, normAbs.protein, normAbs.fat, normAbs.carbs]);
+    
+    // Показ toast при изменении подсказки
+    useEffect(() => {
+      // Сбрасываем dismissed при смене дня
+      setToastDismissed(false);
+    }, [date]);
+    
+    useEffect(() => {
+      if (macroTip && !toastDismissed) {
+        // Показываем toast с задержкой (чтобы не мелькал при загрузке)
+        const showTimeout = setTimeout(() => {
+          setToastVisible(true);
+        }, 1500);
+        
+        // Автоскрытие через 6 секунд
+        toastTimeoutRef.current = setTimeout(() => {
+          setToastVisible(false);
+        }, 7500);
+        
+        return () => {
+          clearTimeout(showTimeout);
+          if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+        };
+      } else {
+        setToastVisible(false);
+      }
+    }, [macroTip, toastDismissed]);
+    
+    // Закрытие toast
+    const dismissToast = () => {
+      setToastVisible(false);
+      setToastDismissed(true);
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+    
+    // SVG Sparkline компонент
+    const renderSparkline = (data, goal) => {
+      if (!data || data.length === 0) return null;
+      
+      const width = 300; // широкий viewBox, SVG растянется на 100%
+      const height = 44;
+      const paddingTop = 4;
+      const paddingBottom = 14; // место для меток дней
+      const paddingX = 12;
+      const chartHeight = height - paddingTop - paddingBottom;
+      const maxKcal = Math.max(goal * 1.2, ...data.map(d => d.kcal));
+      
+      const points = data.map((d, i) => {
+        const x = paddingX + (i / (data.length - 1)) * (width - paddingX * 2);
+        const y = paddingTop + chartHeight - (d.kcal / maxKcal) * chartHeight;
+        // Извлекаем день из даты (последние 2 символа)
+        const dayNum = d.date ? d.date.slice(-2).replace(/^0/, '') : '';
+        return { x, y, kcal: d.kcal, isToday: d.isToday, dayNum };
+      });
+      
+      const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
+      const goalY = paddingTop + chartHeight - (goal / maxKcal) * chartHeight;
+      
+      return React.createElement('svg', { 
+        className: 'sparkline-svg',
+        viewBox: '0 0 ' + width + ' ' + height,
+        preserveAspectRatio: 'xMidYMid meet'
       },
-        React.createElement('div', { className: 'metrics-icon' }, '🎯'),
-        React.createElement('div', { className: 'metrics-value', style: { color: '#0369a1' } }, optimum),
-        React.createElement('div', { className: 'metrics-label' }, 'Цель (' + dayTargetDef + '%)')
-      ),
-      // Съедено
-      React.createElement('div', { 
-        className: 'metrics-card',
-        style: { background: eatenCol.bg, borderColor: eatenCol.border },
-        title: 'Съедено: ' + r0(eatenKcal) + ' ккал (' + (remainingKcal >= 0 ? 'осталось ' + remainingKcal : 'перебор ' + Math.abs(remainingKcal)) + ')'
-      },
-        React.createElement('div', { className: 'metrics-icon' }, '🍽️'),
-        React.createElement('div', { className: 'metrics-value', style: { color: eatenCol.text } }, r0(eatenKcal)),
-        React.createElement('div', { className: 'metrics-label' }, 'Съедено')
-      ),
-      // Осталось / Перебор - кликабельно для фокуса в поиск
-      React.createElement('div', { 
-        className: 'metrics-card metrics-card-clickable',
-        style: { background: remainCol.bg, borderColor: remainCol.border, cursor: 'pointer' },
-        title: remainingKcal >= 0 
-          ? 'Сколько ещё можно съесть до нормы\nКликни для добавления продукта'
-          : 'Перебор от целевой калорийности: ' + Math.abs(remainingKcal) + ' ккал\n' + 
-            (Math.abs(remainingKcal) > 200 
-              ? 'Совет: добавь ' + Math.round(Math.abs(remainingKcal) / 7) + ' мин ходьбы или вычти из следующего приёма'
-              : 'Небольшой перебор, не критично'),
-        onClick: () => {
-          // Фокус на первый input поиска продукта
-          const firstSearchInput = document.querySelector('.suggest-wrap input[placeholder*="Поиск"]');
-          if (firstSearchInput) {
-            firstSearchInput.focus();
-            firstSearchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Линия цели (пунктир)
+        React.createElement('line', {
+          x1: 0, y1: goalY, x2: width, y2: goalY,
+          className: 'sparkline-goal'
+        }),
+        // Градиент заливка
+        React.createElement('defs', null,
+          React.createElement('linearGradient', { id: 'sparklineGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
+            React.createElement('stop', { offset: '0%', stopColor: '#22c55e', stopOpacity: '0.3' }),
+            React.createElement('stop', { offset: '100%', stopColor: '#22c55e', stopOpacity: '0.05' })
+          )
+        ),
+        // Заливка под графиком
+        React.createElement('path', {
+          d: pathD + ' L' + points[points.length-1].x + ',' + (paddingTop + chartHeight) + ' L' + points[0].x + ',' + (paddingTop + chartHeight) + ' Z',
+          fill: 'url(#sparklineGrad)'
+        }),
+        // Линия графика
+        React.createElement('path', {
+          d: pathD,
+          className: 'sparkline-line'
+        }),
+        // Метки дней внизу
+        points.map((p, i) => 
+          React.createElement('text', {
+            key: 'day-' + i,
+            x: p.x,
+            y: height - 2,
+            className: 'sparkline-day-label' + (p.isToday ? ' sparkline-day-today' : ''),
+            textAnchor: 'middle'
+          }, p.dayNum)
+        ),
+        // Точки на все дни с hover и цветом по статусу
+        points.map((p, i) => {
+          // Определяем цвет: зелёный если в норме, жёлтый если чуть превышен, красный если сильно
+          const ratio = p.kcal / goal;
+          let dotClass = 'sparkline-dot';
+          if (ratio <= 1.0) {
+            dotClass += ' sparkline-dot-ok'; // зелёный
+          } else if (ratio <= 1.15) {
+            dotClass += ' sparkline-dot-warn'; // жёлтый (до +15%)
+          } else {
+            dotClass += ' sparkline-dot-over'; // красный (>15%)
           }
-        }
-      },
-        React.createElement('div', { className: 'metrics-icon' }, remainingKcal >= 0 ? '🎯' : '🚫'),
-        React.createElement('div', { className: 'metrics-value', style: { color: remainCol.text } }, 
-          remainingKcal >= 0 ? remainingKcal : Math.abs(remainingKcal)
+          if (p.isToday) dotClass += ' sparkline-dot-today';
+          
+          return React.createElement('circle', {
+            key: 'dot-' + i,
+            cx: p.x, 
+            cy: p.y, 
+            r: p.isToday ? 4 : 2.5,
+            className: dotClass,
+            style: { cursor: 'pointer' }
+          },
+            React.createElement('title', null, p.dayNum + ': ' + p.kcal + ' ккал')
+          );
+        })
+      );
+    };
+    
+    // === БЛОК СТАТИСТИКА ===
+    const statsBlock = React.createElement('div', { className: 'compact-stats compact-card' },
+      React.createElement('div', { className: 'compact-card-header' }, '📊 СТАТИСТИКА'),
+      // 4 карточки метрик внутри статистики
+      React.createElement('div', { className: 'metrics-cards' },
+        // Затраты (TDEE)
+        React.createElement('div', { 
+          className: 'metrics-card',
+          style: { background: '#f8fafc', borderColor: '#e2e8f0' },
+          title: 'Затраты: ' + tdee + ' ккал'
+        },
+          React.createElement('div', { className: 'metrics-icon' }, '⚡'),
+          React.createElement('div', { className: 'metrics-value', style: { color: '#64748b' } }, tdee),
+          React.createElement('div', { className: 'metrics-label' }, 'Затраты')
         ),
-        React.createElement('div', { className: 'metrics-label' }, 
-          remainingKcal >= 0 ? 'Осталось' : 'Перебор'
+        // Цель
+        React.createElement('div', { 
+          className: 'metrics-card',
+          style: { background: '#f0f9ff', borderColor: '#bae6fd' }
+        },
+          React.createElement('div', { className: 'metrics-icon' }, '🎯'),
+          React.createElement('div', { className: 'metrics-value', style: { color: '#0369a1' } }, optimum),
+          React.createElement('div', { className: 'metrics-label' }, 'Цель (' + dayTargetDef + '%)')
         ),
-        // Умная подсказка при переборе
-        (remainingKcal < -200) && React.createElement('div', { className: 'metrics-hint' }, 
-          '+' + Math.round(Math.abs(remainingKcal) / 7) + ' мин 🚶'
+        // Съедено
+        React.createElement('div', { 
+          className: 'metrics-card',
+          style: { background: eatenCol.bg, borderColor: eatenCol.border }
+        },
+          React.createElement('div', { className: 'metrics-icon' }, '🍽️'),
+          React.createElement('div', { className: 'metrics-value', style: { color: eatenCol.text } }, r0(eatenKcal)),
+          React.createElement('div', { className: 'metrics-label' }, 'Съедено')
+        ),
+        // Осталось / Перебор
+        React.createElement('div', { 
+          className: 'metrics-card',
+          style: { background: remainCol.bg, borderColor: remainCol.border }
+        },
+          React.createElement('div', { className: 'metrics-icon' }, remainingKcal >= 0 ? '🎯' : '🚫'),
+          React.createElement('div', { className: 'metrics-value', style: { color: remainCol.text } }, 
+            remainingKcal >= 0 ? remainingKcal : Math.abs(remainingKcal)
+          ),
+          React.createElement('div', { className: 'metrics-label' }, 
+            remainingKcal >= 0 ? 'Осталось' : 'Перебор'
+          )
         )
+      ),
+      // Спарклайн — график калорий за 7 дней
+      React.createElement('div', { className: 'sparkline-container' },
+        renderSparkline(sparklineData, optimum)
       ),
       // Статус-бар прогресса к цели
       React.createElement('div', { className: 'goal-progress-bar' },
@@ -2229,25 +2506,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           )
         ),
         React.createElement('div', { className: 'goal-progress-track' },
-          React.createElement('div', { 
-            className: 'goal-progress-fill' + (eatenKcal > optimum ? ' over' : ''),
-            style: { width: Math.min(100, (eatenKcal / optimum) * 100) + '%' }
-          }),
-          // Маркер цели на 100%
-          React.createElement('div', { className: 'goal-marker' })
+            React.createElement('div', { 
+              className: 'goal-progress-fill' + (eatenKcal > optimum ? ' over' : ''),
+              style: { width: Math.min(100, (eatenKcal / optimum) * 100) + '%' }
+            }),
+            // Маркер цели на 100%
+            React.createElement('div', { className: 'goal-marker' })
+          ),
+          React.createElement('div', { className: 'goal-progress-footer' },
+            eatenKcal <= optimum 
+              ? React.createElement('span', { className: 'goal-remaining' }, 
+                  'Осталось ', React.createElement('b', null, remainingKcal), ' ккал'
+                )
+              : React.createElement('span', { className: 'goal-over' }, 
+                  'Превышение на ', React.createElement('b', null, Math.abs(remainingKcal)), ' ккал'
+                )
+          )
         ),
-        React.createElement('div', { className: 'goal-progress-footer' },
-          eatenKcal <= optimum 
-            ? React.createElement('span', { className: 'goal-remaining' }, 
-                'Осталось ', React.createElement('b', null, remainingKcal), ' ккал'
-              )
-            : React.createElement('span', { className: 'goal-over' }, 
-                'Превышение на ', React.createElement('b', null, Math.abs(remainingKcal)), ' ккал'
-              )
-        )
-      ),
-      // Контейнер: Макро-кольца + Плашка веса
-      React.createElement('div', { className: 'macro-weight-row' },
+        // Контейнер: Макро-кольца + Плашка веса
+        React.createElement('div', { className: 'macro-weight-row' },
         // Макро-бар БЖУ (в стиле Apple Watch колец)
         React.createElement('div', { className: 'macro-rings' },
           // Белки
@@ -2334,6 +2611,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               (currentDeficit > 0 ? '+' : '') + currentDeficit
             ),
             React.createElement('span', { className: 'weight-value-unit' }, '%')
+          ),
+          // Разница от профиля
+          currentDeficit !== profileDeficit && React.createElement('div', { 
+            className: 'deficit-card-trend ' + (currentDeficit < profileDeficit ? 'trend-down' : 'trend-up')
+          }, 
+            React.createElement('span', { className: 'trend-arrow' }, currentDeficit < profileDeficit ? '↓' : '↑'),
+            (currentDeficit > profileDeficit ? '+' : '') + (currentDeficit - profileDeficit) + '%'
           )
         )
       )
@@ -2487,29 +2771,82 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             )
           )
         ),
-        // Бытовая активность - кликабельная карточка
-        React.createElement('div', { 
-          className: 'household-activity-card',
-          onClick: openHouseholdPicker
-        },
-          React.createElement('div', { className: 'household-activity-header' },
-            React.createElement('span', { className: 'household-activity-icon' }, '🏠'),
-            React.createElement('span', { className: 'household-activity-title' }, 'Бытовая активность')
+        // Правая колонка: бытовая активность + кнопка добавить тренировку
+        React.createElement('div', { className: 'activity-right-col' },
+          // Бытовая активность - кликабельная карточка
+          React.createElement('div', { 
+            className: 'household-activity-card',
+            onClick: openHouseholdPicker
+          },
+            React.createElement('div', { className: 'household-activity-header' },
+              React.createElement('span', { className: 'household-activity-icon' }, '🏠'),
+              React.createElement('span', { className: 'household-activity-title' }, 'Бытовая активность')
+            ),
+            React.createElement('div', { className: 'household-activity-value' },
+              React.createElement('span', { className: 'household-value-number' }, day.householdMin || 0),
+              React.createElement('span', { className: 'household-value-unit' }, 'мин')
+            ),
+            householdK > 0 && React.createElement('div', { className: 'household-value-kcal' }, '→ ' + householdK + ' ккал'),
+            React.createElement('div', { className: 'household-activity-hint' }, 
+              'Время на ногах помимо тренировок'
+            )
           ),
-          React.createElement('div', { className: 'household-activity-value' },
-            React.createElement('span', { className: 'household-value-number' }, day.householdMin || 0),
-            React.createElement('span', { className: 'household-value-unit' }, 'мин'),
-            householdK > 0 && React.createElement('span', { className: 'household-value-kcal' }, '→ ' + householdK + ' ккал')
-          ),
-          React.createElement('div', { className: 'household-activity-hint' }, 
-            'Время на ногах помимо тренировок'
-          )
+          // Кнопка добавления тренировки
+          visibleTrainings < 3 && React.createElement('button', {
+            className: 'add-training-btn',
+            onClick: () => setVisibleTrainings(visibleTrainings + 1)
+          }, '+ Тренировка')
         )
+      ),
+      
+      // Тренировки — компактные
+      trainingsBlock
+    );
+    
+    // === SKELETON LOADER ===
+    const skeletonLoader = React.createElement('div', { className: 'skeleton-page' },
+      // Skeleton для СТАТИСТИКА
+      React.createElement('div', { className: 'skeleton-card skeleton-stats' },
+        React.createElement('div', { className: 'skeleton-header' }),
+        React.createElement('div', { className: 'skeleton-metrics' },
+          React.createElement('div', { className: 'skeleton-metric' }),
+          React.createElement('div', { className: 'skeleton-metric' }),
+          React.createElement('div', { className: 'skeleton-metric' }),
+          React.createElement('div', { className: 'skeleton-metric' })
+        ),
+        React.createElement('div', { className: 'skeleton-sparkline' }),
+        React.createElement('div', { className: 'skeleton-progress' }),
+        React.createElement('div', { className: 'skeleton-macros' },
+          React.createElement('div', { className: 'skeleton-ring' }),
+          React.createElement('div', { className: 'skeleton-ring' }),
+          React.createElement('div', { className: 'skeleton-ring' })
+        )
+      ),
+      // Skeleton для АКТИВНОСТЬ
+      React.createElement('div', { className: 'skeleton-card skeleton-activity' },
+        React.createElement('div', { className: 'skeleton-header' }),
+        React.createElement('div', { className: 'skeleton-slider' }),
+        React.createElement('div', { className: 'skeleton-row' },
+          React.createElement('div', { className: 'skeleton-block' }),
+          React.createElement('div', { className: 'skeleton-block' })
+        )
+      ),
+      // Skeleton для приёмов пищи
+      React.createElement('div', { className: 'skeleton-card skeleton-meal' },
+        React.createElement('div', { className: 'skeleton-meal-header' }),
+        React.createElement('div', { className: 'skeleton-search' }),
+        React.createElement('div', { className: 'skeleton-item' }),
+        React.createElement('div', { className: 'skeleton-item' })
       )
     );
+    
+    // Показываем skeleton пока данные не загружены
+    if (!isHydrated) {
+      return React.createElement('div', { className: 'page page-day' }, skeletonLoader);
+    }
   
     return React.createElement('div',{className:'page page-day'},
-      metricsCards,
+      statsBlock,
       compactActivity,
       sideBlock,
       daySummary,
@@ -2522,6 +2859,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         onClick: addMeal,
         title: 'Добавить приём пищи'
       }, '+'),
+      
+      // Toast подсказка БЖУ
+      macroTip && toastVisible && React.createElement('div', {
+        className: 'macro-toast macro-toast-' + macroTip.type + (toastVisible ? ' visible' : ''),
+        onClick: dismissToast
+      },
+        React.createElement('span', { className: 'macro-toast-icon' }, macroTip.icon),
+        React.createElement('span', { className: 'macro-toast-text' }, macroTip.text),
+        React.createElement('button', { className: 'macro-toast-close', onClick: dismissToast }, '×')
+      ),
       
       // Meal Creation/Edit Modal (mobile only)
       showTimePicker && ReactDOM.createPortal(
@@ -2743,6 +3090,35 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 values: gramsValues.map(v => v + 'г'),
                 selected: pendingGrams,
                 onChange: handleGramsWheelChange
+              })
+            )
+          )
+        ),
+        document.body
+      ),
+      
+      // Zone Minutes Picker Modal (for training zones)
+      showZonePicker && ReactDOM.createPortal(
+        React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelZonePicker },
+          React.createElement('div', { className: 'time-picker-modal zone-picker-modal', onClick: e => e.stopPropagation() },
+            React.createElement('div', { className: 'time-picker-header' },
+              React.createElement('button', { className: 'time-picker-cancel', onClick: cancelZonePicker }, 'Отмена'),
+              React.createElement('span', { className: 'time-picker-title' }, 
+                'Зона ' + (zonePickerTarget ? zonePickerTarget.zoneIndex + 1 : '')
+              ),
+              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmZonePicker }, 'Готово')
+            ),
+            // Подсказка с калориями
+            React.createElement('div', { className: 'zone-picker-kcal-hint' },
+              '🔥 ',
+              r0(zoneMinutesValues[pendingZoneMinutes] * (kcalMin[zonePickerTarget?.zoneIndex] || 0)),
+              ' ккал'
+            ),
+            React.createElement('div', { className: 'time-picker-wheels zone-wheels' },
+              React.createElement(WheelColumn, {
+                values: zoneMinutesValues.map(v => v + ' мин'),
+                selected: pendingZoneMinutes,
+                onChange: (i) => setPendingZoneMinutes(i)
               })
             )
           )
