@@ -46,6 +46,10 @@
   let status = CONNECTION_STATUS.OFFLINE;
   let user = null;
   let muteMirror = false;
+  
+  // 🚨 Флаг блокировки сохранения до завершения первого sync
+  let initialSyncCompleted = false;
+  cloud.isInitialSyncCompleted = function() { return initialSyncCompleted; };
 
   function log(){ try{ console.log.apply(console, ['[HEYS.cloud]'].concat([].slice.call(arguments))); }catch(e){} }
   function err(){ try{ console.error.apply(console, ['[HEYS.cloud:ERR]'].concat([].slice.call(arguments))); }catch(e){} }
@@ -407,6 +411,16 @@
       muteMirror = false;
       cloud._lastClientSync = { clientId: client_id, ts: now };
       log('✅ [CLIENT_SYNC] Sync completed for client:', client_id);
+      
+      // 🚨 Разрешаем сохранение после первого sync
+      initialSyncCompleted = true;
+      
+      // Уведомляем приложение о завершении синхронизации (для обновления stepsGoal и т.д.)
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id } }));
+        }, 50);
+      }
     }catch(e){ 
       err('❌ [CLIENT_SYNC] Exception:', e); 
       muteMirror=false; 
@@ -479,10 +493,31 @@
       cloud.saveClientKey = function(...args) {
         let client_id, k, value;
 
+        // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: Блокируем ВСЕ сохранения до завершения первого sync
+        // Это предотвращает затирание данных при загрузке страницы
+        if (!initialSyncCompleted) {
+            const keyInfo = args.find(a => typeof a === 'string' && a.includes('heys_')) || args[1] || 'unknown';
+            log(`⏳ [SAVE BLOCKED] Waiting for initial sync | key: ${keyInfo}`);
+            return;
+        }
+
+        // DEBUG: Лог входящих аргументов для профиля
+        if (args.some(a => typeof a === 'string' && a.includes('profile'))) {
+          console.log('[saveClientKey] 🔍 PROFILE ENTRY | args.length:', args.length, 
+            '| args[0]:', args[0], 
+            '| args[1]:', args[1], 
+            '| args[2]:', JSON.stringify(args[2] || null).substring(0, 200));
+        }
+
         if (args.length === 3) {
             client_id = args[0];
             k = args[1];
             value = args[2];
+            
+            // DEBUG: после парсинга для профиля
+            if (k && k.includes('profile')) {
+              console.log('[saveClientKey] 🔍 PROFILE PARSED (3 args) | client_id:', client_id, '| k:', k, '| value.stepsGoal:', value?.stepsGoal);
+            }
         } else if (args.length === 2) {
             k = args[0];
             value = args[1];
@@ -528,12 +563,27 @@
         }
 
         if (!user || !user.id) {
+            // DEBUG: лог если user отсутствует для профиля
+            if (k && k.includes('profile')) {
+                console.log('[saveClientKey] ❌ BLOCKED - no user | key:', k);
+            }
             return;
         }
 
         // Для дней проверяем что это объект, для остальных ключей пропускаем любые типы
-        if (k && k.includes('dayv2_')) {
+        if (k && k.includes('dayv2_') && !k.includes('backup') && !k.includes('date')) {
             if (typeof value !== 'object' || value === null) {
+                return;
+            }
+            // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем "пустой" день (без meals и реальных данных)
+            // Это защита от HMR-перезагрузок
+            const meals = value.meals || [];
+            const hasRealData = meals.length > 0 || 
+                               (value.steps && value.steps > 0) || 
+                               (value.weight && value.weight > 0) ||
+                               (value.water && value.water > 0);
+            if (!hasRealData) {
+                log(`🚫 [SAVE BLOCKED] Refused to save empty day to Supabase (key: ${k}) - no meals/steps/weight`);
                 return;
             }
         }
@@ -552,12 +602,28 @@
             return; // Блокируем затирание реальных данных пустым массивом
         }
 
+        // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем "пустой" профиль (без ключевых полей)
+        // Это защита от HMR-перезагрузок, когда компонент ремонтируется с дефолтными значениями
+        if (k.includes('profile') && !k.includes('backup')) {
+            const isValidProfile = value && typeof value === 'object' && 
+                                   (value.age || value.weight || value.height || value.firstName);
+            if (!isValidProfile) {
+                log(`🚫 [SAVE BLOCKED] Refused to save empty/invalid profile to Supabase (key: ${k})`);
+                return;
+            }
+        }
+
         // Логирование сохранения
         const dataType = k === 'heys_products' ? '📦 PRODUCTS' :
                         k.includes('dayv2_') ? '📅 DAY' :
                         k.includes('_profile') ? '👤 PROFILE' : '📝 OTHER';
         const itemsCount = Array.isArray(value) ? value.length : 'N/A';
         log(`💾 [SAVE] ${dataType} | key: ${k} | items: ${itemsCount} | client: ${client_id.substring(0, 8)}...`);
+        
+        // DEBUG: детальный лог для профиля
+        if (k.includes('profile')) {
+          console.log('[saveClientKey] 🟢 PROFILE TO SUPABASE | key:', k, '| stepsGoal:', value?.stepsGoal, '| full:', JSON.stringify(value));
+        }
 
         // Добавляем в очередь вместо немедленной отправки
         clientUpsertQueue.push(upsertObj);

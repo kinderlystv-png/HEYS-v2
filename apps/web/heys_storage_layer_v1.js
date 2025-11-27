@@ -140,20 +140,31 @@
     const sk=scoped(k);
     memory.set(sk,v);
     rawSet(sk,v);
+    // DEBUG: логируем сохранение профиля
+    if (k.includes('profile')) {
+      console.log('[Store.set] 🔵 PROFILE SAVE | key: ' + k + ' | scoped: ' + sk + ' | stepsGoal: ' + (v?.stepsGoal || 'NONE') + ' | full: ' + JSON.stringify(v));
+    }
     if(watchers.has(sk)) watchers.get(sk).forEach(fn=>{ try{ fn(v); }catch(e){} });
     try{
       if(global.HEYS && typeof global.HEYS.saveClientKey==='function'){
         const cid=ns();
         if(cid) {
-          // Always pass the original key (not scoped) to saveClientKey
-          // And remove the 'heys_' prefix if it exists, to keep DB keys clean.
-          const keyForCloud = k.startsWith('heys_') ? k.substring('heys_'.length) : k;
+          // Передаём scoped key в облако (с clientId), чтобы ключ совпадал при загрузке
+          // sk уже содержит heys_<clientId>_<key>
           // Не отправлять в облако если v не объект (например, строка совпадает с ключом)
-          if (typeof v !== 'object' || v === null) return;
-          global.HEYS.saveClientKey(cid, keyForCloud, v);
+          if (typeof v !== 'object' || v === null) {
+            if (k.includes('profile')) console.log('[Store.set] ⚠️ PROFILE skipped (not object)');
+            return;
+          }
+          console.log('[Store.set] 🚀 Calling saveClientKey | cid: ' + cid + ' | sk: ' + sk);
+          global.HEYS.saveClientKey(cid, sk, v);
+        } else {
+          if (k.includes('profile')) console.log('[Store.set] ⚠️ PROFILE no cid');
         }
+      } else {
+        if (k.includes('profile')) console.log('[Store.set] ⚠️ PROFILE no saveClientKey function');
       }
-    }catch(e){}
+    }catch(e){ console.log('[Store.set] ❌ ERROR: ' + e.message); }
   };
 
   Store.watch = function(k, fn){ const sk=scoped(k); if(!watchers.has(sk)) watchers.set(sk,new Set()); watchers.get(sk).add(fn); return ()=>{ const set=watchers.get(sk); if(set){ set.delete(fn); if(!set.size) watchers.delete(sk); } }; };

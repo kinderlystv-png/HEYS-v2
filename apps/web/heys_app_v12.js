@@ -1000,10 +1000,23 @@
             }, []);
 
             // Обертка для сохранения данных клиента в облако
+            // ВАЖНО: Поддерживает ДВА формата вызова:
+            //   - saveClientKey(key, value) — старый формат, 2 аргумента
+            //   - saveClientKey(clientId, key, value) — новый формат, 3 аргумента (из Store.set)
             window.HEYS = window.HEYS || {};
-            window.HEYS.saveClientKey = function (k, v) {
-              if (clientId && cloud && typeof cloud.saveClientKey === 'function') {
-                cloud.saveClientKey(clientId, k, v);
+            window.HEYS.saveClientKey = function (...args) {
+              if (cloud && typeof cloud.saveClientKey === 'function') {
+                if (args.length === 3) {
+                  // Новый формат: (clientId, key, value)
+                  const [cid, k, v] = args;
+                  cloud.saveClientKey(cid, k, v);
+                } else if (args.length === 2) {
+                  // Старый формат: (key, value) — используем clientId из замыкания
+                  const [k, v] = args;
+                  if (clientId) {
+                    cloud.saveClientKey(clientId, k, v);
+                  }
+                }
               }
             };
             useEffect(() => {

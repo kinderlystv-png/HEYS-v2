@@ -76,6 +76,7 @@
     keyPrefix = 'heys_dayv2_',
     debounceMs = 500,
     now = () => Date.now(),
+    disabled = false, // ЗАЩИТА: не сохранять пока данные не загружены
   }){
     const timerRef = React.useRef(null);
     const prevStoredSnapRef = React.useRef(null);
@@ -149,12 +150,13 @@
     },[getKey,lsSet,now,readExisting,stripMeta]);
 
     const flush = React.useCallback(()=>{
+      if(disabled) return; // ЗАЩИТА: не сохранять до гидратации
       if(isUnmountedRef.current || !day || !day.date) return;
       const payload = {...day, updatedAt: day.updatedAt!=null? day.updatedAt: now()};
       const daySnap = JSON.stringify(stripMeta(payload));
       if(prevDaySnapRef.current === daySnap) return;
       save(payload);
-    },[day,now,save,stripMeta]);
+    },[day,now,save,stripMeta,disabled]);
 
     React.useEffect(()=>{
       if(!day || !day.date) return;
@@ -169,24 +171,25 @@
     },[day && day.date,getKey,readExisting,stripMeta]);
 
     React.useEffect(()=>{
+      if(disabled) return; // ЗАЩИТА: не запускать таймер до гидратации
       if(!day || !day.date) return;
       const daySnap = JSON.stringify(stripMeta(day));
       if(prevDaySnapRef.current === daySnap) return;
       global.clearTimeout(timerRef.current);
       timerRef.current = global.setTimeout(flush,debounceMs);
       return ()=>{ global.clearTimeout(timerRef.current); };
-    },[day,debounceMs,flush,stripMeta]);
+    },[day,debounceMs,flush,stripMeta,disabled]);
 
     React.useEffect(()=>{
       return ()=>{
         global.clearTimeout(timerRef.current);
-        flush();
+        if(!disabled) flush(); // ЗАЩИТА: не сохранять при unmount если не гидратировано
       };
-    },[flush]);
+    },[flush,disabled]);
 
     React.useEffect(()=>{
       const onVisChange=()=>{
-        if(global.document.visibilityState!=='visible') flush();
+        if(!disabled && global.document.visibilityState!=='visible') flush();
       };
       global.document.addEventListener('visibilitychange',onVisChange);
       global.addEventListener('pagehide',flush);
@@ -223,7 +226,7 @@
     return list;
   }
 
-  function getProfile(){ const p=lsGet('heys_profile',{})||{}; const g=(p.gender||p.sex||'Мужской'); const sex=(String(g).toLowerCase().startsWith('ж')?'female':'male'); return {sex,height:+p.height||175,age:+p.age||30, sleepHours:+p.sleepHours||8, weight:+p.weight||70, deficitPctTarget:+p.deficitPctTarget||0}; }
+  function getProfile(){ const p=lsGet('heys_profile',{})||{}; const g=(p.gender||p.sex||'Мужской'); const sex=(String(g).toLowerCase().startsWith('ж')?'female':'male'); return {sex,height:+p.height||175,age:+p.age||30, sleepHours:+p.sleepHours||8, weight:+p.weight||70, deficitPctTarget:+p.deficitPctTarget||0, stepsGoal:+p.stepsGoal||7000}; }
   function calcBMR(w,prof){ const h=+prof.height||175,a=+prof.age||30,sex=(prof.sex||'male'); return Math.round(10*(+w||0)+6.25*h-5*a+(sex==='female'?-161:5)); }
   function kcalPerMin(met,w){ return Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10; }
   function stepsKcal(steps,w,sex,len){ const coef=(sex==='female'?0.5:0.57); const km=(+steps||0)*(len||0.7)/1000; return Math.round(coef*(+w||0)*km*10)/10; }
@@ -531,6 +534,10 @@
     // Иначе последний развёрнут по умолчанию
     return mealIndex === totalMeals - 1;
   };
+  
+  // Флаг: данные загружены (из localStorage или Supabase)
+  const [isHydrated, setIsHydrated] = useState(false);
+  
   const [day,setDay]=useState(()=>{ 
     const key = 'heys_dayv2_'+date;
     const v=lsGet(key,null); 
@@ -582,7 +589,8 @@
     }
   }, [date]);
 
-    const { flush } = useDayAutosave({ day, date, lsSet, lsGetFn: lsGet });
+    // ЗАЩИТА: не сохранять до завершения гидратации (чтобы не затереть данные из Supabase)
+    const { flush } = useDayAutosave({ day, date, lsSet, lsGetFn: lsGet, disabled: !isHydrated });
 
     useEffect(() => {
       HEYS.Day = HEYS.Day || {};
@@ -611,6 +619,7 @@
     // Подгружать данные дня из облака при смене даты
     useEffect(() => {
       let cancelled = false;
+      setIsHydrated(false); // Сброс: данные ещё не загружены для новой даты
       const clientId = window.HEYS && window.HEYS.currentClientId;
       const cloud = window.HEYS && window.HEYS.cloud;
       const doLocal = () => {
@@ -645,6 +654,9 @@
         if (currentProducts && Array.isArray(currentProducts)) {
           setProducts(currentProducts);
         }
+        
+        // ВАЖНО: данные загружены, теперь можно сохранять
+        setIsHydrated(true);
       };
       if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
         if (typeof cloud.shouldSyncClient === 'function' ? cloud.shouldSyncClient(clientId, 4000) : true){
@@ -945,8 +957,25 @@
     const weightGValues = useMemo(() => Array.from({length: 10}, (_, i) => String(i)), []); // 0-9
     const stepsGoalValues = useMemo(() => Array.from({length: 30}, (_, i) => String((i + 1) * 1000)), []); // 1000-30000
     
-    // Цель шагов из профиля или дефолт 7000
-    const savedStepsGoal = prof.stepsGoal || 7000;
+    // Цель шагов: state для реактивного обновления слайдера
+    const [savedStepsGoal, setSavedStepsGoal] = useState(() => prof.stepsGoal || 7000);
+    
+    // Слушаем завершение синхронизации cloud для обновления stepsGoal
+    useEffect(() => {
+      const handleSyncCompleted = () => {
+        const profileFromStorage = getProfile();
+        if (profileFromStorage.stepsGoal && profileFromStorage.stepsGoal !== savedStepsGoal) {
+          setSavedStepsGoal(profileFromStorage.stepsGoal);
+        }
+      };
+      
+      // Слушаем кастомный event от cloud синхронизации
+      window.addEventListener('heysSyncCompleted', handleSyncCompleted);
+      
+      return () => {
+        window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
+      };
+    }, [savedStepsGoal]); // Обновляем при изменении savedStepsGoal
     
     function openWeightPicker() {
       setWeightPickerStep(1); // начинаем с первого шага
@@ -998,10 +1027,14 @@
       const pendingStepsGoal = (pendingStepsGoalIdx + 1) * 1000; // конвертируем индекс в значение
       const prof = getProfile();
       const shouldSetDeficit = (!day.weightMorning || day.weightMorning === '') && newWeight && (!day.deficitPct && day.deficitPct !== 0);
-      // Сохраняем цель шагов в профиль
+      // Сохраняем цель шагов в профиль и обновляем state
       if (pendingStepsGoal !== savedStepsGoal) {
-        const updatedProf = { ...prof, stepsGoal: pendingStepsGoal };
+        // Важно: читаем RAW данные профиля, чтобы не потерять другие поля (gender и т.д.)
+        const rawProfile = lsGet('heys_profile', {}) || {};
+        const updatedProf = { ...rawProfile, stepsGoal: pendingStepsGoal };
+        console.log('[HEYS] 🎯 Saving stepsGoal | pending: ' + pendingStepsGoal + ' | rawProfile: ' + JSON.stringify(rawProfile) + ' | updatedProf: ' + JSON.stringify(updatedProf));
         lsSet('heys_profile', updatedProf);
+        setSavedStepsGoal(pendingStepsGoal); // обновляем state для слайдера
       }
       setDay({
         ...day,
@@ -1043,6 +1076,29 @@
     
     function cancelDeficitPicker() {
       setShowDeficitPicker(false);
+    }
+
+    // === Household (Бытовая активность) Picker Modal ===
+    const [showHouseholdPicker, setShowHouseholdPicker] = useState(false);
+    const [pendingHouseholdIdx, setPendingHouseholdIdx] = useState(0); // индекс (0 = 0 минут)
+    // Значения от 0 до 300 минут с шагом 10
+    const householdValues = useMemo(() => Array.from({length: 31}, (_, i) => String(i * 10)), []); // 0, 10, 20, ..., 300
+    
+    function openHouseholdPicker() {
+      const currentMin = day.householdMin || 0;
+      // Конвертируем минуты в индекс (0=0, 10=1, 20=2, ...)
+      setPendingHouseholdIdx(Math.max(0, Math.min(30, Math.round(currentMin / 10))));
+      setShowHouseholdPicker(true);
+    }
+    
+    function confirmHouseholdPicker() {
+      const newMinutes = pendingHouseholdIdx * 10; // индекс обратно в минуты
+      setDay({ ...day, householdMin: newMinutes });
+      setShowHouseholdPicker(false);
+    }
+    
+    function cancelHouseholdPicker() {
+      setShowHouseholdPicker(false);
     }
 
     function openGramsPicker(mealIndex, itemId, currentGrams) {
@@ -2392,32 +2448,63 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         )
       ),
       
-      // Остальные инпуты в ряд
-      React.createElement('div', { className: 'compact-activity-inputs' },
-        // Быт
-        React.createElement('div', { className: 'compact-activity-field' },
-          React.createElement('span', { className: 'compact-activity-label' }, 'Быт'),
-          React.createElement('input', { 
-            className: 'compact-input', 
-            type: 'number',
-            value: day.householdMin || '',
-            placeholder: '0',
-            onChange: e => setDay({...day, householdMin: +e.target.value || 0})
-          }),
-          React.createElement('span', { className: 'compact-activity-unit' }, 'мин')
+      // Ряд: Формула расчёта + Бытовая активность
+      React.createElement('div', { className: 'activity-cards-row' },
+        // Плашка с формулой расчёта
+        React.createElement('div', { className: 'formula-card' },
+          React.createElement('div', { className: 'formula-card-header' },
+            React.createElement('span', { className: 'formula-card-icon' }, '📊'),
+            React.createElement('span', { className: 'formula-card-title' }, 'Расчёт калорий')
+          ),
+          React.createElement('div', { className: 'formula-card-rows' },
+            React.createElement('div', { className: 'formula-row' },
+              React.createElement('span', { className: 'formula-label' }, 'BMR'),
+              React.createElement('span', { className: 'formula-value' }, bmr)
+            ),
+            React.createElement('div', { className: 'formula-row' },
+              React.createElement('span', { className: 'formula-label' }, '+ Шаги'),
+              React.createElement('span', { className: 'formula-value' }, stepsK)
+            ),
+            householdK > 0 && React.createElement('div', { className: 'formula-row' },
+              React.createElement('span', { className: 'formula-label' }, '+ Быт'),
+              React.createElement('span', { className: 'formula-value' }, householdK)
+            ),
+            (train1k + train2k > 0) && React.createElement('div', { className: 'formula-row' },
+              React.createElement('span', { className: 'formula-label' }, '+ Тренировки'),
+              React.createElement('span', { className: 'formula-value' }, r0(train1k + train2k))
+            ),
+            React.createElement('div', { className: 'formula-row formula-subtotal' },
+              React.createElement('span', { className: 'formula-label' }, '= Затраты'),
+              React.createElement('span', { className: 'formula-value' }, tdee)
+            ),
+            dayTargetDef !== 0 && React.createElement('div', { className: 'formula-row' + (dayTargetDef < 0 ? ' deficit' : ' surplus') },
+              React.createElement('span', { className: 'formula-label' }, dayTargetDef < 0 ? 'Дефицит' : 'Профицит'),
+              React.createElement('span', { className: 'formula-value' }, (dayTargetDef > 0 ? '+' : '') + dayTargetDef + '%')
+            ),
+            React.createElement('div', { className: 'formula-row formula-total' },
+              React.createElement('span', { className: 'formula-label' }, 'Цель'),
+              React.createElement('span', { className: 'formula-value' }, optimum)
+            )
+          )
+        ),
+        // Бытовая активность - кликабельная карточка
+        React.createElement('div', { 
+          className: 'household-activity-card',
+          onClick: openHouseholdPicker
+        },
+          React.createElement('div', { className: 'household-activity-header' },
+            React.createElement('span', { className: 'household-activity-icon' }, '🏠'),
+            React.createElement('span', { className: 'household-activity-title' }, 'Бытовая активность')
+          ),
+          React.createElement('div', { className: 'household-activity-value' },
+            React.createElement('span', { className: 'household-value-number' }, day.householdMin || 0),
+            React.createElement('span', { className: 'household-value-unit' }, 'мин'),
+            householdK > 0 && React.createElement('span', { className: 'household-value-kcal' }, '→ ' + householdK + ' ккал')
+          ),
+          React.createElement('div', { className: 'household-activity-hint' }, 
+            'Время на ногах помимо тренировок'
+          )
         )
-      ),
-      // Вторая строка: расчётные значения
-      React.createElement('div', { className: 'compact-activity-stats' },
-        React.createElement('span', { title: 'Базовый метаболизм' }, 'BMR: ', React.createElement('b', null, bmr)),
-        React.createElement('span', { title: 'Калории от шагов' }, '→ ', React.createElement('b', null, stepsK), ' ккал'),
-        React.createElement('span', { title: 'Калории от бытовой активности' }, '→ ', React.createElement('b', null, householdK), ' ккал'),
-        React.createElement('span', { title: 'Целевая калорийность' }, 'Цель: ', React.createElement('b', null, optimum))
-      ),
-      // Третья строка: тренировки (если есть)
-      (train1k + train2k > 0) && React.createElement('div', { className: 'compact-activity-stats secondary' },
-        React.createElement('span', null, 'Тренировки: ', React.createElement('b', null, r0(train1k + train2k)), ' ккал'),
-        React.createElement('span', null, '• Всего активность: ', React.createElement('b', null, actTotal), ' ккал')
       )
     );
   
@@ -2595,6 +2682,33 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 selected: pendingDeficitIdx,
                 onChange: (i) => setPendingDeficitIdx(i)
               })
+            )
+          )
+        ),
+        document.body
+      ),
+      
+      // Household (Бытовая активность) Picker Modal
+      showHouseholdPicker && ReactDOM.createPortal(
+        React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelHouseholdPicker },
+          React.createElement('div', { className: 'time-picker-modal household-picker-modal', onClick: e => e.stopPropagation() },
+            React.createElement('div', { className: 'time-picker-header' },
+              React.createElement('button', { className: 'time-picker-cancel', onClick: cancelHouseholdPicker }, 'Отмена'),
+              React.createElement('span', { className: 'time-picker-title' }, '🏠 Бытовая активность'),
+              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmHouseholdPicker }, 'Готово')
+            ),
+            React.createElement('div', { className: 'household-picker-hint' }, 
+              'Добавьте примерное время бытовой активности,',
+              React.createElement('br'),
+              'если были на ногах помимо тренировок'
+            ),
+            React.createElement('div', { className: 'time-picker-wheels household-wheels' },
+              React.createElement(WheelColumn, {
+                values: householdValues,
+                selected: pendingHouseholdIdx,
+                onChange: (i) => setPendingHouseholdIdx(i)
+              }),
+              React.createElement('span', { className: 'household-wheel-unit' }, 'мин')
             )
           )
         ),
