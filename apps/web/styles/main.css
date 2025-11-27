@@ -3078,12 +3078,13 @@ td:first-child input {
 }
 
 .weight-card-trend {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 1px;
+  justify-content: center;
+  gap: 2px;
   font-size: 11px;
   font-weight: 600;
-  margin-left: 4px;
+  margin-top: 2px;
 }
 
 .trend-arrow {
@@ -3328,6 +3329,111 @@ td:first-child input {
 /* === COMPACT ACTIVITY INPUT === */
 .compact-activity {
   margin-bottom: 12px;
+}
+
+/* Steps Slider */
+.steps-slider-container {
+  margin-bottom: 16px;
+}
+
+.steps-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.steps-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.steps-value {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.steps-value b {
+  color: #0ea5e9;
+  font-weight: 700;
+}
+
+.steps-value .steps-goal {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.steps-slider {
+  position: relative;
+  height: 28px;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.steps-slider-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 8px;
+  transform: translateY(-50%);
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+
+.steps-slider-goal-mark {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  background: #16a34a;
+  border-radius: 1px;
+  z-index: 1;
+  opacity: 0.7;
+}
+
+.steps-goal-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 500;
+  color: #94a3b8;
+  white-space: nowrap;
+  margin-top: 6px;
+}
+
+.steps-slider-fill {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 8px;
+  transform: translateY(-50%);
+  border-radius: 4px;
+  transition: width 0.05s ease-out, background 0.15s ease;
+}
+
+.steps-slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 3px solid;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.15s ease;
+}
+
+.steps-slider-thumb:hover,
+.steps-slider:active .steps-slider-thumb {
+  transform: translate(-50%, -50%) scale(1.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .compact-activity-inputs {

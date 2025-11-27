@@ -942,7 +942,24 @@
     const weightGValues = useMemo(() => Array.from({length: 10}, (_, i) => String(i)), []); // 0-9
     
     function openWeightPicker() {
-      const currentWeight = day.weightMorning || 70;
+      // Находим последний введённый вес (сегодня или за прошлые дни)
+      let lastWeight = day.weightMorning;
+      if (!lastWeight) {
+        // Ищем в прошлых днях (до 60 дней назад)
+        const today = new Date(date);
+        for (let i = 1; i <= 60; i++) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = fmtDate(d);
+          const dayKey = 'heys_dayv2_' + dateStr;
+          const dayData = lsGet(dayKey, null);
+          if (dayData && dayData.weightMorning && dayData.weightMorning > 0) {
+            lastWeight = dayData.weightMorning;
+            break;
+          }
+        }
+      }
+      const currentWeight = lastWeight || 70;
       const kg = Math.floor(currentWeight);
       const g = Math.round((currentWeight - kg) * 10);
       setPendingWeightKg(Math.max(0, Math.min(110, kg - 40))); // индекс от 0 (40кг) до 110 (150кг)
@@ -1987,18 +2004,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         
         // Определяем направление
         let arrow = '→';
-        if (diff > 0.2) arrow = '⬆️';
-        else if (diff < -0.2) arrow = '⬇️';
+        let direction = 'same';
+        if (diff > 0.2) { arrow = '⬆️'; direction = 'up'; }
+        else if (diff < -0.2) { arrow = '⬇️'; direction = 'down'; }
         
         // Форматируем текст
         const sign = diff > 0 ? '+' : '';
         const text = arrow + ' ' + sign + r1(diff) + ' кг';
         
-        return { text, diff };
+        return { text, diff, direction };
       } catch (e) {
         return null;
       }
-    }, [date]);
+    }, [date, day.weightMorning]);
     
     const metricsCards = React.createElement('div', { className: 'metrics-cards' },
       // Затраты (TDEE) с трендом веса
@@ -2135,33 +2153,33 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             React.createElement('div', { className: 'macro-ring fat' },
               React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
                 React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
-              React.createElement('circle', { 
-                className: 'macro-ring-fill', 
-                cx: 18, cy: 18, r: 15.9,
-                style: { strokeDasharray: Math.min(100, ((dayTot.fat || 0) / (normAbs.fat || 1)) * 100) + ' 100' }
-              })
+                React.createElement('circle', { 
+                  className: 'macro-ring-fill', 
+                  cx: 18, cy: 18, r: 15.9,
+                  style: { strokeDasharray: Math.min(100, ((dayTot.fat || 0) / (normAbs.fat || 1)) * 100) + ' 100' }
+                })
+              ),
+              React.createElement('span', { className: 'macro-ring-value' }, Math.round(dayTot.fat || 0))
             ),
-            React.createElement('span', { className: 'macro-ring-value' }, Math.round(dayTot.fat || 0))
+            React.createElement('span', { className: 'macro-ring-label' }, 'Жиры'),
+            React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.fat || 0) + 'г')
           ),
-          React.createElement('span', { className: 'macro-ring-label' }, 'Жиры'),
-          React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.fat || 0) + 'г')
-        ),
-        // Углеводы
-        React.createElement('div', { className: 'macro-ring-item' },
-          React.createElement('div', { className: 'macro-ring carbs' },
-            React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
-              React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
-              React.createElement('circle', { 
-                className: 'macro-ring-fill', 
-                cx: 18, cy: 18, r: 15.9,
-                style: { strokeDasharray: Math.min(100, ((dayTot.carbs || 0) / (normAbs.carbs || 1)) * 100) + ' 100' }
-              })
+          // Углеводы
+          React.createElement('div', { className: 'macro-ring-item' },
+            React.createElement('div', { className: 'macro-ring carbs' },
+              React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
+                React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
+                React.createElement('circle', { 
+                  className: 'macro-ring-fill', 
+                  cx: 18, cy: 18, r: 15.9,
+                  style: { strokeDasharray: Math.min(100, ((dayTot.carbs || 0) / (normAbs.carbs || 1)) * 100) + ' 100' }
+                })
+              ),
+              React.createElement('span', { className: 'macro-ring-value' }, Math.round(dayTot.carbs || 0))
             ),
-            React.createElement('span', { className: 'macro-ring-value' }, Math.round(dayTot.carbs || 0))
-          ),
-          React.createElement('span', { className: 'macro-ring-label' }, 'Углеводы'),
-          React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.carbs || 0) + 'г')
-        )
+            React.createElement('span', { className: 'macro-ring-label' }, 'Углеводы'),
+            React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.carbs || 0) + 'г')
+          )
         ),
         // Плашка веса - кликабельная целиком
         React.createElement('div', { 
@@ -2169,40 +2187,135 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           onClick: openWeightPicker
         },
           // Лейбл "Вес" сверху
-          React.createElement('span', { className: 'weight-card-label' }, 'Вес'),
-          // Значение и динамика
+          React.createElement('span', { className: 'weight-card-label' }, 'ВЕС'),
+          // Значение веса
           React.createElement('div', { className: 'weight-card-row' },
             React.createElement('span', { className: 'weight-value-number' }, 
               day.weightMorning ? r1(day.weightMorning) : '—'
             ),
-            React.createElement('span', { className: 'weight-value-unit' }, 'кг'),
-            weightTrend && day.weightMorning && React.createElement('span', { 
-              className: 'weight-card-trend ' + (weightTrend.direction === 'down' ? 'trend-down' : weightTrend.direction === 'up' ? 'trend-up' : 'trend-same')
-            }, 
-              React.createElement('span', { className: 'trend-arrow' }, weightTrend.direction === 'down' ? '↓' : weightTrend.direction === 'up' ? '↑' : ''),
-              weightTrend.text.replace(/[^а-яА-Я0-9.,\-+\s]/g, '').trim()
-            )
+            React.createElement('span', { className: 'weight-value-unit' }, 'кг')
+          ),
+          // Тренд под значением
+          weightTrend && day.weightMorning && React.createElement('div', { 
+            className: 'weight-card-trend ' + (weightTrend.direction === 'down' ? 'trend-down' : weightTrend.direction === 'up' ? 'trend-up' : 'trend-same')
+          }, 
+            React.createElement('span', { className: 'trend-arrow' }, weightTrend.direction === 'down' ? '↓' : weightTrend.direction === 'up' ? '↑' : '→'),
+            weightTrend.text.replace(/[^а-яА-Я0-9.,\-+\s]/g, '').trim()
           )
         )
       )
     );
 
     // === COMPACT ACTIVITY INPUT ===
+    const stepsGoal = 10000;
+    const stepsMax = 20000; // расширенный диапазон
+    const stepsValue = day.steps || 0;
+    // Позиция: 0-10000 занимает 80% слайдера, 10000-20000 — 20%
+    const stepsPercent = stepsValue <= stepsGoal 
+      ? (stepsValue / stepsGoal) * 80 
+      : 80 + ((stepsValue - stepsGoal) / (stepsMax - stepsGoal)) * 20;
+    // Цвет по прогрессу к цели (100% = 10000)
+    const stepsColorPercent = Math.min(100, (stepsValue / stepsGoal) * 100);
+    
+    // Цвет: красный → жёлтый → зелёный (жёлтый на 30% для позитива)
+    const getStepsColor = (pct) => {
+      if (pct < 30) {
+        // 0-30%: красный → жёлтый
+        const t = pct / 30;
+        const r = Math.round(239 - t * (239 - 234)); // 239 → 234
+        const g = Math.round(68 + t * (179 - 68)); // 68 → 179
+        const b = Math.round(68 - t * (68 - 8)); // 68 → 8
+        return `rgb(${r}, ${g}, ${b})`;
+      } else {
+        // 30-100%: жёлтый → зелёный  
+        const t = (pct - 30) / 70;
+        const r = Math.round(234 - t * (234 - 34)); // 234 → 34
+        const g = Math.round(179 + t * (197 - 179)); // 179 → 197
+        const b = Math.round(8 + t * (94 - 8)); // 8 → 94
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+    };
+    const stepsColor = getStepsColor(stepsColorPercent);
+    
+    // Drag handler для слайдера шагов
+    const handleStepsDrag = (e) => {
+      e.preventDefault();
+      const slider = e.currentTarget.closest('.steps-slider');
+      if (!slider) return;
+      
+      const rect = slider.getBoundingClientRect();
+      const updateSteps = (clientX) => {
+        const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+        const percent = (x / rect.width) * 100;
+        let newSteps;
+        if (percent <= 80) {
+          // 0-80% слайдера = 0-10000 шагов, шаг 10
+          newSteps = Math.round(((percent / 80) * stepsGoal) / 10) * 10;
+        } else {
+          // 80-100% слайдера = 10000-20000 шагов, шаг 100
+          const extraPercent = (percent - 80) / 20;
+          newSteps = stepsGoal + Math.round((extraPercent * (stepsMax - stepsGoal)) / 100) * 100;
+        }
+        setDay(prev => ({...prev, steps: Math.min(stepsMax, Math.max(0, newSteps))}));
+      };
+      
+      const onMove = (ev) => {
+        const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+        updateSteps(clientX);
+      };
+      
+      const onEnd = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onEnd);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+      };
+      
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onEnd);
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend', onEnd);
+      
+      // Первый клик тоже обновляет
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      updateSteps(clientX);
+    };
+
     const compactActivity = React.createElement('div', { className: 'compact-activity compact-card' },
-      React.createElement('div', { className: 'compact-card-header' }, '📏 Активность'),
-      // Первая строка: инпуты
-      React.createElement('div', { className: 'compact-activity-inputs' },
-        // Шаги
-        React.createElement('div', { className: 'compact-activity-field' },
-          React.createElement('span', { className: 'compact-activity-label' }, 'Шаги'),
-          React.createElement('input', { 
-            className: 'compact-input', 
-            type: 'number',
-            value: day.steps || '',
-            placeholder: '0',
-            onChange: e => setDay({...day, steps: +e.target.value || 0})
-          })
+      React.createElement('div', { className: 'compact-card-header' }, '📏 АКТИВНОСТЬ'),
+      
+      // Слайдер шагов
+      React.createElement('div', { className: 'steps-slider-container' },
+        React.createElement('div', { className: 'steps-slider-header' },
+          React.createElement('span', { className: 'steps-label' }, '👟 Шаги'),
+          React.createElement('span', { className: 'steps-value' }, 
+            React.createElement('b', null, stepsValue.toLocaleString()),
+            ' / ',
+            React.createElement('b', { className: 'steps-goal' }, stepsGoal.toLocaleString())
+          )
         ),
+        React.createElement('div', { 
+          className: 'steps-slider',
+          onMouseDown: handleStepsDrag,
+          onTouchStart: handleStepsDrag
+        },
+          React.createElement('div', { className: 'steps-slider-track' }),
+          React.createElement('div', { className: 'steps-slider-goal-mark', style: { left: '80%' } },
+            React.createElement('span', { className: 'steps-goal-label' }, '10000')
+          ),
+          React.createElement('div', { 
+            className: 'steps-slider-fill',
+            style: { width: stepsPercent + '%', background: stepsColor }
+          }),
+          React.createElement('div', { 
+            className: 'steps-slider-thumb',
+            style: { left: stepsPercent + '%', borderColor: stepsColor }
+          })
+        )
+      ),
+      
+      // Остальные инпуты в ряд
+      React.createElement('div', { className: 'compact-activity-inputs' },
         // Быт
         React.createElement('div', { className: 'compact-activity-field' },
           React.createElement('span', { className: 'compact-activity-label' }, 'Быт'),
