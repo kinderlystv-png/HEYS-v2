@@ -2798,14 +2798,13 @@ td:first-child input {
 
 /* === METRICS CARDS (Hero Cards) === */
 .metrics-cards {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   margin-bottom: 8px;
-  flex-wrap: wrap;
 }
 
 .metrics-card {
-  flex: 1 1 0;
   min-width: 0;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
@@ -2817,7 +2816,7 @@ td:first-child input {
 
 /* === GOAL PROGRESS BAR (современный статус-бар) === */
 .goal-progress-bar {
-  flex: 1 1 100%;
+  grid-column: 1 / -1;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -2899,19 +2898,21 @@ td:first-child input {
 
 .goal-progress-footer {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 14px;
   color: #64748b;
   text-align: center;
 }
 
 .goal-remaining b {
   color: #22c55e;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 16px;
 }
 
 .goal-over b {
   color: #ef4444;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 16px;
 }
 
 /* === MACRO + WEIGHT ROW (контейнер для колец и веса) === */
@@ -2921,6 +2922,7 @@ td:first-child input {
   gap: 8px;
   margin-top: 8px;
   width: 100%;
+  grid-column: 1 / -1;
 }
 
 /* === MACRO RINGS (БЖУ в стиле Apple Watch) === */
@@ -3009,13 +3011,14 @@ td:first-child input {
   justify-content: center;
   align-items: center;
   gap: 2px;
-  padding: 8px 12px;
+  padding: 8px 12px 16px;
   background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(16, 185, 129, 0.12) 100%);
   border: 1px solid rgba(34, 197, 94, 0.2);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   min-width: 75px;
+  position: relative;
 }
 
 .weight-card-modern:hover {
@@ -3078,13 +3081,16 @@ td:first-child input {
 }
 
 .weight-card-trend {
+  position: absolute;
+  bottom: 14px;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 2px;
   font-size: 11px;
   font-weight: 600;
-  margin-top: 2px;
 }
 
 .trend-arrow {
@@ -3101,6 +3107,63 @@ td:first-child input {
 
 .weight-card-trend.trend-same {
   color: #64748b;
+}
+
+/* === DEFICIT CARD === */
+.deficit-card-modern {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 12px 16px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.12) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 70px;
+}
+
+.deficit-card-modern:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.18) 100%);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.deficit-card-modern:active {
+  transform: scale(0.98);
+}
+
+.deficit-value-number {
+  font-size: 22px;
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.deficit-value-number.deficit-negative {
+  color: #16a34a;
+}
+
+.deficit-value-number.deficit-positive {
+  color: #f59e0b;
+}
+
+/* === DEFICIT PICKER MODAL === */
+.deficit-picker-modal {
+  max-width: 280px;
+}
+
+.deficit-picker-hint {
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+  padding: 12px 16px 8px;
+  line-height: 1.4;
+}
+
+.deficit-wheels {
+  justify-content: center;
+  padding-bottom: 16px;
 }
 
 .weight-card-chevron {
@@ -3135,7 +3198,45 @@ td:first-child input {
 
 /* === WEIGHT PICKER MODAL === */
 .weight-picker-modal {
-  max-width: 280px;
+  max-width: 320px;
+}
+
+/* Step indicator dots */
+.picker-steps-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 0 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.picker-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d1d5db;
+  transition: background 0.2s ease;
+}
+
+.picker-step-dot.active {
+  background: #6366f1;
+}
+
+.weight-picker-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.weight-picker-section:last-child {
+  border-bottom: none;
+}
+
+.weight-picker-section-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-align: center;
 }
 
 .weight-wheels {
@@ -3157,6 +3258,83 @@ td:first-child input {
   color: #000;
   align-self: center;
   margin-left: 4px;
+}
+
+/* Steps Goal Section */
+.steps-goal-section {
+  padding: 12px 16px;
+}
+
+.steps-goal-wheels {
+  justify-content: center;
+  gap: 8px;
+}
+
+.steps-goal-wheel-unit {
+  font-size: 20px;
+  font-weight: 600;
+  color: #000;
+  align-self: center;
+  margin-left: 8px;
+}
+
+.steps-goal-input-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.steps-goal-input {
+  width: 100px;
+  padding: 8px 12px;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #16a34a;
+}
+
+.steps-goal-input:focus {
+  outline: none;
+  border-color: #16a34a;
+  background: #fff;
+}
+
+.steps-goal-unit {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.steps-goal-presets {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.steps-goal-preset {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.steps-goal-preset:active {
+  transform: scale(0.95);
+}
+
+.steps-goal-preset.active {
+  color: #fff;
+  background: #16a34a;
+  border-color: #16a34a;
 }
 
 /* === FAB (Floating Action Button) === */
@@ -3362,6 +3540,12 @@ td:first-child input {
 .steps-value .steps-goal {
   color: #16a34a;
   font-weight: 700;
+}
+
+.steps-kcal-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 400;
 }
 
 .steps-slider {

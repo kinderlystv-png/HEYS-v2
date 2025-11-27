@@ -47,7 +47,8 @@
     }catch(e){}
   }
   function clamp(n,a,b){ n=+n||0; if(n<a)return a; if(n>b)return b; return n; }
-  const r1=v=>Math.round((+v||0)*10)/10;
+  const r1=v=>Math.round((+v||0)*10)/10; // округление до 1 десятой (для веса)
+  const r0=v=>Math.round(+v||0); // округление до целого (для калорий)
 
   // Используем общие модели вместо локальных дубликатов
   const M = HEYS.models || {};
@@ -662,19 +663,19 @@
 
     const z= (lsGet('heys_hr_zones',[]).map(x=>+x.MET||0)); const mets=[2.5,6,8,10].map((_,i)=>z[i]||[2.5,6,8,10][i]);
     const weight=+day.weightMorning||+prof.weight||70; const kcalMin=mets.map(m=>kcalPerMin(m,weight));
-    const trainK= t=>(t.z||[0,0,0,0]).reduce((s,min,i)=> s+r1((+min||0)*(kcalMin[i]||0)),0);
+    const trainK= t=>(t.z||[0,0,0,0]).reduce((s,min,i)=> s+r0((+min||0)*(kcalMin[i]||0)),0);
     const TR=(day.trainings&&Array.isArray(day.trainings)&&day.trainings.length>=2)?day.trainings:[{z:[0,0,0,0]},{z:[0,0,0,0]}];
   const train1k=trainK(TR[0]), train2k=trainK(TR[1]);
-  const stepsK=stepsKcal(day.steps||0,weight,prof.sex,0.7);
-  const householdK=r1((+day.householdMin||0)*kcalPerMin(2.5,weight));
-  const actTotal=r1(train1k+train2k+stepsK+householdK);
-  const bmr=calcBMR(weight,prof), tdee=r1(bmr+actTotal);
+  const stepsK=r0(stepsKcal(day.steps||0,weight,prof.sex,0.7));
+  const householdK=r0((+day.householdMin||0)*kcalPerMin(2.5,weight));
+  const actTotal=r0(train1k+train2k+stepsK+householdK);
+  const bmr=calcBMR(weight,prof), tdee=r0(bmr+actTotal);
   const profileTargetDef=(lsGet('heys_profile',{}).deficitPctTarget||0); // отрицательное число для дефицита
   const dayTargetDef = (day.deficitPct != null ? day.deficitPct : profileTargetDef); // используем дефицит дня, если есть
-  const optimum=r1(tdee*(1+dayTargetDef/100));
+  const optimum=r0(tdee*(1+dayTargetDef/100));
 
   const eatenKcal=(day.meals||[]).reduce((a,m)=>{ const t=(M.mealTotals? M.mealTotals(m,pIndex): {kcal:0}); return a+(t.kcal||0); },0);
-  const factDefPct = tdee? r1(((eatenKcal - tdee)/tdee)*100) : 0; // <0 значит дефицит
+  const factDefPct = tdee? r0(((eatenKcal - tdee)/tdee)*100) : 0; // <0 значит дефицит
 
   // Диагностический лог для отладки расхождений между Днём и Отчётностью
   if (window._HEYS_DEBUG_TDEE) {
@@ -691,7 +692,7 @@
     console.log('HEYS_TDEE_DEBUG [DAY]   actTotal:', actTotal);
     console.log('HEYS_TDEE_DEBUG [DAY] Итоговые значения:');
     console.log('HEYS_TDEE_DEBUG [DAY]   tdee (Общие затраты):', tdee);
-    console.log('HEYS_TDEE_DEBUG [DAY]   eatenKcal (съедено):', r1(eatenKcal));
+    console.log('HEYS_TDEE_DEBUG [DAY]   eatenKcal (съедено):', r0(eatenKcal));
     console.log('HEYS_TDEE_DEBUG [DAY]   optimum (нужно съесть):', optimum);
     console.log('HEYS_TDEE_DEBUG [DAY]   factDefPct:', factDefPct + '%');
     console.groupEnd();
@@ -936,12 +937,19 @@
     
     // === Weight Picker Modal ===
     const [showWeightPicker, setShowWeightPicker] = useState(false);
+    const [weightPickerStep, setWeightPickerStep] = useState(1); // 1=вес, 2=цель шагов
     const [pendingWeightKg, setPendingWeightKg] = useState(70); // целые кг (40-150)
     const [pendingWeightG, setPendingWeightG] = useState(0); // десятые (0-9)
+    const [pendingStepsGoalIdx, setPendingStepsGoalIdx] = useState(6); // индекс для колеса (6 = 7000)
     const weightKgValues = useMemo(() => Array.from({length: 111}, (_, i) => String(40 + i)), []); // 40-150 кг
     const weightGValues = useMemo(() => Array.from({length: 10}, (_, i) => String(i)), []); // 0-9
+    const stepsGoalValues = useMemo(() => Array.from({length: 30}, (_, i) => String((i + 1) * 1000)), []); // 1000-30000
+    
+    // Цель шагов из профиля или дефолт 7000
+    const savedStepsGoal = prof.stepsGoal || 7000;
     
     function openWeightPicker() {
+      setWeightPickerStep(1); // начинаем с первого шага
       // Находим последний введённый вес (сегодня или за прошлые дни)
       let lastWeight = day.weightMorning;
       if (!lastWeight) {
@@ -964,13 +972,37 @@
       const g = Math.round((currentWeight - kg) * 10);
       setPendingWeightKg(Math.max(0, Math.min(110, kg - 40))); // индекс от 0 (40кг) до 110 (150кг)
       setPendingWeightG(g);
+      // Конвертируем savedStepsGoal в индекс колеса (1000=0, 2000=1, ..., 7000=6)
+      setPendingStepsGoalIdx(Math.max(0, Math.min(29, Math.round(savedStepsGoal / 1000) - 1)));
       setShowWeightPicker(true);
+    }
+    
+    function nextWeightPickerStep() {
+      if (weightPickerStep === 1) {
+        setWeightPickerStep(2);
+      } else {
+        confirmWeightPicker();
+      }
+    }
+    
+    function prevWeightPickerStep() {
+      if (weightPickerStep === 2) {
+        setWeightPickerStep(1);
+      } else {
+        cancelWeightPicker();
+      }
     }
     
     function confirmWeightPicker() {
       const newWeight = (40 + pendingWeightKg) + pendingWeightG / 10;
+      const pendingStepsGoal = (pendingStepsGoalIdx + 1) * 1000; // конвертируем индекс в значение
       const prof = getProfile();
       const shouldSetDeficit = (!day.weightMorning || day.weightMorning === '') && newWeight && (!day.deficitPct && day.deficitPct !== 0);
+      // Сохраняем цель шагов в профиль
+      if (pendingStepsGoal !== savedStepsGoal) {
+        const updatedProf = { ...prof, stepsGoal: pendingStepsGoal };
+        lsSet('heys_profile', updatedProf);
+      }
       setDay({
         ...day,
         weightMorning: newWeight,
@@ -983,6 +1015,36 @@
       setShowWeightPicker(false);
     }
     
+    // === Deficit Picker Modal ===
+    const [showDeficitPicker, setShowDeficitPicker] = useState(false);
+    const [pendingDeficitIdx, setPendingDeficitIdx] = useState(20); // индекс (20 = 0%)
+    // Значения от -20% до +20% с шагом 1
+    const deficitValues = useMemo(() => Array.from({length: 41}, (_, i) => {
+      const val = i - 20; // -20 до +20
+      return (val > 0 ? '+' : '') + val + '%';
+    }), []);
+    
+    // Дефицит из профиля или дефолт 0
+    const profileDeficit = prof.deficitPctTarget || 0;
+    const currentDeficit = day.deficitPct != null ? day.deficitPct : profileDeficit;
+    
+    function openDeficitPicker() {
+      // Конвертируем текущий дефицит в индекс (-20 = 0, 0 = 20, +20 = 40)
+      const deficitVal = currentDeficit || 0;
+      setPendingDeficitIdx(Math.max(0, Math.min(40, deficitVal + 20)));
+      setShowDeficitPicker(true);
+    }
+    
+    function confirmDeficitPicker() {
+      const newDeficit = pendingDeficitIdx - 20; // индекс обратно в значение
+      setDay({ ...day, deficitPct: newDeficit });
+      setShowDeficitPicker(false);
+    }
+    
+    function cancelDeficitPicker() {
+      setShowDeficitPicker(false);
+    }
+
     function openGramsPicker(mealIndex, itemId, currentGrams) {
       const gramsNum = parseInt(currentGrams) || 100;
       // Индекс = значение - 1 (т.к. начинаем с 1)
@@ -1319,14 +1381,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Row 3 — Шаги (ккал считаем из stepsK)
       React.createElement('tr',null,
         React.createElement('td',{className:'label muted small'},'Шаги :'),
-        React.createElement('td',null, React.createElement('input',{className:'readOnly',value:r1(stepsK),disabled:true,title:'ккал от шагов'})),
+        React.createElement('td',null, React.createElement('input',{className:'readOnly',value:stepsK,disabled:true,title:'ккал от шагов'})),
         React.createElement('td',null, React.createElement('input',{type:'number',value:day.steps||0,onChange:e=>setDay({...day,steps:+e.target.value||0})})),
         React.createElement('td',null,'шагов')
       ),
       // Row 4 — Тренировки
       React.createElement('tr',null,
         React.createElement('td',{className:'label muted small'},'Тренировки :'),
-        React.createElement('td',null, React.createElement('input',{className:'readOnly',value:r1(train1k+train2k),disabled:true})),
+        React.createElement('td',null, React.createElement('input',{className:'readOnly',value:r0(train1k+train2k),disabled:true})),
         React.createElement('td',null,''),
         React.createElement('td',null,'')
       ),
@@ -1340,7 +1402,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Row 6 — Общая активность
       React.createElement('tr',null,
         React.createElement('td',{className:'label muted small'}, React.createElement('strong',null,'Общая активность :')),
-        React.createElement('td',null, React.createElement('input',{className:'readOnly',value:r1(train1k+train2k+stepsK+householdK),disabled:true})),
+        React.createElement('td',null, React.createElement('input',{className:'readOnly',value:actTotal,disabled:true})),
         React.createElement('td',null,''),
         React.createElement('td',null,'')
       ),
@@ -1354,7 +1416,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Row 7 — Съедено за день
       React.createElement('tr',{className:'vio-row eaten-kcal'},
         React.createElement('td',{className:'label small'},React.createElement('strong',null,'Съедено за день :')),
-        React.createElement('td',null, React.createElement('input',{className:'readOnly',value:r1(eatenKcal),disabled:true})),
+        React.createElement('td',null, React.createElement('input',{className:'readOnly',value:r0(eatenKcal),disabled:true})),
         React.createElement('td',null,''),
         React.createElement('td',null,'')
       ),
@@ -1394,8 +1456,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     const trainingsBlock = React.createElement('div', { className: 'compact-trainings' },
       [0, 1].map((ti) => {
         const T = TR[ti] || { z: [0, 0, 0, 0] };
-        const kcalZ = i => r1((+T.z[i] || 0) * (kcalMin[i] || 0));
-        const total = r1(kcalZ(0) + kcalZ(1) + kcalZ(2) + kcalZ(3));
+        const kcalZ = i => r0((+T.z[i] || 0) * (kcalMin[i] || 0));
+        const total = r0(kcalZ(0) + kcalZ(1) + kcalZ(2) + kcalZ(3));
         return React.createElement('div', { key: 'tr' + ti, className: 'compact-card compact-train' },
           React.createElement('div', { className: 'compact-train-header' },
             React.createElement('span', { className: 'compact-train-icon' }, ti === 0 ? '🏃' : '🚴'),
@@ -1750,7 +1812,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     function dayTotals(){
       const t={kcal:0,carbs:0,simple:0,complex:0,prot:0,fat:0,bad:0,good:0,trans:0,fiber:0};
       (day.meals||[]).forEach(m=>{ const mt=M.mealTotals? M.mealTotals(m,pIndex): {}; Object.keys(t).forEach(k=>{ t[k]+=mt[k]||0; }); });
-      Object.keys(t).forEach(k=>t[k]=r1(t[k]));
+      Object.keys(t).forEach(k=>t[k]=r0(t[k]));
       return t;
     }
     const dayTot = dayTotals();
@@ -1943,7 +2005,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     // Тренировки выводятся в sideBlock (side-compare)
 
     // === HERO METRICS CARDS ===
-    const remainingKcal = r1(optimum - eatenKcal); // сколько ещё можно съесть
+    const remainingKcal = r0(optimum - eatenKcal); // сколько ещё можно съесть
     
     // Цвета для карточек
     function getEatenColor() {
@@ -2023,7 +2085,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       React.createElement('div', { 
         className: 'metrics-card',
         style: { background: '#f8fafc', borderColor: '#e2e8f0' },
-        title: 'Затраты: ' + tdee + ' ккал (BMR ' + bmr + ' + активность ' + r1(actTotal) + ')' + 
+        title: 'Затраты: ' + tdee + ' ккал (BMR ' + bmr + ' + активность ' + actTotal + ')' + 
                (weightTrend ? '\nТренд веса за 7 дней: ' + weightTrend.text : '')
       },
         React.createElement('div', { className: 'metrics-icon' }, '⚡'),
@@ -2060,10 +2122,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       React.createElement('div', { 
         className: 'metrics-card',
         style: { background: eatenCol.bg, borderColor: eatenCol.border },
-        title: 'Съедено: ' + r1(eatenKcal) + ' ккал (' + (remainingKcal >= 0 ? 'осталось ' + remainingKcal : 'перебор ' + Math.abs(remainingKcal)) + ')'
+        title: 'Съедено: ' + r0(eatenKcal) + ' ккал (' + (remainingKcal >= 0 ? 'осталось ' + remainingKcal : 'перебор ' + Math.abs(remainingKcal)) + ')'
       },
         React.createElement('div', { className: 'metrics-icon' }, '🍽️'),
-        React.createElement('div', { className: 'metrics-value', style: { color: eatenCol.text } }, r1(eatenKcal)),
+        React.createElement('div', { className: 'metrics-value', style: { color: eatenCol.text } }, r0(eatenKcal)),
         React.createElement('div', { className: 'metrics-label' }, 'Съедено')
       ),
       // Осталось / Перебор - кликабельно для фокуса в поиск
@@ -2104,7 +2166,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             eatenKcal <= optimum ? '🎯 До цели' : '⚠️ Перебор'
           ),
           React.createElement('span', { className: 'goal-progress-stats' },
-            React.createElement('span', { className: 'goal-eaten' }, r1(eatenKcal)),
+            React.createElement('span', { className: 'goal-eaten' }, r0(eatenKcal)),
             React.createElement('span', { className: 'goal-divider' }, '/'),
             React.createElement('span', { className: 'goal-target' }, optimum),
             React.createElement('span', { className: 'goal-unit' }, 'ккал')
@@ -2187,7 +2249,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           onClick: openWeightPicker
         },
           // Лейбл "Вес" сверху
-          React.createElement('span', { className: 'weight-card-label' }, 'ВЕС'),
+          React.createElement('span', { className: 'weight-card-label' }, 'ВЕС НА УТРО'),
           // Значение веса
           React.createElement('div', { className: 'weight-card-row' },
             React.createElement('span', { className: 'weight-value-number' }, 
@@ -2202,12 +2264,27 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             React.createElement('span', { className: 'trend-arrow' }, weightTrend.direction === 'down' ? '↓' : weightTrend.direction === 'up' ? '↑' : '→'),
             weightTrend.text.replace(/[^а-яА-Я0-9.,\-+\s]/g, '').trim()
           )
+        ),
+        // Плашка дефицита - кликабельная
+        React.createElement('div', { 
+          className: 'deficit-card-modern',
+          onClick: openDeficitPicker
+        },
+          React.createElement('span', { className: 'weight-card-label' }, 'ЦЕЛЬ ДЕФИЦИТ'),
+          React.createElement('div', { className: 'weight-card-row' },
+            React.createElement('span', { 
+              className: 'deficit-value-number' + (currentDeficit < 0 ? ' deficit-negative' : currentDeficit > 0 ? ' deficit-positive' : '')
+            }, 
+              (currentDeficit > 0 ? '+' : '') + currentDeficit
+            ),
+            React.createElement('span', { className: 'weight-value-unit' }, '%')
+          )
         )
       )
     );
 
     // === COMPACT ACTIVITY INPUT ===
-    const stepsGoal = 10000;
+    const stepsGoal = savedStepsGoal;
     const stepsMax = 20000; // расширенный диапазон
     const stepsValue = day.steps || 0;
     // Позиция: 0-10000 занимает 80% слайдера, 10000-20000 — 20%
@@ -2291,7 +2368,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('span', { className: 'steps-value' }, 
             React.createElement('b', null, stepsValue.toLocaleString()),
             ' / ',
-            React.createElement('b', { className: 'steps-goal' }, stepsGoal.toLocaleString())
+            React.createElement('b', { className: 'steps-goal' }, stepsGoal.toLocaleString()),
+            React.createElement('span', { className: 'steps-kcal-hint' }, ' / ' + stepsK + ' ккал')
           )
         ),
         React.createElement('div', { 
@@ -2301,7 +2379,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         },
           React.createElement('div', { className: 'steps-slider-track' }),
           React.createElement('div', { className: 'steps-slider-goal-mark', style: { left: '80%' } },
-            React.createElement('span', { className: 'steps-goal-label' }, '10000')
+            React.createElement('span', { className: 'steps-goal-label' }, String(stepsGoal))
           ),
           React.createElement('div', { 
             className: 'steps-slider-fill',
@@ -2327,30 +2405,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             onChange: e => setDay({...day, householdMin: +e.target.value || 0})
           }),
           React.createElement('span', { className: 'compact-activity-unit' }, 'мин')
-        ),
-        // Цель дефицита %
-        React.createElement('div', { className: 'compact-activity-field' },
-          React.createElement('span', { className: 'compact-activity-label' }, 'Цель деф.'),
-          React.createElement('input', { 
-            className: 'compact-input', 
-            type: 'number',
-            value: day.deficitPct || 0,
-            onChange: e => setDay({...day, deficitPct: Number(e.target.value) || 0})
-          }),
-          React.createElement('span', { className: 'compact-activity-unit' }, '%')
         )
       ),
       // Вторая строка: расчётные значения
       React.createElement('div', { className: 'compact-activity-stats' },
         React.createElement('span', { title: 'Базовый метаболизм' }, 'BMR: ', React.createElement('b', null, bmr)),
-        React.createElement('span', { title: 'Калории от шагов' }, '→ ', React.createElement('b', null, r1(stepsK)), ' ккал'),
+        React.createElement('span', { title: 'Калории от шагов' }, '→ ', React.createElement('b', null, stepsK), ' ккал'),
         React.createElement('span', { title: 'Калории от бытовой активности' }, '→ ', React.createElement('b', null, householdK), ' ккал'),
         React.createElement('span', { title: 'Целевая калорийность' }, 'Цель: ', React.createElement('b', null, optimum))
       ),
       // Третья строка: тренировки (если есть)
       (train1k + train2k > 0) && React.createElement('div', { className: 'compact-activity-stats secondary' },
-        React.createElement('span', null, 'Тренировки: ', React.createElement('b', null, r1(train1k + train2k)), ' ккал'),
-        React.createElement('span', null, '• Всего активность: ', React.createElement('b', null, r1(actTotal)), ' ккал')
+        React.createElement('span', null, 'Тренировки: ', React.createElement('b', null, r0(train1k + train2k)), ' ккал'),
+        React.createElement('span', null, '• Всего активность: ', React.createElement('b', null, actTotal), ' ккал')
       )
     );
   
@@ -2455,28 +2522,79 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         document.body
       ),
       
-      // Weight Picker Modal
+      // Weight Picker Modal (2 steps)
       showWeightPicker && ReactDOM.createPortal(
         React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelWeightPicker },
           React.createElement('div', { className: 'time-picker-modal weight-picker-modal', onClick: e => e.stopPropagation() },
             React.createElement('div', { className: 'time-picker-header' },
-              React.createElement('button', { className: 'time-picker-cancel', onClick: cancelWeightPicker }, 'Отмена'),
-              React.createElement('span', { className: 'time-picker-title' }, '⚖️ Вес'),
-              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmWeightPicker }, 'Готово')
+              React.createElement('button', { className: 'time-picker-cancel', onClick: prevWeightPickerStep }, 
+                weightPickerStep === 1 ? 'Отмена' : '← Назад'
+              ),
+              React.createElement('span', { className: 'time-picker-title' }, 
+                weightPickerStep === 1 ? '⚖️ Вес на утро' : '👟 Цель шагов'
+              ),
+              React.createElement('button', { className: 'time-picker-confirm', onClick: nextWeightPickerStep }, 
+                weightPickerStep === 1 ? 'Далее →' : 'Готово'
+              )
             ),
-            React.createElement('div', { className: 'time-picker-wheels weight-wheels' },
+            // Step indicator
+            React.createElement('div', { className: 'picker-steps-indicator' },
+              React.createElement('div', { className: 'picker-step-dot' + (weightPickerStep >= 1 ? ' active' : '') }),
+              React.createElement('div', { className: 'picker-step-dot' + (weightPickerStep >= 2 ? ' active' : '') })
+            ),
+            // Step 1: Вес
+            weightPickerStep === 1 && React.createElement('div', { className: 'weight-picker-section' },
+              React.createElement('div', { className: 'time-picker-wheels weight-wheels' },
+                React.createElement(WheelColumn, {
+                  values: weightKgValues,
+                  selected: pendingWeightKg,
+                  onChange: (i) => setPendingWeightKg(i)
+                }),
+                React.createElement('div', { className: 'weight-picker-dot' }, '.'),
+                React.createElement(WheelColumn, {
+                  values: weightGValues,
+                  selected: pendingWeightG,
+                  onChange: (i) => setPendingWeightG(i)
+                }),
+                React.createElement('span', { className: 'weight-picker-unit' }, 'кг')
+              )
+            ),
+            // Step 2: Цель шагов (колесо с шагом 1000)
+            weightPickerStep === 2 && React.createElement('div', { className: 'weight-picker-section steps-goal-section' },
+              React.createElement('div', { className: 'time-picker-wheels steps-goal-wheels' },
+                React.createElement(WheelColumn, {
+                  values: stepsGoalValues,
+                  selected: pendingStepsGoalIdx,
+                  onChange: (i) => setPendingStepsGoalIdx(i)
+                }),
+                React.createElement('span', { className: 'steps-goal-wheel-unit' }, 'шагов')
+              )
+            )
+          )
+        ),
+        document.body
+      ),
+      
+      // Deficit Picker Modal
+      showDeficitPicker && ReactDOM.createPortal(
+        React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelDeficitPicker },
+          React.createElement('div', { className: 'time-picker-modal deficit-picker-modal', onClick: e => e.stopPropagation() },
+            React.createElement('div', { className: 'time-picker-header' },
+              React.createElement('button', { className: 'time-picker-cancel', onClick: cancelDeficitPicker }, 'Отмена'),
+              React.createElement('span', { className: 'time-picker-title' }, '📊 Цель дефицита'),
+              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmDeficitPicker }, 'Готово')
+            ),
+            React.createElement('div', { className: 'deficit-picker-hint' }, 
+              'Отрицательный = дефицит (похудение)',
+              React.createElement('br'),
+              'Положительный = профицит (набор)'
+            ),
+            React.createElement('div', { className: 'time-picker-wheels deficit-wheels' },
               React.createElement(WheelColumn, {
-                values: weightKgValues,
-                selected: pendingWeightKg,
-                onChange: (i) => setPendingWeightKg(i)
-              }),
-              React.createElement('div', { className: 'weight-picker-dot' }, '.'),
-              React.createElement(WheelColumn, {
-                values: weightGValues,
-                selected: pendingWeightG,
-                onChange: (i) => setPendingWeightG(i)
-              }),
-              React.createElement('span', { className: 'weight-picker-unit' }, 'кг')
+                values: deficitValues,
+                selected: pendingDeficitIdx,
+                onChange: (i) => setPendingDeficitIdx(i)
+              })
             )
           )
         ),
