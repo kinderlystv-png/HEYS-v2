@@ -5,6 +5,23 @@
   const React = global.React;
   // Убрано избыточное логирование DayTab build
 
+  // === Haptic Feedback ===
+  function haptic(type = 'light') {
+    if (!navigator.vibrate) return;
+    switch(type) {
+      case 'light': navigator.vibrate(10); break;
+      case 'medium': navigator.vibrate(20); break;
+      case 'heavy': navigator.vibrate(30); break;
+      case 'success': navigator.vibrate([10, 50, 20]); break;
+      case 'warning': navigator.vibrate([30, 30, 30]); break;
+      case 'error': navigator.vibrate([50, 30, 50, 30, 50]); break;
+      default: navigator.vibrate(10);
+    }
+  }
+  
+  // Экспортируем для использования в других модулях
+  HEYS.haptic = haptic;
+
   function pad2(n){ return String(n).padStart(2,'0'); }
   function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
   function fmtDate(d){ return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
@@ -954,6 +971,34 @@
     const [toastDismissed, setToastDismissed] = useState(false);
     const toastTimeoutRef = React.useRef(null);
     
+    // === Pull-to-refresh ===
+    const [pullProgress, setPullProgress] = useState(0);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const pullStartY = React.useRef(0);
+    const isPulling = React.useRef(false);
+    
+    // === Dark Theme ===
+    const [isDarkTheme, setIsDarkTheme] = useState(() => {
+      const saved = localStorage.getItem('heys_theme');
+      return saved === 'dark';
+    });
+    
+    // Применяем тему при изменении
+    React.useEffect(() => {
+      document.documentElement.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+      localStorage.setItem('heys_theme', isDarkTheme ? 'dark' : 'light');
+    }, [isDarkTheme]);
+    
+    const toggleTheme = () => setIsDarkTheme(prev => !prev);
+    
+    // === Confetti при достижении цели ===
+    const [showConfetti, setShowConfetti] = useState(false);
+    const confettiShownRef = React.useRef(false);
+    const prevKcalRef = React.useRef(0);
+    
+    // === Progress animation ===
+    const [animatedProgress, setAnimatedProgress] = useState(0);
+    
     // === Grams Picker Modal (mobile only) ===
     const [showGramsPicker, setShowGramsPicker] = useState(false);
     const [gramsPickerTarget, setGramsPickerTarget] = useState(null); // {mealIndex, itemId, currentGrams}
@@ -1189,6 +1234,49 @@
     // Используем глобальный WheelColumn
     const WheelColumn = HEYS.WheelColumn;
     
+    // === BottomSheet с поддержкой свайпа ===
+    const bottomSheetRef = React.useRef(null);
+    const sheetDragY = React.useRef(0);
+    const sheetStartY = React.useRef(0);
+    const isSheetDragging = React.useRef(false);
+    
+    const handleSheetTouchStart = (e) => {
+      sheetStartY.current = e.touches[0].clientY;
+      isSheetDragging.current = true;
+      sheetDragY.current = 0;
+    };
+    
+    const handleSheetTouchMove = (e) => {
+      if (!isSheetDragging.current) return;
+      const diff = e.touches[0].clientY - sheetStartY.current;
+      if (diff > 0) {
+        sheetDragY.current = diff;
+        if (bottomSheetRef.current) {
+          bottomSheetRef.current.style.transform = `translateY(${diff}px)`;
+        }
+      }
+    };
+    
+    const handleSheetTouchEnd = (closeCallback) => {
+      if (!isSheetDragging.current) return;
+      isSheetDragging.current = false;
+      
+      if (sheetDragY.current > 100) {
+        // Закрываем если свайпнули > 100px
+        haptic('light');
+        if (bottomSheetRef.current) {
+          bottomSheetRef.current.classList.add('closing');
+        }
+        setTimeout(() => closeCallback(), 200);
+      } else {
+        // Возвращаем на место
+        if (bottomSheetRef.current) {
+          bottomSheetRef.current.style.transform = '';
+        }
+      }
+      sheetDragY.current = 0;
+    };
+    
     // Генерация значений для часов, минут и оценок 1-10
     const hoursValues = WheelColumn.presets.hours;
     const minutesValues = WheelColumn.presets.minutes;
@@ -1342,6 +1430,7 @@
       setDay({...day, meals}); 
     }
     function addProductToMeal(mi,p){ 
+      haptic('light'); // Вибрация при добавлении
       const item={id:uid('it_'), product_id:p.id??p.product_id, name:p.name, grams:100}; 
       const meals=day.meals.map((m,i)=> i===mi? {...m, items:[...(m.items||[]), item]}:m); 
       setDay({...day, meals}); 
@@ -1368,7 +1457,7 @@
       }, 200);
     }
     function setGrams(mi, itId, g){ g=+g||0; const meals=day.meals.map((m,i)=> i===mi? {...m, items:(m.items||[]).map(it=> it.id===itId?{...it, grams:g}:it)}:m); setDay({...day, meals}); }
-    function removeItem(mi, itId){ const meals=day.meals.map((m,i)=> i===mi? {...m, items:(m.items||[]).filter(it=>it.id!==itId)}:m); setDay({...day, meals}); }
+    function removeItem(mi, itId){ haptic('medium'); const meals=day.meals.map((m,i)=> i===mi? {...m, items:(m.items||[]).filter(it=>it.id!==itId)}:m); setDay({...day, meals}); }
 
     const sleepH = sleepHours(day.sleepStart, day.sleepEnd);
 
@@ -2353,9 +2442,129 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
     
+    // === Pull-to-refresh логика ===
+    const PULL_THRESHOLD = 80;
+    
+    const handleRefresh = async () => {
+      setIsRefreshing(true);
+      // Перезагрузка данных
+      await new Promise(r => setTimeout(r, 600)); // Минимальная задержка для UX
+      window.location.reload(); // Простой рефреш для перезагрузки всего
+    };
+    
+    React.useEffect(() => {
+      const container = document.querySelector('.day-view-container');
+      if (!container) return;
+      
+      const onTouchStart = (e) => {
+        // Начинаем pull только если скролл вверху
+        if (container.scrollTop <= 0) {
+          pullStartY.current = e.touches[0].clientY;
+          isPulling.current = true;
+        }
+      };
+      
+      const onTouchMove = (e) => {
+        if (!isPulling.current || isRefreshing) return;
+        
+        const y = e.touches[0].clientY;
+        const diff = y - pullStartY.current;
+        
+        if (diff > 0 && container.scrollTop <= 0) {
+          // Resistance effect - движение замедляется
+          const progress = Math.min(diff * 0.5, PULL_THRESHOLD);
+          setPullProgress(progress);
+          
+          if (progress > 10) {
+            e.preventDefault(); // Предотвращаем обычный скролл
+          }
+        }
+      };
+      
+      const onTouchEnd = () => {
+        if (!isPulling.current) return;
+        
+        if (pullProgress >= PULL_THRESHOLD) {
+          handleRefresh();
+        } else {
+          setPullProgress(0);
+        }
+        isPulling.current = false;
+      };
+      
+      container.addEventListener('touchstart', onTouchStart, { passive: true });
+      container.addEventListener('touchmove', onTouchMove, { passive: false });
+      container.addEventListener('touchend', onTouchEnd, { passive: true });
+      
+      return () => {
+        container.removeEventListener('touchstart', onTouchStart);
+        container.removeEventListener('touchmove', onTouchMove);
+        container.removeEventListener('touchend', onTouchEnd);
+      };
+    }, [pullProgress, isRefreshing]);
+    
+    // === Анимация прогресса калорий при загрузке ===
+    React.useEffect(() => {
+      const target = (eatenKcal / optimum) * 100;
+      // Анимируем от 0 до target
+      let start = animatedProgress;
+      const duration = 800;
+      const startTime = performance.now();
+      
+      const animate = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // Ease out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = start + (target - start) * eased;
+        setAnimatedProgress(current);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+      
+      requestAnimationFrame(animate);
+    }, [eatenKcal, optimum]);
+    
+    // === Confetti при достижении 100% цели ===
+    React.useEffect(() => {
+      const progress = (eatenKcal / optimum) * 100;
+      const prevProgress = (prevKcalRef.current / optimum) * 100;
+      
+      // Показываем confetti когда впервые достигаем 95-105% (зона успеха)
+      if (progress >= 95 && progress <= 105 && prevProgress < 95 && !confettiShownRef.current) {
+        confettiShownRef.current = true;
+        setShowConfetti(true);
+        haptic('success');
+        
+        // Скрываем через 3 секунды
+        setTimeout(() => setShowConfetti(false), 3000);
+      }
+      
+      // Сбрасываем флаг если уходим ниже 90%
+      if (progress < 90) {
+        confettiShownRef.current = false;
+      }
+      
+      prevKcalRef.current = eatenKcal;
+    }, [eatenKcal, optimum]);
+    
     // SVG Sparkline компонент
     const renderSparkline = (data, goal) => {
-      if (!data || data.length === 0) return null;
+      // Skeleton loader пока данные загружаются
+      if (!data) {
+        return React.createElement('div', { className: 'sparkline-skeleton' },
+          React.createElement('div', { className: 'sparkline-skeleton-line' }),
+          React.createElement('div', { className: 'sparkline-skeleton-dots' },
+            Array.from({length: 7}).map((_, i) => 
+              React.createElement('div', { key: i, className: 'sparkline-skeleton-dot' })
+            )
+          )
+        );
+      }
+      
+      if (data.length === 0) return null;
       
       const width = 300; // широкий viewBox, SVG растянется на 100%
       const height = 44;
@@ -2508,7 +2717,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         React.createElement('div', { className: 'goal-progress-track' },
             React.createElement('div', { 
               className: 'goal-progress-fill' + (eatenKcal > optimum ? ' over' : ''),
-              style: { width: Math.min(100, (eatenKcal / optimum) * 100) + '%' }
+              style: { width: Math.min(100, animatedProgress) + '%' }
             }),
             // Маркер цели на 100%
             React.createElement('div', { className: 'goal-marker' })
@@ -2521,6 +2730,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               : React.createElement('span', { className: 'goal-over' }, 
                   'Превышение на ', React.createElement('b', null, Math.abs(remainingKcal)), ' ккал'
                 )
+          )
+        ),
+        // Confetti overlay
+        showConfetti && React.createElement('div', { className: 'confetti-container' },
+          Array.from({length: 50}).map((_, i) => 
+            React.createElement('div', { 
+              key: i, 
+              className: 'confetti',
+              style: {
+                left: Math.random() * 100 + '%',
+                animationDelay: Math.random() * 0.5 + 's',
+                backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'][i % 5]
+              }
+            })
           )
         ),
         // Контейнер: Макро-кольца + Плашка веса
@@ -2846,10 +3069,37 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     }
   
     return React.createElement('div',{className:'page page-day'},
+      // Pull-to-refresh индикатор
+      (pullProgress > 0 || isRefreshing) && React.createElement('div', {
+        className: 'pull-indicator' + (isRefreshing ? ' refreshing' : ''),
+        style: { 
+          height: isRefreshing ? 50 : pullProgress,
+          opacity: isRefreshing ? 1 : Math.min(pullProgress / 40, 1)
+        }
+      },
+        React.createElement('div', { className: 'pull-spinner' },
+          isRefreshing 
+            ? React.createElement('span', { className: 'pull-spinner-icon spinning' }, '↻')
+            : React.createElement('span', { className: 'pull-spinner-icon' }, pullProgress >= 80 ? '↓' : '↓')
+        ),
+        React.createElement('span', { className: 'pull-text' }, 
+          isRefreshing ? 'Обновление...' : (pullProgress >= 80 ? 'Отпустите' : 'Потяните вниз')
+        )
+      ),
       statsBlock,
       compactActivity,
       sideBlock,
       daySummary,
+      // Empty state когда нет приёмов пищи
+      (!day.meals || day.meals.length === 0) && React.createElement('div', { className: 'empty-state' },
+        React.createElement('div', { className: 'empty-state-icon' }, '🍽️'),
+        React.createElement('div', { className: 'empty-state-title' }, 'Пока нет приёмов пищи'),
+        React.createElement('div', { className: 'empty-state-text' }, 'Добавьте первый приём, чтобы начать отслеживание'),
+        React.createElement('button', { 
+          className: 'btn btn-primary empty-state-btn',
+          onClick: addMeal
+        }, '+ Добавить приём')
+      ),
       mealsUI,
       React.createElement('div',{className:'row desktop-only',style:{justifyContent:'flex-start',marginTop:'8px'}}, React.createElement('button',{className:'btn',onClick:addMeal},'+ Приём')),
       
@@ -2859,6 +3109,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         onClick: addMeal,
         title: 'Добавить приём пищи'
       }, '+'),
+      
+      // Theme toggle button
+      React.createElement('button', {
+        className: 'theme-toggle',
+        onClick: toggleTheme,
+        title: isDarkTheme ? 'Светлая тема' : 'Тёмная тема'
+      }, isDarkTheme ? '☀️' : '🌙'),
       
       // Toast подсказка БЖУ
       macroTip && toastVisible && React.createElement('div', {
@@ -2873,7 +3130,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Meal Creation/Edit Modal (mobile only)
       showTimePicker && ReactDOM.createPortal(
         React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelTimePicker },
-          React.createElement('div', { className: 'time-picker-modal', onClick: e => e.stopPropagation() },
+          React.createElement('div', { 
+            ref: bottomSheetRef,
+            className: 'time-picker-modal', 
+            onClick: e => e.stopPropagation()
+          },
+            // Ручка для свайпа
+            React.createElement('div', { 
+              className: 'bottom-sheet-handle',
+              onTouchStart: handleSheetTouchStart,
+              onTouchMove: handleSheetTouchMove,
+              onTouchEnd: () => handleSheetTouchEnd(cancelTimePicker)
+            }),
             
             // Step 1: Время (показывается при editMode='new' или 'time')
             pickerStep === 1 && React.createElement('div', { 
@@ -2960,6 +3228,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       showWeightPicker && ReactDOM.createPortal(
         React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelWeightPicker },
           React.createElement('div', { className: 'time-picker-modal weight-picker-modal', onClick: e => e.stopPropagation() },
+            // Ручка для свайпа
+            React.createElement('div', { 
+              className: 'bottom-sheet-handle',
+              onTouchStart: handleSheetTouchStart,
+              onTouchMove: handleSheetTouchMove,
+              onTouchEnd: () => handleSheetTouchEnd(cancelWeightPicker)
+            }),
             React.createElement('div', { className: 'time-picker-header' },
               React.createElement('button', { className: 'time-picker-cancel', onClick: prevWeightPickerStep }, 
                 weightPickerStep === 1 ? 'Отмена' : '← Назад'
@@ -3013,6 +3288,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       showDeficitPicker && ReactDOM.createPortal(
         React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelDeficitPicker },
           React.createElement('div', { className: 'time-picker-modal deficit-picker-modal', onClick: e => e.stopPropagation() },
+            // Ручка для свайпа
+            React.createElement('div', { 
+              className: 'bottom-sheet-handle',
+              onTouchStart: handleSheetTouchStart,
+              onTouchMove: handleSheetTouchMove,
+              onTouchEnd: () => handleSheetTouchEnd(cancelDeficitPicker)
+            }),
             React.createElement('div', { className: 'time-picker-header' },
               React.createElement('button', { className: 'time-picker-cancel', onClick: cancelDeficitPicker }, 'Отмена'),
               React.createElement('span', { className: 'time-picker-title' }, '📊 Цель дефицита'),
@@ -3039,6 +3321,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       showHouseholdPicker && ReactDOM.createPortal(
         React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelHouseholdPicker },
           React.createElement('div', { className: 'time-picker-modal household-picker-modal', onClick: e => e.stopPropagation() },
+            // Ручка для свайпа
+            React.createElement('div', { 
+              className: 'bottom-sheet-handle',
+              onTouchStart: handleSheetTouchStart,
+              onTouchMove: handleSheetTouchMove,
+              onTouchEnd: () => handleSheetTouchEnd(cancelHouseholdPicker)
+            }),
             React.createElement('div', { className: 'time-picker-header' },
               React.createElement('button', { className: 'time-picker-cancel', onClick: cancelHouseholdPicker }, 'Отмена'),
               React.createElement('span', { className: 'time-picker-title' }, '🏠 Бытовая активность'),
@@ -3066,6 +3355,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       showGramsPicker && ReactDOM.createPortal(
         React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelGramsPicker },
           React.createElement('div', { className: 'time-picker-modal grams-picker-modal', onClick: e => e.stopPropagation() },
+            // Ручка для свайпа
+            React.createElement('div', { 
+              className: 'bottom-sheet-handle',
+              onTouchStart: handleSheetTouchStart,
+              onTouchMove: handleSheetTouchMove,
+              onTouchEnd: () => handleSheetTouchEnd(cancelGramsPicker)
+            }),
             React.createElement('div', { className: 'time-picker-header' },
               React.createElement('button', { className: 'time-picker-cancel', onClick: cancelGramsPicker }, 'Отмена'),
               React.createElement('span', { className: 'time-picker-title' }, 'Граммы'),
@@ -3101,6 +3397,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       showZonePicker && ReactDOM.createPortal(
         React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelZonePicker },
           React.createElement('div', { className: 'time-picker-modal zone-picker-modal', onClick: e => e.stopPropagation() },
+            // Ручка для свайпа
+            React.createElement('div', { 
+              className: 'bottom-sheet-handle',
+              onTouchStart: handleSheetTouchStart,
+              onTouchMove: handleSheetTouchMove,
+              onTouchEnd: () => handleSheetTouchEnd(cancelZonePicker)
+            }),
             React.createElement('div', { className: 'time-picker-header' },
               React.createElement('button', { className: 'time-picker-cancel', onClick: cancelZonePicker }, 'Отмена'),
               React.createElement('span', { className: 'time-picker-title' }, 

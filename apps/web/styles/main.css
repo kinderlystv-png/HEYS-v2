@@ -4108,6 +4108,395 @@ td:first-child input {
   background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
 }
 
+/* === PULL-TO-REFRESH === */
+.pull-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  overflow: hidden;
+  transition: height 0.2s ease;
+  margin: -12px -12px 8px -12px;
+  padding-top: 8px;
+  background: linear-gradient(180deg, var(--stats-bg) 0%, transparent 100%);
+}
+
+.pull-indicator.refreshing {
+  height: 50px !important;
+}
+
+.pull-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pull-spinner-icon {
+  font-size: 20px;
+  color: var(--acc);
+  transition: transform 0.2s ease;
+}
+
+.pull-spinner-icon.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.pull-text {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* === DARK THEME === */
+[data-theme="dark"] {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --border: #334155;
+  --acc: #3b82f6;
+  --acc-contrast: #ffffff;
+  
+  /* Stats block (тёмно-синий) */
+  --stats-bg: #1e3a5f;
+  --stats-border: #3b82f6;
+  
+  /* Activity block (тёмно-жёлтый) */
+  --activity-bg: #2d2a1f;
+  --activity-border: #b8a04e;
+}
+
+/* Dark theme overrides */
+[data-theme="dark"] body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .modal-overlay .modal-content {
+  background: var(--card);
+  color: var(--text);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .macro-toast {
+  background: var(--card);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .macro-toast-protein {
+  border-left-color: #f87171;
+  background: linear-gradient(135deg, #2d1f1f 0%, #3d2525 100%);
+}
+
+[data-theme="dark"] .macro-toast-fat {
+  border-left-color: #fbbf24;
+  background: linear-gradient(135deg, #2d2a1f 0%, #3d3625 100%);
+}
+
+[data-theme="dark"] .macro-toast-carbs {
+  border-left-color: #4ade80;
+  background: linear-gradient(135deg, #1f2d1f 0%, #253d25 100%);
+}
+
+[data-theme="dark"] .macro-toast-success {
+  border-left-color: #4ade80;
+  background: linear-gradient(135deg, #1f2d1f 0%, #253d25 100%);
+}
+
+[data-theme="dark"] .skeleton-item {
+  background: linear-gradient(90deg, #334155 0%, #475569 50%, #334155 100%);
+}
+
+[data-theme="dark"] .meal-card,
+[data-theme="dark"] .card {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .btn {
+  background: var(--card);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .btn:hover {
+  background: var(--border);
+}
+
+[data-theme="dark"] .btn-primary {
+  background: var(--acc);
+  color: var(--acc-contrast);
+  border-color: var(--acc);
+}
+
+[data-theme="dark"] .nav-link {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .nav-link.active {
+  color: var(--acc);
+}
+
+[data-theme="dark"] .fab-add-meal {
+  background: var(--acc);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+[data-theme="dark"] .empty-state {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .sparkline-skeleton-line {
+  background: linear-gradient(90deg, #334155 0%, #475569 50%, #334155 100%);
+}
+
+[data-theme="dark"] .sparkline-skeleton-dot {
+  background: #475569;
+}
+
+/* Dark theme for bottom sheets */
+[data-theme="dark"] .time-picker-modal {
+  background: #1c1c1e;
+}
+
+[data-theme="dark"] .time-picker-header {
+  border-bottom-color: #38383a;
+}
+
+[data-theme="dark"] .time-picker-title {
+  color: #f2f2f7;
+}
+
+[data-theme="dark"] .bottom-sheet-handle::before {
+  background: #48484a;
+}
+
+[data-theme="dark"] .wheel-column-item {
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .wheel-column-item.selected {
+  color: #f2f2f7;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  z-index: 100;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.theme-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
+}
+
+/* === CONFETTI ANIMATION === */
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  animation: confetti-fall 3s ease-out forwards;
+  transform-origin: center;
+}
+
+@keyframes confetti-fall {
+  0% {
+    top: -10px;
+    opacity: 1;
+    transform: translateX(0) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translateX(20px) rotate(180deg) scale(1);
+  }
+  50% {
+    transform: translateX(-15px) rotate(360deg) scale(0.9);
+  }
+  75% {
+    transform: translateX(10px) rotate(540deg) scale(0.8);
+  }
+  100% {
+    top: 100vh;
+    opacity: 0;
+    transform: translateX(-5px) rotate(720deg) scale(0.6);
+  }
+}
+
+/* === EMPTY STATE === */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  background: var(--card);
+  border: 2px dashed var(--border);
+  border-radius: 16px;
+  margin: 16px 0;
+}
+
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  animation: empty-bounce 2s ease-in-out infinite;
+}
+
+@keyframes empty-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.empty-state-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.empty-state-text {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 20px;
+  max-width: 260px;
+}
+
+.empty-state-btn {
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* === SPARKLINE SKELETON === */
+.sparkline-skeleton {
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 12px;
+}
+
+.sparkline-skeleton-line {
+  height: 2px;
+  background: linear-gradient(90deg, var(--border) 0%, var(--muted) 50%, var(--border) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 1px;
+}
+
+.sparkline-skeleton-dots {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sparkline-skeleton-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.sparkline-skeleton-dot:nth-child(2) { animation-delay: 0.1s; }
+.sparkline-skeleton-dot:nth-child(3) { animation-delay: 0.2s; }
+.sparkline-skeleton-dot:nth-child(4) { animation-delay: 0.3s; }
+.sparkline-skeleton-dot:nth-child(5) { animation-delay: 0.4s; }
+.sparkline-skeleton-dot:nth-child(6) { animation-delay: 0.5s; }
+.sparkline-skeleton-dot:nth-child(7) { animation-delay: 0.6s; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+/* === MICRO ANIMATIONS — bounce при добавлении === */
+.mpc {
+  animation: item-slide-in 0.3s ease-out;
+}
+
+@keyframes item-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.95);
+  }
+  60% {
+    transform: translateX(4px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Bounce эффект при добавлении нового элемента */
+.mpc:last-child {
+  animation: item-bounce-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes item-bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  50% {
+    transform: scale(1.05) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* === GOAL PROGRESS ANIMATION === */
+.goal-progress-fill {
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 /* Desktop: показываем обычную кнопку */
 .desktop-only {
   display: flex;
@@ -4829,7 +5218,7 @@ td:first-child input {
   }
 }
 
-/* === iOS-style Time Picker Modal === */
+/* === iOS-style Bottom Sheet Modal === */
 .time-picker-backdrop {
   position: fixed;
   inset: 0;
@@ -4839,6 +5228,8 @@ td:first-child input {
   align-items: flex-end;
   justify-content: center;
   animation: fadeIn 0.2s ease;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
 }
 
 .time-picker-modal {
@@ -4847,7 +5238,29 @@ td:first-child input {
   width: 100%;
   max-width: 500px;
   padding-bottom: env(safe-area-inset-bottom, 20px);
-  animation: slideUp 0.3s ease;
+  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  touch-action: none;
+  will-change: transform;
+}
+
+/* Bottom sheet handle (ручка для свайпа) */
+.bottom-sheet-handle {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 6px;
+}
+
+.bottom-sheet-handle::before {
+  content: '';
+  width: 36px;
+  height: 5px;
+  background: #d1d1d6;
+  border-radius: 3px;
+}
+
+/* Анимация закрытия */
+.time-picker-modal.closing {
+  animation: slideDown 0.25s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
 
 @keyframes fadeIn {
@@ -4858,6 +5271,11 @@ td:first-child input {
 @keyframes slideUp {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
 }
 
 /* Анимации переходов между шагами */
