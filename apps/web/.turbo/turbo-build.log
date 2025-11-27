@@ -18,12 +18,12 @@
 [34mCLI[39m Cleaning output folder
 [34mCJS[39m Build start
 [34mESM[39m Build start
-[32mCJS[39m [1mdist/index.cjs     [22m[32m108.91 KB[39m
-[32mCJS[39m [1mdist/index.cjs.map [22m[32m392.35 KB[39m
-[32mCJS[39m ⚡️ Build success in 851ms
 [32mESM[39m [1mdist/index.js     [22m[32m107.71 KB[39m
 [32mESM[39m [1mdist/index.js.map [22m[32m392.35 KB[39m
-[32mESM[39m ⚡️ Build success in 851ms
+[32mESM[39m ⚡️ Build success in 853ms
+[32mCJS[39m [1mdist/index.cjs     [22m[32m108.91 KB[39m
+[32mCJS[39m [1mdist/index.cjs.map [22m[32m392.35 KB[39m
+[32mCJS[39m ⚡️ Build success in 853ms
 
 > @heys/storage@14.0.0 build /home/runner/work/HEYS-v2/HEYS-v2/packages/storage
 > tsup
@@ -37,12 +37,12 @@
 [34mCJS[39m Build start
 [34mESM[39m Build start
 Entry module "dist/index.cjs" is using named and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
-[32mCJS[39m [1mdist/index.cjs     [22m[32m71.76 KB[39m
-[32mCJS[39m [1mdist/index.cjs.map [22m[32m272.43 KB[39m
-[32mCJS[39m ⚡️ Build success in 677ms
 [32mESM[39m [1mdist/index.js     [22m[32m71.65 KB[39m
 [32mESM[39m [1mdist/index.js.map [22m[32m272.43 KB[39m
-[32mESM[39m ⚡️ Build success in 678ms
+[32mESM[39m ⚡️ Build success in 686ms
+[32mCJS[39m [1mdist/index.cjs     [22m[32m71.76 KB[39m
+[32mCJS[39m [1mdist/index.cjs.map [22m[32m272.43 KB[39m
+[32mCJS[39m ⚡️ Build success in 686ms
 
 > @heys/core@14.0.0 build /home/runner/work/HEYS-v2/HEYS-v2/packages/core
 > tsup
@@ -55,16 +55,16 @@ Entry module "dist/index.cjs" is using named and default exports together. Consu
 [34mCLI[39m Cleaning output folder
 [34mCJS[39m Build start
 [34mESM[39m Build start
-[32mESM[39m [1mdist/server/router.mjs     [22m[32m20.90 KB[39m
 [32mESM[39m [1mdist/index.mjs             [22m[32m9.68 KB[39m
+[32mESM[39m [1mdist/server/router.mjs     [22m[32m20.90 KB[39m
 [32mESM[39m [1mdist/index.mjs.map         [22m[32m32.66 KB[39m
 [32mESM[39m [1mdist/server/router.mjs.map [22m[32m65.09 KB[39m
-[32mESM[39m ⚡️ Build success in 290ms
+[32mESM[39m ⚡️ Build success in 288ms
 [32mCJS[39m [1mdist/index.js             [22m[32m10.37 KB[39m
 [32mCJS[39m [1mdist/server/router.js     [22m[32m21.25 KB[39m
-[32mCJS[39m [1mdist/index.js.map         [22m[32m32.66 KB[39m
 [32mCJS[39m [1mdist/server/router.js.map [22m[32m65.09 KB[39m
-[32mCJS[39m ⚡️ Build success in 291ms
+[32mCJS[39m [1mdist/index.js.map         [22m[32m32.66 KB[39m
+[32mCJS[39m ⚡️ Build success in 290ms
 
 > @heys/search@14.0.0 build /home/runner/work/HEYS-v2/HEYS-v2/packages/search
 > tsup
@@ -79,10 +79,10 @@ Entry module "dist/index.cjs" is using named and default exports together. Consu
 [34mESM[39m Build start
 [32mCJS[39m [1mdist/index.cjs     [22m[32m5.88 KB[39m
 [32mCJS[39m [1mdist/index.cjs.map [22m[32m16.77 KB[39m
-[32mCJS[39m ⚡️ Build success in 99ms
+[32mCJS[39m ⚡️ Build success in 97ms
 [32mESM[39m [1mdist/index.js     [22m[32m5.87 KB[39m
 [32mESM[39m [1mdist/index.js.map [22m[32m16.77 KB[39m
-[32mESM[39m ⚡️ Build success in 99ms
+[32mESM[39m ⚡️ Build success in 97ms
 
 > @heys/analytics@14.0.0 build /home/runner/work/HEYS-v2/HEYS-v2/packages/analytics
 > tsup
@@ -95,12 +95,12 @@ Entry module "dist/index.cjs" is using named and default exports together. Consu
 [34mCLI[39m Cleaning output folder
 [34mCJS[39m Build start
 [34mESM[39m Build start
+[32mCJS[39m [1mdist/index.cjs     [22m[32m279.00 B[39m
+[32mCJS[39m [1mdist/index.cjs.map [22m[32m570.00 B[39m
+[32mCJS[39m ⚡️ Build success in 41ms
 [32mESM[39m [1mdist/index.js     [22m[32m258.00 B[39m
 [32mESM[39m [1mdist/index.js.map [22m[32m570.00 B[39m
 [32mESM[39m ⚡️ Build success in 41ms
-[32mCJS[39m [1mdist/index.cjs     [22m[32m279.00 B[39m
-[32mCJS[39m [1mdist/index.cjs.map [22m[32m570.00 B[39m
-[32mCJS[39m ⚡️ Build success in 42ms
 
 > @heys/gaming@14.0.0 build /home/runner/work/HEYS-v2/HEYS-v2/packages/gaming
 > tsup
@@ -113,12 +113,12 @@ Entry module "dist/index.cjs" is using named and default exports together. Consu
 [34mCLI[39m Cleaning output folder
 [34mCJS[39m Build start
 [34mESM[39m Build start
-[32mCJS[39m [1mdist/index.cjs     [22m[32m149.00 B[39m
-[32mCJS[39m [1mdist/index.cjs.map [22m[32m276.00 B[39m
-[32mCJS[39m ⚡️ Build success in 36ms
 [32mESM[39m [1mdist/index.js     [22m[32m137.00 B[39m
 [32mESM[39m [1mdist/index.js.map [22m[32m276.00 B[39m
 [32mESM[39m ⚡️ Build success in 36ms
+[32mCJS[39m [1mdist/index.cjs     [22m[32m149.00 B[39m
+[32mCJS[39m [1mdist/index.cjs.map [22m[32m276.00 B[39m
+[32mCJS[39m ⚡️ Build success in 36ms
 
 > @heys/ui@14.0.0 build /home/runner/work/HEYS-v2/HEYS-v2/packages/ui
 > tsup
@@ -131,12 +131,12 @@ Entry module "dist/index.cjs" is using named and default exports together. Consu
 [34mCLI[39m Cleaning output folder
 [34mCJS[39m Build start
 [34mESM[39m Build start
-[32mESM[39m [1mdist/index.js     [22m[32m73.04 KB[39m
-[32mESM[39m [1mdist/index.js.map [22m[32m275.84 KB[39m
-[32mESM[39m ⚡️ Build success in 686ms
 [32mCJS[39m [1mdist/index.cjs     [22m[32m73.65 KB[39m
 [32mCJS[39m [1mdist/index.cjs.map [22m[32m275.84 KB[39m
-[32mCJS[39m ⚡️ Build success in 686ms
+[32mCJS[39m ⚡️ Build success in 681ms
+[32mESM[39m [1mdist/index.js     [22m[32m73.04 KB[39m
+[32mESM[39m [1mdist/index.js.map [22m[32m275.84 KB[39m
+[32mESM[39m ⚡️ Build success in 681ms
 
 > @heys/logger@1.0.0 build /home/runner/work/HEYS-v2/HEYS-v2/packages/logger
 > pnpm run build:js && pnpm run build:types
@@ -151,7 +151,7 @@ Entry module "dist/index.cjs" is using named and default exports together. Consu
 [34mCLI[39m Target: es2022
 [34mESM[39m Build start
 [32mESM[39m [1mdist/index.js [22m[32m16.27 KB[39m
-[32mESM[39m ⚡️ Build success in 23ms
+[32mESM[39m ⚡️ Build success in 22ms
 
 > @heys/logger@1.0.0 build:types /home/runner/work/HEYS-v2/HEYS-v2/packages/logger
 > pnpm exec tsc --project tsconfig.build.json
@@ -188,8 +188,8 @@ computing gzip size...
 [2mdist/[22m[2massets/[22m[32mheys_storage_supabase_v1-a8ac55c1.js  [39m[1m[2m31.81 kB[22m[1m[22m
 [2mdist/[22m[2massets/[22m[32mheys_core_v12-93bef242.js             [39m[1m[2m44.02 kB[22m[1m[22m
 [2mdist/[22m[2massets/[22m[35mindex-c3abfed7.css                    [39m[1m[2m73.05 kB[22m[1m[22m[2m │ gzip: 14.10 kB[22m
-[2mdist/[22m[2massets/[22m[36mfeatures-4ed993c7.js                  [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip:  0.02 kB[22m[2m │ map: 0.10 kB[22m
-[2mdist/[22m[2massets/[22m[36mvendor-4ed993c7.js                    [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip:  0.02 kB[22m[2m │ map: 0.10 kB[22m
 [2mdist/[22m[2massets/[22m[36mreact-4ed993c7.js                     [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip:  0.02 kB[22m[2m │ map: 0.10 kB[22m
+[2mdist/[22m[2massets/[22m[36mvendor-4ed993c7.js                    [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip:  0.02 kB[22m[2m │ map: 0.10 kB[22m
+[2mdist/[22m[2massets/[22m[36mfeatures-4ed993c7.js                  [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip:  0.02 kB[22m[2m │ map: 0.10 kB[22m
 [2mdist/[22m[2massets/[22m[36mcore-4ed993c7.js                      [39m[1m[2m 0.00 kB[22m[1m[22m[2m │ gzip:  0.02 kB[22m[2m │ map: 0.10 kB[22m
-[32m✓ built in 1.56s[39m
+[32m✓ built in 1.60s[39m
