@@ -21,9 +21,7 @@
           // Проверяем загрузку React
           if (!window.React || !window.ReactDOM) {
             reactCheckCount++;
-            if (reactCheckCount === 1 || reactCheckCount % 10 === 0) {
-              console.log('⏳ Waiting for React to load...');
-            }
+            // Логи ожидания отключены для чистой консоли
             setTimeout(initializeApp, 100);
             return;
           }
@@ -38,14 +36,12 @@
 
           if (!heysReady) {
             reactCheckCount++;
-            if (reactCheckCount === 1 || reactCheckCount % 10 === 0) {
-              console.log('⏳ Waiting for HEYS components to load...');
-            }
+            // Логи ожидания отключены для чистой консоли
             setTimeout(initializeApp, 100);
             return;
           }
 
-          console.log('✅ React and HEYS components loaded, initializing app...');
+          // Логи инициализации отключены для чистой консоли
           const React = window.React,
             ReactDOM = window.ReactDOM;
           const { useState, useEffect } = React;
@@ -712,13 +708,40 @@
               return null;
             });
             const [backupBusy, setBackupBusy] = useState(false);
+            
+            // Вычисляем activeDays для DatePicker (после объявления clientId и products)
+            // Пересчитывается когда: меняется дата, clientId, products, syncVer (данные дня) или ЗАВЕРШАЕТСЯ синхронизация
+            const datePickerActiveDays = React.useMemo(() => {
+              // Не вычисляем пока идёт инициализация или нет продуктов
+              if (isInitializing || !products || products.length === 0) {
+                return new Map();
+              }
+              
+              const getActiveDaysForMonth = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
+              if (!getActiveDaysForMonth || !clientId) {
+                return new Map();
+              }
+              
+              // Получаем profile из localStorage
+              const profile = U && U.lsGet ? U.lsGet('heys_profile', {}) : {};
+              
+              // Парсим selectedDate для определения месяца
+              const parts = selectedDate.split('-');
+              const year = parseInt(parts[0], 10);
+              const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
+              
+              try {
+                // Передаём products напрямую в функцию
+                return getActiveDaysForMonth(year, month, profile, products);
+              } catch (e) {
+                console.warn('[App] Error calculating activeDays:', e);
+                return new Map();
+              }
+            }, [selectedDate, clientId, products, isInitializing, syncVer]);
 
             // Получить клиентов куратора из Supabase
             async function fetchClientsFromCloud(curatorId) {
-              console.log('[HEYS] 📊 DEBUG: fetchClientsFromCloud called, curatorId:', curatorId);
-              console.log('[HEYS] 📊 DEBUG: cloud.client exists:', !!cloud.client);
               if (!cloud.client || !curatorId) {
-                console.log('[HEYS] 📊 DEBUG: fetchClientsFromCloud early return (no client or curatorId)');
                 return [];
               }
               
@@ -728,7 +751,6 @@
               );
               
               try {
-                console.log('[HEYS] 📊 DEBUG: Calling Supabase .from("clients")...');
                 const fetchPromise = cloud.client
                   .from('clients')
                   .select('id, name')
@@ -736,7 +758,6 @@
                   .order('updated_at', { ascending: true });
                 
                 const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
-                console.log('[HEYS] 📊 DEBUG: Supabase response - data:', data?.length, 'error:', error?.message);
                 if (error) {
                   console.error('Ошибка загрузки клиентов:', error);
                   return [];
@@ -754,7 +775,6 @@
 
               // Локальный режим
               if (!cloud.client || !cloudUser || !cloudUser.id) {
-                console.log('addClientToCloud: создание локального клиента');
                 const newClient = {
                   id: `local-user-${Date.now()}`,
                   name: clientName,
@@ -1083,20 +1103,16 @@
                 window.HEYS.currentClientId = clientId;
                 // Подгружаем данные клиента из Supabase и обновляем продукты
                 if (cloud && typeof cloud.bootstrapClientSync === 'function') {
-                  console.log(`🔄 [CLIENT CHANGE] Starting bootstrap for client: ${clientId}`);
                   // КРИТИЧНО: Сохраняем текущие продукты перед синхронизацией
                   const productsBeforeSync = products.length > 0 ? products : window.HEYS.utils.lsGet('heys_products', []);
-                  console.log(`📦 [CLIENT CHANGE] Products before sync: ${Array.isArray(productsBeforeSync) ? productsBeforeSync.length : 0} items`);
                   
                   cloud.bootstrapClientSync(clientId).then(() => {
-                    console.log(`🔄 [CLIENT CHANGE] Bootstrap completed, loading products...`);
                     // всегда используем HEYS.utils.lsGet для clientId-специфичного ключа
                     const loadedProducts = Array.isArray(
                       window.HEYS.utils.lsGet('heys_products', []),
                     )
                       ? window.HEYS.utils.lsGet('heys_products', [])
                       : [];
-                    console.log(`📦 [CLIENT CHANGE] Loaded products from localStorage: ${loadedProducts.length} items`);
                     
                     // ЗАЩИТА: если синхронизация вернула пустой массив, а у нас были продукты - не затираем
                     if (loadedProducts.length === 0 && Array.isArray(productsBeforeSync) && productsBeforeSync.length > 0) {
@@ -1437,7 +1453,6 @@
                   setClientId(currentClient);
                   window.HEYS = window.HEYS || {};
                   window.HEYS.currentClientId = currentClient;
-                  console.log('[HEYS] 🔄 Restored client in offline mode:', currentClient);
                 }
 
                 setStatus('offline');
@@ -1447,8 +1462,7 @@
               // Пробуем подключиться к облаку если доступно
               if (cloud && typeof cloud.bootstrapSync === 'function') {
                 // ВАЖНО: Сначала нужен signIn, ПОТОМ bootstrapSync!
-                console.log('[HEYS] 🚀 Starting auto sign-in...');
-                console.log('[HEYS] 📊 DEBUG: isInitializing=true, starting sign-in flow');
+                // Логи sign-in отключены для production
 
                 // Пытаемся автоматический вход с сохранёнными credentials
                 const savedEmail = 'poplanton@mail.ru'; // TODO: взять из настроек
@@ -1457,56 +1471,37 @@
                 cloud
                   .signIn(savedEmail, savedPwd)
                   .then(async (result) => {
-                    console.log('[HEYS] ✅ Auto sign-in completed, user:', result.user?.email);
-                    console.log('[HEYS] 📊 DEBUG: signIn result:', { hasUser: !!result.user, hasError: !!result.error });
+                    // Логи sign-in отключены для production
 
                     if (result.error) {
                       console.error('[HEYS] ❌ Sign-in failed:', result.error);
-                      console.log('[HEYS] 📊 DEBUG: Calling initLocalData due to error');
                       initLocalData();
-                      console.log('[HEYS] 📊 DEBUG: Setting isInitializing=false (error path)');
                       setIsInitializing(false);
                       return;
                     }
 
                     // Теперь пользователь залогинен, можно устанавливать cloudUser
                     const user = result.user || (cloud.getUser && cloud.getUser());
-                    console.log('[HEYS] 📊 DEBUG: user object:', { hasUser: !!user, email: user?.email });
                     if (user) {
                       setCloudUser(user);
                       setStatus('online');
 
                       // Загружаем НАСТОЯЩИХ клиентов из Supabase таблицы clients
                       try {
-                        console.log('[HEYS] 📊 DEBUG: Fetching clients from cloud...');
                         const realClients = await fetchClientsFromCloud(user.id);
-                        console.log('[HEYS] 📊 DEBUG: Fetched clients:', realClients?.length || 0);
                         if (realClients && realClients.length > 0) {
                           setClients(realClients);
                           U.lsSet('heys_clients', realClients); // Сохраняем в localStorage
 
                           // Восстанавливаем последнего выбранного клиента, если он есть в списке
                           const savedClientId = U.lsGet('heys_client_current');
-                          console.log('[HEYS] 📊 DEBUG: savedClientId:', savedClientId);
                           if (savedClientId && realClients.some((c) => c.id === savedClientId)) {
-                            console.log('[HEYS] 🔄 Restoring saved client:', savedClientId);
                             setClientId(savedClientId);
                             window.HEYS = window.HEYS || {};
                             window.HEYS.currentClientId = savedClientId;
-                          } else {
-                            console.log(
-                              '[HEYS] ℹ️ No saved client or client not found in list, showing selector',
-                            );
                           }
-
-                          console.log(
-                            '[HEYS] ✅ Loaded',
-                            realClients.length,
-                            'clients from Supabase',
-                          );
                         } else {
                           // Если нет клиентов в Supabase — fallback на localStorage
-                          console.log('[HEYS] 📊 DEBUG: No clients from cloud, using local fallback');
                           const localClients = U.lsGet('heys_clients', []).filter(
                             (c) => !c.id?.startsWith('local-user'),
                           );
@@ -1518,41 +1513,28 @@
                         }
                       } catch (error) {
                         console.error('[HEYS] Error loading clients:', error);
-                        console.log('[HEYS] 📊 DEBUG: Exception caught, calling initLocalData');
                         initLocalData();
                       }
                     } else {
                       // Нет пользователя после signIn — используем offline
                       console.warn('[HEYS] ⚠️ No user after signIn, using offline mode');
-                      console.log('[HEYS] 📊 DEBUG: No user, calling initLocalData');
                       initLocalData();
                     }
 
                     const initialProducts = Array.isArray(U.lsGet('heys_products', []))
                       ? U.lsGet('heys_products', [])
                       : [];
-                    console.log(`📦 [INIT] Loading initial products: ${initialProducts.length} items`);
                     setProducts(initialProducts);
                     setSyncVer((v) => v + 1);
-                    console.log(
-                      '[HEYS] 🎯 Setting isInitializing = false, clients.length:',
-                      clients.length,
-                    );
-                    console.log('[HEYS] 📊 DEBUG: ===== ABOUT TO SET isInitializing=false (success path) =====');
                     setIsInitializing(false); // ✅ Инициализация завершена
                   })
                   .catch((error) => {
                     console.error('[HEYS] ❌ Auto sign-in failed:', error);
-                    console.log('[HEYS] 📊 DEBUG: signIn.catch, calling initLocalData');
                     initLocalData();
-                    console.log('[HEYS] 📊 DEBUG: ===== ABOUT TO SET isInitializing=false (catch path) =====');
                     setIsInitializing(false); // ✅ Инициализация завершена (offline)
                   });
               } else {
-                console.log('[HEYS] ⚠️ No cloud available, using offline mode');
-                console.log('[HEYS] 📊 DEBUG: No cloud module, calling initLocalData');
                 initLocalData();
-                console.log('[HEYS] 📊 DEBUG: ===== ABOUT TO SET isInitializing=false (no cloud) =====');
                 setIsInitializing(false); // ✅ Инициализация завершена (no cloud)
               }
             }, []);
@@ -1560,17 +1542,13 @@
             // При полной перезагрузке панели — bootstrap продуктов из облака, если выбран клиент
             useEffect(() => {
               if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
-                console.log(`🔄 [RELOAD] Starting bootstrap for client: ${clientId}`);
                 // ЗАЩИТА: Сохраняем текущие продукты перед reload
                 const currentProducts = window.HEYS.utils.lsGet('heys_products', []);
-                console.log(`📦 [RELOAD] Current products before bootstrap: ${Array.isArray(currentProducts) ? currentProducts.length : 0} items`);
                 
                 cloud.bootstrapClientSync(clientId).then(() => {
-                  console.log(`🔄 [RELOAD] Bootstrap completed, loading products...`);
                   const loadedProducts = Array.isArray(window.HEYS.utils.lsGet('heys_products', []))
                     ? window.HEYS.utils.lsGet('heys_products', [])
                     : [];
-                  console.log(`📦 [RELOAD] Loaded products from localStorage: ${loadedProducts.length} items`);
                   
                   // ЗАЩИТА: не затираем продукты пустым массивом после reload
                   if (loadedProducts.length === 0 && Array.isArray(currentProducts) && currentProducts.length > 0) {
@@ -1588,11 +1566,9 @@
             // debounced save products
             const saveTimerRef = React.useRef(null);
             useEffect(() => {
-              console.log(`💾 [useEffect] Products changed, length: ${products.length}, clientId: ${clientId}`);
               if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
               saveTimerRef.current = setTimeout(() => {
                 try {
-                  console.log(`💾 [useEffect] Saving products to cloud: ${products.length} items`);
                   window.HEYS.saveClientKey('heys_products', products);
                 } catch (e) {
                   console.error('Error saving products:', e);
@@ -1753,7 +1729,8 @@
                                 onSelect: setSelectedDate,
                                 onRemove: () => {
                                   setSelectedDate(todayISO());
-                                }
+                                },
+                                activeDays: datePickerActiveDays
                               })
                             : null,
                         ),

@@ -74,8 +74,6 @@
   // Алиас для краткости
   window.devLog = window.DEV.log;
   window.devWarn = window.DEV.warn;
-
-  if (isDev) {
-    console.log('[HEYS Dev Utils] Initialized ✓ (Development Mode)');
-  }
+  
+  // Логи инициализации отключены для чистой консоли
 })();

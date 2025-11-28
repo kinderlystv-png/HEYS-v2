@@ -51,7 +51,8 @@
   let initialSyncCompleted = false;
   cloud.isInitialSyncCompleted = function() { return initialSyncCompleted; };
 
-  function log(){ try{ console.log.apply(console, ['[HEYS.cloud]'].concat([].slice.call(arguments))); }catch(e){} }
+  // Логирование отключено для production (см. copilot-instructions.md)
+  function log(){}
   function err(){ try{ console.error.apply(console, ['[HEYS.cloud:ERR]'].concat([].slice.call(arguments))); }catch(e){} }
 
   /**
@@ -587,15 +588,10 @@
             if (typeof value !== 'object' || value === null) {
                 return;
             }
-            // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем "пустой" день (без meals и реальных данных)
-            // Это защита от HMR-перезагрузок
-            const meals = value.meals || [];
-            const hasRealData = meals.length > 0 || 
-                               (value.steps && value.steps > 0) || 
-                               (value.weight && value.weight > 0) ||
-                               (value.water && value.water > 0);
-            if (!hasRealData) {
-                log(`🚫 [SAVE BLOCKED] Refused to save empty day to Supabase (key: ${k}) - no meals/steps/weight`);
+            // 🚨 ЗАЩИТА ОТ HMR: НЕ сохраняем день без updatedAt (признак что это HMR-сброс, а не реальное изменение)
+            // Если есть updatedAt — это реальное изменение пользователем, разрешаем сохранение (даже пустого дня)
+            if (!value.updatedAt && !value.schemaVersion) {
+                log(`🚫 [SAVE BLOCKED] Refused to save day without updatedAt (HMR protection) - key: ${k}`);
                 return;
             }
         }

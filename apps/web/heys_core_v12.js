@@ -81,10 +81,7 @@
    */
   function lsSet(key, val){ 
     try{ 
-      // Логируем только важные операции, не данные пользователя
-      if (key.includes('_current') || key.includes('session')) {
-        DEV.log('[lsSet] Saving key:', key);
-      }
+      // Логирование отключено для чистой консоли
       localStorage.setItem(key, JSON.stringify(val)); 
       window.HEYS.saveClientKey(key, val); 
     }catch(e){

@@ -1160,8 +1160,9 @@ td:first-child input {
 
 .date-picker-day.today {
   font-weight: 700;
-  color: #667eea;
-  border: 2px solid #667eea;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
 }
 
 .date-picker-day.selected {
@@ -1214,6 +1215,119 @@ td:first-child input {
 .date-picker-btn.delete-btn:hover {
   background: #fee2e2;
   color: #dc2626;
+}
+
+/* Tooltip */
+.date-picker-tooltip {
+  position: fixed;
+  transform: translateX(-50%) translateY(-100%);
+  background: #1f2937;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  z-index: 10002;
+  pointer-events: none;
+  animation: tooltipFade 0.15s ease-out;
+}
+
+.date-picker-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1f2937;
+}
+
+@keyframes tooltipFade {
+  from { opacity: 0; transform: translateX(-50%) translateY(-90%); }
+  to { opacity: 1; transform: translateX(-50%) translateY(-100%); }
+}
+
+/* Кнопка "Вернуться к сегодня" */
+.date-picker-goto-today {
+  width: 100%;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  background: #f0f9ff;
+  border: 1px dashed #667eea;
+  border-radius: 6px;
+  color: #667eea;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.date-picker-goto-today:hover {
+  background: #e0e7ff;
+}
+
+/* Статус-индикатор на дне */
+.date-picker-day {
+  position: relative;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.day-number {
+  font-size: 13px;
+}
+
+.day-status {
+  font-size: 8px;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+/* Streak индикатор */
+.date-picker-streak {
+  padding: 8px 12px;
+  margin: 8px 0;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #92400e;
+  text-align: center;
+}
+
+/* Легенда цветов */
+.date-picker-legend {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0;
+  margin-bottom: 4px;
+  font-size: 10px;
+  color: #6b7280;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.legend-item.good { color: #22c55e; }
+.legend-item.warn { color: #eab308; }
+.legend-item.bad { color: #ef4444; }
+
+/* Сегодняшний день - синий как в навигации */
+.date-picker-day.today {
+  font-weight: 700;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  animation: todayPulse 2s ease-in-out infinite;
+}
+
+@keyframes todayPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
+  50% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2); }
 }
 
 /* Mobile responsive */
@@ -2273,6 +2387,81 @@ td:first-child input {
 .cal-cell:hover:not(.sel) {
   filter: brightness(0.92);
 }
+
+/* === STREAK визуализация === */
+.cal-cell {
+  position: relative;
+}
+
+.cal-cell.streak-start,
+.cal-cell.streak-middle,
+.cal-cell.streak-end {
+  z-index: 1;
+}
+
+/* Соединительные линии между streak днями */
+.cal-cell.streak-start::after,
+.cal-cell.streak-middle::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  background: rgba(34, 197, 94, 0.6);
+  border-radius: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.cal-cell.streak-middle::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  background: rgba(34, 197, 94, 0.6);
+  border-radius: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.cal-cell.streak-end::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  background: rgba(34, 197, 94, 0.6);
+  border-radius: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+/* Иконка огня для streak */
+.streak-fire {
+  position: absolute;
+  top: -4px;
+  right: -2px;
+  font-size: 10px;
+  line-height: 1;
+  z-index: 3;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+}
+
+/* Анимация огня */
+@keyframes streak-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.cal-cell.streak-middle .streak-fire,
+.cal-cell.streak-end .streak-fire {
+  animation: streak-pulse 1.5s ease-in-out infinite;
+}
+
 .cal-foot {
   display: flex;
   gap: 6px;
@@ -4507,6 +4696,11 @@ td:first-child input {
   border-left: 4px solid #3b82f6;
 }
 
+.macro-toast-warning {
+  border-left: 4px solid #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
 .macro-toast-success {
   border-left: 4px solid #22c55e;
   background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
@@ -4708,6 +4902,11 @@ td:first-child input {
 [data-theme="dark"] .macro-toast-carbs {
   border-left-color: #4ade80;
   background: linear-gradient(135deg, #1f2d1f 0%, #253d25 100%);
+}
+
+[data-theme="dark"] .macro-toast-warning {
+  border-left-color: #fbbf24;
+  background: linear-gradient(135deg, #2d2a1f 0%, #3d3625 100%);
 }
 
 [data-theme="dark"] .macro-toast-success {
@@ -5113,6 +5312,11 @@ td:first-child input {
   
   .mobile-only {
     display: flex !important;
+  }
+  
+  /* mpc-totals-wrap needs block, not flex */
+  .mpc-totals-wrap.mobile-only {
+    display: block !important;
   }
   
   .fab-add-meal {

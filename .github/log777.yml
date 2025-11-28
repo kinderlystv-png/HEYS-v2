@@ -1,150 +1,47 @@
 heys_dev_utils.js:79 [HEYS Dev Utils] Initialized ✓ (Development Mode)
 heys_dev_utils.js:31 [HEYS Simple Analytics] Инициализирован ✓
-heys_app_v12.js?v=3:48 ✅ React and HEYS components loaded, initializing app...
+heys_app_v12.js?v=6:48 ✅ React and HEYS components loaded, initializing app...
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] cloud bridge loaded
-heys_app_v12.js?v=3:1450 [HEYS] 🚀 Starting auto sign-in...
-heys_app_v12.js?v=3:1451 [HEYS] 📊 DEBUG: isInitializing=true, starting sign-in flow
-heys_app_v12.js?v=3:1591 💾 [useEffect] Products changed, length: 0, clientId: 
-heys_day_utils.js?v=1:670 [Calendar] getActiveDaysForMonth: {year: 2025, month: 10, weight: 70, bmr: 1649, target: 1649, …}
-heys_day_utils.js?v=1:687 [Calendar] Found active days: 0 []
+heys_app_v12.js?v=6:1471 [HEYS] 🚀 Starting auto sign-in...
+heys_app_v12.js?v=6:1472 [HEYS] 📊 DEBUG: isInitializing=true, starting sign-in flow
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ⏳ [SAVE BLOCKED] Waiting for initial sync | key: heys_dayv2_date
-heys_app_v12.js?v=3:1591 💾 [useEffect] Products changed, length: 224, clientId: 
-heys_app_v12.js?v=3:1595 💾 [useEffect] Saving products to cloud: 224 items
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ⏳ [SAVE BLOCKED] Waiting for initial sync | key: heys_dayv2_2025-11-28
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] signIn ok, user= poplanton@mail.ru
-heys_app_v12.js?v=3:718 [HEYS] 📊 DEBUG: fetchClientsFromCloud called, curatorId: f965a73c-79e3-42b7-9ee0-bfaad09e706b
-heys_app_v12.js?v=3:719 [HEYS] 📊 DEBUG: cloud.client exists: true
-heys_app_v12.js?v=3:731 [HEYS] 📊 DEBUG: Calling Supabase .from("clients")...
-heys_app_v12.js?v=3:1591 💾 [useEffect] Products changed, length: 0, clientId: 
-heys_day_utils.js?v=1:670 [Calendar] getActiveDaysForMonth: {year: 2025, month: 10, weight: 70, bmr: 1649, target: 1649, …}
-heys_day_utils.js?v=1:687 [Calendar] Found active days: 0 []
+heys_app_v12.js?v=6:739 [HEYS] 📊 DEBUG: fetchClientsFromCloud called, curatorId: f965a73c-79e3-42b7-9ee0-bfaad09e706b
+heys_app_v12.js?v=6:740 [HEYS] 📊 DEBUG: cloud.client exists: true
+heys_app_v12.js?v=6:752 [HEYS] 📊 DEBUG: Calling Supabase .from("clients")...
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ⏳ [SAVE BLOCKED] Waiting for initial sync | key: heys_dayv2_date
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] signIn ok, user= poplanton@mail.ru
-heys_app_v12.js?v=3:1460 [HEYS] ✅ Auto sign-in completed, user: poplanton@mail.ru
-heys_app_v12.js?v=3:1461 [HEYS] 📊 DEBUG: signIn result: {hasUser: true, hasError: false}
-heys_app_v12.js?v=3:1474 [HEYS] 📊 DEBUG: user object: {hasUser: true, email: 'poplanton@mail.ru'}
-heys_app_v12.js?v=3:1481 [HEYS] 📊 DEBUG: Fetching clients from cloud...
-heys_app_v12.js?v=3:718 [HEYS] 📊 DEBUG: fetchClientsFromCloud called, curatorId: f965a73c-79e3-42b7-9ee0-bfaad09e706b
-heys_app_v12.js?v=3:719 [HEYS] 📊 DEBUG: cloud.client exists: true
-heys_app_v12.js?v=3:731 [HEYS] 📊 DEBUG: Calling Supabase .from("clients")...
+heys_app_v12.js?v=6:1481 [HEYS] ✅ Auto sign-in completed, user: poplanton@mail.ru
+heys_app_v12.js?v=6:1482 [HEYS] 📊 DEBUG: signIn result: {hasUser: true, hasError: false}
+heys_app_v12.js?v=6:1495 [HEYS] 📊 DEBUG: user object: {hasUser: true, email: 'poplanton@mail.ru'}
+heys_app_v12.js?v=6:1502 [HEYS] 📊 DEBUG: Fetching clients from cloud...
+heys_app_v12.js?v=6:739 [HEYS] 📊 DEBUG: fetchClientsFromCloud called, curatorId: f965a73c-79e3-42b7-9ee0-bfaad09e706b
+heys_app_v12.js?v=6:740 [HEYS] 📊 DEBUG: cloud.client exists: true
+heys_app_v12.js?v=6:752 [HEYS] 📊 DEBUG: Calling Supabase .from("clients")...
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] signIn ok, user= poplanton@mail.ru
-heys_app_v12.js?v=3:1591 💾 [useEffect] Products changed, length: 0, clientId: 
-heys_day_utils.js?v=1:670 [Calendar] getActiveDaysForMonth: {year: 2025, month: 10, weight: 70, bmr: 1649, target: 1649, …}
-heys_day_utils.js?v=1:687 [Calendar] Found active days: 0 []
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ⏳ [SAVE BLOCKED] Waiting for initial sync | key: heys_dayv2_date
-heys_app_v12.js?v=3:739 [HEYS] 📊 DEBUG: Supabase response - data: 5 error: undefined
+heys_app_v12.js?v=6:760 [HEYS] 📊 DEBUG: Supabase response - data: 5 error: undefined
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ⏳ [SAVE BLOCKED] Waiting for initial sync | key: heys_dayv2_2025-11-28
-heys_app_v12.js?v=3:739 [HEYS] 📊 DEBUG: Supabase response - data: 5 error: undefined
-heys_app_v12.js?v=3:1483 [HEYS] 📊 DEBUG: Fetched clients: 5
-heys_app_v12.js?v=3:1490 [HEYS] 📊 DEBUG: savedClientId: 73a55ec7-2b48-47de-8308-06d7bec4259a
-heys_app_v12.js?v=3:1492 [HEYS] 🔄 Restoring saved client: 73a55ec7-2b48-47de-8308-06d7bec4259a
-heys_app_v12.js?v=3:1502 [HEYS] ✅ Loaded 5 clients from Supabase
-heys_app_v12.js?v=3:1534 📦 [INIT] Loading initial products: 0 items
-heys_app_v12.js?v=3:1537 [HEYS] 🎯 Setting isInitializing = false, clients.length: 0
-heys_app_v12.js?v=3:1541 [HEYS] 📊 DEBUG: ===== ABOUT TO SET isInitializing=false (success path) =====
+heys_app_v12.js?v=6:760 [HEYS] 📊 DEBUG: Supabase response - data: 5 error: undefined
+heys_app_v12.js?v=6:1504 [HEYS] 📊 DEBUG: Fetched clients: 5
+heys_app_v12.js?v=6:1511 [HEYS] 📊 DEBUG: savedClientId: 73a55ec7-2b48-47de-8308-06d7bec4259a
+heys_app_v12.js?v=6:1513 [HEYS] 🔄 Restoring saved client: 73a55ec7-2b48-47de-8308-06d7bec4259a
+heys_app_v12.js?v=6:1523 [HEYS] ✅ Loaded 5 clients from Supabase
+heys_app_v12.js?v=6:1555 📦 [INIT] Loading initial products: 0 items
+heys_app_v12.js?v=6:1558 [HEYS] 🎯 Setting isInitializing = false, clients.length: 0
+heys_app_v12.js?v=6:1562 [HEYS] 📊 DEBUG: ===== ABOUT TO SET isInitializing=false (success path) =====
 heys_dev_utils.js:31 [lsSet] Saving key: heys_client_current
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ⏳ [SAVE BLOCKED] Waiting for initial sync | key: heys_client_current
-heys_app_v12.js?v=3:1086 🔄 [CLIENT CHANGE] Starting bootstrap for client: 73a55ec7-2b48-47de-8308-06d7bec4259a
-heys_app_v12.js?v=3:1089 📦 [CLIENT CHANGE] Products before sync: 0 items
-heys_app_v12.js?v=3:1563 🔄 [RELOAD] Starting bootstrap for client: 73a55ec7-2b48-47de-8308-06d7bec4259a
-heys_app_v12.js?v=3:1566 📦 [RELOAD] Current products before bootstrap: 0 items
-heys_app_v12.js?v=3:1591 💾 [useEffect] Products changed, length: 0, clientId: 73a55ec7-2b48-47de-8308-06d7bec4259a
-heys_app_v12.js?v=3:1595 💾 [useEffect] Saving products to cloud: 0 items
+heys_app_v12.js?v=6:1107 🔄 [CLIENT CHANGE] Starting bootstrap for client: 73a55ec7-2b48-47de-8308-06d7bec4259a
+heys_app_v12.js?v=6:1110 📦 [CLIENT CHANGE] Products before sync: 0 items
+heys_app_v12.js?v=6:1584 🔄 [RELOAD] Starting bootstrap for client: 73a55ec7-2b48-47de-8308-06d7bec4259a
+heys_app_v12.js?v=6:1587 📦 [RELOAD] Current products before bootstrap: 0 items
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ⏳ [SAVE BLOCKED] Waiting for initial sync | key: heys_products
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 🔄 [CLIENT_SYNC] Loading data for client: 73a55ec7-2b48-47de-8308-06d7bec4259a
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 🔄 [CLIENT_SYNC] Loading data for client: 73a55ec7-2b48-47de-8308-06d7bec4259a
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 🔄 [CLIENT_SYNC] Loading data for client: 73a55ec7-2b48-47de-8308-06d7bec4259a
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ✅ [CLIENT_SYNC] Loaded 81 keys (DAY: 68, PRODUCTS: 1, PROFILE: 2, NORMS: 2, OTHER: 8)
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: 73a55ec7-2b48-47de-8308-06d7bec4259a
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_backup_meta
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-08
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-08_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-08_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-08_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-08_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-08_backup_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-09
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-09_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-09_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-09_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-09_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-09_backup_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-10
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-10_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-10_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-10_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-10_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-10_backup_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-11
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-11_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-11_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-11_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-11_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-11_backup_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-12
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-12_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-12_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-12_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-12_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-12_backup_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-13
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-13_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-13_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-13_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-13_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-13_backup_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-14
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-14_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-14_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-14_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-14_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-14_backup_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-17
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-17_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-19
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-19_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-20
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-20_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-23
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-23_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-24
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-24_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-25
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-25_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-26
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-26_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-27
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-27_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-29
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-30
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup_backup_backup_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_favorite_products
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_hr_zones
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_hr_zones_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_norms
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_norms_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_profile
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_profile_backup
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   📝 [MIGRATION] Mapped 'heys_client_current' → 'heys_73a55ec7-2b48-47de-8308-06d7bec4259a_client_current'
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_client_current
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   📝 [MIGRATION] Mapped 'heys_products' → 'heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products'
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ✅ [CLIENT_SYNC] Sync completed for client: 73a55ec7-2b48-47de-8308-06d7bec4259a
-heys_day_utils.js?v=1:670 [Calendar] getActiveDaysForMonth: {year: 2025, month: 10, weight: 90, bmr: 1864, target: 1584, …}
-heys_day_utils.js?v=1:687 [Calendar] Found active days: 7 (7) ['2025-11-23', '2025-11-25', '2025-11-26', '2025-11-27', '2025-11-28', '2025-11-29', '2025-11-30']
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 💾 [SAVE] 📅 DAY | key: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date | items: N/A | client: 73a55ec7...
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 💾 [SAVE] 📅 DAY | key: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28 | items: N/A | client: 73a55ec7...
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 💾 [SAVE] 📅 DAY | key: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28 | items: N/A | client: 73a55ec7...
- [HEYS.cloud] ✅ [CLIENT_SYNC] Loaded 81 keys (DAY: 68, PRODUCTS: 1, PROFILE: 2, NORMS: 2, OTHER: 8)
  [HEYS.cloud]   ✅ Saved to localStorage: 73a55ec7-2b48-47de-8308-06d7bec4259a
  [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_backup_meta
  [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-08
@@ -193,30 +90,30 @@ heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 💾 [SAVE] 📅 DAY | key: hey
  [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-17_backup
  [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-19
  [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-19_backup
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-20
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-20_backup
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-23
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-23_backup
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-24
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-24_backup
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-25
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-25_backup
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-26
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-26_backup
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-27
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-27_backup
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28_backup
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-29
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-30
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup_backup
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup_backup_backup
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup_backup_backup_backup
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_favorite_products
- [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_hr_zones
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-20
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-20_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-23
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-23_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-24
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-24_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-25
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-25_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-26
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-26_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-27
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-27_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-29
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-30
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_favorite_products
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_hr_zones
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_hr_zones_backup
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_norms
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_norms_backup
@@ -229,11 +126,96 @@ heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: he
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   📝 [MIGRATION] Mapped 'heys_products' → 'heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products'
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ✅ [CLIENT_SYNC] Sync completed for client: 73a55ec7-2b48-47de-8308-06d7bec4259a
-heys_app_v12.js?v=3:1569 🔄 [RELOAD] Bootstrap completed, loading products...
-heys_app_v12.js?v=3:1573 📦 [RELOAD] Loaded products from localStorage: 224 items
-heys_app_v12.js?v=3:1591 💾 [useEffect] Products changed, length: 224, clientId: 73a55ec7-2b48-47de-8308-06d7bec4259a
-heys_day_utils.js?v=1:670 [Calendar] getActiveDaysForMonth: {year: 2025, month: 10, weight: 90, bmr: 1864, target: 1584, …}
-heys_day_utils.js?v=1:687 [Calendar] Found active days: 7 (7) ['2025-11-23', '2025-11-25', '2025-11-26', '2025-11-27', '2025-11-28', '2025-11-29', '2025-11-30']
+heys_app_v12.js?v=6:1113 🔄 [CLIENT CHANGE] Bootstrap completed, loading products...
+heys_app_v12.js?v=6:1120 📦 [CLIENT CHANGE] Loaded products from localStorage: 224 items
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ✅ [CLIENT_SYNC] Loaded 81 keys (DAY: 68, PRODUCTS: 1, PROFILE: 2, NORMS: 2, OTHER: 8)
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: 73a55ec7-2b48-47de-8308-06d7bec4259a
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_backup_meta
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-08
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-08_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-08_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-08_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-08_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-08_backup_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-09
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-09_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-09_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-09_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-09_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-09_backup_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-10
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-10_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-10_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-10_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-10_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-10_backup_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-11
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-11_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-11_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-11_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-11_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-11_backup_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-12
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-12_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-12_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-12_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-12_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-12_backup_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-13
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-13_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-13_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-13_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-13_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-13_backup_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-14
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-14_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-14_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-14_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-14_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-14_backup_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-17
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-17_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-19
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-19_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-20
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-20_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-23
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-23_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-24
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-24_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-25
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-25_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-26
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-26_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-27
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-27_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-29
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-30
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date_backup_backup_backup_backup_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_favorite_products
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_hr_zones
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_hr_zones_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_norms
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_norms_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_profile
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_profile_backup
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   📝 [MIGRATION] Mapped 'heys_client_current' → 'heys_73a55ec7-2b48-47de-8308-06d7bec4259a_client_current'
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_client_current
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   📝 [MIGRATION] Mapped 'heys_products' → 'heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products'
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ✅ [CLIENT_SYNC] Sync completed for client: 73a55ec7-2b48-47de-8308-06d7bec4259a
+heys_app_v12.js?v=6:1590 🔄 [RELOAD] Bootstrap completed, loading products...
+heys_app_v12.js?v=6:1594 📦 [RELOAD] Loaded products from localStorage: 224 items
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 💾 [SAVE] 📅 DAY | key: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date | items: N/A | client: 73a55ec7...
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 💾 [SAVE] 📅 DAY | key: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date | items: N/A | client: 73a55ec7...
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ✅ [CLIENT_SYNC] Loaded 81 keys (DAY: 68, PRODUCTS: 1, PROFILE: 2, NORMS: 2, OTHER: 8)
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: 73a55ec7-2b48-47de-8308-06d7bec4259a
@@ -320,13 +302,6 @@ heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: he
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   📝 [MIGRATION] Mapped 'heys_products' → 'heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products'
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud]   ✅ Saved to localStorage: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_products
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] ✅ [CLIENT_SYNC] Sync completed for client: 73a55ec7-2b48-47de-8308-06d7bec4259a
-heys_app_v12.js?v=3:1092 🔄 [CLIENT CHANGE] Bootstrap completed, loading products...
-heys_app_v12.js?v=3:1099 📦 [CLIENT CHANGE] Loaded products from localStorage: 224 items
-heys_app_v12.js?v=3:1591 💾 [useEffect] Products changed, length: 224, clientId: 73a55ec7-2b48-47de-8308-06d7bec4259a
-heys_day_utils.js?v=1:670 [Calendar] getActiveDaysForMonth: {year: 2025, month: 10, weight: 90, bmr: 1864, target: 1584, …}bmr: 1864month: 10productsCount: 224target: 1584threshold: 621weight: 90year: 2025[[Prototype]]: Object
-heys_day_utils.js?v=1:687 [Calendar] Found active days: 7 (7) ['2025-11-23', '2025-11-25', '2025-11-26', '2025-11-27', '2025-11-28', '2025-11-29', '2025-11-30']0: "2025-11-23"1: "2025-11-25"2: "2025-11-26"3: "2025-11-27"4: "2025-11-28"5: "2025-11-29"6: "2025-11-30"length: 7[[Prototype]]: Array(0)
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 💾 [SAVE] 📅 DAY | key: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_date | items: N/A | client: 73a55ec7...
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 💾 [SAVE] 📅 DAY | key: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28 | items: N/A | client: 73a55ec7...
-heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 💾 [SAVE] 📅 DAY | key: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28 | items: N/A | client: 73a55ec7...
-heys_app_v12.js?v=3:1595 💾 [useEffect] Saving products to cloud: 224 items
 heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 💾 [SAVE] 📦 PRODUCTS | key: heys_products | items: 224 | client: 73a55ec7...
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 💾 [SAVE] 📅 DAY | key: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28 | items: N/A | client: 73a55ec7...
+heys_storage_supabase_v1.js?v=15:54 [HEYS.cloud] 💾 [SAVE] 📅 DAY | key: heys_73a55ec7-2b48-47de-8308-06d7bec4259a_dayv2_2025-11-28 | items: N/A | client: 73a55ec7...

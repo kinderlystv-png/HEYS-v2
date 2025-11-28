@@ -280,7 +280,7 @@
     }
   };
   
-  DEV.log('[HEYS Simple Analytics] Инициализирован ✓');
+  // Лог инициализации отключен для чистой консоли
   
   // Debug: экспорт статистики в глобальный scope для отладки
   global.heysStats = getStats;

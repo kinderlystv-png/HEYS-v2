@@ -51,12 +51,8 @@
   const useDayAutosave = H.useDayAutosave;
   const useMobileDetection = H.useMobileDetection;
   
-  // === Import DatePicker/Calendar from dayPickers module ===
-  const P = HEYS.dayPickers || {};
-  const Calendar = P.Calendar || HEYS.Calendar || (() => { 
-    console.error('[HEYS] Calendar not loaded from dayPickers'); 
-    return null; 
-  });
+  // Calendar загружается динамически в DayTab (строка ~1337), 
+  // НЕ кэшируем здесь чтобы HMR работал
 
   // === Import models module ===
   const M = HEYS.models || {};
@@ -600,7 +596,33 @@
             placeholder:'🔍 Поиск продукта... (↑↓ навигация, Enter выбор, Esc закрыть)',
             value:search,
             style:{width:'100%', fontSize:'13px'},
-            onFocus:()=>{setOpen(true);},
+            onFocus:()=>{
+              setOpen(true);
+              // Скроллим карточку приёма к верху экрана при фокусе на поиске
+              // На мобильных учитываем виртуальную клавиатуру через visualViewport
+              const scrollToMeal = () => {
+                const mealCard = document.querySelector(`[data-meal-index="${mi}"]`);
+                if (mealCard) {
+                  const headerOffset = 56; // Высота шапки
+                  const elementPosition = mealCard.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                  window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+                }
+              };
+              
+              // Первый скролл сразу
+              setTimeout(scrollToMeal, 100);
+              
+              // На мобильных — дополнительный скролл после открытия клавиатуры
+              if (isMobile && window.visualViewport) {
+                const handleResize = () => {
+                  // Клавиатура изменила viewport — скроллим ещё раз
+                  setTimeout(scrollToMeal, 50);
+                  window.visualViewport.removeEventListener('resize', handleResize);
+                };
+                window.visualViewport.addEventListener('resize', handleResize, { once: true });
+              }
+            },
             onBlur:()=>setTimeout(()=>setOpen(false),200),
             onChange:e=>{setSearch(e.target.value); setOpen(true);},
             onKeyDown: handleKeyDown
@@ -832,7 +854,7 @@
         // Важно: читаем RAW данные профиля, чтобы не потерять другие поля (gender и т.д.)
         const rawProfile = lsGet('heys_profile', {}) || {};
         const updatedProf = { ...rawProfile, stepsGoal: pendingStepsGoal };
-        console.log('[HEYS] 🎯 Saving stepsGoal | pending: ' + pendingStepsGoal + ' | rawProfile: ' + JSON.stringify(rawProfile) + ' | updatedProf: ' + JSON.stringify(updatedProf));
+        // Логи сохранения stepsGoal отключены для чистой консоли
         lsSet('heys_profile', updatedProf);
         setSavedStepsGoal(pendingStepsGoal); // обновляем state для слайдера
       }
@@ -1326,8 +1348,10 @@
     }, [date, prof.weight, prof.height, prof.age, prof.sex, prof.deficitPctTarget, products.length]);
 
     // --- blocks
+    // Получаем Calendar динамически, чтобы HMR работал
+    const CalendarComponent = (HEYS.dayPickers && HEYS.dayPickers.Calendar) || HEYS.Calendar;
     const calendarBlock = React.createElement('div',{className:'area-cal'},
-      React.createElement(Calendar,{
+      React.createElement(CalendarComponent,{
         key: 'cal-' + activeDays.size + '-' + products.length,
         valueISO:date,
         activeDays:activeDays,
@@ -1780,7 +1804,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             mealKcal + ' ккал'
           )
         ),
-        React.createElement('div',{className:'card tone-blue meal-card',style:{marginTop:'4px', width: '100%'}},
+        React.createElement('div',{className:'card tone-blue meal-card', 'data-meal-index': mi, style:{marginTop:'4px', width: '100%'}},
         // MOBILE: Meal totals at top (before search)
         (meal.items || []).length > 0 && React.createElement('div', { className: 'mpc-totals-wrap mobile-only' },
           React.createElement('div', { className: 'mpc-grid mpc-header' },
@@ -2346,13 +2370,34 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       }
     }, [date, eatenKcal]);
     
-    // Умные подсказки по БЖУ
+    // Умные подсказки по БЖУ (с приоритетом предупреждений)
     const macroTip = React.useMemo(() => {
       const proteinPct = (dayTot.protein || 0) / (normAbs.protein || 1);
       const fatPct = (dayTot.fat || 0) / (normAbs.fat || 1);
       const carbsPct = (dayTot.carbs || 0) / (normAbs.carbs || 1);
       
-      // Проверяем в порядке приоритета
+      // Вычисляем простые/сложные углеводы
+      const simpleCarbs = dayTot.simple || 0;
+      const complexCarbs = dayTot.complex || 0;
+      const totalCarbs = simpleCarbs + complexCarbs;
+      const simplePct = totalCarbs > 0 ? (simpleCarbs / totalCarbs) : 0;
+      
+      // Вычисляем вредные жиры
+      const badFat = dayTot.bad || 0;
+      const totalFat = dayTot.fat || 0;
+      const badFatPct = totalFat > 0 ? (badFat / totalFat) : 0;
+      
+      // 🚨 ПРЕДУПРЕЖДЕНИЯ (высший приоритет)
+      // Много простых углеводов (>50% от общих углеводов)
+      if (simplePct > 0.5 && simpleCarbs > 30) {
+        return { icon: '⚠️', text: 'Много простых углеводов! Замени сладкое на кашу/овощи', type: 'warning' };
+      }
+      // Много вредных жиров (>40% от общих жиров)
+      if (badFatPct > 0.4 && badFat > 20) {
+        return { icon: '⚠️', text: 'Много вредных жиров! Замени на рыбу/орехи/авокадо', type: 'warning' };
+      }
+      
+      // 📊 РЕКОМЕНДАЦИИ (обычный приоритет)
       if (proteinPct < 0.5 && fatPct >= 0.5 && carbsPct >= 0.5) {
         return { icon: '🥩', text: 'Добавь белка: творог, яйца, курица', type: 'protein' };
       }
@@ -2362,12 +2407,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       if (carbsPct < 0.5 && proteinPct >= 0.5 && fatPct >= 0.5) {
         return { icon: '🍞', text: 'Добавь углеводов: каша, хлеб, фрукты', type: 'carbs' };
       }
+      
+      // ✅ УСПЕХ
       if (proteinPct >= 0.8 && fatPct >= 0.8 && carbsPct >= 0.8) {
         return { icon: '✅', text: 'Отлично! Все макросы в балансе', type: 'success' };
       }
+      
       // Не показываем подсказку если день пустой или всё слишком мало
       return null;
-    }, [dayTot.protein, dayTot.fat, dayTot.carbs, normAbs.protein, normAbs.fat, normAbs.carbs]);
+    }, [dayTot.protein, dayTot.fat, dayTot.carbs, dayTot.simple, dayTot.complex, dayTot.bad, normAbs.protein, normAbs.fat, normAbs.carbs]);
     
     // Показ toast при изменении подсказки
     useEffect(() => {
@@ -2403,6 +2451,28 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
     
+    // === Мини-график калорий по приёмам ===
+    const mealsChartData = React.useMemo(() => {
+      const meals = day.meals || [];
+      if (meals.length === 0) return null;
+      
+      const data = meals.map((meal, mi) => {
+        const totals = M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0 };
+        const mealTypeInfo = getMealType(mi, meal, meals, pIndex);
+        return {
+          name: mealTypeInfo.name,
+          icon: mealTypeInfo.icon,
+          kcal: Math.round(totals.kcal || 0),
+          time: meal.time || ''
+        };
+      });
+      
+      const totalKcal = data.reduce((sum, m) => sum + m.kcal, 0);
+      const maxKcal = Math.max(...data.map(m => m.kcal), 1);
+      
+      return { meals: data, totalKcal, maxKcal, targetKcal: optimum };
+    }, [day.meals, pIndex, optimum]);
+
     // === Pull-to-refresh логика (Enhanced) ===
     const PULL_THRESHOLD = 80;
     
@@ -2903,7 +2973,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     
     // Drag handler для слайдера шагов
     const handleStepsDrag = (e) => {
-      e.preventDefault();
+      // Не вызываем preventDefault на React synthetic event (passive listener)
       const slider = e.currentTarget.closest('.steps-slider');
       if (!slider) return;
       
@@ -2924,6 +2994,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       };
       
       const onMove = (ev) => {
+        // preventDefault только для touch, чтобы не скроллить страницу
+        if (ev.cancelable) ev.preventDefault();
         const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
         updateSteps(clientX);
       };
@@ -3145,6 +3217,86 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // === ПОД-ВКЛАДКА 2: Дневник питания (или всё на десктопе) ===
       (!isMobile || mobileSubTab === 'diary') && daySummary,
+      
+      // === Мини-график распределения калорий по приёмам ===
+      (!isMobile || mobileSubTab === 'diary') && mealsChartData && mealsChartData.meals.length > 0 && React.createElement('div', { 
+        className: 'meals-chart-container',
+        style: { 
+          margin: '12px 0', 
+          padding: '12px 16px', 
+          background: 'var(--surface, #fff)', 
+          borderRadius: '12px',
+          border: '1px solid var(--border, #e5e7eb)'
+        }
+      },
+        React.createElement('div', { 
+          style: { 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '12px'
+          }
+        },
+          React.createElement('span', { 
+            style: { fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary, #6b7280)' }
+          }, '📊 Распределение калорий'),
+          React.createElement('span', { 
+            style: { 
+              fontSize: '12px', 
+              color: mealsChartData.totalKcal > mealsChartData.targetKcal ? '#dc2626' : '#059669'
+            }
+          }, mealsChartData.totalKcal + ' / ' + Math.round(mealsChartData.targetKcal) + ' ккал')
+        ),
+        // Горизонтальные полоски для каждого приёма
+        React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+          mealsChartData.meals.map((meal, i) => {
+            const widthPct = mealsChartData.targetKcal > 0 
+              ? Math.min(100, (meal.kcal / mealsChartData.targetKcal) * 100)
+              : 0;
+            const isOverTarget = mealsChartData.totalKcal > mealsChartData.targetKcal;
+            return React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+              React.createElement('span', { 
+                style: { width: '24px', fontSize: '14px', textAlign: 'center' }
+              }, meal.icon),
+              React.createElement('div', { 
+                style: { 
+                  flex: 1, 
+                  height: '20px', 
+                  background: 'var(--bg-secondary, #f3f4f6)', 
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                  position: 'relative'
+                }
+              },
+                React.createElement('div', { 
+                  style: { 
+                    width: widthPct + '%', 
+                    height: '100%', 
+                    background: isOverTarget ? 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)' : 'linear-gradient(90deg, #34d399 0%, #10b981 100%)',
+                    borderRadius: '4px',
+                    transition: 'width 0.3s ease'
+                  }
+                }),
+                meal.kcal > 0 && React.createElement('span', {
+                  style: {
+                    position: 'absolute',
+                    right: '6px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    fontSize: '11px',
+                    fontWeight: '500',
+                    color: widthPct > 60 ? '#fff' : 'var(--text-primary, #1f2937)'
+                  }
+                }, meal.kcal + ' ккал')
+              ),
+              meal.time && React.createElement('span', { 
+                style: { width: '40px', fontSize: '11px', color: 'var(--text-secondary, #9ca3af)', textAlign: 'right' }
+              }, meal.time)
+            );
+          })
+        )
+      ),
+      
       // Empty state когда нет приёмов пищи
       (!isMobile || mobileSubTab === 'diary') && (!day.meals || day.meals.length === 0) && React.createElement('div', { className: 'empty-state' },
         React.createElement('div', { className: 'empty-state-icon' }, '🍽️'),

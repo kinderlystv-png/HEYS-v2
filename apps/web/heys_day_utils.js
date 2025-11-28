@@ -557,20 +557,29 @@
   // === Calendar Day Indicators ===
   
   /**
-   * Вычисляет калории за день напрямую из localStorage
+   * Получает данные дня: калории и активность для расчёта реального target
    * @param {string} dateStr - Дата в формате YYYY-MM-DD
    * @param {Map} productsMap - Map продуктов (id => product)
-   * @returns {number} Калории за день
+   * @param {Object} profile - Профиль пользователя
+   * @returns {{kcal: number, steps: number, householdMin: number, trainings: Array}} Данные дня
    */
-  function getDayCalories(dateStr, productsMap) {
+  function getDayData(dateStr, productsMap, profile) {
     try {
-      const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
+      // Пробуем несколько источников clientId
+      let clientId = '';
+      if (window.HEYS && window.HEYS.currentClientId) {
+        clientId = window.HEYS.currentClientId;
+      } else {
+        // Fallback: читаем из localStorage
+        clientId = localStorage.getItem('heys_client_current') || '';
+      }
+      
       const scopedKey = clientId 
         ? 'heys_' + clientId + '_dayv2_' + dateStr 
         : 'heys_dayv2_' + dateStr;
       
       const raw = localStorage.getItem(scopedKey);
-      if (!raw) return 0;
+      if (!raw) return null;
       
       let dayData = null;
       if (raw.startsWith('¤Z¤')) {
@@ -587,8 +596,9 @@
         dayData = JSON.parse(raw);
       }
       
-      if (!dayData || !dayData.meals) return 0;
+      if (!dayData) return null;
       
+      // Считаем калории из meals
       let totalKcal = 0;
       (dayData.meals || []).forEach(meal => {
         (meal.items || []).forEach(item => {
@@ -601,10 +611,25 @@
         });
       });
       
-      return Math.round(totalKcal);
+      return {
+        kcal: Math.round(totalKcal),
+        steps: +dayData.steps || 0,
+        householdMin: +dayData.householdMin || 0,
+        trainings: dayData.trainings || [],
+        weightMorning: +dayData.weightMorning || 0,
+        deficitPct: dayData.deficitPct // может быть undefined — тогда из профиля
+      };
     } catch (e) {
-      return 0;
+      return null;
     }
+  }
+
+  /**
+   * Вычисляет калории за день напрямую из localStorage (legacy wrapper)
+   */
+  function getDayCalories(dateStr, productsMap) {
+    const data = getDayData(dateStr, productsMap, {});
+    return data ? data.kcal : 0;
   }
 
   /**
@@ -644,7 +669,15 @@
           }
         }
       }
-      (products || []).forEach(p => { if(p.id) productsMap.set(p.id, p); });
+      // Если products — объект с полем products, извлекаем массив
+      if (products && !Array.isArray(products) && Array.isArray(products.products)) {
+        products = products.products;
+      }
+      // Финальная проверка что это массив
+      if (!Array.isArray(products)) {
+        products = [];
+      }
+      products.forEach(p => { if(p && p.id) productsMap.set(p.id, p); });
     } catch (e) {
       console.error('[getProductsMap] Error:', e);
     }
@@ -658,41 +691,75 @@
    * @param {number} year - Год
    * @param {number} month - Месяц (0-11)
    * @param {Object} profile - Профиль пользователя {weight, height, age, sex, deficitPctTarget}
+   * @param {Array} products - Массив продуктов (передаётся из App state)
    * @returns {Map<string, {kcal: number, target: number, ratio: number}>} Map дат с данными
    */
-  function getActiveDaysForMonth(year, month, profile) {
+  function getActiveDaysForMonth(year, month, profile, products) {
     const daysData = new Map();
     
     try {
-      // Получаем BMR и целевые калории из профиля
-      const weight = +(profile && profile.weight) || 70;
-      const bmr = calcBMR(weight, profile || {});
+      // Получаем базовые данные из профиля
+      const profileWeight = +(profile && profile.weight) || 70;
       const deficitPct = +(profile && profile.deficitPctTarget) || 0;
-      // Цель = BMR * (1 + deficit/100), deficit обычно отрицательный
-      const target = Math.round(bmr * (1 + deficitPct / 100));
-      const threshold = Math.round(bmr / 3); // 1/3 BMR — минимум для "активного" дня
+      const sex = (profile && profile.sex) || 'male';
+      const baseBmr = calcBMR(profileWeight, profile || {});
+      const threshold = Math.round(baseBmr / 3); // 1/3 BMR — минимум для "активного" дня
       
-      // Получаем продукты для вычисления калорий
-      const productsMap = getProductsMap();
-      
-      console.log('[Calendar] getActiveDaysForMonth:', { year, month, weight, bmr, target, threshold, productsCount: productsMap.size });
+      // Строим Map продуктов из переданного массива
+      const productsMap = new Map();
+      const productsArr = Array.isArray(products) ? products : [];
+      productsArr.forEach(p => { if(p && p.id) productsMap.set(p.id, p); });
       
       // Проходим по всем дням месяца
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       
       for (let d = 1; d <= daysInMonth; d++) {
         const dateStr = fmtDate(new Date(year, month, d));
-        const kcal = getDayCalories(dateStr, productsMap);
+        const dayInfo = getDayData(dateStr, productsMap, profile);
         
-        // Только дни с данными (≥ 1/3 BMR)
-        if (kcal >= threshold) {
-          // ratio: 1.0 = идеально в цель, <1 недоел, >1 переел
-          const ratio = target > 0 ? kcal / target : 0;
-          daysData.set(dateStr, { kcal, target, ratio });
-        }
+        if (!dayInfo || dayInfo.kcal < threshold) continue;
+        
+        // Используем вес дня если есть, иначе из профиля
+        const weight = dayInfo.weightMorning || profileWeight;
+        const bmr = calcBMR(weight, profile || {});
+        
+        // Шаги: формула stepsKcal(steps, weight, sex, 0.7)
+        const steps = dayInfo.steps || 0;
+        const stepsK = stepsKcal(steps, weight, sex, 0.7);
+        
+        // Быт: householdMin × kcalPerMin(2.5, weight)
+        const householdMin = dayInfo.householdMin || 0;
+        const householdK = Math.round(householdMin * kcalPerMin(2.5, weight));
+        
+        // Тренировки: суммируем ккал из зон z (как на экране дня — только первые 3)
+        // Читаем кастомные MET из heys_hr_zones (как на экране дня)
+        const hrZones = lsGet('heys_hr_zones', []);
+        const customMets = hrZones.map(x => +x.MET || 0);
+        const mets = [2.5, 6, 8, 10].map((def, i) => customMets[i] || def);
+        const kcalMin = mets.map(m => kcalPerMin(m, weight));
+        
+        let trainingsK = 0;
+        const trainings = (dayInfo.trainings || []).slice(0, 3); // максимум 3 тренировки
+        
+        trainings.forEach((t, tIdx) => {
+          if (t.z && Array.isArray(t.z)) {
+            let tKcal = 0;
+            t.z.forEach((min, i) => {
+              tKcal += Math.round((+min || 0) * (kcalMin[i] || 0));
+            });
+            trainingsK += tKcal;
+          }
+        });
+        
+        const tdee = bmr + stepsK + householdK + trainingsK;
+        // Используем дефицит дня если есть, иначе из профиля
+        const dayDeficit = dayInfo.deficitPct != null ? dayInfo.deficitPct : deficitPct;
+        const target = Math.round(tdee * (1 + dayDeficit / 100));
+        
+        // ratio: 1.0 = идеально в цель, <1 недоел, >1 переел
+        const ratio = target > 0 ? dayInfo.kcal / target : 0;
+        daysData.set(dateStr, { kcal: dayInfo.kcal, target, ratio });
       }
-      
-      console.log('[Calendar] Found active days:', daysData.size, [...daysData.keys()]);
     } catch (e) {
       console.error('[Calendar] Error:', e);
     }
