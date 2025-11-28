@@ -1318,15 +1318,17 @@
     }, [day.sleepStart, day.sleepEnd]);
 
     // Вычисляем данные о днях для текущего месяца (с цветовой индикацией близости к цели)
+    // Зависит от products чтобы пересчитать после загрузки данных клиента
     const activeDays = useMemo(() => {
       const getActiveDaysForMonth = (HEYS.dayUtils && HEYS.dayUtils.getActiveDaysForMonth) || (() => new Map());
       const d = new Date(date);
       return getActiveDaysForMonth(d.getFullYear(), d.getMonth(), prof);
-    }, [date, prof.weight, prof.height, prof.age, prof.sex, prof.deficitPctTarget]);
+    }, [date, prof.weight, prof.height, prof.age, prof.sex, prof.deficitPctTarget, products.length]);
 
     // --- blocks
     const calendarBlock = React.createElement('div',{className:'area-cal'},
       React.createElement(Calendar,{
+        key: 'cal-' + activeDays.size + '-' + products.length,
         valueISO:date,
         activeDays:activeDays,
         onSelect:(d)=>{

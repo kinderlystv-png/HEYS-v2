@@ -35,7 +35,6 @@ function findUnusedExports() {
     'packages/core/src',
     'packages/ui/src',
     'packages/shared/src',
-    'packages/analytics/src',
     'packages/search/src',
   ];
 
@@ -186,7 +185,6 @@ function findEmptyFiles() {
     'packages/core/src',
     'packages/ui/src',
     'packages/shared/src',
-    'packages/analytics/src',
     'packages/search/src',
   ];
 

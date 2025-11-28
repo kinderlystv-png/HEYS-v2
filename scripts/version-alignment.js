@@ -25,9 +25,7 @@ const packagePaths = [
   'packages/core/package.json',
   'packages/ui/package.json',
   'packages/shared/package.json',
-  'packages/analytics/package.json',
   'packages/search/package.json',
-  'packages/analytics-dashboard/package.json',
 ];
 
 /**

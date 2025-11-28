@@ -23,8 +23,6 @@ export default defineConfig({
         '@heys/shared',
         '@heys/storage', 
         '@heys/search',
-        '@heys/analytics',
-        '@heys/gaming',
         '@heys/core',
         '@heys/ui',
         '@heys/logger',

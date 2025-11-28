@@ -36,8 +36,6 @@
       "@heys/ui": ["./packages/ui/src"],
       "@heys/search": ["./packages/search/src"],
       "@heys/storage": ["./packages/storage/src"],
-      "@heys/gaming": ["./packages/gaming/src"],
-      "@heys/analytics": ["./packages/analytics/src"],
       "@heys/shared": ["./packages/shared/src"],
       "@heys/logger": ["./packages/logger/dist"]
     },
@@ -58,12 +56,6 @@
     },
     {
       "path": "./packages/storage"
-    },
-    {
-      "path": "./packages/gaming"
-    },
-    {
-      "path": "./packages/analytics"
     },
     {
       "path": "./packages/shared"

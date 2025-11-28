@@ -614,32 +614,40 @@
   function getProductsMap() {
     const productsMap = new Map();
     try {
-      const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
-      const productsKey = clientId 
-        ? 'heys_' + clientId + '_products' 
-        : 'heys_products';
-      const productsRaw = localStorage.getItem(productsKey);
-      
-      if (productsRaw) {
-        let products = [];
-        if (productsRaw.startsWith('¤Z¤')) {
-          let str = productsRaw.substring(3);
-          const patterns = {
-            '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
-            '¤c¤': '"carbs100"', '¤f¤': '"fat100"', '¤s¤': '"simple100"',
-            '¤x¤': '"complex100"', '¤b¤': '"badFat100"', '¤g¤': '"goodFat100"',
-            '¤t¤': '"trans100"', '¤i¤': '"fiber100"', '¤G¤': '"gi"', '¤h¤': '"harmScore"'
-          };
-          for (const [code, pattern] of Object.entries(patterns)) {
-            str = str.split(code).join(pattern);
+      // Используем HEYS.store.get который знает правильный ключ с clientId
+      let products = [];
+      if (window.HEYS && window.HEYS.store && typeof window.HEYS.store.get === 'function') {
+        products = window.HEYS.store.get('heys_products', []);
+      } else {
+        // Fallback: пробуем напрямую из localStorage
+        const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
+        const productsKey = clientId 
+          ? 'heys_' + clientId + '_products' 
+          : 'heys_products';
+        const productsRaw = localStorage.getItem(productsKey);
+        
+        if (productsRaw) {
+          if (productsRaw.startsWith('¤Z¤')) {
+            let str = productsRaw.substring(3);
+            const patterns = {
+              '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+              '¤c¤': '"carbs100"', '¤f¤': '"fat100"', '¤s¤': '"simple100"',
+              '¤x¤': '"complex100"', '¤b¤': '"badFat100"', '¤g¤': '"goodFat100"',
+              '¤t¤': '"trans100"', '¤i¤': '"fiber100"', '¤G¤': '"gi"', '¤h¤': '"harmScore"'
+            };
+            for (const [code, pattern] of Object.entries(patterns)) {
+              str = str.split(code).join(pattern);
+            }
+            products = JSON.parse(str);
+          } else {
+            products = JSON.parse(productsRaw);
           }
-          products = JSON.parse(str);
-        } else {
-          products = JSON.parse(productsRaw);
         }
-        (products || []).forEach(p => { if(p.id) productsMap.set(p.id, p); });
       }
-    } catch (e) {}
+      (products || []).forEach(p => { if(p.id) productsMap.set(p.id, p); });
+    } catch (e) {
+      console.error('[getProductsMap] Error:', e);
+    }
     return productsMap;
   }
 

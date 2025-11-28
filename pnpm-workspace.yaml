@@ -2,7 +2,6 @@
 packages:
   # Core packages
   - 'packages/*'
-  - '!packages/analytics-dashboard' # Legacy, подлежит удалению
 
   # Applications
   - 'apps/web'

@@ -37,21 +37,14 @@ layout поиска, улучшить мобильный UX
 
 ## 🟠 СРЕДНИЙ ПРИОРИТЕТ
 
-### 1. Удалить неиспользуемые пакеты (analytics-dashboard, analytics, gaming)
-
-**Файл**: [2025-11-28-remove-analytics-dashboard.md](./docs/tasks/2025-11-28-remove-analytics-dashboard.md)  
-**Описание**: Чистка dead code: 3 пустых пакета + 2 файла в shared/performance  
-**Cleanup**: ~2500 строк мёртвого кода  
-**Время**: ~10 минут
-
-### 2. Решение по packages/threat-detection
+### 1. Решение по packages/threat-detection
 
 **Описание**: Enterprise-level security пакет (~1500+ строк: ML, Anomaly Detection, Incident Response), 0 импортов  
 **Вопрос**: Удалить / Перенести в archive / Оставить для enterprise версии?  
 **Action**: Product decision — обсудить нужен ли enterprise security  
 **Время**: ~5 минут обсуждения
 
-### 3. CSS Variables Migration
+### 2. CSS Variables Migration
 
 **Описание**: Заменить 176 hardcoded hex цветов → CSS var(--name)  
 **Why**: Prerequisite для dark mode и :where() рефакторинга  
@@ -150,6 +143,9 @@ layout поиска, улучшить мобильный UX
       ([archive/2025-11-26-css-refactoring.md](./docs/tasks/archive/2025-11-26-css-refactoring.md))
 - [x] **@heys/web type-check fix** — исправлены 3 type ошибки (browser-logger,
       dynamic-imports)
+- [x] **Удалены dead code пакеты** — packages/analytics-dashboard, packages/analytics, packages/gaming (~2500 строк)
+      + 2 файла в shared/performance (performance-analytics-dashboard.ts, real-time-performance-monitor.ts)
+      + очистка 12 конфиг-файлов ([archive/2025-11-28-remove-analytics-dashboard.md](./docs/tasks/archive/2025-11-28-remove-analytics-dashboard.md))
 
 ---
 

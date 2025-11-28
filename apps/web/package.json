@@ -8,7 +8,7 @@
     "build": "vite build && cp heys_*.js dist/ && cp styles/*.css dist/styles/ 2>/dev/null || mkdir -p dist/styles && cp styles/*.css dist/styles/",
     "build:vercel": "vite build && cp heys_*.js dist/ && mkdir -p dist/styles && cp styles/*.css dist/styles/",
     "build:analyze": "cross-env ANALYZE=true vite build",
-    "build:deps": "pnpm --dir ../.. --filter @heys/shared run build && pnpm --dir ../.. --filter @heys/storage run build && pnpm --dir ../.. --filter @heys/core run build && pnpm --dir ../.. --filter @heys/search run build && pnpm --dir ../.. --filter @heys/analytics run build && pnpm --dir ../.. --filter @heys/gaming run build && pnpm --dir ../.. --filter @heys/ui run build && pnpm --dir ../.. --filter @heys/logger run build",
+    "build:deps": "pnpm --dir ../.. --filter @heys/shared run build && pnpm --dir ../.. --filter @heys/storage run build && pnpm --dir ../.. --filter @heys/core run build && pnpm --dir ../.. --filter @heys/search run build && pnpm --dir ../.. --filter @heys/ui run build && pnpm --dir ../.. --filter @heys/logger run build",
     "clean": "rimraf dist",
     "dev": "cross-env PORT=3001 vite",
     "health-check": "node src/health-check.js",
@@ -22,9 +22,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@heys/analytics": "workspace:*",
     "@heys/core": "workspace:*",
-    "@heys/gaming": "workspace:*",
     "@heys/logger": "workspace:^",
     "@heys/search": "workspace:*",
     "@heys/shared": "workspace:*",

@@ -333,16 +333,8 @@ export class ModuleGroup {
  * Утилиты для feature-based импортов
  */
 export const FeatureImports = {
-  // Аналитика
-  analytics: new ModuleGroup('analytics')
-    .add('@heys/analytics')
-    .add('../components/Analytics/Dashboard'),
-
   // Поиск
   search: new ModuleGroup('search').add('@heys/search').add('../components/Search/SearchInterface'),
-
-  // Игры
-  gaming: new ModuleGroup('gaming').add('@heys/gaming').add('../components/Gaming/GameInterface'),
 
   // Отчёты
   reports: new ModuleGroup('reports')

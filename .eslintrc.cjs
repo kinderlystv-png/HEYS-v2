@@ -151,12 +151,9 @@ module.exports = {
         'TOOLS/**/*.js',
         'packages/ui/**/*.{ts,tsx}', // временно для security компонента
         'packages/shared/**/*.{ts,tsx}', // много legacy кода
-        'packages/analytics/**/*.{ts,tsx}', // имеет legacy файлы
         'packages/storage/**/*.{ts,tsx}', // имеет legacy файлы
         'packages/core/**/*.{ts,tsx}', // имеет legacy файлы
-        'packages/gaming/**/*.{ts,tsx}', // имеет legacy файлы
         'packages/search/**/*.{ts,tsx}', // имеет legacy файлы
-        'packages/analytics-dashboard/**/*.{ts,tsx}', // новый пакет в разработке
         'packages/threat-detection/**/*.{ts,tsx}', // новый пакет в разработке
         'apps/web/**/*.{ts,tsx}', // legacy v12 web app
       ],
@@ -209,9 +206,5 @@ module.exports = {
     // Временно игнорируем проблемные файлы для коммита
     'docs/automation/',
     'archive/legacy-v12/',
-    // Analytics dashboard demo files (в production не попадут)
-    'packages/analytics-dashboard/src/demo*.tsx',
-    'packages/analytics-dashboard/src/*Demo*.tsx',
-    'packages/analytics-dashboard/src/components/*Demo*.tsx',
   ],
 };

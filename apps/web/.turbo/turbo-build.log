@@ -3,7 +3,7 @@
 > vite build && cp heys_*.js dist/ && cp styles/*.css dist/styles/ 2>/dev/null || mkdir -p dist/styles && cp styles/*.css dist/styles/
 
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
-vite v4.5.14 building for production...
+[36mvite v4.5.14 [32mbuilding for production...[36m[39m
 <script src="heys_dev_utils.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_simple_analytics.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_core_v12.js"> in "/index.html" can't be bundled without type="module" attribute
@@ -20,14 +20,11 @@ vite v4.5.14 building for production...
 <script src="heys_user_v12.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_reports_v12.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_app_v12.js?v=3"> in "/index.html" can't be bundled without type="module" attribute
-transforming...
-✓ 3 modules transformed.
-rendering chunks...
-computing gzip size...
-dist/index.html                                    4.31 kB │ gzip:  1.29 kB
-dist/assets/heys_models_v1-c4316578.js             7.92 kB
-dist/assets/heys_simple_analytics-43dd56e7.js     10.30 kB
-dist/assets/heys_storage_supabase_v1-75bd852c.js  32.22 kB
-dist/assets/heys_core_v12-93bef242.js             44.02 kB
-dist/assets/index-622275bf.css                    89.29 kB │ gzip: 17.12 kB
-✓ built in 603ms
+[2K[1Gtransforming (1) [2mindex.html[22m[2K[1G[32m✓[39m 3 modules transformed.
+[2K[1Grendering chunks (1)...[2K[1G[2K[1Gcomputing gzip size (0)...[2K[1Gcomputing gzip size (1)...[2K[1Gcomputing gzip size (2)...[2K[1G[2mdist/[22m[32mindex.html                                   [39m[1m[2m 4.31 kB[22m[1m[22m[2m │ gzip:  1.29 kB[22m
+[2mdist/[22m[2massets/[22m[32mheys_models_v1-c4316578.js            [39m[1m[2m 7.92 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mheys_simple_analytics-43dd56e7.js     [39m[1m[2m10.30 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mheys_storage_supabase_v1-75bd852c.js  [39m[1m[2m32.22 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mheys_core_v12-93bef242.js             [39m[1m[2m44.02 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[35mindex-99fb2ed3.css                    [39m[1m[2m89.16 kB[22m[1m[22m[2m │ gzip: 17.10 kB[22m
+[32m✓ built in 601ms[39m

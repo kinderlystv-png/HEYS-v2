@@ -151,6 +151,7 @@
     
     // Преобразуем activeDays в Map для быстрого поиска
     const daysDataMap = React.useMemo(() => {
+      console.log('[Calendar] activeDays prop:', activeDays, 'isMap:', activeDays instanceof Map);
       if (activeDays instanceof Map) return activeDays;
       return new Map();
     }, [activeDays]);
@@ -196,6 +197,10 @@
         
         const dateStr = fmtDate(dt);
         const dayData = daysDataMap.get(dateStr);
+        // Debug: логируем первый день месяца для проверки
+        if (dt.getDate() === 23 || dt.getDate() === 28) {
+          console.log('[Calendar Cell]', dateStr, 'dayData:', dayData, 'mapSize:', daysDataMap.size);
+        }
         const isSel = same(dt, sel);
         const isToday = same(dt, today);
         
