@@ -226,6 +226,7 @@
 
   // === Exports ===
   // Всё экспортируется через HEYS.dayUtils
+  // POPULAR_CACHE — приватный, не экспортируется (инкапсуляция)
   HEYS.dayUtils = {
     // Haptic
     haptic,
@@ -253,7 +254,6 @@
     loadMealsForDate,
     productsSignature,
     computePopularProducts,
-    POPULAR_CACHE,
     // Profile/Calculations
     getProfile,
     calcBMR,

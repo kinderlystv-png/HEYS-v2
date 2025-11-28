@@ -7,33 +7,39 @@
   
   // === Import utilities from dayUtils module ===
   const U = HEYS.dayUtils || {};
-  // Fallbacks for utilities (in case module didn't load)
-  const haptic = U.haptic || (() => {});
-  const pad2 = U.pad2 || (n => String(n).padStart(2,'0'));
-  const todayISO = U.todayISO || (() => { const d=new Date(); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); });
-  const fmtDate = U.fmtDate || (d => d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()));
-  const parseISO = U.parseISO || (s => { const [y,m,d]=String(s||'').split('-').map(x=>parseInt(x,10)); if(!y||!m||!d) return new Date(); const dt=new Date(y,m-1,d); dt.setHours(12); return dt; });
-  const uid = U.uid || (p => (p||'id')+Math.random().toString(36).slice(2,8));
-  const formatDateDisplay = U.formatDateDisplay || (() => ({ label: 'День', sub: '' }));
-  const lsGet = U.lsGet || ((k,d) => { try{ const v=JSON.parse(localStorage.getItem(k)); return v==null?d:v; }catch(e){ return d; } });
-  const lsSet = U.lsSet || ((k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} });
-  const clamp = U.clamp || ((n,a,b) => { n=+n||0; if(n<a)return a; if(n>b)return b; return n; });
-  const r0 = U.r0 || (v => Math.round(+v||0));
-  const r1 = U.r1 || (v => Math.round((+v||0)*10)/10);
-  const scale = U.scale || ((v,g) => Math.round(((+v||0)*(+g||0)/100)*10)/10);
-  const ensureDay = U.ensureDay || ((d,prof) => d||{});
-  const buildProductIndex = U.buildProductIndex || (() => ({byId:new Map(),byName:new Map()}));
-  const getProductFromItem = U.getProductFromItem || (() => null);
-  const per100 = U.per100 || (() => ({kcal100:0,carbs100:0,prot100:0,fat100:0,simple100:0,complex100:0,bad100:0,good100:0,trans100:0,fiber100:0}));
-  const loadMealsForDate = U.loadMealsForDate || (() => []);
-  const productsSignature = U.productsSignature || (() => '');
-  const computePopularProducts = U.computePopularProducts || (() => []);
-  const getProfile = U.getProfile || (() => ({sex:'male',height:175,age:30,sleepHours:8,weight:70,deficitPctTarget:0,stepsGoal:7000}));
-  const calcBMR = U.calcBMR || ((w,prof) => Math.round(10*(+w||0)+6.25*(prof.height||175)-5*(prof.age||30)+(prof.sex==='female'?-161:5)));
-  const kcalPerMin = U.kcalPerMin || ((met,w) => Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10);
-  const stepsKcal = U.stepsKcal || ((steps,w,sex,len) => { const coef=(sex==='female'?0.5:0.57); const km=(+steps||0)*(len||0.7)/1000; return Math.round(coef*(+w||0)*km*10)/10; });
-  const parseTime = U.parseTime || ((t) => { if(!t||typeof t!=='string'||!t.includes(':')) return null; const [hh,mm]=t.split(':').map(x=>parseInt(x,10)); if(isNaN(hh)||isNaN(mm)) return null; return {hh:clamp(hh,0,23),mm:clamp(mm,0,59)}; });
-  const sleepHours = U.sleepHours || ((a,b) => { const s=parseTime(a),e=parseTime(b); if(!s||!e) return 0; let sh=s.hh+s.mm/60,eh=e.hh+e.mm/60; let d=eh-sh; if(d<0) d+=24; return r1(d); });
+  
+  // Minimal fallback helper: log error and return safe default
+  const warnMissing = (name) => { 
+    console.error('[HEYS] dayUtils.' + name + ' not loaded'); 
+  };
+  
+  // Fallbacks with error logging (not full duplicates)
+  const haptic = U.haptic || (() => { warnMissing('haptic'); });
+  const pad2 = U.pad2 || ((n) => { warnMissing('pad2'); return String(n).padStart(2,'0'); });
+  const todayISO = U.todayISO || (() => { warnMissing('todayISO'); return new Date().toISOString().slice(0,10); });
+  const fmtDate = U.fmtDate || ((d) => { warnMissing('fmtDate'); return d.toISOString().slice(0,10); });
+  const parseISO = U.parseISO || ((s) => { warnMissing('parseISO'); return new Date(); });
+  const uid = U.uid || ((p) => { warnMissing('uid'); return (p||'id')+Math.random().toString(36).slice(2,8); });
+  const formatDateDisplay = U.formatDateDisplay || (() => { warnMissing('formatDateDisplay'); return { label: 'День', sub: '' }; });
+  const lsGet = U.lsGet || ((k,d) => { warnMissing('lsGet'); try{ const v=JSON.parse(localStorage.getItem(k)); return v==null?d:v; }catch(e){ return d; } });
+  const lsSet = U.lsSet || ((k,v) => { warnMissing('lsSet'); try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} });
+  const clamp = U.clamp || ((n,a,b) => { warnMissing('clamp'); n=+n||0; if(n<a)return a; if(n>b)return b; return n; });
+  const r0 = U.r0 || ((v) => { warnMissing('r0'); return Math.round(+v||0); });
+  const r1 = U.r1 || ((v) => { warnMissing('r1'); return Math.round((+v||0)*10)/10; });
+  const scale = U.scale || ((v,g) => { warnMissing('scale'); return Math.round(((+v||0)*(+g||0)/100)*10)/10; });
+  const ensureDay = U.ensureDay || ((d,prof) => { warnMissing('ensureDay'); return d||{}; });
+  const buildProductIndex = U.buildProductIndex || (() => { warnMissing('buildProductIndex'); return {byId:new Map(),byName:new Map()}; });
+  const getProductFromItem = U.getProductFromItem || (() => { warnMissing('getProductFromItem'); return null; });
+  const per100 = U.per100 || (() => { warnMissing('per100'); return {kcal100:0,carbs100:0,prot100:0,fat100:0,simple100:0,complex100:0,bad100:0,good100:0,trans100:0,fiber100:0}; });
+  const loadMealsForDate = U.loadMealsForDate || (() => { warnMissing('loadMealsForDate'); return []; });
+  const productsSignature = U.productsSignature || (() => { warnMissing('productsSignature'); return ''; });
+  const computePopularProducts = U.computePopularProducts || (() => { warnMissing('computePopularProducts'); return []; });
+  const getProfile = U.getProfile || (() => { warnMissing('getProfile'); return {sex:'male',height:175,age:30,sleepHours:8,weight:70,deficitPctTarget:0,stepsGoal:7000}; });
+  const calcBMR = U.calcBMR || ((w,prof) => { warnMissing('calcBMR'); return Math.round(10*(+w||0)+6.25*(prof.height||175)-5*(prof.age||30)+(prof.sex==='female'?-161:5)); });
+  const kcalPerMin = U.kcalPerMin || ((met,w) => { warnMissing('kcalPerMin'); return Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10; });
+  const stepsKcal = U.stepsKcal || ((steps,w,sex,len) => { warnMissing('stepsKcal'); const coef=(sex==='female'?0.5:0.57); const km=(+steps||0)*(len||0.7)/1000; return Math.round(coef*(+w||0)*km*10)/10; });
+  const parseTime = U.parseTime || ((t) => { warnMissing('parseTime'); if(!t||typeof t!=='string'||!t.includes(':')) return null; const [hh,mm]=t.split(':').map(x=>parseInt(x,10)); if(isNaN(hh)||isNaN(mm)) return null; return {hh:Math.max(0,Math.min(23,hh)),mm:Math.max(0,Math.min(59,mm))}; });
+  const sleepHours = U.sleepHours || ((a,b) => { warnMissing('sleepHours'); const pt=(t)=>{ if(!t||!t.includes(':'))return null; const [h,m]=t.split(':').map(x=>+x); return isNaN(h)||isNaN(m)?null:{hh:h,mm:m}; }; const s=pt(a),e=pt(b); if(!s||!e)return 0; let d=(e.hh+e.mm/60)-(s.hh+s.mm/60); if(d<0)d+=24; return Math.round(d*10)/10; });
   
   // === Import hooks from dayHooks module ===
   const H = HEYS.dayHooks || {};

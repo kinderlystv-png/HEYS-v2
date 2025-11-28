@@ -11,9 +11,9 @@
 [34mCJS[39m Build start
 [34mESM[39m Build start
 Entry module "dist/index.cjs" is using named and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
-[32mESM[39m [1mdist/index.js     [22m[32m71.65 KB[39m
-[32mESM[39m [1mdist/index.js.map [22m[32m272.43 KB[39m
-[32mESM[39m ⚡️ Build success in 1118ms
 [32mCJS[39m [1mdist/index.cjs     [22m[32m71.76 KB[39m
 [32mCJS[39m [1mdist/index.cjs.map [22m[32m272.43 KB[39m
-[32mCJS[39m ⚡️ Build success in 1118ms
+[32mCJS[39m ⚡️ Build success in 1156ms
+[32mESM[39m [1mdist/index.js     [22m[32m71.65 KB[39m
+[32mESM[39m [1mdist/index.js.map [22m[32m272.43 KB[39m
+[32mESM[39m ⚡️ Build success in 1157ms

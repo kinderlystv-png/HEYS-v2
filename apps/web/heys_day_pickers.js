@@ -4,17 +4,22 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
   
-  // Импортируем утилиты из dayUtils
+  // Импортируем утилиты из dayUtils с минимальными fallback (error-logging)
   const getDayUtils = () => HEYS.dayUtils || {};
+  
+  // Minimal fallback: log error and return safe default
+  const warnMissing = (name) => { 
+    console.error('[HEYS] dayUtils.' + name + ' not loaded before dayPickers'); 
+  };
 
   // Компактный DatePicker с dropdown
   function DatePicker({valueISO, onSelect, onRemove}) {
     const utils = getDayUtils();
-    // Fallbacks for utilities
-    const parseISO = utils.parseISO || (s => { const [y,m,d]=String(s||'').split('-').map(x=>parseInt(x,10)); if(!y||!m||!d) return new Date(); const dt=new Date(y,m-1,d); dt.setHours(12); return dt; });
-    const todayISO = utils.todayISO || (() => { const d=new Date(),pad2=(n=>String(n).padStart(2,'0')); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); });
-    const fmtDate = utils.fmtDate || (d => { const pad2=(n=>String(n).padStart(2,'0')); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); });
-    const formatDateDisplay = utils.formatDateDisplay || (() => ({ label: 'День', sub: '' }));
+    // Minimal fallbacks with error logging
+    const parseISO = utils.parseISO || ((s) => { warnMissing('parseISO'); return new Date(); });
+    const todayISO = utils.todayISO || (() => { warnMissing('todayISO'); const d=new Date(); return d.toISOString().slice(0,10); });
+    const fmtDate = utils.fmtDate || ((d) => { warnMissing('fmtDate'); return d.toISOString().slice(0,10); });
+    const formatDateDisplay = utils.formatDateDisplay || (() => { warnMissing('formatDateDisplay'); return { label: 'День', sub: '' }; });
     
     const [isOpen, setIsOpen] = React.useState(false);
     const [cur, setCur] = React.useState(parseISO(valueISO || todayISO()));
@@ -116,10 +121,10 @@
   // Полноэкранный Calendar компонент
   function Calendar({valueISO,onSelect,onRemove}){
     const utils = getDayUtils();
-    // Fallbacks for utilities
-    const parseISO = utils.parseISO || (s => { const [y,m,d]=String(s||'').split('-').map(x=>parseInt(x,10)); if(!y||!m||!d) return new Date(); const dt=new Date(y,m-1,d); dt.setHours(12); return dt; });
-    const todayISO = utils.todayISO || (() => { const d=new Date(),pad2=(n=>String(n).padStart(2,'0')); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); });
-    const fmtDate = utils.fmtDate || (d => { const pad2=(n=>String(n).padStart(2,'0')); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); });
+    // Minimal fallbacks with error logging
+    const parseISO = utils.parseISO || ((s) => { warnMissing('parseISO'); return new Date(); });
+    const todayISO = utils.todayISO || (() => { warnMissing('todayISO'); const d=new Date(); return d.toISOString().slice(0,10); });
+    const fmtDate = utils.fmtDate || ((d) => { warnMissing('fmtDate'); return d.toISOString().slice(0,10); });
     
     const [cur,setCur]=React.useState(parseISO(valueISO||todayISO()));
     React.useEffect(()=>{ setCur(parseISO(valueISO||todayISO())); },[valueISO]);
