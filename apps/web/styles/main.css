@@ -4395,6 +4395,227 @@ td:first-child input {
   padding-bottom: 16px;
 }
 
+/* Training Picker Modal */
+.training-picker-modal {
+  max-width: 340px;
+  width: 95vw;
+}
+
+.training-type-section {
+  padding: 12px 16px 8px;
+}
+
+.training-type-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.training-type-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.training-type-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.training-type-btn:active {
+  transform: scale(0.95);
+}
+
+.training-type-btn.active {
+  border-color: #f97316;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+}
+
+.training-type-icon {
+  font-size: 24px;
+}
+
+.training-type-text {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.training-type-btn.active .training-type-text {
+  color: #ea580c;
+  font-weight: 600;
+}
+
+.training-time-section {
+  padding: 8px 16px 0;
+}
+
+.training-time-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 4px;
+  display: block;
+  text-align: center;
+}
+
+.training-time-wheels {
+  justify-content: center;
+  padding-bottom: 8px;
+}
+
+/* Compact train time display */
+.compact-train-time {
+  font-size: 12px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+
+/* Make compact-train-header clickable */
+.compact-train-header {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.compact-train-header:active {
+  background: #f8fafc;
+}
+
+/* Training Zones Section in Modal */
+.training-zones-section {
+  padding: 12px 8px 16px;
+}
+
+.training-zones-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.training-zones-wheels {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+}
+
+.training-zone-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 72px;
+}
+
+.training-zone-header {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+
+.training-zone-header.zone-color-1 { background: #dbeafe; color: #2563eb; }
+.training-zone-header.zone-color-2 { background: #dcfce7; color: #16a34a; }
+.training-zone-header.zone-color-3 { background: #fef3c7; color: #d97706; }
+.training-zone-header.zone-color-4 { background: #fee2e2; color: #dc2626; }
+
+.training-zone-column .wheel-column {
+  width: 70px;
+}
+
+.training-zone-column .wheel-viewport {
+  height: 220px;
+}
+
+.training-zones-kcal {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #f97316;
+  padding: 8px 0 4px;
+}
+
+/* Training zones stats (time + kcal) */
+.training-zones-stats {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 0 8px;
+}
+
+.training-zones-time {
+  font-size: 16px;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.training-zones-stats .training-zones-kcal {
+  padding: 0;
+}
+
+/* Training presets */
+.training-presets-section {
+  padding: 8px 16px 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.training-presets-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.training-presets-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.training-preset-btn {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.training-preset-btn:active {
+  transform: scale(0.97);
+  background: #f1f5f9;
+}
+
+/* Shake animation for validation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+.training-zones-section.shake {
+  animation: shake 0.5s ease-in-out;
+}
+
 /* Clickable zone values */
 .zone-clickable {
   cursor: pointer;
@@ -5009,6 +5230,76 @@ td:first-child input {
 
 [data-theme="dark"] .wheel-column-item.selected {
   color: #f2f2f7;
+}
+
+/* Dark theme for training picker */
+[data-theme="dark"] .training-type-label,
+[data-theme="dark"] .training-time-label {
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .training-type-btn {
+  background: #2c2c2e;
+  border-color: #38383a;
+}
+
+[data-theme="dark"] .training-type-btn.active {
+  border-color: #f97316;
+  background: linear-gradient(135deg, #3d2a1a 0%, #4a3420 100%);
+}
+
+[data-theme="dark"] .training-type-text {
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .training-type-btn.active .training-type-text {
+  color: #fb923c;
+}
+
+[data-theme="dark"] .compact-train-time {
+  background: #2c2c2e;
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .compact-train-header:active {
+  background: #2c2c2e;
+}
+
+/* Dark theme for training zones */
+[data-theme="dark"] .training-zones-label {
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .training-zone-header.zone-color-1 { background: #1e3a5f; color: #60a5fa; }
+[data-theme="dark"] .training-zone-header.zone-color-2 { background: #14532d; color: #4ade80; }
+[data-theme="dark"] .training-zone-header.zone-color-3 { background: #451a03; color: #fbbf24; }
+[data-theme="dark"] .training-zone-header.zone-color-4 { background: #450a0a; color: #f87171; }
+
+[data-theme="dark"] .training-zones-kcal {
+  color: #fb923c;
+}
+
+/* Dark theme for training presets and stats */
+[data-theme="dark"] .training-presets-section {
+  border-top-color: #38383a;
+}
+
+[data-theme="dark"] .training-presets-label {
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .training-preset-btn {
+  background: #2c2c2e;
+  border-color: #38383a;
+  color: #f2f2f7;
+}
+
+[data-theme="dark"] .training-preset-btn:active {
+  background: #3a3a3c;
+}
+
+[data-theme="dark"] .training-zones-time {
+  color: #60a5fa;
 }
 
 /* === TONE CARDS - DARK === */
@@ -6815,3 +7106,477 @@ input, textarea, select {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* =========================================
+   WATER CARD STYLES
+   ========================================= */
+
+/* --- Карточка воды --- */
+.compact-water {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+}
+
+.compact-water .compact-card-header {
+  color: #0369a1;
+}
+
+.water-card-content {
+  display: flex;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+/* Левая часть: большое кольцо */
+.water-ring-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 80px;
+}
+
+.water-ring-large {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+
+.water-ring-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.water-ring-bg {
+  fill: none;
+  stroke: #bae6fd;
+  stroke-width: 3;
+}
+
+.water-ring-fill {
+  fill: none;
+  stroke: #0ea5e9;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.3s ease;
+}
+
+.water-ring-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.water-ring-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0369a1;
+}
+
+.water-ring-unit {
+  font-size: 11px;
+  color: #0ea5e9;
+  font-weight: 500;
+}
+
+.water-goal-text {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Краткий breakdown под кольцом */
+.water-goal-breakdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.water-breakdown-item {
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+.water-breakdown-bonus {
+  color: #059669;
+  font-weight: 500;
+}
+
+/* Напоминание "Давно не пил" */
+.water-reminder {
+  font-size: 10px;
+  color: #f59e0b;
+  font-weight: 500;
+  margin-top: 4px;
+  padding: 3px 8px;
+  background: #fffbeb;
+  border-radius: 4px;
+  animation: reminderPulse 2s ease-in-out infinite;
+}
+
+@keyframes reminderPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+[data-theme="dark"] .water-reminder {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.15);
+}
+
+/* Тултип с полной формулой */
+.water-formula-tooltip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  margin-top: -8px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  border: 1px solid #e5e7eb;
+  z-index: 1000;
+  min-width: 200px;
+  max-width: 280px;
+  animation: tooltipFadeIn 0.2s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-90%); }
+  to { opacity: 1; transform: translateX(-50%) translateY(-100%); }
+}
+
+.water-formula-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0369a1;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.water-formula-row {
+  font-size: 11px;
+  color: #374151;
+  padding: 3px 0;
+  line-height: 1.4;
+}
+
+.water-formula-sub {
+  color: #6b7280;
+  font-size: 10px;
+  padding-left: 8px;
+}
+
+.water-formula-total {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0ea5e9;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.water-formula-hint {
+  font-size: 9px;
+  color: #9ca3af;
+  text-align: center;
+  margin-top: 6px;
+}
+
+[data-theme="dark"] .water-formula-tooltip {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+[data-theme="dark"] .water-formula-title {
+  color: #7dd3fc;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .water-formula-row {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .water-formula-sub {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .water-formula-total {
+  border-color: #334155;
+}
+
+[data-theme="dark"] .water-breakdown-item {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .water-breakdown-bonus {
+  color: #34d399;
+}
+
+/* Анимация добавления на кольце */
+.water-card-anim {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  font-weight: 700;
+  color: #0ea5e9;
+  animation: waterCardPop 0.8s ease-out forwards;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes waterCardPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -70%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.9);
+  }
+}
+
+/* Правая часть */
+.water-card-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Верхняя строка: мотивация + кнопка удаления */
+.water-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.water-motivation-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.water-motivation-inline .water-motivation-emoji {
+  font-size: 16px;
+}
+
+.water-motivation-inline .water-motivation-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0369a1;
+}
+
+/* Кнопка удаления воды (компактная) */
+.water-minus-compact {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.water-minus-compact:active {
+  background: #fee2e2;
+}
+
+[data-theme="dark"] .water-minus-compact {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .water-minus-compact:active {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+/* Inline прогресс-бар */
+.water-progress-inline {
+  height: 6px;
+  background: #bae6fd;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.water-progress-inline .water-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Пресеты в ряд */
+.water-presets-row {
+  display: flex;
+  gap: 6px;
+}
+
+.water-preset-compact {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: #fff;
+  border: 1.5px solid #bae6fd;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 52px;
+}
+
+.water-preset-compact:active {
+  background: #0ea5e9;
+  border-color: #0284c7;
+  transform: scale(0.95);
+}
+
+.water-preset-compact:active .water-preset-ml {
+  color: #fff;
+}
+
+.water-preset-compact .water-preset-icon {
+  font-size: 16px;
+}
+
+.water-preset-compact .water-preset-ml {
+  font-size: 10px;
+  font-weight: 600;
+  color: #0369a1;
+}
+
+/* === FAB для воды (заметный) === */
+.water-fab {
+  position: fixed;
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  right: 16px;
+  height: 44px;
+  padding: 0 16px 0 12px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  z-index: 100;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+}
+
+.water-fab-icon {
+  font-size: 20px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+}
+
+.water-fab-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+
+.water-fab:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+}
+
+[data-theme="dark"] .water-fab {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+/* Анимация добавления воды (над кольцом) */
+.water-card-anim-above {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  font-weight: 700;
+  color: #0ea5e9;
+  animation: waterFloatUp 0.8s ease-out forwards;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes waterFloatUp {
+  0% { 
+    opacity: 1; 
+    transform: translateX(-50%) translateY(0) scale(1); 
+  }
+  100% { 
+    opacity: 0; 
+    transform: translateX(-50%) translateY(-30px) scale(1.2); 
+  }
+}
+
+/* Dark theme */
+[data-theme="dark"] .compact-water {
+  background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%);
+  border-color: #0ea5e9;
+}
+
+[data-theme="dark"] .compact-water .compact-card-header {
+  color: #7dd3fc;
+}
+
+[data-theme="dark"] .water-ring-bg {
+  stroke: #0369a1;
+}
+
+[data-theme="dark"] .water-ring-value,
+[data-theme="dark"] .water-motivation-inline .water-motivation-text {
+  color: #e0f2fe;
+}
+
+[data-theme="dark"] .water-ring-unit {
+  color: #7dd3fc;
+}
+
+[data-theme="dark"] .water-goal-text {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .water-progress-inline {
+  background: #0369a1;
+}
+
+[data-theme="dark"] .water-preset-compact {
+  background: #0c4a6e;
+  border-color: #0ea5e9;
+}
+
+[data-theme="dark"] .water-preset-compact .water-preset-ml {
+  color: #7dd3fc;
+}
+

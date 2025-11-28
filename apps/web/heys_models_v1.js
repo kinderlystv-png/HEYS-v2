@@ -48,6 +48,7 @@
    * @property {number} wellbeingAvg
    * @property {number} stressAvg
    * @property {string} dayComment
+   * @property {number} waterMl - Выпито воды в мл
    * @property {Meal[]} meals
    */
 
@@ -84,11 +85,16 @@
       wellbeingAvg:(d.wellbeingAvg==='')? '' : (d.wellbeingAvg!=null?d.wellbeingAvg:''),
       stressAvg:(d.stressAvg==='')? '' : (d.stressAvg!=null?d.stressAvg:''),
       dayComment:d.dayComment||'',
+      waterMl: +d.waterMl || 0,
       meals:Array.isArray(d.meals)?d.meals:[{id:uuid(),name:'Приём пищи',time:'',mood:'',wellbeing:'',stress:'',items:[]}]
     };
-    if(!Array.isArray(base.trainings)) base.trainings=[{z:[0,0,0,0]},{z:[0,0,0,0]}];
-    if(base.trainings.length<2) while(base.trainings.length<2) base.trainings.push({z:[0,0,0,0]});
-    base.trainings=base.trainings.map(t=>(t&&Array.isArray(t.z))?{z:[+t.z[0]||0,+t.z[1]||0,+t.z[2]||0,+t.z[3]||0]}:{z:[0,0,0,0]});
+    if(!Array.isArray(base.trainings)) base.trainings=[{z:[0,0,0,0],time:'',type:''},{z:[0,0,0,0],time:'',type:''}];
+    if(base.trainings.length<2) while(base.trainings.length<2) base.trainings.push({z:[0,0,0,0],time:'',type:''});
+    base.trainings = base.trainings.map(t => ({
+      z: (t && Array.isArray(t.z)) ? [+t.z[0]||0, +t.z[1]||0, +t.z[2]||0, +t.z[3]||0] : [0,0,0,0],
+      time: (t && t.time) || '',
+      type: (t && t.type) || ''
+    }));
     return base;
   }
 

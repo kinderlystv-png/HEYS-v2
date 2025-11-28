@@ -7,6 +7,8 @@ applyTo: '**/*'
 
 > 🇷🇺 Ответы · EN Code · v2.3.0
 
+📊 **[DATA_MODEL_REFERENCE.md](../docs/DATA_MODEL_REFERENCE.md)** — справочник всех аналитических параметров (dayTot, normAbs, Product, Meal, Training и др.)
+
 ---
 
 ## 1. Базовое поведение

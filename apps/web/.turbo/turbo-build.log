@@ -13,18 +13,18 @@ polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 <script src="heys_wheel_picker.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_swipeable.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_pull_refresh.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_day_utils.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_utils.js?v=7"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_day_hooks.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_day_pickers.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_day_v12.js?v=7"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_pickers.js?v=10"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_v12.js?v=10"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_user_v12.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_reports_v12.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_app_v12.js?v=3"> in "/index.html" can't be bundled without type="module" attribute
-[2K[1Gtransforming (1) [2mindex.html[22m[2K[1G[32m✓[39m 3 modules transformed.
-[2K[1Grendering chunks (1)...[2K[1G[2K[1Gcomputing gzip size (0)...[2K[1Gcomputing gzip size (1)...[2K[1Gcomputing gzip size (2)...[2K[1G[2mdist/[22m[32mindex.html                                   [39m[1m[2m 4.31 kB[22m[1m[22m[2m │ gzip:  1.29 kB[22m
-[2mdist/[22m[2massets/[22m[32mheys_models_v1-c4316578.js            [39m[1m[2m 7.92 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[32mheys_simple_analytics-43dd56e7.js     [39m[1m[2m10.30 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[32mheys_storage_supabase_v1-75bd852c.js  [39m[1m[2m32.22 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[32mheys_core_v12-93bef242.js             [39m[1m[2m44.02 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[35mindex-99fb2ed3.css                    [39m[1m[2m89.16 kB[22m[1m[22m[2m │ gzip: 17.10 kB[22m
-[32m✓ built in 601ms[39m
+<script src="heys_app_v12.js?v=10"> in "/index.html" can't be bundled without type="module" attribute
+[2K[1Gtransforming (1) [2mindex.html[22m[2K[1Gtransforming (3) [2mstyles/critical.css[22m[2K[1G[32m✓[39m 3 modules transformed.
+[2K[1Grendering chunks (1)...[2K[1G[2K[1Gcomputing gzip size (0)...[2K[1Gcomputing gzip size (1)...[2K[1Gcomputing gzip size (2)...[2K[1G[2mdist/[22m[32mindex.html                                   [39m[1m[2m  4.31 kB[22m[1m[22m[2m │ gzip:  1.29 kB[22m
+[2mdist/[22m[2massets/[22m[32mheys_models_v1-a191e720.js            [39m[1m[2m  8.16 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mheys_simple_analytics-b3f08726.js     [39m[1m[2m 10.31 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mheys_storage_supabase_v1-cacdf54d.js  [39m[1m[2m 34.07 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mheys_core_v12-1c0186ca.js             [39m[1m[2m 43.87 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[35mindex-0f368b3a.css                    [39m[1m[2m103.25 kB[22m[1m[22m[2m │ gzip: 19.44 kB[22m
+[32m✓ built in 587ms[39m

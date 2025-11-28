@@ -370,10 +370,15 @@
     console.groupEnd();
   }
 
-    function updateTraining(i,zi,mins){
-      const arr=(day.trainings||[{z:[0,0,0,0]},{z:[0,0,0,0]}]).map((t,idx)=> idx===i? {z:t.z.map((v,j)=> j===zi?(+mins||0):v)}:t);
-      const newDay = {...day, trainings:arr};
-      setDay(newDay);
+    function updateTraining(i, zi, mins) {
+      const arr = (day.trainings || [{z:[0,0,0,0]}, {z:[0,0,0,0]}]).map((t, idx) => {
+        if (idx !== i) return t;
+        return {
+          ...t,  // сохраняем time, type и другие поля
+          z: t.z.map((v, j) => j === zi ? (+mins || 0) : v)
+        };
+      });
+      setDay({ ...day, trainings: arr });
     }
 
     // Компонент для поиска и добавления продукта в конкретный приём
@@ -678,6 +683,14 @@
     const [editingMealIndex, setEditingMealIndex] = useState(null); // null = новый, число = редактирование
     const [editMode, setEditMode] = useState('new'); // 'new' | 'time' | 'mood'
     
+    // === Training Picker Modal ===
+    const [showTrainingPicker, setShowTrainingPicker] = useState(false);
+    const [trainingPickerStep, setTrainingPickerStep] = useState(1); // 1 = тип+время, 2 = зоны
+    const [editingTrainingIndex, setEditingTrainingIndex] = useState(null);
+    const [pendingTrainingTime, setPendingTrainingTime] = useState({hours: 10, minutes: 0});
+    const [pendingTrainingType, setPendingTrainingType] = useState('cardio');
+    const [pendingTrainingZones, setPendingTrainingZones] = useState([0, 0, 0, 0]); // индексы для zoneMinutesValues
+    
     // === Тренировки: количество видимых блоков ===
     const [visibleTrainings, setVisibleTrainings] = useState(() => {
       // Автоопределяем сколько тренировок показывать на основе данных
@@ -900,6 +913,153 @@
       setShowDeficitPicker(false);
     }
 
+    // === Water Tracking ===
+    const [waterAddedAnim, setWaterAddedAnim] = useState(null); // для анимации "+200"
+    const [showWaterTooltip, setShowWaterTooltip] = useState(false); // тултип с формулой
+    const waterLongPressRef = React.useRef(null); // для long press
+
+    // Быстрые пресеты воды
+    const waterPresets = [
+      { ml: 100, label: '100 мл', icon: '💧' },
+      { ml: 200, label: 'Стакан', icon: '🥛' },
+      { ml: 330, label: 'Бутылка', icon: '🧴' },
+      { ml: 500, label: '0.5л', icon: '🍶' }
+    ];
+
+    // Динамический расчёт нормы воды с детализацией
+    const waterGoalBreakdown = useMemo(() => {
+      const w = +day.weightMorning || +prof.weight || 70;
+      const age = +prof.age || 30;
+      const isFemale = prof.sex === 'female';
+      const coef = isFemale ? 28 : 30;
+      
+      // Базовая норма: вес × коэффициент
+      const baseRaw = w * coef;
+      
+      // Корректировка по возрасту
+      let ageFactor = 1;
+      let ageNote = '';
+      if (age >= 60) { ageFactor = 0.9; ageNote = '−10% (60+)'; }
+      else if (age >= 40) { ageFactor = 0.95; ageNote = '−5% (40+)'; }
+      const base = baseRaw * ageFactor;
+      
+      // +250мл за каждые 5000 шагов
+      const stepsCount = Math.floor((day.steps || 0) / 5000);
+      const stepsBonus = stepsCount * 250;
+      
+      // +500мл за тренировку
+      const trainCount = [train1k, train2k, train3k].filter(k => k > 50).length;
+      const trainBonus = trainCount * 500;
+      
+      // Сезонный бонус: +300мл летом (июнь-август)
+      const month = new Date().getMonth(); // 0-11
+      const isHotSeason = month >= 5 && month <= 7; // июнь(5), июль(6), август(7)
+      const seasonBonus = isHotSeason ? 300 : 0;
+      const seasonNote = isHotSeason ? '☀️ Лето' : '';
+      
+      // Итого
+      const total = Math.round((base + stepsBonus + trainBonus + seasonBonus) / 100) * 100;
+      const finalGoal = Math.max(1500, Math.min(5000, total));
+      
+      return {
+        weight: w,
+        coef,
+        baseRaw: Math.round(baseRaw),
+        ageFactor,
+        ageNote,
+        base: Math.round(base),
+        stepsCount,
+        stepsBonus,
+        trainCount,
+        trainBonus,
+        seasonBonus,
+        seasonNote,
+        total: Math.round(total),
+        finalGoal
+      };
+    }, [day.weightMorning, day.steps, train1k, train2k, train3k, prof.weight, prof.age, prof.sex]);
+
+    const waterGoal = waterGoalBreakdown.finalGoal;
+
+    // Мотивационное сообщение по прогрессу
+    const waterMotivation = useMemo(() => {
+      const pct = ((day.waterMl || 0) / waterGoal) * 100;
+      if (pct >= 100) return { emoji: '🏆', text: 'Цель достигнута!' };
+      if (pct >= 75) return { emoji: '🔥', text: 'Почти у цели!' };
+      if (pct >= 50) return { emoji: '🎯', text: 'Половина пути!' };
+      if (pct >= 25) return { emoji: '🌊', text: 'Хороший старт!' };
+      return { emoji: '💧', text: 'Добавь воды' };
+    }, [day.waterMl, waterGoal]);
+
+    // Расчёт времени с последнего приёма воды
+    const waterLastDrink = useMemo(() => {
+      const lastTime = day.lastWaterTime;
+      if (!lastTime) return null;
+      
+      const now = Date.now();
+      const diffMs = now - lastTime;
+      const diffMin = Math.floor(diffMs / 60000);
+      
+      if (diffMin < 60) {
+        return { minutes: diffMin, text: diffMin + ' мин назад', isLong: false };
+      }
+      
+      const hours = Math.floor(diffMin / 60);
+      const mins = diffMin % 60;
+      const isLong = hours >= 2; // больше 2 часов = напоминание
+      const text = hours + 'ч' + (mins > 0 ? ' ' + mins + 'мин' : '') + ' назад';
+      
+      return { hours, minutes: mins, text, isLong };
+    }, [day.lastWaterTime]);
+
+    // Long press для показа тултипа с формулой
+    function handleWaterRingDown(e) {
+      waterLongPressRef.current = setTimeout(() => {
+        setShowWaterTooltip(true);
+        haptic('light');
+      }, 400);
+    }
+    function handleWaterRingUp() {
+      if (waterLongPressRef.current) {
+        clearTimeout(waterLongPressRef.current);
+        waterLongPressRef.current = null;
+      }
+    }
+    function handleWaterRingLeave() {
+      handleWaterRingUp();
+      // На десктопе скрываем при уходе мыши
+      if (!('ontouchstart' in window)) {
+        setShowWaterTooltip(false);
+      }
+    }
+
+    // Быстрое добавление воды с анимацией
+    function addWater(ml) {
+      const newWater = (day.waterMl || 0) + ml;
+      setDay({ ...day, waterMl: newWater, lastWaterTime: Date.now() });
+      
+      // Анимация feedback
+      setWaterAddedAnim('+' + ml);
+      haptic('light');
+      
+      // 🎉 Celebration при достижении цели (переиспользуем confetti от калорий)
+      if (newWater >= waterGoal && (day.waterMl || 0) < waterGoal && !showConfetti) {
+        setShowConfetti(true);
+        haptic('success');
+        setTimeout(() => setShowConfetti(false), 2000);
+      }
+      
+      // Скрыть анимацию
+      setTimeout(() => setWaterAddedAnim(null), 800);
+    }
+
+    // Убрать воду (для исправления ошибок)
+    function removeWater(ml) {
+      const newWater = Math.max(0, (day.waterMl || 0) - ml);
+      setDay({ ...day, waterMl: newWater });
+      haptic('light');
+    }
+
     // === Household (Бытовая активность) Picker Modal ===
     const [showHouseholdPicker, setShowHouseholdPicker] = useState(false);
     const [pendingHouseholdIdx, setPendingHouseholdIdx] = useState(0); // индекс (0 = 0 минут)
@@ -986,6 +1146,99 @@
       setZonePickerTarget(null);
     }
     
+    // === Training Picker functions ===
+    function openTrainingPicker(trainingIndex) {
+      const now = new Date();
+      const T = TR[trainingIndex] || { z: [0,0,0,0], time: '', type: '' };
+      
+      // Если уже есть время — парсим, иначе текущее
+      if (T.time) {
+        const [h, m] = T.time.split(':').map(Number);
+        setPendingTrainingTime({ hours: hourToWheelIndex(h || 10), minutes: m || 0 });
+      } else {
+        setPendingTrainingTime({ hours: hourToWheelIndex(now.getHours()), minutes: now.getMinutes() });
+      }
+      
+      setPendingTrainingType(T.type || 'cardio');
+      
+      // Загружаем зоны — находим индекс в zoneMinutesValues
+      const zones = T.z || [0, 0, 0, 0];
+      const zoneIndices = zones.map(minutes => {
+        // zoneMinutesValues содержит строки '0', '1', ..., '120'
+        const idx = zoneMinutesValues.indexOf(String(minutes));
+        return idx >= 0 ? idx : 0;
+      });
+      setPendingTrainingZones(zoneIndices);
+      
+      setTrainingPickerStep(1); // начинаем с первого шага
+      setEditingTrainingIndex(trainingIndex);
+      setShowTrainingPicker(true);
+    }
+
+    function confirmTrainingPicker() {
+      // Если на первом шаге — переходим на второй
+      if (trainingPickerStep === 1) {
+        setTrainingPickerStep(2);
+        return;
+      }
+      
+      // Валидация: хотя бы одна зона > 0
+      const totalMinutes = pendingTrainingZones.reduce((sum, idx) => sum + (parseInt(zoneMinutesValues[idx], 10) || 0), 0);
+      if (totalMinutes === 0) {
+        haptic('error');
+        // Добавляем shake-анимацию к секции зон
+        const zonesSection = document.querySelector('.training-zones-section');
+        if (zonesSection) {
+          zonesSection.classList.add('shake');
+          setTimeout(() => zonesSection.classList.remove('shake'), 500);
+        }
+        return;
+      }
+      
+      // На втором шаге — сохраняем всё
+      const realHours = wheelIndexToHour(pendingTrainingTime.hours);
+      const timeStr = pad2(realHours) + ':' + pad2(pendingTrainingTime.minutes);
+      
+      // Конвертируем индексы зон в минуты (zoneMinutesValues содержит строки)
+      const zoneMinutes = pendingTrainingZones.map(idx => parseInt(zoneMinutesValues[idx], 10) || 0);
+      
+      // Обновляем тренировку с новыми полями
+      // Заполняем массив до нужного индекса если он короткий
+      const existingTrainings = day.trainings || [];
+      const newTrainings = [...existingTrainings];
+      const idx = editingTrainingIndex;
+      
+      // Заполняем пустые слоты если нужно (для idx=2 при length=2)
+      while (newTrainings.length <= idx) {
+        newTrainings.push({ z: [0, 0, 0, 0], time: '', type: '' });
+      }
+      
+      // Теперь безопасно обновляем
+      newTrainings[idx] = {
+        ...newTrainings[idx],
+        z: zoneMinutes,
+        time: timeStr,
+        type: pendingTrainingType
+      };
+      
+      setDay({ ...day, trainings: newTrainings });
+      setShowTrainingPicker(false);
+      setTrainingPickerStep(1);
+      setEditingTrainingIndex(null);
+    }
+
+    function cancelTrainingPicker() {
+      // Если на втором шаге — возвращаемся на первый
+      if (trainingPickerStep === 2) {
+        setTrainingPickerStep(1);
+        return;
+      }
+      // На первом шаге — закрываем
+      setShowTrainingPicker(false);
+      setTrainingPickerStep(1);
+      setEditingTrainingIndex(null);
+    }
+    
     // === Sleep Quality Picker functions ===
     function openSleepQualityPicker() {
       const currentQuality = day.sleepQuality || 0;
@@ -1025,6 +1278,21 @@
     
     // Используем глобальный WheelColumn
     const WheelColumn = HEYS.WheelColumn;
+    
+    // Типы тренировок для Training Picker Modal
+    const trainingTypes = [
+      { id: 'cardio', icon: '🏃', label: 'Кардио' },
+      { id: 'strength', icon: '🏋️', label: 'Силовая' },
+      { id: 'hobby', icon: '⚽', label: 'Активное хобби' }
+    ];
+    
+    // Пресеты популярных тренировок (зоны в индексах zoneMinutesValues)
+    const trainingPresets = [
+      { id: 'run30', label: '🏃 Бег 30 мин', type: 'cardio', zones: [0, 25, 5, 0] },
+      { id: 'hiit20', label: '⚡ HIIT 20 мин', type: 'cardio', zones: [0, 0, 10, 10] },
+      { id: 'strength45', label: '🏋️ Силовая 45 мин', type: 'strength', zones: [10, 30, 5, 0] },
+      { id: 'walk60', label: '🚶 Прогулка 60 мин', type: 'hobby', zones: [40, 20, 0, 0] }
+    ];
     
     // === BottomSheet с поддержкой свайпа ===
     const bottomSheetRef = React.useRef(null);
@@ -1525,12 +1793,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     // Иконки для тренировок
     const trainIcons = ['🏃', '🚴', '🏊'];
     
-    // Удаление тренировки (скрытие + очистка данных)
+    // Удаление тренировки (сдвигаем остальные вверх)
     const removeTraining = (ti) => {
-      const newTrainings = [...(day.trainings || [{z:[0,0,0,0]},{z:[0,0,0,0]},{z:[0,0,0,0]}])];
-      newTrainings[ti] = {z:[0,0,0,0]}; // очищаем данные
+      const emptyTraining = {z:[0,0,0,0], time:'', type:''};
+      const oldTrainings = day.trainings || [emptyTraining, emptyTraining, emptyTraining];
+      // Удаляем тренировку по индексу и добавляем пустую в конец
+      const newTrainings = [
+        ...oldTrainings.slice(0, ti),
+        ...oldTrainings.slice(ti + 1),
+        emptyTraining
+      ].slice(0, 3); // гарантируем ровно 3 элемента
       setDay({...day, trainings: newTrainings});
-      setVisibleTrainings(Math.max(0, visibleTrainings - 1)); // можно удалить до 0
+      setVisibleTrainings(Math.max(0, visibleTrainings - 1));
     };
 
     // Компактные тренировки в SaaS стиле
@@ -1542,21 +1816,26 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       ),
       // Показываем только видимые тренировки
       Array.from({length: visibleTrainings}, (_, ti) => {
-        const T = TR[ti] || { z: [0, 0, 0, 0] };
+        const T = TR[ti] || { z: [0, 0, 0, 0], time: '', type: '' };
         const kcalZ = i => r0((+T.z[i] || 0) * (kcalMin[i] || 0));
         const total = r0(kcalZ(0) + kcalZ(1) + kcalZ(2) + kcalZ(3));
+        const trainingType = trainingTypes.find(t => t.id === T.type);
         return React.createElement('div', { 
           key: 'tr' + ti, 
           className: 'compact-card compact-train'
         },
-          React.createElement('div', { className: 'compact-train-header' },
-            React.createElement('span', { className: 'compact-train-icon' }, trainIcons[ti] || '💪'),
-            React.createElement('span', null, 'Тренировка ' + (ti + 1)),
+          React.createElement('div', { 
+            className: 'compact-train-header',
+            onClick: () => openTrainingPicker(ti)
+          },
+            React.createElement('span', { className: 'compact-train-icon' }, trainingType ? trainingType.icon : (trainIcons[ti] || '💪')),
+            React.createElement('span', null, trainingType ? trainingType.label : ('Тренировка ' + (ti + 1))),
+            T.time && React.createElement('span', { className: 'compact-train-time' }, T.time),
             React.createElement('span', { className: 'compact-badge train' }, total + ' ккал'),
             // Кнопка удаления (всегда показываем)
             React.createElement('button', {
               className: 'compact-train-remove',
-              onClick: () => removeTraining(ti),
+              onClick: (e) => { e.stopPropagation(); removeTraining(ti); },
               title: 'Убрать тренировку'
             }, '×')
           ),
@@ -3017,6 +3296,134 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       updateSteps(clientX);
     };
 
+    // === Water Card (Карточка воды) ===
+    const waterCard = React.createElement('div', { className: 'compact-water compact-card' },
+      React.createElement('div', { className: 'compact-card-header' }, '💧 ВОДА'),
+      
+      // Основной контент: кольцо + инфо + пресеты
+      React.createElement('div', { className: 'water-card-content' },
+        // Левая часть: кольцо прогресса + breakdown
+        React.createElement('div', { className: 'water-ring-container' },
+          React.createElement('div', { 
+            className: 'water-ring-large',
+            onMouseDown: handleWaterRingDown,
+            onMouseUp: handleWaterRingUp,
+            onMouseLeave: handleWaterRingLeave,
+            onTouchStart: handleWaterRingDown,
+            onTouchEnd: handleWaterRingUp
+          },
+            React.createElement('svg', { viewBox: '0 0 36 36', className: 'water-ring-svg' },
+              React.createElement('circle', { className: 'water-ring-bg', cx: 18, cy: 18, r: 15.9 }),
+              React.createElement('circle', { 
+                className: 'water-ring-fill', 
+                cx: 18, cy: 18, r: 15.9,
+                style: { strokeDasharray: Math.min(100, ((day.waterMl || 0) / waterGoal) * 100) + ' 100' }
+              })
+            ),
+            React.createElement('div', { className: 'water-ring-center' },
+              React.createElement('span', { className: 'water-ring-value' }, 
+                (day.waterMl || 0) >= 1000 
+                  ? ((day.waterMl || 0) / 1000).toFixed(1).replace('.0', '') 
+                  : (day.waterMl || 0)
+              ),
+              React.createElement('span', { className: 'water-ring-unit' }, 
+                (day.waterMl || 0) >= 1000 ? 'л' : 'мл'
+              )
+            )
+          ),
+          // Анимация добавления (над кольцом)
+          waterAddedAnim && React.createElement('span', { 
+            className: 'water-card-anim water-card-anim-above',
+            key: 'water-anim-' + Date.now()
+          }, waterAddedAnim),
+          // Краткий breakdown под кольцом
+          React.createElement('div', { className: 'water-goal-breakdown' },
+            React.createElement('span', { className: 'water-breakdown-item' }, 
+              '⚖️ ' + waterGoalBreakdown.base + 'мл'
+            ),
+            waterGoalBreakdown.stepsBonus > 0 && React.createElement('span', { className: 'water-breakdown-item water-breakdown-bonus' }, 
+              '👟 +' + waterGoalBreakdown.stepsBonus
+            ),
+            waterGoalBreakdown.trainBonus > 0 && React.createElement('span', { className: 'water-breakdown-item water-breakdown-bonus' }, 
+              '🏃 +' + waterGoalBreakdown.trainBonus
+            ),
+            waterGoalBreakdown.seasonBonus > 0 && React.createElement('span', { className: 'water-breakdown-item water-breakdown-bonus' }, 
+              '☀️ +' + waterGoalBreakdown.seasonBonus
+            )
+          ),
+          // Напоминание "Давно не пил" (если >2ч)
+          waterLastDrink && waterLastDrink.isLong && (day.waterMl || 0) < waterGoal && React.createElement('div', { 
+            className: 'water-reminder'
+          }, '⏰ ' + waterLastDrink.text)
+        ),
+        
+        // Тултип с полной формулой (при долгом нажатии)
+        showWaterTooltip && React.createElement('div', { 
+          className: 'water-formula-tooltip',
+          onClick: () => setShowWaterTooltip(false)
+        },
+          React.createElement('div', { className: 'water-formula-title' }, '📊 Расчёт нормы воды'),
+          React.createElement('div', { className: 'water-formula-row' }, 
+            'Базовая: ' + waterGoalBreakdown.weight + ' кг × ' + waterGoalBreakdown.coef + ' мл = ' + waterGoalBreakdown.baseRaw + ' мл'
+          ),
+          waterGoalBreakdown.ageNote && React.createElement('div', { className: 'water-formula-row water-formula-sub' }, 
+            'Возраст: ' + waterGoalBreakdown.ageNote
+          ),
+          waterGoalBreakdown.stepsBonus > 0 && React.createElement('div', { className: 'water-formula-row' }, 
+            'Шаги: ' + (day.steps || 0).toLocaleString() + ' (' + waterGoalBreakdown.stepsCount + '×5000) → +' + waterGoalBreakdown.stepsBonus + ' мл'
+          ),
+          waterGoalBreakdown.trainBonus > 0 && React.createElement('div', { className: 'water-formula-row' }, 
+            'Тренировки: ' + waterGoalBreakdown.trainCount + ' шт → +' + waterGoalBreakdown.trainBonus + ' мл'
+          ),
+          waterGoalBreakdown.seasonBonus > 0 && React.createElement('div', { className: 'water-formula-row' }, 
+            'Сезон: ☀️ Лето → +' + waterGoalBreakdown.seasonBonus + ' мл'
+          ),
+          React.createElement('div', { className: 'water-formula-total' }, 
+            'Итого: ' + (waterGoal / 1000).toFixed(1) + ' л'
+          ),
+          React.createElement('div', { className: 'water-formula-hint' }, 'Нажми, чтобы закрыть')
+        ),
+        
+        // Правая часть: пресеты + прогресс
+        React.createElement('div', { className: 'water-card-right' },
+          // Верхняя строка: мотивация + кнопка удаления
+          React.createElement('div', { className: 'water-top-row' },
+            React.createElement('div', { className: 'water-motivation-inline' },
+              React.createElement('span', { className: 'water-motivation-emoji' }, waterMotivation.emoji),
+              React.createElement('span', { className: 'water-motivation-text' }, waterMotivation.text)
+            ),
+            // Кнопка уменьшения (справа)
+            (day.waterMl || 0) > 0 && React.createElement('button', {
+              className: 'water-minus-compact',
+              onClick: () => removeWater(100)
+            }, '−100')
+          ),
+          
+          // Прогресс-бар
+          React.createElement('div', { className: 'water-progress-inline' },
+            React.createElement('div', { 
+              className: 'water-progress-fill',
+              style: { width: Math.min(100, ((day.waterMl || 0) / waterGoal) * 100) + '%' }
+            })
+          ),
+          
+          // Пресеты в ряд
+          React.createElement('div', { className: 'water-presets-row' },
+            waterPresets.map(preset => 
+              React.createElement('button', {
+                key: preset.ml,
+                className: 'water-preset-compact',
+                onClick: () => addWater(preset.ml)
+              },
+                React.createElement('span', { className: 'water-preset-icon' }, preset.icon),
+                React.createElement('span', { className: 'water-preset-ml' }, '+' + preset.ml)
+              )
+            )
+          )
+        )
+      )
+    );
+
     const compactActivity = React.createElement('div', { className: 'compact-activity compact-card' },
       React.createElement('div', { className: 'compact-card-header' }, '📏 АКТИВНОСТЬ'),
       
@@ -3113,7 +3520,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           // Кнопка добавления тренировки
           visibleTrainings < 3 && React.createElement('button', {
             className: 'add-training-btn',
-            onClick: () => setVisibleTrainings(visibleTrainings + 1)
+            onClick: () => {
+              const newIndex = visibleTrainings;
+              setVisibleTrainings(visibleTrainings + 1);
+              // Сразу открываем picker для новой тренировки
+              setTimeout(() => openTrainingPicker(newIndex), 50);
+            }
           }, '+ Тренировка')
         )
       ),
@@ -3212,8 +3624,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // === ПОД-ВКЛАДКА 1: Статистика дня (или всё на десктопе) ===
       (!isMobile || mobileSubTab === 'stats') && statsBlock,
+      (!isMobile || mobileSubTab === 'stats') && waterCard,
       (!isMobile || mobileSubTab === 'stats') && compactActivity,
       (!isMobile || mobileSubTab === 'stats') && sideBlock,
+      
+      // === FAB для быстрого добавления воды (+200мл) ===
+      (!isMobile || mobileSubTab === 'stats') && React.createElement('button', {
+        className: 'water-fab',
+        onClick: () => addWater(200),
+        'aria-label': 'Добавить стакан воды'
+      }, 
+        React.createElement('span', { className: 'water-fab-icon' }, '💧'),
+        React.createElement('span', { className: 'water-fab-label' }, '+200')
+      ),
       
       // === ПОД-ВКЛАДКА 2: Дневник питания (или всё на десктопе) ===
       (!isMobile || mobileSubTab === 'diary') && daySummary,
@@ -3654,6 +4077,138 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 selected: pendingZoneMinutes,
                 onChange: (i) => setPendingZoneMinutes(i)
               })
+            )
+          )
+        ),
+        document.body
+      ),
+      
+      // Training Picker Modal
+      showTrainingPicker && ReactDOM.createPortal(
+        React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelTrainingPicker },
+          React.createElement('div', { 
+            className: 'time-picker-modal training-picker-modal', 
+            onClick: e => e.stopPropagation()
+          },
+            // Ручка для свайпа
+            React.createElement('div', { 
+              className: 'bottom-sheet-handle',
+              onTouchStart: handleSheetTouchStart,
+              onTouchMove: handleSheetTouchMove,
+              onTouchEnd: () => handleSheetTouchEnd(cancelTrainingPicker)
+            }),
+            
+            // Заголовок
+            React.createElement('div', { className: 'time-picker-header' },
+              React.createElement('button', { className: 'time-picker-cancel', onClick: cancelTrainingPicker }, 
+                trainingPickerStep === 2 ? '← Назад' : 'Отмена'
+              ),
+              React.createElement('span', { className: 'time-picker-title' }, 
+                trainingPickerStep === 1 ? '🏋️ Тренировка' : '⏱️ Зоны'
+              ),
+              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmTrainingPicker }, 
+                trainingPickerStep === 1 ? 'Далее →' : 'Готово'
+              )
+            ),
+            
+            // ШАГ 1: Тип тренировки + Время + Пресеты
+            trainingPickerStep === 1 && React.createElement(React.Fragment, null,
+              // Секция: Тип тренировки
+              React.createElement('div', { className: 'training-type-section' },
+                React.createElement('div', { className: 'training-type-label' }, 'Тип тренировки'),
+                React.createElement('div', { className: 'training-type-buttons' },
+                  trainingTypes.map(t => 
+                    React.createElement('button', {
+                      key: t.id,
+                      className: 'training-type-btn' + (pendingTrainingType === t.id ? ' active' : ''),
+                      onClick: () => { haptic('light'); setPendingTrainingType(t.id); }
+                    },
+                      React.createElement('span', { className: 'training-type-icon' }, t.icon),
+                      React.createElement('span', { className: 'training-type-text' }, t.label)
+                    )
+                  )
+                )
+              ),
+              
+              // Секция: Быстрые пресеты
+              React.createElement('div', { className: 'training-presets-section' },
+                React.createElement('div', { className: 'training-presets-label' }, 'Быстрый выбор'),
+                React.createElement('div', { className: 'training-presets-grid' },
+                  trainingPresets.map(p => 
+                    React.createElement('button', {
+                      key: p.id,
+                      className: 'training-preset-btn',
+                      onClick: () => {
+                        haptic('medium');
+                        setPendingTrainingType(p.type);
+                        setPendingTrainingZones(p.zones);
+                        setTrainingPickerStep(2); // Сразу на второй шаг
+                      }
+                    }, p.label)
+                  )
+                )
+              ),
+              
+              // Секция: Время начала
+              React.createElement('div', { className: 'training-time-section' },
+                React.createElement('div', { className: 'training-time-label' }, 'Время начала'),
+                React.createElement('div', { className: 'time-picker-wheels' },
+                  // Часы
+                  React.createElement(WheelColumn, {
+                    values: hoursValues,
+                    selected: pendingTrainingTime.hours,
+                    onChange: (i) => setPendingTrainingTime(prev => ({...prev, hours: i})),
+                    label: 'Часы'
+                  }),
+                  React.createElement('div', { className: 'time-picker-separator' }, ':'),
+                  // Минуты
+                  React.createElement(WheelColumn, {
+                    values: minutesValues,
+                    selected: pendingTrainingTime.minutes,
+                    onChange: (i) => setPendingTrainingTime(prev => ({...prev, minutes: i})),
+                    label: 'Минуты'
+                  })
+                )
+              )
+            ),
+            
+            // ШАГ 2: Зоны
+            trainingPickerStep === 2 && React.createElement(React.Fragment, null,
+              React.createElement('div', { className: 'training-zones-section' },
+                React.createElement('div', { className: 'training-zones-label' }, 'Минуты в каждой зоне'),
+                React.createElement('div', { className: 'training-zones-wheels' },
+                  [0, 1, 2, 3].map(zi => 
+                    React.createElement('div', { key: 'zone' + zi, className: 'training-zone-column' },
+                      React.createElement('div', { className: 'training-zone-header zone-color-' + (zi + 1) }, 'Z' + (zi + 1)),
+                      React.createElement(WheelColumn, {
+                        values: zoneMinutesValues.map(v => String(v)),
+                        selected: pendingTrainingZones[zi],
+                        onChange: (i) => {
+                          haptic('light');
+                          setPendingTrainingZones(prev => {
+                            const next = [...prev];
+                            next[zi] = i;
+                            return next;
+                          });
+                        }
+                      })
+                    )
+                  )
+                ),
+                // Подсказка с временем и калориями
+                React.createElement('div', { className: 'training-zones-stats' },
+                  React.createElement('span', { className: 'training-zones-time' },
+                    '⏱️ ',
+                    pendingTrainingZones.reduce((sum, idx) => sum + (parseInt(zoneMinutesValues[idx], 10) || 0), 0),
+                    ' мин'
+                  ),
+                  React.createElement('span', { className: 'training-zones-kcal' },
+                    '🔥 ',
+                    r0(pendingTrainingZones.reduce((sum, idx, zi) => sum + (parseInt(zoneMinutesValues[idx], 10) || 0) * (kcalMin[zi] || 0), 0)),
+                    ' ккал'
+                  )
+                )
+              )
             )
           )
         ),
