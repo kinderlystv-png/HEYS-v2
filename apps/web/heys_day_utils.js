@@ -554,6 +554,144 @@
     return slotTypes[clamp(slotIndex, 0, 5)];
   }
 
+  // === Calendar Day Indicators ===
+  
+  /**
+   * Вычисляет калории за день напрямую из localStorage
+   * @param {string} dateStr - Дата в формате YYYY-MM-DD
+   * @param {Map} productsMap - Map продуктов (id => product)
+   * @returns {number} Калории за день
+   */
+  function getDayCalories(dateStr, productsMap) {
+    try {
+      const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
+      const scopedKey = clientId 
+        ? 'heys_' + clientId + '_dayv2_' + dateStr 
+        : 'heys_dayv2_' + dateStr;
+      
+      const raw = localStorage.getItem(scopedKey);
+      if (!raw) return 0;
+      
+      let dayData = null;
+      if (raw.startsWith('¤Z¤')) {
+        let str = raw.substring(3);
+        const patterns = { 
+          '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"', 
+          '¤c¤': '"carbs100"', '¤f¤': '"fat100"' 
+        };
+        for (const [code, pattern] of Object.entries(patterns)) {
+          str = str.split(code).join(pattern);
+        }
+        dayData = JSON.parse(str);
+      } else {
+        dayData = JSON.parse(raw);
+      }
+      
+      if (!dayData || !dayData.meals) return 0;
+      
+      let totalKcal = 0;
+      (dayData.meals || []).forEach(meal => {
+        (meal.items || []).forEach(item => {
+          const grams = +item.grams || 0;
+          const product = productsMap.get(item.product_id);
+          if (product && grams > 0) {
+            const kcal100 = +product.kcal100 || 0;
+            totalKcal += (kcal100 * grams / 100);
+          }
+        });
+      });
+      
+      return Math.round(totalKcal);
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /**
+   * Получает Map продуктов для вычисления калорий
+   * @returns {Map} productsMap (id => product)
+   */
+  function getProductsMap() {
+    const productsMap = new Map();
+    try {
+      const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
+      const productsKey = clientId 
+        ? 'heys_' + clientId + '_products' 
+        : 'heys_products';
+      const productsRaw = localStorage.getItem(productsKey);
+      
+      if (productsRaw) {
+        let products = [];
+        if (productsRaw.startsWith('¤Z¤')) {
+          let str = productsRaw.substring(3);
+          const patterns = {
+            '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+            '¤c¤': '"carbs100"', '¤f¤': '"fat100"', '¤s¤': '"simple100"',
+            '¤x¤': '"complex100"', '¤b¤': '"badFat100"', '¤g¤': '"goodFat100"',
+            '¤t¤': '"trans100"', '¤i¤': '"fiber100"', '¤G¤': '"gi"', '¤h¤': '"harmScore"'
+          };
+          for (const [code, pattern] of Object.entries(patterns)) {
+            str = str.split(code).join(pattern);
+          }
+          products = JSON.parse(str);
+        } else {
+          products = JSON.parse(productsRaw);
+        }
+        (products || []).forEach(p => { if(p.id) productsMap.set(p.id, p); });
+      }
+    } catch (e) {}
+    return productsMap;
+  }
+
+  /**
+   * Вычисляет Set активных дней для месяца
+   * Активный день = съедено ≥ 1/3 BMR (реальное ведение дневника)
+   * 
+   * @param {number} year - Год
+   * @param {number} month - Месяц (0-11)
+   * @param {Object} profile - Профиль пользователя {weight, height, age, sex, deficitPctTarget}
+   * @returns {Map<string, {kcal: number, target: number, ratio: number}>} Map дат с данными
+   */
+  function getActiveDaysForMonth(year, month, profile) {
+    const daysData = new Map();
+    
+    try {
+      // Получаем BMR и целевые калории из профиля
+      const weight = +(profile && profile.weight) || 70;
+      const bmr = calcBMR(weight, profile || {});
+      const deficitPct = +(profile && profile.deficitPctTarget) || 0;
+      // Цель = BMR * (1 + deficit/100), deficit обычно отрицательный
+      const target = Math.round(bmr * (1 + deficitPct / 100));
+      const threshold = Math.round(bmr / 3); // 1/3 BMR — минимум для "активного" дня
+      
+      // Получаем продукты для вычисления калорий
+      const productsMap = getProductsMap();
+      
+      console.log('[Calendar] getActiveDaysForMonth:', { year, month, weight, bmr, target, threshold, productsCount: productsMap.size });
+      
+      // Проходим по всем дням месяца
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = fmtDate(new Date(year, month, d));
+        const kcal = getDayCalories(dateStr, productsMap);
+        
+        // Только дни с данными (≥ 1/3 BMR)
+        if (kcal >= threshold) {
+          // ratio: 1.0 = идеально в цель, <1 недоел, >1 переел
+          const ratio = target > 0 ? kcal / target : 0;
+          daysData.set(dateStr, { kcal, target, ratio });
+        }
+      }
+      
+      console.log('[Calendar] Found active days:', daysData.size, [...daysData.keys()]);
+    } catch (e) {
+      console.error('[Calendar] Error:', e);
+    }
+    
+    return daysData;
+  }
+
   // === Exports ===
   // Всё экспортируется через HEYS.dayUtils
   // POPULAR_CACHE — приватный, не экспортируется (инкапсуляция)
@@ -607,7 +745,11 @@
     getMealType,
     getMealTypeSimple,
     getMealTypeForPreview,
-    fallbackMealType
+    fallbackMealType,
+    // Calendar indicators
+    getDayCalories,
+    getProductsMap,
+    getActiveDaysForMonth
   };
 
 })(window);

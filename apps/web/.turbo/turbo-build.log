@@ -1,160 +1,6 @@
 
 > @heys/web@13.0.1 build /Users/poplavskijanton/HEYS-v2/apps/web
-> pnpm run build:deps && vite build
-
-
-> @heys/web@13.0.1 build:deps /Users/poplavskijanton/HEYS-v2/apps/web
-> pnpm --dir ../.. --filter @heys/shared run build && pnpm --dir ../.. --filter @heys/storage run build && pnpm --dir ../.. --filter @heys/core run build && pnpm --dir ../.. --filter @heys/search run build && pnpm --dir ../.. --filter @heys/analytics run build && pnpm --dir ../.. --filter @heys/gaming run build && pnpm --dir ../.. --filter @heys/ui run build && pnpm --dir ../.. --filter @heys/logger run build
-
-
-> @heys/shared@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/shared
-> tsup
-
-CLI Building entry: src/index.ts
-CLI Using tsconfig: tsconfig.json
-CLI tsup v7.3.0
-CLI Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/shared/tsup.config.ts
-CLI Target: es2022
-CLI Cleaning output folder
-CJS Build start
-ESM Build start
-ESM dist/index.js     107.71 KB
-ESM dist/index.js.map 392.35 KB
-ESM ⚡️ Build success in 1226ms
-CJS dist/index.cjs     108.91 KB
-CJS dist/index.cjs.map 392.35 KB
-CJS ⚡️ Build success in 1226ms
-
-> @heys/storage@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/storage
-> tsup
-
-CLI Building entry: src/index.ts
-CLI Using tsconfig: tsconfig.json
-CLI tsup v7.3.0
-CLI Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/storage/tsup.config.ts
-CLI Target: es2022
-CLI Cleaning output folder
-CJS Build start
-ESM Build start
-Entry module "dist/index.cjs" is using named and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
-CJS dist/index.cjs     71.76 KB
-CJS dist/index.cjs.map 272.43 KB
-CJS ⚡️ Build success in 869ms
-ESM dist/index.js     71.65 KB
-ESM dist/index.js.map 272.43 KB
-ESM ⚡️ Build success in 869ms
-
-> @heys/core@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/core
-> tsup
-
-CLI Building entry: {"index":"src/index.ts","server/router":"src/server/router.ts"}
-CLI Using tsconfig: tsconfig.json
-CLI tsup v7.3.0
-CLI Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/core/tsup.config.ts
-CLI Target: es2022
-CLI Cleaning output folder
-CJS Build start
-ESM Build start
-CJS dist/index.js             10.37 KB
-CJS dist/server/router.js     21.25 KB
-CJS dist/index.js.map         32.66 KB
-CJS dist/server/router.js.map 65.09 KB
-CJS ⚡️ Build success in 429ms
-ESM dist/index.mjs             9.68 KB
-ESM dist/server/router.mjs     20.90 KB
-ESM dist/index.mjs.map         32.66 KB
-ESM dist/server/router.mjs.map 65.09 KB
-ESM ⚡️ Build success in 429ms
-
-> @heys/search@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/search
-> tsup
-
-CLI Building entry: src/index.ts
-CLI Using tsconfig: tsconfig.json
-CLI tsup v7.3.0
-CLI Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/search/tsup.config.ts
-CLI Target: es2022
-CLI Cleaning output folder
-CJS Build start
-ESM Build start
-CJS dist/index.cjs     5.88 KB
-CJS dist/index.cjs.map 16.77 KB
-CJS ⚡️ Build success in 146ms
-ESM dist/index.js     5.87 KB
-ESM dist/index.js.map 16.77 KB
-ESM ⚡️ Build success in 146ms
-
-> @heys/analytics@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/analytics
-> tsup
-
-CLI Building entry: src/index.ts
-CLI Using tsconfig: tsconfig.json
-CLI tsup v7.3.0
-CLI Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/analytics/tsup.config.ts
-CLI Target: es2022
-CLI Cleaning output folder
-CJS Build start
-ESM Build start
-CJS dist/index.cjs     279.00 B
-CJS dist/index.cjs.map 570.00 B
-CJS ⚡️ Build success in 78ms
-ESM dist/index.js     258.00 B
-ESM dist/index.js.map 570.00 B
-ESM ⚡️ Build success in 78ms
-
-> @heys/gaming@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/gaming
-> tsup
-
-CLI Building entry: src/index.ts
-CLI Using tsconfig: tsconfig.json
-CLI tsup v7.3.0
-CLI Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/gaming/tsup.config.ts
-CLI Target: es2022
-CLI Cleaning output folder
-CJS Build start
-ESM Build start
-CJS dist/index.cjs     149.00 B
-CJS dist/index.cjs.map 276.00 B
-CJS ⚡️ Build success in 65ms
-ESM dist/index.js     137.00 B
-ESM dist/index.js.map 276.00 B
-ESM ⚡️ Build success in 66ms
-
-> @heys/ui@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/ui
-> tsup
-
-CLI Building entry: src/index.ts
-CLI Using tsconfig: tsconfig.json
-CLI tsup v7.3.0
-CLI Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/ui/tsup.config.ts
-CLI Target: es2022
-CLI Cleaning output folder
-CJS Build start
-ESM Build start
-ESM dist/index.js     73.04 KB
-ESM dist/index.js.map 275.84 KB
-ESM ⚡️ Build success in 936ms
-CJS dist/index.cjs     73.65 KB
-CJS dist/index.cjs.map 275.84 KB
-CJS ⚡️ Build success in 936ms
-
-> @heys/logger@1.0.0 build /Users/poplavskijanton/HEYS-v2/packages/logger
-> pnpm run build:js && pnpm run build:types
-
-
-> @heys/logger@1.0.0 build:js /Users/poplavskijanton/HEYS-v2/packages/logger
-> tsup src/index.ts --format esm
-
-CLI Building entry: src/index.ts
-CLI Using tsconfig: tsconfig.json
-CLI tsup v7.3.0
-CLI Target: es2022
-ESM Build start
-ESM dist/index.js 16.27 KB
-ESM ⚡️ Build success in 38ms
-
-> @heys/logger@1.0.0 build:types /Users/poplavskijanton/HEYS-v2/packages/logger
-> pnpm exec tsc --project tsconfig.build.json
+> vite build && cp heys_*.js dist/ && cp styles/*.css dist/styles/ 2>/dev/null || mkdir -p dist/styles && cp styles/*.css dist/styles/
 
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 vite v4.5.14 building for production...
@@ -169,27 +15,19 @@ vite v4.5.14 building for production...
 <script src="heys_pull_refresh.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_day_utils.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_day_hooks.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_day_pickers.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_day_v12.js?v=6"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_user_v12.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_reports_v12.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_app_v12.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_pickers.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_v12.js?v=7"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_user_v12.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_reports_v12.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_v12.js?v=3"> in "/index.html" can't be bundled without type="module" attribute
 transforming...
 ✓ 3 modules transformed.
-Generated an empty chunk: "react".
-Generated an empty chunk: "vendor".
-Generated an empty chunk: "features".
-Generated an empty chunk: "core".
 rendering chunks...
 computing gzip size...
-dist/index.html                                    4.22 kB │ gzip:  1.26 kB
+dist/index.html                                    4.31 kB │ gzip:  1.29 kB
 dist/assets/heys_models_v1-c4316578.js             7.92 kB
 dist/assets/heys_simple_analytics-43dd56e7.js     10.30 kB
-dist/assets/heys_storage_supabase_v1-a8ac55c1.js  31.81 kB
+dist/assets/heys_storage_supabase_v1-75bd852c.js  32.22 kB
 dist/assets/heys_core_v12-93bef242.js             44.02 kB
-dist/assets/index-254f2d84.css                    80.57 kB │ gzip: 15.51 kB
-dist/assets/vendor-4ed993c7.js                     0.00 kB │ gzip:  0.02 kB │ map: 0.10 kB
-dist/assets/react-4ed993c7.js                      0.00 kB │ gzip:  0.02 kB │ map: 0.10 kB
-dist/assets/features-4ed993c7.js                   0.00 kB │ gzip:  0.02 kB │ map: 0.10 kB
-dist/assets/core-4ed993c7.js                       0.00 kB │ gzip:  0.02 kB │ map: 0.10 kB
-✓ built in 2.86s
+dist/assets/index-622275bf.css                    89.29 kB │ gzip: 17.12 kB
+✓ built in 603ms

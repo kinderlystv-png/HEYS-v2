@@ -134,7 +134,8 @@
   }
 
   // Полноэкранный Calendar компонент
-  function Calendar({valueISO,onSelect,onRemove}){
+  // activeDays: Map<dateStr, {kcal, target, ratio}> — данные о заполненных днях
+  function Calendar({valueISO,onSelect,onRemove,activeDays}){
     const utils = getDayUtils();
     // Minimal fallbacks with error logging
     const parseISO = utils.parseISO || ((s) => { warnMissing('parseISO'); return new Date(); });
@@ -147,6 +148,42 @@
     const cells=[]; for(let i=0;i<start;i++) cells.push(null); for(let d=1;d<=dim;d++) cells.push(new Date(y,m,d));
     function same(a,b){ return a&&b&&a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
     const sel=parseISO(valueISO||todayISO()); const today=new Date(); today.setHours(12);
+    
+    // Преобразуем activeDays в Map для быстрого поиска
+    const daysDataMap = React.useMemo(() => {
+      if (activeDays instanceof Map) return activeDays;
+      return new Map();
+    }, [activeDays]);
+    
+    // Функция для расчёта цвета фона на основе ratio (близости к цели)
+    // ratio = kcal / target: 1.0 = идеально, <0.8 или >1.2 = плохо
+    function getDayBgColor(ratio) {
+      if (!ratio || ratio <= 0) return null;
+      
+      // Идеальный диапазон: 0.9 - 1.1 (90-110% от цели)
+      // Хороший: 0.8 - 1.2
+      // Плохой: всё остальное
+      
+      const deviation = Math.abs(ratio - 1); // 0 = идеально, 0.5 = 50% отклонение
+      
+      if (deviation <= 0.05) {
+        // Идеально (95-105%) — ярко-зелёный
+        return 'rgba(34, 197, 94, 0.4)'; // green-500
+      } else if (deviation <= 0.1) {
+        // Хорошо (90-110%) — светло-зелёный
+        return 'rgba(34, 197, 94, 0.25)';
+      } else if (deviation <= 0.2) {
+        // Нормально (80-120%) — жёлто-зелёный
+        return 'rgba(234, 179, 8, 0.25)'; // yellow-500
+      } else if (deviation <= 0.3) {
+        // Слабо (70-130%) — оранжевый
+        return 'rgba(249, 115, 22, 0.25)'; // orange-500
+      } else {
+        // Плохо (>30% отклонение) — красный
+        return 'rgba(239, 68, 68, 0.25)'; // red-500
+      }
+    }
+    
     return React.createElement('div',{className:'calendar card'},
       React.createElement('div',{className:'cal-head'},
         React.createElement('button',{className:'cal-nav',onClick:()=>setCur(new Date(y,m-1,1))},'‹'),
@@ -154,7 +191,28 @@
         React.createElement('button',{className:'cal-nav',onClick:()=>setCur(new Date(y,m+1,1))},'›')
       ),
       React.createElement('div',{className:'cal-grid cal-dow'},['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d=>React.createElement('div',{key:d},d))),
-      React.createElement('div',{className:'cal-grid'}, cells.map((dt,i)=> dt==null?React.createElement('div',{key:'e'+i}):React.createElement('div',{key:dt.toISOString(),className:['cal-cell',same(dt,sel)?'sel':'',same(dt,today)?'today':''].join(' ').trim(),onClick:()=>onSelect(fmtDate(dt))},dt.getDate()))),
+      React.createElement('div',{className:'cal-grid'}, cells.map((dt,i)=> {
+        if (dt == null) return React.createElement('div',{key:'e'+i});
+        
+        const dateStr = fmtDate(dt);
+        const dayData = daysDataMap.get(dateStr);
+        const isSel = same(dt, sel);
+        const isToday = same(dt, today);
+        
+        // Стиль с градиентным фоном для заполненных дней
+        const bgColor = dayData ? getDayBgColor(dayData.ratio) : null;
+        const cellStyle = bgColor && !isSel ? { background: bgColor } : undefined;
+        
+        return React.createElement('div', {
+          key: dt.toISOString(),
+          className: ['cal-cell', isSel ? 'sel' : '', isToday ? 'today' : '', dayData ? 'has-data' : ''].join(' ').trim(),
+          style: cellStyle,
+          onClick: () => onSelect(dateStr),
+          title: dayData ? `${dayData.kcal} / ${dayData.target} ккал (${Math.round(dayData.ratio * 100)}%)` : undefined
+        },
+          dt.getDate()
+        );
+      })),
       React.createElement('div',{className:'cal-foot'},
         React.createElement('button',{className:'btn',onClick:()=>onSelect(todayISO())},'Сегодня'),
         React.createElement('button',{className:'btn',onClick:onRemove},'Удалить')

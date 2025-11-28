@@ -12,7 +12,7 @@ CJS Build start
 ESM Build start
 ESM dist/index.js     258.00 B
 ESM dist/index.js.map 570.00 B
-ESM ⚡️ Build success in 345ms
+ESM ⚡️ Build success in 292ms
 CJS dist/index.cjs     279.00 B
 CJS dist/index.cjs.map 570.00 B
-CJS ⚡️ Build success in 350ms
+CJS ⚡️ Build success in 292ms

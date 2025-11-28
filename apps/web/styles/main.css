@@ -2254,6 +2254,8 @@ td:first-child input {
   font-size: 12px;
   text-align: center;
   border-radius: 8px;
+  position: relative;
+  transition: background 0.15s ease;
 }
 .cal-cell.today {
   outline: 2px solid #94a3b8;
@@ -2265,8 +2267,11 @@ td:first-child input {
   color: var(--acc-contrast);
   font-weight: 600;
 }
+.cal-cell.has-data {
+  font-weight: 600;
+}
 .cal-cell:hover:not(.sel) {
-  background: #e2e8f0;
+  filter: brightness(0.92);
 }
 .cal-foot {
   display: flex;

@@ -1317,10 +1317,18 @@
       }
     }, [day.sleepStart, day.sleepEnd]);
 
+    // Вычисляем данные о днях для текущего месяца (с цветовой индикацией близости к цели)
+    const activeDays = useMemo(() => {
+      const getActiveDaysForMonth = (HEYS.dayUtils && HEYS.dayUtils.getActiveDaysForMonth) || (() => new Map());
+      const d = new Date(date);
+      return getActiveDaysForMonth(d.getFullYear(), d.getMonth(), prof);
+    }, [date, prof.weight, prof.height, prof.age, prof.sex, prof.deficitPctTarget]);
+
     // --- blocks
     const calendarBlock = React.createElement('div',{className:'area-cal'},
       React.createElement(Calendar,{
         valueISO:date,
+        activeDays:activeDays,
         onSelect:(d)=>{
           // persist current day explicitly before switching date
           try{ flush(); }catch(e){}
