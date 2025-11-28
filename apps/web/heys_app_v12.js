@@ -612,7 +612,7 @@
             const onTouchStart = React.useCallback((e) => {
               // Игнорируем свайпы на интерактивных элементах
               const target = e.target;
-              if (target.closest('input, textarea, select, button, .swipeable-container, table')) {
+              if (target.closest('input, textarea, select, button, .swipeable-container, table, .tab-switch-group')) {
                 return;
               }
               const touch = e.touches[0];
