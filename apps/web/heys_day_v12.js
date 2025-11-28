@@ -180,52 +180,14 @@
   // === МОБИЛЬНЫЕ ПОД-ВКЛАДКИ ===
   // 'stats' — статистика дня (шапка, статистика, активность, сон)
   // 'diary' — дневник питания (суточные итоги, приёмы пищи)
-  const [mobileSubTab, setMobileSubTab] = useState('stats');
+  // Теперь subTab приходит из props (из нижнего меню App)
+  const mobileSubTab = props.subTab || 'stats';
   
-  // === СВАЙП ДЛЯ ПОД-ВКЛАДОК (только mobile) ===
-  const subTabTouchRef = React.useRef({ startX: 0, startY: 0, startTime: 0 });
-  const SUB_TAB_MIN_SWIPE = 60;
-  const SUB_TAB_MAX_TIME = 500;
-  
-  const onSubTabTouchStart = React.useCallback((e) => {
-    if (!isMobile) return;
-    const target = e.target;
-    if (target.closest('input, textarea, select, button, .swipeable-container, table')) {
-      return;
-    }
-    const touch = e.touches[0];
-    subTabTouchRef.current = {
-      startX: touch.clientX,
-      startY: touch.clientY,
-      startTime: Date.now()
-    };
-  }, [isMobile]);
-  
-  const onSubTabTouchEnd = React.useCallback((e) => {
-    if (!isMobile) return;
-    if (!subTabTouchRef.current.startTime) return;
-    
-    const touch = e.changedTouches[0];
-    const deltaX = touch.clientX - subTabTouchRef.current.startX;
-    const deltaY = touch.clientY - subTabTouchRef.current.startY;
-    const deltaTime = Date.now() - subTabTouchRef.current.startTime;
-    
-    subTabTouchRef.current.startTime = 0;
-    
-    if (deltaTime > SUB_TAB_MAX_TIME) return;
-    if (Math.abs(deltaY) > Math.abs(deltaX) * 0.7) return;
-    if (Math.abs(deltaX) < SUB_TAB_MIN_SWIPE) return;
-    
-    if (deltaX < 0 && mobileSubTab === 'stats') {
-      // Свайп влево → Дневник
-      setMobileSubTab('diary');
-      if (navigator.vibrate) navigator.vibrate(10);
-    } else if (deltaX > 0 && mobileSubTab === 'diary') {
-      // Свайп вправо → Статистика
-      setMobileSubTab('stats');
-      if (navigator.vibrate) navigator.vibrate(10);
-    }
-  }, [isMobile, mobileSubTab]);
+  // === СВАЙП ДЛЯ ПОД-ВКЛАДОК УБРАН ===
+  // Теперь свайп между stats/diary обрабатывается глобально в App
+  // (нижнее меню с 5 вкладками)
+  const onSubTabTouchStart = React.useCallback(() => {}, []);
+  const onSubTabTouchEnd = React.useCallback(() => {}, []);
   
   // Проверка: развёрнут ли приём (последний по умолчанию развёрнут)
   const isMealExpanded = (mealIndex, totalMeals) => {
@@ -3121,27 +3083,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     }
   
     return React.createElement('div',{
-      className: 'page page-day',
-      onTouchStart: onSubTabTouchStart,
-      onTouchEnd: onSubTabTouchEnd
+      className: 'page page-day'
     },
-      // === МОБИЛЬНЫЕ ПОД-ВКЛАДКИ (только mobile) ===
-      isMobile && React.createElement('div', { className: 'day-subtabs' },
-        React.createElement('button', {
-          className: 'day-subtab' + (mobileSubTab === 'stats' ? ' active' : ''),
-          onClick: () => setMobileSubTab('stats')
-        }, 
-          React.createElement('span', { className: 'day-subtab-icon' }, '📊'),
-          React.createElement('span', { className: 'day-subtab-text' }, 'Статистика')
-        ),
-        React.createElement('button', {
-          className: 'day-subtab' + (mobileSubTab === 'diary' ? ' active' : ''),
-          onClick: () => setMobileSubTab('diary')
-        },
-          React.createElement('span', { className: 'day-subtab-icon' }, '🍽️'),
-          React.createElement('span', { className: 'day-subtab-text' }, 'Дневник')
-        )
-      ),
+      // === МОБИЛЬНЫЕ ПОД-ВКЛАДКИ УБРАНЫ ===
+      // Теперь переключение stats/diary через нижнее меню (5 вкладок в App)
       
       // Pull-to-refresh индикатор (Enhanced)
       (pullProgress > 0 || isRefreshing) && React.createElement('div', {

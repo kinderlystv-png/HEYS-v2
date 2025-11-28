@@ -37,7 +37,13 @@ layout поиска, улучшить мобильный UX
 
 ## 🟠 СРЕДНИЙ ПРИОРИТЕТ
 
-### 1. CSS Variables Migration
+### 1. Удалить packages/analytics-dashboard
+
+**Описание**: Legacy пакет, конфликтует с портом 3001, не используется в production  
+**Action**: `rm -rf packages/analytics-dashboard` + убрать исключение из pnpm-workspace.yaml  
+**Время**: ~5 минут
+
+### 2. CSS Variables Migration
 
 **Описание**: Заменить 176 hardcoded hex цветов → CSS var(--name)  
 **Why**: Prerequisite для dark mode и :where() рефакторинга  

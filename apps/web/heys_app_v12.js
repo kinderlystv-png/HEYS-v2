@@ -74,7 +74,7 @@
            * ═══════════════════════════════════════════════════════════════════════════════
            */
           function DayTabWithCloudSync(props) {
-            const { clientId, products, selectedDate, setSelectedDate } = props;
+            const { clientId, products, selectedDate, setSelectedDate, subTab } = props;
             const [loading, setLoading] = React.useState(true);
             React.useEffect(() => {
               let cancelled = false;
@@ -112,7 +112,7 @@
                 '⏳ Загрузка компонента...',
               );
             }
-            return React.createElement(window.HEYS.DayTab, { products, selectedDate, setSelectedDate });
+            return React.createElement(window.HEYS.DayTab, { products, selectedDate, setSelectedDate, subTab });
           }
 
           /* ═══════════════════════════════════════════════════════════════════════════════
@@ -561,7 +561,7 @@
 
           function App() {
             const ONE_CURATOR_MODE = true; // Включаем автовход для работы с Supabase
-            const [tab, setTab] = useState('day');
+            const [tab, setTab] = useState('stats');
             
             // === Dark Theme (3 modes: light / dark / auto) ===
             const [theme, setTheme] = useState(() => {
@@ -600,7 +600,7 @@
             const [products, setProducts] = useState([]);
             
             // === SWIPE NAVIGATION ===
-            const TABS_ORDER = ['ration', 'day', 'reports', 'user'];
+            const TABS_ORDER = ['ration', 'stats', 'diary', 'reports', 'user'];
             const touchRef = React.useRef({ startX: 0, startY: 0, startTime: 0 });
             const MIN_SWIPE_DISTANCE = 60;
             const MAX_SWIPE_TIME = 500; // ms — увеличено для более плавного свайпа
@@ -643,9 +643,8 @@
               if (Math.abs(deltaY) > Math.abs(deltaX) * 0.7) return; // Более мягкое условие
               if (Math.abs(deltaX) < MIN_SWIPE_DISTANCE) return;
               
-              // На вкладке "day" свайп обрабатывается внутри DayTab (под-вкладки)
-              // Поэтому глобальный свайп работает только на других вкладках
-              if (tab === 'day') return;
+              // Свайп между stats и diary обрабатывается глобально
+              // (больше нет отдельной вкладки 'day')
               
               const currentIndex = TABS_ORDER.indexOf(tab);
               
@@ -1058,7 +1057,7 @@
 
             // Автопереключение на вкладку статистики дня при выборе клиента
             useEffect(() => {
-              if (clientId) setTab('day');
+              if (clientId) setTab('stats');
             }, [clientId]);
 
             // Fallback: если после входа продукты пустые, пробуем взять из localStorage через utils
@@ -1748,7 +1747,7 @@
                             React.createElement('span', { className: 'hdr-client-name' }, currentClientName),
                           ),
                           // DatePicker рядом с именем клиента
-                          (tab === 'day' || tab === 'reports') && window.HEYS.DatePicker
+                          (tab === 'stats' || tab === 'diary' || tab === 'reports') && window.HEYS.DatePicker
                             ? React.createElement(window.HEYS.DatePicker, {
                                 valueISO: selectedDate,
                                 onSelect: setSelectedDate,
@@ -1773,14 +1772,29 @@
                     React.createElement('span', { className: 'tab-icon' }, '🍽️'),
                     React.createElement('span', { className: 'tab-text' }, 'Рацион'),
                   ),
+                  // iOS Switch группа для stats/diary — клик переключает на другую
                   React.createElement(
                     'div',
-                    {
-                      className: 'tab ' + (tab === 'day' ? 'active' : ''),
-                      onClick: () => setTab('day'),
+                    { 
+                      className: 'tab-switch-group',
+                      onClick: () => setTab(tab === 'stats' ? 'diary' : 'stats'),
                     },
-                    React.createElement('span', { className: 'tab-icon' }, '📊'),
-                    React.createElement('span', { className: 'tab-text' }, 'День'),
+                    React.createElement(
+                      'div',
+                      {
+                        className: 'tab tab-switch ' + (tab === 'stats' ? 'active' : ''),
+                      },
+                      React.createElement('span', { className: 'tab-icon' }, '📊'),
+                      React.createElement('span', { className: 'tab-text' }, 'Стат'),
+                    ),
+                    React.createElement(
+                      'div',
+                      {
+                        className: 'tab tab-switch ' + (tab === 'diary' ? 'active' : ''),
+                      },
+                      React.createElement('span', { className: 'tab-icon' }, '📓'),
+                      React.createElement('span', { className: 'tab-text' }, 'Дневник'),
+                    ),
                   ),
                   React.createElement(
                     'div',
@@ -1836,13 +1850,14 @@
                         setProducts,
                         clientId,
                       })
-                    : tab === 'day'
+                    : (tab === 'stats' || tab === 'diary')
                       ? React.createElement(DayTabWithCloudSync, {
                           key: 'day' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
                           products,
                           clientId,
                           selectedDate,
                           setSelectedDate,
+                          subTab: tab,
                         })
                       : tab === 'user'
                         ? React.createElement(UserTabWithCloudSync, {
