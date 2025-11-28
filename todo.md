@@ -50,11 +50,12 @@ layout поиска, улучшить мобильный UX
 **Depends on**: CSS Variables Migration  
 **Время**: ~2-4 часа
 
-### 3. Dark mode
+### 3. Dark mode — Полноценная реализация
 
-**Описание**: Добавить `@media (prefers-color-scheme: dark)`, автоадаптация UI  
-**Depends on**: CSS Variables Migration + :where() рефакторинг  
-**Время**: ~1-2 часа
+**Файл**: [2025-11-28-dark-mode-implementation.md](./docs/tasks/2025-11-28-dark-mode-implementation.md)  
+**Описание**: Три режима (light/dark/auto), pill-style toggle, CSS transitions, полное покрытие tone-карточек  
+**Depends on**: —  
+**Время**: ~45-60 минут
 
 ---
 

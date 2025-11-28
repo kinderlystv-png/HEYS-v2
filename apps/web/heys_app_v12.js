@@ -594,17 +594,37 @@
 
             // Получить клиентов куратора из Supabase
             async function fetchClientsFromCloud(curatorId) {
-              if (!cloud.client || !curatorId) return [];
-              const { data, error } = await cloud.client
-                .from('clients')
-                .select('id, name')
-                .eq('curator_id', curatorId)
-                .order('updated_at', { ascending: true });
-              if (error) {
-                console.error('Ошибка загрузки клиентов:', error);
+              console.log('[HEYS] 📊 DEBUG: fetchClientsFromCloud called, curatorId:', curatorId);
+              console.log('[HEYS] 📊 DEBUG: cloud.client exists:', !!cloud.client);
+              if (!cloud.client || !curatorId) {
+                console.log('[HEYS] 📊 DEBUG: fetchClientsFromCloud early return (no client or curatorId)');
                 return [];
               }
-              return data || [];
+              
+              // Таймаут 5 секунд для запроса к Supabase
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout: Supabase request took too long')), 5000)
+              );
+              
+              try {
+                console.log('[HEYS] 📊 DEBUG: Calling Supabase .from("clients")...');
+                const fetchPromise = cloud.client
+                  .from('clients')
+                  .select('id, name')
+                  .eq('curator_id', curatorId)
+                  .order('updated_at', { ascending: true });
+                
+                const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+                console.log('[HEYS] 📊 DEBUG: Supabase response - data:', data?.length, 'error:', error?.message);
+                if (error) {
+                  console.error('Ошибка загрузки клиентов:', error);
+                  return [];
+                }
+                return data || [];
+              } catch (e) {
+                console.error('[HEYS] ❌ fetchClientsFromCloud failed:', e.message);
+                return [];
+              }
             }
 
             // Добавить клиента в Supabase или локально
@@ -1307,6 +1327,7 @@
               if (cloud && typeof cloud.bootstrapSync === 'function') {
                 // ВАЖНО: Сначала нужен signIn, ПОТОМ bootstrapSync!
                 console.log('[HEYS] 🚀 Starting auto sign-in...');
+                console.log('[HEYS] 📊 DEBUG: isInitializing=true, starting sign-in flow');
 
                 // Пытаемся автоматический вход с сохранёнными credentials
                 const savedEmail = 'poplanton@mail.ru'; // TODO: взять из настроек
@@ -1316,29 +1337,36 @@
                   .signIn(savedEmail, savedPwd)
                   .then(async (result) => {
                     console.log('[HEYS] ✅ Auto sign-in completed, user:', result.user?.email);
+                    console.log('[HEYS] 📊 DEBUG: signIn result:', { hasUser: !!result.user, hasError: !!result.error });
 
                     if (result.error) {
                       console.error('[HEYS] ❌ Sign-in failed:', result.error);
+                      console.log('[HEYS] 📊 DEBUG: Calling initLocalData due to error');
                       initLocalData();
+                      console.log('[HEYS] 📊 DEBUG: Setting isInitializing=false (error path)');
                       setIsInitializing(false);
                       return;
                     }
 
                     // Теперь пользователь залогинен, можно устанавливать cloudUser
                     const user = result.user || (cloud.getUser && cloud.getUser());
+                    console.log('[HEYS] 📊 DEBUG: user object:', { hasUser: !!user, email: user?.email });
                     if (user) {
                       setCloudUser(user);
                       setStatus('online');
 
                       // Загружаем НАСТОЯЩИХ клиентов из Supabase таблицы clients
                       try {
+                        console.log('[HEYS] 📊 DEBUG: Fetching clients from cloud...');
                         const realClients = await fetchClientsFromCloud(user.id);
+                        console.log('[HEYS] 📊 DEBUG: Fetched clients:', realClients?.length || 0);
                         if (realClients && realClients.length > 0) {
                           setClients(realClients);
                           U.lsSet('heys_clients', realClients); // Сохраняем в localStorage
 
                           // Восстанавливаем последнего выбранного клиента, если он есть в списке
                           const savedClientId = U.lsGet('heys_client_current');
+                          console.log('[HEYS] 📊 DEBUG: savedClientId:', savedClientId);
                           if (savedClientId && realClients.some((c) => c.id === savedClientId)) {
                             console.log('[HEYS] 🔄 Restoring saved client:', savedClientId);
                             setClientId(savedClientId);
@@ -1357,6 +1385,7 @@
                           );
                         } else {
                           // Если нет клиентов в Supabase — fallback на localStorage
+                          console.log('[HEYS] 📊 DEBUG: No clients from cloud, using local fallback');
                           const localClients = U.lsGet('heys_clients', []).filter(
                             (c) => !c.id?.startsWith('local-user'),
                           );
@@ -1368,11 +1397,13 @@
                         }
                       } catch (error) {
                         console.error('[HEYS] Error loading clients:', error);
+                        console.log('[HEYS] 📊 DEBUG: Exception caught, calling initLocalData');
                         initLocalData();
                       }
                     } else {
                       // Нет пользователя после signIn — используем offline
                       console.warn('[HEYS] ⚠️ No user after signIn, using offline mode');
+                      console.log('[HEYS] 📊 DEBUG: No user, calling initLocalData');
                       initLocalData();
                     }
 
@@ -1386,16 +1417,21 @@
                       '[HEYS] 🎯 Setting isInitializing = false, clients.length:',
                       clients.length,
                     );
+                    console.log('[HEYS] 📊 DEBUG: ===== ABOUT TO SET isInitializing=false (success path) =====');
                     setIsInitializing(false); // ✅ Инициализация завершена
                   })
                   .catch((error) => {
                     console.error('[HEYS] ❌ Auto sign-in failed:', error);
+                    console.log('[HEYS] 📊 DEBUG: signIn.catch, calling initLocalData');
                     initLocalData();
+                    console.log('[HEYS] 📊 DEBUG: ===== ABOUT TO SET isInitializing=false (catch path) =====');
                     setIsInitializing(false); // ✅ Инициализация завершена (offline)
                   });
               } else {
                 console.log('[HEYS] ⚠️ No cloud available, using offline mode');
+                console.log('[HEYS] 📊 DEBUG: No cloud module, calling initLocalData');
                 initLocalData();
+                console.log('[HEYS] 📊 DEBUG: ===== ABOUT TO SET isInitializing=false (no cloud) =====');
                 setIsInitializing(false); // ✅ Инициализация завершена (no cloud)
               }
             }, []);

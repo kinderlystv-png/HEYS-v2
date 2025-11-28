@@ -55,6 +55,25 @@
   function err(){ try{ console.error.apply(console, ['[HEYS.cloud:ERR]'].concat([].slice.call(arguments))); }catch(e){} }
 
   /**
+   * Обёртка для запросов с таймаутом
+   * @param {Promise} promise - Promise для выполнения
+   * @param {number} ms - Таймаут в миллисекундах (по умолчанию 5000)
+   * @param {string} label - Метка для логирования ошибки
+   * @returns {Promise} Результат или {error} при таймауте
+   */
+  async function withTimeout(promise, ms = 5000, label = 'request') {
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error(`Timeout: ${label} took too long`)), ms)
+    );
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } catch (e) {
+      err(`${label} timeout`, e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
+  /**
    * Безопасный парсинг JSON
    * @param {string} v - Строка для парсинга
    * @returns {*} Распарсенное значение или исходная строка при ошибке
@@ -187,9 +206,15 @@
     if (!client) { err('client not initialized'); return; }
     try{
       status = 'signin';
-      const { data, error } = await client.auth.signInWithPassword({ email, password });
+      
+      const { data, error } = await withTimeout(
+        client.auth.signInWithPassword({ email, password }),
+        5000,
+        'signIn'
+      );
+      
       if (error) { status = 'offline'; err('signIn failed', error); return { error }; }
-      user = data.user;
+      user = data?.user;
       if (!user) { status = 'offline'; err('no user after signin'); return { error: 'no user' }; }
       status = 'sync';
       await cloud.bootstrapSync();
@@ -217,9 +242,15 @@
   cloud.bootstrapSync = async function(){
     try{
       muteMirror = true;
-      if (!client || !user) return;
-      const { data, error } = await client.from('kv_store').select('k,v,updated_at');
-      if (error) { err('bootstrap select', error); return; }
+      if (!client || !user) { muteMirror = false; return; }
+      
+      const { data, error } = await withTimeout(
+        client.from('kv_store').select('k,v,updated_at'),
+        5000,
+        'bootstrapSync'
+      );
+      
+      if (error) { err('bootstrap select', error); muteMirror = false; return; }
       const ls = global.localStorage;
       // clear only global keys for full bootstrap (no clientId)
       clearNamespace();
@@ -270,12 +301,16 @@
       
       // Проверяем, действительно ли нужна синхронизация
       // Сначала пробуем загрузить только метаданные для проверки
-      const { data: metaData, error: metaError } = await client
-        .from('client_kv_store')
-        .select('k,updated_at')
-        .eq('client_id', client_id)
-        .order('updated_at', { ascending: false })
-        .limit(5);
+      const { data: metaData, error: metaError } = await withTimeout(
+        client
+          .from('client_kv_store')
+          .select('k,updated_at')
+          .eq('client_id', client_id)
+          .order('updated_at', { ascending: false })
+          .limit(5),
+        5000,
+        'clientSync meta check'
+      );
         
       if (metaError) { 
         err('client bootstrap meta check', metaError); 
@@ -296,21 +331,24 @@
       
       // Теперь загружаем полные данные только если есть обновления
       log('🔄 [CLIENT_SYNC] Loading data for client:', client_id);
-      const { data, error } = await client.from('client_kv_store').select('k,v,updated_at').eq('client_id', client_id);
+      const { data, error } = await withTimeout(
+        client.from('client_kv_store').select('k,v,updated_at').eq('client_id', client_id),
+        10000, // 10 секунд для большого запроса
+        'clientSync full data'
+      );
       if (error) { err('client bootstrap select', error); return; }
       
-      log('✅ [CLIENT_SYNC] Loaded', data?.length || 0, 'keys from Supabase');
-      
-      // Детальное логирование каждого ключа
-      (data||[]).forEach((row, idx) => {
-        const keyType = row.k === 'heys_products' ? '📦 PRODUCTS' :
-                       row.k.includes('dayv2_') ? '📅 DAY' :
-                       row.k.includes('_profile') ? '👤 PROFILE' :
-                       row.k.includes('_norms') ? '🎯 NORMS' : '📝 OTHER';
-        const dataSize = JSON.stringify(row.v).length;
-        const itemsCount = Array.isArray(row.v) ? row.v.length : 'N/A';
-        log(`  ${idx+1}. ${keyType} | key: ${row.k} | size: ${dataSize}b | items: ${itemsCount}`);
+      // Компактная статистика вместо 81 строки логов
+      const stats = { DAY: 0, PRODUCTS: 0, PROFILE: 0, NORMS: 0, OTHER: 0 };
+      (data||[]).forEach(row => {
+        if (row.k === 'heys_products') stats.PRODUCTS++;
+        else if (row.k.includes('dayv2_')) stats.DAY++;
+        else if (row.k.includes('_profile')) stats.PROFILE++;
+        else if (row.k.includes('_norms')) stats.NORMS++;
+        else stats.OTHER++;
       });
+      const summary = Object.entries(stats).filter(([,v]) => v > 0).map(([k,v]) => `${k}: ${v}`).join(', ');
+      log(`✅ [CLIENT_SYNC] Loaded ${data?.length || 0} keys (${summary})`);
       
       const ls = global.localStorage;
       muteMirror = true;
@@ -348,49 +386,36 @@
           
           // ЗАЩИТА: не затираем локальные продукты пустым массивом из Supabase
           if (key.includes('_products')) {
-            console.log(`🔍 [PRODUCTS CHECK] key: ${key}`);
-            console.log(`🔍 [PRODUCTS CHECK] row.v is array: ${Array.isArray(row.v)}, length: ${Array.isArray(row.v) ? row.v.length : 'N/A'}`);
-            
             // Читаем актуальное локальное значение по scoped ключу
             let currentLocal = null;
             try { 
               const rawLocal = ls.getItem(key);
               if (rawLocal) currentLocal = JSON.parse(rawLocal);
-              console.log(`🔍 [PRODUCTS CHECK] currentLocal is array: ${Array.isArray(currentLocal)}, length: ${Array.isArray(currentLocal) ? currentLocal.length : 'N/A'}`);
-            } catch(e) {
-              console.warn('Failed to parse local products:', e);
-            }
+            } catch(e) {}
             
             // КРИТИЧЕСКАЯ ЗАЩИТА: НЕ ЗАТИРАЕМ непустые продукты пустым массивом
             if (Array.isArray(row.v) && row.v.length === 0) {
               if (Array.isArray(currentLocal) && currentLocal.length > 0) {
-                console.warn(`⚠️ [PRODUCTS PROTECTION] BLOCKED: Refusing to overwrite ${currentLocal.length} local products with empty cloud array`);
+                log(`⚠️ [PRODUCTS] BLOCKED: Refusing to overwrite ${currentLocal.length} local products with empty cloud array`);
                 return; // Пропускаем сохранение
               } else {
-                // 🚨 АВТОВОССТАНОВЛЕНИЕ: Оба пусты - пытаемся восстановить из backup
-                console.warn(`⚠️ [PRODUCTS] Both cloud and local are empty - attempting backup restore`);
+                // Оба пусты - пытаемся восстановить из backup
                 const backupKey = key.replace('_products', '_products_backup');
                 const backupRaw = ls.getItem(backupKey);
                 if (backupRaw) {
                   try {
                     const backupData = JSON.parse(backupRaw);
                     if (Array.isArray(backupData) && backupData.length > 0) {
-                      console.log(`✅ [RECOVERY] Restored ${backupData.length} products from backup: ${backupKey}`);
+                      log(`✅ [RECOVERY] Restored ${backupData.length} products from backup`);
                       ls.setItem(key, JSON.stringify(backupData));
-                      // Обновляем cloud данными из backup
                       muteMirror = false;
                       setTimeout(() => cloud.saveClientKey(client_id, 'heys_products', backupData), 500);
                       muteMirror = true;
-                      return; // Восстановлено из backup
+                      return;
                     }
-                  } catch(e) {
-                    console.error(`❌ [RECOVERY] Failed to parse backup:`, e);
-                  }
+                  } catch(e) {}
                 }
-                console.log(`ℹ️ [PRODUCTS] No backup found, accepting empty state`);
               }
-            } else {
-              console.log(`✅ [PRODUCTS] Loading ${Array.isArray(row.v) ? row.v.length : 'N/A'} products from cloud`);
             }
           }
           

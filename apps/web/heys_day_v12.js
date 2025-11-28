@@ -40,6 +40,11 @@
   const stepsKcal = U.stepsKcal || ((steps,w,sex,len) => { warnMissing('stepsKcal'); const coef=(sex==='female'?0.5:0.57); const km=(+steps||0)*(len||0.7)/1000; return Math.round(coef*(+w||0)*km*10)/10; });
   const parseTime = U.parseTime || ((t) => { warnMissing('parseTime'); if(!t||typeof t!=='string'||!t.includes(':')) return null; const [hh,mm]=t.split(':').map(x=>parseInt(x,10)); if(isNaN(hh)||isNaN(mm)) return null; return {hh:Math.max(0,Math.min(23,hh)),mm:Math.max(0,Math.min(59,mm))}; });
   const sleepHours = U.sleepHours || ((a,b) => { warnMissing('sleepHours'); const pt=(t)=>{ if(!t||!t.includes(':'))return null; const [h,m]=t.split(':').map(x=>+x); return isNaN(h)||isNaN(m)?null:{hh:h,mm:m}; }; const s=pt(a),e=pt(b); if(!s||!e)return 0; let d=(e.hh+e.mm/60)-(s.hh+s.mm/60); if(d<0)d+=24; return Math.round(d*10)/10; });
+  // Meal type classification
+  const getMealType = U.getMealType || ((mi, meal, allMeals, pIndex) => { 
+    warnMissing('getMealType'); 
+    return { type: 'snack', name: 'Приём ' + (mi+1), icon: '🍽️' }; 
+  });
   
   // === Import hooks from dayHooks module ===
   const H = HEYS.dayHooks || {};
@@ -371,6 +376,23 @@
       const [dropdownPos, setDropdownPos] = React.useState({top:0, left:0, width:0});
       const inputRef = React.useRef(null);
       
+      // ⭐ Состояние избранных продуктов
+      const [favorites, setFavorites] = React.useState(() => 
+        (window.HEYS && window.HEYS.store && window.HEYS.store.getFavorites) 
+          ? window.HEYS.store.getFavorites() 
+          : new Set()
+      );
+      
+      // Функция toggle избранного
+      const toggleFavorite = React.useCallback((e, productId) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (window.HEYS && window.HEYS.store && window.HEYS.store.toggleFavorite) {
+          const newState = window.HEYS.store.toggleFavorite(productId);
+          setFavorites(window.HEYS.store.getFavorites());
+        }
+      }, []);
+      
       // Обновление позиции выпадашки
       const updateDropdownPos = React.useCallback(() => {
         if (inputRef.current) {
@@ -392,17 +414,16 @@
         };
       }, [open, updateDropdownPos]);
       
-      const top20 = React.useMemo(()=>computePopularProducts(products,date),[prodSig,date.slice(0,7)]);
+      const top20 = React.useMemo(()=>computePopularProducts(products,date),[prodSig,date.slice(0,7),favorites.size]);
       const lc = String(search||'').trim().toLowerCase();
       
       // Используем умный поиск с исправлением опечаток если доступен
       const candidates = React.useMemo(() => {
+        let results;
         if (!lc) {
-          return top20 && top20.length ? top20 : products.slice(0,20);
-        }
-        
-        // Если доступен умный поиск, используем его
-        if (window.HEYS && window.HEYS.SmartSearchWithTypos) {
+          results = top20 && top20.length ? top20 : products.slice(0,20);
+        } else if (window.HEYS && window.HEYS.SmartSearchWithTypos) {
+          // Если доступен умный поиск, используем его
           try {
             const smartResult = window.HEYS.SmartSearchWithTypos.search(lc, products, {
               enablePhonetic: true,
@@ -411,16 +432,34 @@
             });
             
             if (smartResult && smartResult.results && smartResult.results.length > 0) {
-              return smartResult.results;
+              results = smartResult.results;
+            } else {
+              results = products.filter(p=>String(p.name||'').toLowerCase().includes(lc)).slice(0,20);
             }
           } catch (error) {
             DEV.warn('[HEYS] Ошибка умного поиска, используем обычный:', error);
+            results = products.filter(p=>String(p.name||'').toLowerCase().includes(lc)).slice(0,20);
           }
+        } else {
+          // Fallback к обычному поиску
+          results = products.filter(p=>String(p.name||'').toLowerCase().includes(lc)).slice(0,20);
         }
         
-        // Fallback к обычному поиску
-        return products.filter(p=>String(p.name||'').toLowerCase().includes(lc)).slice(0,20);
-      }, [lc, products, top20]);
+        // Сортируем: избранные первыми (для результатов поиска)
+        if (lc && results.length > 0) {
+          results = [...results].sort((a, b) => {
+            const aId = String(a.id ?? a.product_id ?? a.name);
+            const bId = String(b.id ?? b.product_id ?? b.name);
+            const aFav = favorites.has(aId);
+            const bFav = favorites.has(bId);
+            if (aFav && !bFav) return -1;
+            if (!aFav && bFav) return 1;
+            return 0;
+          });
+        }
+        
+        return results;
+      }, [lc, products, top20, favorites]);
       
       // Сброс выбранного индекса при изменении кандидатов
       React.useEffect(() => {
@@ -507,20 +546,39 @@
         showingFrequent && React.createElement('div', { className: 'suggest-header' }, 
           '⭐ Частые продукты'
         ),
-        (candidates||[]).map((p, index) => React.createElement('div', {
-          key:(p.id||p.name),
-          className: `suggest-item ${index === selectedIndex ? 'selected' : ''}`,
-          onMouseDown:()=>{ addProductAndFocusGrams(p); },
-          onMouseEnter:()=>{ setSelectedIndex(index); },
-          ref: index === selectedIndex ? (el) => {
-            if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-          } : null
-        }, 
-        React.createElement('span', null, p.name),
-        React.createElement('small', {style:{color:'var(--muted)', fontSize:'11px', marginLeft:'8px', fontWeight:'normal'}}, 
-          `${Math.round((p.kcal100 || 0))} ккал/100г`
-        )
-        ))
+        (candidates||[]).map((p, index) => {
+          const productId = String(p.id ?? p.product_id ?? p.name);
+          const isFav = favorites.has(productId);
+          return React.createElement('div', {
+            key:(p.id||p.name),
+            className: `suggest-item ${index === selectedIndex ? 'selected' : ''}`,
+            onMouseDown:()=>{ addProductAndFocusGrams(p); },
+            onMouseEnter:()=>{ setSelectedIndex(index); },
+            ref: index === selectedIndex ? (el) => {
+              if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            } : null
+          }, 
+            // Кнопка избранного
+            React.createElement('button', {
+              className: 'favorite-btn',
+              onMouseDown: (e) => toggleFavorite(e, productId),
+              title: isFav ? 'Убрать из избранного' : 'Добавить в избранное',
+              style: {
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '2px 6px 2px 0',
+                fontSize: '14px',
+                opacity: isFav ? 1 : 0.3,
+                transition: 'opacity 0.15s'
+              }
+            }, isFav ? '⭐' : '☆'),
+            React.createElement('span', {style:{flex:1}}, p.name),
+            React.createElement('small', {style:{color:'var(--muted)', fontSize:'11px', marginLeft:'8px', fontWeight:'normal'}}, 
+              `${Math.round((p.kcal100 || 0))} ккал/100г`
+            )
+          );
+        })
       ) : null;
       
       return React.createElement('div', {className:'row suggest-wrap', style:{flex:1, position:'relative'}},
@@ -607,19 +665,40 @@
     const pullStartY = React.useRef(0);
     const isPulling = React.useRef(false);
     
-    // === Dark Theme ===
-    const [isDarkTheme, setIsDarkTheme] = useState(() => {
+    // === Dark Theme (3 modes: light / dark / auto) ===
+    const [theme, setTheme] = useState(() => {
       const saved = localStorage.getItem('heys_theme');
-      return saved === 'dark';
+      // Валидация: только light/dark/auto, иначе light
+      return ['light', 'dark', 'auto'].includes(saved) ? saved : 'light';
     });
     
-    // Применяем тему при изменении
-    React.useEffect(() => {
-      document.documentElement.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
-      localStorage.setItem('heys_theme', isDarkTheme ? 'dark' : 'light');
-    }, [isDarkTheme]);
+    // Вычисляем реальную тему (для auto режима)
+    const resolvedTheme = useMemo(() => {
+      if (theme === 'auto') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      return theme;
+    }, [theme]);
     
-    const toggleTheme = () => setIsDarkTheme(prev => !prev);
+    // Применяем тему + слушаем системные изменения
+    React.useEffect(() => {
+      document.documentElement.setAttribute('data-theme', resolvedTheme);
+      localStorage.setItem('heys_theme', theme);
+      
+      if (theme !== 'auto') return;
+      
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = () => {
+        document.documentElement.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
+      };
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
+    }, [theme, resolvedTheme]);
+    
+    // Cycle: light → dark → auto → light
+    const cycleTheme = () => {
+      setTheme(prev => prev === 'light' ? 'dark' : prev === 'dark' ? 'auto' : 'light');
+    };
     
     // === Confetti при достижении цели ===
     const [showConfetti, setShowConfetti] = useState(false);
@@ -952,6 +1031,8 @@
     // Состояние для второго слайда (самочувствие)
     const [pickerStep, setPickerStep] = useState(1); // 1 = время, 2 = самочувствие
     const [pendingMealMood, setPendingMealMood] = useState({mood: 5, wellbeing: 5, stress: 5});
+    // Состояние для типа приёма в модалке создания
+    const [pendingMealType, setPendingMealType] = useState(null); // null = авто
     
     // Открыть модалку для нового приёма
     function openTimePickerForNewMeal() {
@@ -959,6 +1040,7 @@
       // Конвертируем реальные часы в индекс колеса
       setPendingMealTime({ hours: hourToWheelIndex(now.getHours()), minutes: now.getMinutes() });
       setPendingMealMood({ mood: 5, wellbeing: 5, stress: 5 });
+      setPendingMealType(null); // Сбрасываем на авто
       setEditingMealIndex(null);
       setEditMode('new');
       setPickerStep(1);
@@ -1016,10 +1098,8 @@
       // Конвертируем индекс колеса в реальные часы
       const realHours = wheelIndexToHour(pendingMealTime.hours);
       const timeStr = pad2(realHours) + ':' + pad2(pendingMealTime.minutes);
-      const updatedMeals = day.meals.map((m, i) => 
-        i === editingMealIndex ? { ...m, time: timeStr } : m
-      );
-      setDay({ ...day, meals: updatedMeals });
+      // Используем функцию с автосортировкой
+      updateMealTime(editingMealIndex, timeStr);
       setShowTimePicker(false);
       setEditingMealIndex(null);
     }
@@ -1052,11 +1132,12 @@
             ? { ...m, time: timeStr, mood: moodVal, wellbeing: wellbeingVal, stress: stressVal }
             : m
         );
-        setDay({ ...day, meals: updatedMeals });
+        // Сортируем после обновления
+        const sortedMeals = sortMealsByTime(updatedMeals);
+        setDay({ ...day, meals: sortedMeals });
       } else {
         // Создание нового
-        const newMealIndex = day.meals.length;
-        setDay({...day, meals:[...day.meals, {
+        const newMeal = {
           id: uid('m_'), 
           name: 'Приём', 
           time: timeStr, 
@@ -1064,9 +1145,13 @@
           wellbeing: wellbeingVal, 
           stress: stressVal, 
           items: []
-        }]});
-        // Разворачиваем только новый приём
-        expandOnlyMeal(newMealIndex);
+        };
+        // Добавляем и сортируем
+        const newMeals = sortMealsByTime([...day.meals, newMeal]);
+        setDay({...day, meals: newMeals});
+        // Находим индекс нового приёма после сортировки
+        const newIndex = newMeals.findIndex(m => m.id === newMeal.id);
+        expandOnlyMeal(newIndex >= 0 ? newIndex : newMeals.length - 1);
       }
       
       setShowTimePicker(false);
@@ -1098,6 +1183,35 @@
         }
       }
     }
+    
+    // Сортировка приёмов по времени (ночные 00:00-02:59 в конец)
+    function sortMealsByTime(meals) {
+      if (!meals || meals.length <= 1) return meals;
+      
+      return [...meals].sort((a, b) => {
+        const timeA = U.timeToMinutes ? U.timeToMinutes(a.time) : null;
+        const timeB = U.timeToMinutes ? U.timeToMinutes(b.time) : null;
+        
+        // Если оба без времени — сохраняем порядок
+        if (timeA === null && timeB === null) return 0;
+        // Без времени — в конец
+        if (timeA === null) return 1;
+        if (timeB === null) return -1;
+        
+        return timeA - timeB;
+      });
+    }
+    
+    // Обновление времени приёма с автосортировкой
+    function updateMealTime(mealIndex, newTime) {
+      const updatedMeals = day.meals.map((m, i) => 
+        i === mealIndex ? { ...m, time: newTime } : m
+      );
+      // Сортируем после обновления
+      const sortedMeals = sortMealsByTime(updatedMeals);
+      setDay({ ...day, meals: sortedMeals });
+    }
+    
     function removeMeal(i){ 
       const meals = day.meals.filter((_, idx) => idx !== i); 
       setDay({...day, meals}); 
@@ -1490,8 +1604,72 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     const t=(M.mealTotals? M.mealTotals(m,pIndex): {kcal:0,carbs:0,simple:0,complex:0,prot:0,fat:0,bad:0,good:0,trans:0,fiber:0});
   let gSum=0, giSum=0, harmSum=0; (m.items||[]).forEach(it=>{ const p=getProductFromItem(it,pIndex); if(!p)return; const g=+it.grams||0; if(!g)return; const gi=p.gi??p.gi100??p.GI??p.giIndex; const harm=p.harm??p.harmScore??p.harm100??p.harmPct; gSum+=g; if(gi!=null) giSum+=gi*g; if(harm!=null) harmSum+=harm*g; }); t.gi=gSum?giSum/gSum:0; t.harm=gSum?harmSum/gSum:0; return t; }
       const totals=mTotals(meal);
+      // Определяем тип приёма пищи (ручной или автоматический)
+      const manualType = meal.mealType; // если пользователь выбрал вручную
+      const autoTypeInfo = getMealType(mi, meal, day.meals, pIndex);
+      const mealTypeInfo = manualType && U.MEAL_TYPES && U.MEAL_TYPES[manualType] 
+        ? { type: manualType, ...U.MEAL_TYPES[manualType] }
+        : autoTypeInfo;
+      
+      // Функция смены типа приёма
+      const changeMealType = (newType) => {
+        const updatedMeals = day.meals.map((m, i) => 
+          i === mi ? { ...m, mealType: newType } : m
+        );
+        setDay({ ...day, meals: updatedMeals });
+        haptic('light');
+      };
+      
+      // Dropdown для выбора типа (на мобильных нативный select, на десктопе custom)
+      const MEAL_TYPE_OPTIONS = [
+        { value: '', label: '🔄 Авто' },
+        { value: 'breakfast', label: '🍳 Завтрак' },
+        { value: 'snack1', label: '🍎 Перекус' },
+        { value: 'lunch', label: '🍲 Обед' },
+        { value: 'snack2', label: '🥜 Перекус' },
+        { value: 'dinner', label: '🍽️ Ужин' },
+        { value: 'snack3', label: '🧀 Перекус' },
+        { value: 'night', label: '🌙 Ночной' }
+      ];
+      
+      // Форматируем время для отображения
+      const timeDisplay = meal.time || '';
+      
+      // Калории приёма
+      const mealKcal = Math.round(totals.kcal || 0);
+      
       return React.createElement(React.Fragment,{key:meal.id},
-        React.createElement('div',{className:'meal-sep'},'ПРИЕМ '+(mi+1)),
+        // Заголовок приёма: тип (dropdown) · время · калории
+        React.createElement('div',{className:'meal-sep meal-type-' + mealTypeInfo.type},
+          // Обёртка для dropdown
+          React.createElement('div', { className: 'meal-type-wrapper' },
+            // Текущий тип (иконка + название) — кликабельный
+            React.createElement('span', { className: 'meal-type-label' }, 
+              mealTypeInfo.icon + ' ' + mealTypeInfo.name,
+              // Индикатор dropdown
+              React.createElement('span', { className: 'meal-type-arrow' }, ' ▾')
+            ),
+            // Подсказка "изменить"
+            React.createElement('span', { className: 'meal-type-hint' }, 'изменить'),
+            // Скрытый select поверх
+            React.createElement('select', {
+              className: 'meal-type-select',
+              value: manualType || '',
+              onChange: (e) => changeMealType(e.target.value || null),
+              title: 'Изменить тип приёма'
+            }, MEAL_TYPE_OPTIONS.map(opt => 
+              React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
+            ))
+          ),
+          // Время (если есть)
+          timeDisplay && React.createElement('span', { className: 'meal-time-badge' }, 
+            '· ' + timeDisplay
+          ),
+          // Калории (если есть продукты)
+          mealKcal > 0 && React.createElement('span', { className: 'meal-kcal-badge' }, 
+            mealKcal + ' ккал'
+          )
+        ),
         React.createElement('div',{className:'card tone-blue meal-card',style:{marginTop:'4px', width: '100%'}},
         // MOBILE: Meal totals at top (before search)
         (meal.items || []).length > 0 && React.createElement('div', { className: 'mpc-totals-wrap mobile-only' },
@@ -1768,7 +1946,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('tr',null,
             React.createElement('td',null,''),
             React.createElement('td',null,''),
-            per100Head.map((_,i)=> i===per100Head.length-1? React.createElement('td',{key:'ds-pvL'+i,style:{fontWeight:600,textAlign:'right',paddingRight:'6px'}},'Факт'):React.createElement('td',{key:'ds-pv'+i},'')),
+            per100Head.map((_,i)=> i===per100Head.length-1? React.createElement('td',{key:'ds-pvL'+i,style:{fontWeight:600,textAlign:'right',paddingRight:'6px'},title:'Факт'},'Ф'):React.createElement('td',{key:'ds-pv'+i},'')),
             factKeys.map(k=>factCell(k)),
             React.createElement('td',null,'')
           ),
@@ -1776,7 +1954,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('tr',null,
             React.createElement('td',null,''),
             React.createElement('td',null,''),
-            per100Head.map((_,i)=> i===per100Head.length-1? React.createElement('td',{key:'ds-npL'+i,style:{fontWeight:600,textAlign:'right',paddingRight:'6px'}},'Норма'):React.createElement('td',{key:'ds-np'+i},'')),
+            per100Head.map((_,i)=> i===per100Head.length-1? React.createElement('td',{key:'ds-npL'+i,style:{fontWeight:600,textAlign:'right',paddingRight:'6px'},title:'Норма'},'Н'):React.createElement('td',{key:'ds-np'+i},'')),
             factKeys.map(k=>React.createElement('td',{key:'ds-nv'+k},normVal(k))),
             React.createElement('td',null,'')
           ),
@@ -1784,7 +1962,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('tr',{className:'daily-dev-row'},
             React.createElement('td',null,''),
             React.createElement('td',null,''),
-            per100Head.map((_,i)=> i===per100Head.length-1? React.createElement('td',{key:'ds-dpL'+i,style:{fontWeight:600,textAlign:'right',paddingRight:'6px'}},'Откл'):React.createElement('td',{key:'ds-dp'+i},'')),
+            per100Head.map((_,i)=> i===per100Head.length-1? React.createElement('td',{key:'ds-dpL'+i,style:{fontWeight:600,textAlign:'right',paddingRight:'6px'},title:'Отклонение'},'Δ'):React.createElement('td',{key:'ds-dp'+i},'')),
             factKeys.map(k=>devCell(k)),
             React.createElement('td',null,'')
           )
@@ -1807,7 +1985,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         ),
         // Fact row
         React.createElement('div', { className: 'mds-row' },
-          React.createElement('span', { className: 'mds-label' }, 'Факт'),
+          React.createElement('span', { className: 'mds-label', title: 'Факт' }, 'Ф'),
           React.createElement('span', null, Math.round(dayTot.kcal)),
           React.createElement('span', null, Math.round(dayTot.carbs)),
           React.createElement('span', { className: 'mds-dim' }, pct(dayTot.simple, dayTot.carbs) + '/' + pct(dayTot.complex, dayTot.carbs)),
@@ -1820,7 +1998,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         ),
         // Norm row
         React.createElement('div', { className: 'mds-row' },
-          React.createElement('span', { className: 'mds-label' }, 'Норма'),
+          React.createElement('span', { className: 'mds-label', title: 'Норма' }, 'Н'),
           React.createElement('span', null, Math.round(normAbs.kcal || 0)),
           React.createElement('span', null, Math.round(normAbs.carbs || 0)),
           React.createElement('span', { className: 'mds-dim' }, pct(normAbs.simple || 0, normAbs.carbs || 1) + '/' + pct(normAbs.complex || 0, normAbs.carbs || 1)),
@@ -1833,7 +2011,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         ),
         // Deviation row - custom layout matching header columns
         React.createElement('div', { className: 'mds-row mds-dev' },
-          React.createElement('span', { className: 'mds-label' }, 'Откл'),
+          React.createElement('span', { className: 'mds-label', title: 'Отклонение' }, 'Δ'),
           // kcal
           (() => { const n = normAbs.kcal || 0, f = dayTot.kcal || 0; if (!n) return React.createElement('span', { key: 'dev-kcal' }, '-'); const d = Math.round(((f - n) / n) * 100); return React.createElement('span', { key: 'dev-kcal', style: { color: d > 0 ? '#dc2626' : d < 0 ? '#059669' : '#6b7280' } }, (d > 0 ? '+' : '') + d + '%'); })(),
           // carbs
@@ -2387,13 +2565,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             React.createElement('span', { className: 'goal-unit' }, 'ккал')
           )
         ),
-        React.createElement('div', { className: 'goal-progress-track' },
+        React.createElement('div', { className: 'goal-progress-track' + (eatenKcal > optimum ? ' has-over' : '') },
+            // Зелёная часть — до цели
             React.createElement('div', { 
-              className: 'goal-progress-fill' + (eatenKcal > optimum ? ' over' : ''),
-              style: { width: Math.min(100, animatedProgress) + '%' }
+              className: 'goal-progress-fill',
+              style: { width: Math.min(eatenKcal > optimum ? (optimum / eatenKcal * 100) : animatedProgress, 100) + '%' }
             }),
-            // Маркер цели на 100%
-            React.createElement('div', { className: 'goal-marker' })
+            // Красная часть — перебор (справа от маркера)
+            eatenKcal > optimum && React.createElement('div', { 
+              className: 'goal-progress-over',
+              style: { 
+                left: (optimum / eatenKcal * 100) + '%',
+                width: ((eatenKcal - optimum) / eatenKcal * 100) + '%'
+              }
+            }),
+            // Маркер цели — сдвигается влево при переборе
+            React.createElement('div', { 
+              className: 'goal-marker' + (eatenKcal > optimum ? ' over' : ''),
+              style: eatenKcal > optimum ? { left: (optimum / eatenKcal * 100) + '%' } : {}
+            })
           ),
           React.createElement('div', { className: 'goal-progress-footer' },
             eatenKcal <= optimum 
@@ -2783,12 +2973,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         title: 'Добавить приём пищи'
       }, '+'),
       
-      // Theme toggle button
+      // Theme toggle button (cycle: light → dark → auto)
       React.createElement('button', {
         className: 'theme-toggle',
-        onClick: toggleTheme,
-        title: isDarkTheme ? 'Светлая тема' : 'Тёмная тема'
-      }, isDarkTheme ? '☀️' : '🌙'),
+        onClick: cycleTheme,
+        'data-theme-mode': theme,
+        title: theme === 'light' ? 'Светлая тема' : theme === 'dark' ? 'Тёмная тема' : 'Авто (системная)'
+      }, theme === 'light' ? '☀️' : theme === 'dark' ? '🌙' : 'А'),
       
       // Toast подсказка БЖУ
       macroTip && toastVisible && React.createElement('div', {
@@ -2851,7 +3042,30 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   'Ночной приём — запишется в ',
                   React.createElement('b', null, currentDateLabel)
                 )
-              )
+              ),
+              // Предпросмотр типа приёма
+              (() => {
+                const timeStr = `${String(pendingMealTime.hours).padStart(2, '0')}:${String(pendingMealTime.minutes).padStart(2, '0')}`;
+                const previewType = pendingMealType || HEYS.dayUtils.getMealTypeForPreview(timeStr, day.meals || []);
+                const typeInfo = HEYS.dayUtils.MEAL_TYPES[previewType];
+                return React.createElement('div', { className: 'meal-type-preview' },
+                  React.createElement('span', { className: 'meal-type-preview-label' }, 'Тип приёма:'),
+                  React.createElement('div', { className: 'meal-type-preview-value meal-type-' + previewType },
+                    React.createElement('span', { className: 'meal-type-preview-icon' }, typeInfo.icon),
+                    React.createElement('span', { className: 'meal-type-preview-name' }, typeInfo.name),
+                    React.createElement('select', {
+                      className: 'meal-type-preview-select',
+                      value: previewType,
+                      onChange: (e) => setPendingMealType(e.target.value)
+                    },
+                      Object.entries(HEYS.dayUtils.MEAL_TYPES).map(([key, val]) =>
+                        React.createElement('option', { key, value: key }, val.icon + ' ' + val.name)
+                      )
+                    ),
+                    React.createElement('span', { className: 'meal-type-hint' }, 'изменить')
+                  )
+                );
+              })()
             ),
             
             // Step 2: Самочувствие (показывается при editMode='new' или 'mood')

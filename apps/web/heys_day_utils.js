@@ -187,7 +187,12 @@
   function computePopularProducts(ps, iso){
     const sig = productsSignature(ps);
     const monthKey = (iso||todayISO()).slice(0,7); // YYYY-MM
-    const key = monthKey+'::'+sig;
+    // Добавляем favorites в ключ кэша чтобы обновлять при изменении избранных
+    const favorites = (window.HEYS && window.HEYS.store && window.HEYS.store.getFavorites) 
+      ? window.HEYS.store.getFavorites() 
+      : new Set();
+    const favSig = Array.from(favorites).sort().join(',');
+    const key = monthKey+'::'+sig+'::'+favSig;
     const now = Date.now();
     const ttl = 1000*60*10; // 10 минут
     const cached = POPULAR_CACHE[key];
@@ -209,7 +214,14 @@
       let p=idx.byId.get(String(k))||idx.byName.get(String(k).trim().toLowerCase()); 
       if(p) arr.push({p,c}); 
     });
-    arr.sort((a,b)=>b.c-a.c);
+    // Сортировка: избранные первые, затем по частоте
+    arr.sort((a,b)=>{
+      const aFav = favorites.has(String(a.p.id ?? a.p.product_id ?? a.p.name));
+      const bFav = favorites.has(String(b.p.id ?? b.p.product_id ?? b.p.name));
+      if (aFav && !bFav) return -1;
+      if (!aFav && bFav) return 1;
+      return b.c - a.c;
+    });
     const list = arr.slice(0,20).map(x=>x.p);
     POPULAR_CACHE[key] = { ts: now, list };
     return list;
@@ -263,6 +275,220 @@
     return r1(d); 
   }
 
+  // === Meal Type Classification ===
+  // Типы приёмов пищи с иконками и названиями
+  const MEAL_TYPES = {
+    breakfast: { name: 'Завтрак', icon: '🍳', order: 1 },
+    snack1:    { name: 'Перекус', icon: '🍎', order: 2 },
+    lunch:     { name: 'Обед', icon: '🍲', order: 3 },
+    snack2:    { name: 'Перекус', icon: '🥜', order: 4 },
+    dinner:    { name: 'Ужин', icon: '🍽️', order: 5 },
+    snack3:    { name: 'Перекус', icon: '🧀', order: 6 },
+    night:     { name: 'Ночной приём', icon: '🌙', order: 7 }
+  };
+
+  // Пороги для определения "основного приёма" vs "перекуса"
+  const MAIN_MEAL_THRESHOLDS = {
+    minProducts: 3,      // минимум продуктов для основного приёма
+    minGrams: 200,       // минимум граммов для основного приёма
+    minKcal: 300         // минимум калорий для основного приёма
+  };
+
+  /**
+   * Вычисляет тотал по приёму (граммы, продукты, калории)
+   */
+  function getMealStats(meal, pIndex) {
+    if (!meal || !meal.items || !meal.items.length) {
+      return { totalGrams: 0, productCount: 0, totalKcal: 0 };
+    }
+    
+    let totalGrams = 0;
+    let totalKcal = 0;
+    const productCount = meal.items.length;
+    
+    meal.items.forEach(item => {
+      const g = +item.grams || 0;
+      totalGrams += g;
+      
+      // Пытаемся получить калории
+      const p = pIndex ? getProductFromItem(item, pIndex) : null;
+      if (p) {
+        const per = per100(p);
+        totalKcal += (per.kcal100 || 0) * g / 100;
+      }
+    });
+    
+    return { totalGrams, productCount, totalKcal: Math.round(totalKcal) };
+  }
+
+  /**
+   * Проверяет, является ли приём "основным" (завтрак/обед/ужин) по размеру
+   */
+  function isMainMeal(mealStats) {
+    const { totalGrams, productCount, totalKcal } = mealStats;
+    
+    // Основной приём если: много продуктов ИЛИ (много граммов И больше 1 продукта)
+    if (productCount >= MAIN_MEAL_THRESHOLDS.minProducts) return true;
+    if (totalGrams >= MAIN_MEAL_THRESHOLDS.minGrams && productCount >= 2) return true;
+    if (totalKcal >= MAIN_MEAL_THRESHOLDS.minKcal) return true;
+    
+    return false;
+  }
+
+  /**
+   * Преобразует время в минуты от полуночи (с учётом ночных часов)
+   * Ночные часы (00:00-02:59) считаются как 24:00-26:59
+   */
+  function timeToMinutes(timeStr) {
+    const parsed = parseTime(timeStr);
+    if (!parsed) return null;
+    
+    let { hh, mm } = parsed;
+    // Ночные часы (00-02) — это "после полуночи" предыдущего дня
+    if (hh < NIGHT_HOUR_THRESHOLD) {
+      hh += 24;
+    }
+    return hh * 60 + mm;
+  }
+
+  /**
+   * Определяет тип приёма пищи на основе:
+   * - Порядкового номера (первый = завтрак)
+   * - Времени (деление дня на слоты)
+   * - Размера приёма (основной vs перекус)
+   * 
+   * @param {number} mealIndex - Индекс приёма в отсортированном списке
+   * @param {Object} meal - Объект приёма {id, time, items, ...}
+   * @param {Array} allMeals - Все приёмы дня (отсортированы по времени)
+   * @param {Object} pIndex - Индекс продуктов для расчёта калорий
+   * @returns {Object} { type: string, name: string, icon: string }
+   */
+  function getMealType(mealIndex, meal, allMeals, pIndex) {
+    // Первый приём дня всегда Завтрак
+    if (mealIndex === 0) {
+      return { type: 'breakfast', ...MEAL_TYPES.breakfast };
+    }
+    
+    // Получаем время первого приёма (завтрака)
+    const firstMeal = allMeals[0];
+    const breakfastMinutes = timeToMinutes(firstMeal?.time);
+    const currentMinutes = timeToMinutes(meal?.time);
+    
+    // Если время не указано, определяем по порядку и размеру
+    if (breakfastMinutes === null || currentMinutes === null) {
+      return fallbackMealType(mealIndex, meal, pIndex);
+    }
+    
+    // Конец дня = 03:00 следующего дня = 27:00 в нашей системе
+    const endOfDayMinutes = 27 * 60; // 03:00 + 24 = 27:00
+    
+    // Оставшееся время от завтрака до конца дня
+    const remainingMinutes = endOfDayMinutes - breakfastMinutes;
+    
+    // Делим на 6 слотов (7 типов минус завтрак = 6)
+    const slotDuration = remainingMinutes / 6;
+    
+    // Определяем в какой слот попадает текущий приём
+    const minutesSinceBreakfast = currentMinutes - breakfastMinutes;
+    const slotIndex = Math.floor(minutesSinceBreakfast / slotDuration);
+    
+    // Типы слотов: 0=перекус1, 1=обед, 2=перекус2, 3=ужин, 4=перекус3, 5=ночной
+    const slotTypes = ['snack1', 'lunch', 'snack2', 'dinner', 'snack3', 'night'];
+    
+    // Получаем статистику приёма
+    const mealStats = getMealStats(meal, pIndex);
+    const isMain = isMainMeal(mealStats);
+    
+    // Определяем базовый тип по слоту
+    let baseType = slotTypes[clamp(slotIndex, 0, 5)];
+    
+    // Корректируем: если попали в "перекус" слот, но это большой приём — 
+    // проверяем соседние "основные" слоты
+    if (baseType.startsWith('snack') && isMain) {
+      // Ищем ближайший основной слот
+      if (slotIndex <= 1) {
+        baseType = 'lunch';
+      } else if (slotIndex >= 2 && slotIndex <= 3) {
+        baseType = 'dinner';
+      }
+      // Если после ужина большой приём — оставляем как есть (поздний ужин → snack3)
+    }
+    
+    // Обратная корректировка: если попали в "основной" слот, но это маленький приём — 
+    // оставляем как основной (обед может быть лёгким)
+    
+    // Проверяем не дублируется ли уже этот тип (избегаем 2 обеда)
+    const usedTypes = new Set();
+    for (let i = 0; i < mealIndex; i++) {
+      const prevType = getMealTypeSimple(i, allMeals[i], allMeals, pIndex);
+      usedTypes.add(prevType);
+    }
+    
+    // Если обед уже был, а мы пытаемся назвать это обедом — делаем перекусом
+    if (baseType === 'lunch' && usedTypes.has('lunch')) {
+      baseType = 'snack2';
+    }
+    if (baseType === 'dinner' && usedTypes.has('dinner')) {
+      baseType = 'snack3';
+    }
+    
+    return { type: baseType, ...MEAL_TYPES[baseType] };
+  }
+
+  /**
+   * Упрощённая версия для проверки дубликатов (без рекурсии)
+   */
+  function getMealTypeSimple(mealIndex, meal, allMeals, pIndex) {
+    if (mealIndex === 0) return 'breakfast';
+    
+    const firstMeal = allMeals[0];
+    const breakfastMinutes = timeToMinutes(firstMeal?.time);
+    const currentMinutes = timeToMinutes(meal?.time);
+    
+    if (breakfastMinutes === null || currentMinutes === null) {
+      return 'snack1';
+    }
+    
+    const endOfDayMinutes = 27 * 60;
+    const remainingMinutes = endOfDayMinutes - breakfastMinutes;
+    const slotDuration = remainingMinutes / 6;
+    const minutesSinceBreakfast = currentMinutes - breakfastMinutes;
+    const slotIndex = Math.floor(minutesSinceBreakfast / slotDuration);
+    
+    const slotTypes = ['snack1', 'lunch', 'snack2', 'dinner', 'snack3', 'night'];
+    let baseType = slotTypes[clamp(slotIndex, 0, 5)];
+    
+    const mealStats = getMealStats(meal, pIndex);
+    const isMain = isMainMeal(mealStats);
+    
+    if (baseType.startsWith('snack') && isMain) {
+      if (slotIndex <= 1) baseType = 'lunch';
+      else if (slotIndex >= 2 && slotIndex <= 3) baseType = 'dinner';
+    }
+    
+    return baseType;
+  }
+
+  /**
+   * Fallback определение типа (когда нет времени)
+   */
+  function fallbackMealType(mealIndex, meal, pIndex) {
+    const mealStats = getMealStats(meal, pIndex);
+    const isMain = isMainMeal(mealStats);
+    
+    // По порядку: 0=завтрак, 1=перекус/обед, 2=перекус/ужин, ...
+    const fallbackTypes = [
+      'breakfast',
+      isMain ? 'lunch' : 'snack1',
+      isMain ? 'dinner' : 'snack2',
+      'snack3',
+      'night'
+    ];
+    
+    const type = fallbackTypes[clamp(mealIndex, 0, fallbackTypes.length - 1)];
+    return { type, ...MEAL_TYPES[type] };
+  }
+
   // Форматирование даты для отображения
   function formatDateDisplay(isoDate) {
     const d = parseISO(isoDate);
@@ -280,6 +506,52 @@
     if (isToday) return { label: 'Сегодня', sub: `${dayNum} ${month}` };
     if (isYesterday) return { label: 'Вчера', sub: `${dayNum} ${month}` };
     return { label: `${dayNum} ${month}`, sub: dayName };
+  }
+
+  /**
+   * Предпросмотр типа приёма для модалки создания.
+   * Определяет тип по времени и существующим приёмам (без данных о продуктах).
+   * @param {string} timeStr - время в формате "HH:MM"
+   * @param {Array} existingMeals - массив существующих приёмов дня
+   * @returns {string} - ключ типа (breakfast, lunch, dinner, snack1, snack2, snack3, night)
+   */
+  function getMealTypeForPreview(timeStr, existingMeals) {
+    const meals = existingMeals || [];
+    
+    // Если нет приёмов — это будет первый, значит завтрак
+    if (meals.length === 0) {
+      return 'breakfast';
+    }
+    
+    // Находим первый приём (завтрак)
+    const sortedMeals = [...meals].sort((a, b) => {
+      const aMin = timeToMinutes(a.time) || 0;
+      const bMin = timeToMinutes(b.time) || 0;
+      return aMin - bMin;
+    });
+    
+    const breakfastMinutes = timeToMinutes(sortedMeals[0]?.time);
+    const currentMinutes = timeToMinutes(timeStr);
+    
+    if (breakfastMinutes === null || currentMinutes === null) {
+      return 'snack1'; // fallback
+    }
+    
+    // Если новый приём раньше первого — он станет завтраком
+    if (currentMinutes < breakfastMinutes) {
+      return 'breakfast';
+    }
+    
+    // Конец дня = 03:00 следующего дня = 27:00
+    const endOfDayMinutes = 27 * 60;
+    const remainingMinutes = endOfDayMinutes - breakfastMinutes;
+    const slotDuration = remainingMinutes / 6;
+    
+    const minutesSinceBreakfast = currentMinutes - breakfastMinutes;
+    const slotIndex = Math.floor(minutesSinceBreakfast / slotDuration);
+    
+    const slotTypes = ['snack1', 'lunch', 'snack2', 'dinner', 'snack3', 'night'];
+    return slotTypes[clamp(slotIndex, 0, 5)];
   }
 
   // === Exports ===
@@ -325,7 +597,17 @@
     stepsKcal,
     // Time/Sleep
     parseTime,
-    sleepHours
+    sleepHours,
+    // Meal Type Classification
+    MEAL_TYPES,
+    MAIN_MEAL_THRESHOLDS,
+    getMealStats,
+    isMainMeal,
+    timeToMinutes,
+    getMealType,
+    getMealTypeSimple,
+    getMealTypeForPreview,
+    fallbackMealType
   };
 
 })(window);

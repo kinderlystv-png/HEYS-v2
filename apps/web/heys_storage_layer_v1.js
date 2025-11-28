@@ -161,4 +161,74 @@
 
   Store.flushMemory = function(){ memory.clear(); };
 
+  // ═══════════════════════════════════════════════════════════════════
+  // ⭐ ИЗБРАННЫЕ ПРОДУКТЫ
+  // ═══════════════════════════════════════════════════════════════════
+  const FAVORITES_KEY = 'heys_favorite_products';
+  
+  /**
+   * Получить Set id избранных продуктов
+   * @returns {Set<string>}
+   */
+  Store.getFavorites = function() {
+    const arr = Store.get(FAVORITES_KEY, []);
+    return new Set(Array.isArray(arr) ? arr : []);
+  };
+  
+  /**
+   * Проверить, является ли продукт избранным
+   * @param {string|number} productId
+   * @returns {boolean}
+   */
+  Store.isFavorite = function(productId) {
+    const favorites = Store.getFavorites();
+    return favorites.has(String(productId));
+  };
+  
+  /**
+   * Переключить избранное для продукта
+   * @param {string|number} productId
+   * @returns {boolean} новое состояние (true = избранный)
+   */
+  Store.toggleFavorite = function(productId) {
+    const id = String(productId);
+    const favorites = Store.getFavorites();
+    let newState;
+    if (favorites.has(id)) {
+      favorites.delete(id);
+      newState = false;
+    } else {
+      favorites.add(id);
+      newState = true;
+    }
+    Store.set(FAVORITES_KEY, Array.from(favorites));
+    return newState;
+  };
+  
+  /**
+   * Добавить продукт в избранное
+   * @param {string|number} productId
+   */
+  Store.addFavorite = function(productId) {
+    const id = String(productId);
+    const favorites = Store.getFavorites();
+    if (!favorites.has(id)) {
+      favorites.add(id);
+      Store.set(FAVORITES_KEY, Array.from(favorites));
+    }
+  };
+  
+  /**
+   * Удалить продукт из избранного
+   * @param {string|number} productId
+   */
+  Store.removeFavorite = function(productId) {
+    const id = String(productId);
+    const favorites = Store.getFavorites();
+    if (favorites.has(id)) {
+      favorites.delete(id);
+      Store.set(FAVORITES_KEY, Array.from(favorites));
+    }
+  };
+
 })(window);
