@@ -3,6 +3,7 @@
 ;(function(global){
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
+  const ReactDOM = global.ReactDOM;
   
   // Импортируем утилиты из dayUtils с минимальными fallback (error-logging)
   const getDayUtils = () => HEYS.dayUtils || {};
@@ -70,13 +71,14 @@
         ),
         React.createElement('span', { className: 'date-picker-arrow' }, isOpen ? '▲' : '▼')
       ),
-      // Backdrop для затемнения фона
-      isOpen && React.createElement('div', { 
-        className: 'date-picker-backdrop',
-        onClick: () => setIsOpen(false)
-      }),
-      // Dropdown с календарём (fixed по центру экрана)
-      isOpen && React.createElement('div', { className: 'date-picker-dropdown' },
+      // Backdrop и Dropdown через portal в body
+      isOpen && ReactDOM.createPortal(
+        React.createElement(React.Fragment, null,
+          React.createElement('div', { 
+            className: 'date-picker-backdrop',
+            onClick: () => setIsOpen(false)
+          }),
+          React.createElement('div', { className: 'date-picker-dropdown' },
         React.createElement('div', { className: 'date-picker-header' },
           React.createElement('button', { 
             className: 'date-picker-nav', 
@@ -120,6 +122,7 @@
           }, '🗑️ Очистить')
         )
       )
+    ), document.body)
     );
   }
 
