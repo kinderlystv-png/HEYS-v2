@@ -207,9 +207,10 @@
     try{
       status = 'signin';
       
+      // Увеличен таймаут до 15 секунд для мобильных сетей
       const { data, error } = await withTimeout(
         client.auth.signInWithPassword({ email, password }),
-        5000,
+        15000,
         'signIn'
       );
       
@@ -244,9 +245,10 @@
       muteMirror = true;
       if (!client || !user) { muteMirror = false; return; }
       
+      // Увеличен таймаут до 10 секунд для мобильных сетей
       const { data, error } = await withTimeout(
         client.from('kv_store').select('k,v,updated_at'),
-        5000,
+        10000,
         'bootstrapSync'
       );
       
@@ -301,6 +303,7 @@
       
       // Проверяем, действительно ли нужна синхронизация
       // Сначала пробуем загрузить только метаданные для проверки
+      // Увеличен таймаут до 10 секунд для мобильных сетей
       const { data: metaData, error: metaError } = await withTimeout(
         client
           .from('client_kv_store')
@@ -308,7 +311,7 @@
           .eq('client_id', client_id)
           .order('updated_at', { ascending: false })
           .limit(5),
-        5000,
+        10000,
         'clientSync meta check'
       );
         
@@ -331,9 +334,10 @@
       
       // Теперь загружаем полные данные только если есть обновления
       log('🔄 [CLIENT_SYNC] Loading data for client:', client_id);
+      // Увеличен таймаут до 20 секунд для мобильных сетей
       const { data, error } = await withTimeout(
         client.from('client_kv_store').select('k,v,updated_at').eq('client_id', client_id),
-        10000, // 10 секунд для большого запроса
+        20000,
         'clientSync full data'
       );
       if (error) { err('client bootstrap select', error); return; }
