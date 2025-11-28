@@ -5,8 +5,8 @@
   "description": "HEYS Web Application - Main web interface",
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "build:vercel": "vite build",
+    "build": "vite build && cp heys_*.js dist/ && cp styles/*.css dist/styles/ 2>/dev/null || mkdir -p dist/styles && cp styles/*.css dist/styles/",
+    "build:vercel": "vite build && cp heys_*.js dist/ && mkdir -p dist/styles && cp styles/*.css dist/styles/",
     "build:analyze": "cross-env ANALYZE=true vite build",
     "build:deps": "pnpm --dir ../.. --filter @heys/shared run build && pnpm --dir ../.. --filter @heys/storage run build && pnpm --dir ../.. --filter @heys/core run build && pnpm --dir ../.. --filter @heys/search run build && pnpm --dir ../.. --filter @heys/analytics run build && pnpm --dir ../.. --filter @heys/gaming run build && pnpm --dir ../.. --filter @heys/ui run build && pnpm --dir ../.. --filter @heys/logger run build",
     "clean": "rimraf dist",

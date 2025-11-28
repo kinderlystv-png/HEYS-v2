@@ -5250,14 +5250,15 @@ td:first-child input {
 }
 
 .sleep-time-input {
-  width: 70px;
-  padding: 6px 8px;
+  width: 100px;
+  padding: 8px 4px;
   border: 1px solid #fce7f3;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 15px;
   text-align: center;
-  background: #fef7f9;
+  background: #fff;
   transition: all 0.2s;
+  -webkit-appearance: none;
 }
 
 .sleep-time-input:focus {
@@ -5296,7 +5297,7 @@ td:first-child input {
   border: 1px solid #fce7f3;
   border-radius: 8px;
   font-size: 12px;
-  background: #fef7f9;
+  background: #fff;
   transition: all 0.2s;
 }
 
@@ -5316,7 +5317,7 @@ td:first-child input {
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  background: #fef7f9;
+  background: #fff;
   border: 1px solid #fce7f3;
   border-radius: 10px;
   margin-bottom: 8px;
@@ -5346,7 +5347,7 @@ td:first-child input {
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background: #fef7f9;
+  background: #fff;
   border: 1px solid #fce7f3;
   border-radius: 10px;
   cursor: pointer;
