@@ -659,11 +659,13 @@
     const [toastDismissed, setToastDismissed] = useState(false);
     const toastTimeoutRef = React.useRef(null);
     
-    // === Pull-to-refresh ===
+    // === Pull-to-refresh (Enhanced) ===
     const [pullProgress, setPullProgress] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [refreshStatus, setRefreshStatus] = useState('idle'); // idle | pulling | ready | syncing | success | error
     const pullStartY = React.useRef(0);
     const isPulling = React.useRef(false);
+    const lastHapticRef = React.useRef(0);
     
     // === Dark Theme (3 modes: light / dark / auto) ===
     const [theme, setTheme] = useState(() => {
@@ -2293,14 +2295,53 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
     
-    // === Pull-to-refresh логика ===
+    // === Pull-to-refresh логика (Enhanced) ===
     const PULL_THRESHOLD = 80;
+    
+    // Haptic feedback helper
+    const triggerHaptic = (intensity = 10) => {
+      const now = Date.now();
+      if (now - lastHapticRef.current > 50 && navigator.vibrate) {
+        navigator.vibrate(intensity);
+        lastHapticRef.current = now;
+      }
+    };
     
     const handleRefresh = async () => {
       setIsRefreshing(true);
-      // Перезагрузка данных
-      await new Promise(r => setTimeout(r, 600)); // Минимальная задержка для UX
-      window.location.reload(); // Простой рефреш для перезагрузки всего
+      setRefreshStatus('syncing');
+      triggerHaptic(15);
+      
+      const cloud = window.HEYS && window.HEYS.cloud;
+      const clientId = localStorage.getItem('heys_client_current');
+      
+      try {
+        // Реальная синхронизация с Supabase
+        if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
+          await cloud.bootstrapClientSync(clientId);
+        }
+        
+        // Минимальная задержка для плавного UX
+        await new Promise(r => setTimeout(r, 400));
+        
+        setRefreshStatus('success');
+        triggerHaptic(20);
+        
+        // Показываем успех 800ms, затем сброс
+        await new Promise(r => setTimeout(r, 800));
+        
+        // Перезагрузка данных без полного reload
+        window.dispatchEvent(new CustomEvent('heys:refresh'));
+        
+      } catch (err) {
+        setRefreshStatus('error');
+        console.warn('[Pull-Refresh] Sync error:', err);
+        await new Promise(r => setTimeout(r, 1000));
+      } finally {
+        setIsRefreshing(false);
+        setRefreshStatus('idle');
+        setPullProgress(0);
+      }
     };
     
     React.useEffect(() => {
@@ -2312,6 +2353,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         if (container.scrollTop <= 0) {
           pullStartY.current = e.touches[0].clientY;
           isPulling.current = true;
+          setRefreshStatus('pulling');
         }
       };
       
@@ -2322,11 +2364,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const diff = y - pullStartY.current;
         
         if (diff > 0 && container.scrollTop <= 0) {
-          // Resistance effect - движение замедляется
-          const progress = Math.min(diff * 0.5, PULL_THRESHOLD);
+          // Resistance effect с elastic curve
+          const resistance = 0.45;
+          const progress = Math.min(diff * resistance, PULL_THRESHOLD * 1.2);
           setPullProgress(progress);
           
-          if (progress > 10) {
+          // Haptic при достижении threshold
+          if (progress >= PULL_THRESHOLD && refreshStatus !== 'ready') {
+            setRefreshStatus('ready');
+            triggerHaptic(12);
+          } else if (progress < PULL_THRESHOLD && refreshStatus === 'ready') {
+            setRefreshStatus('pulling');
+          }
+          
+          if (diff > 10) {
             e.preventDefault(); // Предотвращаем обычный скролл
           }
         }
@@ -2338,7 +2389,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         if (pullProgress >= PULL_THRESHOLD) {
           handleRefresh();
         } else {
+          // Elastic bounce back
           setPullProgress(0);
+          setRefreshStatus('idle');
         }
         isPulling.current = false;
       };
@@ -2352,7 +2405,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         container.removeEventListener('touchmove', onTouchMove);
         container.removeEventListener('touchend', onTouchEnd);
       };
-    }, [pullProgress, isRefreshing]);
+    }, [pullProgress, isRefreshing, refreshStatus]);
     
     // === Анимация прогресса калорий при загрузке ===
     React.useEffect(() => {
@@ -2932,21 +2985,43 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     }
   
     return React.createElement('div',{className:'page page-day'},
-      // Pull-to-refresh индикатор
+      // Pull-to-refresh индикатор (Enhanced)
       (pullProgress > 0 || isRefreshing) && React.createElement('div', {
-        className: 'pull-indicator' + (isRefreshing ? ' refreshing' : ''),
+        className: 'pull-indicator' 
+          + (isRefreshing ? ' refreshing' : '') 
+          + (refreshStatus === 'ready' ? ' ready' : '')
+          + (refreshStatus === 'success' ? ' success' : ''),
         style: { 
-          height: isRefreshing ? 50 : pullProgress,
-          opacity: isRefreshing ? 1 : Math.min(pullProgress / 40, 1)
+          height: isRefreshing ? 56 : Math.max(pullProgress, 0),
+          opacity: isRefreshing ? 1 : Math.min(pullProgress / 35, 1)
         }
       },
         React.createElement('div', { className: 'pull-spinner' },
-          isRefreshing 
-            ? React.createElement('span', { className: 'pull-spinner-icon spinning' }, '↻')
-            : React.createElement('span', { className: 'pull-spinner-icon' }, pullProgress >= 80 ? '↓' : '↓')
+          // Иконка в зависимости от состояния
+          refreshStatus === 'success'
+            ? React.createElement('span', { className: 'pull-spinner-icon success' }, '✓')
+            : refreshStatus === 'error'
+              ? React.createElement('span', { className: 'pull-spinner-icon' }, '✗')
+              : refreshStatus === 'syncing'
+                ? React.createElement('span', { className: 'pull-spinner-icon spinning' }, '↻')
+                : React.createElement('span', { 
+                    className: 'pull-spinner-icon' + (refreshStatus === 'ready' ? ' ready' : ''),
+                    style: { 
+                      transform: `rotate(${Math.min(pullProgress / PULL_THRESHOLD, 1) * 180}deg)`,
+                      transition: 'transform 0.1s ease-out'
+                    }
+                  }, refreshStatus === 'ready' ? '↓' : '↻')
         ),
-        React.createElement('span', { className: 'pull-text' }, 
-          isRefreshing ? 'Обновление...' : (pullProgress >= 80 ? 'Отпустите' : 'Потяните вниз')
+        React.createElement('span', { 
+          className: 'pull-text' 
+            + (refreshStatus === 'ready' ? ' ready' : '') 
+            + (refreshStatus === 'syncing' ? ' syncing' : '')
+        }, 
+          refreshStatus === 'success' ? 'Готово!' 
+            : refreshStatus === 'error' ? 'Ошибка синхронизации'
+            : refreshStatus === 'syncing' ? 'Синхронизация...' 
+            : refreshStatus === 'ready' ? 'Отпустите для обновления' 
+            : 'Потяните для обновления'
         )
       ),
       statsBlock,
