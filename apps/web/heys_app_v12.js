@@ -702,7 +702,7 @@
                 try {
                   return U.lsGet('heys_backup_meta', null);
                 } catch (error) {
-                  console.warn('[HEYS] Не удалось загрузить backup метаданные при инициализации:', error);
+                  // Тихий fallback — метаданные backup не критичны
                 }
               }
               return null;
@@ -734,7 +734,7 @@
                 // Передаём products напрямую в функцию
                 return getActiveDaysForMonth(year, month, profile, products);
               } catch (e) {
-                console.warn('[App] Error calculating activeDays:', e);
+                // Тихий fallback — activeDays для календаря не критичны
                 return new Map();
               }
             }, [selectedDate, clientId, products, isInitializing, syncVer]);
@@ -883,7 +883,7 @@
                   }
                 }
               } catch (error) {
-                console.warn('[HEYS] Не удалось перечислить дневные ключи для бэкапа:', error);
+                // Тихий fallback — backup ключи не критичны
               }
               return Array.from(normalized);
             }, [clientId]);
@@ -1101,6 +1101,10 @@
                 U.lsSet('heys_client_current', clientId);
                 window.HEYS = window.HEYS || {};
                 window.HEYS.currentClientId = clientId;
+                
+                // Критический лог: переключение клиента
+                console.info('[HEYS] 👤 Клиент:', clientId.substring(0,8) + '...');
+                
                 // Подгружаем данные клиента из Supabase и обновляем продукты
                 if (cloud && typeof cloud.bootstrapClientSync === 'function') {
                   // КРИТИЧНО: Сохраняем текущие продукты перед синхронизацией
@@ -1116,7 +1120,7 @@
                     
                     // ЗАЩИТА: если синхронизация вернула пустой массив, а у нас были продукты - не затираем
                     if (loadedProducts.length === 0 && Array.isArray(productsBeforeSync) && productsBeforeSync.length > 0) {
-                      console.warn(`⚠️ [CLIENT CHANGE] PROTECTION: Sync returned empty, keeping ${productsBeforeSync.length} products`);
+                      console.info(`ℹ️ [SYNC] Kept ${productsBeforeSync.length} local products (cloud empty)`);
                       setProducts(productsBeforeSync);
                       // Восстанавливаем в localStorage
                       window.HEYS.utils.lsSet('heys_products', productsBeforeSync);
@@ -1140,7 +1144,7 @@
                 const meta = U && typeof U.lsGet === 'function' ? U.lsGet('heys_backup_meta', null) : null;
                 setBackupMeta(meta || null);
               } catch (error) {
-                console.warn('[HEYS] Ошибка обновления метаданных бэкапа при смене клиента:', error);
+                // Тихий fallback — метаданные backup не критичны
               }
             }, [clientId]);
 
@@ -1517,7 +1521,7 @@
                       }
                     } else {
                       // Нет пользователя после signIn — используем offline
-                      console.warn('[HEYS] ⚠️ No user after signIn, using offline mode');
+                      console.info('[HEYS] Offline mode (no user)');
                       initLocalData();
                     }
 
@@ -1552,7 +1556,7 @@
                   
                   // ЗАЩИТА: не затираем продукты пустым массивом после reload
                   if (loadedProducts.length === 0 && Array.isArray(currentProducts) && currentProducts.length > 0) {
-                    console.warn(`⚠️ [RELOAD] PROTECTION: Bootstrap returned empty, keeping ${currentProducts.length} products`);
+                    console.info(`ℹ️ [SYNC] Kept ${currentProducts.length} local products (reload protection)`);
                     setProducts(currentProducts);
                     window.HEYS.utils.lsSet('heys_products', currentProducts);
                   } else {

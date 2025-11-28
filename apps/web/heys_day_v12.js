@@ -2513,7 +2513,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         
       } catch (err) {
         setRefreshStatus('error');
-        console.warn('[Pull-Refresh] Sync error:', err);
+        // Тихий fallback — pull-refresh некритичен
         await new Promise(r => setTimeout(r, 1000));
       } finally {
         setIsRefreshing(false);

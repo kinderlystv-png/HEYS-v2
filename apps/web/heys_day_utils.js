@@ -679,7 +679,7 @@
       }
       products.forEach(p => { if(p && p.id) productsMap.set(p.id, p); });
     } catch (e) {
-      console.error('[getProductsMap] Error:', e);
+      // Тихий fallback — productsMap не критичен
     }
     return productsMap;
   }
@@ -761,7 +761,7 @@
         daysData.set(dateStr, { kcal: dayInfo.kcal, target, ratio });
       }
     } catch (e) {
-      console.error('[Calendar] Error:', e);
+      // Тихий fallback — activeDays для календаря не критичны
     }
     
     return daysData;

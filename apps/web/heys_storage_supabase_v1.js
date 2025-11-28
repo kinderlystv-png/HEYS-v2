@@ -51,9 +51,20 @@
   let initialSyncCompleted = false;
   cloud.isInitialSyncCompleted = function() { return initialSyncCompleted; };
 
-  // Логирование отключено для production (см. copilot-instructions.md)
-  function log(){}
+  // Умное логирование: только критические операции
+  // Включается через localStorage: localStorage.setItem('heys_debug_sync', 'true')
+  const isDebugSync = () => global.localStorage.getItem('heys_debug_sync') === 'true';
+  
+  function log(){
+    // Тихий режим по умолчанию
+    if (isDebugSync()) {
+      try{ console.log.apply(console, ['[HEYS.cloud]'].concat([].slice.call(arguments))); }catch(e){}
+    }
+  }
   function err(){ try{ console.error.apply(console, ['[HEYS.cloud:ERR]'].concat([].slice.call(arguments))); }catch(e){} }
+  
+  // Критический лог — всегда выводится (для важных событий синхронизации)
+  function logCritical(){ try{ console.info.apply(console, ['[HEYS]'].concat([].slice.call(arguments))); }catch(e){} }
 
   /**
    * Обёртка для запросов с таймаутом
@@ -215,17 +226,21 @@
         'signIn'
       );
       
-      if (error) { status = 'offline'; err('signIn failed', error); return { error }; }
+      if (error) { 
+        status = 'offline'; 
+        logCritical('❌ Ошибка входа:', error.message || error);
+        return { error }; 
+      }
       user = data?.user;
       if (!user) { status = 'offline'; err('no user after signin'); return { error: 'no user' }; }
       status = 'sync';
       await cloud.bootstrapSync();
       status = 'online';
-      log('signIn ok, user=', user.email);
+      logCritical('✅ Вход выполнен:', user.email);
       return { user };
     }catch(e){
       status = 'offline';
-      err('signIn exception', e);
+      logCritical('❌ Ошибка входа (exception):', e.message || e);
       return { error: e };
     }
   };
@@ -235,7 +250,7 @@
     user = null;
     status = 'offline';
     clearNamespace();
-    log('signOut ok');
+    logCritical('🚪 Выход из системы');
   };
 
   cloud.getUser = function(){ return user; };
@@ -440,7 +455,11 @@
       
       muteMirror = false;
       cloud._lastClientSync = { clientId: client_id, ts: now };
-      log('✅ [CLIENT_SYNC] Sync completed for client:', client_id);
+      
+      // 🚨 Критический лог: первая синхронизация завершена
+      if (!initialSyncCompleted) {
+        logCritical('✅ Синхронизация завершена | клиент:', client_id.substring(0,8) + '...', '| ключей:', data?.length || 0);
+      }
       
       // 🚨 Разрешаем сохранение после первого sync
       initialSyncCompleted = true;
@@ -452,6 +471,8 @@
         }, 50);
       }
     }catch(e){ 
+      // Критический лог ошибки синхронизации (всегда видим)
+      logCritical('❌ Ошибка синхронизации:', e.message || e);
       err('❌ [CLIENT_SYNC] Exception:', e); 
       muteMirror=false; 
     }
@@ -493,7 +514,22 @@
             .catch(() => {}) // Тихо игнорируем ошибки
         );
         await Promise.allSettled(promises);
-      }catch(e){}
+        
+        // Критический лог: данные отправлены в облако
+        if (uniqueBatch.length > 0) {
+          const types = {};
+          uniqueBatch.forEach(item => {
+            const t = item.k.includes('dayv2_') ? 'day' : 
+                     item.k.includes('products') ? 'products' : 
+                     item.k.includes('profile') ? 'profile' : 'other';
+            types[t] = (types[t] || 0) + 1;
+          });
+          const summary = Object.entries(types).map(([k,v]) => `${k}:${v}`).join(' ');
+          logCritical('☁️ Сохранено в облако:', summary);
+        }
+      }catch(e){
+        logCritical('❌ Ошибка сохранения в облако:', e.message || e);
+      }
     }, 500); // Немного больше задержка для клиентских данных
   }
 
