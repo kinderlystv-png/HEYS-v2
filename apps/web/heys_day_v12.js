@@ -46,8 +46,15 @@
   const useDayAutosave = H.useDayAutosave;
   const useMobileDetection = H.useMobileDetection;
   
-  // === DatePicker/Calendar already exported as HEYS.DatePicker ===
-  // (from heys_day_pickers.js)
+  // === Import DatePicker/Calendar from dayPickers module ===
+  const P = HEYS.dayPickers || {};
+  const Calendar = P.Calendar || HEYS.Calendar || (() => { 
+    console.error('[HEYS] Calendar not loaded from dayPickers'); 
+    return null; 
+  });
+
+  // === Import models module ===
+  const M = HEYS.models || {};
 
   HEYS.DayTab=function DayTab(props){
   const {useState,useMemo,useEffect}=React;
