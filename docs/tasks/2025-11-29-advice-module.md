@@ -2,13 +2,37 @@
 
 > **Цель**: Создать модульную систему советов, которая учитывает ВСЕ аналитические данные и может показывать несколько рекомендаций.
 
-**Предварительное требование**: Сначала выполнить [2025-11-28-smart-toast-recommendations.md](./2025-11-28-smart-toast-recommendations.md) — багфикс + расширение macroTip
+## ⚠️ КРИТИЧЕСКОЕ ПРЕДУСЛОВИЕ
+
+**СНАЧАЛА** выполнить [2025-11-28-smart-toast-recommendations.md](./2025-11-28-smart-toast-recommendations.md):
+- Исправить баг `dayTot.protein` → `dayTot.prot` (строка 2654 в heys_day_v12.js)
+- Исправить баг `normAbs.protein` → `normAbs.prot`
+- Добавить CSS для новых типов toast
+
+**Проверка**: После выполнения первого промпта убедись что в `heys_day_v12.js`:
+```javascript
+const proteinPct = (dayTot.prot || 0) / (normAbs.prot || 1);  // НЕ protein!
+```
+
+### 🔴 ЕСЛИ первый промпт НЕ выполнен:
+Перед началом работы исправь баг вручную:
+```javascript
+// Строка 2654 — БЫЛО:
+const proteinPct = (dayTot.protein || 0) / (normAbs.protein || 1);
+
+// СТАЛО:
+const proteinPct = (dayTot.prot || 0) / (normAbs.prot || 1);
+
+// Строка 2698 — БЫЛО (в dependencies):
+}, [dayTot.protein, dayTot.fat, ... normAbs.protein, normAbs.fat, ...]);
+
+// СТАЛО:
+}, [dayTot.prot, dayTot.fat, ... normAbs.prot, normAbs.fat, ...]);
+```
 
 ---
 
-## 📊 Справочник данных
-
-См. [DATA_MODEL_REFERENCE.md](../DATA_MODEL_REFERENCE.md) — полный список всех аналитических параметров.
+📊 **[DATA_MODEL_REFERENCE.md](../DATA_MODEL_REFERENCE.md)** — справочник всех аналитических параметров (dayTot, normAbs, Product, Meal, Training и др.)
 
 ---
 
@@ -31,7 +55,7 @@ useEffect(() => {
 ```
 
 ### Порядок загрузки скриптов
-В `index.html` добавить ПЕРЕД `heys_day_v12.js`:
+В `index.html` добавить ПЕРЕД `heys_day_v12.js` (найти строку с `heys_day_v12.js` и добавить ПЕРЕД ней):
 ```html
 <script defer src="heys_advice_v1.js?v=1" fetchpriority="low"></script>
 ```
@@ -282,6 +306,16 @@ const ALWAYS_SHOW = ['streak_7', 'perfect_day', 'first_day'];
   
   let lastShowTime = 0;
   let sessionAdviceCount = 0;
+  
+  // Cleanup при смене даты (вызывается извне при date change)
+  function resetSessionAdvices() {
+    sessionAdviceCount = 0;
+    lastShowTime = 0;
+    try {
+      // Очищаем только advice-related ключи, не streak
+      sessionStorage.removeItem(SHOWN_KEY);
+    } catch(e) {}
+  }
 
   // ═══════════════════════════════════════════════════════════
   // 🧠 CONTEXT ANALYZERS — Анализ состояния пользователя
@@ -308,24 +342,24 @@ const ALWAYS_SHOW = ['streak_7', 'perfect_day', 'first_day'];
    * @returns {'stressed'|'crashed'|'success'|'returning'|'newbie'|'normal'}
    */
   function getEmotionalState(ctx) {
-    const { day, currentStreak, mealCount, kcalPct, lastVisitDaysAgo, totalDaysTracked } = ctx;
+    const { day, currentStreak, mealCount, kcalPct, totalDaysTracked } = ctx;
     
-    // Новичок
+    // Новичок (менее 3 дней с данными)
     if (totalDaysTracked < 3) return 'newbie';
     
-    // Возвращение после перерыва
-    if (lastVisitDaysAgo > 2) return 'returning';
-    
-    // Успех
+    // Успех (streak 3+ дней)
     if (currentStreak >= 3) return 'success';
     
-    // Срыв (резкий перебор)
+    // Срыв (резкий перебор >150% калорий)
     if (kcalPct > 1.5) return 'crashed';
     
-    // Стресс (низкий mood)
+    // Стресс (низкий mood в последних приёмах)
     const meals = day?.meals || [];
-    const avgMood = meals.reduce((sum, m) => sum + (m.mood || 3), 0) / (meals.length || 1);
-    if (avgMood < 3 && meals.length > 0) return 'stressed';
+    const moodsWithValues = meals.filter(m => m.mood && !isNaN(+m.mood));
+    if (moodsWithValues.length > 0) {
+      const avgMood = moodsWithValues.reduce((sum, m) => sum + (+m.mood), 0) / moodsWithValues.length;
+      if (avgMood < 3) return 'stressed';
+    }
     
     return 'normal';
   }
@@ -925,15 +959,17 @@ const ALWAYS_SHOW = ['streak_7', 'perfect_day', 'first_day'];
    * React hook для работы с советами
    * @param {Object} params - Параметры
    * @param {ShowTrigger} params.trigger - Что вызвало показ
+   * @param {Object} params.uiState - Состояние UI для проверки занятости
    * @returns {Object} Объект с советами и методами
    */
   function useAdviceEngine(params) {
-    const { dayTot, normAbs, optimum, day, pIndex, activeDays, trigger } = params;
+    const { dayTot, normAbs, optimum, day, pIndex, activeDays, trigger, uiState } = params;
     const React = window.React;
 
     // Вычисляем контекст
     const ctx = React.useMemo(() => {
-      const hour = new Date().getHours();
+      const now = new Date();
+      const hour = now.getHours();
       const meals = day?.meals || [];
       const mealCount = meals.filter(m => m.items?.length > 0).length;
       const trainings = day?.trainings || [];
@@ -962,6 +998,19 @@ const ALWAYS_SHOW = ['streak_7', 'perfect_day', 'first_day'];
           checkDate.setDate(checkDate.getDate() - 1);
         }
       }
+      
+      // 🧠 Расширенный контекст
+      const kcalPct = (dayTot?.kcal || 0) / (optimum || 2000);
+      const tone = getToneForHour(hour);
+      const specialDay = getSpecialDay(now);
+      const emotionalState = getEmotionalState({
+        day,
+        currentStreak,
+        mealCount,
+        kcalPct,
+        lastVisitDaysAgo: 0, // TODO: вычислить из localStorage
+        totalDaysTracked: activeDays?.size || 0
+      });
 
       return {
         dayTot: dayTot || {},
@@ -972,22 +1021,35 @@ const ALWAYS_SHOW = ['streak_7', 'perfect_day', 'first_day'];
         currentStreak,
         hour,
         mealCount,
-        hasTraining
+        hasTraining,
+        // Новые поля
+        kcalPct,
+        tone,
+        specialDay,
+        emotionalState
       };
     }, [dayTot, normAbs, optimum, day, pIndex, activeDays]);
 
     // Получаем ВСЕ советы (без фильтрации по trigger)
     const allAdvices = React.useMemo(() => {
       try {
-        return evaluateRules(ctx);
+        const advices = evaluateRules(ctx);
+        // Фильтруем по эмоциональному состоянию
+        return filterByEmotionalState(advices, ctx.emotionalState);
       } catch (e) {
         console.error('[Advice] Error evaluating rules:', e);
         return [];
       }
     }, [ctx]);
 
-    // Фильтруем по trigger + проверяем cooldown
+    // Фильтруем по trigger + проверяем cooldown + занятость
     const relevantAdvices = React.useMemo(() => {
+      // Если пользователь занят — не показываем
+      if (isUserBusy(uiState)) return [];
+      
+      // Ночью — не беспокоим
+      if (ctx.tone === 'silent') return [];
+      
       if (!trigger || !canShowNow()) return [];
       
       return (allAdvices || []).filter(advice => {
@@ -997,7 +1059,7 @@ const ALWAYS_SHOW = ['streak_7', 'perfect_day', 'first_day'];
         if (wasShownRecently(advice.id)) return false;
         return true;
       });
-    }, [allAdvices, trigger]);
+    }, [allAdvices, trigger, uiState, ctx.tone]);
 
     // Группируем по категориям
     const byCategory = React.useMemo(() => {
@@ -1006,7 +1068,10 @@ const ALWAYS_SHOW = ['streak_7', 'perfect_day', 'first_day'];
         nutrition: [],
         timing: [],
         training: [],
-        lifestyle: []
+        lifestyle: [],
+        emotional: [],
+        motivation: [],
+        special: []
       };
       (allAdvices || []).forEach(a => {
         if (grouped[a.category]) {
@@ -1047,7 +1112,13 @@ const ALWAYS_SHOW = ['streak_7', 'perfect_day', 'first_day'];
     // Утилиты для внешнего использования
     canShowNow,
     wasShownRecently,
-    markAdviceShown
+    markAdviceShown,
+    resetSessionAdvices, // Для сброса при смене даты
+    // Контекстные функции (для внешнего использования)
+    getToneForHour,
+    getEmotionalState,
+    getSpecialDay,
+    isUserBusy
   };
 
 })();
@@ -1055,47 +1126,63 @@ const ALWAYS_SHOW = ['streak_7', 'perfect_day', 'first_day'];
 
 ### Задача 2: Expandable Toast UI с Smart Timing
 
-**Концепция**: Toast показывается только при определённых триггерах и автоматически исчезает через TTL.
+**Концепция**: Toast показывается только при определённых триггерах, учитывает занятость пользователя и автоматически исчезает.
 
 **Где**: В DayTab `heys_day_v12.js`
+
+**⚠️ ВНИМАНИЕ**: Перед этой задачей ОБЯЗАТЕЛЬНО выполнить первый промпт `2025-11-28-smart-toast-recommendations.md` — исправление бага `prot/protein`!
 
 ```javascript
 // ═══════════════════════════════════════════════════════════
 // SMART TIMING — Триггеры показа советов
 // ═══════════════════════════════════════════════════════════
 
-// Состояния
+// Состояния (добавить рядом с существующими useState в DayTab, после строки ~707)
 const [adviceTrigger, setAdviceTrigger] = React.useState(null);
 const [adviceExpanded, setAdviceExpanded] = React.useState(false);
-const [toastVisible, setToastVisible] = React.useState(false);
-const toastTimerRef = React.useRef(null);
+// ⚠️ ВАЖНО: toastVisible, toastDismissed и toastTimeoutRef УЖЕ существуют (строки 705-707)
+// Использовать ИХ, не создавать новые!
+
+// UI State для проверки занятости
+// ⚠️ ВАЖНО: Использовать РЕАЛЬНЫЕ имена переменных из DayTab!
+// ⚠️ showTrainingPicker — НЕ существует! Есть: showTimePicker, showGramsPicker, showWeightPicker, showDeficitPicker, showZonePicker, showSleepQualityPicker, showDayScorePicker, showHouseholdPicker
+const uiState = React.useMemo(() => ({
+  modalOpen: showTimePicker || showGramsPicker || showWeightPicker || showDeficitPicker || showZonePicker || showSleepQualityPicker || showDayScorePicker || showHouseholdPicker,
+  searchOpen: false, // Нет глобального searchOpen в DayTab — поиск внутри MealAddProduct
+  isEditing: false, // Граммы редактируются inline без отдельного состояния
+  isScrolling: false // Опционально: добавить scroll listener
+}), [showTimePicker, showGramsPicker, showWeightPicker, showDeficitPicker, showZonePicker, showSleepQualityPicker, showDayScorePicker, showHouseholdPicker]);
 
 // Триггер при первом открытии вкладки (один раз за сессию)
+// ⚠️ ВАЖНО: Переменная называется `date`, НЕ `curDate`!
 React.useEffect(() => {
-  const sessionKey = 'heys_tab_opened_' + curDate;
+  const sessionKey = 'heys_tab_opened_' + date;
   if (!sessionStorage.getItem(sessionKey)) {
     sessionStorage.setItem(sessionKey, '1');
-    setAdviceTrigger('tab_open');
+    // Небольшая задержка, чтобы пользователь "освоился"
+    setTimeout(() => setAdviceTrigger('tab_open'), 1500);
   }
-}, [curDate]); // curDate — текущая дата дня
+}, [date]);
 
-// Триггер после добавления продукта
+// Триггер после добавления продукта (с задержкой)
 const handleProductAdded = React.useCallback(() => {
   // ... существующая логика добавления ...
-  setAdviceTrigger('product_added');
+  // Задержка 500ms чтобы пользователь увидел результат
+  setTimeout(() => setAdviceTrigger('product_added'), 500);
 }, []);
 
 // Триггер при открытии приёма пищи
 const handleMealOpen = React.useCallback((mealIndex) => {
   // ... существующая логика ...
-  setAdviceTrigger('meal_opened');
+  setTimeout(() => setAdviceTrigger('meal_opened'), 300);
 }, []);
 
-// Получаем советы через модуль с триггером
+// Получаем советы через модуль с триггером И uiState
 const { primary, relevant, count: adviceCount, markShown } = 
   window.HEYS?.advice?.useAdviceEngine?.({
     dayTot, normAbs, optimum, day, pIndex, activeDays,
-    trigger: adviceTrigger // <-- передаём текущий триггер
+    trigger: adviceTrigger,
+    uiState // <-- передаём состояние UI
   }) || { primary: null, relevant: [], count: 0, markShown: () => {} };
 
 // Автоматический показ/скрытие toast
@@ -1104,8 +1191,19 @@ React.useEffect(() => {
     // Показываем toast
     setToastVisible(true);
     
+    // Haptic feedback для важных советов
+    if (primary.type === 'achievement' || primary.type === 'warning') {
+      haptic && haptic('light');
+    }
+    
     // Вызываем onShow
     if (primary.onShow) primary.onShow();
+    
+    // Confetti для достижений
+    if (primary.showConfetti && window.HEYS?.showConfetti) {
+      window.HEYS.showConfetti();
+      haptic && haptic('success');
+    }
     
     // Отмечаем как показанный
     markShown(primary.id);
@@ -1115,7 +1213,7 @@ React.useEffect(() => {
     toastTimerRef.current = setTimeout(() => {
       setToastVisible(false);
       setAdviceExpanded(false);
-      setAdviceTrigger(null); // Сбрасываем триггер
+      setAdviceTrigger(null);
     }, primary.ttl || 5000);
   }
   
@@ -1124,15 +1222,32 @@ React.useEffect(() => {
   };
 }, [primary?.id, adviceTrigger]);
 
-// Сброс триггера при закрытии модалок
-const handleModalClose = React.useCallback(() => {
+// Сброс advice state при смене даты
+React.useEffect(() => {
   setAdviceTrigger(null);
   setAdviceExpanded(false);
-}, []);
+  setToastVisible(false);
+  // Сброс session счётчиков
+  if (window.HEYS?.advice?.resetSessionAdvices) {
+    window.HEYS.advice.resetSessionAdvices();
+  }
+}, [curDate]);
+
+// Сброс при открытии модалки
+React.useEffect(() => {
+  if (uiState.modalOpen || uiState.searchOpen) {
+    setAdviceTrigger(null);
+    setAdviceExpanded(false);
+    setToastVisible(false);
+  }
+}, [uiState.modalOpen, uiState.searchOpen]);
 
 // Рендеринг toast (только если visible)
+// ⚠️ Добавляем role="alert" для accessibility и haptic для feedback
 toastVisible && primary && React.createElement('div', { 
   className: `macro-toast macro-toast-${primary.type} ${adviceExpanded ? 'expanded' : ''} ${toastVisible ? 'visible' : ''}`,
+  role: 'alert',
+  'aria-live': 'polite',
   onClick: () => adviceCount > 1 && setAdviceExpanded(!adviceExpanded)
 },
   // Основной совет
@@ -1163,25 +1278,56 @@ toastVisible && primary && React.createElement('div', {
 
 **Где**: `apps/web/styles/main.css`
 
+**⚠️ ВАЖНО**: Добавить ПОСЛЕ существующих `.macro-toast-*` стилей (после строки ~4935)
+
 ```css
 /* ═══════════════════════════════════════════════════════════
    EXPANDABLE ADVICE TOAST WITH AUTO-HIDE
    ═══════════════════════════════════════════════════════════ */
 
+/* Новые типы toast */
+.macro-toast-fiber {
+  border-left: 4px solid #22c55e;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+}
+
+.macro-toast-tip {
+  border-left: 4px solid #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.macro-toast-achievement {
+  border-left: 4px solid #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  animation: achievementPulse 0.5s ease-out;
+}
+
+@keyframes achievementPulse {
+  0% { transform: translateX(-50%) scale(0.9); }
+  50% { transform: translateX(-50%) scale(1.05); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* Dark theme для новых типов */
+[data-theme="dark"] .macro-toast-fiber {
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  border-left-color: #10b981;
+}
+
+[data-theme="dark"] .macro-toast-tip {
+  background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%);
+  border-left-color: #3b82f6;
+}
+
+[data-theme="dark"] .macro-toast-achievement {
+  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+  border-left-color: #f59e0b;
+}
+
 /* Базовые модификации для расширяемого toast */
 .macro-toast {
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-  opacity: 0;
-  transform: translateX(-50%) translateY(20px);
-  pointer-events: none;
-}
-
-/* Видимое состояние */
-.macro-toast.visible {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-  pointer-events: auto;
 }
 
 .macro-toast.expanded {
@@ -1240,6 +1386,34 @@ toastVisible && primary && React.createElement('div', {
 .macro-toast-extra-achievement { background: rgba(234, 179, 8, 0.2); }
 .macro-toast-extra-tip { background: rgba(59, 130, 246, 0.2); }
 .macro-toast-extra-fiber { background: rgba(34, 197, 94, 0.2); }
+
+/* Mobile: ограничиваем ширину и высоту */
+@media (max-width: 480px) {
+  .macro-toast {
+    max-width: calc(100vw - 24px);
+    font-size: 13px;
+  }
+  
+  .macro-toast.expanded {
+    max-height: 250px;
+    overflow-y: auto;
+  }
+  
+  .macro-toast-extras {
+    max-height: 150px;
+    overflow-y: auto;
+  }
+  
+  .macro-toast-extra {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+}
+
+/* Accessibility: роль alert для screen readers */
+.macro-toast[role="alert"] {
+  /* Стили при необходимости */
+}
 ```
 
 ### Задача 4: Интеграция в DayTab
@@ -1271,21 +1445,38 @@ setAdviceExpanded(false);
 
 ## ✅ Definition of Done
 
+### Core Engine
 - [ ] Создан `heys_advice_v1.js` с движком советов
-- [ ] Все правила имеют `triggers[]` — когда показывать
-- [ ] Все правила имеют `ttl` — сколько показывать
+- [ ] Все правила имеют `triggers[]` и `ttl`
 - [ ] Добавлен трекер показанных советов (sessionStorage)
 - [ ] Cooldown 30 сек между показами
-- [ ] Добавлен streak расчёт внутри модуля
+- [ ] MAX_ADVICES_PER_SESSION = 10
+
+### 🧠 Smart Timing (Deep Psychology)
+- [ ] `getToneForHour()` — адаптация тона по времени
+- [ ] `getEmotionalState()` — определение состояния (stressed, crashed, success)
+- [ ] `getSpecialDay()` — особые дни (понедельник, пятница, Новый год)
+- [ ] `isUserBusy()` — проверка занятости пользователя
+- [ ] `filterByEmotionalState()` — убирать warnings при стрессе/срыве
+- [ ] Ночью (23:00-6:00) — НИКАКИХ советов (tone === 'silent')
+
+### UI Integration
+- [ ] Передача `uiState` в useAdviceEngine
+- [ ] Задержка показа после действия (500ms product_added, 1500ms tab_open)
+- [ ] Сброс при открытии модалки/поиска
 - [ ] Expandable Toast UI + автоскрытие по TTL
-- [ ] CSS для анимации появления/исчезновения
-- [ ] Триггеры интегрированы в DayTab:
-  - [ ] `tab_open` — при первом открытии вкладки за сессию
-  - [ ] `product_added` — после добавления продукта
-  - [ ] `meal_opened` — при открытии приёма пищи
+- [ ] CSS анимации появления/исчезновения
+
+### Советы по состояниям
+- [ ] `welcome_back` — при возвращении после 2+ дней
+- [ ] `crash_support` — поддержка при срыве (>150% ккал)
+- [ ] `stress_support` — поддержка при низком mood
+- [ ] `monday_motivation` — понедельник утро
+- [ ] `friday_reminder` — пятница вечер
+- [ ] `sunday_planning` — воскресенье вечер
+
+### Cleanup
 - [ ] macroTip useMemo УДАЛЁН
-- [ ] Toast показывается ТОЛЬКО при наличии триггера
-- [ ] При открытии модалки — сбрасывается триггер
 - [ ] `pnpm type-check && pnpm build` проходит
 
 ---

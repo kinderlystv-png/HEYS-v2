@@ -7115,16 +7115,21 @@ input, textarea, select {
 .compact-water {
   background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
   border: 1px solid #bae6fd;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 0 12px;
 }
 
 .compact-water .compact-card-header {
   color: #0369a1;
+  grid-column: 1;
+  grid-row: 1;
+  margin-bottom: 4px;
 }
 
 .water-card-content {
-  display: flex;
-  gap: 16px;
-  padding: 8px 0;
+  display: contents;
 }
 
 /* Левая часть: большое кольцо */
@@ -7135,6 +7140,8 @@ input, textarea, select {
   align-items: center;
   gap: 4px;
   min-width: 80px;
+  grid-column: 1;
+  grid-row: 2;
 }
 
 .water-ring-large {
@@ -7360,10 +7367,13 @@ input, textarea, select {
 
 /* Правая часть */
 .water-card-right {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 6px;
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: start;
 }
 
 /* Верхняя строка: мотивация + кнопка удаления */
