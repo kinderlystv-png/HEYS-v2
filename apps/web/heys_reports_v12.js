@@ -160,8 +160,14 @@
     return total;
   }
 
-  // ---------- Чтение meals за дату (без полного перебора localStorage) ----------
+  // ---------- Чтение meals за дату (делегируем в dayUtils для учёта ночной логики) ----------
   function loadMealsForDate(dateStr){
+    // Используем dayUtils если доступен (поддерживает ночные приёмы 00:00-02:59)
+    if (global.HEYS && global.HEYS.dayUtils && global.HEYS.dayUtils.loadMealsForDate) {
+      return global.HEYS.dayUtils.loadMealsForDate(dateStr);
+    }
+    
+    // Fallback: старая логика
     const ls = global.localStorage;
     
     // Проверяем с учетом текущего клиента

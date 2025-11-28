@@ -30,6 +30,35 @@
   function parseISO(s){ const [y,m,d]=String(s||'').split('-').map(x=>parseInt(x,10)); if(!y||!m||!d) return new Date(); const dt=new Date(y,m-1,d); dt.setHours(12); return dt; }
   function uid(p){ return (p||'id')+Math.random().toString(36).slice(2,8); }
 
+  // Ночной порог: приёмы до 03:00 относятся к предыдущему дню
+  const NIGHT_HOUR_THRESHOLD = 3; // 00:00 - 02:59 → предыдущий день
+
+  // Проверка: время относится к "ночным" часам (00:00-02:59)
+  function isNightTime(timeStr) {
+    if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) return false;
+    const [hh] = timeStr.split(':').map(x => parseInt(x, 10));
+    if (isNaN(hh)) return false;
+    return hh >= 0 && hh < NIGHT_HOUR_THRESHOLD;
+  }
+
+  // Возвращает "эффективную" дату для приёма пищи
+  // Если время 00:00-02:59, возвращает предыдущий день
+  function getEffectiveDate(timeStr, calendarDateISO) {
+    if (!calendarDateISO) return calendarDateISO;
+    if (!isNightTime(timeStr)) return calendarDateISO;
+    // Вычитаем 1 день
+    const d = parseISO(calendarDateISO);
+    d.setDate(d.getDate() - 1);
+    return fmtDate(d);
+  }
+
+  // Возвращает "следующий" календарный день
+  function getNextDay(dateISO) {
+    const d = parseISO(dateISO);
+    d.setDate(d.getDate() + 1);
+    return fmtDate(d);
+  }
+
   // === Storage Utilities ===
   function lsGet(k,d){
     try{
@@ -106,7 +135,9 @@
   }
 
   // === Data Loading ===
-  function loadMealsForDate(ds){ 
+  
+  // Базовая загрузка приёмов из localStorage (без ночной логики)
+  function loadMealsRaw(ds){ 
     const keys=['heys_dayv2_'+ds,'heys_day_'+ds,'day_'+ds+'_meals','meals_'+ds,'food_'+ds]; 
     for(const k of keys){ 
       try{ 
@@ -118,6 +149,33 @@
       }catch(e){} 
     } 
     return []; 
+  }
+
+  // Загрузка приёмов для даты с учётом ночной логики:
+  // - Берём приёмы текущего дня (кроме ночных 00:00-02:59)
+  // - Добавляем ночные приёмы из следующего календарного дня (они принадлежат этому дню)
+  function loadMealsForDate(ds){ 
+    // 1. Загружаем приёмы текущего календарного дня (фильтруем ночные — они ушли в предыдущий день)
+    const currentDayMeals = (loadMealsRaw(ds) || []).filter(m => !isNightTime(m.time));
+    
+    // 2. Загружаем ночные приёмы из следующего календарного дня
+    const nextDayISO = getNextDay(ds);
+    const nextDayMeals = (loadMealsRaw(nextDayISO) || []).filter(m => isNightTime(m.time));
+    
+    // 3. Объединяем и сортируем по времени
+    const allMeals = [...currentDayMeals, ...nextDayMeals];
+    
+    // Сортировка: ночные (00:00-02:59) в конец, остальные по времени
+    allMeals.sort((a, b) => {
+      const aIsNight = isNightTime(a.time);
+      const bIsNight = isNightTime(b.time);
+      if (aIsNight && !bIsNight) return 1; // ночные в конец
+      if (!aIsNight && bIsNight) return -1;
+      // Одинаковый тип — сортируем по времени
+      return (a.time || '').localeCompare(b.time || '');
+    });
+    
+    return allMeals;
   }
 
   // Lightweight signature for products (ids/names only)
@@ -237,6 +295,11 @@
     parseISO,
     uid,
     formatDateDisplay,
+    // Night time logic (приёмы 00:00-02:59 относятся к предыдущему дню)
+    NIGHT_HOUR_THRESHOLD,
+    isNightTime,
+    getEffectiveDate,
+    getNextDay,
     // Storage
     lsGet,
     lsSet,
@@ -252,6 +315,7 @@
     per100,
     // Data
     loadMealsForDate,
+    loadMealsRaw,
     productsSignature,
     computePopularProducts,
     // Profile/Calculations

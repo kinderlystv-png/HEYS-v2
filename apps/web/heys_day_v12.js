@@ -908,7 +908,44 @@
     };
     
     // Генерация значений для часов, минут и оценок 1-10
-    const hoursValues = WheelColumn.presets.hours;
+    // Часы начинаются с 03:00 (порядок: 03, 04, ... 23, 00, 01, 02)
+    // Ночные часы (00-02) визуально отмечены как относящиеся к следующему календарному дню
+    const NIGHT_HOUR_THRESHOLD = U.NIGHT_HOUR_THRESHOLD || 3;
+    const hoursOrder = useMemo(() => {
+      // Порядок: 03, 04, 05, ..., 23, 00, 01, 02
+      const order = [];
+      for (let h = NIGHT_HOUR_THRESHOLD; h < 24; h++) order.push(h);
+      for (let h = 0; h < NIGHT_HOUR_THRESHOLD; h++) order.push(h);
+      return order;
+    }, []);
+    
+    // Значения для колеса (с подписями для ночных часов)
+    const hoursValues = useMemo(() => {
+      return hoursOrder.map(h => pad2(h));
+    }, [hoursOrder]);
+    
+    // Конвертация: индекс колеса → реальные часы
+    const wheelIndexToHour = (idx) => hoursOrder[idx] ?? idx;
+    // Конвертация: реальные часы → индекс колеса
+    const hourToWheelIndex = (hour) => {
+      const idx = hoursOrder.indexOf(hour);
+      return idx >= 0 ? idx : 0;
+    };
+    
+    // Проверка: выбранный час относится к ночным (00-02)
+    const isNightHourSelected = useMemo(() => {
+      const realHour = wheelIndexToHour(pendingMealTime.hours);
+      return realHour >= 0 && realHour < NIGHT_HOUR_THRESHOLD;
+    }, [pendingMealTime.hours, hoursOrder]);
+    
+    // Форматированная дата для отображения
+    const currentDateLabel = useMemo(() => {
+      const d = parseISO(date);
+      const dayNum = d.getDate();
+      const month = d.toLocaleDateString('ru-RU', { month: 'short' });
+      return `${dayNum} ${month}`;
+    }, [date]);
+    
     const minutesValues = WheelColumn.presets.minutes;
     const ratingValues = WheelColumn.presets.rating;
     
@@ -919,7 +956,8 @@
     // Открыть модалку для нового приёма
     function openTimePickerForNewMeal() {
       const now = new Date();
-      setPendingMealTime({ hours: now.getHours(), minutes: now.getMinutes() });
+      // Конвертируем реальные часы в индекс колеса
+      setPendingMealTime({ hours: hourToWheelIndex(now.getHours()), minutes: now.getMinutes() });
       setPendingMealMood({ mood: 5, wellbeing: 5, stress: 5 });
       setEditingMealIndex(null);
       setEditMode('new');
@@ -936,7 +974,8 @@
       const hours = parseInt(timeParts[0]) || new Date().getHours();
       const minutes = parseInt(timeParts[1]) || 0;
       
-      setPendingMealTime({ hours, minutes });
+      // Конвертируем реальные часы в индекс колеса
+      setPendingMealTime({ hours: hourToWheelIndex(hours), minutes });
       setEditingMealIndex(mealIndex);
       setEditMode('time');
       setPickerStep(1);
@@ -974,7 +1013,9 @@
     
     // Подтверждение только времени (для редактирования)
     function confirmTimeEdit() {
-      const timeStr = pad2(pendingMealTime.hours) + ':' + pad2(pendingMealTime.minutes);
+      // Конвертируем индекс колеса в реальные часы
+      const realHours = wheelIndexToHour(pendingMealTime.hours);
+      const timeStr = pad2(realHours) + ':' + pad2(pendingMealTime.minutes);
       const updatedMeals = day.meals.map((m, i) => 
         i === editingMealIndex ? { ...m, time: timeStr } : m
       );
@@ -997,7 +1038,9 @@
     }
     
     function confirmMealCreation() {
-      const timeStr = pad2(pendingMealTime.hours) + ':' + pad2(pendingMealTime.minutes);
+      // Конвертируем индекс колеса в реальные часы
+      const realHours = wheelIndexToHour(pendingMealTime.hours);
+      const timeStr = pad2(realHours) + ':' + pad2(pendingMealTime.minutes);
       const moodVal = pendingMealMood.mood === 0 ? '' : pendingMealMood.mood;
       const wellbeingVal = pendingMealMood.wellbeing === 0 ? '' : pendingMealMood.wellbeing;
       const stressVal = pendingMealMood.stress === 0 ? '' : pendingMealMood.stress;
@@ -2800,6 +2843,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   onChange: (i) => setPendingMealTime(prev => ({...prev, minutes: i})),
                   label: 'Минуты'
                 })
+              ),
+              // Подсказка для ночных часов (00:00-02:59)
+              isNightHourSelected && React.createElement('div', { className: 'night-time-hint' },
+                React.createElement('span', { className: 'night-time-icon' }, '🌙'),
+                React.createElement('span', { className: 'night-time-text' }, 
+                  'Ночной приём — запишется в ',
+                  React.createElement('b', null, currentDateLabel)
+                )
               )
             ),
             

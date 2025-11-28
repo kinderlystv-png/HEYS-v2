@@ -5337,6 +5337,45 @@ td:first-child input {
   gap: 0;
 }
 
+/* Night time hint for meals 00:00-02:59 */
+.night-time-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  margin: -8px 20px 12px;
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  border-radius: 12px;
+  color: #e0e7ff;
+  font-size: 13px;
+  animation: fadeInHint 0.3s ease-out;
+}
+
+.night-time-hint .night-time-icon {
+  font-size: 16px;
+}
+
+.night-time-hint .night-time-text {
+  color: #c7d2fe;
+}
+
+.night-time-hint .night-time-text b {
+  color: #fff;
+  font-weight: 600;
+}
+
+@keyframes fadeInHint {
+  from { 
+    opacity: 0; 
+    transform: translateY(-8px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
 .time-picker-wheels.mood-wheels {
   gap: 16px;
   padding-bottom: 40px;

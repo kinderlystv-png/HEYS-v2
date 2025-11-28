@@ -8,6 +8,7 @@
   const getDayUtils = () => HEYS.dayUtils || {};
 
   // Хук для централизованного автосохранения дня с учётом гонок и межвкладочной синхронизации
+  // Поддерживает ночную логику: приёмы 00:00-02:59 сохраняются под следующий календарный день
   function useDayAutosave({
     day,
     date,
@@ -21,6 +22,8 @@
     const utils = getDayUtils();
     const lsSetFn = lsSet || utils.lsSet;
     const lsGetFunc = lsGetFn || utils.lsGet;
+    const isNightTime = utils.isNightTime || (() => false);
+    const getNextDay = utils.getNextDay || ((d) => d);
     
     const timerRef = React.useRef(null);
     const prevStoredSnapRef = React.useRef(null);
@@ -43,7 +46,7 @@
       channelRef.current = null;
     },[]);
 
-    const getKey = React.useCallback((payload)=> keyPrefix + ((payload && payload.date) ? payload.date : date),[keyPrefix,date]);
+    const getKey = React.useCallback((dateStr)=> keyPrefix + dateStr,[keyPrefix]);
 
     const stripMeta = React.useCallback((payload)=>{
       if(!payload) return payload;
@@ -63,9 +66,10 @@
       }catch(e){ return null; }
     },[lsGetFunc]);
 
-    const save = React.useCallback((payload)=>{
-      if(!payload || !payload.date) return;
-      const key = getKey(payload);
+    // Сохранение данных дня под конкретную дату
+    const saveToDate = React.useCallback((dateStr, payload)=>{
+      if(!dateStr || !payload) return;
+      const key = getKey(dateStr);
       const current = readExisting(key);
       const incomingUpdatedAt = payload.updatedAt!=null? payload.updatedAt: now();
 
@@ -74,6 +78,7 @@
 
       const toStore = {
         ...payload,
+        date: dateStr,
         schemaVersion: payload.schemaVersion!=null? payload.schemaVersion:3,
         updatedAt: incomingUpdatedAt,
         _sourceId: sourceIdRef.current,
@@ -83,24 +88,60 @@
         lsSetFn(key,toStore);
         if(channelRef.current && !isUnmountedRef.current){ 
           try{
-            channelRef.current.postMessage({type:'day:update',date:toStore.date,payload:toStore});
+            channelRef.current.postMessage({type:'day:update',date:dateStr,payload:toStore});
           }catch(e){}
         }
-        prevStoredSnapRef.current = JSON.stringify(toStore);
-        prevDaySnapRef.current = JSON.stringify(stripMeta(toStore));
       }catch(error){
         console.error('[AUTOSAVE] localStorage write failed:', error);
       }
-    },[getKey,lsSetFn,now,readExisting,stripMeta]);
+    },[getKey,lsSetFn,now,readExisting]);
 
     const flush = React.useCallback(()=>{
       if(disabled) return; // ЗАЩИТА: не сохранять до гидратации
       if(isUnmountedRef.current || !day || !day.date) return;
-      const payload = {...day, updatedAt: day.updatedAt!=null? day.updatedAt: now()};
-      const daySnap = JSON.stringify(stripMeta(payload));
+      
+      const daySnap = JSON.stringify(stripMeta(day));
       if(prevDaySnapRef.current === daySnap) return;
-      save(payload);
-    },[day,now,save,stripMeta,disabled]);
+      
+      const updatedAt = day.updatedAt!=null? day.updatedAt: now();
+      const meals = day.meals || [];
+      
+      // Разделяем приёмы на дневные и ночные
+      const dayMeals = meals.filter(m => !isNightTime(m.time));
+      const nightMeals = meals.filter(m => isNightTime(m.time));
+      
+      // Сохраняем дневные приёмы под текущую дату
+      const currentDayPayload = {
+        ...day,
+        meals: dayMeals,
+        updatedAt,
+      };
+      saveToDate(day.date, currentDayPayload);
+      
+      // Если есть ночные приёмы — сохраняем их под следующий календарный день
+      if (nightMeals.length > 0) {
+        const nextDayISO = getNextDay(day.date);
+        const nextDayKey = getKey(nextDayISO);
+        const existingNextDay = readExisting(nextDayKey);
+        
+        // Мержим ночные приёмы с существующими данными следующего дня
+        // Фильтруем старые ночные приёмы (по id) и добавляем новые
+        const nightMealIds = new Set(nightMeals.map(m => m.id));
+        const existingNonNightMeals = (existingNextDay?.meals || []).filter(m => !isNightTime(m.time));
+        const existingOtherNightMeals = (existingNextDay?.meals || []).filter(m => isNightTime(m.time) && !nightMealIds.has(m.id));
+        
+        const nextDayPayload = {
+          ...(existingNextDay || {}),
+          date: nextDayISO,
+          meals: [...existingNonNightMeals, ...existingOtherNightMeals, ...nightMeals],
+          updatedAt,
+        };
+        saveToDate(nextDayISO, nextDayPayload);
+      }
+      
+      prevStoredSnapRef.current = JSON.stringify(currentDayPayload);
+      prevDaySnapRef.current = daySnap;
+    },[day,now,saveToDate,stripMeta,disabled,isNightTime,getNextDay,getKey,readExisting]);
 
     React.useEffect(()=>{
       if(!day || !day.date) return;
