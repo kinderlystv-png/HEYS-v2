@@ -5092,7 +5092,7 @@ td:first-child input {
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 50; /* Ниже чем календарь (z-index: 9999) */
   margin: -12px -12px 12px -12px;
 }
 

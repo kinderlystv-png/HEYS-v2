@@ -605,6 +605,10 @@
               if (Math.abs(deltaY) > Math.abs(deltaX) * 0.7) return; // Более мягкое условие
               if (Math.abs(deltaX) < MIN_SWIPE_DISTANCE) return;
               
+              // На вкладке "day" свайп обрабатывается внутри DayTab (под-вкладки)
+              // Поэтому глобальный свайп работает только на других вкладках
+              if (tab === 'day') return;
+              
               const currentIndex = TABS_ORDER.indexOf(tab);
               
               if (deltaX < 0 && currentIndex < TABS_ORDER.length - 1) {
