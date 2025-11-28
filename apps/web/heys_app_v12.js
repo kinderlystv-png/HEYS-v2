@@ -560,6 +560,86 @@
             // useEffect автосмены клиента — ниже всех useState!
             const U = window.HEYS.utils || { lsGet: (k, d) => d, lsSet: () => {} };
             const [products, setProducts] = useState([]);
+            
+            // === SWIPE NAVIGATION ===
+            const TABS_ORDER = ['ration', 'day', 'reports', 'user'];
+            const touchRef = React.useRef({ startX: 0, startY: 0, startTime: 0 });
+            const MIN_SWIPE_DISTANCE = 60;
+            const MAX_SWIPE_TIME = 500; // ms — увеличено для более плавного свайпа
+            
+            // Slide animation state
+            const [slideDirection, setSlideDirection] = useState(null); // 'left' | 'right' | null
+            const [edgeBounce, setEdgeBounce] = useState(null); // 'left' | 'right' | null
+            
+            const onTouchStart = React.useCallback((e) => {
+              // Игнорируем свайпы на интерактивных элементах
+              const target = e.target;
+              if (target.closest('input, textarea, select, button, .swipeable-container, table')) {
+                return;
+              }
+              const touch = e.touches[0];
+              touchRef.current = {
+                startX: touch.clientX,
+                startY: touch.clientY,
+                startTime: Date.now()
+              };
+            }, []);
+            
+            const onTouchEnd = React.useCallback((e) => {
+              if (!touchRef.current.startTime) return; // Не было валидного touchStart
+              
+              const touch = e.changedTouches[0];
+              const deltaX = touch.clientX - touchRef.current.startX;
+              const deltaY = touch.clientY - touchRef.current.startY;
+              const deltaTime = Date.now() - touchRef.current.startTime;
+              
+              // Сбрасываем для следующего свайпа
+              const startTime = touchRef.current.startTime;
+              touchRef.current.startTime = 0;
+              
+              // Игнорируем если:
+              // - свайп слишком медленный
+              // - вертикальный скролл больше горизонтального
+              // - расстояние слишком маленькое
+              if (deltaTime > MAX_SWIPE_TIME) return;
+              if (Math.abs(deltaY) > Math.abs(deltaX) * 0.7) return; // Более мягкое условие
+              if (Math.abs(deltaX) < MIN_SWIPE_DISTANCE) return;
+              
+              const currentIndex = TABS_ORDER.indexOf(tab);
+              
+              if (deltaX < 0 && currentIndex < TABS_ORDER.length - 1) {
+                // Свайп влево → следующая вкладка
+                const nextTab = TABS_ORDER[currentIndex + 1];
+                if (nextTab === 'reports' && window.HEYS?.Day?.requestFlush) {
+                  try { window.HEYS.Day.requestFlush(); } catch (e) {}
+                  setReportsRefresh(Date.now());
+                }
+                setSlideDirection('left');
+                setTimeout(() => {
+                  setTab(nextTab);
+                  setSlideDirection(null);
+                }, 150);
+                if (navigator.vibrate) navigator.vibrate(10);
+              } else if (deltaX > 0 && currentIndex > 0) {
+                // Свайп вправо → предыдущая вкладка
+                setSlideDirection('right');
+                setTimeout(() => {
+                  setTab(TABS_ORDER[currentIndex - 1]);
+                  setSlideDirection(null);
+                }, 150);
+                if (navigator.vibrate) navigator.vibrate(10);
+              } else if (deltaX < 0 && currentIndex === TABS_ORDER.length - 1) {
+                // Край справа — показываем bounce
+                setEdgeBounce('right');
+                if (navigator.vibrate) navigator.vibrate([5, 30, 5]);
+                setTimeout(() => setEdgeBounce(null), 300);
+              } else if (deltaX > 0 && currentIndex === 0) {
+                // Край слева — показываем bounce
+                setEdgeBounce('left');
+                if (navigator.vibrate) navigator.vibrate([5, 30, 5]);
+                setTimeout(() => setEdgeBounce(null), 300);
+              }
+            }, [tab]);
             const [reportsRefresh, setReportsRefresh] = useState(0);
             
             // Дата для DayTab (поднятый state для DatePicker в шапке)
@@ -1681,42 +1761,59 @@
                     React.createElement('span', { className: 'tab-text' }, 'Профиль'),
                   ),
                 ),
-                tab === 'ration'
-                  ? React.createElement(RationTabWithCloudSync, {
-                      key: 'ration' + syncVer + '_' + String(clientId || ''),
-                      products,
-                      setProducts,
-                      clientId,
-                    })
-                  : tab === 'day'
-                    ? React.createElement(DayTabWithCloudSync, {
-                        key: 'day' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                // === SWIPEABLE TAB CONTENT ===
+                React.createElement(
+                  'div',
+                  {
+                    className: 'tab-content-swipeable' + 
+                      (slideDirection === 'left' ? ' slide-out-left' : '') +
+                      (slideDirection === 'right' ? ' slide-out-right' : '') +
+                      (edgeBounce === 'left' ? ' edge-bounce-left' : '') +
+                      (edgeBounce === 'right' ? ' edge-bounce-right' : ''),
+                    onTouchStart: onTouchStart,
+                    onTouchEnd: onTouchEnd,
+                  },
+                  // Edge indicators
+                  edgeBounce && React.createElement('div', { 
+                    className: 'edge-indicator ' + edgeBounce 
+                  }),
+                  tab === 'ration'
+                    ? React.createElement(RationTabWithCloudSync, {
+                        key: 'ration' + syncVer + '_' + String(clientId || ''),
                         products,
+                        setProducts,
                         clientId,
-                        selectedDate,
-                        setSelectedDate,
                       })
-                    : tab === 'user'
-                      ? React.createElement(UserTabWithCloudSync, {
-                          key: 'user' + syncVer + '_' + String(clientId || ''),
+                    : tab === 'day'
+                      ? React.createElement(DayTabWithCloudSync, {
+                          key: 'day' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                          products,
                           clientId,
+                          selectedDate,
+                          setSelectedDate,
                         })
-                      : window.HEYS && window.HEYS.ReportsTab
-                          ? React.createElement(window.HEYS.ReportsTab, {
-                              key:
-                                'reports' +
-                                syncVer +
-                                '_' +
-                                String(clientId || '') +
-                                '_' +
-                                reportsRefresh,
-                              products,
-                            })
-                          : React.createElement(
-                              'div',
-                              { className: 'muted', style: { padding: 24 } },
-                              '⏳ Загрузка компонента отчётов...',
-                            ),
+                      : tab === 'user'
+                        ? React.createElement(UserTabWithCloudSync, {
+                            key: 'user' + syncVer + '_' + String(clientId || ''),
+                            clientId,
+                          })
+                        : window.HEYS && window.HEYS.ReportsTab
+                            ? React.createElement(window.HEYS.ReportsTab, {
+                                key:
+                                  'reports' +
+                                  syncVer +
+                                  '_' +
+                                  String(clientId || '') +
+                                  '_' +
+                                  reportsRefresh,
+                                products,
+                              })
+                            : React.createElement(
+                                'div',
+                                { className: 'muted', style: { padding: 24 } },
+                                '⏳ Загрузка компонента отчётов...',
+                              ),
+                ),
               ),
             );
           }
