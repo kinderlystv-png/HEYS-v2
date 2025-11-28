@@ -177,6 +177,11 @@
   // Централизованная детекция мобильного устройства (с поддержкой ротации)
   const isMobile = useMobileDetection(768);
   
+  // === МОБИЛЬНЫЕ ПОД-ВКЛАДКИ ===
+  // 'stats' — статистика дня (шапка, статистика, активность, сон)
+  // 'diary' — дневник питания (суточные итоги, приёмы пищи)
+  const [mobileSubTab, setMobileSubTab] = useState('stats');
+  
   // Проверка: развёрнут ли приём (последний по умолчанию развёрнут)
   const isMealExpanded = (mealIndex, totalMeals) => {
     // Если есть явное состояние — используем его
@@ -2985,6 +2990,24 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     }
   
     return React.createElement('div',{className:'page page-day'},
+      // === МОБИЛЬНЫЕ ПОД-ВКЛАДКИ (только mobile) ===
+      isMobile && React.createElement('div', { className: 'day-subtabs' },
+        React.createElement('button', {
+          className: 'day-subtab' + (mobileSubTab === 'stats' ? ' active' : ''),
+          onClick: () => setMobileSubTab('stats')
+        }, 
+          React.createElement('span', { className: 'day-subtab-icon' }, '📊'),
+          React.createElement('span', { className: 'day-subtab-text' }, 'Статистика')
+        ),
+        React.createElement('button', {
+          className: 'day-subtab' + (mobileSubTab === 'diary' ? ' active' : ''),
+          onClick: () => setMobileSubTab('diary')
+        },
+          React.createElement('span', { className: 'day-subtab-icon' }, '🍽️'),
+          React.createElement('span', { className: 'day-subtab-text' }, 'Дневник')
+        )
+      ),
+      
       // Pull-to-refresh индикатор (Enhanced)
       (pullProgress > 0 || isRefreshing) && React.createElement('div', {
         className: 'pull-indicator' 
@@ -3024,12 +3047,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             : 'Потяните для обновления'
         )
       ),
-      statsBlock,
-      compactActivity,
-      sideBlock,
-      daySummary,
+      
+      // === ПОД-ВКЛАДКА 1: Статистика дня (или всё на десктопе) ===
+      (!isMobile || mobileSubTab === 'stats') && statsBlock,
+      (!isMobile || mobileSubTab === 'stats') && compactActivity,
+      (!isMobile || mobileSubTab === 'stats') && sideBlock,
+      
+      // === ПОД-ВКЛАДКА 2: Дневник питания (или всё на десктопе) ===
+      (!isMobile || mobileSubTab === 'diary') && daySummary,
       // Empty state когда нет приёмов пищи
-      (!day.meals || day.meals.length === 0) && React.createElement('div', { className: 'empty-state' },
+      (!isMobile || mobileSubTab === 'diary') && (!day.meals || day.meals.length === 0) && React.createElement('div', { className: 'empty-state' },
         React.createElement('div', { className: 'empty-state-icon' }, '🍽️'),
         React.createElement('div', { className: 'empty-state-title' }, 'Пока нет приёмов пищи'),
         React.createElement('div', { className: 'empty-state-text' }, 'Добавьте первый приём, чтобы начать отслеживание'),
@@ -3038,12 +3065,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           onClick: addMeal
         }, '+ Добавить приём')
       ),
-      mealsUI,
+      (!isMobile || mobileSubTab === 'diary') && mealsUI,
       React.createElement('div',{className:'row desktop-only',style:{justifyContent:'flex-start',marginTop:'8px'}}, React.createElement('button',{className:'btn',onClick:addMeal},'+ Приём')),
       
-      // FAB - Floating Action Button (только mobile)
-      React.createElement('button', {
-        className: 'fab-add-meal mobile-only',
+      // FAB - Floating Action Button (только mobile + только на вкладке diary)
+      isMobile && mobileSubTab === 'diary' && React.createElement('button', {
+        className: 'fab-add-meal',
         onClick: addMeal,
         title: 'Добавить приём пищи'
       }, '+'),

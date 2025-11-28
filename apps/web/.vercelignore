@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs (will be built on Vercel)
+dist/
+dist-ssr/
+coverage/
+.turbo/
+
+# Dev/Test files
+*.log
+*.local
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# Archive & Docs
+archive/
+docs/
+TESTS/
+TOOLS/
+database/
+database_fixes/
+k8s/
+docker-compose*.yml
+Dockerfile
+
+# Other apps (deploying web only)
+apps/mobile/
+apps/tg-mini/
+
+# Large files
+*.zip
+*.tar.gz
+bundle-analysis/
+performance-reports/
+test-results/
+logs/
+temp/
