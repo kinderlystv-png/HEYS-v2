@@ -556,6 +556,38 @@
           function App() {
             const ONE_CURATOR_MODE = true; // Включаем автовход для работы с Supabase
             const [tab, setTab] = useState('day');
+            
+            // === Dark Theme (3 modes: light / dark / auto) ===
+            const [theme, setTheme] = useState(() => {
+              const saved = localStorage.getItem('heys_theme');
+              return ['light', 'dark', 'auto'].includes(saved) ? saved : 'light';
+            });
+            
+            const resolvedTheme = React.useMemo(() => {
+              if (theme === 'auto') {
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+              }
+              return theme;
+            }, [theme]);
+            
+            React.useEffect(() => {
+              document.documentElement.setAttribute('data-theme', resolvedTheme);
+              localStorage.setItem('heys_theme', theme);
+              
+              if (theme !== 'auto') return;
+              
+              const mq = window.matchMedia('(prefers-color-scheme: dark)');
+              const handler = () => {
+                document.documentElement.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
+              };
+              mq.addEventListener('change', handler);
+              return () => mq.removeEventListener('change', handler);
+            }, [theme, resolvedTheme]);
+            
+            const cycleTheme = () => {
+              setTheme(prev => prev === 'light' ? 'dark' : prev === 'dark' ? 'auto' : 'light');
+            };
+            
             // ...все остальные useState...
             // useEffect автосмены клиента — ниже всех useState!
             const U = window.HEYS.utils || { lsGet: (k, d) => d, lsSet: () => {} };
@@ -1674,6 +1706,16 @@
                             '↻ Сменить',
                           )
                         : null,
+                      // Theme toggle button
+                      React.createElement(
+                        'button',
+                        {
+                          className: 'hdr-theme-btn',
+                          onClick: cycleTheme,
+                          title: theme === 'light' ? 'Светлая тема' : theme === 'dark' ? 'Тёмная тема' : 'Авто (системная)'
+                        },
+                        theme === 'light' ? '☀️' : theme === 'dark' ? '🌙' : '🔄'
+                      ),
                       window.HEYS.analyticsUI
                         ? React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
                         : null,

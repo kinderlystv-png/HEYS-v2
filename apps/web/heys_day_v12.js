@@ -1604,7 +1604,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 className: 'sleep-quality-btn',
                 onClick: openSleepQualityPicker
               },
-                React.createElement('span', { className: 'sleep-quality-label' }, 'Качество'),
+                React.createElement('span', { className: 'sleep-quality-label' }, 'Качество сна'),
                 React.createElement('span', { className: 'sleep-quality-value' }, day.sleepQuality ? '★ ' + day.sleepQuality : '—')
               )
             ),
@@ -1632,7 +1632,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               ),
               React.createElement('div', { className: 'mood-card' },
                 React.createElement('span', { className: 'mood-card-icon' }, '💪'),
-                React.createElement('span', { className: 'mood-card-label' }, 'Энергия'),
+                React.createElement('span', { className: 'mood-card-label' }, 'Самочувствие'),
                 React.createElement('span', { className: 'mood-card-value' }, day.wellbeingAvg || '—')
               ),
               React.createElement('div', { className: 'mood-card' },
@@ -3209,14 +3209,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         onClick: addMeal,
         title: 'Добавить приём пищи'
       }, '+'),
-      
-      // Theme toggle button (cycle: light → dark → auto)
-      React.createElement('button', {
-        className: 'theme-toggle',
-        onClick: cycleTheme,
-        'data-theme-mode': theme,
-        title: theme === 'light' ? 'Светлая тема' : theme === 'dark' ? 'Тёмная тема' : 'Авто (системная)'
-      }, theme === 'light' ? '☀️' : theme === 'dark' ? '🌙' : 'А'),
       
       // Toast подсказка БЖУ
       macroTip && toastVisible && React.createElement('div', {

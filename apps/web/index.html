@@ -34,11 +34,9 @@
       crossorigin="anonymous"
     />
 
-    <!-- Critical resource preloading with priority hints -->
-    <link rel="preload" href="heys_core_v12.js" as="script" fetchpriority="high" />
-    <link rel="preload" href="heys_simple_analytics.js" as="script" fetchpriority="high" />
-
-    <!-- Resource hints for better caching -->
+    <!-- Resource hints for better caching (prefetch, not preload to avoid warnings) -->
+    <link rel="prefetch" href="heys_core_v12.js" />
+    <link rel="prefetch" href="heys_simple_analytics.js" />
     <link rel="prefetch" href="heys_storage_supabase_v1.js" />
     <link rel="prefetch" href="heys_models_v1.js" />
 
@@ -55,11 +53,13 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#2563eb" />
     
-    <!-- Apple iOS PWA Support -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- PWA Support (iOS + Android) -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="HEYS" />
-    <link rel="apple-touch-icon" href="/icon-192.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
   </head>
   <body>
     <div id="root"></div>
