@@ -25,8 +25,8 @@
       isVerticalScroll: null // null = не определено, true = вертикальный скролл
     });
     
-    const DELETE_THRESHOLD = 80; // Порог для показа кнопки удаления
-    const DELETE_FULL_THRESHOLD = 150; // Порог для автоматического удаления
+    const DELETE_THRESHOLD = 100; // Порог для показа кнопки удаления (увеличен для меньшей чувствительности)
+    const DELETE_FULL_THRESHOLD = 180; // Порог для автоматического удаления
     
     React.useEffect(() => {
       const el = rowRef.current;
@@ -51,8 +51,8 @@
         const deltaX = touch.clientX - touchState.current.startX;
         const deltaY = touch.clientY - touchState.current.startY;
         
-        // Определяем направление скролла при первом движении
-        if (touchState.current.isVerticalScroll === null && (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5)) {
+        // Определяем направление скролла при первом движении (увеличен порог 5→15)
+        if (touchState.current.isVerticalScroll === null && (Math.abs(deltaX) > 15 || Math.abs(deltaY) > 15)) {
           touchState.current.isVerticalScroll = Math.abs(deltaY) > Math.abs(deltaX);
         }
         

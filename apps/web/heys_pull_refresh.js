@@ -4,9 +4,9 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
 
-  // Параметры
-  const PULL_THRESHOLD = 80; // px для активации
-  const MAX_PULL = 120; // максимальная высота
+  // Параметры (увеличены пороги для меньшей чувствительности)
+  const PULL_THRESHOLD = 100; // px для активации
+  const MAX_PULL = 140; // максимальная высота
 
   function PullToRefresh({ onRefresh, children }) {
     const { useState, useRef, useCallback, useEffect } = React;
@@ -46,8 +46,8 @@
           vibrate(10);
         }
         
-        // Предотвращаем скролл браузера
-        if (diff > 10) {
+        // Предотвращаем скролл браузера (увеличен порог)
+        if (diff > 20) {
           e.preventDefault();
         }
       }
