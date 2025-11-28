@@ -996,27 +996,46 @@ td:first-child input {
 
 /* Dropdown */
 .date-picker-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 9999;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10001;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   padding: 12px;
   min-width: 280px;
+  max-width: calc(100vw - 32px);
   box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.2), 0 4px 12px -2px rgba(0, 0, 0, 0.1);
   animation: datePickerSlide 0.2s ease;
+}
+
+/* Backdrop для календаря */
+.date-picker-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes datePickerSlide {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translate(-50%, -50%) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
