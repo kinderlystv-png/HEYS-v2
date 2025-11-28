@@ -4,7 +4,16 @@
   "outputDirectory": "dist",
   "installCommand": "cd ../.. && pnpm install",
   "framework": "vite",
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "@vercel/edge"
+    }
+  },
   "rewrites": [
+    {
+      "source": "/api/supabase/:path*",
+      "destination": "/api/supabase/:path*"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
