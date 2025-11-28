@@ -1533,11 +1533,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       })
     );
 
-  // Компактные блоки сна и оценки дня в SaaS стиле
+  // Компактный блок сна и оценки дня в SaaS стиле (объединённый, розовый фон)
   const sideBlock = React.createElement('div',{className:'area-side right-col'},
-      // Блок СОН — компактный
-      React.createElement('div', { className: 'compact-card' },
-        React.createElement('div', { className: 'compact-card-header' }, '😴 Сон'),
+      React.createElement('div', { className: 'compact-sleep compact-card' },
+        React.createElement('div', { className: 'compact-card-header' }, '😴 Сон и самочувствие'),
+        
+        // Секция СОН
+        React.createElement('div', { className: 'section-title' }, '🌙 Сон'),
         React.createElement('div', { className: 'compact-row' },
           React.createElement('label', { className: 'compact-label' }, 'Лёг'),
           React.createElement('input', { className: 'compact-input time', type: 'time', value: day.sleepStart || '', onChange: e => setDay({...day, sleepStart: e.target.value}) }),
@@ -1547,10 +1549,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('input', { className: 'compact-input tiny', type: 'number', step: '0.5', placeholder: '★', title: 'Качество сна', value: day.sleepQuality || '', onChange: e => setDay({...day, sleepQuality: +e.target.value || 0}) }),
         ),
         React.createElement('input', { className: 'compact-note', type: 'text', placeholder: 'Заметка о сне...', value: day.sleepNote || '', onChange: e => setDay({...day, sleepNote: e.target.value}) }),
-      ),
-      // Блок ОЦЕНКА ДНЯ — компактный  
-      React.createElement('div', { className: 'compact-card' },
-        React.createElement('div', { className: 'compact-card-header' }, '📊 День'),
+        
+        // Разделитель
+        React.createElement('div', { className: 'section-divider' }),
+        
+        // Секция ОЦЕНКА ДНЯ
+        React.createElement('div', { className: 'section-title' }, '📊 Оценка дня'),
         React.createElement('div', { className: 'compact-row' },
           React.createElement('input', { className: 'compact-input tiny', type: 'number', placeholder: '★', title: 'Оценка дня', value: day.dayScore || '', onChange: e => setDay({...day, dayScore: +e.target.value || 0}) }),
           React.createElement('span', { className: 'compact-stat', title: 'Настроение' }, '😊', React.createElement('span', null, day.moodAvg || '—')),

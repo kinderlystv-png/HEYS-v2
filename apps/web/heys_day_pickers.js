@@ -24,22 +24,25 @@
     
     const [isOpen, setIsOpen] = React.useState(false);
     const [cur, setCur] = React.useState(parseISO(valueISO || todayISO()));
+    const [dropdownPos, setDropdownPos] = React.useState({ top: 0, right: 0 });
     const wrapperRef = React.useRef(null);
+    const triggerRef = React.useRef(null);
     
     React.useEffect(() => { setCur(parseISO(valueISO || todayISO())); }, [valueISO]);
     
-    // Закрытие при клике вне
+    // Вычисляем позицию при открытии
     React.useEffect(() => {
-      function handleClickOutside(e) {
-        if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-          setIsOpen(false);
-        }
-      }
-      if (isOpen) {
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+      if (isOpen && triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        setDropdownPos({
+          top: rect.bottom + 8,
+          right: window.innerWidth - rect.right
+        });
       }
     }, [isOpen]);
+    
+    // Закрытие при клике вне (теперь не нужно — backdrop закрывает)
+    // handleClickOutside удалён
     
     const y = cur.getFullYear(), m = cur.getMonth();
     const first = new Date(y, m, 1), start = (first.getDay() + 6) % 7;
@@ -61,6 +64,7 @@
     return React.createElement('div', { className: 'date-picker', ref: wrapperRef },
       // Кнопка-триггер
       React.createElement('button', {
+        ref: triggerRef,
         className: 'date-picker-trigger' + (isOpen ? ' open' : ''),
         onClick: () => setIsOpen(!isOpen)
       },
@@ -78,7 +82,10 @@
             className: 'date-picker-backdrop',
             onClick: () => setIsOpen(false)
           }),
-          React.createElement('div', { className: 'date-picker-dropdown' },
+          React.createElement('div', { 
+            className: 'date-picker-dropdown',
+            style: { top: dropdownPos.top + 'px', right: dropdownPos.right + 'px' }
+          },
         React.createElement('div', { className: 'date-picker-header' },
           React.createElement('button', { 
             className: 'date-picker-nav', 
