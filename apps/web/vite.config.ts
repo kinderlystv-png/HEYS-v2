@@ -17,19 +17,21 @@ export default defineConfig({
   build: {
     // Advanced Tree Shaking Configuration - Performance Sprint Day 2
     rollupOptions: {
-      // External dependencies bundling for Performance Sprint
-      external: [],
+      // External: workspace packages не используются в legacy web app
+      // React загружается через CDN, legacy JS файлы не импортируют packages
+      external: [
+        '@heys/shared',
+        '@heys/storage', 
+        '@heys/search',
+        '@heys/analytics',
+        '@heys/gaming',
+        '@heys/core',
+        '@heys/ui',
+        '@heys/logger',
+      ],
       output: {
-        manualChunks: {
-          // React ecosystem в отдельный chunk
-          react: ['react', 'react-dom'],
-          // Vendor libraries
-          vendor: ['@heys/shared', '@heys/storage'],
-          // Feature modules
-          features: ['@heys/search', '@heys/analytics', '@heys/gaming'],
-          // Core functionality
-          core: ['@heys/core', '@heys/ui'],
-        },
+        // manualChunks отключены — legacy app использует vanilla JS + React CDN
+        // Packages билдятся отдельно для других apps (tg-mini, mobile)
         // Оптимизируем имена файлов
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',

@@ -775,6 +775,16 @@
     // Значения минут: 0-120
     const zoneMinutesValues = useMemo(() => Array.from({length: 121}, (_, i) => String(i)), []);
     
+    // === Sleep Quality Picker Modal ===
+    const [showSleepQualityPicker, setShowSleepQualityPicker] = useState(false);
+    const [pendingSleepQuality, setPendingSleepQuality] = useState(0);
+    const sleepQualityValues = useMemo(() => ['—', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'], []);
+    
+    // === Day Score Picker Modal ===
+    const [showDayScorePicker, setShowDayScorePicker] = useState(false);
+    const [pendingDayScore, setPendingDayScore] = useState(0);
+    const dayScoreValues = useMemo(() => ['—', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], []);
+    
     // === Weight Picker Modal ===
     const [showWeightPicker, setShowWeightPicker] = useState(false);
     const [weightPickerStep, setWeightPickerStep] = useState(1); // 1=вес, 2=цель шагов
@@ -990,6 +1000,43 @@
     function cancelZonePicker() {
       setShowZonePicker(false);
       setZonePickerTarget(null);
+    }
+    
+    // === Sleep Quality Picker functions ===
+    function openSleepQualityPicker() {
+      const currentQuality = day.sleepQuality || 0;
+      // Находим индекс: 0='—', 1='1', 2='1.5', 3='2', ...
+      const idx = currentQuality === 0 ? 0 : sleepQualityValues.indexOf(String(currentQuality));
+      setPendingSleepQuality(idx >= 0 ? idx : 0);
+      setShowSleepQualityPicker(true);
+    }
+    
+    function confirmSleepQualityPicker() {
+      const value = pendingSleepQuality === 0 ? 0 : parseFloat(sleepQualityValues[pendingSleepQuality]);
+      setDay({...day, sleepQuality: value});
+      setShowSleepQualityPicker(false);
+    }
+    
+    function cancelSleepQualityPicker() {
+      setShowSleepQualityPicker(false);
+    }
+    
+    // === Day Score Picker functions ===
+    function openDayScorePicker() {
+      const currentScore = day.dayScore || 0;
+      const idx = currentScore === 0 ? 0 : dayScoreValues.indexOf(String(currentScore));
+      setPendingDayScore(idx >= 0 ? idx : 0);
+      setShowDayScorePicker(true);
+    }
+    
+    function confirmDayScorePicker() {
+      const value = pendingDayScore === 0 ? 0 : parseInt(dayScoreValues[pendingDayScore]);
+      setDay({...day, dayScore: value});
+      setShowDayScorePicker(false);
+    }
+    
+    function cancelDayScorePicker() {
+      setShowDayScorePicker(false);
     }
     
     // Используем глобальный WheelColumn
@@ -1533,35 +1580,70 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       })
     );
 
-  // Компактный блок сна и оценки дня в SaaS стиле (объединённый, розовый фон)
+  // Компактный блок сна и оценки дня в SaaS стиле (две плашки в розовом контейнере)
   const sideBlock = React.createElement('div',{className:'area-side right-col'},
       React.createElement('div', { className: 'compact-sleep compact-card' },
         React.createElement('div', { className: 'compact-card-header' }, '😴 Сон и самочувствие'),
         
-        // Секция СОН
-        React.createElement('div', { className: 'section-title' }, '🌙 Сон'),
-        React.createElement('div', { className: 'compact-row' },
-          React.createElement('label', { className: 'compact-label' }, 'Лёг'),
-          React.createElement('input', { className: 'compact-input time', type: 'time', value: day.sleepStart || '', onChange: e => setDay({...day, sleepStart: e.target.value}) }),
-          React.createElement('label', { className: 'compact-label' }, '→'),
-          React.createElement('input', { className: 'compact-input time', type: 'time', value: day.sleepEnd || '', onChange: e => setDay({...day, sleepEnd: e.target.value}) }),
-          React.createElement('span', { className: 'compact-badge' }, sleepH ? sleepH + 'ч' : '—'),
-          React.createElement('input', { className: 'compact-input tiny', type: 'number', step: '0.5', placeholder: '★', title: 'Качество сна', value: day.sleepQuality || '', onChange: e => setDay({...day, sleepQuality: +e.target.value || 0}) }),
-        ),
-        React.createElement('input', { className: 'compact-note', type: 'text', placeholder: 'Заметка о сне...', value: day.sleepNote || '', onChange: e => setDay({...day, sleepNote: e.target.value}) }),
-        
-        // Разделитель
-        React.createElement('div', { className: 'section-divider' }),
-        
-        // Секция ОЦЕНКА ДНЯ
-        React.createElement('div', { className: 'section-title' }, '📊 Оценка дня'),
-        React.createElement('div', { className: 'compact-row' },
-          React.createElement('input', { className: 'compact-input tiny', type: 'number', placeholder: '★', title: 'Оценка дня', value: day.dayScore || '', onChange: e => setDay({...day, dayScore: +e.target.value || 0}) }),
-          React.createElement('span', { className: 'compact-stat', title: 'Настроение' }, '😊', React.createElement('span', null, day.moodAvg || '—')),
-          React.createElement('span', { className: 'compact-stat', title: 'Самочувствие' }, '💪', React.createElement('span', null, day.wellbeingAvg || '—')),
-          React.createElement('span', { className: 'compact-stat', title: 'Стресс' }, '😰', React.createElement('span', null, day.stressAvg || '—')),
-        ),
-        React.createElement('input', { className: 'compact-note', type: 'text', placeholder: 'Заметка о дне...', value: day.dayComment || '', onChange: e => setDay({...day, dayComment: e.target.value}) }),
+        // Ряд с двумя плашками
+        React.createElement('div', { className: 'sleep-cards-row' },
+          // Плашка СОН
+          React.createElement('div', { className: 'sleep-card' },
+            React.createElement('div', { className: 'sleep-card-header' },
+              React.createElement('span', { className: 'sleep-card-icon' }, '🌙'),
+              React.createElement('span', { className: 'sleep-card-title' }, 'Сон')
+            ),
+            React.createElement('div', { className: 'sleep-card-times' },
+              React.createElement('input', { className: 'sleep-time-input', type: 'time', value: day.sleepStart || '', onChange: e => setDay({...day, sleepStart: e.target.value}) }),
+              React.createElement('span', { className: 'sleep-arrow' }, '→'),
+              React.createElement('input', { className: 'sleep-time-input', type: 'time', value: day.sleepEnd || '', onChange: e => setDay({...day, sleepEnd: e.target.value}) })
+            ),
+            React.createElement('div', { className: 'sleep-card-stats' },
+              React.createElement('span', { className: 'sleep-duration' }, sleepH ? 'Спал ' + sleepH + ' ч' : '—'),
+              React.createElement('div', { 
+                className: 'sleep-quality-btn',
+                onClick: openSleepQualityPicker
+              },
+                React.createElement('span', { className: 'sleep-quality-label' }, 'Качество'),
+                React.createElement('span', { className: 'sleep-quality-value' }, day.sleepQuality ? '★ ' + day.sleepQuality : '—')
+              )
+            ),
+            React.createElement('input', { className: 'sleep-note', type: 'text', placeholder: 'Заметка...', value: day.sleepNote || '', onChange: e => setDay({...day, sleepNote: e.target.value}) })
+          ),
+          
+          // Плашка ОЦЕНКА ДНЯ
+          React.createElement('div', { className: 'sleep-card' },
+            React.createElement('div', { className: 'sleep-card-header' },
+              React.createElement('span', { className: 'sleep-card-icon' }, '📊'),
+              React.createElement('span', { className: 'sleep-card-title' }, 'Оценка дня')
+            ),
+            React.createElement('div', { 
+              className: 'day-score-btn',
+              onClick: openDayScorePicker
+            },
+              React.createElement('span', { className: 'day-score-label' }, 'Оценка'),
+              React.createElement('span', { className: 'day-score-value' }, day.dayScore ? day.dayScore + ' / 10' : '—')
+            ),
+            React.createElement('div', { className: 'day-mood-row' },
+              React.createElement('div', { className: 'mood-card' },
+                React.createElement('span', { className: 'mood-card-icon' }, '😊'),
+                React.createElement('span', { className: 'mood-card-label' }, 'Настроение'),
+                React.createElement('span', { className: 'mood-card-value' }, day.moodAvg || '—')
+              ),
+              React.createElement('div', { className: 'mood-card' },
+                React.createElement('span', { className: 'mood-card-icon' }, '💪'),
+                React.createElement('span', { className: 'mood-card-label' }, 'Энергия'),
+                React.createElement('span', { className: 'mood-card-value' }, day.wellbeingAvg || '—')
+              ),
+              React.createElement('div', { className: 'mood-card' },
+                React.createElement('span', { className: 'mood-card-icon' }, '😰'),
+                React.createElement('span', { className: 'mood-card-label' }, 'Стресс'),
+                React.createElement('span', { className: 'mood-card-value' }, day.stressAvg || '—')
+              )
+            ),
+            React.createElement('input', { className: 'sleep-note', type: 'text', placeholder: 'Заметка...', value: day.dayComment || '', onChange: e => setDay({...day, dayComment: e.target.value}) })
+          )
+        )
       )
     );
 
@@ -3472,6 +3554,60 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 values: zoneMinutesValues.map(v => v + ' мин'),
                 selected: pendingZoneMinutes,
                 onChange: (i) => setPendingZoneMinutes(i)
+              })
+            )
+          )
+        ),
+        document.body
+      ),
+      
+      // Sleep Quality Picker Modal
+      showSleepQualityPicker && ReactDOM.createPortal(
+        React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelSleepQualityPicker },
+          React.createElement('div', { className: 'time-picker-modal quality-picker-modal', onClick: e => e.stopPropagation() },
+            React.createElement('div', { 
+              className: 'bottom-sheet-handle',
+              onTouchStart: handleSheetTouchStart,
+              onTouchMove: handleSheetTouchMove,
+              onTouchEnd: () => handleSheetTouchEnd(cancelSleepQualityPicker)
+            }),
+            React.createElement('div', { className: 'time-picker-header' },
+              React.createElement('button', { className: 'time-picker-cancel', onClick: cancelSleepQualityPicker }, 'Отмена'),
+              React.createElement('span', { className: 'time-picker-title' }, '😴 Качество сна'),
+              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmSleepQualityPicker }, 'Готово')
+            ),
+            React.createElement('div', { className: 'time-picker-wheels quality-wheels' },
+              React.createElement(WheelColumn, {
+                values: sleepQualityValues.map(v => v === '—' ? '—' : '★ ' + v),
+                selected: pendingSleepQuality,
+                onChange: (i) => setPendingSleepQuality(i)
+              })
+            )
+          )
+        ),
+        document.body
+      ),
+      
+      // Day Score Picker Modal
+      showDayScorePicker && ReactDOM.createPortal(
+        React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelDayScorePicker },
+          React.createElement('div', { className: 'time-picker-modal score-picker-modal', onClick: e => e.stopPropagation() },
+            React.createElement('div', { 
+              className: 'bottom-sheet-handle',
+              onTouchStart: handleSheetTouchStart,
+              onTouchMove: handleSheetTouchMove,
+              onTouchEnd: () => handleSheetTouchEnd(cancelDayScorePicker)
+            }),
+            React.createElement('div', { className: 'time-picker-header' },
+              React.createElement('button', { className: 'time-picker-cancel', onClick: cancelDayScorePicker }, 'Отмена'),
+              React.createElement('span', { className: 'time-picker-title' }, '📊 Оценка дня'),
+              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmDayScorePicker }, 'Готово')
+            ),
+            React.createElement('div', { className: 'time-picker-wheels score-wheels' },
+              React.createElement(WheelColumn, {
+                values: dayScoreValues.map(v => v === '—' ? '—' : v + ' / 10'),
+                selected: pendingDayScore,
+                onChange: (i) => setPendingDayScore(i)
               })
             )
           )

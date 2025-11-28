@@ -15,9 +15,9 @@
   --activity-bg: #fffef5;
   --activity-border: #f5e6a3;
   
-  /* Sleep/Day block (розовый) */
-  --sleep-bg: #fdf2f8;
-  --sleep-border: #fbcfe8;
+  /* Sleep/Day block (суперсветло-розовый) */
+  --sleep-bg: #fef7f9;
+  --sleep-border: #fce7f3;
   
   /* Progress colors */
   --success: #22c55e;
@@ -5196,7 +5196,7 @@ td:first-child input {
   margin-bottom: 12px;
 }
 
-/* === COMPACT SLEEP BLOCK (розовый) === */
+/* === COMPACT SLEEP BLOCK (суперсветло-розовый) === */
 .compact-sleep {
   margin-bottom: 8px;
   background: var(--sleep-bg);
@@ -5207,25 +5207,208 @@ td:first-child input {
   color: #be185d;
 }
 
-.compact-sleep .compact-badge {
-  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
-  box-shadow: 0 2px 4px rgba(236, 72, 153, 0.25);
+/* Ряд с двумя плашками */
+.sleep-cards-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.compact-sleep .section-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #fbcfe8, transparent);
-  margin: 12px 0;
+/* Плашка Сон / Оценка дня */
+.sleep-card {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #fce7f3;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.compact-sleep .section-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #be185d;
-  margin-bottom: 8px;
+.sleep-card-header {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-bottom: 10px;
+}
+
+.sleep-card-icon {
+  font-size: 14px;
+}
+
+.sleep-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #be185d;
+}
+
+/* Время сна */
+.sleep-card-times {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.sleep-time-input {
+  width: 70px;
+  padding: 6px 8px;
+  border: 1px solid #fce7f3;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: center;
+  background: #fef7f9;
+  transition: all 0.2s;
+}
+
+.sleep-time-input:focus {
+  outline: none;
+  border-color: #ec4899;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
+}
+
+.sleep-arrow {
+  color: #f9a8d4;
+  font-size: 14px;
+}
+
+/* Статистика сна */
+.sleep-card-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.sleep-duration {
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Заметка */
+.sleep-note {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #fce7f3;
+  border-radius: 8px;
+  font-size: 12px;
+  background: #fef7f9;
+  transition: all 0.2s;
+}
+
+.sleep-note:focus {
+  outline: none;
+  border-color: #ec4899;
+  background: #fff;
+}
+
+.sleep-note::placeholder {
+  color: #f9a8d4;
+}
+
+/* Оценка дня */
+.day-score-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #fef7f9;
+  border: 1px solid #fce7f3;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.day-score-btn:active {
+  transform: scale(0.98);
+  background: #fdf2f8;
+}
+
+.day-score-label {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.day-score-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #be185d;
+}
+
+/* Кнопка качества сна */
+.sleep-quality-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #fef7f9;
+  border: 1px solid #fce7f3;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sleep-quality-btn:active {
+  transform: scale(0.98);
+  background: #fdf2f8;
+}
+
+.sleep-quality-label {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.sleep-quality-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f59e0b;
+}
+
+/* Настроение — красивые карточки */
+.day-mood-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.mood-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  background: linear-gradient(135deg, #fef7f9 0%, #fff 100%);
+  border: 1px solid #fce7f3;
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+
+.mood-card:active {
+  transform: scale(0.97);
+}
+
+.mood-card-icon {
+  font-size: 18px;
+  margin-bottom: 2px;
+}
+
+.mood-card-label {
+  font-size: 9px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+}
+
+.mood-card-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #be185d;
 }
 
 /* === COMPACT ACTIVITY INPUT === */
