@@ -1,4 +1,4 @@
 
-> @heys/ui@14.0.0 type-check /Users/poplavskijanton/HEYS-v2/packages/ui
+> @heys/ui@14.0.0 type-check /home/runner/work/HEYS-v2/HEYS-v2/packages/ui
 > tsc --noEmit
 

@@ -1,430 +1,53 @@
 // heys_day_v12.js — DayTab component, daily tracking, meals, statistics
+// Refactored: imports from heys_day_utils.js, heys_day_hooks.js, heys_day_pickers.js
 
 ;(function(global){
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
-  // Убрано избыточное логирование DayTab build
-
-  // === Haptic Feedback ===
-  function haptic(type = 'light') {
-    if (!navigator.vibrate) return;
-    switch(type) {
-      case 'light': navigator.vibrate(10); break;
-      case 'medium': navigator.vibrate(20); break;
-      case 'heavy': navigator.vibrate(30); break;
-      case 'success': navigator.vibrate([10, 50, 20]); break;
-      case 'warning': navigator.vibrate([30, 30, 30]); break;
-      case 'error': navigator.vibrate([50, 30, 50, 30, 50]); break;
-      default: navigator.vibrate(10);
-    }
-  }
   
-  // Экспортируем для использования в других модулях
-  HEYS.haptic = haptic;
-
-  function pad2(n){ return String(n).padStart(2,'0'); }
-  function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
-  function fmtDate(d){ return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
-  function parseISO(s){ const [y,m,d]=String(s||'').split('-').map(x=>parseInt(x,10)); if(!y||!m||!d) return new Date(); const dt=new Date(y,m-1,d); dt.setHours(12); return dt; }
-  function uid(p){ return (p||'id')+Math.random().toString(36).slice(2,8); }
-  function lsGet(k,d){
-    try{
-      if(HEYS.store && typeof HEYS.store.get==='function') {
-        const result = HEYS.store.get(k,d);
-        if (window.HEYS && window.HEYS.analytics) {
-          window.HEYS.analytics.trackDataOperation('storage-op');
-        }
-        return result;
-      }
-      const v=JSON.parse(localStorage.getItem(k)); 
-      if (window.HEYS && window.HEYS.analytics) {
-        window.HEYS.analytics.trackDataOperation('storage-op');
-      }
-      return v==null?d:v;
-    }catch(e){ return d; }
-  }
-  function lsSet(k,v){
-    try{
-      if(HEYS.store && typeof HEYS.store.set==='function') {
-        const result = HEYS.store.set(k,v);
-        if (window.HEYS && window.HEYS.analytics) {
-          window.HEYS.analytics.trackDataOperation('storage-op');
-        }
-        return result;
-      }
-      // Сначала пишем в localStorage для мгновенной доступности другим вкладкам
-      try{ 
-        localStorage.setItem(k, JSON.stringify(v)); 
-        if (window.HEYS && window.HEYS.analytics) {
-          window.HEYS.analytics.trackDataOperation('storage-op');
-        }
-      }catch(e){}
-      // Потом отправляем в облако (асинхронно)
-      try{ window.HEYS.saveClientKey(k, v); }catch(e){}
-    }catch(e){}
-  }
-  function clamp(n,a,b){ n=+n||0; if(n<a)return a; if(n>b)return b; return n; }
-  const r1=v=>Math.round((+v||0)*10)/10; // округление до 1 десятой (для веса)
-  const r0=v=>Math.round(+v||0); // округление до целого (для калорий)
-
-  // Используем общие модели вместо локальных дубликатов
-  const M = HEYS.models || {};
-  function ensureDay(d,prof){ return (M.ensureDay? M.ensureDay(d,prof): (d||{})); }
-  function buildProductIndex(ps){ return M.buildProductIndex? M.buildProductIndex(ps): {byId:new Map(),byName:new Map()}; }
-  function getProductFromItem(it,idx){ return M.getProductFromItem? M.getProductFromItem(it,idx): null; }
-  function per100(p){
-    if(!p) return {kcal100:0,carbs100:0,prot100:0,fat100:0,simple100:0,complex100:0,bad100:0,good100:0,trans100:0,fiber100:0};
-    if(M.computeDerivedProduct){
-      const d=M.computeDerivedProduct(p);
-      return {kcal100:d.kcal100,carbs100:d.carbs100,prot100:+p.protein100||0,fat100:d.fat100,simple100:+p.simple100||0,complex100:+p.complex100||0,bad100:+p.badFat100||0,good100:+p.goodFat100||0,trans100:+p.trans100||0,fiber100:+p.fiber100||0};
-    }
-    const s=+p.simple100||0,c=+p.complex100||0,pr=+p.protein100||0,b=+p.badFat100||0,g=+p.goodFat100||0,t=+p.trans100||0,fib=+p.fiber100||0; const carbs=+p.carbs100||(s+c); const fat=+p.fat100||(b+g+t); const kcal=+p.kcal100||(4*(pr+carbs)+8*fat); return {kcal100:kcal,carbs100:carbs,prot100:pr,fat100:fat,simple100:s,complex100:c,bad100:b,good100:g,trans100:t,fiber100:fib};
-  }
-  const scale=(v,g)=>Math.round(((+v||0)*(+g||0)/100)*10)/10;
-
-  function loadMealsForDate(ds){ const keys=['heys_dayv2_'+ds,'heys_day_'+ds,'day_'+ds+'_meals','meals_'+ds,'food_'+ds]; for(const k of keys){ try{ const raw=localStorage.getItem(k); if(!raw)continue; const v=JSON.parse(raw); if(v&&Array.isArray(v.meals)) return v.meals; if(Array.isArray(v)) return v; }catch(e){} } return []; }
-
-  // Хук для централизованного автосохранения дня с учётом гонок и межвкладочной синхронизации
-  function useDayAutosave({
-    day,
-    date,
-    lsSet,
-    lsGetFn = lsGet,
-    keyPrefix = 'heys_dayv2_',
-    debounceMs = 500,
-    now = () => Date.now(),
-    disabled = false, // ЗАЩИТА: не сохранять пока данные не загружены
-  }){
-    const timerRef = React.useRef(null);
-    const prevStoredSnapRef = React.useRef(null);
-    const prevDaySnapRef = React.useRef(null);
-    const sourceIdRef = React.useRef((global.crypto && typeof global.crypto.randomUUID === 'function')? global.crypto.randomUUID(): String(Math.random()));
-    const channelRef = React.useRef(null);
-    const isUnmountedRef = React.useRef(false);
-
-    React.useEffect(()=>{
-      isUnmountedRef.current = false;
-      if('BroadcastChannel' in global){
-        const channel = new BroadcastChannel('heys_day_updates');
-        channelRef.current = channel;
-        return ()=>{
-          isUnmountedRef.current = true;
-          channel.close();
-          channelRef.current = null;
-        };
-      }
-      channelRef.current = null;
-    },[]);
-
-    const getKey = React.useCallback((payload)=> keyPrefix + ((payload && payload.date) ? payload.date : date),[keyPrefix,date]);
-
-    const stripMeta = React.useCallback((payload)=>{
-      if(!payload) return payload;
-      const {updatedAt,_sourceId,...rest} = payload;
-      return rest;
-    },[]);
-
-    const readExisting = React.useCallback((key)=>{
-      if(!key) return null;
-      try{
-        const stored = lsGetFn? lsGetFn(key,null):null;
-        if(stored && typeof stored==='object') return stored;
-      }catch(e){}
-      try{
-        const raw = global.localStorage.getItem(key);
-        return raw? JSON.parse(raw):null;
-      }catch(e){ return null; }
-    },[lsGetFn]);
-
-    const save = React.useCallback((payload)=>{
-      if(!payload || !payload.date) return;
-      const key = getKey(payload);
-      const current = readExisting(key);
-      const incomingUpdatedAt = payload.updatedAt!=null? payload.updatedAt: now();
-
-      if(current && current.updatedAt > incomingUpdatedAt) return;
-      if(current && current.updatedAt===incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) return;
-
-      const toStore = {
-        ...payload,
-        schemaVersion: payload.schemaVersion!=null? payload.schemaVersion:3,
-        updatedAt: incomingUpdatedAt,
-        _sourceId: sourceIdRef.current,
-      };
-
-      try{
-        lsSet(key,toStore);
-        if(channelRef.current && !isUnmountedRef.current){ 
-          try{
-            channelRef.current.postMessage({type:'day:update',date:toStore.date,payload:toStore});
-          }catch(e){}
-        }
-        prevStoredSnapRef.current = JSON.stringify(toStore);
-        prevDaySnapRef.current = JSON.stringify(stripMeta(toStore));
-      }catch(error){
-        console.error('[AUTOSAVE] localStorage write failed:', error);
-      }
-    },[getKey,lsSet,now,readExisting,stripMeta]);
-
-    const flush = React.useCallback(()=>{
-      if(disabled) return; // ЗАЩИТА: не сохранять до гидратации
-      if(isUnmountedRef.current || !day || !day.date) return;
-      const payload = {...day, updatedAt: day.updatedAt!=null? day.updatedAt: now()};
-      const daySnap = JSON.stringify(stripMeta(payload));
-      if(prevDaySnapRef.current === daySnap) return;
-      save(payload);
-    },[day,now,save,stripMeta,disabled]);
-
-    React.useEffect(()=>{
-      if(!day || !day.date) return;
-      const key = getKey(day);
-      const current = readExisting(key);
-      if(current){
-        prevStoredSnapRef.current = JSON.stringify(current);
-        prevDaySnapRef.current = JSON.stringify(stripMeta(current));
-      }else{
-        prevDaySnapRef.current = JSON.stringify(stripMeta(day));
-      }
-    },[day && day.date,getKey,readExisting,stripMeta]);
-
-    React.useEffect(()=>{
-      if(disabled) return; // ЗАЩИТА: не запускать таймер до гидратации
-      if(!day || !day.date) return;
-      const daySnap = JSON.stringify(stripMeta(day));
-      if(prevDaySnapRef.current === daySnap) return;
-      global.clearTimeout(timerRef.current);
-      timerRef.current = global.setTimeout(flush,debounceMs);
-      return ()=>{ global.clearTimeout(timerRef.current); };
-    },[day,debounceMs,flush,stripMeta,disabled]);
-
-    React.useEffect(()=>{
-      return ()=>{
-        global.clearTimeout(timerRef.current);
-        if(!disabled) flush(); // ЗАЩИТА: не сохранять при unmount если не гидратировано
-      };
-    },[flush,disabled]);
-
-    React.useEffect(()=>{
-      const onVisChange=()=>{
-        if(!disabled && global.document.visibilityState!=='visible') flush();
-      };
-      global.document.addEventListener('visibilitychange',onVisChange);
-      global.addEventListener('pagehide',flush);
-      return ()=>{
-        global.document.removeEventListener('visibilitychange',onVisChange);
-        global.removeEventListener('pagehide',flush);
-      };
-    },[flush]);
-
-    return {flush};
-  }
-
-  // Lightweight signature for products (ids/names only)
-  function productsSignature(ps){ return (ps||[]).map(p=>p&& (p.id||p.product_id||p.name)||'').join('|'); }
-  // Cached popular products (per month + signature + TTL)
-  const POPULAR_CACHE = {}; // key => {ts, list}
-  function computePopularProducts(ps, iso){
-    const sig = productsSignature(ps);
-    const monthKey = (iso||todayISO()).slice(0,7); // YYYY-MM
-    const key = monthKey+'::'+sig;
-    const now = Date.now();
-    const ttl = 1000*60*10; // 10 минут
-    const cached = POPULAR_CACHE[key];
-    if (cached && (now - cached.ts) < ttl) return cached.list;
-    const idx=buildProductIndex(ps), base=iso?new Date(iso):new Date(), cnt=new Map();
-    for(let i=0;i<30;i++){
-      const d=new Date(base); d.setDate(d.getDate()-i);
-      (loadMealsForDate(fmtDate(d))||[]).forEach(m=>{ ((m&&m.items)||[]).forEach(it=>{ const p=getProductFromItem(it,idx); if(!p)return; const k=String(p.id??p.product_id??p.name); cnt.set(k,(cnt.get(k)||0)+1); }); });
-    }
-    const arr=[]; cnt.forEach((c,k)=>{ let p=idx.byId.get(String(k))||idx.byName.get(String(k).trim().toLowerCase()); if(p) arr.push({p,c}); });
-    arr.sort((a,b)=>b.c-a.c);
-    const list = arr.slice(0,20).map(x=>x.p);
-    POPULAR_CACHE[key] = { ts: now, list };
-    return list;
-  }
-
-  function getProfile(){ const p=lsGet('heys_profile',{})||{}; const g=(p.gender||p.sex||'Мужской'); const sex=(String(g).toLowerCase().startsWith('ж')?'female':'male'); return {sex,height:+p.height||175,age:+p.age||30, sleepHours:+p.sleepHours||8, weight:+p.weight||70, deficitPctTarget:+p.deficitPctTarget||0, stepsGoal:+p.stepsGoal||7000}; }
-  function calcBMR(w,prof){ const h=+prof.height||175,a=+prof.age||30,sex=(prof.sex||'male'); return Math.round(10*(+w||0)+6.25*h-5*a+(sex==='female'?-161:5)); }
-  function kcalPerMin(met,w){ return Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10; }
-  function stepsKcal(steps,w,sex,len){ const coef=(sex==='female'?0.5:0.57); const km=(+steps||0)*(len||0.7)/1000; return Math.round(coef*(+w||0)*km*10)/10; }
-  function parseTime(t){ if(!t||typeof t!=='string'||!t.includes(':')) return null; const [hh,mm]=t.split(':').map(x=>parseInt(x,10)); if(isNaN(hh)||isNaN(mm)) return null; return {hh:clamp(hh,0,23),mm:clamp(mm,0,59)}; }
-  function sleepHours(a,b){ const s=parseTime(a),e=parseTime(b); if(!s||!e) return 0; let sh=s.hh+s.mm/60,eh=e.hh+e.mm/60; let d=eh-sh; if(d<0) d+=24; return r1(d); }
-
-  // Форматирование даты для отображения
-  function formatDateDisplay(isoDate) {
-    const d = parseISO(isoDate);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const isToday = d.toDateString() === today.toDateString();
-    const isYesterday = d.toDateString() === yesterday.toDateString();
-    
-    const dayName = d.toLocaleDateString('ru-RU', { weekday: 'short' });
-    const dayNum = d.getDate();
-    const month = d.toLocaleDateString('ru-RU', { month: 'short' });
-    
-    if (isToday) return { label: 'Сегодня', sub: `${dayNum} ${month}` };
-    if (isYesterday) return { label: 'Вчера', sub: `${dayNum} ${month}` };
-    return { label: `${dayNum} ${month}`, sub: dayName };
-  }
-
-  // Компактный DatePicker с dropdown
-  function DatePicker({valueISO, onSelect, onRemove}) {
-    const [isOpen, setIsOpen] = React.useState(false);
-    const [cur, setCur] = React.useState(parseISO(valueISO || todayISO()));
-    const wrapperRef = React.useRef(null);
-    
-    React.useEffect(() => { setCur(parseISO(valueISO || todayISO())); }, [valueISO]);
-    
-    // Закрытие при клике вне
-    React.useEffect(() => {
-      function handleClickOutside(e) {
-        if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-          setIsOpen(false);
-        }
-      }
-      if (isOpen) {
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-      }
-    }, [isOpen]);
-    
-    const y = cur.getFullYear(), m = cur.getMonth();
-    const first = new Date(y, m, 1), start = (first.getDay() + 6) % 7;
-    const dim = new Date(y, m + 1, 0).getDate();
-    const cells = [];
-    for (let i = 0; i < start; i++) cells.push(null);
-    for (let d = 1; d <= dim; d++) cells.push(new Date(y, m, d));
-    
-    function same(a, b) {
-      return a && b && a.getFullYear() === b.getFullYear() && 
-             a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-    }
-    
-    const sel = parseISO(valueISO || todayISO());
-    const today = new Date(); today.setHours(12);
-    const dateInfo = formatDateDisplay(valueISO || todayISO());
-    const isToday = sel.toDateString() === today.toDateString();
-    
-    return React.createElement('div', { className: 'date-picker', ref: wrapperRef },
-      // Кнопка-триггер
-      React.createElement('button', {
-        className: 'date-picker-trigger' + (isOpen ? ' open' : ''),
-        onClick: () => setIsOpen(!isOpen)
-      },
-        React.createElement('span', { className: 'date-picker-icon' }, '📅'),
-        React.createElement('span', { className: 'date-picker-text' },
-          React.createElement('span', { className: 'date-picker-main' }, dateInfo.label),
-          React.createElement('span', { className: 'date-picker-sub' }, dateInfo.sub)
-        ),
-        React.createElement('span', { className: 'date-picker-arrow' }, isOpen ? '▲' : '▼')
-      ),
-      // Dropdown с календарём
-      isOpen && React.createElement('div', { className: 'date-picker-dropdown' },
-        React.createElement('div', { className: 'date-picker-header' },
-          React.createElement('button', { 
-            className: 'date-picker-nav', 
-            onClick: () => setCur(new Date(y, m - 1, 1)) 
-          }, '‹'),
-          React.createElement('span', { className: 'date-picker-title' },
-            cur.toLocaleString('ru-RU', { month: 'long', year: 'numeric' })
-          ),
-          React.createElement('button', { 
-            className: 'date-picker-nav', 
-            onClick: () => setCur(new Date(y, m + 1, 1)) 
-          }, '›')
-        ),
-        React.createElement('div', { className: 'date-picker-weekdays' },
-          ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(d => 
-            React.createElement('div', { key: d, className: 'date-picker-weekday' }, d)
-          )
-        ),
-        React.createElement('div', { className: 'date-picker-days' },
-          cells.map((dt, i) => dt == null
-            ? React.createElement('div', { key: 'e' + i, className: 'date-picker-day empty' })
-            : React.createElement('div', {
-                key: dt.toISOString(),
-                className: [
-                  'date-picker-day',
-                  same(dt, sel) ? 'selected' : '',
-                  same(dt, today) ? 'today' : ''
-                ].join(' ').trim(),
-                onClick: () => { onSelect(fmtDate(dt)); setIsOpen(false); }
-              }, dt.getDate())
-          )
-        ),
-        React.createElement('div', { className: 'date-picker-footer' },
-          React.createElement('button', {
-            className: 'date-picker-btn today-btn',
-            onClick: () => { onSelect(todayISO()); setIsOpen(false); }
-          }, '📍 Сегодня'),
-          React.createElement('button', {
-            className: 'date-picker-btn delete-btn',
-            onClick: () => { onRemove(); setIsOpen(false); }
-          }, '🗑️ Очистить')
-        )
-      )
-    );
-  }
-
-  // Экспортируем DatePicker для использования в шапке
-  HEYS.DatePicker = DatePicker;
-
-  function Calendar({valueISO,onSelect,onRemove}){
-    const [cur,setCur]=React.useState(parseISO(valueISO||todayISO()));
-    React.useEffect(()=>{ setCur(parseISO(valueISO||todayISO())); },[valueISO]);
-    const y=cur.getFullYear(),m=cur.getMonth(),first=new Date(y,m,1),start=(first.getDay()+6)%7,dim=new Date(y,m+1,0).getDate();
-    const cells=[]; for(let i=0;i<start;i++) cells.push(null); for(let d=1;d<=dim;d++) cells.push(new Date(y,m,d));
-    function same(a,b){ return a&&b&&a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
-    const sel=parseISO(valueISO||todayISO()); const today=new Date(); today.setHours(12);
-    return React.createElement('div',{className:'calendar card'},
-      React.createElement('div',{className:'cal-head'},
-        React.createElement('button',{className:'cal-nav',onClick:()=>setCur(new Date(y,m-1,1))},'‹'),
-        React.createElement('div',{className:'cal-title'},cur.toLocaleString('ru-RU',{month:'long',year:'numeric'})),
-        React.createElement('button',{className:'cal-nav',onClick:()=>setCur(new Date(y,m+1,1))},'›')
-      ),
-      React.createElement('div',{className:'cal-grid cal-dow'},['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d=>React.createElement('div',{key:d},d))),
-      React.createElement('div',{className:'cal-grid'}, cells.map((dt,i)=> dt==null?React.createElement('div',{key:'e'+i}):React.createElement('div',{key:dt.toISOString(),className:['cal-cell',same(dt,sel)?'sel':'',same(dt,today)?'today':''].join(' ').trim(),onClick:()=>onSelect(fmtDate(dt))},dt.getDate()))),
-      React.createElement('div',{className:'cal-foot'},
-        React.createElement('button',{className:'btn',onClick:()=>onSelect(todayISO())},'Сегодня'),
-        React.createElement('button',{className:'btn',onClick:onRemove},'Удалить')
-      )
-    );
-  }
-
-  // Хук для централизованной детекции мобильных устройств с поддержкой ротации
-  function useMobileDetection(breakpoint = 768) {
-    const [isMobile, setIsMobile] = React.useState(() => {
-      if (typeof window === 'undefined') return false;
-      return window.innerWidth <= breakpoint;
-    });
-
-    React.useEffect(() => {
-      if (typeof window === 'undefined' || !window.matchMedia) return;
-      
-      const mediaQuery = window.matchMedia(`(max-width: ${breakpoint}px)`);
-      
-      const handleChange = (e) => {
-        setIsMobile(e.matches);
-      };
-      
-      // Начальное значение
-      setIsMobile(mediaQuery.matches);
-      
-      // Подписка на изменения (поддержка ротации экрана)
-      if (mediaQuery.addEventListener) {
-        mediaQuery.addEventListener('change', handleChange);
-        return () => mediaQuery.removeEventListener('change', handleChange);
-      } else {
-        // Fallback для старых браузеров
-        mediaQuery.addListener(handleChange);
-        return () => mediaQuery.removeListener(handleChange);
-      }
-    }, [breakpoint]);
-
-    return isMobile;
-  }
+  // === Import utilities from dayUtils module ===
+  const U = HEYS.dayUtils || {};
+  
+  // Minimal fallback helper: log error and return safe default
+  const warnMissing = (name) => { 
+    console.error('[HEYS] dayUtils.' + name + ' not loaded'); 
+  };
+  
+  // Fallbacks with error logging (not full duplicates)
+  const haptic = U.haptic || (() => { warnMissing('haptic'); });
+  const pad2 = U.pad2 || ((n) => { warnMissing('pad2'); return String(n).padStart(2,'0'); });
+  const todayISO = U.todayISO || (() => { warnMissing('todayISO'); return new Date().toISOString().slice(0,10); });
+  const fmtDate = U.fmtDate || ((d) => { warnMissing('fmtDate'); return d.toISOString().slice(0,10); });
+  const parseISO = U.parseISO || ((s) => { warnMissing('parseISO'); return new Date(); });
+  const uid = U.uid || ((p) => { warnMissing('uid'); return (p||'id')+Math.random().toString(36).slice(2,8); });
+  const formatDateDisplay = U.formatDateDisplay || (() => { warnMissing('formatDateDisplay'); return { label: 'День', sub: '' }; });
+  const lsGet = U.lsGet || ((k,d) => { warnMissing('lsGet'); try{ const v=JSON.parse(localStorage.getItem(k)); return v==null?d:v; }catch(e){ return d; } });
+  const lsSet = U.lsSet || ((k,v) => { warnMissing('lsSet'); try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} });
+  const clamp = U.clamp || ((n,a,b) => { warnMissing('clamp'); n=+n||0; if(n<a)return a; if(n>b)return b; return n; });
+  const r0 = U.r0 || ((v) => { warnMissing('r0'); return Math.round(+v||0); });
+  const r1 = U.r1 || ((v) => { warnMissing('r1'); return Math.round((+v||0)*10)/10; });
+  const scale = U.scale || ((v,g) => { warnMissing('scale'); return Math.round(((+v||0)*(+g||0)/100)*10)/10; });
+  const ensureDay = U.ensureDay || ((d,prof) => { warnMissing('ensureDay'); return d||{}; });
+  const buildProductIndex = U.buildProductIndex || (() => { warnMissing('buildProductIndex'); return {byId:new Map(),byName:new Map()}; });
+  const getProductFromItem = U.getProductFromItem || (() => { warnMissing('getProductFromItem'); return null; });
+  const per100 = U.per100 || (() => { warnMissing('per100'); return {kcal100:0,carbs100:0,prot100:0,fat100:0,simple100:0,complex100:0,bad100:0,good100:0,trans100:0,fiber100:0}; });
+  const loadMealsForDate = U.loadMealsForDate || (() => { warnMissing('loadMealsForDate'); return []; });
+  const productsSignature = U.productsSignature || (() => { warnMissing('productsSignature'); return ''; });
+  const computePopularProducts = U.computePopularProducts || (() => { warnMissing('computePopularProducts'); return []; });
+  const getProfile = U.getProfile || (() => { warnMissing('getProfile'); return {sex:'male',height:175,age:30,sleepHours:8,weight:70,deficitPctTarget:0,stepsGoal:7000}; });
+  const calcBMR = U.calcBMR || ((w,prof) => { warnMissing('calcBMR'); return Math.round(10*(+w||0)+6.25*(prof.height||175)-5*(prof.age||30)+(prof.sex==='female'?-161:5)); });
+  const kcalPerMin = U.kcalPerMin || ((met,w) => { warnMissing('kcalPerMin'); return Math.round((((+met||0)*(+w||0)*0.0175)-1)*10)/10; });
+  const stepsKcal = U.stepsKcal || ((steps,w,sex,len) => { warnMissing('stepsKcal'); const coef=(sex==='female'?0.5:0.57); const km=(+steps||0)*(len||0.7)/1000; return Math.round(coef*(+w||0)*km*10)/10; });
+  const parseTime = U.parseTime || ((t) => { warnMissing('parseTime'); if(!t||typeof t!=='string'||!t.includes(':')) return null; const [hh,mm]=t.split(':').map(x=>parseInt(x,10)); if(isNaN(hh)||isNaN(mm)) return null; return {hh:Math.max(0,Math.min(23,hh)),mm:Math.max(0,Math.min(59,mm))}; });
+  const sleepHours = U.sleepHours || ((a,b) => { warnMissing('sleepHours'); const pt=(t)=>{ if(!t||!t.includes(':'))return null; const [h,m]=t.split(':').map(x=>+x); return isNaN(h)||isNaN(m)?null:{hh:h,mm:m}; }; const s=pt(a),e=pt(b); if(!s||!e)return 0; let d=(e.hh+e.mm/60)-(s.hh+s.mm/60); if(d<0)d+=24; return Math.round(d*10)/10; });
+  
+  // === Import hooks from dayHooks module ===
+  const H = HEYS.dayHooks || {};
+  const useDayAutosave = H.useDayAutosave;
+  const useMobileDetection = H.useMobileDetection;
+  
+  // === DatePicker/Calendar already exported as HEYS.DatePicker ===
+  // (from heys_day_pickers.js)
 
   HEYS.DayTab=function DayTab(props){
   const {useState,useMemo,useEffect}=React;

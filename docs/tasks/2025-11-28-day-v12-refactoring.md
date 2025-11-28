@@ -33,12 +33,12 @@
 
 ### Phase 1: Анализ и подготовка
 
-- [ ] **Анализ структуры** — построить карту зависимостей внутри файла
+- [x] **Анализ структуры** — построить карту зависимостей внутри файла
   - **Why**: Понять какие функции от каких зависят
   - **Acceptance**: Список компонентов с их зависимостями
   - **Files**: `apps/web/heys_day_v12.js`
 
-- [ ] **Определить границы модулей** — разбить на логические группы
+- [x] **Определить границы модулей** — разбить на логические группы
   - **Why**: Минимизировать связанность при выносе
   - **Acceptance**: План разбиения на 5-8 файлов
   - **Groups** (предварительно):
@@ -53,45 +53,46 @@
 
 ### Phase 2: Вынос утилит (SAFE — без React)
 
-- [ ] **Создать `heys_day_utils.js`** — чистые функции без зависимостей
+- [x] **Создать `heys_day_utils.js`** — чистые функции без зависимостей (267 строк)
   - **Why**: Наиболее безопасный первый шаг
   - **Acceptance**: Утилиты работают, импорт в heys_day_v12.js
   - **Functions**: pad2, todayISO, fmtDate, parseISO, uid, clamp, r0, r1, scale, per100, lsGet, lsSet, sleepHours, parseTime, formatDateDisplay, calcBMR, kcalPerMin, stepsKcal, getProfile, productsSignature, **haptic**
   - **Pattern**: IIFE с экспортом в `HEYS.dayUtils`
 
-- [ ] **Тест Phase 2** — проверить работоспособность
+- [x] **Тест Phase 2** — проверить работоспособность
   - **How**: `pnpm dev` → открыть вкладку День → проверить расчёты
   - **Acceptance**: UI работает как раньше, нет ошибок в console
 
 ### Phase 3: Вынос хуков
 
-- [ ] **Создать `heys_day_hooks.js`** — React хуки
+- [x] **Создать `heys_day_hooks.js`** — React хуки (188 строк)
   - **Why**: Хуки переиспользуемы, можно вынести независимо
   - **Functions**: useDayAutosave, useMobileDetection
   - **Dependencies**: lsGet, lsSet из heys_day_utils.js, React.useState/useEffect/useRef/useCallback
   - **Pattern**: IIFE с экспортом в `HEYS.dayHooks`
   - **⚠️ Note**: `useMobileDetection` сейчас НЕ экспортируется, используется локально в DayTab. После выноса — экспортировать как `HEYS.dayHooks.useMobileDetection`
 
-- [ ] **Тест Phase 3** — автосохранение и детекция мобильных
+- [x] **Тест Phase 3** — автосохранение и детекция мобильных
   - **How**: Добавить продукт → перезагрузить → проверить сохранение
   - **Acceptance**: Данные сохраняются, isMobile корректно определяется
 
 ### Phase 4: Вынос пикеров (DatePicker, Calendar)
 
-- [ ] **Создать `heys_day_pickers.js`** — компоненты выбора даты
+- [x] **Создать `heys_day_pickers.js`** — компоненты выбора даты (155 строк)
   - **Why**: Независимые UI компоненты, переиспользуются
   - **Components**: DatePicker, Calendar
   - **Dependencies**: formatDateDisplay, parseISO, fmtDate, todayISO
   - **Pattern**: IIFE с экспортом в `HEYS.DatePicker`, `HEYS.Calendar`
 
-- [ ] **Тест Phase 4** — навигация по датам
+- [x] **Тест Phase 4** — навигация по датам
   - **How**: Кликнуть на датапикер → выбрать другую дату → вернуться
   - **Acceptance**: Календарь работает, дата меняется
 
 ### Phase 5: Вынос модальных окон
 
-- [ ] **Создать `heys_day_modals.js`** — iOS-style пикеры
+- [ ] **Создать `heys_day_modals.js`** — iOS-style пикеры (ОТЛОЖЕНО)
   - **Why**: Крупные UI блоки с wheel columns
+  - **⚠️ ЗАМЕТКА**: Модальные окна тесно связаны с локальным состоянием DayTab (showTimePicker, pendingMealTime, editingMealIndex и т.д.). Вынос требует значительного рефакторинга props-drilling или использования Context API.
   - **Components**: 
     - Time Picker modal (showTimePicker state)
     - Grams Picker modal (showGramsPicker state)
@@ -109,8 +110,9 @@
 
 ### Phase 6: Вынос блока тренировок
 
-- [ ] **Создать `heys_day_trainings.js`** — UI тренировок
+- [ ] **Создать `heys_day_trainings.js`** — UI тренировок (ОТЛОЖЕНО)
   - **Why**: Изолированный UI блок с собственной логикой
+  - **⚠️ ЗАМЕТКА**: Блок тренировок зависит от TR, kcalMin, visibleTrainings, setVisibleTrainings, day, setDay — все это локальное состояние DayTab. Требует передачи ~10+ props.
   - **Components**: trainingsBlock, trainIcons, removeTraining
   - **Dependencies**: TR, kcalMin, openZonePicker, r0
   - **Pattern**: Компонент TrainingsBlock(props)
@@ -427,7 +429,8 @@ pnpm build         # Production build
 
 ---
 
-**Version**: 1.1.0 | **Created**: 2025-11-28 | **Last audit**: 2025-11-28
+**Version**: 1.2.0 | **Created**: 2025-11-28 | **Last audit**: 2025-11-28
 
 ### Changelog
+- **1.2.0**: Выполнены Phase 2-4 — созданы heys_day_utils.js (267 строк), heys_day_hooks.js (188 строк), heys_day_pickers.js (155 строк). heys_day_v12.js уменьшен с 3434 до 3051 строк (-11%). Phases 5-9 отложены из-за сильной связности с локальным состоянием DayTab.
 - **1.1.0**: Глубокий аудит — исправлено количество строк (3400), актуализирован порядок скриптов в index.html с defer, добавлена секция рисков, уточнение по useMobileDetection, добавлены текущие HEYS экспорты, предупреждение об объединении Phase 4+5

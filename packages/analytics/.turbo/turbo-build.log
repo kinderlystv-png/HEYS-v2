@@ -1,18 +1,18 @@
 
-> @heys/analytics@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/analytics
+> @heys/analytics@14.0.0 build /home/runner/work/HEYS-v2/HEYS-v2/packages/analytics
 > tsup
 
 [34mCLI[39m Building entry: src/index.ts
 [34mCLI[39m Using tsconfig: tsconfig.json
 [34mCLI[39m tsup v7.3.0
-[34mCLI[39m Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/analytics/tsup.config.ts
+[34mCLI[39m Using tsup config: /home/runner/work/HEYS-v2/HEYS-v2/packages/analytics/tsup.config.ts
 [34mCLI[39m Target: es2022
 [34mCLI[39m Cleaning output folder
 [34mCJS[39m Build start
 [34mESM[39m Build start
-[32mESM[39m [1mdist/index.js     [22m[32m258.00 B[39m
-[32mESM[39m [1mdist/index.js.map [22m[32m570.00 B[39m
-[32mESM[39m ⚡️ Build success in 244ms
 [32mCJS[39m [1mdist/index.cjs     [22m[32m279.00 B[39m
 [32mCJS[39m [1mdist/index.cjs.map [22m[32m570.00 B[39m
-[32mCJS[39m ⚡️ Build success in 245ms
+[32mCJS[39m ⚡️ Build success in 137ms
+[32mESM[39m [1mdist/index.js     [22m[32m258.00 B[39m
+[32mESM[39m [1mdist/index.js.map [22m[32m570.00 B[39m
+[32mESM[39m ⚡️ Build success in 137ms
