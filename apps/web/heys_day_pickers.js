@@ -70,7 +70,12 @@
         ),
         React.createElement('span', { className: 'date-picker-arrow' }, isOpen ? '▲' : '▼')
       ),
-      // Dropdown с календарём
+      // Backdrop для затемнения фона
+      isOpen && React.createElement('div', { 
+        className: 'date-picker-backdrop',
+        onClick: () => setIsOpen(false)
+      }),
+      // Dropdown с календарём (fixed по центру экрана)
       isOpen && React.createElement('div', { className: 'date-picker-dropdown' },
         React.createElement('div', { className: 'date-picker-header' },
           React.createElement('button', { 
