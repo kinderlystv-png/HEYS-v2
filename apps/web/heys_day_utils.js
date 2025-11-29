@@ -741,6 +741,12 @@
         let trainingsK = 0;
         const trainings = (dayInfo.trainings || []).slice(0, 3); // максимум 3 тренировки
         
+        // Собираем типы тренировок с реальными минутами
+        const trainingTypes = trainings
+          .filter(t => t && t.z && Array.isArray(t.z) && t.z.some(z => z > 0))
+          .map(t => t.type || 'cardio');
+        const hasTraining = trainingTypes.length > 0;
+        
         trainings.forEach((t, tIdx) => {
           if (t.z && Array.isArray(t.z)) {
             let tKcal = 0;
@@ -758,7 +764,11 @@
         
         // ratio: 1.0 = идеально в цель, <1 недоел, >1 переел
         const ratio = target > 0 ? dayInfo.kcal / target : 0;
-        daysData.set(dateStr, { kcal: dayInfo.kcal, target, ratio });
+        
+        // moodAvg для mood-полосы на графике
+        const moodAvg = dayInfo.moodAvg ? +dayInfo.moodAvg : null;
+        
+        daysData.set(dateStr, { kcal: dayInfo.kcal, target, ratio, hasTraining, trainingTypes, moodAvg });
       }
     } catch (e) {
       // Тихий fallback — activeDays для календаря не критичны

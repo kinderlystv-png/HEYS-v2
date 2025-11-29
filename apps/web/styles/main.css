@@ -3575,9 +3575,10 @@ td:first-child input {
   background: linear-gradient(135deg, #ecfdf5 0%, #dcfce7 100%);
   border: 1px solid #bbf7d0;
   border-radius: 12px;
-  padding: 12px 16px 8px;
+  padding: 12px 16px 14px; /* увеличил нижний padding для min/max меток */
+  padding-top: 24px; /* место для аннотаций сверху */
   margin-top: 4px;
-  overflow: hidden;
+  overflow: visible; /* чтобы аннотации не обрезались */
 }
 
 .kcal-sparkline-header {
@@ -3642,6 +3643,7 @@ td:first-child input {
   width: 100%;
   height: 60px;
   min-height: 60px;
+  overflow: visible; /* чтобы аннотации не обрезались */
 }
 
 .sparkline-area {
@@ -3658,6 +3660,28 @@ td:first-child input {
   stroke-dasharray: 2000;
   stroke-dashoffset: 2000;
   animation: drawSparkline 4s ease-in-out forwards;
+  transition: stroke-width 0.2s ease;
+}
+
+/* Hover-эффект — утолщение линии при наведении */
+.sparkline-svg:hover .sparkline-line {
+  stroke-width: 2.5;
+}
+
+/* Transition между периодами — плавная смена данных */
+.sparkline-svg {
+  transition: opacity 0.3s ease;
+}
+
+.sparkline-svg.transitioning {
+  opacity: 0.5;
+}
+
+/* Transition между периодами */
+.sparkline-transitioning {
+  opacity: 0.3;
+  transform: scale(0.97);
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
 }
 
 @keyframes drawSparkline {
@@ -3666,14 +3690,70 @@ td:first-child input {
   }
 }
 
+/* Анимация заливки — появляется вместе с линией */
+.sparkline-area-animated {
+  opacity: 0;
+  animation: fadeInArea 4s ease-in-out forwards;
+}
+
+@keyframes fadeInArea {
+  0% { opacity: 0; }
+  50% { opacity: 0.15; }
+  100% { opacity: 1; }
+}
+
+/* Анимация точек — появляются последовательно */
+.sparkline-dot {
+  transition: r 0.15s ease, fill 0.15s ease;
+  opacity: 0;
+  animation: fadeInDot 0.3s ease-out forwards;
+}
+
+/* Skeleton loader для графиков */
+.sparkline-skeleton {
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+}
+
+.sparkline-skeleton-line {
+  height: 2px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 2px;
+}
+
+.sparkline-skeleton-dots {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sparkline-skeleton-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes fadeInDot {
+  to { opacity: 1; }
+}
+
 .sparkline-goal {
   stroke: #94a3b8;
   stroke-dasharray: 3, 3;
   stroke-width: 1;
-}
-
-.sparkline-dot {
-  transition: r 0.15s ease, fill 0.15s ease;
 }
 
 .sparkline-dot:hover {
@@ -3694,6 +3774,18 @@ td:first-child input {
 
 .sparkline-dot-today {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+  animation: pulseDot 2s ease-in-out infinite, fadeInDot 0.3s ease-out forwards;
+}
+
+@keyframes pulseDot {
+  0%, 100% { 
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(34, 197, 94, 0));
+  }
+  50% { 
+    transform: scale(1.3);
+    filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.6));
+  }
 }
 
 .sparkline-day-label {
@@ -3705,6 +3797,326 @@ td:first-child input {
 .sparkline-day-today {
   fill: #22c55e;
   font-weight: 600;
+}
+
+/* === SPARKLINE POPUP — детали при тапе на точку === */
+.sparkline-popup {
+  position: absolute;
+  background: white;
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e2e8f0;
+  z-index: 100;
+  min-width: 160px;
+  transform: translateX(-50%);
+  animation: popupFadeIn 0.2s ease-out;
+}
+
+@keyframes popupFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(5px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.sparkline-popup-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.sparkline-popup-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  padding: 3px 0;
+}
+
+.sparkline-popup-label {
+  color: #64748b;
+}
+
+.sparkline-popup-value {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.sparkline-popup-value.good { color: #22c55e; }
+.sparkline-popup-value.warn { color: #f59e0b; }
+.sparkline-popup-value.bad { color: #ef4444; }
+
+.sparkline-popup-btn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 8px;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sparkline-popup-btn:hover {
+  background: #e2e8f0;
+}
+
+/* Popup для идеального дня */
+.sparkline-popup-perfect {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #f59e0b;
+}
+
+.sparkline-popup-header.perfect {
+  color: #b45309;
+  font-size: 14px;
+}
+
+.sparkline-popup-motivation {
+  font-size: 12px;
+  color: #78350f;
+  margin: 4px 0;
+}
+
+.sparkline-popup-subtitle {
+  font-size: 11px;
+  color: #92400e;
+  opacity: 0.8;
+}
+
+/* === HEATMAP — мини полоска под графиком === */
+.sparkline-heatmap {
+  display: flex;
+  gap: 2px;
+  padding: 4px 16px 0;
+  justify-content: space-between;
+}
+
+.sparkline-heatmap-day {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.sparkline-heatmap-day:hover {
+  transform: scaleY(1.5);
+}
+
+.sparkline-heatmap-day.level-0 { background: #f1f5f9; } /* нет данных */
+.sparkline-heatmap-day.level-1 { background: #bbf7d0; } /* <80% */
+.sparkline-heatmap-day.level-2 { background: #4ade80; } /* 80-95% */
+.sparkline-heatmap-day.level-3 { background: #22c55e; } /* 95-105% - идеал */
+.sparkline-heatmap-day.level-4 { background: #fde047; } /* 105-115% */
+.sparkline-heatmap-day.level-5 { background: #f97316; } /* 115-130% */
+.sparkline-heatmap-day.level-6 { background: #ef4444; } /* >130% */
+
+/* === MOOD-ПОЛОСА — градиентная полоса настроения === */
+.sparkline-mood-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px;
+}
+
+.sparkline-mood-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  overflow: visible;
+}
+
+.sparkline-mood-label {
+  font-size: 10px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* === Slider Elements === */
+.sparkline-slider-line {
+  stroke: #3b82f6;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 2;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.sparkline-slider-point {
+  fill: #3b82f6;
+  stroke: white;
+  stroke-width: 2;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.4));
+}
+
+.sparkline-slider-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  animation: sparkline-tooltip-appear 0.15s ease-out;
+}
+
+@keyframes sparkline-tooltip-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.sparkline-slider-tooltip-date {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.sparkline-slider-tooltip-kcal {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.sparkline-slider-tooltip-ratio {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 2px;
+}
+
+.sparkline-slider-tooltip-ratio.ratio-ok {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.sparkline-slider-tooltip-ratio.ratio-warn {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.sparkline-slider-tooltip-ratio.ratio-over {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* === SPARKLINE ANNOTATIONS — иконки событий на графике === */
+.sparkline-annotation {
+  font-size: 11px;
+  text-anchor: middle;
+  pointer-events: none;
+  opacity: 0;
+  animation: fadeInAnnotation 0.3s ease-out forwards;
+  animation-delay: 3.5s; /* после рисования линии */
+  dominant-baseline: auto; /* рендерим корректно */
+}
+
+@keyframes fadeInAnnotation {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sparkline-annotation-training {
+  fill: #8b5cf6; /* фиолетовый для тренировок */
+}
+
+.sparkline-annotation-holiday {
+  fill: #f59e0b; /* оранжевый для праздников */
+}
+
+/* Прогнозная линия */
+.sparkline-forecast-line {
+  stroke: #94a3b8 !important;
+  stroke-width: 1.5 !important;
+  animation: none !important;
+}
+
+.sparkline-forecast-dot {
+  fill: #94a3b8 !important;
+  opacity: 0.5;
+}
+
+/* Золотая streak-линия между 🔥 днями */
+.sparkline-streak-line {
+  stroke: #f59e0b;
+  stroke-width: 3;
+  fill: none;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Прогнозные дни — тонкий шрифт */
+.sparkline-day-forecast {
+  font-weight: 300 !important;
+  opacity: 0.5;
+  font-style: italic;
+}
+
+/* Выходные и праздники — красный */
+.sparkline-day-weekend {
+  fill: #ef4444 !important;
+}
+
+/* Min/Max метки */
+.sparkline-minmax-label {
+  font-size: 9px;
+  font-weight: 600;
+  fill: #64748b;
+  opacity: 0;
+  animation: fadeInAnnotation 0.3s ease forwards;
+  animation-delay: 3.5s;
+}
+
+.sparkline-min-label {
+  fill: #ef4444;
+}
+
+.sparkline-max-label {
+  fill: #22c55e;
+}
+
+/* 🔥 для идеальных дней */
+.sparkline-fire {
+  font-size: 12px;
+  dominant-baseline: middle;
+  opacity: 0;
+  animation: popIn 0.4s ease forwards;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+}
+
+.sparkline-fire-today {
+  font-size: 14px;
+  animation: popIn 0.4s ease forwards, pulseFireGlow 2s ease-in-out infinite;
+  animation-delay: var(--delay, 3s), 4s;
+}
+
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0.3); }
+  70% { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulseFireGlow {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(234,88,12,0.4)); }
+  50% { filter: drop-shadow(0 0 8px rgba(234,88,12,0.8)); }
 }
 
 /* === CORRELATION BLOCK — связь калорий и веса === */
@@ -3745,6 +4157,32 @@ td:first-child input {
   font-weight: 500;
   color: #334155;
   line-height: 1.3;
+}
+
+/* Кликабельный блок корреляции */
+.correlation-clickable {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.correlation-clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.correlation-clickable:active {
+  transform: scale(0.98);
+}
+
+/* Анимация пульсации при обновлении данных */
+@keyframes correlationPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  50% { transform: scale(1.02); box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+.correlation-block.pulse {
+  animation: correlationPulse 0.6s ease-out;
 }
 
 /* === WEIGHT SPARKLINE — график веса с трендом === */
@@ -3852,6 +4290,20 @@ td:first-child input {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  transition: stroke-width 0.2s ease;
+}
+
+/* Hover-эффект для весового графика */
+.weight-sparkline-svg:hover .weight-sparkline-line {
+  stroke-width: 3;
+}
+
+.weight-sparkline-svg {
+  transition: opacity 0.3s ease;
+}
+
+.weight-sparkline-svg.transitioning {
+  opacity: 0.5;
 }
 
 /* Анимация рисования линии веса */
@@ -3887,6 +4339,18 @@ td:first-child input {
 .weight-sparkline-dot-today {
   stroke: white;
   stroke-width: 1.5;
+  animation: pulseDotWeight 2s ease-in-out infinite;
+}
+
+@keyframes pulseDotWeight {
+  0%, 100% { 
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(139, 92, 246, 0));
+  }
+  50% { 
+    transform: scale(1.3);
+    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6));
+  }
 }
 
 .weight-sparkline-day-label {
@@ -5784,6 +6248,62 @@ td:first-child input {
   fill: #4ade80;
 }
 
+/* Dark theme for new sparkline elements */
+[data-theme="dark"] .sparkline-streak-line {
+  stroke: #fbbf24;
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.5));
+}
+
+[data-theme="dark"] .sparkline-day-weekend {
+  fill: #f87171;
+}
+
+[data-theme="dark"] .sparkline-day-forecast {
+  fill: #64748b;
+}
+
+[data-theme="dark"] .sparkline-mood-label {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .sparkline-slider-line {
+  stroke: #60a5fa;
+}
+
+[data-theme="dark"] .sparkline-slider-point {
+  fill: #60a5fa;
+  stroke: #1e293b;
+  filter: drop-shadow(0 2px 4px rgba(96, 165, 250, 0.5));
+}
+
+[data-theme="dark"] .sparkline-slider-tooltip {
+  background: rgba(30, 41, 59, 0.95);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .sparkline-slider-tooltip-date {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .sparkline-slider-tooltip-kcal {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .sparkline-slider-tooltip-ratio.ratio-ok {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .sparkline-slider-tooltip-ratio.ratio-warn {
+  background: #713f12;
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .sparkline-slider-tooltip-ratio.ratio-over {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
 /* Dark theme for correlation block */
 [data-theme="dark"] .correlation-block {
   background: linear-gradient(135deg, #1a1f2e 0%, #151a24 100%);
@@ -5807,6 +6327,10 @@ td:first-child input {
 
 [data-theme="dark"] .correlation-text {
   color: #e2e8f0;
+}
+
+[data-theme="dark"] .correlation-clickable:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Dark theme for weight sparkline */
@@ -7608,12 +8132,232 @@ td:first-child input {
 
 .grams-preview-kcal {
   color: #000;
-  /* Subtle animation on value change */
-  transition: transform 0.12s ease-out;
+  /* Smooth animation on value change */
+  transition: transform 0.15s ease-out, color 0.15s ease;
+  display: inline-block;
+  font-weight: 500;
 }
 
-.grams-preview-kcal:active {
-  transform: scale(1.05);
+/* Kcal color coding */
+.grams-preview-kcal.kcal-low {
+  color: #34c759;
+}
+.grams-preview-kcal.kcal-mid {
+  color: #ff9500;
+}
+.grams-preview-kcal.kcal-high {
+  color: #ff3b30;
+}
+
+.grams-preview-kcal.animating {
+  animation: kcal-pulse 0.3s ease-out;
+}
+
+@keyframes kcal-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* "Обычно вы едите" hint */
+.grams-hint {
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.grams-hint:hover {
+  color: #007aff;
+}
+.grams-hint:active {
+  opacity: 0.7;
+}
+
+/* Kcal Calculator */
+.kcal-calculator {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+}
+.kcal-calc-toggle {
+  font-size: 14px;
+  padding: 6px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  background: #f8f8f8;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.kcal-calc-toggle:hover {
+  background: #f0f0f0;
+}
+.kcal-calc-toggle.active {
+  background: #007aff;
+  border-color: #007aff;
+  color: #fff;
+}
+.kcal-calc-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kcal-calc-input input {
+  width: 80px;
+  padding: 6px 10px;
+  font-size: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  text-align: center;
+  background: #fff;
+}
+.kcal-calc-input input:focus {
+  outline: none;
+  border-color: #007aff;
+}
+.kcal-calc-result {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* === Portion Buttons === */
+.grams-portions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+
+.grams-portion-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 72px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 2px solid #e5e5ea;
+  background: #f2f2f7;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.grams-portion-btn .portion-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #000;
+}
+
+.grams-portion-btn .portion-grams {
+  font-size: 12px;
+  color: #8e8e93;
+  font-weight: 500;
+}
+
+.grams-portion-btn:active {
+  transform: scale(0.96);
+  animation: portion-bounce 0.3s ease;
+}
+
+@keyframes portion-bounce {
+  0% { transform: scale(0.96); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.grams-portion-btn.active {
+  background: #007aff;
+  border-color: #007aff;
+}
+
+.grams-portion-btn.active .portion-name,
+.grams-portion-btn.active .portion-grams {
+  color: #fff;
+}
+
+/* Рекомендованная порция (последняя выбранная) */
+.grams-portion-btn.recommended {
+  border-color: #34c759;
+  box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.2);
+  position: relative;
+}
+
+.grams-portion-btn.recommended::after {
+  content: '★';
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  background: #34c759;
+  color: #fff;
+  font-size: 10px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grams-portion-btn:not(.active):hover {
+  background: #e5e5ea;
+}
+
+/* Dark mode for portions */
+[data-theme="dark"] .grams-portion-btn {
+  background: #2c2c2e;
+  border-color: #48484a;
+}
+
+[data-theme="dark"] .grams-portion-btn .portion-name {
+  color: #fff;
+}
+
+[data-theme="dark"] .grams-portion-btn .portion-grams {
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .grams-portion-btn.active {
+  background: #0a84ff;
+  border-color: #0a84ff;
+}
+
+[data-theme="dark"] .grams-portion-btn:not(.active):hover {
+  background: #3a3a3c;
+}
+
+[data-theme="dark"] .grams-portion-btn.recommended {
+  border-color: #30d158;
+  box-shadow: 0 0 0 2px rgba(48, 209, 88, 0.2);
+}
+
+[data-theme="dark"] .grams-portion-btn.recommended::after {
+  background: #30d158;
+}
+
+/* Свайп контейнер для порций */
+.grams-portions {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.grams-portions::-webkit-scrollbar {
+  display: none;
+}
+
+.grams-portion-btn {
+  scroll-snap-align: center;
+  flex-shrink: 0;
 }
 
 .grams-input-container {
@@ -7621,7 +8365,48 @@ td:first-child input {
   justify-content: center;
   align-items: center;
   padding: 0 16px 20px;
-  gap: 4px;
+  gap: 8px;
+}
+
+/* Stepper кнопки +/- */
+.grams-stepper-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 500;
+  color: #007aff;
+  background: #f2f2f7;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.grams-stepper-btn:hover {
+  background: #e5e5ea;
+}
+
+.grams-stepper-btn:active {
+  transform: scale(0.95);
+  background: #d1d1d6;
+}
+
+[data-theme="dark"] .grams-stepper-btn {
+  background: #2c2c2e;
+  color: #0a84ff;
+}
+
+[data-theme="dark"] .grams-stepper-btn:hover {
+  background: #3a3a3c;
+}
+
+[data-theme="dark"] .grams-stepper-btn:active {
+  background: #48484a;
 }
 
 .grams-input {
@@ -7684,7 +8469,7 @@ td:first-child input {
   height: 6px;
   background: linear-gradient(90deg, #34c759 0%, #007aff 100%);
   border-radius: 3px;
-  transition: width 0.05s ease-out;
+  transition: width 0.15s ease-out;
 }
 
 .grams-slider-thumb {
@@ -7696,7 +8481,7 @@ td:first-child input {
   border-radius: 50%;
   transform: translateX(-50%);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition: left 0.15s ease-out, transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .grams-slider-thumb:active,
@@ -7771,6 +8556,50 @@ td:first-child input {
 
 [data-theme="dark"] .grams-preview-kcal {
   color: #fff;
+}
+
+/* Dark theme kcal colors */
+[data-theme="dark"] .grams-preview-kcal.kcal-low {
+  color: #30d158;
+}
+[data-theme="dark"] .grams-preview-kcal.kcal-mid {
+  color: #ffd60a;
+}
+[data-theme="dark"] .grams-preview-kcal.kcal-high {
+  color: #ff453a;
+}
+
+[data-theme="dark"] .grams-hint {
+  color: #98989d;
+}
+[data-theme="dark"] .grams-hint:hover {
+  color: #0a84ff;
+}
+
+/* Dark theme kcal calculator */
+[data-theme="dark"] .kcal-calc-toggle {
+  background: #2c2c2e;
+  border-color: #48484a;
+  color: #98989d;
+}
+[data-theme="dark"] .kcal-calc-toggle:hover {
+  background: #3a3a3c;
+}
+[data-theme="dark"] .kcal-calc-toggle.active {
+  background: #0a84ff;
+  border-color: #0a84ff;
+  color: #fff;
+}
+[data-theme="dark"] .kcal-calc-input input {
+  background: #1c1c1e;
+  border-color: #48484a;
+  color: #fff;
+}
+[data-theme="dark"] .kcal-calc-input input:focus {
+  border-color: #0a84ff;
+}
+[data-theme="dark"] .kcal-calc-result {
+  color: #98989d;
 }
 
 [data-theme="dark"] .grams-input {

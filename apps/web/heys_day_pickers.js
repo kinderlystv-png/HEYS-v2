@@ -72,8 +72,8 @@
         const dateStr = fmtDate(checkDate);
         const dayData = daysDataMap.get(dateStr);
         
-        // Хороший день = ratio от 0.75 до 1.15
-        if (dayData && dayData.ratio >= 0.75 && dayData.ratio <= 1.15) {
+        // Хороший день = ratio от 0.75 до 1.10 (единый стандарт)
+        if (dayData && dayData.ratio >= 0.75 && dayData.ratio <= 1.10) {
           count++;
         } else if (i > 0) { // Первый день (сегодня) может быть без данных
           break;
@@ -276,8 +276,9 @@
     }, [activeDays]);
     
     // Проверка является ли день "успешным" (зелёным)
+    // Единый стандарт: 75-110% (синхронизировано со streak и sparkline)
     function isGoodDay(ratio) {
-      return ratio && ratio > 0.6 && ratio <= 1.1;
+      return ratio && ratio >= 0.75 && ratio <= 1.1;
     }
     
     // Функция для расчёта цвета фона (асимметричная логика)
