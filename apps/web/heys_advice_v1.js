@@ -879,6 +879,489 @@
       });
     }
     
+    // ═════════════════════════════════════════════════════════
+    // 🍽️ PHASE 1: MEAL-LEVEL СОВЕТЫ (priority: 71-80)
+    // ═════════════════════════════════════════════════════════
+    
+    // Получаем данные о приёмах пищи
+    const lastMealWithItems = getLastMealWithItems(day);
+    const firstMealWithItems = getFirstMealWithItems(day);
+    const lastMealTotals = lastMealWithItems ? getMealTotals(lastMealWithItems, pIndex) : null;
+    
+    // meal_too_large — большой приём пищи (>800 ккал)
+    if (lastMealTotals && lastMealTotals.kcal > 800 && canShowMealAdvice()) {
+      advices.push({
+        id: 'meal_too_large',
+        icon: '🍽️',
+        text: `Большой приём (${Math.round(lastMealTotals.kcal)} ккал)! Следующий сделай полегче`,
+        type: 'tip',
+        priority: 71,
+        category: 'nutrition',
+        triggers: ['product_added'],
+        ttl: 5000,
+        onShow: () => markMealAdviceShown()
+      });
+    }
+    
+    // meal_too_small — маленький приём (<150 ккал при >=2 приёмах)
+    if (lastMealTotals && lastMealTotals.kcal < 150 && lastMealTotals.kcal > 0 && mealCount >= 2 && canShowMealAdvice()) {
+      advices.push({
+        id: 'meal_too_small',
+        icon: '🥄',
+        text: 'Маловато — добавь ещё что-нибудь',
+        type: 'tip',
+        priority: 72,
+        category: 'nutrition',
+        triggers: ['product_added'],
+        ttl: 5000,
+        onShow: () => markMealAdviceShown()
+      });
+    }
+    
+    // protein_per_meal_low — мало белка в приёме (<20г при >200 ккал)
+    if (lastMealTotals && lastMealTotals.prot < 20 && lastMealTotals.kcal > 200 && canShowMealAdvice()) {
+      advices.push({
+        id: 'protein_per_meal_low',
+        icon: '🥚',
+        text: 'Мало белка в приёме — добавь яйцо или творог',
+        type: 'tip',
+        priority: 73,
+        category: 'nutrition',
+        triggers: ['product_added'],
+        ttl: 5000,
+        onShow: () => markMealAdviceShown()
+      });
+    }
+    
+    // evening_carbs_high — много углеводов вечером (>50г после 20:00)
+    if (hour >= 20 && lastMealTotals && lastMealTotals.carbs > 50 && canShowMealAdvice()) {
+      advices.push({
+        id: 'evening_carbs_high',
+        icon: '🌙',
+        text: `${Math.round(lastMealTotals.carbs)}г углеводов на ночь — утром может быть голодно`,
+        type: 'tip',
+        priority: 74,
+        category: 'nutrition',
+        triggers: ['product_added'],
+        ttl: 5000,
+        onShow: () => markMealAdviceShown()
+      });
+    }
+    
+    // fiber_per_meal_good — хорошая клетчатка в приёме (>8г)
+    if (lastMealTotals && lastMealTotals.fiber > 8 && canShowMealAdvice()) {
+      advices.push({
+        id: 'fiber_per_meal_good',
+        icon: '🥗',
+        text: 'Отлично с клетчаткой! Надолго насытит',
+        type: 'achievement',
+        priority: 75,
+        category: 'nutrition',
+        triggers: ['product_added'],
+        ttl: 4000,
+        onShow: () => markMealAdviceShown()
+      });
+    }
+    
+    // variety_meal_good — разнообразный приём (>=4 продукта)
+    if (lastMealWithItems && lastMealWithItems.items?.length >= 4 && canShowMealAdvice()) {
+      advices.push({
+        id: 'variety_meal_good',
+        icon: '🌈',
+        text: 'Разнообразный приём — так держать!',
+        type: 'achievement',
+        priority: 76,
+        category: 'nutrition',
+        triggers: ['product_added'],
+        ttl: 4000,
+        onShow: () => markMealAdviceShown()
+      });
+    }
+    
+    // late_first_meal — поздний первый приём (после 12:00)
+    if (firstMealWithItems && hour >= 13) {
+      const [fmHour] = (firstMealWithItems.time || '12:00').split(':').map(Number);
+      if (fmHour >= 12) {
+        advices.push({
+          id: 'late_first_meal',
+          icon: '⏰',
+          text: 'Первый приём поздновато — завтра попробуй раньше',
+          type: 'tip',
+          priority: 77,
+          category: 'timing',
+          triggers: ['tab_open'],
+          ttl: 5000
+        });
+      }
+    }
+    
+    // ═════════════════════════════════════════════════════════
+    // 📊 PHASE 2: DAY-QUALITY СОВЕТЫ (priority: 81-90)
+    // ═════════════════════════════════════════════════════════
+    
+    // trans_free_day — день без транс-жиров
+    if ((dayTot?.trans || 0) === 0 && mealCount >= 2) {
+      advices.push({
+        id: 'trans_free_day',
+        icon: '🎉',
+        text: 'День без транс-жиров!',
+        type: 'achievement',
+        priority: 81,
+        category: 'nutrition',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // sugar_low_day — почти без сахара (<25г простых при >=2 приёмах)
+    if ((dayTot?.simple || 0) < 25 && (dayTot?.simple || 0) > 0 && mealCount >= 2) {
+      advices.push({
+        id: 'sugar_low_day',
+        icon: '🍬',
+        text: 'Почти без сахара — отлично! 🚫',
+        type: 'achievement',
+        priority: 82,
+        category: 'nutrition',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // super_hydration — гидратация на максимуме (>=2500мл)
+    const waterMlP2 = day?.waterMl || 0;
+    if (waterMlP2 >= 2500) {
+      advices.push({
+        id: 'super_hydration',
+        icon: '💧',
+        text: `${waterMlP2}мл воды — гидратация на максимуме! 💧💧💧`,
+        type: 'achievement',
+        priority: 83,
+        category: 'hydration',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // variety_day_good — 10+ уникальных продуктов
+    const uniqueProductCount = countUniqueProducts(day);
+    if (uniqueProductCount >= 10) {
+      advices.push({
+        id: 'variety_day_good',
+        icon: '🌈',
+        text: `${uniqueProductCount} разных продуктов — отличное разнообразие!`,
+        type: 'achievement',
+        priority: 84,
+        category: 'nutrition',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // deficit_on_track — дефицит идёт по плану (85-95% при deficitPct > 0)
+    const deficitPct = day?.deficitPct || 0;
+    if (kcalPct >= 0.85 && kcalPct <= 0.95 && deficitPct > 0) {
+      advices.push({
+        id: 'deficit_on_track',
+        icon: '📊',
+        text: 'Дефицит идёт по плану!',
+        type: 'achievement',
+        priority: 85,
+        category: 'nutrition',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // weekend_relax — выходные расслабление (Сб/Вс при 110-130%)
+    const dayOfWeek = new Date().getDay();
+    if ((dayOfWeek === 0 || dayOfWeek === 6) && kcalPct >= 1.1 && kcalPct <= 1.3) {
+      advices.push({
+        id: 'weekend_relax',
+        icon: '🛋️',
+        text: 'Выходной расслабляешься — это нормально',
+        type: 'tip',
+        priority: 86,
+        category: 'lifestyle',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // ═════════════════════════════════════════════════════════
+    // ⏱️ PHASE 3: TIMING & PATTERNS (priority: 91-100)
+    // ═════════════════════════════════════════════════════════
+    
+    // Получаем данные для анализа паттернов
+    const mealsWithItemsP3 = (day?.meals || []).filter(m => m.items?.length > 0);
+    const mealTimes = mealsWithItemsP3.map(m => {
+      const [h, min] = (m.time || '12:00').split(':').map(Number);
+      return h * 60 + min;
+    }).sort((a, b) => a - b);
+    
+    // fasting_window_good — 14+ часов без еды (ужин→завтрак)
+    if (firstMealWithItems && hour >= 10) {
+      const yesterdayDays = getRecentDays(1);
+      const yesterdayDay = yesterdayDays[0];
+      const yesterdayLastMeal = getLastMealWithItems(yesterdayDay);
+      
+      if (yesterdayLastMeal) {
+        const [lastH] = (yesterdayLastMeal.time || '20:00').split(':').map(Number);
+        const [firstH] = (firstMealWithItems.time || '08:00').split(':').map(Number);
+        const fastingWindow = (24 - lastH) + firstH;
+        
+        if (fastingWindow >= 14 && !sessionStorage.getItem('heys_fasting_good')) {
+          advices.push({
+            id: 'fasting_window_good',
+            icon: '🕐',
+            text: `${fastingWindow}+ часов без еды — отличное окно!`,
+            type: 'achievement',
+            priority: 91,
+            category: 'timing',
+            triggers: ['tab_open'],
+            ttl: 5000,
+            onShow: () => { try { sessionStorage.setItem('heys_fasting_good', '1'); } catch(e) {} }
+          });
+        }
+      }
+    }
+    
+    // long_fast_warning — большой перерыв между приёмами (>7ч днём)
+    if (mealTimes.length >= 1 && hour >= 10 && hour <= 18) {
+      const lastMealMinutes = mealTimes[mealTimes.length - 1];
+      const nowMinutes = hour * 60 + new Date().getMinutes();
+      const gapHours = (nowMinutes - lastMealMinutes) / 60;
+      
+      if (gapHours > 7) {
+        advices.push({
+          id: 'long_fast_warning',
+          icon: '⏰',
+          text: 'Давно не ел — не переешь потом!',
+          type: 'tip',
+          priority: 92,
+          category: 'timing',
+          triggers: ['tab_open'],
+          ttl: 5000
+        });
+      }
+    }
+    
+    // meal_spacing_perfect — идеальные интервалы (3-5ч между приёмами, >=3 приёма)
+    if (mealTimes.length >= 3) {
+      const gaps = [];
+      for (let i = 1; i < mealTimes.length; i++) {
+        gaps.push((mealTimes[i] - mealTimes[i-1]) / 60);
+      }
+      const allGapsGood = gaps.every(g => g >= 3 && g <= 5);
+      
+      if (allGapsGood && !sessionStorage.getItem('heys_spacing_perfect')) {
+        advices.push({
+          id: 'meal_spacing_perfect',
+          icon: '⏱️',
+          text: 'Идеальные интервалы между приёмами!',
+          type: 'achievement',
+          priority: 93,
+          category: 'timing',
+          triggers: ['tab_open'],
+          ttl: 5000,
+          onShow: () => { try { sessionStorage.setItem('heys_spacing_perfect', '1'); } catch(e) {} }
+        });
+      }
+    }
+    
+    // training_recovery_window — окно восстановления (30-60 мин после тренировки)
+    const trainingsP3 = day?.trainings || [];
+    const todayTrainingP3 = trainingsP3.find(t => t.z && t.z.some(m => m > 0));
+    if (todayTrainingP3 && todayTrainingP3.time) {
+      const [trainH, trainM] = todayTrainingP3.time.split(':').map(Number);
+      const trainMinutes = trainH * 60 + trainM;
+      const nowMinutes = hour * 60 + new Date().getMinutes();
+      const minutesSince = nowMinutes - trainMinutes;
+      
+      if (minutesSince >= 30 && minutesSince <= 60 && proteinPct < 0.8) {
+        advices.push({
+          id: 'training_recovery_window',
+          icon: '🏋️',
+          text: 'Окно восстановления — белок сейчас усвоится лучше!',
+          type: 'tip',
+          priority: 94,
+          category: 'training',
+          triggers: ['tab_open'],
+          ttl: 5000
+        });
+      }
+    }
+    
+    // sleep_debt_accumulating — накопленный недосып (3 дня < 6 часов)
+    const recentDaysForSleep = getRecentDays(3);
+    const sleepHoursRecent = recentDaysForSleep.map(d => calculateSleepHours(d)).filter(h => h > 0);
+    if (sleepHoursRecent.length >= 3) {
+      const allUnder6 = sleepHoursRecent.every(h => h < 6);
+      if (allUnder6 && !sessionStorage.getItem('heys_sleep_debt')) {
+        advices.push({
+          id: 'sleep_debt_accumulating',
+          icon: '😴',
+          text: 'Накопился недосып — сегодня ляг пораньше!',
+          type: 'warning',
+          priority: 95,
+          category: 'lifestyle',
+          triggers: ['tab_open'],
+          ttl: 6000,
+          onShow: () => { try { sessionStorage.setItem('heys_sleep_debt', '1'); } catch(e) {} }
+        });
+      }
+    }
+    
+    // stress_eating_detected — стресс + переедание
+    const avgStressForPattern = calculateAverageStress(day);
+    if (avgStressForPattern >= 4 && kcalPct > 1.15) {
+      advices.push({
+        id: 'stress_eating_detected',
+        icon: '🚶',
+        text: 'Стресс → перекус? Попробуй прогулку вместо еды',
+        type: 'tip',
+        priority: 96,
+        category: 'emotional',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // ═════════════════════════════════════════════════════════
+    // 🏆 PHASE 4: TRENDS & MILESTONES (priority: 1-10)
+    // ═════════════════════════════════════════════════════════
+    
+    // weight_trend_down/up — тренд веса за 7 дней
+    const recentDaysForWeight = getRecentDays(7);
+    const weightsForTrend = recentDaysForWeight.map(d => d.weightMorning).filter(w => w > 0);
+    
+    if (weightsForTrend.length >= 3) {
+      // Упрощённый тренд: средний первых 3 vs средний последних 3
+      const firstAvg = weightsForTrend.slice(0, 3).reduce((a, b) => a + b, 0) / 3;
+      const lastAvg = weightsForTrend.slice(-3).reduce((a, b) => a + b, 0) / 3;
+      const trendPerWeek = ((lastAvg - firstAvg) / weightsForTrend.length) * 7;
+      
+      if (trendPerWeek < -0.3 && !sessionStorage.getItem('heys_weight_trend_down')) {
+        advices.push({
+          id: 'weight_trend_down',
+          icon: '📉',
+          text: 'Вес уходит! Так держать',
+          type: 'achievement',
+          priority: 6,
+          category: 'weight',
+          triggers: ['tab_open'],
+          ttl: 5000,
+          onShow: () => { try { sessionStorage.setItem('heys_weight_trend_down', '1'); } catch(e) {} }
+        });
+      }
+      
+      if (trendPerWeek > 0.5 && !sessionStorage.getItem('heys_weight_trend_up')) {
+        advices.push({
+          id: 'weight_trend_up',
+          icon: '📈',
+          text: 'Вес растёт быстро — проверь калории',
+          type: 'warning',
+          priority: 7,
+          category: 'weight',
+          triggers: ['tab_open'],
+          ttl: 5000,
+          onShow: () => { try { sessionStorage.setItem('heys_weight_trend_up', '1'); } catch(e) {} }
+        });
+      }
+    }
+    
+    // milestone_7_days — неделя с HEYS
+    const totalDays = getTotalDaysTracked();
+    if (totalDays === 7 && !isMilestoneShown('7_days')) {
+      advices.push({
+        id: 'milestone_7_days',
+        icon: '📅',
+        text: 'Неделя с HEYS! Привычка формируется',
+        type: 'achievement',
+        priority: 2,
+        category: 'achievement',
+        triggers: ['tab_open'],
+        ttl: 8000,
+        showConfetti: true,
+        onShow: () => markMilestoneShown('7_days')
+      });
+    }
+    
+    // milestone_30_days — месяц с HEYS
+    if (totalDays === 30 && !isMilestoneShown('30_days')) {
+      const firstName = prof?.firstName || '';
+      advices.push({
+        id: 'milestone_30_days',
+        icon: '🎉',
+        text: firstName ? `Месяц с HEYS, ${firstName}! Ты молодец` : 'Месяц с HEYS! Ты молодец',
+        type: 'achievement',
+        priority: 1,
+        category: 'achievement',
+        triggers: ['tab_open'],
+        ttl: 10000,
+        showConfetti: true,
+        onShow: () => markMilestoneShown('30_days')
+      });
+    }
+    
+    // milestone_100_days — 100 дней с HEYS
+    if (totalDays === 100 && !isMilestoneShown('100_days')) {
+      advices.push({
+        id: 'milestone_100_days',
+        icon: '🏆',
+        text: '100 дней! Ты легенда',
+        type: 'achievement',
+        priority: 1,
+        category: 'achievement',
+        triggers: ['tab_open'],
+        ttl: 12000,
+        showConfetti: true,
+        onShow: () => markMilestoneShown('100_days')
+      });
+    }
+    
+    // new_record_streak — новый рекорд streak
+    if (currentStreak > 0) {
+      const isNewRecord = updatePersonalBestStreak(currentStreak);
+      if (isNewRecord && currentStreak >= 3 && !sessionStorage.getItem('heys_new_record')) {
+        advices.push({
+          id: 'new_record_streak',
+          icon: '🔥',
+          text: `Рекордный streak — ${currentStreak} дней! 🔥🔥🔥`,
+          type: 'achievement',
+          priority: 2,
+          category: 'achievement',
+          triggers: ['tab_open'],
+          ttl: 8000,
+          showConfetti: true,
+          onShow: () => { try { sessionStorage.setItem('heys_new_record', '1'); } catch(e) {} }
+        });
+      }
+    }
+    
+    // first_training_ever — первая тренировка в истории
+    if (hasTraining && !isMilestoneShown('first_training')) {
+      // Проверяем что это действительно первая тренировка
+      const historyDays = getRecentDays(30);
+      const hasHistoryTraining = historyDays.some(d => 
+        d.trainings?.some(t => t.z && t.z.some(m => m > 0))
+      );
+      
+      if (!hasHistoryTraining) {
+        advices.push({
+          id: 'first_training_ever',
+          icon: '🏃',
+          text: 'Первая тренировка в HEYS! Начало положено',
+          type: 'achievement',
+          priority: 3,
+          category: 'achievement',
+          triggers: ['tab_open'],
+          ttl: 8000,
+          showConfetti: true,
+          onShow: () => markMilestoneShown('first_training')
+        });
+      }
+    }
+    
     // ─────────────────────────────────────────────────────────
     // 🥜 TIMING TIPS (priority: 55-59)
     // ─────────────────────────────────────────────────────────

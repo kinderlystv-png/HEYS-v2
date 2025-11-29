@@ -46,6 +46,61 @@
             ReactDOM = window.ReactDOM;
           const { useState, useEffect } = React;
 
+          /* ═══════════════════════════════════════════════════════════════════════════════
+           * 🛡️ КОМПОНЕНТ: ErrorBoundary — Защита от ошибок рендеринга
+           * ═══════════════════════════════════════════════════════════════════════════════
+           */
+          class ErrorBoundary extends React.Component {
+            constructor(props) {
+              super(props);
+              this.state = { hasError: false, error: null };
+            }
+            static getDerivedStateFromError(error) {
+              return { hasError: true, error };
+            }
+            componentDidCatch(error, info) {
+              console.error('[HEYS] ErrorBoundary caught:', error, info);
+            }
+            render() {
+              if (this.state.hasError) {
+                return React.createElement('div', { 
+                  className: 'error-boundary-fallback',
+                  style: {
+                    padding: '32px 24px',
+                    textAlign: 'center',
+                    background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                    borderRadius: '16px',
+                    margin: '16px',
+                    border: '1px solid #fecaca'
+                  }
+                },
+                  React.createElement('div', { style: { fontSize: '48px', marginBottom: '16px' } }, '😔'),
+                  React.createElement('h2', { style: { color: '#dc2626', marginBottom: '8px', fontSize: '18px' } }, 'Что-то пошло не так'),
+                  React.createElement('p', { style: { color: '#7f1d1d', marginBottom: '16px', fontSize: '14px' } }, 
+                    'Попробуйте обновить страницу'
+                  ),
+                  React.createElement('button', {
+                    onClick: () => window.location.reload(),
+                    style: {
+                      background: '#dc2626',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '8px',
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }
+                  }, '🔄 Обновить')
+                );
+              }
+              return this.props.children;
+            }
+          }
+
+          // Экспортируем для использования в других модулях
+          window.HEYS.ErrorBoundary = ErrorBoundary;
+
           // init cloud (safe if no cloud module)
           if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
             // Определяем URL: используем прокси на Vercel для обхода блокировок
@@ -1866,7 +1921,7 @@
             );
           }
           const root = ReactDOM.createRoot(document.getElementById('root'));
-          root.render(React.createElement(App));
+          root.render(React.createElement(ErrorBoundary, null, React.createElement(App)));
         }
 
         // Start initialization

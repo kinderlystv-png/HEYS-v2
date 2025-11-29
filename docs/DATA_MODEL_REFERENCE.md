@@ -1,7 +1,7 @@
 # 📊 HEYS Data Model Reference
 
 > **Справочник всех аналитических параметров HEYS**  
-> Версия: 1.5.0 | Обновлено: 2025-11-29 | **77 умных советов**
+> Версия: 1.6.0 | Обновлено: 2025-11-29 | **103 умных совета**
 
 ---
 
@@ -262,7 +262,7 @@
 
 ## Советы (Advice Module)
 
-**Файл**: `heys_advice_v1.js` | **Всего советов: 77**
+**Файл**: `heys_advice_v1.js` | **Всего советов: 103**
 
 ### Все типы советов
 
@@ -347,6 +347,36 @@
 | `workout_consistent` | 3 дня тренировок подряд | achievement | tab_open |
 | `evening_snacker` | Паттерн поздних ужинов 3 дня | correlation | tab_open |
 | `morning_skipper` | Паттерн без завтрака 3 дня | correlation | tab_open |
+| **Phase 2: Meal-level** | | | |
+| `meal_too_large` | `lastMeal.kcal > 800` | nutrition | product_added |
+| `meal_too_small` | `meal.kcal < 150 && mealCount >= 2` | nutrition | product_added |
+| `protein_per_meal_low` | `meal.prot < 20 && meal.kcal > 200` | nutrition | product_added |
+| `evening_carbs_high` | `hour >= 20 && lastMeal.carbs > 50` | nutrition | product_added |
+| `fiber_per_meal_good` | `meal.fiber > 8` | nutrition | product_added |
+| `variety_meal_good` | `meal.items.length >= 4` | nutrition | product_added |
+| `late_first_meal` | `firstMeal.time >= '12:00' && hour >= 13` | lifestyle | tab_open |
+| **Phase 2: Day-quality** | | | |
+| `trans_free_day` | `dayTot.trans === 0 && mealCount >= 2` | achievement | tab_open |
+| `sugar_low_day` | `dayTot.simple < 25 && mealCount >= 2` | achievement | tab_open |
+| `super_hydration` | `waterMl >= 2500` | hydration | tab_open |
+| `variety_day_good` | `uniqueProducts >= 10` | nutrition | tab_open |
+| `deficit_on_track` | `kcalPct 0.85-0.95 && deficitPct > 0` | lifestyle | tab_open |
+| `weekend_relax` | `(Сб или Вс) && kcalPct 1.1-1.3` | lifestyle | tab_open |
+| **Phase 2: Timing & Patterns** | | | |
+| `fasting_window_good` | `gap ужин→завтрак >= 14h` | timing | tab_open |
+| `long_fast_warning` | `gap между приёмами > 7h && hour 10-18` | timing | tab_open |
+| `meal_spacing_perfect` | `все gaps 3-5 часов && meals >= 3` | timing | tab_open |
+| `training_recovery_window` | `30-60 мин после тренировки` | training | tab_open |
+| `sleep_debt_accumulating` | `3 дня < 6 часов сна` | sleep | tab_open |
+| `stress_eating_detected` | `avgStress >= 4 && kcalPct > 1.15` | correlation | tab_open |
+| **Phase 2: Milestones** | | | |
+| `weight_trend_down` | `7-day trend < -0.3kg/week` | correlation | tab_open |
+| `weight_trend_up` | `7-day trend > +0.5kg/week` | correlation | tab_open |
+| `milestone_7_days` | `totalDaysTracked === 7` | achievement | tab_open |
+| `milestone_30_days` | `totalDaysTracked === 30` | achievement | tab_open |
+| `milestone_100_days` | `totalDaysTracked === 100` | achievement | tab_open |
+| `new_record_streak` | `currentStreak === personalBestStreak` | achievement | tab_open |
+| `first_training_ever` | первая тренировка в истории | achievement | tab_open |
 
 ### Используемые переменные
 
@@ -428,7 +458,8 @@
 ## Changelog
 
 | Версия | Дата | Изменения |
-|--------|------|-----------|
+|--------|------|----------|
+| 1.6.0 | 2025-11-29 | **+26 советов Phase 2**: meal-level (7), day-quality (6), timing & patterns (6), milestones (7) = 103 всего |
 | 1.5.0 | 2025-11-29 | Финальная актуализация: подтверждено 77 уникальных советов, добавлен счётчик в заголовок |
 | 1.4.1 | 2025-11-29 | Актуализация: Training.type использует ID ('cardio', 'strength', 'hobby'), а не русские названия |
 | 1.4.0 | 2025-11-29 | +21 новый совет: dayScore, training.type, weight, caffeine, timing, gamification, patterns |

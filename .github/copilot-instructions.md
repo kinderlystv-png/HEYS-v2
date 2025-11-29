@@ -212,7 +212,7 @@ Object.keys(localStorage).filter((k) => k.startsWith('heys_'));
 - Отмечать `[x]` задачи по мере выполнения
 - После всех задач → `pnpm type-check && pnpm build`
 - Перенести выполненный промпт: `docs/tasks/` → `docs/tasks/archive/`
-- Перенести задачу в секцию `✅ ВЫПОЛНЕНО` в `todo.md`
+- **Перенести задачу в `done.md`** (todo.md только для активных задач!)
 
 ---
 
@@ -310,6 +310,7 @@ docs: update architecture diagram
 3. **Минимум шагов** — используй HMR, не делай лишних действий
 4. **Task Prompt Template** — для многошаговых задач используй
    `docs/TASK_PROMPT_TEMPLATE.md`
+5. **todo.md = только задачи** — выполненное сразу переносить в `done.md`
 
 ---
 

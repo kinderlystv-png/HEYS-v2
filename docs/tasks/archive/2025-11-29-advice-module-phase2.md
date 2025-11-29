@@ -1,86 +1,99 @@
-# Advice Module Phase 2 — 25+ новых советов
+# Advice Module Phase 2 — 26 новых советов
 
 **Дата**: 2025-11-29  
 **Приоритет**: 🟡 Средний  
-**Время**: ~2-3 часа (5 фаз: Phase 0 + 4 фазы реализации)  
-**Зависимости**: Advice Module (77 советов уже реализовано)
+**Время**: ~2-3 часа (Phase 0 проверки + 4 фазы реализации)  
+**Зависимости**: Advice Module v1 (77 советов уже реализовано)
 
 ---
 
 ## 📋 Описание
 
-Расширение модуля советов до **100+ уникальных типов**. Новые советы основаны на уже существующих данных в модели — не требуют новых полей.
+Расширение модуля советов до **103 уникальных типов**. Новые советы основаны на уже существующих данных в модели — не требуют новых полей.
 
 **Справочник данных**: [DATA_MODEL_REFERENCE.md](../DATA_MODEL_REFERENCE.md)
 
 ---
 
-## 🔴 ГЛУБОКИЙ АУДИТ ПРОМПТА (v2)
+## 🔴 PHASE 0: ОБЯЗАТЕЛЬНЫЕ ПРОВЕРКИ (5-10 мин)
 
-### ⚠️ Критические проблемы
+> ⚠️ **НЕ НАЧИНАТЬ реализацию пока все проверки не пройдены!**
 
-| # | Проблема | Риск | Решение | Статус |
-|---|----------|------|---------|--------|
-| 1 | **Дубликат `high_protein_day`** — уже есть `protein_champion` (line 810, proteinPct >= 1.2) | 🟡 | Удалить из промпта | ✅ Удалён |
-| 2 | **Дубликат `hydration_perfect`** — уже есть `water_goal_reached` (line 1177, waterPct >= 1.0) | 🟡 | Заменён на `super_hydration` (2500мл) | ✅ Заменён |
-| 3 | **Дубликат `all_macros_perfect`** — уже есть `balanced_macros` (line 718) | 🟡 | Удалить из промпта | ✅ Удалён |
-| 4 | **Нет доступа к `HEYS.models.mealTotals`** — в advice модуле не импортирован | 🔴 | Добавить helper с fallback | ✅ Phase 0 |
-| 5 | **`getRecentDays` fallback без clientId** — fallback читает без namespace | 🟡 | OK — основной путь через `HEYS.dayUtils.lsGet` | ✅ OK |
-| 6 | **Нет теста на пустой день** — meal-level советы сломают UI | 🟡 | Guard clause в каждом совете | ✅ Phase 0 |
-| 7 | **sessionStorage для milestones** — потеряются при закрытии браузера | 🟡 | Использовать localStorage | ✅ Phase 0 |
-| 8 | **Нет `getPersonalBestStreak()`** — для `new_record_streak` нужен helper | 🔴 | Добавить helper + localStorage | ⚠️ Phase 0 |
-| 9 | **`getTotalDaysTracked()` без clientId** — считает дни всех клиентов | 🟡 | Фильтровать по clientId | ⚠️ Phase 0 |
-| 10 | **Нет throttling для meal-level советов** — могут спамить при каждом продукте | 🟡 | Добавить debounce 3 сек | ⚠️ Phase 0 |
+### Команды для консоли браузера:
 
-### 🟢 Что уже хорошо (подтверждено кодом)
+```javascript
+// ═══════════════════════════════════════════════════════════
+// B1: HEYS.models.mealTotals доступность
+// ═══════════════════════════════════════════════════════════
+console.log('B1 — mealTotals:', typeof HEYS?.models?.mealTotals === 'function' ? '✅ OK' : '❌ FAIL');
 
-| # | Что работает | Где в коде |
-|---|--------------|------------|
-| 1 | Порядок загрузки скриптов правильный (models → advice) | index.html lines 92, 101 |
-| 2 | `getRecentDays(n)` уже реализован с fallback | line 1827 |
-| 3 | `hasCoffeeAfterHour()` — хороший паттерн для keyword-поиска | line 1851 |
-| 4 | Session management работает (`canShowAdvice`, `markAdviceShown`) | lines 215-242 |
-| 5 | Confetti уже работает для `streak_7` | line 482 |
-| 6 | Haptic feedback уже интегрирован в DayTab | line 2603-2609 |
-| 7 | `onShow` callback поддерживается | line 2606 |
-| 8 | Emotional state filtering работает | lines 140-155, 2082 |
+// ═══════════════════════════════════════════════════════════
+// B2: Тест пустого дня — не должен упасть
+// ═══════════════════════════════════════════════════════════
+try {
+  const testCtx = { 
+    dayTot: {}, 
+    normAbs: {}, 
+    day: { meals: [] }, 
+    hour: 12, 
+    mealCount: 0,
+    currentStreak: 0,
+    tone: 'active',
+    optimum: 2000
+  };
+  const result = HEYS.advice.generateAdvices?.(testCtx);
+  console.log('B2 — пустой день:', Array.isArray(result) ? '✅ OK' : '❌ FAIL');
+} catch(e) {
+  console.log('B2 — пустой день: ❌ FAIL', e.message);
+}
 
-### 🔵 Оценка оверкилла
+// ═══════════════════════════════════════════════════════════
+// B3: localStorage размер (должен быть < 5MB)
+// ═══════════════════════════════════════════════════════════
+const lsSize = (JSON.stringify(localStorage).length / 1024 / 1024).toFixed(2);
+console.log('B3 — localStorage:', parseFloat(lsSize) < 5 ? `✅ OK (${lsSize}MB)` : `❌ WARN (${lsSize}MB)`);
 
-| Фича | Оценка | Вердикт |
-|------|--------|---------|
-| 26 новых советов | ✅ Нормально | Логичное расширение |
-| Meal-level советы | ✅ Нормально | Ценная функциональность |
-| `calculateWeightTrend()` линейная регрессия | ⚠️ Лёгкий оверкилл | Можно упростить до среднего |
-| `meal_spacing_perfect` анализ всех gaps | ⚠️ Лёгкий оверкилл | Можно упростить |
-| Phase 3 timing советы (6 шт) | ⚠️ Много | Можно сократить до 4 |
-| Confetti для каждого milestone | ✅ OK | Уже работает |
-| Sound effects | ❌ Оверкилл | Убрать из плана |
-| AI-рецепты | ❌ Оверкилл | Future scope |
-| Weather API | ❌ Оверкилл | Future scope |
+// ═══════════════════════════════════════════════════════════
+// B4: Счётчик советов в advice модуле
+// ═══════════════════════════════════════════════════════════
+const fullCtx = {
+  dayTot: { kcal: 1500, prot: 80, carbs: 150, fat: 50, fiber: 20 },
+  normAbs: { kcal: 2000, prot: 100, carbs: 250, fat: 70, fiber: 25 },
+  day: { meals: [{ items: [{ id: 1 }] }], trainings: [] },
+  hour: 14,
+  mealCount: 1,
+  currentStreak: 2,
+  tone: 'active',
+  optimum: 2000,
+  prof: {}
+};
+const advices = HEYS.advice.generateAdvices?.(fullCtx) || [];
+console.log('B4 — советов в модуле:', advices.length, '(ожидается ~10-20 для базового контекста)');
 
----
+// ═══════════════════════════════════════════════════════════
+// B5: Phase 0 helpers доступность
+// ═══════════════════════════════════════════════════════════
+const helpers = [
+  'getMealTotals', 'getLastMealWithItems', 'getFirstMealWithItems',
+  'isMilestoneShown', 'markMilestoneShown', 'countUniqueProducts',
+  'getTotalDaysTracked', 'getPersonalBestStreak', 'updatePersonalBestStreak',
+  'canShowMealAdvice', 'markMealAdviceShown', 'getRecentDays'
+];
+const missing = helpers.filter(h => typeof HEYS?.advice?.[h] !== 'function');
+console.log('B5 — helpers:', missing.length === 0 ? '✅ OK (12/12)' : `❌ MISSING: ${missing.join(', ')}`);
+```
 
-## 🎯 Phase 0: Подготовка фундамента — ~20 мин
+### Чеклист проверок:
 
-**Критические исправления перед началом работы.**
+| # | Проверка | Ожидаемый результат | Статус |
+|---|----------|---------------------|--------|
+| B1 | `HEYS.models.mealTotals` | `✅ OK` | ⏳ |
+| B2 | Пустой день без ошибки | `✅ OK` | ⏳ |
+| B3 | localStorage < 5MB | `✅ OK (<X.XX MB)` | ⏳ |
+| B4 | Советов ~10-20 базовых | Число в консоли | ⏳ |
+| B5 | Helpers 12/12 | `✅ OK (12/12)` | ⏳ |
 
-### ✅ Уже выполнено в Phase 0:
-
-- [x] **P0.1**: Helper `getMealTotals(meal, pIndex)` с fallback
-- [x] **P0.2**: Проверено — `getRecentDays` использует `HEYS.dayUtils.lsGet`
-- [x] **P0.3**: Helper `getLastMealWithItems(day)` + `getFirstMealWithItems(day)`
-- [x] **P0.4**: Helpers `isMilestoneShown(id)` / `markMilestoneShown(id)` с localStorage
-- [x] **P0.5**: Helper `countUniqueProducts(day)`
-- [x] **P0.6**: Helper `getTotalDaysTracked()` 
-
-### ⚠️ Требуется доделать в Phase 0:
-
-> **✅ UPDATE 2025-11-29**: Все helpers уже реализованы в `heys_advice_v1.js` (строки 2027-2073)!
-
-- [x] **P0.7**: Helper `getPersonalBestStreak()` — ✅ реализован (line 2027)
-- [x] **P0.8**: Helper `updatePersonalBestStreak()` — ✅ реализован (line 2040)  
-- [x] **P0.9**: Throttle `canShowMealAdvice()` — ✅ реализован (line 2062)
+> ✅ **Все проверки пройдены?** → Переходи к Phase 1!
 
 ---
 
@@ -515,20 +528,20 @@ sessionStorage.getItem('heys_last_meal_advice')
 
 ## 🚀 После выполнения
 
-1. Закоммитить: `git commit -m "feat: add 26 new advice types (Phase 2)"`
+1. Закоммитить: `git commit -m "feat(advice): add 26 new advice types → 103 total"`
 2. Обновить DATA_MODEL_REFERENCE.md до v1.6.0
 3. Перенести промпт в `archive/`
-4. Обновить todo.md
+4. Обновить todo.md — отметить Phase 2 как ✅
 
 ---
 
 ## 🎯 Итоговые рекомендации
 
 ### ✅ Что делать:
-1. **Phase 0 сначала** — доделать P0.7-P0.9 перед фазами 1-4
+1. **Проверить блокеры B1-B5** в консоли браузера (5 мин)
 2. **Тестировать после каждой фазы** — не накапливать баги
-3. **Персонализация текстов** — добавить `firstName` где уместно
-4. **Динамические числа** — показывать конкретные значения
+3. **Персонализация текстов** — `${firstName}` где уместно
+4. **Динамические числа** — `${Math.round(mealTot.kcal)}` вместо "много"
 5. **Использовать существующие паттерны** — confetti, haptic, onShow
 
 ### ❌ Чего избегать:
@@ -538,13 +551,37 @@ sessionStorage.getItem('heys_last_meal_advice')
 4. **Слишком много советов сразу** — throttle 3 сек
 5. **Переусложнение Phase 3** — можно сократить до 4 советов
 
-### 💡 Быстрые победы (Easy Wins):
-1. Добавить `showConfetti: true` для milestones — **уже работает!**
+### 💡 Easy Wins (после Phase 2):
+1. ✅ Confetti для milestones — **уже работает**
 2. Персонализация с `firstName` — 5 минут
 3. CSS pulse animation для иконок — 5 минут
 4. Gradient badges для категорий — 10 минут
 
 ---
 
-**Версия промпта**: 2.0 (после глубокого аудита)  
+## 🌟 WOW-идеи для следующего спринта
+
+> **После Phase 2 — фокус на современные UX-паттерны!**
+
+| Фича | Почему WOW | Время | Сложность |
+|------|------------|-------|-----------|
+| 🎙️ **Voice Input** | "Добавь 100г творога" — конкуренты не умеют | 2ч | M |
+| 📸 **Фото еды** | Дневник становится живым, эмоциональная связь | 1-2ч | S |
+| 📲 **Share Streak** | Viral growth через Instagram Stories | 30м | S |
+| 👋 **Onboarding** | x2 retention для новых пользователей | 1-2ч | M |
+| 📊 **Widget iOS/Android** | Home screen = ежедневное напоминание | 3-4ч | L |
+| 🌙 **Sleep Integration** | Apple Health / Google Fit sync | 2-3ч | M |
+| ✨ **Animated Streaks** | Огненная анимация при streak | 30м | S |
+| 🏆 **Weekly Leaderboard** | Соревнование с друзьями | 3-4ч | L |
+
+### 🎯 Рекомендуемый порядок после Phase 2:
+1. **Onboarding** (1-2ч) — 3 экрана при первом запуске
+2. **Voice Input** (2ч) — Web Speech API
+3. **Фото еды** (1-2ч) — `<input type="file" accept="image/*" capture>`
+4. **Share Streak** (30м) — Web Share API + canvas
+
+---
+
+**Версия промпта**: 2.1 (глубокий аудит + блокеры)  
 **Последнее обновление**: 2025-11-29
+

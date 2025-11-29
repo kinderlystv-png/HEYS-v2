@@ -389,6 +389,66 @@
       const [dropdownPos, setDropdownPos] = React.useState({top:0, left:0, width:0});
       const inputRef = React.useRef(null);
       
+      // 🆕 State для модалки ввода граммов (mobile only)
+      const [gramsModalProduct, setGramsModalProduct] = React.useState(null);
+      const [gramsValue, setGramsValue] = React.useState(100);
+      const gramsInputRef = React.useRef(null);
+      
+      // 🆕 Swipe-to-close для grams modal
+      const gramsModalRef = React.useRef(null);
+      const gramsSheetDragY = React.useRef(0);
+      const gramsSheetStartY = React.useRef(0);
+      const isGramsSheetDragging = React.useRef(false);
+      
+      // 🆕 Анимация калорий (animated kcal value)
+      const [animatedKcal, setAnimatedKcal] = React.useState(0);
+      const animationRef = React.useRef(null);
+      
+      // Animate kcal value smoothly
+      React.useEffect(() => {
+        if (!gramsModalProduct) return;
+        const targetKcal = Math.round((gramsModalProduct.kcal100 || 0) * gramsValue / 100);
+        
+        // Cancel previous animation
+        if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        
+        const startKcal = animatedKcal;
+        const diff = targetKcal - startKcal;
+        if (Math.abs(diff) < 1) {
+          setAnimatedKcal(targetKcal);
+          return;
+        }
+        
+        const duration = 120; // ms
+        const startTime = performance.now();
+        
+        const animate = (currentTime) => {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          // Ease-out cubic
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const current = Math.round(startKcal + diff * eased);
+          setAnimatedKcal(current);
+          
+          if (progress < 1) {
+            animationRef.current = requestAnimationFrame(animate);
+          }
+        };
+        
+        animationRef.current = requestAnimationFrame(animate);
+        
+        return () => {
+          if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        };
+      }, [gramsValue, gramsModalProduct]);
+      
+      // Reset animated kcal when modal opens
+      React.useEffect(() => {
+        if (gramsModalProduct) {
+          setAnimatedKcal(Math.round((gramsModalProduct.kcal100 || 0) * gramsValue / 100));
+        }
+      }, [gramsModalProduct?.id]);
+      
       // ⭐ Состояние избранных продуктов
       const [favorites, setFavorites] = React.useState(() => 
         (window.HEYS && window.HEYS.store && window.HEYS.store.getFavorites) 
@@ -479,13 +539,14 @@
         setSelectedIndex(-1);
       }, [candidates.length, search]);
       
-      // Функция добавления продукта с фокусом на поле граммов
+      // Функция добавления продукта с фокусом на поле граммов (desktop)
       const addProductAndFocusGrams = React.useCallback((product) => {
         const newItem = {id:uid('it_'), product_id:product.id??product.product_id, name:product.name, grams:100};
         const meals = day.meals.map((m,i)=> i===mi? {...m, items:[...(m.items||[]), newItem]}:m);
         setDay({...day, meals});
         setSearch(''); 
         setOpen(false);
+        setSelectedIndex(-1); // Сбрасываем выделение
         
         // Фокус на поле граммов нового продукта через itemId
         setTimeout(() => {
@@ -509,6 +570,189 @@
         }, 200);
       }, [mi, day.meals, setDay]);
       
+      // 🆕 Функция добавления продукта с указанными граммами (из модалки)
+      const addProductWithGrams = React.useCallback((product, grams) => {
+        const newItem = {id:uid('it_'), product_id:product.id??product.product_id, name:product.name, grams: grams || 100};
+        const meals = day.meals.map((m,i)=> i===mi? {...m, items:[...(m.items||[]), newItem]}:m);
+        setDay({...day, meals});
+        setGramsModalProduct(null);
+        setGramsValue(100);
+        // Сохраняем последние граммы и историю для этого продукта
+        try {
+          const productId = product.id ?? product.product_id ?? product.name;
+          U.lsSet(`heys_last_grams_${productId}`, grams);
+          // 🆕 Сохраняем в историю для умных пресетов
+          const history = U.lsGet('heys_grams_history', {});
+          if (!history[productId]) history[productId] = [];
+          history[productId].push(grams);
+          if (history[productId].length > 20) history[productId].shift();
+          U.lsSet('heys_grams_history', history);
+        } catch(e) {}
+      }, [mi, day.meals, setDay]);
+      
+      // Проверка мобильного viewport (должно быть ДО handleProductSelect)
+      const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+      
+      // 🆕 Открыть модалку граммов (mobile) или добавить сразу (desktop)
+      const handleProductSelect = React.useCallback((product) => {
+        if (isMobile) {
+          // Загружаем последние граммы для этого продукта
+          const productId = product.id ?? product.product_id ?? product.name;
+          const lastGrams = U.lsGet(`heys_last_grams_${productId}`, 100);
+          setGramsValue(lastGrams);
+          setGramsModalProduct(product);
+          setSearch('');
+          setOpen(false);
+          setSelectedIndex(-1);
+          // Автофокус на поле ввода через небольшую задержку
+          setTimeout(() => {
+            if (gramsInputRef.current) {
+              gramsInputRef.current.focus();
+              gramsInputRef.current.select();
+            }
+          }, 100);
+        } else {
+          addProductAndFocusGrams(product);
+        }
+      }, [isMobile, addProductAndFocusGrams]);
+      
+      // 🆕 Закрыть модалку граммов
+      const cancelGramsModal = React.useCallback(() => {
+        setGramsModalProduct(null);
+        setGramsValue(100);
+      }, []);
+      
+      // 🆕 Подтвердить граммы
+      const confirmGramsModal = React.useCallback(() => {
+        if (gramsModalProduct && gramsValue > 0) {
+          addProductWithGrams(gramsModalProduct, gramsValue);
+        }
+      }, [gramsModalProduct, gramsValue, addProductWithGrams]);
+      
+      // 🆕 Swipe-to-close handlers для grams modal
+      const handleGramsSheetTouchStart = React.useCallback((e) => {
+        gramsSheetStartY.current = e.touches[0].clientY;
+        isGramsSheetDragging.current = true;
+        gramsSheetDragY.current = 0;
+      }, []);
+      
+      const handleGramsSheetTouchMove = React.useCallback((e) => {
+        if (!isGramsSheetDragging.current) return;
+        const diff = e.touches[0].clientY - gramsSheetStartY.current;
+        if (diff > 0) {
+          gramsSheetDragY.current = diff;
+          if (gramsModalRef.current) {
+            gramsModalRef.current.style.transform = `translateY(${diff}px)`;
+          }
+        }
+      }, []);
+      
+      const handleGramsSheetTouchEnd = React.useCallback(() => {
+        if (!isGramsSheetDragging.current) return;
+        isGramsSheetDragging.current = false;
+        
+        if (gramsSheetDragY.current > 100) {
+          // Закрываем если свайпнули > 100px
+          try { navigator.vibrate?.(10); } catch(e) {}
+          if (gramsModalRef.current) {
+            gramsModalRef.current.classList.add('closing');
+          }
+          setTimeout(() => cancelGramsModal(), 200);
+        } else {
+          // Возвращаем на место
+          if (gramsModalRef.current) {
+            gramsModalRef.current.style.transform = '';
+          }
+        }
+        gramsSheetDragY.current = 0;
+      }, [cancelGramsModal]);
+      
+      // 🆕 Умные пресеты на основе истории
+      const smartGramsPresets = React.useMemo(() => {
+        if (!gramsModalProduct?.id) return [50, 100, 150, 200, 250];
+        
+        const history = U.lsGet('heys_grams_history', {});
+        const productHistory = history[gramsModalProduct.id];
+        
+        if (!productHistory || productHistory.length < 3) {
+          return [50, 100, 150, 200, 250]; // Fallback to defaults
+        }
+        
+        // Частотный анализ
+        const freq = {};
+        productHistory.forEach(v => freq[v] = (freq[v] || 0) + 1);
+        
+        // Сортируем по частоте, берём топ-5
+        const topValues = Object.entries(freq)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([v]) => +v)
+          .sort((a, b) => a - b);
+        
+        // Если меньше 5 уникальных значений — дополняем defaults
+        if (topValues.length < 5) {
+          const defaults = [50, 100, 150, 200, 250];
+          defaults.forEach(d => {
+            if (topValues.length < 5 && !topValues.includes(d)) {
+              topValues.push(d);
+            }
+          });
+          topValues.sort((a, b) => a - b);
+        }
+        
+        return topValues.slice(0, 5);
+      }, [gramsModalProduct?.id]);
+      
+      // 🆕 Сохранение в историю граммов (вызывается при добавлении продукта)
+      const saveGramsToHistory = React.useCallback((productId, grams) => {
+        const history = U.lsGet('heys_grams_history', {});
+        if (!history[productId]) history[productId] = [];
+        history[productId].push(grams);
+        // Храним последние 20 значений
+        if (history[productId].length > 20) history[productId].shift();
+        U.lsSet('heys_grams_history', history);
+      }, []);
+      
+      // 🆕 Пресеты граммов (теперь используем smart presets)
+      // const gramsPresets = [50, 100, 150, 200, 250]; // Old static presets
+      
+      // 🆕 Drag handler для слайдера граммов
+      const handleGramsDrag = React.useCallback((e) => {
+        e.preventDefault();
+        const slider = e.currentTarget;
+        const rect = slider.getBoundingClientRect();
+        const minGrams = 10;
+        const maxGrams = 500;
+        
+        const updateFromPosition = (clientX) => {
+          const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+          const percent = x / rect.width;
+          const grams = Math.round((minGrams + percent * (maxGrams - minGrams)) / 10) * 10;
+          setGramsValue(Math.max(minGrams, Math.min(maxGrams, grams)));
+          // Haptic feedback (wrapped in try-catch for Chrome policy)
+          try { navigator.vibrate?.(3); } catch(e) {}
+        };
+        
+        updateFromPosition(e.touches ? e.touches[0].clientX : e.clientX);
+        
+        const handleMove = (moveEvent) => {
+          moveEvent.preventDefault();
+          updateFromPosition(moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX);
+        };
+        
+        const handleEnd = () => {
+          document.removeEventListener('mousemove', handleMove);
+          document.removeEventListener('mouseup', handleEnd);
+          document.removeEventListener('touchmove', handleMove);
+          document.removeEventListener('touchend', handleEnd);
+        };
+        
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('touchend', handleEnd);
+      }, []);
+      
       // Обработка клавиш для навигации
       const handleKeyDown = React.useCallback((e) => {
         if (!open || candidates.length === 0) return;
@@ -525,9 +769,9 @@
           case 'Enter':
             e.preventDefault();
             if (selectedIndex >= 0 && selectedIndex < candidates.length) {
-              addProductAndFocusGrams(candidates[selectedIndex]);
+              handleProductSelect(candidates[selectedIndex]);
             } else if (candidates.length > 0) {
-              addProductAndFocusGrams(candidates[0]);
+              handleProductSelect(candidates[0]);
             }
             break;
           case 'Escape':
@@ -536,10 +780,7 @@
             setSelectedIndex(-1);
             break;
         }
-      }, [open, candidates, selectedIndex, addProductAndFocusGrams]);
-      
-      // Проверка мобильного viewport
-      const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+      }, [open, candidates, selectedIndex, handleProductSelect]);
       
       // Флаг: показываем частые продукты (когда поле пустое)
       const showingFrequent = !lc;
@@ -565,7 +806,7 @@
           return React.createElement('div', {
             key:(p.id||p.name),
             className: `suggest-item ${index === selectedIndex ? 'selected' : ''}`,
-            onMouseDown:()=>{ addProductAndFocusGrams(p); },
+            onMouseDown:()=>{ handleProductSelect(p); },
             onMouseEnter:()=>{ setSelectedIndex(index); },
             ref: index === selectedIndex ? (el) => {
               if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -603,32 +844,47 @@
             style:{width:'100%', fontSize:'13px'},
             onFocus:()=>{
               setOpen(true);
-              // Скроллим карточку приёма к верху экрана при фокусе на поиске
-              // На мобильных учитываем виртуальную клавиатуру через visualViewport
-              const scrollToMeal = () => {
-                const mealCard = document.querySelector(`[data-meal-index="${mi}"]`);
-                if (mealCard) {
-                  const headerOffset = 56; // Высота шапки
-                  const elementPosition = mealCard.getBoundingClientRect().top;
+              // Скроллим поле поиска к верху экрана при фокусе
+              // На мобильных добавляем временный padding чтобы было куда скроллить
+              const scrollToInput = () => {
+                if (inputRef.current) {
+                  // Добавляем временный spacer внизу страницы для возможности скролла
+                  let spacer = document.getElementById('keyboard-spacer');
+                  if (!spacer && isMobile) {
+                    spacer = document.createElement('div');
+                    spacer.id = 'keyboard-spacer';
+                    spacer.style.height = '50vh'; // Половина экрана — достаточно для клавиатуры
+                    spacer.style.pointerEvents = 'none';
+                    document.body.appendChild(spacer);
+                  }
+                  
+                  // Теперь скроллим к полю ввода
+                  const headerOffset = 60;
+                  const elementPosition = inputRef.current.getBoundingClientRect().top;
                   const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
                   window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
                 }
               };
               
               // Первый скролл сразу
-              setTimeout(scrollToMeal, 100);
+              setTimeout(scrollToInput, 100);
               
               // На мобильных — дополнительный скролл после открытия клавиатуры
               if (isMobile && window.visualViewport) {
                 const handleResize = () => {
-                  // Клавиатура изменила viewport — скроллим ещё раз
-                  setTimeout(scrollToMeal, 50);
+                  // Клавиатура изменила viewport — скроллим ещё раз к полю ввода
+                  setTimeout(scrollToInput, 50);
                   window.visualViewport.removeEventListener('resize', handleResize);
                 };
                 window.visualViewport.addEventListener('resize', handleResize, { once: true });
               }
             },
-            onBlur:()=>setTimeout(()=>setOpen(false),200),
+            onBlur:()=>{
+              setTimeout(()=>setOpen(false),200);
+              // Убираем spacer при потере фокуса
+              const spacer = document.getElementById('keyboard-spacer');
+              if (spacer) spacer.remove();
+            },
             onChange:e=>{setSearch(e.target.value); setOpen(true);},
             onKeyDown: handleKeyDown
           }),
@@ -645,6 +901,119 @@
           }, `${candidates.length} найдено`),
           // На мобильных — Portal в body, на десктопе — обычный dropdown
           isMobile && dropdownContent ? ReactDOM.createPortal(dropdownContent, document.body) : dropdownContent
+        ),
+        
+        // 🆕 Модалка ввода граммов (mobile only)
+        gramsModalProduct && ReactDOM.createPortal(
+          React.createElement('div', { className: 'time-picker-backdrop grams-modal-backdrop', onClick: cancelGramsModal },
+            React.createElement('div', { 
+              ref: gramsModalRef,
+              className: 'time-picker-modal grams-modal',
+              onClick: e => e.stopPropagation(),
+              onTouchMove: handleGramsSheetTouchMove,
+              onTouchEnd: handleGramsSheetTouchEnd
+            },
+              // Ручка для свайпа (активная зона)
+              React.createElement('div', { 
+                className: 'bottom-sheet-handle',
+                onTouchStart: handleGramsSheetTouchStart
+              }),
+              
+              // Заголовок с названием продукта
+              React.createElement('div', { className: 'time-picker-header' },
+                React.createElement('button', { className: 'time-picker-cancel', onClick: cancelGramsModal }, 'Отмена'),
+                React.createElement('span', { className: 'time-picker-title grams-modal-title' }, 
+                  gramsModalProduct.name?.length > 25 
+                    ? gramsModalProduct.name.slice(0, 25) + '...' 
+                    : gramsModalProduct.name
+                ),
+                React.createElement('button', { className: 'time-picker-confirm', onClick: confirmGramsModal }, 'Добавить')
+              ),
+              
+              // Калории preview (с анимацией)
+              React.createElement('div', { className: 'grams-preview' },
+                React.createElement('span', { className: 'grams-preview-value' }, gramsValue + 'г'),
+                React.createElement('span', { className: 'grams-preview-separator' }, ' = '),
+                React.createElement('span', { className: 'grams-preview-kcal' }, 
+                  animatedKcal + ' ккал'
+                )
+              ),
+              
+              // Поле ввода
+              React.createElement('div', { className: 'grams-input-container' },
+                React.createElement('input', {
+                  ref: gramsInputRef,
+                  type: 'number',
+                  inputMode: 'numeric',
+                  className: 'grams-input',
+                  value: gramsValue,
+                  onChange: (e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    setGramsValue(Math.max(0, Math.min(9999, val)));
+                  },
+                  onKeyDown: (e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      confirmGramsModal();
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      cancelGramsModal();
+                    }
+                  },
+                  placeholder: '100'
+                }),
+                React.createElement('span', { className: 'grams-input-suffix' }, 'г')
+              ),
+              
+              // Слайдер (как у шагов)
+              React.createElement('div', { className: 'grams-slider-container' },
+                React.createElement('div', { 
+                  className: 'grams-slider',
+                  onMouseDown: handleGramsDrag,
+                  onTouchStart: handleGramsDrag
+                },
+                  React.createElement('div', { className: 'grams-slider-track' }),
+                  // Метки smart-пресетов на слайдере
+                  smartGramsPresets.map(preset => {
+                    const percent = ((preset - 10) / (500 - 10)) * 100;
+                    return React.createElement('div', { 
+                      key: preset,
+                      className: 'grams-slider-mark',
+                      style: { left: percent + '%' }
+                    });
+                  }),
+                  React.createElement('div', { 
+                    className: 'grams-slider-fill',
+                    style: { width: ((gramsValue - 10) / (500 - 10)) * 100 + '%' }
+                  }),
+                  React.createElement('div', { 
+                    className: 'grams-slider-thumb',
+                    style: { left: ((gramsValue - 10) / (500 - 10)) * 100 + '%' }
+                  })
+                ),
+                React.createElement('div', { className: 'grams-slider-labels' },
+                  React.createElement('span', null, '10'),
+                  React.createElement('span', null, '500')
+                )
+              ),
+              
+              // Умные пресеты (на основе истории)
+              React.createElement('div', { className: 'grams-presets' },
+                smartGramsPresets.map(preset => 
+                  React.createElement('button', {
+                    key: preset,
+                    className: 'grams-preset' + (gramsValue === preset ? ' active' : ''),
+                    onClick: () => {
+                      setGramsValue(preset);
+                      // Haptic feedback (wrapped in try-catch for Chrome policy)
+                      try { navigator.vibrate?.(5); } catch(e) {}
+                    }
+                  }, preset + 'г')
+                )
+              )
+            )
+          ),
+          document.body
         )
       );
     }
@@ -700,6 +1069,9 @@
       if (tr[1] && hasData(tr[1])) return 2;
       return 1;
     });
+    
+    // === Период графиков (7, 14, 30 дней) ===
+    const [chartPeriod, setChartPeriod] = useState(7);
     
     // === Toast для подсказок БЖУ ===
     const [toastVisible, setToastVisible] = useState(false);
@@ -937,6 +1309,11 @@
     const [gramsInputValue, setGramsInputValue] = useState(''); // для ручного ввода
     // Генерируем значения от 1 до 2000 с шагом 1
     const gramsValues = useMemo(() => Array.from({length: 2000}, (_, i) => String(i + 1)), []);
+    
+    // === 🆕 Edit Grams Modal (slider-based, like MealAddProduct) ===
+    const [editGramsTarget, setEditGramsTarget] = useState(null); // {mealIndex, itemId, product}
+    const [editGramsValue, setEditGramsValue] = useState(100);
+    const editGramsInputRef = React.useRef(null);
     
     // === Zone Minutes Picker Modal ===
     const [showZonePicker, setShowZonePicker] = useState(false);
@@ -1297,6 +1674,68 @@
       setGramsPickerTarget(null);
     }
     
+    // === 🆕 Edit Grams Modal functions (slider-based) ===
+    function openEditGramsModal(mealIndex, itemId, currentGrams, product) {
+      setEditGramsTarget({ mealIndex, itemId, product });
+      setEditGramsValue(currentGrams || 100);
+      // Автофокус на input через задержку
+      setTimeout(() => {
+        if (editGramsInputRef.current) {
+          editGramsInputRef.current.focus();
+          editGramsInputRef.current.select();
+        }
+      }, 100);
+    }
+    
+    function confirmEditGramsModal() {
+      if (editGramsTarget && editGramsValue > 0) {
+        setGrams(editGramsTarget.mealIndex, editGramsTarget.itemId, editGramsValue);
+      }
+      setEditGramsTarget(null);
+      setEditGramsValue(100);
+    }
+    
+    function cancelEditGramsModal() {
+      setEditGramsTarget(null);
+      setEditGramsValue(100);
+    }
+    
+    // Drag handler для слайдера граммов (edit mode)
+    function handleEditGramsDrag(e) {
+      e.preventDefault();
+      const slider = e.currentTarget;
+      const rect = slider.getBoundingClientRect();
+      const minGrams = 10;
+      const maxGrams = 500;
+      
+      const updateFromPosition = (clientX) => {
+        const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+        const percent = x / rect.width;
+        const grams = Math.round((minGrams + percent * (maxGrams - minGrams)) / 10) * 10;
+        setEditGramsValue(Math.max(minGrams, Math.min(maxGrams, grams)));
+        try { navigator.vibrate?.(3); } catch(e) {}
+      };
+      
+      updateFromPosition(e.touches ? e.touches[0].clientX : e.clientX);
+      
+      const handleMove = (moveEvent) => {
+        moveEvent.preventDefault();
+        updateFromPosition(moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX);
+      };
+      
+      const handleEnd = () => {
+        document.removeEventListener('mousemove', handleMove);
+        document.removeEventListener('mouseup', handleEnd);
+        document.removeEventListener('touchmove', handleMove);
+        document.removeEventListener('touchend', handleEnd);
+      };
+      
+      document.addEventListener('mousemove', handleMove);
+      document.addEventListener('mouseup', handleEnd);
+      document.addEventListener('touchmove', handleMove, { passive: false });
+      document.addEventListener('touchend', handleEnd);
+    }
+
     // === Zone Minutes Picker functions ===
     function openZonePicker(trainingIndex, zoneIndex) {
       const T = TR[trainingIndex] || { z: [0, 0, 0, 0] };
@@ -1740,11 +2179,25 @@
       const meals = day.meals.filter((_, idx) => idx !== i); 
       setDay({...day, meals}); 
     }
+    // Track newly added items for fly-in animation
+    const [newItemIds, setNewItemIds] = useState(new Set());
+    
     function addProductToMeal(mi,p){ 
       haptic('light'); // Вибрация при добавлении
       const item={id:uid('it_'), product_id:p.id??p.product_id, name:p.name, grams:100}; 
       const meals=day.meals.map((m,i)=> i===mi? {...m, items:[...(m.items||[]), item]}:m); 
       setDay({...day, meals}); 
+      
+      // Track new item for animation
+      setNewItemIds(prev => new Set([...prev, item.id]));
+      // Remove from new items after animation completes
+      setTimeout(() => {
+        setNewItemIds(prev => {
+          const next = new Set(prev);
+          next.delete(item.id);
+          return next;
+        });
+      }, 500);
       
       // Dispatch event для advice системы
       window.dispatchEvent(new CustomEvent('heysProductAdded'));
@@ -2202,7 +2655,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     const row={kcal:scale(per.kcal100,G),carbs:scale(per.carbs100,G),simple:scale(per.simple100,G),complex:scale(per.complex100,G),prot:scale(per.prot100,G),fat:scale(per.fat100,G),bad:scale(per.bad100,G),good:scale(per.good100,G),trans:scale(per.trans100,G),fiber:scale(per.fiber100,G)};
     const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
   const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
-    return React.createElement('tr',{key:it.id},
+    const isNew = newItemIds.has(it.id);
+    return React.createElement('tr',{key:it.id, 'data-new': isNew ? 'true' : 'false'},
       React.createElement('td',{'data-cell':'name'},p.name),
       React.createElement('td',{'data-cell':'grams'},React.createElement('input',{
         type:'number',
@@ -2400,10 +2854,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               // Row 1: name + grams (без кнопки delete — удаление свайпом)
               React.createElement('div', { className: 'mpc-row1' },
                 React.createElement('span', { className: 'mpc-name' }, p.name),
-                // На мобильных — кнопка открывает wheel picker
+                // На мобильных — кнопка открывает модалку со слайдером
                 React.createElement('button', {
                   className: 'mpc-grams-btn ' + gramsClass,
-                  onClick: (e) => { e.stopPropagation(); openGramsPicker(mi, it.id, G); }
+                  onClick: (e) => { e.stopPropagation(); openEditGramsModal(mi, it.id, G, p); }
                 }, G + 'г')
               ),
               // Row 2: header labels (grid)
@@ -2830,14 +3284,24 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       try {
         const today = new Date(date);
         const weights = [];
+        const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
         
         // Собираем вес за последние 7 дней (включая сегодня)
         for (let i = 0; i < 7; i++) {
           const d = new Date(today);
           d.setDate(d.getDate() - i);
           const dateStr = fmtDate(d);
-          const dayKey = 'heys_dayv2_' + dateStr;
-          const dayData = lsGet(dayKey, null);
+          const scopedKey = clientId 
+            ? 'heys_' + clientId + '_dayv2_' + dateStr 
+            : 'heys_dayv2_' + dateStr;
+          
+          let dayData = null;
+          try {
+            const raw = localStorage.getItem(scopedKey);
+            if (raw) {
+              dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+            }
+          } catch(e) {}
           
           if (dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0) {
             weights.push({ date: dateStr, weight: +dayData.weightMorning });
@@ -2872,88 +3336,154 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       }
     }, [date, day.weightMorning]);
     
-    // Данные для sparkline калорий за 7 дней
+    // Прогноз веса на месяц (~Xкг/мес)
+    const monthForecast = React.useMemo(() => {
+      if (!weightTrend || !weightTrend.diff) return null;
+      
+      // Экстраполируем тренд на 30 дней
+      // weightTrend.diff — изменение за chartPeriod дней
+      const dailyChange = weightTrend.diff / chartPeriod;
+      const monthChange = dailyChange * 30;
+      
+      // Показываем только если изменение значительное (>0.5кг/мес)
+      if (Math.abs(monthChange) < 0.5) return null;
+      
+      const sign = monthChange > 0 ? '+' : '';
+      return {
+        text: '~' + sign + r1(monthChange) + ' кг/мес',
+        direction: monthChange < 0 ? 'down' : monthChange > 0 ? 'up' : 'same'
+      };
+    }, [weightTrend, chartPeriod]);
+    
+    // Данные для sparkline веса за N дней
+    const weightSparklineData = React.useMemo(() => {
+      try {
+        const today = new Date(date);
+        const days = [];
+        const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
+        
+        for (let i = chartPeriod - 1; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = fmtDate(d);
+          const scopedKey = clientId 
+            ? 'heys_' + clientId + '_dayv2_' + dateStr 
+            : 'heys_dayv2_' + dateStr;
+          
+          let dayData = null;
+          try {
+            const raw = localStorage.getItem(scopedKey);
+            if (raw) {
+              dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+            }
+          } catch(e) {}
+          
+          if (dayData?.weightMorning > 0) {
+            days.push({ 
+              date: dateStr, 
+              weight: +dayData.weightMorning,
+              isToday: i === 0,
+              dayNum: dateStr.slice(-2).replace(/^0/, '')
+            });
+          }
+        }
+        return days;
+      } catch (e) {
+        return [];
+      }
+    }, [date, day.weightMorning, chartPeriod]);
+    
+    // Данные для sparkline калорий за chartPeriod дней
+    // Используем products из state (реактивные данные после sync)
     const sparklineData = React.useMemo(() => {
       try {
         const today = new Date(date);
         const days = [];
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
         
-        // Получаем продукты для вычисления калорий
-        let productsMap = new Map();
-        try {
-          const productsKey = clientId 
-            ? 'heys_' + clientId + '_products' 
-            : 'heys_products';
-          const productsRaw = localStorage.getItem(productsKey);
-          if (productsRaw) {
-            let products = [];
-            if (productsRaw.startsWith('¤Z¤')) {
-              let str = productsRaw.substring(3);
-              const patterns = {
-                '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
-                '¤c¤': '"carbs100"', '¤f¤': '"fat100"', '¤s¤': '"simple100"',
-                '¤x¤': '"complex100"', '¤b¤': '"badFat100"', '¤g¤': '"goodFat100"',
-                '¤t¤': '"trans100"', '¤i¤': '"fiber100"', '¤G¤': '"gi"', '¤h¤': '"harmScore"'
-              };
-              for (const [code, pattern] of Object.entries(patterns)) {
-                str = str.split(code).join(pattern);
-              }
-              products = JSON.parse(str);
-            } else {
-              products = JSON.parse(productsRaw);
-            }
-            (products || []).forEach(p => { if(p.id) productsMap.set(p.id, p); });
-          }
-        } catch(e) {}
+        // Строим Map продуктов из state (а не из localStorage!)
+        const productsMap = new Map();
+        (products || []).forEach(p => { if(p && p.id) productsMap.set(p.id, p); });
         
-        for (let i = 6; i >= 0; i--) {
+        // Получаем данные activeDays для нескольких месяцев (chartPeriod может охватывать 2 месяца)
+        const getActiveDaysForMonth = (HEYS.dayUtils && HEYS.dayUtils.getActiveDaysForMonth) || (() => new Map());
+        const allActiveDays = new Map();
+        
+        // Собираем данные за текущий и предыдущий месяц
+        // Важно: передаём products из state как 4-й аргумент!
+        for (let monthOffset = 0; monthOffset >= -1; monthOffset--) {
+          const checkDate = new Date(today);
+          checkDate.setMonth(checkDate.getMonth() + monthOffset);
+          const monthData = getActiveDaysForMonth(checkDate.getFullYear(), checkDate.getMonth(), prof, products);
+          monthData.forEach((v, k) => allActiveDays.set(k, v));
+        }
+        
+        for (let i = chartPeriod - 1; i >= 0; i--) {
           const d = new Date(today);
           d.setDate(d.getDate() - i);
           const dateStr = fmtDate(d);
           const isToday = i === 0;
           
-          // Для сегодня используем eatenKcal напрямую
+          // Берём данные из activeDays (там уже вычислены kcal и target)
+          const dayInfo = allActiveDays.get(dateStr);
+          
+          // Для сегодня используем eatenKcal и текущий optimum
           if (isToday) {
-            days.push({ date: dateStr, kcal: Math.round(eatenKcal || 0), isToday: true });
+            days.push({ 
+              date: dateStr, 
+              kcal: Math.round(eatenKcal || 0), 
+              target: optimum,
+              isToday: true 
+            });
             continue;
           }
           
-          // Для прошлых дней читаем напрямую из localStorage
-          let dayData = null;
-          try {
-            const scopedKey = clientId 
-              ? 'heys_' + clientId + '_dayv2_' + dateStr 
-              : 'heys_dayv2_' + dateStr;
-            const raw = localStorage.getItem(scopedKey);
-            if (raw) {
-              if (raw.startsWith('¤Z¤')) {
-                let str = raw.substring(3);
-                const patterns = { '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"', '¤c¤': '"carbs100"', '¤f¤': '"fat100"' };
-                for (const [code, pattern] of Object.entries(patterns)) str = str.split(code).join(pattern);
-                dayData = JSON.parse(str);
-              } else {
-                dayData = JSON.parse(raw);
-              }
-            }
-          } catch(e) {}
-          
-          if (dayData && dayData.meals) {
-            // Вычисляем калории через продукты
-            let totalKcal = 0;
-            (dayData.meals || []).forEach(meal => {
-              (meal.items || []).forEach(item => {
-                const grams = +item.grams || 0;
-                const product = productsMap.get(item.product_id);
-                if (product && grams > 0) {
-                  const kcal100 = +product.kcal100 || 0;
-                  totalKcal += (kcal100 * grams / 100);
-                }
-              });
+          // Для прошлых дней используем данные из activeDays
+          if (dayInfo && dayInfo.kcal > 0) {
+            days.push({ 
+              date: dateStr, 
+              kcal: dayInfo.kcal, 
+              target: dayInfo.target,
+              isToday: false 
             });
-            days.push({ date: dateStr, kcal: Math.round(totalKcal), isToday: false });
           } else {
-            days.push({ date: dateStr, kcal: 0, isToday: false });
+            // Fallback: читаем напрямую из localStorage
+            let dayData = null;
+            try {
+              const scopedKey = clientId 
+                ? 'heys_' + clientId + '_dayv2_' + dateStr 
+                : 'heys_dayv2_' + dateStr;
+              const raw = localStorage.getItem(scopedKey);
+              if (raw) {
+                if (raw.startsWith('¤Z¤')) {
+                  let str = raw.substring(3);
+                  const patterns = { '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"', '¤c¤': '"carbs100"', '¤f¤': '"fat100"' };
+                  for (const [code, pattern] of Object.entries(patterns)) str = str.split(code).join(pattern);
+                  dayData = JSON.parse(str);
+                } else {
+                  dayData = JSON.parse(raw);
+                }
+              }
+            } catch(e) {}
+            
+            if (dayData && dayData.meals) {
+              // Вычисляем калории через продукты
+              let totalKcal = 0;
+              (dayData.meals || []).forEach(meal => {
+                (meal.items || []).forEach(item => {
+                  const grams = +item.grams || 0;
+                  const product = productsMap.get(item.product_id);
+                  if (product && grams > 0) {
+                    const kcal100 = +product.kcal100 || 0;
+                    totalKcal += (kcal100 * grams / 100);
+                  }
+                });
+              });
+              // Без target если нет в activeDays, используем текущий optimum
+              days.push({ date: dateStr, kcal: Math.round(totalKcal), target: optimum, isToday: false });
+            } else {
+              days.push({ date: dateStr, kcal: 0, target: optimum, isToday: false });
+            }
           }
         }
         
@@ -2961,7 +3491,40 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       } catch (e) {
         return [];
       }
-    }, [date, eatenKcal]);
+    }, [date, eatenKcal, chartPeriod, optimum, prof, products]);
+    
+    // Тренд калорий за последние N дней (среднее превышение/дефицит)
+    const kcalTrend = React.useMemo(() => {
+      if (!sparklineData || sparklineData.length < 3 || !optimum || optimum <= 0) return null;
+      
+      try {
+        // Считаем среднее отклонение от нормы (исключая сегодня)
+        const pastDays = sparklineData.filter(d => !d.isToday && d.kcal > 0);
+        if (pastDays.length < 2) return null;
+        
+        const avgKcal = pastDays.reduce((sum, d) => sum + d.kcal, 0) / pastDays.length;
+        const diff = avgKcal - optimum;
+        const diffPct = Math.round((diff / optimum) * 100);
+        
+        let direction = 'same';
+        let text = '';
+        
+        if (diffPct <= -5) {
+          direction = 'deficit';
+          text = 'Дефицит ' + Math.abs(diffPct) + '%';
+        } else if (diffPct >= 5) {
+          direction = 'excess';
+          text = 'Избыток ' + diffPct + '%';
+        } else {
+          direction = 'same';
+          text = 'В норме';
+        }
+        
+        return { text, diff, direction, avgKcal: Math.round(avgKcal) };
+      } catch (e) {
+        return null;
+      }
+    }, [sparklineData, optimum]);
     
     // Закрытие toast
     const dismissToast = () => {
@@ -3167,34 +3730,65 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       if (data.length === 0) return null;
       
-      const width = 300; // широкий viewBox, SVG растянется на 100%
-      const height = 44;
-      const paddingTop = 4;
+      const width = 360; // широкий viewBox, SVG растянется на 100%
+      const height = 60; // такая же высота как у веса
+      const paddingTop = 6;
       const paddingBottom = 14; // место для меток дней
-      const paddingX = 12;
+      const paddingX = 16;
       const chartHeight = height - paddingTop - paddingBottom;
-      const maxKcal = Math.max(goal * 1.2, ...data.map(d => d.kcal));
+      
+      // maxKcal учитывает и ккал и target каждого дня
+      const allValues = data.flatMap(d => [d.kcal, d.target || goal]);
+      const maxKcal = Math.max(goal * 1.2, ...allValues);
       
       const points = data.map((d, i) => {
         const x = paddingX + (i / (data.length - 1)) * (width - paddingX * 2);
         const y = paddingTop + chartHeight - (d.kcal / maxKcal) * chartHeight;
+        const targetY = paddingTop + chartHeight - ((d.target || goal) / maxKcal) * chartHeight;
         // Извлекаем день из даты (последние 2 символа)
         const dayNum = d.date ? d.date.slice(-2).replace(/^0/, '') : '';
-        return { x, y, kcal: d.kcal, isToday: d.isToday, dayNum };
+        return { x, y, kcal: d.kcal, target: d.target || goal, targetY, isToday: d.isToday, dayNum };
       });
       
-      const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
-      const goalY = paddingTop + chartHeight - (goal / maxKcal) * chartHeight;
+      // Плавная кривая через cubic bezier (catmull-rom → bezier)
+      const smoothPath = (pts, yKey = 'y') => {
+        if (pts.length < 2) return '';
+        if (pts.length === 2) return `M${pts[0].x},${pts[0][yKey]} L${pts[1].x},${pts[1][yKey]}`;
+        
+        let d = `M${pts[0].x},${pts[0][yKey]}`;
+        for (let i = 0; i < pts.length - 1; i++) {
+          const p0 = pts[Math.max(0, i - 1)];
+          const p1 = pts[i];
+          const p2 = pts[i + 1];
+          const p3 = pts[Math.min(pts.length - 1, i + 2)];
+          
+          // Catmull-Rom → Cubic Bezier control points
+          const tension = 0.3;
+          const cp1x = p1.x + (p2.x - p0.x) * tension;
+          const cp1y = p1[yKey] + (p2[yKey] - p0[yKey]) * tension;
+          const cp2x = p2.x - (p3.x - p1.x) * tension;
+          const cp2y = p2[yKey] - (p3[yKey] - p1[yKey]) * tension;
+          
+          d += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2[yKey]}`;
+        }
+        return d;
+      };
+      
+      const pathD = smoothPath(points, 'y');
+      
+      // Линия цели — плавная пунктирная
+      const goalPathD = smoothPath(points, 'targetY');
       
       return React.createElement('svg', { 
         className: 'sparkline-svg',
         viewBox: '0 0 ' + width + ' ' + height,
         preserveAspectRatio: 'xMidYMid meet'
       },
-        // Линия цели (пунктир)
-        React.createElement('line', {
-          x1: 0, y1: goalY, x2: width, y2: goalY,
-          className: 'sparkline-goal'
+        // Линия цели (плавная пунктирная)
+        React.createElement('path', {
+          d: goalPathD,
+          className: 'sparkline-goal',
+          fill: 'none'
         }),
         // Градиент заливка
         React.createElement('defs', null,
@@ -3226,7 +3820,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Точки на все дни с hover и цветом по статусу
         points.map((p, i) => {
           // Определяем цвет: зелёный если в норме, жёлтый если чуть превышен, красный если сильно
-          const ratio = p.kcal / goal;
+          // Используем target этого дня, не общий goal!
+          const ratio = p.target > 0 ? p.kcal / p.target : 0;
           let dotClass = 'sparkline-dot';
           if (ratio <= 1.0) {
             dotClass += ' sparkline-dot-ok'; // зелёный
@@ -3245,7 +3840,96 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             className: dotClass,
             style: { cursor: 'pointer' }
           },
-            React.createElement('title', null, p.dayNum + ': ' + p.kcal + ' ккал')
+            // Tooltip показывает и ккал и цель дня
+            React.createElement('title', null, p.dayNum + ': ' + p.kcal + ' / ' + p.target + ' ккал')
+          );
+        })
+      );
+    };
+    
+    // SVG Sparkline для веса
+    const renderWeightSparkline = (data, trend) => {
+      if (!data || data.length < 2) return null;
+      
+      const width = 360;
+      const height = 60; // такая же высота как у калорий
+      const paddingTop = 6;
+      const paddingBottom = 14;
+      const paddingX = 16;
+      const chartHeight = height - paddingTop - paddingBottom;
+      
+      // Масштаб с минимумом 1 кг range
+      const weights = data.map(d => d.weight);
+      const minWeight = Math.min(...weights);
+      const maxWeight = Math.max(...weights);
+      const rawRange = maxWeight - minWeight;
+      const range = Math.max(1, rawRange + 0.5);
+      const adjustedMin = minWeight - 0.25;
+      
+      const points = data.map((d, i) => {
+        const x = paddingX + (i / (data.length - 1)) * (width - paddingX * 2);
+        const y = paddingTop + chartHeight - ((d.weight - adjustedMin) / range) * chartHeight;
+        return { x, y, weight: d.weight, isToday: d.isToday, dayNum: d.dayNum };
+      });
+      
+      const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
+      
+      // Вычисляем длину path для анимации
+      let pathLength = 0;
+      for (let i = 1; i < points.length; i++) {
+        const dx = points[i].x - points[i-1].x;
+        const dy = points[i].y - points[i-1].y;
+        pathLength += Math.sqrt(dx*dx + dy*dy);
+      }
+      
+      return React.createElement('svg', { 
+        className: 'weight-sparkline-svg',
+        viewBox: '0 0 ' + width + ' ' + height,
+        preserveAspectRatio: 'xMidYMid meet'
+      },
+        // Градиент заливка
+        React.createElement('defs', null,
+          React.createElement('linearGradient', { id: 'weightSparklineGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
+            React.createElement('stop', { offset: '0%', stopColor: '#8b5cf6', stopOpacity: '0.25' }),
+            React.createElement('stop', { offset: '100%', stopColor: '#8b5cf6', stopOpacity: '0.05' })
+          )
+        ),
+        // Заливка под графиком
+        React.createElement('path', {
+          d: pathD + ' L' + points[points.length-1].x + ',' + (paddingTop + chartHeight) + ' L' + points[0].x + ',' + (paddingTop + chartHeight) + ' Z',
+          fill: 'url(#weightSparklineGrad)',
+          className: 'weight-sparkline-area'
+        }),
+        // Линия графика с анимацией
+        React.createElement('path', {
+          d: pathD,
+          className: 'weight-sparkline-line',
+          style: { strokeDasharray: pathLength, strokeDashoffset: pathLength }
+        }),
+        // Метки дней внизу
+        points.map((p, i) => 
+          React.createElement('text', {
+            key: 'wday-' + i,
+            x: p.x,
+            y: height - 2,
+            className: 'weight-sparkline-day-label' + (p.isToday ? ' weight-sparkline-day-today' : ''),
+            textAnchor: 'middle'
+          }, p.dayNum)
+        ),
+        // Точки
+        points.map((p, i) => {
+          let dotClass = 'weight-sparkline-dot';
+          if (p.isToday) dotClass += ' weight-sparkline-dot-today';
+          
+          return React.createElement('circle', {
+            key: 'wdot-' + i,
+            cx: p.x, 
+            cy: p.y, 
+            r: p.isToday ? 4 : 2.5,
+            className: dotClass,
+            style: { cursor: 'pointer' }
+          },
+            React.createElement('title', null, p.dayNum + ': ' + p.weight + ' кг')
           );
         })
       );
@@ -3298,9 +3982,79 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           )
         )
       ),
-      // Спарклайн — график калорий за 7 дней
-      React.createElement('div', { className: 'sparkline-container' },
+      // Спарклайн калорий — карточка в стиле веса
+      React.createElement('div', { className: 'kcal-sparkline-container' },
+        React.createElement('div', { className: 'kcal-sparkline-header' },
+          React.createElement('span', { className: 'kcal-sparkline-title' }, '📊 Калории'),
+          React.createElement('div', { className: 'kcal-period-pills' },
+            [7, 14, 30].map(period => 
+              React.createElement('button', {
+                key: period,
+                className: 'kcal-period-pill' + (chartPeriod === period ? ' active' : ''),
+                onClick: () => {
+                  if (chartPeriod !== period) {
+                    setChartPeriod(period);
+                    haptic('light');
+                  }
+                }
+              }, period + 'д')
+            )
+          )
+        ),
         renderSparkline(sparklineData, optimum)
+      ),
+      // Блок корреляции калорий и веса
+      (kcalTrend && weightTrend) && React.createElement('div', { 
+        className: 'correlation-block' + 
+          (kcalTrend.direction === 'deficit' && weightTrend.direction === 'down' ? ' positive' :
+           kcalTrend.direction === 'excess' && weightTrend.direction === 'up' ? ' warning' :
+           kcalTrend.direction === 'deficit' && weightTrend.direction === 'up' ? ' mixed' : '')
+      },
+        React.createElement('span', { className: 'correlation-icon' },
+          kcalTrend.direction === 'deficit' && weightTrend.direction === 'down' ? '🎯' :
+          kcalTrend.direction === 'excess' && weightTrend.direction === 'up' ? '⚠️' :
+          kcalTrend.direction === 'deficit' && weightTrend.direction === 'up' ? '🤔' :
+          kcalTrend.direction === 'excess' && weightTrend.direction === 'down' ? '💪' : '📊'
+        ),
+        React.createElement('span', { className: 'correlation-text' },
+          kcalTrend.direction === 'deficit' && weightTrend.direction === 'down' 
+            ? 'Дефицит работает! Вес снижается' :
+          kcalTrend.direction === 'excess' && weightTrend.direction === 'up' 
+            ? 'Избыток калорий → рост веса' :
+          kcalTrend.direction === 'deficit' && weightTrend.direction === 'up' 
+            ? 'Вес растёт при дефиците — проверь продукты' :
+          kcalTrend.direction === 'excess' && weightTrend.direction === 'down' 
+            ? 'Отличная активность компенсирует калории!' :
+          kcalTrend.direction === 'same' 
+            ? 'Калории в норме' : 'Анализируем данные...'
+        )
+      ),
+      // Спарклайн веса — график веса с трендом
+      weightSparklineData.length >= 2 && React.createElement('div', { 
+        className: 'weight-sparkline-container' + 
+          (weightTrend.direction === 'down' ? ' trend-down' : 
+           weightTrend.direction === 'up' ? ' trend-up' : ' trend-same')
+      },
+        React.createElement('div', { className: 'weight-sparkline-header' },
+          React.createElement('span', { className: 'weight-sparkline-title' }, '⚖️ Вес'),
+          React.createElement('div', { className: 'weight-sparkline-badges' },
+            React.createElement('span', { 
+              className: 'weight-trend-badge' + 
+                (weightTrend.direction === 'down' ? ' down' : 
+                 weightTrend.direction === 'up' ? ' up' : ' same')
+            },
+              weightTrend.direction === 'down' ? '↓' : 
+              weightTrend.direction === 'up' ? '↑' : '→',
+              ' ', weightTrend.text
+            ),
+            monthForecast && React.createElement('span', { 
+              className: 'weight-forecast-badge' + 
+                (monthForecast.direction === 'down' ? ' down' : 
+                 monthForecast.direction === 'up' ? ' up' : '')
+            }, monthForecast.text)
+          )
+        ),
+        renderWeightSparkline(weightSparklineData, weightTrend)
       ),
       // Статус-бар прогресса к цели
       React.createElement('div', { className: 'goal-progress-bar' },
@@ -4483,6 +5237,94 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 selected: pendingGrams,
                 onChange: handleGramsWheelChange
               })
+            )
+          )
+        ),
+        document.body
+      ),
+      
+      // 🆕 Edit Grams Modal (slider-based, like MealAddProduct)
+      editGramsTarget && ReactDOM.createPortal(
+        React.createElement('div', { className: 'time-picker-backdrop grams-modal-backdrop', onClick: cancelEditGramsModal },
+          React.createElement('div', { className: 'time-picker-modal grams-modal', onClick: e => e.stopPropagation() },
+            // Ручка для свайпа
+            React.createElement('div', { 
+              className: 'bottom-sheet-handle',
+              onTouchStart: handleSheetTouchStart,
+              onTouchMove: handleSheetTouchMove,
+              onTouchEnd: () => handleSheetTouchEnd(cancelEditGramsModal)
+            }),
+            // Header
+            React.createElement('div', { className: 'time-picker-header' },
+              React.createElement('button', { className: 'time-picker-cancel', onClick: cancelEditGramsModal }, 'Отмена'),
+              React.createElement('span', { className: 'time-picker-title grams-modal-title' }, 
+                editGramsTarget.product?.name || 'Граммы'
+              ),
+              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmEditGramsModal }, 'Готово')
+            ),
+            // Preview: граммы = калории
+            React.createElement('div', { className: 'grams-preview' },
+              React.createElement('span', { className: 'grams-preview-value' }, editGramsValue + 'г'),
+              React.createElement('span', { className: 'grams-preview-separator' }, '='),
+              React.createElement('span', { className: 'grams-preview-kcal' }, 
+                Math.round((editGramsTarget.product?.kcal100 || 0) * editGramsValue / 100) + ' ккал'
+              )
+            ),
+            // Input field
+            React.createElement('div', { className: 'grams-input-container' },
+              React.createElement('input', {
+                ref: editGramsInputRef,
+                type: 'number',
+                inputMode: 'numeric',
+                className: 'grams-input',
+                value: editGramsValue,
+                onChange: e => setEditGramsValue(Math.max(1, Math.min(2000, parseInt(e.target.value) || 0))),
+                onFocus: e => e.target.select()
+              }),
+              React.createElement('span', { className: 'grams-input-suffix' }, 'г')
+            ),
+            // Slider
+            React.createElement('div', { className: 'grams-slider-container' },
+              React.createElement('div', {
+                className: 'grams-slider',
+                onMouseDown: handleEditGramsDrag,
+                onTouchStart: handleEditGramsDrag
+              },
+                React.createElement('div', { className: 'grams-slider-track' }),
+                React.createElement('div', { 
+                  className: 'grams-slider-fill',
+                  style: { width: Math.min(100, Math.max(0, (editGramsValue - 10) / (500 - 10) * 100)) + '%' }
+                }),
+                React.createElement('div', { 
+                  className: 'grams-slider-thumb',
+                  style: { left: Math.min(100, Math.max(0, (editGramsValue - 10) / (500 - 10) * 100)) + '%' }
+                }),
+                // Метки
+                [100, 200, 300, 400].map(mark => 
+                  React.createElement('div', {
+                    key: mark,
+                    className: 'grams-slider-mark',
+                    style: { left: ((mark - 10) / (500 - 10) * 100) + '%' }
+                  })
+                )
+              ),
+              React.createElement('div', { className: 'grams-slider-labels' },
+                React.createElement('span', null, '10'),
+                React.createElement('span', null, '500')
+              )
+            ),
+            // Presets
+            React.createElement('div', { className: 'grams-presets' },
+              [50, 100, 150, 200, 250].map(preset =>
+                React.createElement('button', {
+                  key: preset,
+                  className: 'grams-preset' + (editGramsValue === preset ? ' active' : ''),
+                  onClick: () => {
+                    setEditGramsValue(preset);
+                    try { navigator.vibrate?.(5); } catch(e) {}
+                  }
+                }, preset + 'г')
+              )
             )
           )
         ),
