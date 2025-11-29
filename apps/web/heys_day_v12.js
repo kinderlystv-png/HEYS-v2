@@ -1682,7 +1682,7 @@
     // Собираем uiState для проверки занятости пользователя
     const uiState = React.useMemo(() => ({
       modalOpen: false, // TODO: отслеживать состояние модалок
-      searchOpen: searchOpen,
+      searchOpen: false, // В DayTab нет глобального поиска, он внутри MealAddProduct
       showTimePicker,
       showGramsPicker,
       showWeightPicker,
@@ -1692,7 +1692,7 @@
       showDayScorePicker,
       showHouseholdPicker,
       showTrainingPicker
-    }), [searchOpen, showTimePicker, showGramsPicker, showWeightPicker, showDeficitPicker, 
+    }), [showTimePicker, showGramsPicker, showWeightPicker, showDeficitPicker, 
         showZonePicker, showSleepQualityPicker, showDayScorePicker, showHouseholdPicker, showTrainingPicker]);
     
     // Вызов advice engine
