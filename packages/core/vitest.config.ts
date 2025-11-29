@@ -26,7 +26,6 @@ export default defineConfig({
       '@heys/logger': path.resolve(__dirname, '../logger/src'),
       '@heys': path.resolve(__dirname, '../..'),
       // Дополнительные workspace aliases
-      '@heys/threat-detection': path.resolve(__dirname, '../threat-detection/src'),
       '@heys/storage': path.resolve(__dirname, '../storage/src'),
       '@heys/search': path.resolve(__dirname, '../search/src'),
     },

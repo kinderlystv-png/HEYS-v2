@@ -23,7 +23,6 @@ export default defineConfig({
       '@heys': path.resolve(__dirname, '../..'),
       // Workspace package aliases для корректного импорта
       '@heys/shared': path.resolve(__dirname, './src'),
-      '@heys/threat-detection': path.resolve(__dirname, '../threat-detection/src/index.ts'),
       '@heys/core': path.resolve(__dirname, '../core/src'),
       '@heys/storage': path.resolve(__dirname, '../storage/src'),
       '@heys/search': path.resolve(__dirname, '../search/src'),

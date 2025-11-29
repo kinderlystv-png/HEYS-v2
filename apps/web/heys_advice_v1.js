@@ -1888,6 +1888,198 @@
   }
   
   // ═══════════════════════════════════════════════════════════
+  // PHASE 0: MEAL & MILESTONE HELPERS
+  // ═══════════════════════════════════════════════════════════
+  
+  /**
+   * Вычисляет суммы нутриентов для одного приёма пищи
+   * @param {Object} meal - Приём пищи (meal object)
+   * @param {Object} pIndex - Индекс продуктов { byId: Map, byName: Map }
+   * @returns {Object|null} { kcal, prot, carbs, simple, complex, fat, good, bad, trans, fiber } или null
+   */
+  function getMealTotals(meal, pIndex) {
+    if (!meal || !meal.items || meal.items.length === 0) return null;
+    
+    // Пробуем использовать HEYS.models.mealTotals если доступен
+    if (window.HEYS?.models?.mealTotals) {
+      return window.HEYS.models.mealTotals(meal, pIndex);
+    }
+    
+    // Fallback: вычисляем сами
+    const tot = { kcal: 0, prot: 0, carbs: 0, simple: 0, complex: 0, fat: 0, good: 0, bad: 0, trans: 0, fiber: 0 };
+    
+    for (const item of meal.items) {
+      const grams = item.grams || 0;
+      if (grams <= 0) continue;
+      
+      // Получаем продукт из индекса
+      let product = null;
+      if (pIndex?.byId && item.product_id) {
+        product = pIndex.byId.get(item.product_id) || pIndex.byId.get(String(item.product_id));
+      }
+      if (!product) continue;
+      
+      const ratio = grams / 100;
+      tot.kcal += (product.kcal100 || 0) * ratio;
+      tot.prot += (product.protein100 || 0) * ratio;
+      tot.simple += (product.simple100 || 0) * ratio;
+      tot.complex += (product.complex100 || 0) * ratio;
+      tot.carbs += ((product.simple100 || 0) + (product.complex100 || 0)) * ratio;
+      tot.good += (product.goodFat100 || 0) * ratio;
+      tot.bad += (product.badFat100 || 0) * ratio;
+      tot.trans += (product.trans100 || 0) * ratio;
+      tot.fat += ((product.goodFat100 || 0) + (product.badFat100 || 0) + (product.trans100 || 0)) * ratio;
+      tot.fiber += (product.fiber100 || 0) * ratio;
+    }
+    
+    return tot;
+  }
+  
+  /**
+   * Получает последний приём пищи с реальными продуктами
+   * @param {Object} day - Данные дня
+   * @returns {Object|null} meal объект или null
+   */
+  function getLastMealWithItems(day) {
+    const meals = (day?.meals || []).filter(m => m.items?.length > 0);
+    return meals.length > 0 ? meals[meals.length - 1] : null;
+  }
+  
+  /**
+   * Получает первый приём пищи с реальными продуктами
+   * @param {Object} day - Данные дня
+   * @returns {Object|null} meal объект или null
+   */
+  function getFirstMealWithItems(day) {
+    const meals = (day?.meals || []).filter(m => m.items?.length > 0);
+    return meals.length > 0 ? meals[0] : null;
+  }
+  
+  /**
+   * Проверяет, был ли показан milestone (персистентно)
+   * @param {string} id - ID milestone (например '30_days')
+   * @returns {boolean}
+   */
+  function isMilestoneShown(id) {
+    try {
+      return localStorage.getItem('heys_milestone_' + id) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+  
+  /**
+   * Отмечает milestone как показанный
+   * @param {string} id - ID milestone
+   */
+  function markMilestoneShown(id) {
+    try {
+      localStorage.setItem('heys_milestone_' + id, '1');
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }
+  
+  /**
+   * Подсчитывает количество уникальных продуктов за день
+   * @param {Object} day - Данные дня
+   * @returns {number}
+   */
+  function countUniqueProducts(day) {
+    const ids = new Set();
+    (day?.meals || []).forEach(meal => {
+      (meal.items || []).forEach(item => {
+        if (item.product_id) ids.add(String(item.product_id));
+      });
+    });
+    return ids.size;
+  }
+  
+  /**
+   * Подсчитывает общее количество дней с данными в localStorage
+   * Учитывает clientId для multi-client режима
+   * @returns {number}
+   */
+  function getTotalDaysTracked() {
+    try {
+      const clientId = localStorage.getItem('heys_client_current') || '';
+      let count = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.includes('heys_dayv2_')) {
+          // Если есть clientId, проверяем что ключ начинается с него
+          // Формат: {clientId}_heys_dayv2_{date} или heys_dayv2_{date}
+          if (!clientId || key.startsWith(clientId + '_') || !key.includes('_heys_dayv2_')) {
+            count++;
+          }
+        }
+      }
+      return count;
+    } catch (e) {
+      return 0;
+    }
+  }
+  
+  /**
+   * Получает лучший streak из localStorage
+   * @returns {number}
+   */
+  function getPersonalBestStreak() {
+    try {
+      return parseInt(localStorage.getItem('heys_best_streak') || '0', 10);
+    } catch (e) {
+      return 0;
+    }
+  }
+  
+  /**
+   * Обновляет лучший streak если текущий больше
+   * @param {number} currentStreak - Текущий streak
+   * @returns {boolean} true если это новый рекорд
+   */
+  function updatePersonalBestStreak(currentStreak) {
+    const best = getPersonalBestStreak();
+    if (currentStreak > best) {
+      try {
+        localStorage.setItem('heys_best_streak', String(currentStreak));
+      } catch (e) {
+        // Ignore storage errors
+      }
+      return true; // Новый рекорд!
+    }
+    return false;
+  }
+  
+  /**
+   * Throttle для meal-level советов (3 секунды между показами)
+   */
+  const MEAL_ADVICE_THROTTLE_MS = 3000;
+  
+  /**
+   * Проверяет, можно ли показать meal-level совет
+   * @returns {boolean}
+   */
+  function canShowMealAdvice() {
+    try {
+      const last = sessionStorage.getItem('heys_last_meal_advice');
+      return !last || (Date.now() - parseInt(last, 10)) > MEAL_ADVICE_THROTTLE_MS;
+    } catch (e) {
+      return true;
+    }
+  }
+  
+  /**
+   * Отмечает время показа meal-level совета
+   */
+  function markMealAdviceShown() {
+    try {
+      sessionStorage.setItem('heys_last_meal_advice', String(Date.now()));
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }
+  
+  // ═══════════════════════════════════════════════════════════
   // REACT HOOK
   // ═══════════════════════════════════════════════════════════
   
@@ -2021,7 +2213,20 @@
     isUserBusy,
     calculateAverageMood,
     calculateAverageStress,
-    calculateAverageWellbeing
+    calculateAverageWellbeing,
+    // Phase 0 helpers (Phase 2 советы)
+    getMealTotals,
+    getLastMealWithItems,
+    getFirstMealWithItems,
+    isMilestoneShown,
+    markMilestoneShown,
+    countUniqueProducts,
+    getTotalDaysTracked,
+    getPersonalBestStreak,
+    updatePersonalBestStreak,
+    canShowMealAdvice,
+    markMealAdviceShown,
+    getRecentDays
   };
   
 })();

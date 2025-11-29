@@ -1,37 +1,25 @@
-// Temporary export bridge for threat detection service
-// This resolves import issues between packages
+/**
+ * Mock ThreatDetectionService - заменяет удалённый @heys/threat-detection
+ * HEYS = nutrition tracking app, security ML не используется
+ */
 
-// Define interface for consistent typing
-interface IThreatDetectionService {
+export interface IThreatDetectionService {
   initialize(): Promise<void>;
-  analyzeSecurityEvent(event: any): Promise<any>;
-  getStatistics(): Promise<any>;
+  analyzeSecurityEvent(event: unknown): Promise<{ anomalyScore: number }>;
+  getStatistics(): Promise<Record<string, unknown>>;
 }
 
-// Import using try-catch to handle missing package gracefully
-let ThreatDetectionService: new () => IThreatDetectionService;
+export class ThreatDetectionService implements IThreatDetectionService {
+  async initialize(): Promise<void> {
+    // Mock - no-op
+  }
 
-try {
-  const threatDetection = require('@heys/threat-detection');
-  ThreatDetectionService = threatDetection.ThreatDetectionService;
-} catch (error) {
-  // Fallback mock for development
-  ThreatDetectionService = class MockThreatDetectionService implements IThreatDetectionService {
-    async initialize() {
-      console.warn(
-        'Using mock ThreatDetectionService - install @heys/threat-detection for full functionality',
-      );
-    }
+  async analyzeSecurityEvent(_event: unknown): Promise<{ anomalyScore: number }> {
+    // Mock - always returns low score (no threats)
+    return { anomalyScore: 0 };
+  }
 
-    async analyzeSecurityEvent(_event: any) {
-      return { threat_level: 'low', matches: [] };
-    }
-
-    async getStatistics() {
-      return { totalEvents: 0, threats: 0, incidents: 0 };
-    }
-  };
+  async getStatistics(): Promise<Record<string, unknown>> {
+    return { enabled: false, note: 'Security ML disabled - not needed for nutrition app' };
+  }
 }
-
-export { ThreatDetectionService };
-export type { IThreatDetectionService };
