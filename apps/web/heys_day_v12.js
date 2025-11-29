@@ -1302,15 +1302,7 @@
     // === Progress animation ===
     const [animatedProgress, setAnimatedProgress] = useState(0);
     
-    // === Grams Picker Modal (mobile only) ===
-    const [showGramsPicker, setShowGramsPicker] = useState(false);
-    const [gramsPickerTarget, setGramsPickerTarget] = useState(null); // {mealIndex, itemId, currentGrams}
-    const [pendingGrams, setPendingGrams] = useState(99); // индекс 99 = 100г
-    const [gramsInputValue, setGramsInputValue] = useState(''); // для ручного ввода
-    // Генерируем значения от 1 до 2000 с шагом 1
-    const gramsValues = useMemo(() => Array.from({length: 2000}, (_, i) => String(i + 1)), []);
-    
-    // === 🆕 Edit Grams Modal (slider-based, like MealAddProduct) ===
+    // === Edit Grams Modal (slider-based, like MealAddProduct) ===
     const [editGramsTarget, setEditGramsTarget] = useState(null); // {mealIndex, itemId, product}
     const [editGramsValue, setEditGramsValue] = useState(100);
     const editGramsInputRef = React.useRef(null);
@@ -1633,48 +1625,7 @@
       setShowHouseholdPicker(false);
     }
 
-    function openGramsPicker(mealIndex, itemId, currentGrams) {
-      const gramsNum = parseInt(currentGrams) || 100;
-      // Индекс = значение - 1 (т.к. начинаем с 1)
-      const closestIdx = Math.max(0, Math.min(1999, gramsNum - 1));
-      
-      setGramsPickerTarget({ mealIndex, itemId, currentGrams: gramsNum });
-      setPendingGrams(closestIdx);
-      setGramsInputValue(String(gramsNum)); // синхронизируем input
-      setShowGramsPicker(true);
-    }
-    
-    // Обработка ручного ввода граммов
-    function handleGramsInput(e) {
-      const val = e.target.value.replace(/[^0-9]/g, ''); // только цифры
-      setGramsInputValue(val);
-      const num = parseInt(val) || 0;
-      if (num >= 1 && num <= 2000) {
-        setPendingGrams(num - 1); // синхронизируем wheel
-      }
-    }
-    
-    // Синхронизация input при изменении wheel
-    function handleGramsWheelChange(idx) {
-      setPendingGrams(idx);
-      setGramsInputValue(gramsValues[idx]);
-    }
-    
-    function confirmGramsPicker() {
-      if (gramsPickerTarget) {
-        const newGrams = parseInt(gramsValues[pendingGrams]) || 100;
-        setGrams(gramsPickerTarget.mealIndex, gramsPickerTarget.itemId, newGrams);
-      }
-      setShowGramsPicker(false);
-      setGramsPickerTarget(null);
-    }
-    
-    function cancelGramsPicker() {
-      setShowGramsPicker(false);
-      setGramsPickerTarget(null);
-    }
-    
-    // === 🆕 Edit Grams Modal functions (slider-based) ===
+    // === Edit Grams Modal functions (slider-based) ===
     function openEditGramsModal(mealIndex, itemId, currentGrams, product) {
       setEditGramsTarget({ mealIndex, itemId, product });
       setEditGramsValue(currentGrams || 100);
@@ -2289,7 +2240,6 @@
       modalOpen: false, // TODO: отслеживать состояние модалок
       searchOpen: false, // В DayTab нет глобального поиска, он внутри MealAddProduct
       showTimePicker,
-      showGramsPicker,
       showWeightPicker,
       showDeficitPicker,
       showZonePicker,
@@ -2297,7 +2247,7 @@
       showDayScorePicker,
       showHouseholdPicker,
       showTrainingPicker
-    }), [showTimePicker, showGramsPicker, showWeightPicker, showDeficitPicker, 
+    }), [showTimePicker, showWeightPicker, showDeficitPicker, 
         showZonePicker, showSleepQualityPicker, showDayScorePicker, showHouseholdPicker, showTrainingPicker]);
 
     // --- blocks
@@ -3082,11 +3032,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     
     // Сброс при открытии picker
     React.useEffect(() => {
-      if (uiState.showTimePicker || uiState.showGramsPicker || uiState.showWeightPicker ||
+      if (uiState.showTimePicker || uiState.showWeightPicker ||
           uiState.showDeficitPicker || uiState.showZonePicker) {
         setAdviceExpanded(false);
       }
-    }, [uiState.showTimePicker, uiState.showGramsPicker, uiState.showWeightPicker,
+    }, [uiState.showTimePicker, uiState.showWeightPicker,
         uiState.showDeficitPicker, uiState.showZonePicker]);
 
     const factKeys = ['kcal','carbs','simple','complex','prot','fat','bad','good','trans','fiber','gi','harm'];
@@ -3779,28 +3729,99 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Линия цели — плавная пунктирная
       const goalPathD = smoothPath(points, 'targetY');
       
+      // Определяем цвет точки по ratio
+      const getDotColor = (ratio) => {
+        if (ratio <= 1.0) return '#22c55e'; // зелёный
+        if (ratio <= 1.15) return '#eab308'; // жёлтый
+        return '#ef4444'; // красный
+      };
+      
+      // Полный плавный путь области между двумя кривыми
+      const buildFullAreaPath = (pts) => {
+        if (pts.length < 2) return '';
+        
+        let d = `M${pts[0].x},${pts[0].y}`;
+        for (let i = 0; i < pts.length - 1; i++) {
+          const p0 = pts[Math.max(0, i - 1)];
+          const p1 = pts[i];
+          const p2 = pts[i + 1];
+          const p3 = pts[Math.min(pts.length - 1, i + 2)];
+          
+          const tension = 0.3;
+          const cp1x = p1.x + (p2.x - p0.x) * tension;
+          const cp1y = p1.y + (p2.y - p0.y) * tension;
+          const cp2x = p2.x - (p3.x - p1.x) * tension;
+          const cp2y = p2.y - (p3.y - p1.y) * tension;
+          
+          d += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+        }
+        
+        d += ` L${pts[pts.length - 1].x},${pts[pts.length - 1].targetY}`;
+        
+        for (let i = pts.length - 1; i > 0; i--) {
+          const p0 = pts[Math.min(pts.length - 1, i + 1)];
+          const p1 = pts[i];
+          const p2 = pts[i - 1];
+          const p3 = pts[Math.max(0, i - 2)];
+          
+          const tension = 0.3;
+          const cp1x = p1.x + (p2.x - p0.x) * tension;
+          const cp1y = p1.targetY + (p2.targetY - p0.targetY) * tension;
+          const cp2x = p2.x - (p3.x - p1.x) * tension;
+          const cp2y = p2.targetY - (p3.targetY - p1.targetY) * tension;
+          
+          d += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.targetY}`;
+        }
+        
+        d += ' Z';
+        return d;
+      };
+      
+      const fullAreaPath = buildFullAreaPath(points);
+      
+      // Определяем цвет для каждой точки
+      const getPointColor = (ratio) => {
+        if (ratio <= 1.0) return '#22c55e'; // зелёный
+        if (ratio <= 1.15) return '#eab308'; // жёлтый
+        return '#ef4444'; // красный
+      };
+      
+      // Создаём горизонтальный градиент с цветами по точкам
+      const gradientStops = points.map((p, i) => {
+        const ratio = p.target > 0 ? p.kcal / p.target : 0;
+        const color = getPointColor(ratio);
+        const offset = points.length > 1 ? (i / (points.length - 1)) * 100 : 50;
+        return { offset, color };
+      });
+      
       return React.createElement('svg', { 
         className: 'sparkline-svg',
         viewBox: '0 0 ' + width + ' ' + height,
         preserveAspectRatio: 'xMidYMid meet'
       },
+        // Градиент с цветами по точкам
+        React.createElement('defs', null,
+          React.createElement('linearGradient', { id: 'areaGradient', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
+            gradientStops.map((stop, i) => 
+              React.createElement('stop', { 
+                key: i, 
+                offset: stop.offset + '%', 
+                stopColor: stop.color, 
+                stopOpacity: 0.25 
+              })
+            )
+          )
+        ),
+        // Заливка области с градиентом
+        React.createElement('path', {
+          d: fullAreaPath,
+          fill: 'url(#areaGradient)'
+        }),
         // Линия цели (плавная пунктирная)
         React.createElement('path', {
           d: goalPathD,
           className: 'sparkline-goal',
           fill: 'none'
-        }),
-        // Градиент заливка
-        React.createElement('defs', null,
-          React.createElement('linearGradient', { id: 'sparklineGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
-            React.createElement('stop', { offset: '0%', stopColor: '#22c55e', stopOpacity: '0.3' }),
-            React.createElement('stop', { offset: '100%', stopColor: '#22c55e', stopOpacity: '0.05' })
-          )
-        ),
-        // Заливка под графиком
-        React.createElement('path', {
-          d: pathD + ' L' + points[points.length-1].x + ',' + (paddingTop + chartHeight) + ' L' + points[0].x + ',' + (paddingTop + chartHeight) + ' Z',
-          fill: 'url(#sparklineGrad)'
         }),
         // Линия графика
         React.createElement('path', {
@@ -3852,7 +3873,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       if (!data || data.length < 2) return null;
       
       const width = 360;
-      const height = 60; // такая же высота как у калорий
+      const height = 60;
       const paddingTop = 6;
       const paddingBottom = 14;
       const paddingX = 16;
@@ -3872,39 +3893,67 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         return { x, y, weight: d.weight, isToday: d.isToday, dayNum: d.dayNum };
       });
       
-      const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
+      // Плавная кривая (как у калорий)
+      const smoothPath = (pts) => {
+        if (pts.length < 2) return '';
+        if (pts.length === 2) return `M${pts[0].x},${pts[0].y} L${pts[1].x},${pts[1].y}`;
+        
+        let d = `M${pts[0].x},${pts[0].y}`;
+        for (let i = 0; i < pts.length - 1; i++) {
+          const p0 = pts[Math.max(0, i - 1)];
+          const p1 = pts[i];
+          const p2 = pts[i + 1];
+          const p3 = pts[Math.min(pts.length - 1, i + 2)];
+          
+          const tension = 0.3;
+          const cp1x = p1.x + (p2.x - p0.x) * tension;
+          const cp1y = p1.y + (p2.y - p0.y) * tension;
+          const cp2x = p2.x - (p3.x - p1.x) * tension;
+          const cp2y = p2.y - (p3.y - p1.y) * tension;
+          
+          d += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+        }
+        return d;
+      };
       
-      // Вычисляем длину path для анимации
-      let pathLength = 0;
-      for (let i = 1; i < points.length; i++) {
-        const dx = points[i].x - points[i-1].x;
-        const dy = points[i].y - points[i-1].y;
-        pathLength += Math.sqrt(dx*dx + dy*dy);
-      }
+      const pathD = smoothPath(points);
+      
+      // Определяем тренд: сравниваем первую и последнюю половину
+      const firstHalf = points.slice(0, Math.ceil(points.length / 2));
+      const secondHalf = points.slice(Math.floor(points.length / 2));
+      const avgFirst = firstHalf.reduce((s, p) => s + p.weight, 0) / firstHalf.length;
+      const avgSecond = secondHalf.reduce((s, p) => s + p.weight, 0) / secondHalf.length;
+      const weightTrend = avgSecond - avgFirst; // положительный = вес растёт
+      
+      // Цвет градиента по тренду
+      const trendColor = weightTrend <= -0.1 ? '#22c55e' : (weightTrend >= 0.1 ? '#ef4444' : '#8b5cf6');
+      
+      // Область под графиком (с плавными границами)
+      const areaPath = pathD + ` L${points[points.length-1].x},${paddingTop + chartHeight} L${points[0].x},${paddingTop + chartHeight} Z`;
       
       return React.createElement('svg', { 
         className: 'weight-sparkline-svg',
         viewBox: '0 0 ' + width + ' ' + height,
         preserveAspectRatio: 'xMidYMid meet'
       },
-        // Градиент заливка
+        // Градиент заливка по тренду
         React.createElement('defs', null,
           React.createElement('linearGradient', { id: 'weightSparklineGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
-            React.createElement('stop', { offset: '0%', stopColor: '#8b5cf6', stopOpacity: '0.25' }),
-            React.createElement('stop', { offset: '100%', stopColor: '#8b5cf6', stopOpacity: '0.05' })
+            React.createElement('stop', { offset: '0%', stopColor: trendColor, stopOpacity: '0.25' }),
+            React.createElement('stop', { offset: '100%', stopColor: trendColor, stopOpacity: '0.05' })
           )
         ),
         // Заливка под графиком
         React.createElement('path', {
-          d: pathD + ' L' + points[points.length-1].x + ',' + (paddingTop + chartHeight) + ' L' + points[0].x + ',' + (paddingTop + chartHeight) + ' Z',
+          d: areaPath,
           fill: 'url(#weightSparklineGrad)',
           className: 'weight-sparkline-area'
         }),
-        // Линия графика с анимацией
+        // Линия графика (плавная, с анимацией)
         React.createElement('path', {
           d: pathD,
-          className: 'weight-sparkline-line',
-          style: { strokeDasharray: pathLength, strokeDashoffset: pathLength }
+          className: 'weight-sparkline-line weight-sparkline-line-animated',
+          style: { stroke: trendColor }
         }),
         // Метки дней внизу
         points.map((p, i) => 
@@ -3916,8 +3965,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             textAnchor: 'middle'
           }, p.dayNum)
         ),
-        // Точки
+        // Точки с цветом по локальному тренду
         points.map((p, i) => {
+          // Локальный тренд: сравниваем с предыдущей точкой
+          const prevWeight = i > 0 ? points[i-1].weight : p.weight;
+          const localTrend = p.weight - prevWeight;
+          const dotColor = localTrend < -0.05 ? '#22c55e' : (localTrend > 0.05 ? '#ef4444' : '#8b5cf6');
+          
           let dotClass = 'weight-sparkline-dot';
           if (p.isToday) dotClass += ' weight-sparkline-dot-today';
           
@@ -3927,9 +3981,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             cy: p.y, 
             r: p.isToday ? 4 : 2.5,
             className: dotClass,
-            style: { cursor: 'pointer' }
+            style: { cursor: 'pointer', fill: dotColor }
           },
-            React.createElement('title', null, p.dayNum + ': ' + p.weight + ' кг')
+            React.createElement('title', null, p.dayNum + ': ' + p.weight + ' кг' + (localTrend !== 0 ? ' (' + (localTrend > 0 ? '+' : '') + localTrend.toFixed(1) + ')' : ''))
           );
         })
       );
@@ -5201,49 +5255,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         document.body
       ),
       
-      // Grams Picker Modal (mobile only)
-      showGramsPicker && ReactDOM.createPortal(
-        React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelGramsPicker },
-          React.createElement('div', { className: 'time-picker-modal grams-picker-modal', onClick: e => e.stopPropagation() },
-            // Ручка для свайпа
-            React.createElement('div', { 
-              className: 'bottom-sheet-handle',
-              onTouchStart: handleSheetTouchStart,
-              onTouchMove: handleSheetTouchMove,
-              onTouchEnd: () => handleSheetTouchEnd(cancelGramsPicker)
-            }),
-            React.createElement('div', { className: 'time-picker-header' },
-              React.createElement('button', { className: 'time-picker-cancel', onClick: cancelGramsPicker }, 'Отмена'),
-              React.createElement('span', { className: 'time-picker-title' }, 'Граммы'),
-              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmGramsPicker }, 'Готово')
-            ),
-            // Input для быстрого ввода
-            React.createElement('div', { className: 'grams-input-row' },
-              React.createElement('input', {
-                type: 'text',
-                inputMode: 'numeric',
-                pattern: '[0-9]*',
-                className: 'grams-manual-input',
-                value: gramsInputValue,
-                onChange: handleGramsInput,
-                onFocus: e => e.target.select(),
-                placeholder: '100'
-              }),
-              React.createElement('span', { className: 'grams-input-suffix' }, 'г')
-            ),
-            React.createElement('div', { className: 'time-picker-wheels grams-wheels' },
-              React.createElement(WheelColumn, {
-                values: gramsValues.map(v => v + 'г'),
-                selected: pendingGrams,
-                onChange: handleGramsWheelChange
-              })
-            )
-          )
-        ),
-        document.body
-      ),
-      
-      // 🆕 Edit Grams Modal (slider-based, like MealAddProduct)
+      // Edit Grams Modal (slider-based, like MealAddProduct)
       editGramsTarget && ReactDOM.createPortal(
         React.createElement('div', { className: 'time-picker-backdrop grams-modal-backdrop', onClick: cancelEditGramsModal },
           React.createElement('div', { className: 'time-picker-modal grams-modal', onClick: e => e.stopPropagation() },
