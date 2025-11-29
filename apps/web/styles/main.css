@@ -4927,6 +4927,176 @@ td:first-child input {
   background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
 }
 
+/* Fiber - зелёный (клетчатка) */
+.macro-toast-fiber {
+  border-left: 4px solid #10b981;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+}
+
+/* Tip - синий (подсказки) */
+.macro-toast-tip {
+  border-left: 4px solid #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+/* Achievement - золотой с анимацией */
+.macro-toast-achievement {
+  border-left: 4px solid #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fde68a 100%);
+  animation: achievementPulse 0.5s ease-out;
+}
+
+@keyframes achievementPulse {
+  0% { transform: translateX(-50%) scale(0.9); }
+  50% { transform: translateX(-50%) scale(1.05); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* Progress bar для auto-hide */
+.macro-toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: currentColor;
+  opacity: 0.3;
+  border-radius: 0 0 12px 12px;
+  animation: toast-progress 7.5s linear forwards;
+}
+
+@keyframes toast-progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+.macro-toast-achievement .macro-toast-progress {
+  animation-duration: 10s;
+}
+
+/* Анимации иконок */
+.macro-toast-achievement .macro-toast-icon {
+  animation: fire-flicker 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes fire-flicker {
+  0% { transform: scale(1) rotate(-2deg); filter: brightness(1); }
+  100% { transform: scale(1.05) rotate(2deg); filter: brightness(1.1); }
+}
+
+.macro-toast-warning .macro-toast-icon {
+  animation: warning-pulse 1s ease-in-out infinite;
+}
+
+@keyframes warning-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.macro-toast-success .macro-toast-icon,
+.macro-toast-fiber .macro-toast-icon {
+  animation: success-bounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes success-bounce {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.macro-toast-tip .macro-toast-icon {
+  animation: tip-wobble 0.5s ease-in-out;
+}
+
+@keyframes tip-wobble {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+}
+
+/* Swipe-to-dismiss */
+.macro-toast {
+  will-change: transform;
+  touch-action: pan-x;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* === EXPANDABLE ADVICE TOAST === */
+.macro-toast.expanded {
+  bottom: 90px;
+  max-height: 300px;
+  border-radius: 16px;
+}
+
+.macro-toast-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.macro-toast-badge {
+  background: rgba(255, 255, 255, 0.3);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: auto;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.macro-toast-extras {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.macro-toast-extra {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.macro-toast-extra-warning { background: rgba(239, 68, 68, 0.2); }
+.macro-toast-extra-achievement { background: rgba(234, 179, 8, 0.2); }
+.macro-toast-extra-tip { background: rgba(59, 130, 246, 0.2); }
+.macro-toast-extra-fiber { background: rgba(34, 197, 94, 0.2); }
+
+/* Mobile: ограничиваем ширину и высоту */
+@media (max-width: 480px) {
+  .macro-toast.expanded {
+    max-height: 250px;
+    overflow-y: auto;
+  }
+  
+  .macro-toast-extras {
+    max-height: 150px;
+    overflow-y: auto;
+  }
+  
+  .macro-toast-extra {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+}
+
 /* === PULL-TO-REFRESH (Modern Design) === */
 .pull-indicator {
   display: flex;
@@ -5133,6 +5303,21 @@ td:first-child input {
 [data-theme="dark"] .macro-toast-success {
   border-left-color: #4ade80;
   background: linear-gradient(135deg, #1f2d1f 0%, #253d25 100%);
+}
+
+[data-theme="dark"] .macro-toast-fiber {
+  border-left-color: #10b981;
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+}
+
+[data-theme="dark"] .macro-toast-tip {
+  border-left-color: #3b82f6;
+  background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%);
+}
+
+[data-theme="dark"] .macro-toast-achievement {
+  border-left-color: #f59e0b;
+  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
 }
 
 [data-theme="dark"] .skeleton-item {

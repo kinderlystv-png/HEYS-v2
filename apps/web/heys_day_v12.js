@@ -705,6 +705,27 @@
     const [toastVisible, setToastVisible] = useState(false);
     const [toastDismissed, setToastDismissed] = useState(false);
     const toastTimeoutRef = React.useRef(null);
+    const [toastSwipeX, setToastSwipeX] = useState(0);
+    const toastTouchStart = React.useRef(0);
+    
+    // Touch handlers для swipe-to-dismiss
+    const handleToastTouchStart = (e) => {
+      toastTouchStart.current = e.touches[0].clientX;
+    };
+    const handleToastTouchMove = (e) => {
+      const diff = e.touches[0].clientX - toastTouchStart.current;
+      setToastSwipeX(diff);
+    };
+    const handleToastTouchEnd = () => {
+      if (Math.abs(toastSwipeX) > 80) {
+        dismissToast();
+      }
+      setToastSwipeX(0);
+    };
+    
+    // === Advice Module State ===
+    const [adviceTrigger, setAdviceTrigger] = useState(null);
+    const [adviceExpanded, setAdviceExpanded] = useState(false);
     
     // === Pull-to-refresh (Enhanced) ===
     const [pullProgress, setPullProgress] = useState(0);
@@ -1573,6 +1594,9 @@
       const meals=day.meals.map((m,i)=> i===mi? {...m, items:[...(m.items||[]), item]}:m); 
       setDay({...day, meals}); 
       
+      // Dispatch event для advice системы
+      window.dispatchEvent(new CustomEvent('heysProductAdded'));
+      
       // Автофокус на поле граммов нового продукта в конкретном приеме пищи
       setTimeout(() => {
         // Ищем input с конкретными data-атрибутами
@@ -1614,6 +1638,165 @@
       const d = new Date(date);
       return getActiveDaysForMonth(d.getFullYear(), d.getMonth(), prof);
     }, [date, prof.weight, prof.height, prof.age, prof.sex, prof.deficitPctTarget, products.length]);
+
+    // Вычисляем текущий streak (дней подряд в норме 75-115%)
+    const currentStreak = React.useMemo(() => {
+      try {
+        let count = 0;
+        let checkDate = new Date();
+        checkDate.setHours(12);
+        
+        for (let i = 0; i < 30; i++) {
+          const dateStr = fmtDate(checkDate);
+          const dayData = lsGet('heys_dayv2_' + dateStr, null);
+          
+          if (dayData && dayData.meals && dayData.meals.length > 0) {
+            // Вычисляем калории за день
+            let totalKcal = 0;
+            (dayData.meals || []).forEach(meal => {
+              (meal.items || []).forEach(item => {
+                const grams = +item.grams || 0;
+                const product = pIndex.get(item.product_id);
+                if (product && grams > 0) {
+                  totalKcal += ((+product.kcal100 || 0) * grams / 100);
+                }
+              });
+            });
+            
+            // Хороший день = 75-115% от optimum
+            const ratio = totalKcal / (optimum || 1);
+            if (ratio >= 0.75 && ratio <= 1.15) {
+              count++;
+            } else if (i > 0) break; // Первый день может быть незавершён
+          } else if (i > 0) break;
+          
+          checkDate.setDate(checkDate.getDate() - 1);
+        }
+        return count;
+      } catch (e) {
+        return 0;
+      }
+    }, [optimum, pIndex, fmtDate, lsGet]);
+
+    // === Advice Module Integration ===
+    // Собираем uiState для проверки занятости пользователя
+    const uiState = React.useMemo(() => ({
+      modalOpen: false, // TODO: отслеживать состояние модалок
+      searchOpen: searchOpen,
+      showTimePicker,
+      showGramsPicker,
+      showWeightPicker,
+      showDeficitPicker,
+      showZonePicker,
+      showSleepQualityPicker,
+      showDayScorePicker,
+      showHouseholdPicker,
+      showTrainingPicker
+    }), [searchOpen, showTimePicker, showGramsPicker, showWeightPicker, showDeficitPicker, 
+        showZonePicker, showSleepQualityPicker, showDayScorePicker, showHouseholdPicker, showTrainingPicker]);
+    
+    // Вызов advice engine
+    const adviceEngine = React.useMemo(() => {
+      if (!window.HEYS?.advice?.useAdviceEngine) return null;
+      return window.HEYS.advice.useAdviceEngine;
+    }, []);
+    
+    const adviceResult = adviceEngine ? adviceEngine({
+      dayTot,
+      normAbs,
+      optimum,
+      day,
+      pIndex,
+      currentStreak,
+      trigger: adviceTrigger,
+      uiState
+    }) : { primary: null, relevant: [], adviceCount: 0 };
+    
+    const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, markShown } = adviceResult;
+    
+    // Listener для heysProductAdded event
+    React.useEffect(() => {
+      const handleProductAdded = () => {
+        // Задержка перед показом совета
+        setTimeout(() => {
+          setAdviceTrigger('product_added');
+        }, 500);
+      };
+      
+      window.addEventListener('heysProductAdded', handleProductAdded);
+      return () => window.removeEventListener('heysProductAdded', handleProductAdded);
+    }, []);
+    
+    // Trigger на открытие вкладки
+    React.useEffect(() => {
+      // Показываем совет при открытии вкладки с задержкой
+      const timer = setTimeout(() => {
+        setAdviceTrigger('tab_open');
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }, [date]); // При смене даты - новый триггер
+    
+    // Показ toast при получении совета
+    React.useEffect(() => {
+      if (!advicePrimary) return;
+      
+      // Сбрасываем expanded
+      setAdviceExpanded(false);
+      
+      // Показываем toast
+      setToastVisible(true);
+      setToastDismissed(false);
+      
+      // Haptic feedback для важных советов
+      if ((advicePrimary.type === 'achievement' || advicePrimary.type === 'warning') && typeof haptic === 'function') {
+        haptic('light');
+      }
+      
+      // Вызываем onShow
+      if (advicePrimary.onShow) advicePrimary.onShow();
+      
+      // Confetti для достижений
+      if (advicePrimary.showConfetti) {
+        setShowConfetti(true);
+        if (typeof haptic === 'function') haptic('success');
+        setTimeout(() => setShowConfetti(false), 2000);
+      }
+      
+      // Отмечаем как показанный
+      if (markShown) markShown(advicePrimary.id);
+      
+      // Запускаем таймер скрытия
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = setTimeout(() => {
+        setToastVisible(false);
+        setAdviceExpanded(false);
+        setAdviceTrigger(null);
+      }, advicePrimary.ttl || 5000);
+      
+      return () => {
+        if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      };
+    }, [advicePrimary?.id, adviceTrigger]);
+    
+    // Сброс advice при смене даты
+    React.useEffect(() => {
+      setAdviceTrigger(null);
+      setAdviceExpanded(false);
+      setToastVisible(false);
+      if (window.HEYS?.advice?.resetSessionAdvices) {
+        window.HEYS.advice.resetSessionAdvices();
+      }
+    }, [date]);
+    
+    // Сброс при открытии модалки/поиска
+    React.useEffect(() => {
+      if (uiState.showTimePicker || uiState.showGramsPicker || uiState.showWeightPicker ||
+          uiState.showDeficitPicker || uiState.showZonePicker || uiState.searchOpen) {
+        setAdviceExpanded(false);
+      }
+    }, [uiState.showTimePicker, uiState.showGramsPicker, uiState.showWeightPicker,
+        uiState.showDeficitPicker, uiState.showZonePicker, uiState.searchOpen]);
 
     // --- blocks
     // Получаем Calendar динамически, чтобы HMR работал
@@ -2651,9 +2834,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     
     // Умные подсказки по БЖУ (с приоритетом предупреждений)
     const macroTip = React.useMemo(() => {
-      const proteinPct = (dayTot.protein || 0) / (normAbs.protein || 1);
+      const proteinPct = (dayTot.prot || 0) / (normAbs.prot || 1);
       const fatPct = (dayTot.fat || 0) / (normAbs.fat || 1);
       const carbsPct = (dayTot.carbs || 0) / (normAbs.carbs || 1);
+      const kcalPct = (dayTot.kcal || 0) / (optimum || 1);
+      const fiberPct = (dayTot.fiber || 0) / (normAbs.fiber || 25);
       
       // Вычисляем простые/сложные углеводы
       const simpleCarbs = dayTot.simple || 0;
@@ -2666,7 +2851,45 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const totalFat = dayTot.fat || 0;
       const badFatPct = totalFat > 0 ? (badFat / totalFat) : 0;
       
+      // Средний ГИ
+      const avgGI = dayTot.gi || 0;
+      
+      // Контекст времени
+      const hour = new Date().getHours();
+      
+      // Количество приёмов пищи
+      const mealCount = (day.meals || []).filter(m => m.items?.length > 0).length;
+      
+      // Была ли тренировка
+      const hasTraining = (day.trainings || []).some(t => t.z && t.z.some(m => m > 0));
+      
+      // 🏆 ДОСТИЖЕНИЯ (высший приоритет, раз за сессию)
+      try {
+        if (currentStreak >= 7 && !sessionStorage.getItem('heys_streak7')) {
+          sessionStorage.setItem('heys_streak7', '1');
+          return { icon: '🏆', text: `Невероятно! ${currentStreak} дней в норме!`, type: 'achievement' };
+        }
+        if (currentStreak >= 3 && !sessionStorage.getItem('heys_streak3')) {
+          sessionStorage.setItem('heys_streak3', '1');
+          return { icon: '🔥', text: `${currentStreak} дня подряд в норме! Так держать!`, type: 'achievement' };
+        }
+      } catch(e) {}
+      
+      // 👋 Первый день в приложении
+      if (mealCount === 1 && !localStorage.getItem('heys_first_meal_tip')) {
+        localStorage.setItem('heys_first_meal_tip', '1');
+        return { icon: '👋', text: 'Отличное начало! Записывай всё — это ключ к успеху', type: 'achievement' };
+      }
+      
       // 🚨 ПРЕДУПРЕЖДЕНИЯ (высший приоритет)
+      // Сильный перебор калорий
+      if (kcalPct >= 1.25) {
+        return { icon: '⚠️', text: 'Перебор калорий! Завтра сделай разгрузочный день', type: 'warning' };
+      }
+      // Мало калорий вечером (возможное голодание)
+      if (hour >= 18 && dayTot.kcal < 500 && dayTot.kcal > 0) {
+        return { icon: '⚠️', text: 'Слишком мало калорий — это вредит метаболизму', type: 'warning' };
+      }
       // Много простых углеводов (>50% от общих углеводов)
       if (simplePct > 0.5 && simpleCarbs > 30) {
         return { icon: '⚠️', text: 'Много простых углеводов! Замени сладкое на кашу/овощи', type: 'warning' };
@@ -2675,8 +2898,75 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       if (badFatPct > 0.4 && badFat > 20) {
         return { icon: '⚠️', text: 'Много вредных жиров! Замени на рыбу/орехи/авокадо', type: 'warning' };
       }
+      // Высокий средний ГИ
+      if (avgGI > 70 && dayTot.kcal > 500) {
+        return { icon: '📈', text: 'Высокий ГИ — замени быстрые углеводы на сложные', type: 'warning' };
+      }
       
-      // 📊 РЕКОМЕНДАЦИИ (обычный приоритет)
+      // 🥬 КЛЕТЧАТКА
+      if (fiberPct < 0.5 && dayTot.kcal > 500) {
+        return { icon: '🥬', text: 'Добавь клетчатки: овощи, фрукты, каша', type: 'fiber' };
+      }
+      
+      // 🥗 Нет овощей/фруктов
+      const allItems = (day.meals || []).flatMap(m => m.items || []);
+      const hasVeggies = allItems.some(it => {
+        const product = M.getProductFromItem ? M.getProductFromItem(it, pIndex) : pIndex.get(it.product_id);
+        const name = product?.name || it.name || '';
+        return /овощ|салат|помидор|огурец|капуста|морковь|яблок|банан|апельсин|груша|свёкла|брокколи|шпинат|лук|перец|кабачок|тыква|зелень|петрушка|укроп|сельдерей/i.test(name);
+      });
+      if (!hasVeggies && dayTot.kcal > 800) {
+        return { icon: '🥗', text: 'Добавь овощи или фрукты — витамины и клетчатка', type: 'tip' };
+      }
+      
+      // 🍽️ Баланс макросов
+      if (carbsPct > 0.7 && proteinPct < 0.4) {
+        return { icon: '🍽️', text: 'Углеводы без белка = быстрый голод. Добавь белок!', type: 'tip' };
+      }
+      if (fatPct > 0.7 && carbsPct < 0.4) {
+        return { icon: '⚡', text: 'Для энергии нужны углеводы — попробуй кашу', type: 'tip' };
+      }
+      
+      // 🥚 Мало белка на завтрак
+      const breakfastMeal = (day.meals || [])[0];
+      if (breakfastMeal && breakfastMeal.items?.length > 0) {
+        const breakfastTotals = M.mealTotals ? M.mealTotals(breakfastMeal, pIndex) : {};
+        if ((breakfastTotals.prot || 0) < 10 && (breakfastTotals.kcal || 0) > 200) {
+          return { icon: '🥚', text: 'Белок на завтрак = сытость до обеда. Добавь яйца/творог', type: 'tip' };
+        }
+      }
+      
+      // ⏰ Контекст времени
+      // Вечерние простые углеводы
+      if (hour >= 18 && simplePct > 0.4 && simpleCarbs > 50) {
+        return { icon: '🌙', text: 'Сладкое вечером → плохой сон. Лучше белок!', type: 'tip' };
+      }
+      // Пропущенный завтрак
+      if (hour >= 12 && mealCount === 0) {
+        return { icon: '🌅', text: 'Завтрак запускает метаболизм — не пропускай!', type: 'tip' };
+      }
+      // Большой перерыв между приёмами
+      if (hour >= 14 && mealCount === 1 && dayTot.kcal > 300) {
+        return { icon: '⏰', text: 'Большие перерывы замедляют метаболизм — перекуси!', type: 'tip' };
+      }
+      // Один большой приём
+      if (mealCount === 1 && dayTot.kcal > 800) {
+        return { icon: '🍽️', text: 'Лучше 3-4 небольших приёма чем 1 большой', type: 'tip' };
+      }
+      
+      // 💪 После тренировки важен белок
+      if (hasTraining && proteinPct < 0.6) {
+        return { icon: '💪', text: 'После тренировки важен белок для восстановления', type: 'tip' };
+      }
+      
+      // 💧 Контекст воды
+      const waterMl = day.waterMl || 0;
+      const waterGoal = 2000;
+      if (waterMl < waterGoal * 0.5 && hour >= 15) {
+        return { icon: '💧', text: 'Выпей воды — ты за полдня ниже 50% нормы', type: 'tip' };
+      }
+      
+      // 📊 РЕКОМЕНДАЦИИ по дефицитам макросов
       if (proteinPct < 0.5 && fatPct >= 0.5 && carbsPct >= 0.5) {
         return { icon: '🥩', text: 'Добавь белка: творог, яйца, курица', type: 'protein' };
       }
@@ -2687,6 +2977,21 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         return { icon: '🍞', text: 'Добавь углеводов: каша, хлеб, фрукты', type: 'carbs' };
       }
       
+      // 🎯 Подсказка калорий (осталось немного)
+      if (kcalPct >= 0.8 && kcalPct < 0.95) {
+        const remaining = Math.round(optimum - dayTot.kcal);
+        return { icon: '🎯', text: `Осталось ${remaining} ккал — идеально для перекуса`, type: 'tip' };
+      }
+      // Небольшой перебор
+      if (kcalPct >= 1.1 && kcalPct < 1.25) {
+        return { icon: '📊', text: 'Немного перебор — завтра чуть меньше, и всё ок 😊', type: 'tip' };
+      }
+      
+      // ⭐ Идеальный день
+      if (kcalPct >= 0.95 && kcalPct <= 1.05 && proteinPct >= 0.9 && fatPct >= 0.9 && carbsPct >= 0.9) {
+        return { icon: '⭐', text: 'Идеальный баланс! Отличная работа 🎉', type: 'achievement' };
+      }
+      
       // ✅ УСПЕХ
       if (proteinPct >= 0.8 && fatPct >= 0.8 && carbsPct >= 0.8) {
         return { icon: '✅', text: 'Отлично! Все макросы в балансе', type: 'success' };
@@ -2694,7 +2999,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // Не показываем подсказку если день пустой или всё слишком мало
       return null;
-    }, [dayTot.protein, dayTot.fat, dayTot.carbs, dayTot.simple, dayTot.complex, dayTot.bad, normAbs.protein, normAbs.fat, normAbs.carbs]);
+    }, [dayTot.prot, dayTot.fat, dayTot.carbs, dayTot.simple, dayTot.complex, dayTot.bad, dayTot.kcal, dayTot.fiber, dayTot.gi, normAbs.prot, normAbs.fat, normAbs.carbs, normAbs.fiber, optimum, currentStreak, day.meals, day.trainings, day.waterMl, pIndex]);
     
     // Показ toast при изменении подсказки
     useEffect(() => {
@@ -3740,14 +4045,45 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         title: 'Добавить приём пищи'
       }, '+'),
       
-      // Toast подсказка БЖУ
-      macroTip && toastVisible && React.createElement('div', {
-        className: 'macro-toast macro-toast-' + macroTip.type + (toastVisible ? ' visible' : ''),
-        onClick: dismissToast
+      // Toast подсказка (Advice Module или fallback на macroTip)
+      (advicePrimary || macroTip) && toastVisible && React.createElement('div', {
+        className: 'macro-toast macro-toast-' + (advicePrimary?.type || macroTip?.type) + 
+                   (adviceExpanded ? ' expanded' : '') + (toastVisible ? ' visible' : ''),
+        role: 'alert',
+        'aria-live': 'polite',
+        onClick: () => adviceCount > 1 ? setAdviceExpanded(!adviceExpanded) : dismissToast(),
+        onTouchStart: handleToastTouchStart,
+        onTouchMove: handleToastTouchMove,
+        onTouchEnd: handleToastTouchEnd,
+        style: { 
+          transform: `translateX(calc(-50% + ${toastSwipeX}px))`, 
+          opacity: 1 - Math.abs(toastSwipeX) / 150 
+        }
       },
-        React.createElement('span', { className: 'macro-toast-icon' }, macroTip.icon),
-        React.createElement('span', { className: 'macro-toast-text' }, macroTip.text),
-        React.createElement('button', { className: 'macro-toast-close', onClick: dismissToast }, '×')
+        // Основной контент
+        React.createElement('div', { className: 'macro-toast-main' },
+          React.createElement('span', { className: 'macro-toast-icon' }, advicePrimary?.icon || macroTip?.icon),
+          React.createElement('span', { className: 'macro-toast-text' }, advicePrimary?.text || macroTip?.text),
+          adviceCount > 1 && React.createElement('span', { className: 'macro-toast-badge' }, `+${adviceCount - 1}`),
+          React.createElement('button', { 
+            className: 'macro-toast-close', 
+            onClick: (e) => { e.stopPropagation(); dismissToast(); } 
+          }, '×')
+        ),
+        // Progress bar
+        React.createElement('div', { className: 'macro-toast-progress' }),
+        // Дополнительные советы (при раскрытии)
+        adviceExpanded && adviceRelevant && React.createElement('div', { className: 'macro-toast-extras' },
+          adviceRelevant.slice(1, 4).map(advice => 
+            React.createElement('div', { 
+              key: advice.id,
+              className: `macro-toast-extra macro-toast-extra-${advice.type}`
+            },
+              React.createElement('span', null, advice.icon),
+              React.createElement('span', null, advice.text)
+            )
+          )
+        )
       ),
       
       // Meal Creation/Edit Modal (mobile only)
