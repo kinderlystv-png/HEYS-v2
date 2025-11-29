@@ -1694,109 +1694,6 @@
       showTrainingPicker
     }), [showTimePicker, showGramsPicker, showWeightPicker, showDeficitPicker, 
         showZonePicker, showSleepQualityPicker, showDayScorePicker, showHouseholdPicker, showTrainingPicker]);
-    
-    // Вызов advice engine
-    const adviceEngine = React.useMemo(() => {
-      if (!window.HEYS?.advice?.useAdviceEngine) return null;
-      return window.HEYS.advice.useAdviceEngine;
-    }, []);
-    
-    const adviceResult = adviceEngine ? adviceEngine({
-      dayTot,
-      normAbs,
-      optimum,
-      day,
-      pIndex,
-      currentStreak,
-      trigger: adviceTrigger,
-      uiState
-    }) : { primary: null, relevant: [], adviceCount: 0 };
-    
-    const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, markShown } = adviceResult;
-    
-    // Listener для heysProductAdded event
-    React.useEffect(() => {
-      const handleProductAdded = () => {
-        // Задержка перед показом совета
-        setTimeout(() => {
-          setAdviceTrigger('product_added');
-        }, 500);
-      };
-      
-      window.addEventListener('heysProductAdded', handleProductAdded);
-      return () => window.removeEventListener('heysProductAdded', handleProductAdded);
-    }, []);
-    
-    // Trigger на открытие вкладки
-    React.useEffect(() => {
-      // Показываем совет при открытии вкладки с задержкой
-      const timer = setTimeout(() => {
-        setAdviceTrigger('tab_open');
-      }, 1500);
-      
-      return () => clearTimeout(timer);
-    }, [date]); // При смене даты - новый триггер
-    
-    // Показ toast при получении совета
-    React.useEffect(() => {
-      if (!advicePrimary) return;
-      
-      // Сбрасываем expanded
-      setAdviceExpanded(false);
-      
-      // Показываем toast
-      setToastVisible(true);
-      setToastDismissed(false);
-      
-      // Haptic feedback для важных советов
-      if ((advicePrimary.type === 'achievement' || advicePrimary.type === 'warning') && typeof haptic === 'function') {
-        haptic('light');
-      }
-      
-      // Вызываем onShow
-      if (advicePrimary.onShow) advicePrimary.onShow();
-      
-      // Confetti для достижений
-      if (advicePrimary.showConfetti) {
-        setShowConfetti(true);
-        if (typeof haptic === 'function') haptic('success');
-        setTimeout(() => setShowConfetti(false), 2000);
-      }
-      
-      // Отмечаем как показанный
-      if (markShown) markShown(advicePrimary.id);
-      
-      // Запускаем таймер скрытия
-      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-      toastTimeoutRef.current = setTimeout(() => {
-        setToastVisible(false);
-        setAdviceExpanded(false);
-        setAdviceTrigger(null);
-      }, advicePrimary.ttl || 5000);
-      
-      return () => {
-        if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-      };
-    }, [advicePrimary?.id, adviceTrigger]);
-    
-    // Сброс advice при смене даты
-    React.useEffect(() => {
-      setAdviceTrigger(null);
-      setAdviceExpanded(false);
-      setToastVisible(false);
-      if (window.HEYS?.advice?.resetSessionAdvices) {
-        window.HEYS.advice.resetSessionAdvices();
-      }
-    }, [date]);
-    
-    // Сброс при открытии модалки/поиска
-    React.useEffect(() => {
-      if (uiState.showTimePicker || uiState.showGramsPicker || uiState.showWeightPicker ||
-          uiState.showDeficitPicker || uiState.showZonePicker || uiState.searchOpen) {
-        setAdviceExpanded(false);
-      }
-    }, [uiState.showTimePicker, uiState.showGramsPicker, uiState.showWeightPicker,
-        uiState.showDeficitPicker, uiState.showZonePicker, uiState.searchOpen]);
 
     // --- blocks
     // Получаем Calendar динамически, чтобы HMR работал
@@ -2504,6 +2401,83 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       return {kcal:K, carbs, simple, complex, prot, fat, bad, good, trans, fiber, gi, harm};
     }
     const normAbs = computeDailyNorms();
+    
+    // === Advice Module Integration (после dayTot и normAbs) ===
+    const adviceEngine = React.useMemo(() => {
+      if (!window.HEYS?.advice?.useAdviceEngine) return null;
+      return window.HEYS.advice.useAdviceEngine;
+    }, []);
+    
+    const adviceResult = adviceEngine ? adviceEngine({
+      dayTot,
+      normAbs,
+      optimum,
+      day,
+      pIndex,
+      currentStreak,
+      trigger: adviceTrigger,
+      uiState
+    }) : { primary: null, relevant: [], adviceCount: 0 };
+    
+    const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, markShown } = adviceResult;
+    
+    // Listener для heysProductAdded event
+    React.useEffect(() => {
+      const handleProductAdded = () => {
+        setTimeout(() => setAdviceTrigger('product_added'), 500);
+      };
+      window.addEventListener('heysProductAdded', handleProductAdded);
+      return () => window.removeEventListener('heysProductAdded', handleProductAdded);
+    }, []);
+    
+    // Trigger на открытие вкладки
+    React.useEffect(() => {
+      const timer = setTimeout(() => setAdviceTrigger('tab_open'), 1500);
+      return () => clearTimeout(timer);
+    }, [date]);
+    
+    // Показ toast при получении совета
+    React.useEffect(() => {
+      if (!advicePrimary) return;
+      setAdviceExpanded(false);
+      setToastVisible(true);
+      setToastDismissed(false);
+      if ((advicePrimary.type === 'achievement' || advicePrimary.type === 'warning') && typeof haptic === 'function') {
+        haptic('light');
+      }
+      if (advicePrimary.onShow) advicePrimary.onShow();
+      if (advicePrimary.showConfetti) {
+        setShowConfetti(true);
+        if (typeof haptic === 'function') haptic('success');
+        setTimeout(() => setShowConfetti(false), 2000);
+      }
+      if (markShown) markShown(advicePrimary.id);
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = setTimeout(() => {
+        setToastVisible(false);
+        setAdviceExpanded(false);
+        setAdviceTrigger(null);
+      }, advicePrimary.ttl || 5000);
+      return () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); };
+    }, [advicePrimary?.id, adviceTrigger]);
+    
+    // Сброс advice при смене даты
+    React.useEffect(() => {
+      setAdviceTrigger(null);
+      setAdviceExpanded(false);
+      setToastVisible(false);
+      if (window.HEYS?.advice?.resetSessionAdvices) window.HEYS.advice.resetSessionAdvices();
+    }, [date]);
+    
+    // Сброс при открытии picker
+    React.useEffect(() => {
+      if (uiState.showTimePicker || uiState.showGramsPicker || uiState.showWeightPicker ||
+          uiState.showDeficitPicker || uiState.showZonePicker) {
+        setAdviceExpanded(false);
+      }
+    }, [uiState.showTimePicker, uiState.showGramsPicker, uiState.showWeightPicker,
+        uiState.showDeficitPicker, uiState.showZonePicker]);
+
     const factKeys = ['kcal','carbs','simple','complex','prot','fat','bad','good','trans','fiber','gi','harm'];
   function devVal(k){ const n=+normAbs[k]||0; const f=+dayTot[k]||0; if(!n) return '-'; const d=((f-n)/n)*100; return (d>0?'+':'')+Math.round(d)+'%'; }
   function devCell(k){ const n=+normAbs[k]||0; if(!n) return React.createElement('td',{key:'ds-dv'+k},'-'); const f=+dayTot[k]||0; const d=((f-n)/n)*100; const diff=Math.round(d); const color= diff>0?'#dc2626':(diff<0?'#059669':'#111827'); const fw=diff!==0?600:400; return React.createElement('td',{key:'ds-dv'+k,style:{color,fontWeight:fw}},(diff>0?'+':'')+diff+'%'); }

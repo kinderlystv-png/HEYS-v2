@@ -706,24 +706,30 @@
       return filterByEmotionalState(allAdvices, ctx.emotionalState);
     }, [allAdvices, ctx.emotionalState]);
     
-    // Фильтруем по триггеру и проверяем можно ли показать
-    const relevantAdvices = React.useMemo(() => {
+    // Фильтруем по триггеру (для показа в развёрнутом виде — без canShowAdvice)
+    const allForTrigger = React.useMemo(() => {
       if (!trigger) return [];
       if (isUserBusy(uiState)) return [];
       
       return filteredAdvices
         .filter(a => a.triggers.includes(trigger))
-        .filter(a => canShowAdvice(a.id))
         .sort((a, b) => a.priority - b.priority);
     }, [filteredAdvices, trigger, uiState]);
     
-    // Основной совет
+    // Советы которые можно показать (с проверкой cooldown)
+    const relevantAdvices = React.useMemo(() => {
+      return allForTrigger.filter(a => canShowAdvice(a.id));
+    }, [allForTrigger]);
+    
+    // Основной совет (первый доступный)
     const primary = relevantAdvices[0] || null;
-    const adviceCount = relevantAdvices.length;
+    
+    // Количество для badge — ВСЕ советы для триггера (без canShowAdvice)
+    const adviceCount = allForTrigger.length;
     
     return {
       primary,
-      relevant: relevantAdvices,
+      relevant: allForTrigger, // Все советы для развёртывания
       adviceCount,
       allAdvices,
       ctx,
