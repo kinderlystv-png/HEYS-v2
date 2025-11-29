@@ -1,21 +1,37 @@
 # 📊 HEYS Data Model Reference
 
 > **Справочник всех аналитических параметров HEYS**  
-> Версия: 1.0.0 | Обновлено: 2025-11-29
+> Версия: 1.5.0 | Обновлено: 2025-11-29 | **77 умных советов**
 
 ---
 
 ## Быстрая навигация
 
-- [Данные дня (DayRecord)](#данные-дня-dayrecord)
-- [Тренировки (Training)](#тренировки-training)
-- [Пульсовые зоны](#пульсовые-зоны-heys_hr_zones)
-- [Приёмы пищи (Meal)](#приёмы-пищи-meal)
-- [Продукты (Product)](#продукт-product)
-- [Профиль пользователя](#профиль-пользователя-heys_profile)
-- [Нормы питания](#нормы-питания-heys_norms)
-- [Вычисляемые данные](#вычисляемые-данные)
-- [localStorage ключи](#localstorage-ключи)
+- [📊 HEYS Data Model Reference](#-heys-data-model-reference)
+  - [Быстрая навигация](#быстрая-навигация)
+  - [Данные дня (DayRecord)](#данные-дня-dayrecord)
+  - [Тренировки (Training)](#тренировки-training)
+  - [Пульсовые зоны (heys\_hr\_zones)](#пульсовые-зоны-heys_hr_zones)
+  - [Приёмы пищи (Meal)](#приёмы-пищи-meal)
+  - [Продукт в приёме (MealItem)](#продукт-в-приёме-mealitem)
+  - [Продукт (Product)](#продукт-product)
+    - [Базовые поля (на 100г)](#базовые-поля-на-100г)
+    - [Вычисляемые поля (computeDerived)](#вычисляемые-поля-computederived)
+  - [Профиль пользователя (heys\_profile)](#профиль-пользователя-heys_profile)
+  - [Нормы питания (heys\_norms)](#нормы-питания-heys_norms)
+  - [Вычисляемые данные](#вычисляемые-данные)
+    - [Суммы за день (dayTot)](#суммы-за-день-daytot)
+    - [Дневные нормы в граммах (normAbs)](#дневные-нормы-в-граммах-normabs)
+    - [Метаболизм](#метаболизм)
+    - [Streak аналитика](#streak-аналитика)
+  - [Советы (Advice Module)](#советы-advice-module)
+    - [Все типы советов](#все-типы-советов)
+    - [Используемые переменные](#используемые-переменные)
+  - [🔮 Потенциальные советы (не реализованы)](#-потенциальные-советы-не-реализованы)
+  - [localStorage ключи](#localstorage-ключи)
+  - [Частые ошибки](#частые-ошибки)
+  - [Связанные файлы](#связанные-файлы)
+  - [Changelog](#changelog)
 
 ---
 
@@ -39,7 +55,10 @@
 | `wellbeingAvg` | number | Среднее самочувствие за день (1-5) | `3.8` |
 | `stressAvg` | number | Средний стресс за день (1-5) | `2.5` |
 | `dayComment` | string | Комментарий к дню | `"Продуктивный день"` |
-| `waterMl` | number | Выпито воды (мл) | ⚠️ **Не реализован** |
+| `waterMl` | number | Выпито воды (мл) | `1500` |
+| `lastWaterTime` | string | Время последнего приёма воды (ISO) | `"2025-11-29T14:30:00"` |
+| `sleepHours` | number | Вычисляемое: часы сна | `7.5` |
+| `updatedAt` | number | Timestamp последнего обновления | `1732886400000` |
 | `meals` | Meal[] | Массив приёмов пищи | `[...]` |
 | `trainings` | Training[] | Массив тренировок (до 3) | `[...]` |
 
@@ -50,10 +69,19 @@
 | Параметр | Тип | Описание | Пример |
 |----------|-----|----------|--------|
 | `z` | number[4] | Минуты в каждой пульсовой зоне | `[5, 20, 15, 0]` |
-| `time` | string | Время тренировки | `"18:00"` |
-| `type` | string | Тип тренировки | `"Кардио"` |
+| `time` | string | Время тренировки (HH:MM) | `"18:00"` |
+| `type` | string | Тип тренировки (ID) | `"cardio"` / `"strength"` / `"hobby"` |
 
 **Примечание**: `z[0]` = зона 1 (лёгкая), `z[3]` = зона 4 (максимальная)
+
+**Типы тренировок** (ID → Label):
+| ID | Иконка | Label | Описание |
+|----|--------|-------|----------|
+| `cardio` | 🏃 | Кардио | бег, велосипед, плавание |
+| `strength` | 🏋️ | Силовая | тренажёры, свободные веса |
+| `hobby` | ⚽ | Активное хобби | йога, прогулки, спортивные игры |
+
+⚠️ **Важно**: В коде используются **ID** (`'cardio'`, `'strength'`, `'hobby'`), НЕ русские названия!
 
 ---
 
@@ -122,6 +150,11 @@
 | `fiber100` | number | Клетчатка | `8.0` |
 | `gi` | number | Гликемический индекс | `55` |
 | `harm` | number | Индекс вреда (0-100) | `5` |
+| `category` | string | Категория продукта | `"Молочные"` |
+
+**Альтернативные названия полей** (для совместимости):
+- ГИ: `gi100`, `GI`, `giIndex`
+- Вред: `harmScore`, `harm100`, `harmPct`
 
 ### Вычисляемые поля (computeDerived)
 
@@ -147,8 +180,9 @@
 | `age` | number | Возраст (лет) | `30` |
 | `sleepHours` | number | Норма сна (часов) | `8` |
 | `insulinWaveHours` | number | Период инсулиновой волны | `4` |
-| `deficitPctTarget` | number | Целевой % дефицита | `15` |
-| `stepsGoal` | number | Цель по шагам | `10000` |
+| `deficitPctTarget` | number | Целевой % дефицита калорий | `15` |
+| `stepsGoal` | number | Цель по шагам в день | `10000` |
+| `activityLevel` | string | Уровень активности (для TDEE) | `"moderate"` |
 
 ---
 
@@ -226,6 +260,131 @@
 
 ---
 
+## Советы (Advice Module)
+
+**Файл**: `heys_advice_v1.js` | **Всего советов: 77**
+
+### Все типы советов
+
+| ID | Условие | Категория | Триггер |
+|---|---|---|---|
+| `young_sleep` | `age<25 && hour 1-5` | personalized | tab_open |
+| `monday_motivation` | Понедельник утро | motivation | tab_open |
+| `friday_reminder` | Пятница вечер | motivation | tab_open |
+| `sunday_planning` | Воскресенье вечер | motivation | tab_open |
+| `crash_support` | `kcalPct > 1.5` | emotional | tab_open, product_added |
+| `stress_support` | `avgMood < 3` | emotional | tab_open |
+| `streak_7` | `currentStreak >= 7` | achievement | tab_open |
+| `streak_3` | `currentStreak 3-6` | achievement | tab_open |
+| `perfect_day` | `hour>=18 && kcalPct 0.95-1.05 && macros>=0.9` | achievement | tab_open |
+| `first_day` | `mealCount === 1` (первый раз) | achievement | product_added |
+| `kcal_excess_critical` | `kcalPct >= 1.25` | nutrition | product_added |
+| `kcal_excess_mild` | `kcalPct 1.1-1.25` | nutrition | product_added |
+| `trans_fat_warning` | `transPct > 1.0` | nutrition | product_added |
+| `simple_carbs_warning` | `simplePct > 1.3` | nutrition | product_added |
+| `harm_warning` | `harmPct > 1.0` | nutrition | product_added |
+| `protein_low` | `proteinPct < 0.5 && hour >= 12` | nutrition | tab_open, product_added |
+| `fiber_low` | `fiberPct < 0.3 && mealCount >= 2` | nutrition | tab_open, product_added |
+| `fiber_good` | `fiberPct >= 1.0` | nutrition | product_added |
+| `good_fat_low` | `goodFatPct < 0.4 && hour >= 14` | nutrition | tab_open, product_added |
+| `post_training_protein` | `hasTraining && proteinPct < 0.8` | training | tab_open, product_added |
+| `evening_undereating` | `hour >= 20 && kcalPct < 0.7` | nutrition | tab_open |
+| `evening_perfect` | `hour >= 21 && kcalPct 0.9-1.1` | lifestyle | tab_open |
+| `balanced_macros` | `mealCount>=2 && all macros 0.9-1.2` | nutrition | product_added |
+| `sleep_low` | `sleepHours > 0 && < 6` | lifestyle | tab_open |
+| `morning_breakfast` | `hour 7-10 && mealCount === 0` | lifestyle | tab_open |
+| `steps_goal` | `steps >= 10000` | lifestyle | tab_open |
+| `winter_vitamin_d` | `month 10-2` (ноябрь-март) | lifestyle | tab_open |
+| `variety_low` | `items>=5 && uniqueProducts<3` | nutrition | tab_open, product_added |
+| `after_sweet_protein` | `lastMeal simplePct>0.6 && kcal>100` | nutrition | product_added |
+| `sleep_hunger_correlation` | `sleepDeficit>2 && kcalPct>1.15` | correlation | tab_open, product_added |
+| `sleep_hunger_warning` | `sleepDeficit>1.5 && hour<12 && kcalPct<0.3` | correlation | tab_open |
+| `stress_sweet_pattern` | `avgStress>=4 && simplePct>1.2` | correlation | product_added |
+| `low_stress_balance` | `avgStress 1-2 && kcalPct 0.9-1.1` | correlation | tab_open |
+| `hard_workout_recovery` | `highIntensity>20min && proteinPct<1.0` | training | tab_open, product_added |
+| `cardio_carbs_balance` | `fatBurn>30min && carbsPct>1.2` | training | product_added |
+| `great_workout` | `totalMinutes >= 45` | training | tab_open |
+| `water_evening_low` | `hour>=18 && waterPct<0.5` | hydration | tab_open |
+| `water_reminder` | `hoursSinceWater>2 && hour 10-21` | hydration | tab_open, product_added |
+| `water_goal_reached` | `waterPct >= 1.0` | hydration | tab_open |
+| `high_gi_warning` | `avgGI>70 && mealCount>=2` | nutrition | tab_open, product_added |
+| `low_gi_great` | `avgGI 0-55 && mealCount>=2` | nutrition | tab_open |
+| `simple_complex_ratio` | `totalCarbs>50 && simpleRatio>0.5` | nutrition | product_added |
+| `carbs_balance_perfect` | `simpleRatio<=0.3 && mealCount>=2` | nutrition | tab_open |
+| `fat_quality_low` | `totalFat>20 && goodRatio<0.4` | nutrition | tab_open, product_added |
+| `fat_quality_great` | `goodRatio>=0.6` | nutrition | tab_open |
+| `insulin_too_fast` | `gap < insulinWave*0.5` | timing | product_added |
+| `insulin_perfect` | `avgGap >= insulinWave*0.9 && meals>=3` | timing | tab_open |
+| `late_dinner_warning` | `lastMealHour >= 22` | timing | product_added |
+| `good_dinner_time` | `lastMealHour 18-20 && hour>=21` | timing | tab_open |
+| `bad_sleep_advice` | `sleepQuality 1-2 && hour<12` | sleep | tab_open |
+| `great_sleep` | `sleepQuality>=4 && sleepHours>=7` | sleep | tab_open |
+| `sugar_mood_crash` | `moodDrop>=2 && prevMealSimple>30g` | emotional | tab_open |
+| `wellbeing_low_food` | `avgWellbeing<3 && kcalPct<0.4 && hour>=12` | emotional | tab_open |
+| `wellbeing_nutrition_link` | `avgWellbeing>=4 && kcalPct 0.8-1.1` | emotional | tab_open |
+| `iron_reminder` | `gender='Женский' && mealCount>=2 && !hasIronFood` | personalized | tab_open |
+| `age_protein` | `age>=40 && proteinPct<0.9` | personalized | tab_open, product_added |
+| `household_bonus` | `householdMin >= 60` | activity | tab_open |
+| `sedentary_day` | `household=0 && steps<3000 && !training && hour>=18` | activity | tab_open |
+| `day_score_low` | `dayScore < 5 && hour >= 20` | emotional | tab_open |
+| `day_score_high` | `dayScore >= 8 && hour >= 20` | achievement | tab_open |
+| `training_type_strength` | `training.type === 'strength' && proteinPct < 1.0` | training | tab_open, product_added |
+| `training_type_hobby` | `training.type === 'hobby'` | training | tab_open |
+| `weight_spike_up` | `\|Δweight\| > 1kg` | correlation | tab_open |
+| `weight_stable` | `7-day weights σ < 0.5kg` | achievement | tab_open |
+| `caffeine_evening` | Кофе после 16:00 | nutrition | product_added |
+| `empty_stomach_late` | `hour 10-12 && mealCount === 0` | lifestyle | tab_open |
+| `late_heavy_meal` | `lastMealHour >= 21 && lastMealKcal > 500` | timing | product_added |
+| `insulin_countdown` | `minutesUntilEnd > 0 && < 60` | timing | tab_open |
+| `bedtime_protein` | `hour 20-22 && proteinPct < 0.8` | timing | tab_open |
+| `post_holiday_detox` | Дни после праздников (1-2 янв, и др.) | lifestyle | tab_open |
+| `best_day_recall` | Лучший день за 7 дней | motivation | tab_open |
+| `night_owl_warning` | `hour 1-5 && mealCount > 0` | lifestyle | product_added |
+| `lunch_time` | `hour === 13 && mealCount === 1` | lifestyle | tab_open |
+| `protein_champion` | `proteinPct >= 1.2` | achievement | tab_open, product_added |
+| `snack_window` | `hour === 16 && kcalPct < 0.6` | lifestyle | tab_open |
+| `mood_improving` | Настроение выросло между приёмами | correlation | product_added |
+| `workout_consistent` | 3 дня тренировок подряд | achievement | tab_open |
+| `evening_snacker` | Паттерн поздних ужинов 3 дня | correlation | tab_open |
+| `morning_skipper` | Паттерн без завтрака 3 дня | correlation | tab_open |
+
+### Используемые переменные
+
+| Переменная | Источник | Описание |
+|------------|----------|----------|
+| `dayTot.prot` | DayTab | Сумма белка за день |
+| `dayTot.gi` | DayTab | Средневзвешенный ГИ |
+| `normAbs.prot` | DayTab | Норма белка в граммах |
+| `kcalPct` | `dayTot.kcal / optimum` | Выполнение калорийности |
+| `prof.gender` | heys_profile | `'Женский'` / `'Мужской'` |
+| `prof.age` | heys_profile | Возраст |
+| `prof.sleepHours` | heys_profile | Норма сна |
+| `prof.insulinWaveHours` | heys_profile | Период инсулиновой волны |
+| `waterGoal` | waterGoalBreakdown | Динамическая норма воды |
+| `pIndex.byId.get()` | buildProductIndex | Индекс продуктов |
+| `day.householdMin` | DayRecord | Минуты домашней активности |
+| `day.steps` | DayRecord | Шаги за день |
+| `day.sleepQuality` | DayRecord | Качество сна (1-5) |
+| `day.trainings[].type` | Training | Тип тренировки |
+| `currentStreak` | DayTab (вычисляется) | Дней подряд в норме |
+
+---
+
+## 🔮 Потенциальные советы (не реализованы)
+
+Данные уже есть в модели, но советы пока не используют их:
+
+| ID | Данные | Условие | Описание |
+|----|--------|---------|----------|
+| `category_variety` | `Product.category` | Все продукты одной категории | Разнообразие по категориям (требует поле category) |
+| `training_type_cardio` | `training.type` | `type === 'cardio'` | Лёгкие углеводы после кардио |
+| `weekly_trends` | История дней | Анализ недели | Еженедельный инсайт |
+| `weekday_pattern` | История 28 дней | Паттерны по дням недели | Требует много данных |
+
+> **Примечание**: Для `category_variety` нужно сначала добавить поле `category` в модель Product.
+
+---
+
 ## localStorage ключи
 
 | Ключ | Описание | Namespace |
@@ -262,6 +421,7 @@
 | `heys_day_hooks.js` | React hooks для данных дня |
 | `heys_user_v12.js` | Профиль и настройки |
 | `heys_core_v12.js` | Продукты, поиск, утилиты |
+| `heys_advice_v1.js` | Модуль умных советов |
 
 ---
 
@@ -269,4 +429,10 @@
 
 | Версия | Дата | Изменения |
 |--------|------|-----------|
+| 1.5.0 | 2025-11-29 | Финальная актуализация: подтверждено 77 уникальных советов, добавлен счётчик в заголовок |
+| 1.4.1 | 2025-11-29 | Актуализация: Training.type использует ID ('cardio', 'strength', 'hobby'), а не русские названия |
+| 1.4.0 | 2025-11-29 | +21 новый совет: dayScore, training.type, weight, caffeine, timing, gamification, patterns |
+| 1.3.0 | 2025-11-29 | Глубокий аудит: Training.type, Product.category, альтернативные поля ГИ/вред, секция "Потенциальные советы" |
+| 1.2.0 | 2025-11-29 | Добавлена секция Советы (Advice Module) — 34 типа советов |
+| 1.1.0 | 2025-11-29 | Аудит: добавлены `waterMl` ✅, `lastWaterTime`, `sleepHours`, `updatedAt` |
 | 1.0.0 | 2025-11-29 | Первоначальная версия справочника |

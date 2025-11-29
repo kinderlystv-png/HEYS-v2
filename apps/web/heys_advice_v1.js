@@ -40,7 +40,18 @@
    * @returns {'normal'|'stressed'|'crashed'|'success'|'returning'}
    */
   function getEmotionalState(params) {
-    const { day, currentStreak, mealCount, kcalPct, lastVisitDaysAgo, totalDaysTracked } = params;
+    const { day, currentStreak, mealCount, kcalPct, totalDaysTracked } = params;
+    
+    // Вычисляем lastVisitDaysAgo из localStorage
+    let lastVisitDaysAgo = 0;
+    try {
+      const lastVisit = localStorage.getItem('heys_last_visit');
+      if (lastVisit) {
+        const last = new Date(lastVisit);
+        const now = new Date();
+        lastVisitDaysAgo = Math.floor((now - last) / (1000 * 60 * 60 * 24));
+      }
+    } catch(e) {}
     
     // Вернулся после перерыва
     if (lastVisitDaysAgo > 3) return 'returning';
@@ -68,6 +79,30 @@
     const moods = meals.map(m => m.mood).filter(m => m > 0);
     if (moods.length === 0) return 0;
     return moods.reduce((a, b) => a + b, 0) / moods.length;
+  }
+  
+  /**
+   * Вычисляет средний стресс за день
+   * @param {Object} day
+   * @returns {number} 0 если нет данных, иначе 1-5
+   */
+  function calculateAverageStress(day) {
+    const meals = day?.meals || [];
+    const stresses = meals.map(m => m.stress).filter(s => s > 0);
+    if (stresses.length === 0) return 0;
+    return stresses.reduce((a, b) => a + b, 0) / stresses.length;
+  }
+  
+  /**
+   * Вычисляет среднее самочувствие за день
+   * @param {Object} day
+   * @returns {number} 0 если нет данных, иначе 1-5
+   */
+  function calculateAverageWellbeing(day) {
+    const meals = day?.meals || [];
+    const values = meals.map(m => m.wellbeing).filter(w => w > 0);
+    if (values.length === 0) return 0;
+    return values.reduce((a, b) => a + b, 0) / values.length;
   }
   
   /**
@@ -219,14 +254,48 @@
     const {
       dayTot, normAbs, optimum, day, pIndex, currentStreak,
       hour, mealCount, hasTraining, kcalPct,
-      tone, specialDay, emotionalState
+      tone, specialDay, emotionalState, prof, waterGoal
     } = ctx;
     
-    // Ночью — никаких советов
-    if (tone === 'silent') return [];
+    // Ночью — никаких советов (кроме исключений)
+    if (tone === 'silent') {
+      const nightAdvices = [];
+      const age = prof?.age || 30;
+      
+      // Исключение 1: young_sleep для молодых
+      if (age < 25 && hour >= 1 && hour <= 5) {
+        nightAdvices.push({
+          id: 'young_sleep',
+          icon: '🌙',
+          text: 'Поздно не спишь? Сон важнее диеты!',
+          type: 'tip',
+          priority: 15,
+          category: 'personalized',
+          triggers: ['tab_open'],
+          ttl: 5000
+        });
+      }
+      
+      // Исключение 2: night_owl_warning при ночном перекусе
+      if (hour >= 1 && hour < 5 && mealCount > 0 && !sessionStorage.getItem('heys_night_owl')) {
+        nightAdvices.push({
+          id: 'night_owl_warning',
+          icon: '🦉',
+          text: 'Ночной перекус? Записал! Но сон важнее еды 😴',
+          type: 'tip',
+          priority: 20,
+          category: 'lifestyle',
+          triggers: ['product_added'],
+          ttl: 5000,
+          onShow: () => { try { sessionStorage.setItem('heys_night_owl', '1'); } catch(e) {} }
+        });
+      }
+      
+      return nightAdvices.length > 0 ? nightAdvices : [];
+    }
     
-    // Guard: пустой день
-    if ((dayTot?.kcal || 0) < 10 && mealCount === 0) return [];
+    // Флаг для пустого дня — некоторые советы должны работать
+    const isDayEmpty = (dayTot?.kcal || 0) < 10 && mealCount === 0;
     
     // Вычисляем процентные показатели
     const proteinPct = (dayTot?.prot || 0) / (normAbs?.prot || 1);
@@ -278,6 +347,91 @@
         triggers: ['tab_open'],
         ttl: 5000
       });
+    }
+    
+    // Задача 42: После праздников — лёгкий день
+    const today = new Date();
+    const dayOfMonth = today.getDate();
+    const monthOfYear = today.getMonth(); // 0-indexed
+    // Дни ПОСЛЕ праздников: 1-2 января, 24 февраля, 9 марта, 10 мая, 13 июня
+    const postHolidayDates = [
+      [1, 0], [2, 0],    // После НГ
+      [24, 1],           // После 23 февраля
+      [9, 2],            // После 8 марта
+      [10, 4],           // После 9 мая
+      [13, 5]            // После 12 июня
+    ];
+    
+    const isPostHoliday = postHolidayDates.some(([d, m]) => d === dayOfMonth && m === monthOfYear);
+    
+    if (isPostHoliday && !sessionStorage.getItem('heys_post_holiday')) {
+      advices.push({
+        id: 'post_holiday_detox',
+        icon: '🌿',
+        text: 'После вчерашнего праздника — лёгкий день: овощи, вода, белок',
+        type: 'tip',
+        priority: 15,
+        category: 'lifestyle',
+        triggers: ['tab_open'],
+        ttl: 6000,
+        onShow: () => { try { sessionStorage.setItem('heys_post_holiday', '1'); } catch(e) {} }
+      });
+    }
+    
+    // Задача 43: Напоминание о лучшем дне недели
+    const lastBestDayCheck = localStorage.getItem('heys_best_day_last_check');
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    
+    if (!lastBestDayCheck || +lastBestDayCheck < weekAgo) {
+      const recentDays = getRecentDays(7);
+      
+      if (recentDays.length >= 3) {
+        // Найти день с лучшим ratio (closest to 1.0)
+        let bestDay = null;
+        let bestDiff = Infinity;
+        
+        for (const d of recentDays) {
+          // Вычисляем сумму ккал дня (грубо)
+          const dayMeals = d.meals || [];
+          let dayKcal = 0;
+          for (const meal of dayMeals) {
+            for (const item of (meal.items || [])) {
+              const product = pIndex?.byId?.get(item.product_id);
+              if (product) dayKcal += (product.kcal100 || 0) * (item.grams || 100) / 100;
+            }
+          }
+          
+          // Используем текущий optimum (он стабилен)
+          const ratio = dayKcal / (optimum || 2000);
+          const diff = Math.abs(ratio - 1.0);
+          
+          if (diff < bestDiff && ratio > 0.5) {
+            bestDiff = diff;
+            bestDay = { ...d, ratio };
+          }
+        }
+        
+        if (bestDay && bestDiff < 0.15) { // В пределах ±15% от нормы
+          const dayDate = new Date(bestDay.date);
+          const dayNames = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+          const dayName = dayNames[dayDate.getDay()];
+          const pct = Math.round(bestDay.ratio * 100);
+          
+          advices.push({
+            id: 'best_day_recall',
+            icon: '⭐',
+            text: `Твой лучший день был ${dayName} — ${pct}% нормы. Повтори!`,
+            type: 'motivation',
+            priority: 44,
+            category: 'motivation',
+            triggers: ['tab_open'],
+            ttl: 6000,
+            onShow: () => { 
+              try { localStorage.setItem('heys_best_day_last_check', Date.now().toString()); } catch(e) {} 
+            }
+          });
+        }
+      }
     }
     
     // ─────────────────────────────────────────────────────────
@@ -386,6 +540,7 @@
         id: 'kcal_excess_critical',
         icon: '🔴',
         text: `${Math.round(kcalPct * 100)}% от нормы — завтра компенсируем`,
+        details: 'Не стоит переживать! Один день переедания — это нормально. Завтра сделай лёгкий дефицит 10-15% и всё выровняется. Главное — не срывайся в "раз уж переел" режим.',
         type: 'warning',
         priority: 11,
         category: 'nutrition',
@@ -411,6 +566,7 @@
         id: 'trans_fat_warning',
         icon: '⚠️',
         text: 'Транс-жиры превышены — избегай фастфуда',
+        details: 'Транс-жиры — самые вредные. Они повышают "плохой" холестерин и снижают "хороший". Избегай: маргарин, фаст-фуд, чипсы, выпечка с длительным сроком хранения.',
         type: 'warning',
         priority: 12,
         category: 'nutrition',
@@ -425,6 +581,7 @@
         id: 'simple_carbs_warning',
         icon: '🍬',
         text: 'Много сахара сегодня — ограничь сладкое',
+        details: 'Простые углеводы быстро повышают сахар в крови, вызывая всплеск инсулина и потом упадок энергии. Альтернативы: фрукты, тёмный шоколад 70%+, орехи.',
         type: 'warning',
         priority: 14,
         category: 'nutrition',
@@ -457,6 +614,7 @@
         id: 'protein_low',
         icon: '🥩',
         text: 'Добавь белка — мясо, рыба, творог',
+        details: 'Белок важен для мышц, иммунитета и сытости. Норма: 1.5-2г на кг веса. Лучшие источники: курица, индейка, рыба, яйца, творог, греческий йогурт, бобовые.',
         type: 'tip',
         priority: 31,
         category: 'nutrition',
@@ -471,7 +629,8 @@
         id: 'fiber_low',
         icon: '🥬',
         text: 'Мало клетчатки — добавь овощей или злаков',
-        type: 'fiber',
+        details: 'Клетчатка важна для пищеварения и сытости. Норма: 25-35г в день. Лидеры: авокадо, брокколи, овсянка, чечевица, груши, малина, семена чиа.',
+        type: 'tip',
         priority: 32,
         category: 'nutrition',
         triggers: ['product_added', 'tab_open'],
@@ -500,6 +659,7 @@
         id: 'good_fat_low',
         icon: '🥑',
         text: 'Добавь полезных жиров — авокадо, орехи, оливковое масло',
+        details: 'Омега-3 и мононенасыщенные жиры важны для мозга, сердца и гормонов. Лучшие источники: жирная рыба (сёмга, скумбрия), авокадо, оливковое масло, орехи (грецкие, миндаль), семена льна и чиа.',
         type: 'tip',
         priority: 33,
         category: 'nutrition',
@@ -514,6 +674,7 @@
         id: 'post_training_protein',
         icon: '💪',
         text: 'После тренировки важен белок — добавь 20-30г',
+        details: 'Белок в течение 2 часов после тренировки ускоряет восстановление мышц. Идеально: протеиновый коктейль, творог с бананом, куриная грудка с рисом, или греческий йогурт с орехами.',
         type: 'tip',
         priority: 34,
         category: 'training',
@@ -528,6 +689,7 @@
         id: 'evening_undereating',
         icon: '🌙',
         text: 'Ещё можно поесть — не голодай перед сном',
+        details: 'Сильный голод перед сном ухудшает качество сна и может привести к ночным перекусам. Лучше лёгкий ужин: белок + овощи, или творог с ягодами.',
         type: 'tip',
         priority: 36,
         category: 'nutrition',
@@ -597,6 +759,66 @@
       });
     }
     
+    // Задача 37: Расширение morning_breakfast — нет завтрака к 11
+    // НЕ показывать если morning_breakfast уже был показан
+    if (hour >= 10 && hour < 12 && mealCount === 0 && !sessionStorage.getItem('heys_morning_breakfast_shown')) {
+      advices.push({
+        id: 'empty_stomach_late',
+        icon: '🍳',
+        text: `Уже ${hour}:00, а завтрака нет — метаболизм ждёт топлива`,
+        type: 'tip',
+        priority: 53,
+        category: 'lifestyle',
+        triggers: ['tab_open'],
+        ttl: 5000,
+        onShow: () => { try { sessionStorage.setItem('heys_morning_breakfast_shown', '1'); } catch(e) {} }
+      });
+    }
+    
+    // Задача 44: Напоминание об обеде
+    if (hour === 13 && mealCount === 1) {
+      advices.push({
+        id: 'lunch_time',
+        icon: '🍽️',
+        text: 'Час дня — идеальное время для обеда!',
+        type: 'tip',
+        priority: 52,
+        category: 'lifestyle',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // Задача 45: Время полдника
+    if (hour === 16 && kcalPct < 0.6) {
+      const remaining = Math.round((optimum || 2000) * (1 - kcalPct));
+      advices.push({
+        id: 'snack_window',
+        icon: '🥪',
+        text: `16:00 — время полдника. Осталось ~${remaining} ккал`,
+        type: 'tip',
+        priority: 51,
+        category: 'lifestyle',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // Задача 46: Белковый чемпион
+    if (proteinPct >= 1.2 && !sessionStorage.getItem('heys_protein_champion')) {
+      advices.push({
+        id: 'protein_champion',
+        icon: '🏆',
+        text: 'Белковый чемпион! Мышцы тебя благодарят',
+        type: 'achievement',
+        priority: 10,
+        category: 'achievement',
+        triggers: ['tab_open', 'product_added'],
+        ttl: 5000,
+        onShow: () => { try { sessionStorage.setItem('heys_protein_champion', '1'); } catch(e) {} }
+      });
+    }
+    
     // Шаги
     const steps = day?.steps || 0;
     if (steps >= 10000) {
@@ -607,6 +829,968 @@
         type: 'achievement',
         priority: 53,
         category: 'lifestyle',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // ❄️ SEASONAL TIPS (priority: 60-65)
+    // ─────────────────────────────────────────────────────────
+    
+    const month = new Date().getMonth();
+    // Зима: ноябрь (10), декабрь (11), январь (0), февраль (1), март (2)
+    if ((month >= 10 || month <= 2) && !sessionStorage.getItem('heys_winter_tip')) {
+      advices.push({
+        id: 'winter_vitamin_d',
+        icon: '❄️',
+        text: 'Зимой важен витамин D — рыба, яйца, грибы',
+        type: 'tip',
+        priority: 60,
+        category: 'lifestyle',
+        triggers: ['tab_open'],
+        ttl: 5000,
+        onShow: () => { try { sessionStorage.setItem('heys_winter_tip', '1'); } catch(e) {} }
+      });
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // 🌈 VARIETY TIPS (priority: 45-50)
+    // ─────────────────────────────────────────────────────────
+    
+    // Разнообразие рациона
+    const allItems = (day?.meals || []).flatMap(m => m.items || []);
+    const productNames = allItems.map(it => {
+      const product = pIndex?.byId?.get(it.product_id);
+      return (product?.name || it.name || '').toLowerCase().trim();
+    }).filter(Boolean);
+    const uniqueProducts = new Set(productNames).size;
+    
+    if (productNames.length >= 5 && uniqueProducts < 3) {
+      advices.push({
+        id: 'variety_low',
+        icon: '🌈',
+        text: 'Разнообразь рацион — добавь другие продукты',
+        type: 'tip',
+        priority: 45,
+        category: 'nutrition',
+        triggers: ['product_added', 'tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // 🥜 TIMING TIPS (priority: 55-59)
+    // ─────────────────────────────────────────────────────────
+    
+    // После сладкого нужен белок
+    const lastMeal = (day?.meals || []).slice(-1)[0];
+    if (lastMeal && lastMeal.items?.length > 0) {
+      let lastMealSimple = 0, lastMealCarbs = 0, lastMealKcal = 0;
+      for (const item of lastMeal.items) {
+        const product = pIndex?.byId?.get(item.product_id);
+        if (!product) continue;
+        const grams = item.grams || 100;
+        lastMealSimple += (product.simple100 || 0) * grams / 100;
+        lastMealCarbs += ((product.simple100 || 0) + (product.complex100 || 0)) * grams / 100;
+        lastMealKcal += (product.kcal100 || 0) * grams / 100;
+      }
+      const lastMealSimplePct = lastMealCarbs > 0 ? (lastMealSimple / lastMealCarbs) : 0;
+      
+      if (lastMealSimplePct > 0.6 && lastMealKcal > 100) {
+        advices.push({
+          id: 'after_sweet_protein',
+          icon: '🥜',
+          text: 'После сладкого добавь белок — орехи или творог',
+          type: 'tip',
+          priority: 55,
+          category: 'nutrition',
+          triggers: ['product_added'],
+          ttl: 5000
+        });
+      }
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // 🧠 CORRELATION INSIGHTS (priority: 20-30)
+    // ─────────────────────────────────────────────────────────
+    
+    // Задача 10: Связь сна и переедания
+    const sleepHoursCorr = calculateSleepHours(day);
+    const sleepNorm = prof?.sleepHours || 8;
+    const sleepDeficit = sleepNorm - sleepHoursCorr;
+    
+    // Недосып + переедание = объяснить связь
+    if (sleepDeficit > 2 && kcalPct > 1.15) {
+      advices.push({
+        id: 'sleep_hunger_correlation',
+        icon: '🧠',
+        text: `Недосып ${sleepDeficit.toFixed(1)}ч повышает аппетит — это нормально`,
+        type: 'insight',
+        priority: 20,
+        category: 'correlation',
+        triggers: ['product_added', 'tab_open'],
+        ttl: 6000
+      });
+    }
+    
+    // Недосып утром — предупредить о повышенном аппетите
+    if (sleepDeficit > 1.5 && hour < 12 && kcalPct < 0.3) {
+      advices.push({
+        id: 'sleep_hunger_warning',
+        icon: '⚡',
+        text: 'После недосыпа аппетит выше — планируй сытный обед',
+        type: 'tip',
+        priority: 25,
+        category: 'correlation',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // Задача 11: Стресс → простые углеводы
+    const avgStress = calculateAverageStress(day);
+    const simplePctCorr = (dayTot?.simple || 0) / ((normAbs?.simple || 50) || 1);
+    
+    // Высокий стресс + много сладкого = понять паттерн
+    if (avgStress >= 4 && simplePctCorr > 1.2) {
+      advices.push({
+        id: 'stress_sweet_pattern',
+        icon: '💡',
+        text: 'Стресс → сладкое — попробуй орехи или тёмный шоколад',
+        type: 'insight',
+        priority: 22,
+        category: 'correlation',
+        triggers: ['product_added'],
+        ttl: 6000
+      });
+    }
+    
+    // Низкий стресс + хороший баланс = похвалить
+    if (avgStress > 0 && avgStress <= 2 && kcalPct >= 0.9 && kcalPct <= 1.1) {
+      advices.push({
+        id: 'low_stress_balance',
+        icon: '☮️',
+        text: 'Спокойный день = легче держать баланс. Замечаешь?',
+        type: 'insight',
+        priority: 40,
+        category: 'correlation',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // Задача 36: Динамика веса
+    const todayWeight = day?.weightMorning || 0;
+    
+    if (todayWeight > 0 && !sessionStorage.getItem('heys_weight_tip')) {
+      // Загружаем вчерашние данные
+      const yesterdayDays = getRecentDays(1);
+      const yesterdayDay = yesterdayDays[0];
+      const yesterdayWeight = yesterdayDay?.weightMorning || 0;
+      
+      // Резкий скачок веса (±1кг)
+      if (yesterdayWeight > 0) {
+        const diff = todayWeight - yesterdayWeight;
+        
+        if (Math.abs(diff) > 1.0) {
+          const diffStr = diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1);
+          advices.push({
+            id: 'weight_spike_up',
+            icon: '💧',
+            text: `Вес ${diffStr}кг — скорее всего вода, не переживай`,
+            type: 'insight',
+            priority: 23,
+            category: 'correlation',
+            triggers: ['tab_open'],
+            ttl: 5000,
+            onShow: () => { try { sessionStorage.setItem('heys_weight_tip', '1'); } catch(e) {} }
+          });
+        }
+      }
+      
+      // Стабильный вес за 7 дней
+      const recentDays = getRecentDays(7);
+      const weights = recentDays
+        .map(d => d.weightMorning)
+        .filter(w => w > 0);
+      
+      if (weights.length >= 5) {
+        // Вычисляем стандартное отклонение
+        const avg = weights.reduce((a, b) => a + b, 0) / weights.length;
+        const variance = weights.reduce((sum, w) => sum + Math.pow(w - avg, 2), 0) / weights.length;
+        const stdDev = Math.sqrt(variance);
+        
+        if (stdDev < 0.5 && !sessionStorage.getItem('heys_weight_stable_tip')) {
+          advices.push({
+            id: 'weight_stable',
+            icon: '📊',
+            text: 'Вес стабилен уже неделю — отличная работа!',
+            type: 'achievement',
+            priority: 9,
+            category: 'achievement',
+            triggers: ['tab_open'],
+            ttl: 5000,
+            onShow: () => { try { sessionStorage.setItem('heys_weight_stable_tip', '1'); } catch(e) {} }
+          });
+        }
+      }
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // 🏋️ TRAINING TIPS (priority: 30-35)
+    // ─────────────────────────────────────────────────────────
+    
+    // Задача 14: Post-workout советы
+    const trainings = day?.trainings || [];
+    const todayTraining = trainings.find(t => t.z && t.z.some(m => m > 0));
+    
+    if (todayTraining) {
+      const totalMinutes = todayTraining.z.reduce((a, b) => a + b, 0);
+      const highIntensityMinutes = (todayTraining.z[2] || 0) + (todayTraining.z[3] || 0); // Зоны 3-4
+      const isHardWorkout = highIntensityMinutes > 20;
+      const proteinPct = (dayTot?.prot || 0) / ((normAbs?.prot || 100) || 1);
+      
+      // Тяжёлая тренировка — нужно больше белка
+      if (isHardWorkout && proteinPct < 1.0) {
+        advices.push({
+          id: 'hard_workout_recovery',
+          icon: '🔥',
+          text: `${highIntensityMinutes} мин в высоких зонах — добавь белка для восстановления`,
+          type: 'tip',
+          priority: 30,
+          category: 'training',
+          triggers: ['product_added', 'tab_open'],
+          ttl: 5000
+        });
+      }
+      
+      // Кардио в зоне жиросжигания — не переедать углеводами
+      const fatBurnMinutes = todayTraining.z[1] || 0; // Зона 2
+      const carbsPct = (dayTot?.carbs || 0) / ((normAbs?.carbs || 200) || 1);
+      if (fatBurnMinutes > 30 && carbsPct > 1.2) {
+        advices.push({
+          id: 'cardio_carbs_balance',
+          icon: '🏃',
+          text: 'После кардио лучше белок и овощи, чем углеводы',
+          type: 'tip',
+          priority: 35,
+          category: 'training',
+          triggers: ['product_added'],
+          ttl: 5000
+        });
+      }
+      
+      // Отличная тренировка!
+      if (totalMinutes >= 45) {
+        advices.push({
+          id: 'great_workout',
+          icon: '💪',
+          text: `${totalMinutes} мин тренировки — супер!`,
+          type: 'achievement',
+          priority: 7,
+          category: 'training',
+          triggers: ['tab_open'],
+          ttl: 4000
+        });
+      }
+      
+      // Задача 35: Советы по типу тренировки
+      // training.type = 'cardio' | 'strength' | 'hobby'
+      
+      // После силовой — белок важнее
+      if (todayTraining.type === 'strength' && proteinPct < 1.0) {
+        advices.push({
+          id: 'training_type_strength',
+          icon: '🏋️',
+          text: 'После силовой важен белок — 20-30г в течение 2 часов',
+          type: 'tip',
+          priority: 31,
+          category: 'training',
+          triggers: ['tab_open', 'product_added'],
+          ttl: 5000
+        });
+      }
+      
+      // После хобби (йога и т.п.) — лёгкий приём
+      if (todayTraining.type === 'hobby' && !sessionStorage.getItem('heys_hobby_tip')) {
+        advices.push({
+          id: 'training_type_hobby',
+          icon: '🧘',
+          text: 'После активного хобби идеален лёгкий приём — овощи, фрукты',
+          type: 'tip',
+          priority: 49,
+          category: 'training',
+          triggers: ['tab_open'],
+          ttl: 5000,
+          onShow: () => { try { sessionStorage.setItem('heys_hobby_tip', '1'); } catch(e) {} }
+        });
+      }
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // 💧 HYDRATION TIPS (priority: 42-46)
+    // ─────────────────────────────────────────────────────────
+    
+    // Задача 13: Умные напоминания о воде
+    const waterMl = day?.waterMl || 0;
+    const waterNorm = waterGoal || 2000; // waterGoal передан из ctx
+    const waterPct = waterMl / waterNorm;
+    
+    // Мало воды к вечеру
+    if (hour >= 18 && waterPct < 0.5) {
+      const needed = Math.round(waterNorm * 0.7 - waterMl);
+      if (needed > 0) {
+        advices.push({
+          id: 'water_evening_low',
+          icon: '💧',
+          text: `Выпито ${waterMl}мл — добавь ещё ${needed}мл`,
+          type: 'tip',
+          priority: 42,
+          category: 'hydration',
+          triggers: ['tab_open'],
+          ttl: 5000
+        });
+      }
+    }
+    
+    // Давно не пил — напомнить
+    const lastWater = day?.lastWaterTime ? new Date(day.lastWaterTime) : null;
+    const hoursSinceWater = lastWater ? (Date.now() - lastWater.getTime()) / (1000 * 60 * 60) : 99;
+    
+    if (hoursSinceWater > 2 && hour >= 10 && hour <= 21 && waterPct < 1.0) {
+      advices.push({
+        id: 'water_reminder',
+        icon: '🚰',
+        text: 'Уже 2+ часа без воды — выпей стакан',
+        type: 'tip',
+        priority: 44,
+        category: 'hydration',
+        triggers: ['tab_open', 'product_added'],
+        ttl: 4000
+      });
+    }
+    
+    // Норма выполнена!
+    if (waterPct >= 1.0 && !sessionStorage.getItem('heys_water_done')) {
+      advices.push({
+        id: 'water_goal_reached',
+        icon: '💦',
+        text: `${waterMl}мл — дневная норма воды выполнена!`,
+        type: 'achievement',
+        priority: 6,
+        category: 'hydration',
+        triggers: ['tab_open'],
+        ttl: 5000,
+        onShow: () => { try { sessionStorage.setItem('heys_water_done', '1'); } catch(e) {} }
+      });
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // 🎯 NUTRITION QUALITY TIPS (priority: 32-40)
+    // ─────────────────────────────────────────────────────────
+    
+    // Задача 22: Гликемический индекс
+    const avgGI = dayTot?.gi || 0;
+    
+    if (avgGI > 70 && mealCount >= 2) {
+      advices.push({
+        id: 'high_gi_warning',
+        icon: '📈',
+        text: `Средний ГИ ${Math.round(avgGI)} — добавь белок и клетчатку`,
+        type: 'tip',
+        priority: 33,
+        category: 'nutrition',
+        triggers: ['product_added', 'tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    if (avgGI > 0 && avgGI <= 55 && mealCount >= 2) {
+      advices.push({
+        id: 'low_gi_great',
+        icon: '💚',
+        text: `ГИ ${Math.round(avgGI)} — стабильная энергия весь день`,
+        type: 'achievement',
+        priority: 36,
+        category: 'nutrition',
+        triggers: ['tab_open'],
+        ttl: 4000
+      });
+    }
+    
+    // Задача 23: Соотношение простых/сложных углеводов
+    const simpleCarbs = dayTot?.simple || 0;
+    const complexCarbs = dayTot?.complex || 0;
+    const totalCarbs = simpleCarbs + complexCarbs;
+    
+    if (totalCarbs > 50) {
+      const simpleRatio = simpleCarbs / totalCarbs;
+      
+      if (simpleRatio > 0.5) {
+        advices.push({
+          id: 'simple_complex_ratio',
+          icon: '⚖️',
+          text: `${Math.round(simpleRatio * 100)}% простых углеводов — добавь каши, хлеб`,
+          type: 'tip',
+          priority: 34,
+          category: 'nutrition',
+          triggers: ['product_added'],
+          ttl: 5000
+        });
+      }
+      
+      if (simpleRatio <= 0.3 && mealCount >= 2) {
+        advices.push({
+          id: 'carbs_balance_perfect',
+          icon: '🌾',
+          text: 'Отличный баланс углеводов!',
+          type: 'achievement',
+          priority: 37,
+          category: 'nutrition',
+          triggers: ['tab_open'],
+          ttl: 4000
+        });
+      }
+    }
+    
+    // Задача 24: Качество жиров
+    const goodFat = dayTot?.good || 0;
+    const badFat = dayTot?.bad || 0;
+    const transFat = dayTot?.trans || 0;
+    const totalFat = goodFat + badFat + transFat;
+    
+    if (totalFat > 20) {
+      const goodRatio = goodFat / totalFat;
+      
+      if (goodRatio < 0.4) {
+        advices.push({
+          id: 'fat_quality_low',
+          icon: '🐟',
+          text: 'Добавь полезных жиров — рыба, орехи, авокадо',
+          type: 'tip',
+          priority: 32,
+          category: 'nutrition',
+          triggers: ['product_added', 'tab_open'],
+          ttl: 5000
+        });
+      }
+      
+      if (goodRatio >= 0.6) {
+        advices.push({
+          id: 'fat_quality_great',
+          icon: '💚',
+          text: `${Math.round(goodRatio * 100)}% полезных жиров — супер!`,
+          type: 'achievement',
+          priority: 38,
+          category: 'nutrition',
+          triggers: ['tab_open'],
+          ttl: 4000
+        });
+      }
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // ⏰ CHRONO-NUTRITION TIPS (priority: 38-43)
+    // ─────────────────────────────────────────────────────────
+    
+    // Задача 15: Инсулиновые волны
+    const insulinWave = prof?.insulinWaveHours || 4;
+    const mealsWithItems = (day?.meals || []).filter(m => m.items?.length > 0);
+    
+    if (mealsWithItems.length >= 2) {
+      const times = mealsWithItems.map(m => {
+        const [h, min] = (m.time || '12:00').split(':').map(Number);
+        return h * 60 + min;
+      }).sort((a, b) => a - b);
+      
+      for (let i = 1; i < times.length; i++) {
+        const gap = times[i] - times[i - 1];
+        
+        if (gap < insulinWave * 60 * 0.5) { // < 50% от нормы
+          const gapHours = (gap / 60).toFixed(1).replace('.0', '');
+          advices.push({
+            id: 'insulin_too_fast',
+            icon: '⏱️',
+            text: `Между приёмами ${gapHours}ч — дай инсулину отдохнуть`,
+            type: 'tip',
+            priority: 38,
+            category: 'timing',
+            triggers: ['product_added'],
+            ttl: 5000
+          });
+          break;
+        }
+      }
+      
+      const avgGap = (times[times.length - 1] - times[0]) / (times.length - 1);
+      if (avgGap >= insulinWave * 60 * 0.9 && mealsWithItems.length >= 3) {
+        advices.push({
+          id: 'insulin_perfect',
+          icon: '⏰',
+          text: 'Отличные интервалы между приёмами!',
+          type: 'achievement',
+          priority: 39,
+          category: 'timing',
+          triggers: ['tab_open'],
+          ttl: 4000
+        });
+      }
+      
+      // Задача 40: Обратный отсчёт до конца инсулиновой волны
+      const lastMealTimeMinutes = times[times.length - 1];
+      const nowMinutes = hour * 60 + new Date().getMinutes();
+      const insulinEndMinutes = lastMealTimeMinutes + insulinWave * 60;
+      const minutesUntilEnd = insulinEndMinutes - nowMinutes;
+      
+      if (minutesUntilEnd > 0 && minutesUntilEnd < 60 && !sessionStorage.getItem('heys_insulin_countdown')) {
+        advices.push({
+          id: 'insulin_countdown',
+          icon: '⏱️',
+          text: `Через ${minutesUntilEnd} мин инсулиновая волна закончится — можно перекусить`,
+          type: 'info',
+          priority: 40,
+          category: 'timing',
+          triggers: ['tab_open'],
+          ttl: 5000,
+          onShow: () => { try { sessionStorage.setItem('heys_insulin_countdown', '1'); } catch(e) {} }
+        });
+      }
+    }
+    
+    // Задача 41: Белок перед сном
+    const sleepNormHours = prof?.sleepHours || 8;
+    const expectedBedtime = 24 - sleepNormHours + 7; // Примерно когда ложится спать (если встаёт в 7)
+    const hoursUntilBed = expectedBedtime - hour;
+    
+    if (hour >= 20 && hour <= 22 && proteinPct < 0.8 && hoursUntilBed > 0 && hoursUntilBed <= 4) {
+      advices.push({
+        id: 'bedtime_protein',
+        icon: '🥛',
+        text: `До сна ~${Math.round(hoursUntilBed)}ч — последний шанс добрать белок`,
+        type: 'tip',
+        priority: 35,
+        category: 'timing',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // Задача 16: Поздний ужин
+    const lastMealTime = (() => {
+      const mealsList = (day?.meals || []).filter(m => m.items?.length > 0);
+      if (mealsList.length === 0) return null;
+      const timesList = mealsList.map(m => m.time || '12:00').sort();
+      return timesList[timesList.length - 1];
+    })();
+    
+    if (lastMealTime) {
+      const [lastH] = lastMealTime.split(':').map(Number);
+      
+      if (lastH >= 22) {
+        advices.push({
+          id: 'late_dinner_warning',
+          icon: '🌙',
+          text: 'Поздний ужин — сон может быть хуже',
+          type: 'tip',
+          priority: 41,
+          category: 'timing',
+          triggers: ['product_added'],
+          ttl: 5000
+        });
+      }
+      
+      // Задача 38: Тяжёлый ужин после 21:00
+      // Вычисляем калории последнего приёма
+      const lastMealByTime = (day?.meals || []).find(m => m.time === lastMealTime);
+      if (lastH >= 21 && lastH < 22 && lastMealByTime && !sessionStorage.getItem('heys_late_heavy_shown')) {
+        let lateMealKcal = 0;
+        for (const item of (lastMealByTime.items || [])) {
+          const product = pIndex?.byId?.get(item.product_id);
+          if (product) lateMealKcal += (product.kcal100 || 0) * (item.grams || 100) / 100;
+        }
+        
+        if (lateMealKcal > 500) {
+          advices.push({
+            id: 'late_heavy_meal',
+            icon: '🌙',
+            text: `Плотный ужин (${Math.round(lateMealKcal)} ккал) после 21:00 — сон может быть хуже`,
+            type: 'tip',
+            priority: 40,
+            category: 'timing',
+            triggers: ['product_added'],
+            ttl: 5000,
+            onShow: () => { try { sessionStorage.setItem('heys_late_heavy_shown', '1'); } catch(e) {} }
+          });
+        }
+      }
+      
+      if (lastH >= 18 && lastH <= 20 && hour >= 21) {
+        advices.push({
+          id: 'good_dinner_time',
+          icon: '✨',
+          text: 'Ужин в правильное время — молодец!',
+          type: 'achievement',
+          priority: 43,
+          category: 'timing',
+          triggers: ['tab_open'],
+          ttl: 4000
+        });
+      }
+    }
+    
+    // Задача 39: Кофе вечером
+    if (hasCoffeeAfterHour(day?.meals, 16, pIndex) && !sessionStorage.getItem('heys_caffeine_tip')) {
+      advices.push({
+        id: 'caffeine_evening',
+        icon: '☕',
+        text: 'Кофе после 16:00 может ухудшить сон',
+        type: 'tip',
+        priority: 42,
+        category: 'nutrition',
+        triggers: ['product_added'],
+        ttl: 5000,
+        onShow: () => { try { sessionStorage.setItem('heys_caffeine_tip', '1'); } catch(e) {} }
+      });
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // 😴 SLEEP QUALITY TIPS (priority: 26-28)
+    // ─────────────────────────────────────────────────────────
+    
+    // Задача 25: Качество сна + питание
+    const sleepQuality = day?.sleepQuality || 0;
+    const sleepHoursQ = calculateSleepHours(day);
+    
+    if (sleepQuality > 0 && sleepQuality <= 2 && hour < 12) {
+      advices.push({
+        id: 'bad_sleep_advice',
+        icon: '😴',
+        text: 'После плохого сна — меньше кофе, больше белка',
+        type: 'tip',
+        priority: 26,
+        category: 'sleep',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    if (sleepQuality >= 4 && sleepHoursQ >= 7) {
+      advices.push({
+        id: 'great_sleep',
+        icon: '😊',
+        text: 'Хорошо выспался — день будет продуктивным!',
+        type: 'achievement',
+        priority: 46,
+        category: 'sleep',
+        triggers: ['tab_open'],
+        ttl: 4000
+      });
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // 🎭 EMOTIONAL INTELLIGENCE (priority: 24-30)
+    // ─────────────────────────────────────────────────────────
+    
+    // Задача 19: Паттерны настроения и еды
+    const mealsWithMood = (day?.meals || []).filter(m => m.mood > 0 && m.items?.length > 0);
+    
+    if (mealsWithMood.length >= 2) {
+      const moodDropMeal = mealsWithMood.find((m, i) => {
+        if (i === 0) return false;
+        return m.mood < mealsWithMood[i - 1].mood - 1; // Падение на 2+
+      });
+      
+      if (moodDropMeal) {
+        const prevMealIdx = mealsWithMood.indexOf(moodDropMeal) - 1;
+        const prevMeal = mealsWithMood[prevMealIdx];
+        
+        // Много сахара в предыдущем приёме?
+        let prevSimple = 0;
+        for (const item of prevMeal.items || []) {
+          const product = pIndex?.byId?.get(item.product_id);
+          if (product) prevSimple += (product.simple100 || 0) * (item.grams || 100) / 100;
+        }
+        
+        if (prevSimple > 30) {
+          advices.push({
+            id: 'sugar_mood_crash',
+            icon: '🎢',
+            text: 'Заметил? После сладкого настроение может падать',
+            type: 'insight',
+            priority: 24,
+            category: 'emotional',
+            triggers: ['tab_open'],
+            ttl: 6000
+          });
+        }
+      }
+    }
+    
+    // Задача 20: Wellbeing и питание
+    const avgWellbeing = calculateAverageWellbeing(day);
+    
+    // Плохое самочувствие + мало еды — поесть!
+    if (avgWellbeing > 0 && avgWellbeing < 3 && kcalPct < 0.4 && hour >= 12) {
+      advices.push({
+        id: 'wellbeing_low_food',
+        icon: '🍽️',
+        text: 'Возможно самочувствие улучшится после еды',
+        type: 'tip',
+        priority: 29,
+        category: 'emotional',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // Отличное самочувствие — закрепить
+    if (avgWellbeing >= 4 && kcalPct >= 0.8 && kcalPct <= 1.1) {
+      advices.push({
+        id: 'wellbeing_nutrition_link',
+        icon: '✨',
+        text: 'Хорошее самочувствие + правильное питание — запомни этот день!',
+        type: 'insight',
+        priority: 45,
+        category: 'emotional',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // Задача 34: dayScore — оценка дня
+    const dayScore = day?.dayScore ? +day.dayScore : 0;
+    
+    // Плохой день — поддержка
+    if (dayScore > 0 && dayScore < 5 && hour >= 20) {
+      advices.push({
+        id: 'day_score_low',
+        icon: '💙',
+        text: 'Не лучший день? Завтра будет лучше!',
+        type: 'tip',
+        priority: 27,
+        category: 'emotional',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // Отличный день — похвала
+    if (dayScore >= 8 && hour >= 20) {
+      advices.push({
+        id: 'day_score_high',
+        icon: '⭐',
+        text: 'Отличная оценка дня! Запомни это ощущение',
+        type: 'achievement',
+        priority: 8,
+        category: 'achievement',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // Задача 47: Настроение улучшилось после еды
+    const allMeals = day?.meals || [];
+    const mealsWithMoodData = allMeals.filter(m => m.mood > 0 && m.items?.length > 0);
+    
+    if (mealsWithMoodData.length >= 2 && !sessionStorage.getItem('heys_mood_improving')) {
+      const prevMealMood = mealsWithMoodData[mealsWithMoodData.length - 2]?.mood || 0;
+      const currentMealMood = mealsWithMoodData[mealsWithMoodData.length - 1]?.mood || 0;
+      
+      if (prevMealMood > 0 && currentMealMood > prevMealMood) {
+        advices.push({
+          id: 'mood_improving',
+          icon: '📈',
+          text: 'Настроение улучшилось после еды — интересный паттерн!',
+          type: 'insight',
+          priority: 45,
+          category: 'correlation',
+          triggers: ['product_added'],
+          ttl: 5000,
+          onShow: () => { try { sessionStorage.setItem('heys_mood_improving', '1'); } catch(e) {} }
+        });
+      }
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // 📊 BEHAVIORAL PATTERNS (priority: 7-39)
+    // ─────────────────────────────────────────────────────────
+    
+    // Задача 48: Тренировки 3 дня подряд
+    const recentForTraining = getRecentDays(2); // Вчера и позавчера
+    const todayHasTraining = (day?.trainings || []).some(t => t.z?.some(m => m > 0));
+    
+    if (todayHasTraining && recentForTraining.length >= 2 && !sessionStorage.getItem('heys_workout_consistent')) {
+      const allThreeHaveTraining = recentForTraining.every(d => 
+        (d.trainings || []).some(t => t.z?.some(m => m > 0))
+      );
+      
+      if (allThreeHaveTraining) {
+        advices.push({
+          id: 'workout_consistent',
+          icon: '🔥',
+          text: '3 дня тренировок подряд! Ты машина 💪',
+          type: 'achievement',
+          priority: 7,
+          category: 'achievement',
+          triggers: ['tab_open'],
+          ttl: 5000,
+          onShow: () => { try { sessionStorage.setItem('heys_workout_consistent', '1'); } catch(e) {} }
+        });
+      }
+    }
+    
+    // Задача 49: Паттерн поздних ужинов (3 дня подряд)
+    const lastEvensCheck = localStorage.getItem('heys_evening_snacker_check');
+    const weekAgoPattern = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    
+    if (!lastEvensCheck || +lastEvensCheck < weekAgoPattern) {
+      const recentForPattern = getRecentDays(3);
+      
+      if (recentForPattern.length >= 3) {
+        const allLateEaters = recentForPattern.every(d => {
+          const dayMeals = (d.meals || []).filter(m => m.items?.length > 0);
+          if (dayMeals.length === 0) return false;
+          const times = dayMeals.map(m => m.time || '12:00').sort();
+          const lastTime = times[times.length - 1];
+          const [h] = lastTime.split(':').map(Number);
+          return h >= 22;
+        });
+        
+        if (allLateEaters) {
+          advices.push({
+            id: 'evening_snacker',
+            icon: '🌙',
+            text: 'Заметил тренд — ты часто ужинаешь поздно. Может, перекус раньше?',
+            type: 'insight',
+            priority: 38,
+            category: 'correlation',
+            triggers: ['tab_open'],
+            ttl: 6000,
+            onShow: () => { 
+              try { localStorage.setItem('heys_evening_snacker_check', Date.now().toString()); } catch(e) {} 
+            }
+          });
+        }
+      }
+    }
+    
+    // Задача 50: Паттерн без завтрака (3 дня подряд)
+    const lastSkipCheck = localStorage.getItem('heys_morning_skipper_check');
+    
+    if (!lastSkipCheck || +lastSkipCheck < weekAgoPattern) {
+      const recentForSkip = getRecentDays(3);
+      
+      if (recentForSkip.length >= 3) {
+        const allSkipBreakfast = recentForSkip.every(d => {
+          const dayMeals = (d.meals || []).filter(m => m.items?.length > 0);
+          if (dayMeals.length === 0) return true; // Нет приёмов = пропустил
+          const times = dayMeals.map(m => m.time || '12:00').sort();
+          const firstTime = times[0];
+          const [h] = firstTime.split(':').map(Number);
+          return h >= 11; // Первый приём после 11:00
+        });
+        
+        if (allSkipBreakfast) {
+          advices.push({
+            id: 'morning_skipper',
+            icon: '🤔',
+            text: 'Уже 3 дня без раннего завтрака — экспериментируешь с интервальным голоданием?',
+            type: 'insight',
+            priority: 39,
+            category: 'correlation',
+            triggers: ['tab_open'],
+            ttl: 6000,
+            onShow: () => { 
+              try { localStorage.setItem('heys_morning_skipper_check', Date.now().toString()); } catch(e) {} 
+            }
+          });
+        }
+      }
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // 🌟 PERSONALIZATION TIPS (priority: 54-56)
+    // ─────────────────────────────────────────────────────────
+    
+    // Задача 26: Рекомендации по полу
+    const isFemale = prof?.gender === 'Женский';
+    
+    if (isFemale && mealCount >= 2) {
+      // Проверяем наличие продуктов богатых железом
+      const ironRichKeywords = ['мясо', 'печень', 'говядина', 'гречка', 'шпинат', 'чечевица'];
+      const allItemsP = (day?.meals || []).flatMap(m => m.items || []);
+      const hasIronRichFood = allItemsP.some(item => {
+        const product = pIndex?.byId?.get(item.product_id);
+        const name = (product?.name || item.name || '').toLowerCase();
+        return ironRichKeywords.some(kw => name.includes(kw));
+      });
+      
+      if (!hasIronRichFood && !sessionStorage.getItem('heys_iron_tip_today')) {
+        advices.push({
+          id: 'iron_reminder',
+          icon: '🩸',
+          text: 'Не забывай о железе — мясо, печень, гречка',
+          type: 'tip',
+          priority: 55,
+          category: 'personalized',
+          triggers: ['tab_open'],
+          ttl: 5000,
+          onShow: () => { try { sessionStorage.setItem('heys_iron_tip_today', '1'); } catch(e) {} }
+        });
+      }
+    }
+    
+    // Задача 27: Рекомендации по возрасту
+    const age = prof?.age || 30;
+    const proteinPctAge = (dayTot?.prot || 0) / ((normAbs?.prot || 100) || 1);
+    
+    if (age >= 40 && proteinPctAge < 0.9) {
+      advices.push({
+        id: 'age_protein',
+        icon: '💪',
+        text: 'После 40 важно больше белка — сохраняем мышцы',
+        type: 'tip',
+        priority: 54,
+        category: 'personalized',
+        triggers: ['product_added', 'tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // young_sleep обрабатывается в начале функции (в silent mode)
+    
+    // ─────────────────────────────────────────────────────────
+    // 🏠 ACTIVITY TIPS (priority: 48-50)
+    // ─────────────────────────────────────────────────────────
+    
+    // Задача 21: Домашняя активность
+    const household = day?.householdMin || 0;
+    
+    if (household >= 60) {
+      const extraKcal = Math.round(household * 3); // ~3 ккал/мин
+      advices.push({
+        id: 'household_bonus',
+        icon: '🏠',
+        text: `${household} мин активности ≈ +${extraKcal} ккал сожжено`,
+        type: 'info',
+        priority: 50,
+        category: 'activity',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // Нет активности весь день
+    const stepsDay = day?.steps || 0;
+    if (household === 0 && stepsDay < 3000 && !hasTraining && hour >= 18) {
+      advices.push({
+        id: 'sedentary_day',
+        icon: '🚶',
+        text: 'Малоподвижный день — прогуляйся 15 минут',
+        type: 'tip',
+        priority: 48,
+        category: 'activity',
         triggers: ['tab_open'],
         ttl: 5000
       });
@@ -635,6 +1819,74 @@
     return hours + mins / 60;
   }
   
+  /**
+   * Загружает N дней истории из localStorage
+   * @param {number} n - Количество дней назад
+   * @returns {Array<{date: string, [key: string]: any}>} Массив дней с данными
+   */
+  function getRecentDays(n) {
+    const lsGet = (window.HEYS?.dayUtils?.lsGet) || ((k, d) => {
+      try { 
+        const v = localStorage.getItem(k);
+        return v ? JSON.parse(v) : d; 
+      } catch { return d; }
+    });
+    
+    const days = [];
+    const today = new Date();
+    
+    for (let i = 1; i <= n; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const iso = d.toISOString().slice(0, 10);
+      const dayData = lsGet('heys_dayv2_' + iso, null);
+      
+      if (dayData && dayData.date) {
+        days.push({ date: iso, ...dayData });
+      }
+    }
+    
+    return days;
+  }
+  
+  /**
+   * Проверяет, есть ли кофе-содержащие продукты после указанного часа
+   * @param {Array} meals - Массив приёмов пищи (day.meals)
+   * @param {number} afterHour - После какого часа искать (например 16)
+   * @param {Object} pIndex - Индекс продуктов { byId: Map, byName: Map }
+   * @returns {boolean} true если найден кофе после указанного часа
+   */
+  function hasCoffeeAfterHour(meals, afterHour, pIndex) {
+    if (!meals || !Array.isArray(meals)) return false;
+    
+    const coffeeKeywords = ['кофе', 'coffee', 'капучино', 'латте', 'лате', 'раф', 'американо', 'эспрессо', 'флэт', 'мокко', 'макиато'];
+    
+    for (const meal of meals) {
+      // Парсим время приёма
+      if (!meal.time) continue;
+      const [h] = meal.time.split(':').map(Number);
+      if (h < afterHour) continue;
+      
+      // Проверяем продукты в приёме
+      for (const item of (meal.items || [])) {
+        // Получаем название продукта
+        let name = item.name || '';
+        if (!name && pIndex?.byId && item.product_id) {
+          const product = pIndex.byId.get(item.product_id);
+          if (product) name = product.name || '';
+        }
+        
+        // Ищем кофе-ключевые слова
+        const nameLower = name.toLowerCase();
+        if (coffeeKeywords.some(kw => nameLower.includes(kw))) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+  
   // ═══════════════════════════════════════════════════════════
   // REACT HOOK
   // ═══════════════════════════════════════════════════════════
@@ -650,11 +1902,13 @@
    * @param {number} params.currentStreak - Текущий streak (передаётся из DayTab, НЕ вычисляется заново!)
    * @param {string} params.trigger - Что вызвало показ ('tab_open'|'product_added')
    * @param {Object} params.uiState - Состояние UI для проверки занятости
+   * @param {Object} params.prof - Профиль пользователя (sex, age, weight, sleepHours, insulinWaveHours и др.)
+   * @param {number} params.waterGoal - Динамическая норма воды (из waterGoalBreakdown)
    * @returns {Object} Объект с советами и методами
    */
   function useAdviceEngine(params) {
     // ⚠️ ВАЖНО: currentStreak передаётся как параметр, НЕ вычисляется!
-    const { dayTot, normAbs, optimum, day, pIndex, currentStreak, trigger, uiState } = params;
+    const { dayTot, normAbs, optimum, day, pIndex, currentStreak, trigger, uiState, prof, waterGoal } = params;
     const React = window.React;
     
     // Вычисляем контекст
@@ -675,7 +1929,7 @@
         currentStreak: currentStreak || 0,
         mealCount,
         kcalPct,
-        lastVisitDaysAgo: 0, // TODO: вычислить из localStorage
+        // lastVisitDaysAgo теперь вычисляется внутри getEmotionalState
         totalDaysTracked: 30 // Приблизительно
       });
       
@@ -684,7 +1938,7 @@
         normAbs: normAbs || {},
         optimum: optimum || 2000,
         day: day || {},
-        pIndex: pIndex || new Map(),
+        pIndex: pIndex || { byId: new Map(), byName: new Map() },
         currentStreak: currentStreak || 0,
         hour,
         mealCount,
@@ -692,9 +1946,11 @@
         kcalPct,
         tone,
         specialDay,
-        emotionalState
+        emotionalState,
+        prof: prof || {},           // Профиль пользователя
+        waterGoal: waterGoal || 2000 // Норма воды
       };
-    }, [dayTot, normAbs, optimum, day, pIndex, currentStreak]);
+    }, [dayTot, normAbs, optimum, day, pIndex, currentStreak, prof, waterGoal]);
     
     // Генерируем все советы
     const allAdvices = React.useMemo(() => {
@@ -707,9 +1963,15 @@
     }, [allAdvices, ctx.emotionalState]);
     
     // Фильтруем по триггеру (для показа в развёрнутом виде — без canShowAdvice)
+    // Спецтриггер 'manual' — показывает ВСЕ советы без фильтрации по триггеру
     const allForTrigger = React.useMemo(() => {
       if (!trigger) return [];
       if (isUserBusy(uiState)) return [];
+      
+      // Manual trigger — показываем все советы
+      if (trigger === 'manual') {
+        return filteredAdvices.sort((a, b) => a.priority - b.priority);
+      }
       
       return filteredAdvices
         .filter(a => a.triggers.includes(trigger))
@@ -756,7 +2018,10 @@
     getEmotionalState,
     getSpecialDay,
     filterByEmotionalState,
-    isUserBusy
+    isUserBusy,
+    calculateAverageMood,
+    calculateAverageStress,
+    calculateAverageWellbeing
   };
   
 })();

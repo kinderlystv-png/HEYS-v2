@@ -606,9 +606,9 @@
             const [edgeBounce, setEdgeBounce] = useState(null); // 'left' | 'right' | null
             
             const onTouchStart = React.useCallback((e) => {
-              // Игнорируем свайпы на интерактивных элементах
+              // Игнорируем свайпы на интерактивных элементах и модалках
               const target = e.target;
-              if (target.closest('input, textarea, select, button, .swipeable-container, table, .tab-switch-group')) {
+              if (target.closest('input, textarea, select, button, .swipeable-container, table, .tab-switch-group, .advice-list-overlay')) {
                 return;
               }
               const touch = e.touches[0];
