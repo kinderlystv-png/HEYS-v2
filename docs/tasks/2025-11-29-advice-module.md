@@ -32,7 +32,82 @@ const proteinPct = (dayTot.prot || 0) / (normAbs.prot || 1);
 
 ---
 
+## 🔍 РЕЗУЛЬТАТЫ АУДИТА (2025-11-29)
+
+### 🔴 Критические исправления (уже внесены в промпт)
+
+| Проблема | Было | Стало |
+|----------|------|-------|
+| Неверное имя ref | `toastTimerRef` | `toastTimeoutRef` (строка 707) |
+| Неверное имя переменной даты | `curDate` | `date` (строка 131) |
+| Нет проверки типа haptic | `haptic && haptic()` | `typeof haptic === 'function' && haptic()` |
+| Нет `handleProductAdded` | Был как функция | Использовать CustomEvent |
+
+### 🟡 Важные ограничения
+
+1. **`activeDays` содержит данные только за текущий месяц** — streak может быть неточным на границе месяцев. Для точного streak нужно читать localStorage напрямую с ключом `heys_dayv2_` + dateStr
+
+2. **Продукты добавляются через MealAddProduct компонент** — нужно добавить dispatch CustomEvent `heysProductAdded` при успешном добавлении
+
+3. **Существующие pickers (все найдены и проверены)**:
+   - `showTimePicker` ✅ (строка 681)
+   - `showGramsPicker` ✅ (строка 761)
+   - `showWeightPicker` ✅ (строка 786)
+   - `showDeficitPicker` ✅ (строка 887)
+   - `showZonePicker` ✅ (строка 769)
+   - `showSleepQualityPicker` ✅ (строка 776)
+   - `showDayScorePicker` ✅ (строка 781)
+   - `showHouseholdPicker` ✅ (строка 1064)
+   - `showTrainingPicker` ✅ (строка 687)
+
+### 🟢 Проверено и ОК
+
+- ✅ `dayTot.prot` — правильный ключ (M.mealTotals возвращает `prot`)
+- ✅ `normAbs.prot` — правильный ключ
+- ✅ `activeDays` Map доступен (строка 1612)
+- ✅ `pIndex` доступен
+- ✅ `optimum` доступен
+- ✅ Toast рендерится (строка 3744)
+- ✅ `toastTimeoutRef` существует (строка 707)
+- ✅ `showConfetti` существует (строка 753) — можно использовать для achievements
+
+---
+
 📊 **[DATA_MODEL_REFERENCE.md](../DATA_MODEL_REFERENCE.md)** — справочник всех аналитических параметров (dayTot, normAbs, Product, Meal, Training и др.)
+
+---
+
+## 🔍 РЕЗУЛЬТАТЫ АУДИТА (2025-11-29)
+
+### 🔴 Критические исправления (уже внесены в промпт)
+
+1. **`toastTimerRef` → `toastTimeoutRef`** — в реальном коде ref называется `toastTimeoutRef` (строка 707)
+2. **`curDate` → `date`** — в DayTab переменная называется `date` (строка 144)
+3. **Confetti** — `showConfetti` существует (строка 753), можно использовать для achievements
+5. **Добавлен fallback** для исправления бага prot/protein если первый промпт не выполнен
+
+### 🟡 Важные замечания (учесть при реализации)
+
+1. **`activeDays` содержит только текущий месяц!** — streak может сломаться на границе месяца. В модуле используется inline `formatDate` + прямой обход с лимитом 30 дней — это ОК для практических целей.
+
+2. **`returning` эмоциональное состояние** — `lastVisitDaysAgo` передаётся как `0` и не вычисляется. TODO: добавить в будущем через `localStorage` ключ `heys_last_visit`.
+
+3. **CSS типы `emotional` и `motivation`** — категории есть, но CSS для них не указан. Советы этих категорий используют `type: 'achievement'` или `type: 'tip'`, так что CSS им не нужен отдельный.
+
+4. **`success` vs `achievement`** — в существующем CSS есть `.macro-toast-success` (строка 4925). В модуле `type: 'success'` используется для "Все макросы в балансе", `type: 'achievement'` для streak. Оба работают.
+
+5. **Guard для пустого дня** — добавить в `evaluateRules`:
+   ```javascript
+   if (dayTot.kcal < 10 && mealCount === 0) return []; // Пустой день — не показывать
+   ```
+
+### ✅ Проверено и ОК
+
+- ✅ `haptic` доступен в скоупе DayTab (строка 15)
+- ✅ `prot` вместо `protein` в модуле советов — ПРАВИЛЬНО
+- ✅ `toastVisible`, `toastDismissed`, `toastTimeoutRef` существуют (строки 705-707)
+- ✅ CSS анимации адекватные
+- ✅ `activeDays` Map доступен в DayTab (строка 1612)
 
 ---
 
@@ -254,6 +329,19 @@ const ALWAYS_SHOW = ['streak_7', 'perfect_day', 'first_day'];
 | `apps/web/heys_day_v12.js` | Интеграция модуля, замена macroTip |
 | `apps/web/styles/main.css` | Стили для Advice Panel |
 
+### 📍 Актуальные номера строк (на 2025-11-29)
+
+| Что | Строка | Описание |
+|-----|--------|----------|
+| `date` переменная | 144 | `const date = selectedDate \|\| todayISO();` |
+| `toastTimeoutRef` | 707 | `const toastTimeoutRef = React.useRef(null);` |
+| `toastVisible` | 705 | `const [toastVisible, setToastVisible] = useState(false);` |
+| `macroTip` useMemo | 2653 | Старый код советов — УДАЛИТЬ |
+| `activeDays` | 1612 | Map с ratio для дней месяца |
+| `.macro-toast` CSS | 4850 | Существующие стили toast |
+
+⚠️ **После правок номера строк могут сместиться!** Используй поиск по тексту.
+
 ---
 
 ## 📝 Структура Advice
@@ -467,6 +555,9 @@ const ALWAYS_SHOW = ['streak_7', 'perfect_day', 'first_day'];
     
     // Ночью — не беспокоим!
     if (tone === 'silent') return [];
+    
+    // Пустой день — не показывать советы (нет смысла)
+    if ((dayTot.kcal || 0) < 10 && mealCount === 0) return [];
 
     // Вычисляем проценты
     const kcalPct = (dayTot.kcal || 0) / (optimum || 1);
@@ -547,6 +638,8 @@ const ALWAYS_SHOW = ['streak_7', 'perfect_day', 'first_day'];
     // ─────────────────────────────────────────────────────────
 
     if (emotionalState === 'returning') {
+      // ⚠️ TODO: lastVisitDaysAgo не вычисляется, этот совет пока не сработает
+      // Для активации: добавить localStorage ключ heys_last_visit и вычислять разницу
       advices.push({
         id: 'welcome_back',
         icon: '👋',
@@ -976,6 +1069,9 @@ const ALWAYS_SHOW = ['streak_7', 'perfect_day', 'first_day'];
       const hasTraining = trainings.some(t => t.z && t.z.some(m => m > 0));
       
       // Streak — inline formatDate для независимости от window.fmtDate
+      // ⚠️ ОГРАНИЧЕНИЕ: activeDays содержит данные только за текущий месяц!
+      // Если streak пересекает границу месяца — результат может быть неточным.
+      // Для точного streak нужно читать localStorage напрямую с ключом `heys_dayv2_` + dateStr
       const formatDate = (d) => {
         const yyyy = d.getFullYear();
         const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -1145,13 +1241,12 @@ const [adviceExpanded, setAdviceExpanded] = React.useState(false);
 
 // UI State для проверки занятости
 // ⚠️ ВАЖНО: Использовать РЕАЛЬНЫЕ имена переменных из DayTab!
-// ⚠️ showTrainingPicker — НЕ существует! Есть: showTimePicker, showGramsPicker, showWeightPicker, showDeficitPicker, showZonePicker, showSleepQualityPicker, showDayScorePicker, showHouseholdPicker
 const uiState = React.useMemo(() => ({
-  modalOpen: showTimePicker || showGramsPicker || showWeightPicker || showDeficitPicker || showZonePicker || showSleepQualityPicker || showDayScorePicker || showHouseholdPicker,
+  modalOpen: showTimePicker || showGramsPicker || showWeightPicker || showDeficitPicker || showZonePicker || showSleepQualityPicker || showDayScorePicker || showHouseholdPicker || showTrainingPicker,
   searchOpen: false, // Нет глобального searchOpen в DayTab — поиск внутри MealAddProduct
   isEditing: false, // Граммы редактируются inline без отдельного состояния
   isScrolling: false // Опционально: добавить scroll listener
-}), [showTimePicker, showGramsPicker, showWeightPicker, showDeficitPicker, showZonePicker, showSleepQualityPicker, showDayScorePicker, showHouseholdPicker]);
+}), [showTimePicker, showGramsPicker, showWeightPicker, showDeficitPicker, showZonePicker, showSleepQualityPicker, showDayScorePicker, showHouseholdPicker, showTrainingPicker]);
 
 // Триггер при первом открытии вкладки (один раз за сессию)
 // ⚠️ ВАЖНО: Переменная называется `date`, НЕ `curDate`!
@@ -1164,17 +1259,15 @@ React.useEffect(() => {
   }
 }, [date]);
 
-// Триггер после добавления продукта (с задержкой)
-const handleProductAdded = React.useCallback(() => {
-  // ... существующая логика добавления ...
-  // Задержка 500ms чтобы пользователь увидел результат
-  setTimeout(() => setAdviceTrigger('product_added'), 500);
-}, []);
-
-// Триггер при открытии приёма пищи
-const handleMealOpen = React.useCallback((mealIndex) => {
-  // ... существующая логика ...
-  setTimeout(() => setAdviceTrigger('meal_opened'), 300);
+// Триггер после добавления продукта — через CustomEvent
+// ⚠️ В MealAddProduct добавить: window.dispatchEvent(new CustomEvent('heysProductAdded'));
+React.useEffect(() => {
+  const handleProductAdded = () => {
+    // Задержка 500ms чтобы пользователь увидел результат
+    setTimeout(() => setAdviceTrigger('product_added'), 500);
+  };
+  window.addEventListener('heysProductAdded', handleProductAdded);
+  return () => window.removeEventListener('heysProductAdded', handleProductAdded);
 }, []);
 
 // Получаем советы через модуль с триггером И uiState
@@ -1192,25 +1285,28 @@ React.useEffect(() => {
     setToastVisible(true);
     
     // Haptic feedback для важных советов
-    if (primary.type === 'achievement' || primary.type === 'warning') {
-      haptic && haptic('light');
+    // ⚠️ ВАЖНО: проверяем typeof, не просто truthy!
+    if ((primary.type === 'achievement' || primary.type === 'warning') && typeof haptic === 'function') {
+      haptic('light');
     }
     
     // Вызываем onShow
     if (primary.onShow) primary.onShow();
     
-    // Confetti для достижений
-    if (primary.showConfetti && window.HEYS?.showConfetti) {
-      window.HEYS.showConfetti();
-      haptic && haptic('success');
+    // Confetti для достижений (✅ showConfetti существует на строке 753!)
+    if (primary.showConfetti) {
+      setShowConfetti(true);
+      if (typeof haptic === 'function') haptic('success');
+      setTimeout(() => setShowConfetti(false), 2000);
     }
     
     // Отмечаем как показанный
     markShown(primary.id);
     
     // Запускаем таймер скрытия
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => {
+    // ⚠️ ВАЖНО: Используем toastTimeoutRef, НЕ toastTimerRef!
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => {
       setToastVisible(false);
       setAdviceExpanded(false);
       setAdviceTrigger(null);
@@ -1218,11 +1314,12 @@ React.useEffect(() => {
   }
   
   return () => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
   };
 }, [primary?.id, adviceTrigger]);
 
 // Сброс advice state при смене даты
+// ⚠️ ВАЖНО: Переменная называется `date`, НЕ `curDate`!
 React.useEffect(() => {
   setAdviceTrigger(null);
   setAdviceExpanded(false);
@@ -1231,7 +1328,7 @@ React.useEffect(() => {
   if (window.HEYS?.advice?.resetSessionAdvices) {
     window.HEYS.advice.resetSessionAdvices();
   }
-}, [curDate]);
+}, [date]);
 
 // Сброс при открытии модалки
 React.useEffect(() => {
@@ -1422,19 +1519,34 @@ toastVisible && primary && React.createElement('div', {
 
 #### 4.1 Добавить скрипт в index.html
 
-**ПЕРЕД** `heys_day_v12.js`:
+**ПЕРЕД** `heys_day_v12.js` (найти строку с `heys_day_v12.js` и добавить ПЕРЕД ней):
 ```html
 <script defer src="heys_advice_v1.js?v=1" fetchpriority="low"></script>
 ```
 
-#### 4.2 В DayTab:
-1. Добавить состояние `const [adviceExpanded, setAdviceExpanded] = React.useState(false);`
-2. Вызвать `useAdviceEngine` с нужными параметрами
-3. Добавить useEffect для onShow (см. Задача 2)
-4. Заменить рендеринг toast на expandable версию
-5. **Удалить старый macroTip useMemo** — логика теперь в модуле
+#### 4.2 Добавить dispatch event при добавлении продукта
 
-#### 4.3 Закрытие при открытии модалок
+**Где**: Найти место в MealAddProduct где продукт добавляется в meal.items
+
+**Поиск**: `setDay(prev =>` внутри функции добавления продукта
+
+**Добавить ПОСЛЕ успешного setDay**:
+```javascript
+// Dispatch event для advice системы
+window.dispatchEvent(new CustomEvent('heysProductAdded'));
+```
+
+#### 4.3 В DayTab:
+1. Добавить состояние `const [adviceExpanded, setAdviceExpanded] = React.useState(false);` (~строка 708)
+2. Добавить состояние `const [adviceTrigger, setAdviceTrigger] = React.useState(null);`
+3. Добавить listener для `heysProductAdded` event (см. Задача 2)
+4. Вызвать `useAdviceEngine` с нужными параметрами
+5. Добавить useEffect для показа toast (см. Задача 2)
+6. Заменить рендеринг toast на expandable версию
+7. **Удалить старый macroTip useMemo** (~строки 2653-2698) — логика теперь в модуле
+8. **Удалить старый useEffect для macroTip** (~строки 2700-2724)
+
+#### 4.4 Закрытие при открытии модалок
 
 ```javascript
 // В обработчиках открытия модалок добавить:
@@ -1445,12 +1557,17 @@ setAdviceExpanded(false);
 
 ## ✅ Definition of Done
 
+### Pre-flight (ПЕРЕД началом)
+- [ ] Проверить что баг `prot/protein` исправлен (строка 2654 в heys_day_v12.js)
+- [ ] Если не исправлен — исправить вручную (см. секцию "КРИТИЧЕСКОЕ ПРЕДУСЛОВИЕ")
+
 ### Core Engine
-- [ ] Создан `heys_advice_v1.js` с движком советов
+- [ ] Создан `apps/web/heys_advice_v1.js` с движком советов
 - [ ] Все правила имеют `triggers[]` и `ttl`
 - [ ] Добавлен трекер показанных советов (sessionStorage)
 - [ ] Cooldown 30 сек между показами
 - [ ] MAX_ADVICES_PER_SESSION = 10
+- [ ] Guard для пустого дня (kcal < 10 && mealCount === 0)
 
 ### 🧠 Smart Timing (Deep Psychology)
 - [ ] `getToneForHour()` — адаптация тона по времени
@@ -1460,7 +1577,14 @@ setAdviceExpanded(false);
 - [ ] `filterByEmotionalState()` — убирать warnings при стрессе/срыве
 - [ ] Ночью (23:00-6:00) — НИКАКИХ советов (tone === 'silent')
 
-### UI Integration
+### UI Integration (в heys_day_v12.js)
+- [ ] Скрипт добавлен в `index.html` ПЕРЕД `heys_day_v12.js`
+- [ ] Добавлен `heysProductAdded` CustomEvent dispatch в MealAddProduct
+- [ ] Добавлен event listener для `heysProductAdded` в DayTab
+- [ ] Добавлены состояния: `adviceTrigger`, `adviceExpanded`
+- [ ] Используется `date` (НЕ curDate!)
+- [ ] Используется `toastTimeoutRef` (НЕ toastTimerRef!)
+- [ ] `uiState` собирает ВСЕ picker'ы (включая showTrainingPicker)
 - [ ] Передача `uiState` в useAdviceEngine
 - [ ] Задержка показа после действия (500ms product_added, 1500ms tab_open)
 - [ ] Сброс при открытии модалки/поиска
@@ -1468,7 +1592,6 @@ setAdviceExpanded(false);
 - [ ] CSS анимации появления/исчезновения
 
 ### Советы по состояниям
-- [ ] `welcome_back` — при возвращении после 2+ дней
 - [ ] `crash_support` — поддержка при срыве (>150% ккал)
 - [ ] `stress_support` — поддержка при низком mood
 - [ ] `monday_motivation` — понедельник утро
@@ -1476,7 +1599,8 @@ setAdviceExpanded(false);
 - [ ] `sunday_planning` — воскресенье вечер
 
 ### Cleanup
-- [ ] macroTip useMemo УДАЛЁН
+- [ ] macroTip useMemo УДАЛЁН (вся логика в модуле)
+- [ ] Старые useEffect для toast УДАЛЕНЫ (строки 2700-2730)
 - [ ] `pnpm type-check && pnpm build` проходит
 
 ---
@@ -1486,12 +1610,13 @@ setAdviceExpanded(false);
 - ❌ Отдельную fixed панель (конфликт z-index с модалками)
 - ❌ Side effects в useMemo (React Strict Mode)
 - ❌ Зависимость от window.fmtDate (использовать inline formatDate)
-- ❌ Dark theme CSS (light достаточно, toast уже имеет свои цвета)
 - ❌ Переусложнять — это не AI engine
 - ❌ Добавлять персистентность советов в localStorage
 - ❌ Делать советы кликабельными с действиями (пока)
 - ❌ Добавлять звуки/вибрацию
 - ❌ Создавать отдельную вкладку советов
+- ❌ Использовать `curDate` — правильно `date`
+- ❌ Использовать `toastTimerRef` — правильно `toastTimeoutRef`
 
 ---
 
