@@ -4299,12 +4299,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     };
     
     React.useEffect(() => {
-      const container = document.querySelector('.day-view-container');
-      if (!container) return;
-      
+      // Используем window, так как scroll на уровне страницы, не на контейнере
       const onTouchStart = (e) => {
-        // Начинаем pull только если скролл вверху
-        if (container.scrollTop <= 0) {
+        // Начинаем pull только если скролл вверху страницы
+        if (window.scrollY <= 0) {
           pullStartY.current = e.touches[0].clientY;
           isPulling.current = true;
           setRefreshStatus('pulling');
@@ -4317,7 +4315,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const y = e.touches[0].clientY;
         const diff = y - pullStartY.current;
         
-        if (diff > 0 && container.scrollTop <= 0) {
+        if (diff > 0 && window.scrollY <= 0) {
           // Resistance effect с elastic curve
           const resistance = 0.45;
           const progress = Math.min(diff * resistance, PULL_THRESHOLD * 1.2);
@@ -4350,14 +4348,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         isPulling.current = false;
       };
       
-      container.addEventListener('touchstart', onTouchStart, { passive: true });
-      container.addEventListener('touchmove', onTouchMove, { passive: false });
-      container.addEventListener('touchend', onTouchEnd, { passive: true });
+      document.addEventListener('touchstart', onTouchStart, { passive: true });
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      document.addEventListener('touchend', onTouchEnd, { passive: true });
       
       return () => {
-        container.removeEventListener('touchstart', onTouchStart);
-        container.removeEventListener('touchmove', onTouchMove);
-        container.removeEventListener('touchend', onTouchEnd);
+        document.removeEventListener('touchstart', onTouchStart);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onTouchEnd);
       };
     }, [pullProgress, isRefreshing, refreshStatus]);
     

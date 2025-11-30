@@ -1,7 +1,7 @@
 # Task: XP, Уровни и Достижения — Полная система геймификации
 
 > **Gamification 2.0**: XP, уровни, достижения, бейджи, статус-бар в шапке  
-> **Audit Version**: 6.0 | **Last Review**: 2025-11-30 (финальный аудит перед реализацией)
+> **Audit Version**: 6.1 | **Last Review**: 2025-11-30 (добавлены C1-C6, W9-W11, Q1-Q5)
 
 ## 🎯 WHY (Бизнес-контекст)
 
@@ -49,6 +49,17 @@
 | **B5** | **`HEYS.Day.getStreak()` не экспортирован** | Нигде | 🔴 Gamification не знает streak | Экспортировать в useEffect |
 | **B6** | **day_completed логика отсутствует** | — | 🔴 +50 XP не начисляется | Проверка при входе утром |
 
+### 🔴 КРИТИЧЕСКИЕ ПРОБЕЛЫ (добавлено в v6.1):
+
+| # | Пробел | Риск | Решение |
+|---|--------|------|--------|
+| **C1** | **Нет dispatch в `addProductAndFocusGrams` (621) и `addProductWithGrams` (652)** | 🔴 High | Добавить `haptic('light')` + dispatch `heysProductAdded` |
+| **C2** | **Нет debounce — быстрые клики = много XP** | 🔴 High | Debounce 500ms per reason в `addXP()` |
+| **C3** | **HEYS.game может быть не загружен** | 🟡 Medium | Guard: `if (HEYS.game) HEYS.game.addXP(...)` |
+| **C4** | **getStreak() stale при первом входе** | 🟡 Medium | Refresh streak при монтировании DayTab |
+| **C5** | **clientId switch mid-session** | 🔴 High | Event `heysClientChanged` → refresh XP bar |
+| **C6** | **Expanded panel 400px на mobile 320px** | 🟡 Medium | `max-height: 60vh; overflow-y: auto` |
+
 ### 🟡 ПОТЕНЦИАЛЬНЫЕ ПРОБЛЕМЫ:
 
 | # | Проблема | Риск | Решение |
@@ -57,7 +68,16 @@
 | **P2** | Achievement popup + advice одновременно | Визуальный хаос | Achievement > advice (блокировка) |
 | **P3** | Confetti дублирование | 3+ места | Централизовать в `HEYS.game.celebrate()` |
 | **P4** | getStreak() зависит от pIndex | Если продукты не загружены | Fallback: день с meals = streak |
-| **P5** | Развёрнутая панель блокирует контент | Mobile UX | Backdrop + tap outside to close |
+| **P5** | Развёрнутая панель блокирует контент | Mobile UX | `max-height: 60vh; overflow-y: auto` + tap outside + swipe down to close |
+
+### 🟠 ПОТЕНЦИАЛЬНЫЕ КОНФЛИКТЫ:
+
+| # | Конфликт | Риск | Решение |
+|---|----------|------|--------|
+| **K1** | Confetti из advice + confetti из game | 🟡 | Централизовать: `HEYS.celebrate()` |
+| **K2** | `setShowConfetti` = React state в DayTab | 🔴 | CustomEvent `heysCelebrate` → DayTab слушает |
+| **K3** | 3 flying stars одновременно | 🟡 | Очередь или debounce 300ms |
+| **K4** | Level up + Achievement одновременно | 🟡 | Очередь уведомлений (level first) |
 
 ### 🔵 WOW-ЭФФЕКТЫ (обязательно реализовать):
 
@@ -71,6 +91,9 @@
 | **W6** | 🔥 bounce при +streak | Streak icon | S | TODO |
 | **W7** | Gradient shift по уровням | Progress bar цвет | S | TODO |
 | **W8** | Haptic patterns | light/success/celebration | S | TODO |
+| **W9** | Floating "+5" над кнопкой | Перед flying star | S | TODO |
+| **W10** | XP multiplier x1.5 для perfect day | ratio 0.95-1.05 | S | TODO |
+| **W11** | Achievement progress hints | "До Неделя успеха: 5/7" | M | TODO |
 
 ### 🎮 СОВРЕМЕННЫЕ ИГРОВЫЕ ПАТТЕРНЫ:
 
@@ -618,10 +641,10 @@ function checkYesterdayCompletion() {
   - **Acceptance**: При level up показывается "🎉 Уровень 8! Ты теперь Практик"
   - **Bonus**: Confetti при уровнях кратных 5
 
-- [ ] **Achievement popup** — Popup под hdr-top
+- [ ] **Achievement popup** — Slide-down под hdr-top (НЕ modal!)
   - **UI**: Аналогично level up, но с иконкой достижения
   - **Animation**: slideDown + confetti при milestone достижениях
-  - **Auto-hide**: 5 сек или tap anywhere
+  - **Auto-hide**: 5 сек или tap anywhere (НЕ блокирует UI)
 
 - [ ] **Game Popup компонент**
   - **Файл**: `apps/web/heys_gamification_v1.js`
@@ -813,7 +836,7 @@ if (HEYS.utils && HEYS.utils.haptic) {
 - **Priority**: high (retention критичен)
 - **Complexity**: M (~2.5-3 часа)
 - **Created**: 2025-11-30
-- **Audit Version**: 6.0 (финальный, все решения приняты)
+- **Audit Version**: 6.1 (финальный + C1-C6 блокеры)
 
 ---
 
@@ -831,24 +854,9 @@ if (HEYS.utils && HEYS.utils.haptic) {
 | **Milestone confetti** | Уже есть в проекте | Переиспользовать `setShowConfetti(true)` |
 | **Flying star** | Бeзье-дуга от source к target | `cubic-bezier(0.25, 0.1, 0.25, 1)` + scale down |
 
-### 🔊 Sound Effects (опционально, но вау)
+### 🔊 Sound Effects (Future — не в этой версии)
 
-```javascript
-// Простые звуки через Web Audio API (без файлов!)
-const audioCtx = new AudioContext();
-function playXPSound() {
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.connect(gain).connect(audioCtx.destination);
-  osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
-  osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.1); // A6
-  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
-  osc.start(); osc.stop(audioCtx.currentTime + 0.2);
-}
-// Использование: playXPSound() при level up
-// Настройка: localStorage 'heys_sounds' = 'on'|'off'
-```
+> Web Audio API beep при level up. Отложено — низкий ROI.
 
 ### 🏆 Визуальные уровни (титулы)
 
@@ -870,6 +878,8 @@ function playXPSound() {
                 ▲
           сегодня в норме — огонь горит!
 ```
+
+**UI решение**: Если `streak === 0` → скрыть 🔥 (не показывать `🔥0`)
 
 **Идея**: В XP bar добавить мини-индикатор streak рядом с уровнем:
 `⭐ Ур.7 | 🔥5 | ████████░░ 450/600`
@@ -893,33 +903,15 @@ function playXPSound() {
 ```
 
 **Механика**: 
-- При первом входе за день — показать popup
+- При первом входе за день — показать popup (при монтировании App, любой таб)
 - Прогрессивный бонус: 10→15→20→25→30→40→50 XP
 - Сброс при пропуске дня (но не streak!)
-- **Storage**: `heys_login_streak` (отдельно от основного streak)
+- При смене клиента — показать popup заново (каждый клиент свой loginStreak)
+- **Storage**: `heys_login_streak` (отдельно от основного streak, через U.lsSet с clientId)
 
-### ⚡ Combo System (WOW!)
+### ⚡ Combo System (Future — не в этой версии)
 
-```javascript
-// 3+ действия за 60 секунд = COMBO!
-let comboCount = 0;
-let comboTimer = null;
-
-function triggerCombo() {
-  comboCount++;
-  clearTimeout(comboTimer);
-  comboTimer = setTimeout(() => { comboCount = 0; }, 60000);
-  
-  if (comboCount >= 3) {
-    const multiplier = Math.min(2, 1 + comboCount * 0.1); // x1.3, x1.4, x1.5... max x2
-    showComboPopup(`COMBO x${multiplier.toFixed(1)}! 🔥`);
-    return multiplier;
-  }
-  return 1;
-}
-```
-
-**UI**: При combo показать `⚡ COMBO x1.5` над XP bar
+> 3+ действия за 60 сек = x1.5 XP. Отложено — усложняет логику.
 
 ### 💡 Психологические триггеры
 
