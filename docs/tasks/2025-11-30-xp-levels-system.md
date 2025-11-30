@@ -1,7 +1,7 @@
 # Task: XP, Уровни и Достижения — Полная система геймификации
 
 > **Gamification 2.0**: XP, уровни, достижения, бейджи, статус-бар в шапке  
-> **Audit Version**: 6.1 | **Last Review**: 2025-11-30 (добавлены C1-C6, W9-W11, Q1-Q5)
+> **Audit Version**: 6.2 | **Last Review**: 2025-11-30 | **Phase 0.5**: ✅ DONE
 
 ## 🎯 WHY (Бизнес-контекст)
 
@@ -979,19 +979,28 @@ if (HEYS.utils && HEYS.utils.haptic) {
 - ✅ Analytics button → в Профиль
 - ✅ Placeholder для XP bar
 
-### Phase 1: Core Module (45 мин)
+### Phase 0.5: Блокеры и CSS (15 мин) ✅ ВЫПОЛНЕНО!
+- ✅ `heysProductAdded` dispatch в 3 функциях (lines 631, 667, 2573)
+- ✅ `heysWaterAdded` dispatch (line 1900)
+- ✅ `HEYS.Day.getStreak()` экспортирован (line 2660)
+- ✅ CSS: `.game-panel-expanded` max-height: 60vh
+- ✅ CSS: `.flying-xp` animation
+- ✅ CSS: z-index hierarchy (FAB=1000, panel=1050, popup=1100, flying=1150, confetti=1200)
+
+### Phase 1: Core Module (60 мин)
 10. Создать `heys_gamification_v1.js`:
-    - `HEYS.game.addXP(amount, reason, sourceEl)` — **с debounce 500ms per reason**
+    - `HEYS.game.addXP(amount, reason, sourceEl)` — **с debounce 100ms**
     - `HEYS.game.getLevel()`, `getProgress()`, `getStats()`
-    - `HEYS.game.flyToBar(sourceEl)` — flying animation **с очередью**
+    - `HEYS.game.flyToBar(sourceEl)` — flying animation
     - `HEYS.game.celebrate()` — centralized confetti (dispatch `heysCelebrate`)
     - `HEYS.game.showNotification(type, data)` — **с очередью**
+    - Listener `heysProductAdded`, `heysWaterAdded` → автоматический addXP
 11. GamificationBar компонент (React, в hdr-top):
-    - Progress bar с glow
+    - Progress bar с glow эффектом
     - Level + streak indicator (**скрыть 🔥 если streak === 0**)
-    - Tap → expanded panel (stats + ALL achievements)
-    - **max-height: 60vh; overflow-y: auto** + tap outside/swipe down to close
-12. Daily login bonus popup (при монтировании App)
+    - Tap → expanded panel (stats + ALL achievements grid)
+    - **max-height: 60vh; overflow-y: auto** + tap outside to close
+12. Level Up notification (popup под hdr-top, confetti при уровнях кратных 5)
 13. Подключить в `index.html`
 14. Тест в консоли: `HEYS.game.addXP(50, 'test')`
 
@@ -1004,18 +1013,18 @@ if (HEYS.utils && HEYS.utils.haptic) {
 20. addXP при заполнении сна/веса (в user tab)
 21. day_completed check (D1: утром проверяем вчера)
 
-### Phase 3: Achievements (45 мин)
-22. Achievements library (25 штук в 5 категориях)
-23. Achievement popup (modal с confetti)
-24. Streak achievements (автопроверка при каждом addXP)
-25. Level achievements (при level up)
-26. Expanded panel с grid всех 25 ачивок (locked/unlocked)
+### Phase 3: Achievements + Daily Login (60 мин)
+22. Daily Login Bonus popup (прогрессивный: 10→50 XP за 7 дней)
+23. Achievements library (25 штук в 5 категориях)
+24. Achievement popup (slide-down под header с confetti)
+25. Streak achievements (автопроверка при каждом addXP)
+26. Level achievements (при level up)
 
-### Phase 4: Polish & Notifications (25 мин)
-27. Level up notification + confetti (levels % 5)
-28. Micro-animations (pulse, glow, flying star bezier)
-29. Haptic feedback (использовать `HEYS.haptic()`)
-30. `prefers-reduced-motion` support
+### Phase 4: Polish & Animations (25 мин)
+27. Micro-animations (pulse, glow, flying star bezier)
+28. Haptic feedback patterns (light/success/celebration)
+29. `prefers-reduced-motion` support
+30. Achievement progress hints ("До Неделя успеха: 5/7")
 
 ### Phase 5: Testing & QA (15 мин)
 31. `pnpm type-check && pnpm lint && pnpm build`
