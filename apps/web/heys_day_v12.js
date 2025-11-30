@@ -1524,6 +1524,67 @@
     const isPulling = React.useRef(false);
     const lastHapticRef = React.useRef(0);
     
+    // === Offline indicator ===
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const [pendingChanges, setPendingChanges] = useState(false);
+    const [syncMessage, setSyncMessage] = useState(''); // '' | 'offline' | 'pending' | 'syncing' | 'synced'
+    
+    // Слушаем online/offline события
+    React.useEffect(() => {
+      const handleOnline = async () => {
+        setIsOnline(true);
+        // Автоматическая синхронизация при восстановлении сети
+        if (pendingChanges) {
+          setSyncMessage('syncing');
+          const cloud = window.HEYS && window.HEYS.cloud;
+          const clientId = localStorage.getItem('heys_client_current');
+          try {
+            if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
+              await cloud.bootstrapClientSync(clientId);
+            }
+            setSyncMessage('synced');
+            setPendingChanges(false);
+            // Скрываем через 2 сек
+            setTimeout(() => setSyncMessage(''), 2000);
+          } catch (e) {
+            setSyncMessage('pending');
+          }
+        }
+      };
+      
+      const handleOffline = () => {
+        setIsOnline(false);
+        setSyncMessage('offline');
+      };
+      
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+      
+      // Начальная проверка
+      if (!navigator.onLine) {
+        setSyncMessage('offline');
+      }
+      
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }, [pendingChanges]);
+    
+    // Отслеживаем изменения данных (для pendingChanges)
+    React.useEffect(() => {
+      const handleDataChange = () => {
+        if (!navigator.onLine) {
+          setPendingChanges(true);
+          setSyncMessage('pending');
+        }
+      };
+      
+      // Слушаем события сохранения
+      window.addEventListener('heys:data-saved', handleDataChange);
+      return () => window.removeEventListener('heys:data-saved', handleDataChange);
+    }, []);
+
     // === Dark Theme (3 modes: light / dark / auto) ===
     const [theme, setTheme] = useState(() => {
       const saved = localStorage.getItem('heys_theme');
@@ -3548,6 +3609,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       };
       window.addEventListener('heysProductAdded', handleProductAdded);
       return () => window.removeEventListener('heysProductAdded', handleProductAdded);
+    }, []);
+    
+    // Listener для heysCelebrate event (централизованный confetti от gamification)
+    React.useEffect(() => {
+      const handleCelebrate = () => {
+        setShowConfetti(true);
+        if (typeof haptic === 'function') haptic('success');
+        setTimeout(() => setShowConfetti(false), 2500);
+      };
+      window.addEventListener('heysCelebrate', handleCelebrate);
+      return () => window.removeEventListener('heysCelebrate', handleCelebrate);
     }, []);
     
     // Trigger на открытие вкладки
@@ -6724,6 +6796,49 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             : refreshStatus === 'syncing' ? 'Синхронизация...' 
             : refreshStatus === 'ready' ? 'Отпустите для обновления' 
             : 'Потяните для обновления'
+        )
+      ),
+      
+      // === Offline/Sync indicator ===
+      syncMessage && React.createElement('div', {
+        className: 'offline-banner ' + syncMessage,
+        style: {
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          padding: '8px 16px',
+          fontSize: '13px',
+          fontWeight: 500,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          transition: 'all 0.3s ease',
+          background: syncMessage === 'synced' ? '#10b981' 
+            : syncMessage === 'syncing' ? '#3b82f6'
+            : syncMessage === 'pending' ? '#f59e0b'
+            : '#ef4444',
+          color: '#fff'
+        }
+      },
+        // Иконка
+        React.createElement('span', { 
+          style: { 
+            fontSize: '16px',
+            animation: syncMessage === 'syncing' ? 'spin 1s linear infinite' : 'none'
+          }
+        }, 
+          syncMessage === 'synced' ? '✓' 
+            : syncMessage === 'syncing' ? '↻'
+            : syncMessage === 'pending' ? '⏳'
+            : '📡'
+        ),
+        // Текст
+        React.createElement('span', null,
+          syncMessage === 'synced' ? 'Синхронизировано!' 
+            : syncMessage === 'syncing' ? 'Синхронизация...'
+            : syncMessage === 'pending' ? 'Изменения сохранены локально'
+            : 'Нет сети — работаем офлайн'
         )
       ),
       

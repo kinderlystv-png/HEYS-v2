@@ -33,6 +33,7 @@ const PRECACHE_URLS = [
   '/heys_swipeable.js',
   '/heys_pull_refresh.js',
   '/heys_ratio_zones_v1.js',
+  '/heys_gamification_v1.js',
   '/heys_data_overview_v1.js',
   '/heys_dev_utils.js'
 ];

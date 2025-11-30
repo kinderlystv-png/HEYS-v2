@@ -764,6 +764,8 @@ td:first-child input {
   margin: 0 auto;
   padding: 12px 18px 80px;
   box-sizing: border-box;
+  /* Отступ сверху для fixed шапки (GamificationBar ~50px + ClientRow ~56px) */
+  padding-top: 118px;
 }
 
 /* === MODERN HEADER === */
@@ -772,19 +774,27 @@ td:first-child input {
   flex-direction: column;
   gap: 0;
   padding: 0;
-  margin-bottom: 8px;
   box-sizing: border-box;
   width: 100%;
+  
+  /* Fixed header — всегда виден при прокрутке */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--bg-primary, #f8f9fa);
+  max-width: 100%;
 }
 
-/* Верхняя линия: лого + статус */
+/* Верхняя линия: Gamification */
 .hdr-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px 16px 0 0;
+  border-radius: 0; /* Fixed шапка без скругления сверху */
   color: white;
 }
 
