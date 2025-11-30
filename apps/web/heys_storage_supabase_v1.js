@@ -47,9 +47,315 @@
   let user = null;
   let muteMirror = false;
   
+  // Оригинальный setItem (до перехвата) — для safeSetItem
+  let originalSetItem = null;
+  
   // 🚨 Флаг блокировки сохранения до завершения первого sync
   let initialSyncCompleted = false;
   cloud.isInitialSyncCompleted = function() { return initialSyncCompleted; };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 📦 ПЕРСИСТЕНТНАЯ ОЧЕРЕДЬ СИНХРОНИЗАЦИИ
+  // ═══════════════════════════════════════════════════════════════════
+  
+  const PENDING_QUEUE_KEY = 'heys_pending_sync_queue';
+  const PENDING_CLIENT_QUEUE_KEY = 'heys_pending_client_sync_queue';
+  
+  // ═══════════════════════════════════════════════════════════════════
+  // 🧹 QUOTA MANAGEMENT — ЗАЩИТА ОТ ПЕРЕПОЛНЕНИЯ STORAGE
+  // ═══════════════════════════════════════════════════════════════════
+  
+  const MAX_STORAGE_MB = 4.5; // Лимит ~5MB, оставляем запас
+  const OLD_DATA_DAYS = 90; // Удаляем данные старше 90 дней
+  
+  /** Получить размер localStorage в MB */
+  function getStorageSize() {
+    try {
+      let total = 0;
+      for (let key in global.localStorage) {
+        if (global.localStorage.hasOwnProperty(key)) {
+          total += (global.localStorage.getItem(key) || '').length * 2; // UTF-16
+        }
+      }
+      return total / 1024 / 1024;
+    } catch (e) {
+      return 0;
+    }
+  }
+  
+  /** Получить дату из ключа dayv2_YYYY-MM-DD */
+  function getDateFromDayKey(key) {
+    const match = key.match(/dayv2_(\d{4}-\d{2}-\d{2})/);
+    if (match) {
+      return new Date(match[1]);
+    }
+    return null;
+  }
+  
+  /** Очистить старые данные для освобождения места */
+  function cleanupOldData(daysToKeep = OLD_DATA_DAYS) {
+    try {
+      const now = new Date();
+      const cutoff = new Date(now.getTime() - daysToKeep * 24 * 60 * 60 * 1000);
+      let cleaned = 0;
+      
+      // Собираем ключи для удаления
+      const keysToRemove = [];
+      for (let i = 0; i < global.localStorage.length; i++) {
+        const key = global.localStorage.key(i);
+        if (key && key.includes('dayv2_')) {
+          const date = getDateFromDayKey(key);
+          if (date && date < cutoff) {
+            keysToRemove.push(key);
+          }
+        }
+      }
+      
+      // Удаляем старые данные
+      keysToRemove.forEach(key => {
+        global.localStorage.removeItem(key);
+        cleaned++;
+      });
+      
+      if (cleaned > 0) {
+        logCritical(`🧹 Очищено ${cleaned} старых записей (>${daysToKeep} дней)`);
+      }
+      
+      return cleaned;
+    } catch (e) {
+      return 0;
+    }
+  }
+  
+  /** Агрессивная очистка при критическом переполнении */
+  function aggressiveCleanup() {
+    logCritical('🚨 Агрессивная очистка storage...');
+    
+    // 1. Удаляем данные старше 30 дней
+    cleanupOldData(30);
+    
+    // 2. Удаляем debug/temp ключи
+    const tempKeys = [];
+    for (let i = 0; i < global.localStorage.length; i++) {
+      const key = global.localStorage.key(i);
+      if (key && (key.includes('_debug') || key.includes('_temp') || key.includes('_cache'))) {
+        tempKeys.push(key);
+      }
+    }
+    tempKeys.forEach(k => global.localStorage.removeItem(k));
+    
+    // 3. Показываем размер после очистки
+    const sizeMB = getStorageSize();
+    logCritical(`📊 Размер после очистки: ${sizeMB.toFixed(2)} MB`);
+  }
+  
+  /** Безопасная запись в localStorage с обработкой QuotaExceeded */
+  function safeSetItem(key, value) {
+    // Используем оригинальный setItem если доступен (избегаем рекурсии через перехват)
+    const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
+    
+    try {
+      setFn(key, value);
+      return true;
+    } catch (e) {
+      if (e.name === 'QuotaExceededError' || e.code === 22) {
+        // Пробуем очистить старые данные
+        logCritical('⚠️ localStorage переполнен, очищаем старые данные...');
+        cleanupOldData();
+        
+        // Пробуем ещё раз
+        try {
+          setFn(key, value);
+          return true;
+        } catch (e2) {
+          // Всё ещё не помещается — удаляем pending queues и sync log
+          global.localStorage.removeItem(PENDING_QUEUE_KEY);
+          global.localStorage.removeItem(PENDING_CLIENT_QUEUE_KEY);
+          global.localStorage.removeItem(SYNC_LOG_KEY);
+          
+          try {
+            setFn(key, value);
+            return true;
+          } catch (e3) {
+            // Агрессивная очистка — удаляем старые дни за 30 дней вместо 90
+            aggressiveCleanup();
+            try {
+              setFn(key, value);
+              return true;
+            } catch (e4) {
+              logCritical('❌ Не удалось сохранить данные: storage критически переполнен');
+              return false;
+            }
+          }
+        }
+      }
+      return false;
+    }
+  }
+  
+  /** Загрузить очередь из localStorage */
+  function loadPendingQueue(key) {
+    try {
+      const data = global.localStorage.getItem(key);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  
+  /** Сохранить очередь в localStorage */
+  function savePendingQueue(key, queue) {
+    try {
+      if (queue.length > 0) {
+        safeSetItem(key, JSON.stringify(queue));
+      } else {
+        global.localStorage.removeItem(key);
+      }
+    } catch (e) {}
+  }
+  
+  /** Получить количество ожидающих изменений */
+  cloud.getPendingCount = function() {
+    return clientUpsertQueue.length + upsertQueue.length;
+  };
+  
+  /** Получить детализацию pending (для UI) */
+  cloud.getPendingDetails = function() {
+    const details = { days: 0, products: 0, profile: 0, other: 0 };
+    
+    const allItems = [...clientUpsertQueue, ...upsertQueue];
+    allItems.forEach(item => {
+      const k = item.k || '';
+      if (k.includes('dayv2_')) details.days++;
+      else if (k.includes('products')) details.products++;
+      else if (k.includes('profile')) details.profile++;
+      else details.other++;
+    });
+    
+    return details;
+  };
+  
+  /** Получить информацию о storage */
+  cloud.getStorageInfo = function() {
+    const sizeMB = getStorageSize();
+    const usedPercent = Math.round((sizeMB / MAX_STORAGE_MB) * 100);
+    return {
+      sizeMB: sizeMB.toFixed(2),
+      maxMB: MAX_STORAGE_MB,
+      usedPercent,
+      isNearLimit: usedPercent > 80
+    };
+  };
+  
+  /** Принудительная очистка старых данных */
+  cloud.cleanupStorage = cleanupOldData;
+  
+  // ═══════════════════════════════════════════════════════════════════
+  // 📜 SYNC HISTORY LOG — ЖУРНАЛ СИНХРОНИЗАЦИЙ
+  // ═══════════════════════════════════════════════════════════════════
+  
+  const SYNC_LOG_KEY = 'heys_sync_log';
+  const MAX_SYNC_LOG_ENTRIES = 50;
+  
+  /** Добавить запись в журнал синхронизации */
+  function addSyncLogEntry(type, details) {
+    try {
+      const log = JSON.parse(global.localStorage.getItem(SYNC_LOG_KEY) || '[]');
+      log.unshift({
+        ts: Date.now(),
+        type, // 'sync_ok' | 'sync_error' | 'offline' | 'online' | 'quota_error'
+        details
+      });
+      // Ограничиваем размер лога
+      if (log.length > MAX_SYNC_LOG_ENTRIES) {
+        log.length = MAX_SYNC_LOG_ENTRIES;
+      }
+      global.localStorage.setItem(SYNC_LOG_KEY, JSON.stringify(log));
+    } catch (e) {}
+  }
+  
+  /** Получить журнал синхронизации */
+  cloud.getSyncLog = function() {
+    try {
+      return JSON.parse(global.localStorage.getItem(SYNC_LOG_KEY) || '[]');
+    } catch (e) {
+      return [];
+    }
+  };
+  
+  /** Очистить журнал синхронизации */
+  cloud.clearSyncLog = function() {
+    global.localStorage.removeItem(SYNC_LOG_KEY);
+  };
+  
+  /** Событие для UI об изменении pending count */
+  function notifyPendingChange() {
+    const count = cloud.getPendingCount();
+    const details = cloud.getPendingDetails();
+    try {
+      global.dispatchEvent(new CustomEvent('heys:pending-change', { 
+        detail: { count, details } 
+      }));
+    } catch (e) {}
+  }
+  
+  /** Событие: синхронизация восстановлена */
+  function notifySyncRestored(syncedCount) {
+    try {
+      addSyncLogEntry('sync_ok', { count: syncedCount });
+      global.dispatchEvent(new CustomEvent('heys:sync-restored', { 
+        detail: { count: syncedCount } 
+      }));
+    } catch (e) {}
+  }
+  
+  /** Событие: ошибка синхронизации */
+  function notifySyncError(error) {
+    try {
+      addSyncLogEntry('sync_error', { error: error?.message || String(error) });
+      global.dispatchEvent(new CustomEvent('heys:sync-error', { 
+        detail: { error } 
+      }));
+    } catch (e) {}
+  }
+  
+  /** Принудительный retry синхронизации */
+  cloud.retrySync = function() {
+    resetRetry();
+    if (clientUpsertQueue.length > 0) {
+      scheduleClientPush();
+    }
+    if (upsertQueue.length > 0) {
+      schedulePush();
+    }
+    return cloud.getPendingCount();
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔄 EXPONENTIAL BACKOFF ДЛЯ RETRY
+  // ═══════════════════════════════════════════════════════════════════
+  
+  let retryAttempt = 0;
+  const MAX_RETRY_ATTEMPTS = 5;
+  const BASE_RETRY_DELAY = 1000; // 1 сек
+  
+  /** Вычислить задержку с exponential backoff */
+  function getRetryDelay() {
+    // 1s, 2s, 4s, 8s, 16s (max)
+    return Math.min(BASE_RETRY_DELAY * Math.pow(2, retryAttempt), 16000);
+  }
+  
+  /** Сбросить счётчик retry при успешной синхронизации */
+  function resetRetry() {
+    retryAttempt = 0;
+  }
+  
+  /** Увеличить счётчик retry */
+  function incrementRetry() {
+    if (retryAttempt < MAX_RETRY_ATTEMPTS) {
+      retryAttempt++;
+    }
+  }
 
   // Умное логирование: только критические операции
   // Включается через localStorage: localStorage.setItem('heys_debug_sync', 'true')
@@ -162,8 +468,6 @@
   // 🔄 ПЕРЕХВАТ LOCALSTORAGE
   // ═══════════════════════════════════════════════════════════════════
   
-  let originalSetItem = null;
-  
   /**
    * Проверка, требует ли ключ client-specific хранилища
    * @param {string} k - Ключ для проверки
@@ -180,14 +484,21 @@
   /**
    * Перехват localStorage.setItem для автоматического зеркалирования в cloud
    * Зеркалирует наши ключи (heys_*, day*) в Supabase
+   * Обрабатывает QuotaExceededError автоматической очисткой
    */
   function interceptSetItem(){
     try{
       if (originalSetItem) return; // Защита от повторного перехвата
       
+      // Сохраняем оригинальный метод в глобальную переменную
       originalSetItem = global.localStorage.setItem.bind(global.localStorage);
       global.localStorage.setItem = function(k, v){
-        originalSetItem(k, v);
+        // Используем безопасную запись с обработкой QuotaExceeded
+        if (!safeSetItem(k, v)) {
+          // Если не удалось сохранить даже после очистки — логируем
+          console.warn('[HEYS] Не удалось сохранить:', k);
+          return;
+        }
         
         if (!muteMirror && isOurKey(k)){
           if (needsClientStorage(k)) {
@@ -496,19 +807,35 @@
   };
 
   // Дебаунсинг для клиентских данных
-  let clientUpsertQueue = [];
+  let clientUpsertQueue = loadPendingQueue(PENDING_CLIENT_QUEUE_KEY);
   let clientUpsertTimer = null;
   
   function scheduleClientPush(){
     if (clientUpsertTimer) return;
+    
+    // Сохраняем очередь в localStorage для персистентности
+    savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+    notifyPendingChange();
+    
+    const delay = navigator.onLine ? 500 : getRetryDelay();
+    
     clientUpsertTimer = setTimeout(async () => {
       const batch = clientUpsertQueue.splice(0, clientUpsertQueue.length);
       clientUpsertTimer = null;
-      if (!client || !user || !batch.length) return;
+      if (!client || !user || !batch.length) {
+        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+        notifyPendingChange();
+        return;
+      }
       // Не пытаемся отправить если нет сети — данные уже в localStorage
       if (!navigator.onLine) {
         // Вернуть в очередь для повторной отправки когда сеть появится
         clientUpsertQueue.push(...batch);
+        incrementRetry();
+        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+        notifyPendingChange();
+        // Запланировать повторную попытку с exponential backoff
+        scheduleClientPush();
         return;
       }
       
@@ -531,6 +858,9 @@
         );
         await Promise.allSettled(promises);
         
+        // Успех — сбрасываем retry счётчик
+        resetRetry();
+        
         // Критический лог: данные отправлены в облако
         if (uniqueBatch.length > 0) {
           const types = {};
@@ -543,10 +873,21 @@
           const summary = Object.entries(types).map(([k,v]) => `${k}:${v}`).join(' ');
           logCritical('☁️ Сохранено в облако:', summary);
         }
+        
+        // Обновляем персистентную очередь
+        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+        notifyPendingChange();
       }catch(e){
+        // При ошибке — вернуть в очередь и увеличить retry
+        clientUpsertQueue.push(...uniqueBatch);
+        incrementRetry();
+        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+        notifyPendingChange();
         logCritical('❌ Ошибка сохранения в облако:', e.message || e);
+        // Запланировать повторную попытку
+        scheduleClientPush();
       }
-    }, 500); // Немного больше задержка для клиентских данных
+    }, delay);
   }
 
   // Функция для проверки статуса синхронизации
@@ -733,18 +1074,34 @@
     };
 
   // очередь upsert'ов
-  let upsertQueue = [];
+  let upsertQueue = loadPendingQueue(PENDING_QUEUE_KEY);
   let upsertTimer = null;
   function schedulePush(){
     if (upsertTimer) return;
+    
+    // Сохраняем очередь в localStorage для персистентности
+    savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
+    notifyPendingChange();
+    
+    const delay = navigator.onLine ? 300 : getRetryDelay();
+    
     upsertTimer = setTimeout(async () => {
       const batch = upsertQueue.splice(0, upsertQueue.length);
       upsertTimer = null;
-      if (!client || !user || !batch.length) return;
+      if (!client || !user || !batch.length) {
+        savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
+        notifyPendingChange();
+        return;
+      }
       // Не пытаемся отправить если нет сети — данные уже в localStorage
       if (!navigator.onLine) {
         // Вернуть в очередь для повторной отправки когда сеть появится
         upsertQueue.push(...batch);
+        incrementRetry();
+        savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
+        notifyPendingChange();
+        // Запланировать повторную попытку с exponential backoff
+        schedulePush();
         return;
       }
       
@@ -762,10 +1119,30 @@
       
       try{
         const { error } = await client.from('kv_store').upsert(uniqueBatch, { onConflict: 'user_id,k' });
-        if (error) { err('bulk upsert', error); return; }
-        // Убрано избыточное логирование upsert ok для каждого элемента
-      }catch(e){ err('bulk upsert exception', e); }
-    }, 300);
+        if (error) { 
+          // При ошибке — вернуть в очередь
+          upsertQueue.push(...uniqueBatch);
+          incrementRetry();
+          savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
+          notifyPendingChange();
+          err('bulk upsert', error); 
+          schedulePush();
+          return; 
+        }
+        // Успех — сбрасываем retry счётчик
+        resetRetry();
+        savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
+        notifyPendingChange();
+      }catch(e){ 
+        // При исключении — вернуть в очередь
+        upsertQueue.push(...uniqueBatch);
+        incrementRetry();
+        savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
+        notifyPendingChange();
+        err('bulk upsert exception', e);
+        schedulePush();
+      }
+    }, delay);
   }
 
   cloud.saveKey = function(k, v){
@@ -808,14 +1185,32 @@
     client: function() { return client; }
   };
 
-  // Когда сеть возвращается — пробуем отправить накопленные данные
+  // Когда сеть возвращается — сбрасываем retry и пробуем отправить накопленные данные
   global.addEventListener('online', function() {
+    addSyncLogEntry('online', { pending: cloud.getPendingCount() });
+    resetRetry(); // Сбрасываем exponential backoff
+    
+    const pendingBefore = cloud.getPendingCount();
+    
     if (clientUpsertQueue.length > 0) {
       scheduleClientPush();
     }
     if (upsertQueue.length > 0) {
       schedulePush();
     }
+    notifyPendingChange();
+    
+    // Уведомляем UI что сеть вернулась и синхронизация начнётся
+    if (pendingBefore > 0) {
+      global.dispatchEvent(new CustomEvent('heys:network-restored', { 
+        detail: { pendingCount: pendingBefore } 
+      }));
+    }
+  });
+  
+  // Когда сеть пропадает — логируем
+  global.addEventListener('offline', function() {
+    addSyncLogEntry('offline', { pending: cloud.getPendingCount() });
   });
 
   // Убрано избыточное логирование utils lsSet wrapped

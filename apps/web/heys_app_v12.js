@@ -44,7 +44,7 @@
           // Логи инициализации отключены для чистой консоли
           const React = window.React,
             ReactDOM = window.ReactDOM;
-          const { useState, useEffect, useRef } = React;
+          const { useState, useEffect, useRef, useCallback } = React;
 
           /* ═══════════════════════════════════════════════════════════════════════════════
            * 🛡️ КОМПОНЕНТ: ErrorBoundary — Защита от ошибок рендеринга
@@ -1037,19 +1037,36 @@
             };
 
             // === Cloud Sync Status ===
-            const [cloudStatus, setCloudStatus] = useState('unknown'); // 'unknown' | 'offline' | 'syncing' | 'synced' | 'error'
+            const [cloudStatus, setCloudStatus] = useState(() => navigator.onLine ? 'idle' : 'offline');
+            const [pendingCount, setPendingCount] = useState(0); // Количество ожидающих изменений
+            const [pendingDetails, setPendingDetails] = useState({ days: 0, products: 0, profile: 0, other: 0 });
+            const [showOfflineBanner, setShowOfflineBanner] = useState(!navigator.onLine);
+            const [syncToast, setSyncToast] = useState(null); // { type: 'restored' | 'error', message: string }
             const cloudSyncTimeoutRef = useRef(null);
             const pendingChangesRef = useRef(false); // Есть ли несинхронизированные изменения
+            const syncingStartRef = useRef(null); // Время начала syncing для минимальной длительности
+            const MIN_SYNCING_DURATION = 800; // Минимум 800ms показывать анимацию
+            
+            // Функция для показа synced с учётом минимального времени syncing
+            const showSyncedWithMinDuration = useCallback(() => {
+              const elapsed = syncingStartRef.current ? Date.now() - syncingStartRef.current : MIN_SYNCING_DURATION;
+              const remaining = Math.max(0, MIN_SYNCING_DURATION - elapsed);
+              
+              setTimeout(() => {
+                syncingStartRef.current = null;
+                setCloudStatus('synced');
+                // Скрываем через 2 сек
+                if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+                cloudSyncTimeoutRef.current = setTimeout(() => setCloudStatus('idle'), 2000);
+              }, remaining);
+            }, []);
             
             useEffect(() => {
               // Слушаем события синхронизации
               const handleSyncComplete = () => {
                 pendingChangesRef.current = false;
                 if (navigator.onLine) {
-                  setCloudStatus('synced');
-                  // Скрываем через 2 сек
-                  if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
-                  cloudSyncTimeoutRef.current = setTimeout(() => setCloudStatus('idle'), 2000);
+                  showSyncedWithMinDuration();
                 }
               };
               
@@ -1062,28 +1079,56 @@
                   return;
                 }
                 
-                // Показываем что идёт синхронизация
+                // Показываем что идёт синхронизация (запоминаем время начала)
+                if (!syncingStartRef.current) {
+                  syncingStartRef.current = Date.now();
+                }
                 setCloudStatus('syncing');
-                // Через 1.5 сек показываем synced (fallback если heysSyncCompleted не сработал)
+                
+                // Через 2 сек показываем synced (fallback если heysSyncCompleted не сработал)
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 cloudSyncTimeoutRef.current = setTimeout(() => {
                   pendingChangesRef.current = false;
-                  setCloudStatus('synced');
-                  setTimeout(() => setCloudStatus('idle'), 2000);
-                }, 1500);
+                  showSyncedWithMinDuration();
+                }, 2000);
+              };
+              
+              // Обработчик изменения pending count
+              const handlePendingChange = (e) => {
+                const count = e.detail?.count || 0;
+                const details = e.detail?.details || { days: 0, products: 0, profile: 0, other: 0 };
+                setPendingCount(count);
+                setPendingDetails(details);
+                if (count > 0 && !navigator.onLine) {
+                  setCloudStatus('offline');
+                }
+              };
+              
+              // Сеть вернулась с pending данными
+              const handleNetworkRestored = (e) => {
+                const count = e.detail?.pendingCount || 0;
+                if (count > 0) {
+                  if (!syncingStartRef.current) {
+                    syncingStartRef.current = Date.now();
+                  }
+                  setCloudStatus('syncing');
+                }
               };
               
               // Отслеживаем онлайн/оффлайн статус
               const handleOnline = () => {
+                setShowOfflineBanner(false);
                 // Сеть появилась — если есть pending изменения, показываем syncing
-                if (pendingChangesRef.current) {
+                if (pendingChangesRef.current || pendingCount > 0) {
+                  if (!syncingStartRef.current) {
+                    syncingStartRef.current = Date.now();
+                  }
                   setCloudStatus('syncing');
                   // Ждём завершения синхронизации
                   if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                   cloudSyncTimeoutRef.current = setTimeout(() => {
                     pendingChangesRef.current = false;
-                    setCloudStatus('synced');
-                    setTimeout(() => setCloudStatus('idle'), 2000);
+                    showSyncedWithMinDuration();
                   }, 2000);
                 } else {
                   setCloudStatus('idle');
@@ -1091,34 +1136,52 @@
               };
               
               const handleOffline = () => {
+                setShowOfflineBanner(true);
                 setCloudStatus('offline');
               };
               
               window.addEventListener('heysSyncCompleted', handleSyncComplete);
               window.addEventListener('heys:data-saved', handleDataSaved);
+              window.addEventListener('heys:pending-change', handlePendingChange);
+              window.addEventListener('heys:network-restored', handleNetworkRestored);
               window.addEventListener('online', handleOnline);
               window.addEventListener('offline', handleOffline);
               
-              // Начальный статус
+              // Начальный статус — если сеть есть, ставим idle
               if (!navigator.onLine) {
                 setCloudStatus('offline');
+                setShowOfflineBanner(true);
               } else {
-                const cloud = window.HEYS?.cloud;
-                if (cloud?.user) {
-                  setCloudStatus('idle');
-                } else {
-                  setCloudStatus('offline');
-                }
+                setCloudStatus('idle');
+              }
+              
+              // Получить начальный pending count и details
+              if (window.HEYS?.cloud?.getPendingCount) {
+                setPendingCount(window.HEYS.cloud.getPendingCount());
+              }
+              if (window.HEYS?.cloud?.getPendingDetails) {
+                setPendingDetails(window.HEYS.cloud.getPendingDetails());
               }
               
               return () => {
                 window.removeEventListener('heysSyncCompleted', handleSyncComplete);
                 window.removeEventListener('heys:data-saved', handleDataSaved);
+                window.removeEventListener('heys:pending-change', handlePendingChange);
+                window.removeEventListener('heys:network-restored', handleNetworkRestored);
                 window.removeEventListener('online', handleOnline);
                 window.removeEventListener('offline', handleOffline);
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
               };
-            }, []);
+            }, [pendingCount, showSyncedWithMinDuration]);
+            
+            // Retry синхронизации
+            const handleRetrySync = () => {
+              if (window.HEYS?.cloud?.retrySync) {
+                window.HEYS.cloud.retrySync();
+                syncingStartRef.current = Date.now();
+                setCloudStatus('syncing');
+              }
+            };
 
             const [backupMeta, setBackupMeta] = useState(() => {
               if (U && typeof U.lsGet === 'function') {
@@ -2062,6 +2125,16 @@
               }
               return name.slice(0, 2).toUpperCase();
             };
+            
+            // Формируем текст для pending details
+            const getPendingText = () => {
+              const parts = [];
+              if (pendingDetails.days > 0) parts.push(`${pendingDetails.days} дн.`);
+              if (pendingDetails.products > 0) parts.push(`${pendingDetails.products} прод.`);
+              if (pendingDetails.profile > 0) parts.push('профиль');
+              if (pendingDetails.other > 0) parts.push(`${pendingDetails.other} др.`);
+              return parts.length > 0 ? parts.join(', ') : '';
+            };
 
             const currentClientName = clients.find((c) => c.id === clientId)?.name || 'Выберите клиента';
 
@@ -2069,6 +2142,26 @@
               React.Fragment,
               null,
               gate,
+              // === OFFLINE BANNER ===
+              showOfflineBanner && React.createElement(
+                'div',
+                { className: 'offline-banner' },
+                React.createElement('span', { className: 'offline-banner-icon' }, '⊘'),
+                React.createElement('span', { className: 'offline-banner-text' }, 
+                  pendingCount > 0 
+                    ? `Нет сети · ${pendingCount} изменений ожидают (${getPendingText()})`
+                    : 'Нет подключения к сети'
+                ),
+                pendingCount > 0 && navigator.onLine && React.createElement(
+                  'button',
+                  { 
+                    className: 'offline-banner-retry',
+                    onClick: handleRetrySync
+                  },
+                  '↻ Повторить'
+                )
+              ),
+              // Toast убран — отвлекает
               React.createElement(
                 'div',
                 { className: 'wrap' },
@@ -2156,18 +2249,20 @@
                             className: 'cloud-sync-indicator ' + cloudStatus,
                             title: cloudStatus === 'syncing' ? 'Синхронизация...' 
                               : cloudStatus === 'synced' ? 'Сохранено в облако'
-                              : cloudStatus === 'offline' ? 'Офлайн — данные сохраняются локально'
+                              : cloudStatus === 'offline' 
+                                ? (pendingCount > 0 
+                                    ? `Офлайн — ${pendingCount} изменений ожидают синхронизации`
+                                    : 'Офлайн — данные сохраняются локально')
                               : cloudStatus === 'error' ? 'Ошибка синхронизации'
-                              : 'Облако',
-                            // Не использовать эмодзи — они ломают Twemoji при offline
-                            // Используем CSS символы вместо эмодзи для offline-безопасности
+                              : 'Подключено к облаку',
+                            // Синее облако — сеть есть, зелёная галочка — синхронизировано
                             dangerouslySetInnerHTML: {
                               __html: cloudStatus === 'syncing' 
                                 ? '<span class="cloud-icon spin">↻</span>'
                                 : cloudStatus === 'synced' 
-                                ? '<span class="cloud-icon synced">☁✓</span>'
+                                ? '<span class="cloud-icon synced">✓</span>'
                                 : cloudStatus === 'offline' 
-                                ? '<span class="cloud-icon offline">⊘</span>'
+                                ? '<span class="cloud-icon offline">⊘</span>' + (pendingCount > 0 ? '<span class="pending-badge">' + pendingCount + '</span>' : '')
                                 : cloudStatus === 'error' 
                                 ? '<span class="cloud-icon error">⚠</span>'
                                 : '<span class="cloud-icon idle">☁</span>'

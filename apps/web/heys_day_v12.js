@@ -1636,7 +1636,11 @@
     // Применяем тему + слушаем системные изменения
     React.useEffect(() => {
       document.documentElement.setAttribute('data-theme', resolvedTheme);
-      localStorage.setItem('heys_theme', theme);
+      try {
+        localStorage.setItem('heys_theme', theme);
+      } catch (e) {
+        // QuotaExceeded — игнорируем, тема применится через data-theme
+      }
       
       if (theme !== 'auto') return;
       

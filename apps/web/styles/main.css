@@ -1397,8 +1397,11 @@ td:first-child input {
 }
 
 .cloud-sync-indicator.syncing .cloud-icon.spin {
-  animation: syncSpin 1s linear infinite;
+  animation: syncSpin 0.8s linear infinite;
   display: inline-block;
+  transform-origin: center center;
+  font-size: 16px;
+  line-height: 1;
 }
 
 @keyframes syncSpin {
@@ -1422,6 +1425,138 @@ td:first-child input {
 .cloud-sync-indicator.offline {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
+  position: relative;
+}
+
+/* Бейдж с количеством pending изменений */
+.cloud-sync-indicator .pending-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: white;
+  font-size: 9px;
+  font-weight: 600;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   OFFLINE BANNER — полоска вверху при отсутствии сети
+   ═══════════════════════════════════════════════════════════════════ */
+
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.offline-banner-icon {
+  font-size: 16px;
+}
+
+.offline-banner-text {
+  flex: 1;
+  text-align: center;
+}
+
+.offline-banner-retry {
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.offline-banner-retry:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+.offline-banner-retry:active {
+  transform: scale(0.95);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SYNC TOAST — уведомление о синхронизации
+   ═══════════════════════════════════════════════════════════════════ */
+
+.sync-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9998;
+  padding: 10px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  animation: toastIn 0.3s ease;
+}
+
+@keyframes toastIn {
+  from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+  to { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+.sync-toast.syncing {
+  background: #3b82f6;
+  color: white;
+}
+
+.sync-toast.restored {
+  background: #10b981;
+  color: white;
+}
+
+.sync-toast.error {
+  background: #ef4444;
+  color: white;
+}
+
+.sync-toast-icon {
+  font-size: 16px;
+}
+
+.sync-toast-icon.spin {
+  animation: syncSpin 1s linear infinite;
+}
+
+/* Сдвиг контента при показе offline banner */
+body:has(.offline-banner) .wrap {
+  padding-top: 40px;
 }
 
 .cloud-sync-indicator.error {
@@ -1430,7 +1565,9 @@ td:first-child input {
 }
 
 .cloud-sync-indicator.idle {
-  opacity: 0.5;
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  opacity: 1;
 }
 
 .hdr-client-label {
@@ -7816,6 +7953,11 @@ td:first-child input {
   color: #9ca3af;
 }
 
+[data-theme="dark"] .cloud-sync-indicator.idle {
+  background: rgba(96, 165, 250, 0.2);
+  color: #60a5fa;
+}
+
 [data-theme="dark"] .cloud-sync-indicator.syncing {
   background: rgba(96, 165, 250, 0.2);
   color: #60a5fa;
@@ -7829,6 +7971,16 @@ td:first-child input {
 [data-theme="dark"] .cloud-sync-indicator.offline {
   background: rgba(248, 113, 113, 0.15);
   color: #f87171;
+}
+
+/* Offline banner dark */
+[data-theme="dark"] .offline-banner {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+/* Sync toast dark */
+[data-theme="dark"] .sync-toast {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 /* Today quick button in header */
