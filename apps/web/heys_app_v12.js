@@ -2915,9 +2915,15 @@
               try {
                 if (cloud && typeof cloud.signOut === 'function') await cloud.signOut();
               } catch (e) {}
-              setStatus(typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'offline');
+              // Сбрасываем состояние — покажется форма входа
+              setCloudUser(null);
+              setClientId(null);
+              setClients([]);
               setProducts([]);
+              setStatus('offline');
               setSyncVer((v) => v + 1);
+              // Очищаем сохранённый клиент (но не email если "Запомнить меня")
+              try { localStorage.removeItem('heys_last_client_id'); } catch (e) {}
             }
             
             // Формируем текст для pending details
@@ -3245,7 +3251,20 @@
                                   onRemove: () => {
                                     setSelectedDate(todayISO());
                                   },
-                                  activeDays: datePickerActiveDays
+                                  activeDays: datePickerActiveDays,
+                                  // Функция для загрузки данных при смене месяца
+                                  getActiveDaysForMonth: (year, month) => {
+                                    const getActiveDaysForMonthFn = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
+                                    if (!getActiveDaysForMonthFn || !clientId || !products || products.length === 0) {
+                                      return new Map();
+                                    }
+                                    const profile = U && U.lsGet ? U.lsGet('heys_profile', {}) : {};
+                                    try {
+                                      return getActiveDaysForMonthFn(year, month, profile, products);
+                                    } catch (e) {
+                                      return new Map();
+                                    }
+                                  }
                                 }),
                                 // Кнопка темы
                                 React.createElement('button', {

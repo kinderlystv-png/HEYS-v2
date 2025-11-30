@@ -16,7 +16,8 @@
 
   // Компактный DatePicker с dropdown
   // activeDays: Map<dateStr, {kcal, target, ratio}> — данные о заполненных днях (опционально)
-  function DatePicker({valueISO, onSelect, onRemove, activeDays}) {
+  // getActiveDaysForMonth: (year, month) => Map — функция для загрузки данных при смене месяца
+  function DatePicker({valueISO, onSelect, onRemove, activeDays, getActiveDaysForMonth}) {
     const utils = getDayUtils();
     // Minimal fallbacks with error logging
     const parseISO = utils.parseISO || ((s) => { warnMissing('parseISO'); return new Date(); });
@@ -24,11 +25,35 @@
     const fmtDate = utils.fmtDate || ((d) => { warnMissing('fmtDate'); return d.toISOString().slice(0,10); });
     const formatDateDisplay = utils.formatDateDisplay || (() => { warnMissing('formatDateDisplay'); return { label: 'День', sub: '' }; });
     
-    // Преобразуем activeDays в Map
+    const [isOpen, setIsOpen] = React.useState(false);
+    const [cur, setCur] = React.useState(parseISO(valueISO || todayISO()));
+    const [dropdownPos, setDropdownPos] = React.useState({ top: 0, right: 0 });
+    const [tooltip, setTooltip] = React.useState(null); // { x, y, text }
+    const [monthData, setMonthData] = React.useState(null); // Данные для текущего месяца календаря
+    const wrapperRef = React.useRef(null);
+    const triggerRef = React.useRef(null);
+    
+    const y = cur.getFullYear(), m = cur.getMonth();
+    
+    // Загружаем данные при смене месяца
+    React.useEffect(() => {
+      if (getActiveDaysForMonth) {
+        try {
+          const data = getActiveDaysForMonth(y, m);
+          setMonthData(data);
+        } catch (e) {
+          setMonthData(null);
+        }
+      }
+    }, [y, m, getActiveDaysForMonth]);
+    
+    // Преобразуем activeDays в Map (fallback если нет getActiveDaysForMonth)
     const daysDataMap = React.useMemo(() => {
+      // Приоритет: данные для текущего месяца → переданные activeDays
+      if (monthData instanceof Map) return monthData;
       if (activeDays instanceof Map) return activeDays;
       return new Map();
-    }, [activeDays]);
+    }, [monthData, activeDays]);
     
     // Функция для расчёта цвета фона — используем централизованный ratioZones
     const rz = HEYS.ratioZones;
@@ -68,13 +93,6 @@
       return { count, isActive: count > 0 };
     }, [daysDataMap, fmtDate]);
     
-    const [isOpen, setIsOpen] = React.useState(false);
-    const [cur, setCur] = React.useState(parseISO(valueISO || todayISO()));
-    const [dropdownPos, setDropdownPos] = React.useState({ top: 0, right: 0 });
-    const [tooltip, setTooltip] = React.useState(null); // { x, y, text }
-    const wrapperRef = React.useRef(null);
-    const triggerRef = React.useRef(null);
-    
     React.useEffect(() => { setCur(parseISO(valueISO || todayISO())); }, [valueISO]);
     
     // Вычисляем позицию при открытии
@@ -88,7 +106,6 @@
       }
     }, [isOpen]);
     
-    const y = cur.getFullYear(), m = cur.getMonth();
     const first = new Date(y, m, 1), start = (first.getDay() + 6) % 7;
     const dim = new Date(y, m + 1, 0).getDate();
     const cells = [];
