@@ -44,7 +44,7 @@
           // Логи инициализации отключены для чистой консоли
           const React = window.React,
             ReactDOM = window.ReactDOM;
-          const { useState, useEffect } = React;
+          const { useState, useEffect, useRef } = React;
 
           /* ═══════════════════════════════════════════════════════════════════════════════
            * 🛡️ КОМПОНЕНТ: ErrorBoundary — Защита от ошибок рендеринга
@@ -1035,6 +1035,52 @@
               // Напоминаем через 24 часа
               localStorage.setItem('heys_update_dismissed', Date.now().toString());
             };
+
+            // === Cloud Sync Status ===
+            const [cloudStatus, setCloudStatus] = useState('unknown'); // 'unknown' | 'offline' | 'syncing' | 'synced' | 'error'
+            const cloudSyncTimeoutRef = useRef(null);
+            
+            useEffect(() => {
+              // Слушаем события синхронизации
+              const handleSyncComplete = () => {
+                setCloudStatus('synced');
+                // Скрываем через 2 сек
+                if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+                cloudSyncTimeoutRef.current = setTimeout(() => setCloudStatus('idle'), 2000);
+              };
+              
+              const handleDataSaved = () => {
+                // Показываем что идёт синхронизация
+                setCloudStatus('syncing');
+                // Через 600ms (500ms debounce + 100ms buffer) проверяем завершение
+                if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+                cloudSyncTimeoutRef.current = setTimeout(() => {
+                  // Если очередь пуста — synced
+                  const cloud = window.HEYS?.cloud;
+                  if (cloud?.getSyncStatus?.('check') === 'synced') {
+                    setCloudStatus('synced');
+                    setTimeout(() => setCloudStatus('idle'), 2000);
+                  }
+                }, 600);
+              };
+              
+              window.addEventListener('heysSyncCompleted', handleSyncComplete);
+              window.addEventListener('heys:data-saved', handleDataSaved);
+              
+              // Начальный статус
+              const cloud = window.HEYS?.cloud;
+              if (cloud?.user) {
+                setCloudStatus('idle');
+              } else {
+                setCloudStatus('offline');
+              }
+              
+              return () => {
+                window.removeEventListener('heysSyncCompleted', handleSyncComplete);
+                window.removeEventListener('heys:data-saved', handleDataSaved);
+                if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+              };
+            }, []);
 
             const [backupMeta, setBackupMeta] = useState(() => {
               if (U && typeof U.lsGet === 'function') {
@@ -2066,6 +2112,21 @@
                                 lastName && React.createElement('span', { key: 'ln', className: 'hdr-client-lastname' }, lastName)
                               ];
                             })()
+                          ),
+                          // Cloud sync indicator
+                          React.createElement('div', {
+                            className: 'cloud-sync-indicator ' + cloudStatus,
+                            title: cloudStatus === 'syncing' ? 'Синхронизация...' 
+                              : cloudStatus === 'synced' ? 'Сохранено в облако'
+                              : cloudStatus === 'offline' ? 'Офлайн'
+                              : cloudStatus === 'error' ? 'Ошибка синхронизации'
+                              : 'Облако'
+                          },
+                            cloudStatus === 'syncing' ? '↻'
+                              : cloudStatus === 'synced' ? '☁️✓'
+                              : cloudStatus === 'offline' ? '📴'
+                              : cloudStatus === 'error' ? '⚠️'
+                              : '☁️'
                           ),
                           // Кнопка "Сегодня" + DatePicker
                           (tab === 'stats' || tab === 'diary' || tab === 'reports') && window.HEYS.DatePicker

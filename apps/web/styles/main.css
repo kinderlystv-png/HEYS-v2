@@ -764,8 +764,8 @@ td:first-child input {
   margin: 0 auto;
   padding: 12px 18px 80px;
   box-sizing: border-box;
-  /* Отступ сверху для fixed шапки (GamificationBar ~52px + ClientRow ~64px) */
-  padding-top: 120px;
+  /* Отступ сверху для fixed шапки */
+  padding-top: 130px;
 }
 
 /* === MODERN HEADER === */
@@ -796,7 +796,7 @@ td:first-child input {
   padding: 16px 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 16px 16px 0 0;
-  border: 2px solid #667eea;
+  border: 1px solid #667eea;
   border-bottom: none;
   color: white;
 }
@@ -1295,7 +1295,7 @@ td:first-child input {
   gap: 16px;
   padding: 12px 20px;
   background: #f0f0f0;
-  border: 2px solid #667eea;
+  border: 1px solid #667eea;
   border-top: none;
   border-radius: 0 0 16px 16px;
   flex-wrap: wrap;
@@ -1368,6 +1368,59 @@ td:first-child input {
   font-weight: 400;
   color: #6b7280;
   line-height: 1.2;
+}
+
+/* Cloud sync indicator */
+.cloud-sync-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.cloud-sync-indicator.syncing {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  animation: syncSpin 1s linear infinite;
+}
+
+@keyframes syncSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.cloud-sync-indicator.synced {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  font-size: 12px;
+  animation: syncPop 0.3s ease;
+}
+
+@keyframes syncPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.cloud-sync-indicator.offline {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.cloud-sync-indicator.error {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.cloud-sync-indicator.idle {
+  opacity: 0.5;
 }
 
 .hdr-client-label {
@@ -3094,7 +3147,7 @@ td:first-child input {
   .wrap {
     padding: 12px 14px 80px;
     /* Отступ сверху для fixed шапки на мобильных */
-    padding-top: 120px;
+    padding-top: 130px;
   }
 }
 
@@ -7745,6 +7798,27 @@ td:first-child input {
 [data-theme="dark"] .hdr-bottom {
   background: #2a2a2a;
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Cloud sync indicator dark */
+[data-theme="dark"] .cloud-sync-indicator {
+  background: rgba(156, 163, 175, 0.15);
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .cloud-sync-indicator.syncing {
+  background: rgba(96, 165, 250, 0.2);
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .cloud-sync-indicator.synced {
+  background: rgba(52, 211, 153, 0.2);
+  color: #34d399;
+}
+
+[data-theme="dark"] .cloud-sync-indicator.offline {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
 }
 
 /* Today quick button in header */
