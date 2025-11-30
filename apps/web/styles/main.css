@@ -929,22 +929,31 @@ td:first-child input {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* === Gamification Bar (Phase 0 Placeholder) === */
+/* === Gamification Bar (Phase 1 Live) === */
 .hdr-gamification {
   padding: 12px 16px;
+  position: relative;
 }
 
-.game-bar-placeholder {
+.game-bar-container {
+  position: relative;
+  width: 100%;
+}
+
+.game-bar {
   display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .game-level {
   font-weight: 600;
   font-size: 14px;
   white-space: nowrap;
+  transition: color 0.3s ease;
 }
 
 .game-progress {
@@ -954,6 +963,11 @@ td:first-child input {
   border-radius: 4px;
   overflow: hidden;
   min-width: 60px;
+  position: relative;
+}
+
+.game-progress.glowing {
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
 }
 
 .game-progress-fill {
@@ -973,6 +987,16 @@ td:first-child input {
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
+  animation: none;
+}
+
+.game-streak:hover {
+  animation: bounce 0.5s ease;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
 }
 
 .game-expand-btn {
@@ -994,7 +1018,66 @@ td:first-child input {
   background: rgba(255, 255, 255, 0.25);
 }
 
-/* === Gamification Expanded Panel (Phase 0.5) === */
+.game-expand-btn.expanded {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(180deg);
+}
+
+/* === Gamification Notification (Level Up / Achievement) === */
+.game-notification {
+  position: absolute;
+  top: 100%;
+  left: 8px;
+  right: 8px;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 1100;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+  animation: slideDown 0.3s ease-out;
+  cursor: pointer;
+}
+
+.game-notification.level_up {
+  background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.game-notification.achievement {
+  background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+.game-notification .notif-icon {
+  font-size: 28px;
+  animation: pulse 0.5s ease 2;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.game-notification .notif-content {
+  flex: 1;
+}
+
+.game-notification .notif-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: white;
+}
+
+.game-notification .notif-subtitle {
+  font-size: 13px;
+  opacity: 0.85;
+  color: white;
+}
+
+/* === Gamification Expanded Panel === */
 .game-panel-expanded {
   position: absolute;
   top: 100%;
@@ -1022,28 +1105,114 @@ td:first-child input {
   z-index: 1040;
 }
 
-/* Gamification Notifications */
-.game-popup {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-  color: white;
-  padding: 16px;
-  border-radius: 0 0 16px 16px;
-  z-index: 1100;
+/* Stats section in expanded panel */
+.game-stats-section {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.game-stat {
   text-align: center;
-  animation: slideDown 0.3s ease-out;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
 }
 
-.game-popup.level-up {
-  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+.game-stat .stat-value {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
 }
 
-.game-popup.achievement {
-  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+.game-stat .stat-label {
+  display: block;
+  font-size: 10px;
+  opacity: 0.7;
+  color: white;
+  margin-top: 2px;
+}
+
+/* Title section */
+.game-title-section {
+  text-align: center;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 16px;
+}
+
+.game-title-section .current-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.game-title-section .next-level-hint {
+  font-size: 12px;
+  opacity: 0.7;
+  color: white;
+  margin-top: 4px;
+}
+
+/* Achievements section */
+.game-achievements-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  margin: 0 0 12px 0;
+}
+
+.achievement-category {
+  margin-bottom: 12px;
+}
+
+.achievement-category .category-name {
+  font-size: 11px;
+  opacity: 0.7;
+  color: white;
+  margin-bottom: 6px;
+}
+
+.achievements-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.achievement-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.achievement-badge.locked {
+  opacity: 0.5;
+  filter: grayscale(100%);
+}
+
+.achievement-badge.unlocked {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+}
+
+.achievement-badge .badge-icon {
+  font-size: 20px;
+}
+
+.achievement-badge .badge-xp {
+  font-size: 9px;
+  opacity: 0.8;
+  color: white;
+  margin-top: 2px;
 }
 
 /* Flying XP animation */
@@ -1085,13 +1254,13 @@ td:first-child input {
 .theme-fab { z-index: 1000; }
 .game-panel-backdrop { z-index: 1040; }
 .game-panel-expanded { z-index: 1050; }
-.game-popup { z-index: 1100; }
+.game-notification { z-index: 1100; }
 .flying-xp { z-index: 1150; }
 .confetti-container { z-index: 1200; }
 
 /* Mobile: compact gamification bar */
 @media (max-width: 400px) {
-  .game-bar-placeholder {
+  .game-bar {
     gap: 8px;
   }
   .game-xp {
@@ -1099,6 +1268,9 @@ td:first-child input {
   }
   .game-level {
     font-size: 13px;
+  }
+  .game-stats-section {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

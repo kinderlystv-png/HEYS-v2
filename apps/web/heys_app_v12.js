@@ -101,6 +101,214 @@
           // Экспортируем для использования в других модулях
           window.HEYS.ErrorBoundary = ErrorBoundary;
 
+          /* ═══════════════════════════════════════════════════════════════════════════════
+           * 🎮 КОМПОНЕНТ: GamificationBar — XP, уровень, streak, достижения
+           * ═══════════════════════════════════════════════════════════════════════════════
+           */
+          function GamificationBar() {
+            const [stats, setStats] = useState(() => {
+              return HEYS.game ? HEYS.game.getStats() : {
+                totalXP: 0,
+                level: 1,
+                title: { icon: '🌱', title: 'Новичок', color: '#94a3b8' },
+                progress: { current: 0, required: 100, percent: 0 },
+                unlockedCount: 0,
+                totalAchievements: 25
+              };
+            });
+            const [streak, setStreak] = useState(() => {
+              return HEYS.Day && HEYS.Day.getStreak ? HEYS.Day.getStreak() : 0;
+            });
+            const [expanded, setExpanded] = useState(false);
+            const [notification, setNotification] = useState(null);
+
+            // Слушаем обновления XP
+            useEffect(() => {
+              const handleUpdate = (e) => {
+                if (HEYS.game) {
+                  setStats(HEYS.game.getStats());
+                }
+                // Обновляем streak
+                if (HEYS.Day && HEYS.Day.getStreak) {
+                  setStreak(HEYS.Day.getStreak());
+                }
+              };
+
+              const handleNotification = (e) => {
+                setNotification(e.detail);
+                setTimeout(() => setNotification(null), e.detail.type === 'level_up' ? 4000 : 3000);
+              };
+
+              window.addEventListener('heysGameUpdate', handleUpdate);
+              window.addEventListener('heysGameNotification', handleNotification);
+              window.addEventListener('heysProductAdded', handleUpdate);
+              window.addEventListener('heysWaterAdded', handleUpdate);
+
+              return () => {
+                window.removeEventListener('heysGameUpdate', handleUpdate);
+                window.removeEventListener('heysGameNotification', handleNotification);
+                window.removeEventListener('heysProductAdded', handleUpdate);
+                window.removeEventListener('heysWaterAdded', handleUpdate);
+              };
+            }, []);
+
+            // Периодическое обновление streak (каждые 30 сек)
+            useEffect(() => {
+              const interval = setInterval(() => {
+                if (HEYS.Day && HEYS.Day.getStreak) {
+                  setStreak(HEYS.Day.getStreak());
+                }
+              }, 30000);
+              return () => clearInterval(interval);
+            }, []);
+
+            const toggleExpanded = () => setExpanded(!expanded);
+
+            const { title, progress } = stats;
+            const progressPercent = Math.max(5, progress.percent); // Minimum 5% для визуального feedback
+
+            // Glow эффект при >90%
+            const isGlowing = progress.percent >= 90;
+
+            return React.createElement('div', { className: 'game-bar-container' },
+              // Main bar
+              React.createElement('div', { 
+                className: 'game-bar',
+                onClick: toggleExpanded
+              },
+                // Level + icon
+                React.createElement('span', { 
+                  className: 'game-level',
+                  style: { color: title.color }
+                }, `${title.icon} Ур.${stats.level}`),
+                
+                // Progress bar
+                React.createElement('div', { 
+                  className: `game-progress ${isGlowing ? 'glowing' : ''}`
+                },
+                  React.createElement('div', { 
+                    className: 'game-progress-fill',
+                    style: { 
+                      width: `${progressPercent}%`,
+                      background: `linear-gradient(90deg, ${title.color} 0%, ${title.color}cc 100%)`
+                    }
+                  })
+                ),
+                
+                // XP counter
+                React.createElement('span', { className: 'game-xp' }, 
+                  `${progress.current}/${progress.required}`
+                ),
+                
+                // Streak (скрываем если 0)
+                streak > 0 && React.createElement('span', { 
+                  className: 'game-streak',
+                  title: `${streak} дней подряд в норме!`
+                }, `🔥${streak}`),
+                
+                // Expand button
+                React.createElement('button', { 
+                  className: `game-expand-btn ${expanded ? 'expanded' : ''}`,
+                  title: expanded ? 'Свернуть' : 'Подробнее'
+                }, expanded ? '▲' : '▼')
+              ),
+
+              // Notification (level up / achievement)
+              notification && React.createElement('div', {
+                className: `game-notification ${notification.type}`,
+                onClick: () => setNotification(null)
+              },
+                notification.type === 'level_up' 
+                  ? React.createElement(React.Fragment, null,
+                      React.createElement('span', { className: 'notif-icon' }, notification.data.icon),
+                      React.createElement('div', { className: 'notif-content' },
+                        React.createElement('div', { className: 'notif-title' }, `🎉 Уровень ${notification.data.newLevel}!`),
+                        React.createElement('div', { className: 'notif-subtitle' }, `Ты теперь ${notification.data.title}`)
+                      )
+                    )
+                  : notification.type === 'achievement'
+                    ? React.createElement(React.Fragment, null,
+                        React.createElement('span', { className: 'notif-icon' }, notification.data.achievement.icon),
+                        React.createElement('div', { className: 'notif-content' },
+                          React.createElement('div', { className: 'notif-title' }, notification.data.achievement.name),
+                          React.createElement('div', { className: 'notif-subtitle' }, `+${notification.data.achievement.xp} XP`)
+                        )
+                      )
+                    : null
+              ),
+
+              // Expanded panel (backdrop + content)
+              expanded && React.createElement(React.Fragment, null,
+                // Backdrop
+                React.createElement('div', { 
+                  className: 'game-panel-backdrop',
+                  onClick: () => setExpanded(false)
+                }),
+                // Panel content
+                React.createElement('div', { className: 'game-panel-expanded' },
+                  // Stats section
+                  React.createElement('div', { className: 'game-stats-section' },
+                    React.createElement('div', { className: 'game-stat' },
+                      React.createElement('span', { className: 'stat-value' }, stats.totalXP),
+                      React.createElement('span', { className: 'stat-label' }, 'Всего XP')
+                    ),
+                    React.createElement('div', { className: 'game-stat' },
+                      React.createElement('span', { className: 'stat-value' }, `${stats.level}`),
+                      React.createElement('span', { className: 'stat-label' }, 'Уровень')
+                    ),
+                    React.createElement('div', { className: 'game-stat' },
+                      React.createElement('span', { className: 'stat-value' }, streak || 0),
+                      React.createElement('span', { className: 'stat-label' }, 'Streak')
+                    ),
+                    React.createElement('div', { className: 'game-stat' },
+                      React.createElement('span', { className: 'stat-value' }, `${stats.unlockedCount}/${stats.totalAchievements}`),
+                      React.createElement('span', { className: 'stat-label' }, 'Достижения')
+                    )
+                  ),
+
+                  // Title & next level
+                  React.createElement('div', { className: 'game-title-section' },
+                    React.createElement('div', { 
+                      className: 'current-title',
+                      style: { color: title.color }
+                    }, `${title.icon} ${title.title}`),
+                    React.createElement('div', { className: 'next-level-hint' },
+                      `До уровня ${stats.level + 1}: ${progress.required - progress.current} XP`
+                    )
+                  ),
+
+                  // Achievements grid
+                  React.createElement('div', { className: 'game-achievements-section' },
+                    React.createElement('h4', null, '🏆 Достижения'),
+                    HEYS.game && HEYS.game.getAchievementCategories().map(cat =>
+                      React.createElement('div', { key: cat.id, className: 'achievement-category' },
+                        React.createElement('div', { className: 'category-name' }, cat.name),
+                        React.createElement('div', { className: 'achievements-row' },
+                          cat.achievements.map(achId => {
+                            const ach = HEYS.game.ACHIEVEMENTS[achId];
+                            const unlocked = HEYS.game.isAchievementUnlocked(achId);
+                            return React.createElement('div', {
+                              key: achId,
+                              className: `achievement-badge ${unlocked ? 'unlocked' : 'locked'}`,
+                              title: `${ach.name}: ${ach.desc}`,
+                              style: unlocked ? { borderColor: HEYS.game.RARITY_COLORS[ach.rarity] } : {}
+                            },
+                              React.createElement('span', { className: 'badge-icon' }, unlocked ? ach.icon : '🔒'),
+                              React.createElement('span', { className: 'badge-xp' }, `+${ach.xp}`)
+                            );
+                          })
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            );
+          }
+
+          // Экспортируем GamificationBar
+          window.HEYS.GamificationBar = GamificationBar;
+
           // init cloud (safe if no cloud module)
           if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
             // Определяем URL: используем прокси на Vercel для обхода блокировок
@@ -1754,20 +1962,12 @@
                 React.createElement(
                   'div',
                   { className: 'hdr' },
-                  // === ВЕРХНЯЯ ЛИНИЯ: Gamification Bar (Phase 0 - placeholder) ===
+                  // === ВЕРХНЯЯ ЛИНИЯ: Gamification Bar ===
                   React.createElement(
                     'div',
                     { className: 'hdr-top hdr-gamification' },
-                    // Placeholder для GamificationBar — будет заменён в Phase 1
-                    React.createElement('div', { className: 'game-bar-placeholder' },
-                      React.createElement('span', { className: 'game-level' }, '🌱 Ур.1'),
-                      React.createElement('div', { className: 'game-progress' },
-                        React.createElement('div', { className: 'game-progress-fill', style: { width: '0%' } })
-                      ),
-                      React.createElement('span', { className: 'game-xp' }, '0/100'),
-                      React.createElement('span', { className: 'game-streak' }, '🔥0'),
-                      React.createElement('button', { className: 'game-expand-btn', title: 'Подробнее' }, '▼')
-                    )
+                    // Live GamificationBar component
+                    React.createElement(GamificationBar)
                   ),
                   // === НИЖНЯЯ ЛИНИЯ: Клиент + Действия ===
                   clientId
