@@ -76,22 +76,13 @@
 
     // Сохранение данных дня под конкретную дату
     const saveToDate = React.useCallback((dateStr, payload)=>{
-      if(!dateStr || !payload) {
-        console.log('[HEYS] 💾 saveToDate() SKIPPED: no dateStr or payload');
-        return;
-      }
+      if(!dateStr || !payload) return;
       const key = getKey(dateStr);
       const current = readExisting(key);
       const incomingUpdatedAt = payload.updatedAt!=null? payload.updatedAt: now();
 
-      if(current && current.updatedAt > incomingUpdatedAt) {
-        console.log('[HEYS] 💾 saveToDate() SKIPPED: existing is newer | key:', key);
-        return;
-      }
-      if(current && current.updatedAt===incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) {
-        console.log('[HEYS] 💾 saveToDate() SKIPPED: same timestamp, other source wins');
-        return;
-      }
+      if(current && current.updatedAt > incomingUpdatedAt) return;
+      if(current && current.updatedAt===incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) return;
 
       const toStore = {
         ...payload,
@@ -102,7 +93,6 @@
       };
 
       try{
-        console.log('[HEYS] 💾 saveToDate() WRITING | key:', key, '| meals:', toStore.meals?.length);
         lsSetFn(key,toStore);
         if(channelRef.current && !isUnmountedRef.current){ 
           try{
@@ -115,23 +105,10 @@
     },[getKey,lsSetFn,now,readExisting]);
 
     const flush = React.useCallback(()=>{
-      console.log('[HEYS] 💾 flush() called | disabled:', disabled, '| day?.date:', day?.date, '| meals:', day?.meals?.length);
-      if(disabled) {
-        console.log('[HEYS] 💾 flush() SKIPPED: disabled=true (isHydrated=false)');
-        return;
-      }
-      if(isUnmountedRef.current || !day || !day.date) {
-        console.log('[HEYS] 💾 flush() SKIPPED: unmounted or no day');
-        return;
-      }
+      if(disabled || isUnmountedRef.current || !day || !day.date) return;
       
       const daySnap = JSON.stringify(stripMeta(day));
-      if(prevDaySnapRef.current === daySnap) {
-        console.log('[HEYS] 💾 flush() SKIPPED: no changes');
-        return;
-      }
-      
-      console.log('[HEYS] 💾 flush() SAVING | date:', day.date, '| meals:', day.meals?.length);
+      if(prevDaySnapRef.current === daySnap) return;
       
       const updatedAt = day.updatedAt!=null? day.updatedAt: now();
       
@@ -142,8 +119,6 @@
         updatedAt,
       };
       saveToDate(day.date, payload);
-      console.log('[HEYS] 💾 flush() SAVED to', day.date, '| meals:', payload.meals?.length);
-      
       prevStoredSnapRef.current = JSON.stringify(payload);
       prevDaySnapRef.current = daySnap;
     },[day,now,saveToDate,stripMeta,disabled,getKey,readExisting]);

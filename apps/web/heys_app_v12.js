@@ -404,14 +404,8 @@
 
           // init cloud (safe if no cloud module)
           if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
-            // Определяем URL: используем прокси на Vercel для обхода блокировок
-            const isProduction = window.location.hostname.includes('vercel.app');
-            const supabaseUrl = isProduction 
-              ? window.location.origin + '/api/supabase'  // Прокси через Vercel
-              : 'https://ukqolcziqcuplqfgrmsh.supabase.co'; // Локальная разработка
-            
             HEYS.cloud.init({
-              url: supabaseUrl,
+              url: 'https://ukqolcziqcuplqfgrmsh.supabase.co',
               anonKey:
                 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
             });
