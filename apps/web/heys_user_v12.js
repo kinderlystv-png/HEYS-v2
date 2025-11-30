@@ -114,9 +114,14 @@
       
       if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
         if (typeof cloud.shouldSyncClient === 'function' ? cloud.shouldSyncClient(clientId, 4000) : true) {
-          cloud.bootstrapClientSync(clientId).then(() => {
-            setTimeout(reloadData, 150); // Как в данных дня
-          });
+          cloud.bootstrapClientSync(clientId)
+            .then(() => {
+              setTimeout(reloadData, 150); // Как в данных дня
+            })
+            .catch((err) => {
+              console.warn('[HEYS] Profile sync failed, using local cache:', err?.message || err);
+              reloadData(); // Загружаем из localStorage при ошибке
+            });
         } else {
           reloadData();
         }
@@ -404,9 +409,14 @@
       
       if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
         if (typeof cloud.shouldSyncClient === 'function' ? cloud.shouldSyncClient(clientId, 4000) : true) {
-          cloud.bootstrapClientSync(clientId).then(() => {
-            setTimeout(reloadNorms, 150); // Как в данных дня
-          });
+          cloud.bootstrapClientSync(clientId)
+            .then(() => {
+              setTimeout(reloadNorms, 150); // Как в данных дня
+            })
+            .catch((err) => {
+              console.warn('[HEYS] Norms sync failed, using local cache:', err?.message || err);
+              reloadNorms(); // Загружаем из localStorage при ошибке
+            });
         } else {
           reloadNorms();
         }

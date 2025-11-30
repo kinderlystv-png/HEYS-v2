@@ -131,22 +131,33 @@
   function aggressiveCleanup() {
     logCritical('🚨 Агрессивная очистка storage...');
     
-    // 1. Удаляем данные старше 30 дней
-    cleanupOldData(30);
+    // 1. Удаляем данные старше 14 дней (более агрессивно)
+    cleanupOldData(14);
     
-    // 2. Удаляем debug/temp ключи
+    // 2. Удаляем debug/temp/cache ключи
     const tempKeys = [];
     for (let i = 0; i < global.localStorage.length; i++) {
       const key = global.localStorage.key(i);
-      if (key && (key.includes('_debug') || key.includes('_temp') || key.includes('_cache'))) {
+      if (key && (key.includes('_debug') || key.includes('_temp') || key.includes('_cache') || key.includes('_log'))) {
         tempKeys.push(key);
       }
     }
     tempKeys.forEach(k => global.localStorage.removeItem(k));
     
-    // 3. Показываем размер после очистки
+    // 3. Очищаем pending queues
+    global.localStorage.removeItem(PENDING_QUEUE_KEY);
+    global.localStorage.removeItem(PENDING_CLIENT_QUEUE_KEY);
+    global.localStorage.removeItem(SYNC_LOG_KEY);
+    
+    // 4. Показываем размер после очистки
     const sizeMB = getStorageSize();
     logCritical(`📊 Размер после очистки: ${sizeMB.toFixed(2)} MB`);
+    
+    // 5. Если всё ещё > 4MB — удаляем ещё старее (7 дней)
+    if (sizeMB > 4) {
+      cleanupOldData(7);
+      logCritical(`📊 После удаления >7 дней: ${getStorageSize().toFixed(2)} MB`);
+    }
   }
   
   /** Безопасная запись в localStorage с обработкой QuotaExceeded */
@@ -653,8 +664,8 @@
       );
         
       if (metaError) { 
-        err('client bootstrap meta check', metaError); 
-        return; 
+        err('client bootstrap meta check', metaError);
+        throw new Error('Sync meta check failed: ' + (metaError.message || metaError));
       }
       
       // Проверяем, изменились ли данные с последней синхронизации
@@ -677,7 +688,10 @@
         20000,
         'clientSync full data'
       );
-      if (error) { err('client bootstrap select', error); return; }
+      if (error) { 
+        err('client bootstrap select', error);
+        throw new Error('Sync data fetch failed: ' + (error.message || error));
+      }
       
       // Компактная статистика вместо 81 строки логов
       const stats = { DAY: 0, PRODUCTS: 0, PROFILE: 0, NORMS: 0, OTHER: 0 };
@@ -777,6 +791,9 @@
       muteMirror = false;
       cloud._lastClientSync = { clientId: client_id, ts: now };
       
+      // 🧹 Очистка дублирующихся ключей после синхронизации
+      cleanupDuplicateKeys();
+      
       // 🚨 Критический лог: первая синхронизация завершена
       if (!initialSyncCompleted) {
         logCritical('✅ Синхронизация завершена | клиент:', client_id.substring(0,8) + '...', '| ключей:', data?.length || 0);
@@ -795,7 +812,9 @@
       // Критический лог ошибки синхронизации (всегда видим)
       logCritical('❌ Ошибка синхронизации:', e.message || e);
       err('❌ [CLIENT_SYNC] Exception:', e); 
-      muteMirror=false; 
+      muteMirror=false;
+      // Пробрасываем ошибку чтобы внешний .catch() мог её обработать
+      throw e;
     }
   };
 
@@ -889,6 +908,15 @@
         savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
         notifyPendingChange();
         logCritical('❌ Ошибка сохранения в облако:', e.message || e);
+        
+        // Уведомляем об ошибке с временем до retry (exponential backoff)
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          const retryIn = Math.min(5, Math.ceil(getRetryDelay() / 1000)); // секунд до retry
+          window.dispatchEvent(new CustomEvent('heys:sync-error', { 
+            detail: { error: e.message || 'Sync failed', retryIn } 
+          }));
+        }
+        
         // Запланировать повторную попытку
         scheduleClientPush();
       }
@@ -1217,6 +1245,250 @@
   global.addEventListener('offline', function() {
     addSyncLogEntry('offline', { pending: cloud.getPendingCount() });
   });
+
+  /** Принудительный retry синхронизации */
+  cloud.retrySync = function() {
+    if (!navigator.onLine) return false;
+    
+    resetRetry(); // Сбрасываем exponential backoff
+    
+    // Запускаем синхронизацию обеих очередей
+    if (clientUpsertQueue.length > 0) {
+      if (clientUpsertTimer) clearTimeout(clientUpsertTimer);
+      clientUpsertTimer = null;
+      scheduleClientPush();
+    }
+    if (upsertQueue.length > 0) {
+      if (upsertTimer) clearTimeout(upsertTimer);
+      upsertTimer = null;
+      schedulePush();
+    }
+    
+    return true;
+  };
+
+  /** Очистить дублирующиеся ключи (двойной clientId, старые форматы) */
+  function cleanupDuplicateKeys() {
+    const keysToRemove = [];
+    const currentClientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
+    
+    for (let i = 0; i < global.localStorage.length; i++) {
+      const key = global.localStorage.key(i);
+      if (!key) continue;
+      
+      // 1. Удаляем ключи с двойным clientId (bug): clientId_clientId_...
+      if (key.match(/[a-f0-9-]{36}_[a-f0-9-]{36}_/)) {
+        keysToRemove.push(key);
+        continue;
+      }
+      
+      // 2. Удаляем старый формат _heys_products (должен быть _products)
+      if (key.includes('_heys_products')) {
+        keysToRemove.push(key);
+        continue;
+      }
+      
+      // 3. Удаляем products_backup если есть products
+      if (key.includes('_products_backup') && currentClientId && key.includes(currentClientId)) {
+        const normalKey = key.replace('_products_backup', '_products');
+        if (global.localStorage.getItem(normalKey)) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+    
+    if (keysToRemove.length > 0) {
+      keysToRemove.forEach(k => global.localStorage.removeItem(k));
+      log(`🧹 Очищено ${keysToRemove.length} дублирующихся ключей`);
+    }
+    
+    return keysToRemove.length;
+  }
+  
+  /** Диагностика localStorage — показывает топ-10 ключей по размеру */
+  cloud.diagnoseStorage = function() {
+    const items = [];
+    let total = 0;
+    
+    for (let key in global.localStorage) {
+      if (global.localStorage.hasOwnProperty(key)) {
+        const value = global.localStorage.getItem(key) || '';
+        const sizeKB = (value.length * 2) / 1024;
+        total += sizeKB;
+        items.push({ key, sizeKB: sizeKB.toFixed(2), chars: value.length });
+      }
+    }
+    
+    items.sort((a, b) => parseFloat(b.sizeKB) - parseFloat(a.sizeKB));
+    
+    console.log('📊 localStorage диагностика:');
+    console.log(`Общий размер: ${(total / 1024).toFixed(2)} MB`);
+    console.log('Топ-10 по размеру:');
+    console.table(items.slice(0, 10));
+    
+    return { totalMB: (total / 1024).toFixed(2), items: items.slice(0, 20) };
+  };
+  
+  /** Очистить все данные текущего клиента (кроме профиля и auth) */
+  cloud.clearClientData = function(keepDays = 30) {
+    const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
+    const prefix = clientId ? clientId + '_' : '';
+    let cleaned = 0;
+    
+    const keysToRemove = [];
+    for (let i = 0; i < global.localStorage.length; i++) {
+      const key = global.localStorage.key(i);
+      if (key && key.startsWith('heys_') && key.includes(prefix) && key.includes('dayv2_')) {
+        const match = key.match(/dayv2_(\d{4}-\d{2}-\d{2})/);
+        if (match) {
+          const date = new Date(match[1]);
+          const cutoff = new Date();
+          cutoff.setDate(cutoff.getDate() - keepDays);
+          if (date < cutoff) {
+            keysToRemove.push(key);
+          }
+        }
+      }
+    }
+    
+    keysToRemove.forEach(k => {
+      global.localStorage.removeItem(k);
+      cleaned++;
+    });
+    
+    console.log(`🧹 Очищено ${cleaned} записей старше ${keepDays} дней`);
+    cloud.diagnoseStorage();
+    return cleaned;
+  };
+  
+  /** Очистить дублирующиеся ключи вручную */
+  cloud.cleanupDuplicates = function() {
+    return cleanupDuplicateKeys();
+  };
+  
+  /** Удалить продукты других клиентов (освобождает много места) */
+  cloud.cleanupOtherClientsProducts = function() {
+    const currentClientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
+    if (!currentClientId) {
+      console.log('❌ Нет текущего клиента');
+      return 0;
+    }
+    
+    const keysToRemove = [];
+    for (let i = 0; i < global.localStorage.length; i++) {
+      const key = global.localStorage.key(i);
+      if (key && key.includes('_products') && !key.includes(currentClientId)) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    keysToRemove.forEach(k => global.localStorage.removeItem(k));
+    console.log(`🧹 Удалено ${keysToRemove.length} ключей продуктов других клиентов`);
+    cloud.diagnoseStorage();
+    return keysToRemove.length;
+  };
+  
+  /**
+   * Безопасное переключение клиента:
+   * 1. Синхронизирует данные старого клиента в облако
+   * 2. Ждёт завершения
+   * 3. Очищает данные старого клиента из localStorage
+   * 4. Загружает данные нового клиента
+   */
+  cloud.switchClient = async function(newClientId) {
+    if (!newClientId) {
+      console.log('❌ Не указан ID нового клиента');
+      return false;
+    }
+    
+    const oldClientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
+    
+    // Если тот же клиент — ничего не делаем
+    if (oldClientId === newClientId) {
+      log('Клиент уже выбран:', newClientId);
+      return true;
+    }
+    
+    log('🔄 Переключение клиента:', oldClientId?.substring(0,8), '→', newClientId.substring(0,8));
+    
+    // 1. Сначала синхронизируем текущие данные в облако (если есть pending)
+    if (oldClientId && cloud.getPendingCount() > 0) {
+      log('⏳ Ожидаем синхронизацию старого клиента...');
+      
+      // Принудительно отправляем pending данные
+      try {
+        // Ждём завершения текущих операций (макс 5 секунд)
+        await new Promise((resolve) => {
+          let attempts = 0;
+          const check = () => {
+            if (cloud.getPendingCount() === 0 || attempts >= 10) {
+              resolve();
+            } else {
+              attempts++;
+              setTimeout(check, 500);
+            }
+          };
+          // Триггерим retry если есть pending
+          if (cloud.retrySync) cloud.retrySync();
+          check();
+        });
+        log('✅ Синхронизация старого клиента завершена');
+      } catch (e) {
+        logCritical('⚠️ Не удалось дождаться синхронизации, но продолжаем переключение');
+      }
+    }
+    
+    // 2. Очищаем данные старого клиента из localStorage (кроме auth)
+    if (oldClientId) {
+      const keysToRemove = [];
+      for (let i = 0; i < global.localStorage.length; i++) {
+        const key = global.localStorage.key(i);
+        if (key && key.includes(oldClientId) && !key.includes('_auth')) {
+          // Не удаляем глобальные ключи
+          if (!key.includes('heys_client_current') && !key.includes('heys_user')) {
+            keysToRemove.push(key);
+          }
+        }
+      }
+      keysToRemove.forEach(k => global.localStorage.removeItem(k));
+      log(`🧹 Очищено ${keysToRemove.length} ключей старого клиента`);
+    }
+    
+    // 3. Также удаляем дубликаты и данные других клиентов
+    cleanupDuplicateKeys();
+    
+    // 4. Удаляем продукты ВСЕХ других клиентов (не только старого)
+    const otherProductKeys = [];
+    for (let i = 0; i < global.localStorage.length; i++) {
+      const key = global.localStorage.key(i);
+      if (key && key.includes('_products') && !key.includes(newClientId)) {
+        otherProductKeys.push(key);
+      }
+    }
+    otherProductKeys.forEach(k => global.localStorage.removeItem(k));
+    if (otherProductKeys.length > 0) {
+      log(`🧹 Удалено ${otherProductKeys.length} ключей продуктов других клиентов`);
+    }
+    
+    // 5. Сохраняем новый clientId
+    global.localStorage.setItem('heys_client_current', JSON.stringify(newClientId));
+    
+    // 6. Синхронизируем данные нового клиента из облака
+    log('📥 Загружаем данные нового клиента...');
+    try {
+      await cloud.bootstrapClientSync(newClientId);
+      log('✅ Переключение завершено успешно');
+      
+      // Показываем итоговый размер storage
+      const sizeMB = getStorageSize();
+      log(`📊 Размер localStorage: ${sizeMB.toFixed(2)} MB`);
+      
+      return true;
+    } catch (e) {
+      logCritical('❌ Ошибка загрузки данных нового клиента:', e);
+      return false;
+    }
+  };
 
   // Убрано избыточное логирование utils lsSet wrapped
 

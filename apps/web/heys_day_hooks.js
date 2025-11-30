@@ -32,8 +32,6 @@
       }
     }, [lsSet, utils.lsSet]);
     const lsGetFunc = lsGetFn || utils.lsGet;
-    const isNightTime = utils.isNightTime || (() => false);
-    const getNextDay = utils.getNextDay || ((d) => d);
     
     const timerRef = React.useRef(null);
     const prevStoredSnapRef = React.useRef(null);
@@ -78,13 +76,22 @@
 
     // Сохранение данных дня под конкретную дату
     const saveToDate = React.useCallback((dateStr, payload)=>{
-      if(!dateStr || !payload) return;
+      if(!dateStr || !payload) {
+        console.log('[HEYS] 💾 saveToDate() SKIPPED: no dateStr or payload');
+        return;
+      }
       const key = getKey(dateStr);
       const current = readExisting(key);
       const incomingUpdatedAt = payload.updatedAt!=null? payload.updatedAt: now();
 
-      if(current && current.updatedAt > incomingUpdatedAt) return;
-      if(current && current.updatedAt===incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) return;
+      if(current && current.updatedAt > incomingUpdatedAt) {
+        console.log('[HEYS] 💾 saveToDate() SKIPPED: existing is newer | key:', key);
+        return;
+      }
+      if(current && current.updatedAt===incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) {
+        console.log('[HEYS] 💾 saveToDate() SKIPPED: same timestamp, other source wins');
+        return;
+      }
 
       const toStore = {
         ...payload,
@@ -95,6 +102,7 @@
       };
 
       try{
+        console.log('[HEYS] 💾 saveToDate() WRITING | key:', key, '| meals:', toStore.meals?.length);
         lsSetFn(key,toStore);
         if(channelRef.current && !isUnmountedRef.current){ 
           try{
@@ -107,51 +115,38 @@
     },[getKey,lsSetFn,now,readExisting]);
 
     const flush = React.useCallback(()=>{
-      if(disabled) return;
-      if(isUnmountedRef.current || !day || !day.date) return;
-      
-      const daySnap = JSON.stringify(stripMeta(day));
-      if(prevDaySnapRef.current === daySnap) return;
-      
-      const updatedAt = day.updatedAt!=null? day.updatedAt: now();
-      const meals = day.meals || [];
-      
-      // Разделяем приёмы на дневные и ночные
-      const dayMeals = meals.filter(m => !isNightTime(m.time));
-      const nightMeals = meals.filter(m => isNightTime(m.time));
-      
-      // Сохраняем дневные приёмы под текущую дату
-      const currentDayPayload = {
-        ...day,
-        meals: dayMeals,
-        updatedAt,
-      };
-      saveToDate(day.date, currentDayPayload);
-      
-      // Если есть ночные приёмы — сохраняем их под следующий календарный день
-      if (nightMeals.length > 0) {
-        const nextDayISO = getNextDay(day.date);
-        const nextDayKey = getKey(nextDayISO);
-        const existingNextDay = readExisting(nextDayKey);
-        
-        // Мержим ночные приёмы с существующими данными следующего дня
-        // Фильтруем старые ночные приёмы (по id) и добавляем новые
-        const nightMealIds = new Set(nightMeals.map(m => m.id));
-        const existingNonNightMeals = (existingNextDay?.meals || []).filter(m => !isNightTime(m.time));
-        const existingOtherNightMeals = (existingNextDay?.meals || []).filter(m => isNightTime(m.time) && !nightMealIds.has(m.id));
-        
-        const nextDayPayload = {
-          ...(existingNextDay || {}),
-          date: nextDayISO,
-          meals: [...existingNonNightMeals, ...existingOtherNightMeals, ...nightMeals],
-          updatedAt,
-        };
-        saveToDate(nextDayISO, nextDayPayload);
+      console.log('[HEYS] 💾 flush() called | disabled:', disabled, '| day?.date:', day?.date, '| meals:', day?.meals?.length);
+      if(disabled) {
+        console.log('[HEYS] 💾 flush() SKIPPED: disabled=true (isHydrated=false)');
+        return;
+      }
+      if(isUnmountedRef.current || !day || !day.date) {
+        console.log('[HEYS] 💾 flush() SKIPPED: unmounted or no day');
+        return;
       }
       
-      prevStoredSnapRef.current = JSON.stringify(currentDayPayload);
+      const daySnap = JSON.stringify(stripMeta(day));
+      if(prevDaySnapRef.current === daySnap) {
+        console.log('[HEYS] 💾 flush() SKIPPED: no changes');
+        return;
+      }
+      
+      console.log('[HEYS] 💾 flush() SAVING | date:', day.date, '| meals:', day.meals?.length);
+      
+      const updatedAt = day.updatedAt!=null? day.updatedAt: now();
+      
+      // Просто сохраняем все приёмы под текущую дату
+      // Ночная логика теперь в todayISO() — до 3:00 "сегодня" = вчера
+      const payload = {
+        ...day,
+        updatedAt,
+      };
+      saveToDate(day.date, payload);
+      console.log('[HEYS] 💾 flush() SAVED to', day.date, '| meals:', payload.meals?.length);
+      
+      prevStoredSnapRef.current = JSON.stringify(payload);
       prevDaySnapRef.current = daySnap;
-    },[day,now,saveToDate,stripMeta,disabled,isNightTime,getNextDay,getKey,readExisting]);
+    },[day,now,saveToDate,stripMeta,disabled,getKey,readExisting]);
 
     React.useEffect(()=>{
       if(!day || !day.date) return;

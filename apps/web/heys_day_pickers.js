@@ -101,7 +101,7 @@
     }
     
     const sel = parseISO(valueISO || todayISO());
-    const today = new Date(); today.setHours(12);
+    const today = parseISO(todayISO()); // Учитываем ночной порог (до 3:00 = вчера)
     const dateInfo = formatDateDisplay(valueISO || todayISO());
     
     // Проверяем, показывается ли текущий месяц
@@ -250,7 +250,7 @@
     const y=cur.getFullYear(),m=cur.getMonth(),first=new Date(y,m,1),start=(first.getDay()+6)%7,dim=new Date(y,m+1,0).getDate();
     const cells=[]; for(let i=0;i<start;i++) cells.push(null); for(let d=1;d<=dim;d++) cells.push(new Date(y,m,d));
     function same(a,b){ return a&&b&&a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
-    const sel=parseISO(valueISO||todayISO()); const today=new Date(); today.setHours(12);
+    const sel=parseISO(valueISO||todayISO()); const today=parseISO(todayISO()); // Учитываем ночной порог
     
     // Преобразуем activeDays в Map для быстрого поиска
     const daysDataMap = React.useMemo(() => {

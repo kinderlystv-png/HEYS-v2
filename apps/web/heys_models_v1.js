@@ -264,7 +264,18 @@
   function round1(v){ return Math.round(v*10)/10; }
   function uuid(){ return Math.random().toString(36).slice(2,10); }
   function pad2(n){ return String(n).padStart(2,'0'); }
-  function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
+  
+  // Ночной порог: до 03:00 считается "вчера" (день ещё не закончился)
+  const NIGHT_HOUR_THRESHOLD = 3;
+  function todayISO(){ 
+    const d = new Date(); 
+    const hour = d.getHours();
+    // До 3:00 — это ещё "вчера" (день не закончился)
+    if (hour < NIGHT_HOUR_THRESHOLD) {
+      d.setDate(d.getDate() - 1);
+    }
+    return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()); 
+  }
 
   function ensureDay(d, prof){
     d=d||{}; 

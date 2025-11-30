@@ -1016,7 +1016,10 @@
     React.useEffect(()=>{
       const clientId = window.HEYS && window.HEYS.currentClientId;
       if (clientId && window.HEYS.cloud && typeof window.HEYS.cloud.bootstrapClientSync === 'function') {
-        window.HEYS.cloud.bootstrapClientSync(clientId);
+        window.HEYS.cloud.bootstrapClientSync(clientId)
+          .catch((err) => {
+            console.warn('[HEYS] Reports sync failed, using local cache:', err?.message || err);
+          });
       }
     }, [window.HEYS && window.HEYS.currentClientId]);
     const profile = U.lsGet('heys_profile', {});

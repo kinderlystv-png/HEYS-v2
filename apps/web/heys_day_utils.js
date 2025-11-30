@@ -36,13 +36,24 @@
 
   // === Date/Time Utilities ===
   function pad2(n){ return String(n).padStart(2,'0'); }
-  function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
+  
+  // Ночной порог: до 03:00 считается "вчера" (день ещё не закончился)
+  const NIGHT_HOUR_THRESHOLD = 3; // 00:00 - 02:59 → ещё предыдущий день
+  
+  // "Эффективная" сегодняшняя дата — до 3:00 возвращает вчера
+  function todayISO(){ 
+    const d = new Date(); 
+    const hour = d.getHours();
+    // До 3:00 — это ещё "вчера" (день не закончился)
+    if (hour < NIGHT_HOUR_THRESHOLD) {
+      d.setDate(d.getDate() - 1);
+    }
+    return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()); 
+  }
+  
   function fmtDate(d){ return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
   function parseISO(s){ const [y,m,d]=String(s||'').split('-').map(x=>parseInt(x,10)); if(!y||!m||!d) return new Date(); const dt=new Date(y,m-1,d); dt.setHours(12); return dt; }
   function uid(p){ return (p||'id')+Math.random().toString(36).slice(2,8); }
-
-  // Ночной порог: приёмы до 03:00 относятся к предыдущему дню
-  const NIGHT_HOUR_THRESHOLD = 3; // 00:00 - 02:59 → предыдущий день
 
   // Проверка: время относится к "ночным" часам (00:00-02:59)
   function isNightTime(timeStr) {
@@ -501,14 +512,15 @@
   }
 
   // Форматирование даты для отображения
+  // Использует "эффективную" дату (до 3:00 — ещё вчера)
   function formatDateDisplay(isoDate) {
     const d = parseISO(isoDate);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    const effectiveToday = parseISO(todayISO()); // todayISO учитывает ночной порог
+    const effectiveYesterday = new Date(effectiveToday);
+    effectiveYesterday.setDate(effectiveYesterday.getDate() - 1);
     
-    const isToday = d.toDateString() === today.toDateString();
-    const isYesterday = d.toDateString() === yesterday.toDateString();
+    const isToday = d.toDateString() === effectiveToday.toDateString();
+    const isYesterday = d.toDateString() === effectiveYesterday.toDateString();
     
     const dayName = d.toLocaleDateString('ru-RU', { weekday: 'short' });
     const dayNum = d.getDate();

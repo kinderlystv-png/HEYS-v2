@@ -72,42 +72,22 @@
   // Дата приходит из шапки App (DatePicker в header)
   const { selectedDate, setSelectedDate } = props;
   
+  // Products приходят из App → DayTabWithCloudSync → DayTab
+  // Используем props.products напрямую (уже синхронизированы wrapper'ом)
+  const products = props.products || [];
+  
   // Twemoji: reparse emoji after render
   useEffect(() => {
     if (window.scheduleTwemojiParse) window.scheduleTwemojiParse();
   });
   
-  // Трекинг просмотра дня
+  // Трекинг просмотра дня (только один раз)
   useEffect(() => {
     if (window.HEYS && window.HEYS.analytics) {
       window.HEYS.analytics.trackDataOperation('day-viewed');
     }
   }, []);
   
-  const [products, setProducts] = useState(() => {
-    // Используем HEYS.store.get для получения продуктов с учетом client_id
-    if (window.HEYS && window.HEYS.store && typeof window.HEYS.store.get === 'function') {
-      const stored = window.HEYS.store.get('heys_products', []);
-      if (window.HEYS && window.HEYS.analytics && Array.isArray(stored)) {
-        window.HEYS.analytics.trackDataOperation('products-loaded', stored.length);
-      }
-      return Array.isArray(stored) ? stored : [];
-    } else if (window.HEYS && window.HEYS.products && typeof window.HEYS.products.getAll === 'function') {
-      // Fallback к products API
-      const stored = window.HEYS.products.getAll();
-      if (window.HEYS && window.HEYS.analytics && Array.isArray(stored)) {
-        window.HEYS.analytics.trackDataOperation('products-loaded', stored.length);
-      }
-      return stored;
-    } else {
-      // Последний fallback к localStorage (может не работать с client_id)
-      const stored = window.HEYS.utils.lsGet('heys_products', []);
-      if (window.HEYS && window.HEYS.analytics && Array.isArray(stored)) {
-        window.HEYS.analytics.trackDataOperation('products-loaded', stored.length);
-      }
-      return Array.isArray(stored) ? stored : [];
-    }
-  });
   const prodSig = useMemo(()=>productsSignature(products), [products]);
   const pIndex = useMemo(()=>buildProductIndex(products),[prodSig]);
 
@@ -115,42 +95,6 @@
   window.HEYS.debug = window.HEYS.debug || {};
   window.HEYS.debug.dayProducts = products;
   window.HEYS.debug.dayProductIndex = pIndex;
-
-  // Подписка на события обновления продуктов
-  useEffect(() => {
-    const handleProductsUpdate = (event) => {
-      if (event.detail?.products) {
-        setProducts(event.detail.products);
-      }
-    };
-
-    window.addEventListener('heysProductsUpdated', handleProductsUpdate);
-    return () => window.removeEventListener('heysProductsUpdated', handleProductsUpdate);
-  }, []);
-
-  // Подгружать продукты из облака при смене клиента
-  useEffect(() => {
-    const clientId = window.HEYS && window.HEYS.currentClientId;
-    const cloud = window.HEYS && window.HEYS.cloud;
-    if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
-      const need = (typeof cloud.shouldSyncClient === 'function') ? cloud.shouldSyncClient(clientId, 4000) : true;
-      if (need) {
-        cloud.bootstrapClientSync(clientId).then(() => {
-          const latest = (window.HEYS.store && window.HEYS.store.get && window.HEYS.store.get('heys_products', null)) || 
-                        (window.HEYS.products && window.HEYS.products.getAll && window.HEYS.products.getAll()) || [];
-          setProducts(Array.isArray(latest) ? latest : []);
-        });
-      } else {
-        const latest = (window.HEYS.store && window.HEYS.store.get && window.HEYS.store.get('heys_products', null)) || 
-                      (window.HEYS.products && window.HEYS.products.getAll && window.HEYS.products.getAll()) || [];
-        setProducts(Array.isArray(latest) ? latest : []);
-      }
-    } else {
-      const latest = (window.HEYS.store && window.HEYS.store.get && window.HEYS.store.get('heys_products', null)) || 
-                    (window.HEYS.products && window.HEYS.products.getAll && window.HEYS.products.getAll()) || [];
-      setProducts(Array.isArray(latest) ? latest : []);
-    }
-  }, [window.HEYS && window.HEYS.currentClientId]);
   const prof=getProfile();
   // date приходит из props (selectedDate из App header)
   const date = selectedDate || todayISO();
@@ -248,6 +192,9 @@
   // Флаг: данные загружены (из localStorage или Supabase)
   const [isHydrated, setIsHydrated] = useState(false);
   
+  // Ref для отслеживания предыдущей даты (нужен для flush перед сменой)
+  const prevDateRef = React.useRef(date);
+  
   const [day,setDay]=useState(()=>{ 
     const key = 'heys_dayv2_'+date;
     const v=lsGet(key,null); 
@@ -283,49 +230,16 @@
     }
   });
 
-  // Обновлять day при смене даты (из DatePicker в шапке)
-  useEffect(() => {
-    const key = 'heys_dayv2_' + date;
-    const v = lsGet(key, null);
-    const profNow = getProfile();
-    
-    // Функция очистки пустых тренировок
-    const cleanEmptyTrainings = (trainings) => {
-      if (!Array.isArray(trainings)) return [];
-      return trainings.filter(t => {
-        if (!t) return false;
-        // Тренировка непустая если есть хотя бы одна зона > 0
-        const hasZones = t.z && t.z.some(z => z > 0);
-        return hasZones;
-      });
-    };
-    
-    if (v && v.date) {
-      // Очищаем пустые тренировки при загрузке
-      const cleanedDay = {
-        ...v,
-        trainings: cleanEmptyTrainings(v.trainings)
-      };
-      setDay(ensureDay(cleanedDay, profNow));
-    } else {
-      setDay(ensureDay({ 
-        date: date, 
-        meals: (loadMealsForDate(date) || []), 
-        trainings: [],
-        weightMorning: '',
-        deficitPct: '',
-        sleepStart: '',
-        sleepEnd: '',
-        sleepQuality: '',
-        sleepNote: '',
-        dayScore: '',
-        moodAvg: '',
-        wellbeingAvg: '',
-        stressAvg: '',
-        dayComment: ''
-      }, profNow));
-    }
-  }, [date]);
+  // Функция очистки пустых тренировок (используется при загрузке дня)
+  const cleanEmptyTrainings = (trainings) => {
+    if (!Array.isArray(trainings)) return [];
+    return trainings.filter(t => {
+      if (!t) return false;
+      // Тренировка непустая если есть хотя бы одна зона > 0
+      const hasZones = t.z && t.z.some(z => z > 0);
+      return hasZones;
+    });
+  };
 
     // ЗАЩИТА: не сохранять до завершения гидратации (чтобы не затереть данные из Supabase)
     const { flush } = useDayAutosave({ day, date, lsSet, lsGetFn: lsGet, disabled: !isHydrated });
@@ -360,6 +274,17 @@
     // Подгружать данные дня из облака при смене даты
     useEffect(() => {
       let cancelled = false;
+      
+      // 🔴 КРИТИЧНО: Сохранить текущие данные ПЕРЕД сменой даты!
+      // Иначе несохранённые изменения потеряются при переходе на другую дату
+      const dateActuallyChanged = prevDateRef.current !== date;
+      if (dateActuallyChanged && HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+        console.info(`[HEYS] 📅 Смена даты: ${prevDateRef.current} → ${date}, сохраняем предыдущий день...`);
+        // Flush данные предыдущего дня синхронно
+        HEYS.Day.requestFlush();
+      }
+      prevDateRef.current = date;
+      
       setIsHydrated(false); // Сброс: данные ещё не загружены для новой даты
       const clientId = window.HEYS && window.HEYS.currentClientId;
       const cloud = window.HEYS && window.HEYS.cloud;
@@ -368,8 +293,15 @@
         const profNow = getProfile();
         const key = 'heys_dayv2_' + date;
         const v = lsGet(key, null);
+        console.log('[HEYS] 📅 doLocal() loading day | key:', key, '| found:', !!v, '| meals in storage:', v?.meals?.length);
         if (v && v.date) {
-          setDay(ensureDay(v, profNow));
+          // Очищаем пустые тренировки при загрузке
+          const cleanedDay = {
+            ...v,
+            trainings: cleanEmptyTrainings(v.trainings)
+          };
+          setDay(ensureDay(cleanedDay, profNow));
+          console.log('[HEYS] 📅 doLocal() loaded existing day | meals:', cleanedDay.meals?.length);
         } else {
           // create a clean default day for the selected date (don't inherit previous trainings)
           const defaultDay = ensureDay({ 
@@ -388,23 +320,25 @@
             dayComment: ''
           }, profNow);
           setDay(defaultDay);
-        }
-        
-        // Обновляем продукты после смены даты
-        const currentProducts = lsGet('heys_products', null);
-        if (currentProducts && Array.isArray(currentProducts)) {
-          setProducts(currentProducts);
+          console.log('[HEYS] 📅 doLocal() created NEW day | date:', date);
         }
         
         // ВАЖНО: данные загружены, теперь можно сохранять
+        // Продукты приходят через props.products, не нужно обновлять локально
         setIsHydrated(true);
       };
       if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
         if (typeof cloud.shouldSyncClient === 'function' ? cloud.shouldSyncClient(clientId, 4000) : true){
-          cloud.bootstrapClientSync(clientId).then(() => {
-            // Даем время на то, чтобы событие heysProductsUpdated отправилось
-            setTimeout(doLocal, 150);
-          });
+          cloud.bootstrapClientSync(clientId)
+            .then(() => {
+              // Даем время на то, чтобы событие heysProductsUpdated отправилось
+              setTimeout(doLocal, 150);
+            })
+            .catch((err) => {
+              // Нет сети или ошибка — загружаем из локального кэша
+              console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
+              doLocal();
+            });
         } else {
           doLocal();
         }
@@ -1665,6 +1599,9 @@
     const confettiShownRef = React.useRef(false);
     const prevKcalRef = React.useRef(0);
     
+    // === Emoji анимация в рейтинг модалке ===
+    const [emojiAnimating, setEmojiAnimating] = useState({ mood: '', wellbeing: '', stress: '' });
+    
     // === Анимации карточек при превышении/успехе ===
     const [shakeEaten, setShakeEaten] = useState(false);   // карточка "Съедено" — shake при превышении
     const [shakeOver, setShakeOver] = useState(false);     // карточка "Перебор" — shake при превышении
@@ -2629,12 +2566,16 @@
 
     // addMeal теперь открывает модалку на мобильных
     function addMeal(){ 
+      console.log('[HEYS] 🍽 addMeal() called | date:', day.date, '| meals before:', day.meals.length, '| isHydrated:', isHydrated);
       if (isMobile) {
         openTimePickerForNewMeal();
       } else {
         // Десктоп — старое поведение
+        const newMealId = uid('m_');
         const newMealIndex = day.meals.length;
-        setDay({...day, meals:[...day.meals,{id:uid('m_'),name:'Приём',time:'',mood:'',wellbeing:'',stress:'',items:[]}]}); 
+        const newMeals = [...day.meals, {id:newMealId,name:'Приём',time:'',mood:'',wellbeing:'',stress:'',items:[]}];
+        console.log('[HEYS] 🍽 addMeal() creating meal | id:', newMealId, '| new meals count:', newMeals.length);
+        setDay({...day, meals: newMeals}); 
         expandOnlyMeal(newMealIndex);
         if (window.HEYS && window.HEYS.analytics) {
           window.HEYS.analytics.trackDataOperation('meal-created');
@@ -2789,6 +2730,17 @@
         }
       };
     }, [currentStreak]);
+
+    // Экспорт addMeal для PWA shortcuts и внешних вызовов
+    React.useEffect(() => {
+      HEYS.Day = HEYS.Day || {};
+      HEYS.Day.addMeal = addMeal;
+      return () => {
+        if (HEYS.Day && HEYS.Day.addMeal === addMeal) {
+          delete HEYS.Day.addMeal;
+        }
+      };
+    }, [addMeal]);
 
     // === Advice Module Integration ===
     // Собираем uiState для проверки занятости пользователя
@@ -7338,6 +7290,69 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 };
                 const compositeFace = getCompositeFace();
                 
+                // ⏰ Таймер с последнего приёма пищи
+                const getTimeSinceLastMeal = () => {
+                  const meals = day.meals || [];
+                  if (meals.length === 0) return null;
+                  const lastMeal = meals[meals.length - 1];
+                  if (!lastMeal.time) return null;
+                  
+                  const [h, m] = lastMeal.time.split(':').map(Number);
+                  const lastMealDate = new Date();
+                  lastMealDate.setHours(h, m, 0, 0);
+                  
+                  const now = new Date();
+                  const diffMs = now - lastMealDate;
+                  if (diffMs < 0) return null; // прошлый день
+                  
+                  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                  const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                  
+                  // Инсулиновая волна из профиля (по умолчанию 4 часа)
+                  const insulinWave = prof?.insulinWaveHours || 4;
+                  const isInsulinOk = diffHours >= insulinWave;
+                  
+                  return {
+                    hours: diffHours,
+                    mins: diffMins,
+                    isOk: isInsulinOk,
+                    insulinWave
+                  };
+                };
+                const timeSinceLastMeal = getTimeSinceLastMeal();
+                
+                // 🎉 Триггер confetti при идеальных оценках (используем состояние из родительского компонента)
+                const triggerConfetti = () => {
+                  if (!showConfetti) {
+                    setShowConfetti(true);
+                    // Haptic celebration
+                    if (navigator.vibrate) navigator.vibrate([50, 50, 50, 50, 100]);
+                    // Звук celebration
+                    try {
+                      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                      const playNote = (freq, time, dur) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.type = 'sine';
+                        osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.06, ctx.currentTime + time);
+                        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + time + dur);
+                        osc.start(ctx.currentTime + time);
+                        osc.stop(ctx.currentTime + time + dur);
+                      };
+                      // Мажорный аккорд C-E-G-C
+                      playNote(523.25, 0, 0.15);
+                      playNote(659.25, 0.1, 0.15);
+                      playNote(783.99, 0.2, 0.15);
+                      playNote(1046.50, 0.3, 0.2);
+                    } catch(e) {}
+                    // Автоскрытие через 2 секунды
+                    setTimeout(() => setShowConfetti(false), 2000);
+                  }
+                };
+                
                 // Цвет значения по позиции (positive: red→blue→green)
                 const getPositiveColor = (v) => {
                   if (v <= 3) return '#ef4444';
@@ -7436,8 +7451,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 
                 const correlationHint = getCorrelationHint();
                 
-                // Состояние emoji анимации
-                const [emojiAnimating, setEmojiAnimating] = React.useState({ mood: '', wellbeing: '', stress: '' });
+                // emojiAnimating теперь на уровне компонента (useState нельзя в IIFE)
                 
                 // Quick chips для комментария
                 const getQuickChips = () => {
@@ -7695,7 +7709,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   // Success sound при хорошей оценке
                   if (value >= 8 && prevValue < 8) playSuccessSound();
                   
-                  setPendingMealMood(prev => ({...prev, [field]: value}));
+                  // Обновляем состояние
+                  const newMood = {...pendingMealMood, [field]: value};
+                  setPendingMealMood(newMood);
+                  
+                  // Проверяем идеальные оценки для confetti
+                  const isPerfect = newMood.mood >= 8 && newMood.wellbeing >= 8 && 
+                                    newMood.stress > 0 && newMood.stress <= 2;
+                  if (isPerfect && !showConfetti) {
+                    triggerConfetti();
+                  }
                 };
                 
                 // Добавить chip в комментарий
@@ -7707,6 +7730,21 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 };
                 
                 return [
+              // 🎉 Confetti animation
+              showConfetti && React.createElement('div', { className: 'confetti-container', key: 'confetti' },
+                ...Array(20).fill(0).map((_, i) => 
+                  React.createElement('div', { 
+                    key: 'confetti-' + i, 
+                    className: 'confetti-piece',
+                    style: {
+                      left: (5 + Math.random() * 90) + '%',
+                      animationDelay: (Math.random() * 0.5) + 's',
+                      backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'][i % 5]
+                    }
+                  })
+                )
+              ),
+              
               // Progress dots
               React.createElement('div', { className: 'rating-progress-dots', key: 'progress-dots' },
                 React.createElement('div', { className: 'rating-progress-dot' + (pendingMealMood.mood > 0 ? ' filled' : '') }),
@@ -7714,9 +7752,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('div', { className: 'rating-progress-dot' + (pendingMealMood.stress > 0 ? ' filled' : '') })
               ),
               
+              // ⏰ Таймер с последнего приёма
+              timeSinceLastMeal && React.createElement('div', { 
+                className: 'meal-timer-hint' + (timeSinceLastMeal.isOk ? ' ok' : ' warning'),
+                key: 'meal-timer'
+              },
+                React.createElement('span', { className: 'meal-timer-icon' }, timeSinceLastMeal.isOk ? '✅' : '⏰'),
+                React.createElement('span', { className: 'meal-timer-text' },
+                  timeSinceLastMeal.hours > 0 
+                    ? `${timeSinceLastMeal.hours}ч ${timeSinceLastMeal.mins}мин с прошлого приёма`
+                    : `${timeSinceLastMeal.mins} мин с прошлого приёма`
+                ),
+                !timeSinceLastMeal.isOk && React.createElement('span', { className: 'meal-timer-wave' },
+                  ` (инсулиновая волна ${timeSinceLastMeal.insulinWave}ч)`
+                )
+              ),
+              
               // Mood Face Avatar (большое лицо вверху)
               React.createElement('div', { className: 'mood-face-avatar', key: 'mood-face' },
-                React.createElement('span', { className: 'mood-face-emoji' }, compositeFace.emoji),
+                React.createElement('span', { className: 'mood-face-emoji' + (showConfetti ? ' celebrate' : '') }, compositeFace.emoji),
                 React.createElement('span', { className: 'mood-face-text' }, compositeFace.text)
               ),
               

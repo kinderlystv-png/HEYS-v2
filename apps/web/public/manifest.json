@@ -23,5 +23,14 @@
   ],
   "categories": ["health", "fitness", "lifestyle"],
   "lang": "ru",
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Добавить приём пищи",
+      "short_name": "+ Приём",
+      "description": "Быстро добавить новый приём пищи",
+      "url": "/?action=add-meal",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
 }

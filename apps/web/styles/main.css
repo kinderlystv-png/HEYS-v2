@@ -766,6 +766,19 @@ td:first-child input {
   box-sizing: border-box;
   /* Отступ сверху для fixed шапки */
   padding-top: 130px;
+  /* Плавное появление после загрузки */
+  animation: wrapFadeIn 0.4s ease-out;
+}
+
+@keyframes wrapFadeIn {
+  from { 
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* === MODERN HEADER === */
@@ -1455,6 +1468,47 @@ td:first-child input {
   box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
+/* Прогресс синхронизации (3/5) рядом со spinner */
+.cloud-sync-indicator .sync-progress {
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 4px;
+  color: #3b82f6;
+}
+
+/* Countdown до retry (5) рядом с ошибкой */
+.cloud-sync-indicator .retry-countdown {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #f59e0b;
+  color: white;
+  font-size: 9px;
+  font-weight: 600;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  animation: countdown-pulse 1s infinite;
+}
+
+@keyframes countdown-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Error state */
+.cloud-sync-indicator.error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  position: relative;
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    OFFLINE BANNER — полоска вверху при отсутствии сети
    ═══════════════════════════════════════════════════════════════════ */
@@ -2064,16 +2118,39 @@ body:has(.offline-banner) .wrap {
 /* Mobile responsive */
 @media (max-width: 640px) {
   .date-picker-trigger {
-    padding: 6px 10px;
-    min-width: 120px;
+    padding: 4px 6px;
+    min-width: 90px;
+    gap: 4px;
+  }
+  
+  .date-picker-icon {
+    font-size: 14px;
   }
   
   .date-picker-main {
-    font-size: 13px;
+    font-size: 12px;
   }
   
   .date-picker-sub {
+    font-size: 9px;
+  }
+  
+  .date-picker-arrow {
     font-size: 10px;
+  }
+  
+  /* Компактная кнопка быстрого перехода */
+  .today-quick-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+  
+  /* Компактная кнопка темы */
+  .hdr-theme-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
   }
   
   .date-picker-dropdown {
@@ -3088,6 +3165,120 @@ body:has(.offline-banner) .wrap {
     inset 0 1px 0 rgba(255, 255, 255, 0.5);
   animation: pop 0.25s ease;
 }
+
+/* === Login Modal === */
+.login-modal {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.login-modal input:focus {
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+}
+
+.login-modal button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5) !important;
+}
+
+.login-modal button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+[data-theme="dark"] .login-modal {
+  background: rgba(30, 30, 35, 0.95) !important;
+}
+
+[data-theme="dark"] .login-modal input {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+[data-theme="dark"] .login-modal input::placeholder {
+  color: var(--muted);
+}
+
+/* === Client Select Modal === */
+.client-select-modal {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.client-select-modal input:focus {
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+}
+
+.client-card:hover {
+  border-color: #667eea !important;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.client-card .btn-icon:hover {
+  transform: scale(1.1);
+}
+
+[data-theme="dark"] .client-select-modal {
+  background: rgba(30, 30, 35, 0.95) !important;
+}
+
+[data-theme="dark"] .client-select-modal input {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+[data-theme="dark"] .client-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .client-card:hover {
+  background: rgba(102, 126, 234, 0.1) !important;
+  border-color: rgba(102, 126, 234, 0.3) !important;
+}
+
+/* === Client Card Animation === */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* === Client Dropdown (header) === */
+.hdr-client-clickable:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.hdr-client-clickable:hover .hdr-client-avatar {
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.hdr-client-avatar {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+[data-theme="dark"] .hdr-client-clickable:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.client-dropdown-item:hover {
+  background: rgba(102, 126, 234, 0.08) !important;
+}
+
+[data-theme="dark"] .client-dropdown {
+  background: var(--card) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
 @keyframes pop {
   from {
     transform: translateY(12px);
@@ -9717,6 +9908,240 @@ body:has(.offline-banner) .wrap {
   margin-bottom: 12px;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   APP LOADER — Красивый полноэкранный прелоадер
+   ═══════════════════════════════════════════════════════════════════ */
+
+.app-loader {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 24px;
+  animation: appLoaderFadeIn 0.3s ease;
+}
+
+@keyframes appLoaderFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.app-loader-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.app-loader-logo {
+  font-size: 56px;
+  margin-bottom: 16px;
+  animation: appLoaderPulse 2s ease-in-out infinite;
+}
+
+@keyframes appLoaderPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.app-loader-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 6px;
+}
+
+.app-loader-subtitle {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.app-loader-skeleton {
+  width: 100%;
+  max-width: 430px;
+  background: #fff;
+  border-radius: 24px;
+  padding: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.app-loader-skeleton .skeleton-header {
+  margin-bottom: 16px;
+  height: auto;
+  width: auto;
+}
+
+.app-loader-skeleton .skeleton-bar {
+  height: 8px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.app-loader-skeleton .skeleton-bar-xp {
+  margin-bottom: 12px;
+}
+
+.app-loader-skeleton .skeleton-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-loader-skeleton .skeleton-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  flex-shrink: 0;
+}
+
+.app-loader-skeleton .skeleton-rect {
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.app-loader-skeleton .skeleton-client {
+  flex: 1;
+}
+
+.app-loader-skeleton .skeleton-content {
+  margin: 20px 0;
+}
+
+.app-loader-skeleton .skeleton-sparkline {
+  height: 80px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.app-loader-skeleton .skeleton-dot {
+  flex: 1;
+  min-width: 6px;
+  background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%);
+  border-radius: 3px 3px 0 0;
+  opacity: 0.3;
+  animation: skeletonDotPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeletonDotPulse {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.5; }
+}
+
+.app-loader-skeleton .skeleton-cards {
+  display: flex;
+  gap: 8px;
+}
+
+.app-loader-skeleton .skeleton-card {
+  flex: 1;
+  height: 60px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 12px;
+  border: none;
+  padding: 0;
+}
+
+.app-loader-skeleton .skeleton-card-wide {
+  flex: 2;
+}
+
+.app-loader-skeleton .skeleton-tabs {
+  display: flex;
+  justify-content: space-around;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 16px;
+}
+
+.app-loader-skeleton .skeleton-tab {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.app-loader-skeleton .skeleton-tab-active {
+  background: linear-gradient(90deg, #dbeafe 25%, #bfdbfe 50%, #dbeafe 75%);
+  background-size: 200% 100%;
+}
+
+.app-loader-spinner {
+  margin-top: 24px;
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: appLoaderSpin 0.8s linear infinite;
+}
+
+@keyframes appLoaderSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Dark mode */
+[data-theme="dark"] .app-loader {
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+}
+
+[data-theme="dark"] .app-loader-title {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .app-loader-subtitle {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .app-loader-skeleton {
+  background: #1e293b;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .app-loader-skeleton .skeleton-bar,
+[data-theme="dark"] .app-loader-skeleton .skeleton-circle,
+[data-theme="dark"] .app-loader-skeleton .skeleton-rect,
+[data-theme="dark"] .app-loader-skeleton .skeleton-card,
+[data-theme="dark"] .app-loader-skeleton .skeleton-tab {
+  background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+  background-size: 200% 100%;
+}
+
+[data-theme="dark"] .app-loader-skeleton .skeleton-sparkline {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .app-loader-skeleton .skeleton-tabs {
+  border-top-color: #334155;
+}
+
+[data-theme="dark"] .app-loader-spinner {
+  border-color: #334155;
+  border-top-color: #3b82f6;
+}
+
 .skeleton-search {
   height: 40px;
   background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
@@ -10542,6 +10967,89 @@ body:has(.offline-banner) .wrap {
   background: rgba(16, 185, 129, 0.08);
   border-color: rgba(16, 185, 129, 0.15);
   color: #059669;
+}
+
+/* ⏰ Meal timer hint */
+.meal-timer-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin: 0 16px 8px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  animation: fade-in-up 0.3s ease;
+}
+
+.meal-timer-hint.ok {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #059669;
+}
+
+.meal-timer-hint.warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: #d97706;
+}
+
+.meal-timer-icon {
+  font-size: 16px;
+}
+
+.meal-timer-text {
+  flex: 1;
+}
+
+.meal-timer-wave {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* 🎉 Confetti animation */
+.confetti-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  top: -20px;
+  border-radius: 2px;
+  animation: confetti-fall 2s ease-out forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(250px) rotate(720deg) scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* Celebrate emoji animation */
+.mood-face-emoji.celebrate {
+  animation: celebrate-bounce 0.6s ease-out;
+}
+
+@keyframes celebrate-bounce {
+  0%, 100% { transform: scale(1); }
+  20% { transform: scale(1.3) rotate(-10deg); }
+  40% { transform: scale(1.2) rotate(10deg); }
+  60% { transform: scale(1.25) rotate(-5deg); }
+  80% { transform: scale(1.15) rotate(5deg); }
 }
 
 /* Correlation hint */
