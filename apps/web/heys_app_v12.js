@@ -1007,6 +1007,35 @@
               localStorage.setItem('heys_pwa_banner_dismissed', Date.now().toString());
             };
             
+            // === Update Toast (новая версия доступна) ===
+            const [showUpdateToast, setShowUpdateToast] = useState(false);
+            
+            // Регистрируем глобальный хук для SW
+            React.useEffect(() => {
+              window.HEYS = window.HEYS || {};
+              window.HEYS.showUpdateToast = () => {
+                setShowUpdateToast(true);
+              };
+              return () => {
+                if (window.HEYS) delete window.HEYS.showUpdateToast;
+              };
+            }, []);
+            
+            const handleUpdate = () => {
+              // Принудительно активируем новый SW
+              if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage('skipWaiting');
+              }
+              // Перезагрузка через 300ms для завершения активации
+              setTimeout(() => window.location.reload(), 300);
+            };
+            
+            const dismissUpdateToast = () => {
+              setShowUpdateToast(false);
+              // Напоминаем через 24 часа
+              localStorage.setItem('heys_update_dismissed', Date.now().toString());
+            };
+
             const [backupMeta, setBackupMeta] = useState(() => {
               if (U && typeof U.lsGet === 'function') {
                 try {
@@ -2238,6 +2267,23 @@
                       onClick: dismissPwaBanner
                     }, '✕')
                   )
+                )
+              ),
+              // === Update Toast (новая версия) ===
+              showUpdateToast && React.createElement(
+                'div',
+                { className: 'update-toast' },
+                React.createElement('div', { className: 'update-toast-content' },
+                  React.createElement('span', { className: 'update-toast-icon' }, '🚀'),
+                  React.createElement('span', { className: 'update-toast-text' }, 'Доступна новая версия!'),
+                  React.createElement('button', { 
+                    className: 'update-toast-btn',
+                    onClick: handleUpdate
+                  }, 'Обновить'),
+                  React.createElement('button', { 
+                    className: 'update-toast-dismiss',
+                    onClick: dismissUpdateToast
+                  }, '✕')
                 )
               ),
             );

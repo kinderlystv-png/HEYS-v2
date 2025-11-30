@@ -247,6 +247,9 @@
             .then(function(registration) {
               console.log('[App] SW registered, scope:', registration.scope);
               
+              // Сохраняем регистрацию для Background Sync
+              window.swRegistration = registration;
+              
               // Проверка обновлений каждые 60 минут
               setInterval(function() {
                 registration.update();
@@ -266,10 +269,35 @@
                   }
                 });
               });
+              
+              // Background Sync — регистрируем при изменениях данных
+              window.requestBackgroundSync = function() {
+                if ('sync' in registration) {
+                  registration.sync.register('heys-sync')
+                    .then(function() { console.log('[App] Background sync scheduled'); })
+                    .catch(function() { console.log('[App] Background sync not available'); });
+                }
+              };
             })
             .catch(function(error) {
               console.warn('[App] SW registration failed:', error);
             });
+            
+          // Обработка сообщений от Service Worker
+          navigator.serviceWorker.addEventListener('message', function(event) {
+            if (event.data.type === 'SYNC_START') {
+              console.log('[App] Background sync starting...');
+              // Триггерим синхронизацию через HEYS.cloud
+              if (window.HEYS && window.HEYS.cloud && window.HEYS.cloud.sync) {
+                window.HEYS.cloud.sync();
+              }
+            }
+            
+            if (event.data.type === 'SYNC_COMPLETE') {
+              console.log('[App] Background sync complete');
+              window.dispatchEvent(new CustomEvent('heys:sync-complete'));
+            }
+          });
         });
       }
     </script>

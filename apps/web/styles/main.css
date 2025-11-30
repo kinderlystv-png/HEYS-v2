@@ -764,8 +764,8 @@ td:first-child input {
   margin: 0 auto;
   padding: 12px 18px 80px;
   box-sizing: border-box;
-  /* Отступ сверху для fixed шапки (GamificationBar ~50px + ClientRow ~56px) */
-  padding-top: 118px;
+  /* Отступ сверху для fixed шапки (GamificationBar ~52px + ClientRow ~64px) */
+  padding-top: 120px;
 }
 
 /* === MODERN HEADER === */
@@ -773,9 +773,7 @@ td:first-child input {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 0;
   box-sizing: border-box;
-  width: 100%;
   
   /* Fixed header — всегда виден при прокрутке */
   position: fixed;
@@ -784,6 +782,9 @@ td:first-child input {
   right: 0;
   z-index: 100;
   background: var(--bg-primary, #f8f9fa);
+  
+  /* Padding как у карточек */
+  padding: 12px 18px 0;
   max-width: 100%;
 }
 
@@ -794,7 +795,9 @@ td:first-child input {
   justify-content: space-between;
   padding: 16px 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 0; /* Fixed шапка без скругления сверху */
+  border-radius: 16px 16px 0 0;
+  border: 2px solid #667eea;
+  border-bottom: none;
   color: white;
 }
 
@@ -1291,14 +1294,16 @@ td:first-child input {
   justify-content: space-between;
   gap: 16px;
   padding: 12px 20px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: #f0f0f0;
+  border: 2px solid #667eea;
   border-top: none;
   border-radius: 0 0 16px 16px;
   flex-wrap: wrap;
   overflow: visible;
   position: relative;
   z-index: 10;
+  /* Тень снизу как у нижнего меню */
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
 }
 
 /* Информация о клиенте */
@@ -1941,6 +1946,10 @@ td:first-child input {
 
 /* Mobile responsive header */
 @media (max-width: 768px) {
+  .hdr {
+    padding: 10px 16px 0;
+  }
+
   .hdr-top {
     padding: 12px 16px;
     border-radius: 12px 12px 0 0;
@@ -3084,6 +3093,8 @@ td:first-child input {
   }
   .wrap {
     padding: 12px 14px 80px;
+    /* Отступ сверху для fixed шапки на мобильных */
+    padding-top: 120px;
   }
 }
 
@@ -3151,7 +3162,7 @@ td:first-child input {
 @media (max-width: 640px) {
   /* === СОВРЕМЕННАЯ ШАПКА НА МОБИЛЬНЫХ === */
   .hdr {
-    padding: 0;
+    padding: 8px 14px 0;
     margin-bottom: 0;
   }
 
@@ -7732,8 +7743,8 @@ td:first-child input {
 
 /* Header bottom */
 [data-theme="dark"] .hdr-bottom {
-  background: var(--card);
-  border-color: var(--border);
+  background: #2a2a2a;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Today quick button in header */
@@ -12577,6 +12588,123 @@ input, textarea, select {
 }
 
 [data-theme="dark"] .pwa-banner-install:active {
+  background: #334155;
+}
+
+/* ========================================
+   Update Toast (SW Update Available)
+   ======================================== */
+.update-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001;
+  animation: slideDownToast 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes slideDownToast {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.update-toast-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  max-width: 360px;
+}
+
+.update-toast-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.update-toast-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.update-toast-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.update-toast-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.update-toast-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.update-toast-update {
+  padding: 8px 16px;
+  background: #fff;
+  color: #059669;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.update-toast-update:active {
+  transform: scale(0.95);
+  background: #ecfdf5;
+}
+
+.update-toast-dismiss {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 12px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.update-toast-dismiss:active {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(0.9);
+}
+
+/* Dark theme */
+[data-theme="dark"] .update-toast-content {
+  background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  box-shadow: 0 4px 20px rgba(5, 150, 105, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .update-toast-update {
+  background: #1e293b;
+  color: #34d399;
+}
+
+[data-theme="dark"] .update-toast-update:active {
   background: #334155;
 }
 

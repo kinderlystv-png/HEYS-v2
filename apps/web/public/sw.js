@@ -207,6 +207,33 @@ async function staleWhileRevalidate(request) {
   return new Response('Offline', { status: 503 });
 }
 
+// === Background Sync ===
+const SYNC_TAG = 'heys-sync';
+const SYNC_QUEUE_KEY = 'heys-sync-queue';
+
+self.addEventListener('sync', (event) => {
+  if (event.tag === SYNC_TAG) {
+    console.log('[SW] Background sync triggered');
+    event.waitUntil(processSyncQueue());
+  }
+});
+
+async function processSyncQueue() {
+  // Получаем очередь из IndexedDB (через postMessage к клиенту)
+  const clients = await self.clients.matchAll();
+  
+  for (const client of clients) {
+    client.postMessage({ type: 'SYNC_START' });
+  }
+  
+  // Даём клиенту время на синхронизацию
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  for (const client of clients) {
+    client.postMessage({ type: 'SYNC_COMPLETE' });
+  }
+}
+
 // === Сообщения от клиента ===
 self.addEventListener('message', (event) => {
   if (event.data === 'skipWaiting') {
@@ -215,6 +242,18 @@ self.addEventListener('message', (event) => {
   
   if (event.data === 'getVersion') {
     event.ports[0]?.postMessage({ version: CACHE_VERSION });
+  }
+  
+  // Регистрация Background Sync
+  if (event.data === 'registerSync') {
+    self.registration.sync?.register(SYNC_TAG)
+      .then(() => console.log('[SW] Background sync registered'))
+      .catch(err => console.warn('[SW] Background sync not supported:', err));
+  }
+  
+  // Запрос на немедленную синхронизацию (для тестирования)
+  if (event.data === 'forceSync') {
+    processSyncQueue();
   }
 });
 

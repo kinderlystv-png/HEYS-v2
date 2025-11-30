@@ -220,10 +220,85 @@
     return isMobile;
   }
 
+  // Хук для Smart Prefetch — предзагрузка данных ±N дней при наличии интернета
+  function useSmartPrefetch({
+    currentDate,
+    daysRange = 7,  // ±7 дней
+    enabled = true
+  }) {
+    const prefetchedRef = React.useRef(new Set());
+    const utils = getDayUtils();
+    const lsGet = utils.lsGet || HEYS.utils?.lsGet;
+    
+    // Генерация списка дат для prefetch
+    const getDatesToPrefetch = React.useCallback((centerDate) => {
+      const dates = [];
+      const center = new Date(centerDate);
+      
+      for (let i = -daysRange; i <= daysRange; i++) {
+        const d = new Date(center);
+        d.setDate(d.getDate() + i);
+        dates.push(d.toISOString().slice(0, 10));
+      }
+      
+      return dates;
+    }, [daysRange]);
+    
+    // Prefetch данных через Supabase (если доступно)
+    const prefetchFromCloud = React.useCallback(async (dates) => {
+      if (!navigator.onLine) return;
+      if (!HEYS.cloud?.isAuthenticated?.()) return;
+      
+      const toFetch = dates.filter(d => !prefetchedRef.current.has(d));
+      if (toFetch.length === 0) return;
+      
+      try {
+        // Пометим как "в процессе" чтобы избежать дублирования
+        toFetch.forEach(d => prefetchedRef.current.add(d));
+        
+        // Загружаем данные через cloud sync
+        if (HEYS.cloud?.fetchDays) {
+          await HEYS.cloud.fetchDays(toFetch);
+        }
+      } catch (error) {
+        // Откатываем пометки при ошибке
+        toFetch.forEach(d => prefetchedRef.current.delete(d));
+      }
+    }, []);
+    
+    // Prefetch при смене даты или восстановлении соединения
+    React.useEffect(() => {
+      if (!enabled || !currentDate) return;
+      
+      const dates = getDatesToPrefetch(currentDate);
+      prefetchFromCloud(dates);
+      
+      // Подписка на восстановление соединения
+      const handleOnline = () => {
+        // Сбрасываем prefetch cache при восстановлении
+        prefetchedRef.current.clear();
+        prefetchFromCloud(getDatesToPrefetch(currentDate));
+      };
+      
+      window.addEventListener('online', handleOnline);
+      return () => window.removeEventListener('online', handleOnline);
+    }, [currentDate, enabled, getDatesToPrefetch, prefetchFromCloud]);
+    
+    // Ручной триггер prefetch
+    const triggerPrefetch = React.useCallback(() => {
+      if (!currentDate) return;
+      prefetchedRef.current.clear();
+      prefetchFromCloud(getDatesToPrefetch(currentDate));
+    }, [currentDate, getDatesToPrefetch, prefetchFromCloud]);
+    
+    return { triggerPrefetch };
+  }
+
   // === Exports ===
   HEYS.dayHooks = {
     useDayAutosave,
-    useMobileDetection
+    useMobileDetection,
+    useSmartPrefetch
   };
 
 })(window);

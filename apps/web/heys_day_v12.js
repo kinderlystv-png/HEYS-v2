@@ -50,6 +50,7 @@
   const H = HEYS.dayHooks || {};
   const useDayAutosave = H.useDayAutosave;
   const useMobileDetection = H.useMobileDetection;
+  const useSmartPrefetch = H.useSmartPrefetch;
   
   // Calendar загружается динамически в DayTab (строка ~1337), 
   // НЕ кэшируем здесь чтобы HMR работал
@@ -320,6 +321,9 @@
 
     // ЗАЩИТА: не сохранять до завершения гидратации (чтобы не затереть данные из Supabase)
     const { flush } = useDayAutosave({ day, date, lsSet, lsGetFn: lsGet, disabled: !isHydrated });
+    
+    // Smart Prefetch: предзагрузка ±7 дней при наличии интернета
+    useSmartPrefetch && useSmartPrefetch({ currentDate: date, daysRange: 7, enabled: isHydrated });
 
     useEffect(() => {
       HEYS.Day = HEYS.Day || {};
@@ -1528,6 +1532,7 @@
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [pendingChanges, setPendingChanges] = useState(false);
     const [syncMessage, setSyncMessage] = useState(''); // '' | 'offline' | 'pending' | 'syncing' | 'synced'
+    const [pendingQueue, setPendingQueue] = useState([]); // Очередь изменений для Optimistic UI
     
     // Слушаем online/offline события
     React.useEffect(() => {
@@ -1573,10 +1578,23 @@
     
     // Отслеживаем изменения данных (для pendingChanges)
     React.useEffect(() => {
-      const handleDataChange = () => {
+      const handleDataChange = (e) => {
         if (!navigator.onLine) {
           setPendingChanges(true);
           setSyncMessage('pending');
+          
+          // Добавляем в очередь (если есть детали)
+          if (e.detail && e.detail.type) {
+            setPendingQueue(prev => {
+              const newItem = {
+                id: Date.now(),
+                type: e.detail.type,
+                time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+              };
+              // Максимум 5 последних изменений
+              return [...prev, newItem].slice(-5);
+            });
+          }
         }
       };
       
@@ -1584,6 +1602,13 @@
       window.addEventListener('heys:data-saved', handleDataChange);
       return () => window.removeEventListener('heys:data-saved', handleDataChange);
     }, []);
+    
+    // Очистка очереди при успешной синхронизации
+    React.useEffect(() => {
+      if (syncMessage === 'synced') {
+        setPendingQueue([]);
+      }
+    }, [syncMessage]);
 
     // === Dark Theme (3 modes: light / dark / auto) ===
     const [theme, setTheme] = useState(() => {
@@ -6839,6 +6864,51 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             : syncMessage === 'syncing' ? 'Синхронизация...'
             : syncMessage === 'pending' ? 'Изменения сохранены локально'
             : 'Нет сети — работаем офлайн'
+        )
+      ),
+      
+      // === Pending Queue (Optimistic UI) ===
+      pendingQueue.length > 0 && syncMessage === 'pending' && React.createElement('div', {
+        className: 'pending-queue',
+        style: {
+          padding: '8px 16px',
+          background: 'rgba(245, 158, 11, 0.1)',
+          fontSize: '12px',
+          color: '#92400e'
+        }
+      },
+        React.createElement('div', { 
+          style: { 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px',
+            marginBottom: '4px',
+            fontWeight: 500
+          } 
+        },
+          React.createElement('span', null, '📋'),
+          'Ожидают синхронизации:'
+        ),
+        React.createElement('div', { 
+          style: { 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: '4px' 
+          } 
+        },
+          pendingQueue.map(item => 
+            React.createElement('span', {
+              key: item.id,
+              style: {
+                padding: '2px 8px',
+                background: 'rgba(245, 158, 11, 0.2)',
+                borderRadius: '10px',
+                fontSize: '11px'
+              }
+            }, 
+              (item.type === 'meal' ? '🍽️' : item.type === 'product' ? '🥗' : '💾') + ' ' + item.time
+            )
+          )
         )
       ),
       

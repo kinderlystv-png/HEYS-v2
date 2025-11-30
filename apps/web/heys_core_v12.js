@@ -84,8 +84,12 @@
       // Логирование отключено для чистой консоли
       localStorage.setItem(key, JSON.stringify(val)); 
       window.HEYS.saveClientKey(key, val);
-      // Событие для offline-индикатора
-      window.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key } }));
+      // Событие для offline-индикатора с типом изменения
+      const type = key.includes('dayv2') ? 'meal' 
+        : key.includes('product') ? 'product'
+        : key.includes('profile') ? 'profile'
+        : 'data';
+      window.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key, type } }));
     }catch(e){
       console.error('[lsSet] Error saving:', key, e);
     } 
