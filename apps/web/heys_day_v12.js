@@ -1298,11 +1298,14 @@
     
     // === Training Picker Modal ===
     const [showTrainingPicker, setShowTrainingPicker] = useState(false);
-    const [trainingPickerStep, setTrainingPickerStep] = useState(1); // 1 = тип+время, 2 = зоны
+    const [trainingPickerStep, setTrainingPickerStep] = useState(1); // 1 = тип+время, 2 = зоны, 3 = оценки
     const [editingTrainingIndex, setEditingTrainingIndex] = useState(null);
     const [pendingTrainingTime, setPendingTrainingTime] = useState({hours: 10, minutes: 0});
     const [pendingTrainingType, setPendingTrainingType] = useState('cardio');
     const [pendingTrainingZones, setPendingTrainingZones] = useState([0, 0, 0, 0]); // индексы для zoneMinutesValues
+    const [pendingTrainingQuality, setPendingTrainingQuality] = useState(0); // 0-10
+    const [pendingTrainingFeelAfter, setPendingTrainingFeelAfter] = useState(0); // 0-10
+    const [pendingTrainingComment, setPendingTrainingComment] = useState('');
     
     // === Тренировки: количество видимых блоков ===
     const [visibleTrainings, setVisibleTrainings] = useState(() => {
@@ -1982,7 +1985,20 @@
     }
 
     // Быстрое добавление воды с анимацией
-    function addWater(ml) {
+    function addWater(ml, skipScroll = false) {
+      // Сначала прокручиваем к карточке воды (если вызвано из FAB)
+      const waterCardEl = document.getElementById('water-card');
+      if (!skipScroll && waterCardEl) {
+        waterCardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Задержка для завершения скролла перед анимацией
+        setTimeout(() => runWaterAnimation(ml), 400);
+        return;
+      }
+      runWaterAnimation(ml);
+    }
+    
+    // Внутренняя функция анимации воды
+    function runWaterAnimation(ml) {
       const newWater = (day.waterMl || 0) + ml;
       setDay({ ...day, waterMl: newWater, lastWaterTime: Date.now() });
       
@@ -1998,7 +2014,8 @@
       window.dispatchEvent(new CustomEvent('heysWaterAdded', { detail: { ml, total: newWater } }));
       
       // 🎉 Celebration при достижении цели (переиспользуем confetti от калорий)
-      if (newWater >= waterGoal && (day.waterMl || 0) < waterGoal && !showConfetti) {
+      const prevWater = day.waterMl || 0;
+      if (newWater >= waterGoal && prevWater < waterGoal && !showConfetti) {
         setShowConfetti(true);
         haptic('success');
         setTimeout(() => setShowConfetti(false), 2000);
@@ -2125,7 +2142,7 @@
     // === Training Picker functions ===
     function openTrainingPicker(trainingIndex) {
       const now = new Date();
-      const T = TR[trainingIndex] || { z: [0,0,0,0], time: '', type: '' };
+      const T = TR[trainingIndex] || { z: [0,0,0,0], time: '', type: '', quality: 0, feelAfter: 0, comment: '' };
       
       // Если уже есть время — парсим, иначе текущее
       if (T.time) {
@@ -2146,6 +2163,11 @@
       });
       setPendingTrainingZones(zoneIndices);
       
+      // Загружаем оценки
+      setPendingTrainingQuality(T.quality || 0);
+      setPendingTrainingFeelAfter(T.feelAfter || 0);
+      setPendingTrainingComment(T.comment || '');
+      
       setTrainingPickerStep(1); // начинаем с первого шага
       setEditingTrainingIndex(trainingIndex);
       setShowTrainingPicker(true);
@@ -2158,20 +2180,25 @@
         return;
       }
       
-      // Валидация: хотя бы одна зона > 0
-      const totalMinutes = pendingTrainingZones.reduce((sum, idx) => sum + (parseInt(zoneMinutesValues[idx], 10) || 0), 0);
-      if (totalMinutes === 0) {
-        haptic('error');
-        // Добавляем shake-анимацию к секции зон
-        const zonesSection = document.querySelector('.training-zones-section');
-        if (zonesSection) {
-          zonesSection.classList.add('shake');
-          setTimeout(() => zonesSection.classList.remove('shake'), 500);
+      // Если на втором шаге — переходим на третий (оценки)
+      if (trainingPickerStep === 2) {
+        // Валидация: хотя бы одна зона > 0
+        const totalMinutes = pendingTrainingZones.reduce((sum, idx) => sum + (parseInt(zoneMinutesValues[idx], 10) || 0), 0);
+        if (totalMinutes === 0) {
+          haptic('error');
+          // Добавляем shake-анимацию к секции зон
+          const zonesSection = document.querySelector('.training-zones-section');
+          if (zonesSection) {
+            zonesSection.classList.add('shake');
+            setTimeout(() => zonesSection.classList.remove('shake'), 500);
+          }
+          return;
         }
+        setTrainingPickerStep(3);
         return;
       }
       
-      // На втором шаге — сохраняем всё
+      // На третьем шаге — сохраняем всё
       const realHours = wheelIndexToHour(pendingTrainingTime.hours);
       const timeStr = pad2(realHours) + ':' + pad2(pendingTrainingTime.minutes);
       
@@ -2186,7 +2213,7 @@
       
       // Заполняем пустые слоты если нужно (для idx=2 при length=2)
       while (newTrainings.length <= idx) {
-        newTrainings.push({ z: [0, 0, 0, 0], time: '', type: '' });
+        newTrainings.push({ z: [0, 0, 0, 0], time: '', type: '', quality: 0, feelAfter: 0, comment: '' });
       }
       
       // Теперь безопасно обновляем
@@ -2194,7 +2221,10 @@
         ...newTrainings[idx],
         z: zoneMinutes,
         time: timeStr,
-        type: pendingTrainingType
+        type: pendingTrainingType,
+        quality: pendingTrainingQuality,
+        feelAfter: pendingTrainingFeelAfter,
+        comment: pendingTrainingComment
       };
       
       setDay({ ...day, trainings: newTrainings });
@@ -2204,7 +2234,11 @@
     }
 
     function cancelTrainingPicker() {
-      // Если на втором шаге — возвращаемся на первый
+      // Если на втором или третьем шаге — возвращаемся на предыдущий
+      if (trainingPickerStep === 3) {
+        setTrainingPickerStep(2);
+        return;
+      }
       if (trainingPickerStep === 2) {
         setTrainingPickerStep(1);
         return;
@@ -2352,13 +2386,6 @@
     ];
     
     // Пресеты популярных тренировок (зоны в индексах zoneMinutesValues)
-    const trainingPresets = [
-      { id: 'run30', label: '🏃 Бег 30 мин', type: 'cardio', zones: [0, 25, 5, 0] },
-      { id: 'hiit20', label: '⚡ HIIT 20 мин', type: 'cardio', zones: [0, 0, 10, 10] },
-      { id: 'strength45', label: '🏋️ Силовая 45 мин', type: 'strength', zones: [10, 30, 5, 0] },
-      { id: 'walk60', label: '🚶 Прогулка 60 мин', type: 'hobby', zones: [40, 20, 0, 0] }
-    ];
-    
     // === BottomSheet с поддержкой свайпа ===
     const bottomSheetRef = React.useRef(null);
     const sheetDragY = React.useRef(0);
@@ -2980,10 +3007,21 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       ),
       // Показываем только видимые тренировки
       Array.from({length: visibleTrainings}, (_, ti) => {
-        const T = TR[ti] || { z: [0, 0, 0, 0], time: '', type: '' };
+        const T = TR[ti] || { z: [0, 0, 0, 0], time: '', type: '', quality: 0, feelAfter: 0, comment: '' };
         const kcalZ = i => r0((+T.z[i] || 0) * (kcalMin[i] || 0));
         const total = r0(kcalZ(0) + kcalZ(1) + kcalZ(2) + kcalZ(3));
         const trainingType = trainingTypes.find(t => t.id === T.type);
+        
+        // Эмодзи для оценок
+        const getQualityEmoji = (v) => 
+          v === 0 ? null : v <= 2 ? '😫' : v <= 4 ? '😕' : v <= 6 ? '😐' : v <= 8 ? '💪' : '🔥';
+        const getFeelEmoji = (v) => 
+          v === 0 ? null : v <= 2 ? '🥵' : v <= 4 ? '😓' : v <= 6 ? '😌' : v <= 8 ? '😊' : '✨';
+        
+        const qualityEmoji = getQualityEmoji(T.quality);
+        const feelEmoji = getFeelEmoji(T.feelAfter);
+        const hasRatings = T.quality > 0 || T.feelAfter > 0;
+        
         return React.createElement('div', { 
           key: 'tr' + ti, 
           className: 'compact-card compact-train'
@@ -3015,6 +3053,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               +T.z[zi] > 0 && React.createElement('span', { className: 'compact-zone-kcal' }, kcalZ(zi) + ' ккал'),
             )),
           ),
+          // Оценки тренировки (если есть)
+          hasRatings && React.createElement('div', { className: 'training-card-ratings' },
+            qualityEmoji && React.createElement('div', { className: 'training-card-rating' },
+              React.createElement('span', { className: 'training-card-rating-emoji' }, qualityEmoji),
+              React.createElement('span', { className: 'training-card-rating-label' }, 'Качество'),
+              React.createElement('span', { className: 'training-card-rating-value' }, T.quality + '/10')
+            ),
+            feelEmoji && React.createElement('div', { className: 'training-card-rating' },
+              React.createElement('span', { className: 'training-card-rating-emoji' }, feelEmoji),
+              React.createElement('span', { className: 'training-card-rating-label' }, 'После'),
+              React.createElement('span', { className: 'training-card-rating-value' }, T.feelAfter + '/10')
+            )
+          ),
+          // Комментарий (если есть)
+          T.comment && React.createElement('div', { className: 'training-card-comment' },
+            '💬 ', T.comment
+          )
         );
       })
     );
@@ -6489,7 +6544,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     };
 
     // === Water Card (Карточка воды) ===
-    const waterCard = React.createElement('div', { className: 'compact-water compact-card' },
+    const waterCard = React.createElement('div', { id: 'water-card', className: 'compact-water compact-card' },
       React.createElement('div', { className: 'compact-card-header' }, '💧 ВОДА'),
       
       // Основной контент: кольцо + инфо + пресеты
@@ -6626,7 +6681,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               React.createElement('button', {
                 key: preset.ml,
                 className: 'water-preset-compact',
-                onClick: () => addWater(preset.ml)
+                onClick: () => addWater(preset.ml, true) // skipScroll: уже внутри карточки
               },
                 React.createElement('span', { className: 'water-preset-icon' }, preset.icon),
                 React.createElement('span', { className: 'water-preset-ml' }, '+' + preset.ml)
@@ -6832,94 +6887,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             : refreshStatus === 'syncing' ? 'Синхронизация...' 
             : refreshStatus === 'ready' ? 'Отпустите для обновления' 
             : 'Потяните для обновления'
-        )
-      ),
-      
-      // === Offline/Sync indicator ===
-      syncMessage && React.createElement('div', {
-        className: 'offline-banner ' + syncMessage,
-        style: {
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          padding: '8px 16px',
-          fontSize: '13px',
-          fontWeight: 500,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px',
-          transition: 'all 0.3s ease',
-          background: syncMessage === 'synced' ? '#10b981' 
-            : syncMessage === 'syncing' ? '#3b82f6'
-            : syncMessage === 'pending' ? '#f59e0b'
-            : '#ef4444',
-          color: '#fff'
-        }
-      },
-        // Иконка
-        React.createElement('span', { 
-          style: { 
-            fontSize: '16px',
-            animation: syncMessage === 'syncing' ? 'spin 1s linear infinite' : 'none'
-          }
-        }, 
-          syncMessage === 'synced' ? '✓' 
-            : syncMessage === 'syncing' ? '↻'
-            : syncMessage === 'pending' ? '⏳'
-            : '📡'
-        ),
-        // Текст
-        React.createElement('span', null,
-          syncMessage === 'synced' ? 'Синхронизировано!' 
-            : syncMessage === 'syncing' ? 'Синхронизация...'
-            : syncMessage === 'pending' ? 'Изменения сохранены локально'
-            : 'Нет сети — работаем офлайн'
-        )
-      ),
-      
-      // === Pending Queue (Optimistic UI) ===
-      pendingQueue.length > 0 && syncMessage === 'pending' && React.createElement('div', {
-        className: 'pending-queue',
-        style: {
-          padding: '8px 16px',
-          background: 'rgba(245, 158, 11, 0.1)',
-          fontSize: '12px',
-          color: '#92400e'
-        }
-      },
-        React.createElement('div', { 
-          style: { 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '6px',
-            marginBottom: '4px',
-            fontWeight: 500
-          } 
-        },
-          React.createElement('span', null, '📋'),
-          'Ожидают синхронизации:'
-        ),
-        React.createElement('div', { 
-          style: { 
-            display: 'flex', 
-            flexWrap: 'wrap', 
-            gap: '4px' 
-          } 
-        },
-          pendingQueue.map(item => 
-            React.createElement('span', {
-              key: item.id,
-              style: {
-                padding: '2px 8px',
-                background: 'rgba(245, 158, 11, 0.2)',
-                borderRadius: '10px',
-                fontSize: '11px'
-              }
-            }, 
-              (item.type === 'meal' ? '🍽️' : item.type === 'product' ? '🥗' : '💾') + ' ' + item.time
-            )
-          )
         )
       ),
       
@@ -7386,12 +7353,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   return '#ef4444';
                 };
                 
-                // Haptic feedback
-                const triggerHaptic = () => {
-                  if (navigator.vibrate) navigator.vibrate(10);
+                // Haptic feedback с интенсивностью
+                const triggerHaptic = (intensity = 10) => {
+                  if (navigator.vibrate) navigator.vibrate(intensity);
                 };
                 
-                // Звуковой tick (очень тихий)
+                // Звуковой tick (очень тихий) + success звук
                 const playTick = (() => {
                   let lastValue = null;
                   return (value) => {
@@ -7411,6 +7378,85 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     lastValue = value;
                   };
                 })();
+                
+                // Приятный звук при хорошей оценке (4-5)
+                const playSuccessSound = () => {
+                  try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+                    osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08); // E5
+                    osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.16); // G5
+                    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.25);
+                  } catch (e) {}
+                };
+                
+                // Корреляция с прошлыми данными
+                const getCorrelationHint = () => {
+                  try {
+                    // Ищем похожие паттерны за последние 14 дней
+                    const mood = pendingMealMood.mood;
+                    const stress = pendingMealMood.stress;
+                    if (mood === 0 && stress === 0) return null;
+                    
+                    for (let i = 1; i <= 14; i++) {
+                      const d = new Date();
+                      d.setDate(d.getDate() - i);
+                      const dData = lsGet('heys_dayv2_' + fmtDate(d), null);
+                      if (!dData) continue;
+                      
+                      // Низкое настроение — ищем связь с недосыпом
+                      if (mood > 0 && mood <= 3 && dData.sleepHours && dData.sleepHours < 6) {
+                        const dMoods = (dData.meals || []).map(m => m.mood).filter(v => v > 0);
+                        const avgMood = dMoods.length > 0 ? dMoods.reduce((a,b) => a+b, 0) / dMoods.length : 5;
+                        if (avgMood <= 4) {
+                          return { icon: '💡', text: `${i} дн. назад при ${dData.sleepHours}ч сна тоже было настроение ${Math.round(avgMood)}` };
+                        }
+                      }
+                      
+                      // Высокий стресс — ищем связь с переработкой
+                      if (stress >= 7) {
+                        const dStress = (dData.meals || []).map(m => m.stress).filter(v => v > 0);
+                        const avgStress = dStress.length > 0 ? dStress.reduce((a,b) => a+b, 0) / dStress.length : 5;
+                        if (avgStress >= 7) {
+                          return { icon: '🔄', text: `${i} дн. назад тоже был высокий стресс — паттерн?` };
+                        }
+                      }
+                    }
+                  } catch (e) {}
+                  return null;
+                };
+                
+                const correlationHint = getCorrelationHint();
+                
+                // Состояние emoji анимации
+                const [emojiAnimating, setEmojiAnimating] = React.useState({ mood: '', wellbeing: '', stress: '' });
+                
+                // Quick chips для комментария
+                const getQuickChips = () => {
+                  if (moodJournalState === 'negative') {
+                    if (pendingMealMood.stress >= 7) return ['Работа', 'Дедлайн', 'Конфликт', 'Усталость'];
+                    if (pendingMealMood.wellbeing <= 3) return ['Голова', 'Живот', 'Слабость', 'Недосып'];
+                    if (pendingMealMood.mood <= 3) return ['Тревога', 'Грусть', 'Злость', 'Апатия'];
+                    return ['Устал', 'Стресс', 'Плохо спал'];
+                  }
+                  if (moodJournalState === 'positive') {
+                    if (pendingMealMood.mood >= 8) return ['Радость', 'Успех', 'Встреча', 'Природа'];
+                    if (pendingMealMood.stress <= 2) return ['Отдых', 'Медитация', 'Прогулка', 'Спорт'];
+                    return ['Хороший день', 'Энергия', 'Мотивация'];
+                  }
+                  return [];
+                };
+                
+                // Подсчёт заполненности
+                const filledCount = (pendingMealMood.mood > 0 ? 1 : 0) + (pendingMealMood.wellbeing > 0 ? 1 : 0) + (pendingMealMood.stress > 0 ? 1 : 0);
                 
                 // Разница с предыдущим приёмом
                 const prevMeal = (day.meals || []).length > 0 ? day.meals[day.meals.length - 1] : null;
@@ -7550,19 +7596,124 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 const wellbeingDiff = getDiff(pendingMealMood.wellbeing, prevMeal?.wellbeing);
                 const stressDiff = getDiff(pendingMealMood.stress, prevMeal?.stress);
                 
-                // Проверка для mood journal
-                const showJournalPrompt = (pendingMealMood.mood > 0 && pendingMealMood.mood <= 3) || 
-                                          (pendingMealMood.wellbeing > 0 && pendingMealMood.wellbeing <= 3) ||
-                                          (pendingMealMood.stress >= 8);
+                // Вычисляем общее состояние на основе всех 3 оценок
+                const { mood, wellbeing, stress } = pendingMealMood;
+                const hasAnyRating = mood > 0 || wellbeing > 0 || stress > 0;
                 
-                // Slider handler с haptic и звуком
-                const handleSliderChange = (field, value) => {
-                  triggerHaptic();
+                // Позитивные сигналы: высокие mood/wellbeing (≥7), низкий stress (≤3)
+                const positiveSignals = (mood >= 7 ? 1 : 0) + (wellbeing >= 7 ? 1 : 0) + (stress > 0 && stress <= 3 ? 1 : 0);
+                // Негативные сигналы: низкие mood/wellbeing (≤3), высокий stress (≥7)
+                const negativeSignals = (mood > 0 && mood <= 3 ? 1 : 0) + (wellbeing > 0 && wellbeing <= 3 ? 1 : 0) + (stress >= 7 ? 1 : 0);
+                
+                // Определяем состояние: positive, negative или neutral
+                const moodJournalState = negativeSignals >= 2 ? 'negative' : // 2+ плохих = плохо
+                                         negativeSignals === 1 && positiveSignals === 0 ? 'negative' : // 1 плохой и нет хороших = плохо  
+                                         positiveSignals >= 2 ? 'positive' : // 2+ хороших = хорошо
+                                         positiveSignals === 1 && negativeSignals === 0 ? 'positive' : // 1 хороший и нет плохих = хорошо
+                                         'neutral'; // смешанные или нейтральные оценки
+                
+                // Детальный текст в зависимости от комбинации оценок
+                const getJournalText = () => {
+                  if (moodJournalState === 'negative') {
+                    // Комбинации негативных состояний
+                    if (stress >= 8 && mood <= 3 && wellbeing <= 3) return '😰 Тяжёлый момент — что происходит?';
+                    if (stress >= 8 && mood <= 3) return 'Стресс + плохое настроение — расскажи';
+                    if (stress >= 8 && wellbeing <= 3) return 'Стресс + плохое самочувствие — что случилось?';
+                    if (mood <= 3 && wellbeing <= 3) return 'И настроение, и самочувствие... что не так?';
+                    if (stress >= 7) return 'Что стрессует?';
+                    if (wellbeing <= 3) return 'Плохое самочувствие — что беспокоит?';
+                    if (mood <= 3) return 'Плохое настроение — что расстроило?';
+                    return 'Что случилось?';
+                  }
+                  if (moodJournalState === 'positive') {
+                    // Комбинации позитивных состояний
+                    if (mood >= 9 && wellbeing >= 9 && stress <= 2) return '🌟 Идеальное состояние! В чём секрет?';
+                    if (mood >= 8 && wellbeing >= 8) return '✨ Отлично себя чувствуешь! Что помогло?';
+                    if (mood >= 8 && stress <= 2) return 'Отличное настроение и спокойствие!';
+                    if (wellbeing >= 8 && stress <= 2) return 'Прекрасное самочувствие! Что способствует?';
+                    if (mood >= 7) return 'Хорошее настроение! Что порадовало?';
+                    if (wellbeing >= 7) return 'Хорошее самочувствие! Запиши причину';
+                    if (stress <= 2) return 'Спокойствие — что помогает расслабиться?';
+                    return 'Запиши что порадовало!';
+                  }
+                  // neutral — разные контексты
+                  if (mood >= 5 && mood <= 6 && wellbeing >= 5 && wellbeing <= 6) return 'Стабильный день — любые мысли?';
+                  if (stress >= 4 && stress <= 6) return 'Немного напряжения — хочешь записать?';
+                  return 'Заметка о приёме пищи';
+                };
+                
+                const getJournalPlaceholder = () => {
+                  if (moodJournalState === 'negative') {
+                    if (stress >= 7) return 'Работа, отношения, здоровье...';
+                    if (wellbeing <= 3) return 'Симптомы, усталость, боль...';
+                    if (mood <= 3) return 'Что расстроило или разозлило...';
+                    return 'Расскажи что не так...';
+                  }
+                  if (moodJournalState === 'positive') {
+                    if (mood >= 8 && wellbeing >= 8) return 'Что сделало день отличным?';
+                    if (stress <= 2) return 'Медитация, прогулка, отдых...';
+                    return 'Что сделало момент хорошим?';
+                  }
+                  return 'Любые мысли о еде или дне...';
+                };
+
+                const journalConfig = {
+                  negative: { 
+                    icon: '📝', 
+                    text: getJournalText(),
+                    placeholder: getJournalPlaceholder(),
+                    btnText: 'Записать'
+                  },
+                  positive: {
+                    icon: '✨',
+                    text: getJournalText(),
+                    placeholder: getJournalPlaceholder(),
+                    btnText: 'Записать'
+                  },
+                  neutral: {
+                    icon: '💭',
+                    text: getJournalText(),
+                    placeholder: getJournalPlaceholder(),
+                    btnText: 'Записать'
+                  }
+                };
+                
+                // Slider handler с haptic, звуком и анимацией emoji
+                const handleSliderChange = (field, value, prevValue) => {
+                  triggerHaptic(value >= 8 || value <= 2 ? 15 : 10);
                   playTick(value);
+                  
+                  // Emoji анимация
+                  if (value !== prevValue) {
+                    const animType = (field === 'stress' && value >= 7) || 
+                                     ((field === 'mood' || field === 'wellbeing') && value <= 3) 
+                                     ? 'shake' : 'bounce';
+                    setEmojiAnimating(prev => ({...prev, [field]: animType}));
+                    setTimeout(() => setEmojiAnimating(prev => ({...prev, [field]: ''})), 400);
+                  }
+                  
+                  // Success sound при хорошей оценке
+                  if (value >= 8 && prevValue < 8) playSuccessSound();
+                  
                   setPendingMealMood(prev => ({...prev, [field]: value}));
                 };
                 
+                // Добавить chip в комментарий
+                const addChipToComment = (chip) => {
+                  triggerHaptic(5);
+                  const current = pendingMealMood.journalEntry || '';
+                  const newEntry = current ? current + ', ' + chip : chip;
+                  setPendingMealMood(prev => ({...prev, journalEntry: newEntry}));
+                };
+                
                 return [
+              // Progress dots
+              React.createElement('div', { className: 'rating-progress-dots', key: 'progress-dots' },
+                React.createElement('div', { className: 'rating-progress-dot' + (pendingMealMood.mood > 0 ? ' filled' : '') }),
+                React.createElement('div', { className: 'rating-progress-dot' + (pendingMealMood.wellbeing > 0 ? ' filled' : '') }),
+                React.createElement('div', { className: 'rating-progress-dot' + (pendingMealMood.stress > 0 ? ' filled' : '') })
+              ),
+              
               // Mood Face Avatar (большое лицо вверху)
               React.createElement('div', { className: 'mood-face-avatar', key: 'mood-face' },
                 React.createElement('span', { className: 'mood-face-emoji' }, compositeFace.emoji),
@@ -7578,12 +7729,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('span', null, aiInsight.text)
               ),
               
+              // Корреляция с прошлыми данными
+              correlationHint && React.createElement('div', { className: 'correlation-hint', key: 'correlation-hint' },
+                React.createElement('span', { className: 'correlation-hint-icon' }, correlationHint.icon),
+                React.createElement('span', { className: 'correlation-hint-text' }, correlationHint.text)
+              ),
+              
               // Слайдеры оценок
               React.createElement('div', { className: 'mood-sliders', key: 'mood-sliders' },
                 // Настроение
                 React.createElement('div', { className: 'mood-slider-row' },
                   React.createElement('div', { className: 'mood-slider-header' },
-                    React.createElement('span', { className: 'mood-slider-emoji mood-emoji-dynamic' }, getMoodEmoji(pendingMealMood.mood)),
+                    React.createElement('span', { 
+                      className: 'mood-slider-emoji mood-emoji-dynamic' + (emojiAnimating.mood ? ' animate-' + emojiAnimating.mood : '')
+                    }, getMoodEmoji(pendingMealMood.mood)),
                     React.createElement('span', { className: 'mood-slider-label' }, 'Настроение'),
                     React.createElement('span', { 
                       className: 'mood-slider-value' + (pendingMealMood.mood !== (prevMeal?.mood || 0) ? ' pulse' : ''), 
@@ -7595,15 +7754,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   React.createElement('div', { className: 'mood-presets' },
                     React.createElement('button', { 
                       className: 'mood-preset mood-preset-bad' + (pendingMealMood.mood <= 3 && pendingMealMood.mood > 0 ? ' active' : ''),
-                      onClick: () => { triggerHaptic(); setPendingMealMood(prev => ({...prev, mood: 2})); }
+                      onClick: () => { handleSliderChange('mood', 2, pendingMealMood.mood); }
                     }, '😢 Плохо'),
                     React.createElement('button', { 
                       className: 'mood-preset mood-preset-ok' + (pendingMealMood.mood >= 4 && pendingMealMood.mood <= 6 ? ' active' : ''),
-                      onClick: () => { triggerHaptic(); setPendingMealMood(prev => ({...prev, mood: 5})); }
+                      onClick: () => { handleSliderChange('mood', 5, pendingMealMood.mood); }
                     }, '😐 Норм'),
                     React.createElement('button', { 
                       className: 'mood-preset mood-preset-good' + (pendingMealMood.mood >= 7 ? ' active' : ''),
-                      onClick: () => { triggerHaptic(); setPendingMealMood(prev => ({...prev, mood: 8})); }
+                      onClick: () => { handleSliderChange('mood', 8, pendingMealMood.mood); }
                     }, '😊 Отлично')
                   ),
                   React.createElement('div', { className: 'mood-slider-track' },
@@ -7626,7 +7785,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 // Самочувствие
                 React.createElement('div', { className: 'mood-slider-row' },
                   React.createElement('div', { className: 'mood-slider-header' },
-                    React.createElement('span', { className: 'mood-slider-emoji mood-emoji-dynamic' }, getWellbeingEmoji(pendingMealMood.wellbeing)),
+                    React.createElement('span', { 
+                      className: 'mood-slider-emoji mood-emoji-dynamic' + (emojiAnimating.wellbeing ? ' animate-' + emojiAnimating.wellbeing : '')
+                    }, getWellbeingEmoji(pendingMealMood.wellbeing)),
                     React.createElement('span', { className: 'mood-slider-label' }, 'Самочувствие'),
                     React.createElement('span', { 
                       className: 'mood-slider-value' + (pendingMealMood.wellbeing !== (prevMeal?.wellbeing || 0) ? ' pulse' : ''), 
@@ -7637,15 +7798,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   React.createElement('div', { className: 'mood-presets' },
                     React.createElement('button', { 
                       className: 'mood-preset mood-preset-bad' + (pendingMealMood.wellbeing <= 3 && pendingMealMood.wellbeing > 0 ? ' active' : ''),
-                      onClick: () => { triggerHaptic(); setPendingMealMood(prev => ({...prev, wellbeing: 2})); }
+                      onClick: () => { handleSliderChange('wellbeing', 2, pendingMealMood.wellbeing); }
                     }, '🤒 Плохо'),
                     React.createElement('button', { 
                       className: 'mood-preset mood-preset-ok' + (pendingMealMood.wellbeing >= 4 && pendingMealMood.wellbeing <= 6 ? ' active' : ''),
-                      onClick: () => { triggerHaptic(); setPendingMealMood(prev => ({...prev, wellbeing: 5})); }
+                      onClick: () => { handleSliderChange('wellbeing', 5, pendingMealMood.wellbeing); }
                     }, '😐 Норм'),
                     React.createElement('button', { 
                       className: 'mood-preset mood-preset-good' + (pendingMealMood.wellbeing >= 7 ? ' active' : ''),
-                      onClick: () => { triggerHaptic(); setPendingMealMood(prev => ({...prev, wellbeing: 8})); }
+                      onClick: () => { handleSliderChange('wellbeing', 8, pendingMealMood.wellbeing); }
                     }, '💪 Отлично')
                   ),
                   React.createElement('div', { className: 'mood-slider-track' },
@@ -7667,7 +7828,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 // Стресс (инверсия)
                 React.createElement('div', { className: 'mood-slider-row' },
                   React.createElement('div', { className: 'mood-slider-header' },
-                    React.createElement('span', { className: 'mood-slider-emoji mood-emoji-dynamic' }, getStressEmoji(pendingMealMood.stress)),
+                    React.createElement('span', { 
+                      className: 'mood-slider-emoji mood-emoji-dynamic' + (emojiAnimating.stress ? ' animate-' + emojiAnimating.stress : '')
+                    }, getStressEmoji(pendingMealMood.stress)),
                     React.createElement('span', { className: 'mood-slider-label' }, 'Стресс'),
                     React.createElement('span', { 
                       className: 'mood-slider-value' + (pendingMealMood.stress !== (prevMeal?.stress || 0) ? ' pulse' : ''), 
@@ -7678,15 +7841,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   React.createElement('div', { className: 'mood-presets' },
                     React.createElement('button', { 
                       className: 'mood-preset mood-preset-good' + (pendingMealMood.stress <= 3 && pendingMealMood.stress > 0 ? ' active' : ''),
-                      onClick: () => { triggerHaptic(); setPendingMealMood(prev => ({...prev, stress: 2})); }
+                      onClick: () => { handleSliderChange('stress', 2, pendingMealMood.stress); }
                     }, '😌 Спокоен'),
                     React.createElement('button', { 
                       className: 'mood-preset mood-preset-ok' + (pendingMealMood.stress >= 4 && pendingMealMood.stress <= 6 ? ' active' : ''),
-                      onClick: () => { triggerHaptic(); setPendingMealMood(prev => ({...prev, stress: 5})); }
+                      onClick: () => { handleSliderChange('stress', 5, pendingMealMood.stress); }
                     }, '😐 Норм'),
                     React.createElement('button', { 
                       className: 'mood-preset mood-preset-bad' + (pendingMealMood.stress >= 7 ? ' active' : ''),
-                      onClick: () => { triggerHaptic(); setPendingMealMood(prev => ({...prev, stress: 8})); }
+                      onClick: () => { handleSliderChange('stress', 8, pendingMealMood.stress); }
                     }, '😰 Стресс')
                   ),
                   React.createElement('div', { className: 'mood-slider-track' },
@@ -7707,27 +7870,37 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 )
               ),
               
-              // Wrapper с фиксированной высотой чтобы не прыгало
-              React.createElement('div', { className: 'mood-journal-wrapper', key: 'journal-wrapper' },
-                // Mood Journal prompt (при низких оценках)
-                showJournalPrompt && React.createElement('div', { className: 'mood-journal-prompt' },
-                  React.createElement('span', { className: 'mood-journal-icon' }, '📝'),
-                  React.createElement('span', { className: 'mood-journal-text' }, 'Хочешь записать что случилось?'),
-                  React.createElement('button', { 
-                    className: 'mood-journal-btn',
-                    onClick: () => {
-                      const note = prompt('Что случилось? (опционально)');
-                      if (note && note.trim()) {
-                        // Сохраняем в dayComment или отдельное поле
-                        const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-                        const entry = `[${time}] ${note.trim()}`;
-                        setDay(prev => ({
-                          ...prev,
-                          dayComment: prev.dayComment ? prev.dayComment + '\n' + entry : entry
-                        }));
-                      }
-                    }
-                  }, 'Записать')
+              // Блок комментария — всегда виден, стиль меняется по всем 3 оценкам
+              React.createElement('div', { 
+                className: 'mood-journal-wrapper ' + moodJournalState, 
+                key: 'journal-wrapper' 
+              },
+                React.createElement('div', { 
+                  className: 'mood-journal-prompt ' + moodJournalState
+                },
+                  React.createElement('span', { className: 'mood-journal-icon' }, journalConfig[moodJournalState].icon),
+                  React.createElement('span', { className: 'mood-journal-text' }, journalConfig[moodJournalState].text),
+                  // Quick chips для быстрого ввода
+                  getQuickChips().length > 0 && React.createElement('div', { 
+                    className: 'quick-chips ' + moodJournalState 
+                  },
+                    getQuickChips().map(chip => 
+                      React.createElement('button', { 
+                        key: chip,
+                        className: 'quick-chip' + ((pendingMealMood.journalEntry || '').includes(chip) ? ' selected' : ''),
+                        onClick: () => addChipToComment(chip)
+                      }, chip)
+                    )
+                  ),
+                  // Поле ввода комментария
+                  React.createElement('input', {
+                    type: 'text',
+                    className: 'mood-journal-input',
+                    placeholder: journalConfig[moodJournalState].placeholder,
+                    value: pendingMealMood.journalEntry || '',
+                    onChange: (e) => setPendingMealMood(prev => ({...prev, journalEntry: e.target.value})),
+                    onClick: (e) => e.stopPropagation()
+                  })
                 )
               )
                 ];
@@ -8041,23 +8214,24 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             // Заголовок
             React.createElement('div', { className: 'time-picker-header' },
               React.createElement('button', { className: 'time-picker-cancel', onClick: cancelTrainingPicker }, 
-                trainingPickerStep === 2 ? '← Назад' : 'Отмена'
+                trainingPickerStep >= 2 ? '← Назад' : 'Отмена'
               ),
               React.createElement('span', { className: 'time-picker-title' }, 
-                trainingPickerStep === 1 ? '🏋️ Тренировка' : '⏱️ Зоны'
+                trainingPickerStep === 1 ? '🏋️ Тренировка' : 
+                trainingPickerStep === 2 ? '⏱️ Зоны' : '⭐ Оценка'
               ),
               // Кнопка "Готово" неактивна если на шаге 2 и все зоны = 0
               (() => {
                 const totalMinutes = trainingPickerStep === 2 
                   ? pendingTrainingZones.reduce((sum, idx) => sum + (parseInt(zoneMinutesValues[idx], 10) || 0), 0)
-                  : 1; // На первом шаге всегда активна
+                  : 1; // На первом и третьем шаге всегда активна
                 const isDisabled = trainingPickerStep === 2 && totalMinutes === 0;
                 return React.createElement('button', { 
                   className: 'time-picker-confirm' + (isDisabled ? ' disabled' : ''), 
                   onClick: isDisabled ? undefined : confirmTrainingPicker,
                   disabled: isDisabled
                 }, 
-                  trainingPickerStep === 1 ? 'Далее →' : 'Готово'
+                  trainingPickerStep === 3 ? 'Готово' : 'Далее →'
                 );
               })()
             ),
@@ -8077,25 +8251,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                       React.createElement('span', { className: 'training-type-icon' }, t.icon),
                       React.createElement('span', { className: 'training-type-text' }, t.label)
                     )
-                  )
-                )
-              ),
-              
-              // Секция: Быстрые пресеты
-              React.createElement('div', { className: 'training-presets-section' },
-                React.createElement('div', { className: 'training-presets-label' }, 'Быстрый выбор'),
-                React.createElement('div', { className: 'training-presets-grid' },
-                  trainingPresets.map(p => 
-                    React.createElement('button', {
-                      key: p.id,
-                      className: 'training-preset-btn',
-                      onClick: () => {
-                        haptic('medium');
-                        setPendingTrainingType(p.type);
-                        setPendingTrainingZones(p.zones);
-                        setTrainingPickerStep(2); // Сразу на второй шаг
-                      }
-                    }, p.label)
                   )
                 )
               ),
@@ -8160,7 +8315,175 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   )
                 )
               )
-            )
+            ),
+            
+            // ШАГ 3: Оценки тренировки
+            trainingPickerStep === 3 && (() => {
+              // Определяем состояние на основе обеих оценок
+              const quality = pendingTrainingQuality;
+              const feelAfter = pendingTrainingFeelAfter;
+              
+              const positiveSignals = (quality >= 7 ? 1 : 0) + (feelAfter >= 7 ? 1 : 0);
+              const negativeSignals = (quality > 0 && quality <= 3 ? 1 : 0) + (feelAfter > 0 && feelAfter <= 3 ? 1 : 0);
+              
+              const ratingState = negativeSignals >= 1 && positiveSignals === 0 ? 'negative' :
+                                  positiveSignals >= 1 && negativeSignals === 0 ? 'positive' : 'neutral';
+              
+              // Цвет для значения оценки
+              const getPositiveColor = (v) => {
+                if (v <= 3) return '#ef4444';
+                if (v <= 5) return '#eab308';
+                if (v <= 7) return '#84cc16';
+                return '#10b981';
+              };
+              
+              // Эмодзи для качества тренировки
+              const getQualityEmoji = (v) => 
+                v === 0 ? '🤷' : v <= 2 ? '😫' : v <= 4 ? '😕' : v <= 6 ? '😐' : v <= 8 ? '💪' : '🔥';
+              
+              // Эмодзи для самочувствия после
+              const getFeelEmoji = (v) => 
+                v === 0 ? '🤷' : v <= 2 ? '🥵' : v <= 4 ? '😓' : v <= 6 ? '😌' : v <= 8 ? '😊' : '✨';
+              
+              // Текст для блока комментария
+              const getCommentText = () => {
+                if (ratingState === 'negative') {
+                  if (quality <= 3 && feelAfter <= 3) return 'Тяжёлая тренировка — что пошло не так?';
+                  if (quality <= 3) return 'Тренировка не удалась — что помешало?';
+                  if (feelAfter <= 3) return 'Плохое самочувствие после — что случилось?';
+                  return 'Что пошло не так?';
+                }
+                if (ratingState === 'positive') {
+                  if (quality >= 8 && feelAfter >= 8) return '🎉 Отличная тренировка! Что помогло?';
+                  if (quality >= 7) return 'Хорошая тренировка! Запиши что понравилось';
+                  if (feelAfter >= 7) return 'Отличное самочувствие! В чём секрет?';
+                  return 'Что понравилось?';
+                }
+                return 'Заметка о тренировке';
+              };
+              
+              return React.createElement(React.Fragment, null,
+                // Оценка качества тренировки
+                React.createElement('div', { className: 'training-rating-section' },
+                  React.createElement('div', { className: 'training-rating-row' },
+                    React.createElement('div', { className: 'training-rating-header' },
+                      React.createElement('span', { className: 'training-rating-emoji' }, getQualityEmoji(quality)),
+                      React.createElement('span', { className: 'training-rating-label' }, 'Качество тренировки'),
+                      React.createElement('span', { 
+                        className: 'training-rating-value',
+                        style: { color: quality === 0 ? '#9ca3af' : getPositiveColor(quality) }
+                      }, quality === 0 ? '—' : quality + '/10')
+                    ),
+                    React.createElement('div', { className: 'training-rating-presets' },
+                      React.createElement('button', { 
+                        className: 'mood-preset mood-preset-bad' + (quality > 0 && quality <= 3 ? ' active' : ''),
+                        onClick: () => { haptic('light'); setPendingTrainingQuality(2); }
+                      }, '😫 Плохо'),
+                      React.createElement('button', { 
+                        className: 'mood-preset mood-preset-ok' + (quality >= 4 && quality <= 6 ? ' active' : ''),
+                        onClick: () => { haptic('light'); setPendingTrainingQuality(5); }
+                      }, '😐 Норм'),
+                      React.createElement('button', { 
+                        className: 'mood-preset mood-preset-good' + (quality >= 7 ? ' active' : ''),
+                        onClick: () => { haptic('light'); setPendingTrainingQuality(8); }
+                      }, '💪 Отлично')
+                    ),
+                    React.createElement('input', {
+                      type: 'range',
+                      min: 0,
+                      max: 10,
+                      value: quality,
+                      className: 'mood-slider mood-slider-positive',
+                      onChange: (e) => { haptic('light'); setPendingTrainingQuality(parseInt(e.target.value)); }
+                    })
+                  ),
+                  
+                  // Оценка самочувствия после
+                  React.createElement('div', { className: 'training-rating-row' },
+                    React.createElement('div', { className: 'training-rating-header' },
+                      React.createElement('span', { className: 'training-rating-emoji' }, getFeelEmoji(feelAfter)),
+                      React.createElement('span', { className: 'training-rating-label' }, 'Самочувствие после'),
+                      React.createElement('span', { 
+                        className: 'training-rating-value',
+                        style: { color: feelAfter === 0 ? '#9ca3af' : getPositiveColor(feelAfter) }
+                      }, feelAfter === 0 ? '—' : feelAfter + '/10')
+                    ),
+                    React.createElement('div', { className: 'training-rating-presets' },
+                      React.createElement('button', { 
+                        className: 'mood-preset mood-preset-bad' + (feelAfter > 0 && feelAfter <= 3 ? ' active' : ''),
+                        onClick: () => { haptic('light'); setPendingTrainingFeelAfter(2); }
+                      }, '🥵 Устал'),
+                      React.createElement('button', { 
+                        className: 'mood-preset mood-preset-ok' + (feelAfter >= 4 && feelAfter <= 6 ? ' active' : ''),
+                        onClick: () => { haptic('light'); setPendingTrainingFeelAfter(5); }
+                      }, '😌 Норм'),
+                      React.createElement('button', { 
+                        className: 'mood-preset mood-preset-good' + (feelAfter >= 7 ? ' active' : ''),
+                        onClick: () => { haptic('light'); setPendingTrainingFeelAfter(8); }
+                      }, '✨ Энергия')
+                    ),
+                    React.createElement('input', {
+                      type: 'range',
+                      min: 0,
+                      max: 10,
+                      value: feelAfter,
+                      className: 'mood-slider mood-slider-positive',
+                      onChange: (e) => { haptic('light'); setPendingTrainingFeelAfter(parseInt(e.target.value)); }
+                    })
+                  )
+                ),
+                
+                // Блок комментария с quick chips
+                (() => {
+                  // Quick chips для тренировки
+                  const trainingChips = ratingState === 'negative' 
+                    ? ['Мало сил', 'Травма', 'Не выспался', 'Жарко', 'Нет мотивации']
+                    : ratingState === 'positive'
+                    ? ['Новый рекорд', 'Много энергии', 'Хороший сон', 'Правильно ел', 'В потоке']
+                    : [];
+                  
+                  const addTrainingChip = (chip) => {
+                    haptic('light');
+                    const current = pendingTrainingComment || '';
+                    setPendingTrainingComment(current ? current + ', ' + chip : chip);
+                  };
+                  
+                  return React.createElement('div', { 
+                    className: 'training-comment-wrapper ' + ratingState
+                  },
+                    React.createElement('div', { 
+                      className: 'training-comment-prompt ' + ratingState
+                    },
+                      React.createElement('span', { className: 'training-comment-icon' }, 
+                        ratingState === 'negative' ? '📝' : ratingState === 'positive' ? '✨' : '💭'
+                      ),
+                      React.createElement('span', { className: 'training-comment-text' }, getCommentText()),
+                      // Quick chips
+                      trainingChips.length > 0 && React.createElement('div', { 
+                        className: 'quick-chips ' + ratingState 
+                      },
+                        trainingChips.map(chip => 
+                          React.createElement('button', { 
+                            key: chip,
+                            className: 'quick-chip' + ((pendingTrainingComment || '').includes(chip) ? ' selected' : ''),
+                            onClick: () => addTrainingChip(chip)
+                          }, chip)
+                        )
+                      ),
+                      React.createElement('input', {
+                        type: 'text',
+                        className: 'training-comment-input',
+                        placeholder: ratingState === 'negative' ? 'Что пошло не так...' : 
+                                     ratingState === 'positive' ? 'Что помогло...' : 'Любые мысли...',
+                        value: pendingTrainingComment,
+                        onChange: (e) => setPendingTrainingComment(e.target.value),
+                        onClick: (e) => e.stopPropagation()
+                      })
+                    )
+                  );
+                })()
+              );
+            })()
           )
         ),
         document.body
@@ -8249,27 +8572,65 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('span', null, '🌟')
               )
             ),
-            // Wrapper с фиксированной высотой чтобы не прыгало
-            React.createElement('div', { className: 'sleep-quality-comment-wrapper' },
-              // Предложение записать комментарий при плохом сне (1-4 из 10)
-              pendingSleepQuality >= 1 && pendingSleepQuality <= 4 && React.createElement('div', { className: 'sleep-quality-comment-prompt' },
-                React.createElement('div', { className: 'comment-prompt-header' },
-                  React.createElement('span', { className: 'sleep-quality-comment-icon' }, '📝'),
-                  React.createElement('span', { className: 'sleep-quality-comment-text' }, 'Что помешало?')
-                ),
-                // История комментариев
-                day.sleepNote && React.createElement('div', { className: 'comment-history' }, day.sleepNote),
-                // Поле для нового комментария
-                React.createElement('input', {
-                  type: 'text',
-                  className: 'sleep-quality-comment-input',
-                  placeholder: 'Шум, кошмары, душно...',
-                  value: pendingSleepNote,
-                  onChange: (e) => setPendingSleepNote(e.target.value),
-                  onClick: (e) => e.stopPropagation()
-                })
-              )
-            ),
+            // Комментарий всегда виден с динамическим стилем
+            (() => {
+              const sleepState = pendingSleepQuality >= 8 ? 'positive' : pendingSleepQuality >= 1 && pendingSleepQuality <= 4 ? 'negative' : 'neutral';
+              
+              // Quick chips для сна
+              const sleepChips = sleepState === 'negative' 
+                ? ['Шум', 'Кошмары', 'Душно', 'Поздно лёг', 'Тревога', 'Кофе']
+                : sleepState === 'positive'
+                ? ['Режим', 'Тишина', 'Прохлада', 'Без гаджетов', 'Прогулка']
+                : [];
+              
+              const addSleepChip = (chip) => {
+                if (navigator.vibrate) navigator.vibrate(5);
+                const current = pendingSleepNote || '';
+                setPendingSleepNote(current ? current + ', ' + chip : chip);
+              };
+              
+              return React.createElement('div', { 
+                className: 'sleep-quality-comment-wrapper ' + sleepState
+              },
+                React.createElement('div', { 
+                  className: 'sleep-quality-comment-prompt ' + sleepState
+                },
+                  React.createElement('div', { className: 'comment-prompt-header' },
+                    React.createElement('span', { className: 'sleep-quality-comment-icon' }, 
+                      sleepState === 'positive' ? '✨' : sleepState === 'negative' ? '📝' : '💭'
+                    ),
+                    React.createElement('span', { className: 'sleep-quality-comment-text' }, 
+                      sleepState === 'positive' ? 'Секрет хорошего сна?' : 
+                      sleepState === 'negative' ? 'Что помешало?' : 'Заметка о сне'
+                    )
+                  ),
+                  // Quick chips
+                  sleepChips.length > 0 && React.createElement('div', { 
+                    className: 'quick-chips ' + sleepState 
+                  },
+                    sleepChips.map(chip => 
+                      React.createElement('button', { 
+                        key: chip,
+                        className: 'quick-chip' + ((pendingSleepNote || '').includes(chip) ? ' selected' : ''),
+                        onClick: () => addSleepChip(chip)
+                      }, chip)
+                    )
+                  ),
+                  // История комментариев
+                  day.sleepNote && React.createElement('div', { className: 'comment-history' }, day.sleepNote),
+                  // Поле для нового комментария
+                  React.createElement('input', {
+                    type: 'text',
+                    className: 'sleep-quality-comment-input',
+                    placeholder: sleepState === 'positive' ? 'Режим, тишина, прохлада...' : 
+                                 sleepState === 'negative' ? 'Шум, кошмары, душно...' : 'Любые заметки...',
+                    value: pendingSleepNote,
+                    onChange: (e) => setPendingSleepNote(e.target.value),
+                    onClick: (e) => e.stopPropagation()
+                  })
+                )
+              );
+            })(),
             // Часы сна
             day.sleepHours > 0 && React.createElement('div', { className: 'sleep-quality-hours-info' },
               '🛏️ Сегодня: ',
@@ -8360,13 +8721,24 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('span', null, '😊')
               )
             ),
-            // Wrapper с фиксированной высотой чтобы не прыгало
-            React.createElement('div', { className: 'day-score-comment-wrapper' },
-              // Предложение записать комментарий при низкой оценке
-              pendingDayScore >= 1 && pendingDayScore <= 4 && React.createElement('div', { className: 'day-score-comment-prompt' },
+            // Блок комментария — всегда виден, стиль меняется в зависимости от оценки
+            React.createElement('div', { 
+              className: 'day-score-comment-wrapper' + 
+                (pendingDayScore >= 7 ? ' positive' : pendingDayScore >= 1 && pendingDayScore <= 4 ? ' negative' : ' neutral')
+            },
+              React.createElement('div', { 
+                className: 'day-score-comment-prompt' + 
+                  (pendingDayScore >= 7 ? ' positive' : pendingDayScore >= 1 && pendingDayScore <= 4 ? ' negative' : ' neutral')
+              },
                 React.createElement('div', { className: 'comment-prompt-header' },
-                  React.createElement('span', { className: 'day-score-comment-icon' }, '📝'),
-                  React.createElement('span', { className: 'day-score-comment-text' }, 'Что случилось?')
+                  React.createElement('span', { className: 'day-score-comment-icon' }, 
+                    pendingDayScore >= 7 ? '✨' : pendingDayScore >= 1 && pendingDayScore <= 4 ? '📝' : '💭'
+                  ),
+                  React.createElement('span', { className: 'day-score-comment-text' }, 
+                    pendingDayScore >= 7 ? 'Что сделало день отличным?' 
+                    : pendingDayScore >= 1 && pendingDayScore <= 4 ? 'Что случилось?' 
+                    : 'Заметка о дне'
+                  )
                 ),
                 // История комментариев
                 day.dayComment && React.createElement('div', { className: 'comment-history' }, day.dayComment),
@@ -8374,7 +8746,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('input', {
                   type: 'text',
                   className: 'day-score-comment-input',
-                  placeholder: 'Болела голова, плохо спал...',
+                  placeholder: pendingDayScore >= 7 
+                    ? 'Хорошо выспался, прогулка...' 
+                    : pendingDayScore >= 1 && pendingDayScore <= 4 
+                    ? 'Болела голова, плохо спал...' 
+                    : 'Обычный день...',
                   value: pendingDayComment,
                   onChange: (e) => setPendingDayComment(e.target.value),
                   onClick: (e) => e.stopPropagation()

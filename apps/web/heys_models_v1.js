@@ -297,12 +297,15 @@
       waterMl: +d.waterMl || 0,
       meals:Array.isArray(d.meals)?d.meals:[{id:uuid(),name:'Приём пищи',time:'',mood:'',wellbeing:'',stress:'',items:[]}]
     };
-    if(!Array.isArray(base.trainings)) base.trainings=[{z:[0,0,0,0],time:'',type:''},{z:[0,0,0,0],time:'',type:''}];
-    if(base.trainings.length<2) while(base.trainings.length<2) base.trainings.push({z:[0,0,0,0],time:'',type:''});
+    if(!Array.isArray(base.trainings)) base.trainings=[{z:[0,0,0,0],time:'',type:'',quality:0,feelAfter:0,comment:''},{z:[0,0,0,0],time:'',type:'',quality:0,feelAfter:0,comment:''}];
+    if(base.trainings.length<2) while(base.trainings.length<2) base.trainings.push({z:[0,0,0,0],time:'',type:'',quality:0,feelAfter:0,comment:''});
     base.trainings = base.trainings.map(t => ({
       z: (t && Array.isArray(t.z)) ? [+t.z[0]||0, +t.z[1]||0, +t.z[2]||0, +t.z[3]||0] : [0,0,0,0],
       time: (t && t.time) || '',
-      type: (t && t.type) || ''
+      type: (t && t.type) || '',
+      quality: (t && +t.quality) || 0,
+      feelAfter: (t && +t.feelAfter) || 0,
+      comment: (t && t.comment) || ''
     }));
     return base;
   }

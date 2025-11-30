@@ -1040,30 +1040,57 @@
             const [cloudStatus, setCloudStatus] = useState(() => navigator.onLine ? 'idle' : 'offline');
             const [pendingCount, setPendingCount] = useState(0); // Количество ожидающих изменений
             const [pendingDetails, setPendingDetails] = useState({ days: 0, products: 0, profile: 0, other: 0 });
-            const [showOfflineBanner, setShowOfflineBanner] = useState(!navigator.onLine);
-            const [syncToast, setSyncToast] = useState(null); // { type: 'restored' | 'error', message: string }
+            const [showOfflineBanner, setShowOfflineBanner] = useState(false); // Управляется через useEffect
+            const [showOnlineBanner, setShowOnlineBanner] = useState(false); // Баннер "Сеть восстановлена"
             const cloudSyncTimeoutRef = useRef(null);
             const pendingChangesRef = useRef(false); // Есть ли несинхронизированные изменения
             const syncingStartRef = useRef(null); // Время начала syncing для минимальной длительности
-            const MIN_SYNCING_DURATION = 800; // Минимум 800ms показывать анимацию
+            const MIN_SYNCING_DURATION = 1500; // Минимум 1.5 секунды показывать анимацию
+            const SYNCING_DELAY = 400; // Показывать spinner только если sync длится дольше 400ms
+            const syncedTimeoutRef = useRef(null); // Отдельный ref для synced timeout
+            const syncingDelayTimeoutRef = useRef(null); // Задержка перед показом spinner
+            const initialCheckDoneRef = useRef(false); // Начальная проверка сети выполнена
             
             // Функция для показа synced с учётом минимального времени syncing
             const showSyncedWithMinDuration = useCallback(() => {
-              const elapsed = syncingStartRef.current ? Date.now() - syncingStartRef.current : MIN_SYNCING_DURATION;
+              // Защита от множественных вызовов
+              if (syncedTimeoutRef.current) {
+                // showSyncedWithMinDuration already scheduled, skip
+                return;
+              }
+              
+              const elapsed = syncingStartRef.current ? Date.now() - syncingStartRef.current : 0;
               const remaining = Math.max(0, MIN_SYNCING_DURATION - elapsed);
               
-              setTimeout(() => {
+              // showSyncedWithMinDuration: elapsed + remaining = MIN_SYNCING_DURATION
+              
+              syncedTimeoutRef.current = setTimeout(() => {
+                syncedTimeoutRef.current = null;
                 syncingStartRef.current = null;
+                // → synced
                 setCloudStatus('synced');
                 // Скрываем через 2 сек
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
-                cloudSyncTimeoutRef.current = setTimeout(() => setCloudStatus('idle'), 2000);
+                cloudSyncTimeoutRef.current = setTimeout(() => {
+                  // → idle
+                  setCloudStatus('idle');
+                }, 2000);
               }, remaining);
             }, []);
             
             useEffect(() => {
               // Слушаем события синхронизации
               const handleSyncComplete = () => {
+                // Отменяем delay timeout — если sync завершился быстро, не показываем spinner
+                if (syncingDelayTimeoutRef.current) {
+                  clearTimeout(syncingDelayTimeoutRef.current);
+                  syncingDelayTimeoutRef.current = null;
+                }
+                // Отменяем fallback
+                if (cloudSyncTimeoutRef.current) {
+                  clearTimeout(cloudSyncTimeoutRef.current);
+                  cloudSyncTimeoutRef.current = null;
+                }
                 pendingChangesRef.current = false;
                 if (navigator.onLine) {
                   showSyncedWithMinDuration();
@@ -1079,18 +1106,41 @@
                   return;
                 }
                 
-                // Показываем что идёт синхронизация (запоминаем время начала)
+                // Если synced уже запланирован — не прерываем, пусть отработает
+                if (syncedTimeoutRef.current) {
+                  return;
+                }
+                
+                // Также отменяем fallback timeout
+                if (cloudSyncTimeoutRef.current) {
+                  clearTimeout(cloudSyncTimeoutRef.current);
+                  cloudSyncTimeoutRef.current = null;
+                }
+                
+                // Запоминаем время начала
                 if (!syncingStartRef.current) {
                   syncingStartRef.current = Date.now();
+                  
+                  // Показываем spinner только если sync длится дольше SYNCING_DELAY
+                  // Это предотвращает мерцание для быстрых операций
+                  if (!syncingDelayTimeoutRef.current) {
+                    syncingDelayTimeoutRef.current = setTimeout(() => {
+                      syncingDelayTimeoutRef.current = null;
+                      // Проверяем что всё ещё в процессе синхронизации
+                      if (syncingStartRef.current && !syncedTimeoutRef.current) {
+                        setCloudStatus('syncing');
+                      }
+                    }, SYNCING_DELAY);
+                  }
                 }
-                setCloudStatus('syncing');
                 
-                // Через 2 сек показываем synced (fallback если heysSyncCompleted не сработал)
-                if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
-                cloudSyncTimeoutRef.current = setTimeout(() => {
-                  pendingChangesRef.current = false;
-                  showSyncedWithMinDuration();
-                }, 2000);
+                // Fallback на 5 сек — если heysSyncCompleted не сработает
+                if (!cloudSyncTimeoutRef.current) {
+                  cloudSyncTimeoutRef.current = setTimeout(() => {
+                    pendingChangesRef.current = false;
+                    showSyncedWithMinDuration();
+                  }, 5000);
+                }
               };
               
               // Обработчик изменения pending count
@@ -1118,6 +1168,10 @@
               // Отслеживаем онлайн/оффлайн статус
               const handleOnline = () => {
                 setShowOfflineBanner(false);
+                // Показываем баннер "Сеть восстановлена" на 2 секунды
+                setShowOnlineBanner(true);
+                setTimeout(() => setShowOnlineBanner(false), 2000);
+                
                 // Сеть появилась — если есть pending изменения, показываем syncing
                 if (pendingChangesRef.current || pendingCount > 0) {
                   if (!syncingStartRef.current) {
@@ -1136,8 +1190,13 @@
               };
               
               const handleOffline = () => {
+                // Показываем баннер на 3 секунды, потом скрываем
+                // Основная индикация — через иконку в header
                 setShowOfflineBanner(true);
                 setCloudStatus('offline');
+                setTimeout(() => {
+                  setShowOfflineBanner(false);
+                }, 3000);
               };
               
               window.addEventListener('heysSyncCompleted', handleSyncComplete);
@@ -1147,12 +1206,17 @@
               window.addEventListener('online', handleOnline);
               window.addEventListener('offline', handleOffline);
               
-              // Начальный статус — если сеть есть, ставим idle
-              if (!navigator.onLine) {
-                setCloudStatus('offline');
-                setShowOfflineBanner(true);
-              } else {
-                setCloudStatus('idle');
+              // Начальный статус — выполняется только один раз
+              if (!initialCheckDoneRef.current) {
+                initialCheckDoneRef.current = true;
+                if (!navigator.onLine) {
+                  setCloudStatus('offline');
+                  // Показываем баннер на 3 секунды при старте без сети
+                  setShowOfflineBanner(true);
+                  setTimeout(() => setShowOfflineBanner(false), 3000);
+                } else {
+                  setCloudStatus('idle');
+                }
               }
               
               // Получить начальный pending count и details
@@ -2142,23 +2206,22 @@
               React.Fragment,
               null,
               gate,
-              // === OFFLINE BANNER ===
+              // === OFFLINE BANNER (показывается 3 сек при потере сети) ===
               showOfflineBanner && React.createElement(
                 'div',
                 { className: 'offline-banner' },
-                React.createElement('span', { className: 'offline-banner-icon' }, '⊘'),
+                React.createElement('span', { className: 'offline-banner-icon' }, '📡'),
                 React.createElement('span', { className: 'offline-banner-text' }, 
-                  pendingCount > 0 
-                    ? `Нет сети · ${pendingCount} изменений ожидают (${getPendingText()})`
-                    : 'Нет подключения к сети'
-                ),
-                pendingCount > 0 && navigator.onLine && React.createElement(
-                  'button',
-                  { 
-                    className: 'offline-banner-retry',
-                    onClick: handleRetrySync
-                  },
-                  '↻ Повторить'
+                  'Нет сети — данные сохраняются локально'
+                )
+              ),
+              // === ONLINE BANNER (показывается 2 сек при восстановлении сети) ===
+              showOnlineBanner && React.createElement(
+                'div',
+                { className: 'online-banner' },
+                React.createElement('span', { className: 'online-banner-icon' }, '✓'),
+                React.createElement('span', { className: 'online-banner-text' }, 
+                  pendingCount > 0 ? 'Сеть восстановлена — синхронизация...' : 'Сеть восстановлена'
                 )
               ),
               // Toast убран — отвлекает
@@ -2246,6 +2309,7 @@
                           ),
                           // Cloud sync indicator
                           React.createElement('div', {
+                            key: 'cloud-' + cloudStatus, // Force re-render on status change
                             className: 'cloud-sync-indicator ' + cloudStatus,
                             title: cloudStatus === 'syncing' ? 'Синхронизация...' 
                               : cloudStatus === 'synced' ? 'Сохранено в облако'
@@ -2258,14 +2322,14 @@
                             // Синее облако — сеть есть, зелёная галочка — синхронизировано
                             dangerouslySetInnerHTML: {
                               __html: cloudStatus === 'syncing' 
-                                ? '<span class="cloud-icon spin">↻</span>'
+                                ? '<div class="sync-spinner"></div>'
                                 : cloudStatus === 'synced' 
                                 ? '<span class="cloud-icon synced">✓</span>'
                                 : cloudStatus === 'offline' 
-                                ? '<span class="cloud-icon offline">⊘</span>' + (pendingCount > 0 ? '<span class="pending-badge">' + pendingCount + '</span>' : '')
+                                ? '<svg class="cloud-icon offline" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2"/></svg>' + (pendingCount > 0 ? '<span class="pending-badge">' + pendingCount + '</span>' : '')
                                 : cloudStatus === 'error' 
                                 ? '<span class="cloud-icon error">⚠</span>'
-                                : '<span class="cloud-icon idle">☁</span>'
+                                : '<svg class="cloud-icon idle" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>'
                             }
                           }),
                           // Кнопка "Сегодня" + DatePicker

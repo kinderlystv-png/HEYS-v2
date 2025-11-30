@@ -170,6 +170,13 @@
       if(!day || !day.date) return;
       const daySnap = JSON.stringify(stripMeta(day));
       if(prevDaySnapRef.current === daySnap) return;
+      
+      // ☁️ Сразу показать что данные изменились (до debounce)
+      // Это запустит анимацию синхронизации в облачном индикаторе
+      if (typeof global.dispatchEvent === 'function') {
+        global.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key: 'day', type: 'data' } }));
+      }
+      
       global.clearTimeout(timerRef.current);
       timerRef.current = global.setTimeout(flush,debounceMs);
       return ()=>{ global.clearTimeout(timerRef.current); };

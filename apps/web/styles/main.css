@@ -1396,12 +1396,19 @@ td:first-child input {
   color: #3b82f6;
 }
 
-.cloud-sync-indicator.syncing .cloud-icon.spin {
+/* Крутящийся spinner для syncing */
+.sync-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
   animation: syncSpin 0.8s linear infinite;
-  display: inline-block;
-  transform-origin: center center;
-  font-size: 16px;
-  line-height: 1;
+}
+
+/* SVG иконки */
+.cloud-sync-indicator svg.cloud-icon {
+  display: block;
 }
 
 @keyframes syncSpin {
@@ -1505,6 +1512,34 @@ td:first-child input {
   transform: scale(0.95);
 }
 
+/* Online banner — сеть восстановлена */
+.online-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  animation: slideDown 0.3s ease;
+}
+
+.online-banner-icon {
+  font-size: 16px;
+}
+
+.online-banner-text {
+  text-align: center;
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    SYNC TOAST — уведомление о синхронизации
    ═══════════════════════════════════════════════════════════════════ */
@@ -1568,6 +1603,10 @@ body:has(.offline-banner) .wrap {
   background: rgba(59, 130, 246, 0.15);
   color: #3b82f6;
   opacity: 1;
+}
+
+.cloud-sync-indicator.idle svg.cloud-icon {
+  display: block;
 }
 
 .hdr-client-label {
@@ -6626,6 +6665,160 @@ body:has(.offline-banner) .wrap {
   animation: shake 0.5s ease-in-out;
 }
 
+/* === Training Rating Section (Step 3) === */
+.training-rating-section {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.training-rating-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.training-rating-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.training-rating-emoji {
+  font-size: 24px;
+}
+
+.training-rating-label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.training-rating-value {
+  font-size: 16px;
+  font-weight: 600;
+  min-width: 50px;
+  text-align: right;
+}
+
+.training-rating-presets {
+  display: flex;
+  gap: 8px;
+}
+
+.training-rating-presets .mood-preset {
+  flex: 1;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+/* Training Comment Block */
+.training-comment-wrapper {
+  margin: 0 16px 16px;
+  transition: all 0.3s ease;
+}
+
+.training-comment-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  transition: all 0.3s ease;
+}
+
+.training-comment-prompt.neutral {
+  background: rgba(156, 163, 175, 0.08);
+  border: 1px solid rgba(156, 163, 175, 0.15);
+}
+
+.training-comment-prompt.positive {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.training-comment-prompt.negative {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+.training-comment-prompt .training-comment-icon {
+  font-size: 20px;
+}
+
+.training-comment-prompt .training-comment-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.training-comment-prompt.positive .training-comment-text {
+  color: #059669;
+}
+
+.training-comment-prompt.negative .training-comment-text {
+  color: #dc2626;
+}
+
+.training-comment-input {
+  width: 100%;
+  border: none;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #1c1c1e;
+  outline: none;
+}
+
+.training-comment-input::placeholder {
+  color: #9ca3af;
+}
+
+.training-comment-input:focus {
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Training Card Rating Display */
+.training-card-ratings {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.training-card-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.training-card-rating-emoji {
+  font-size: 14px;
+}
+
+.training-card-rating-value {
+  font-weight: 600;
+  color: #6366f1;
+}
+
+.training-card-comment {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(156, 163, 175, 0.08);
+  border-radius: 8px;
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+}
+
 /* Clickable zone values */
 .zone-clickable {
   cursor: pointer;
@@ -8899,6 +9092,7 @@ body:has(.offline-banner) .wrap {
 .sleep-quality-comment-wrapper {
   min-height: 70px;
   margin: 0 16px 16px;
+  transition: all 0.3s ease;
 }
 
 .sleep-quality-comment-prompt {
@@ -8906,10 +9100,28 @@ body:has(.offline-banner) .wrap {
   flex-direction: column;
   gap: 10px;
   padding: 12px 14px;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.15);
+  background: rgba(156, 163, 175, 0.08);
+  border: 1px solid rgba(156, 163, 175, 0.15);
   border-radius: 14px;
-  animation: comment-prompt-appear 0.3s ease-out;
+  transition: all 0.3s ease;
+}
+
+/* Negative state - плохой сон (1-4) */
+.sleep-quality-comment-prompt.negative {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+/* Positive state - хороший сон (8-10) */
+.sleep-quality-comment-prompt.positive {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+/* Neutral state */
+.sleep-quality-comment-prompt.neutral {
+  background: rgba(156, 163, 175, 0.08);
+  border-color: rgba(156, 163, 175, 0.15);
 }
 
 /* Общие стили для comment prompt header */
@@ -9049,18 +9261,35 @@ body:has(.offline-banner) .wrap {
 .day-score-comment-wrapper {
   min-height: 70px;
   margin: 0 16px 16px;
+  transition: all 0.3s ease;
 }
 
-/* Prompt для комментария при низкой оценке */
+/* Prompt для комментария — базовые стили */
 .day-score-comment-prompt {
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 12px 14px;
+  border-radius: 14px;
+  transition: all 0.3s ease;
+}
+
+/* Негативный стиль (плохая оценка 1-4) — красноватый */
+.day-score-comment-prompt.negative {
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.15);
-  border-radius: 14px;
-  animation: comment-prompt-appear 0.3s ease-out;
+}
+
+/* Позитивный стиль (хорошая оценка 7-10) — зеленый */
+.day-score-comment-prompt.positive {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+/* Нейтральный стиль (средняя оценка 5-6) — серый */
+.day-score-comment-prompt.neutral {
+  background: rgba(107, 114, 128, 0.06);
+  border: 1px solid rgba(107, 114, 128, 0.12);
 }
 
 @keyframes comment-prompt-appear {
@@ -9097,7 +9326,29 @@ body:has(.offline-banner) .wrap {
 
 .day-score-comment-input:focus {
   background: #fff;
+  box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.2);
+}
+
+/* Focus стили для разных состояний */
+.day-score-comment-prompt.negative .day-score-comment-input:focus {
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.day-score-comment-prompt.positive .day-score-comment-input:focus {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+/* Цвет текста для разных состояний */
+.day-score-comment-prompt.positive .day-score-comment-text {
+  color: #059669;
+}
+
+.day-score-comment-prompt.negative .day-score-comment-text {
+  color: #dc2626;
+}
+
+.day-score-comment-prompt.neutral .day-score-comment-text {
+  color: #6b7280;
 }
 
 /* Legacy (можно удалить) */
@@ -10193,10 +10444,139 @@ body:has(.offline-banner) .wrap {
 /* Dynamic emoji animation */
 .mood-emoji-dynamic {
   transition: transform 0.15s ease;
+  display: inline-block;
 }
 
 .mood-slider-row:active .mood-emoji-dynamic {
   transform: scale(1.2);
+}
+
+/* Emoji bounce animation on value change */
+@keyframes emoji-bounce {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.25) rotate(-5deg); }
+  50% { transform: scale(1.15) rotate(5deg); }
+  75% { transform: scale(1.2) rotate(-3deg); }
+}
+
+@keyframes emoji-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px) rotate(-5deg); }
+  40% { transform: translateX(4px) rotate(5deg); }
+  60% { transform: translateX(-3px) rotate(-3deg); }
+  80% { transform: translateX(3px) rotate(3deg); }
+}
+
+.mood-emoji-dynamic.animate-bounce {
+  animation: emoji-bounce 0.4s ease-out;
+}
+
+.mood-emoji-dynamic.animate-shake {
+  animation: emoji-shake 0.4s ease-out;
+}
+
+/* Progress dots indicator */
+.rating-progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 0 4px;
+}
+
+.rating-progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.rating-progress-dot.filled {
+  background: #10b981;
+  transform: scale(1.1);
+}
+
+.rating-progress-dot.partial {
+  background: #fbbf24;
+}
+
+/* Quick suggestion chips */
+.quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+.quick-chip {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  background: rgba(107, 114, 128, 0.1);
+  border: 1px solid rgba(107, 114, 128, 0.15);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.quick-chip:active {
+  transform: scale(0.95);
+}
+
+.quick-chip.selected {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #059669;
+}
+
+.quick-chips.negative .quick-chip {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+.quick-chips.positive .quick-chip {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+/* Correlation hint */
+.correlation-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin: 8px 16px 0;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 12px;
+  font-size: 12px;
+  color: #3b82f6;
+  animation: fade-in-up 0.3s ease;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.correlation-hint-icon {
+  font-size: 16px;
+}
+
+.correlation-hint-text {
+  flex: 1;
+  line-height: 1.4;
 }
 
 /* Difference indicator */
@@ -10355,18 +10735,47 @@ body:has(.offline-banner) .wrap {
 .mood-journal-wrapper {
   min-height: 60px;
   margin: 0 16px 16px;
+  transition: all 0.3s ease;
 }
 
-/* Mood Journal Prompt */
+/* Mood Journal Prompt — базовые стили */
 .mood-journal-prompt {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  background: rgba(239, 68, 68, 0.08);
   border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+/* Негативный стиль — красноватый */
+.mood-journal-prompt.negative {
+  background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.15);
-  animation: comment-prompt-appear 0.3s ease-out;
+}
+
+/* Позитивный стиль — зеленый */
+.mood-journal-prompt.positive {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+/* Нейтральный стиль — серый */
+.mood-journal-prompt.neutral {
+  background: rgba(156, 163, 175, 0.08);
+  border: 1px solid rgba(156, 163, 175, 0.15);
+}
+
+.mood-journal-prompt.positive .mood-journal-text {
+  color: #059669;
+}
+
+.mood-journal-prompt.negative .mood-journal-text {
+  color: #dc2626;
+}
+
+.mood-journal-prompt.neutral .mood-journal-text {
+  color: #6b7280;
 }
 
 .mood-journal-icon {
@@ -10381,7 +10790,7 @@ body:has(.offline-banner) .wrap {
 
 .mood-journal-btn {
   padding: 6px 14px;
-  background: #ef4444;
+  background: #6b7280;
   color: white;
   border: none;
   border-radius: 8px;
@@ -10391,8 +10800,46 @@ body:has(.offline-banner) .wrap {
   transition: all 0.15s ease;
 }
 
+.mood-journal-btn.positive {
+  background: #10b981;
+}
+
+.mood-journal-wrapper.negative .mood-journal-btn {
+  background: #ef4444;
+}
+
 .mood-journal-btn:active {
   transform: scale(0.95);
+}
+
+/* Journal input field */
+.mood-journal-input {
+  width: 100%;
+  border: none;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #1c1c1e;
+  outline: none;
+  margin-top: 8px;
+}
+
+.mood-journal-input::placeholder {
+  color: #9ca3af;
+}
+
+.mood-journal-input:focus {
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.mood-journal-prompt.positive .mood-journal-input:focus {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.mood-journal-prompt.negative .mood-journal-input:focus {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
 }
 
 /* Slider footer with sparkline */

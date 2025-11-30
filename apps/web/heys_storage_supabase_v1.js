@@ -872,6 +872,11 @@
           });
           const summary = Object.entries(types).map(([k,v]) => `${k}:${v}`).join(' ');
           logCritical('☁️ Сохранено в облако:', summary);
+          
+          // Уведомляем о завершении синхронизации
+          if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { saved: uniqueBatch.length } }));
+          }
         }
         
         // Обновляем персистентную очередь
