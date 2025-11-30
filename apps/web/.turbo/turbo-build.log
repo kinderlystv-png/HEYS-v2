@@ -32,5 +32,5 @@ dist/assets/heys_simple_analytics-b3f08726.js      10.31 kB
 dist/assets/heys_models_v1-6318c519.js             21.55 kB
 dist/assets/heys_storage_supabase_v1-aebf887d.js   34.42 kB
 dist/assets/heys_core_v12-d3a5aefb.js              44.59 kB
-dist/assets/index-4a2dbc9a.css                    175.98 kB │ gzip: 31.91 kB
-✓ built in 662ms
+dist/assets/index-22dfd02f.css                    176.69 kB │ gzip: 32.09 kB
+✓ built in 890ms

@@ -4795,7 +4795,7 @@ td:first-child input {
 .week-heatmap-grid {
   display: flex;
   justify-content: center;
-  gap: 3px;
+  gap: 6px;
 }
 
 .week-heatmap-day {
@@ -4831,9 +4831,9 @@ td:first-child input {
 }
 
 .week-heatmap-cell {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
   background: #e2e8f0;
   transition: background 0.2s ease, transform 0.15s ease;
 }

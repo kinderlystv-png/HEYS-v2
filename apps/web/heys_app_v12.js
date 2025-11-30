@@ -1769,16 +1769,6 @@
                       React.createElement('button', { className: 'game-expand-btn', title: 'Подробнее' }, '▼')
                     )
                   ),
-                  // === Theme Toggle FAB ===
-                  React.createElement(
-                    'button',
-                    {
-                      className: 'theme-fab',
-                      onClick: cycleTheme,
-                      title: theme === 'light' ? 'Светлая тема' : theme === 'dark' ? 'Тёмная тема' : 'Авто'
-                    },
-                    theme === 'light' ? '☀️' : theme === 'dark' ? '🌙' : '🔄'
-                  ),
                   // === НИЖНЯЯ ЛИНИЯ: Клиент + Действия ===
                   clientId
                     ? React.createElement(
@@ -1828,8 +1818,25 @@
                           React.createElement(
                             'div',
                             { className: 'hdr-client-info' },
-                            React.createElement('span', { className: 'hdr-client-label' }, 'Клиент'),
-                            React.createElement('span', { className: 'hdr-client-name' }, currentClientName),
+                            // Имя и фамилия в 2 строки из профиля
+                            (() => {
+                              const U = window.HEYS && window.HEYS.utils;
+                              const profile = U && U.lsGet ? U.lsGet('heys_profile', {}) : {};
+                              const firstName = profile.firstName || '';
+                              const lastName = profile.lastName || '';
+                              // Если профиль пустой — fallback на имя клиента
+                              if (!firstName && !lastName) {
+                                const parts = currentClientName.split(' ');
+                                return [
+                                  React.createElement('span', { key: 'fn', className: 'hdr-client-firstname' }, parts[0] || ''),
+                                  parts[1] && React.createElement('span', { key: 'ln', className: 'hdr-client-lastname' }, parts.slice(1).join(' '))
+                                ];
+                              }
+                              return [
+                                React.createElement('span', { key: 'fn', className: 'hdr-client-firstname' }, firstName),
+                                lastName && React.createElement('span', { key: 'ln', className: 'hdr-client-lastname' }, lastName)
+                              ];
+                            })()
                           ),
                           // Кнопка "Сегодня" + DatePicker
                           (tab === 'stats' || tab === 'diary' || tab === 'reports') && window.HEYS.DatePicker
@@ -1848,7 +1855,19 @@
                                     setSelectedDate(todayISO());
                                   },
                                   activeDays: datePickerActiveDays
-                                })
+                                }),
+                                // Кнопка темы
+                                React.createElement('button', {
+                                  className: 'hdr-theme-btn',
+                                  onClick: () => {
+                                    const html = document.documentElement;
+                                    const current = html.getAttribute('data-theme') || 'light';
+                                    const next = current === 'dark' ? 'light' : 'dark';
+                                    html.setAttribute('data-theme', next);
+                                    localStorage.setItem('heys_theme', next);
+                                  },
+                                  title: 'Сменить тему'
+                                }, document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙')
                               )
                             : null,
                         ),
