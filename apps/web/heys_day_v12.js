@@ -3749,19 +3749,60 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
 
     // === HERO METRICS CARDS ===
     const remainingKcal = r0(optimum - eatenKcal); // сколько ещё можно съесть
+    const currentRatio = eatenKcal / (optimum || 1);
     
-    // Цвета для карточек
+    // Цвета для карточек — используем ratioZones
     function getEatenColor() {
-      const ratio = eatenKcal / (optimum || 1);
-      if (ratio < 0.7) return { bg: '#dcfce7', text: '#065f46', border: '#86efac' }; // зелёный
-      if (ratio <= 1.0) return { bg: '#fef9c3', text: '#854d0e', border: '#fde047' }; // жёлтый
-      return { bg: '#fee2e2', text: '#b91c1c', border: '#fecaca' }; // красный
+      const rz = window.HEYS && window.HEYS.ratioZones;
+      if (rz) {
+        const zone = rz.getZone(currentRatio);
+        const baseColor = zone.color;
+        return { 
+          bg: baseColor + '20',
+          text: zone.textColor === '#fff' ? baseColor : zone.textColor, 
+          border: baseColor + '60'
+        };
+      }
+      // Fallback
+      if (currentRatio < 0.5) return { bg: '#ef444420', text: '#ef4444', border: '#ef444460' };
+      if (currentRatio < 0.75) return { bg: '#eab30820', text: '#eab308', border: '#eab30860' };
+      if (currentRatio < 1.1) return { bg: '#22c55e20', text: '#22c55e', border: '#22c55e60' };
+      if (currentRatio < 1.3) return { bg: '#eab30820', text: '#eab308', border: '#eab30860' };
+      return { bg: '#ef444420', text: '#ef4444', border: '#ef444460' };
     }
     function getRemainingColor() {
-      if (remainingKcal > 100) return { bg: '#dcfce7', text: '#065f46', border: '#86efac' };
-      if (remainingKcal >= 0) return { bg: '#fef9c3', text: '#854d0e', border: '#fde047' };
-      return { bg: '#fee2e2', text: '#b91c1c', border: '#fecaca' };
+      const rz = window.HEYS && window.HEYS.ratioZones;
+      if (rz) {
+        const zone = rz.getZone(currentRatio);
+        const baseColor = zone.color;
+        return { 
+          bg: baseColor + '20',
+          text: zone.textColor === '#fff' ? baseColor : zone.textColor, 
+          border: baseColor + '60'
+        };
+      }
+      if (remainingKcal > 100) return { bg: '#22c55e20', text: '#22c55e', border: '#22c55e60' };
+      if (remainingKcal >= 0) return { bg: '#eab30820', text: '#eab308', border: '#eab30860' };
+      return { bg: '#ef444420', text: '#ef4444', border: '#ef444460' };
     }
+    
+    // Статус ratio для badge
+    function getRatioStatus() {
+      const rz = window.HEYS && window.HEYS.ratioZones;
+      const zoneId = rz ? rz.getStatus(currentRatio) : 
+        (currentRatio < 0.5 ? 'crash' : currentRatio < 0.75 ? 'low' : currentRatio < 0.9 ? 'good' : currentRatio < 1.1 ? 'perfect' : currentRatio < 1.3 ? 'over' : 'binge');
+      
+      switch (zoneId) {
+        case 'crash': return { emoji: '💀', text: 'Критически мало!', color: '#ef4444' };
+        case 'low': return { emoji: '🍽️', text: 'Маловато', color: '#eab308' };
+        case 'good': return { emoji: '👍', text: 'Хорошо!', color: '#22c55e' };
+        case 'perfect': return { emoji: '🔥', text: 'Идеально!', color: '#10b981' };
+        case 'over': return { emoji: '😅', text: 'Чуть больше', color: '#eab308' };
+        case 'binge': return { emoji: '🚨', text: 'Перебор!', color: '#ef4444' };
+        default: return { emoji: '📊', text: '', color: '#64748b' };
+      }
+    }
+    const ratioStatus = getRatioStatus();
     function getDeficitColor() {
       // factDefPct отрицательный = дефицит (хорошо), положительный = профицит (плохо)
       const target = dayTargetDef; // отрицательное значение
@@ -5730,7 +5771,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     
     // === БЛОК СТАТИСТИКА ===
     const statsBlock = React.createElement('div', { className: 'compact-stats compact-card' },
-      React.createElement('div', { className: 'compact-card-header' }, '📊 СТАТИСТИКА'),
+      React.createElement('div', { className: 'compact-card-header stats-header-with-badge' },
+        React.createElement('span', null, '📊 СТАТИСТИКА'),
+        React.createElement('span', { 
+          className: 'ratio-status-badge' + (ratioStatus.emoji === '🔥' ? ' perfect' : ''),
+          style: { color: ratioStatus.color }
+        }, ratioStatus.emoji + ' ' + ratioStatus.text)
+      ),
       // 4 карточки метрик внутри статистики
       React.createElement('div', { className: 'metrics-cards' },
         // Затраты (TDEE)

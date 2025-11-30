@@ -448,6 +448,32 @@ td:first-child input {
   gap: 6px;
 }
 
+/* Header с badge статуса справа */
+.compact-card-header.stats-header-with-badge {
+  justify-content: space-between;
+}
+
+.ratio-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  animation: badgeFadeIn 0.4s ease-out;
+}
+
+.ratio-status-badge.perfect {
+  animation: badgeFadeIn 0.4s ease-out, perfectPulse 2s ease-in-out infinite;
+}
+
+@keyframes badgeFadeIn {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes perfectPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; transform: scale(1.05); }
+}
+
 .compact-row {
   display: flex;
   align-items: center;
@@ -832,23 +858,37 @@ td:first-child input {
   width: 36px;
   height: 36px;
   padding: 0;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
   font-size: 18px;
   cursor: pointer;
   transition: all 0.2s ease;
-  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .hdr-theme-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.25);
   transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
 }
 
 .hdr-theme-btn:active {
   transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode */
+[data-theme="dark"] .hdr-theme-btn {
+  background: rgba(50, 50, 60, 0.95);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .hdr-theme-btn:hover {
+  background: rgba(60, 60, 70, 1);
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 /* === Theme FAB (Phase 0 Gamification) === */
@@ -1025,13 +1065,27 @@ td:first-child input {
 .hdr-client-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .hdr-client-name {
   font-size: 15px;
   font-weight: 600;
   color: #1f2937;
+}
+
+.hdr-client-firstname {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.2;
+}
+
+.hdr-client-lastname {
+  font-size: 11px;
+  font-weight: 400;
+  color: #6b7280;
+  line-height: 1.2;
 }
 
 .hdr-client-label {
@@ -4700,71 +4754,69 @@ td:first-child input {
   animation: correlationPulse 0.6s ease-out;
 }
 
-/* === Week Heatmap === */
+/* === Week Heatmap (compact) === */
 .week-heatmap {
   grid-column: 1 / -1;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-top: 8px;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-top: 4px;
 }
 
 .week-heatmap-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
 .week-heatmap-title {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: #1e293b;
 }
 
 .week-heatmap-streak {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #f59e0b;
   background: #fef3c7;
-  padding: 2px 6px;
-  border-radius: 8px;
+  padding: 1px 5px;
+  border-radius: 6px;
 }
 
 .week-heatmap-stat {
-  font-size: 12px;
+  font-size: 11px;
   color: #64748b;
   margin-left: auto;
 }
 
 .week-heatmap-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
+  display: flex;
+  justify-content: center;
+  gap: 3px;
 }
 
 .week-heatmap-day {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   cursor: pointer;
   transition: transform 0.15s ease;
-  animation: fadeInUp 0.3s ease-out backwards;
-  animation-delay: var(--stagger-delay, 0ms);
 }
 
 .week-heatmap-day:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .week-heatmap-day:active {
-  transform: scale(0.92);
+  transform: scale(0.95);
 }
 
 .week-heatmap-name {
-  font-size: 10px;
+  font-size: 9px;
   color: #64748b;
   font-weight: 500;
 }
@@ -4779,16 +4831,16 @@ td:first-child input {
 }
 
 .week-heatmap-cell {
-  width: 100%;
-  aspect-ratio: 1;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
   background: #e2e8f0;
-  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  transition: background 0.2s ease, transform 0.15s ease;
 }
 
 /* Hover эффект на ячейке */
 .week-heatmap-day:not(.empty) .week-heatmap-cell:hover {
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 /* Статусы — fallback если нет inline градиента */
