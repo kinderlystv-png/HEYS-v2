@@ -619,12 +619,16 @@
       
       // Функция добавления продукта с фокусом на поле граммов (desktop)
       const addProductAndFocusGrams = React.useCallback((product) => {
+        haptic('light'); // 🎮 XP: вибрация при добавлении
         const newItem = {id:uid('it_'), product_id:product.id??product.product_id, name:product.name, grams:100};
         const meals = day.meals.map((m,i)=> i===mi? {...m, items:[...(m.items||[]), newItem]}:m);
         setDay({...day, meals});
         setSearch(''); 
         setOpen(false);
         setSelectedIndex(-1); // Сбрасываем выделение
+        
+        // 🎮 XP: Dispatch для gamification + advice
+        window.dispatchEvent(new CustomEvent('heysProductAdded', { detail: { product, grams: 100 } }));
         
         // Фокус на поле граммов нового продукта через itemId
         setTimeout(() => {
@@ -650,6 +654,7 @@
       
       // 🆕 Функция добавления продукта с указанными граммами (из модалки)
       const addProductWithGrams = React.useCallback((product, grams) => {
+        haptic('light'); // 🎮 XP: вибрация при добавлении
         const newItem = {id:uid('it_'), product_id:product.id??product.product_id, name:product.name, grams: grams || 100};
         const meals = day.meals.map((m,i)=> i===mi? {...m, items:[...(m.items||[]), newItem]}:m);
         setDay({...day, meals});
@@ -657,6 +662,10 @@
         setGramsValue(100);
         setKcalInputMode(false);
         setTargetKcalValue('');
+        
+        // 🎮 XP: Dispatch для gamification + advice
+        window.dispatchEvent(new CustomEvent('heysProductAdded', { detail: { product, grams } }));
+        
         // Сохраняем последние граммы и историю для этого продукта
         try {
           const productId = product.id ?? product.product_id ?? product.name;
@@ -1886,6 +1895,9 @@
       // Анимация feedback
       setWaterAddedAnim('+' + ml);
       haptic('light');
+      
+      // 🎮 XP: Dispatch для gamification
+      window.dispatchEvent(new CustomEvent('heysWaterAdded', { detail: { ml, total: newWater } }));
       
       // 🎉 Celebration при достижении цели (переиспользуем confetti от калорий)
       if (newWater >= waterGoal && (day.waterMl || 0) < waterGoal && !showConfetti) {

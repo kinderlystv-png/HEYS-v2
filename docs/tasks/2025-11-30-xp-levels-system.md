@@ -947,30 +947,29 @@ if (HEYS.utils && HEYS.utils.haptic) {
 
 ## 🚀 Порядок выполнения
 
-### Phase 0.5: Блокеры фундамента (15 мин) ⚠️ ВЫПОЛНИТЬ ПЕРВЫМ!
+### Phase 0.5: Блокеры фундамента (20 мин) ⚠️ ВЫПОЛНИТЬ ПЕРВЫМ!
 
 > **Без этого Phase 1 будет сломан!**
 
-```javascript
-// B1-B2: Добавить data-game-source атрибуты к кнопкам добавления
-// B3: Placeholder уже есть — нужно добавить React state
-// B4: Добавить dispatch в addProductAndFocusGrams
-// B5: Экспортировать HEYS.Day.getStreak()
-// B6: Добавить логику day_completed (D1: проверяем вчера утром)
-```
+**Блокеры B (из предыдущего аудита):**
+1. **B1-B2**: Добавить `data-game-source="product"` к кнопкам продуктов
+2. **B4**: В `addProductAndFocusGrams()` (строка 621) добавить:
+   - `haptic('light');`
+   - `window.dispatchEvent(new CustomEvent('heysProductAdded', {...}))`
+3. **B5**: Экспортировать `HEYS.Day.getStreak()` ✅ (уже сделано строка 2648)
+4. **B6**: day_completed логика — проверять вчера утром
 
-1. **B1-B2**: Добавить `data-game-source="product-btn-{id}"` к кнопкам продуктов
-2. **B4**: В `addProductAndFocusGrams()` добавить `window.dispatchEvent(new CustomEvent('heysProductAdded', {...}))`
-3. **B5**: В конце DayTab добавить `HEYS.Day = { getStreak: () => currentStreak }`
-4. **B6**: В `useEffect` при монтировании проверять вчерашний день:
-   ```javascript
-   if (hour < 12) {
-     const yesterday = HEYS.ratioZones.isSuccess(yesterdayRatio);
-     if (yesterday && !claimed('day_completed_' + yesterdayDate)) {
-       HEYS.game.addXP(50, 'day_completed');
-     }
-   }
-   ```
+**Критические пробелы C (новые):**
+5. **C1**: В `addProductAndFocusGrams` и `addProductWithGrams` — добавить haptic + dispatch
+6. **C2**: В `addXP()` — debounce 500ms per reason (защита от спама)
+7. **C3**: Guard `if (HEYS.game)` перед всеми вызовами addXP
+8. **C5**: Слушать `heysClientChanged` → refresh XP bar
+9. **C6**: Expanded panel → `max-height: 60vh; overflow-y: auto`
+
+**Конфликты K (предотвратить):**
+10. **K1-K2**: Централизовать confetti через CustomEvent `heysCelebrate`
+11. **K3**: Flying stars очередь (max 1 одновременно)
+12. **K4**: Notifications queue (level up > achievement)
 
 ### Phase 0: Подготовка фундамента (25 мин) ✅ ВЫПОЛНЕНО!
 - ✅ Экспортировать `HEYS.Day.getStreak()` из useMemo
@@ -982,15 +981,17 @@ if (HEYS.utils && HEYS.utils.haptic) {
 
 ### Phase 1: Core Module (45 мин)
 10. Создать `heys_gamification_v1.js`:
-    - `HEYS.game.addXP(amount, reason, sourceEl)`
+    - `HEYS.game.addXP(amount, reason, sourceEl)` — **с debounce 500ms per reason**
     - `HEYS.game.getLevel()`, `getProgress()`, `getStats()`
-    - `HEYS.game.flyToBar(sourceEl)` — flying animation
-    - `HEYS.game.celebrate()` — centralized confetti
+    - `HEYS.game.flyToBar(sourceEl)` — flying animation **с очередью**
+    - `HEYS.game.celebrate()` — centralized confetti (dispatch `heysCelebrate`)
+    - `HEYS.game.showNotification(type, data)` — **с очередью**
 11. GamificationBar компонент (React, в hdr-top):
     - Progress bar с glow
-    - Level + streak indicator
+    - Level + streak indicator (**скрыть 🔥 если streak === 0**)
     - Tap → expanded panel (stats + ALL achievements)
-12. Daily login bonus popup (onboarding XP)
+    - **max-height: 60vh; overflow-y: auto** + tap outside/swipe down to close
+12. Daily login bonus popup (при монтировании App)
 13. Подключить в `index.html`
 14. Тест в консоли: `HEYS.game.addXP(50, 'test')`
 

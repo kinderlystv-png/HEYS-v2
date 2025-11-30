@@ -235,5 +235,40 @@
     <script defer src="heys_reports_v12.js?v=2" fetchpriority="low"></script>
     <script defer src="heys_data_overview_v1.js?v=1" fetchpriority="low"></script>
     <script defer src="heys_app_v12.js?v=10" fetchpriority="high"></script>
+    
+    <!-- Service Worker Registration (PWA offline support) -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+              console.log('[App] SW registered, scope:', registration.scope);
+              
+              // Проверка обновлений каждые 60 минут
+              setInterval(function() {
+                registration.update();
+              }, 60 * 60 * 1000);
+              
+              // Уведомление о новой версии
+              registration.addEventListener('updatefound', function() {
+                var newWorker = registration.installing;
+                newWorker.addEventListener('statechange', function() {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // Новая версия готова
+                    console.log('[App] New version available!');
+                    // Можно показать toast "Доступно обновление"
+                    if (window.HEYS && window.HEYS.showUpdateToast) {
+                      window.HEYS.showUpdateToast();
+                    }
+                  }
+                });
+              });
+            })
+            .catch(function(error) {
+              console.warn('[App] SW registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
