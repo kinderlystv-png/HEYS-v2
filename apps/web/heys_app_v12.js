@@ -651,7 +651,7 @@
             const [products, setProducts] = useState([]);
             
             // === SWIPE NAVIGATION ===
-            const TABS_ORDER = ['ration', 'stats', 'diary', 'reports', 'user'];
+            const TABS_ORDER = ['ration', 'stats', 'diary', 'reports', 'overview', 'user'];
             const touchRef = React.useRef({ startX: 0, startY: 0, startTime: 0 });
             const MIN_SWIPE_DISTANCE = 60;
             const MAX_SWIPE_TIME = 500; // ms — увеличено для более плавного свайпа
@@ -1865,6 +1865,15 @@
                   React.createElement(
                     'div',
                     {
+                      className: 'tab ' + (tab === 'overview' ? 'active' : ''),
+                      onClick: () => setTab('overview'),
+                    },
+                    React.createElement('span', { className: 'tab-icon' }, '📋'),
+                    React.createElement('span', { className: 'tab-text' }, 'Обзор'),
+                  ),
+                  React.createElement(
+                    'div',
+                    {
                       className: 'tab ' + (tab === 'user' ? 'active' : ''),
                       onClick: () => setTab('user'),
                     },
@@ -1909,7 +1918,20 @@
                             key: 'user' + syncVer + '_' + String(clientId || ''),
                             clientId,
                           })
-                        : window.HEYS && window.HEYS.ReportsTab
+                        : tab === 'overview'
+                          ? (window.HEYS && window.HEYS.DataOverviewTab
+                              ? React.createElement(window.HEYS.DataOverviewTab, {
+                                  key: 'overview' + syncVer + '_' + String(clientId || ''),
+                                  clientId,
+                                  setTab,
+                                  setSelectedDate,
+                                })
+                              : React.createElement(
+                                  'div',
+                                  { className: 'muted', style: { padding: 24 } },
+                                  '⏳ Загрузка компонента обзора...',
+                                ))
+                          : window.HEYS && window.HEYS.ReportsTab
                             ? React.createElement(window.HEYS.ReportsTab, {
                                 key:
                                   'reports' +

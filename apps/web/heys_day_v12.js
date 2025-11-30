@@ -4200,6 +4200,49 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         return d;
       };
       
+      // Расчёт длины cubic bezier сегмента (приближение через разбиение на отрезки)
+      const bezierLength = (p1, cp1, cp2, p2, steps = 10) => {
+        let length = 0;
+        let prevX = p1.x, prevY = p1.y;
+        for (let t = 1; t <= steps; t++) {
+          const s = t / steps;
+          const u = 1 - s;
+          // Cubic Bezier formula: B(t) = (1-t)³P0 + 3(1-t)²tP1 + 3(1-t)t²P2 + t³P3
+          const x = u*u*u*p1.x + 3*u*u*s*cp1.x + 3*u*s*s*cp2.x + s*s*s*p2.x;
+          const y = u*u*u*p1.y + 3*u*u*s*cp1.y + 3*u*s*s*cp2.y + s*s*s*p2.y;
+          length += Math.sqrt((x - prevX) ** 2 + (y - prevY) ** 2);
+          prevX = x;
+          prevY = y;
+        }
+        return length;
+      };
+      
+      // Кумулятивные длины пути до каждой точки (для синхронизации анимации)
+      const calcCumulativeLengths = (pts, yKey = 'y') => {
+        const lengths = [0]; // первая точка = 0
+        if (pts.length < 2) return lengths;
+        
+        for (let i = 0; i < pts.length - 1; i++) {
+          const p0 = pts[Math.max(0, i - 1)];
+          const p1 = pts[i];
+          const p2 = pts[i + 1];
+          const p3 = pts[Math.min(pts.length - 1, i + 2)];
+          
+          const tension = 0.3;
+          const cp1 = { x: p1.x + (p2.x - p0.x) * tension, y: p1[yKey] + (p2[yKey] - p0[yKey]) * tension };
+          const cp2 = { x: p2.x - (p3.x - p1.x) * tension, y: p2[yKey] - (p3[yKey] - p1[yKey]) * tension };
+          
+          const segmentLen = bezierLength(
+            { x: p1.x, y: p1[yKey] }, cp1, cp2, { x: p2.x, y: p2[yKey] }
+          );
+          lengths.push(lengths[lengths.length - 1] + segmentLen);
+        }
+        return lengths;
+      };
+      
+      const cumulativeLengths = calcCumulativeLengths(points, 'y');
+      const totalPathLength = cumulativeLengths[cumulativeLengths.length - 1] || 1;
+      
       const pathD = smoothPath(points, 'y');
       
       // Линия цели — плавная пунктирная
@@ -4398,10 +4441,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           className: 'sparkline-goal',
           fill: 'none'
         }),
-        // Линия графика
+        // Линия графика (dasharray = реальная длина пути для синхронизации с точками)
         React.createElement('path', {
           d: pathD,
-          className: 'sparkline-line'
+          className: 'sparkline-line',
+          style: { 
+            strokeDasharray: totalPathLength, 
+            strokeDashoffset: totalPathLength 
+          }
         }),
         // Золотые streak-линии между 🔥 днями
         streakPaths.map((streakPath, i) => 
@@ -4481,8 +4528,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const ratio = p.target > 0 ? p.kcal / p.target : 0;
           const deltaColor = rz ? rz.getGradientColor(ratio, 1) : '#64748b';
           
-          // Delay: дельта появляется после всех точек
-          const deltaDelay = 2.6 + (i * 0.03); // быстрый stagger после точек
+          // Delay: все дельты и эмодзи появляются одновременно — взрыв от оси X
+          const deltaDelay = 2.6; // все сразу
           
           return React.createElement('g', { key: 'day-group-' + i },
             // Дата
@@ -4515,16 +4562,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           })
         ),
         // Золотые пульсирующие точки для идеальных дней, иначе обычные точки
-        // Точки появляются синхронно с рисованием линии — когда линия доходит до точки
+        // Точки появляются синхронно с рисованием линии (по реальной длине кривой Безье)
         (() => {
-          const lineDrawDuration = 2.5; // секунд — должно совпадать с CSS animation
+          const lineDrawDuration = 3; // секунд — должно совпадать с CSS animation
           const leadTime = 0.15; // точки появляются чуть раньше линии
           
           return points.map((p, i) => {
             const ratio = p.target > 0 ? p.kcal / p.target : 0;
-            // Линейная задержка: первая точка сразу, последняя в конце анимации
-            const progress = points.length > 1 ? i / (points.length - 1) : 0;
-            const animDelay = Math.max(0, progress * lineDrawDuration - leadTime);
+            // Задержка пропорциональна реальной длине пути до точки
+            const pathProgress = cumulativeLengths[i] / totalPathLength;
+            const animDelay = Math.max(0, pathProgress * lineDrawDuration - leadTime);
           
             // Идеальный день — золотая пульсирующая точка
             if (p.isPerfect && p.kcal > 0) {
@@ -4568,7 +4615,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Аннотации тренировок — пунктирные линии вниз к точкам (появляются синхронно с точкой)
         points.map((p, i) => {
           if (!p.hasTraining || !p.trainingTypes.length) return null;
-          const lineDelay = 2.6 + (i * 0.03); // после всех точек
+          const lineDelay = 2.6; // все сразу
           return React.createElement('line', {
             key: 'train-line-' + i,
             x1: p.x,
@@ -4585,7 +4632,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           // Маппинг типов на эмодзи
           const typeEmoji = { cardio: '🏃', strength: '🏋️', hobby: '⚽' };
           const emojis = p.trainingTypes.map(t => typeEmoji[t] || '🏃').join('');
-          const emojiDelay = 2.6 + (i * 0.03); // после всех точек
+          const emojiDelay = 2.6; // все сразу — взрыв от оси X
           return React.createElement('text', {
             key: 'train-' + i,
             x: p.x,

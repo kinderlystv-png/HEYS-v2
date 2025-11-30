@@ -3712,9 +3712,7 @@ td:first-child input {
   stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
-  /* Анимация рисования линии — линейная для синхронизации с точками */
-  stroke-dasharray: 500;
-  stroke-dashoffset: 500;
+  /* Анимация рисования линии — dasharray/offset задаётся inline для точной длины */
   animation: drawSparkline 3s linear forwards;
   transition: stroke-width 0.2s ease;
 }
@@ -3763,6 +3761,8 @@ td:first-child input {
   transition: r 0.1s ease, fill 0.1s ease;
   opacity: 0;
   transform: scale(0);
+  transform-box: fill-box;
+  transform-origin: center center;
   animation: dotAppear 0.08s ease-out forwards;
   animation-delay: var(--delay, 0s);
 }
@@ -3839,7 +3839,8 @@ td:first-child input {
 
 .sparkline-dot-today {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
-  animation: pulseDot 2s ease-in-out infinite, fadeInDot 0.3s ease-out forwards;
+  animation: dotAppear 0.08s ease-out forwards, pulseDot 2s ease-in-out infinite;
+  animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 0.1s);
   transform-box: fill-box;
   transform-origin: center center;
 }
@@ -4272,7 +4273,7 @@ td:first-child input {
   font-size: 10px;
   fill: #8b5cf6; /* фиолетовый для тренировок */
   opacity: 0;
-  animation: fadeInSimple 0.15s ease-out forwards;
+  animation: fadeInSimple 0.3s ease-out forwards;
   animation-delay: var(--delay, 0s);
 }
 
@@ -4339,7 +4340,7 @@ td:first-child input {
   font-size: 10px;
   font-weight: 700;
   opacity: 0;
-  animation: fadeInSimple 0.1s ease-out forwards;
+  animation: fadeInSimple 0.3s ease-out forwards;
   animation-delay: var(--delay, 0s);
 }
 
@@ -10277,5 +10278,198 @@ input, textarea, select {
 
 [data-theme="dark"] .water-preset-compact .water-preset-ml {
   color: #7dd3fc;
+}
+
+/* ================================================
+   DATA OVERVIEW TAB — Таблица заполненности данных
+   ================================================ */
+
+.data-overview-tab {
+  padding: 12px;
+  min-height: 100%;
+}
+
+.data-overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+
+.data-overview-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color, #1f2937);
+}
+
+.data-overview-total {
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #d1fae5;
+  color: #059669;
+  font-weight: 500;
+}
+
+.data-overview-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -12px;
+  padding: 0 12px;
+}
+
+.data-overview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 520px;
+}
+
+.data-overview-table th {
+  padding: 8px 6px;
+  text-align: center;
+  font-weight: normal;
+  font-size: 14px;
+  position: sticky;
+  top: 0;
+  background: var(--bg-color, #fff);
+  border-bottom: 2px solid #e5e7eb;
+  z-index: 2;
+}
+
+.data-overview-table th:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+
+.data-overview-table td {
+  padding: 10px 6px;
+  text-align: center;
+  border-bottom: 1px solid #f3f4f6;
+  min-width: 36px;
+}
+
+.data-overview-table td:first-child {
+  text-align: left;
+  font-weight: 500;
+  font-size: 12px;
+  position: sticky;
+  left: 0;
+  background: var(--bg-color, #fff);
+  z-index: 1;
+  white-space: nowrap;
+  padding-right: 12px;
+}
+
+.data-overview-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.data-overview-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.data-overview-table tbody tr:active {
+  background: #f3f4f6;
+}
+
+/* Cell states */
+.cell-filled { 
+  color: #059669;
+  font-weight: 500;
+}
+
+.cell-empty { 
+  color: #9ca3af;
+  background: #fef2f2;
+}
+
+/* Hint */
+.data-overview-hint {
+  text-align: center;
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 12px;
+  padding: 8px;
+}
+
+/* Empty state */
+.data-overview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.data-overview-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.data-overview-empty-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.data-overview-empty-hint {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* Dark theme */
+[data-theme="dark"] .data-overview-title {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .data-overview-total {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .data-overview-table th {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+[data-theme="dark"] .data-overview-table td {
+  border-color: #374151;
+}
+
+[data-theme="dark"] .data-overview-table td:first-child {
+  background: #1f2937;
+}
+
+[data-theme="dark"] .data-overview-table tbody tr:hover {
+  background: #374151;
+}
+
+[data-theme="dark"] .data-overview-table tbody tr:active {
+  background: #4b5563;
+}
+
+[data-theme="dark"] .cell-empty { 
+  color: #6b7280; 
+  background: #451a1a;
+}
+
+[data-theme="dark"] .data-overview-hint {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .data-overview-empty-text {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .data-overview-empty-hint {
+  color: #6b7280;
 }
 
