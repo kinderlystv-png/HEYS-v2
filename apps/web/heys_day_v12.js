@@ -4120,11 +4120,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const lastChartDate = chartData[chartData.length - 1]?.date || '';
       
       if (hasEnoughData && lastChartDate) {
-        // Вычисляем тренд по последним 3 дням (без неполного сегодня)
+        // Вычисляем тренд калорий по последним 3 дням (без неполного сегодня)
         const lastDays = chartData.slice(-3);
         const avgChange = (lastDays[2].kcal - lastDays[0].kcal) / 2;
         const lastKcal = chartData[chartData.length - 1].kcal;
         const lastTarget = chartData[chartData.length - 1].target || goal;
+        
+        // Вычисляем тренд НОРМЫ за последние 7 дней (учитывает изменения веса, активности)
+        const last7Days = chartData.slice(-7);
+        let targetTrend = 0;
+        if (last7Days.length >= 2) {
+          const firstTarget = last7Days[0].target || goal;
+          const lastTargetVal = last7Days[last7Days.length - 1].target || goal;
+          targetTrend = (lastTargetVal - firstTarget) / (last7Days.length - 1);
+        }
         
         // Если сегодня неполный — добавляем прогноз на сегодня и завтра
         const daysToForecast = isTodayIncomplete ? 2 : forecastDays;
@@ -4133,9 +4142,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const forecastDate = addDays(lastChartDate, i);
           const forecastDayNum = forecastDate ? new Date(forecastDate).getDate() : '';
           const isTodayForecast = isTodayIncomplete && i === 1;
+          // Прогноз нормы по тренду
+          const forecastTarget = Math.round(lastTarget + targetTrend * i);
           forecastPoints.push({
             kcal: Math.max(0, Math.round(lastKcal + avgChange * i)),
-            target: lastTarget,
+            target: forecastTarget,
             isForecast: true,
             isTodayForecast, // маркер что это прогноз на сегодня
             date: forecastDate,
@@ -4297,23 +4308,39 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       let forecastPathD = '';
       let forecastColor = '#94a3b8'; // серый по умолчанию
       let forecastPathLength = 0; // длина для анимации
-      if (forecastPts.length > 0 && points.length > 0) {
+      if (forecastPts.length > 0 && points.length >= 2) {
+        // Берём 2 последние точки для плавного продолжения Bezier
+        const prev2Point = points[points.length - 2];
         const lastPoint = points[points.length - 1];
         const forecastPoint = forecastPts[forecastPts.length - 1];
-        const allForecast = [lastPoint, ...forecastPts];
-        forecastPathD = smoothPath(allForecast, 'y');
         
-        // Вычисляем длину прогнозной линии для анимации
-        for (let i = 0; i < allForecast.length - 1; i++) {
-          const p0 = allForecast[Math.max(0, i - 1)];
-          const p1 = allForecast[i];
-          const p2 = allForecast[i + 1];
-          const p3 = allForecast[Math.min(allForecast.length - 1, i + 2)];
+        // Полный массив для расчёта касательных
+        const allForBezier = [prev2Point, lastPoint, ...forecastPts];
+        
+        // Строим путь только для прогнозной части (от lastPoint)
+        // Используем smoothPath но начинаем с индекса 1
+        let d = `M${lastPoint.x},${lastPoint.y}`;
+        for (let i = 1; i < allForBezier.length - 1; i++) {
+          const p0 = allForBezier[i - 1];
+          const p1 = allForBezier[i];
+          const p2 = allForBezier[i + 1];
+          const p3 = allForBezier[Math.min(allForBezier.length - 1, i + 2)];
           const tension = 0.3;
-          const cp1 = { x: p1.x + (p2.x - p0.x) * tension, y: p1.y + (p2.y - p0.y) * tension };
-          const cp2 = { x: p2.x - (p3.x - p1.x) * tension, y: p2.y - (p3.y - p1.y) * tension };
-          forecastPathLength += bezierLength({ x: p1.x, y: p1.y }, cp1, cp2, { x: p2.x, y: p2.y });
+          const cp1x = p1.x + (p2.x - p0.x) * tension;
+          const cp1y = p1.y + (p2.y - p0.y) * tension;
+          const cp2x = p2.x - (p3.x - p1.x) * tension;
+          const cp2y = p2.y - (p3.y - p1.y) * tension;
+          d += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+          
+          // Длина сегмента
+          forecastPathLength += bezierLength(
+            { x: p1.x, y: p1.y },
+            { x: cp1x, y: cp1y },
+            { x: cp2x, y: cp2y },
+            { x: p2.x, y: p2.y }
+          );
         }
+        forecastPathD = d;
         
         // Цвет по направлению тренда относительно цели
         const lastRatio = lastPoint.target > 0 ? lastPoint.kcal / lastPoint.target : 1;
@@ -4326,6 +4353,33 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         } else {
           forecastColor = '#8b5cf6'; // фиолетовый — стабильно
         }
+      }
+      
+      // Прогнозная линия НОРМЫ (goal) — продолжение тренда за 7 дней
+      let forecastGoalPathD = '';
+      if (forecastPts.length > 0 && points.length >= 2) {
+        // Берём 2 последние точки для плавного продолжения Bezier
+        const prev2Point = points[points.length - 2];
+        const lastPoint = points[points.length - 1];
+        
+        // Полный массив для расчёта касательных (используем targetY)
+        const allForBezier = [prev2Point, lastPoint, ...forecastPts];
+        
+        // Строим путь только для прогнозной части (от lastPoint)
+        let d = `M${lastPoint.x},${lastPoint.targetY}`;
+        for (let i = 1; i < allForBezier.length - 1; i++) {
+          const p0 = allForBezier[i - 1];
+          const p1 = allForBezier[i];
+          const p2 = allForBezier[i + 1];
+          const p3 = allForBezier[Math.min(allForBezier.length - 1, i + 2)];
+          const tension = 0.3;
+          const cp1x = p1.x + (p2.x - p0.x) * tension;
+          const cp1y = p1.targetY + (p2.targetY - p0.targetY) * tension;
+          const cp2x = p2.x - (p3.x - p1.x) * tension;
+          const cp2y = p2.targetY - (p3.targetY - p1.targetY) * tension;
+          d += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.targetY}`;
+        }
+        forecastGoalPathD = d;
       }
       
       // === Streak detection: золотая линия между последовательными 🔥 днями ===
@@ -4550,7 +4604,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             }
           })
         ),
-        // Прогнозная линия — маска для анимации + пунктир
+        // Прогнозная линия калорий — маска для анимации + пунктир
         forecastPathD && React.createElement('g', { key: 'forecast-group' },
           // Маска: сплошная линия которая рисуется
           React.createElement('defs', null,
@@ -4579,6 +4633,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             mask: 'url(#forecastMask)'
           })
         ),
+        // Прогнозная линия нормы (цели)
+        forecastGoalPathD && React.createElement('path', {
+          key: 'forecast-goal-line',
+          d: forecastGoalPathD,
+          fill: 'none',
+          stroke: 'rgba(148, 163, 184, 0.7)', // серый slate-400
+          strokeWidth: 1.5,
+          strokeDasharray: '4 3',
+          strokeLinecap: 'round'
+        }),
         // Точки прогноза (с цветом по тренду) — появляются после прогнозной линии
         forecastPts.map((p, i) => {
           // Задержка = 3с (основная линия) + время до этой точки в прогнозе
@@ -5067,10 +5131,27 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Область под графиком (с плавными границами)
       const areaPath = pathD + ` L${points[points.length-1].x},${paddingTop + chartHeight} L${points[0].x},${paddingTop + chartHeight} Z`;
       
-      // Прогнозная линия (от последней точки к прогнозу)
-      const forecastLineD = forecastPt 
-        ? `M${points[points.length - 1].x},${points[points.length - 1].y} L${forecastPt.x},${forecastPt.y}`
-        : '';
+      // Прогнозная линия (от последней точки к прогнозу) — плавная Bezier
+      let forecastLineD = '';
+      if (forecastPt && points.length >= 2) {
+        // Берём 2 последние точки для плавного продолжения
+        const prev2Point = points[points.length - 2];
+        const lastPoint = points[points.length - 1];
+        
+        // Массив для расчёта касательных
+        const allForBezier = [prev2Point, lastPoint, forecastPt];
+        
+        // Строим Bezier от lastPoint к forecastPt
+        const p0 = allForBezier[0];
+        const p1 = allForBezier[1];
+        const p2 = allForBezier[2];
+        const tension = 0.3;
+        const cp1x = p1.x + (p2.x - p0.x) * tension;
+        const cp1y = p1.y + (p2.y - p0.y) * tension;
+        const cp2x = p2.x - (p2.x - p1.x) * tension;
+        const cp2y = p2.y - (p2.y - p1.y) * tension;
+        forecastLineD = `M${p1.x},${p1.y} C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+      }
       
       return React.createElement('svg', { 
         className: 'weight-sparkline-svg',
@@ -5100,6 +5181,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Прогнозная линия (пунктирная)
         forecastPt && React.createElement('path', {
           d: forecastLineD,
+          fill: 'none',
           className: 'weight-sparkline-forecast-line',
           style: { stroke: forecastColor, strokeDasharray: '4 3', opacity: 0.6 }
         }),

@@ -80,12 +80,18 @@
   // ---------- Компоненты ----------
 
   // Ячейка таблицы
-  function DataCell({ field, fieldConfig }) {
+  // showEmpty = true если день активный (2+ полей) и нужно подсвечивать пропуски
+  function DataCell({ field, fieldConfig, showEmpty }) {
     const { filled, value } = field;
     const title = filled ? fieldConfig.format(value) : 'Не заполнено';
     
+    // Если день почти пустой (0-1 поле) — не подсвечиваем красным
+    const cellClass = filled 
+      ? 'cell-filled' 
+      : (showEmpty ? 'cell-empty' : 'cell-neutral');
+    
     return React.createElement('td', {
-      className: filled ? 'cell-filled' : 'cell-empty',
+      className: cellClass,
       title: title
     }, filled ? '✓' : '—');
   }
@@ -98,6 +104,9 @@
 
     // Форматируем дату: "30.11 Сб"
     const dateLabel = pad2(day.dayNum) + '.' + pad2(day.month) + ' ' + day.dayOfWeek;
+    
+    // Показывать красный фон пустых ячеек только если день активный (2+ заполненных поля)
+    const showEmpty = day.filledCount >= 2;
 
     return React.createElement('tr', { onClick: handleClick },
       // Колонка даты (sticky)
@@ -108,7 +117,8 @@
         React.createElement(DataCell, {
           key: f.key,
           field: day.fields[f.key],
-          fieldConfig: f
+          fieldConfig: f,
+          showEmpty: showEmpty
         })
       )
     );
@@ -118,9 +128,15 @@
   function TableHeader() {
     return React.createElement('thead', null,
       React.createElement('tr', null,
-        React.createElement('th', null, 'Дата'),
+        React.createElement('th', { className: 'th-date' }, 'Дата'),
         ...TRACKED_FIELDS.map(f =>
-          React.createElement('th', { key: f.key, title: f.label }, f.icon)
+          React.createElement('th', { 
+            key: f.key, 
+            className: 'th-vertical',
+            title: f.label 
+          }, 
+            React.createElement('span', { className: 'th-text' }, f.label)
+          )
         )
       )
     );

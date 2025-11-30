@@ -10352,15 +10352,41 @@ input, textarea, select {
 }
 
 .data-overview-table th {
-  padding: 8px 6px;
+  padding: 8px 4px;
   text-align: center;
-  font-weight: normal;
-  font-size: 14px;
+  font-weight: 500;
+  font-size: 11px;
   position: sticky;
   top: 0;
   background: var(--bg-color, #fff);
   border-bottom: 2px solid #e5e7eb;
   z-index: 2;
+}
+
+/* Вертикальный текст в заголовках */
+.data-overview-table th.th-vertical {
+  vertical-align: bottom;
+  padding: 8px 2px 6px;
+  min-width: 28px;
+  height: 80px;
+}
+
+.data-overview-table th.th-vertical .th-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+}
+
+.data-overview-table th.th-date {
+  text-align: left;
+  font-size: 12px;
+  vertical-align: bottom;
+  padding-bottom: 6px;
 }
 
 .data-overview-table th:first-child {
@@ -10411,6 +10437,12 @@ input, textarea, select {
 .cell-empty { 
   color: #9ca3af;
   background: #fef2f2;
+}
+
+/* Нейтральная ячейка — день почти пустой, не подсвечиваем */
+.cell-neutral {
+  color: #d1d5db;
+  background: transparent;
 }
 
 /* Hint */
