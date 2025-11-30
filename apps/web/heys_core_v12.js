@@ -81,7 +81,6 @@
    */
   function lsSet(key, val){ 
     try{ 
-      // Логирование отключено для чистой консоли
       localStorage.setItem(key, JSON.stringify(val)); 
       window.HEYS.saveClientKey(key, val);
       // Событие для offline-индикатора с типом изменения

@@ -22,7 +22,15 @@
   const uid = U.uid || ((p) => { warnMissing('uid'); return (p||'id')+Math.random().toString(36).slice(2,8); });
   const formatDateDisplay = U.formatDateDisplay || (() => { warnMissing('formatDateDisplay'); return { label: 'День', sub: '' }; });
   const lsGet = U.lsGet || ((k,d) => { warnMissing('lsGet'); try{ const v=JSON.parse(localStorage.getItem(k)); return v==null?d:v; }catch(e){ return d; } });
-  const lsSet = U.lsSet || ((k,v) => { warnMissing('lsSet'); try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} });
+  // ВАЖНО: lsSet должен вызывать U.lsSet динамически, т.к. при загрузке файла U может быть ещё не готов
+  const lsSet = (k,v) => { 
+    if (U.lsSet) { 
+      U.lsSet(k, v); 
+    } else { 
+      warnMissing('lsSet'); 
+      try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} 
+    } 
+  };
   const clamp = U.clamp || ((n,a,b) => { warnMissing('clamp'); n=+n||0; if(n<a)return a; if(n>b)return b; return n; });
   const r0 = U.r0 || ((v) => { warnMissing('r0'); return Math.round(+v||0); });
   const r1 = U.r1 || ((v) => { warnMissing('r1'); return Math.round((+v||0)*10)/10; });
@@ -5459,23 +5467,24 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               }, '⭐' + sliderPoint.dayScore)
           )
       ),
-      // Mood-полоса или Heatmap под графиком
+      // Полоса оценки дня (dayScore) под графиком
       (() => {
-        // Проверяем наличие mood данных
-        const hasMoodData = points.some(p => p.moodAvg != null);
+        // Проверяем наличие данных оценки дня
+        const hasDayScoreData = points.some(p => p.dayScore > 0);
         
-        if (hasMoodData) {
-          // Mood-полоса с градиентом
-          const getMoodColor = (mood) => {
-            if (mood == null) return '#e2e8f0'; // нет данных — серый
-            if (mood <= 2) return '#94a3b8'; // 😢 плохо — серый
-            if (mood <= 3) return '#fbbf24'; // 😐 нормально — жёлтый
+        if (hasDayScoreData) {
+          // Полоса с градиентом по dayScore (1-10)
+          const getDayScoreColor = (score) => {
+            if (!score || score <= 0) return 'transparent'; // нет данных — прозрачный пропуск
+            if (score <= 3) return '#ef4444'; // 😢 плохо — красный
+            if (score <= 5) return '#f97316'; // 😐 средне — оранжевый
+            if (score <= 7) return '#eab308'; // 🙂 нормально — жёлтый
             return '#22c55e'; // 😊 хорошо — зелёный
           };
           
           const moodStops = points.map((p, i) => ({
             offset: points.length > 1 ? (i / (points.length - 1)) * 100 : 50,
-            color: getMoodColor(p.moodAvg)
+            color: getDayScoreColor(p.dayScore)
           }));
           
           return React.createElement('div', { className: 'sparkline-mood-container' },
@@ -5500,7 +5509,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 fill: 'url(#moodGradient)'
               })
             ),
-            React.createElement('span', { className: 'sparkline-mood-label' }, '😊 Настроение')
+            React.createElement('span', { className: 'sparkline-mood-label' }, '⭐ Оценка дня')
           );
         }
         
@@ -6629,8 +6638,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     const compactActivity = React.createElement('div', { className: 'compact-activity compact-card' },
       React.createElement('div', { className: 'compact-card-header' }, '📏 АКТИВНОСТЬ'),
       
-      // Слайдер шагов
-      React.createElement('div', { className: 'steps-slider-container' },
+      // Слайдер шагов с зоной защиты от свайпа
+      React.createElement('div', { className: 'steps-slider-container no-swipe-zone' },
         React.createElement('div', { className: 'steps-slider-header' },
           React.createElement('span', { className: 'steps-label' }, '👟 Шаги'),
           React.createElement('span', { className: 'steps-value' }, 

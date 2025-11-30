@@ -9176,6 +9176,12 @@ td:first-child input {
   margin-bottom: 20px;
 }
 
+/* Зона без свайпа — увеличенный padding для touch */
+.steps-slider-container.no-swipe-zone {
+  padding: 50px 0;
+  margin: -50px 0 -30px 0; /* Компенсируем padding визуально */
+}
+
 .steps-motivation {
   text-align: center;
   font-size: 12px;

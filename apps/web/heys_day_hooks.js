@@ -20,7 +20,17 @@
     disabled = false, // ЗАЩИТА: не сохранять пока данные не загружены
   }){
     const utils = getDayUtils();
-    const lsSetFn = lsSet || utils.lsSet;
+    // ВАЖНО: Используем динамический вызов чтобы всегда брать актуальный HEYS.utils.lsSet
+    // Это нужно для синхронизации с облаком (диспатч события heys:data-saved)
+    const lsSetFn = React.useCallback((key, val) => {
+      const actualLsSet = global.HEYS?.utils?.lsSet || lsSet || utils.lsSet;
+      if (actualLsSet) {
+        actualLsSet(key, val);
+      } else {
+        // Fallback
+        try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+      }
+    }, [lsSet, utils.lsSet]);
     const lsGetFunc = lsGetFn || utils.lsGet;
     const isNightTime = utils.isNightTime || (() => false);
     const getNextDay = utils.getNextDay || ((d) => d);
@@ -97,7 +107,7 @@
     },[getKey,lsSetFn,now,readExisting]);
 
     const flush = React.useCallback(()=>{
-      if(disabled) return; // ЗАЩИТА: не сохранять до гидратации
+      if(disabled) return;
       if(isUnmountedRef.current || !day || !day.date) return;
       
       const daySnap = JSON.stringify(stripMeta(day));

@@ -869,9 +869,9 @@
             const [edgeBounce, setEdgeBounce] = useState(null); // 'left' | 'right' | null
             
             const onTouchStart = React.useCallback((e) => {
-              // Игнорируем свайпы на интерактивных элементах и модалках
+              // Игнорируем свайпы на интерактивных элементах, модалках и слайдерах
               const target = e.target;
-              if (target.closest('input, textarea, select, button, .swipeable-container, table, .tab-switch-group, .advice-list-overlay')) {
+              if (target.closest('input, textarea, select, button, .swipeable-container, table, .tab-switch-group, .advice-list-overlay, .no-swipe-zone, [type="range"]')) {
                 return;
               }
               const touch = e.touches[0];
@@ -1049,19 +1049,15 @@
                 cloudSyncTimeoutRef.current = setTimeout(() => setCloudStatus('idle'), 2000);
               };
               
-              const handleDataSaved = () => {
+              const handleDataSaved = (e) => {
                 // Показываем что идёт синхронизация
                 setCloudStatus('syncing');
-                // Через 600ms (500ms debounce + 100ms buffer) проверяем завершение
+                // Через 1.5 сек показываем synced (fallback если heysSyncCompleted не сработал)
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 cloudSyncTimeoutRef.current = setTimeout(() => {
-                  // Если очередь пуста — synced
-                  const cloud = window.HEYS?.cloud;
-                  if (cloud?.getSyncStatus?.('check') === 'synced') {
-                    setCloudStatus('synced');
-                    setTimeout(() => setCloudStatus('idle'), 2000);
-                  }
-                }, 600);
+                  setCloudStatus('synced');
+                  setTimeout(() => setCloudStatus('idle'), 2000);
+                }, 1500);
               };
               
               window.addEventListener('heysSyncCompleted', handleSyncComplete);
