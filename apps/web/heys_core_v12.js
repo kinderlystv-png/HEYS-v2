@@ -754,7 +754,22 @@
     return true; // Базовая валидация прошла
   };
 
-  HEYS.utils = { INVIS, NUM_RE, round1, uuid, toNum, toNumInput, computeDerived, lsGet, lsSet, parsePasted, validateInput };
+  // Emoji style management (twemoji | system)
+  const getEmojiStyle = () => localStorage.getItem('heys_emoji_style') || 'twemoji';
+  const setEmojiStyle = (style) => {
+    const validStyles = ['twemoji', 'system'];
+    if (!validStyles.includes(style)) style = 'twemoji';
+    localStorage.setItem('heys_emoji_style', style);
+    document.body.className = document.body.className.replace(/emoji-\w+/g, '') + ' emoji-' + style;
+    // Reparse emoji if twemoji selected - multiple times to ensure all are caught
+    if (style === 'twemoji' && window.applyTwemoji) {
+      window.applyTwemoji();
+      setTimeout(window.applyTwemoji, 50);
+      setTimeout(window.applyTwemoji, 200);
+    }
+  };
+
+  HEYS.utils = { INVIS, NUM_RE, round1, uuid, toNum, toNumInput, computeDerived, lsGet, lsSet, parsePasted, validateInput, getEmojiStyle, setEmojiStyle };
   HEYS.validateInput = validateInput; // Прямой доступ для тестов
   HEYS.core = { validateInput }; // Создаем объект core с валидацией
   

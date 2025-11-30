@@ -7,17 +7,28 @@
   HEYS.dayUtils = {};
 
   // === Haptic Feedback ===
+  // Track if user has interacted (required for vibrate API)
+  let userHasInteracted = false;
+  if (typeof window !== 'undefined') {
+    const markInteracted = () => { userHasInteracted = true; };
+    window.addEventListener('click', markInteracted, { once: true, passive: true });
+    window.addEventListener('touchstart', markInteracted, { once: true, passive: true });
+    window.addEventListener('keydown', markInteracted, { once: true, passive: true });
+  }
+  
   function haptic(type = 'light') {
-    if (!navigator.vibrate) return;
-    switch(type) {
-      case 'light': navigator.vibrate(10); break;
-      case 'medium': navigator.vibrate(20); break;
-      case 'heavy': navigator.vibrate(30); break;
-      case 'success': navigator.vibrate([10, 50, 20]); break;
-      case 'warning': navigator.vibrate([30, 30, 30]); break;
-      case 'error': navigator.vibrate([50, 30, 50, 30, 50]); break;
-      default: navigator.vibrate(10);
-    }
+    if (!navigator.vibrate || !userHasInteracted) return;
+    try {
+      switch(type) {
+        case 'light': navigator.vibrate(10); break;
+        case 'medium': navigator.vibrate(20); break;
+        case 'heavy': navigator.vibrate(30); break;
+        case 'success': navigator.vibrate([10, 50, 20]); break;
+        case 'warning': navigator.vibrate([30, 30, 30]); break;
+        case 'error': navigator.vibrate([50, 30, 50, 30, 50]); break;
+        default: navigator.vibrate(10);
+      }
+    } catch(e) { /* ignore vibrate errors */ }
   }
   
   // Экспортируем для использования в других модулях (legacy)

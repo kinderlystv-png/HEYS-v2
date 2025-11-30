@@ -2,11 +2,72 @@
 (function(global){
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
-  const { lsGet, lsSet, toNum, round1 } = HEYS.utils || {
-    lsGet:(k,d)=>d, lsSet:()=>{}, toNum:(x)=>Number(x)||0, round1:(v)=>Math.round(v*10)/10
+  const { lsGet, lsSet, toNum, round1, getEmojiStyle, setEmojiStyle } = HEYS.utils || {
+    lsGet:(k,d)=>d, lsSet:()=>{}, toNum:(x)=>Number(x)||0, round1:(v)=>Math.round(v*10)/10,
+    getEmojiStyle:()=>'android', setEmojiStyle:()=>{}
   };
 
+  // Emoji Style Selector Component
+  function EmojiStyleSelector() {
+    const [style, setStyle] = React.useState(() => getEmojiStyle());
+    
+    // Определяем платформу
+    const platformInfo = React.useMemo(() => {
+      if (typeof window === 'undefined') return { needsTwemoji: false, name: 'Unknown' };
+      const ua = navigator.userAgent || '';
+      const isWindows = /Windows/i.test(ua);
+      const isLinux = /Linux/i.test(ua) && !/Android/i.test(ua);
+      const isMac = /Macintosh|Mac OS/i.test(ua);
+      const isIOS = /iPhone|iPad|iPod/i.test(ua);
+      const isAndroid = /Android/i.test(ua);
+      
+      let name = 'Устройство';
+      if (isWindows) name = 'Windows';
+      else if (isMac) name = 'Mac';
+      else if (isIOS) name = 'iPhone/iPad';
+      else if (isAndroid) name = 'Android';
+      else if (isLinux) name = 'Linux';
+      
+      return {
+        needsTwemoji: isWindows || isLinux,
+        name: name,
+        twemojiAvailable: !!window.twemoji
+      };
+    }, []);
+    
+    const handleChange = (e) => {
+      const newStyle = e.target.value;
+      setStyle(newStyle);
+      setEmojiStyle(newStyle);
+    };
+    
+    // Если Twemoji не загружен (Mac/iOS/Android), показываем инфо-блок
+    if (!platformInfo.twemojiAvailable) {
+      return React.createElement('div', {className:'inline-field'},
+        React.createElement('label', null, 'Стиль эмодзи 😀'),
+        React.createElement('span', {className:'sep'}, '-'),
+        React.createElement('span', {style:{color:'var(--gray-500)',fontSize:'0.875rem'}}, 
+          `Используются эмодзи ${platformInfo.name}`
+        )
+      );
+    }
+    
+    return React.createElement('div', {className:'inline-field'},
+      React.createElement('label', null, 'Стиль эмодзи 😀'),
+      React.createElement('span', {className:'sep'}, '-'),
+      React.createElement('select', {value: style, onChange: handleChange},
+        React.createElement('option', {value:'twemoji'}, '🐦 Twitter/Android'),
+        React.createElement('option', {value:'system'}, `💻 ${platformInfo.name}`)
+      )
+    );
+  }
+
   function UserTabBase(){
+    // Twemoji: reparse emoji after render
+    React.useEffect(() => {
+      if (window.scheduleTwemojiParse) window.scheduleTwemojiParse();
+    });
+    
     const [profile, setProfile] = React.useState(() => {
       return lsGet('heys_profile', {
         firstName:'', lastName:'', gender:'Мужской',
@@ -109,7 +170,8 @@
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Рост (см)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.height, onChange:e=>updateProfileField('height', Number(e.target.value)||0)})),
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Возраст (лет)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.age, onChange:e=>updateProfileField('age', Number(e.target.value)||0)})),
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Норма сна (часов)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.5', value:profile.sleepHours, onChange:e=>updateProfileField('sleepHours', Number(e.target.value)||0)})),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Инсулиновая волна (часов)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.5', value:profile.insulinWaveHours, onChange:e=>updateProfileField('insulinWaveHours', Number(e.target.value)||0)}))
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Инсулиновая волна (часов)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.5', value:profile.insulinWaveHours, onChange:e=>updateProfileField('insulinWaveHours', Number(e.target.value)||0)})),
+          React.createElement(EmojiStyleSelector, null)
         ),
         React.createElement('div', {className:'row', style:{marginTop:'10px', gap:'20px'}},
           React.createElement('div', {className:'pill'}, `Максимальный пульс: ${maxHR} уд/мин (220 - возраст)`),

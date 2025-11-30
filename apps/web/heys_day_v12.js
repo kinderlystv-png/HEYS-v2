@@ -63,6 +63,11 @@
   // Дата приходит из шапки App (DatePicker в header)
   const { selectedDate, setSelectedDate } = props;
   
+  // Twemoji: reparse emoji after render
+  useEffect(() => {
+    if (window.scheduleTwemojiParse) window.scheduleTwemojiParse();
+  });
+  
   // Трекинг просмотра дня
   useEffect(() => {
     if (window.HEYS && window.HEYS.analytics) {
@@ -2937,6 +2942,30 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Калории приёма
       const mealKcal = Math.round(totals.kcal || 0);
       
+      // Определяем, является ли этот приём "текущим" (голубой) или "прошедшим" (серый)
+      // Текущий = последний приём + не прошло больше 1 часа с момента приёма
+      const isLastMeal = mi === day.meals.length - 1;
+      let isCurrentMeal = isLastMeal;
+      
+      if (isLastMeal && meal.time) {
+        // Проверяем, прошло ли больше часа с времени приёма
+        const [hours, minutes] = meal.time.split(':').map(Number);
+        if (!isNaN(hours) && !isNaN(minutes)) {
+          const now = new Date();
+          const mealDate = new Date();
+          mealDate.setHours(hours, minutes, 0, 0);
+          
+          // Если время приёма в будущем (пользователь запланировал), считаем текущим
+          // Если прошло больше 60 минут — уже не текущий
+          const diffMinutes = (now - mealDate) / (1000 * 60);
+          if (diffMinutes > 60) {
+            isCurrentMeal = false;
+          }
+        }
+      }
+      
+      const mealCardClass = isCurrentMeal ? 'card tone-blue meal-card' : 'card tone-slate meal-card';
+      
       return React.createElement(React.Fragment,{key:meal.id},
         // Заголовок приёма: тип (dropdown) · время · калории
         React.createElement('div',{className:'meal-sep meal-type-' + mealTypeInfo.type},
@@ -2969,7 +2998,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             mealKcal + ' ккал'
           )
         ),
-        React.createElement('div',{className:'card tone-blue meal-card', 'data-meal-index': mi, style:{marginTop:'4px', width: '100%'}},
+        React.createElement('div',{className: mealCardClass, 'data-meal-index': mi, style:{marginTop:'4px', width: '100%'}},
         // MOBILE: Meal totals at top (before search)
         (meal.items || []).length > 0 && React.createElement('div', { className: 'mpc-totals-wrap mobile-only' },
           React.createElement('div', { className: 'mpc-grid mpc-header' },
@@ -4547,9 +4576,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         sliderPrevPointRef.current = null;
       };
       
-      return React.createElement('div', { className: 'sparkline-container' },
+      return React.createElement('div', { 
+        className: 'sparkline-container',
+        ref: (el) => {
+          // Вызываем Twemoji после рендера для foreignObject
+          if (el && window.applyTwemoji) {
+            setTimeout(() => window.applyTwemoji(el), 50);
+          }
+        }
+      },
       React.createElement('svg', { 
-        className: 'sparkline-svg',
+        className: 'sparkline-svg animate-always',
         viewBox: '0 0 ' + width + ' ' + height,
         preserveAspectRatio: 'none', // растягиваем по всей ширине
         onPointerMove: handlePointerMove,
@@ -4811,6 +4848,21 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           );
         });
         })(),
+        // Пунктирные линии от точек к меткам дней (появляются синхронно с точкой)
+        points.map((p, i) => {
+          if (p.kcal <= 0) return null;
+          const pathProgress = cumulativeLengths[i] / totalPathLength;
+          const lineDelay = Math.max(0, pathProgress * 3 - 0.15);
+          return React.createElement('line', {
+            key: 'point-line-' + i,
+            x1: p.x,
+            y1: p.y + 6, // от точки
+            x2: p.x,
+            y2: height - paddingBottom + 6, // до меток дней
+            className: 'sparkline-point-line',
+            style: { '--delay': lineDelay + 's' }
+          });
+        }).filter(Boolean),
         // Аннотации тренировок — пунктирные линии вниз к точкам (появляются синхронно с точкой)
         points.map((p, i) => {
           if (!p.hasTraining || !p.trainingTypes.length) return null;
@@ -4825,22 +4877,40 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             style: { '--delay': lineDelay + 's' }
           });
         }).filter(Boolean),
-        // Аннотации тренировок — иконки в одну линию сверху (появляются синхронно с точкой)
+        // Аннотации тренировок — иконки в одну линию сверху
+        // Используем SVG <image> с Twemoji CDN напрямую
         points.map((p, i) => {
           if (!p.hasTraining || !p.trainingTypes.length) return null;
-          // Маппинг типов на эмодзи
-          const typeEmoji = { cardio: '🏃', strength: '🏋️', hobby: '⚽' };
-          const emojis = p.trainingTypes.map(t => typeEmoji[t] || '🏃').join('');
-          const emojiDelay = 2.6; // все сразу — взрыв от оси X
-          return React.createElement('text', {
+          // Маппинг типов на Twemoji codepoints
+          const typeCodepoint = { 
+            cardio: '1f3c3',      // 🏃
+            strength: '1f3cb-fe0f', // 🏋️
+            hobby: '26bd'         // ⚽
+          };
+          const emojiDelay = 2.6;
+          const emojiSize = 16;
+          const emojiCount = p.trainingTypes.length;
+          const totalWidth = emojiCount * emojiSize;
+          const startX = p.x - totalWidth / 2;
+          
+          return React.createElement('g', {
             key: 'train-' + i,
-            x: p.x,
-            y: 5, // фиксированная верхняя линия
             className: 'sparkline-annotation sparkline-annotation-training',
-            textAnchor: 'middle',
-            dominantBaseline: 'hanging',
             style: { '--delay': emojiDelay + 's' }
-          }, emojis);
+          },
+            p.trainingTypes.map((t, j) => {
+              const code = typeCodepoint[t] || '1f3c3';
+              const url = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/' + code + '.svg';
+              return React.createElement('image', {
+                key: j,
+                href: url,
+                x: startX + j * emojiSize,
+                y: 1,
+                width: emojiSize,
+                height: emojiSize
+              });
+            })
+          );
         }).filter(Boolean),
         // Слайдер — вертикальная линия
         sliderPoint && React.createElement('line', {
@@ -5154,7 +5224,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       }
       
       return React.createElement('svg', { 
-        className: 'weight-sparkline-svg',
+        className: 'weight-sparkline-svg animate-always',
         viewBox: '0 0 ' + width + ' ' + height,
         preserveAspectRatio: 'none', // растягиваем по всей ширине
         style: { height: height + 'px' } // явная высота
@@ -5184,6 +5254,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           fill: 'none',
           className: 'weight-sparkline-forecast-line',
           style: { stroke: forecastColor, strokeDasharray: '4 3', opacity: 0.6 }
+        }),
+        // Пунктирные линии от точек к меткам дней
+        points.map((p, i) => {
+          const animDelay = 3 + i * 0.15;
+          return React.createElement('line', {
+            key: 'wpoint-line-' + i,
+            x1: p.x,
+            y1: p.y + 6, // от точки
+            x2: p.x,
+            y2: height - paddingBottom + 4, // до меток дней
+            className: 'sparkline-point-line weight-sparkline-point-line',
+            style: { '--delay': animDelay + 's' }
+          });
         }),
         // Метки дней внизу
         points.map((p, i) => {

@@ -1,3 +1,6 @@
+/* === Emoji styles === */
+/* Twemoji loaded via JS when 'twemoji' style is selected */
+
 :root {
   --bg: #ffffff;
   --card: #ffffff;
@@ -6,6 +9,9 @@
   --border: #e5e7eb;
   --acc: #2563eb;
   --acc-contrast: #ffffff;
+  
+  /* Emoji style: 'android' | 'apple' | 'system' */
+  --emoji-style: 'android';
   
   /* Stats block (голубой) */
   --stats-bg: #f0f9ff;
@@ -75,12 +81,35 @@ body {
     Segoe UI,
     Roboto,
     Helvetica,
-    Arial;
+    Arial,
+    'Noto Color Emoji';
   background: var(--bg);
   color: var(--text);
   font-size: 13px;
   line-height: 1.35;
 }
+
+/* Emoji font override - Android style */
+.emoji, [data-emoji] {
+  font-family: 'Noto Color Emoji', sans-serif;
+}
+
+/* Emoji style switcher classes */
+
+/* Twemoji (Twitter emoji = Android-like) */
+body.emoji-twemoji img.emoji {
+  height: 1.2em;
+  width: 1.2em;
+  margin: 0 0.05em 0 0.1em;
+  vertical-align: -0.2em;
+  display: inline;
+}
+
+/* System default - use whatever OS provides (Windows = Segoe, Mac = Apple) */
+body.emoji-system {
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -1795,8 +1824,8 @@ td:first-child input {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 .tone-blue {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
 }
 .tone-green {
   background: #ecfdf5;
@@ -1812,8 +1841,8 @@ td:first-child input {
   border: 1px solid #ddd6fe;
 }
 .tone-slate {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: #fafbfc;
+  border: 1px solid #93c5fd;
 }
 
 /* badges / pills */
@@ -3067,10 +3096,19 @@ td:first-child input {
 
   /* Meal totals - grid layout */
   .mpc-totals-wrap {
-    background: #f0f9ff;
+    background: #dbeafe;
     border-radius: 6px;
     padding: 6px 8px;
     margin-top: 6px;
+  }
+
+  /* Серый фон для прошедших приёмов */
+  .tone-slate .mpc-totals-wrap {
+    background: #f8fafc;
+  }
+  .tone-slate .mpc-totals-wrap .mpc-header,
+  .tone-slate .mpc-totals-wrap .mpc-totals-values {
+    color: #64748b;
   }
 
   .mpc-totals-wrap .mpc-header {
@@ -3126,11 +3164,17 @@ td:first-child input {
     display: flex;
     gap: 10px;
     padding: 8px 10px;
-    background: #f0f9ff;
+    background: #dbeafe;
     border-radius: 6px;
     font-weight: 600;
     font-size: 12px;
     color: #0369a1;
+  }
+
+  /* Серый фон для прошедших приёмов (legacy) */
+  .tone-slate .mpc-totals {
+    background: #f8fafc;
+    color: #64748b;
   }
 
   /* Meal meta row - SaaS compact style */
@@ -4290,6 +4334,25 @@ td:first-child input {
   opacity: 0;
   animation: fadeInLine 0.3s ease-out forwards;
   animation-delay: var(--delay, 0s);
+}
+
+/* Пунктирная линия от точки к дню — синхронизирована с точкой */
+.sparkline-point-line {
+  stroke: #94a3b8; /* slate-400 — ярче */
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0;
+  animation: fadeInPointLine 0.3s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+.weight-sparkline-point-line {
+  stroke: #c084fc; /* purple-400 — для веса, ярче */
+}
+
+@keyframes fadeInPointLine {
+  0% { opacity: 0; }
+  100% { opacity: 0.5; }
 }
 
 @keyframes fadeInLine {
@@ -6717,6 +6780,15 @@ td:first-child input {
   fill: #4ade80;
 }
 
+/* Dark mode для пунктирных линий от точек к дням */
+[data-theme="dark"] .sparkline-point-line {
+  stroke: #64748b; /* slate-500 — ярче */
+}
+
+[data-theme="dark"] .weight-sparkline-point-line {
+  stroke: #a78bfa; /* purple-400 — ярче */
+}
+
 /* Dark theme for new sparkline elements */
 [data-theme="dark"] .sparkline-streak-line {
   stroke: #fbbf24;
@@ -7047,6 +7119,19 @@ td:first-child input {
 [data-theme="dark"] .tone-slate {
   background: #1e2530;
   border-color: #3a4555;
+}
+
+/* Серые mpc-totals внутри прошедших приёмов (dark theme) */
+[data-theme="dark"] .tone-slate .mpc-totals-wrap {
+  background: #2a3040;
+}
+[data-theme="dark"] .tone-slate .mpc-totals-wrap .mpc-header,
+[data-theme="dark"] .tone-slate .mpc-totals-wrap .mpc-totals-values {
+  color: #94a3b8;
+}
+[data-theme="dark"] .tone-slate .mpc-totals {
+  background: #2a3040;
+  color: #94a3b8;
 }
 
 /* Violet main-violet card */
@@ -9380,8 +9465,11 @@ input, textarea, select {
 }
 
 /* --- Reduce motion for accessibility --- */
+/* Исключаем .animate-always — графики всегда анимируются (это часть UX) */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *:not(.animate-always):not(.animate-always *),
+  *:not(.animate-always):not(.animate-always *)::before,
+  *:not(.animate-always):not(.animate-always *)::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
