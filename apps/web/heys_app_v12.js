@@ -752,6 +752,53 @@
             const [newName, setNewName] = useState('');
             const [cloudUser, setCloudUser] = useState(null);
             const [isInitializing, setIsInitializing] = useState(true); // Флаг начальной загрузки
+            
+            // === PWA Install Banner ===
+            const [pwaInstallPrompt, setPwaInstallPrompt] = useState(null);
+            const [showPwaBanner, setShowPwaBanner] = useState(false);
+            
+            // Слушаем beforeinstallprompt событие
+            React.useEffect(() => {
+              // Проверяем, не установлено ли уже приложение
+              const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                                   window.navigator.standalone === true;
+              if (isStandalone) return;
+              
+              // Проверяем, не отклонил ли пользователь баннер ранее
+              const dismissed = localStorage.getItem('heys_pwa_banner_dismissed');
+              if (dismissed) {
+                const dismissedTime = parseInt(dismissed, 10);
+                // Показываем снова через 7 дней
+                if (Date.now() - dismissedTime < 7 * 24 * 60 * 60 * 1000) return;
+              }
+              
+              const handler = (e) => {
+                e.preventDefault();
+                setPwaInstallPrompt(e);
+                // Показываем баннер через 3 секунды после загрузки
+                setTimeout(() => setShowPwaBanner(true), 3000);
+              };
+              
+              window.addEventListener('beforeinstallprompt', handler);
+              return () => window.removeEventListener('beforeinstallprompt', handler);
+            }, []);
+            
+            const handlePwaInstall = async () => {
+              if (!pwaInstallPrompt) return;
+              pwaInstallPrompt.prompt();
+              const { outcome } = await pwaInstallPrompt.userChoice;
+              if (outcome === 'accepted') {
+                setShowPwaBanner(false);
+                localStorage.setItem('heys_pwa_installed', 'true');
+              }
+              setPwaInstallPrompt(null);
+            };
+            
+            const dismissPwaBanner = () => {
+              setShowPwaBanner(false);
+              localStorage.setItem('heys_pwa_banner_dismissed', Date.now().toString());
+            };
+            
             const [backupMeta, setBackupMeta] = useState(() => {
               if (U && typeof U.lsGet === 'function') {
                 try {
@@ -1707,59 +1754,30 @@
                 React.createElement(
                   'div',
                   { className: 'hdr' },
-                  // === ВЕРХНЯЯ ЛИНИЯ: Логотип + Статус ===
+                  // === ВЕРХНЯЯ ЛИНИЯ: Gamification Bar (Phase 0 - placeholder) ===
                   React.createElement(
                     'div',
-                    { className: 'hdr-top' },
-                    React.createElement(
-                      'div',
-                      { className: 'hdr-logo' },
-                      React.createElement('div', { className: 'hdr-logo-icon' }, '🥗'),
-                      React.createElement(
-                        'div',
-                        null,
-                        React.createElement('div', { className: 'hdr-logo-text' }, 'HEYS'),
-                        React.createElement('div', { className: 'hdr-logo-sub' }, 'Панель куратора'),
+                    { className: 'hdr-top hdr-gamification' },
+                    // Placeholder для GamificationBar — будет заменён в Phase 1
+                    React.createElement('div', { className: 'game-bar-placeholder' },
+                      React.createElement('span', { className: 'game-level' }, '🌱 Ур.1'),
+                      React.createElement('div', { className: 'game-progress' },
+                        React.createElement('div', { className: 'game-progress-fill', style: { width: '0%' } })
                       ),
-                    ),
-                    React.createElement(
-                      'div',
-                      { className: 'hdr-status' },
-                      React.createElement(
-                        'span',
-                        { className: 'status ' + (status === 'online' ? 'ok' : 'err') },
-                        status === 'online' ? 'Онлайн' : 'Офлайн',
-                      ),
-                      clientId
-                        ? React.createElement(
-                            'button',
-                            {
-                              className: 'hdr-switch-btn',
-                              onClick: () => {
-                                localStorage.removeItem('heys_client_current');
-                                window.HEYS = window.HEYS || {};
-                                window.HEYS.currentClientId = null;
-                                setClientId('');
-                              },
-                              title: 'Сменить клиента',
-                            },
-                            '↻ Сменить',
-                          )
-                        : null,
-                      // Theme toggle button
-                      React.createElement(
-                        'button',
-                        {
-                          className: 'hdr-theme-btn',
-                          onClick: cycleTheme,
-                          title: theme === 'light' ? 'Светлая тема' : theme === 'dark' ? 'Тёмная тема' : 'Авто (системная)'
-                        },
-                        theme === 'light' ? '☀️' : theme === 'dark' ? '🌙' : '🔄'
-                      ),
-                      window.HEYS.analyticsUI
-                        ? React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
-                        : null,
-                    ),
+                      React.createElement('span', { className: 'game-xp' }, '0/100'),
+                      React.createElement('span', { className: 'game-streak' }, '🔥0'),
+                      React.createElement('button', { className: 'game-expand-btn', title: 'Подробнее' }, '▼')
+                    )
+                  ),
+                  // === Theme Toggle FAB ===
+                  React.createElement(
+                    'button',
+                    {
+                      className: 'theme-fab',
+                      onClick: cycleTheme,
+                      title: theme === 'light' ? 'Светлая тема' : theme === 'dark' ? 'Тёмная тема' : 'Авто'
+                    },
+                    theme === 'light' ? '☀️' : theme === 'dark' ? '🌙' : '🔄'
                   ),
                   // === НИЖНЯЯ ЛИНИЯ: Клиент + Действия ===
                   clientId
@@ -1772,7 +1790,39 @@
                           { className: 'hdr-client' },
                           React.createElement(
                             'div',
-                            { className: 'hdr-client-avatar' },
+                            {
+                              className: 'hdr-client-avatar',
+                              title: 'Удерживайте для смены клиента',
+                              onTouchStart: (e) => {
+                                e.target._longPressTimer = setTimeout(() => {
+                                  if (confirm('Сменить клиента?')) {
+                                    localStorage.removeItem('heys_client_current');
+                                    window.HEYS = window.HEYS || {};
+                                    window.HEYS.currentClientId = null;
+                                    setClientId('');
+                                  }
+                                }, 600);
+                              },
+                              onTouchEnd: (e) => {
+                                clearTimeout(e.target._longPressTimer);
+                              },
+                              onMouseDown: (e) => {
+                                e.target._longPressTimer = setTimeout(() => {
+                                  if (confirm('Сменить клиента?')) {
+                                    localStorage.removeItem('heys_client_current');
+                                    window.HEYS = window.HEYS || {};
+                                    window.HEYS.currentClientId = null;
+                                    setClientId('');
+                                  }
+                                }, 600);
+                              },
+                              onMouseUp: (e) => {
+                                clearTimeout(e.target._longPressTimer);
+                              },
+                              onMouseLeave: (e) => {
+                                clearTimeout(e.target._longPressTimer);
+                              }
+                            },
                             getClientInitials(currentClientName),
                           ),
                           React.createElement(
@@ -1948,6 +1998,28 @@
                                 '⏳ Загрузка компонента отчётов...',
                               ),
                 ),
+              ),
+              // === PWA Install Banner ===
+              showPwaBanner && React.createElement(
+                'div',
+                { className: 'pwa-install-banner' },
+                React.createElement('div', { className: 'pwa-banner-content' },
+                  React.createElement('div', { className: 'pwa-banner-icon' }, '📱'),
+                  React.createElement('div', { className: 'pwa-banner-text' },
+                    React.createElement('div', { className: 'pwa-banner-title' }, 'Установить HEYS'),
+                    React.createElement('div', { className: 'pwa-banner-desc' }, 'Быстрый доступ с главного экрана')
+                  ),
+                  React.createElement('div', { className: 'pwa-banner-actions' },
+                    React.createElement('button', { 
+                      className: 'pwa-banner-install',
+                      onClick: handlePwaInstall
+                    }, 'Установить'),
+                    React.createElement('button', { 
+                      className: 'pwa-banner-dismiss',
+                      onClick: dismissPwaBanner
+                    }, '✕')
+                  )
+                )
               ),
             );
           }

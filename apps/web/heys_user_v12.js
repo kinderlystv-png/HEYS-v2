@@ -215,6 +215,16 @@
       React.createElement(HEYS_RatioZonesCard, null),
 
       React.createElement(HEYS_NormsCard, null),
+
+      // Аналитика (перенесено из hdr-top)
+      window.HEYS.analyticsUI
+        ? React.createElement('div', {className:'card', style:{marginTop:'10px'}},
+            React.createElement('div', {className:'section-title'}, '📊 Аналитика'),
+            React.createElement('div', {style:{marginTop:'8px'}},
+              React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
+            )
+          )
+        : null,
       
     )
     );
