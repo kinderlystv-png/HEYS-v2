@@ -1781,16 +1781,25 @@
                             React.createElement('span', { className: 'hdr-client-label' }, 'Клиент'),
                             React.createElement('span', { className: 'hdr-client-name' }, currentClientName),
                           ),
-                          // DatePicker рядом с именем клиента
+                          // Кнопка "Сегодня" + DatePicker
                           (tab === 'stats' || tab === 'diary' || tab === 'reports') && window.HEYS.DatePicker
-                            ? React.createElement(window.HEYS.DatePicker, {
-                                valueISO: selectedDate,
-                                onSelect: setSelectedDate,
-                                onRemove: () => {
-                                  setSelectedDate(todayISO());
-                                },
-                                activeDays: datePickerActiveDays
-                              })
+                            ? React.createElement('div', { className: 'hdr-date-group' },
+                                // Кнопка быстрого перехода на сегодня
+                                React.createElement('button', {
+                                  className: 'today-quick-btn' + (selectedDate === todayISO() ? ' active' : ''),
+                                  onClick: () => setSelectedDate(todayISO()),
+                                  title: 'Перейти на сегодня'
+                                }, new Date().getDate()),
+                                // DatePicker
+                                React.createElement(window.HEYS.DatePicker, {
+                                  valueISO: selectedDate,
+                                  onSelect: setSelectedDate,
+                                  onRemove: () => {
+                                    setSelectedDate(todayISO());
+                                  },
+                                  activeDays: datePickerActiveDays
+                                })
+                              )
                             : null,
                         ),
                       )

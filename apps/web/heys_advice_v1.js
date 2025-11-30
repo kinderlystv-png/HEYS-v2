@@ -25,23 +25,31 @@
   /**
    * Получает тон сообщений в зависимости от времени суток
    * @param {number} hour - Текущий час (0-23)
-   * @returns {'silent'|'gentle'|'active'|'calm'}
+   * @returns {'gentle'|'active'|'calm'}
    */
   function getToneForHour(hour) {
-    if (hour >= 23 || hour < 6) return 'silent';  // Ночь — не беспокоить
+    // Убран silent режим — советы работают 24/7
     if (hour >= 6 && hour < 10) return 'gentle';   // Утро — мягко
     if (hour >= 10 && hour < 18) return 'active';  // День — активно
-    return 'calm'; // Вечер — спокойно
+    return 'calm'; // Вечер/ночь — спокойно
   }
   
   /**
    * Определяет эмоциональное состояние пользователя
+   * Использует централизованный HEYS.ratioZones для порогов
    * @param {Object} params
    * @returns {'normal'|'stressed'|'crashed'|'success'|'returning'}
    */
   function getEmotionalState(params) {
     const { day, currentStreak, mealCount, kcalPct, totalDaysTracked } = params;
     
+    // Используем централизованный ratioZones
+    const rz = HEYS.ratioZones;
+    if (rz) {
+      return rz.getEmotionalCategory(kcalPct, currentStreak);
+    }
+    
+    // Fallback если ratioZones не загружен
     // Вычисляем lastVisitDaysAgo из localStorage
     let lastVisitDaysAgo = 0;
     try {
@@ -56,15 +64,15 @@
     // Вернулся после перерыва
     if (lastVisitDaysAgo > 3) return 'returning';
     
-    // Срыв — сильно переел
-    if (kcalPct > 1.5) return 'crashed';
+    // Срыв — сильно переел или недоел
+    if (kcalPct > 1.3 || kcalPct < 0.5) return 'crashed';
     
     // Стресс — низкое настроение
     const avgMood = calculateAverageMood(day);
     if (avgMood > 0 && avgMood < 3) return 'stressed';
     
-    // Успех — streak или хороший день
-    if (currentStreak >= 3 || (kcalPct >= 0.9 && kcalPct <= 1.1)) return 'success';
+    // Успех — streak или хороший день (0.75-1.1)
+    if (currentStreak >= 3 || (kcalPct >= 0.75 && kcalPct <= 1.1)) return 'success';
     
     return 'normal';
   }
@@ -256,43 +264,6 @@
       hour, mealCount, hasTraining, kcalPct,
       tone, specialDay, emotionalState, prof, waterGoal
     } = ctx;
-    
-    // Ночью — никаких советов (кроме исключений)
-    if (tone === 'silent') {
-      const nightAdvices = [];
-      const age = prof?.age || 30;
-      
-      // Исключение 1: young_sleep для молодых
-      if (age < 25 && hour >= 1 && hour <= 5) {
-        nightAdvices.push({
-          id: 'young_sleep',
-          icon: '🌙',
-          text: 'Поздно не спишь? Сон важнее диеты!',
-          type: 'tip',
-          priority: 15,
-          category: 'personalized',
-          triggers: ['tab_open'],
-          ttl: 5000
-        });
-      }
-      
-      // Исключение 2: night_owl_warning при ночном перекусе
-      if (hour >= 1 && hour < 5 && mealCount > 0 && !sessionStorage.getItem('heys_night_owl')) {
-        nightAdvices.push({
-          id: 'night_owl_warning',
-          icon: '🦉',
-          text: 'Ночной перекус? Записал! Но сон важнее еды 😴',
-          type: 'tip',
-          priority: 20,
-          category: 'lifestyle',
-          triggers: ['product_added'],
-          ttl: 5000,
-          onShow: () => { try { sessionStorage.setItem('heys_night_owl', '1'); } catch(e) {} }
-        });
-      }
-      
-      return nightAdvices.length > 0 ? nightAdvices : [];
-    }
     
     // Флаг для пустого дня — некоторые советы должны работать
     const isDayEmpty = (dayTot?.kcal || 0) < 10 && mealCount === 0;

@@ -30,39 +30,22 @@
       return new Map();
     }, [activeDays]);
     
-    // Функция для расчёта цвета фона (асимметричная логика)
-    // Недоел = хорошо (зелёный), Переел = плохо (красный)
+    // Функция для расчёта цвета фона — используем централизованный ratioZones
+    const rz = HEYS.ratioZones;
     function getDayBgColor(ratio) {
       if (!ratio || ratio <= 0) return null;
-      
-      if (ratio > 1) {
-        // ПЕРЕЕЛ — плохо (красные оттенки)
-        const overeat = ratio - 1;
-        if (overeat <= 0.05) return 'rgba(234, 179, 8, 0.25)';
-        else if (overeat <= 0.15) return 'rgba(249, 115, 22, 0.3)';
-        else return 'rgba(239, 68, 68, 0.35)';
-      } else {
-        // НЕДОЕЛ или в норме — хорошо (зелёные оттенки)
-        const undereat = 1 - ratio;
-        if (undereat <= 0.1) return 'rgba(34, 197, 94, 0.4)';
-        else if (undereat <= 0.25) return 'rgba(34, 197, 94, 0.25)';
-        else if (undereat <= 0.4) return 'rgba(234, 179, 8, 0.25)';
-        else return 'rgba(249, 115, 22, 0.25)';
-      }
+      return rz ? rz.getGradientColor(ratio, 0.35) : 'rgba(156, 163, 175, 0.35)';
     }
     
-    // Функция для получения эмодзи статуса
+    // Функция для получения эмодзи статуса — используем ratioZones
     function getStatusEmoji(ratio) {
-      if (!ratio || ratio <= 0) return '';
-      if (ratio >= 0.8 && ratio <= 1.1) return '✓'; // в норме
-      return ''; // остальные без эмодзи
+      return rz ? rz.getEmoji(ratio) : '';
     }
     
-    // Вычисляем streak (серию хороших дней)
+    // Вычисляем streak (серию хороших дней) — используем ratioZones.isSuccess()
     const streakInfo = React.useMemo(() => {
       if (daysDataMap.size === 0) return { count: 0, isActive: false };
       
-      const todayStr = todayISO();
       let count = 0;
       let checkDate = new Date();
       checkDate.setHours(12);
@@ -72,8 +55,8 @@
         const dateStr = fmtDate(checkDate);
         const dayData = daysDataMap.get(dateStr);
         
-        // Хороший день = ratio от 0.75 до 1.10 (единый стандарт)
-        if (dayData && dayData.ratio >= 0.75 && dayData.ratio <= 1.10) {
+        // Хороший день = isSuccess из ratioZones (good или perfect)
+        if (dayData && rz && rz.isSuccess(dayData.ratio)) {
           count++;
         } else if (i > 0) { // Первый день (сегодня) может быть без данных
           break;
@@ -83,7 +66,7 @@
       }
       
       return { count, isActive: count > 0 };
-    }, [daysDataMap, todayISO, fmtDate]);
+    }, [daysDataMap, fmtDate]);
     
     const [isOpen, setIsOpen] = React.useState(false);
     const [cur, setCur] = React.useState(parseISO(valueISO || todayISO()));
@@ -275,31 +258,18 @@
       return new Map();
     }, [activeDays]);
     
-    // Проверка является ли день "успешным" (зелёным)
-    // Единый стандарт: 75-110% (синхронизировано со streak и sparkline)
+    // Используем централизованный ratioZones для всей логики цветов
+    const rz = HEYS.ratioZones;
+    
+    // Проверка является ли день "успешным" (good или perfect)
     function isGoodDay(ratio) {
-      return ratio && ratio >= 0.75 && ratio <= 1.1;
+      return rz ? rz.isSuccess(ratio) : (ratio && ratio >= 0.75 && ratio <= 1.1);
     }
     
-    // Функция для расчёта цвета фона (асимметричная логика)
-    // Недоел = хорошо (зелёный), Переел = плохо (красный)
+    // Функция для расчёта цвета фона с градиентом
     function getDayBgColor(ratio) {
       if (!ratio || ratio <= 0) return null;
-      
-      if (ratio > 1) {
-        // ПЕРЕЕЛ — плохо (красные оттенки)
-        const overeat = ratio - 1; // насколько переел (0.1 = 10%)
-        if (overeat <= 0.05) return 'rgba(234, 179, 8, 0.25)';      // +5% — жёлтый (почти норма)
-        else if (overeat <= 0.15) return 'rgba(249, 115, 22, 0.3)'; // +15% — оранжевый
-        else return 'rgba(239, 68, 68, 0.35)';                      // >15% — красный
-      } else {
-        // НЕДОЕЛ или в норме — хорошо (зелёные оттенки)
-        const undereat = 1 - ratio; // насколько недоел (0.1 = 10%)
-        if (undereat <= 0.1) return 'rgba(34, 197, 94, 0.4)';       // до -10% — ярко-зелёный (идеально)
-        else if (undereat <= 0.25) return 'rgba(34, 197, 94, 0.25)';// до -25% — зелёный (хорошо)
-        else if (undereat <= 0.4) return 'rgba(234, 179, 8, 0.25)'; // до -40% — жёлтый (маловато)
-        else return 'rgba(249, 115, 22, 0.25)';                     // >40% — оранжевый (сильно мало)
-      }
+      return rz ? rz.getGradientColor(ratio, 0.35) : 'rgba(156, 163, 175, 0.35)';
     }
     
     // Вычисляем streak информацию для каждого дня
@@ -350,7 +320,13 @@
       React.createElement('div',{className:'cal-head'},
         React.createElement('button',{className:'cal-nav',onClick:()=>setCur(new Date(y,m-1,1))},'‹'),
         React.createElement('div',{className:'cal-title'},cur.toLocaleString('ru-RU',{month:'long',year:'numeric'})),
-        React.createElement('button',{className:'cal-nav',onClick:()=>setCur(new Date(y,m+1,1))},'›')
+        React.createElement('button',{className:'cal-nav',onClick:()=>setCur(new Date(y,m+1,1))},'›'),
+        // Кнопка "Сегодня" — быстрый переход
+        React.createElement('button',{
+          className:'cal-today-btn',
+          onClick:()=>onSelect(todayISO()),
+          title:'Сегодня'
+        },'⌂')
       ),
       React.createElement('div',{className:'cal-grid cal-dow'},['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d=>React.createElement('div',{key:d},d))),
       React.createElement('div',{className:'cal-grid'}, cells.map((dt,i)=> {

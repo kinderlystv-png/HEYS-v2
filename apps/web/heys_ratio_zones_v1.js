@@ -1,0 +1,279 @@
+// heys_ratio_zones_v1.js — Централизованная логика цветов ratio (калории/норма)
+// Единый источник правды для всех компонентов: sparkline, heatmap, datepicker, advice
+(function(global) {
+  const HEYS = global.HEYS = global.HEYS || {};
+  
+  // === Дефолтные зоны ratio ===
+  const DEFAULT_RATIO_ZONES = [
+    { id: 'crash', name: 'Срыв (недоел)', from: 0, to: 0.5, color: '#ef4444', textColor: '#fff' },
+    { id: 'low', name: 'Маловато', from: 0.5, to: 0.75, color: '#eab308', textColor: '#000' },
+    { id: 'good', name: 'Хорошо', from: 0.75, to: 0.9, color: '#22c55e', textColor: '#fff' },
+    { id: 'perfect', name: 'Идеально!', from: 0.9, to: 1.1, color: '#10b981', textColor: '#fff' },
+    { id: 'over', name: 'Переел', from: 1.1, to: 1.3, color: '#eab308', textColor: '#000' },
+    { id: 'binge', name: 'Срыв (переел)', from: 1.3, to: Infinity, color: '#ef4444', textColor: '#fff' }
+  ];
+
+  // RGB компоненты для интерполяции градиентов
+  const COLORS = {
+    red: { r: 239, g: 68, b: 68 },      // #ef4444
+    yellow: { r: 234, g: 179, b: 8 },    // #eab308
+    green: { r: 34, g: 197, b: 94 },     // #22c55e
+    emerald: { r: 16, g: 185, b: 129 }   // #10b981 (perfect)
+  };
+
+  /**
+   * Линейная интерполяция между двумя цветами
+   */
+  function lerpColor(c1, c2, t) {
+    t = Math.max(0, Math.min(1, t));
+    return {
+      r: Math.round(c1.r + (c2.r - c1.r) * t),
+      g: Math.round(c1.g + (c2.g - c1.g) * t),
+      b: Math.round(c1.b + (c2.b - c1.b) * t)
+    };
+  }
+
+  function rgbToHex({ r, g, b }) {
+    return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+
+  function rgbToRgba({ r, g, b }, alpha = 1) {
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  // === API модуля ===
+  const ratioZones = {
+    DEFAULT_ZONES: DEFAULT_RATIO_ZONES,
+
+    /**
+     * Получить текущие зоны (из localStorage или дефолтные)
+     */
+    getZones() {
+      try {
+        if (HEYS.utils && HEYS.utils.lsGet) {
+          return HEYS.utils.lsGet('heys_ratio_zones', DEFAULT_RATIO_ZONES);
+        }
+        const stored = localStorage.getItem('heys_ratio_zones');
+        return stored ? JSON.parse(stored) : DEFAULT_RATIO_ZONES;
+      } catch (e) {
+        return DEFAULT_RATIO_ZONES;
+      }
+    },
+
+    /**
+     * Сохранить зоны
+     */
+    setZones(zones) {
+      try {
+        if (HEYS.utils && HEYS.utils.lsSet) {
+          HEYS.utils.lsSet('heys_ratio_zones', zones);
+        } else {
+          localStorage.setItem('heys_ratio_zones', JSON.stringify(zones));
+        }
+      } catch (e) {
+        console.error('Failed to save ratio zones:', e);
+      }
+    },
+
+    /**
+     * Сбросить к дефолтным
+     */
+    resetZones() {
+      this.setZones(DEFAULT_RATIO_ZONES);
+      return DEFAULT_RATIO_ZONES;
+    },
+
+    /**
+     * Найти зону по ratio
+     * @param {number} ratio - значение kcal/optimum
+     * @returns {Object} зона { id, name, from, to, color, textColor }
+     */
+    getZone(ratio) {
+      const zones = this.getZones();
+      if (!ratio || ratio <= 0) return zones[0]; // crash
+      
+      for (const zone of zones) {
+        if (ratio >= zone.from && ratio < zone.to) {
+          return zone;
+        }
+      }
+      return zones[zones.length - 1]; // binge (последняя)
+    },
+
+    /**
+     * Получить статус (id зоны)
+     */
+    getStatus(ratio) {
+      return this.getZone(ratio).id;
+    },
+
+    /**
+     * Получить название статуса
+     */
+    getStatusName(ratio) {
+      return this.getZone(ratio).name;
+    },
+
+    /**
+     * Проверка: это успешный день? (good или perfect)
+     */
+    isSuccess(ratio) {
+      const status = this.getStatus(ratio);
+      return status === 'good' || status === 'perfect';
+    },
+
+    /**
+     * Проверка: это идеальный день?
+     */
+    isPerfect(ratio) {
+      return this.getStatus(ratio) === 'perfect';
+    },
+
+    /**
+     * Проверка: это streak-день? (хороший для серии)
+     */
+    isStreakDay(ratio) {
+      return this.isSuccess(ratio);
+    },
+
+    /**
+     * Получить базовый цвет зоны (hex)
+     */
+    getColor(ratio) {
+      return this.getZone(ratio).color;
+    },
+
+    /**
+     * Получить цвет с градиентом внутри зоны
+     * @param {number} ratio
+     * @param {number} alpha - прозрачность (0-1)
+     * @returns {string} rgba цвет
+     */
+    getGradientColor(ratio, alpha = 1) {
+      if (!ratio || ratio <= 0) {
+        return rgbToRgba(COLORS.red, alpha);
+      }
+      
+      const zones = this.getZones();
+      
+      // Находим позицию ratio и интерполируем
+      if (ratio < 0.5) {
+        // 0 → 0.5: красный (без градиента, это crash)
+        return rgbToRgba(COLORS.red, alpha);
+      } else if (ratio < 0.75) {
+        // 0.5 → 0.75: красный → жёлтый
+        const t = (ratio - 0.5) / 0.25;
+        return rgbToRgba(lerpColor(COLORS.red, COLORS.yellow, t), alpha);
+      } else if (ratio < 0.9) {
+        // 0.75 → 0.9: жёлтый → зелёный
+        const t = (ratio - 0.75) / 0.15;
+        return rgbToRgba(lerpColor(COLORS.yellow, COLORS.green, t), alpha);
+      } else if (ratio < 1.0) {
+        // 0.9 → 1.0: зелёный → изумрудный (perfect)
+        const t = (ratio - 0.9) / 0.1;
+        return rgbToRgba(lerpColor(COLORS.green, COLORS.emerald, t), alpha);
+      } else if (ratio < 1.1) {
+        // 1.0 → 1.1: изумрудный (идеально)
+        return rgbToRgba(COLORS.emerald, alpha);
+      } else if (ratio < 1.3) {
+        // 1.1 → 1.3: изумрудный → жёлтый
+        const t = (ratio - 1.1) / 0.2;
+        return rgbToRgba(lerpColor(COLORS.emerald, COLORS.yellow, t), alpha);
+      } else {
+        // > 1.3: жёлтый → красный (binge)
+        const t = Math.min((ratio - 1.3) / 0.2, 1);
+        return rgbToRgba(lerpColor(COLORS.yellow, COLORS.red, t), alpha);
+      }
+    },
+
+    /**
+     * Получить CSS класс для статуса
+     */
+    getStatusClass(ratio) {
+      const status = this.getStatus(ratio);
+      return 'ratio-' + status;
+    },
+
+    /**
+     * Для heatmap: простой статус (совместимость)
+     */
+    getHeatmapStatus(ratio) {
+      if (!ratio || ratio <= 0) return 'empty';
+      const status = this.getStatus(ratio);
+      switch (status) {
+        case 'crash': return 'red';
+        case 'low': return 'yellow';
+        case 'good': 
+        case 'perfect': return 'green';
+        case 'over': return 'yellow';
+        case 'binge': return 'red';
+        default: return 'empty';
+      }
+    },
+
+    /**
+     * Получить эмодзи для ratio
+     */
+    getEmoji(ratio) {
+      const status = this.getStatus(ratio);
+      switch (status) {
+        case 'crash': return '💀';
+        case 'low': return '😕';
+        case 'good': return '✓';
+        case 'perfect': return '⭐';
+        case 'over': return '😅';
+        case 'binge': return '🚨';
+        default: return '';
+      }
+    },
+
+    /**
+     * Определить эмоциональное состояние (для advice)
+     */
+    getEmotionalCategory(ratio, currentStreak = 0) {
+      const status = this.getStatus(ratio);
+      
+      // Срыв — важнее всего
+      if (status === 'crash' || status === 'binge') return 'crashed';
+      
+      // Успех — streak или хороший день
+      if (currentStreak >= 3 || status === 'perfect' || status === 'good') return 'success';
+      
+      // Лёгкий перебор — returning
+      if (status === 'over') return 'returning';
+      
+      // Маловато — stressed
+      if (status === 'low') return 'stressed';
+      
+      return 'normal';
+    },
+
+    /**
+     * Статистика для дебага
+     */
+    debugInfo(ratio) {
+      const zone = this.getZone(ratio);
+      return {
+        ratio,
+        zone: zone.id,
+        name: zone.name,
+        color: zone.color,
+        gradientColor: this.getGradientColor(ratio, 1),
+        isSuccess: this.isSuccess(ratio),
+        isPerfect: this.isPerfect(ratio),
+        emoji: this.getEmoji(ratio)
+      };
+    }
+  };
+
+  // Экспорт
+  HEYS.ratioZones = ratioZones;
+
+  // Для отладки в консоли
+  if (typeof window !== 'undefined') {
+    window.debugRatio = (ratio) => {
+      console.table(ratioZones.debugInfo(ratio));
+    };
+  }
+
+})(typeof window !== 'undefined' ? window : global);

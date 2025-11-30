@@ -149,9 +149,148 @@
         React.createElement('div', {className:'muted', style:{marginTop:'8px'}}, 'Формулы: Макс пульс = 220 − возраст. Кал/мин = MET × (вес × 0.0175) − 1.')
       ),
 
+      // Зоны калорийности (ratio zones)
+      React.createElement(HEYS_RatioZonesCard, null),
+
       React.createElement(HEYS_NormsCard, null),
       
     )
+    );
+  }
+
+  // === Зоны калорийности (ratio zones) ===
+  function HEYS_RatioZonesCard() {
+    const rz = HEYS.ratioZones;
+    const [zones, setZones] = React.useState(() => rz ? rz.getZones() : []);
+    
+    // Синхронизация с модулем
+    React.useEffect(() => {
+      if (rz) setZones(rz.getZones());
+    }, []);
+    
+    const updateZone = (i, field, value) => {
+      const newZones = zones.map((z, idx) => {
+        if (idx !== i) return z;
+        const updated = { ...z, [field]: value };
+        return updated;
+      });
+      
+      // Автокорректировка границ соседних зон
+      if (field === 'to' && i < newZones.length - 1) {
+        newZones[i + 1] = { ...newZones[i + 1], from: value };
+      }
+      if (field === 'from' && i > 0) {
+        newZones[i - 1] = { ...newZones[i - 1], to: value };
+      }
+      
+      setZones(newZones);
+      if (rz) rz.setZones(newZones);
+    };
+    
+    const resetZones = () => {
+      if (confirm('Сбросить зоны калорийности к значениям по умолчанию?')) {
+        if (rz) {
+          const def = rz.resetZones();
+          setZones(def);
+        }
+      }
+    };
+    
+    // Формат для отображения
+    const fmtPct = (v) => {
+      if (v === 0) return '0%';
+      if (v === Infinity || v > 100) return '∞';
+      return Math.round(v * 100) + '%';
+    };
+    
+    if (!rz) {
+      return React.createElement('div', {className:'card', style:{marginTop:'10px'}},
+        React.createElement('div', {className:'muted'}, 'Модуль ratioZones не загружен')
+      );
+    }
+    
+    return React.createElement('div', {className:'card', style:{marginTop:'10px'}},
+      React.createElement('div', {className:'row', style:{justifyContent:'space-between'}},
+        React.createElement('div', {className:'section-title'}, 'Зоны калорийности'),
+        React.createElement('div', {className:'row'}, 
+          React.createElement('button', {className:'btn', onClick:resetZones}, 'Сбросить к шаблону')
+        )
+      ),
+      React.createElement('div', {className:'muted', style:{marginBottom:'10px'}}, 
+        'Определяют цвета в календаре, графиках и советах. Ratio = съедено / норма.'
+      ),
+      React.createElement('div', {style:{overflowX:'auto'}},
+        React.createElement('table', null,
+          React.createElement('thead', null, React.createElement('tr', null,
+            React.createElement('th', {style:{width:'40px'}}, 'Цвет'),
+            React.createElement('th', null, 'Название'),
+            React.createElement('th', {style:{width:'80px'}}, 'От'),
+            React.createElement('th', {style:{width:'80px'}}, 'До'),
+            React.createElement('th', {style:{width:'60px'}}, 'Превью')
+          )),
+          React.createElement('tbody', null,
+            zones.map((z, i) => {
+              // Демо ratio для превью (середина зоны)
+              const demoRatio = z.to === Infinity ? z.from + 0.2 : (z.from + z.to) / 2;
+              const bgColor = rz.getGradientColor(demoRatio, 0.5);
+              
+              return React.createElement('tr', {key:z.id},
+                React.createElement('td', null, 
+                  React.createElement('div', {
+                    style:{
+                      width:'24px', height:'24px', borderRadius:'4px',
+                      background: z.color, margin:'0 auto'
+                    }
+                  })
+                ),
+                React.createElement('td', null, 
+                  React.createElement('input', {
+                    value:z.name, 
+                    onChange:e=>updateZone(i, 'name', e.target.value),
+                    style:{width:'100%'}
+                  })
+                ),
+                React.createElement('td', null, 
+                  i === 0 ? React.createElement('span', {className:'muted'}, '0%') :
+                  React.createElement('input', {
+                    type:'number', 
+                    step:'0.05',
+                    min:'0',
+                    max:'2',
+                    value:z.from, 
+                    onChange:e=>updateZone(i, 'from', parseFloat(e.target.value)||0),
+                    style:{width:'70px'}
+                  })
+                ),
+                React.createElement('td', null, 
+                  i === zones.length - 1 ? React.createElement('span', {className:'muted'}, '∞') :
+                  React.createElement('input', {
+                    type:'number', 
+                    step:'0.05',
+                    min:'0',
+                    max:'2',
+                    value:z.to, 
+                    onChange:e=>updateZone(i, 'to', parseFloat(e.target.value)||0),
+                    style:{width:'70px'}
+                  })
+                ),
+                React.createElement('td', null, 
+                  React.createElement('div', {
+                    style:{
+                      padding:'4px 8px', borderRadius:'4px',
+                      background: bgColor, textAlign:'center',
+                      fontSize:'11px', fontWeight:'600'
+                    }
+                  }, fmtPct(demoRatio))
+                )
+              );
+            })
+          )
+        )
+      ),
+      React.createElement('div', {className:'muted', style:{marginTop:'8px'}}, 
+        'Зоны применяются везде: календарь, sparkline, heatmap, советы. Границы соседних зон автоматически синхронизируются.'
+      )
     );
   }
 

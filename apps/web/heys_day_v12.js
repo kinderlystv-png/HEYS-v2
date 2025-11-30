@@ -58,7 +58,7 @@
   const M = HEYS.models || {};
 
   HEYS.DayTab=function DayTab(props){
-  const {useState,useMemo,useEffect}=React;
+  const {useState,useMemo,useEffect,useRef}=React;
   
   // Дата приходит из шапки App (DatePicker в header)
   const { selectedDate, setSelectedDate } = props;
@@ -1523,6 +1523,21 @@
     const weightGValues = useMemo(() => Array.from({length: 10}, (_, i) => String(i)), []); // 0-9
     const stepsGoalValues = useMemo(() => Array.from({length: 30}, (_, i) => String((i + 1) * 1000)), []); // 1000-30000
     
+    // Пульсация блока корреляции при изменении веса
+    const [correlationPulse, setCorrelationPulse] = useState(false);
+    const prevWeightRef = useRef(day.weightMorning);
+    
+    useEffect(() => {
+      // Пульсация при изменении веса
+      if (prevWeightRef.current !== day.weightMorning && day.weightMorning) {
+        setCorrelationPulse(true);
+        const timer = setTimeout(() => setCorrelationPulse(false), 600);
+        prevWeightRef.current = day.weightMorning;
+        return () => clearTimeout(timer);
+      }
+      prevWeightRef.current = day.weightMorning;
+    }, [day.weightMorning]);
+    
     // Цель шагов: state для реактивного обновления слайдера
     const [savedStepsGoal, setSavedStepsGoal] = useState(() => prof.stepsGoal || 7000);
     
@@ -2408,9 +2423,10 @@
               });
             });
             
-            // Хороший день = 75-115% от optimum
+            // Хороший день: используем централизованный ratioZones
             const ratio = totalKcal / (optimum || 1);
-            if (ratio >= 0.75 && ratio <= 1.10) {
+            const rz = HEYS.ratioZones;
+            if (rz ? rz.isSuccess(ratio) : (ratio >= 0.75 && ratio <= 1.10)) {
               count++;
             } else if (i > 0) break; // Первый день может быть незавершён
           } else if (i > 0) break;
@@ -3572,13 +3588,34 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             const todayTrainings = (day.trainings || []).filter(t => t && t.z && t.z.some(z => z > 0));
             const hasTraining = todayTrainings.length > 0;
             const trainingTypes = todayTrainings.map(t => t.type || 'cardio');
+            // Считаем минуты тренировок сегодня
+            let trainingMinutes = 0;
+            todayTrainings.forEach(t => {
+              if (t.z && Array.isArray(t.z)) trainingMinutes += t.z.reduce((s, m) => s + (+m || 0), 0);
+            });
+            // Сон сегодня
+            let sleepHours = 0;
+            if (day.sleepStart && day.sleepEnd) {
+              const [sh, sm] = day.sleepStart.split(':').map(Number);
+              const [eh, em] = day.sleepEnd.split(':').map(Number);
+              let startMin = sh * 60 + sm, endMin = eh * 60 + em;
+              if (endMin < startMin) endMin += 24 * 60;
+              sleepHours = (endMin - startMin) / 60;
+            }
             days.push({ 
               date: dateStr, 
               kcal: Math.round(eatenKcal || 0), 
               target: optimum,
               isToday: true,
               hasTraining,
-              trainingTypes
+              trainingTypes,
+              trainingMinutes,
+              sleepHours,
+              moodAvg: +day.moodAvg || 0,
+              dayScore: +day.dayScore || 0,
+              prot: Math.round(dayTot.prot || 0),
+              fat: Math.round(dayTot.fat || 0),
+              carbs: Math.round(dayTot.carbs || 0)
             });
             continue;
           }
@@ -3594,7 +3631,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               target: dayInfo.target,
               isToday: false,
               hasTraining,
-              trainingTypes
+              trainingTypes,
+              trainingMinutes: dayInfo.trainingMinutes || 0,
+              sleepHours: dayInfo.sleepHours || 0,
+              moodAvg: dayInfo.moodAvg || 0,
+              dayScore: dayInfo.dayScore || 0,
+              prot: dayInfo.prot || 0,
+              fat: dayInfo.fat || 0,
+              carbs: dayInfo.carbs || 0
             });
           } else {
             // Fallback: читаем напрямую из localStorage
@@ -3679,6 +3723,119 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         return null;
       }
     }, [sparklineData, optimum]);
+    
+    // Данные для heatmap текущей недели (пн-вс)
+    const weekHeatmapData = React.useMemo(() => {
+      // Парсим текущую дату правильно (без timezone issues)
+      const [year, month, dayNum] = date.split('-').map(Number);
+      const today = new Date(year, month - 1, dayNum);
+      const now = new Date();
+      const nowDateStr = fmtDate(now);
+      
+      // Находим понедельник текущей недели
+      const dayOfWeek = today.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(today);
+      monday.setDate(today.getDate() + mondayOffset);
+      
+      // Используем те же данные что и sparklineData (activeDays)
+      const getActiveDaysForMonth = (HEYS.dayUtils && HEYS.dayUtils.getActiveDaysForMonth) || (() => new Map());
+      const allActiveDays = new Map();
+      
+      // Собираем данные за текущий и предыдущий месяц (неделя может охватывать 2 месяца)
+      for (let monthOffset = 0; monthOffset >= -1; monthOffset--) {
+        const checkDate = new Date(today);
+        checkDate.setMonth(checkDate.getMonth() + monthOffset);
+        const monthData = getActiveDaysForMonth(checkDate.getFullYear(), checkDate.getMonth(), prof, products);
+        monthData.forEach((v, k) => allActiveDays.set(k, v));
+      }
+      
+      const days = [];
+      const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+      let streak = 0;
+      let weekendExcess = 0;
+      let weekdayAvg = 0;
+      let weekendCount = 0;
+      let weekdayCount = 0;
+      
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        const dateStr = fmtDate(d);
+        const isFuture = dateStr > nowDateStr;
+        const isToday = dateStr === date;
+        const isWeekend = i >= 5;
+        
+        // Загружаем данные дня из activeDays
+        let ratio = null;
+        let kcal = 0;
+        let status = 'empty'; // empty | low | green | yellow | red | perfect
+        
+        // Используем централизованный ratioZones
+        const rz = HEYS.ratioZones;
+        
+        if (!isFuture) {
+          const dayInfo = allActiveDays.get(dateStr);
+          if (dayInfo && dayInfo.kcal > 0) {
+            kcal = dayInfo.kcal;
+            const target = dayInfo.target || optimum;
+            if (kcal > 0 && target > 0) {
+              ratio = kcal / target;
+              // Используем ratioZones для определения статуса
+              status = rz ? rz.getHeatmapStatus(ratio) : 'empty';
+              
+              // Считаем streak (последовательные успешные дни — green)
+              const isSuccess = rz ? rz.isSuccess(ratio) : (ratio >= 0.75 && ratio <= 1.1);
+              if (isSuccess && (days.length === 0 || days[days.length - 1].status === 'green')) {
+                streak++;
+              } else if (!isSuccess) {
+                streak = 0;
+              }
+              
+              // Статистика для паттерна выходных
+              if (isWeekend) {
+                weekendExcess += ratio;
+                weekendCount++;
+              } else {
+                weekdayAvg += ratio;
+                weekdayCount++;
+              }
+            }
+          }
+        }
+        
+        days.push({
+          date: dateStr,
+          name: dayNames[i],
+          status,
+          ratio,
+          kcal: Math.round(kcal),
+          isToday,
+          isFuture,
+          isWeekend,
+          // Градиентный цвет из ratioZones
+          bgColor: ratio && rz ? rz.getGradientColor(ratio, 0.6) : null
+        });
+      }
+      
+      const inNorm = days.filter(d => d.status === 'green' || d.status === 'perfect').length;
+      const withData = days.filter(d => d.status !== 'empty' && !d.isFuture).length;
+      
+      // Паттерн выходных
+      let weekendPattern = null;
+      if (weekendCount > 0 && weekdayCount > 0) {
+        const avgWeekend = weekendExcess / weekendCount;
+        const avgWeekday = weekdayAvg / weekdayCount;
+        const diff = Math.round((avgWeekend - avgWeekday) * 100);
+        if (Math.abs(diff) >= 10) {
+          weekendPattern = diff > 0 
+            ? 'По выходным +' + diff + '% калорий'
+            : 'По выходным ' + diff + '% калорий';
+        }
+      }
+      
+      return { days, inNorm, withData, streak, weekendPattern };
+    }, [date, optimum, pIndex, products, prof]);
     
     // Закрытие toast
     const dismissToast = () => {
@@ -3902,26 +4059,40 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         return d.toISOString().slice(0, 10);
       };
       
-      // Прогноз на +2 дня по тренду
-      const forecastDays = 2;
-      const hasEnoughData = data.length >= 3;
-      let forecastPoints = [];
-      const lastDate = data[data.length - 1]?.date || '';
+      // === Проверка: сегодня съедено < 50% нормы? ===
+      // Если да, показываем сегодня как прогноз (пунктиром), а не как реальные данные
+      const todayData = data.find(d => d.isToday);
+      const todayRatio = todayData && todayData.target > 0 ? todayData.kcal / todayData.target : 0;
+      const isTodayIncomplete = todayData && todayRatio < 0.5;
       
-      if (hasEnoughData && lastDate) {
-        // Вычисляем тренд по последним 3 дням
-        const lastDays = data.slice(-3);
+      // Фильтруем данные: если сегодня неполный — исключаем из основных точек
+      const chartData = isTodayIncomplete ? data.filter(d => !d.isToday) : data;
+      
+      // Прогноз на +1 день по тренду (завтра), или сегодня+завтра если сегодня неполный
+      const forecastDays = 1;
+      const hasEnoughData = chartData.length >= 3;
+      let forecastPoints = [];
+      const lastChartDate = chartData[chartData.length - 1]?.date || '';
+      
+      if (hasEnoughData && lastChartDate) {
+        // Вычисляем тренд по последним 3 дням (без неполного сегодня)
+        const lastDays = chartData.slice(-3);
         const avgChange = (lastDays[2].kcal - lastDays[0].kcal) / 2;
-        const lastKcal = data[data.length - 1].kcal;
-        const lastTarget = data[data.length - 1].target || goal;
+        const lastKcal = chartData[chartData.length - 1].kcal;
+        const lastTarget = chartData[chartData.length - 1].target || goal;
         
-        for (let i = 1; i <= forecastDays; i++) {
-          const forecastDate = addDays(lastDate, i);
+        // Если сегодня неполный — добавляем прогноз на сегодня и завтра
+        const daysToForecast = isTodayIncomplete ? 2 : forecastDays;
+        
+        for (let i = 1; i <= daysToForecast; i++) {
+          const forecastDate = addDays(lastChartDate, i);
           const forecastDayNum = forecastDate ? new Date(forecastDate).getDate() : '';
+          const isTodayForecast = isTodayIncomplete && i === 1;
           forecastPoints.push({
             kcal: Math.max(0, Math.round(lastKcal + avgChange * i)),
             target: lastTarget,
             isForecast: true,
+            isTodayForecast, // маркер что это прогноз на сегодня
             date: forecastDate,
             dayNum: forecastDayNum,
             isWeekend: isWeekend(forecastDate) || isHoliday(forecastDate)
@@ -3929,18 +4100,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         }
       }
       
-      const totalPoints = data.length + forecastPoints.length;
+      const totalPoints = chartData.length + forecastPoints.length;
       const width = 360;
-      const height = 60;
-      const paddingTop = 6;
-      const paddingBottom = 14; // место для меток дней
-      const paddingX = 16;
+      const height = 130; // увеличено для дельты под датами
+      const paddingTop = 16; // для меток над точками
+      const paddingBottom = 26; // место для дат + дельты
+      const paddingX = 8; // минимальные отступы — точки почти у края
       const chartHeight = height - paddingTop - paddingBottom;
       
       // Адаптивная шкала Y: от минимума до максимума с отступами
       // Это делает разницу между точками более заметной
-      const allKcalValues = [...data, ...forecastPoints].map(d => d.kcal).filter(v => v > 0);
-      const allTargetValues = [...data, ...forecastPoints].map(d => d.target || goal);
+      const allKcalValues = [...chartData, ...forecastPoints].map(d => d.kcal).filter(v => v > 0);
+      const allTargetValues = [...chartData, ...forecastPoints].map(d => d.target || goal);
       const allValues = [...allKcalValues, ...allTargetValues];
       
       const dataMin = Math.min(...allValues);
@@ -3953,8 +4124,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const scaleMax = dataMax + padding;
       const scaleRange = scaleMax - scaleMin;
       
-      // Основные точки данных
-      const points = data.map((d, i) => {
+      // Основные точки данных (без неполного сегодня)
+      const points = chartData.map((d, i) => {
         const x = paddingX + (i / (totalPoints - 1)) * (width - paddingX * 2);
         // Нормализуем к scaleMin-scaleMax
         const yNorm = scaleRange > 0 ? (d.kcal - scaleMin) / scaleRange : 0.5;
@@ -3964,21 +4135,28 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Извлекаем день из даты (последние 2 символа)
         const dayNum = d.date ? d.date.slice(-2).replace(/^0/, '') : '';
         const ratio = (d.target || goal) > 0 ? d.kcal / (d.target || goal) : 0;
-        // Хороший день: единый стандарт 75-110% (синхронизировано с календарём и streak)
-        const isPerfect = ratio >= 0.75 && ratio <= 1.10;
+        // Хороший день: используем централизованный ratioZones
+        const rz = HEYS.ratioZones;
+        const isPerfect = rz ? rz.isSuccess(ratio) : (ratio >= 0.75 && ratio <= 1.10);
         // Выходные/праздники
         const isWeekendDay = isWeekend(d.date) || isHoliday(d.date);
+        // День недели (0=Вс, 1=Пн, ...)
+        const dayOfWeek = d.date ? new Date(d.date).getDay() : 0;
         return { 
           x, y, kcal: d.kcal, target: d.target || goal, targetY, ratio,
           isToday: d.isToday, dayNum, date: d.date, isPerfect,
           hasTraining: d.hasTraining, trainingTypes: d.trainingTypes || [],
-          isWeekend: isWeekendDay, moodAvg: d.moodAvg || null
+          trainingMinutes: d.trainingMinutes || 0,
+          isWeekend: isWeekendDay, moodAvg: d.moodAvg || null,
+          sleepHours: d.sleepHours || 0, dayScore: d.dayScore || 0,
+          prot: d.prot || 0, fat: d.fat || 0, carbs: d.carbs || 0,
+          dayOfWeek
         };
       });
       
-      // Точки прогноза
+      // Точки прогноза (включая сегодня если неполный)
       const forecastPts = forecastPoints.map((d, i) => {
-        const idx = data.length + i;
+        const idx = chartData.length + i;
         const x = paddingX + (idx / (totalPoints - 1)) * (width - paddingX * 2);
         const yNorm = scaleRange > 0 ? (d.kcal - scaleMin) / scaleRange : 0.5;
         const y = paddingTop + chartHeight - yNorm * chartHeight;
@@ -3986,6 +4164,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const targetY = paddingTop + chartHeight - targetNorm * chartHeight;
         return { 
           x, y, kcal: d.kcal, target: d.target, targetY, isForecast: true, 
+          isTodayForecast: d.isTodayForecast || false,
           dayNum: d.dayNum || '', date: d.date, isWeekend: d.isWeekend 
         };
       });
@@ -4028,10 +4207,24 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // Прогнозная линия (если есть данные)
       let forecastPathD = '';
-      if (forecastPts.length > 0) {
+      let forecastColor = '#94a3b8'; // серый по умолчанию
+      if (forecastPts.length > 0 && points.length > 0) {
         const lastPoint = points[points.length - 1];
+        const forecastPoint = forecastPts[forecastPts.length - 1];
         const allForecast = [lastPoint, ...forecastPts];
         forecastPathD = smoothPath(allForecast, 'y');
+        
+        // Цвет по направлению тренда относительно цели
+        const lastRatio = lastPoint.target > 0 ? lastPoint.kcal / lastPoint.target : 1;
+        const forecastRatio = forecastPoint.target > 0 ? forecastPoint.kcal / forecastPoint.target : 1;
+        // Зелёный если идём к дефициту, красный если к избытку
+        if (forecastRatio < lastRatio && forecastRatio <= 1.1) {
+          forecastColor = '#22c55e'; // зелёный — улучшение
+        } else if (forecastRatio > lastRatio && forecastRatio > 1.0) {
+          forecastColor = '#ef4444'; // красный — ухудшение
+        } else {
+          forecastColor = '#8b5cf6'; // фиолетовый — стабильно
+        }
       }
       
       // === Streak detection: золотая линия между последовательными 🔥 днями ===
@@ -4084,11 +4277,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         extractPathSegment(points, range.start, range.end, 'y')
       );
       
-      // Определяем цвет точки по ratio
+      // Определяем цвет точки по ratio — используем централизованный ratioZones
+      const rz = HEYS.ratioZones;
       const getDotColor = (ratio) => {
-        if (ratio <= 1.0) return '#22c55e'; // зелёный
-        if (ratio <= 1.15) return '#eab308'; // жёлтый
-        return '#ef4444'; // красный
+        return rz ? rz.getGradientColor(ratio, 1) : '#22c55e';
       };
       
       // Полный плавный путь области между двумя кривыми
@@ -4134,11 +4326,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       const fullAreaPath = buildFullAreaPath(points);
       
-      // Определяем цвет для каждой точки
+      // Определяем цвет для каждой точки — используем градиент из ratioZones
       const getPointColor = (ratio) => {
-        if (ratio <= 1.0) return '#22c55e'; // зелёный
-        if (ratio <= 1.15) return '#eab308'; // жёлтый
-        return '#ef4444'; // красный
+        return rz ? rz.getGradientColor(ratio, 1) : '#22c55e';
       };
       
       // Создаём горизонтальный градиент с цветами по точкам
@@ -4174,14 +4364,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         sliderPrevPointRef.current = null;
       };
       
-      return React.createElement(React.Fragment, null,
+      return React.createElement('div', { className: 'sparkline-container' },
       React.createElement('svg', { 
         className: 'sparkline-svg',
         viewBox: '0 0 ' + width + ' ' + height,
-        preserveAspectRatio: 'xMidYMid meet',
+        preserveAspectRatio: 'none', // растягиваем по всей ширине
         onPointerMove: handlePointerMove,
         onPointerLeave: handlePointerLeave,
-        style: { touchAction: 'none' } // предотвращаем scroll при свайпе
+        style: { touchAction: 'none', height: height + 'px' } // явная высота
       },
         // Градиент с цветами по точкам
         React.createElement('defs', null,
@@ -4221,41 +4411,78 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             className: 'sparkline-streak-line'
           })
         ),
-        // Прогнозная линия (пунктирная, бледная)
+        // Прогнозная линия (пунктирная, с цветом по тренду)
         forecastPathD && React.createElement('path', {
           d: forecastPathD,
-          className: 'sparkline-line sparkline-forecast-line',
-          strokeDasharray: '4,3',
-          strokeOpacity: 0.4
+          className: 'sparkline-line',
+          style: { 
+            stroke: forecastColor, 
+            strokeDasharray: '4 3', 
+            strokeOpacity: 0.6,
+            strokeWidth: 2
+          }
         }),
-        // Точки прогноза
+        // Точки прогноза (с цветом по тренду)
         forecastPts.map((p, i) => 
           React.createElement('circle', {
             key: 'forecast-dot-' + i,
             cx: p.x, 
             cy: p.y, 
-            r: 2,
-            className: 'sparkline-dot sparkline-forecast-dot'
+            r: p.isTodayForecast ? 4 : 3, // сегодня крупнее
+            style: {
+              fill: forecastColor,
+              opacity: p.isTodayForecast ? 0.7 : 0.6,
+              strokeDasharray: '2 2',
+              stroke: forecastColor,
+              strokeWidth: p.isTodayForecast ? 2 : 1
+            }
           })
         ),
+        // Метки прогнозных ккал над точками (бледные)
+        forecastPts.map((p, i) => {
+          const isLast = i === forecastPts.length - 1;
+          return React.createElement('text', {
+            key: 'forecast-kcal-' + i,
+            x: p.x,
+            y: p.y - 8,
+            className: 'sparkline-day-label' + (p.isTodayForecast ? ' sparkline-day-today' : ' sparkline-day-forecast'),
+            textAnchor: isLast ? 'end' : 'middle',
+            style: { opacity: p.isTodayForecast ? 0.7 : 0.5, fill: forecastColor }
+          }, p.kcal);
+        }),
         // Метки прогнозных дней (тонким шрифтом)
-        forecastPts.map((p, i) => 
-          React.createElement('text', {
+        forecastPts.map((p, i) => {
+          const isLast = i === forecastPts.length - 1;
+          return React.createElement('text', {
             key: 'forecast-day-' + i,
             x: p.x,
             y: height - 2,
-            className: 'sparkline-day-label sparkline-day-forecast' + (p.isWeekend ? ' sparkline-day-weekend' : ''),
-            textAnchor: 'middle'
-          }, p.dayNum)
-        ),
-        // Метки дней внизу
+            className: 'sparkline-day-label' + 
+              (p.isTodayForecast ? ' sparkline-day-today' : ' sparkline-day-forecast') + 
+              (p.isWeekend ? ' sparkline-day-weekend' : ''),
+            textAnchor: isLast ? 'end' : 'middle',
+            style: { opacity: p.isTodayForecast ? 0.8 : 0.5 }
+          }, p.dayNum);
+        }),
+        // Метки дней внизу + дельта для всех дней (дельта появляется синхронно с точкой)
         points.map((p, i) => {
-          const isMin = minPoint && p.kcal === minPoint.kcal && minPoint.kcal !== maxKcalVal;
-          const isMax = maxPoint && p.kcal === maxPoint.kcal;
           // Классы для выходных и сегодня
           let dayClass = 'sparkline-day-label';
           if (p.isToday) dayClass += ' sparkline-day-today';
           if (p.isWeekend) dayClass += ' sparkline-day-weekend';
+          // Динамический anchor для крайних точек
+          const isFirst = i === 0;
+          const isLast = i === points.length - 1 && forecastPts.length === 0;
+          const anchor = isFirst ? 'start' : (isLast ? 'end' : 'middle');
+          
+          // Дельта: разница между съеденным и нормой
+          const delta = p.kcal - p.target;
+          const deltaText = delta >= 0 ? '+' + Math.round(delta) : Math.round(delta);
+          const ratio = p.target > 0 ? p.kcal / p.target : 0;
+          const deltaColor = rz ? rz.getGradientColor(ratio, 1) : '#64748b';
+          
+          // Delay: дельта появляется после всех точек
+          const deltaDelay = 2.6 + (i * 0.03); // быстрый stagger после точек
           
           return React.createElement('g', { key: 'day-group-' + i },
             // Дата
@@ -4263,49 +4490,62 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               x: p.x,
               y: height - 2,
               className: dayClass,
-              textAnchor: 'middle'
+              textAnchor: anchor
             }, p.dayNum),
-            // Min/Max метка под датой
-            (isMin || isMax) && React.createElement('text', {
+            // Дельта под датой (для всех дней с данными)
+            p.kcal > 0 && React.createElement('text', {
               x: p.x,
-              y: height + 9,
-              className: 'sparkline-minmax-label ' + (isMin ? 'sparkline-min-label' : 'sparkline-max-label'),
-              textAnchor: 'middle'
-            }, Math.round(p.kcal))
+              y: height + 10,
+              className: 'sparkline-delta-label',
+              textAnchor: anchor,
+              style: { fill: deltaColor, '--delay': deltaDelay + 's' }
+            }, deltaText)
           );
         }),
         // Точки на все дни с hover и цветом по статусу (анимация с задержкой)
-        // 🔥 для идеальных дней (ratio 0.95-1.05), иначе обычные точки
-        points.map((p, i) => {
-          const ratio = p.target > 0 ? p.kcal / p.target : 0;
-          const animDelay = 3 + i * 0.15;
+        // Weekly Rhythm — вертикальные сепараторы перед понедельниками (но не первым)
+        points.filter((p, i) => i > 0 && p.dayOfWeek === 1).map((p, i) =>
+          React.createElement('line', {
+            key: 'week-sep-' + i,
+            x1: p.x - 4,
+            y1: paddingTop + 4,
+            x2: p.x - 4,
+            y2: height - paddingBottom - 4,
+            className: 'sparkline-week-separator'
+          })
+        ),
+        // Золотые пульсирующие точки для идеальных дней, иначе обычные точки
+        // Точки появляются синхронно с рисованием линии — когда линия доходит до точки
+        (() => {
+          const lineDrawDuration = 2.5; // секунд — должно совпадать с CSS animation
+          const leadTime = 0.15; // точки появляются чуть раньше линии
           
-          // Идеальный день — показываем 🔥
-          if (p.isPerfect && p.kcal > 0) {
-            return React.createElement('text', {
-              key: 'fire-' + i,
-              x: p.x,
-              y: p.y + 4,
-              className: 'sparkline-fire' + (p.isToday ? ' sparkline-fire-today' : ''),
-              textAnchor: 'middle',
-              style: { cursor: 'pointer', animationDelay: animDelay + 's' },
-              onClick: (e) => {
-                e.stopPropagation();
-                haptic('medium');
-                setSparklinePopup({ type: 'perfect', point: p, x: e.clientX, y: e.clientY });
-              }
-            }, '🔥');
-          }
+          return points.map((p, i) => {
+            const ratio = p.target > 0 ? p.kcal / p.target : 0;
+            // Линейная задержка: первая точка сразу, последняя в конце анимации
+            const progress = points.length > 1 ? i / (points.length - 1) : 0;
+            const animDelay = Math.max(0, progress * lineDrawDuration - leadTime);
           
-          // Обычная точка
+            // Идеальный день — золотая пульсирующая точка
+            if (p.isPerfect && p.kcal > 0) {
+              return React.createElement('circle', {
+                key: 'gold-' + i,
+                cx: p.x,
+                cy: p.y,
+                r: p.isToday ? 5 : 4,
+                className: 'sparkline-dot-gold' + (p.isToday ? ' sparkline-dot-gold-today' : ''),
+                style: { cursor: 'pointer', '--delay': animDelay + 's' },
+                onClick: (e) => {
+                  e.stopPropagation();
+                  haptic('medium');
+                  setSparklinePopup({ type: 'perfect', point: p, x: e.clientX, y: e.clientY });
+                }
+              });
+            }
+          
+            // Обычная точка — цвет через inline style из ratioZones
+            const dotColor = rz ? rz.getGradientColor(ratio, 1) : '#22c55e';
           let dotClass = 'sparkline-dot';
-          if (ratio <= 1.0) {
-            dotClass += ' sparkline-dot-ok';
-          } else if (ratio <= 1.15) {
-            dotClass += ' sparkline-dot-warn';
-          } else {
-            dotClass += ' sparkline-dot-over';
-          }
           if (p.isToday) dotClass += ' sparkline-dot-today';
           
           return React.createElement('circle', {
@@ -4314,7 +4554,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             cy: p.y, 
             r: p.isToday ? 4 : 2.5,
             className: dotClass,
-            style: { cursor: 'pointer', animationDelay: animDelay + 's' },
+            style: { cursor: 'pointer', '--delay': animDelay + 's', fill: dotColor },
             onClick: (e) => {
               e.stopPropagation();
               haptic('light');
@@ -4323,19 +4563,39 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           },
             React.createElement('title', null, p.dayNum + ': ' + p.kcal + ' / ' + p.target + ' ккал')
           );
-        }),
-        // Аннотации тренировок — иконки над точками по типу
-        points.filter(p => p.hasTraining && p.trainingTypes.length > 0).map((p, i) => {
+        });
+        })(),
+        // Аннотации тренировок — пунктирные линии вниз к точкам (появляются синхронно с точкой)
+        points.map((p, i) => {
+          if (!p.hasTraining || !p.trainingTypes.length) return null;
+          const lineDelay = 2.6 + (i * 0.03); // после всех точек
+          return React.createElement('line', {
+            key: 'train-line-' + i,
+            x1: p.x,
+            y1: 6, // от верхней линии
+            x2: p.x,
+            y2: p.y - 6, // до точки
+            className: 'sparkline-training-line',
+            style: { '--delay': lineDelay + 's' }
+          });
+        }).filter(Boolean),
+        // Аннотации тренировок — иконки в одну линию сверху (появляются синхронно с точкой)
+        points.map((p, i) => {
+          if (!p.hasTraining || !p.trainingTypes.length) return null;
           // Маппинг типов на эмодзи
           const typeEmoji = { cardio: '🏃', strength: '🏋️', hobby: '⚽' };
           const emojis = p.trainingTypes.map(t => typeEmoji[t] || '🏃').join('');
+          const emojiDelay = 2.6 + (i * 0.03); // после всех точек
           return React.createElement('text', {
             key: 'train-' + i,
             x: p.x,
-            y: p.y - 10, // всегда над точкой
-            className: 'sparkline-annotation sparkline-annotation-training'
+            y: 5, // фиксированная верхняя линия
+            className: 'sparkline-annotation sparkline-annotation-training',
+            textAnchor: 'middle',
+            dominantBaseline: 'hanging',
+            style: { '--delay': emojiDelay + 's' }
           }, emojis);
-        }),
+        }).filter(Boolean),
         // Слайдер — вертикальная линия
         sliderPoint && React.createElement('line', {
           key: 'slider-line',
@@ -4354,7 +4614,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           className: 'sparkline-slider-point'
         })
       ),
-      // Glassmorphism тултип для слайдера
+      // Glassmorphism тултип для слайдера (компактный)
       sliderPoint && React.createElement('div', {
         className: 'sparkline-slider-tooltip',
         style: {
@@ -4362,18 +4622,55 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           transform: 'translateX(-50%)'
         }
       },
-        React.createElement('div', { className: 'sparkline-slider-tooltip-date' }, 
-          sliderPoint.dayNum + (sliderPoint.isForecast ? ' (прогноз)' : '')
+        // Header: дата + badge процент
+        React.createElement('div', { className: 'sparkline-slider-tooltip-header' }, 
+          React.createElement('span', { className: 'sparkline-slider-tooltip-date' }, 
+            (() => {
+              if (sliderPoint.isForecast) return sliderPoint.dayNum + ' П';
+              const weekDays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+              const wd = weekDays[sliderPoint.dayOfWeek] || '';
+              return sliderPoint.dayNum + ' ' + wd;
+            })()
+          ),
+          sliderPoint.ratio && React.createElement('span', { 
+            className: 'sparkline-slider-tooltip-ratio',
+            style: { backgroundColor: rz ? rz.getGradientColor(sliderPoint.ratio, 0.9) : '#22c55e' }
+          }, Math.round(sliderPoint.ratio * 100) + '%')
         ),
+        // Калории
         React.createElement('div', { className: 'sparkline-slider-tooltip-kcal' }, 
-          sliderPoint.kcal + ' / ' + sliderPoint.target + ' ккал'
+          sliderPoint.kcal + ' ',
+          React.createElement('small', null, '/ ' + sliderPoint.target)
         ),
-        sliderPoint.ratio && React.createElement('div', { 
-          className: 'sparkline-slider-tooltip-ratio ' + 
-            (sliderPoint.ratio <= 1.0 ? 'ratio-ok' : sliderPoint.ratio <= 1.15 ? 'ratio-warn' : 'ratio-over')
-        }, 
-          Math.round(sliderPoint.ratio * 100) + '%'
-        )
+        // Теги: БЖУ + сон/тренировка/настроение/оценка
+        (sliderPoint.prot > 0 || sliderPoint.trainingMinutes > 0 || sliderPoint.sleepHours > 0 || sliderPoint.moodAvg > 0 || sliderPoint.dayScore > 0) &&
+          React.createElement('div', { className: 'sparkline-slider-tooltip-tags' },
+            sliderPoint.prot > 0 && React.createElement('span', { className: 'sparkline-slider-tooltip-tag' }, '🥩' + sliderPoint.prot),
+            sliderPoint.fat > 0 && React.createElement('span', { className: 'sparkline-slider-tooltip-tag' }, '🧈' + sliderPoint.fat),
+            sliderPoint.carbs > 0 && React.createElement('span', { className: 'sparkline-slider-tooltip-tag' }, '🍞' + sliderPoint.carbs),
+            sliderPoint.trainingMinutes > 0 && React.createElement('span', { className: 'sparkline-slider-tooltip-tag good' },
+              (() => {
+                const typeEmoji = { cardio: '🏃', strength: '🏋️', hobby: '⚽' };
+                const emoji = (sliderPoint.trainingTypes || []).map(t => typeEmoji[t] || '🏃')[0] || '🏃';
+                return emoji + sliderPoint.trainingMinutes + 'м';
+              })()
+            ),
+            // Сон (всегда если есть)
+            sliderPoint.sleepHours > 0 && 
+              React.createElement('span', { 
+                className: 'sparkline-slider-tooltip-tag' + (sliderPoint.sleepHours < 6 ? ' bad' : '')
+              }, '😴' + sliderPoint.sleepHours.toFixed(1) + 'ч'),
+            // Настроение (всегда если есть)
+            sliderPoint.moodAvg > 0 && 
+              React.createElement('span', { 
+                className: 'sparkline-slider-tooltip-tag' + (sliderPoint.moodAvg < 3 ? ' warn' : sliderPoint.moodAvg >= 4 ? ' good' : '')
+              }, '😊' + sliderPoint.moodAvg.toFixed(1)),
+            // Оценка дня (если есть)
+            sliderPoint.dayScore > 0 && 
+              React.createElement('span', { 
+                className: 'sparkline-slider-tooltip-tag' + (sliderPoint.dayScore >= 8 ? ' good' : sliderPoint.dayScore < 5 ? ' warn' : '')
+              }, '⭐' + sliderPoint.dayScore)
+          )
       ),
       // Mood-полоса или Heatmap под графиком
       (() => {
@@ -4416,7 +4713,31 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 fill: 'url(#moodGradient)'
               })
             ),
-            React.createElement('span', { className: 'sparkline-mood-label' }, '😊 Настроение')
+            React.createElement('span', { className: 'sparkline-mood-label' }, '😊 Настроение'),
+            // 😴💤😪 Индикаторы сна под настроением
+            React.createElement('div', { className: 'sparkline-sleep-row' },
+              points.map((p, i) => {
+                if (p.sleepHours <= 0) return null;
+                // Градация: <5ч красный, 5-6ч оранжевый, 6-7ч жёлтый, 7-8ч зелёный, 8+ч синий
+                let sleepClass = 'sparkline-sleep-indicator';
+                if (p.sleepHours < 5) sleepClass += ' sleep-critical';
+                else if (p.sleepHours < 6) sleepClass += ' sleep-bad';
+                else if (p.sleepHours < 7) sleepClass += ' sleep-low';
+                else if (p.sleepHours <= 8.5) sleepClass += ' sleep-good';
+                else sleepClass += ' sleep-over';
+                
+                const emoji = p.sleepHours < 6 ? '😴' : (p.sleepHours > 8.5 ? '😪' : '💤');
+                // Позиционирование как в графике
+                const offset = points.length > 1 ? (i / (points.length - 1)) * 100 : 50;
+                
+                return React.createElement('span', {
+                  key: 'sleep-' + i,
+                  className: sleepClass,
+                  style: { left: offset + '%' },
+                  title: p.sleepHours.toFixed(1) + 'ч сна'
+                }, emoji);
+              })
+            )
           );
         }
         
@@ -4460,26 +4781,57 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       if (data.length < 2) return null;
       
+      // Прогноз на +1 день (завтра) по тренду последних 3 точек
+      const forecastDays = 1;
+      let forecastPoint = null;
+      if (data.length >= 3) {
+        const lastDays = data.slice(-3);
+        const avgChange = (lastDays[2].weight - lastDays[0].weight) / 2;
+        const lastWeight = data[data.length - 1].weight;
+        const lastDate = data[data.length - 1].date;
+        if (lastDate) {
+          const forecastDate = new Date(lastDate);
+          forecastDate.setDate(forecastDate.getDate() + 1);
+          forecastPoint = {
+            weight: +(lastWeight + avgChange).toFixed(1),
+            date: forecastDate.toISOString().slice(0, 10),
+            dayNum: forecastDate.getDate(),
+            isForecast: true
+          };
+        }
+      }
+      
       const width = 360;
-      const height = 60;
-      const paddingTop = 6;
-      const paddingBottom = 14;
-      const paddingX = 16;
+      const height = 120; // оптимальный размер графика
+      const paddingTop = 16; // для меток веса над точками
+      const paddingBottom = 16;
+      const paddingX = 8; // минимальные отступы — точки почти у края
       const chartHeight = height - paddingTop - paddingBottom;
       
-      // Масштаб с минимумом 1 кг range
-      const weights = data.map(d => d.weight);
-      const minWeight = Math.min(...weights);
-      const maxWeight = Math.max(...weights);
+      // Масштаб с минимумом 1 кг range (включая прогноз)
+      const allWeights = [...data.map(d => d.weight), ...(forecastPoint ? [forecastPoint.weight] : [])];
+      const minWeight = Math.min(...allWeights);
+      const maxWeight = Math.max(...allWeights);
       const rawRange = maxWeight - minWeight;
       const range = Math.max(1, rawRange + 0.5);
       const adjustedMin = minWeight - 0.25;
       
+      const totalPoints = data.length + (forecastPoint ? 1 : 0);
+      
       const points = data.map((d, i) => {
-        const x = paddingX + (i / (data.length - 1)) * (width - paddingX * 2);
+        const x = paddingX + (i / (totalPoints - 1)) * (width - paddingX * 2);
         const y = paddingTop + chartHeight - ((d.weight - adjustedMin) / range) * chartHeight;
         return { x, y, weight: d.weight, isToday: d.isToday, dayNum: d.dayNum, date: d.date };
       });
+      
+      // Точка прогноза
+      let forecastPt = null;
+      if (forecastPoint) {
+        const idx = data.length;
+        const x = paddingX + (idx / (totalPoints - 1)) * (width - paddingX * 2);
+        const y = paddingTop + chartHeight - ((forecastPoint.weight - adjustedMin) / range) * chartHeight;
+        forecastPt = { x, y, ...forecastPoint };
+      }
       
       // Плавная кривая (как у калорий)
       const smoothPath = (pts) => {
@@ -4516,13 +4868,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Цвет градиента по тренду
       const trendColor = weightTrend <= -0.1 ? '#22c55e' : (weightTrend >= 0.1 ? '#ef4444' : '#8b5cf6');
       
+      // Цвет прогноза (по направлению тренда)
+      const forecastColor = forecastPt 
+        ? (forecastPt.weight < points[points.length - 1].weight ? '#22c55e' : 
+           forecastPt.weight > points[points.length - 1].weight ? '#ef4444' : '#8b5cf6')
+        : trendColor;
+      
       // Область под графиком (с плавными границами)
       const areaPath = pathD + ` L${points[points.length-1].x},${paddingTop + chartHeight} L${points[0].x},${paddingTop + chartHeight} Z`;
+      
+      // Прогнозная линия (от последней точки к прогнозу)
+      const forecastLineD = forecastPt 
+        ? `M${points[points.length - 1].x},${points[points.length - 1].y} L${forecastPt.x},${forecastPt.y}`
+        : '';
       
       return React.createElement('svg', { 
         className: 'weight-sparkline-svg',
         viewBox: '0 0 ' + width + ' ' + height,
-        preserveAspectRatio: 'xMidYMid meet'
+        preserveAspectRatio: 'none', // растягиваем по всей ширине
+        style: { height: height + 'px' } // явная высота
       },
         // Градиент заливка по тренду
         React.createElement('defs', null,
@@ -4543,16 +4907,56 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           className: 'weight-sparkline-line weight-sparkline-line-animated',
           style: { stroke: trendColor }
         }),
+        // Прогнозная линия (пунктирная)
+        forecastPt && React.createElement('path', {
+          d: forecastLineD,
+          className: 'weight-sparkline-forecast-line',
+          style: { stroke: forecastColor, strokeDasharray: '4 3', opacity: 0.6 }
+        }),
         // Метки дней внизу
-        points.map((p, i) => 
-          React.createElement('text', {
+        points.map((p, i) => {
+          const isFirst = i === 0;
+          const isLast = i === points.length - 1 && !forecastPt;
+          const anchor = isFirst ? 'start' : (isLast ? 'end' : 'middle');
+          return React.createElement('text', {
             key: 'wday-' + i,
             x: p.x,
             y: height - 2,
             className: 'weight-sparkline-day-label' + (p.isToday ? ' weight-sparkline-day-today' : ''),
-            textAnchor: 'middle'
-          }, p.dayNum)
-        ),
+            textAnchor: anchor
+          }, p.dayNum);
+        }),
+        // Метки веса над точками
+        points.map((p, i) => {
+          const isFirst = i === 0;
+          const isLast = i === points.length - 1 && !forecastPt;
+          const anchor = isFirst ? 'start' : (isLast ? 'end' : 'middle');
+          return React.createElement('text', {
+            key: 'wlabel-' + i,
+            x: p.x,
+            y: p.y - 8,
+            className: 'weight-sparkline-weight-label' + (p.isToday ? ' weight-sparkline-day-today' : ''),
+            textAnchor: anchor
+          }, p.weight.toFixed(1));
+        }),
+        // Метка веса прогноза (бледная)
+        forecastPt && React.createElement('text', {
+          key: 'wlabel-forecast',
+          x: forecastPt.x,
+          y: forecastPt.y - 8,
+          className: 'weight-sparkline-weight-label weight-sparkline-day-forecast',
+          textAnchor: 'end',
+          style: { opacity: 0.5 }
+        }, forecastPt.weight.toFixed(1)),
+        // Метка прогнозного дня (бледная)
+        forecastPt && React.createElement('text', {
+          key: 'wday-forecast',
+          x: forecastPt.x,
+          y: height - 2,
+          className: 'weight-sparkline-day-label weight-sparkline-day-forecast',
+          textAnchor: 'end',
+          style: { opacity: 0.5 }
+        }, forecastPt.dayNum),
         // Точки с цветом по локальному тренду (анимация с задержкой)
         points.map((p, i) => {
           // Локальный тренд: сравниваем с предыдущей точкой
@@ -4586,7 +4990,41 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           },
             React.createElement('title', null, p.dayNum + ': ' + p.weight + ' кг' + (localTrend !== 0 ? ' (' + (localTrend > 0 ? '+' : '') + localTrend.toFixed(1) + ')' : ''))
           );
-        })
+        }),
+        // Точка прогноза (полупрозрачная, пунктирная обводка)
+        forecastPt && React.createElement('circle', {
+          key: 'wdot-forecast',
+          cx: forecastPt.x,
+          cy: forecastPt.y,
+          r: 3.5,
+          className: 'weight-sparkline-dot weight-sparkline-dot-forecast',
+          style: { 
+            fill: forecastColor, 
+            opacity: 0.6,
+            strokeDasharray: '2 2',
+            stroke: forecastColor,
+            strokeWidth: 1.5,
+            cursor: 'pointer'
+          },
+          onClick: (e) => {
+            e.stopPropagation();
+            haptic('light');
+            const lastWeight = points[points.length - 1]?.weight || forecastPt.weight;
+            const forecastChange = forecastPt.weight - lastWeight;
+            setSparklinePopup({ 
+              type: 'weight-forecast', 
+              point: { 
+                ...forecastPt, 
+                forecastChange,
+                lastWeight
+              },
+              x: e.clientX, 
+              y: e.clientY 
+            });
+          }
+        },
+          React.createElement('title', null, forecastPt.dayNum + ' (прогноз): ~' + forecastPt.weight + ' кг')
+        )
       );
     };
     
@@ -4658,7 +5096,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           renderSparkline(sparklineData, optimum)
         )
       ),
-      // Popup с деталями при клике на точку
+      // Popup с деталями при клике на точку — компактный дизайн
       sparklinePopup && sparklinePopup.type === 'kcal' && React.createElement('div', {
         className: 'sparkline-popup',
         style: { 
@@ -4668,30 +5106,58 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         },
         onClick: (e) => e.stopPropagation()
       },
+        // Header: дата + badge с процентом
         React.createElement('div', { className: 'sparkline-popup-header' },
-          sparklinePopup.point.isToday ? 'Сегодня' : sparklinePopup.point.dayNum + ' число'
-        ),
-        React.createElement('div', { className: 'sparkline-popup-row' },
-          React.createElement('span', { className: 'sparkline-popup-label' }, 'Съедено'),
-          React.createElement('span', { className: 'sparkline-popup-value' }, sparklinePopup.point.kcal + ' ккал')
-        ),
-        React.createElement('div', { className: 'sparkline-popup-row' },
-          React.createElement('span', { className: 'sparkline-popup-label' }, 'Цель'),
-          React.createElement('span', { className: 'sparkline-popup-value' }, sparklinePopup.point.target + ' ккал')
-        ),
-        React.createElement('div', { className: 'sparkline-popup-row' },
-          React.createElement('span', { className: 'sparkline-popup-label' }, 'Разница'),
+          React.createElement('span', null,
+            (() => {
+              if (sparklinePopup.point.isToday) return 'Сегодня';
+              const weekDays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+              const wd = weekDays[sparklinePopup.point.dayOfWeek] || '';
+              return sparklinePopup.point.dayNum + ' ' + wd;
+            })()
+          ),
           React.createElement('span', { 
-            className: 'sparkline-popup-value ' + 
+            className: 'popup-pct ' + 
               (sparklinePopup.point.kcal <= sparklinePopup.point.target ? 'good' : 
                sparklinePopup.point.kcal <= sparklinePopup.point.target * 1.15 ? 'warn' : 'bad')
-          }, (sparklinePopup.point.kcal - sparklinePopup.point.target > 0 ? '+' : '') + 
-             (sparklinePopup.point.kcal - sparklinePopup.point.target) + ' ккал')
+          }, Math.round((sparklinePopup.point.kcal / sparklinePopup.point.target) * 100) + '%')
         ),
-        sparklinePopup.point.hasTraining && React.createElement('div', { className: 'sparkline-popup-row' },
-          React.createElement('span', { className: 'sparkline-popup-label' }, '🏃 Тренировка'),
-          React.createElement('span', { className: 'sparkline-popup-value good' }, 'Да')
+        // Главная строка — калории
+        React.createElement('div', { className: 'sparkline-popup-main' },
+          sparklinePopup.point.kcal + ' ',
+          React.createElement('small', null, '/ ' + sparklinePopup.point.target + ' ккал')
         ),
+        // Теги: БЖУ + сон/тренировка/настроение/оценка
+        React.createElement('div', { className: 'sparkline-popup-tags' },
+          // БЖУ как компактные теги
+          sparklinePopup.point.prot > 0 && React.createElement('span', { className: 'sparkline-popup-tag' }, '🥩' + sparklinePopup.point.prot),
+          sparklinePopup.point.fat > 0 && React.createElement('span', { className: 'sparkline-popup-tag' }, '🧈' + sparklinePopup.point.fat),
+          sparklinePopup.point.carbs > 0 && React.createElement('span', { className: 'sparkline-popup-tag' }, '🍞' + sparklinePopup.point.carbs),
+          // Тренировка
+          sparklinePopup.point.trainingMinutes > 0 && React.createElement('span', { className: 'sparkline-popup-tag good' },
+            (() => {
+              const typeEmoji = { cardio: '🏃', strength: '🏋️', hobby: '⚽' };
+              const emoji = (sparklinePopup.point.trainingTypes || []).map(t => typeEmoji[t] || '🏃')[0] || '🏃';
+              return emoji + sparklinePopup.point.trainingMinutes + 'м';
+            })()
+          ),
+          // Сон (всегда если есть данные)
+          sparklinePopup.point.sleepHours > 0 && 
+            React.createElement('span', { 
+              className: 'sparkline-popup-tag' + (sparklinePopup.point.sleepHours < 6 ? ' bad' : '')
+            }, '😴' + sparklinePopup.point.sleepHours.toFixed(1) + 'ч'),
+          // Настроение (всегда если есть)
+          sparklinePopup.point.moodAvg > 0 && 
+            React.createElement('span', { 
+              className: 'sparkline-popup-tag' + (sparklinePopup.point.moodAvg < 3 ? ' warn' : sparklinePopup.point.moodAvg >= 4 ? ' good' : '')
+            }, '😊' + sparklinePopup.point.moodAvg.toFixed(1)),
+          // Оценка дня (если есть)
+          sparklinePopup.point.dayScore > 0 && 
+            React.createElement('span', { 
+              className: 'sparkline-popup-tag' + (sparklinePopup.point.dayScore >= 8 ? ' good' : sparklinePopup.point.dayScore < 5 ? ' warn' : '')
+            }, '⭐' + sparklinePopup.point.dayScore)
+        ),
+        // Кнопка перехода
         !sparklinePopup.point.isToday && React.createElement('button', {
           className: 'sparkline-popup-btn',
           onClick: () => {
@@ -4699,7 +5165,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             setDate(sparklinePopup.point.date);
             haptic('light');
           }
-        }, '→ Перейти к дню')
+        }, '→ К дню')
       ),
       // Popup для идеального дня 🔥
       sparklinePopup && sparklinePopup.type === 'perfect' && React.createElement('div', {
@@ -4734,6 +5200,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         className: 'correlation-block correlation-clickable',
         onClick: () => {
           haptic('light');
+          setToastVisible(true);
           setAdviceTrigger('manual');
         }
       },
@@ -4745,11 +5212,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Блок корреляции калорий и веса (диагноз + совет)
       (kcalTrend && weightTrend) && React.createElement('div', { 
         className: 'correlation-block correlation-clickable' + 
+          (correlationPulse ? ' pulse' : '') +
           (kcalTrend.direction === 'deficit' && weightTrend.direction === 'down' ? ' positive' :
            kcalTrend.direction === 'excess' && weightTrend.direction === 'up' ? ' warning' :
            kcalTrend.direction === 'deficit' && weightTrend.direction === 'up' ? ' mixed' : ''),
         onClick: () => {
           haptic('light');
+          setToastVisible(true);
           setAdviceTrigger('manual');
         }
       },
@@ -4780,6 +5249,50 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             ? 'Калории в норме, вес ' + (weightTrend.direction === 'down' ? 'снижается' : 'растёт') :
           'Анализируем данные...'
         )
+      ),
+      // === Mini-heatmap недели ===
+      weekHeatmapData && React.createElement('div', {
+        className: 'week-heatmap'
+      },
+        React.createElement('div', { className: 'week-heatmap-header' },
+          React.createElement('span', { className: 'week-heatmap-title' }, '📅 Неделя'),
+          weekHeatmapData.streak >= 2 && React.createElement('span', { 
+            className: 'week-heatmap-streak' 
+          }, '🔥 ' + weekHeatmapData.streak),
+          React.createElement('span', { className: 'week-heatmap-stat' },
+            weekHeatmapData.inNorm + '/' + weekHeatmapData.withData + ' в норме'
+          )
+        ),
+        React.createElement('div', { className: 'week-heatmap-grid' },
+          weekHeatmapData.days.map((d, i) => 
+            React.createElement('div', {
+              key: i,
+              className: 'week-heatmap-day ' + d.status + 
+                (d.isToday ? ' today' : '') +
+                (d.isWeekend ? ' weekend' : ''),
+              title: d.isFuture ? d.name : (d.kcal > 0 ? d.kcal + ' ккал (' + Math.round(d.ratio * 100) + '%)' : 'Нет данных'),
+              style: { 
+                '--stagger-delay': (i * 50) + 'ms',
+                '--day-bg-color': d.bgColor || 'transparent'
+              },
+              onClick: () => {
+                if (!d.isFuture && d.status !== 'empty') {
+                  setDate(d.date);
+                  haptic('light');
+                }
+              }
+            },
+              React.createElement('span', { className: 'week-heatmap-name' }, d.name),
+              React.createElement('div', { 
+                className: 'week-heatmap-cell',
+                style: d.bgColor ? { background: d.bgColor } : undefined
+              })
+            )
+          )
+        ),
+        weekHeatmapData.weekendPattern && React.createElement('div', { 
+          className: 'week-heatmap-pattern' 
+        }, weekHeatmapData.weekendPattern)
       ),
       // Спарклайн веса — график веса с трендом
       weightSparklineData.length >= 2 && React.createElement('div', { 
@@ -4842,6 +5355,36 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             haptic('light');
           }
         }, '→ Перейти к дню')
+      ),
+      // Popup для прогноза веса (завтра)
+      sparklinePopup && sparklinePopup.type === 'weight-forecast' && React.createElement('div', {
+        className: 'sparkline-popup sparkline-popup-forecast',
+        style: { 
+          position: 'fixed',
+          left: Math.min(sparklinePopup.x - 120, window.innerWidth - 200) + 'px', 
+          top: (sparklinePopup.y - 100) + 'px'
+        },
+        onClick: (e) => e.stopPropagation()
+      },
+        React.createElement('div', { className: 'sparkline-popup-header' },
+          '🔮 Прогноз на ' + sparklinePopup.point.dayNum + ' число'
+        ),
+        React.createElement('div', { className: 'sparkline-popup-row' },
+          React.createElement('span', { className: 'sparkline-popup-label' }, 'Ожидаемый вес'),
+          React.createElement('span', { className: 'sparkline-popup-value' }, '~' + sparklinePopup.point.weight + ' кг')
+        ),
+        React.createElement('div', { className: 'sparkline-popup-row' },
+          React.createElement('span', { className: 'sparkline-popup-label' }, 'Изменение'),
+          React.createElement('span', { 
+            className: 'sparkline-popup-value ' + 
+              (sparklinePopup.point.forecastChange < -0.05 ? 'good' : 
+               sparklinePopup.point.forecastChange > 0.05 ? 'bad' : '')
+          }, (sparklinePopup.point.forecastChange > 0 ? '+' : '') + 
+             sparklinePopup.point.forecastChange.toFixed(1) + ' кг')
+        ),
+        React.createElement('div', { className: 'sparkline-popup-hint' },
+          'На основе тренда последних дней'
+        )
       ),
       // Статус-бар прогресса к цели
       React.createElement('div', { className: 'goal-progress-bar' },

@@ -848,8 +848,11 @@ td:first-child input {
   overflow: visible;
 }
 
-/* DatePicker в hdr-client выравнивается вправо */
-.hdr-client .date-picker {
+/* Группа кнопок даты в header */
+.hdr-date-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
   margin-left: auto;
 }
 
@@ -2390,6 +2393,58 @@ td:first-child input {
 .cal-nav:hover {
   background: #cbd5e1;
 }
+
+/* Кнопка быстрого перехода на сегодня (в header рядом с DatePicker) */
+.today-quick-btn {
+  border: 1px solid #3b82f6;
+  background: #3b82f6;
+  color: white;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+.today-quick-btn:hover {
+  background: #2563eb;
+  box-shadow: 0 3px 8px rgba(59, 130, 246, 0.4);
+}
+.today-quick-btn:active {
+  transform: scale(0.95);
+}
+.today-quick-btn.active {
+  background: #10b981;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.cal-today-btn {
+  border: none;
+  background: #3b82f6;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  transition: background 0.15s, transform 0.1s;
+}
+.cal-today-btn:hover {
+  background: #2563eb;
+}
+.cal-today-btn:active {
+  transform: scale(0.95);
+}
 .cal-title {
   text-transform: capitalize;
   font-size: 14px;
@@ -3575,7 +3630,7 @@ td:first-child input {
   background: linear-gradient(135deg, #ecfdf5 0%, #dcfce7 100%);
   border: 1px solid #bbf7d0;
   border-radius: 12px;
-  padding: 12px 16px 14px; /* увеличил нижний padding для min/max меток */
+  padding: 12px 12px 14px;
   padding-top: 24px; /* место для аннотаций сверху */
   margin-top: 4px;
   overflow: visible; /* чтобы аннотации не обрезались */
@@ -3627,8 +3682,9 @@ td:first-child input {
 /* === SPARKLINE — мини-график калорий === */
 .sparkline-container {
   display: block;
+  position: relative; /* для позиционирования тултипа */
   padding: 0;
-  overflow: hidden;
+  overflow: visible; /* чтобы тултип не обрезался */
 }
 
 .sparkline-label {
@@ -3641,8 +3697,8 @@ td:first-child input {
 .sparkline-svg {
   display: block;
   width: 100%;
-  height: 60px;
-  min-height: 60px;
+  height: auto; /* адаптируется к inline style */
+  min-height: 100px;
   overflow: visible; /* чтобы аннотации не обрезались */
 }
 
@@ -3656,10 +3712,10 @@ td:first-child input {
   stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
-  /* Анимация рисования линии */
-  stroke-dasharray: 2000;
-  stroke-dashoffset: 2000;
-  animation: drawSparkline 4s ease-in-out forwards;
+  /* Анимация рисования линии — линейная для синхронизации с точками */
+  stroke-dasharray: 500;
+  stroke-dashoffset: 500;
+  animation: drawSparkline 3s linear forwards;
   transition: stroke-width 0.2s ease;
 }
 
@@ -3693,7 +3749,7 @@ td:first-child input {
 /* Анимация заливки — появляется вместе с линией */
 .sparkline-area-animated {
   opacity: 0;
-  animation: fadeInArea 4s ease-in-out forwards;
+  animation: fadeInArea 5s ease-in-out forwards;
 }
 
 @keyframes fadeInArea {
@@ -3702,11 +3758,18 @@ td:first-child input {
   100% { opacity: 1; }
 }
 
-/* Анимация точек — появляются последовательно */
+/* Анимация точек — появляются мгновенно когда линия доходит */
 .sparkline-dot {
-  transition: r 0.15s ease, fill 0.15s ease;
+  transition: r 0.1s ease, fill 0.1s ease;
   opacity: 0;
-  animation: fadeInDot 0.3s ease-out forwards;
+  transform: scale(0);
+  animation: dotAppear 0.08s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes dotAppear {
+  0% { opacity: 0; transform: scale(0); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 /* Skeleton loader для графиков */
@@ -3747,7 +3810,9 @@ td:first-child input {
 }
 
 @keyframes fadeInDot {
-  to { opacity: 1; }
+  0% { opacity: 0; transform: scale(0); }
+  70% { opacity: 1; transform: scale(1.3); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 .sparkline-goal {
@@ -3775,6 +3840,8 @@ td:first-child input {
 .sparkline-dot-today {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
   animation: pulseDot 2s ease-in-out infinite, fadeInDot 0.3s ease-out forwards;
+  transform-box: fill-box;
+  transform-origin: center center;
 }
 
 @keyframes pulseDot {
@@ -3783,8 +3850,8 @@ td:first-child input {
     filter: drop-shadow(0 0 0 rgba(34, 197, 94, 0));
   }
   50% { 
-    transform: scale(1.3);
-    filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.6));
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.5));
   }
 }
 
@@ -3799,40 +3866,97 @@ td:first-child input {
   font-weight: 600;
 }
 
-/* === SPARKLINE POPUP — детали при тапе на точку === */
+/* === SPARKLINE POPUP — компактные детали при тапе на точку === */
 .sparkline-popup {
   position: absolute;
   background: white;
-  border-radius: 12px;
-  padding: 12px 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   border: 1px solid #e2e8f0;
   z-index: 100;
-  min-width: 160px;
+  min-width: 140px;
+  max-width: 180px;
   transform: translateX(-50%);
-  animation: popupFadeIn 0.2s ease-out;
+  animation: popupFadeIn 0.15s ease-out;
 }
 
 @keyframes popupFadeIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(5px); }
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .sparkline-popup-header {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #1e293b;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
+.sparkline-popup-header .popup-pct {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.sparkline-popup-header .popup-pct.good { background: #dcfce7; color: #16a34a; }
+.sparkline-popup-header .popup-pct.warn { background: #fef3c7; color: #d97706; }
+.sparkline-popup-header .popup-pct.bad { background: #fee2e2; color: #dc2626; }
+
+/* Главная строка — калории */
+.sparkline-popup-main {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 6px;
+  letter-spacing: -0.3px;
+}
+.sparkline-popup-main small {
+  font-size: 11px;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+/* Разделитель */
+.sparkline-popup-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 6px 0;
+}
+
+/* Секция тегов — БЖУ, сон, тренировка */
+.sparkline-popup-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.sparkline-popup-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+}
+.sparkline-popup-tag.good { background: #dcfce7; color: #16a34a; }
+.sparkline-popup-tag.warn { background: #fef3c7; color: #d97706; }
+.sparkline-popup-tag.bad { background: #fee2e2; color: #dc2626; }
+
+/* Строка данных (устарело, но сохраним для perfect popup) */
 .sparkline-popup-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
-  padding: 3px 0;
+  font-size: 11px;
+  padding: 2px 0;
 }
 
 .sparkline-popup-label {
@@ -3849,13 +3973,13 @@ td:first-child input {
 .sparkline-popup-value.bad { color: #ef4444; }
 
 .sparkline-popup-btn {
-  margin-top: 10px;
+  margin-top: 6px;
   width: 100%;
-  padding: 8px;
+  padding: 6px;
   background: #f1f5f9;
   border: none;
-  border-radius: 8px;
-  font-size: 12px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 500;
   color: #475569;
   cursor: pointer;
@@ -3870,24 +3994,52 @@ td:first-child input {
 .sparkline-popup-perfect {
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   border-color: #f59e0b;
+  text-align: center;
 }
 
 .sparkline-popup-header.perfect {
   color: #b45309;
-  font-size: 14px;
+  font-size: 13px;
+  justify-content: center;
 }
 
 .sparkline-popup-motivation {
-  font-size: 12px;
+  font-size: 11px;
   color: #78350f;
   margin: 4px 0;
 }
 
 .sparkline-popup-subtitle {
-  font-size: 11px;
+  font-size: 10px;
   color: #92400e;
   opacity: 0.8;
 }
+
+.sparkline-popup-hint {
+  font-size: 9px;
+  color: var(--text-tertiary, #71717a);
+  margin-top: 4px;
+  text-align: center;
+  font-style: italic;
+}
+
+.sparkline-popup-forecast {
+  border: 1px dashed var(--border-color, #3f3f46);
+}
+
+/* Dark mode */
+[data-theme="dark"] .sparkline-popup {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+[data-theme="dark"] .sparkline-popup-header { color: #f1f5f9; }
+[data-theme="dark"] .sparkline-popup-main { color: #f1f5f9; }
+[data-theme="dark"] .sparkline-popup-main small { color: #64748b; }
+[data-theme="dark"] .sparkline-popup-divider { background: #334155; }
+[data-theme="dark"] .sparkline-popup-tag { background: #334155; color: #94a3b8; }
+[data-theme="dark"] .sparkline-popup-btn { background: #334155; color: #94a3b8; }
+[data-theme="dark"] .sparkline-popup-btn:hover { background: #475569; }
 
 /* === HEATMAP — мини полоска под графиком === */
 .sparkline-heatmap {
@@ -3919,13 +4071,16 @@ td:first-child input {
 /* === MOOD-ПОЛОСА — градиентная полоса настроения === */
 .sparkline-mood-container {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding: 4px 16px;
+  padding: 12px 12px 4px;
+  margin-top: 4px;
 }
 
 .sparkline-mood-bar {
   flex: 1;
+  min-width: 0; /* для корректного flex */
   height: 6px;
   border-radius: 3px;
   overflow: visible;
@@ -3935,6 +4090,23 @@ td:first-child input {
   font-size: 10px;
   color: #64748b;
   white-space: nowrap;
+}
+
+/* Ряд индикаторов сна под mood-bar */
+.sparkline-sleep-row {
+  position: relative;
+  width: 100%;
+  height: 14px;
+  margin-top: 2px;
+}
+
+.sparkline-sleep-row .sparkline-sleep-indicator {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 9px;
+  opacity: 0;
+  animation: fadeInSleep 0.3s ease forwards;
+  animation-delay: 4.5s;
 }
 
 /* === Slider Elements === */
@@ -3956,26 +4128,27 @@ td:first-child input {
 
 .sparkline-slider-tooltip {
   position: absolute;
-  bottom: calc(100% + 8px);
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.85);
+  bottom: calc(100% + 6px);
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.5);
   pointer-events: none;
   z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  animation: sparkline-tooltip-appear 0.15s ease-out;
+  gap: 4px;
+  animation: sparkline-tooltip-appear 0.12s ease-out;
+  min-width: 80px;
 }
 
 @keyframes sparkline-tooltip-appear {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(4px);
+    transform: translateX(-50%) translateY(3px);
   }
   to {
     opacity: 1;
@@ -3983,23 +4156,26 @@ td:first-child input {
   }
 }
 
+/* Header row: дата + badge процент */
+.sparkline-slider-tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
 .sparkline-slider-tooltip-date {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: #1e293b;
 }
 
-.sparkline-slider-tooltip-kcal {
-  font-size: 10px;
-  color: #64748b;
-}
-
 .sparkline-slider-tooltip-ratio {
-  font-size: 12px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-top: 2px;
+  padding: 1px 5px;
+  border-radius: 3px;
 }
 
 .sparkline-slider-tooltip-ratio.ratio-ok {
@@ -4017,24 +4193,107 @@ td:first-child input {
   color: #dc2626;
 }
 
+/* Main row: калории */
+.sparkline-slider-tooltip-kcal {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1e293b;
+  letter-spacing: -0.3px;
+}
+.sparkline-slider-tooltip-kcal small {
+  font-size: 9px;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+/* Tags row: компактные теги */
+.sparkline-slider-tooltip-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+}
+
+.sparkline-slider-tooltip-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #f1f5f9;
+  color: #475569;
+}
+.sparkline-slider-tooltip-tag.good { background: #dcfce7; color: #16a34a; }
+.sparkline-slider-tooltip-tag.warn { background: #fef3c7; color: #d97706; }
+.sparkline-slider-tooltip-tag.bad { background: #fee2e2; color: #dc2626; }
+
+/* Weekly Rhythm — вертикальные сепараторы недель */
+.sparkline-week-separator {
+  stroke: #e2e8f0;
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0.6;
+}
+
+/* Burn Glow — свечение тренировок */
+.sparkline-burn-glow {
+  fill: #f97316;
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+/* 😴 Sleep Warning */
+.sparkline-sleep-warning {
+  font-size: 8px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
 /* === SPARKLINE ANNOTATIONS — иконки событий на графике === */
 .sparkline-annotation {
   font-size: 11px;
   text-anchor: middle;
   pointer-events: none;
   opacity: 0;
-  animation: fadeInAnnotation 0.3s ease-out forwards;
-  animation-delay: 3.5s; /* после рисования линии */
+  animation: fadeInAnnotation 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-delay: 4.5s; /* после рисования линии 5s */
   dominant-baseline: auto; /* рендерим корректно */
 }
 
 @keyframes fadeInAnnotation {
-  from { opacity: 0; transform: translateY(3px); }
-  to { opacity: 1; transform: translateY(0); }
+  0% { opacity: 0; transform: translateY(4px) scale(0.8); }
+  70% { opacity: 1; transform: translateY(-1px) scale(1.05); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .sparkline-annotation-training {
+  font-size: 10px;
   fill: #8b5cf6; /* фиолетовый для тренировок */
+  opacity: 0;
+  animation: fadeInSimple 0.15s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes fadeInSimple {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Пунктирная линия от эмодзи тренировки к точке — синхронизирована с точкой */
+.sparkline-training-line {
+  stroke: #a78bfa; /* светло-фиолетовый */
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0;
+  animation: fadeInLine 0.3s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes fadeInLine {
+  0% { opacity: 0; }
+  100% { opacity: 0.5; }
 }
 
 .sparkline-annotation-holiday {
@@ -4075,7 +4334,16 @@ td:first-child input {
   fill: #ef4444 !important;
 }
 
-/* Min/Max метки */
+/* Дельта (отклонение от нормы) под каждым днём — синхронизирована с точкой */
+.sparkline-delta-label {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0;
+  animation: fadeInSimple 0.1s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+/* Min/Max метки (deprecated, используется delta) */
 .sparkline-minmax-label {
   font-size: 9px;
   font-weight: 600;
@@ -4093,30 +4361,60 @@ td:first-child input {
   fill: #22c55e;
 }
 
-/* 🔥 для идеальных дней */
-.sparkline-fire {
-  font-size: 12px;
-  dominant-baseline: middle;
+/* Золотые пульсирующие точки для идеальных дней */
+.sparkline-dot-gold {
+  fill: #fbbf24; /* золотой */
+  stroke: #f59e0b;
+  stroke-width: 1.5;
   opacity: 0;
-  animation: popIn 0.4s ease forwards;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+  transform: scale(0);
+  animation: dotAppear 0.15s ease-out forwards, pulseGold 2s ease-in-out infinite;
+  animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 0.2s);
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.6));
+  transform-box: fill-box;
+  transform-origin: center center;
 }
 
-.sparkline-fire-today {
-  font-size: 14px;
-  animation: popIn 0.4s ease forwards, pulseFireGlow 2s ease-in-out infinite;
-  animation-delay: var(--delay, 3s), 4s;
+.sparkline-dot-gold-today {
+  fill: #fbbf24;
+  stroke: #f59e0b;
+  stroke-width: 2;
+  opacity: 0;
+  transform: scale(0);
+  animation: dotAppear 0.15s ease-out forwards, pulseGoldToday 1.5s ease-in-out infinite;
+  animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 0.2s);
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.8));
+  transform-box: fill-box;
+  transform-origin: center center;
 }
 
 @keyframes popIn {
-  0% { opacity: 0; transform: scale(0.3); }
-  70% { opacity: 1; transform: scale(1.2); }
+  0% { opacity: 0; transform: scale(0); }
+  60% { opacity: 1; transform: scale(1.4); }
+  80% { transform: scale(0.9); }
   100% { opacity: 1; transform: scale(1); }
 }
 
-@keyframes pulseFireGlow {
-  0%, 100% { filter: drop-shadow(0 0 3px rgba(234,88,12,0.4)); }
-  50% { filter: drop-shadow(0 0 8px rgba(234,88,12,0.8)); }
+@keyframes pulseGold {
+  0%, 100% { 
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.5));
+  }
+  50% { 
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.8));
+  }
+}
+
+@keyframes pulseGoldToday {
+  0%, 100% { 
+    transform: scale(1);
+    filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.6));
+  }
+  50% { 
+    transform: scale(1.25);
+    filter: drop-shadow(0 0 12px rgba(251, 191, 36, 1));
+  }
 }
 
 /* === CORRELATION BLOCK — связь калорий и веса === */
@@ -4185,6 +4483,149 @@ td:first-child input {
   animation: correlationPulse 0.6s ease-out;
 }
 
+/* === Week Heatmap === */
+.week-heatmap {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-top: 8px;
+}
+
+.week-heatmap-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.week-heatmap-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.week-heatmap-streak {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f59e0b;
+  background: #fef3c7;
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+.week-heatmap-stat {
+  font-size: 12px;
+  color: #64748b;
+  margin-left: auto;
+}
+
+.week-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.week-heatmap-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  animation: fadeInUp 0.3s ease-out backwards;
+  animation-delay: var(--stagger-delay, 0ms);
+}
+
+.week-heatmap-day:hover {
+  transform: translateY(-2px);
+}
+
+.week-heatmap-day:active {
+  transform: scale(0.92);
+}
+
+.week-heatmap-name {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.week-heatmap-day.weekend .week-heatmap-name {
+  color: #94a3b8;
+}
+
+.week-heatmap-day.today .week-heatmap-name {
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+.week-heatmap-cell {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  background: #e2e8f0;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+/* Hover эффект на ячейке */
+.week-heatmap-day:not(.empty) .week-heatmap-cell:hover {
+  transform: scale(1.05);
+}
+
+/* Статусы — fallback если нет inline градиента */
+.week-heatmap-day.low .week-heatmap-cell:not([style*="background"]) {
+  background: #eab308; /* жёлтый для low */
+}
+
+.week-heatmap-day.green .week-heatmap-cell:not([style*="background"]) {
+  background: #22c55e;
+}
+
+.week-heatmap-day.perfect .week-heatmap-cell:not([style*="background"]) {
+  background: #10b981;
+}
+
+.week-heatmap-day.yellow .week-heatmap-cell:not([style*="background"]) {
+  background: #eab308;
+}
+
+.week-heatmap-day.red .week-heatmap-cell:not([style*="background"]) {
+  background: #ef4444;
+}
+
+.week-heatmap-day.empty .week-heatmap-cell {
+  background: #e2e8f0;
+  opacity: 0.5;
+}
+
+/* Today ring с анимацией */
+.week-heatmap-day.today .week-heatmap-cell {
+  box-shadow: 0 0 0 2px #3b82f6;
+  animation: todayPulse 2s ease-in-out infinite;
+}
+
+@keyframes todayPulse {
+  0%, 100% { box-shadow: 0 0 0 2px #3b82f6; }
+  50% { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5); }
+}
+
+/* Паттерн-инсайт */
+.week-heatmap-pattern {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+}
+
+/* Hover на всём блоке */
+.week-heatmap:hover {
+  border-color: #cbd5e1;
+}
+
 /* === WEIGHT SPARKLINE — график веса с трендом === */
 .weight-sparkline-container {
   grid-column: 1 / -1;
@@ -4192,7 +4633,7 @@ td:first-child input {
   background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
   border: 1px solid #e9d5ff;
   border-radius: 12px;
-  padding: 12px 16px 8px;
+  padding: 12px 12px 8px;
   margin-top: 4px;
   overflow: hidden;
   transition: background 0.4s ease, border-color 0.4s ease;
@@ -4278,7 +4719,8 @@ td:first-child input {
 .weight-sparkline-svg {
   display: block;
   width: 100%;
-  height: 60px;
+  height: auto; /* адаптируется к inline style */
+  min-height: 100px;
 }
 
 .weight-sparkline-area {
@@ -4308,9 +4750,9 @@ td:first-child input {
 
 /* Анимация рисования линии веса */
 .weight-sparkline-line-animated {
-  stroke-dasharray: 2000;
-  stroke-dashoffset: 2000;
-  animation: drawSparkline 4s ease-in-out forwards;
+  stroke-dasharray: 500;
+  stroke-dashoffset: 500;
+  animation: drawSparkline 3s linear forwards;
 }
 
 /* Цвет линии по тренду (fallback) */
@@ -4340,6 +4782,8 @@ td:first-child input {
   stroke: white;
   stroke-width: 1.5;
   animation: pulseDotWeight 2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center center;
 }
 
 @keyframes pulseDotWeight {
@@ -4348,12 +4792,18 @@ td:first-child input {
     filter: drop-shadow(0 0 0 rgba(139, 92, 246, 0));
   }
   50% { 
-    transform: scale(1.3);
-    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6));
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.5));
   }
 }
 
 .weight-sparkline-day-label {
+  font-size: 8px;
+  fill: #94a3b8;
+  font-weight: 400;
+}
+
+.weight-sparkline-weight-label {
   font-size: 8px;
   fill: #94a3b8;
   font-weight: 400;
@@ -6304,6 +6754,35 @@ td:first-child input {
   color: #fca5a5;
 }
 
+/* Dark theme for new sparkline elements */
+/* Dark mode slider tooltip tags */
+[data-theme="dark"] .sparkline-slider-tooltip-kcal {
+  color: #f1f5f9;
+}
+[data-theme="dark"] .sparkline-slider-tooltip-kcal small {
+  color: #64748b;
+}
+[data-theme="dark"] .sparkline-slider-tooltip-tag {
+  background: #334155;
+  color: #94a3b8;
+}
+[data-theme="dark"] .sparkline-slider-tooltip-tag.good {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+[data-theme="dark"] .sparkline-slider-tooltip-tag.bad {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .sparkline-week-separator {
+  stroke: #334155;
+}
+
+[data-theme="dark"] .sparkline-burn-glow {
+  fill: #fb923c;
+}
+
 /* Dark theme for correlation block */
 [data-theme="dark"] .correlation-block {
   background: linear-gradient(135deg, #1a1f2e 0%, #151a24 100%);
@@ -6580,6 +7059,19 @@ td:first-child input {
 [data-theme="dark"] .hdr-bottom {
   background: var(--card);
   border-color: var(--border);
+}
+
+/* Today quick button in header */
+[data-theme="dark"] .today-quick-btn {
+  background: #60a5fa;
+  box-shadow: 0 2px 4px rgba(96, 165, 250, 0.3);
+}
+[data-theme="dark"] .today-quick-btn:hover {
+  background: #3b82f6;
+}
+[data-theme="dark"] .today-quick-btn.active {
+  background: #34d399;
+  box-shadow: 0 2px 4px rgba(52, 211, 153, 0.3);
 }
 
 /* Bottom nav tabs */

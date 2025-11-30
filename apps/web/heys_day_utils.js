@@ -598,26 +598,55 @@
       
       if (!dayData) return null;
       
-      // Считаем калории из meals
-      let totalKcal = 0;
+      // Считаем калории и макросы из meals
+      let totalKcal = 0, totalProt = 0, totalFat = 0, totalCarbs = 0;
       (dayData.meals || []).forEach(meal => {
         (meal.items || []).forEach(item => {
           const grams = +item.grams || 0;
           const product = productsMap.get(item.product_id);
           if (product && grams > 0) {
-            const kcal100 = +product.kcal100 || 0;
-            totalKcal += (kcal100 * grams / 100);
+            const mult = grams / 100;
+            totalKcal += (+product.kcal100 || 0) * mult;
+            totalProt += (+product.protein100 || 0) * mult;
+            totalFat += (+product.fat100 || 0) * mult;
+            totalCarbs += (+product.carbs100 || (+product.simple100 || 0) + (+product.complex100 || 0)) * mult;
           }
         });
       });
       
+      // Вычисляем sleepHours из sleepStart/sleepEnd
+      let sleepHours = 0;
+      if (dayData.sleepStart && dayData.sleepEnd) {
+        const [sh, sm] = dayData.sleepStart.split(':').map(Number);
+        const [eh, em] = dayData.sleepEnd.split(':').map(Number);
+        let startMin = sh * 60 + sm;
+        let endMin = eh * 60 + em;
+        if (endMin < startMin) endMin += 24 * 60; // через полночь
+        sleepHours = (endMin - startMin) / 60;
+      }
+      
+      // Считаем общие минуты тренировок
+      let trainingMinutes = 0;
+      (dayData.trainings || []).forEach(t => {
+        if (t && t.z && Array.isArray(t.z)) {
+          trainingMinutes += t.z.reduce((sum, m) => sum + (+m || 0), 0);
+        }
+      });
+      
       return {
         kcal: Math.round(totalKcal),
+        prot: Math.round(totalProt),
+        fat: Math.round(totalFat),
+        carbs: Math.round(totalCarbs),
         steps: +dayData.steps || 0,
         householdMin: +dayData.householdMin || 0,
         trainings: dayData.trainings || [],
+        trainingMinutes,
         weightMorning: +dayData.weightMorning || 0,
-        deficitPct: dayData.deficitPct // может быть undefined — тогда из профиля
+        deficitPct: dayData.deficitPct, // может быть undefined — тогда из профиля
+        sleepHours,
+        moodAvg: +dayData.moodAvg || 0,
+        dayScore: +dayData.dayScore || 0
       };
     } catch (e) {
       return null;
@@ -768,7 +797,20 @@
         // moodAvg для mood-полосы на графике
         const moodAvg = dayInfo.moodAvg ? +dayInfo.moodAvg : null;
         
-        daysData.set(dateStr, { kcal: dayInfo.kcal, target, ratio, hasTraining, trainingTypes, moodAvg });
+        // Дополнительные данные для sparkline
+        const sleepHours = dayInfo.sleepHours || 0;
+        const trainingMinutes = dayInfo.trainingMinutes || 0;
+        const prot = dayInfo.prot || 0;
+        const fat = dayInfo.fat || 0;
+        const carbs = dayInfo.carbs || 0;
+        const dayScore = dayInfo.dayScore || 0;
+        
+        daysData.set(dateStr, { 
+          kcal: dayInfo.kcal, target, ratio, 
+          hasTraining, trainingTypes, trainingMinutes,
+          moodAvg, sleepHours, dayScore,
+          prot, fat, carbs
+        });
       }
     } catch (e) {
       // Тихий fallback — activeDays для календаря не критичны
