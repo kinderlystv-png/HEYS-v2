@@ -4512,8 +4512,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const isSuccess = ratio >= 0.75 && ratio <= 1.1;
       const isExcess = ratio > 1.1;
       
-      console.log('🔔 ANIM CHECK: ratio =', ratio.toFixed(2), 'success =', isSuccess, 'excess =', isExcess);
-      
       if (isExcess) {
         // ❌ Превышение — shake последовательно
         shakeTimerRef.current = setTimeout(() => {
