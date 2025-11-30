@@ -1039,41 +1039,83 @@
             // === Cloud Sync Status ===
             const [cloudStatus, setCloudStatus] = useState('unknown'); // 'unknown' | 'offline' | 'syncing' | 'synced' | 'error'
             const cloudSyncTimeoutRef = useRef(null);
+            const pendingChangesRef = useRef(false); // Есть ли несинхронизированные изменения
             
             useEffect(() => {
               // Слушаем события синхронизации
               const handleSyncComplete = () => {
-                setCloudStatus('synced');
-                // Скрываем через 2 сек
-                if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
-                cloudSyncTimeoutRef.current = setTimeout(() => setCloudStatus('idle'), 2000);
+                pendingChangesRef.current = false;
+                if (navigator.onLine) {
+                  setCloudStatus('synced');
+                  // Скрываем через 2 сек
+                  if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+                  cloudSyncTimeoutRef.current = setTimeout(() => setCloudStatus('idle'), 2000);
+                }
               };
               
               const handleDataSaved = (e) => {
+                pendingChangesRef.current = true;
+                
+                if (!navigator.onLine) {
+                  // Оффлайн — показываем статус offline
+                  setCloudStatus('offline');
+                  return;
+                }
+                
                 // Показываем что идёт синхронизация
                 setCloudStatus('syncing');
                 // Через 1.5 сек показываем synced (fallback если heysSyncCompleted не сработал)
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 cloudSyncTimeoutRef.current = setTimeout(() => {
+                  pendingChangesRef.current = false;
                   setCloudStatus('synced');
                   setTimeout(() => setCloudStatus('idle'), 2000);
                 }, 1500);
               };
               
+              // Отслеживаем онлайн/оффлайн статус
+              const handleOnline = () => {
+                // Сеть появилась — если есть pending изменения, показываем syncing
+                if (pendingChangesRef.current) {
+                  setCloudStatus('syncing');
+                  // Ждём завершения синхронизации
+                  if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+                  cloudSyncTimeoutRef.current = setTimeout(() => {
+                    pendingChangesRef.current = false;
+                    setCloudStatus('synced');
+                    setTimeout(() => setCloudStatus('idle'), 2000);
+                  }, 2000);
+                } else {
+                  setCloudStatus('idle');
+                }
+              };
+              
+              const handleOffline = () => {
+                setCloudStatus('offline');
+              };
+              
               window.addEventListener('heysSyncCompleted', handleSyncComplete);
               window.addEventListener('heys:data-saved', handleDataSaved);
+              window.addEventListener('online', handleOnline);
+              window.addEventListener('offline', handleOffline);
               
               // Начальный статус
-              const cloud = window.HEYS?.cloud;
-              if (cloud?.user) {
-                setCloudStatus('idle');
-              } else {
+              if (!navigator.onLine) {
                 setCloudStatus('offline');
+              } else {
+                const cloud = window.HEYS?.cloud;
+                if (cloud?.user) {
+                  setCloudStatus('idle');
+                } else {
+                  setCloudStatus('offline');
+                }
               }
               
               return () => {
                 window.removeEventListener('heysSyncCompleted', handleSyncComplete);
                 window.removeEventListener('heys:data-saved', handleDataSaved);
+                window.removeEventListener('online', handleOnline);
+                window.removeEventListener('offline', handleOffline);
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
               };
             }, []);
