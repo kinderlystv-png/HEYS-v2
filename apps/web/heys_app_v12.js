@@ -2156,16 +2156,23 @@
                             className: 'cloud-sync-indicator ' + cloudStatus,
                             title: cloudStatus === 'syncing' ? 'Синхронизация...' 
                               : cloudStatus === 'synced' ? 'Сохранено в облако'
-                              : cloudStatus === 'offline' ? 'Офлайн'
+                              : cloudStatus === 'offline' ? 'Офлайн — данные сохраняются локально'
                               : cloudStatus === 'error' ? 'Ошибка синхронизации'
-                              : 'Облако'
-                          },
-                            cloudStatus === 'syncing' ? '↻'
-                              : cloudStatus === 'synced' ? '☁️✓'
-                              : cloudStatus === 'offline' ? '📴'
-                              : cloudStatus === 'error' ? '⚠️'
-                              : '☁️'
-                          ),
+                              : 'Облако',
+                            // Не использовать эмодзи — они ломают Twemoji при offline
+                            // Используем CSS символы вместо эмодзи для offline-безопасности
+                            dangerouslySetInnerHTML: {
+                              __html: cloudStatus === 'syncing' 
+                                ? '<span class="cloud-icon spin">↻</span>'
+                                : cloudStatus === 'synced' 
+                                ? '<span class="cloud-icon synced">☁✓</span>'
+                                : cloudStatus === 'offline' 
+                                ? '<span class="cloud-icon offline">⊘</span>'
+                                : cloudStatus === 'error' 
+                                ? '<span class="cloud-icon error">⚠</span>'
+                                : '<span class="cloud-icon idle">☁</span>'
+                            }
+                          }),
                           // Кнопка "Сегодня" + DatePicker
                           (tab === 'stats' || tab === 'diary' || tab === 'reports') && window.HEYS.DatePicker
                             ? React.createElement('div', { className: 'hdr-date-group' },

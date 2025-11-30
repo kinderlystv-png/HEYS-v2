@@ -125,6 +125,8 @@
           window.applyTwemoji = function(el) {
             if (window.heysEmojiStyle !== 'twemoji') return;
             if (!window.twemoji) return;
+            // Не парсить эмодзи когда нет сети — иначе бесконечные ошибки загрузки SVG
+            if (!navigator.onLine) return;
             
             // Ensure class is set
             if (!document.body.classList.contains('emoji-twemoji')) {
@@ -142,6 +144,8 @@
           // Debounced parse
           var parseTimeout = null;
           window.scheduleTwemojiParse = function() {
+            // Не ставить таймер если нет сети
+            if (!navigator.onLine) return;
             if (parseTimeout) clearTimeout(parseTimeout);
             parseTimeout = setTimeout(window.applyTwemoji, 30);
           };
@@ -164,6 +168,11 @@
             }
           };
           startObserver();
+          
+          // Reparse when back online
+          window.addEventListener('online', function() {
+            window.applyTwemoji();
+          });
           
           // Aggressive reparsing during page load
           setTimeout(window.applyTwemoji, 100);

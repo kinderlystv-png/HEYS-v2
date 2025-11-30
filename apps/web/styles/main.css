@@ -1385,10 +1385,20 @@ td:first-child input {
   cursor: default;
 }
 
+/* Не использовать эмодзи, только обычные символы для offline-безопасности */
+.cloud-sync-indicator .cloud-icon {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-style: normal;
+}
+
 .cloud-sync-indicator.syncing {
   background: rgba(59, 130, 246, 0.15);
   color: #3b82f6;
+}
+
+.cloud-sync-indicator.syncing .cloud-icon.spin {
   animation: syncSpin 1s linear infinite;
+  display: inline-block;
 }
 
 @keyframes syncSpin {
