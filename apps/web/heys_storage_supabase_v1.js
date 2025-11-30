@@ -221,6 +221,11 @@
 
   cloud.signIn = async function(email, password){
     if (!client) { err('client not initialized'); return; }
+    // Проверяем сеть перед попыткой входа
+    if (!navigator.onLine) {
+      status = 'offline';
+      return { error: { message: 'Нет подключения к интернету' } };
+    }
     try{
       status = 'signin';
       
@@ -500,6 +505,12 @@
       const batch = clientUpsertQueue.splice(0, clientUpsertQueue.length);
       clientUpsertTimer = null;
       if (!client || !user || !batch.length) return;
+      // Не пытаемся отправить если нет сети — данные уже в localStorage
+      if (!navigator.onLine) {
+        // Вернуть в очередь для повторной отправки когда сеть появится
+        clientUpsertQueue.push(...batch);
+        return;
+      }
       
       // Удаляем дубликаты по комбинации user_id+client_id+k, оставляя последние значения
       const uniqueBatch = [];
@@ -730,6 +741,12 @@
       const batch = upsertQueue.splice(0, upsertQueue.length);
       upsertTimer = null;
       if (!client || !user || !batch.length) return;
+      // Не пытаемся отправить если нет сети — данные уже в localStorage
+      if (!navigator.onLine) {
+        // Вернуть в очередь для повторной отправки когда сеть появится
+        upsertQueue.push(...batch);
+        return;
+      }
       
       // Удаляем дубликаты по комбинации user_id+k, оставляя последние значения
       const uniqueBatch = [];
@@ -790,6 +807,16 @@
     sync: cloud.pushAll,
     client: function() { return client; }
   };
+
+  // Когда сеть возвращается — пробуем отправить накопленные данные
+  global.addEventListener('online', function() {
+    if (clientUpsertQueue.length > 0) {
+      scheduleClientPush();
+    }
+    if (upsertQueue.length > 0) {
+      schedulePush();
+    }
+  });
 
   // Убрано избыточное логирование utils lsSet wrapped
 
