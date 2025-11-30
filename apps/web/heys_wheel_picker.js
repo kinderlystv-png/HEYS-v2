@@ -257,25 +257,37 @@
       };
     }, [values.length, snapToIndex, getIndexFromOffset]);
     
+    // Вычисляем текущий центральный индекс из offset
+    const currentCenterIndex = getIndexFromOffset(offset);
+    
     return React.createElement('div', { className: 'wheel-column' },
       label && React.createElement('div', { className: 'wheel-label' }, label),
       React.createElement('div', { 
         className: 'wheel-viewport',
         ref: containerRef
       },
+        React.createElement('div', { className: 'wheel-highlight' }),
         React.createElement('div', { 
           className: 'wheel-track',
           style: { transform: `translateY(${offset + itemHeight * 2}px)` }
         },
-          values.map((val, i) => React.createElement('div', {
-            key: i,
-            className: 'wheel-item' + (i === selected ? ' selected' : ''),
-            style: { height: itemHeight },
-            onClick: () => snapToIndex(i)
-          }, val))
+          values.map((val, i) => {
+            // Вычисляем расстояние от центра для эффекта затухания
+            const distanceFromCenter = Math.abs(i - (-offset / itemHeight));
+            const opacity = Math.max(0.3, 1 - distanceFromCenter * 0.3);
+            
+            return React.createElement('div', {
+              key: i,
+              className: 'wheel-item' + (i === currentCenterIndex ? ' selected' : ''),
+              style: { 
+                height: itemHeight,
+                opacity: i === currentCenterIndex ? 1 : opacity
+              },
+              onClick: () => snapToIndex(i)
+            }, val);
+          })
         )
-      ),
-      React.createElement('div', { className: 'wheel-highlight' })
+      )
     );
   }
 

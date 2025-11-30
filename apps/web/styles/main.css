@@ -7008,15 +7008,29 @@ td:first-child input {
   color: #f2f2f7;
 }
 
+[data-theme="dark"] .mood-hint-first {
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .mood-hint-change {
+  color: #0a84ff;
+}
+
+[data-theme="dark"] .mood-label {
+  color: #8e8e93;
+}
+
 [data-theme="dark"] .bottom-sheet-handle::before {
   background: #48484a;
 }
 
-[data-theme="dark"] .wheel-column-item {
+[data-theme="dark"] .wheel-column-item,
+[data-theme="dark"] .wheel-item {
   color: #8e8e93;
 }
 
-[data-theme="dark"] .wheel-column-item.selected {
+[data-theme="dark"] .wheel-column-item.selected,
+[data-theme="dark"] .wheel-item.selected {
   color: #f2f2f7;
 }
 
@@ -8629,6 +8643,24 @@ td:first-child input {
   font-weight: 500;
 }
 
+/* Подсказка для первого приёма */
+.mood-hint-first {
+  text-align: center;
+  font-size: 13px;
+  color: #8e8e93;
+  padding: 8px 20px 16px;
+  line-height: 1.4;
+}
+
+/* Подсказка "изменилось?" для следующих приёмов */
+.mood-hint-change {
+  font-size: 11px;
+  color: #007aff;
+  text-align: center;
+  margin-top: 4px;
+  font-style: italic;
+}
+
 .time-picker-separator {
   font-size: 28px;
   font-weight: 600;
@@ -8660,10 +8692,14 @@ td:first-child input {
   position: relative;
   width: 100%;
   touch-action: none; /* Полный контроль над touch */
+  -webkit-overflow-scrolling: auto; /* Отключаем нативный скролл */
 }
 
 .wheel-track {
   will-change: transform;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .wheel-item {
@@ -8671,16 +8707,18 @@ td:first-child input {
   align-items: center;
   justify-content: center;
   font-size: 22px;
-  color: #c7c7cc;
+  color: #8e8e93;
   cursor: pointer;
-  transition: color 0.1s ease, font-size 0.1s ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  width: 100%;
+  flex-shrink: 0;
+  will-change: transform, opacity;
 }
 
 .wheel-item.selected {
   color: #000;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 24px;
 }
 

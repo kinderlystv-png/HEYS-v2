@@ -148,6 +148,8 @@
   const setDate = setSelectedDate;
   // State for collapsed/expanded meals (mobile) - с кэшированием в sessionStorage
   const expandedMealsKey = 'heys_expandedMeals_' + date;
+  // Отдельный state для ручного разворачивания устаревших приёмов (не кешируется)
+  const [manualExpandedStale, setManualExpandedStale] = useState({});
   const [expandedMeals, setExpandedMeals] = useState(() => {
     try {
       const cached = sessionStorage.getItem(expandedMealsKey);
@@ -164,8 +166,29 @@
     } catch (e) {}
   }, [expandedMeals, expandedMealsKey]);
   
-  const toggleMealExpand = (mealIndex) => {
-    setExpandedMeals(prev => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+  // Проверка: устарел ли приём (прошло больше 1 часа с времени приёма)
+  const isMealStale = (meal) => {
+    if (!meal || !meal.time) return false;
+    const [hours, minutes] = meal.time.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return false;
+    const now = new Date();
+    const mealDate = new Date();
+    mealDate.setHours(hours, minutes, 0, 0);
+    const diffMinutes = (now - mealDate) / (1000 * 60);
+    return diffMinutes > 60;
+  };
+  
+  const toggleMealExpand = (mealIndex, meals) => {
+    const meal = meals && meals[mealIndex];
+    const isStale = meal && isMealStale(meal);
+    
+    if (isStale) {
+      // Для устаревших — отдельный state (не кешируется)
+      setManualExpandedStale(prev => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+    } else {
+      // Для актуальных — обычный state (кешируется)
+      setExpandedMeals(prev => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+    }
   };
   
   // Функция для разворачивания нового приёма и сворачивания остальных
@@ -189,14 +212,27 @@
   // (нижнее меню с 5 вкладками)
   const onSubTabTouchStart = React.useCallback(() => {}, []);
   const onSubTabTouchEnd = React.useCallback(() => {}, []);
-  
-  // Проверка: развёрнут ли приём (последний по умолчанию развёрнут)
-  const isMealExpanded = (mealIndex, totalMeals) => {
-    // Если есть явное состояние — используем его
+
+  // Проверка: развёрнут ли приём
+  // - Устаревшие приёмы (>1 часа) автоматически свёрнуты
+  // - Пользователь может вручную развернуть их кликом (не кешируется)
+  // - Последний актуальный приём развёрнут по умолчанию
+  const isMealExpanded = (mealIndex, totalMeals, meals) => {
+    const meal = meals && meals[mealIndex];
+    const isStale = meal && isMealStale(meal);
+    
+    // Устаревшие приёмы (>1 часа) свёрнуты по умолчанию
+    // Можно развернуть вручную (состояние не кешируется)
+    if (isStale) {
+      return manualExpandedStale[mealIndex] === true;
+    }
+    
+    // Для актуальных приёмов — стандартная логика
     if (expandedMeals.hasOwnProperty(mealIndex)) {
       return expandedMeals[mealIndex];
     }
-    // Иначе последний развёрнут по умолчанию
+    
+    // Последний актуальный приём развёрнут по умолчанию
     return mealIndex === totalMeals - 1;
   };
   
@@ -2207,7 +2243,22 @@
       const now = new Date();
       // Конвертируем реальные часы в индекс колеса
       setPendingMealTime({ hours: hourToWheelIndex(now.getHours()), minutes: now.getMinutes() });
-      setPendingMealMood({ mood: 5, wellbeing: 5, stress: 5 });
+      
+      // Оценки: если есть предыдущие приёмы — берём от последнего, иначе 5
+      const meals = day.meals || [];
+      if (meals.length > 0) {
+        // Берём последний приём по времени (они отсортированы)
+        const lastMeal = meals[meals.length - 1];
+        setPendingMealMood({
+          mood: lastMeal.mood || 5,
+          wellbeing: lastMeal.wellbeing || 5,
+          stress: lastMeal.stress || 5
+        });
+      } else {
+        // Первый приём в день — дефолт 5
+        setPendingMealMood({ mood: 5, wellbeing: 5, stress: 5 });
+      }
+      
       setPendingMealType(null); // Сбрасываем на авто
       setEditingMealIndex(null);
       setEditMode('new');
@@ -3061,14 +3112,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         React.createElement('div', { className: 'mobile-products-list' },
           // Expandable products section
           (meal.items || []).length > 0 && React.createElement('div', { 
-            className: 'mpc-products-toggle' + (isMealExpanded(mi, (day.meals||[]).length) ? ' expanded' : ''),
-            onClick: () => toggleMealExpand(mi)
+            className: 'mpc-products-toggle' + (isMealExpanded(mi, (day.meals||[]).length, day.meals) ? ' expanded' : ''),
+            onClick: () => toggleMealExpand(mi, day.meals)
           },
-            React.createElement('span', null, isMealExpanded(mi, (day.meals||[]).length) ? '▼' : '▶'),
+            React.createElement('span', null, isMealExpanded(mi, (day.meals||[]).length, day.meals) ? '▼' : '▶'),
             React.createElement('span', null, (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов'))
           ),
           // Products list (shown when expanded)
-          isMealExpanded(mi, (day.meals||[]).length) && (meal.items || []).map(it => {
+          isMealExpanded(mi, (day.meals||[]).length, day.meals) && (meal.items || []).map(it => {
             const p = getProductFromItem(it, pIndex) || { name: it.name || '?' };
             const G = +it.grams || 0;
             const per = per100(p);
@@ -6724,6 +6775,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   ? React.createElement('button', { className: 'time-picker-confirm', onClick: confirmMoodEdit }, 'Готово')
                   : React.createElement('button', { className: 'time-picker-confirm', onClick: confirmMealCreation }, 'Готово')
               ),
+              // Подсказка для первого приёма в день
+              (day.meals || []).length === 0 && editMode === 'new' && React.createElement('div', { className: 'mood-hint-first' },
+                '💡 Ставьте первую оценку, которая пришла в голову — это самое верное интуитивное решение'
+              ),
               React.createElement('div', { className: 'time-picker-wheels mood-wheels' },
                 React.createElement('div', { className: 'mood-column' },
                   React.createElement('div', { className: 'mood-emoji' }, '😊'),
@@ -6732,7 +6787,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     selected: pendingMealMood.mood,
                     onChange: (i) => setPendingMealMood(prev => ({...prev, mood: i}))
                   }),
-                  React.createElement('div', { className: 'mood-label' }, 'Настроение')
+                  React.createElement('div', { className: 'mood-label' }, 'Настроение'),
+                  // Подсказка для следующих приёмов
+                  (day.meals || []).length > 0 && React.createElement('div', { className: 'mood-hint-change' }, 'поднялось или упало?')
                 ),
                 React.createElement('div', { className: 'mood-column' },
                   React.createElement('div', { className: 'mood-emoji' }, '💪'),
@@ -6741,7 +6798,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     selected: pendingMealMood.wellbeing,
                     onChange: (i) => setPendingMealMood(prev => ({...prev, wellbeing: i}))
                   }),
-                  React.createElement('div', { className: 'mood-label' }, 'Самочувствие')
+                  React.createElement('div', { className: 'mood-label' }, 'Самочувствие'),
+                  // Подсказка для следующих приёмов
+                  (day.meals || []).length > 0 && React.createElement('div', { className: 'mood-hint-change' }, 'лучше или хуже?')
                 ),
                 React.createElement('div', { className: 'mood-column' },
                   React.createElement('div', { className: 'mood-emoji' }, '😰'),
@@ -6750,7 +6809,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     selected: pendingMealMood.stress,
                     onChange: (i) => setPendingMealMood(prev => ({...prev, stress: i}))
                   }),
-                  React.createElement('div', { className: 'mood-label' }, 'Стресс')
+                  React.createElement('div', { className: 'mood-label' }, 'Стресс'),
+                  // Подсказка для следующих приёмов
+                  (day.meals || []).length > 0 && React.createElement('div', { className: 'mood-hint-change' }, 'вырос или снизился?')
                 )
               )
             )

@@ -69,18 +69,23 @@
   /**
    * Обёртка для запросов с таймаутом
    * @param {Promise} promise - Promise для выполнения
-   * @param {number} ms - Таймаут в миллисекундах (по умолчанию 5000)
+   * @param {number} ms - Таймаут в миллисекундах (по умолчанию 10000)
    * @param {string} label - Метка для логирования ошибки
    * @returns {Promise} Результат или {error} при таймауте
    */
-  async function withTimeout(promise, ms = 5000, label = 'request') {
+  async function withTimeout(promise, ms = 10000, label = 'request') {
     const timeoutPromise = new Promise((_, reject) => 
       setTimeout(() => reject(new Error(`Timeout: ${label} took too long`)), ms)
     );
     try {
       return await Promise.race([promise, timeoutPromise]);
     } catch (e) {
-      err(`${label} timeout`, e.message);
+      // Для bootstrapSync таймаут — это нормально при медленной сети, не критическая ошибка
+      if (label.includes('bootstrap')) {
+        console.warn(`[HEYS.cloud] ⏳ ${label}: медленная сеть, синхронизация продолжается...`);
+      } else {
+        err(`${label} timeout`, e.message);
+      }
       return { data: null, error: { message: e.message } };
     }
   }
@@ -261,10 +266,10 @@
       muteMirror = true;
       if (!client || !user) { muteMirror = false; return; }
       
-      // Увеличен таймаут до 10 секунд для мобильных сетей
+      // Таймаут 20 секунд для медленных мобильных сетей
       const { data, error } = await withTimeout(
         client.from('kv_store').select('k,v,updated_at'),
-        10000,
+        20000,
         'bootstrapSync'
       );
       
