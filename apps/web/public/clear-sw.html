@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Очистка Service Workers и кеша</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .status {
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+      background: white;
+      border-left: 4px solid #4CAF50;
+    }
+    .error {
+      border-left-color: #f44336;
+    }
+    button {
+      background: #2196F3;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #0d8bf2;
+    }
+    pre {
+      background: #263238;
+      color: #aed581;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧹 Очистка Service Workers и кеша</h1>
+  
+  <button onclick="clearAll()">Очистить всё</button>
+  <button onclick="location.reload()">Перезагрузить</button>
+  <button onclick="location.href='/'">← Назад на главную</button>
+  
+  <div id="log"></div>
+
+  <script>
+    const log = document.getElementById('log');
+
+    function addLog(message, isError = false) {
+      const div = document.createElement('div');
+      div.className = `status ${isError ? 'error' : ''}`;
+      div.textContent = message;
+      log.appendChild(div);
+    }
+
+    async function clearAll() {
+      log.innerHTML = '';
+      addLog('🚀 Начало очистки...');
+
+      try {
+        // 1. Отменяем регистрацию всех Service Workers
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          addLog(`📋 Найдено Service Workers: ${registrations.length}`);
+          
+          for (const registration of registrations) {
+            await registration.unregister();
+            addLog(`✅ Service Worker удалён: ${registration.scope}`);
+          }
+        }
+
+        // 2. Очищаем все кеши
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          addLog(`📋 Найдено кешей: ${cacheNames.length}`);
+          
+          for (const cacheName of cacheNames) {
+            await caches.delete(cacheName);
+            addLog(`✅ Кеш удалён: ${cacheName}`);
+          }
+        }
+
+        // 3. Очищаем localStorage
+        localStorage.clear();
+        addLog('✅ localStorage очищен');
+
+        // 4. Очищаем sessionStorage
+        sessionStorage.clear();
+        addLog('✅ sessionStorage очищен');
+
+        // 5. Очищаем IndexedDB (опционально)
+        if (window.indexedDB) {
+          const databases = await indexedDB.databases();
+          for (const db of databases) {
+            if (db.name) {
+              indexedDB.deleteDatabase(db.name);
+              addLog(`✅ IndexedDB удалена: ${db.name}`);
+            }
+          }
+        }
+
+        addLog('🎉 Очистка завершена! Перезагрузите страницу.');
+        
+        // Автоматическая перезагрузка через 2 секунды
+        setTimeout(() => {
+          window.location.reload(true);
+        }, 2000);
+
+      } catch (error) {
+        addLog(`❌ Ошибка: ${error.message}`, true);
+        console.error(error);
+      }
+    }
+
+    // Автоматически запускаем при загрузке
+    window.addEventListener('load', () => {
+      addLog('ℹ️ Страница загружена. Нажмите "Очистить всё" для начала.');
+    });
+  </script>
+</body>
+</html>
