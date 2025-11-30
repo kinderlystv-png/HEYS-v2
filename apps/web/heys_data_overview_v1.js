@@ -158,7 +158,8 @@
     // Обработчик клика на строку
     const handleRowClick = useCallback((dateStr) => {
       if (setSelectedDate) {
-        setSelectedDate(new Date(dateStr));
+        // selectedDate должна быть строкой YYYY-MM-DD, не Date!
+        setSelectedDate(dateStr);
       }
       if (setTab) {
         setTab('stats');

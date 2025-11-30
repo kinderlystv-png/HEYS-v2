@@ -4107,7 +4107,7 @@ td:first-child input {
   font-size: 9px;
   opacity: 0;
   animation: fadeInSleep 0.3s ease forwards;
-  animation-delay: 4.5s;
+  animation-delay: var(--delay, 0s);
 }
 
 /* === Slider Elements === */
@@ -4321,6 +4321,24 @@ td:first-child input {
   filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6));
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* Анимированная streak-линия — рисуется синхронно с основной */
+.sparkline-streak-animated {
+  animation: drawSparkline linear forwards;
+  /* animationDelay и animationDuration задаются inline */
+}
+
+/* Прогнозная линия — маска для анимации пунктира */
+.sparkline-forecast-mask {
+  animation: drawSparkline 0.6s linear forwards;
+  animation-delay: 2.9s;
+}
+
+/* Точки прогноза — появляются синхронно с прогнозной линией */
+.sparkline-forecast-dot {
+  animation: dotAppear 0.15s ease-out forwards;
+  animation-delay: var(--delay, 3s);
 }
 
 /* Прогнозные дни — тонкий шрифт */
@@ -5405,9 +5423,9 @@ td:first-child input {
 /* Кнопка добавления тренировки в правой колонке */
 .add-training-btn {
   padding: 14px 12px;
-  border: 1px dashed #cbd5e1;
-  background: transparent;
-  color: #64748b;
+  border: 1px dashed #f97316;
+  background: rgba(249, 115, 22, 0.08);
+  color: #ea580c;
   border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
@@ -5417,9 +5435,9 @@ td:first-child input {
 }
 
 .add-training-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #ea580c;
+  color: #c2410c;
+  background: rgba(249, 115, 22, 0.15);
 }
 
 .add-training-btn:active {
@@ -8440,6 +8458,13 @@ td:first-child input {
 .time-picker-confirm {
   color: #007aff;
   font-weight: 600;
+}
+
+.time-picker-confirm.disabled,
+.time-picker-confirm:disabled {
+  color: #c7c7cc;
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .time-picker-wheels {

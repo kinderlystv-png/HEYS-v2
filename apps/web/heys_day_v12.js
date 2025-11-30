@@ -201,14 +201,25 @@
   const [day,setDay]=useState(()=>{ 
     const key = 'heys_dayv2_'+date;
     const v=lsGet(key,null); 
+    
+    // Функция очистки пустых тренировок
+    const cleanEmptyTrainings = (trainings) => {
+      if (!Array.isArray(trainings)) return [];
+      return trainings.filter(t => t && t.z && t.z.some(z => z > 0));
+    };
+    
     if (v && v.date) {
-      return ensureDay(v, prof);
+      // Очищаем пустые тренировки при загрузке
+      return ensureDay({
+        ...v,
+        trainings: cleanEmptyTrainings(v.trainings)
+      }, prof);
     } else {
-      // Для нового дня устанавливаем пустые значения
+      // Для нового дня — пустой массив тренировок
       return ensureDay({
         date: date,
         meals: [],
-        trainings: [{ z: [0,0,0,0] }, { z: [0,0,0,0] }],
+        trainings: [],
         sleepStart: '',
         sleepEnd: '',
         sleepQuality: '',
@@ -227,13 +238,30 @@
     const key = 'heys_dayv2_' + date;
     const v = lsGet(key, null);
     const profNow = getProfile();
+    
+    // Функция очистки пустых тренировок
+    const cleanEmptyTrainings = (trainings) => {
+      if (!Array.isArray(trainings)) return [];
+      return trainings.filter(t => {
+        if (!t) return false;
+        // Тренировка непустая если есть хотя бы одна зона > 0
+        const hasZones = t.z && t.z.some(z => z > 0);
+        return hasZones;
+      });
+    };
+    
     if (v && v.date) {
-      setDay(ensureDay(v, profNow));
+      // Очищаем пустые тренировки при загрузке
+      const cleanedDay = {
+        ...v,
+        trainings: cleanEmptyTrainings(v.trainings)
+      };
+      setDay(ensureDay(cleanedDay, profNow));
     } else {
       setDay(ensureDay({ 
         date: date, 
         meals: (loadMealsForDate(date) || []), 
-        trainings: [{ z:[0,0,0,0] }, { z:[0,0,0,0] }],
+        trainings: [],
         weightMorning: '',
         deficitPct: '',
         sleepStart: '',
@@ -1204,7 +1232,8 @@
       const hasData = (t) => t && t.z && t.z.some(v => +v > 0);
       if (tr[2] && hasData(tr[2])) return 3;
       if (tr[1] && hasData(tr[1])) return 2;
-      return 1;
+      if (tr[0] && hasData(tr[0])) return 1;
+      return 0; // Если нет тренировок — не показываем пустые блоки
     });
     
     // === Период графиков (7, 14, 30 дней) ===
@@ -2000,7 +2029,23 @@
         setTrainingPickerStep(1);
         return;
       }
-      // На первом шаге — закрываем
+      
+      // На первом шаге — закрываем и проверяем пустую тренировку
+      const idx = editingTrainingIndex;
+      const trainings = day.trainings || [];
+      const training = trainings[idx];
+      
+      // Если тренировка пустая (не существует или все зоны = 0) — уменьшаем visibleTrainings
+      const isEmpty = !training || (
+        (!training.z || training.z.every(z => z === 0)) &&
+        !training.time &&
+        !training.type
+      );
+      
+      if (isEmpty && idx !== null && idx === visibleTrainings - 1) {
+        setVisibleTrainings(prev => Math.max(0, prev - 1));
+      }
+      
       setShowTrainingPicker(false);
       setTrainingPickerStep(1);
       setEditingTrainingIndex(null);
@@ -4251,11 +4296,24 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Прогнозная линия (если есть данные)
       let forecastPathD = '';
       let forecastColor = '#94a3b8'; // серый по умолчанию
+      let forecastPathLength = 0; // длина для анимации
       if (forecastPts.length > 0 && points.length > 0) {
         const lastPoint = points[points.length - 1];
         const forecastPoint = forecastPts[forecastPts.length - 1];
         const allForecast = [lastPoint, ...forecastPts];
         forecastPathD = smoothPath(allForecast, 'y');
+        
+        // Вычисляем длину прогнозной линии для анимации
+        for (let i = 0; i < allForecast.length - 1; i++) {
+          const p0 = allForecast[Math.max(0, i - 1)];
+          const p1 = allForecast[i];
+          const p2 = allForecast[i + 1];
+          const p3 = allForecast[Math.min(allForecast.length - 1, i + 2)];
+          const tension = 0.3;
+          const cp1 = { x: p1.x + (p2.x - p0.x) * tension, y: p1.y + (p2.y - p0.y) * tension };
+          const cp2 = { x: p2.x - (p3.x - p1.x) * tension, y: p2.y - (p3.y - p1.y) * tension };
+          forecastPathLength += bezierLength({ x: p1.x, y: p1.y }, cp1, cp2, { x: p2.x, y: p2.y });
+        }
         
         // Цвет по направлению тренда относительно цели
         const lastRatio = lastPoint.target > 0 ? lastPoint.kcal / lastPoint.target : 1;
@@ -4316,9 +4374,37 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       };
       
       const streakRanges = findStreakRanges(points);
-      const streakPaths = streakRanges.map(range => 
-        extractPathSegment(points, range.start, range.end, 'y')
-      );
+      
+      // Вычисляем длину каждого streak-сегмента и задержку анимации
+      const lineDrawDuration = 3; // секунд — должно совпадать с анимацией основной линии
+      const streakData = streakRanges.map(range => {
+        const path = extractPathSegment(points, range.start, range.end, 'y');
+        
+        // Длина streak-сегмента
+        let segmentLength = 0;
+        for (let i = range.start; i < range.end; i++) {
+          const p0 = points[Math.max(0, i - 1)];
+          const p1 = points[i];
+          const p2 = points[i + 1];
+          const p3 = points[Math.min(points.length - 1, i + 2)];
+          const tension = 0.3;
+          const cp1 = { x: p1.x + (p2.x - p0.x) * tension, y: p1.y + (p2.y - p0.y) * tension };
+          const cp2 = { x: p2.x - (p3.x - p1.x) * tension, y: p2.y - (p3.y - p1.y) * tension };
+          segmentLength += bezierLength({ x: p1.x, y: p1.y }, cp1, cp2, { x: p2.x, y: p2.y });
+        }
+        
+        // Задержка = когда основная линия достигает начала streak
+        const startProgress = cumulativeLengths[range.start] / totalPathLength;
+        const animDelay = startProgress * lineDrawDuration;
+        
+        // Длительность = пропорционально длине сегмента относительно общей длины
+        const segmentDuration = (segmentLength / totalPathLength) * lineDrawDuration;
+        
+        return { path, segmentLength, animDelay, segmentDuration };
+      });
+      
+      // Для совместимости оставляем streakPaths
+      const streakPaths = streakData.map(d => d.path);
       
       // Определяем цвет точки по ratio — используем централизованный ratioZones
       const rz = HEYS.ratioZones;
@@ -4450,41 +4536,69 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             strokeDashoffset: totalPathLength 
           }
         }),
-        // Золотые streak-линии между 🔥 днями
-        streakPaths.map((streakPath, i) => 
+        // Золотые streak-линии между 🔥 днями (анимируются синхронно с основной линией)
+        streakData.map((data, i) => 
           React.createElement('path', {
             key: 'streak-' + i,
-            d: streakPath,
-            className: 'sparkline-streak-line'
+            d: data.path,
+            className: 'sparkline-streak-line sparkline-streak-animated',
+            style: {
+              strokeDasharray: data.segmentLength,
+              strokeDashoffset: data.segmentLength,
+              animationDelay: data.animDelay + 's',
+              animationDuration: data.segmentDuration + 's'
+            }
           })
         ),
-        // Прогнозная линия (пунктирная, с цветом по тренду)
-        forecastPathD && React.createElement('path', {
-          d: forecastPathD,
-          className: 'sparkline-line',
-          style: { 
-            stroke: forecastColor, 
-            strokeDasharray: '4 3', 
-            strokeOpacity: 0.6,
-            strokeWidth: 2
-          }
-        }),
-        // Точки прогноза (с цветом по тренду)
-        forecastPts.map((p, i) => 
-          React.createElement('circle', {
+        // Прогнозная линия — маска для анимации + пунктир
+        forecastPathD && React.createElement('g', { key: 'forecast-group' },
+          // Маска: сплошная линия которая рисуется
+          React.createElement('defs', null,
+            React.createElement('mask', { id: 'forecastMask' },
+              React.createElement('path', {
+                d: forecastPathD,
+                fill: 'none',
+                stroke: 'white',
+                strokeWidth: 4,
+                strokeLinecap: 'round',
+                strokeDasharray: forecastPathLength,
+                strokeDashoffset: forecastPathLength,
+                className: 'sparkline-forecast-mask'
+              })
+            )
+          ),
+          // Видимая пунктирная линия под маской
+          React.createElement('path', {
+            d: forecastPathD,
+            fill: 'none',
+            stroke: forecastColor,
+            strokeWidth: 2,
+            strokeDasharray: '6 4',
+            strokeOpacity: 0.7,
+            strokeLinecap: 'round',
+            mask: 'url(#forecastMask)'
+          })
+        ),
+        // Точки прогноза (с цветом по тренду) — появляются после прогнозной линии
+        forecastPts.map((p, i) => {
+          // Задержка = 3с (основная линия) + время до этой точки в прогнозе
+          const forecastDelay = 3 + (i + 1) / forecastPts.length * Math.max(0.5, (forecastPathLength / totalPathLength) * 3);
+          return React.createElement('circle', {
             key: 'forecast-dot-' + i,
             cx: p.x, 
             cy: p.y, 
             r: p.isTodayForecast ? 4 : 3, // сегодня крупнее
+            className: 'sparkline-dot sparkline-forecast-dot',
             style: {
               fill: forecastColor,
-              opacity: p.isTodayForecast ? 0.7 : 0.6,
+              opacity: 0, // начинаем скрытым
+              '--delay': forecastDelay + 's',
               strokeDasharray: '2 2',
               stroke: forecastColor,
               strokeWidth: p.isTodayForecast ? 2 : 1
             }
-          })
-        ),
+          });
+        }),
         // Метки прогнозных ккал над точками (бледные)
         forecastPts.map((p, i) => {
           const isLast = i === forecastPts.length - 1;
@@ -4497,19 +4611,40 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             style: { opacity: p.isTodayForecast ? 0.7 : 0.5, fill: forecastColor }
           }, p.kcal);
         }),
-        // Метки прогнозных дней (тонким шрифтом)
+        // Метки прогнозных дней (дата + "прогноз" выше в 2 строки)
         forecastPts.map((p, i) => {
           const isLast = i === forecastPts.length - 1;
-          return React.createElement('text', {
-            key: 'forecast-day-' + i,
-            x: p.x,
-            y: height - 2,
-            className: 'sparkline-day-label' + 
-              (p.isTodayForecast ? ' sparkline-day-today' : ' sparkline-day-forecast') + 
-              (p.isWeekend ? ' sparkline-day-weekend' : ''),
-            textAnchor: isLast ? 'end' : 'middle',
-            style: { opacity: p.isTodayForecast ? 0.8 : 0.5 }
-          }, p.dayNum);
+          const isTomorrow = !p.isTodayForecast && i === 0;
+          const isLabelMultiline = p.isTodayForecast || isTomorrow;
+          const line1 = 'прогноз';
+          const line2 = p.isTodayForecast ? 'на сегодня' : 'на завтра';
+          
+          return React.createElement('g', { key: 'forecast-day-' + i },
+            // "прогноз" + "на сегодня/завтра" выше даты
+            isLabelMultiline && React.createElement('text', {
+              x: p.x,
+              y: height - 18,
+              className: 'sparkline-day-label sparkline-day-forecast',
+              textAnchor: isLast ? 'end' : 'middle',
+              style: { opacity: 0.8, fontSize: '7px' }
+            }, line1),
+            isLabelMultiline && React.createElement('text', {
+              x: p.x,
+              y: height - 11,
+              className: 'sparkline-day-label sparkline-day-forecast',
+              textAnchor: isLast ? 'end' : 'middle',
+              style: { opacity: 0.8, fontSize: '7px' }
+            }, line2),
+            // Дата внизу
+            React.createElement('text', {
+              x: p.x,
+              y: height - 2,
+              className: 'sparkline-day-label sparkline-day-forecast' + 
+                (p.isWeekend ? ' sparkline-day-weekend' : ''),
+              textAnchor: isLast ? 'end' : 'middle',
+              style: { opacity: 0.8 }
+            }, p.dayNum)
+          );
         }),
         // Метки дней внизу + дельта для всех дней (дельта появляется синхронно с точкой)
         points.map((p, i) => {
@@ -4760,31 +4895,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 fill: 'url(#moodGradient)'
               })
             ),
-            React.createElement('span', { className: 'sparkline-mood-label' }, '😊 Настроение'),
-            // 😴💤😪 Индикаторы сна под настроением
-            React.createElement('div', { className: 'sparkline-sleep-row' },
-              points.map((p, i) => {
-                if (p.sleepHours <= 0) return null;
-                // Градация: <5ч красный, 5-6ч оранжевый, 6-7ч жёлтый, 7-8ч зелёный, 8+ч синий
-                let sleepClass = 'sparkline-sleep-indicator';
-                if (p.sleepHours < 5) sleepClass += ' sleep-critical';
-                else if (p.sleepHours < 6) sleepClass += ' sleep-bad';
-                else if (p.sleepHours < 7) sleepClass += ' sleep-low';
-                else if (p.sleepHours <= 8.5) sleepClass += ' sleep-good';
-                else sleepClass += ' sleep-over';
-                
-                const emoji = p.sleepHours < 6 ? '😴' : (p.sleepHours > 8.5 ? '😪' : '💤');
-                // Позиционирование как в графике
-                const offset = points.length > 1 ? (i / (points.length - 1)) * 100 : 50;
-                
-                return React.createElement('span', {
-                  key: 'sleep-' + i,
-                  className: sleepClass,
-                  style: { left: offset + '%' },
-                  title: p.sleepHours.toFixed(1) + 'ч сна'
-                }, emoji);
-              })
-            )
+            React.createElement('span', { className: 'sparkline-mood-label' }, '😊 Настроение')
           );
         }
         
@@ -4806,6 +4917,38 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               className: 'sparkline-heatmap-cell level-' + level,
               title: p.dayNum + ': ' + Math.round(ratio * 100) + '%'
             });
+          })
+        );
+      })(),
+      // 😴💤😪 Индикаторы сна — отдельный ряд (показывается всегда если есть данные сна)
+      (() => {
+        const hasSleepData = points.some(p => p.sleepHours > 0);
+        if (!hasSleepData) return null;
+        
+        return React.createElement('div', { className: 'sparkline-sleep-row' },
+          points.map((p, i) => {
+            if (p.sleepHours <= 0) return null;
+            // Градация: <5ч красный, 5-6ч оранжевый, 6-7ч жёлтый, 7-8ч зелёный, 8+ч синий
+            let sleepClass = 'sparkline-sleep-indicator';
+            if (p.sleepHours < 5) sleepClass += ' sleep-critical';
+            else if (p.sleepHours < 6) sleepClass += ' sleep-bad';
+            else if (p.sleepHours < 7) sleepClass += ' sleep-low';
+            else if (p.sleepHours <= 8.5) sleepClass += ' sleep-good';
+            else sleepClass += ' sleep-over';
+            
+            const emoji = p.sleepHours < 6 ? '😴' : (p.sleepHours > 8.5 ? '😪' : '💤');
+            // Позиционирование как в графике
+            const offset = points.length > 1 ? (i / (points.length - 1)) * 100 : 50;
+            // Задержка синхронна с точкой
+            const pathProgress = cumulativeLengths[i] / totalPathLength;
+            const animDelay = Math.max(0, pathProgress * 3 - 0.15);
+            
+            return React.createElement('span', {
+              key: 'sleep-' + i,
+              className: sleepClass,
+              style: { left: offset + '%', '--delay': animDelay + 's' },
+              title: p.sleepHours.toFixed(1) + 'ч сна'
+            }, emoji);
           })
         );
       })()
@@ -6759,9 +6902,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               React.createElement('span', { className: 'time-picker-title' }, 
                 trainingPickerStep === 1 ? '🏋️ Тренировка' : '⏱️ Зоны'
               ),
-              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmTrainingPicker }, 
-                trainingPickerStep === 1 ? 'Далее →' : 'Готово'
-              )
+              // Кнопка "Готово" неактивна если на шаге 2 и все зоны = 0
+              (() => {
+                const totalMinutes = trainingPickerStep === 2 
+                  ? pendingTrainingZones.reduce((sum, idx) => sum + (parseInt(zoneMinutesValues[idx], 10) || 0), 0)
+                  : 1; // На первом шаге всегда активна
+                const isDisabled = trainingPickerStep === 2 && totalMinutes === 0;
+                return React.createElement('button', { 
+                  className: 'time-picker-confirm' + (isDisabled ? ' disabled' : ''), 
+                  onClick: isDisabled ? undefined : confirmTrainingPicker,
+                  disabled: isDisabled
+                }, 
+                  trainingPickerStep === 1 ? 'Далее →' : 'Готово'
+                );
+              })()
             ),
             
             // ШАГ 1: Тип тренировки + Время + Пресеты
