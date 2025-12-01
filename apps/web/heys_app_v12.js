@@ -3617,14 +3617,15 @@
                 React.createElement(
                   'div',
                   { className: 'tabs' },
+                  // Рацион — только для десктопа
                   React.createElement(
                     'div',
                     {
-                      className: 'tab ' + (tab === 'ration' ? 'active' : ''),
+                      className: 'tab tab-desktop-only ' + (tab === 'ration' ? 'active' : ''),
                       onClick: () => setTab('ration'),
                     },
-                    React.createElement('span', { className: 'tab-icon' }, '🍽️'),
-                    React.createElement('span', { className: 'tab-text' }, 'Рацион'),
+                    React.createElement('span', { className: 'tab-icon' }, '🗂️'),
+                    React.createElement('span', { className: 'tab-text' }, 'База'),
                   ),
                   // iOS Switch группа для stats/diary — клик переключает на другую
                   React.createElement(
@@ -3639,21 +3640,21 @@
                         className: 'tab tab-switch ' + (tab === 'stats' ? 'active' : ''),
                       },
                       React.createElement('span', { className: 'tab-icon' }, '📊'),
-                      React.createElement('span', { className: 'tab-text' }, 'Стат'),
+                      React.createElement('span', { className: 'tab-text' }, 'Итоги'),
                     ),
                     React.createElement(
                       'div',
                       {
                         className: 'tab tab-switch ' + (tab === 'diary' ? 'active' : ''),
                       },
-                      React.createElement('span', { className: 'tab-icon' }, '📓'),
-                      React.createElement('span', { className: 'tab-text' }, 'Дневник'),
+                      React.createElement('span', { className: 'tab-icon' }, '🍴'),
+                      React.createElement('span', { className: 'tab-text' }, 'Еда'),
                     ),
                   ),
                   React.createElement(
                     'div',
                     {
-                      className: 'tab ' + (tab === 'reports' ? 'active' : ''),
+                      className: 'tab tab-desktop-only ' + (tab === 'reports' ? 'active' : ''),
                       onClick: () => {
                         if (
                           window.HEYS &&
@@ -3669,7 +3670,7 @@
                       },
                     },
                     React.createElement('span', { className: 'tab-icon' }, '📈'),
-                    React.createElement('span', { className: 'tab-text' }, 'Отчёты'),
+                    React.createElement('span', { className: 'tab-text' }, 'Графики'),
                   ),
                   React.createElement(
                     'div',
@@ -3686,8 +3687,8 @@
                       className: 'tab ' + (tab === 'user' ? 'active' : ''),
                       onClick: () => setTab('user'),
                     },
-                    React.createElement('span', { className: 'tab-icon' }, '👤'),
-                    React.createElement('span', { className: 'tab-text' }, 'Профиль'),
+                    React.createElement('span', { className: 'tab-icon' }, '⚙️'),
+                    React.createElement('span', { className: 'tab-text' }, 'Настройки'),
                   ),
                 ),
                 // === SWIPEABLE TAB CONTENT ===
@@ -3786,6 +3787,9 @@
                   React.createElement('div', { className: 'pwa-banner-icon' }, '📲'),
                   React.createElement('div', { className: 'pwa-banner-text' },
                     React.createElement('div', { className: 'pwa-banner-title' }, 'Установить HEYS'),
+                    React.createElement('div', { className: 'ios-benefit-hint' }, 
+                      '✨ Полный экран • Быстрый доступ • Работа offline'
+                    ),
                     React.createElement('div', { className: 'ios-steps' },
                       React.createElement('div', { className: 'ios-step' },
                         React.createElement('span', { className: 'ios-step-num' }, '1'),

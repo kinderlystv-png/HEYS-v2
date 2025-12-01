@@ -164,10 +164,13 @@
       const isFav = favorites.has(pid);
       const kcal = Math.round(product.kcal100 || 0);
       const prot = Math.round(product.protein100 || 0);
+      const harmVal = product.harm ?? product.harmScore ?? product.harm100;
+      const harmBg = getHarmBg(harmVal);
       
       return React.createElement('div', {
         key: pid,
         className: 'aps-product-card',
+        style: harmBg ? { background: harmBg } : undefined,
         onClick: () => selectProduct(product)
       },
         // Иконка категории
@@ -267,6 +270,24 @@
     );
   }
 
+  // Фон карточки по вредности (копия из heys_day_v12.js)
+  function getHarmBg(h) {
+    if (h == null) return null;
+    if (h <= -2) return '#d1fae5'; // суперполезный — насыщенный мятный
+    if (h <= -1) return '#ecfdf5'; // очень полезный
+    if (h <= 0) return '#f0fdf4';  // полезный — светло-зелёный
+    if (h <= 1) return '#fafafa';  // почти нейтральный
+    if (h <= 2) return null;       // нормальный — дефолт
+    if (h <= 3) return '#fffef5';  // чуть тёплый
+    if (h <= 4) return '#fffbeb';  // кремовый
+    if (h <= 5) return '#fef9e7';  // светло-жёлтый
+    if (h <= 6) return '#fef3c7';  // жёлтый
+    if (h <= 7) return '#fde68a';  // янтарный
+    if (h <= 8) return '#fecaca';  // светло-розовый
+    if (h <= 9) return '#fee2e2';  // розовый
+    return '#fecdd3';              // красноватый
+  }
+
   // Иконка категории (копия из heys_day_v12.js)
   function getCategoryIcon(cat) {
     if (!cat) return '🍽️';
@@ -287,8 +308,9 @@
   }
 
   // === Компонент выбора граммов (Шаг 2) ===
-  function GramsStep({ data, onChange, context }) {
-    const product = data.selectedProduct;
+  function GramsStep({ data, onChange, context, stepData }) {
+    // Продукт берём из данных первого шага (search)
+    const product = stepData?.search?.selectedProduct || data.selectedProduct;
     const grams = data.grams || 100;
     
     if (!product) {
@@ -313,8 +335,8 @@
       if (product.portions && product.portions.length) {
         return product.portions;
       }
-      // Авто-порции по названию
-      return HEYS.models?.getAutoPortions?.(product) || [
+      // Авто-порции по названию (передаём строку, не объект!)
+      return HEYS.models?.getAutoPortions?.(product.name) || [
         { name: '50г', grams: 50 },
         { name: '100г', grams: 100 },
         { name: '150г', grams: 150 },
@@ -331,9 +353,16 @@
     // Быстрые кнопки порций
     const quickPortions = [50, 100, 150, 200, 300];
     
+    // Фон хедера по вредности
+    const harmVal = product.harm ?? product.harmScore ?? product.harm100;
+    const harmBg = getHarmBg(harmVal);
+    
     return React.createElement('div', { className: 'aps-grams-step' },
       // Название продукта
-      React.createElement('div', { className: 'aps-product-header' },
+      React.createElement('div', { 
+        className: 'aps-product-header',
+        style: harmBg ? { background: harmBg, borderColor: harmBg } : undefined
+      },
         product.category && React.createElement('span', { className: 'aps-product-icon-lg' }, 
           getCategoryIcon(product.category)
         ),

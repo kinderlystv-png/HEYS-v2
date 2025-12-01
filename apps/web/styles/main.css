@@ -3503,8 +3503,9 @@ body:has(.offline-banner) .wrap {
 
 .tabs {
   display: flex;
+  justify-content: center;
   gap: 0;
-  padding: 0;
+  padding: 0 12px;
   margin: 0;
   background: #ffffff;
   border-top: 1px solid #f0f0f0;
@@ -3517,6 +3518,24 @@ body:has(.offline-banner) .wrap {
   box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.04);
   padding-bottom: max(4px, env(safe-area-inset-bottom));
   padding-top: 4px;
+}
+
+/* Скрыть технические вкладки на мобилке */
+@media (max-width: 768px) {
+  .tab.tab-desktop-only {
+    display: none;
+  }
+  
+  /* Равномерное распределение на мобилке */
+  .tabs {
+    justify-content: space-around;
+  }
+  
+  .tabs > .tab,
+  .tabs > .tab-switch-group {
+    flex: 1;
+    max-width: 25%;
+  }
 }
 
 .tab {
@@ -3581,12 +3600,12 @@ body:has(.offline-banner) .wrap {
 /* === iOS Switch стиль для stats/diary вкладок === */
 .tab-switch-group {
   display: flex;
-  align-self: center;
+  align-items: center;
+  justify-content: center;
   background: #e5e5ea;
   border-radius: 8px;
   padding: 2px;
   gap: 0;
-  margin: 0 2px;
   height: 36px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -16575,6 +16594,13 @@ input, textarea, select {
 
 .ios-banner-content .pwa-banner-text {
   flex: none;
+}
+
+.ios-benefit-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
 }
 
 .ios-steps {
