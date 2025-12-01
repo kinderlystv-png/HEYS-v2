@@ -534,24 +534,25 @@
       const newProducts = [...products, parsedPreview];
       HEYS.products?.setAll?.(newProducts);
       
-      // 2. Обновляем данные шага — продукт выбран
-      onChange({ 
-        ...data, 
-        newProduct: parsedPreview,
-        selectedProduct: parsedPreview,
-        grams: 100
-      });
-      
-      // 3. Вызываем callback если есть (для обновления списка в родителе)
+      // 2. Вызываем callback если есть (для обновления списка в родителе)
       if (context?.onProductCreated) {
         context.onProductCreated(parsedPreview);
       }
       
-      // 4. Переходим на шаг граммов
-      if (goToStep) {
-        setTimeout(() => goToStep(1, 'left'), 100);
+      // 3. Сразу добавляем продукт в приём пищи (100г по умолчанию)
+      if (context?.onAdd) {
+        context.onAdd({
+          product: parsedPreview,
+          grams: 100,
+          mealIndex: context.mealIndex || 0
+        });
       }
-    }, [parsedPreview, data, onChange, context, goToStep]);
+      
+      // 4. Закрываем модалку
+      if (closeModal) {
+        closeModal();
+      }
+    }, [parsedPreview, context, closeModal]);
     
     return React.createElement('div', { className: 'aps-create-step' },
       // Заголовок
@@ -983,6 +984,7 @@
         dateKey, 
         mealIndex, 
         onNewProduct,
+        onAdd, // Передаём callback для добавления в приём пищи
         // Callback при создании продукта — обновляем список
         onProductCreated: (product) => {
           currentProducts = [...currentProducts, product];
