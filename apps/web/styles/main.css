@@ -438,6 +438,12 @@ td:first-child input {
   transform: scale(0.99);
 }
 
+/* Отключаем scale для карточки статистики — мешает позиционированию popup'ов */
+.compact-stats.compact-card:active,
+.compact-water.compact-card:active {
+  transform: none;
+}
+
 .compact-card-header {
   font-size: 13px;
   font-weight: 600;
@@ -5815,8 +5821,14 @@ body:has(.offline-banner) .wrap {
   background: white;
   border-radius: 10px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  z-index: 100;
-  animation: popupFadeIn 0.18s ease-out;
+  z-index: 9999;
+  animation: sparklinePopupFadeIn 0.15s ease-out;
+  will-change: opacity;
+}
+
+@keyframes sparklinePopupFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* === SPARKLINE POPUP V2 — консистентный с metric-popup === */
@@ -5824,6 +5836,11 @@ body:has(.offline-banner) .wrap {
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
   overflow: visible;
+}
+
+/* Скрываем старую стрелку ::after для v2 (у него своя .sparkline-popup-arrow) */
+.sparkline-popup.sparkline-popup-v2::after {
+  display: none;
 }
 
 .sparkline-popup-v2 .sparkline-popup-stripe {
@@ -6057,7 +6074,7 @@ body:has(.offline-banner) .wrap {
   background: #fef3c7;
 }
 
-/* Стрелка-указатель снизу попапа */
+/* Стрелка-указатель снизу попапа (для legacy, не v2) */
 .sparkline-popup::after {
   content: '';
   position: absolute;
@@ -6073,8 +6090,8 @@ body:has(.offline-banner) .wrap {
 }
 
 @keyframes popupFadeIn {
-  from { opacity: 0; transform: scale(0.95) translateY(-8px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .sparkline-popup-header {
@@ -7776,11 +7793,9 @@ body:has(.offline-banner) .wrap {
 @keyframes popupFadeIn {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(-8px);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
   }
 }
 

@@ -137,7 +137,7 @@ pnpm type-check && pnpm lint && pnpm build  # Проверка
 </details>
 
 <details>
-<summary>🔧 Техдолг</summary>
+## 🔧 Техдолг</summary>
 
 | Задача | Приоритет |
 |--------|-----------|

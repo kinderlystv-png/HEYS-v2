@@ -6787,18 +6787,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const onTouchStart = (e) => { startY = e.touches[0].clientY; };
         const onTouchEnd = (e) => {
           const deltaY = e.changedTouches[0].clientY - startY;
-          if (deltaY > 50) { setSparklinePopup(null); haptic('light'); }
+          if (deltaY > 50) { 
+            setSparklinePopup(null); 
+            haptic('light'); 
+          }
         };
         
         return React.createElement('div', {
           className: 'sparkline-popup sparkline-popup-v2',
           role: 'dialog',
           'aria-label': (point.isToday ? 'Сегодня' : point.dayNum) + ' — ' + pct + '% от нормы',
+          'aria-modal': 'true',
           style: { 
             position: 'fixed',
             left: left + 'px', 
             top: (sparklinePopup.y + 15) + 'px',
-            width: popupW + 'px'
+            width: popupW + 'px',
+            zIndex: 9999
           },
           onClick: (e) => e.stopPropagation(),
           onTouchStart: onTouchStart,
@@ -6921,11 +6926,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           className: 'sparkline-popup sparkline-popup-v2 sparkline-popup-perfect-v2',
           role: 'dialog',
           'aria-label': 'Идеальный день — ' + pct + '% от нормы',
+          'aria-modal': 'true',
           style: { 
             position: 'fixed',
             left: left + 'px', 
             top: (sparklinePopup.y + 15) + 'px',
-            width: popupW + 'px'
+            width: popupW + 'px',
+            zIndex: 9999
           },
           onClick: (e) => e.stopPropagation(),
           onTouchStart: onTouchStart,
@@ -7949,10 +7956,33 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             );
           };
           
+          // Функция открытия popup для круга
+          const openRingPopup = (e, macro, value, norm, ratio, color, badges) => {
+            e.stopPropagation();
+            const rect = e.currentTarget.getBoundingClientRect();
+            setMacroBadgePopup({
+              macro,
+              emoji: null,
+              desc: null,
+              value: Math.round(value || 0),
+              norm: Math.round(norm || 0),
+              ratio,
+              color,
+              allBadges: badges || [],
+              x: rect.left + rect.width / 2,
+              y: rect.bottom
+            });
+            haptic('light');
+          };
+          
           return React.createElement('div', { className: 'macro-rings' },
           // Белки
           React.createElement('div', { className: 'macro-ring-item' },
-            React.createElement('div', { className: 'macro-ring' + (protColor === '#ef4444' ? ' macro-ring-pulse' : '') },
+            React.createElement('div', { 
+              className: 'macro-ring' + (protColor === '#ef4444' ? ' macro-ring-pulse' : ''),
+              onClick: (e) => openRingPopup(e, 'Белки', dayTot.prot, normAbs.prot, protRatio, protColor, protBadges),
+              style: { cursor: 'pointer' }
+            },
               React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
                 React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
                 React.createElement('circle', { 
@@ -7974,7 +8004,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           ),
           // Жиры
           React.createElement('div', { className: 'macro-ring-item' },
-            React.createElement('div', { className: 'macro-ring' + (fatColor === '#ef4444' ? ' macro-ring-pulse' : '') },
+            React.createElement('div', { 
+              className: 'macro-ring' + (fatColor === '#ef4444' ? ' macro-ring-pulse' : ''),
+              onClick: (e) => openRingPopup(e, 'Жиры', dayTot.fat, normAbs.fat, fatRatio, fatColor, fatBadges),
+              style: { cursor: 'pointer' }
+            },
               React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
                 React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
                 React.createElement('circle', { 
@@ -7996,7 +8030,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           ),
           // Углеводы
           React.createElement('div', { className: 'macro-ring-item' },
-            React.createElement('div', { className: 'macro-ring' + (carbsColor === '#ef4444' ? ' macro-ring-pulse' : '') },
+            React.createElement('div', { 
+              className: 'macro-ring' + (carbsColor === '#ef4444' ? ' macro-ring-pulse' : ''),
+              onClick: (e) => openRingPopup(e, 'Углеводы', dayTot.carbs, normAbs.carbs, carbsRatio, carbsColor, carbsBadges),
+              style: { cursor: 'pointer' }
+            },
               React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
                 React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
                 React.createElement('circle', { 
