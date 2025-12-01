@@ -16563,24 +16563,96 @@ input, textarea, select {
   background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
 }
 
-.ios-instructions {
+.ios-banner-content {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.ios-banner-content .pwa-banner-icon {
+  display: none;
+}
+
+.ios-banner-content .pwa-banner-text {
+  flex: none;
+}
+
+.ios-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ios-step {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.ios-step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .ios-share-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.25);
+  width: 28px;
+  height: 28px;
+  background: #007AFF;
   border-radius: 6px;
-  font-size: 18px;
-  transform: rotate(180deg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.4);
+  animation: iosPulse 2s ease-in-out infinite;
+}
+
+@keyframes iosPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(0, 122, 255, 0.4); }
+  50% { transform: scale(1.1); box-shadow: 0 2px 12px rgba(0, 122, 255, 0.6); }
+}
+
+.ios-got-it-btn {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ios-got-it-btn:active {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(0.98);
+}
+
+.ios-arrow-hint {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.6);
+  animation: iosArrowBounce 1s ease-in-out infinite;
+}
+
+@keyframes iosArrowBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(4px); }
 }
 
 [data-theme="dark"] .ios-pwa-banner .pwa-banner-content {
@@ -18656,6 +18728,67 @@ input, textarea, select {
   padding: 40px;
   color: var(--muted);
   font-size: 16px;
+}
+
+/* === APS OPEN BUTTON (Кнопка вызова модалки) === */
+
+.aps-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  border: 1px solid #93c5fd;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2563eb;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.aps-open-btn:hover {
+  background: linear-gradient(135deg, #bfdbfe 0%, #c7d2fe 100%);
+  border-color: #60a5fa;
+  transform: translateY(-1px);
+}
+
+.aps-open-btn:active {
+  transform: scale(0.97);
+}
+
+.aps-open-icon {
+  font-size: 16px;
+}
+
+.aps-open-text {
+  font-weight: 600;
+}
+
+[data-theme="dark"] .aps-open-btn {
+  background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .aps-open-btn:hover {
+  background: linear-gradient(135deg, #1e40af 0%, #4338ca 100%);
+}
+
+/* На мобильных — более компактная */
+@media (max-width: 768px) {
+  .aps-open-btn {
+    padding: 12px 20px;
+    font-size: 15px;
+    border-radius: 12px;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .aps-open-icon {
+    font-size: 18px;
+  }
 }
 
 

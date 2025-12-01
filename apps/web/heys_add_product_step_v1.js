@@ -77,6 +77,12 @@
     
     const { products = [], dateKey = '' } = context || {};
     
+    // Debug: проверяем что products пришли
+    useEffect(() => {
+      console.log('[AddProductStep] context:', context);
+      console.log('[AddProductStep] products count:', products?.length);
+    }, [context, products]);
+    
     // Фокус на input при монтировании
     useEffect(() => {
       setTimeout(() => inputRef.current?.focus(), 100);

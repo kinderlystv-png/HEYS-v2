@@ -3782,20 +3782,38 @@
               !isMorningCheckinBlocking && showIosPwaBanner && React.createElement(
                 'div',
                 { className: 'pwa-install-banner ios-pwa-banner' },
-                React.createElement('div', { className: 'pwa-banner-content' },
+                React.createElement('div', { className: 'pwa-banner-content ios-banner-content' },
                   React.createElement('div', { className: 'pwa-banner-icon' }, '📲'),
                   React.createElement('div', { className: 'pwa-banner-text' },
                     React.createElement('div', { className: 'pwa-banner-title' }, 'Установить HEYS'),
-                    React.createElement('div', { className: 'pwa-banner-desc ios-instructions' },
-                      'Нажмите ',
-                      React.createElement('span', { className: 'ios-share-icon' }, '⎙'),
-                      ' внизу, затем «На экран Домой»'
+                    React.createElement('div', { className: 'ios-steps' },
+                      React.createElement('div', { className: 'ios-step' },
+                        React.createElement('span', { className: 'ios-step-num' }, '1'),
+                        'Нажмите ',
+                        React.createElement('span', { className: 'ios-share-icon' }, 
+                          React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
+                            React.createElement('path', { d: 'M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8' }),
+                            React.createElement('polyline', { points: '16 6 12 2 8 6' }),
+                            React.createElement('line', { x1: 12, y1: 2, x2: 12, y2: 15 })
+                          )
+                        ),
+                        ' внизу'
+                      ),
+                      React.createElement('div', { className: 'ios-step' },
+                        React.createElement('span', { className: 'ios-step-num' }, '2'),
+                        '«На экран Домой»'
+                      )
                     )
                   ),
                   React.createElement('button', { 
-                    className: 'pwa-banner-dismiss',
+                    className: 'ios-got-it-btn',
                     onClick: dismissIosPwaBanner
-                  }, '✕')
+                  }, 'Понял')
+                ),
+                React.createElement('div', { className: 'ios-arrow-hint' },
+                  React.createElement('svg', { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'currentColor' },
+                    React.createElement('path', { d: 'M12 16l-6-6h12l-6 6z' })
+                  )
                 )
               ),
               // === Update Toast (только после Morning Check-in) ===

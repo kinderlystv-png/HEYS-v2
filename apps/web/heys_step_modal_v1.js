@@ -404,7 +404,8 @@
             StepComponent && React.createElement(StepComponent, {
               data: stepData[currentConfig.id] || {},
               onChange: (data) => updateStepData(currentConfig.id, data),
-              stepData: stepData
+              stepData: stepData,
+              context: context
             })
           ),
 
