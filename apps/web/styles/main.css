@@ -16558,6 +16558,34 @@ input, textarea, select {
   background: #334155;
 }
 
+/* === iOS Safari PWA Banner === */
+.ios-pwa-banner .pwa-banner-content {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+}
+
+.ios-instructions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.ios-share-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  font-size: 14px;
+  transform: rotate(180deg);
+}
+
+[data-theme="dark"] .ios-pwa-banner .pwa-banner-content {
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+}
+
 /* ========================================
    Update Toast (SW Update Available)
    ======================================== */
@@ -18114,6 +18142,519 @@ input, textarea, select {
 [data-theme="dark"] .mc-tip {
   color: #94a3b8;
   border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* === ADD PRODUCT STEP === */
+
+.aps-search-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 4px;
+  max-height: 60vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Кнопка "Новый продукт" */
+.aps-new-product-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
+  border: 2px dashed #93c5fd;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.aps-new-product-btn:hover {
+  background: linear-gradient(135deg, #bfdbfe 0%, #ddd6fe 100%);
+  border-color: #60a5fa;
+}
+
+.aps-new-product-btn:active {
+  transform: scale(0.98);
+}
+
+.aps-new-icon {
+  width: 28px;
+  height: 28px;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.aps-new-hint {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+[data-theme="dark"] .aps-new-product-btn {
+  background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .aps-new-icon {
+  background: #3b82f6;
+}
+
+[data-theme="dark"] .aps-new-hint {
+  color: #9ca3af;
+}
+
+/* Поле поиска */
+.aps-search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.aps-search-icon {
+  position: absolute;
+  left: 14px;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.aps-search-input {
+  width: 100%;
+  padding: 14px 40px 14px 44px;
+  font-size: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+  transition: border-color 0.2s;
+}
+
+.aps-search-input:focus {
+  outline: none;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.aps-search-clear {
+  position: absolute;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: #e5e7eb;
+  color: #6b7280;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-theme="dark"] .aps-search-clear {
+  background: #4b5563;
+  color: #d1d5db;
+}
+
+/* Секции */
+.aps-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aps-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-left: 4px;
+}
+
+/* Список продуктов */
+.aps-products-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Карточка продукта */
+.aps-product-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.aps-product-card:hover {
+  background: #f8fafc;
+  border-color: var(--acc);
+}
+
+.aps-product-card:active {
+  transform: scale(0.98);
+  background: #f1f5f9;
+}
+
+[data-theme="dark"] .aps-product-card:hover {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .aps-product-card:active {
+  background: #0f172a;
+}
+
+.aps-product-icon {
+  font-size: 24px;
+  min-width: 32px;
+  text-align: center;
+}
+
+.aps-product-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.aps-product-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aps-product-meta {
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.aps-product-meta-sep {
+  opacity: 0.5;
+}
+
+.aps-fav-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: #d1d5db;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: 8px;
+}
+
+.aps-fav-btn:hover {
+  background: #fef3c7;
+  color: #f59e0b;
+}
+
+.aps-fav-btn.active {
+  color: #f59e0b;
+}
+
+/* Пустое состояние */
+.aps-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--muted);
+}
+
+.aps-empty span:first-child {
+  font-size: 32px;
+}
+
+.aps-add-new-btn {
+  margin-top: 8px;
+  padding: 10px 20px;
+  background: var(--acc);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aps-add-new-btn:hover {
+  opacity: 0.9;
+}
+
+/* === GRAMS STEP === */
+
+.aps-grams-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 0 4px;
+}
+
+.aps-product-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--stats-bg);
+  border: 1px solid var(--stats-border);
+  border-radius: 12px;
+}
+
+.aps-product-icon-lg {
+  font-size: 32px;
+}
+
+.aps-product-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Большой дисплей калорий */
+.aps-kcal-display {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.aps-kcal-value {
+  font-size: 56px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.aps-kcal-unit {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+/* БЖУ */
+.aps-macros {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+}
+
+.aps-macro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.aps-macro-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.aps-macro-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Поле ввода граммов */
+.aps-grams-input-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.aps-grams-btn {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aps-grams-btn:hover {
+  background: #f1f5f9;
+  border-color: var(--acc);
+}
+
+.aps-grams-btn:active {
+  transform: scale(0.95);
+}
+
+.aps-grams-input {
+  width: 100px;
+  padding: 12px 8px;
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+}
+
+.aps-grams-input:focus {
+  outline: none;
+  border-color: var(--acc);
+}
+
+.aps-grams-unit {
+  font-size: 18px;
+  color: var(--muted);
+}
+
+/* Слайдер */
+.aps-grams-slider {
+  width: 100%;
+  height: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(to right, #22c55e, #eab308, #ef4444);
+  border-radius: 4px;
+  outline: none;
+  margin: 8px 0;
+}
+
+.aps-grams-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border: 2px solid var(--acc);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.aps-grams-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border: 2px solid var(--acc);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Быстрые кнопки */
+.aps-quick-grams {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.aps-quick-btn {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aps-quick-btn:hover {
+  border-color: var(--acc);
+}
+
+.aps-quick-btn.active {
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+}
+
+/* Порции продукта */
+.aps-portions {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.aps-portions-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.aps-portions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.aps-portion-btn {
+  padding: 8px 14px;
+  font-size: 14px;
+  border: 1px solid #d1fae5;
+  background: #ecfdf5;
+  color: #059669;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aps-portion-btn:hover {
+  border-color: #10b981;
+}
+
+.aps-portion-btn.active {
+  background: #10b981;
+  color: #fff;
+  border-color: #10b981;
+}
+
+[data-theme="dark"] .aps-portion-btn {
+  background: #064e3b;
+  border-color: #065f46;
+  color: #34d399;
+}
+
+[data-theme="dark"] .aps-portion-btn.active {
+  background: #10b981;
+  color: #fff;
+}
+
+.aps-no-product {
+  text-align: center;
+  padding: 40px;
+  color: var(--muted);
+  font-size: 16px;
 }
 
 

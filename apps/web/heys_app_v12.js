@@ -1371,8 +1371,20 @@
             // === PWA Install Banner ===
             const [pwaInstallPrompt, setPwaInstallPrompt] = useState(null);
             const [showPwaBanner, setShowPwaBanner] = useState(false);
+            const [showIosPwaBanner, setShowIosPwaBanner] = useState(false);
             
-            // Слушаем beforeinstallprompt событие
+            // Определяем iOS Safari
+            const isIosSafari = React.useMemo(() => {
+              const ua = navigator.userAgent || '';
+              const isIos = /iPhone|iPad|iPod/.test(ua);
+              const isWebkit = /WebKit/.test(ua);
+              const isChrome = /CriOS/.test(ua);
+              const isFirefox = /FxiOS/.test(ua);
+              // iOS Safari = iOS + WebKit + не Chrome + не Firefox
+              return isIos && isWebkit && !isChrome && !isFirefox;
+            }, []);
+            
+            // Слушаем beforeinstallprompt событие (Android/Desktop)
             React.useEffect(() => {
               // Проверяем, не установлено ли уже приложение
               const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
@@ -1387,6 +1399,12 @@
                 if (Date.now() - dismissedTime < 7 * 24 * 60 * 60 * 1000) return;
               }
               
+              // Для iOS Safari — показываем специальный баннер
+              if (isIosSafari) {
+                setTimeout(() => setShowIosPwaBanner(true), 3000);
+                return;
+              }
+              
               const handler = (e) => {
                 e.preventDefault();
                 setPwaInstallPrompt(e);
@@ -1396,7 +1414,7 @@
               
               window.addEventListener('beforeinstallprompt', handler);
               return () => window.removeEventListener('beforeinstallprompt', handler);
-            }, []);
+            }, [isIosSafari]);
             
             const handlePwaInstall = async () => {
               if (!pwaInstallPrompt) return;
@@ -1411,6 +1429,11 @@
             
             const dismissPwaBanner = () => {
               setShowPwaBanner(false);
+              localStorage.setItem('heys_pwa_banner_dismissed', Date.now().toString());
+            };
+            
+            const dismissIosPwaBanner = () => {
+              setShowIosPwaBanner(false);
               localStorage.setItem('heys_pwa_banner_dismissed', Date.now().toString());
             };
             
@@ -3733,7 +3756,7 @@
                               ),
                 ),
               ),
-              // === PWA Install Banner (только после Morning Check-in) ===
+              // === PWA Install Banner for Android/Desktop (только после Morning Check-in) ===
               !isMorningCheckinBlocking && showPwaBanner && React.createElement(
                 'div',
                 { className: 'pwa-install-banner' },
@@ -3753,6 +3776,26 @@
                       onClick: dismissPwaBanner
                     }, '✕')
                   )
+                )
+              ),
+              // === iOS Safari PWA Banner ===
+              !isMorningCheckinBlocking && showIosPwaBanner && React.createElement(
+                'div',
+                { className: 'pwa-install-banner ios-pwa-banner' },
+                React.createElement('div', { className: 'pwa-banner-content' },
+                  React.createElement('div', { className: 'pwa-banner-icon' }, '📲'),
+                  React.createElement('div', { className: 'pwa-banner-text' },
+                    React.createElement('div', { className: 'pwa-banner-title' }, 'Установить HEYS'),
+                    React.createElement('div', { className: 'pwa-banner-desc ios-instructions' },
+                      'Нажмите ',
+                      React.createElement('span', { className: 'ios-share-icon' }, '⎙'),
+                      ' внизу, затем «На экран Домой»'
+                    )
+                  ),
+                  React.createElement('button', { 
+                    className: 'pwa-banner-dismiss',
+                    onClick: dismissIosPwaBanner
+                  }, '✕')
                 )
               ),
               // === Update Toast (только после Morning Check-in) ===
