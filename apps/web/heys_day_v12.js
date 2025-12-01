@@ -211,6 +211,9 @@
   // Ref для отслеживания предыдущей даты (нужен для flush перед сменой)
   const prevDateRef = React.useRef(date);
   
+  // Ref для отслеживания последнего updatedAt — предотвращает гонку между doLocal и handleDayUpdated
+  const lastLoadedUpdatedAtRef = React.useRef(0);
+  
   const [dayRaw,setDayRaw]=useState(()=>{ 
     const key = 'heys_dayv2_'+date;
     const v=lsGet(key,null); 
@@ -307,20 +310,32 @@
       setIsHydrated(false); // Сброс: данные ещё не загружены для новой даты
       const clientId = window.HEYS && window.HEYS.currentClientId;
       const cloud = window.HEYS && window.HEYS.cloud;
+      
+      // Сбрасываем ref при смене даты
+      lastLoadedUpdatedAtRef.current = 0;
+      
       const doLocal = () => {
         if (cancelled) return;
         const profNow = getProfile();
         const key = 'heys_dayv2_' + date;
         const v = lsGet(key, null);
-        console.log('[HEYS] 📅 doLocal() loading day | key:', key, '| found:', !!v, '| meals in storage:', v?.meals?.length);
+        console.log('[HEYS] 📅 doLocal() loading day | key:', key, '| found:', !!v, '| meals in storage:', v?.meals?.length, '| steps:', v?.steps);
         if (v && v.date) {
+          // ЗАЩИТА: не перезаписываем более свежие данные
+          // handleDayUpdated может уже загрузить sync данные
+          if (v.updatedAt && lastLoadedUpdatedAtRef.current > 0 && v.updatedAt < lastLoadedUpdatedAtRef.current) {
+            console.log('[HEYS] 📅 doLocal() SKIPPED — newer data already loaded | storage:', v.updatedAt, '| loaded:', lastLoadedUpdatedAtRef.current);
+            return;
+          }
+          lastLoadedUpdatedAtRef.current = v.updatedAt || Date.now();
+          
           // Очищаем пустые тренировки при загрузке
           const cleanedDay = {
             ...v,
             trainings: cleanEmptyTrainings(v.trainings)
           };
           setDay(ensureDay(cleanedDay, profNow));
-          console.log('[HEYS] 📅 doLocal() loaded existing day | meals:', cleanedDay.meals?.length);
+          console.log('[HEYS] 📅 doLocal() loaded existing day | meals:', cleanedDay.meals?.length, '| steps:', cleanedDay.steps);
         } else {
           // create a clean default day for the selected date (don't inherit previous trainings)
           const defaultDay = ensureDay({ 
@@ -350,8 +365,9 @@
         if (typeof cloud.shouldSyncClient === 'function' ? cloud.shouldSyncClient(clientId, 4000) : true){
           cloud.bootstrapClientSync(clientId)
             .then(() => {
-              // Даем время на то, чтобы событие heysProductsUpdated отправилось
-              setTimeout(doLocal, 150);
+              // После sync localStorage уже обновлён событиями heys:day-updated
+              // Просто загружаем финальные данные (без задержки!)
+              doLocal();
             })
             .catch((err) => {
               // Нет сети или ошибка — загружаем из локального кэша
@@ -378,7 +394,11 @@
           const key = 'heys_dayv2_' + date;
           const v = lsGet(key, null);
           if (v && v.date) {
-            console.log('[HEYS] 📅 Reloading day after update | meals:', v.meals?.length, '| steps:', v.steps);
+            // Обновляем ref чтобы doLocal() не перезаписал более старыми данными
+            if (v.updatedAt) {
+              lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current, v.updatedAt);
+            }
+            console.log('[HEYS] 📅 Reloading day after update | meals:', v.meals?.length, '| steps:', v.steps, '| updatedAt:', v.updatedAt);
             setDay(ensureDay({ ...v, trainings: cleanEmptyTrainings(v.trainings) }, profNow));
           }
         }

@@ -35,4 +35,4 @@ polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 [2mdist/[22m[2massets/[22m[32mheys_core_v12-a269254d.js             [39m[1m[2m 46.00 kB[22m[1m[22m
 [2mdist/[22m[2massets/[22m[32mheys_storage_supabase_v1-cf484419.js  [39m[1m[2m 75.40 kB[22m[1m[22m
 [2mdist/[22m[2massets/[22m[35mindex-a9347fe2.css                    [39m[1m[2m276.86 kB[22m[1m[22m[2m │ gzip: 48.29 kB[22m
-[32m✓ built in 780ms[39m
+[32m✓ built in 1.07s[39m
