@@ -424,7 +424,7 @@
     
     // Доступ к навигации StepModal
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
-    const { goToStep, closeModal } = stepContext;
+    const { goToStep, closeModal, updateStepData } = stepContext;
     
     // Фокус на textarea при монтировании
     useEffect(() => {
@@ -539,20 +539,19 @@
         context.onProductCreated(parsedPreview);
       }
       
-      // 3. Сразу добавляем продукт в приём пищи (100г по умолчанию)
-      if (context?.onAdd) {
-        context.onAdd({
-          product: parsedPreview,
-          grams: 100,
-          mealIndex: context.mealIndex || 0
-        });
-      }
+      // 3. Сохраняем продукт в данные шага для передачи на шаг граммов
+      onChange({ 
+        ...data, 
+        newProduct: parsedPreview,
+        selectedProduct: parsedPreview,
+        grams: 100
+      });
       
-      // 4. Закрываем модалку
-      if (closeModal) {
-        closeModal();
+      // 4. Переходим на шаг граммов
+      if (goToStep) {
+        setTimeout(() => goToStep(1, 'left'), 100);
       }
-    }, [parsedPreview, context, closeModal]);
+    }, [parsedPreview, data, onChange, context, goToStep]);
     
     return React.createElement('div', { className: 'aps-create-step' },
       // Заголовок
