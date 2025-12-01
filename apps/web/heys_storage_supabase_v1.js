@@ -758,9 +758,12 @@
     
     const now = Date.now();
     
-    // Увеличиваем throttling с 4 до 30 секунд для снижения нагрузки
-    if (cloud._lastClientSync && cloud._lastClientSync.clientId === client_id && (now - cloud._lastClientSync.ts) < 30000){
+    // Throttling 5 секунд — баланс между нагрузкой и актуальностью данных
+    // Раньше было 30 сек, но это слишком долго для multi-device sync
+    const SYNC_THROTTLE_MS = 5000;
+    if (cloud._lastClientSync && cloud._lastClientSync.clientId === client_id && (now - cloud._lastClientSync.ts) < SYNC_THROTTLE_MS){
       // Тихий пропуск throttled запросов
+      log('sync throttled, last sync:', Math.round((now - cloud._lastClientSync.ts)/1000), 'sec ago');
       return;
     }
     
@@ -867,11 +870,17 @@
               if (merged) {
                 logCritical(`🔀 [MERGE] Day conflict resolved | key: ${key} | local: ${new Date(localUpdatedAt).toLocaleTimeString()} | remote: ${new Date(remoteUpdatedAt).toLocaleTimeString()}`);
                 ls.setItem(key, JSON.stringify(merged));
-                // Отправляем merged версию обратно в облако
-                setTimeout(() => {
-                  muteMirror = false;
-                  cloud.saveClientKey(client_id, row.k, merged);
-                }, 200);
+                // Отправляем merged версию обратно в облако через очередь (гарантия доставки)
+                // Используем row.k (оригинальный ключ из БД) для правильной записи
+                const mergedUpsertObj = {
+                  user_id: user.id,
+                  client_id: client_id,
+                  k: row.k,
+                  v: merged,
+                  updated_at: (new Date()).toISOString(),
+                };
+                clientUpsertQueue.push(mergedUpsertObj);
+                scheduleClientPush();
                 return; // Уже сохранили merged
               }
             }

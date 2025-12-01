@@ -105,8 +105,9 @@
    */
   function lsSet(key, val){ 
     try{ 
+      // localStorage.setItem триггерит interceptSetItem в heys_storage_supabase_v1.js,
+      // который автоматически вызывает saveClientKey — НЕ дублируем здесь!
       localStorage.setItem(key, JSON.stringify(val)); 
-      window.HEYS.saveClientKey(key, val);
       // Событие для offline-индикатора с типом изменения
       const type = key.includes('dayv2') ? 'meal' 
         : key.includes('product') ? 'product'
