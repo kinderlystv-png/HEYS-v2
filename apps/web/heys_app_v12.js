@@ -1828,8 +1828,14 @@
             // Вычисляем activeDays для DatePicker (после объявления clientId и products)
             // Пересчитывается когда: меняется дата, clientId, products, syncVer (данные дня) или ЗАВЕРШАЕТСЯ синхронизация
             const datePickerActiveDays = React.useMemo(() => {
+              // Fallback chain для products: props → HEYS.products.getAll() → localStorage
+              const effectiveProducts = (products && products.length > 0) ? products
+                : (window.HEYS.products?.getAll?.() || [])
+                .length > 0 ? window.HEYS.products.getAll()
+                : (U.lsGet?.('heys_products', []) || []);
+              
               // Не вычисляем пока идёт инициализация или нет продуктов
-              if (isInitializing || !products || products.length === 0) {
+              if (isInitializing || effectiveProducts.length === 0) {
                 return new Map();
               }
               
@@ -1847,8 +1853,8 @@
               const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
               
               try {
-                // Передаём products напрямую в функцию
-                return getActiveDaysForMonth(year, month, profile, products);
+                // Передаём effectiveProducts (с fallback) в функцию
+                return getActiveDaysForMonth(year, month, profile, effectiveProducts);
               } catch (e) {
                 // Тихий fallback — activeDays для календаря не критичны
                 return new Map();
@@ -3627,12 +3633,17 @@
                                   // Функция для загрузки данных при смене месяца
                                   getActiveDaysForMonth: (year, month) => {
                                     const getActiveDaysForMonthFn = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
-                                    if (!getActiveDaysForMonthFn || !clientId || !products || products.length === 0) {
+                                    // Fallback chain для products
+                                    const effectiveProducts = (products && products.length > 0) ? products
+                                      : (window.HEYS.products?.getAll?.() || [])
+                                      .length > 0 ? window.HEYS.products.getAll()
+                                      : (U.lsGet?.('heys_products', []) || []);
+                                    if (!getActiveDaysForMonthFn || !clientId || effectiveProducts.length === 0) {
                                       return new Map();
                                     }
                                     const profile = U && U.lsGet ? U.lsGet('heys_profile', {}) : {};
                                     try {
-                                      return getActiveDaysForMonthFn(year, month, profile, products);
+                                      return getActiveDaysForMonthFn(year, month, profile, effectiveProducts);
                                     } catch (e) {
                                       return new Map();
                                     }

@@ -307,15 +307,17 @@
       }
     }, [currentStepIndex, goToStep]);
 
-    // Swipe handlers
+    // Swipe handlers — учитываем allowSwipe из конфига шага
+    const stepAllowSwipe = currentConfig?.allowSwipe !== false && allowSwipe;
+    
     const handleTouchStart = useCallback((e) => {
-      if (!allowSwipe) return;
+      if (!stepAllowSwipe) return;
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
-    }, [allowSwipe]);
+    }, [stepAllowSwipe, currentConfig]);
 
     const handleTouchEnd = useCallback((e) => {
-      if (!allowSwipe) return;
+      if (!stepAllowSwipe) return;
       const deltaX = e.changedTouches[0].clientX - touchStartX.current;
       const deltaY = e.changedTouches[0].clientY - touchStartY.current;
 
@@ -326,7 +328,7 @@
           goToStep(currentStepIndex - 1, 'right');
         }
       }
-    }, [allowSwipe, currentStepIndex, totalSteps, goToStep]);
+    }, [stepAllowSwipe, currentStepIndex, totalSteps, goToStep, currentConfig]);
 
     // Закрытие
     const handleClose = useCallback(() => {
@@ -386,16 +388,21 @@
             }, '×')
           ),
 
-          // Progress dots
-          showProgress && totalSteps > 1 && React.createElement('div', { className: 'mc-progress' },
-            Array.from({ length: totalSteps }, (_, i) =>
-              React.createElement('div', {
-                key: i,
-                className: `mc-dot ${i <= currentStepIndex ? 'mc-dot--active' : ''}`,
-                onClick: () => goToStep(i, i > currentStepIndex ? 'left' : 'right')
-              })
+          // Progress bar (вместо dots)
+          showProgress && totalSteps > 1 && React.createElement('div', { className: 'mc-progress-bar' },
+            React.createElement('div', { 
+              className: 'mc-progress-fill',
+              style: { width: `${((currentStepIndex + 1) / totalSteps) * 100}%` }
+            }),
+            React.createElement('span', { className: 'mc-progress-text' }, 
+              `${currentStepIndex + 1}/${totalSteps}`
             )
           ),
+          
+          // Swipe indicator на первом шаге
+          currentStepIndex === 0 && totalSteps > 1 && React.createElement('div', { 
+            className: 'mc-swipe-hint'
+          }, 'Свайп → для продолжения'),
 
           // Step title
           React.createElement('div', { className: 'mc-step-header' },

@@ -1067,7 +1067,15 @@
   // Определяем компонент ReportsTab
   const ReportsTab = function ReportsTab(props){
     const React = global.React, { useMemo, useState, useEffect } = React;
-    const products = useMemo(()=>props.products||[], [props.products]);
+    // Fallback chain для products: props → HEYS.products.getAll() → localStorage
+    const propsProducts = props.products || [];
+    const products = useMemo(() => {
+      if (propsProducts.length > 0) return propsProducts;
+      const fromStore = global.HEYS?.products?.getAll?.() || [];
+      if (fromStore.length > 0) return fromStore;
+      const U = (global.HEYS && HEYS.utils) || { lsGet:(k,d)=>d };
+      return U.lsGet?.('heys_products', []) || [];
+    }, [propsProducts]);
     const prodIndex = useMemo(()=>buildProductIndex(products), [products]);
 
     const U = (global.HEYS && HEYS.utils) || { lsGet:(k,d)=>d };

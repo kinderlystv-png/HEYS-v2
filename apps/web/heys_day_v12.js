@@ -116,11 +116,6 @@
   window.HEYS.debug = window.HEYS.debug || {};
   window.HEYS.debug.dayProducts = products;
   window.HEYS.debug.dayProductIndex = pIndex;
-  
-  // 🔍 DEBUG: Проверка загрузки products
-  useEffect(() => {
-    console.log('[DayTab] products.length:', products.length, '| pIndex.byId.size:', pIndex?.byId?.size || 0);
-  }, [products.length, pIndex]);
   const prof=getProfile();
   // date приходит из props (selectedDate из App header)
   const date = selectedDate || todayISO();

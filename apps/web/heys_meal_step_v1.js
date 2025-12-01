@@ -218,12 +218,40 @@
     // Состояние анимации эмодзи и чисел
     const [emojiAnim, setEmojiAnim] = useState({ mood: '', wellbeing: '', stress: '' });
     const [numAnim, setNumAnim] = useState({ mood: false, wellbeing: false, stress: false });
+    const [emojiTap, setEmojiTap] = useState({ mood: false, wellbeing: false, stress: false });
     
     // Confetti state
     const [showConfetti, setShowConfetti] = useState(false);
     
+    // Показывать pulse на пресетах (только первые 3 секунды)
+    const [showPulse, setShowPulse] = useState(true);
+    useEffect(() => {
+      const timer = setTimeout(() => setShowPulse(false), 3000);
+      return () => clearTimeout(timer);
+    }, []);
+    
     // Ref для автофокуса на комментарий
     const commentRef = useRef(null);
+    
+    // История оценок за сегодня
+    const todayMoods = useMemo(() => {
+      const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+      const meals = dayData.meals || [];
+      return meals.map(m => ({
+        time: m.time,
+        mood: m.mood || 5,
+        wellbeing: m.wellbeing || 5,
+        stress: m.stress || 5
+      }));
+    }, [context?.dateKey]);
+    
+    // Тап на emoji — увеличение
+    const handleEmojiTap = (field) => {
+      haptic(5);
+      setEmojiTap(prev => ({...prev, [field]: true}));
+      setTimeout(() => setEmojiTap(prev => ({...prev, [field]: false})), 300);
+    };
     
     // === Динамический комментарий ===
     
@@ -411,6 +439,44 @@
     ];
 
     return React.createElement('div', { className: 'meal-mood-step' },
+      // Мини-график настроения за день (если есть предыдущие приёмы)
+      todayMoods.length > 0 && React.createElement('div', { className: 'meal-mood-history' },
+        React.createElement('div', { className: 'meal-mood-history-label' }, 'Сегодня:'),
+        React.createElement('div', { className: 'meal-mood-history-items' },
+          todayMoods.map((m, i) => 
+            React.createElement('div', { 
+              key: i, 
+              className: 'meal-mood-history-item',
+              title: `${m.time} — 😊${m.mood} 💪${m.wellbeing} 😰${m.stress}`
+            },
+              React.createElement('span', { className: 'meal-mood-history-time' }, m.time),
+              React.createElement('div', { className: 'meal-mood-history-bar' },
+                React.createElement('div', { 
+                  className: 'meal-mood-history-fill',
+                  style: { 
+                    width: `${((m.mood + m.wellbeing + (11 - m.stress)) / 3) * 10}%`,
+                    background: m.mood >= 6 ? '#22c55e' : m.mood >= 4 ? '#eab308' : '#ef4444'
+                  }
+                })
+              )
+            )
+          ),
+          // Текущий (пустой)
+          React.createElement('div', { className: 'meal-mood-history-item meal-mood-history-current' },
+            React.createElement('span', { className: 'meal-mood-history-time' }, 'Сейчас'),
+            React.createElement('div', { className: 'meal-mood-history-bar' },
+              React.createElement('div', { 
+                className: 'meal-mood-history-fill meal-mood-history-fill-current',
+                style: { 
+                  width: `${((mood + wellbeing + (11 - stress)) / 3) * 10}%`,
+                  background: 'linear-gradient(90deg, #3b82f6, #10b981)'
+                }
+              })
+            )
+          )
+        )
+      ),
+      
       // Общий индикатор состояния
       React.createElement('div', { className: 'meal-overall-status' },
         React.createElement('span', { className: 'meal-overall-emoji' }, overallStatus.emoji),
@@ -441,9 +507,10 @@
           style: { background: getCardBg(mood) }
         },
           React.createElement('div', { className: 'meal-rating-row-main' },
-            // Emoji слева
+            // Emoji слева (с тапом)
             React.createElement('span', { 
-              className: `meal-rating-emoji-lg ${emojiAnim.mood}`,
+              className: `meal-rating-emoji-lg ${emojiAnim.mood} ${emojiTap.mood ? 'emoji-tap' : ''}`,
+              onClick: () => handleEmojiTap('mood')
             }, MOOD_EMOJI[mood] || '😐'),
             // Инфо справа
             React.createElement('div', { className: 'meal-rating-info' },
@@ -458,7 +525,7 @@
               )
             ),
             // Пресеты справа
-            React.createElement('div', { className: 'meal-rating-presets' },
+            React.createElement('div', { className: `meal-rating-presets ${showPulse ? 'presets-pulse' : ''}` },
               PRESETS_POSITIVE.map(p => 
                 React.createElement('button', {
                   key: p.value,
@@ -474,7 +541,10 @@
             type: 'range',
             className: 'mood-slider mood-slider-positive',
             min: 1, max: 10, value: mood,
-            onChange: (e) => handleSliderChange('mood', Number(e.target.value))
+            onChange: (e) => handleSliderChange('mood', Number(e.target.value)),
+            onTouchStart: (e) => e.stopPropagation(),
+            onTouchEnd: (e) => e.stopPropagation(),
+            onTouchMove: (e) => e.stopPropagation()
           })
         ),
         
@@ -485,7 +555,8 @@
         },
           React.createElement('div', { className: 'meal-rating-row-main' },
             React.createElement('span', { 
-              className: `meal-rating-emoji-lg ${emojiAnim.wellbeing}`,
+              className: `meal-rating-emoji-lg ${emojiAnim.wellbeing} ${emojiTap.wellbeing ? 'emoji-tap' : ''}`,
+              onClick: () => handleEmojiTap('wellbeing')
             }, WELLBEING_EMOJI[wellbeing] || '😐'),
             React.createElement('div', { className: 'meal-rating-info' },
               React.createElement('div', { className: 'meal-rating-title' }, 'Самочувствие'),
@@ -498,7 +569,7 @@
                 React.createElement('span', { className: 'meal-rating-text' }, getWellbeingText(wellbeing))
               )
             ),
-            React.createElement('div', { className: 'meal-rating-presets' },
+            React.createElement('div', { className: `meal-rating-presets ${showPulse ? 'presets-pulse' : ''}` },
               PRESETS_POSITIVE.map(p => 
                 React.createElement('button', {
                   key: p.value,
@@ -513,7 +584,10 @@
             type: 'range',
             className: 'mood-slider mood-slider-positive',
             min: 1, max: 10, value: wellbeing,
-            onChange: (e) => handleSliderChange('wellbeing', Number(e.target.value))
+            onChange: (e) => handleSliderChange('wellbeing', Number(e.target.value)),
+            onTouchStart: (e) => e.stopPropagation(),
+            onTouchEnd: (e) => e.stopPropagation(),
+            onTouchMove: (e) => e.stopPropagation()
           })
         ),
         
@@ -524,7 +598,8 @@
         },
           React.createElement('div', { className: 'meal-rating-row-main' },
             React.createElement('span', { 
-              className: `meal-rating-emoji-lg ${emojiAnim.stress}`,
+              className: `meal-rating-emoji-lg ${emojiAnim.stress} ${emojiTap.stress ? 'emoji-tap' : ''}`,
+              onClick: () => handleEmojiTap('stress')
             }, STRESS_EMOJI[stress] || '😐'),
             React.createElement('div', { className: 'meal-rating-info' },
               React.createElement('div', { className: 'meal-rating-title' }, 'Стресс'),
@@ -537,7 +612,7 @@
                 React.createElement('span', { className: 'meal-rating-text' }, getStressText(stress))
               )
             ),
-            React.createElement('div', { className: 'meal-rating-presets' },
+            React.createElement('div', { className: `meal-rating-presets ${showPulse ? 'presets-pulse' : ''}` },
               PRESETS_NEGATIVE.map(p => 
                 React.createElement('button', {
                   key: p.value,
@@ -552,7 +627,10 @@
             type: 'range',
             className: 'mood-slider mood-slider-negative',
             min: 1, max: 10, value: stress,
-            onChange: (e) => handleSliderChange('stress', Number(e.target.value))
+            onChange: (e) => handleSliderChange('stress', Number(e.target.value)),
+            onTouchStart: (e) => e.stopPropagation(),
+            onTouchEnd: (e) => e.stopPropagation(),
+            onTouchMove: (e) => e.stopPropagation()
           })
         )
       ),
@@ -621,6 +699,7 @@
       title: 'Самочувствие',
       hint: 'Как вы себя чувствуете?',
       icon: '😊',
+      allowSwipe: false, // Отключаем свайп — конфликтует со слайдерами
       component: MealMoodStepComponent,
       getInitialData: (ctx) => {
         // Берём оценки из предыдущего приёма если есть
