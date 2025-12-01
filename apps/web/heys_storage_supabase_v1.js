@@ -1233,8 +1233,14 @@
                                     value.sleepEnd ||
                                     value.dayScore;
                 if (!hasRealData) {
-                    log(`🚫 [SAVE BLOCKED] Refused to save empty day before sync completed - key: ${k}`);
+                    logCritical(`🚫 [SAVE BLOCKED] Empty day before sync - key: ${k}`);
                     return;
+                }
+            } else {
+                // Диагностика: почему waitingForSync = false?
+                const hasRealData = value.weightMorning || value.steps > 0 || value.waterMl > 0;
+                if (!hasRealData) {
+                    log(`⚠️ [SAVE ALLOWED] Empty day saved (sync completed) - key: ${k}`);
                 }
             }
         }
