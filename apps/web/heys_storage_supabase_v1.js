@@ -99,14 +99,19 @@
     merged.waterMl = Math.max(local.waterMl || 0, remote.waterMl || 0);
     merged.householdMin = Math.max(local.householdMin || 0, remote.householdMin || 0);
     
-    // 📊 Вес: берём последний (по updatedAt)
-    if (local.updatedAt > remote.updatedAt) {
-      merged.weightMorning = local.weightMorning || remote.weightMorning;
+    // 📊 Вес: берём ЛЮБОЕ ненулевое значение (приоритет — свежему)
+    // ВАЖНО: вес может быть 0 у нового пустого дня, поэтому приоритет ненулевому
+    if (local.weightMorning && remote.weightMorning) {
+      // Оба есть — берём свежее
+      merged.weightMorning = (local.updatedAt || 0) >= (remote.updatedAt || 0) 
+        ? local.weightMorning 
+        : remote.weightMorning;
     } else {
-      merged.weightMorning = remote.weightMorning || local.weightMorning;
+      // Берём любое ненулевое
+      merged.weightMorning = local.weightMorning || remote.weightMorning || 0;
     }
     
-    // 😴 Сон: берём непустые значения, приоритет — более свежему
+    // 😴 Сон: берём непустые значения (приоритет свежему только если оба заполнены)
     merged.sleepStart = local.sleepStart || remote.sleepStart || '';
     merged.sleepEnd = local.sleepEnd || remote.sleepEnd || '';
     merged.sleepQuality = local.sleepQuality || remote.sleepQuality || '';
@@ -1185,6 +1190,22 @@
             if (!value.updatedAt && !value.schemaVersion) {
                 log(`🚫 [SAVE BLOCKED] Refused to save day without updatedAt (HMR protection) - key: ${k}`);
                 return;
+            }
+            
+            // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем ПУСТОЙ день в облако до завершения sync
+            // Это предотвращает перезапись реальных данных пустым днём при открытии нового устройства
+            if (waitingForSync) {
+                const hasRealData = value.weightMorning || 
+                                    value.steps > 0 || 
+                                    value.waterMl > 0 ||
+                                    (value.meals && value.meals.length > 0 && value.meals.some(m => m.items?.length > 0)) ||
+                                    value.sleepStart || 
+                                    value.sleepEnd ||
+                                    value.dayScore;
+                if (!hasRealData) {
+                    log(`🚫 [SAVE BLOCKED] Refused to save empty day before sync completed - key: ${k}`);
+                    return;
+                }
             }
         }
 
