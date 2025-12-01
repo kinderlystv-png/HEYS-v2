@@ -52,16 +52,31 @@
   
   // 🚨 Флаг блокировки сохранения до завершения первого sync
   let initialSyncCompleted = false;
+  let failsafeTimerId = null;
   cloud.isInitialSyncCompleted = function() { return initialSyncCompleted; };
   
-  // 🔄 FAILSAFE: Если sync не завершился за 15 секунд — разрешаем сохранения
-  // Это предотвращает блокировку изменений при проблемах с сетью
-  setTimeout(() => {
-    if (!initialSyncCompleted) {
-      logCritical('⚠️ [FAILSAFE] Initial sync timeout (15s) — enabling saves');
-      initialSyncCompleted = true;
+  // 🔄 FAILSAFE: Если sync не завершился за 45 секунд — разрешаем сохранения
+  // Увеличено с 15 до 45 сек — пользователю нужно время на ввод логина/пароля
+  // Таймер отменяется при успешном signIn → bootstrapClientSync
+  function startFailsafeTimer() {
+    if (failsafeTimerId) clearTimeout(failsafeTimerId);
+    failsafeTimerId = setTimeout(() => {
+      if (!initialSyncCompleted) {
+        logCritical('⚠️ [FAILSAFE] Initial sync timeout (45s) — enabling saves');
+        initialSyncCompleted = true;
+      }
+    }, 45000);
+  }
+  
+  function cancelFailsafeTimer() {
+    if (failsafeTimerId) {
+      clearTimeout(failsafeTimerId);
+      failsafeTimerId = null;
     }
-  }, 15000);
+  }
+  
+  // Запускаем failsafe при загрузке (будет отменён при signIn)
+  startFailsafeTimer();
 
   // ═══════════════════════════════════════════════════════════════════
   // 📦 ПЕРСИСТЕНТНАЯ ОЧЕРЕДЬ СИНХРОНИЗАЦИИ
@@ -746,6 +761,17 @@
   cloud.bootstrapClientSync = async function(client_id){
     if (!client || !user || !client_id) return;
     
+    // 🔄 Отменяем длинный failsafe — sync начался, запускаем короткий (20 сек на сам sync)
+    cancelFailsafeTimer();
+    if (!initialSyncCompleted) {
+      failsafeTimerId = setTimeout(() => {
+        if (!initialSyncCompleted) {
+          logCritical('⚠️ [FAILSAFE] Sync timeout (20s) — enabling saves');
+          initialSyncCompleted = true;
+        }
+      }, 20000);
+    }
+    
     // КРИТИЧЕСКАЯ ПРОВЕРКА: синхронизировать только текущего клиента
     let currentClientId = global.localStorage.getItem('heys_client_current');
     // Распарсить JSON если это строка в кавычках
@@ -976,6 +1002,7 @@
       
       // 🚨 Разрешаем сохранение после первого sync
       initialSyncCompleted = true;
+      cancelFailsafeTimer(); // Отменяем failsafe — sync успешен
       
       // Уведомляем приложение о завершении синхронизации (для обновления stepsGoal и т.д.)
       if (typeof window !== 'undefined' && window.dispatchEvent) {
