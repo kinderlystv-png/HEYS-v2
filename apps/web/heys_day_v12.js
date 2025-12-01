@@ -367,7 +367,8 @@
       return () => { cancelled = true; };
     }, [date]);
 
-    // Слушаем событие обновления данных дня (от Morning Check-in)
+    // Слушаем событие обновления данных дня (от Morning Check-in или внешних изменений)
+    // НЕ слушаем heysSyncCompleted — это вызывает бесконечный цикл при каждом сохранении
     React.useEffect(() => {
       const handleDayUpdated = (e) => {
         const updatedDate = e.detail?.date;
@@ -377,20 +378,17 @@
           const key = 'heys_dayv2_' + date;
           const v = lsGet(key, null);
           if (v && v.date) {
-            console.log('[HEYS] 📅 Reloading day after sync/update | meals:', v.meals?.length, '| steps:', v.steps);
+            console.log('[HEYS] 📅 Reloading day after update | meals:', v.meals?.length, '| steps:', v.steps);
             setDay(ensureDay({ ...v, trainings: cleanEmptyTrainings(v.trainings) }, profNow));
           }
         }
       };
       
-      // Слушаем явное событие обновления дня
+      // Слушаем явное событие обновления дня (от StepModal, Morning Check-in)
       window.addEventListener('heys:day-updated', handleDayUpdated);
-      // Слушаем завершение sync (pull-to-refresh) — перезагружаем данные
-      window.addEventListener('heysSyncCompleted', handleDayUpdated);
       
       return () => {
         window.removeEventListener('heys:day-updated', handleDayUpdated);
-        window.removeEventListener('heysSyncCompleted', handleDayUpdated);
       };
     }, [date]);
 

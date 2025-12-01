@@ -904,6 +904,14 @@
               if (merged) {
                 logCritical(`🔀 [MERGE] Day conflict resolved | key: ${key} | local: ${new Date(localUpdatedAt).toLocaleTimeString()} | remote: ${new Date(remoteUpdatedAt).toLocaleTimeString()}`);
                 ls.setItem(key, JSON.stringify(merged));
+                
+                // Уведомляем UI об обновлении данных дня (для pull-to-refresh)
+                const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+                if (dateMatch) {
+                  window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dateMatch[1], source: 'merge' } }));
+                  logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (merge)`);
+                }
+                
                 // Отправляем merged версию обратно в облако через очередь (гарантия доставки)
                 // Используем row.k (оригинальный ключ из БД) для правильной записи
                 const mergedUpsertObj = {
@@ -982,8 +990,15 @@
             }
           }
           
-          // 🔍 Диагностика: логируем загрузку данных дня с шагами
+          // Уведомляем UI об обновлении данных дня (когда облачные данные новее)
           if (key.includes('dayv2_') && row.v) {
+            const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+            if (dateMatch) {
+              window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dateMatch[1], source: 'cloud' } }));
+              logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (cloud sync)`);
+            }
+            
+            // 🔍 Диагностика: логируем загрузку данных дня с шагами
             const steps = row.v.steps || 0;
             if (steps > 0) {
               logCritical(`📅 [DAY SYNC] Loaded day ${key} with steps: ${steps}`);
