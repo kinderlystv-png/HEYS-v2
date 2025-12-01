@@ -13,17 +13,17 @@ pnpm type-check && pnpm lint && pnpm build  # Проверка
 
 ## 🔥 ПРИОРИТЕТ
 
-### ✅ Рефакторинг MealAddProduct (quick fix DONE!)
+### ⏳ Рефакторинг MealAddProduct (quick fix НЕ применён)
 **Файл**: [2025-12-01-extract-meal-add-product.md](./docs/tasks/2025-12-01-extract-meal-add-product.md)  
 **Время**: ~5 мин (quick fix) | 60-90 мин (полный рефакторинг)  
-**Статус**: ✅ Quick fix применён
+**Статус**: ⚠️ Откатился при git checkout
 
 **Проблема**: `MealAddProduct` (~800 строк) определён ВНУТРИ `DayTab`, пересоздаётся на каждый рендер → UNMOUNT/MOUNT при добавлении приёма.
 
-**Quick Fix (2025-12-01)**:
-- ✅ Обернул `MealAddProduct` в `React.useMemo()` — стабильная ссылка
-- ✅ Перенёс `gramsModal` state выше useMemo (dependency order)
-- ✅ `pnpm type-check && pnpm build` — PASS
+**Что нужно сделать**:
+1. Обернуть `MealAddProduct` в `React.useMemo()` (строка 432)
+2. Закрыть useMemo после функции (строка ~1234)
+3. Добавить deps: `[gramsModal, setGramsModal, day, setDay, products, pIndex, date, prodSig]`
 
 **Осталось (опционально)**: Полный рефакторинг — вынести MealAddProduct за пределы DayTab.
 

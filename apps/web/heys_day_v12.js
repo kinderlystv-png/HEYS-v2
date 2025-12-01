@@ -1763,9 +1763,16 @@
     
     // Слушаем завершение синхронизации cloud и изменения профиля для обновления stepsGoal
     useEffect(() => {
-      const handleProfileUpdate = () => {
+      const handleProfileUpdate = (e) => {
+        // Используем значение из события напрямую (если есть), иначе из storage
+        const stepsFromEvent = e?.detail?.stepsGoal;
+        if (stepsFromEvent != null) {
+          setSavedStepsGoal(stepsFromEvent);
+          return;
+        }
+        // Fallback для cloud sync (heysSyncCompleted)
         const profileFromStorage = getProfile();
-        if (profileFromStorage.stepsGoal && profileFromStorage.stepsGoal !== savedStepsGoal) {
+        if (profileFromStorage.stepsGoal) {
           setSavedStepsGoal(profileFromStorage.stepsGoal);
         }
       };
@@ -1779,7 +1786,7 @@
         window.removeEventListener('heysSyncCompleted', handleProfileUpdate);
         window.removeEventListener('heys:profile-updated', handleProfileUpdate);
       };
-    }, [savedStepsGoal]); // Обновляем при изменении savedStepsGoal
+    }, []); // Пустой массив — слушатели регистрируются один раз
     
     // === Открытие StepModal для веса и шагов ===
     function openWeightPicker() {
@@ -3468,7 +3475,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             className: 'mpc-products-toggle' + (isMealExpanded(mi, (day.meals||[]).length, day.meals) ? ' expanded' : ''),
             onClick: () => toggleMealExpand(mi, day.meals)
           },
-            React.createElement('span', null, isMealExpanded(mi, (day.meals||[]).length, day.meals) ? '▼' : '▶'),
+            React.createElement('span', { className: 'toggle-arrow' }, '›'),
             React.createElement('span', null, (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов'))
           ),
           // Products list (shown when expanded)
@@ -3483,10 +3490,88 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             // Определяем цвет граммов
             const gramsClass = G > 500 ? 'grams-danger' : G > 300 ? 'grams-warn' : '';
             
-            const cardContent = React.createElement('div', { className: 'mpc' },
-              // Row 1: name + grams (без кнопки delete — удаление свайпом)
+            // Фон карточки по вредности: плавный градиент от зелёного к красному
+            const getHarmBg = (h) => {
+              if (h == null) return '#fff';
+              if (h <= -2) return '#d1fae5'; // суперполезный — насыщенный мятный
+              if (h <= -1) return '#ecfdf5'; // очень полезный
+              if (h <= 0) return '#f0fdf4';  // полезный — светло-зелёный
+              if (h <= 1) return '#fafafa';  // почти нейтральный
+              if (h <= 2) return '#fff';     // нормальный — белый
+              if (h <= 3) return '#fffef5';  // чуть тёплый
+              if (h <= 4) return '#fffbeb';  // кремовый
+              if (h <= 5) return '#fef9e7';  // светло-жёлтый
+              if (h <= 6) return '#fef3c7';  // жёлтый
+              if (h <= 7) return '#fde68a';  // янтарный
+              if (h <= 8) return '#fecaca';  // светло-розовый
+              if (h <= 9) return '#fee2e2';  // розовый
+              return '#fecdd3';              // красноватый
+            };
+            const harmBg = getHarmBg(harmVal);
+            
+            // Бейдж полезности/вредности
+            const getHarmBadge = (h) => {
+              if (h == null) return null;
+              if (h <= -1) return { emoji: '🌿', text: 'полезный', color: '#059669' };
+              if (h >= 8) return { emoji: '⚠️', text: 'вредный', color: '#dc2626' };
+              return null;
+            };
+            const harmBadge = getHarmBadge(harmVal);
+            
+            // Иконка категории продукта
+            const getCategoryIcon = (cat) => {
+              if (!cat) return null;
+              const c = cat.toLowerCase();
+              if (c.includes('молоч') || c.includes('сыр') || c.includes('творог')) return '🥛';
+              if (c.includes('мяс') || c.includes('птиц') || c.includes('курин') || c.includes('говя') || c.includes('свин')) return '🍖';
+              if (c.includes('рыб') || c.includes('морепр')) return '🐟';
+              if (c.includes('овощ') || c.includes('салат') || c.includes('зелен')) return '🥬';
+              if (c.includes('фрукт') || c.includes('ягод')) return '🍎';
+              if (c.includes('круп') || c.includes('каш') || c.includes('злак') || c.includes('хлеб') || c.includes('выпеч')) return '🌾';
+              if (c.includes('яйц')) return '🥚';
+              if (c.includes('орех') || c.includes('семеч')) return '🥜';
+              if (c.includes('масл')) return '🫒';
+              if (c.includes('напит') || c.includes('сок') || c.includes('кофе') || c.includes('чай')) return '🥤';
+              if (c.includes('сладк') || c.includes('десерт') || c.includes('конфет') || c.includes('шокол')) return '🍬';
+              if (c.includes('соус') || c.includes('специ') || c.includes('припра')) return '🧂';
+              return '🍽️';
+            };
+            const categoryIcon = getCategoryIcon(p.category);
+            
+            // Поиск альтернативы с меньшей калорийностью в той же категории
+            const findAlternative = (prod, allProducts) => {
+              if (!prod.category || !allProducts || allProducts.length < 2) return null;
+              const currentKcal = per.kcal100 || 0;
+              if (currentKcal < 50) return null; // уже низкокалорийный
+              
+              const sameCategory = allProducts.filter(alt => 
+                alt.category === prod.category && 
+                alt.id !== prod.id &&
+                (alt.kcal100 || computeDerivedProduct(alt).kcal100) < currentKcal * 0.7 // на 30%+ меньше
+              );
+              if (sameCategory.length === 0) return null;
+              
+              // Берём самый низкокалорийный
+              const best = sameCategory.reduce((a, b) => {
+                const aKcal = a.kcal100 || computeDerivedProduct(a).kcal100;
+                const bKcal = b.kcal100 || computeDerivedProduct(b).kcal100;
+                return aKcal < bKcal ? a : b;
+              });
+              const bestKcal = best.kcal100 || computeDerivedProduct(best).kcal100;
+              const saving = Math.round((1 - bestKcal / currentKcal) * 100);
+              return { name: best.name, saving };
+            };
+            const alternative = findAlternative(p, products);
+            
+            const cardContent = React.createElement('div', { className: 'mpc', style: { background: harmBg } },
+              // Row 1: category icon + name + badge + grams
               React.createElement('div', { className: 'mpc-row1' },
+                categoryIcon && React.createElement('span', { className: 'mpc-category-icon' }, categoryIcon),
                 React.createElement('span', { className: 'mpc-name' }, p.name),
+                harmBadge && React.createElement('span', { 
+                  className: 'mpc-badge',
+                  style: { color: harmBadge.color }
+                }, harmBadge.emoji),
                 // На мобильных — кнопка открывает модалку со слайдером
                 React.createElement('button', {
                   className: 'mpc-grams-btn ' + gramsClass,
@@ -3516,6 +3601,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('span', null, Math.round(scale(per.fiber100, G))),
                 React.createElement('span', null, giVal != null ? Math.round(giVal) : '-'),
                 React.createElement('span', null, harmVal != null ? fmtVal('harm', harmVal) : '-')
+              ),
+              // Row 4: альтернатива (если есть)
+              alternative && React.createElement('div', { className: 'mpc-alternative' },
+                React.createElement('span', null, '💡 Замени на '),
+                React.createElement('strong', null, alternative.name),
+                React.createElement('span', null, ' — на ' + alternative.saving + '% меньше ккал')
               )
             );
             
@@ -3528,7 +3619,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             }
             
             // На десктопе — обычная карточка с кнопкой удаления
-            return React.createElement('div', { key: it.id, className: 'mpc', style: { marginBottom: '6px' } },
+            return React.createElement('div', { key: it.id, className: 'mpc', style: { marginBottom: '6px', background: harmBg } },
               React.createElement('div', { className: 'mpc-row1' },
                 React.createElement('span', { className: 'mpc-name' }, p.name),
                 React.createElement('input', {

@@ -39,6 +39,15 @@
   function getLastKnownWeight() {
     const profile = lsGet('heys_profile', { weight: 70 });
     const today = new Date();
+    
+    // Сначала проверяем сегодняшний вес (для редактирования из карточки)
+    const todayKey = today.toISOString().slice(0, 10);
+    const todayData = lsGet(`heys_dayv2_${todayKey}`, {});
+    if (todayData.weightMorning) {
+      return { weight: todayData.weightMorning, daysAgo: 0, date: todayKey };
+    }
+    
+    // Если сегодня нет — ищем в прошлых днях (для утреннего чек-ина)
     for (let i = 1; i <= 60; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);

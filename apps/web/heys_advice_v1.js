@@ -2279,7 +2279,8 @@
    * @returns {Array<{date: string, [key: string]: any}>} Массив дней с данными
    */
   function getRecentDays(n) {
-    const lsGet = (window.HEYS?.dayUtils?.lsGet) || ((k, d) => {
+    // Приоритет: HEYS.utils (с namespace) → HEYS.dayUtils → fallback
+    const lsGet = (window.HEYS?.utils?.lsGet) || (window.HEYS?.dayUtils?.lsGet) || ((k, d) => {
       try { 
         const v = localStorage.getItem(k);
         return v ? JSON.parse(v) : d; 

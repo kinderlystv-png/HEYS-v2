@@ -82,41 +82,31 @@
   }
 
   // === Storage Utilities ===
+  // ВАЖНО: Используем HEYS.utils.lsGet/lsSet которые работают с clientId namespace
   function lsGet(k,d){
     try{
+      // Приоритет: HEYS.utils (с namespace) → HEYS.store → localStorage fallback
+      if(HEYS.utils && typeof HEYS.utils.lsGet==='function') {
+        return HEYS.utils.lsGet(k, d);
+      }
       if(HEYS.store && typeof HEYS.store.get==='function') {
-        const result = HEYS.store.get(k,d);
-        if (global.HEYS && global.HEYS.analytics) {
-          global.HEYS.analytics.trackDataOperation('storage-op');
-        }
-        return result;
+        return HEYS.store.get(k,d);
       }
       const v=JSON.parse(localStorage.getItem(k)); 
-      if (global.HEYS && global.HEYS.analytics) {
-        global.HEYS.analytics.trackDataOperation('storage-op');
-      }
       return v==null?d:v;
     }catch(e){ return d; }
   }
   
   function lsSet(k,v){
     try{
-      if(HEYS.store && typeof HEYS.store.set==='function') {
-        const result = HEYS.store.set(k,v);
-        if (global.HEYS && global.HEYS.analytics) {
-          global.HEYS.analytics.trackDataOperation('storage-op');
-        }
-        return result;
+      // Приоритет: HEYS.utils (с namespace) → HEYS.store → localStorage fallback
+      if(HEYS.utils && typeof HEYS.utils.lsSet==='function') {
+        return HEYS.utils.lsSet(k, v);
       }
-      // Сначала пишем в localStorage для мгновенной доступности другим вкладкам
-      try{ 
-        localStorage.setItem(k, JSON.stringify(v)); 
-        if (global.HEYS && global.HEYS.analytics) {
-          global.HEYS.analytics.trackDataOperation('storage-op');
-        }
-      }catch(e){}
-      // Потом отправляем в облако (асинхронно)
-      try{ global.HEYS.saveClientKey(k, v); }catch(e){}
+      if(HEYS.store && typeof HEYS.store.set==='function') {
+        return HEYS.store.set(k,v);
+      }
+      localStorage.setItem(k, JSON.stringify(v));
     }catch(e){}
   }
 
