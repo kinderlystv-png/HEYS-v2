@@ -18,6 +18,13 @@
    */
   function shouldShowMorningCheckin() {
     const U = HEYS.utils || {};
+    
+    // Если клиент не выбран — НЕ показываем чек-ин (чтобы не показывать до авторизации)
+    const currentClientId = localStorage.getItem('heys_client_current');
+    if (!currentClientId) {
+      return false;
+    }
+    
     const todayKey = getTodayKey();
     const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${todayKey}`, {}) : {};
     

@@ -18275,7 +18275,8 @@ input, textarea, select {
   flex-direction: column;
   gap: 10px;
   padding: 0;
-  max-height: 55vh;
+  height: 540px;
+  max-height: 540px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -18351,18 +18352,21 @@ input, textarea, select {
   left: 12px;
   font-size: 14px;
   pointer-events: none;
-  opacity: 0.6;
+  opacity: 0.5;
+  z-index: 1;
 }
 
 .aps-search-input {
   width: 100%;
-  padding: 10px 36px 10px 34px;
+  padding: 10px 36px 10px 12px;
+  padding-left: 38px !important;
   font-size: 15px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--card);
   color: var(--text);
   transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
 .aps-search-input:focus {
@@ -18538,6 +18542,9 @@ input, textarea, select {
   align-items: center;
   gap: 10px;
   padding: 0;
+  height: 520px;
+  max-height: 520px;
+  overflow-y: auto;
 }
 
 .aps-product-header {
@@ -18698,20 +18705,23 @@ input, textarea, select {
 .aps-quick-grams {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .aps-quick-btn {
-  padding: 10px 16px;
-  font-size: 14px;
+  padding: 6px 10px;
+  font-size: 13px;
   font-weight: 500;
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--text);
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .aps-quick-btn:hover {
@@ -18735,11 +18745,13 @@ input, textarea, select {
   font-weight: 600;
   color: var(--muted);
   margin-bottom: 4px;
+  text-align: center;
 }
 
 .aps-portions-list {
   display: flex;
   flex-wrap: nowrap;
+  justify-content: center;
   gap: 3px;
   overflow: hidden;
 }
