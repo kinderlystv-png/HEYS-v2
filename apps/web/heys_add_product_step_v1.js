@@ -2,7 +2,7 @@
 // Двухшаговый flow: поиск → граммы/порции
 (function(global) {
   const HEYS = global.HEYS = global.HEYS || {};
-  const { useState, useMemo, useCallback, useEffect, useRef } = React;
+  const { useState, useMemo, useCallback, useEffect, useRef, useContext } = React;
 
   // Ждём загрузки StepModal
   if (!HEYS.StepModal) {
@@ -67,13 +67,104 @@
     return sorted.slice(0, 20);
   }
 
+  // === Категории для фильтрации ===
+  const CATEGORIES = [
+    { id: 'all', name: 'Все', icon: '📋' },
+    { id: 'dairy', name: 'Молочные', icon: '🥛', match: ['молоч', 'сыр', 'творог', 'йогурт', 'кефир', 'молоко'] },
+    { id: 'meat', name: 'Мясо', icon: '🍖', match: ['мяс', 'курин', 'говя', 'свин', 'индейк', 'птиц'] },
+    { id: 'fish', name: 'Рыба', icon: '🐟', match: ['рыб', 'морепр', 'лосось', 'тунец', 'креветк'] },
+    { id: 'veggies', name: 'Овощи', icon: '🥬', match: ['овощ', 'салат', 'огурец', 'помидор', 'капуст', 'морков'] },
+    { id: 'fruits', name: 'Фрукты', icon: '🍎', match: ['фрукт', 'ягод', 'яблок', 'банан', 'апельс'] },
+    { id: 'grains', name: 'Крупы', icon: '🌾', match: ['круп', 'каш', 'рис', 'гречк', 'овся', 'хлеб', 'макар'] },
+    { id: 'sweets', name: 'Сладкое', icon: '🍬', match: ['сладк', 'конфет', 'шокол', 'торт', 'печень', 'десерт'] }
+  ];
+
+  // Проверка категории продукта
+  function matchCategory(product, categoryId) {
+    if (categoryId === 'all') return true;
+    const cat = CATEGORIES.find(c => c.id === categoryId);
+    if (!cat || !cat.match) return true;
+    const name = (product.name || '').toLowerCase();
+    const pCat = (product.category || '').toLowerCase();
+    return cat.match.some(m => name.includes(m) || pCat.includes(m));
+  }
+
+  // Умные рекомендации на основе контекста
+  function getSmartRecommendations(products, dateKey) {
+    const hour = new Date().getHours();
+    const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+    const hasTraining = dayData.trainings && dayData.trainings.length > 0;
+    const meals = dayData.meals || [];
+    
+    // Считаем сумму белка за день
+    let totalProtein = 0;
+    meals.forEach(m => {
+      (m.items || []).forEach(it => {
+        const g = it.grams || 100;
+        const p = products.find(pr => (pr.id || pr.name) === (it.product_id || it.name));
+        if (p) totalProtein += (p.protein100 || 0) * g / 100;
+      });
+    });
+    
+    const recommendations = [];
+    
+    // После тренировки — белок
+    if (hasTraining && totalProtein < 80) {
+      const proteinRich = products
+        .filter(p => (p.protein100 || 0) >= 15)
+        .slice(0, 5);
+      if (proteinRich.length) {
+        recommendations.push({
+          title: '💪 После тренировки',
+          hint: 'Белок для восстановления',
+          products: proteinRich
+        });
+      }
+    }
+    
+    // Вечером — лёгкое
+    if (hour >= 20) {
+      const light = products
+        .filter(p => (p.kcal100 || 0) < 100 && (p.harm || 0) <= 2)
+        .slice(0, 5);
+      if (light.length) {
+        recommendations.push({
+          title: '🌙 Вечерний перекус',
+          hint: 'Лёгкие продукты',
+          products: light
+        });
+      }
+    }
+    
+    // Мало клетчатки — овощи
+    if (hour >= 14) {
+      const veggies = products
+        .filter(p => (p.fiber100 || 0) >= 2 || (p.category || '').toLowerCase().includes('овощ'))
+        .slice(0, 5);
+      if (veggies.length) {
+        recommendations.push({
+          title: '🥗 Добавьте овощей',
+          hint: 'Клетчатка важна',
+          products: veggies
+        });
+      }
+    }
+    
+    return recommendations.slice(0, 2); // Максимум 2 рекомендации
+  }
+
   // === Компонент поиска продукта (Шаг 1) ===
   function ProductSearchStep({ data, onChange, context }) {
     const [search, setSearch] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('all');
     const [favorites, setFavorites] = useState(() => 
       HEYS.store?.getFavorites?.() || new Set()
     );
     const inputRef = useRef(null);
+    
+    // Доступ к навигации StepModal
+    const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
+    const { goToStep } = stepContext;
     
     const { products = [], dateKey = '' } = context || {};
     
@@ -103,30 +194,47 @@
       }).slice(0, 10);
     }, [products, favorites]);
     
-    // Поиск
+    // Умные рекомендации
+    const smartRecs = useMemo(() => 
+      getSmartRecommendations(products, dateKey),
+      [products, dateKey]
+    );
+    
+    // Поиск с фильтром категории
     const lc = search.trim().toLowerCase();
     const searchResults = useMemo(() => {
-      if (!lc) return [];
+      let results = [];
       
-      // Умный поиск если доступен
-      if (HEYS.SmartSearchWithTypos) {
-        try {
-          const result = HEYS.SmartSearchWithTypos.search(lc, products, {
-            enablePhonetic: true,
-            enableSynonyms: true,
-            maxSuggestions: 20
-          });
-          if (result?.results?.length) return result.results;
-        } catch (e) {
-          console.warn('[AddProductStep] Smart search error:', e);
+      if (lc) {
+        // Умный поиск если доступен
+        if (HEYS.SmartSearchWithTypos) {
+          try {
+            const result = HEYS.SmartSearchWithTypos.search(lc, products, {
+              enablePhonetic: true,
+              enableSynonyms: true,
+              maxSuggestions: 30
+            });
+            if (result?.results?.length) results = result.results;
+          } catch (e) {
+            console.warn('[AddProductStep] Smart search error:', e);
+          }
+        }
+        
+        // Fallback
+        if (!results.length) {
+          results = products.filter(p => 
+            String(p.name || '').toLowerCase().includes(lc)
+          );
         }
       }
       
-      // Fallback
-      return products.filter(p => 
-        String(p.name || '').toLowerCase().includes(lc)
-      ).slice(0, 20);
-    }, [lc, products]);
+      // Фильтр по категории
+      if (selectedCategory !== 'all') {
+        results = results.filter(p => matchCategory(p, selectedCategory));
+      }
+      
+      return results.slice(0, 20);
+    }, [lc, products, selectedCategory]);
     
     // Toggle избранного
     const toggleFavorite = useCallback((e, productId) => {
@@ -137,15 +245,26 @@
       }
     }, []);
     
-    // Выбор продукта
+    // Выбор продукта — сразу переход на шаг граммов
     const selectProduct = useCallback((product) => {
       haptic('light');
+      
+      // Последние использованные граммы для этого продукта
+      const productId = product.id ?? product.product_id ?? product.name;
+      const lastGrams = lsGet(`heys_last_grams_${productId}`, null);
+      const defaultGrams = lastGrams || 100;
+      
       onChange({ 
         ...data, 
         selectedProduct: product,
-        grams: 100 
+        grams: defaultGrams,
+        lastGrams: lastGrams // Для отображения подсказки
       });
-    }, [data, onChange]);
+      // Автопереход на шаг 2 (граммы)
+      if (goToStep) {
+        setTimeout(() => goToStep(1, 'left'), 50);
+      }
+    }, [data, onChange, goToStep]);
     
     // Кнопка "Новый продукт"
     const handleNewProduct = useCallback(() => {
@@ -232,6 +351,30 @@
         }, '×')
       ),
       
+      // Фильтр по категориям
+      React.createElement('div', { className: 'aps-categories' },
+        CATEGORIES.map(cat => 
+          React.createElement('button', {
+            key: cat.id,
+            className: 'aps-category-chip' + (selectedCategory === cat.id ? ' active' : ''),
+            onClick: () => setSelectedCategory(cat.id)
+          }, cat.icon + ' ' + cat.name)
+        )
+      ),
+      
+      // Умные рекомендации (если нет поиска и есть рекомендации)
+      !showSearch && smartRecs.length > 0 && smartRecs.map((rec, ri) =>
+        React.createElement('div', { key: ri, className: 'aps-section aps-smart-rec' },
+          React.createElement('div', { className: 'aps-section-title' }, 
+            rec.title,
+            React.createElement('span', { className: 'aps-rec-hint' }, rec.hint)
+          ),
+          React.createElement('div', { className: 'aps-products-list' },
+            rec.products.map(p => renderProductCard(p, false))
+          )
+        )
+      ),
+      
       // Результаты поиска
       showSearch && React.createElement('div', { className: 'aps-section' },
         React.createElement('div', { className: 'aps-section-title' }, 
@@ -311,7 +454,18 @@
   function GramsStep({ data, onChange, context, stepData }) {
     // Продукт берём из данных первого шага (search)
     const product = stepData?.search?.selectedProduct || data.selectedProduct;
-    const grams = data.grams || 100;
+    const lastGrams = stepData?.search?.lastGrams; // Последние использованные
+    const grams = data.grams || stepData?.search?.grams || 100;
+    
+    // Режим ввода: grams или kcal
+    const [inputMode, setInputMode] = useState('grams');
+    const [kcalInput, setKcalInput] = useState('');
+    const gramsInputRef = useRef(null);
+    
+    // Автофокус на поле граммов
+    useEffect(() => {
+      setTimeout(() => gramsInputRef.current?.focus(), 150);
+    }, []);
     
     if (!product) {
       return React.createElement('div', { className: 'aps-no-product' },
@@ -350,6 +504,39 @@
       onChange({ ...data, grams: val });
     }, [data, onChange]);
     
+    // Расчёт граммов из ккал
+    const setKcalAndCalcGrams = useCallback((kcalStr) => {
+      setKcalInput(kcalStr);
+      const kcal = Number(kcalStr) || 0;
+      if (kcal > 0 && kcal100 > 0) {
+        const calcGrams = Math.round(kcal / kcal100 * 100);
+        const val = Math.max(1, Math.min(2000, calcGrams));
+        onChange({ ...data, grams: val });
+      }
+    }, [data, onChange, kcal100]);
+    
+    // Считаем сумму ккал за день
+    const { dateKey, mealIndex } = context || {};
+    const dayTotalKcal = useMemo(() => {
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+      let total = 0;
+      (dayData.meals || []).forEach(m => {
+        (m.items || []).forEach(it => {
+          const g = it.grams || 100;
+          const pid = it.product_id || it.name;
+          const prod = (context?.products || []).find(p => (p.id || p.name) === pid);
+          if (prod) total += (prod.kcal100 || 0) * g / 100;
+        });
+      });
+      return Math.round(total);
+    }, [dateKey, context?.products]);
+    
+    // Норма ккал из профиля
+    const dailyGoal = useMemo(() => {
+      const profile = lsGet('heys_profile', {});
+      return profile.optimum || profile.tdee || 1800;
+    }, []);
+    
     // Быстрые кнопки порций
     const quickPortions = [50, 100, 150, 200, 300];
     
@@ -367,6 +554,15 @@
           getCategoryIcon(product.category)
         ),
         React.createElement('div', { className: 'aps-product-title' }, product.name)
+      ),
+      
+      // Подсказка про последние граммы
+      lastGrams && React.createElement('div', { className: 'aps-last-grams-hint' },
+        React.createElement('span', null, 'В прошлый раз: '),
+        React.createElement('button', {
+          className: 'aps-last-grams-btn',
+          onClick: () => setGrams(lastGrams)
+        }, lastGrams + 'г')
       ),
       
       // Большой дисплей калорий
@@ -391,13 +587,26 @@
         )
       ),
       
+      // Переключатель режима: граммы / ккал
+      React.createElement('div', { className: 'aps-input-mode-toggle' },
+        React.createElement('button', {
+          className: 'aps-mode-btn' + (inputMode === 'grams' ? ' active' : ''),
+          onClick: () => setInputMode('grams')
+        }, '⚖️ Граммы'),
+        React.createElement('button', {
+          className: 'aps-mode-btn' + (inputMode === 'kcal' ? ' active' : ''),
+          onClick: () => setInputMode('kcal')
+        }, '🔥 Ккал')
+      ),
+      
       // Поле ввода граммов
-      React.createElement('div', { className: 'aps-grams-input-row' },
+      inputMode === 'grams' && React.createElement('div', { className: 'aps-grams-input-row' },
         React.createElement('button', {
           className: 'aps-grams-btn',
           onClick: () => setGrams(grams - 10)
         }, '−10'),
         React.createElement('input', {
+          ref: gramsInputRef,
           type: 'number',
           className: 'aps-grams-input',
           value: grams,
@@ -413,8 +622,23 @@
         }, '+10')
       ),
       
-      // Слайдер
-      React.createElement('input', {
+      // Поле ввода ккал (для расчёта граммов)
+      inputMode === 'kcal' && React.createElement('div', { className: 'aps-kcal-input-row' },
+        React.createElement('span', { className: 'aps-kcal-label' }, 'Хочу съесть:'),
+        React.createElement('input', {
+          type: 'number',
+          className: 'aps-kcal-input',
+          value: kcalInput,
+          onChange: (e) => setKcalAndCalcGrams(e.target.value),
+          placeholder: 'ккал',
+          inputMode: 'numeric'
+        }),
+        React.createElement('span', { className: 'aps-kcal-unit' }, 'ккал'),
+        React.createElement('span', { className: 'aps-calc-result' }, '= ' + grams + 'г')
+      ),
+      
+      // Слайдер (только в режиме граммов)
+      inputMode === 'grams' && React.createElement('input', {
         type: 'range',
         className: 'aps-grams-slider',
         min: 10,
@@ -447,6 +671,18 @@
             }, p.name + (p.name.includes('г') ? '' : ` (${p.grams}г)`))
           )
         )
+      ),
+      
+      // Итог дня: +ккал → всего/норма (%)
+      React.createElement('div', { className: 'aps-day-total' },
+        React.createElement('span', { className: 'aps-day-plus' }, '+' + currentKcal + ' ккал'),
+        React.createElement('span', { className: 'aps-day-arrow' }, ' → '),
+        React.createElement('span', { className: 'aps-day-sum' }, 
+          (dayTotalKcal + currentKcal) + '/' + dailyGoal
+        ),
+        React.createElement('span', { className: 'aps-day-pct' }, 
+          ' (' + Math.round((dayTotalKcal + currentKcal) / dailyGoal * 100) + '%)'
+        )
       )
     );
   }
@@ -476,7 +712,7 @@
           icon: '🍽️',
           component: ProductSearchStep,
           getInitialData: () => ({ selectedProduct: null, grams: 100 }),
-          validate: (data) => !!data.selectedProduct
+          validate: (data) => !!data?.selectedProduct
         },
         {
           id: 'grams',
@@ -484,7 +720,7 @@
           hint: 'Укажите количество',
           icon: '⚖️',
           component: GramsStep,
-          validate: (data) => data.grams > 0
+          validate: (data, stepData) => (data?.grams || stepData?.search?.grams || 0) > 0
         }
       ],
       context: { products, dateKey, mealIndex, onNewProduct },

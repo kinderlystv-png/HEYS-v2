@@ -181,8 +181,8 @@
   // Проверка: развёрнут ли приём
   // - Устаревшие приёмы (>1 часа) автоматически свёрнуты
   // - Пользователь может вручную развернуть их кликом (не кешируется)
-  // - Последний актуальный приём развёрнут по умолчанию
-  const isMealExpanded = (mealIndex, totalMeals, meals) => {
+  // - Первый в отсортированном списке (последний по времени) развёрнут по умолчанию
+  const isMealExpanded = (mealIndex, totalMeals, meals, displayIndex = null) => {
     const meal = meals && meals[mealIndex];
     const isStale = meal && isMealStale(meal);
     
@@ -197,7 +197,11 @@
       return expandedMeals[mealIndex];
     }
     
-    // Последний актуальный приём развёрнут по умолчанию
+    // Первый в отсортированном списке (последний по времени) развёрнут по умолчанию
+    // Если displayIndex передан — используем его, иначе fallback на старую логику
+    if (displayIndex !== null) {
+      return displayIndex === 0;
+    }
     return mealIndex === totalMeals - 1;
   };
   
@@ -1852,7 +1856,7 @@
       }
     }
     
-    // Сортировка приёмов по времени (ночные 00:00-02:59 в конец)
+    // Сортировка приёмов по времени (последние наверху для удобства)
     function sortMealsByTime(meals) {
       if (!meals || meals.length <= 1) return meals;
       
@@ -1866,7 +1870,8 @@
         if (timeA === null) return 1;
         if (timeB === null) return -1;
         
-        return timeA - timeB;
+        // Обратный порядок: последние наверху
+        return timeB - timeA;
       });
     }
     
@@ -2516,7 +2521,27 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       return Math.round(num); // всё остальное до целых
     }
 
-    const mealsUI = (day.meals||[]).map((meal,mi)=>{
+    // Сортируем приёмы для отображения (последние наверху)
+    const sortedMealsForDisplay = React.useMemo(() => {
+      const meals = day.meals || [];
+      if (meals.length <= 1) return meals;
+      
+      return [...meals].sort((a, b) => {
+        const timeA = U.timeToMinutes ? U.timeToMinutes(a.time) : null;
+        const timeB = U.timeToMinutes ? U.timeToMinutes(b.time) : null;
+        
+        if (timeA === null && timeB === null) return 0;
+        if (timeA === null) return 1;
+        if (timeB === null) return -1;
+        
+        // Обратный порядок: последние (позже) наверху
+        return timeB - timeA;
+      });
+    }, [day.meals]);
+
+    const mealsUI = sortedMealsForDisplay.map((meal, displayIndex) => {
+      // Находим реальный индекс в day.meals для правильного обновления
+      const mi = (day.meals || []).findIndex(m => m.id === meal.id);
       const headerMeta = MEAL_HEADER_META;
       const header = headerMeta.map(h=>h.label.replace(/<br>/g,'/'));
   function pRow(it){
@@ -2608,26 +2633,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const mealKcal = Math.round(totals.kcal || 0);
       
       // Определяем, является ли этот приём "текущим" (голубой) или "прошедшим" (серый)
-      // Текущий = последний приём + не прошло больше 1 часа с момента приёма
-      const isLastMeal = mi === day.meals.length - 1;
-      let isCurrentMeal = isLastMeal;
-      
-      if (isLastMeal && meal.time) {
-        // Проверяем, прошло ли больше часа с времени приёма
-        const [hours, minutes] = meal.time.split(':').map(Number);
-        if (!isNaN(hours) && !isNaN(minutes)) {
-          const now = new Date();
-          const mealDate = new Date();
-          mealDate.setHours(hours, minutes, 0, 0);
-          
-          // Если время приёма в будущем (пользователь запланировал), считаем текущим
-          // Если прошло больше 60 минут — уже не текущий
-          const diffMinutes = (now - mealDate) / (1000 * 60);
-          if (diffMinutes > 60) {
-            isCurrentMeal = false;
-          }
-        }
-      }
+      // Текущий = первый в отсортированном списке (последний по времени) И прошло < 1 часа
+      const isFirstInDisplay = displayIndex === 0;
+      const isStale = isMealStale(meal);
+      const isCurrentMeal = isFirstInDisplay && !isStale;
       
       const mealCardClass = isCurrentMeal ? 'card tone-blue meal-card' : 'card tone-slate meal-card';
       
@@ -2726,14 +2735,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         React.createElement('div', { className: 'mobile-products-list' },
           // Expandable products section
           (meal.items || []).length > 0 && React.createElement('div', { 
-            className: 'mpc-products-toggle' + (isMealExpanded(mi, (day.meals||[]).length, day.meals) ? ' expanded' : ''),
+            className: 'mpc-products-toggle' + (isMealExpanded(mi, (day.meals||[]).length, day.meals, displayIndex) ? ' expanded' : ''),
             onClick: () => toggleMealExpand(mi, day.meals)
           },
             React.createElement('span', { className: 'toggle-arrow' }, '›'),
             React.createElement('span', null, (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов'))
           ),
           // Products list (shown when expanded)
-          isMealExpanded(mi, (day.meals||[]).length, day.meals) && (meal.items || []).map(it => {
+          isMealExpanded(mi, (day.meals||[]).length, day.meals, displayIndex) && (meal.items || []).map(it => {
             const p = getProductFromItem(it, pIndex) || { name: it.name || '?' };
             const G = +it.grams || 0;
             const per = per100(p);
@@ -3102,7 +3111,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
   const factHead = ['ккал','У','Прост','Сл','Б','Ж','ВрЖ','ПолЖ','СупЖ','Клет','ГИ','Вред','']; // последний пустой (кнопка)
   // Helper: calc percent of part from total (for mobile summary)
   const pct = (part, total) => total > 0 ? Math.round((part / total) * 100) : 0;
-    const daySummary = React.createElement('div',{className:'card tone-slate',style:{marginTop:'16px',overflowX:'auto'}},
+    const daySummary = React.createElement('div',{className:'card tone-slate',style:{marginTop:'8px',overflowX:'auto'}},
       React.createElement('div',{className:'section-title',style:{marginBottom:'4px'}},'СУТОЧНЫЕ ИТОГИ'),
       React.createElement('table',{className:'tbl meals-table daily-summary'},
         React.createElement('thead',null,React.createElement('tr',null,

@@ -771,7 +771,7 @@ td:first-child input {
   padding: 12px 18px 80px;
   box-sizing: border-box;
   /* Отступ сверху для fixed шапки */
-  padding-top: 130px;
+  padding-top: 110px;
   /* Плавное появление после загрузки */
   animation: wrapFadeIn 0.4s ease-out;
 }
@@ -964,7 +964,7 @@ td:first-child input {
 
 /* === Gamification Bar (Phase 1 Live) === */
 .hdr-gamification {
-  padding: 12px 16px;
+  padding: 10px 16px;
   position: relative;
 }
 
@@ -2399,16 +2399,17 @@ td:first-child input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 12px 20px;
+  gap: 10px;
+  padding: 6px 16px;
   background: #f0f0f0;
   border: 1px solid #667eea;
   border-top: none;
   border-radius: 0 0 16px 16px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   overflow: visible;
   position: relative;
   z-index: 10;
+  min-height: 40px;
   /* Тень снизу как у нижнего меню */
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
 }
@@ -2430,20 +2431,21 @@ td:first-child input {
 }
 
 .hdr-client-avatar {
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  border-radius: 12px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 13px;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   transition: transform 0.2s ease;
+  flex-shrink: 0;
 }
 
 .hdr-client-avatar:active {
@@ -2453,27 +2455,28 @@ td:first-child input {
 .hdr-client-info {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
+  line-height: 1.1;
 }
 
 .hdr-client-name {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   color: #1f2937;
 }
 
 .hdr-client-firstname {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #1f2937;
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 .hdr-client-lastname {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 400;
   color: #6b7280;
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 /* Cloud sync indicator */
@@ -3375,10 +3378,10 @@ body:has(.offline-banner) .wrap {
   }
   
   .hdr-bottom {
-    padding: 12px 16px;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
+    padding: 6px 16px;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
     border-radius: 0 0 12px 12px;
   }
   
@@ -3503,21 +3506,23 @@ body:has(.offline-banner) .wrap {
 
 .tabs {
   display: flex;
-  justify-content: center;
+  justify-content: space-around;
+  align-items: center;
   gap: 0;
-  padding: 0 12px;
+  padding: 0 16px;
   margin: 0;
   background: #ffffff;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid #e0e0e0;
   border-radius: 0;
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 1000;
-  box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08), 0 -1px 4px rgba(0, 0, 0, 0.04);
   padding-bottom: max(4px, env(safe-area-inset-bottom));
   padding-top: 4px;
+  min-height: 46px;
 }
 
 /* Скрыть технические вкладки на мобилке */
@@ -3525,27 +3530,16 @@ body:has(.offline-banner) .wrap {
   .tab.tab-desktop-only {
     display: none;
   }
-  
-  /* Равномерное распределение на мобилке */
-  .tabs {
-    justify-content: space-around;
-  }
-  
-  .tabs > .tab,
-  .tabs > .tab-switch-group {
-    flex: 1;
-    max-width: 25%;
-  }
 }
 
 .tab {
   cursor: pointer;
-  padding: 4px 8px 3px;
-  min-height: 44px;
+  padding: 4px 12px;
+  min-height: 48px;
   border-radius: 0;
   font-weight: 500;
-  font-size: 9px;
-  color: #b0b0b0;
+  font-size: 10px;
+  color: #8e8e93;
   user-select: none;
   touch-action: manipulation;
   transition: color 0.15s ease;
@@ -3555,26 +3549,25 @@ body:has(.offline-banner) .wrap {
   border: none;
   background: transparent;
   flex: 1;
-  min-width: 0;
+  min-width: 60px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 4px;
   -webkit-tap-highlight-color: transparent;
 }
 
 .tab .tab-icon {
-  font-size: 20px;
+  font-size: 24px;
   line-height: 1;
   transition: transform 0.12s ease;
 }
 
 .tab .tab-text {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 .tab:hover {
@@ -3606,20 +3599,23 @@ body:has(.offline-banner) .wrap {
   border-radius: 8px;
   padding: 2px;
   gap: 0;
-  height: 36px;
+  height: 40px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  flex: 1;
+  max-width: 140px;
 }
 
 .tab.tab-switch {
-  flex: none;
-  min-width: 50px;
-  min-height: auto;
-  padding: 4px 8px;
+  flex: 1;
+  min-width: 60px;
+  min-height: 36px;
+  padding: 6px 10px;
   border-radius: 0;
   background: transparent;
   color: #666;
   transition: all 0.2s ease;
+  gap: 2px;
 }
 
 /* Скругление только на внешних краях */
@@ -3632,11 +3628,12 @@ body:has(.offline-banner) .wrap {
 }
 
 .tab.tab-switch .tab-icon {
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .tab.tab-switch .tab-text {
-  font-size: 8px;
+  font-size: 9px;
+  font-weight: 500;
 }
 
 .tab.tab-switch.active {
@@ -4027,9 +4024,13 @@ body:has(.offline-banner) .wrap {
   display: inline-flex;
   align-items: center;
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
   transition: background 0.15s;
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  font-weight: 600;
+  font-size: 13px;
+  color: #1e40af;
 }
 
 .meal-type-arrow {
@@ -4039,18 +4040,22 @@ body:has(.offline-banner) .wrap {
 }
 
 .meal-type-label:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, #bfdbfe 0%, #c7d2fe 100%);
 }
 
 .meal-type-wrapper:hover .meal-type-arrow {
   opacity: 1;
 }
 
-/* Время приёма */
+/* Время приёма — ВЫДЕЛЕННОЕ */
 .meal-time-badge {
-  color: #64748b;
-  font-weight: 500;
-  font-size: 10px;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  margin-left: 8px;
 }
 
 /* Калории приёма */
@@ -4667,7 +4672,7 @@ body:has(.offline-banner) .wrap {
   .wrap {
     padding: 12px 14px 80px;
     /* Отступ сверху для fixed шапки на мобильных */
-    padding-top: 130px;
+    padding-top: 125px;
   }
 }
 
@@ -4760,8 +4765,8 @@ body:has(.offline-banner) .wrap {
   }
 
   .hdr-bottom {
-    padding: 10px 14px;
-    gap: 10px;
+    padding: 6px 14px;
+    gap: 8px;
     border-radius: 0 0 12px 12px;
   }
 
@@ -10434,8 +10439,15 @@ body:has(.offline-banner) .wrap {
 [data-theme="dark"] .meal-sep.meal-type-snack3 { color: #9ca3af; }
 [data-theme="dark"] .meal-sep.meal-type-night { color: #a78bfa; }
 
-[data-theme="dark"] .meal-time-badge { color: #94a3b8; }
-[data-theme="dark"] .meal-type-label:hover { background: rgba(255, 255, 255, 0.1); }
+[data-theme="dark"] .meal-time-badge { 
+  background: #78350f; 
+  color: #fcd34d; 
+}
+[data-theme="dark"] .meal-type-label { 
+  background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%); 
+  color: #93c5fd; 
+}
+[data-theme="dark"] .meal-type-label:hover { background: linear-gradient(135deg, #1e40af 0%, #4338ca 100%); }
 [data-theme="dark"] .meal-type-arrow { color: #94a3b8; }
 
 [data-theme="dark"] .meal-kcal-badge { background: #334155; color: #e2e8f0; }
@@ -11093,8 +11105,8 @@ body:has(.offline-banner) .wrap {
 /* Bottom nav tabs */
 [data-theme="dark"] .tabs {
   background: #1c1c1e;
-  border-top-color: #2c2c2e;
-  box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.2);
+  border-top-color: #3a3a3c;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3), 0 -1px 4px rgba(0, 0, 0, 0.2);
 }
 
 [data-theme="dark"] .tab {
@@ -11591,7 +11603,7 @@ body:has(.offline-banner) .wrap {
 
 /* === COMPACT STATS (Статистика) === */
 .compact-stats {
-  margin-top: 8px;
+  margin-top: 4px;
   margin-bottom: 8px;
   background: var(--stats-bg);
   border-color: var(--stats-border);
@@ -16831,7 +16843,7 @@ input, textarea, select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 16px 12px;
+  padding: 10px 12px 8px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -16843,9 +16855,9 @@ input, textarea, select {
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  font-weight: 300;
-  color: #94a3b8;
-  background: rgba(0, 0, 0, 0.05);
+  font-weight: 500;
+  color: #dc2626;
+  background: #fee2e2;
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -16854,13 +16866,13 @@ input, textarea, select {
 }
 
 .mc-close-btn:hover {
-  background: rgba(0, 0, 0, 0.1);
-  color: #64748b;
+  background: #fecaca;
+  color: #b91c1c;
 }
 
 .mc-close-btn:active {
   transform: scale(0.9);
-  background: rgba(0, 0, 0, 0.15);
+  background: #fca5a5;
 }
 
 .mc-title {
@@ -17627,13 +17639,13 @@ input, textarea, select {
 }
 
 [data-theme="dark"] .mc-close-btn {
-  color: #64748b;
-  background: rgba(255, 255, 255, 0.1);
+  color: #fca5a5;
+  background: #7f1d1d;
 }
 
 [data-theme="dark"] .mc-close-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #94a3b8;
+  background: #991b1b;
+  color: #fecaca;
 }
 
 /* Dark mode - Sleep Quality */
@@ -18245,12 +18257,25 @@ input, textarea, select {
 
 /* === ADD PRODUCT STEP === */
 
+/* === APS (Add Product Step) Modal Override === */
+/* Компактная модалка для добавления продукта */
+.mc-modal:has(.aps-search-step),
+.mc-modal:has(.aps-grams-step) {
+  max-width: 340px;
+}
+
+.mc-modal:has(.aps-search-step) .mc-step-content,
+.mc-modal:has(.aps-grams-step) .mc-step-content {
+  padding: 0 12px 12px;
+  min-height: auto;
+}
+
 .aps-search-step {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 0 4px;
-  max-height: 60vh;
+  gap: 10px;
+  padding: 0;
+  max-height: 55vh;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -18259,14 +18284,14 @@ input, textarea, select {
 .aps-new-product-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: 8px;
+  padding: 10px 12px;
   background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
-  border: 2px dashed #93c5fd;
-  border-radius: 14px;
+  border: 1.5px dashed #93c5fd;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   color: #2563eb;
 }
@@ -18281,15 +18306,15 @@ input, textarea, select {
 }
 
 .aps-new-icon {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   background: #2563eb;
   color: #fff;
-  border-radius: 8px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -18323,17 +18348,18 @@ input, textarea, select {
 
 .aps-search-icon {
   position: absolute;
-  left: 14px;
-  font-size: 16px;
+  left: 12px;
+  font-size: 14px;
   pointer-events: none;
+  opacity: 0.6;
 }
 
 .aps-search-input {
   width: 100%;
-  padding: 14px 40px 14px 44px;
-  font-size: 16px;
+  padding: 10px 36px 10px 34px;
+  font-size: 15px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--card);
   color: var(--text);
   transition: border-color 0.2s;
@@ -18370,34 +18396,34 @@ input, textarea, select {
 .aps-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
 }
 
 .aps-section-title {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding-left: 4px;
+  padding-left: 2px;
 }
 
 /* Список продуктов */
 .aps-products-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 /* Карточка продукта */
 .aps-product-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 8px 10px;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -18421,8 +18447,8 @@ input, textarea, select {
 }
 
 .aps-product-icon {
-  font-size: 24px;
-  min-width: 32px;
+  font-size: 20px;
+  min-width: 26px;
   text-align: center;
 }
 
@@ -18432,7 +18458,7 @@ input, textarea, select {
 }
 
 .aps-product-name {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text);
   white-space: nowrap;
@@ -18441,11 +18467,11 @@ input, textarea, select {
 }
 
 .aps-product-meta {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted);
   display: flex;
   gap: 4px;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .aps-product-meta-sep {
@@ -18510,58 +18536,58 @@ input, textarea, select {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 0 4px;
+  gap: 10px;
+  padding: 0;
 }
 
 .aps-product-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  padding: 12px 16px;
+  padding: 10px 12px;
   background: var(--stats-bg);
   border: 1px solid var(--stats-border);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .aps-product-icon-lg {
-  font-size: 32px;
+  font-size: 26px;
 }
 
 .aps-product-title {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text);
 }
 
-/* Большой дисплей калорий */
+/* Дисплей калорий — компактный */
 .aps-kcal-display {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  padding: 16px 0;
+  padding: 8px 0;
 }
 
 .aps-kcal-value {
-  font-size: 56px;
+  font-size: 42px;
   font-weight: 700;
   color: var(--text);
   line-height: 1;
 }
 
 .aps-kcal-unit {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--muted);
-  margin-left: 4px;
+  margin-left: 3px;
 }
 
-/* БЖУ */
+/* БЖУ — компактный */
 .aps-macros {
   display: flex;
   justify-content: center;
-  gap: 24px;
+  gap: 16px;
 }
 
 .aps-macro {
@@ -18572,35 +18598,35 @@ input, textarea, select {
 }
 
 .aps-macro-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--muted);
 }
 
 .aps-macro-value {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
 }
 
-/* Поле ввода граммов */
+/* Поле ввода граммов — компактный */
 .aps-grams-input-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: 4px;
 }
 
 .aps-grams-btn {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--text);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -18615,13 +18641,13 @@ input, textarea, select {
 }
 
 .aps-grams-input {
-  width: 100px;
-  padding: 12px 8px;
-  font-size: 28px;
+  width: 80px;
+  padding: 8px 6px;
+  font-size: 22px;
   font-weight: 700;
   text-align: center;
   border: 2px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--card);
   color: var(--text);
 }
@@ -18632,7 +18658,7 @@ input, textarea, select {
 }
 
 .aps-grams-unit {
-  font-size: 18px;
+  font-size: 15px;
   color: var(--muted);
 }
 
@@ -18701,31 +18727,37 @@ input, textarea, select {
 /* Порции продукта */
 .aps-portions {
   width: 100%;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .aps-portions-title {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--muted);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .aps-portions-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 3px;
+  overflow: hidden;
 }
 
 .aps-portion-btn {
-  padding: 8px 14px;
-  font-size: 14px;
+  padding: 4px 6px;
+  font-size: 11px;
   border: 1px solid #d1fae5;
   background: #ecfdf5;
   color: #059669;
-  border-radius: 8px;
+  border-radius: 5px;
   cursor: pointer;
   transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .aps-portion-btn:hover {
@@ -18816,5 +18848,291 @@ input, textarea, select {
     font-size: 18px;
   }
 }
+
+/* === Категории-чипы === */
+.aps-categories {
+  display: flex;
+  gap: 5px;
+  padding: 4px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.aps-categories::-webkit-scrollbar {
+  display: none;
+}
+
+.aps-category-chip {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #374151;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.aps-category-chip:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.aps-category-chip.active {
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+}
+
+[data-theme="dark"] .aps-category-chip {
+  background: #374151;
+  border-color: #4b5563;
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .aps-category-chip.active {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: #fff;
+}
+
+/* === Умные рекомендации === */
+.aps-smart-rec {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 10px;
+  padding: 8px !important;
+  margin-bottom: 8px;
+}
+
+[data-theme="dark"] .aps-smart-rec {
+  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+}
+
+.aps-rec-hint {
+  font-size: 12px;
+  color: #92400e;
+  margin-left: 8px;
+  font-weight: 400;
+}
+
+[data-theme="dark"] .aps-rec-hint {
+  color: #fcd34d;
+}
+
+.aps-products-horizontal {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.aps-products-horizontal::-webkit-scrollbar {
+  display: none;
+}
+
+.aps-products-horizontal .aps-product-card {
+  flex-shrink: 0;
+  min-width: 140px;
+  max-width: 160px;
+}
+
+/* === Подсказка про последние граммы === */
+.aps-last-grams-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #dbeafe;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1e40af;
+  margin-bottom: 8px;
+}
+
+[data-theme="dark"] .aps-last-grams-hint {
+  background: #1e3a5f;
+  color: #93c5fd;
+}
+
+.aps-last-grams-btn {
+  padding: 4px 10px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aps-last-grams-btn:hover {
+  background: #1d4ed8;
+}
+
+.aps-last-grams-btn:active {
+  transform: scale(0.95);
+}
+
+/* === Slide-анимация между шагами === */
+/* Анимации слайда между шагами — временно выключены */
+/*
+.mc-step-content {
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+
+.mc-slide-left {
+  animation: slideFromRight 0.25s ease forwards;
+}
+
+.mc-slide-right {
+  animation: slideFromLeft 0.25s ease forwards;
+}
+*/
+
+@keyframes slideFromRight {
+  from {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideFromLeft {
+  from {
+    transform: translateX(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* === Переключатель граммы/ккал === */
+.aps-input-mode-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.aps-mode-btn {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aps-mode-btn.active {
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+}
+
+/* === Ввод ккал === */
+.aps-kcal-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: #fef3c7;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.aps-kcal-label {
+  font-size: 13px;
+  color: #92400e;
+}
+
+.aps-kcal-input {
+  width: 70px;
+  padding: 6px 10px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  border: 2px solid #f59e0b;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.aps-kcal-input:focus {
+  outline: none;
+  border-color: #d97706;
+}
+
+.aps-calc-result {
+  font-size: 16px;
+  font-weight: 600;
+  color: #059669;
+}
+
+[data-theme="dark"] .aps-kcal-input-row {
+  background: #78350f;
+}
+
+[data-theme="dark"] .aps-kcal-label {
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .aps-kcal-input {
+  background: #1f2937;
+  border-color: #f59e0b;
+  color: #fff;
+}
+
+/* === Итог дня === */
+.aps-day-total {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  border-radius: 10px;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.aps-day-plus {
+  font-weight: 700;
+  color: #059669;
+}
+
+.aps-day-arrow {
+  color: #6b7280;
+}
+
+.aps-day-sum {
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.aps-day-pct {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .aps-day-total {
+  background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%);
+}
+
+[data-theme="dark"] .aps-day-sum {
+  color: #93c5fd;
+}
+
+/* Кнопка закрытия — используется базовый стиль из .mc-close-btn выше */
 
 

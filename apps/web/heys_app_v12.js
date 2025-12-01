@@ -3627,7 +3627,17 @@
                     React.createElement('span', { className: 'tab-icon' }, '🗂️'),
                     React.createElement('span', { className: 'tab-text' }, 'База'),
                   ),
-                  // iOS Switch группа для stats/diary — клик переключает на другую
+                  // Обзор — слева
+                  React.createElement(
+                    'div',
+                    {
+                      className: 'tab ' + (tab === 'overview' ? 'active' : ''),
+                      onClick: () => setTab('overview'),
+                    },
+                    React.createElement('span', { className: 'tab-icon' }, '📋'),
+                    React.createElement('span', { className: 'tab-text' }, 'Обзор'),
+                  ),
+                  // iOS Switch группа для stats/diary — ПО ЦЕНТРУ
                   React.createElement(
                     'div',
                     { 
@@ -3651,6 +3661,7 @@
                       React.createElement('span', { className: 'tab-text' }, 'Еда'),
                     ),
                   ),
+                  // Графики — только для десктопа
                   React.createElement(
                     'div',
                     {
@@ -3672,15 +3683,7 @@
                     React.createElement('span', { className: 'tab-icon' }, '📈'),
                     React.createElement('span', { className: 'tab-text' }, 'Графики'),
                   ),
-                  React.createElement(
-                    'div',
-                    {
-                      className: 'tab ' + (tab === 'overview' ? 'active' : ''),
-                      onClick: () => setTab('overview'),
-                    },
-                    React.createElement('span', { className: 'tab-icon' }, '📋'),
-                    React.createElement('span', { className: 'tab-text' }, 'Обзор'),
-                  ),
+                  // Настройки — справа
                   React.createElement(
                     'div',
                     {

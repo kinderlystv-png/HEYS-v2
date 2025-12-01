@@ -265,7 +265,7 @@
 
     const handleNext = useCallback(() => {
       // Валидация текущего шага
-      if (currentConfig.validate && !currentConfig.validate(stepData[currentConfig.id])) {
+      if (currentConfig.validate && !currentConfig.validate(stepData[currentConfig.id], stepData)) {
         return;
       }
 
@@ -351,10 +351,18 @@
 
     const StepComponent = currentConfig.component;
 
+    // Закрытие по клику на backdrop (вне модалки)
+    const handleBackdropClick = useCallback((e) => {
+      if (e.target.classList.contains('mc-backdrop') && onClose) {
+        onClose();
+      }
+    }, [onClose]);
+
     return React.createElement(StepModalContext.Provider, { value: contextValue },
       React.createElement('div', { 
         className: 'mc-backdrop',
         ref: containerRef,
+        onClick: handleBackdropClick,
         onTouchStart: handleTouchStart,
         onTouchEnd: handleTouchEnd
       },
