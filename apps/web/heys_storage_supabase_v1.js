@@ -1760,6 +1760,13 @@
       const sizeMB = getStorageSize();
       log(`📊 Размер localStorage: ${sizeMB.toFixed(2)} MB`);
       
+      // 🌅 Уведомляем App о смене клиента — для Morning Check-in и т.д.
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: newClientId } }));
+        }, 50);
+      }
+      
       return true;
     } catch (e) {
       logCritical('❌ Ошибка загрузки данных нового клиента:', e);

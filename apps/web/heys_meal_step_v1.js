@@ -238,12 +238,31 @@
       const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
       const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
       const meals = dayData.meals || [];
-      return meals.map(m => ({
-        time: m.time,
-        mood: m.mood || 5,
-        wellbeing: m.wellbeing || 5,
-        stress: m.stress || 5
-      }));
+      return meals.map(m => {
+        const moodVal = m.mood || 5;
+        const wellVal = m.wellbeing || 5;
+        const stressVal = m.stress || 5;
+        // Средняя оценка: mood + wellbeing + (10 - stress) / 3, шкала 0-10
+        const avg = (moodVal + wellVal + (10 - stressVal)) / 3;
+        
+        // Название: из name, или из mealType, или fallback
+        let displayName = m.name;
+        if (!displayName || displayName === 'Приём') {
+          if (m.mealType && MEAL_TYPES[m.mealType]) {
+            displayName = MEAL_TYPES[m.mealType].name;
+          } else {
+            displayName = 'Приём';
+          }
+        }
+        
+        return {
+          name: displayName,
+          mood: moodVal,
+          wellbeing: wellVal,
+          stress: stressVal,
+          avg: Math.round(avg * 10) / 10
+        };
+      });
     }, [context?.dateKey]);
     
     // Тап на emoji — увеличение
@@ -438,41 +457,84 @@
       { emoji: '😰', value: 8, label: 'Стресс' }
     ];
 
+    // Текущая средняя оценка
+    const currentAvg = Math.round((mood + wellbeing + (10 - stress)) / 3 * 10) / 10;
+    
+    // Данные для спарклайна: предыдущие + текущий
+    const sparklineData = [...todayMoods.map(m => m.avg), currentAvg];
+    const sparkMax = 10;
+    const sparkMin = 0;
+    
+    // Функция рисования спарклайна
+    const renderSparkline = () => {
+      if (sparklineData.length < 2) return null;
+      const width = 120;
+      const height = 24;
+      const padding = 2;
+      const points = sparklineData.map((v, i) => {
+        const x = padding + (i / (sparklineData.length - 1)) * (width - padding * 2);
+        const y = height - padding - ((v - sparkMin) / (sparkMax - sparkMin)) * (height - padding * 2);
+        return { x, y, v };
+      });
+      const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+      
+      return React.createElement('svg', { 
+        className: 'meal-mood-sparkline',
+        viewBox: `0 0 ${width} ${height}`,
+        preserveAspectRatio: 'none'
+      },
+        // Линия
+        React.createElement('path', {
+          d: pathD,
+          fill: 'none',
+          stroke: '#3b82f6',
+          strokeWidth: 2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
+        }),
+        // Точки
+        ...points.map((p, i) => 
+          React.createElement('circle', {
+            key: i,
+            cx: p.x,
+            cy: p.y,
+            r: i === points.length - 1 ? 4 : 3,
+            fill: i === points.length - 1 ? '#10b981' : (p.v >= 6 ? '#22c55e' : p.v >= 4 ? '#eab308' : '#ef4444'),
+            stroke: 'white',
+            strokeWidth: 1.5
+          })
+        )
+      );
+    };
+
     return React.createElement('div', { className: 'meal-mood-step' },
       // Мини-график настроения за день (если есть предыдущие приёмы)
       todayMoods.length > 0 && React.createElement('div', { className: 'meal-mood-history' },
-        React.createElement('div', { className: 'meal-mood-history-label' }, 'Сегодня:'),
+        React.createElement('div', { className: 'meal-mood-history-header' },
+          React.createElement('span', { className: 'meal-mood-history-label' }, 'Сегодня'),
+          renderSparkline()
+        ),
         React.createElement('div', { className: 'meal-mood-history-items' },
           todayMoods.map((m, i) => 
             React.createElement('div', { 
               key: i, 
               className: 'meal-mood-history-item',
-              title: `${m.time} — 😊${m.mood} 💪${m.wellbeing} 😰${m.stress}`
+              title: `😊${m.mood} 💪${m.wellbeing} 😰${m.stress}`
             },
-              React.createElement('span', { className: 'meal-mood-history-time' }, m.time),
-              React.createElement('div', { className: 'meal-mood-history-bar' },
-                React.createElement('div', { 
-                  className: 'meal-mood-history-fill',
-                  style: { 
-                    width: `${((m.mood + m.wellbeing + (11 - m.stress)) / 3) * 10}%`,
-                    background: m.mood >= 6 ? '#22c55e' : m.mood >= 4 ? '#eab308' : '#ef4444'
-                  }
-                })
-              )
+              React.createElement('span', { className: 'meal-mood-history-name' }, m.name),
+              React.createElement('span', { 
+                className: 'meal-mood-history-avg',
+                style: { color: m.avg >= 6 ? '#22c55e' : m.avg >= 4 ? '#eab308' : '#ef4444' }
+              }, m.avg.toFixed(1))
             )
           ),
-          // Текущий (пустой)
+          // Текущий
           React.createElement('div', { className: 'meal-mood-history-item meal-mood-history-current' },
-            React.createElement('span', { className: 'meal-mood-history-time' }, 'Сейчас'),
-            React.createElement('div', { className: 'meal-mood-history-bar' },
-              React.createElement('div', { 
-                className: 'meal-mood-history-fill meal-mood-history-fill-current',
-                style: { 
-                  width: `${((mood + wellbeing + (11 - stress)) / 3) * 10}%`,
-                  background: 'linear-gradient(90deg, #3b82f6, #10b981)'
-                }
-              })
-            )
+            React.createElement('span', { className: 'meal-mood-history-name' }, 'Сейчас'),
+            React.createElement('span', { 
+              className: 'meal-mood-history-avg',
+              style: { color: '#3b82f6', fontWeight: 600 }
+            }, currentAvg.toFixed(1))
           )
         )
       ),
@@ -762,11 +824,27 @@
         }
         const timeStr = `${pad2(realHours)}:${pad2(timeData.minutes || 0)}`;
         
+        // Если тип не выбран явно — определяем автоматически по времени
+        let mealType = timeData.mealType || null;
+        if (!mealType) {
+          // Авто-определение по часу (упрощённая логика)
+          const h = realHours >= 24 ? realHours - 24 : realHours;
+          if (h >= 6 && h < 10) mealType = 'breakfast';
+          else if (h >= 10 && h < 12) mealType = 'snack1';
+          else if (h >= 12 && h < 15) mealType = 'lunch';
+          else if (h >= 15 && h < 18) mealType = 'snack2';
+          else if (h >= 18 && h < 21) mealType = 'dinner';
+          else mealType = 'night';
+        }
+        
+        // Название приёма из типа
+        const mealName = MEAL_TYPES[mealType]?.name || 'Приём';
+        
         const newMeal = {
           id: uid('m_'),
-          name: 'Приём',
+          name: mealName,
           time: timeStr,
-          mealType: timeData.mealType || null,
+          mealType: mealType,
           mood: moodData.mood || 5,
           wellbeing: moodData.wellbeing || 5,
           stress: moodData.stress || 5,

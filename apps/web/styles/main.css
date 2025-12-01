@@ -18784,27 +18784,38 @@ input, textarea, select {
 /* === MOOD HISTORY MINI-CHART === */
 .meal-mood-history {
   margin-top: 12px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   background: rgba(0,0,0,0.02);
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 [data-theme="dark"] .meal-mood-history {
   background: rgba(255,255,255,0.03);
 }
 
+.meal-mood-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
 .meal-mood-history-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
   color: #9ca3af;
-  margin-bottom: 6px;
+}
+
+.meal-mood-sparkline {
+  width: 100px;
+  height: 24px;
 }
 
 .meal-mood-history-items {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 
 .meal-mood-history-item {
@@ -18813,28 +18824,39 @@ input, textarea, select {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 4px 2px;
-  border-radius: 6px;
+  padding: 6px 4px;
+  border-radius: 8px;
   background: rgba(0,0,0,0.02);
   transition: background 0.2s ease;
+  min-width: 0;
 }
 
 [data-theme="dark"] .meal-mood-history-item {
   background: rgba(255,255,255,0.02);
 }
 
-.meal-mood-history-item.current {
-  background: rgba(59, 130, 246, 0.1);
+.meal-mood-history-current {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
-.meal-mood-history-emoji {
-  font-size: 14px;
-}
-
-.meal-mood-history-time {
-  font-size: 9px;
-  color: #9ca3af;
+.meal-mood-history-name {
+  font-size: 10px;
+  color: #6b7280;
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+[data-theme="dark"] .meal-mood-history-name {
+  color: #9ca3af;
+}
+
+.meal-mood-history-avg {
+  font-size: 13px;
+  font-weight: 700;
 }
 
 /* === STEP MODAL PROGRESS BAR === */
