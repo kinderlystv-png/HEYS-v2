@@ -220,13 +220,44 @@
               return HEYS.game ? HEYS.game.canClaimDailyBonus() : false;
             });
             const [justUnlockedAch, setJustUnlockedAch] = useState(null);
+            const [dailyMultiplier, setDailyMultiplier] = useState(() => {
+              return HEYS.game ? HEYS.game.getDailyMultiplier() : { multiplier: 1, actions: 0, label: '' };
+            });
+            const [weeklyChallenge, setWeeklyChallenge] = useState(() => {
+              return HEYS.game ? HEYS.game.getWeeklyChallenge() : { earned: 0, target: 500, percent: 0, completed: false };
+            });
+            const [xpHistory, setXpHistory] = useState(() => {
+              return HEYS.game && HEYS.game.getXPHistory ? HEYS.game.getXPHistory() : [];
+            });
             const prevLevelRef = useRef(stats.level);
             
-            // Проверяем daily bonus при монтировании
+            // Проверяем daily bonus и streak при монтировании + слушаем инициализацию Day
             useEffect(() => {
+              const updateStreak = () => {
+                if (HEYS.Day && HEYS.Day.getStreak) {
+                  setStreak(HEYS.Day.getStreak());
+                }
+              };
+              
+              const handleStreakEvent = (e) => {
+                if (e.detail && typeof e.detail.streak === 'number') {
+                  setStreak(e.detail.streak);
+                }
+              };
+              
               if (HEYS.game) {
                 setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
               }
+              
+              // Пробуем сразу
+              updateStreak();
+              
+              // Слушаем событие обновления streak из DayTab
+              window.addEventListener('heysDayStreakUpdated', handleStreakEvent);
+              
+              return () => {
+                window.removeEventListener('heysDayStreakUpdated', handleStreakEvent);
+              };
             }, []);
 
             // Слушаем обновления XP
@@ -267,16 +298,36 @@
                 }
               };
 
+              const handleDailyMultiplierUpdate = (e) => {
+                setDailyMultiplier(e.detail);
+              };
+
+              const handleWeeklyUpdate = () => {
+                if (HEYS.game) {
+                  setWeeklyChallenge(HEYS.game.getWeeklyChallenge());
+                  // Также обновляем daily multiplier
+                  setDailyMultiplier(HEYS.game.getDailyMultiplier());
+                  // И историю XP
+                  if (HEYS.game.getXPHistory) {
+                    setXpHistory(HEYS.game.getXPHistory());
+                  }
+                }
+              };
+
               window.addEventListener('heysGameUpdate', handleUpdate);
               window.addEventListener('heysGameNotification', handleNotification);
               window.addEventListener('heysProductAdded', handleUpdate);
               window.addEventListener('heysWaterAdded', handleUpdate);
+              window.addEventListener('heysDailyMultiplierUpdate', handleDailyMultiplierUpdate);
+              window.addEventListener('heysGameUpdate', handleWeeklyUpdate);
 
               return () => {
                 window.removeEventListener('heysGameUpdate', handleUpdate);
                 window.removeEventListener('heysGameNotification', handleNotification);
                 window.removeEventListener('heysProductAdded', handleUpdate);
                 window.removeEventListener('heysWaterAdded', handleUpdate);
+                window.removeEventListener('heysDailyMultiplierUpdate', handleDailyMultiplierUpdate);
+                window.removeEventListener('heysGameUpdate', handleWeeklyUpdate);
               };
             }, []);
 
@@ -340,18 +391,17 @@
             return React.createElement('div', { 
               className: `game-bar-container ${isLevelUpFlash ? 'level-up-flash' : ''}`
             },
-              // Main bar
+              // Main bar — одна строка
               React.createElement('div', { 
                 className: 'game-bar',
                 onClick: toggleExpanded
               },
-                // Level + icon + rank badge + level preview
-                React.createElement('span', { 
-                  className: 'game-level',
+                // Level + Rank Badge (горизонтально, компактно)
+                React.createElement('div', { 
+                  className: 'game-level-group',
                   style: { color: title.color }
                 }, 
-                  `${title.icon} Ур.${stats.level}`,
-                  // Rank Badge
+                  React.createElement('span', { className: 'game-level-text' }, `${title.icon} ${stats.level}`),
                   HEYS.game && React.createElement('span', {
                     className: 'game-rank-badge',
                     style: { 
@@ -359,15 +409,35 @@
                       color: stats.level >= 10 ? '#000' : '#fff'
                     }
                   }, HEYS.game.getRankBadge(stats.level).rank),
-                  // Level Preview Tooltip
-                  HEYS.game && HEYS.game.getNextLevelTitle(stats.level) && React.createElement('span', { 
-                    className: 'game-level-preview' 
-                  }, `Следующий: ${HEYS.game.getNextLevelTitle(stats.level).icon} ${HEYS.game.getNextLevelTitle(stats.level).title}`)
+                  // Level Roadmap Tooltip — все звания
+                  HEYS.game && HEYS.game.getAllTitles && React.createElement('div', { 
+                    className: 'game-level-roadmap' 
+                  },
+                    React.createElement('div', { className: 'roadmap-title' }, '🎮 Путь развития'),
+                    HEYS.game.getAllTitles().map((t, i) => {
+                      const isCurrent = stats.level >= t.min && stats.level <= t.max;
+                      const isAchieved = stats.level > t.max;
+                      const isFuture = stats.level < t.min;
+                      return React.createElement('div', {
+                        key: i,
+                        className: `roadmap-item ${isCurrent ? 'current' : ''} ${isAchieved ? 'achieved' : ''} ${isFuture ? 'future' : ''}`
+                      },
+                        React.createElement('span', { className: 'roadmap-icon' }, t.icon),
+                        React.createElement('span', { className: 'roadmap-name' }, t.title),
+                        React.createElement('span', { 
+                          className: 'roadmap-levels',
+                          style: { color: t.color }
+                        }, `ур.${t.min}-${t.max}`),
+                        isCurrent && React.createElement('span', { className: 'roadmap-you' }, '← ты'),
+                        isAchieved && React.createElement('span', { className: 'roadmap-check' }, '✓')
+                      );
+                    })
+                  )
                 ),
                 
-                // Progress bar with tooltip
+                // Progress bar
                 React.createElement('div', { 
-                  className: `game-progress ${isGlowing ? 'glowing' : ''} ${isShimmering ? 'shimmer' : ''} ${isPulsing ? 'pulse' : ''}`,
+                  className: `game-progress ${isGlowing ? 'glowing' : ''} ${isShimmering ? 'shimmer' : ''} ${isPulsing ? 'pulse' : ''} ${progress.percent >= 85 && progress.percent < 100 ? 'near-goal' : ''}`,
                   onClick: handleProgressClick
                 },
                   React.createElement('div', { 
@@ -383,18 +453,31 @@
                   )
                 ),
                 
-                // XP counter with counting animation
-                React.createElement('span', { 
-                  className: `game-xp ${isXPCounting ? 'counting' : ''}`
-                }, `${progress.current}/${progress.required}`),
+                // Daily Multiplier
+                dailyMultiplier.actions > 0 && React.createElement('span', {
+                  className: `game-daily-mult ${dailyMultiplier.multiplier >= 2 ? 'high' : dailyMultiplier.multiplier > 1 ? 'active' : ''}`,
+                  title: dailyMultiplier.nextThreshold 
+                    ? `${dailyMultiplier.actions} действий сегодня. Ещё ${dailyMultiplier.nextThreshold - dailyMultiplier.actions} до ${dailyMultiplier.nextMultiplier}x!`
+                    : `${dailyMultiplier.actions} действий сегодня. Максимальный бонус!`
+                },
+                  dailyMultiplier.multiplier > 1 
+                    ? React.createElement('span', { className: 'game-daily-mult-value' }, `${dailyMultiplier.multiplier}x`)
+                    : `⚡${dailyMultiplier.actions}`
+                ),
                 
-                // XP Multiplier badge (при streak 3+)
-                HEYS.game && HEYS.game.getXPMultiplier() > 1 && React.createElement('span', {
-                  className: 'game-multiplier',
-                  title: 'Бонус за streak!'
-                }, `${HEYS.game.getXPMultiplier()}x`),
+                // Streak
+                streak > 0 && React.createElement('span', { 
+                  className: `game-streak ${getStreakClass(streak)}`,
+                  title: `${streak} дней подряд в норме!`
+                }, `🔥${streak}`),
                 
-                // Daily Bonus button
+                // Personal Best
+                HEYS.game && HEYS.game.isNewStreakRecord() && streak > 0 && React.createElement('span', {
+                  className: 'game-personal-best',
+                  title: 'Новый рекорд streak!'
+                }, '🏆'),
+                
+                // Daily Bonus
                 dailyBonusAvailable && React.createElement('button', {
                   className: 'game-daily-bonus',
                   onClick: (e) => {
@@ -404,19 +487,12 @@
                     }
                   },
                   title: 'Забрать ежедневный бонус!'
-                }, '🎁 +10'),
+                }, '🎁'),
                 
-                // Personal Best indicator
-                HEYS.game && HEYS.game.isNewStreakRecord() && streak > 0 && React.createElement('span', {
-                  className: 'game-personal-best',
-                  title: 'Новый рекорд streak!'
-                }, '🏆 NEW!'),
-                
-                // Streak с анимацией огня по уровню
-                streak > 0 && React.createElement('span', { 
-                  className: `game-streak ${getStreakClass(streak)}`,
-                  title: `${streak} дней подряд в норме!`
-                }, `🔥${streak}`),
+                // XP counter
+                React.createElement('span', { 
+                  className: `game-xp ${isXPCounting ? 'counting' : ''}`
+                }, `${progress.current}/${progress.required}`),
                 
                 // Expand button
                 React.createElement('button', { 
@@ -458,7 +534,15 @@
                             )
                           )
                         )
-                      : null
+                      : notification.type === 'weekly_complete'
+                        ? React.createElement(React.Fragment, null,
+                            React.createElement('span', { className: 'notif-icon' }, '🎯'),
+                            React.createElement('div', { className: 'notif-content' },
+                              React.createElement('div', { className: 'notif-title' }, '🎉 Недельный челлендж!'),
+                              React.createElement('div', { className: 'notif-subtitle' }, `+100 XP бонус!`)
+                            )
+                          )
+                        : null
               ),
 
               // Expanded panel (backdrop + content)
@@ -470,6 +554,65 @@
                 }),
                 // Panel content
                 React.createElement('div', { className: 'game-panel-expanded' },
+                  // Weekly Challenge Section (красивая карточка)
+                  React.createElement('div', { 
+                    className: `game-weekly-card ${weeklyChallenge.completed ? 'completed' : ''}`
+                  },
+                    React.createElement('div', { className: 'weekly-header' },
+                      React.createElement('span', { className: 'weekly-icon' }, weeklyChallenge.completed ? '🏆' : '🎯'),
+                      React.createElement('div', { className: 'weekly-title-group' },
+                        React.createElement('span', { className: 'weekly-title' }, 'Недельный челлендж'),
+                        React.createElement('span', { className: 'weekly-subtitle' }, 
+                          weeklyChallenge.completed 
+                            ? '✨ Выполнено! +100 XP бонус' 
+                            : `Заработай ${weeklyChallenge.target} XP за неделю`
+                        )
+                      )
+                    ),
+                    React.createElement('div', { className: 'weekly-progress-container' },
+                      React.createElement('div', { className: 'weekly-progress-bar' },
+                        React.createElement('div', { 
+                          className: 'weekly-progress-fill',
+                          style: { width: `${weeklyChallenge.percent}%` }
+                        }),
+                        React.createElement('div', { className: 'weekly-progress-glow' })
+                      ),
+                      React.createElement('div', { className: 'weekly-progress-labels' },
+                        React.createElement('span', { className: 'weekly-earned' }, `${weeklyChallenge.earned} XP`),
+                        React.createElement('span', { className: 'weekly-target' }, `${weeklyChallenge.target} XP`)
+                      )
+                    ),
+                    React.createElement('div', { className: 'weekly-percent' }, 
+                      weeklyChallenge.completed 
+                        ? '100%' 
+                        : `${weeklyChallenge.percent}%`
+                    )
+                  ),
+                  
+                  // XP History — мини-график за 7 дней
+                  xpHistory.length > 0 && React.createElement('div', { className: 'xp-history-section' },
+                    React.createElement('div', { className: 'xp-history-title' }, '📊 XP за неделю'),
+                    React.createElement('div', { className: 'xp-history-chart' },
+                      (() => {
+                        const maxXP = Math.max(...xpHistory.map(d => d.xp), 1);
+                        return xpHistory.map((day, i) => 
+                          React.createElement('div', { 
+                            key: i, 
+                            className: `xp-history-bar ${i === 6 ? 'today' : ''}`,
+                            title: `${day.date}: ${day.xp} XP`
+                          },
+                            React.createElement('div', { 
+                              className: 'xp-bar-fill',
+                              style: { height: `${(day.xp / maxXP) * 100}%` }
+                            }),
+                            React.createElement('span', { className: 'xp-bar-day' }, day.day),
+                            day.xp > 0 && React.createElement('span', { className: 'xp-bar-value' }, day.xp)
+                          )
+                        );
+                      })()
+                    )
+                  ),
+                  
                   // Stats section
                   React.createElement('div', { className: 'game-stats-section' },
                     React.createElement('div', { className: 'game-stat' },
@@ -511,9 +654,11 @@
                           cat.achievements.map(achId => {
                             const ach = HEYS.game.ACHIEVEMENTS[achId];
                             const unlocked = HEYS.game.isAchievementUnlocked(achId);
+                            const isJustUnlocked = justUnlockedAch === achId;
+                            const rarityClass = unlocked ? `rarity-${ach.rarity}` : '';
                             return React.createElement('div', {
                               key: achId,
-                              className: `achievement-badge ${unlocked ? 'unlocked' : 'locked'}`,
+                              className: `achievement-badge ${unlocked ? 'unlocked' : 'locked'} ${rarityClass} ${isJustUnlocked ? 'just-unlocked' : ''}`,
                               title: `${ach.name}: ${ach.desc}`,
                               style: unlocked ? { borderColor: HEYS.game.RARITY_COLORS[ach.rarity] } : {}
                             },
@@ -3369,9 +3514,31 @@
                                 : '<svg class="cloud-icon idle" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>'
                             }
                           }),
-                          // Кнопка "Сегодня" + DatePicker
+                          // Кнопки "Вчера" + "Сегодня" + DatePicker
                           (tab === 'stats' || tab === 'diary' || tab === 'reports') && window.HEYS.DatePicker
                             ? React.createElement('div', { className: 'hdr-date-group' },
+                                // Кнопка быстрого перехода на вчера
+                                React.createElement('button', {
+                                  className: 'yesterday-quick-btn' + (selectedDate === (() => {
+                                    const d = new Date();
+                                    if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+                                    d.setDate(d.getDate() - 1);
+                                    return d.toISOString().slice(0, 10);
+                                  })() ? ' active' : ''),
+                                  onClick: () => {
+                                    const d = new Date();
+                                    if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+                                    d.setDate(d.getDate() - 1);
+                                    setSelectedDate(d.toISOString().slice(0, 10));
+                                  },
+                                  title: 'Перейти на вчера'
+                                }, (() => {
+                                  // До 3:00 — вчера = позавчера реально
+                                  const d = new Date();
+                                  if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+                                  d.setDate(d.getDate() - 1);
+                                  return d.getDate();
+                                })()),
                                 // Кнопка быстрого перехода на сегодня (учитываем ночной порог)
                                 React.createElement('button', {
                                   className: 'today-quick-btn' + (selectedDate === todayISO() ? ' active' : ''),

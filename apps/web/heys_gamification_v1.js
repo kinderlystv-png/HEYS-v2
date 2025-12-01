@@ -157,6 +157,17 @@
       unlockedAchievements: [],
       dailyXP: {},          // { '2025-11-30': { product_added: 5, water_added: 2, ... } }
       dailyBonusClaimed: null, // '2025-11-30' — дата последнего daily bonus
+      // Daily Action Multiplier (накопительный за день)
+      dailyActions: {
+        date: null,           // '2025-12-01'
+        count: 0              // количество действий за день
+      },
+      // Weekly challenge
+      weeklyChallenge: {
+        weekStart: null,      // '2025-12-01' — начало недели
+        target: 500,          // цель XP
+        earned: 0             // набрано XP
+      },
       stats: {
         totalProducts: 0,
         totalWater: 0,
@@ -264,6 +275,266 @@
     const nextLevel = level + 1;
     if (nextLevel > 25) return null;
     return getLevelTitle(nextLevel);
+  }
+
+  /**
+   * Получить все звания с уровнями для отображения прогресса
+   */
+  function getAllTitles() {
+    return LEVEL_TITLES.map(t => ({
+      ...t,
+      // Уровень, с которого начинается это звание
+      startLevel: t.min
+    }));
+  }
+
+  // ========== DAILY ACTION MULTIPLIER ==========
+  // Накопительный множитель за день: чем больше действий — тем больше XP
+  // Сбрасывается только на новый день
+  
+  const DAILY_MULTIPLIER_THRESHOLDS = [
+    { actions: 0, multiplier: 1.0, label: '' },
+    { actions: 3, multiplier: 1.2, label: '🔥' },      // 3+ действия = 1.2x
+    { actions: 6, multiplier: 1.5, label: '🔥🔥' },    // 6+ = 1.5x
+    { actions: 10, multiplier: 1.8, label: '🔥🔥🔥' }, // 10+ = 1.8x
+    { actions: 15, multiplier: 2.0, label: '⚡' },      // 15+ = 2x
+    { actions: 20, multiplier: 2.5, label: '⚡⚡' },    // 20+ = 2.5x
+    { actions: 30, multiplier: 3.0, label: '💎' }      // 30+ = 3x (max)
+  ];
+
+  // Порог ночи: до 3:00 — это ещё "вчера"
+  const NIGHT_HOUR_THRESHOLD = 3;
+
+  function getTodayDate() {
+    const d = new Date();
+    const hour = d.getHours();
+    // До 3:00 — это ещё "вчера" (день продолжается)
+    if (hour < NIGHT_HOUR_THRESHOLD) {
+      d.setDate(d.getDate() - 1);
+    }
+    return d.toISOString().slice(0, 10);
+  }
+
+  function getDailyMultiplier() {
+    const data = loadData();
+    const today = getTodayDate();
+    
+    // Миграция или новый день
+    if (!data.dailyActions || data.dailyActions.date !== today) {
+      return { multiplier: 1, actions: 0, label: '', nextThreshold: 3 };
+    }
+    
+    const actions = data.dailyActions.count;
+    let current = DAILY_MULTIPLIER_THRESHOLDS[0];
+    let next = DAILY_MULTIPLIER_THRESHOLDS[1];
+    
+    for (let i = DAILY_MULTIPLIER_THRESHOLDS.length - 1; i >= 0; i--) {
+      if (actions >= DAILY_MULTIPLIER_THRESHOLDS[i].actions) {
+        current = DAILY_MULTIPLIER_THRESHOLDS[i];
+        next = DAILY_MULTIPLIER_THRESHOLDS[i + 1] || null;
+        break;
+      }
+    }
+    
+    return {
+      multiplier: current.multiplier,
+      actions: actions,
+      label: current.label,
+      nextThreshold: next ? next.actions : null,
+      nextMultiplier: next ? next.multiplier : null
+    };
+  }
+
+  function incrementDailyActions() {
+    const data = loadData();
+    const today = getTodayDate();
+    
+    // Миграция или новый день — сбрасываем
+    if (!data.dailyActions || data.dailyActions.date !== today) {
+      data.dailyActions = { date: today, count: 0 };
+    }
+    
+    data.dailyActions.count += 1;
+    saveData();
+    
+    const multiplierInfo = getDailyMultiplier();
+    
+    // Dispatch event для UI
+    window.dispatchEvent(new CustomEvent('heysDailyMultiplierUpdate', {
+      detail: multiplierInfo
+    }));
+    
+    return multiplierInfo;
+  }
+
+  // ========== WEEKLY CHALLENGE ==========
+  function getWeekStart() {
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Понедельник
+    return new Date(now.setDate(diff)).toISOString().slice(0, 10);
+  }
+
+  function getWeeklyChallenge() {
+    const data = loadData();
+    const currentWeek = getWeekStart();
+    
+    // Миграция: если weeklyChallenge нет (старые данные), создаём
+    if (!data.weeklyChallenge) {
+      data.weeklyChallenge = {
+        weekStart: currentWeek,
+        target: 500,
+        earned: 0
+      };
+      saveData();
+    }
+    
+    // Новая неделя — сбрасываем
+    if (data.weeklyChallenge.weekStart !== currentWeek) {
+      data.weeklyChallenge = {
+        weekStart: currentWeek,
+        target: 500,
+        earned: 0
+      };
+      saveData();
+    }
+    
+    return {
+      ...data.weeklyChallenge,
+      percent: Math.min(100, Math.round((data.weeklyChallenge.earned / data.weeklyChallenge.target) * 100)),
+      completed: data.weeklyChallenge.earned >= data.weeklyChallenge.target
+    };
+  }
+
+  function addWeeklyXP(xp) {
+    const data = loadData();
+    const currentWeek = getWeekStart();
+    
+    // Миграция: если weeklyChallenge нет
+    if (!data.weeklyChallenge) {
+      data.weeklyChallenge = { weekStart: currentWeek, target: 500, earned: 0 };
+    }
+    
+    if (data.weeklyChallenge.weekStart !== currentWeek) {
+      data.weeklyChallenge = { weekStart: currentWeek, target: 500, earned: 0 };
+    }
+    
+    const wasCompleted = data.weeklyChallenge.earned >= data.weeklyChallenge.target;
+    data.weeklyChallenge.earned += xp;
+    saveData();
+    
+    // Проверяем завершение
+    if (!wasCompleted && data.weeklyChallenge.earned >= data.weeklyChallenge.target) {
+      showNotification('weekly_complete', { target: data.weeklyChallenge.target });
+      // Бонус за выполнение
+      data.totalXP += 100;
+      data.level = calculateLevel(data.totalXP);
+      saveData();
+      celebrate();
+    }
+  }
+
+  // ========== XP SOUND (Web Audio API) ==========
+  let audioContext = null;
+  
+  function playXPSound(isLevelUp = false) {
+    try {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      if (isLevelUp) {
+        // Level up — мелодия из 3 нот (восходящая)
+        oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+        oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+        oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+        gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.4);
+      } else {
+        // Обычный XP — короткий "пинг"
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.15);
+      }
+    } catch (e) {
+      // Ignore audio errors
+    }
+  }
+
+  // ========== XP HISTORY (7 days) ==========
+  function getXPHistory() {
+    const data = loadData();
+    const history = [];
+    const today = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      const dayXP = data.dailyXP[dateStr] || {};
+      
+      // Сумма XP за день
+      let totalDayXP = 0;
+      for (const reason of Object.keys(dayXP)) {
+        const action = XP_ACTIONS[reason];
+        if (action) {
+          totalDayXP += dayXP[reason] * action.xp;
+        }
+      }
+      
+      history.push({
+        date: dateStr,
+        day: d.toLocaleDateString('ru', { weekday: 'short' }),
+        xp: totalDayXP
+      });
+    }
+    
+    return history;
+  }
+
+  // ========== FLOATING XP ==========
+  function showFloatingXP(sourceEl, xpAmount, isCombo = false) {
+    let x, y;
+    if (sourceEl && sourceEl.getBoundingClientRect) {
+      const rect = sourceEl.getBoundingClientRect();
+      x = rect.left + rect.width / 2;
+      y = rect.top;
+    } else {
+      x = window.innerWidth / 2;
+      y = window.innerHeight / 2;
+    }
+
+    const float = document.createElement('div');
+    float.className = `floating-xp-text ${isCombo ? 'combo' : ''}`;
+    float.innerHTML = isCombo 
+      ? `<span class="combo-text">COMBO!</span> +${xpAmount}` 
+      : `+${xpAmount}`;
+    float.style.cssText = `
+      position: fixed;
+      left: ${x}px;
+      top: ${y}px;
+      transform: translateX(-50%);
+      font-size: ${isCombo ? '18px' : '16px'};
+      font-weight: 700;
+      color: ${isCombo ? '#f59e0b' : '#fbbf24'};
+      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      pointer-events: none;
+      z-index: 9999;
+      animation: floatUp 1.2s ease-out forwards;
+    `;
+    document.body.appendChild(float);
+    setTimeout(() => float.remove(), 1200);
   }
 
   // ========== FLYING ANIMATION ==========
@@ -566,7 +837,24 @@
     canClaimDailyBonus,
     claimDailyBonus,
     isNewStreakRecord,
-    getNextLevelTitle
+    getNextLevelTitle,
+    getAllTitles,
+    
+    // Daily Action Multiplier
+    getDailyMultiplier,
+    incrementDailyActions,
+    
+    // Weekly challenge
+    getWeeklyChallenge,
+    
+    // Floating XP
+    showFloatingXP,
+    
+    // XP Sound
+    playXPSound,
+    
+    // XP History (7 days)
+    getXPHistory
   };
 
   // ========== INTERNAL ==========
@@ -595,9 +883,18 @@
     let xpToAdd = amount > 0 ? amount : (action ? action.xp : 0);
     if (xpToAdd <= 0) return;
     
+    // Увеличиваем счётчик дневных действий
+    const dailyInfo = incrementDailyActions();
+    
     // Применяем multiplier от streak
-    const multiplier = getXPMultiplier();
-    xpToAdd = Math.round(xpToAdd * multiplier);
+    const streakMultiplier = getXPMultiplier();
+    // Применяем daily multiplier (накопительный за день)
+    const totalMultiplier = streakMultiplier * dailyInfo.multiplier;
+    xpToAdd = Math.round(xpToAdd * totalMultiplier);
+    
+    // Floating XP animation (показываем если есть бонус)
+    const hasBonus = dailyInfo.multiplier > 1;
+    showFloatingXP(sourceEl, xpToAdd, hasBonus);
 
     const oldLevel = data.level;
     data.totalXP += xpToAdd;
@@ -615,6 +912,9 @@
       data.stats.bestStreak = streak;
     }
 
+    // Weekly challenge tracking
+    addWeeklyXP(xpToAdd);
+    
     saveData();
 
     // Haptic
@@ -622,6 +922,9 @@
 
     // Flying animation
     flyToBar(sourceEl, xpToAdd);
+    
+    // XP Sound
+    playXPSound(false);
 
     // Dispatch update event
     window.dispatchEvent(new CustomEvent('heysGameUpdate', {
@@ -637,6 +940,10 @@
     // Level up notification
     if (data.level > oldLevel) {
       const title = getLevelTitle(data.level);
+      
+      // Level-up sound!
+      playXPSound(true);
+      
       showNotification('level_up', {
         newLevel: data.level,
         title: title.title,

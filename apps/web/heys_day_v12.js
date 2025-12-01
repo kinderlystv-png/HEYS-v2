@@ -1302,6 +1302,9 @@
     // === Popup для бейджей БЖУ ===
     const [macroBadgePopup, setMacroBadgePopup] = useState(null); // { macro, emoji, desc, x, y }
     
+    // === Popup для метрик (вода, шаги, калории) ===
+    const [metricPopup, setMetricPopup] = useState(null); // { type: 'water'|'steps'|'kcal', x, y, data }
+    
     // === Slider для интерактивного просмотра графика ===
     const [sliderPoint, setSliderPoint] = useState(null);
     const sliderPrevPointRef = React.useRef(null);
@@ -1318,7 +1321,7 @@
     
     // Закрытие popup при клике вне
     React.useEffect(() => {
-      if (!sparklinePopup && !macroBadgePopup) return;
+      if (!sparklinePopup && !macroBadgePopup && !metricPopup) return;
       const handleClickOutside = (e) => {
         if (sparklinePopup && !e.target.closest('.sparkline-popup')) {
           setSparklinePopup(null);
@@ -1326,10 +1329,13 @@
         if (macroBadgePopup && !e.target.closest('.macro-badge-popup')) {
           setMacroBadgePopup(null);
         }
+        if (metricPopup && !e.target.closest('.metric-popup')) {
+          setMetricPopup(null);
+        }
       };
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
-    }, [sparklinePopup, macroBadgePopup]);
+    }, [sparklinePopup, macroBadgePopup, metricPopup]);
     
     // === Toast для подсказок БЖУ ===
     const [toastVisible, setToastVisible] = useState(false);
@@ -2784,6 +2790,17 @@
     React.useEffect(() => {
       HEYS.Day = HEYS.Day || {};
       HEYS.Day.getStreak = () => currentStreak;
+      
+      // Dispatch событие чтобы GamificationBar мог обновить streak
+      window.dispatchEvent(new CustomEvent('heysDayStreakUpdated', { 
+        detail: { streak: currentStreak } 
+      }));
+      
+      // Confetti при streak 7, 14, 30, 100
+      if ([7, 14, 30, 100].includes(currentStreak) && HEYS.game && HEYS.game.celebrate) {
+        HEYS.game.celebrate();
+      }
+      
       return () => {
         if (HEYS.Day && HEYS.Day.getStreak) {
           delete HEYS.Day.getStreak;
@@ -4241,8 +4258,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               trainingTypes,
               trainingMinutes: dayInfo.trainingMinutes || 0,
               sleepHours: dayInfo.sleepHours || 0,
-              moodAvg: dayInfo.moodAvg || 0,
+              sleepQuality: dayInfo.sleepQuality || 0,
               dayScore: dayInfo.dayScore || 0,
+              steps: dayInfo.steps || 0,
               prot: dayInfo.prot || 0,
               fat: dayInfo.fat || 0,
               carbs: dayInfo.carbs || 0
@@ -4302,11 +4320,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 hasTraining, 
                 trainingTypes,
                 sleepHours: fallbackSleepHours,
-                moodAvg: +dayData.moodAvg || 0,
-                dayScore: +dayData.dayScore || 0
+                sleepQuality: +dayData.sleepQuality || 0,
+                dayScore: +dayData.dayScore || 0,
+                steps: +dayData.steps || 0
               });
             } else {
-              days.push({ date: dateStr, kcal: 0, target: optimum, isToday: false, hasTraining: false, trainingTypes: [], sleepHours: 0, moodAvg: 0, dayScore: 0 });
+              days.push({ date: dateStr, kcal: 0, target: optimum, isToday: false, hasTraining: false, trainingTypes: [], sleepHours: 0, sleepQuality: 0, dayScore: 0, steps: 0 });
             }
           }
         }
@@ -4947,8 +4966,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           isUnknown: d.isUnknown || false, // флаг неизвестного дня
           hasTraining: d.hasTraining, trainingTypes: d.trainingTypes || [],
           trainingMinutes: d.trainingMinutes || 0,
-          isWeekend: isWeekendDay, moodAvg: d.moodAvg || null,
+          isWeekend: isWeekendDay, sleepQuality: d.sleepQuality || 0,
           sleepHours: d.sleepHours || 0, dayScore: d.dayScore || 0,
+          steps: d.steps || 0,
           prot: d.prot || 0, fat: d.fat || 0, carbs: d.carbs || 0,
           dayOfWeek
         };
@@ -6087,24 +6107,46 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           sliderPoint.kcal + ' ',
           React.createElement('small', null, '/ ' + sliderPoint.target)
         ),
-        // Теги: сон + настроение + оценка дня
-        (sliderPoint.sleepHours > 0 || sliderPoint.moodAvg > 0 || sliderPoint.dayScore > 0) &&
+        // Теги: сон, оценка сна, тренировка, шаги, оценка дня
+        (sliderPoint.sleepHours > 0 || sliderPoint.sleepQuality > 0 || sliderPoint.dayScore > 0 || sliderPoint.trainingMinutes > 0 || sliderPoint.steps > 0) &&
           React.createElement('div', { className: 'sparkline-slider-tooltip-tags' },
             // Сон
             sliderPoint.sleepHours > 0 && 
               React.createElement('span', { 
                 className: 'sparkline-slider-tooltip-tag' + (sliderPoint.sleepHours < 6 ? ' bad' : '')
-              }, '😴' + sliderPoint.sleepHours.toFixed(1) + 'ч'),
-            // Настроение
-            sliderPoint.moodAvg > 0 && 
+              }, 'Сон: ' + sliderPoint.sleepHours.toFixed(1) + 'ч'),
+            // Оценка сна (1-10) — динамический цвет
+            sliderPoint.sleepQuality > 0 && 
               React.createElement('span', { 
-                className: 'sparkline-slider-tooltip-tag' + (sliderPoint.moodAvg < 3 ? ' warn' : sliderPoint.moodAvg >= 4 ? ' good' : '')
-              }, '😊' + sliderPoint.moodAvg.toFixed(1)),
-            // Оценка дня
+                className: 'sparkline-slider-tooltip-tag',
+                style: { 
+                  backgroundColor: sliderPoint.sleepQuality <= 3 ? '#ef4444' : 
+                                   sliderPoint.sleepQuality <= 5 ? '#f97316' : 
+                                   sliderPoint.sleepQuality <= 7 ? '#eab308' : '#22c55e',
+                  color: sliderPoint.sleepQuality <= 5 ? '#fff' : '#000'
+                }
+              }, 'Оценка сна: ' + sliderPoint.sleepQuality),
+            // Тренировка
+            sliderPoint.trainingMinutes > 0 && 
+              React.createElement('span', { 
+                className: 'sparkline-slider-tooltip-tag good'
+              }, 'Тренировка: ' + sliderPoint.trainingMinutes + 'м'),
+            // Шаги
+            sliderPoint.steps > 0 && 
+              React.createElement('span', { 
+                className: 'sparkline-slider-tooltip-tag' + (sliderPoint.steps >= 10000 ? ' good' : '')
+              }, 'Шаги: ' + sliderPoint.steps.toLocaleString()),
+            // Оценка дня (1-10) — динамический цвет
             sliderPoint.dayScore > 0 && 
               React.createElement('span', { 
-                className: 'sparkline-slider-tooltip-tag' + (sliderPoint.dayScore >= 8 ? ' good' : sliderPoint.dayScore < 5 ? ' warn' : '')
-              }, '⭐' + sliderPoint.dayScore)
+                className: 'sparkline-slider-tooltip-tag',
+                style: { 
+                  backgroundColor: sliderPoint.dayScore <= 3 ? '#ef4444' : 
+                                   sliderPoint.dayScore <= 5 ? '#f97316' : 
+                                   sliderPoint.dayScore <= 7 ? '#eab308' : '#22c55e',
+                  color: sliderPoint.dayScore <= 5 ? '#fff' : '#000'
+                }
+              }, 'Оценка дня: ' + sliderPoint.dayScore)
           )
       ),
       // Полоса оценки дня (dayScore) под графиком
@@ -6623,7 +6665,24 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Съедено
         React.createElement('div', { 
           className: 'metrics-card' + (shakeEaten ? ' shake-excess' : ''),
-          style: { background: eatenCol.bg, borderColor: eatenCol.border }
+          style: { background: eatenCol.bg, borderColor: eatenCol.border, cursor: 'pointer' },
+          onClick: (e) => {
+            e.stopPropagation();
+            const rect = e.currentTarget.getBoundingClientRect();
+            setMetricPopup({
+              type: 'kcal',
+              x: rect.left + rect.width / 2,
+              y: rect.top,
+              data: {
+                eaten: eatenKcal,
+                goal: optimum,
+                remaining: remainingKcal,
+                ratio: currentRatio,
+                deficitPct: dayTargetDef
+              }
+            });
+            haptic('light');
+          }
         },
           React.createElement('div', { className: 'metrics-icon' }, '🍽️'),
           React.createElement('div', { className: 'metrics-value', style: { color: eatenCol.text } }, r0(eatenKcal)),
@@ -6686,157 +6745,813 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         )
       );
       })(),
-      // Popup с деталями при клике на точку — компактный дизайн
-      sparklinePopup && sparklinePopup.type === 'kcal' && React.createElement('div', {
-        className: 'sparkline-popup',
-        style: { 
-          position: 'fixed',
-          left: sparklinePopup.x + 'px', 
-          top: (sparklinePopup.y - 120) + 'px'
+      // Popup с деталями при клике на точку — НОВЫЙ КОНСИСТЕНТНЫЙ ДИЗАЙН
+      sparklinePopup && sparklinePopup.type === 'kcal' && (() => {
+        const point = sparklinePopup.point;
+        const ratio = point.kcal / point.target;
+        const pct = Math.round(ratio * 100);
+        
+        // Цвет по ratio
+        const getColor = (r) => {
+          if (r <= 0.5) return '#ef4444';
+          if (r < 0.75) return '#eab308';
+          if (r < 0.9) return '#22c55e';
+          if (r < 1.1) return '#10b981';
+          if (r < 1.3) return '#eab308';
+          return '#ef4444';
+        };
+        const color = getColor(ratio);
+        
+        // Позиционирование
+        const popupW = 260;
+        let left = sparklinePopup.x - popupW / 2;
+        let arrowPos = 'center';
+        if (left < 10) { left = 10; arrowPos = 'left'; }
+        if (left + popupW > window.innerWidth - 10) { left = window.innerWidth - popupW - 10; arrowPos = 'right'; }
+        
+        // Вчера
+        const prevPoint = sparklineData[sparklineData.findIndex(p => p.date === point.date) - 1];
+        const diff = prevPoint ? point.kcal - prevPoint.kcal : null;
+        
+        // Gradient для progress
+        const getGradient = (r) => {
+          if (r < 0.5) return 'linear-gradient(90deg, #ef4444 0%, #ef4444 100%)';
+          if (r < 0.75) return 'linear-gradient(90deg, #ef4444 0%, #eab308 100%)';
+          if (r < 1.0) return 'linear-gradient(90deg, #eab308 0%, #22c55e 100%)';
+          if (r < 1.15) return 'linear-gradient(90deg, #22c55e 0%, #10b981 100%)';
+          return 'linear-gradient(90deg, #eab308 0%, #ef4444 100%)';
+        };
+        
+        // Swipe
+        let startY = 0;
+        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
+        const onTouchEnd = (e) => {
+          const deltaY = e.changedTouches[0].clientY - startY;
+          if (deltaY > 50) { setSparklinePopup(null); haptic('light'); }
+        };
+        
+        return React.createElement('div', {
+          className: 'sparkline-popup sparkline-popup-v2',
+          role: 'dialog',
+          'aria-label': (point.isToday ? 'Сегодня' : point.dayNum) + ' — ' + pct + '% от нормы',
+          style: { 
+            position: 'fixed',
+            left: left + 'px', 
+            top: (sparklinePopup.y + 15) + 'px',
+            width: popupW + 'px'
+          },
+          onClick: (e) => e.stopPropagation(),
+          onTouchStart: onTouchStart,
+          onTouchEnd: onTouchEnd
         },
-        onClick: (e) => e.stopPropagation()
-      },
-        // Header: дата + badge с процентом
-        React.createElement('div', { className: 'sparkline-popup-header' },
-          React.createElement('span', null,
-            (() => {
-              if (sparklinePopup.point.isToday) return 'Сегодня';
-              const weekDays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-              const wd = weekDays[sparklinePopup.point.dayOfWeek] || '';
-              return sparklinePopup.point.dayNum + ' ' + wd;
-            })()
+          // Цветная полоса
+          React.createElement('div', { 
+            className: 'sparkline-popup-stripe',
+            style: { background: color }
+          }),
+          // Контент
+          React.createElement('div', { className: 'sparkline-popup-content' },
+            // Swipe indicator
+            React.createElement('div', { className: 'sparkline-popup-swipe' }),
+            // Header: дата + процент
+            React.createElement('div', { className: 'sparkline-popup-header-v2' },
+              React.createElement('span', { className: 'sparkline-popup-date' },
+                (() => {
+                  if (point.isToday) return '📅 Сегодня';
+                  const weekDays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                  const wd = weekDays[point.dayOfWeek] || '';
+                  return '📅 ' + point.dayNum + ' ' + wd;
+                })()
+              ),
+              React.createElement('span', { 
+                className: 'sparkline-popup-pct',
+                style: { color: color }
+              }, pct + '%')
+            ),
+            // Progress bar
+            React.createElement('div', { className: 'sparkline-popup-progress' },
+              React.createElement('div', { 
+                className: 'sparkline-popup-progress-fill',
+                style: { 
+                  width: Math.min(100, pct) + '%',
+                  background: getGradient(ratio)
+                }
+              })
+            ),
+            // Value
+            React.createElement('div', { className: 'sparkline-popup-value-row' },
+              React.createElement('span', { style: { color: color, fontWeight: 700, fontSize: '15px' } }, 
+                Math.round(point.kcal) + ' ккал'
+              ),
+              React.createElement('span', { className: 'sparkline-popup-target' }, 
+                ' / ' + point.target + ' ккал'
+              ),
+              // Сравнение со вчера
+              diff !== null && React.createElement('span', { 
+                className: 'sparkline-popup-compare' + (diff > 0 ? ' up' : diff < 0 ? ' down' : ''),
+              }, diff > 0 ? '↑' : diff < 0 ? '↓' : '=', ' ', Math.abs(Math.round(diff)))
+            ),
+            // Теги: сон, тренировка, шаги, оценка
+            (point.sleepHours > 0 || point.trainingMinutes > 0 || point.steps > 0 || point.dayScore > 0) &&
+              React.createElement('div', { className: 'sparkline-popup-tags-v2' },
+                point.sleepHours > 0 && React.createElement('span', { 
+                  className: 'sparkline-popup-tag-v2' + (point.sleepHours < 6 ? ' bad' : point.sleepHours >= 7 ? ' good' : '')
+                }, '😴 ' + point.sleepHours.toFixed(1) + 'ч'),
+                point.trainingMinutes > 0 && React.createElement('span', { 
+                  className: 'sparkline-popup-tag-v2 good'
+                }, '🏃 ' + point.trainingMinutes + 'м'),
+                point.steps > 0 && React.createElement('span', { 
+                  className: 'sparkline-popup-tag-v2' + (point.steps >= 10000 ? ' good' : '')
+                }, '👟 ' + point.steps.toLocaleString()),
+                point.dayScore > 0 && React.createElement('span', { 
+                  className: 'sparkline-popup-tag-v2',
+                  style: { 
+                    backgroundColor: point.dayScore <= 3 ? '#fee2e2' : 
+                                     point.dayScore <= 5 ? '#fef3c7' : 
+                                     point.dayScore <= 7 ? '#fef3c7' : '#dcfce7',
+                    color: point.dayScore <= 3 ? '#dc2626' : 
+                           point.dayScore <= 5 ? '#d97706' : 
+                           point.dayScore <= 7 ? '#d97706' : '#16a34a'
+                  }
+                }, '⭐ ' + point.dayScore)
+              ),
+            // Кнопка перехода
+            !point.isToday && React.createElement('button', {
+              className: 'sparkline-popup-btn-v2',
+              onClick: () => {
+                setSparklinePopup(null);
+                setDate(point.date);
+                haptic('light');
+              }
+            }, '→ Перейти к дню'),
+            // Close
+            React.createElement('button', {
+              className: 'sparkline-popup-close',
+              'aria-label': 'Закрыть',
+              onClick: () => setSparklinePopup(null)
+            }, '✕')
           ),
-          React.createElement('span', { 
-            className: 'popup-pct ' + 
-              (sparklinePopup.point.kcal <= sparklinePopup.point.target ? 'good' : 
-               sparklinePopup.point.kcal <= sparklinePopup.point.target * 1.15 ? 'warn' : 'bad')
-          }, Math.round((sparklinePopup.point.kcal / sparklinePopup.point.target) * 100) + '%')
-        ),
-        // Главная строка — калории
-        React.createElement('div', { className: 'sparkline-popup-main' },
-          sparklinePopup.point.kcal + ' ',
-          React.createElement('small', null, '/ ' + sparklinePopup.point.target + ' ккал')
-        ),
-        // Теги: сон + настроение + оценка дня
-        React.createElement('div', { className: 'sparkline-popup-tags' },
-          // Сон
-          sparklinePopup.point.sleepHours > 0 && 
-            React.createElement('span', { 
-              className: 'sparkline-popup-tag' + (sparklinePopup.point.sleepHours < 6 ? ' bad' : '')
-            }, '😴' + sparklinePopup.point.sleepHours.toFixed(1) + 'ч'),
-          // Настроение
-          sparklinePopup.point.moodAvg > 0 && 
-            React.createElement('span', { 
-              className: 'sparkline-popup-tag' + (sparklinePopup.point.moodAvg < 3 ? ' warn' : sparklinePopup.point.moodAvg >= 4 ? ' good' : '')
-            }, '😊' + sparklinePopup.point.moodAvg.toFixed(1)),
-          // Оценка дня
-          sparklinePopup.point.dayScore > 0 && 
-            React.createElement('span', { 
-              className: 'sparkline-popup-tag' + (sparklinePopup.point.dayScore >= 8 ? ' good' : sparklinePopup.point.dayScore < 5 ? ' warn' : '')
-            }, '⭐' + sparklinePopup.point.dayScore)
-        ),
-        // Кнопка перехода
-        !sparklinePopup.point.isToday && React.createElement('button', {
-          className: 'sparkline-popup-btn',
-          onClick: () => {
-            setSparklinePopup(null);
-            setDate(sparklinePopup.point.date);
-            haptic('light');
-          }
-        }, '→ К дню')
-      ),
-      // Popup для идеального дня 🔥
-      sparklinePopup && sparklinePopup.type === 'perfect' && React.createElement('div', {
-        className: 'sparkline-popup sparkline-popup-perfect',
-        style: { 
-          position: 'fixed',
-          left: sparklinePopup.x + 'px', 
-          top: (sparklinePopup.y - 100) + 'px'
+          // Стрелка
+          React.createElement('div', { 
+            className: 'sparkline-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
+          })
+        );
+      })(),
+      // Popup для идеального дня 🔥 — ЗОЛОТОЙ СТИЛЬ
+      sparklinePopup && sparklinePopup.type === 'perfect' && (() => {
+        const point = sparklinePopup.point;
+        const pct = Math.round((point.kcal / point.target) * 100);
+        
+        // Позиционирование
+        const popupW = 260;
+        let left = sparklinePopup.x - popupW / 2;
+        let arrowPos = 'center';
+        if (left < 10) { left = 10; arrowPos = 'left'; }
+        if (left + popupW > window.innerWidth - 10) { left = window.innerWidth - popupW - 10; arrowPos = 'right'; }
+        
+        // Swipe
+        let startY = 0;
+        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
+        const onTouchEnd = (e) => {
+          const deltaY = e.changedTouches[0].clientY - startY;
+          if (deltaY > 50) { setSparklinePopup(null); haptic('light'); }
+        };
+        
+        return React.createElement('div', {
+          className: 'sparkline-popup sparkline-popup-v2 sparkline-popup-perfect-v2',
+          role: 'dialog',
+          'aria-label': 'Идеальный день — ' + pct + '% от нормы',
+          style: { 
+            position: 'fixed',
+            left: left + 'px', 
+            top: (sparklinePopup.y + 15) + 'px',
+            width: popupW + 'px'
+          },
+          onClick: (e) => e.stopPropagation(),
+          onTouchStart: onTouchStart,
+          onTouchEnd: onTouchEnd
         },
-        onClick: (e) => e.stopPropagation()
-      },
-        React.createElement('div', { className: 'sparkline-popup-header perfect' },
-          '🔥 Идеальный день!'
-        ),
-        React.createElement('div', { className: 'sparkline-popup-motivation' },
-          'Попал точно в цель: ' + sparklinePopup.point.kcal + ' / ' + sparklinePopup.point.target + ' ккал'
-        ),
-        React.createElement('div', { className: 'sparkline-popup-subtitle' },
-          'Так держать! 💪'
-        ),
-        !sparklinePopup.point.isToday && React.createElement('button', {
-          className: 'sparkline-popup-btn',
-          onClick: () => {
-            setSparklinePopup(null);
-            setDate(sparklinePopup.point.date);
-            haptic('light');
-          }
-        }, '→ Перейти к дню')
-      ),
+          // Золотая полоса
+          React.createElement('div', { 
+            className: 'sparkline-popup-stripe',
+            style: { background: 'linear-gradient(90deg, #f59e0b, #fbbf24)' }
+          }),
+          // Контент
+          React.createElement('div', { className: 'sparkline-popup-content' },
+            // Swipe indicator
+            React.createElement('div', { className: 'sparkline-popup-swipe' }),
+            // Header: emoji + дата
+            React.createElement('div', { className: 'sparkline-popup-header-v2 perfect' },
+              React.createElement('span', { className: 'sparkline-popup-perfect-title' }, '🔥 Идеальный день!'),
+              React.createElement('span', { 
+                className: 'sparkline-popup-pct',
+                style: { color: '#f59e0b' }
+              }, pct + '%')
+            ),
+            // Progress bar (золотой)
+            React.createElement('div', { className: 'sparkline-popup-progress' },
+              React.createElement('div', { 
+                className: 'sparkline-popup-progress-fill',
+                style: { 
+                  width: Math.min(100, pct) + '%',
+                  background: 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                }
+              })
+            ),
+            // Value
+            React.createElement('div', { className: 'sparkline-popup-value-row' },
+              React.createElement('span', { style: { color: '#f59e0b', fontWeight: 700, fontSize: '15px' } }, 
+                Math.round(point.kcal) + ' ккал'
+              ),
+              React.createElement('span', { className: 'sparkline-popup-target' }, 
+                ' / ' + point.target + ' ккал'
+              )
+            ),
+            // Motivation
+            React.createElement('div', { className: 'sparkline-popup-motivation-v2' },
+              '✨ Попал точно в цель! Так держать!'
+            ),
+            // Теги (золотой стиль)
+            (point.sleepHours > 0 || point.trainingMinutes > 0 || point.steps > 0 || point.dayScore > 0) &&
+              React.createElement('div', { className: 'sparkline-popup-tags-v2 perfect' },
+                point.sleepHours > 0 && React.createElement('span', { 
+                  className: 'sparkline-popup-tag-v2 perfect'
+                }, '😴 ' + point.sleepHours.toFixed(1) + 'ч'),
+                point.trainingMinutes > 0 && React.createElement('span', { 
+                  className: 'sparkline-popup-tag-v2 perfect'
+                }, '🏃 ' + point.trainingMinutes + 'м'),
+                point.steps > 0 && React.createElement('span', { 
+                  className: 'sparkline-popup-tag-v2 perfect'
+                }, '👟 ' + point.steps.toLocaleString()),
+                point.dayScore > 0 && React.createElement('span', { 
+                  className: 'sparkline-popup-tag-v2 perfect'
+                }, '⭐ ' + point.dayScore)
+              ),
+            // Кнопка перехода
+            !point.isToday && React.createElement('button', {
+              className: 'sparkline-popup-btn-v2 perfect',
+              onClick: () => {
+                setSparklinePopup(null);
+                setDate(point.date);
+                haptic('light');
+              }
+            }, '→ Перейти к дню'),
+            // Close
+            React.createElement('button', {
+              className: 'sparkline-popup-close perfect',
+              'aria-label': 'Закрыть',
+              onClick: () => setSparklinePopup(null)
+            }, '✕')
+          ),
+          // Стрелка (золотая)
+          React.createElement('div', { 
+            className: 'sparkline-popup-arrow perfect' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
+          })
+        );
+      })(),
       // Popup для бейджей БЖУ
-      macroBadgePopup && React.createElement('div', {
-        className: 'macro-badge-popup',
-        style: (() => {
-          const popupWidth = 200; // примерная ширина
-          const x = macroBadgePopup.x;
-          const screenW = window.innerWidth;
-          const margin = 12;
-          // Умная позиция: левый край, центр, правый край
-          let left, transform;
-          if (x < popupWidth / 2 + margin) {
-            // Близко к левому краю — прижать влево
-            left = margin;
-            transform = 'translateX(0)';
-          } else if (x > screenW - popupWidth / 2 - margin) {
-            // Близко к правому краю — прижать вправо
-            left = screenW - margin;
-            transform = 'translateX(-100%)';
-          } else {
-            // Центрировать
-            left = x;
-            transform = 'translateX(-50%)';
+      macroBadgePopup && (() => {
+        const popupWidth = 220;
+        const x = macroBadgePopup.x;
+        const screenW = window.innerWidth;
+        const margin = 12;
+        
+        // Умная позиция: вычисляем left напрямую без transform
+        let left, arrowPos = 'center';
+        if (x < popupWidth / 2 + margin) {
+          left = margin;
+          arrowPos = 'left';
+        } else if (x > screenW - popupWidth / 2 - margin) {
+          left = screenW - popupWidth - margin;
+          arrowPos = 'right';
+        } else {
+          left = x - popupWidth / 2;
+        }
+        
+        // 📊 Сравнение со вчера
+        const getYesterdayCompare = () => {
+          try {
+            const macroKey = macroBadgePopup.macro === 'Белки' ? 'prot' : 
+                             macroBadgePopup.macro === 'Жиры' ? 'fat' : 'carbs';
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const dateStr = yesterday.toISOString().slice(0, 10);
+            const dayData = U.lsGet('heys_dayv2_' + dateStr);
+            if (!dayData || !dayData.meals) return null;
+            
+            let macroSum = 0;
+            dayData.meals.forEach(meal => {
+              (meal.items || []).forEach(item => {
+                const prod = pIndex.byId.get(item.product_id);
+                if (prod) {
+                  const g = item.grams || 100;
+                  if (macroKey === 'prot') macroSum += (prod.protein100 || 0) * g / 100;
+                  else if (macroKey === 'fat') macroSum += ((prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0)) * g / 100;
+                  else macroSum += ((prod.simple100 || 0) + (prod.complex100 || 0)) * g / 100;
+                }
+              });
+            });
+            
+            const diff = macroBadgePopup.value - macroSum;
+            if (Math.abs(diff) < 5) return { icon: '↔️', text: 'как вчера', diff: 0 };
+            if (diff > 0) return { icon: '📈', text: '+' + Math.round(diff) + 'г', diff: diff };
+            return { icon: '📉', text: Math.round(diff) + 'г', diff: diff };
+          } catch (e) { return null; }
+        };
+        const yesterdayCompare = getYesterdayCompare();
+        
+        // Рекомендация продукта если недобор
+        const getRec = () => {
+          if (macroBadgePopup.ratio >= 0.9) return null;
+          const deficit = macroBadgePopup.norm - macroBadgePopup.value;
+          const macro = macroBadgePopup.macro;
+          if (macro === 'Белки' && deficit > 20) {
+            return { icon: '🍗', text: 'Добавь курицу 100г', amount: '+25г' };
+          } else if (macro === 'Белки' && deficit > 10) {
+            return { icon: '🥚', text: 'Добавь яйцо', amount: '+12г' };
+          } else if (macro === 'Жиры' && deficit > 10) {
+            return { icon: '🥑', text: 'Добавь авокадо', amount: '+15г' };
+          } else if (macro === 'Углеводы' && deficit > 20) {
+            return { icon: '🍌', text: 'Добавь банан', amount: '+25г' };
           }
-          return {
+          return null;
+        };
+        const rec = getRec();
+        
+        // ⏰ Динамическое сообщение по времени
+        const getTimeMsg = () => {
+          const hour = new Date().getHours();
+          const ratio = macroBadgePopup.ratio;
+          if (ratio >= 0.9 && ratio <= 1.1) return { icon: '✅', text: 'В норме!' };
+          if (ratio > 1.1) return { icon: '😅', text: 'Немного перебор' };
+          // Недобор
+          if (hour < 12) return { icon: '🌅', text: 'Ещё целый день впереди!' };
+          if (hour < 17) return { icon: '☀️', text: 'Время ещё есть' };
+          if (hour < 20) return { icon: '🌆', text: 'Осталось немного времени' };
+          return { icon: '🌙', text: 'День почти закончен' };
+        };
+        const timeMsg = getTimeMsg();
+        
+        // 🏆 Streak макроса (последние 7 дней)
+        const getMacroStreak = () => {
+          try {
+            const macroKey = macroBadgePopup.macro === 'Белки' ? 'prot' : 
+                             macroBadgePopup.macro === 'Жиры' ? 'fat' : 'carbs';
+            let streak = 0;
+            const today = new Date();
+            for (let i = 1; i <= 7; i++) {
+              const d = new Date(today);
+              d.setDate(d.getDate() - i);
+              const dateStr = d.toISOString().slice(0, 10);
+              const dayData = U.lsGet('heys_dayv2_' + dateStr);
+              if (!dayData || !dayData.meals) break;
+              
+              // Вычислим сумму макроса за день
+              let macroSum = 0;
+              dayData.meals.forEach(meal => {
+                (meal.items || []).forEach(item => {
+                  const prod = pIndex.byId.get(item.product_id);
+                  if (prod) {
+                    const g = item.grams || 100;
+                    if (macroKey === 'prot') macroSum += (prod.protein100 || 0) * g / 100;
+                    else if (macroKey === 'fat') macroSum += ((prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0)) * g / 100;
+                    else macroSum += ((prod.simple100 || 0) + (prod.complex100 || 0)) * g / 100;
+                  }
+                });
+              });
+              
+              // Норма макроса
+              const normKey = macroKey === 'prot' ? 'prot' : macroKey;
+              const norm = normAbs[normKey] || 100;
+              const dayRatio = macroSum / norm;
+              
+              if (dayRatio >= 0.8 && dayRatio <= 1.2) streak++;
+              else break;
+            }
+            return streak;
+          } catch (e) { return 0; }
+        };
+        const macroStreak = getMacroStreak();
+        
+        // 📊 Мини-sparkline за 7 дней
+        const getMiniSparkline = () => {
+          try {
+            const macroKey = macroBadgePopup.macro === 'Белки' ? 'prot' : 
+                             macroBadgePopup.macro === 'Жиры' ? 'fat' : 'carbs';
+            const data = [];
+            const today = new Date();
+            for (let i = 6; i >= 0; i--) {
+              const d = new Date(today);
+              d.setDate(d.getDate() - i);
+              const dateStr = d.toISOString().slice(0, 10);
+              const dayData = U.lsGet('heys_dayv2_' + dateStr);
+              if (!dayData || !dayData.meals) { data.push(0); continue; }
+              
+              let macroSum = 0;
+              dayData.meals.forEach(meal => {
+                (meal.items || []).forEach(item => {
+                  const prod = pIndex.byId.get(item.product_id);
+                  if (prod) {
+                    const g = item.grams || 100;
+                    if (macroKey === 'prot') macroSum += (prod.protein100 || 0) * g / 100;
+                    else if (macroKey === 'fat') macroSum += ((prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0)) * g / 100;
+                    else macroSum += ((prod.simple100 || 0) + (prod.complex100 || 0)) * g / 100;
+                  }
+                });
+              });
+              data.push(macroSum);
+            }
+            // Сегодня
+            data[6] = macroBadgePopup.value;
+            return data;
+          } catch (e) { return [0,0,0,0,0,0,0]; }
+        };
+        const sparkData = getMiniSparkline();
+        const sparkMax = Math.max(...sparkData, macroBadgePopup.norm) || 100;
+        
+        // Градиент для прогресс-бара
+        const getProgressGradient = (ratio) => {
+          if (ratio <= 0.5) return 'linear-gradient(90deg, #ef4444 0%, #f97316 100%)';
+          if (ratio <= 0.8) return 'linear-gradient(90deg, #f97316 0%, #eab308 100%)';
+          if (ratio <= 1.0) return 'linear-gradient(90deg, #eab308 0%, #22c55e 100%)';
+          if (ratio <= 1.2) return 'linear-gradient(90deg, #22c55e 0%, #10b981 100%)';
+          return 'linear-gradient(90deg, #f97316 0%, #ef4444 100%)';
+        };
+        
+        // Swipe handler
+        let startY = 0;
+        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
+        const onTouchEnd = (e) => {
+          const diff = e.changedTouches[0].clientY - startY;
+          if (diff > 50) setMacroBadgePopup(null); // swipe down
+        };
+        
+        return React.createElement('div', {
+          className: 'macro-badge-popup',
+          role: 'dialog',
+          'aria-label': macroBadgePopup.macro + ' — ' + Math.round(macroBadgePopup.ratio * 100) + '% от нормы',
+          'aria-modal': 'true',
+          style: {
             position: 'fixed',
             left: left + 'px',
-            top: (macroBadgePopup.y - 90) + 'px',
-            transform: transform
-          };
-        })(),
-        onClick: (e) => e.stopPropagation()
-      },
-        // Header: макрос + процент
-        React.createElement('div', { className: 'macro-badge-popup-header' },
-          React.createElement('span', { className: 'macro-badge-popup-title' }, macroBadgePopup.macro),
-          React.createElement('span', { 
-            className: 'macro-badge-popup-pct',
-            style: { color: macroBadgePopup.color }
-          }, Math.round(macroBadgePopup.ratio * 100) + '%')
-        ),
-        // Значение
-        React.createElement('div', { className: 'macro-badge-popup-value' },
-          React.createElement('span', { style: { color: macroBadgePopup.color, fontWeight: 700 } }, 
-            macroBadgePopup.value + 'г'
+            top: (macroBadgePopup.y + 15) + 'px',
+            width: popupWidth + 'px'
+          },
+          onClick: (e) => e.stopPropagation(),
+          onTouchStart: onTouchStart,
+          onTouchEnd: onTouchEnd
+        },
+          // Цветная полоса сверху
+          React.createElement('div', { 
+            className: 'macro-badge-popup-stripe',
+            style: { background: macroBadgePopup.color }
+          }),
+          // Контент
+          React.createElement('div', { className: 'macro-badge-popup-content' },
+            // Swipe indicator (mobile)
+            React.createElement('div', { className: 'macro-badge-popup-swipe' }),
+            // Header: макрос + процент
+            React.createElement('div', { className: 'macro-badge-popup-header' },
+              React.createElement('span', { className: 'macro-badge-popup-title' }, macroBadgePopup.macro),
+              React.createElement('span', { 
+                className: 'macro-badge-popup-pct macro-badge-popup-animated',
+                style: { color: macroBadgePopup.color }
+              }, Math.round(macroBadgePopup.ratio * 100) + '%')
+            ),
+            // 📊 Мини-sparkline
+            React.createElement('div', { className: 'macro-badge-popup-sparkline' },
+              React.createElement('svg', { viewBox: '0 0 70 20', className: 'macro-badge-popup-spark-svg' },
+                // Линия нормы
+                React.createElement('line', {
+                  x1: 0, y1: 20 - (macroBadgePopup.norm / sparkMax * 18),
+                  x2: 70, y2: 20 - (macroBadgePopup.norm / sparkMax * 18),
+                  stroke: '#e2e8f0',
+                  strokeWidth: 1,
+                  strokeDasharray: '2,2'
+                }),
+                // Точки и линии
+                sparkData.map((val, i) => {
+                  const x = i * 10 + 5;
+                  const y = 20 - (val / sparkMax * 18);
+                  const nextVal = sparkData[i + 1];
+                  const isToday = i === 6;
+                  return React.createElement('g', { key: i },
+                    // Линия к следующей точке
+                    nextVal !== undefined && React.createElement('line', {
+                      x1: x, y1: y,
+                      x2: (i + 1) * 10 + 5, y2: 20 - (nextVal / sparkMax * 18),
+                      stroke: macroBadgePopup.color,
+                      strokeWidth: 1.5,
+                      strokeOpacity: 0.6
+                    }),
+                    // Точка
+                    React.createElement('circle', {
+                      cx: x, cy: y,
+                      r: isToday ? 3 : 2,
+                      fill: isToday ? macroBadgePopup.color : '#94a3b8',
+                      className: isToday ? 'macro-badge-popup-spark-today' : ''
+                    })
+                  );
+                })
+              ),
+              React.createElement('span', { className: 'macro-badge-popup-spark-label' }, '7 дней')
+            ),
+            // 🎨 Прогресс-бар с градиентом
+            React.createElement('div', { className: 'macro-badge-popup-progress' },
+              React.createElement('div', { 
+                className: 'macro-badge-popup-progress-fill macro-badge-popup-animated-bar',
+                style: { 
+                  width: Math.min(100, macroBadgePopup.ratio * 100) + '%',
+                  background: getProgressGradient(macroBadgePopup.ratio)
+                }
+              })
+            ),
+            // 💫 Значение с анимацией + сравнение со вчера
+            React.createElement('div', { className: 'macro-badge-popup-value' },
+              React.createElement('span', { 
+                className: 'macro-badge-popup-animated',
+                style: { color: macroBadgePopup.color, fontWeight: 700 } 
+              }, macroBadgePopup.value + 'г'),
+              React.createElement('span', { className: 'macro-badge-popup-norm' }, 
+                ' / ' + macroBadgePopup.norm + 'г'
+              ),
+              // 📊 Сравнение со вчера
+              yesterdayCompare && React.createElement('span', { 
+                className: 'macro-badge-popup-compare' + (yesterdayCompare.diff > 0 ? ' up' : yesterdayCompare.diff < 0 ? ' down' : ''),
+                'aria-label': 'Сравнение со вчера'
+              }, yesterdayCompare.icon + ' ' + yesterdayCompare.text)
+            ),
+            // ⏰ Динамическое сообщение по времени
+            React.createElement('div', { className: 'macro-badge-popup-time-msg' },
+              React.createElement('span', null, timeMsg.icon),
+              React.createElement('span', null, ' ' + timeMsg.text)
+            ),
+            // 🏆 Streak макроса
+            macroStreak > 0 && React.createElement('div', { className: 'macro-badge-popup-streak' },
+              React.createElement('span', { className: 'macro-badge-popup-streak-icon' }, '🏆'),
+              React.createElement('span', null, macroStreak + ' ' + (macroStreak === 1 ? 'день' : macroStreak < 5 ? 'дня' : 'дней') + ' подряд в норме!')
+            ),
+            // Описание (все бейджи)
+            macroBadgePopup.allBadges.length > 0 && React.createElement('div', { className: 'macro-badge-popup-desc' },
+              macroBadgePopup.allBadges.map((b, i) => 
+                React.createElement('div', { key: i, className: 'macro-badge-popup-item' },
+                  React.createElement('span', { className: 'macro-badge-popup-emoji' }, b.emoji),
+                  React.createElement('span', null, b.desc)
+                )
+              )
+            ),
+            // Рекомендация продукта
+            rec && React.createElement('div', { className: 'macro-badge-popup-rec' },
+              React.createElement('span', { className: 'macro-badge-popup-rec-icon' }, rec.icon),
+              React.createElement('span', { className: 'macro-badge-popup-rec-text' },
+                rec.text + ' ',
+                React.createElement('b', null, rec.amount)
+              )
+            ),
+            // Закрыть
+            React.createElement('button', {
+              className: 'macro-badge-popup-close',
+              'aria-label': 'Закрыть',
+              onClick: () => setMacroBadgePopup(null)
+            }, '✕')
           ),
-          React.createElement('span', { className: 'macro-badge-popup-norm' }, 
-            ' / ' + macroBadgePopup.norm + 'г'
-          )
-        ),
-        // Описание (все бейджи)
-        React.createElement('div', { className: 'macro-badge-popup-desc' },
-          macroBadgePopup.allBadges.map((b, i) => 
-            React.createElement('div', { key: i, className: 'macro-badge-popup-item' },
-              React.createElement('span', { className: 'macro-badge-popup-emoji' }, b.emoji),
-              React.createElement('span', null, b.desc)
-            )
-          )
-        ),
-        // Закрыть
-        React.createElement('button', {
-          className: 'macro-badge-popup-close',
-          onClick: () => setMacroBadgePopup(null)
-        }, '✕')
-      ),
+          // Стрелка-указатель
+          React.createElement('div', { 
+            className: 'macro-badge-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
+          })
+        );
+      })(),
+      // === METRIC POPUP (вода, шаги, калории) ===
+      metricPopup && (() => {
+        // Позиционирование
+        const popupW = 280;
+        let left = metricPopup.x - popupW / 2;
+        let arrowPos = 'center';
+        if (left < 10) { left = 10; arrowPos = 'left'; }
+        if (left + popupW > window.innerWidth - 10) { left = window.innerWidth - popupW - 10; arrowPos = 'right'; }
+        
+        // Получаем историю для sparkline (7 дней)
+        const getMetricHistory = () => {
+          const days = [];
+          const currentD = new Date(date);
+          for (let i = 6; i >= 0; i--) {
+            const d = new Date(currentD);
+            d.setDate(d.getDate() - i);
+            const key = 'heys_dayv2_' + d.toISOString().slice(0,10);
+            const stored = U.lsGet(key, null);
+            if (stored) {
+              if (metricPopup.type === 'water') {
+                days.push(stored.waterMl || 0);
+              } else if (metricPopup.type === 'steps') {
+                days.push(stored.steps || 0);
+              } else {
+                // kcal — нужно суммировать meals
+                const dayTotKcal = (stored.meals || []).reduce((a, m) => {
+                  const t = M.mealTotals ? M.mealTotals(m, pIndex) : { kcal: 0 };
+                  return a + (t.kcal || 0);
+                }, 0);
+                days.push(dayTotKcal);
+              }
+            } else {
+              days.push(0);
+            }
+          }
+          return days;
+        };
+        
+        const history = getMetricHistory();
+        const sparkMax = Math.max(...history, metricPopup.data.goal || 1) * 1.1;
+        
+        // Streak расчёт
+        const getMetricStreak = () => {
+          let streak = 0;
+          const goal = metricPopup.data.goal;
+          for (let i = history.length - 1; i >= 0; i--) {
+            const val = history[i];
+            if (metricPopup.type === 'steps') {
+              if (val >= goal * 0.8) streak++; else break;
+            } else if (metricPopup.type === 'water') {
+              if (val >= goal * 0.8) streak++; else break;
+            } else {
+              const ratio = goal > 0 ? val / goal : 0;
+              if (ratio >= 0.75 && ratio <= 1.15) streak++; else break;
+            }
+          }
+          return streak;
+        };
+        const streak = getMetricStreak();
+        
+        // Вчера
+        const yesterdayVal = history.length >= 2 ? history[history.length - 2] : null;
+        const todayVal = history[history.length - 1] || 0;
+        const diff = yesterdayVal !== null ? todayVal - yesterdayVal : null;
+        
+        // Цвет и конфиг по типу
+        const config = {
+          water: { icon: '💧', name: 'Вода', unit: 'мл', color: '#3b82f6', goal: metricPopup.data.goal },
+          steps: { icon: '👟', name: 'Шаги', unit: '', color: metricPopup.data.color || '#22c55e', goal: metricPopup.data.goal },
+          kcal: { icon: '🔥', name: 'Калории', unit: 'ккал', color: '#f59e0b', goal: metricPopup.data.goal }
+        }[metricPopup.type];
+        
+        const ratio = metricPopup.data.ratio || 0;
+        const pct = Math.round(ratio * 100);
+        
+        // Gradient
+        const getGradient = (r) => {
+          if (r < 0.5) return 'linear-gradient(90deg, #ef4444 0%, #ef4444 100%)';
+          if (r < 0.75) return 'linear-gradient(90deg, #ef4444 0%, #eab308 100%)';
+          if (r < 1.0) return 'linear-gradient(90deg, #eab308 0%, #22c55e 100%)';
+          if (r < 1.15) return 'linear-gradient(90deg, #22c55e 0%, #10b981 100%)';
+          return 'linear-gradient(90deg, #eab308 0%, #ef4444 100%)';
+        };
+        
+        // Swipe handler
+        let startY = 0;
+        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
+        const onTouchEnd = (e) => {
+          const diffY = e.changedTouches[0].clientY - startY;
+          if (diffY > 50) setMetricPopup(null);
+        };
+        
+        return React.createElement('div', {
+          className: 'metric-popup',
+          role: 'dialog',
+          'aria-label': config.name + ' — ' + pct + '% от нормы',
+          'aria-modal': 'true',
+          style: {
+            position: 'fixed',
+            left: left + 'px',
+            top: (metricPopup.y + 15) + 'px',
+            width: popupW + 'px',
+            zIndex: 9999
+          },
+          onClick: (e) => e.stopPropagation(),
+          onTouchStart: onTouchStart,
+          onTouchEnd: onTouchEnd
+        },
+          // Цветная полоса
+          React.createElement('div', { 
+            className: 'metric-popup-stripe',
+            style: { background: config.color }
+          }),
+          // Контент
+          React.createElement('div', { className: 'metric-popup-content' },
+            // Swipe indicator
+            React.createElement('div', { className: 'metric-popup-swipe' }),
+            // Header
+            React.createElement('div', { className: 'metric-popup-header' },
+              React.createElement('span', { className: 'metric-popup-title' }, config.icon + ' ' + config.name),
+              React.createElement('span', { 
+                className: 'metric-popup-pct',
+                style: { color: config.color }
+              }, pct + '%')
+            ),
+            // Sparkline
+            React.createElement('div', { className: 'metric-popup-sparkline' },
+              React.createElement('svg', { viewBox: '0 0 70 20', className: 'metric-popup-spark-svg' },
+                // Goal line
+                React.createElement('line', {
+                  x1: 0, y1: 20 - (config.goal / sparkMax * 18),
+                  x2: 70, y2: 20 - (config.goal / sparkMax * 18),
+                  stroke: '#e2e8f0',
+                  strokeWidth: 1,
+                  strokeDasharray: '2,2'
+                }),
+                // Points and lines
+                history.map((val, i) => {
+                  const x = i * 10 + 5;
+                  const y = 20 - (val / sparkMax * 18);
+                  const nextVal = history[i + 1];
+                  const isToday = i === 6;
+                  return React.createElement('g', { key: i },
+                    nextVal !== undefined && React.createElement('line', {
+                      x1: x, y1: y,
+                      x2: (i + 1) * 10 + 5, y2: 20 - (nextVal / sparkMax * 18),
+                      stroke: config.color,
+                      strokeWidth: 1.5,
+                      strokeOpacity: 0.6
+                    }),
+                    React.createElement('circle', {
+                      cx: x, cy: y,
+                      r: isToday ? 3 : 2,
+                      fill: isToday ? config.color : '#94a3b8'
+                    })
+                  );
+                })
+              ),
+              React.createElement('span', { className: 'metric-popup-spark-label' }, '7 дней')
+            ),
+            // Progress bar
+            React.createElement('div', { className: 'metric-popup-progress' },
+              React.createElement('div', { 
+                className: 'metric-popup-progress-fill',
+                style: { 
+                  width: Math.min(100, pct) + '%',
+                  background: getGradient(ratio)
+                }
+              })
+            ),
+            // Value
+            React.createElement('div', { className: 'metric-popup-value' },
+              React.createElement('span', { style: { color: config.color, fontWeight: 700 } }, 
+                metricPopup.type === 'water' 
+                  ? (metricPopup.data.value >= 1000 ? (metricPopup.data.value / 1000).toFixed(1) + 'л' : metricPopup.data.value + 'мл')
+                  : metricPopup.type === 'steps'
+                    ? metricPopup.data.value.toLocaleString()
+                    : Math.round(metricPopup.data.eaten) + ' ккал'
+              ),
+              React.createElement('span', { className: 'metric-popup-goal' }, 
+                ' / ' + (metricPopup.type === 'water' 
+                  ? (config.goal >= 1000 ? (config.goal / 1000).toFixed(1) + 'л' : config.goal + 'мл')
+                  : metricPopup.type === 'steps'
+                    ? config.goal.toLocaleString()
+                    : Math.round(config.goal) + ' ккал'
+                )
+              ),
+              // Yesterday compare
+              diff !== null && React.createElement('span', { 
+                className: 'metric-popup-compare' + (diff > 0 ? ' up' : diff < 0 ? ' down' : ''),
+              }, diff > 0 ? '↑' : diff < 0 ? '↓' : '=', ' ', 
+                metricPopup.type === 'steps' ? Math.abs(diff).toLocaleString() : Math.abs(Math.round(diff)),
+                ' vs вчера'
+              )
+            ),
+            // Extra info per type
+            metricPopup.type === 'water' && metricPopup.data.breakdown && React.createElement('div', { className: 'metric-popup-extra' },
+              React.createElement('span', null, '⚖️ База: ' + metricPopup.data.breakdown.base + 'мл'),
+              metricPopup.data.breakdown.stepsBonus > 0 && React.createElement('span', null, ' 👟+' + metricPopup.data.breakdown.stepsBonus),
+              metricPopup.data.breakdown.trainBonus > 0 && React.createElement('span', null, ' 🏃+' + metricPopup.data.breakdown.trainBonus)
+            ),
+            metricPopup.type === 'steps' && React.createElement('div', { className: 'metric-popup-extra' },
+              React.createElement('span', null, '🔥 Сожжено: '),
+              React.createElement('b', null, metricPopup.data.kcal + ' ккал')
+            ),
+            metricPopup.type === 'kcal' && React.createElement('div', { className: 'metric-popup-extra' },
+              React.createElement('span', null, metricPopup.data.remaining >= 0 ? '✅ Осталось: ' : '⚠️ Перебор: '),
+              React.createElement('b', null, Math.abs(metricPopup.data.remaining) + ' ккал')
+            ),
+            // Streak
+            streak > 0 && React.createElement('div', { className: 'metric-popup-streak' },
+              React.createElement('span', null, '🏆'),
+              React.createElement('span', null, streak + ' ' + (streak === 1 ? 'день' : streak < 5 ? 'дня' : 'дней') + ' подряд!')
+            ),
+            // Water reminder
+            metricPopup.type === 'water' && metricPopup.data.lastDrink && metricPopup.data.lastDrink.isLong && React.createElement('div', { className: 'metric-popup-reminder' },
+              React.createElement('span', null, '⏰ ' + metricPopup.data.lastDrink.text)
+            ),
+            // Close button
+            React.createElement('button', {
+              className: 'metric-popup-close',
+              'aria-label': 'Закрыть',
+              onClick: () => setMetricPopup(null)
+            }, '✕')
+          ),
+          // Arrow
+          React.createElement('div', { 
+            className: 'metric-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
+          })
+        );
+      })(),
       // Fallback: нет данных о весе, но есть калории
       (!weightTrend && kcalTrend) && React.createElement('div', { 
         className: 'correlation-block correlation-clickable',
@@ -6969,10 +7684,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         className: 'sparkline-popup',
         style: { 
           position: 'fixed',
-          left: sparklinePopup.x + 'px', 
+          left: Math.min(Math.max(sparklinePopup.x, 100), window.innerWidth - 100) + 'px', 
           top: (sparklinePopup.y - 100) + 'px'
         },
-        onClick: (e) => e.stopPropagation()
+        onClick: (e) => e.stopPropagation(),
+        onTouchStart: (e) => { e.currentTarget._touchStartY = e.touches[0].clientY; },
+        onTouchMove: (e) => {
+          const deltaY = e.touches[0].clientY - (e.currentTarget._touchStartY || 0);
+          if (deltaY > 30) e.currentTarget.style.opacity = Math.max(0, 1 - deltaY / 100);
+        },
+        onTouchEnd: (e) => {
+          const deltaY = e.changedTouches[0].clientY - (e.currentTarget._touchStartY || 0);
+          if (deltaY > 50) { setSparklinePopup(null); haptic('light'); }
+          else e.currentTarget.style.opacity = 1;
+        }
       },
         React.createElement('div', { className: 'sparkline-popup-header' },
           sparklinePopup.point.isToday ? 'Сегодня' : sparklinePopup.point.dayNum + ' число'
@@ -7441,7 +8166,27 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 style: { strokeDasharray: Math.min(100, ((day.waterMl || 0) / waterGoal) * 100) + ' 100' }
               })
             ),
-            React.createElement('div', { className: 'water-ring-center' },
+            React.createElement('div', { 
+              className: 'water-ring-center',
+              onClick: (e) => {
+                e.stopPropagation();
+                const rect = e.currentTarget.getBoundingClientRect();
+                setMetricPopup({
+                  type: 'water',
+                  x: rect.left + rect.width / 2,
+                  y: rect.top,
+                  data: {
+                    value: day.waterMl || 0,
+                    goal: waterGoal,
+                    ratio: (day.waterMl || 0) / waterGoal,
+                    breakdown: waterGoalBreakdown,
+                    lastDrink: waterLastDrink
+                  }
+                });
+                haptic('light');
+              },
+              style: { cursor: 'pointer' }
+            },
               React.createElement('span', { className: 'water-ring-value' }, 
                 (day.waterMl || 0) >= 1000 
                   ? ((day.waterMl || 0) / 1000).toFixed(1).replace('.0', '') 
@@ -7573,7 +8318,27 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       React.createElement('div', { className: 'steps-slider-container no-swipe-zone' },
         React.createElement('div', { className: 'steps-slider-header' },
           React.createElement('span', { className: 'steps-label' }, '👟 Шаги'),
-          React.createElement('span', { className: 'steps-value' }, 
+          React.createElement('span', { 
+            className: 'steps-value',
+            onClick: (e) => {
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              setMetricPopup({
+                type: 'steps',
+                x: rect.left + rect.width / 2,
+                y: rect.top,
+                data: {
+                  value: stepsValue,
+                  goal: stepsGoal,
+                  ratio: stepsValue / stepsGoal,
+                  kcal: stepsK,
+                  color: stepsColor
+                }
+              });
+              haptic('light');
+            },
+            style: { cursor: 'pointer' }
+          }, 
             React.createElement('b', null, stepsValue.toLocaleString()),
             ' / ',
             React.createElement('b', { className: 'steps-goal' }, stepsGoal.toLocaleString()),

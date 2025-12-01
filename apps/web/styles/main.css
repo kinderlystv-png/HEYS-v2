@@ -881,16 +881,17 @@ td:first-child input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   background: rgba(255, 255, 255, 0.95);
-  border: 2px solid rgba(0, 0, 0, 0.15);
-  border-radius: 10px;
-  font-size: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
 }
 
 .hdr-theme-btn:hover {
@@ -968,12 +969,51 @@ td:first-child input {
 
 .game-bar {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Legacy row layout — kept for compatibility */
+.game-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.game-row-main {
+  gap: 10px;
+}
+
+.game-row-stats {
+  gap: 6px;
+  font-size: 11px;
+  opacity: 0.9;
+  flex-wrap: wrap;
+}
+
+/* Level group — горизонтальный компактный */
+.game-level-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.game-level-text {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
+/* Inline indicators — компактные значки в строке */
 
 .game-level {
   font-weight: 600;
@@ -1201,13 +1241,13 @@ td:first-child input {
 
 /* === Rank Badge === */
 .game-rank-badge {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 10px;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 8px;
   font-weight: 600;
-  margin-left: 4px;
   animation: badgeShine 3s ease-in-out infinite;
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  align-self: flex-start;
 }
 
 @keyframes badgeShine {
@@ -1221,9 +1261,8 @@ td:first-child input {
   font-weight: 700;
   color: #fbbf24;
   background: rgba(251, 191, 36, 0.2);
-  padding: 2px 6px;
-  border-radius: 8px;
-  margin-left: 4px;
+  padding: 2px 5px;
+  border-radius: 6px;
   animation: multiplierPulse 1.5s ease-in-out infinite;
 }
 
@@ -1236,11 +1275,11 @@ td:first-child input {
 .game-daily-bonus {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   color: white;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 4px 8px;
+  padding: 2px 6px;
   cursor: pointer;
   animation: bonusGlow 2s ease-in-out infinite;
   white-space: nowrap;
@@ -1258,21 +1297,21 @@ td:first-child input {
 }
 
 @keyframes bonusGlow {
-  0%, 100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
-  50% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.8); }
+  0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 12px rgba(245, 158, 11, 0.8); }
 }
 
 /* === Level Preview Tooltip === */
-.game-level {
+.game-level-group {
   position: relative;
   cursor: help;
 }
 
 .game-level-preview {
   position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+  top: calc(100% + 8px);
+  left: 0;
+  transform: none;
   background: rgba(15, 23, 42, 0.95);
   color: white;
   padding: 8px 12px;
@@ -1284,44 +1323,569 @@ td:first-child input {
   transition: opacity 0.2s ease;
   z-index: 100;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  text-align: left;
+}
+
+/* Level Roadmap — карта всех званий */
+.game-level-roadmap {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: rgba(15, 23, 42, 0.98);
+  color: white;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: translateY(-4px);
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  min-width: 180px;
+}
+
+.game-level-roadmap::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 20px;
+  border: 6px solid transparent;
+  border-bottom-color: rgba(15, 23, 42, 0.98);
+}
+
+.game-level-group:hover .game-level-roadmap {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.roadmap-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   text-align: center;
+}
+
+.roadmap-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  opacity: 0.5;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.roadmap-item.achieved {
+  opacity: 0.4;
+}
+
+.roadmap-item.current {
+  opacity: 1;
+  background: rgba(255, 215, 0, 0.15);
+  margin: 0 -10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.roadmap-item.future {
+  opacity: 0.6;
+}
+
+.roadmap-icon {
+  font-size: 16px;
+  width: 24px;
+  text-align: center;
+}
+
+.roadmap-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.roadmap-levels {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.roadmap-you {
+  font-size: 10px;
+  color: #fbbf24;
+  font-weight: 600;
+  animation: youPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes youPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.roadmap-check {
+  color: #22c55e;
+  font-size: 12px;
 }
 
 .game-level-preview::after {
   content: '';
   position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 100%;
+  left: 16px;
+  transform: none;
   border: 5px solid transparent;
-  border-top-color: rgba(15, 23, 42, 0.95);
+  border-bottom-color: rgba(15, 23, 42, 0.95);
 }
 
-.game-level:hover .game-level-preview {
+/* === Floating XP Text === */
+@keyframes floatUp {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-30px) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-60px) scale(0.8);
+  }
+}
+
+.floating-xp-text {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.floating-xp-text.combo {
+  animation: floatUpCombo 1.5s ease-out forwards;
+}
+
+.floating-xp-text .combo-text {
+  display: block;
+  font-size: 12px;
+  color: #ef4444;
+  animation: comboPop 0.3s ease-out;
+}
+
+@keyframes floatUpCombo {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-50%) translateY(-20px) scale(1.4) rotate(-5deg);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-40px) scale(1.2) rotate(5deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-80px) scale(0.8) rotate(0deg);
+  }
+}
+
+@keyframes comboPop {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+
+/* === Daily Action Multiplier === */
+.game-daily-mult {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.game-daily-mult.active {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.2);
+  animation: dailyMultPulse 2s ease-in-out infinite;
+}
+
+.game-daily-mult.high {
+  color: #f97316;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.3) 0%, rgba(234, 88, 12, 0.3) 100%);
+  animation: dailyMultGlow 1.5s ease-in-out infinite;
+  text-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
+}
+
+.game-daily-mult-value {
+  font-size: 10px;
+  font-weight: 700;
+  color: inherit;
+  opacity: 0.9;
+}
+
+@keyframes dailyMultPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes dailyMultGlow {
+  0%, 100% { box-shadow: 0 0 6px rgba(249, 115, 22, 0.3); }
+  50% { box-shadow: 0 0 12px rgba(249, 115, 22, 0.6); }
+}
+
+/* === Weekly Challenge Card (в expanded панели) === */
+.game-weekly-card {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.game-weekly-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 60%);
+  animation: weeklyCardShimmer 8s linear infinite;
+}
+
+@keyframes weeklyCardShimmer {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.game-weekly-card.completed {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.game-weekly-card.completed::before {
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.15) 0%, transparent 60%);
+}
+
+.weekly-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.weekly-icon {
+  font-size: 28px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.weekly-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.weekly-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.weekly-subtitle {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.game-weekly-card.completed .weekly-subtitle {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.weekly-progress-container {
+  position: relative;
+  z-index: 1;
+}
+
+.weekly-progress-bar {
+  height: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+}
+
+.weekly-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+  border-radius: 5px;
+  transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+}
+
+.weekly-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+  animation: weeklyProgressShine 2s ease-in-out infinite;
+}
+
+@keyframes weeklyProgressShine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.game-weekly-card.completed .weekly-progress-fill {
+  background: linear-gradient(90deg, #22c55e 0%, #10b981 50%, #059669 100%);
+}
+
+.weekly-progress-glow {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.6) 0%, transparent 70%);
+  transform: translateY(-50%);
+  animation: weeklyGlowPulse 1.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes weeklyGlowPulse {
+  0%, 100% { opacity: 0.5; transform: translateY(-50%) scale(1); }
+  50% { opacity: 1; transform: translateY(-50%) scale(1.3); }
+}
+
+.game-weekly-card.completed .weekly-progress-glow {
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.6) 0%, transparent 70%);
+}
+
+.weekly-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.weekly-earned {
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+}
+
+.weekly-target {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.weekly-percent {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 24px;
+  font-weight: 800;
+  color: rgba(139, 92, 246, 0.9);
+  text-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.game-weekly-card.completed .weekly-percent {
+  color: #22c55e;
+  text-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+}
+
+/* === XP History Chart === */
+.xp-history-section {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+.xp-history-title {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  opacity: 0.9;
+}
+
+.xp-history-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 60px;
+}
+
+.xp-history-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  position: relative;
+}
+
+.xp-bar-fill {
+  width: 100%;
+  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+  border-radius: 4px 4px 0 0;
+  min-height: 2px;
+  transition: height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: absolute;
+  bottom: 18px;
+}
+
+.xp-history-bar.today .xp-bar-fill {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.xp-bar-day {
+  font-size: 9px;
+  opacity: 0.6;
+  position: absolute;
+  bottom: 0;
+  text-transform: capitalize;
+}
+
+.xp-history-bar.today .xp-bar-day {
+  opacity: 1;
+  font-weight: 600;
+  color: #22c55e;
+}
+
+.xp-bar-value {
+  font-size: 8px;
+  font-weight: 600;
+  position: absolute;
+  bottom: 22px;
+  color: #fbbf24;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.xp-history-bar:hover .xp-bar-value {
   opacity: 1;
 }
 
-/* === Personal Best Badge === */
+.xp-history-bar.today .xp-bar-value {
+  color: #22c55e;
+  opacity: 1;
+}
+
+/* === Trophy Animation === */
 .game-personal-best {
-  font-size: 9px;
-  background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
-  color: white;
-  padding: 2px 6px;
-  border-radius: 8px;
+  font-size: 11px;
+  color: #fbbf24;
   font-weight: 600;
-  margin-left: 4px;
-  animation: personalBestPop 0.5s ease-out, personalBestGlow 2s ease-in-out infinite 0.5s;
+  animation: trophyBounce 2s ease-in-out infinite;
 }
 
-@keyframes personalBestPop {
-  0% { transform: scale(0); opacity: 0; }
-  50% { transform: scale(1.3); }
-  100% { transform: scale(1); opacity: 1; }
+@keyframes trophyBounce {
+  0%, 100% { 
+    transform: translateY(0) rotate(0deg); 
+  }
+  25% { 
+    transform: translateY(-3px) rotate(-5deg); 
+  }
+  75% { 
+    transform: translateY(-3px) rotate(5deg); 
+  }
 }
 
-@keyframes personalBestGlow {
-  0%, 100% { box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
-  50% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.8); }
+/* Trophy появление */
+.game-personal-best.just-appeared {
+  animation: trophyAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes trophyAppear {
+  0% { 
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.5) rotate(10deg);
+  }
+  100% { 
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* === Daily Goal Pulse === */
+.game-progress.near-goal .game-progress-fill {
+  animation: goalPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes goalPulse {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(34, 197, 94, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(34, 197, 94, 0.8), 0 0 24px rgba(34, 197, 94, 0.4);
+  }
+}
+
+/* === Rare Badge Showcase === */
+.achievement-badge.rarity-rare {
+  animation: rareBadgeShine 3s ease-in-out infinite;
+}
+
+.achievement-badge.rarity-epic {
+  animation: epicBadgeGlow 2s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+}
+
+.achievement-badge.rarity-legendary {
+  animation: legendaryBadgePulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.6);
+}
+
+.achievement-badge.rarity-mythic {
+  animation: mythicBadgeRainbow 3s linear infinite;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+}
+
+@keyframes rareBadgeShine {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
+}
+
+@keyframes epicBadgeGlow {
+  0%, 100% { 
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.8);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes legendaryBadgePulse {
+  0%, 100% { 
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.4);
+    filter: brightness(1);
+  }
+  50% { 
+    box-shadow: 0 0 25px rgba(234, 179, 8, 1);
+    filter: brightness(1.3);
+  }
+}
+
+@keyframes mythicBadgeRainbow {
+  0% { box-shadow: 0 0 20px #ff6b6b; }
+  25% { box-shadow: 0 0 20px #ffd93d; }
+  50% { box-shadow: 0 0 20px #6bcb77; }
+  75% { box-shadow: 0 0 20px #4d96ff; }
+  100% { box-shadow: 0 0 20px #ff6b6b; }
 }
 
 /* === Achievement Unlock Animation === */
@@ -1384,8 +1948,19 @@ td:first-child input {
   gap: 12px;
   z-index: 1100;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
-  animation: slideDown 0.3s ease-out;
+  animation: gameNotifSlideDown 0.3s ease-out forwards;
   cursor: pointer;
+}
+
+@keyframes gameNotifSlideDown {
+  from { 
+    opacity: 0; 
+    transform: translateY(-8px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
 }
 
 .game-notification.level_up {
@@ -1401,6 +1976,11 @@ td:first-child input {
 .game-notification.daily_bonus {
   background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
   border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.game-notification.weekly_complete {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border: 1px solid rgba(139, 92, 246, 0.3);
 }
 
 .game-notification .notif-icon {
@@ -1442,12 +2022,18 @@ td:first-child input {
   max-height: 60vh;
   overflow-y: auto;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-  animation: slideDown 0.3s ease-out;
+  animation: gamePanelSlideDown 0.25s ease-out forwards;
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes gamePanelSlideDown {
+  from { 
+    opacity: 0; 
+    transform: translateY(-8px);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0);
+  }
 }
 
 .game-panel-backdrop {
@@ -1649,7 +2235,7 @@ td:first-child input {
 .hdr-client {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   flex: 1;
   overflow: visible;
 }
@@ -1659,7 +2245,6 @@ td:first-child input {
   display: flex;
   align-items: center;
   gap: 2px;
-  margin-left: auto;
 }
 
 .hdr-client-avatar {
@@ -2000,7 +2585,7 @@ body:has(.offline-banner) .wrap {
 .hdr-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
   flex: 1;
   min-width: 0;
 }
@@ -3643,17 +4228,48 @@ body:has(.offline-banner) .wrap {
   background: #cbd5e1;
 }
 
+/* Кнопка быстрого перехода на вчера (в header рядом с DatePicker) */
+.yesterday-quick-btn {
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #374151;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s, border-color 0.15s;
+}
+.yesterday-quick-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+.yesterday-quick-btn:active {
+  transform: scale(0.95);
+}
+.yesterday-quick-btn.active {
+  background: #10b981;
+  border-color: #10b981;
+  color: white;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
 /* Кнопка быстрого перехода на сегодня (в header рядом с DatePicker) */
 .today-quick-btn {
   border: 1px solid #3b82f6;
   background: #3b82f6;
   color: white;
-  min-width: 38px;
-  height: 38px;
-  padding: 0 10px;
-  border-radius: 10px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -5194,23 +5810,271 @@ body:has(.offline-banner) .wrap {
 }
 
 /* === SPARKLINE POPUP — компактные детали при тапе на точку === */
+/* Базовые стили переопределяются в v2 */
 .sparkline-popup {
-  position: absolute;
   background: white;
   border-radius: 10px;
-  padding: 10px 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  border: 1px solid #e2e8f0;
   z-index: 100;
-  min-width: 140px;
-  max-width: 180px;
+  animation: popupFadeIn 0.18s ease-out;
+}
+
+/* === SPARKLINE POPUP V2 — консистентный с metric-popup === */
+.sparkline-popup.sparkline-popup-v2 {
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+  overflow: visible;
+}
+
+.sparkline-popup-v2 .sparkline-popup-stripe {
+  height: 4px;
+  border-radius: 16px 16px 0 0;
+}
+
+.sparkline-popup-v2 .sparkline-popup-content {
+  padding: 12px 14px 14px;
+  position: relative;
+}
+
+.sparkline-popup-v2 .sparkline-popup-swipe {
+  width: 32px;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  margin: 0 auto 8px;
+}
+
+.sparkline-popup-v2 .sparkline-popup-header-v2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-right: 24px;
+}
+
+.sparkline-popup-v2 .sparkline-popup-date {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.sparkline-popup-v2 .sparkline-popup-pct {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.sparkline-popup-v2 .sparkline-popup-perfect-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #b45309;
+}
+
+.sparkline-popup-v2 .sparkline-popup-progress {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.sparkline-popup-v2 .sparkline-popup-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sparkline-popup-v2 .sparkline-popup-value-row {
+  font-size: 15px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.sparkline-popup-v2 .sparkline-popup-target {
+  color: #94a3b8;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+.sparkline-popup-v2 .sparkline-popup-compare {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  background: #f1f5f9;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.sparkline-popup-v2 .sparkline-popup-compare.up {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.sparkline-popup-v2 .sparkline-popup-compare.down {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.sparkline-popup-v2 .sparkline-popup-motivation-v2 {
+  font-size: 12px;
+  color: #b45309;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.sparkline-popup-v2 .sparkline-popup-tags-v2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.sparkline-popup-v2 .sparkline-popup-tag-v2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.sparkline-popup-v2 .sparkline-popup-tag-v2.good {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.sparkline-popup-v2 .sparkline-popup-tag-v2.bad {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.sparkline-popup-v2 .sparkline-popup-tag-v2.perfect {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+
+.sparkline-popup-v2 .sparkline-popup-btn-v2 {
+  width: 100%;
+  padding: 8px;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sparkline-popup-v2 .sparkline-popup-btn-v2:hover {
+  background: #e2e8f0;
+}
+
+.sparkline-popup-v2 .sparkline-popup-btn-v2.perfect {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.sparkline-popup-v2 .sparkline-popup-btn-v2.perfect:hover {
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+}
+
+.sparkline-popup-v2 .sparkline-popup-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  font-size: 12px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.sparkline-popup-v2 .sparkline-popup-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #334155;
+}
+
+.sparkline-popup-v2 .sparkline-popup-close.perfect {
+  color: #92400e;
+}
+
+.sparkline-popup-v2 .sparkline-popup-arrow {
+  position: absolute;
+  top: -8px;
+  left: 50%;
   transform: translateX(-50%);
-  animation: popupFadeIn 0.15s ease-out;
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 8px solid #fff;
+  filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
+}
+
+.sparkline-popup-v2 .sparkline-popup-arrow.left {
+  left: 24px;
+  transform: none;
+}
+
+.sparkline-popup-v2 .sparkline-popup-arrow.right {
+  left: auto;
+  right: 24px;
+  transform: none;
+}
+
+.sparkline-popup-v2 .sparkline-popup-arrow.perfect {
+  border-bottom-color: #fde68a;
+}
+
+/* Золотой фон для perfect popup */
+.sparkline-popup-v2.sparkline-popup-perfect-v2 {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #fcd34d;
+}
+
+.sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-swipe {
+  background: #fcd34d;
+}
+
+.sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-progress {
+  background: #fef3c7;
+}
+
+/* Стрелка-указатель снизу попапа */
+.sparkline-popup::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid white;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
 }
 
 @keyframes popupFadeIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .sparkline-popup-header {
@@ -5276,6 +6140,17 @@ body:has(.offline-banner) .wrap {
 .sparkline-popup-tag.good { background: #dcfce7; color: #16a34a; }
 .sparkline-popup-tag.warn { background: #fef3c7; color: #d97706; }
 .sparkline-popup-tag.bad { background: #fee2e2; color: #dc2626; }
+
+/* Золотой стиль для идеальных дней */
+.sparkline-popup-tags.perfect {
+  margin-top: 8px;
+}
+.sparkline-popup-tag.perfect { 
+  background: linear-gradient(135deg, #fef3c7, #fde68a); 
+  color: #92400e; 
+  border: 1px solid #f59e0b;
+  font-weight: 500;
+}
 
 /* Строка данных (устарело, но сохраним для perfect popup) */
 .sparkline-popup-row {
@@ -5367,6 +6242,120 @@ body:has(.offline-banner) .wrap {
 [data-theme="dark"] .sparkline-popup-tag { background: #334155; color: #94a3b8; }
 [data-theme="dark"] .sparkline-popup-btn { background: #334155; color: #94a3b8; }
 [data-theme="dark"] .sparkline-popup-btn:hover { background: #475569; }
+
+/* Dark mode: sparkline-popup-v2 */
+[data-theme="dark"] .sparkline-popup-v2 {
+  background: #1e293b;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-swipe {
+  background: #475569;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-date {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-progress {
+  background: #334155;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-target {
+  color: #64748b;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-compare {
+  background: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-compare.up {
+  background: #14532d;
+  color: #4ade80;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-compare.down {
+  background: #450a0a;
+  color: #f87171;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2 {
+  background: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.good {
+  background: #14532d;
+  color: #4ade80;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.bad {
+  background: #450a0a;
+  color: #f87171;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.perfect {
+  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+  border-color: #92400e;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2 {
+  background: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2:hover {
+  background: #475569;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2.perfect {
+  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+  border-color: #92400e;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-close {
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-arrow {
+  border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 {
+  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+  border-color: #92400e;
+}
+
+[data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-swipe {
+  background: #92400e;
+}
+
+[data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-perfect-title {
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-motivation-v2 {
+  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+  border-color: #b45309;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-progress {
+  background: #78350f;
+}
+
+[data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-arrow {
+  border-bottom-color: #78350f;
+}
 
 /* === HEATMAP — мини полоска под графиком === */
 .sparkline-heatmap {
@@ -6737,23 +7726,61 @@ body:has(.offline-banner) .wrap {
 /* === MACRO BADGE POPUP === */
 .macro-badge-popup {
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  padding: 12px 14px;
-  min-width: 180px;
-  max-width: 220px;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  max-width: 240px;
   z-index: 1000;
-  animation: popupFadeIn 0.2s ease;
+  animation: popupFadeIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+  position: relative;
+  touch-action: pan-y;
+}
+
+/* Цветная полоса сверху */
+.macro-badge-popup-stripe {
+  height: 4px;
+  width: 100%;
+}
+
+/* Контент popup */
+.macro-badge-popup-content {
+  padding: 10px 14px 14px;
+}
+
+/* Стрелка-указатель */
+.macro-badge-popup-arrow {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 8px solid #fff;
+  filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
+}
+
+.macro-badge-popup-arrow.left {
+  left: 24px;
+  transform: none;
+}
+
+.macro-badge-popup-arrow.right {
+  left: auto;
+  right: 24px;
+  transform: none;
 }
 
 @keyframes popupFadeIn {
   from {
     opacity: 0;
-    scale: 0.95;
+    transform: scale(0.95) translateY(-8px);
   }
   to {
     opacity: 1;
-    scale: 1;
+    transform: scale(1) translateY(0);
   }
 }
 
@@ -6761,44 +7788,181 @@ body:has(.offline-banner) .wrap {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
-  padding-right: 20px; /* место для крестика */
+  margin-bottom: 8px;
+  padding-right: 24px;
 }
 
 .macro-badge-popup-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  color: #334155;
+  color: #1e293b;
 }
 
 .macro-badge-popup-pct {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* Прогресс-бар */
+.macro-badge-popup-progress {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.macro-badge-popup-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 💫 Анимация count-up для чисел */
+.macro-badge-popup-animated {
+  animation: macroCountUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.macro-badge-popup-animated-bar {
+  animation: macroBarFill 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes macroCountUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes macroBarFill {
+  from {
+    width: 0 !important;
+  }
+}
+
+/* 📊 Мини-sparkline */
+.macro-badge-popup-sparkline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.macro-badge-popup-spark-svg {
+  width: 70px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.macro-badge-popup-spark-label {
+  font-size: 10px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.macro-badge-popup-spark-today {
+  animation: sparkPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes sparkPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ⏰ Динамическое сообщение по времени */
+.macro-badge-popup-time-msg {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+  padding: 4px 0;
+}
+
+/* 🏆 Streak макроса */
+.macro-badge-popup-streak {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #d97706;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  animation: streakGlow 2s ease-in-out infinite;
+}
+
+.macro-badge-popup-streak-icon {
   font-size: 14px;
-  font-weight: 700;
+}
+
+@keyframes streakGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+  50% { box-shadow: 0 0 8px 2px rgba(251, 191, 36, 0.3); }
 }
 
 .macro-badge-popup-value {
-  font-size: 16px;
-  margin-bottom: 8px;
+  font-size: 15px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  flex-wrap: wrap;
 }
 
 .macro-badge-popup-norm {
   color: #94a3b8;
   font-weight: 400;
+  font-size: 13px;
+}
+
+/* 📊 Сравнение со вчера */
+.macro-badge-popup-compare {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  background: #f1f5f9;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.macro-badge-popup-compare.up {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.macro-badge-popup-compare.down {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .macro-badge-popup-desc {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+  margin-top: 2px;
 }
 
 .macro-badge-popup-item {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px;
   color: #475569;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 .macro-badge-popup-emoji {
@@ -6806,21 +7970,271 @@ body:has(.offline-banner) .wrap {
   flex-shrink: 0;
 }
 
+/* Рекомендация продукта */
+.macro-badge-popup-rec {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.macro-badge-popup-rec-icon {
+  font-size: 16px;
+}
+
+.macro-badge-popup-rec-text b {
+  font-weight: 600;
+}
+
 .macro-badge-popup-close {
   position: absolute;
-  top: 8px;
+  top: 10px;
   right: 10px;
-  background: none;
+  background: rgba(0, 0, 0, 0.05);
   border: none;
-  font-size: 14px;
-  color: #94a3b8;
+  font-size: 12px;
+  color: #64748b;
   cursor: pointer;
-  padding: 4px;
+  padding: 4px 6px;
   line-height: 1;
+  border-radius: 6px;
+  transition: all 0.15s;
 }
 
 .macro-badge-popup-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #334155;
+}
+
+.macro-badge-popup-close:active {
+  transform: scale(0.95);
+}
+
+/* Swipe indicator */
+.macro-badge-popup-swipe {
+  width: 32px;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  margin: 0 auto 8px;
+}
+
+/* ====================================
+   METRIC POPUP (вода, шаги, калории)
+   ==================================== */
+
+.metric-popup {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+  animation: popupFadeIn 0.2s ease-out;
+  overflow: visible;
+  z-index: 9999;
+}
+
+.metric-popup-stripe {
+  height: 4px;
+  border-radius: 16px 16px 0 0;
+}
+
+.metric-popup-content {
+  padding: 12px 14px 14px;
+  position: relative;
+}
+
+.metric-popup-swipe {
+  width: 32px;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  margin: 0 auto 8px;
+}
+
+.metric-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-right: 24px;
+}
+
+.metric-popup-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.metric-popup-pct {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* Sparkline */
+.metric-popup-sparkline {
+  position: relative;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metric-popup-spark-svg {
+  flex: 1;
+  height: 20px;
+}
+
+.metric-popup-spark-label {
+  font-size: 10px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+/* Progress bar */
+.metric-popup-progress {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.metric-popup-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Value */
+.metric-popup-value {
+  font-size: 15px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.metric-popup-goal {
+  color: #94a3b8;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+.metric-popup-compare {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  background: #f1f5f9;
   color: #64748b;
+  white-space: nowrap;
+}
+
+.metric-popup-compare.up {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.metric-popup-compare.down {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Extra info */
+.metric-popup-extra {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.metric-popup-extra b {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Streak */
+.metric-popup-streak {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #d97706;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  animation: streakGlow 2s ease-in-out infinite;
+}
+
+/* Reminder */
+.metric-popup-reminder {
+  font-size: 12px;
+  color: #ea580c;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-top: 4px;
+}
+
+/* Close button */
+.metric-popup-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  font-size: 12px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.metric-popup-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #334155;
+}
+
+.metric-popup-close:active {
+  transform: scale(0.95);
+}
+
+/* Arrow */
+.metric-popup-arrow {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 8px solid #fff;
+  filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
+}
+
+.metric-popup-arrow.left {
+  left: 24px;
+  transform: none;
+}
+
+.metric-popup-arrow.right {
+  left: auto;
+  right: 24px;
+  transform: none;
 }
 
 .macro-ring-percent {
@@ -8514,6 +9928,168 @@ body:has(.offline-banner) .wrap {
   background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
 }
 
+/* 🌙 Тёмная тема для popup БЖУ */
+[data-theme="dark"] .macro-badge-popup {
+  background: #1e293b;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .macro-badge-popup-arrow {
+  border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .macro-badge-popup-swipe {
+  background: #475569;
+}
+
+[data-theme="dark"] .macro-badge-popup-title {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .macro-badge-popup-sparkline {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .macro-badge-popup-spark-label {
+  color: #64748b;
+}
+
+[data-theme="dark"] .macro-badge-popup-progress {
+  background: #334155;
+}
+
+[data-theme="dark"] .macro-badge-popup-norm {
+  color: #64748b;
+}
+
+[data-theme="dark"] .macro-badge-popup-compare {
+  background: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .macro-badge-popup-compare.up {
+  background: #14532d;
+  color: #4ade80;
+}
+
+[data-theme="dark"] .macro-badge-popup-compare.down {
+  background: #450a0a;
+  color: #f87171;
+}
+
+[data-theme="dark"] .macro-badge-popup-time-msg {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .macro-badge-popup-streak {
+  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+  border-color: #92400e;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .macro-badge-popup-desc {
+  border-top-color: #334155;
+}
+
+[data-theme="dark"] .macro-badge-popup-item {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .macro-badge-popup-rec {
+  background: linear-gradient(135deg, #14532d 0%, #166534 100%);
+  border-color: #22c55e;
+  color: #86efac;
+}
+
+[data-theme="dark"] .macro-badge-popup-close {
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .macro-badge-popup-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #f1f5f9;
+}
+
+/* Dark theme: Metric Popup */
+[data-theme="dark"] .metric-popup {
+  background: #1e293b;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .metric-popup-arrow {
+  border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .metric-popup-swipe {
+  background: #475569;
+}
+
+[data-theme="dark"] .metric-popup-title {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .metric-popup-sparkline {
+  background: transparent;
+}
+
+[data-theme="dark"] .metric-popup-spark-label {
+  color: #64748b;
+}
+
+[data-theme="dark"] .metric-popup-progress {
+  background: #334155;
+}
+
+[data-theme="dark"] .metric-popup-goal {
+  color: #64748b;
+}
+
+[data-theme="dark"] .metric-popup-compare {
+  background: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .metric-popup-compare.up {
+  background: #14532d;
+  color: #4ade80;
+}
+
+[data-theme="dark"] .metric-popup-compare.down {
+  background: #450a0a;
+  color: #f87171;
+}
+
+[data-theme="dark"] .metric-popup-extra {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .metric-popup-extra b {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .metric-popup-streak {
+  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+  border-color: #92400e;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .metric-popup-reminder {
+  background: #451a03;
+  border-color: #92400e;
+  color: #fb923c;
+}
+
+[data-theme="dark"] .metric-popup-close {
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .metric-popup-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #f1f5f9;
+}
+
 [data-theme="dark"] .skeleton-item {
   background: linear-gradient(90deg, #334155 0%, #475569 50%, #334155 100%);
 }
@@ -9159,6 +10735,22 @@ body:has(.offline-banner) .wrap {
 /* Sync toast dark */
 [data-theme="dark"] .sync-toast {
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* Yesterday quick button in header */
+[data-theme="dark"] .yesterday-quick-btn {
+  background: #2c2c2e;
+  border-color: #3c3c3e;
+  color: #e5e5e5;
+}
+[data-theme="dark"] .yesterday-quick-btn:hover {
+  background: #3c3c3e;
+}
+[data-theme="dark"] .yesterday-quick-btn.active {
+  background: #34d399;
+  border-color: #34d399;
+  color: white;
+  box-shadow: 0 2px 4px rgba(52, 211, 153, 0.3);
 }
 
 /* Today quick button in header */
