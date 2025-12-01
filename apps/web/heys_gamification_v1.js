@@ -61,7 +61,8 @@
     sleep_logged: { xp: 5, maxPerDay: 1, label: 'Сон заполнен' },
     weight_logged: { xp: 5, maxPerDay: 1, label: 'Вес записан' },
     day_completed: { xp: 50, maxPerDay: 1, label: 'День выполнен' },
-    perfect_day: { xp: 25, maxPerDay: 1, label: 'Идеальный день' }
+    perfect_day: { xp: 25, maxPerDay: 1, label: 'Идеальный день' },
+    advice_read: { xp: 2, maxPerDay: 20, label: 'Совет прочитан' }
   };
 
   /**
@@ -103,7 +104,11 @@
 
     // 🌅 Привычки (2)
     early_bird: { id: 'early_bird', name: 'Ранняя пташка', desc: 'Завтрак до 9:00 7 дней', xp: 100, icon: '🌅', category: 'habits', rarity: 'rare' },
-    night_owl_safe: { id: 'night_owl_safe', name: 'Без ночных перекусов', desc: 'Нет еды после 22:00 7 дней', xp: 100, icon: '🌙', category: 'habits', rarity: 'rare' }
+    night_owl_safe: { id: 'night_owl_safe', name: 'Без ночных перекусов', desc: 'Нет еды после 22:00 7 дней', xp: 100, icon: '🌙', category: 'habits', rarity: 'rare' },
+
+    // 💡 Советы (2)
+    advice_reader: { id: 'advice_reader', name: 'Внимательный', desc: 'Прочитать 50 советов', xp: 50, icon: '💡', category: 'habits', rarity: 'common' },
+    advice_master: { id: 'advice_master', name: 'Мудрец', desc: 'Прочитать 200 советов', xp: 150, icon: '🧠', category: 'habits', rarity: 'rare' }
   };
 
   const ACHIEVEMENT_CATEGORIES = [
@@ -172,6 +177,7 @@
         totalProducts: 0,
         totalWater: 0,
         totalTrainings: 0,
+        totalAdvicesRead: 0,
         perfectDays: 0,
         bestStreak: 0
       },
@@ -624,32 +630,6 @@
     window.dispatchEvent(new CustomEvent('heysCelebrate'));
   }
 
-  // ========== ACHIEVEMENT TOAST ==========
-  function showAchievementToast(ach) {
-    // Удаляем предыдущий toast если есть
-    const existing = document.querySelector('.achievement-toast');
-    if (existing) existing.remove();
-
-    const toast = document.createElement('div');
-    toast.className = `achievement-toast rarity-${ach.rarity}`;
-    toast.innerHTML = `
-      <div class="toast-icon">${ach.icon}</div>
-      <div class="toast-content">
-        <div class="toast-title">🏆 Достижение!</div>
-        <div class="toast-name">${ach.name}</div>
-        <div class="toast-desc">${ach.desc}</div>
-        <div class="toast-xp">+${ach.xp} XP</div>
-      </div>
-    `;
-    document.body.appendChild(toast);
-
-    // Убираем через 4 секунды
-    setTimeout(() => {
-      toast.classList.add('hiding');
-      setTimeout(() => toast.remove(), 500);
-    }, 4000);
-  }
-
   // ========== STREAK SHIELD ==========
   function canUseStreakShield() {
     const data = loadData();
@@ -843,6 +823,23 @@
       }
     }
 
+    // Advice achievements — за прочтение советов
+    if (reason === 'advice_read') {
+      // Инкрементируем счётчик прочитанных советов
+      if (!data.stats) data.stats = {};
+      if (!data.stats.totalAdvicesRead) data.stats.totalAdvicesRead = 0;
+      data.stats.totalAdvicesRead++;
+      saveData();
+
+      // Проверяем достижения
+      if (data.stats.totalAdvicesRead >= 50 && !data.unlockedAchievements.includes('advice_reader')) {
+        newAchievements.push('advice_reader');
+      }
+      if (data.stats.totalAdvicesRead >= 200 && !data.unlockedAchievements.includes('advice_master')) {
+        newAchievements.push('advice_master');
+      }
+    }
+
     // Unlock new achievements
     for (const achId of newAchievements) {
       unlockAchievement(achId);
@@ -863,10 +860,8 @@
     data.level = calculateLevel(data.totalXP);
     saveData();
 
-    // Achievement Toast (красивый большой toast)
-    showAchievementToast(ach);
-
-    // Также показываем notification (для истории)
+    // Показываем notification (React компонент .game-notification)
+    // NOTE: showAchievementToast убран — был дубль с showNotification
     showNotification('achievement', {
       achievement: ach,
       totalXP: data.totalXP,

@@ -221,6 +221,9 @@
 
       React.createElement(HEYS_NormsCard, null),
 
+      // Статистика советов
+      React.createElement(HEYS_AdviceStatsCard, null),
+
       // Аналитика (перенесено из hdr-top)
       window.HEYS.analyticsUI
         ? React.createElement('div', {className:'card', style:{marginTop:'10px'}},
@@ -232,6 +235,105 @@
         : null,
       
     )
+    );
+  }
+
+  // === Статистика советов ===
+  function HEYS_AdviceStatsCard() {
+    const [stats, setStats] = React.useState({ totalAdvicesRead: 0 });
+    
+    React.useEffect(() => {
+      // Получаем статистику из геймификации
+      if (window.HEYS?.game?.getStats) {
+        const gameStats = window.HEYS.game.getStats();
+        setStats(gameStats.stats || { totalAdvicesRead: 0 });
+      }
+      
+      // Подписываемся на обновления
+      const handleUpdate = () => {
+        if (window.HEYS?.game?.getStats) {
+          const gameStats = window.HEYS.game.getStats();
+          setStats(gameStats.stats || { totalAdvicesRead: 0 });
+        }
+      };
+      window.addEventListener('heysGameUpdate', handleUpdate);
+      return () => window.removeEventListener('heysGameUpdate', handleUpdate);
+    }, []);
+    
+    const total = stats.totalAdvicesRead || 0;
+    
+    // Прогресс к следующему достижению
+    let nextMilestone, progress, remaining;
+    if (total < 50) {
+      nextMilestone = 50;
+      progress = (total / 50) * 100;
+      remaining = 50 - total;
+    } else if (total < 200) {
+      nextMilestone = 200;
+      progress = (total / 200) * 100;
+      remaining = 200 - total;
+    } else {
+      nextMilestone = null;
+      progress = 100;
+      remaining = 0;
+    }
+    
+    return React.createElement('div', { className: 'card', style: { marginTop: '10px' } },
+      React.createElement('div', { className: 'section-title' }, '💡 Советы'),
+      React.createElement('div', { style: { marginTop: '8px' } },
+        React.createElement('div', { 
+          style: { 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            marginBottom: '8px'
+          } 
+        },
+          React.createElement('span', { style: { color: 'var(--gray-600)' } }, 'Прочитано советов:'),
+          React.createElement('span', { style: { fontWeight: 600, fontSize: '18px' } }, total)
+        ),
+        nextMilestone && React.createElement('div', null,
+          React.createElement('div', { 
+            style: { 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              fontSize: '13px',
+              color: 'var(--gray-500)',
+              marginBottom: '4px'
+            } 
+          },
+            React.createElement('span', null, `До достижения "${nextMilestone === 50 ? '💡 Внимательный' : '🧠 Мудрец'}"`),
+            React.createElement('span', null, `${remaining} осталось`)
+          ),
+          React.createElement('div', { 
+            style: { 
+              height: '8px', 
+              background: 'var(--gray-200)', 
+              borderRadius: '4px',
+              overflow: 'hidden'
+            } 
+          },
+            React.createElement('div', { 
+              style: { 
+                height: '100%', 
+                width: progress + '%',
+                background: 'linear-gradient(90deg, var(--blue-400), var(--blue-500))',
+                borderRadius: '4px',
+                transition: 'width 0.3s ease'
+              } 
+            })
+          )
+        ),
+        !nextMilestone && React.createElement('div', { 
+          style: { 
+            padding: '8px 12px', 
+            background: 'var(--green-50)', 
+            borderRadius: '8px',
+            color: 'var(--green-700)',
+            fontSize: '14px'
+          } 
+        }, '🏆 Все достижения за советы получены!')
+      )
     );
   }
 

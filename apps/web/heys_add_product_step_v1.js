@@ -266,16 +266,14 @@
       }
     }, [data, onChange, goToStep]);
     
-    // Кнопка "Новый продукт"
+    // Кнопка "Новый продукт" — переход на шаг создания
     const handleNewProduct = useCallback(() => {
       haptic('medium');
-      // Открываем форму создания нового продукта
-      if (HEYS.products?.showAddModal) {
-        HEYS.products.showAddModal();
-      } else if (context?.onNewProduct) {
-        context.onNewProduct();
+      // Переходим на шаг создания нового продукта (шаг 2 — create)
+      if (goToStep) {
+        goToStep(2, 'left');
       }
-    }, [context]);
+    }, [goToStep]);
     
     // Рендер карточки продукта
     const renderProductCard = (product, showFavorite = true) => {
@@ -413,6 +411,206 @@
     );
   }
 
+  // === Компонент создания нового продукта (Шаг create) ===
+  function CreateProductStep({ data, onChange, context }) {
+    const [pasteText, setPasteText] = useState('');
+    const [error, setError] = useState('');
+    const [parsedPreview, setParsedPreview] = useState(null);
+    const textareaRef = useRef(null);
+    
+    // Доступ к навигации StepModal
+    const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
+    const { goToStep, closeModal } = stepContext;
+    
+    // Фокус на textarea при монтировании
+    useEffect(() => {
+      setTimeout(() => textareaRef.current?.focus(), 100);
+    }, []);
+    
+    // Парсинг вставленного текста (копия логики из heys_core_v12.js)
+    const parseProductLine = useCallback((text) => {
+      if (!text || !text.trim()) return null;
+      
+      // Регулярки из heys_core_v12.js
+      const INVIS = /[\u00A0\u1680\u180E\u2000-\u200A\u200B-\u200F\u202F\u205F\u3000\uFEFF]/g;
+      const NUM_RE = /[-+]?\d+(?:[\.,]\d+)?/g;
+      
+      // Нормализация строки
+      let clean = text.replace(INVIS, ' ');
+      clean = clean.replace(/\u060C/g, ',').replace(/\u066B/g, ',').replace(/\u066C/g, ',').replace(/\u201A/g, ',');
+      clean = clean.replace(/\u00B7/g, '.').replace(/[–—−]/g, '-').replace(/%/g, '');
+      clean = clean.replace(/\t+/g, ' ').replace(/\s+/g, ' ').trim();
+      
+      // Извлекаем числа
+      const tokens = clean.match(NUM_RE) || [];
+      if (!tokens.length) return null;
+      
+      // Берём последние 12 чисел
+      let last = tokens.slice(-12);
+      if (last.length < 12) {
+        last = Array(12 - last.length).fill('0').concat(last);
+      }
+      
+      // Находим позицию первого числа для извлечения названия
+      const toNum = (x) => {
+        if (x === undefined || x === null) return 0;
+        const s = String(x).trim().replace(',', '.');
+        const n = Number(s);
+        return Number.isFinite(n) ? n : 0;
+      };
+      
+      // Поиск позиции первого токена
+      let start = 0;
+      let firstPos = clean.length;
+      for (const tok of last) {
+        const idx = clean.indexOf(tok, start);
+        if (idx !== -1 && idx < firstPos) {
+          firstPos = idx;
+          break;
+        }
+        if (idx !== -1) start = idx + tok.length;
+      }
+      
+      const name = clean.slice(0, firstPos).trim() || 'Без названия';
+      const nums = last.map(toNum);
+      
+      // Порядок: kcal, carbs, simple, complex, protein, fat, bad, good, trans, fiber, gi, harm
+      const [kcal, carbs, simple, complex, protein, fat, bad, good, trans, fiber, gi, harm] = nums;
+      
+      // Вычисляем производные
+      const carbs100 = simple + complex;
+      const fat100 = bad + good + trans;
+      const kcal100 = 4 * (protein + carbs100) + 8 * fat100;
+      
+      return {
+        id: Math.random().toString(36).slice(2, 10),
+        name,
+        simple100: simple,
+        complex100: complex,
+        protein100: protein,
+        badFat100: bad,
+        goodFat100: good,
+        trans100: trans,
+        fiber100: fiber,
+        gi: gi,
+        harmScore: harm,
+        carbs100: Math.round(carbs100 * 10) / 10,
+        fat100: Math.round(fat100 * 10) / 10,
+        kcal100: Math.round(kcal100 * 10) / 10
+      };
+    }, []);
+    
+    // При изменении текста — пытаемся распарсить
+    useEffect(() => {
+      if (!pasteText.trim()) {
+        setParsedPreview(null);
+        setError('');
+        return;
+      }
+      
+      const parsed = parseProductLine(pasteText);
+      if (parsed) {
+        setParsedPreview(parsed);
+        setError('');
+        onChange({ ...data, newProduct: parsed });
+      } else {
+        setParsedPreview(null);
+        setError('Не удалось распознать данные. Формат: Название + 12 чисел.');
+      }
+    }, [pasteText, parseProductLine, data, onChange]);
+    
+    // Добавить продукт в базу и выбрать его
+    const handleCreate = useCallback(() => {
+      if (!parsedPreview) return;
+      
+      haptic('medium');
+      
+      // 1. Добавляем в базу продуктов
+      const products = HEYS.products?.getAll?.() || [];
+      const newProducts = [...products, parsedPreview];
+      HEYS.products?.setAll?.(newProducts);
+      
+      // 2. Обновляем данные шага — продукт выбран
+      onChange({ 
+        ...data, 
+        newProduct: parsedPreview,
+        selectedProduct: parsedPreview,
+        grams: 100
+      });
+      
+      // 3. Вызываем callback если есть (для обновления списка в родителе)
+      if (context?.onProductCreated) {
+        context.onProductCreated(parsedPreview);
+      }
+      
+      // 4. Переходим на шаг граммов
+      if (goToStep) {
+        setTimeout(() => goToStep(1, 'left'), 100);
+      }
+    }, [parsedPreview, data, onChange, context, goToStep]);
+    
+    return React.createElement('div', { className: 'aps-create-step' },
+      // Заголовок
+      React.createElement('div', { className: 'aps-create-header' },
+        React.createElement('span', { className: 'aps-create-icon' }, '➕'),
+        React.createElement('span', { className: 'aps-create-title' }, 'Создать новый продукт')
+      ),
+      
+      // Инструкция
+      React.createElement('div', { className: 'aps-create-hint' },
+        'Вставьте строку с данными продукта:',
+        React.createElement('br'),
+        React.createElement('span', { className: 'aps-create-format' }, 
+          'Название · ккал · У · простые · сложные · Б · Ж · вред · польза · транс · клетч · ГИ · вред'
+        )
+      ),
+      
+      // Textarea для вставки
+      React.createElement('textarea', {
+        ref: textareaRef,
+        className: 'aps-create-textarea',
+        placeholder: 'Пример: Овсянка на воде\t120\t22\t2\t20\t4\t2\t0.5\t1.5\t0\t3\t40\t0',
+        value: pasteText,
+        onChange: (e) => setPasteText(e.target.value),
+        rows: 3
+      }),
+      
+      // Ошибка
+      error && React.createElement('div', { className: 'aps-create-error' }, '⚠️ ' + error),
+      
+      // Превью распознанного продукта
+      parsedPreview && React.createElement('div', { className: 'aps-create-preview' },
+        React.createElement('div', { className: 'aps-preview-title' }, '✅ Распознано:'),
+        React.createElement('div', { className: 'aps-preview-name' }, parsedPreview.name),
+        React.createElement('div', { className: 'aps-preview-macros' },
+          React.createElement('span', { className: 'aps-preview-kcal' }, parsedPreview.kcal100 + ' ккал'),
+          React.createElement('span', null, 'Б ' + parsedPreview.protein100 + 'г'),
+          React.createElement('span', null, 'Ж ' + parsedPreview.fat100 + 'г'),
+          React.createElement('span', null, 'У ' + parsedPreview.carbs100 + 'г')
+        ),
+        React.createElement('div', { className: 'aps-preview-extra' },
+          'ГИ: ' + parsedPreview.gi + ' · Клетчатка: ' + parsedPreview.fiber100 + 'г · Вред: ' + parsedPreview.harmScore
+        )
+      ),
+      
+      // Кнопка добавить
+      React.createElement('button', {
+        className: 'aps-create-btn' + (parsedPreview ? ' active' : ''),
+        onClick: handleCreate,
+        disabled: !parsedPreview
+      },
+        parsedPreview 
+          ? '✓ Добавить «' + parsedPreview.name.slice(0, 20) + (parsedPreview.name.length > 20 ? '...' : '') + '»'
+          : 'Вставьте данные продукта'
+      ),
+      
+      // Подсказка про формат
+      React.createElement('div', { className: 'aps-create-tip' },
+        '💡 Скопируйте строку из таблицы Google Sheets или Excel. Поддерживаются запятые и точки.'
+      )
+    );
+  }
+
   // Фон карточки по вредности (копия из heys_day_v12.js)
   function getHarmBg(h) {
     if (h == null) return null;
@@ -452,10 +650,10 @@
 
   // === Компонент выбора граммов (Шаг 2) ===
   function GramsStep({ data, onChange, context, stepData }) {
-    // Продукт берём из данных первого шага (search)
-    const product = stepData?.search?.selectedProduct || data.selectedProduct;
-    const lastGrams = stepData?.search?.lastGrams; // Последние использованные
-    const grams = data.grams || stepData?.search?.grams || 100;
+    // Продукт берём из данных первого шага (search) или из create
+    const product = stepData?.create?.selectedProduct || stepData?.search?.selectedProduct || data.selectedProduct;
+    const lastGrams = stepData?.search?.lastGrams || stepData?.create?.lastGrams; // Последние использованные
+    const grams = data.grams || stepData?.search?.grams || stepData?.create?.grams || 100;
     
     // Режим ввода: grams или kcal
     const [inputMode, setInputMode] = useState('grams');
@@ -698,6 +896,9 @@
       onClose 
     } = options;
     
+    // Mutable ref для обновления продуктов после создания
+    let currentProducts = [...products];
+    
     if (!HEYS.StepModal) {
       console.error('[AddProductStep] StepModal not loaded');
       return;
@@ -721,9 +922,27 @@
           icon: '⚖️',
           component: GramsStep,
           validate: (data, stepData) => (data?.grams || stepData?.search?.grams || 0) > 0
+        },
+        {
+          id: 'create',
+          title: 'Новый продукт',
+          hint: 'Создайте продукт из данных',
+          icon: '➕',
+          component: CreateProductStep,
+          getInitialData: () => ({ newProduct: null }),
+          validate: (data) => !!data?.newProduct
         }
       ],
-      context: { products, dateKey, mealIndex, onNewProduct },
+      context: { 
+        products: currentProducts, 
+        dateKey, 
+        mealIndex, 
+        onNewProduct,
+        // Callback при создании продукта — обновляем список
+        onProductCreated: (product) => {
+          currentProducts = [...currentProducts, product];
+        }
+      },
       showGreeting: false,
       showStreak: false,
       showTip: false,
@@ -731,13 +950,19 @@
       allowSwipe: true,
       title: 'Добавить продукт',
       onComplete: (stepData) => {
+        // Проверяем, был ли создан новый продукт
+        const createData = stepData.create || {};
         const searchData = stepData.search || {};
-        const gramsData = stepData.grams || searchData;
+        const gramsData = stepData.grams || {};
         
-        if (searchData.selectedProduct && gramsData.grams) {
+        // Приоритет: новый продукт из create, затем выбранный из search
+        const selectedProduct = createData.selectedProduct || searchData.selectedProduct;
+        const grams = gramsData.grams || createData.grams || searchData.grams || 100;
+        
+        if (selectedProduct && grams) {
           onAdd?.({
-            product: searchData.selectedProduct,
-            grams: gramsData.grams,
+            product: selectedProduct,
+            grams: grams,
             mealIndex
           });
         }
@@ -751,6 +976,7 @@
     show: showAddProductModal,
     ProductSearchStep,
     GramsStep,
+    CreateProductStep,
     getCategoryIcon,
     computePopularProducts
   };

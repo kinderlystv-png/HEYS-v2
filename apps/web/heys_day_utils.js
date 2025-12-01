@@ -275,7 +275,8 @@
     if(!t||typeof t!=='string'||!t.includes(':')) return null; 
     const [hh,mm]=t.split(':').map(x=>parseInt(x,10)); 
     if(isNaN(hh)||isNaN(mm)) return null; 
-    return {hh:clamp(hh,0,23),mm:clamp(mm,0,59)}; 
+    // НЕ обрезаем часы до 23 — ночные часы могут быть 24-26
+    return {hh:Math.max(0, hh),mm:clamp(mm,0,59)}; 
   }
   
   function sleepHours(a,b){ 
@@ -361,6 +362,23 @@
       hh += 24;
     }
     return hh * 60 + mm;
+  }
+
+  /**
+   * Форматирует время приёма для отображения
+   * 24:20 → 00:20 (ночные часы хранятся как 24-26)
+   */
+  function formatMealTime(timeStr) {
+    if (!timeStr) return '';
+    const parsed = parseTime(timeStr);
+    if (!parsed) return timeStr;
+    
+    let { hh, mm } = parsed;
+    // Нормализуем ночные часы: 24 → 00, 25 → 01, 26 → 02
+    if (hh >= 24) {
+      hh = hh - 24;
+    }
+    return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
   }
 
   /**
@@ -871,6 +889,7 @@
     // Time/Sleep
     parseTime,
     sleepHours,
+    formatMealTime,
     // Meal Type Classification
     MEAL_TYPES,
     MAIN_MEAL_THRESHOLDS,

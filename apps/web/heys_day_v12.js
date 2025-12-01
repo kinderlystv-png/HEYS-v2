@@ -684,7 +684,20 @@
     // === Advice Module State ===
     const [adviceTrigger, setAdviceTrigger] = useState(null);
     const [adviceExpanded, setAdviceExpanded] = useState(false);
-    const [dismissedAdvices, setDismissedAdvices] = useState(new Set());
+    // Прочитанные советы (свайп влево) — сохраняются на день
+    const [dismissedAdvices, setDismissedAdvices] = useState(() => {
+      try {
+        const saved = localStorage.getItem('heys_advice_read_today');
+        if (saved) {
+          const { date, ids } = JSON.parse(saved);
+          if (date === new Date().toISOString().slice(0, 10)) {
+            return new Set(ids);
+          }
+        }
+      } catch(e) {}
+      return new Set();
+    });
+    // Скрытые до завтра советы (свайп вправо)
     const [hiddenUntilTomorrow, setHiddenUntilTomorrow] = useState(() => {
       try {
         const saved = localStorage.getItem('heys_advice_hidden_today');
@@ -700,7 +713,10 @@
     const [adviceSwipeState, setAdviceSwipeState] = useState({}); // { adviceId: { x, direction } }
     const [expandedAdviceId, setExpandedAdviceId] = useState(null);
     const [dismissAllAnimation, setDismissAllAnimation] = useState(false);
+    const [lastDismissedAdvice, setLastDismissedAdvice] = useState(null); // { id, action: 'read'|'hidden', timeout }
+    const [undoFading, setUndoFading] = useState(false); // для fade-out анимации
     const adviceSwipeStart = React.useRef({});
+    const adviceCardRefs = React.useRef({}); // refs для floating XP
     
     // Группировка и сортировка советов
     const ADVICE_PRIORITY = { warning: 0, insight: 1, tip: 2, achievement: 3, info: 4 };
@@ -722,8 +738,8 @@
     const getSortedGroupedAdvices = React.useCallback((advices) => {
       if (!advices?.length) return { sorted: [], groups: {} };
       
-      // Фильтруем скрытые до завтра
-      const filtered = advices.filter(a => !hiddenUntilTomorrow.has(a.id));
+      // Фильтруем прочитанные и скрытые до завтра
+      const filtered = advices.filter(a => !dismissedAdvices.has(a.id) && !hiddenUntilTomorrow.has(a.id));
       
       // Сортируем по приоритету (warning сверху, achievement снизу)
       const sorted = [...filtered].sort((a, b) => 
@@ -739,7 +755,7 @@
       });
       
       return { sorted, groups };
-    }, [hiddenUntilTomorrow]);
+    }, [dismissedAdvices, hiddenUntilTomorrow]);
     
     // Handlers для swipe советов (влево = прочитано, вправо = скрыть до завтра)
     const handleAdviceSwipeStart = (adviceId, e) => {
@@ -752,16 +768,109 @@
       const direction = diff < 0 ? 'left' : 'right';
       setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: diff, direction } }));
     };
+    
+    // Звук прочтения совета (тихий приятный звук)
+    const playAdviceSound = React.useCallback(() => {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(659.25, ctx.currentTime); // E5
+        osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.08); // G5
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.06, ctx.currentTime); // Тихо
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.15);
+      } catch(e) {}
+    }, []);
+    
+    // Undo последнего действия
+    const undoLastDismiss = React.useCallback(() => {
+      if (!lastDismissedAdvice) return;
+      const { id, action, hideTimeout } = lastDismissedAdvice;
+      
+      // Очищаем таймер
+      if (hideTimeout) clearTimeout(hideTimeout);
+      
+      if (action === 'read' || action === 'hidden') {
+        // Возвращаем совет
+        setDismissedAdvices(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          try {
+            localStorage.setItem('heys_advice_read_today', JSON.stringify({
+              date: new Date().toISOString().slice(0, 10),
+              ids: [...newSet]
+            }));
+          } catch(e) {}
+          return newSet;
+        });
+      }
+      if (action === 'hidden') {
+        setHiddenUntilTomorrow(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          try {
+            localStorage.setItem('heys_advice_hidden_today', JSON.stringify({
+              date: new Date().toISOString().slice(0, 10),
+              ids: [...newSet]
+            }));
+          } catch(e) {}
+          return newSet;
+        });
+      }
+      
+      setLastDismissedAdvice(null);
+      haptic('light');
+    }, [lastDismissedAdvice]);
+    
     const handleAdviceSwipeEnd = (adviceId) => {
       const state = adviceSwipeState[adviceId];
       const swipeX = state?.x || 0;
       
+      // Очищаем предыдущий undo таймер
+      if (lastDismissedAdvice?.hideTimeout) clearTimeout(lastDismissedAdvice.hideTimeout);
+      
       if (swipeX < -100) {
-        // Свайп влево = прочитано (dismiss)
-        setDismissedAdvices(prev => new Set([...prev, adviceId]));
+        // Свайп влево = прочитано (сохраняется на день)
+        setDismissedAdvices(prev => {
+          const newSet = new Set([...prev, adviceId]);
+          try {
+            localStorage.setItem('heys_advice_read_today', JSON.stringify({
+              date: new Date().toISOString().slice(0, 10),
+              ids: [...newSet]
+            }));
+          } catch(e) {}
+          return newSet;
+        });
+        
+        // +XP за прочтение совета с floating animation
+        if (window.HEYS?.game?.addXP) {
+          const cardEl = adviceCardRefs.current[adviceId];
+          window.HEYS.game.addXP('advice_read', cardEl);
+        }
+        
+        // Звук
+        playAdviceSound();
         haptic('light');
+        
+        // Undo — показываем 3 секунды (прогресс-бар в overlay)
+        setUndoFading(false);
+        const hideTimeout = setTimeout(() => {
+          console.log('[Advice Undo] Timeout expired, clearing lastDismissedAdvice');
+          setLastDismissedAdvice(null);
+          setUndoFading(false);
+        }, 3000);
+        console.log('[Advice Undo] Setting lastDismissedAdvice:', { id: adviceId, action: 'read' });
+        setLastDismissedAdvice({ id: adviceId, action: 'read', hideTimeout });
+        
       } else if (swipeX > 100) {
-        // Свайп вправо = скрыть до завтра
+        // Свайп вправо = скрыть до завтра + прочитано
         setHiddenUntilTomorrow(prev => {
           const newSet = new Set([...prev, adviceId]);
           try {
@@ -772,8 +881,26 @@
           } catch(e) {}
           return newSet;
         });
-        setDismissedAdvices(prev => new Set([...prev, adviceId]));
+        // Также отмечаем как прочитанное
+        setDismissedAdvices(prev => {
+          const newSet = new Set([...prev, adviceId]);
+          try {
+            localStorage.setItem('heys_advice_read_today', JSON.stringify({
+              date: new Date().toISOString().slice(0, 10),
+              ids: [...newSet]
+            }));
+          } catch(e) {}
+          return newSet;
+        });
         haptic('medium');
+        
+        // Undo — показываем 3 секунды (прогресс-бар в overlay)
+        setUndoFading(false);
+        const hideTimeout = setTimeout(() => {
+          setLastDismissedAdvice(null);
+          setUndoFading(false);
+        }, 3000);
+        setLastDismissedAdvice({ id: adviceId, action: 'hidden', hideTimeout });
       }
       
       setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: 0, direction: null } }));
@@ -801,10 +928,24 @@
       haptic('medium');
       
       // Домино-эффект с задержкой
-      const advices = adviceRelevant?.filter(a => !dismissedAdvices.has(a.id)) || [];
+      const advices = adviceRelevant?.filter(a => !dismissedAdvices.has(a.id) && !hiddenUntilTomorrow.has(a.id)) || [];
+      const allIds = advices.map(a => a.id);
+      
       advices.forEach((advice, index) => {
         setTimeout(() => {
-          setDismissedAdvices(prev => new Set([...prev, advice.id]));
+          setDismissedAdvices(prev => {
+            const newSet = new Set([...prev, advice.id]);
+            // Сохраняем на последнем шаге
+            if (index === advices.length - 1) {
+              try {
+                localStorage.setItem('heys_advice_read_today', JSON.stringify({
+                  date: new Date().toISOString().slice(0, 10),
+                  ids: [...newSet]
+                }));
+              } catch(e) {}
+            }
+            return newSet;
+          });
           if (index < 3) haptic('light'); // Haptic только для первых 3
         }, index * 80);
       });
@@ -816,10 +957,9 @@
       }, advices.length * 80 + 300);
     };
     
-    // Сброс dismissed при закрытии списка
+    // Сброс swipe state при закрытии списка (но НЕ dismissedAdvices — они персистентные)
     React.useEffect(() => {
       if (adviceTrigger !== 'manual') {
-        setDismissedAdvices(new Set());
         setAdviceSwipeState({});
         setExpandedAdviceId(null);
         setDismissAllAnimation(false);
@@ -1688,8 +1828,11 @@
     // Конвертация: индекс колеса → реальные часы
     const wheelIndexToHour = (idx) => hoursOrder[idx] ?? idx;
     // Конвертация: реальные часы → индекс колеса
+    // Учитывает ночные часы: 24→0, 25→1, 26→2
     const hourToWheelIndex = (hour) => {
-      const idx = hoursOrder.indexOf(hour);
+      // Нормализуем ночные часы для поиска в колесе
+      const normalizedHour = hour >= 24 ? hour - 24 : hour;
+      const idx = hoursOrder.indexOf(normalizedHour);
       return idx >= 0 ? idx : 0;
     };
     
@@ -1793,7 +1936,11 @@
     // Подтверждение только времени (для редактирования)
     function confirmTimeEdit() {
       // Конвертируем индекс колеса в реальные часы
-      const realHours = wheelIndexToHour(pendingMealTime.hours);
+      let realHours = wheelIndexToHour(pendingMealTime.hours);
+      // Ночные часы (00-02) записываем как 24-26
+      if (realHours < NIGHT_HOUR_THRESHOLD) {
+        realHours += 24;
+      }
       const timeStr = pad2(realHours) + ':' + pad2(pendingMealTime.minutes);
       // Используем функцию с автосортировкой
       updateMealTime(editingMealIndex, timeStr);
@@ -1816,7 +1963,11 @@
     
     function confirmMealCreation() {
       // Конвертируем индекс колеса в реальные часы
-      const realHours = wheelIndexToHour(pendingMealTime.hours);
+      let realHours = wheelIndexToHour(pendingMealTime.hours);
+      // Ночные часы (00-02) записываем как 24-26
+      if (realHours < NIGHT_HOUR_THRESHOLD) {
+        realHours += 24;
+      }
       const timeStr = pad2(realHours) + ':' + pad2(pendingMealTime.minutes);
       const moodVal = pendingMealMood.mood === 0 ? '' : pendingMealMood.mood;
       const wellbeingVal = pendingMealMood.wellbeing === 0 ? '' : pendingMealMood.wellbeing;
@@ -1866,10 +2017,31 @@
       setEditMode('new');
     }
 
-    // addMeal теперь открывает модалку на мобильных
+    // addMeal теперь открывает новую модульную модалку
     function addMeal(){ 
       console.log('[HEYS] 🍽 addMeal() called | date:', day.date, '| meals before:', day.meals.length, '| isHydrated:', isHydrated);
-      if (isMobile) {
+      if (isMobile && HEYS.MealStep) {
+        // Новая модульная модалка с шагами
+        HEYS.MealStep.showAddMeal({
+          dateKey: date,
+          onComplete: (newMeal) => {
+            console.log('[HEYS] 🍽 MealStep complete | meal:', newMeal.id, '| time:', newMeal.time);
+            // Добавляем meal в текущий state и сортируем
+            const newMeals = sortMealsByTime([...day.meals, newMeal]);
+            const updatedDay = { ...day, meals: newMeals, updatedAt: Date.now() };
+            setDay(updatedDay);
+            // Разворачиваем новый приём
+            const newIndex = newMeals.findIndex(m => m.id === newMeal.id);
+            if (newIndex >= 0) {
+              expandOnlyMeal(newIndex);
+            }
+            if (window.HEYS && window.HEYS.analytics) {
+              window.HEYS.analytics.trackDataOperation('meal-created');
+            }
+          }
+        });
+      } else if (isMobile) {
+        // Fallback на старую модалку если MealStep не загружен
         openTimePickerForNewMeal();
       } else {
         // Десктоп — старое поведение
@@ -2655,8 +2827,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         { value: 'night', label: '🌙 Ночной' }
       ];
       
-      // Форматируем время для отображения
-      const timeDisplay = meal.time || '';
+      // Форматируем время для отображения (24:20 → 00:20)
+      const timeDisplay = U.formatMealTime ? U.formatMealTime(meal.time) : (meal.time || '');
       
       // Калории приёма
       const mealKcal = Math.round(totals.kcal || 0);
@@ -2963,7 +3135,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   className: 'compact-input time mobile-time-btn', 
                   onClick: () => openTimeEditor(mi),
                   title: 'Изменить время'
-                }, meal.time || '—:—')
+                }, (U.formatMealTime ? U.formatMealTime(meal.time) : meal.time) || '—:—')
               : React.createElement('input', { className: 'compact-input time', type: 'time', title: 'Время приёма', value: meal.time || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, time: e.target.value} : m); setDay({...day, meals}); } }),
             // На мобильных — кнопка редактирования оценок, на десктопе — inputs
             isMobile
@@ -3045,8 +3217,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     
     const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, allAdvices, markShown } = adviceResult;
     
-    // Количество всех актуальных советов (для badge на FAB кнопке)
-    const totalAdviceCount = allAdvices?.length || 0;
+    // Количество непрочитанных советов (для badge на FAB кнопке)
+    const totalAdviceCount = React.useMemo(() => {
+      if (!allAdvices?.length) return 0;
+      return allAdvices.filter(a => !dismissedAdvices.has(a.id) && !hiddenUntilTomorrow.has(a.id)).length;
+    }, [allAdvices, dismissedAdvices, hiddenUntilTomorrow]);
     
     // Listener для heysProductAdded event
     React.useEffect(() => {
@@ -8065,7 +8240,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               ),
               meal.time && React.createElement('span', { 
                 style: { width: '40px', fontSize: '11px', color: 'var(--text-secondary, #9ca3af)', textAlign: 'right' }
-              }, meal.time)
+              }, U.formatMealTime ? U.formatMealTime(meal.time) : meal.time)
             );
           })
         )
@@ -8126,7 +8301,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 ? // С группировкой
                   groupKeys.map(category => {
                     const categoryAdvices = groups[category];
-                    const activeCategoryAdvices = categoryAdvices.filter(a => !dismissedAdvices.has(a.id));
+                    // Показываем не-dismissed + последний dismissed (для undo)
+                    const activeCategoryAdvices = categoryAdvices.filter(a => 
+                      !dismissedAdvices.has(a.id) || lastDismissedAdvice?.id === a.id
+                    );
                     if (activeCategoryAdvices.length === 0) return null;
                     
                     return React.createElement('div', { 
@@ -8142,7 +8320,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     );
                   })
                 : // Без группировки (одна категория)
-                  sorted.filter(a => !dismissedAdvices.has(a.id))
+                  sorted.filter(a => !dismissedAdvices.has(a.id) || lastDismissedAdvice?.id === a.id)
                     .map((advice, index) => renderAdviceCard(advice, index, index))
             ),
             // Подсказки
@@ -8158,50 +8336,111 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         
         function renderAdviceCard(advice, localIndex, globalIndex) {
           const isDismissed = dismissedAdvices.has(advice.id);
+          const isHidden = hiddenUntilTomorrow.has(advice.id);
           const swipeState = adviceSwipeState[advice.id] || { x: 0, direction: null };
           const swipeX = swipeState.x;
           const swipeDirection = swipeState.direction;
           const swipeProgress = Math.min(1, Math.abs(swipeX) / 100);
           const isExpanded = expandedAdviceId === advice.id;
           
+          // Проверяем, это ли последний dismissed совет (для показа undo)
+          const isLastDismissed = lastDismissedAdvice?.id === advice.id;
+          const showUndo = isLastDismissed && (isDismissed || isHidden);
+          
+          console.log('[renderAdviceCard]', advice.id, { isDismissed, isHidden, isLastDismissed, showUndo, lastDismissedAdviceId: lastDismissedAdvice?.id });
+          
+          // Если совет скрыт и это не последний dismissed — не показываем
+          if ((isDismissed || isHidden) && !showUndo) return null;
+          
           return React.createElement('div', { 
             key: advice.id,
-            className: `advice-list-item-wrapper${isDismissed ? ' dismissed' : ''}`,
+            className: `advice-list-item-wrapper`,
             style: { 
               animationDelay: `${globalIndex * 50}ms`,
-              '--stagger-delay': `${globalIndex * 50}ms`
+              '--stagger-delay': `${globalIndex * 50}ms`,
+              position: 'relative',
+              overflow: 'hidden'
             }
           },
-            // Фон слева "Прочитано" (зелёный)
-            React.createElement('div', { 
+            // Undo overlay (показывается после свайпа)
+            showUndo && React.createElement('div', {
+              className: 'advice-undo-overlay',
+              onClick: () => undoLastDismiss(),
+              style: {
+                position: 'absolute',
+                inset: 0,
+                background: lastDismissedAdvice.action === 'hidden' 
+                  ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' 
+                  : 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                color: 'white',
+                fontWeight: 600,
+                fontSize: '14px',
+                cursor: 'pointer',
+                zIndex: 10
+              }
+            },
+              React.createElement('span', null, lastDismissedAdvice.action === 'hidden' ? '🔕 Скрыто' : '✓ Прочитано'),
+              React.createElement('span', { 
+                style: { 
+                  background: 'rgba(255,255,255,0.3)', 
+                  padding: '4px 10px', 
+                  borderRadius: '12px',
+                  fontSize: '13px'
+                } 
+              }, 'Отменить'),
+              // Прогресс-бар (убывает за 3 сек)
+              React.createElement('div', {
+                style: {
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  height: '3px',
+                  background: 'rgba(255,255,255,0.5)',
+                  width: '100%',
+                  animation: 'undoProgress 3s linear forwards'
+                }
+              })
+            ),
+            // Фон слева "Прочитано" (зелёный) — только если нет undo
+            !showUndo && React.createElement('div', { 
               className: 'advice-list-item-bg advice-list-item-bg-left',
               style: { opacity: swipeDirection === 'left' ? swipeProgress : 0 }
             },
               React.createElement('span', null, '✓ Прочитано')
             ),
-            // Фон справа "Скрыть" (оранжевый)
-            React.createElement('div', { 
+            // Фон справа "Скрыть" (оранжевый) — только если нет undo
+            !showUndo && React.createElement('div', { 
               className: 'advice-list-item-bg advice-list-item-bg-right',
               style: { opacity: swipeDirection === 'right' ? swipeProgress : 0 }
             },
               React.createElement('span', null, '🔕 До завтра')
             ),
-            // Сам совет
+            // Сам совет (скрыт под undo overlay)
             React.createElement('div', { 
+              ref: (el) => { if (el) adviceCardRefs.current[advice.id] = el; },
               className: `advice-list-item advice-list-item-${advice.type}${isExpanded ? ' expanded' : ''}`,
               style: { 
-                transform: `translateX(${swipeX}px)`,
-                opacity: 1 - swipeProgress * 0.3
+                transform: showUndo ? 'none' : `translateX(${swipeX}px)`,
+                opacity: showUndo ? 0.1 : (1 - swipeProgress * 0.3),
+                pointerEvents: showUndo ? 'none' : 'auto'
               },
               onTouchStart: (e) => {
+                if (showUndo) return;
                 handleAdviceSwipeStart(advice.id, e);
                 handleAdviceLongPressStart(advice.id);
               },
               onTouchMove: (e) => {
+                if (showUndo) return;
                 handleAdviceSwipeMove(advice.id, e);
                 handleAdviceLongPressEnd();
               },
               onTouchEnd: () => {
+                if (showUndo) return;
                 handleAdviceSwipeEnd(advice.id);
                 handleAdviceLongPressEnd();
               }

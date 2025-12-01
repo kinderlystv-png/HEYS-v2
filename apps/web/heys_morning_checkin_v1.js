@@ -131,6 +131,28 @@
           onComplete
         });
       }
+    },
+    
+    // Добавить приём пищи (через MealStep)
+    meal: (dateKey, onComplete) => {
+      if (HEYS.MealStep) {
+        HEYS.MealStep.showAddMeal({
+          dateKey: dateKey || new Date().toISOString().slice(0, 10),
+          onComplete
+        });
+      } else if (HEYS.StepModal) {
+        // Fallback если MealStep не загружен
+        HEYS.StepModal.show({
+          steps: ['mealTime', 'mealMood'],
+          title: 'Новый приём',
+          showProgress: true,
+          showStreak: false,
+          showGreeting: false,
+          showTip: false,
+          context: { dateKey: dateKey || new Date().toISOString().slice(0, 10) },
+          onComplete
+        });
+      }
     }
   };
 

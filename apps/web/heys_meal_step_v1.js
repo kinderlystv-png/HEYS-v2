@@ -1,0 +1,638 @@
+// heys_meal_step_v1.js — Шаги добавления приёма пищи через StepModal
+// Двухшаговый flow: время+тип → оценки+комментарий
+(function(global) {
+  const HEYS = global.HEYS = global.HEYS || {};
+  const { useState, useMemo, useCallback, useEffect, useRef } = React;
+
+  // Ждём загрузки StepModal
+  if (!HEYS.StepModal) {
+    console.warn('[HEYS] MealStep: StepModal not loaded yet');
+  }
+
+  // === Утилиты ===
+  const U = () => HEYS.utils || {};
+  const lsGet = (key, def) => {
+    const utils = U();
+    if (utils.lsGet) return utils.lsGet(key, def);
+    try {
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : def;
+    } catch { return def; }
+  };
+  const lsSet = (key, val) => {
+    const utils = U();
+    if (utils.lsSet) {
+      utils.lsSet(key, val);
+    } else {
+      localStorage.setItem(key, JSON.stringify(val));
+    }
+  };
+
+  // Haptic feedback
+  const haptic = (intensity = 10) => {
+    if (navigator.vibrate) navigator.vibrate(intensity);
+  };
+
+  // Unique ID generator
+  const uid = (prefix = '') => prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  // Pad number to 2 digits
+  const pad2 = (n) => String(n).padStart(2, '0');
+
+  // === Константы ===
+  
+  // Типы приёмов пищи
+  const MEAL_TYPES = HEYS.dayUtils?.MEAL_TYPES || {
+    breakfast: { name: 'Завтрак', icon: '🍳', order: 1 },
+    snack1:    { name: 'Перекус', icon: '🍎', order: 2 },
+    lunch:     { name: 'Обед', icon: '🍲', order: 3 },
+    snack2:    { name: 'Перекус', icon: '🥜', order: 4 },
+    dinner:    { name: 'Ужин', icon: '🍽️', order: 5 },
+    snack3:    { name: 'Перекус', icon: '🧀', order: 6 },
+    night:     { name: 'Ночной приём', icon: '🌙', order: 7 }
+  };
+
+  // Emoji для оценок
+  const MOOD_EMOJI = ['😢','😢','😕','😕','😐','😐','🙂','🙂','😊','😊','😄'];
+  const WELLBEING_EMOJI = ['🤒','🤒','😓','😓','😐','😐','🙂','🙂','💪','💪','🏆'];
+  const STRESS_EMOJI = ['😌','😌','🙂','🙂','😐','😐','😟','😟','😰','😰','😱'];
+
+  // ============================================================
+  // STEP 1: ВРЕМЯ И ТИП ПРИЁМА
+  // ============================================================
+  
+  // Порог ночных часов (00:00-02:59 считаются продолжением предыдущего дня)
+  const NIGHT_HOUR_THRESHOLD = 3;
+  
+  // Порядок часов: 03, 04, ..., 23, 00, 01, 02
+  // Это позволяет скроллить от вечера к ночи естественно
+  const HOURS_ORDER = (() => {
+    const order = [];
+    for (let h = NIGHT_HOUR_THRESHOLD; h < 24; h++) order.push(h);
+    for (let h = 0; h < NIGHT_HOUR_THRESHOLD; h++) order.push(h);
+    console.log('[HEYS] HOURS_ORDER:', order.join(','));
+    return order;
+  })();
+  
+  // Конвертация: индекс колеса → реальный час
+  const wheelIndexToHour = (idx) => {
+    const result = HOURS_ORDER[idx] ?? idx;
+    console.log('[HEYS] wheelIndexToHour | idx:', idx, '→ hour:', result);
+    return result;
+  };
+  
+  // Конвертация: реальный час → индекс колеса
+  const hourToWheelIndex = (hour) => {
+    // Нормализуем 24-26 → 0-2
+    const normalizedHour = hour >= 24 ? hour - 24 : hour;
+    const idx = HOURS_ORDER.indexOf(normalizedHour);
+    console.log('[HEYS] hourToWheelIndex | hour:', hour, '→ normalized:', normalizedHour, '→ idx:', idx);
+    return idx >= 0 ? idx : 0;
+  };
+  
+  function MealTimeStepComponent({ data, onChange, context }) {
+    const { WheelPicker } = HEYS.StepModal;
+    
+    // Индекс колеса для часов (не реальный час!)
+    // При инициализации берём текущий час и конвертируем в индекс
+    const currentHourIndex = data.hourIndex ?? hourToWheelIndex(new Date().getHours());
+    const minutes = data.minutes ?? Math.floor(new Date().getMinutes() / 5) * 5;
+    const mealType = data.mealType ?? null; // null = авто
+    
+    // Реальный час для отображения и логики
+    const realHours = wheelIndexToHour(currentHourIndex);
+    
+    console.log('[HEYS] MealTimeStep render | data.hourIndex:', data.hourIndex, '| currentHourIndex:', currentHourIndex, '| realHours:', realHours);
+    
+    // Значения для пикера часов (форматированные строки)
+    const hoursValues = useMemo(() => HOURS_ORDER.map(h => pad2(h)), []);
+    // Значения для пикера минут
+    const minutesValues = useMemo(() => Array.from({ length: 12 }, (_, i) => i * 5), []);
+    
+    // Получаем существующие приёмы для определения типа
+    const existingMeals = useMemo(() => {
+      const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+      return dayData.meals || [];
+    }, [context?.dateKey]);
+    
+    // Авто-определение типа приёма по времени
+    const autoType = useMemo(() => {
+      const timeStr = `${pad2(realHours)}:${pad2(minutes)}`;
+      if (HEYS.dayUtils?.getMealTypeForPreview) {
+        return HEYS.dayUtils.getMealTypeForPreview(timeStr, existingMeals);
+      }
+      // Fallback логика
+      if (realHours >= 6 && realHours < 10) return 'breakfast';
+      if (realHours >= 10 && realHours < 12) return 'snack1';
+      if (realHours >= 12 && realHours < 15) return 'lunch';
+      if (realHours >= 15 && realHours < 18) return 'snack2';
+      if (realHours >= 18 && realHours < 21) return 'dinner';
+      if (realHours >= 21 || realHours < 3) return 'night';
+      return 'snack3';
+    }, [realHours, minutes, existingMeals]);
+    
+    const currentType = mealType || autoType;
+    const typeInfo = MEAL_TYPES[currentType] || MEAL_TYPES.snack1;
+    
+    // Подсказка для ночных часов (00-02)
+    const isNightHour = realHours >= 0 && realHours < NIGHT_HOUR_THRESHOLD;
+    
+    // Форматированная текущая дата
+    const dateLabel = useMemo(() => {
+      const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
+      const d = new Date(dateKey);
+      return `${d.getDate()} ${d.toLocaleDateString('ru-RU', { month: 'short' })}`;
+    }, [context?.dateKey]);
+    
+    // Обновление часов — сохраняем ИНДЕКС, не реальный час
+    const updateHours = (v) => {
+      // v — это строка вида "00", "01", ..., "23"
+      const hourValue = parseInt(v, 10);
+      const newIndex = HOURS_ORDER.indexOf(hourValue);
+      console.log('[HEYS] MealTimeStep updateHours | v:', v, '| hourValue:', hourValue, '| newIndex:', newIndex);
+      haptic(5);
+      onChange({ ...data, hourIndex: newIndex >= 0 ? newIndex : 0, minutes: data.minutes ?? minutes });
+    };
+    
+    const updateMinutes = (v) => {
+      haptic(5);
+      onChange({ ...data, hourIndex: data.hourIndex ?? currentHourIndex, minutes: v });
+    };
+    
+    const selectType = (type) => {
+      haptic(10);
+      onChange({ ...data, mealType: type });
+    };
+    
+    // Текущее значение для пикера часов (форматированная строка)
+    const currentHourValue = pad2(realHours);
+
+    return React.createElement('div', { className: 'meal-time-step' },
+      // Время
+      React.createElement('div', { className: 'meal-time-display' },
+        React.createElement('span', { className: 'meal-time-value' }, 
+          `${pad2(realHours)}:${pad2(minutes)}`
+        )
+      ),
+      
+      // Wheel pickers
+      React.createElement('div', { className: 'meal-time-pickers' },
+        React.createElement(WheelPicker, {
+          values: hoursValues,
+          value: currentHourValue,
+          onChange: updateHours,
+          label: 'Часы'
+        }),
+        React.createElement('span', { className: 'meal-time-separator' }, ':'),
+        React.createElement(WheelPicker, {
+          values: minutesValues,
+          value: minutes,
+          onChange: updateMinutes,
+          label: 'Минуты',
+          suffix: ''
+        })
+      ),
+      
+      // Подсказка для ночных часов
+      isNightHour && React.createElement('div', { className: 'meal-night-hint' },
+        React.createElement('span', { className: 'meal-night-icon' }, '🌙'),
+        React.createElement('span', { className: 'meal-night-text' }, 
+          'Ночной приём — запишется в ', React.createElement('b', null, dateLabel)
+        )
+      ),
+      
+      // Выбор типа приёма
+      React.createElement('div', { className: 'meal-type-section' },
+        React.createElement('div', { className: 'meal-type-label' }, 'Тип приёма:'),
+        React.createElement('div', { className: 'meal-type-grid' },
+          Object.entries(MEAL_TYPES).map(([key, val]) =>
+            React.createElement('button', {
+              key,
+              className: `meal-type-btn ${currentType === key ? 'active' : ''}`,
+              onClick: () => selectType(key)
+            },
+              React.createElement('span', { className: 'meal-type-btn-icon' }, val.icon),
+              React.createElement('span', { className: 'meal-type-btn-name' }, val.name)
+            )
+          )
+        )
+      )
+    );
+  }
+
+  // ============================================================
+  // STEP 2: ОЦЕНКИ + КОММЕНТАРИЙ
+  // ============================================================
+  
+  function MealMoodStepComponent({ data, onChange, stepData, context }) {
+    const mood = data.mood ?? 5;
+    const wellbeing = data.wellbeing ?? 5;
+    const stress = data.stress ?? 5;
+    const comment = data.comment ?? '';
+    
+    // Состояние анимации эмодзи
+    const [emojiAnim, setEmojiAnim] = useState({ mood: '', wellbeing: '', stress: '' });
+    
+    // Confetti state
+    const [showConfetti, setShowConfetti] = useState(false);
+    
+    // === Динамический комментарий ===
+    
+    // Определяем общее состояние
+    const positiveSignals = (mood >= 7 ? 1 : 0) + (wellbeing >= 7 ? 1 : 0) + (stress > 0 && stress <= 3 ? 1 : 0);
+    const negativeSignals = (mood > 0 && mood <= 3 ? 1 : 0) + (wellbeing > 0 && wellbeing <= 3 ? 1 : 0) + (stress >= 7 ? 1 : 0);
+    
+    const moodState = negativeSignals >= 2 ? 'negative' :
+                      negativeSignals === 1 && positiveSignals === 0 ? 'negative' :
+                      positiveSignals >= 2 ? 'positive' :
+                      positiveSignals === 1 && negativeSignals === 0 ? 'positive' :
+                      'neutral';
+    
+    // Текст в зависимости от состояния
+    const getJournalText = () => {
+      if (moodState === 'negative') {
+        if (stress >= 8 && mood <= 3 && wellbeing <= 3) return '😰 Тяжёлый момент — что происходит?';
+        if (stress >= 8 && mood <= 3) return 'Стресс + плохое настроение — расскажи';
+        if (stress >= 8 && wellbeing <= 3) return 'Стресс + плохое самочувствие — что случилось?';
+        if (mood <= 3 && wellbeing <= 3) return 'И настроение, и самочувствие... что не так?';
+        if (stress >= 7) return 'Что стрессует?';
+        if (wellbeing <= 3) return 'Плохое самочувствие — что беспокоит?';
+        if (mood <= 3) return 'Плохое настроение — что расстроило?';
+        return 'Что случилось?';
+      }
+      if (moodState === 'positive') {
+        if (mood >= 9 && wellbeing >= 9 && stress <= 2) return '🌟 Идеальное состояние! В чём секрет?';
+        if (mood >= 8 && wellbeing >= 8) return '✨ Отлично себя чувствуешь! Что помогло?';
+        if (mood >= 8 && stress <= 2) return 'Отличное настроение и спокойствие!';
+        if (wellbeing >= 8 && stress <= 2) return 'Прекрасное самочувствие! Что способствует?';
+        if (mood >= 7) return 'Хорошее настроение! Что порадовало?';
+        if (wellbeing >= 7) return 'Хорошое самочувствие! Запиши причину';
+        if (stress <= 2) return 'Спокойствие — что помогает расслабиться?';
+        return 'Запиши что порадовало!';
+      }
+      if (mood >= 5 && mood <= 6 && wellbeing >= 5 && wellbeing <= 6) return 'Стабильный день — любые мысли?';
+      if (stress >= 4 && stress <= 6) return 'Немного напряжения — хочешь записать?';
+      return 'Заметка о приёме пищи';
+    };
+    
+    const getPlaceholder = () => {
+      if (moodState === 'negative') {
+        if (stress >= 7) return 'Работа, отношения, здоровье...';
+        if (wellbeing <= 3) return 'Симптомы, усталость, боль...';
+        if (mood <= 3) return 'Что расстроило или разозлило...';
+        return 'Расскажи что не так...';
+      }
+      if (moodState === 'positive') {
+        if (mood >= 8 && wellbeing >= 8) return 'Что сделало день отличным?';
+        if (stress <= 2) return 'Медитация, прогулка, отдых...';
+        return 'Что сделало момент хорошим?';
+      }
+      return 'Любые мысли о еде или дне...';
+    };
+    
+    // Quick chips
+    const getQuickChips = () => {
+      if (moodState === 'negative') {
+        if (stress >= 7) return ['Работа', 'Дедлайн', 'Конфликт', 'Усталость'];
+        if (wellbeing <= 3) return ['Голова', 'Живот', 'Слабость', 'Недосып'];
+        if (mood <= 3) return ['Тревога', 'Грусть', 'Злость', 'Апатия'];
+        return ['Устал', 'Стресс', 'Плохо спал'];
+      }
+      if (moodState === 'positive') {
+        if (mood >= 8) return ['Радость', 'Успех', 'Встреча', 'Природа'];
+        if (stress <= 2) return ['Отдых', 'Медитация', 'Прогулка', 'Спорт'];
+        return ['Хороший день', 'Энергия', 'Мотивация'];
+      }
+      return [];
+    };
+    
+    const chips = getQuickChips();
+    
+    // Цвета для слайдеров
+    const getPositiveColor = (v) => {
+      if (v <= 3) return '#ef4444';
+      if (v <= 5) return '#3b82f6';
+      if (v <= 7) return '#22c55e';
+      return '#10b981';
+    };
+    
+    const getNegativeColor = (v) => {
+      if (v <= 3) return '#10b981';
+      if (v <= 5) return '#3b82f6';
+      if (v <= 7) return '#eab308';
+      return '#ef4444';
+    };
+    
+    // Confetti при идеальных оценках
+    const triggerConfetti = useCallback(() => {
+      if (!showConfetti) {
+        setShowConfetti(true);
+        haptic([50, 50, 50, 50, 100]);
+        setTimeout(() => setShowConfetti(false), 2000);
+      }
+    }, [showConfetti]);
+    
+    // Обработчик изменения слайдера
+    const handleSliderChange = (field, value) => {
+      haptic(value >= 8 || value <= 2 ? 15 : 10);
+      
+      // Анимация emoji
+      const animType = (field === 'stress' && value >= 7) || 
+                       ((field === 'mood' || field === 'wellbeing') && value <= 3) 
+                       ? 'shake' : 'bounce';
+      setEmojiAnim(prev => ({...prev, [field]: animType}));
+      setTimeout(() => setEmojiAnim(prev => ({...prev, [field]: ''})), 400);
+      
+      const newData = {...data, [field]: value};
+      onChange(newData);
+      
+      // Проверяем идеальные оценки для confetti
+      const isPerfect = (field === 'mood' ? value : mood) >= 8 && 
+                        (field === 'wellbeing' ? value : wellbeing) >= 8 && 
+                        (field === 'stress' ? value : stress) > 0 && 
+                        (field === 'stress' ? value : stress) <= 2;
+      if (isPerfect) triggerConfetti();
+    };
+    
+    // Добавить chip в комментарий
+    const addChip = (chip) => {
+      haptic(5);
+      const newComment = comment ? comment + ', ' + chip : chip;
+      onChange({ ...data, comment: newComment });
+    };
+
+    return React.createElement('div', { className: 'meal-mood-step' },
+      // Confetti
+      showConfetti && React.createElement('div', { className: 'confetti-container' },
+        ...Array(20).fill(0).map((_, i) => 
+          React.createElement('div', { 
+            key: 'confetti-' + i, 
+            className: 'confetti-piece',
+            style: {
+              left: (5 + Math.random() * 90) + '%',
+              animationDelay: (Math.random() * 0.5) + 's',
+              backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'][i % 5]
+            }
+          })
+        )
+      ),
+      
+      // Настроение
+      React.createElement('div', { className: 'meal-rating-row' },
+        React.createElement('div', { className: 'meal-rating-label' },
+          React.createElement('span', { 
+            className: `meal-rating-emoji ${emojiAnim.mood}`,
+            style: { filter: `drop-shadow(0 0 4px ${getPositiveColor(mood)}40)` }
+          }, MOOD_EMOJI[mood] || '😐'),
+          React.createElement('span', { className: 'meal-rating-name' }, 'Настроение')
+        ),
+        React.createElement('input', {
+          type: 'range',
+          className: 'meal-rating-slider',
+          min: 1,
+          max: 10,
+          value: mood,
+          onChange: (e) => handleSliderChange('mood', Number(e.target.value)),
+          style: { 
+            background: `linear-gradient(to right, ${getPositiveColor(mood)} ${(mood - 1) * 11.1}%, #e5e7eb ${(mood - 1) * 11.1}%)`
+          }
+        }),
+        React.createElement('span', { 
+          className: 'meal-rating-value',
+          style: { color: getPositiveColor(mood) }
+        }, mood)
+      ),
+      
+      // Самочувствие
+      React.createElement('div', { className: 'meal-rating-row' },
+        React.createElement('div', { className: 'meal-rating-label' },
+          React.createElement('span', { 
+            className: `meal-rating-emoji ${emojiAnim.wellbeing}`,
+            style: { filter: `drop-shadow(0 0 4px ${getPositiveColor(wellbeing)}40)` }
+          }, WELLBEING_EMOJI[wellbeing] || '😐'),
+          React.createElement('span', { className: 'meal-rating-name' }, 'Самочувствие')
+        ),
+        React.createElement('input', {
+          type: 'range',
+          className: 'meal-rating-slider',
+          min: 1,
+          max: 10,
+          value: wellbeing,
+          onChange: (e) => handleSliderChange('wellbeing', Number(e.target.value)),
+          style: { 
+            background: `linear-gradient(to right, ${getPositiveColor(wellbeing)} ${(wellbeing - 1) * 11.1}%, #e5e7eb ${(wellbeing - 1) * 11.1}%)`
+          }
+        }),
+        React.createElement('span', { 
+          className: 'meal-rating-value',
+          style: { color: getPositiveColor(wellbeing) }
+        }, wellbeing)
+      ),
+      
+      // Стресс
+      React.createElement('div', { className: 'meal-rating-row' },
+        React.createElement('div', { className: 'meal-rating-label' },
+          React.createElement('span', { 
+            className: `meal-rating-emoji ${emojiAnim.stress}`,
+            style: { filter: `drop-shadow(0 0 4px ${getNegativeColor(stress)}40)` }
+          }, STRESS_EMOJI[stress] || '😐'),
+          React.createElement('span', { className: 'meal-rating-name' }, 'Стресс')
+        ),
+        React.createElement('input', {
+          type: 'range',
+          className: 'meal-rating-slider meal-rating-slider--stress',
+          min: 1,
+          max: 10,
+          value: stress,
+          onChange: (e) => handleSliderChange('stress', Number(e.target.value)),
+          style: { 
+            background: `linear-gradient(to right, ${getNegativeColor(stress)} ${(stress - 1) * 11.1}%, #e5e7eb ${(stress - 1) * 11.1}%)`
+          }
+        }),
+        React.createElement('span', { 
+          className: 'meal-rating-value',
+          style: { color: getNegativeColor(stress) }
+        }, stress)
+      ),
+      
+      // Динамический комментарий
+      React.createElement('div', { 
+        className: `meal-comment-section meal-comment-${moodState}`
+      },
+        React.createElement('div', { className: 'meal-comment-header' },
+          React.createElement('span', { className: 'meal-comment-icon' }, 
+            moodState === 'negative' ? '📝' : moodState === 'positive' ? '✨' : '💭'
+          ),
+          React.createElement('span', { className: 'meal-comment-title' }, getJournalText())
+        ),
+        
+        // Quick chips
+        chips.length > 0 && React.createElement('div', { className: 'meal-comment-chips' },
+          chips.map(chip => 
+            React.createElement('button', {
+              key: chip,
+              className: 'meal-comment-chip',
+              onClick: () => addChip(chip)
+            }, chip)
+          )
+        ),
+        
+        // Textarea
+        React.createElement('textarea', {
+          className: 'meal-comment-input',
+          placeholder: getPlaceholder(),
+          value: comment,
+          onChange: (e) => onChange({ ...data, comment: e.target.value }),
+          rows: 2
+        })
+      )
+    );
+  }
+
+  // ============================================================
+  // РЕГИСТРАЦИЯ ШАГОВ
+  // ============================================================
+  
+  if (HEYS.StepModal) {
+    const { registerStep } = HEYS.StepModal;
+    
+    // Шаг 1: Время и тип
+    registerStep('mealTime', {
+      title: 'Время приёма',
+      hint: 'Выберите время и тип',
+      icon: '🕐',
+      component: MealTimeStepComponent,
+      getInitialData: (ctx) => {
+        const now = new Date();
+        return {
+          hours: now.getHours(),
+          minutes: Math.floor(now.getMinutes() / 5) * 5,
+          mealType: null // авто
+        };
+      },
+      validate: () => true
+    });
+    
+    // Шаг 2: Оценки и комментарий
+    registerStep('mealMood', {
+      title: 'Самочувствие',
+      hint: 'Как вы себя чувствуете?',
+      icon: '😊',
+      component: MealMoodStepComponent,
+      getInitialData: (ctx) => {
+        // Берём оценки из предыдущего приёма если есть
+        const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
+        const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+        const meals = dayData.meals || [];
+        
+        if (meals.length > 0) {
+          const lastMeal = meals[meals.length - 1];
+          return {
+            mood: lastMeal.mood || 5,
+            wellbeing: lastMeal.wellbeing || 5,
+            stress: lastMeal.stress || 5,
+            comment: ''
+          };
+        }
+        
+        return { mood: 5, wellbeing: 5, stress: 5, comment: '' };
+      },
+      validate: () => true
+    });
+    
+    console.log('[HEYS] Meal steps registered: mealTime, mealMood');
+  }
+
+  // ============================================================
+  // API: СОЗДАНИЕ ПРИЁМА
+  // ============================================================
+  
+  /**
+   * Показать модалку добавления приёма пищи
+   * @param {Object} options
+   * @param {string} options.dateKey - Дата (YYYY-MM-DD)
+   * @param {Function} options.onComplete - Callback после создания
+   */
+  function showAddMealModal(options = {}) {
+    const dateKey = options.dateKey || new Date().toISOString().slice(0, 10);
+    
+    HEYS.StepModal.show({
+      steps: ['mealTime', 'mealMood'],
+      title: 'Новый приём',
+      showProgress: true,
+      showStreak: false,
+      showGreeting: false,
+      showTip: false,
+      context: { dateKey },
+      onComplete: (stepData) => {
+        // Создаём приём
+        const timeData = stepData.mealTime || {};
+        const moodData = stepData.mealMood || {};
+        
+        console.log('[HEYS] MealStep onComplete | timeData:', JSON.stringify(timeData));
+        
+        // Конвертируем индекс колеса в реальный час
+        // Если hourIndex не установлен (пользователь не трогал пикер), 
+        // используем текущий час как fallback
+        const defaultHourIndex = hourToWheelIndex(new Date().getHours());
+        const hourIndex = timeData.hourIndex ?? defaultHourIndex;
+        let realHours = wheelIndexToHour(hourIndex);
+        
+        console.log('[HEYS] MealStep | hourIndex:', hourIndex, '(default:', defaultHourIndex, ') | realHours:', realHours);
+        
+        // Ночные часы (00-02) записываем как 24-26 для правильной сортировки
+        if (realHours < NIGHT_HOUR_THRESHOLD) {
+          realHours += 24; // 00:20 → 24:20
+        }
+        console.log('[HEYS] MealStep | realHours after adjustment:', realHours);
+        const timeStr = `${pad2(realHours)}:${pad2(timeData.minutes || 0)}`;
+        console.log('[HEYS] MealStep | timeStr:', timeStr);
+        
+        const newMeal = {
+          id: uid('m_'),
+          name: 'Приём',
+          time: timeStr,
+          mealType: timeData.mealType || null,
+          mood: moodData.mood || 5,
+          wellbeing: moodData.wellbeing || 5,
+          stress: moodData.stress || 5,
+          items: []
+        };
+        
+        // Сохраняем комментарий если есть
+        if (moodData.comment && moodData.comment.trim()) {
+          newMeal.comment = moodData.comment.trim();
+        }
+        
+        // НЕ сохраняем в localStorage напрямую!
+        // DayTab сам добавит meal в свой state и сохранит через autosave
+        // Это избегает race condition между модалкой и DayTab
+        
+        // Callback — передаём только newMeal, DayTab сам обновит state
+        if (options.onComplete) {
+          options.onComplete(newMeal);
+        }
+      },
+      onClose: options.onClose
+    });
+  }
+  
+  // Вспомогательная функция для сортировки
+  function timeToMinutes(timeStr) {
+    if (!timeStr) return null;
+    const [h, m] = timeStr.split(':').map(Number);
+    if (isNaN(h) || isNaN(m)) return null;
+    // Ночные часы (00-02) — это "после полуночи"
+    const hours = h < 3 ? h + 24 : h;
+    return hours * 60 + m;
+  }
+
+  // === Экспорт ===
+  HEYS.MealStep = {
+    showAddMeal: showAddMealModal,
+    TimeStep: MealTimeStepComponent,
+    MoodStep: MealMoodStepComponent
+  };
+
+})(typeof window !== 'undefined' ? window : global);

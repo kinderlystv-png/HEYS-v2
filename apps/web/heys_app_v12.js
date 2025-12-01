@@ -498,13 +498,32 @@
                 React.createElement('button', { 
                   className: `game-expand-btn ${expanded ? 'expanded' : ''}`,
                   title: expanded ? 'Свернуть' : 'Подробнее'
-                }, expanded ? '▲' : '▼')
+                }, expanded ? '▲' : '▼'),
+                
+                // Theme toggle button
+                React.createElement('button', {
+                  className: 'hdr-theme-btn',
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    const html = document.documentElement;
+                    const current = html.getAttribute('data-theme') || 'light';
+                    const next = current === 'dark' ? 'light' : 'dark';
+                    html.setAttribute('data-theme', next);
+                    localStorage.setItem('heys_theme', next);
+                  },
+                  title: 'Сменить тему'
+                }, document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙')
               ),
 
-              // Notification (level up / achievement)
+              // Notification (level up / achievement / streak_shield)
               notification && React.createElement('div', {
-                className: `game-notification ${notification.type}`,
-                onClick: () => setNotification(null)
+                className: `game-notification ${notification.type}${notification.type === 'achievement' && notification.data.achievement?.rarity ? ' rarity-' + notification.data.achievement.rarity : ''}`,
+                onClick: () => setNotification(null),
+                onTouchStart: (e) => { e.currentTarget._touchStartY = e.touches[0].clientY; },
+                onTouchMove: (e) => {
+                  const deltaY = e.currentTarget._touchStartY - e.touches[0].clientY;
+                  if (deltaY > 50) { setNotification(null); } // swipe up to dismiss
+                }
               },
                 notification.type === 'level_up' 
                   ? React.createElement(React.Fragment, null,
@@ -542,7 +561,15 @@
                               React.createElement('div', { className: 'notif-subtitle' }, `+100 XP бонус!`)
                             )
                           )
-                        : null
+                        : notification.type === 'streak_shield'
+                          ? React.createElement(React.Fragment, null,
+                              React.createElement('span', { className: 'notif-icon' }, '🛡️'),
+                              React.createElement('div', { className: 'notif-content' },
+                                React.createElement('div', { className: 'notif-title' }, 'Streak спасён!'),
+                                React.createElement('div', { className: 'notif-subtitle' }, notification.data.message || 'Щит защитил твою серию')
+                              )
+                            )
+                          : null
               ),
 
               // Expanded panel (backdrop + content)
@@ -1707,6 +1734,7 @@
               };
               
               window.addEventListener('heysSyncCompleted', handleSyncComplete);
+              window.addEventListener('heys:data-uploaded', handleSyncComplete); // Upload завершён — тоже сброс spinner
               window.addEventListener('heys:data-saved', handleDataSaved);
               window.addEventListener('heys:pending-change', handlePendingChange);
               window.addEventListener('heys:network-restored', handleNetworkRestored);
@@ -1738,6 +1766,7 @@
               
               return () => {
                 window.removeEventListener('heysSyncCompleted', handleSyncComplete);
+                window.removeEventListener('heys:data-uploaded', handleSyncComplete);
                 window.removeEventListener('heys:data-saved', handleDataSaved);
                 window.removeEventListener('heys:pending-change', handlePendingChange);
                 window.removeEventListener('heys:network-restored', handleNetworkRestored);
@@ -3609,18 +3638,6 @@
                                     }
                                   }
                                 }),
-                                // Кнопка темы
-                                React.createElement('button', {
-                                  className: 'hdr-theme-btn',
-                                  onClick: () => {
-                                    const html = document.documentElement;
-                                    const current = html.getAttribute('data-theme') || 'light';
-                                    const next = current === 'dark' ? 'light' : 'dark';
-                                    html.setAttribute('data-theme', next);
-                                    localStorage.setItem('heys_theme', next);
-                                  },
-                                  title: 'Сменить тему'
-                                }, document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙')
                               )
                             : null,
                         ),

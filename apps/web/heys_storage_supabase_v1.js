@@ -16,10 +16,31 @@
   
   /** Ключи, требующие client-specific storage */
   const CLIENT_SPECIFIC_KEYS = [
+    // Основные данные клиента
     'heys_products',
     'heys_profile',
     'heys_hr_zones',
-    'heys_norms'
+    'heys_norms',
+    'heys_ratio_zones',       // Настройки цветовых зон ratio
+    'heys_grams_history',     // История введённых граммов (для автокомплита)
+    
+    // Советы (advice)
+    'heys_advice_read_today',
+    'heys_advice_hidden_today',
+    'heys_first_meal_tip',
+    'heys_best_day_last_check',
+    'heys_evening_snacker_check',
+    'heys_morning_skipper_check',
+    'heys_last_visit',
+    
+    // Gamification
+    'heys_game',              // XP, уровни, достижения
+    'heys_best_streak'        // Лучший streak
+  ];
+  
+  /** Префиксы ключей, требующих client-specific storage */
+  const CLIENT_SPECIFIC_PREFIXES = [
+    'heys_milestone_'         // Достигнутые вехи (heys_milestone_7_days, etc.)
   ];
   
   /** Префиксы для client-specific данных */
@@ -632,7 +653,12 @@
     // Проверяем дни пользователя
     if (k.includes(CLIENT_KEY_PATTERNS.DAY_V2)) return true;
     // Проверяем общие client-specific ключи
-    return CLIENT_SPECIFIC_KEYS.includes(k);
+    if (CLIENT_SPECIFIC_KEYS.includes(k)) return true;
+    // Проверяем префиксы (динамические ключи типа heys_milestone_7_days)
+    for (const prefix of CLIENT_SPECIFIC_PREFIXES) {
+      if (k.startsWith(prefix)) return true;
+    }
+    return false;
   }
   
   /**
