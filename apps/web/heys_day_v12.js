@@ -996,7 +996,8 @@
                   }
                   
                   // Теперь скроллим к полю ввода
-                  const headerOffset = 60;
+                  // 🔧 FIX: Учитываем высоту фикс-шапки (.hdr ~150px)
+                  const headerOffset = 160;
                   const elementPosition = inputRef.current.getBoundingClientRect().top;
                   const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
                   window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
@@ -1739,15 +1740,8 @@
     const [pendingDayComment, setPendingDayComment] = useState(''); // временный комментарий
     const dayScoreValues = useMemo(() => ['—', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], []);
     
-    // === Weight Picker Modal ===
-    const [showWeightPicker, setShowWeightPicker] = useState(false);
-    const [weightPickerStep, setWeightPickerStep] = useState(1); // 1=вес, 2=цель шагов
-    const [pendingWeightKg, setPendingWeightKg] = useState(70); // целые кг (40-150)
-    const [pendingWeightG, setPendingWeightG] = useState(0); // десятые (0-9)
-    const [pendingStepsGoalIdx, setPendingStepsGoalIdx] = useState(6); // индекс для колеса (6 = 7000)
-    const weightKgValues = useMemo(() => Array.from({length: 111}, (_, i) => String(40 + i)), []); // 40-150 кг
-    const weightGValues = useMemo(() => Array.from({length: 10}, (_, i) => String(i)), []); // 0-9
-    const stepsGoalValues = useMemo(() => Array.from({length: 30}, (_, i) => String((i + 1) * 1000)), []); // 1000-30000
+    // === Weight Picker Modal (теперь использует StepModal) ===
+    const [showWeightPicker, setShowWeightPicker] = useState(false); // для совместимости с uiState
     
     // Пульсация блока корреляции при изменении веса
     const [correlationPulse, setCorrelationPulse] = useState(false);
@@ -1767,9 +1761,9 @@
     // Цель шагов: state для реактивного обновления слайдера
     const [savedStepsGoal, setSavedStepsGoal] = useState(() => prof.stepsGoal || 7000);
     
-    // Слушаем завершение синхронизации cloud для обновления stepsGoal
+    // Слушаем завершение синхронизации cloud и изменения профиля для обновления stepsGoal
     useEffect(() => {
-      const handleSyncCompleted = () => {
+      const handleProfileUpdate = () => {
         const profileFromStorage = getProfile();
         if (profileFromStorage.stepsGoal && profileFromStorage.stepsGoal !== savedStepsGoal) {
           setSavedStepsGoal(profileFromStorage.stepsGoal);
@@ -1777,135 +1771,41 @@
       };
       
       // Слушаем кастомный event от cloud синхронизации
-      window.addEventListener('heysSyncCompleted', handleSyncCompleted);
+      window.addEventListener('heysSyncCompleted', handleProfileUpdate);
+      // Слушаем изменения профиля из StepModal
+      window.addEventListener('heys:profile-updated', handleProfileUpdate);
       
       return () => {
-        window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
+        window.removeEventListener('heysSyncCompleted', handleProfileUpdate);
+        window.removeEventListener('heys:profile-updated', handleProfileUpdate);
       };
     }, [savedStepsGoal]); // Обновляем при изменении savedStepsGoal
     
+    // === Открытие StepModal для веса и шагов ===
     function openWeightPicker() {
-      setWeightPickerStep(1); // начинаем с первого шага
-      // Находим последний введённый вес (сегодня или за прошлые дни)
-      let lastWeight = day.weightMorning;
-      if (!lastWeight) {
-        // Ищем в прошлых днях (до 60 дней назад)
-        const today = new Date(date);
-        for (let i = 1; i <= 60; i++) {
-          const d = new Date(today);
-          d.setDate(d.getDate() - i);
-          const dateStr = fmtDate(d);
-          const dayKey = 'heys_dayv2_' + dateStr;
-          const dayData = lsGet(dayKey, null);
-          if (dayData && dayData.weightMorning && dayData.weightMorning > 0) {
-            lastWeight = dayData.weightMorning;
-            break;
-          }
-        }
+      if (HEYS.showCheckin && HEYS.showCheckin.weight) {
+        HEYS.showCheckin.weight();
       }
-      const currentWeight = lastWeight || 70;
-      const kg = Math.floor(currentWeight);
-      const g = Math.round((currentWeight - kg) * 10);
-      setPendingWeightKg(Math.max(0, Math.min(110, kg - 40))); // индекс от 0 (40кг) до 110 (150кг)
-      setPendingWeightG(g);
-      // Конвертируем savedStepsGoal в индекс колеса (1000=0, 2000=1, ..., 7000=6)
-      setPendingStepsGoalIdx(Math.max(0, Math.min(29, Math.round(savedStepsGoal / 1000) - 1)));
-      setShowWeightPicker(true);
     }
     
-    // Открыть пикер напрямую на шаге "Цель шагов" (без веса)
     function openStepsGoalPicker() {
-      setWeightPickerStep(2); // сразу шаг 2
-      setPendingStepsGoalIdx(Math.max(0, Math.min(29, Math.round(savedStepsGoal / 1000) - 1)));
-      setShowWeightPicker(true);
-    }
-    
-    function nextWeightPickerStep() {
-      if (weightPickerStep === 1) {
-        setWeightPickerStep(2);
-      } else {
-        confirmWeightPicker();
+      if (HEYS.showCheckin && HEYS.showCheckin.steps) {
+        HEYS.showCheckin.steps();
       }
-    }
-    
-    function prevWeightPickerStep() {
-      if (weightPickerStep === 2) {
-        setWeightPickerStep(1);
-      } else {
-        cancelWeightPicker();
-      }
-    }
-    
-    function confirmWeightPicker() {
-      const newWeight = (40 + pendingWeightKg) + pendingWeightG / 10;
-      const pendingStepsGoal = (pendingStepsGoalIdx + 1) * 1000; // конвертируем индекс в значение
-      const prof = getProfile();
-      const shouldSetDeficit = (!day.weightMorning || day.weightMorning === '') && newWeight && (!day.deficitPct && day.deficitPct !== 0);
-      // Сохраняем цель шагов в профиль и обновляем state
-      if (pendingStepsGoal !== savedStepsGoal) {
-        // Важно: читаем RAW данные профиля, чтобы не потерять другие поля (gender и т.д.)
-        const rawProfile = lsGet('heys_profile', {}) || {};
-        const updatedProf = { ...rawProfile, stepsGoal: pendingStepsGoal };
-        // Логи сохранения stepsGoal отключены для чистой консоли
-        lsSet('heys_profile', updatedProf);
-        setSavedStepsGoal(pendingStepsGoal); // обновляем state для слайдера
-      }
-      setDay({
-        ...day,
-        weightMorning: newWeight,
-        deficitPct: shouldSetDeficit ? (prof.deficitPctTarget || 0) : day.deficitPct
-      });
-      setShowWeightPicker(false);
-    }
-    
-    function cancelWeightPicker() {
-      setShowWeightPicker(false);
-    }
-    
-    // DEV: Очистить вес за сегодня (для тестирования Morning Check-in)
-    function clearTodayWeight() {
-      if (!confirm('🗑️ Очистить вес за сегодня?\n\nЭто позволит увидеть Morning Check-in заново.')) return;
-      setDay({
-        ...day,
-        weightMorning: null,
-        sleepStart: null,
-        sleepEnd: null,
-        sleepHours: null,
-        sleepQuality: null
-      });
-      setShowWeightPicker(false);
-      // Перезагрузим для показа check-in
-      setTimeout(() => window.location.reload(), 100);
     }
 
-    // === Deficit Picker Modal ===
-    const [showDeficitPicker, setShowDeficitPicker] = useState(false);
-    const [pendingDeficitIdx, setPendingDeficitIdx] = useState(20); // индекс (20 = 0%)
-    // Значения от -20% до +20% с шагом 1
-    const deficitValues = useMemo(() => Array.from({length: 41}, (_, i) => {
-      const val = i - 20; // -20 до +20
-      return (val > 0 ? '+' : '') + val + '%';
-    }), []);
+    // === Deficit Picker (теперь использует StepModal) ===
+    const [showDeficitPicker, setShowDeficitPicker] = useState(false); // для совместимости с uiState
     
     // Дефицит из профиля или дефолт 0
     const profileDeficit = prof.deficitPctTarget || 0;
     const currentDeficit = day.deficitPct != null ? day.deficitPct : profileDeficit;
     
     function openDeficitPicker() {
-      // Конвертируем текущий дефицит в индекс (-20 = 0, 0 = 20, +20 = 40)
-      const deficitVal = currentDeficit || 0;
-      setPendingDeficitIdx(Math.max(0, Math.min(40, deficitVal + 20)));
-      setShowDeficitPicker(true);
-    }
-    
-    function confirmDeficitPicker() {
-      const newDeficit = pendingDeficitIdx - 20; // индекс обратно в значение
-      setDay({ ...day, deficitPct: newDeficit });
-      setShowDeficitPicker(false);
-    }
-    
-    function cancelDeficitPicker() {
-      setShowDeficitPicker(false);
+      // Используем StepModal вместо старого пикера
+      if (HEYS.showCheckin && HEYS.showCheckin.deficit) {
+        HEYS.showCheckin.deficit(date);
+      }
     }
 
     // === Water Tracking ===
@@ -8117,12 +8017,32 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             ),
             React.createElement('span', { className: 'weight-value-unit' }, 'кг')
           ),
-          // Тренд под значением
-          weightTrend && day.weightMorning && React.createElement('div', { 
-            className: 'weight-card-trend ' + (weightTrend.direction === 'down' ? 'trend-down' : weightTrend.direction === 'up' ? 'trend-up' : 'trend-same')
-          }, 
-            React.createElement('span', { className: 'trend-arrow' }, weightTrend.direction === 'down' ? '↓' : weightTrend.direction === 'up' ? '↑' : '→'),
-            weightTrend.text.replace(/[^а-яА-Я0-9.,\-+\s]/g, '').trim()
+          // Тренд под значением + DEV кнопка очистки
+          day.weightMorning && React.createElement('div', { className: 'weight-trend-row' },
+            weightTrend && React.createElement('div', { 
+              className: 'weight-card-trend ' + (weightTrend.direction === 'down' ? 'trend-down' : weightTrend.direction === 'up' ? 'trend-up' : 'trend-same')
+            }, 
+              React.createElement('span', { className: 'trend-arrow' }, weightTrend.direction === 'down' ? '↓' : weightTrend.direction === 'up' ? '↑' : '→'),
+              weightTrend.text.replace(/[^а-яА-Я0-9.,\-+\s]/g, '').trim()
+            ),
+            // DEV: Мини-кнопка очистки веса
+            React.createElement('button', {
+              className: 'dev-clear-weight-mini',
+              onClick: (e) => {
+                e.stopPropagation();
+                if (!confirm('🗑️ Очистить вес за сегодня?\n\nЭто позволит увидеть Morning Check-in заново.')) return;
+                setDay({
+                  ...day,
+                  weightMorning: null,
+                  sleepStart: null,
+                  sleepEnd: null,
+                  sleepHours: null,
+                  sleepQuality: null
+                });
+                setTimeout(() => window.location.reload(), 100);
+              },
+              title: 'DEV: Очистить вес для теста Morning Check-in'
+            }, '×')
           )
         ),
         // Плашка дефицита - кликабельная
@@ -9746,105 +9666,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               )
                 ];
               })()
-            )
-          )
-        ),
-        document.body
-      ),
-      
-      // Weight Picker Modal (2 steps)
-      showWeightPicker && ReactDOM.createPortal(
-        React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelWeightPicker },
-          React.createElement('div', { className: 'time-picker-modal weight-picker-modal', onClick: e => e.stopPropagation() },
-            // Ручка для свайпа
-            React.createElement('div', { 
-              className: 'bottom-sheet-handle',
-              onTouchStart: handleSheetTouchStart,
-              onTouchMove: handleSheetTouchMove,
-              onTouchEnd: () => handleSheetTouchEnd(cancelWeightPicker)
-            }),
-            React.createElement('div', { className: 'time-picker-header' },
-              React.createElement('button', { className: 'time-picker-cancel', onClick: prevWeightPickerStep }, 
-                weightPickerStep === 1 ? 'Отмена' : '← Назад'
-              ),
-              React.createElement('span', { className: 'time-picker-title' }, 
-                weightPickerStep === 1 ? '⚖️ Вес на утро' : '👟 Цель шагов'
-              ),
-              React.createElement('button', { className: 'time-picker-confirm', onClick: nextWeightPickerStep }, 
-                weightPickerStep === 1 ? 'Далее →' : 'Готово'
-              )
-            ),
-            // Step indicator
-            React.createElement('div', { className: 'picker-steps-indicator' },
-              React.createElement('div', { className: 'picker-step-dot' + (weightPickerStep >= 1 ? ' active' : '') }),
-              React.createElement('div', { className: 'picker-step-dot' + (weightPickerStep >= 2 ? ' active' : '') })
-            ),
-            // DEV: Кнопка очистки веса
-            React.createElement('button', {
-              className: 'dev-clear-weight-btn',
-              onClick: clearTodayWeight,
-              title: 'DEV: Очистить вес для теста Morning Check-in'
-            }, '🗑️ Очистить вес (DEV)'),
-            // Step 1: Вес
-            weightPickerStep === 1 && React.createElement('div', { className: 'weight-picker-section' },
-              React.createElement('div', { className: 'time-picker-wheels weight-wheels' },
-                React.createElement(WheelColumn, {
-                  values: weightKgValues,
-                  selected: pendingWeightKg,
-                  onChange: (i) => setPendingWeightKg(i)
-                }),
-                React.createElement('div', { className: 'weight-picker-dot' }, '.'),
-                React.createElement(WheelColumn, {
-                  values: weightGValues,
-                  selected: pendingWeightG,
-                  onChange: (i) => setPendingWeightG(i)
-                }),
-                React.createElement('span', { className: 'weight-picker-unit' }, 'кг')
-              )
-            ),
-            // Step 2: Цель шагов (колесо с шагом 1000)
-            weightPickerStep === 2 && React.createElement('div', { className: 'weight-picker-section steps-goal-section' },
-              React.createElement('div', { className: 'time-picker-wheels steps-goal-wheels' },
-                React.createElement(WheelColumn, {
-                  values: stepsGoalValues,
-                  selected: pendingStepsGoalIdx,
-                  onChange: (i) => setPendingStepsGoalIdx(i)
-                }),
-                React.createElement('span', { className: 'steps-goal-wheel-unit' }, 'шагов')
-              )
-            )
-          )
-        ),
-        document.body
-      ),
-      
-      // Deficit Picker Modal
-      showDeficitPicker && ReactDOM.createPortal(
-        React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelDeficitPicker },
-          React.createElement('div', { className: 'time-picker-modal deficit-picker-modal', onClick: e => e.stopPropagation() },
-            // Ручка для свайпа
-            React.createElement('div', { 
-              className: 'bottom-sheet-handle',
-              onTouchStart: handleSheetTouchStart,
-              onTouchMove: handleSheetTouchMove,
-              onTouchEnd: () => handleSheetTouchEnd(cancelDeficitPicker)
-            }),
-            React.createElement('div', { className: 'time-picker-header' },
-              React.createElement('button', { className: 'time-picker-cancel', onClick: cancelDeficitPicker }, 'Отмена'),
-              React.createElement('span', { className: 'time-picker-title' }, '📊 Цель дефицита'),
-              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmDeficitPicker }, 'Готово')
-            ),
-            React.createElement('div', { className: 'deficit-picker-hint' }, 
-              'Отрицательный = дефицит (похудение)',
-              React.createElement('br'),
-              'Положительный = профицит (набор)'
-            ),
-            React.createElement('div', { className: 'time-picker-wheels deficit-wheels' },
-              React.createElement(WheelColumn, {
-                values: deficitValues,
-                selected: pendingDeficitIdx,
-                onChange: (i) => setPendingDeficitIdx(i)
-              })
             )
           )
         ),

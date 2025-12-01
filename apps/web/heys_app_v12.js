@@ -2442,13 +2442,18 @@
             const [showClientDropdown, setShowClientDropdown] = useState(false); // Dropdown в шапке
             
             // Morning Check-in — показываем СРАЗУ если нет веса за сегодня
-            // Инициализируем как null (не проверено), потом true/false
-            const [showMorningCheckin, setShowMorningCheckin] = useState(null);
+            // Проверка СИНХРОННАЯ при инициализации — модалка появляется мгновенно
+            const [showMorningCheckin, setShowMorningCheckin] = useState(() => {
+              // Проверяем сразу при mount, пока clientId ещё не инициализирован
+              if (HEYS.shouldShowMorningCheckin) {
+                return HEYS.shouldShowMorningCheckin();
+              }
+              return false;
+            });
             
-            // Проверяем morning checkin СРАЗУ при появлении clientId
+            // Перепроверяем при смене клиента (clientId)
             useEffect(() => {
               if (clientId && !isInitializing && HEYS.shouldShowMorningCheckin) {
-                // Проверяем синхронно — без задержки!
                 const shouldShow = HEYS.shouldShowMorningCheckin();
                 setShowMorningCheckin(shouldShow);
               }
@@ -3212,12 +3217,8 @@
               isMorningCheckinBlocking && React.createElement(HEYS.MorningCheckin, {
                 onComplete: (data) => {
                   console.log('[App] 🎉 MorningCheckin onComplete вызван');
-                  // Сначала инкрементим syncVer чтобы DayTab перезагрузился с новым key
-                  setSyncVer((v) => {
-                    console.log('[App] 🔄 syncVer:', v, '->', v + 1);
-                    return v + 1;
-                  });
-                  // Потом скрываем check-in — DayTab появится с обновлённым key
+                  // НЕ инкрементим syncVer — данные обновляются через событие 'heys:day-updated'
+                  // Это предотвращает пересоздание DayTab и показ скелетонов
                   console.log('[App] 👁️ Скрываю MorningCheckin');
                   setShowMorningCheckin(false);
                 }
