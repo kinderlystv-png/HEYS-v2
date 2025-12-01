@@ -156,6 +156,7 @@
       level: 1,
       unlockedAchievements: [],
       dailyXP: {},          // { '2025-11-30': { product_added: 5, water_added: 2, ... } }
+      dailyBonusClaimed: null, // '2025-11-30' — дата последнего daily bonus
       stats: {
         totalProducts: 0,
         totalWater: 0,
@@ -202,6 +203,67 @@
   function getXPForCurrentLevel(level) {
     if (level <= 1) return 0;
     return LEVEL_THRESHOLDS[level - 1];
+  }
+
+  // ========== RANK BADGES ==========
+  const RANK_BADGES = [
+    { min: 1, max: 4, rank: 'Bronze', icon: '🥉', color: '#cd7f32' },
+    { min: 5, max: 9, rank: 'Silver', icon: '🥈', color: '#c0c0c0' },
+    { min: 10, max: 14, rank: 'Gold', icon: '🥇', color: '#ffd700' },
+    { min: 15, max: 19, rank: 'Platinum', icon: '💎', color: '#e5e4e2' },
+    { min: 20, max: 25, rank: 'Diamond', icon: '👑', color: '#b9f2ff' }
+  ];
+
+  function getRankBadge(level) {
+    for (const r of RANK_BADGES) {
+      if (level >= r.min && level <= r.max) return r;
+    }
+    return RANK_BADGES[RANK_BADGES.length - 1];
+  }
+
+  // ========== XP MULTIPLIER ==========
+  function getXPMultiplier() {
+    const streak = HEYS.Day && HEYS.Day.getStreak ? HEYS.Day.getStreak() : 0;
+    if (streak >= 14) return 3;  // 3x при streak 14+
+    if (streak >= 7) return 2.5; // 2.5x при streak 7+
+    if (streak >= 3) return 2;   // 2x при streak 3+
+    return 1;
+  }
+
+  // ========== DAILY BONUS ==========
+  function canClaimDailyBonus() {
+    const data = loadData();
+    const today = getToday();
+    return data.dailyBonusClaimed !== today;
+  }
+
+  function claimDailyBonus() {
+    const data = loadData();
+    const today = getToday();
+    if (data.dailyBonusClaimed === today) return false;
+    
+    data.dailyBonusClaimed = today;
+    const bonusXP = 10 * getXPMultiplier();
+    data.totalXP += bonusXP;
+    data.level = calculateLevel(data.totalXP);
+    saveData();
+    
+    showNotification('daily_bonus', { xp: bonusXP, multiplier: getXPMultiplier() });
+    window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: { xpGained: bonusXP, reason: 'daily_bonus' } }));
+    return true;
+  }
+
+  // ========== PERSONAL BEST ==========
+  function isNewStreakRecord() {
+    const data = loadData();
+    const currentStreak = HEYS.Day && HEYS.Day.getStreak ? HEYS.Day.getStreak() : 0;
+    return currentStreak > 0 && currentStreak > data.stats.bestStreak;
+  }
+
+  function getNextLevelTitle(level) {
+    const nextLevel = level + 1;
+    if (nextLevel > 25) return null;
+    return getLevelTitle(nextLevel);
   }
 
   // ========== FLYING ANIMATION ==========
@@ -495,7 +557,16 @@
     ACHIEVEMENT_CATEGORIES,
     RARITY_COLORS,
     LEVEL_TITLES,
-    XP_ACTIONS
+    XP_ACTIONS,
+    RANK_BADGES,
+
+    // Новые функции
+    getRankBadge,
+    getXPMultiplier,
+    canClaimDailyBonus,
+    claimDailyBonus,
+    isNewStreakRecord,
+    getNextLevelTitle
   };
 
   // ========== INTERNAL ==========
@@ -520,9 +591,13 @@
       data.dailyXP[today][reason] = dailyCount + 1;
     }
 
-    // Определяем XP
-    const xpToAdd = amount > 0 ? amount : (action ? action.xp : 0);
+    // Определяем XP с учётом multiplier
+    let xpToAdd = amount > 0 ? amount : (action ? action.xp : 0);
     if (xpToAdd <= 0) return;
+    
+    // Применяем multiplier от streak
+    const multiplier = getXPMultiplier();
+    xpToAdd = Math.round(xpToAdd * multiplier);
 
     const oldLevel = data.level;
     data.totalXP += xpToAdd;

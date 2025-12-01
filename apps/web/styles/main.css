@@ -993,7 +993,45 @@ td:first-child input {
 }
 
 .game-progress.glowing {
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+}
+
+/* Shimmer при >80% */
+.game-progress.shimmer .game-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+/* Pulse при >90% (приближение к level-up) */
+.game-progress.pulse .game-progress-fill {
+  animation: progressPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes progressPulse {
+  0%, 100% { 
+    box-shadow: 0 0 4px rgba(255, 215, 0, 0.4);
+    filter: brightness(1);
+  }
+  50% { 
+    box-shadow: 0 0 16px rgba(255, 215, 0, 0.8);
+    filter: brightness(1.2);
+  }
 }
 
 .game-progress-fill {
@@ -1001,19 +1039,155 @@ td:first-child input {
   background: linear-gradient(90deg, #10b981 0%, #22c55e 100%);
   border-radius: 4px;
   transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
 }
 
 .game-xp {
   font-size: 12px;
   opacity: 0.9;
   white-space: nowrap;
+  transition: transform 0.3s ease, color 0.3s ease;
+  position: relative;
+}
+
+/* XP counting animation */
+.game-xp.counting {
+  animation: xpPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  color: #fbbf24;
+}
+
+@keyframes xpPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* Level up rainbow flash */
+.game-bar-container.level-up-flash {
+  animation: rainbowFlash 1s ease-out;
+}
+
+@keyframes rainbowFlash {
+  0% { 
+    background: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #9b59b6);
+    background-size: 400% 100%;
+  }
+  50% { 
+    background-position: 100% 0;
+  }
+  100% { 
+    background: transparent;
+  }
+}
+
+/* Ripple effect on progress bar tap */
+.game-progress {
+  position: relative;
+  overflow: hidden;
+}
+
+.game-progress .ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: scale(0);
+  animation: rippleEffect 0.6s ease-out;
+  pointer-events: none;
+}
+
+@keyframes rippleEffect {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Progress bar tooltip */
+.game-progress-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.game-progress-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(15, 23, 42, 0.95);
+}
+
+.game-progress:hover .game-progress-tooltip,
+.game-progress:active .game-progress-tooltip {
+  opacity: 1;
 }
 
 .game-streak {
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+/* Streak уровни анимации */
+.game-streak.streak-low {
   animation: none;
+}
+
+.game-streak.streak-mid {
+  animation: flicker 1.5s ease-in-out infinite;
+}
+
+.game-streak.streak-high {
+  animation: flicker 1s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.6));
+}
+
+.game-streak.streak-epic {
+  animation: flicker 0.8s ease-in-out infinite, goldGlow 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+}
+
+.game-streak.streak-legendary {
+  animation: flicker 0.6s ease-in-out infinite, rainbowGlow 3s linear infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 100, 100, 0.8));
+}
+
+@keyframes flicker {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  25% { transform: scale(1.05); opacity: 0.9; }
+  50% { transform: scale(1.1); opacity: 1; }
+  75% { transform: scale(1.03); opacity: 0.95; }
+}
+
+@keyframes goldGlow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6)); }
+  50% { filter: drop-shadow(0 0 16px rgba(255, 215, 0, 1)); }
+}
+
+@keyframes rainbowGlow {
+  0% { filter: drop-shadow(0 0 10px #ff6b6b); }
+  25% { filter: drop-shadow(0 0 10px #ffd93d); }
+  50% { filter: drop-shadow(0 0 10px #6bcb77); }
+  75% { filter: drop-shadow(0 0 10px #4d96ff); }
+  100% { filter: drop-shadow(0 0 10px #ff6b6b); }
 }
 
 .game-streak:hover {
@@ -1023,6 +1197,153 @@ td:first-child input {
 @keyframes bounce {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.15); }
+}
+
+/* === Rank Badge === */
+.game-rank-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+  margin-left: 4px;
+  animation: badgeShine 3s ease-in-out infinite;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+@keyframes badgeShine {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
+}
+
+/* === XP Multiplier Badge === */
+.game-multiplier {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.2);
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-left: 4px;
+  animation: multiplierPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes multiplierPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.9; }
+}
+
+/* === Daily Bonus Button === */
+.game-daily-bonus {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  cursor: pointer;
+  animation: bonusGlow 2s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+.game-daily-bonus:hover {
+  transform: scale(1.05);
+}
+
+.game-daily-bonus.claimed {
+  background: rgba(255, 255, 255, 0.1);
+  animation: none;
+  opacity: 0.5;
+  cursor: default;
+}
+
+@keyframes bonusGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.8); }
+}
+
+/* === Level Preview Tooltip === */
+.game-level {
+  position: relative;
+  cursor: help;
+}
+
+.game-level-preview {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.game-level-preview::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(15, 23, 42, 0.95);
+}
+
+.game-level:hover .game-level-preview {
+  opacity: 1;
+}
+
+/* === Personal Best Badge === */
+.game-personal-best {
+  font-size: 9px;
+  background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: 600;
+  margin-left: 4px;
+  animation: personalBestPop 0.5s ease-out, personalBestGlow 2s ease-in-out infinite 0.5s;
+}
+
+@keyframes personalBestPop {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes personalBestGlow {
+  0%, 100% { box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.8); }
+}
+
+/* === Achievement Unlock Animation === */
+.achievement-badge.just-unlocked {
+  animation: achievementUnlock 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes achievementUnlock {
+  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+  50% { transform: scale(1.3) rotate(10deg); }
+  70% { transform: scale(0.9) rotate(-5deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.achievement-badge.just-unlocked .badge-icon {
+  animation: iconBurst 0.6s ease-out 0.2s;
+}
+
+@keyframes iconBurst {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.5); filter: brightness(1.5); }
+  100% { transform: scale(1); }
 }
 
 .game-expand-btn {
@@ -1075,6 +1396,11 @@ td:first-child input {
 .game-notification.achievement {
   background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%);
   border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+.game-notification.daily_bonus {
+  background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+  border: 1px solid rgba(251, 191, 36, 0.3);
 }
 
 .game-notification .notif-icon {
@@ -5075,8 +5401,10 @@ body:has(.offline-banner) .wrap {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding: 12px 12px 4px;
+  padding: 12px 4px 4px; /* уменьшили боковые отступы */
   margin-top: 4px;
+  margin-left: -4px;
+  margin-right: -4px;
 }
 
 .sparkline-mood-bar {
@@ -5085,6 +5413,29 @@ body:has(.offline-banner) .wrap {
   height: 6px;
   border-radius: 3px;
   overflow: visible;
+}
+
+/* Современный бар оценки дня — CSS градиент вместо SVG */
+.sparkline-mood-bar-modern {
+  height: 8px;
+  border-radius: 4px; /* pill shape */
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+/* Глянцевый блик сверху */
+.sparkline-mood-bar-modern::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  right: 4px;
+  height: 3px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.4), transparent);
+  border-radius: 2px;
+  pointer-events: none;
 }
 
 .sparkline-mood-label {
@@ -5108,6 +5459,33 @@ body:has(.offline-banner) .wrap {
   opacity: 0;
   animation: fadeInSleep 0.3s ease forwards;
   animation-delay: var(--delay, 0s);
+}
+
+@keyframes fadeInSleep {
+  from { opacity: 0; transform: translateX(-50%) scale(0.5); }
+  to { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+/* Цвета индикаторов сна по длительности */
+.sparkline-sleep-indicator.sleep-critical { 
+  filter: grayscale(0) brightness(1); /* 😴 <5ч — красный оттенок */
+  text-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+}
+.sparkline-sleep-indicator.sleep-bad { 
+  filter: hue-rotate(-15deg); /* 😴 5-6ч — оранжевый оттенок */
+  text-shadow: 0 0 4px rgba(249, 115, 22, 0.4);
+}
+.sparkline-sleep-indicator.sleep-low { 
+  /* 😴 6-7ч — нормальный */
+  opacity: 0.8;
+}
+.sparkline-sleep-indicator.sleep-good { 
+  /* 💤 7-8.5ч — хорошо */
+  opacity: 1;
+}
+.sparkline-sleep-indicator.sleep-over { 
+  filter: hue-rotate(40deg); /* 😪 8.5+ч — синий оттенок (пересып) */
+  text-shadow: 0 0 4px rgba(59, 130, 246, 0.4);
 }
 
 /* === Slider Elements === */
@@ -6002,7 +6380,8 @@ body:has(.offline-banner) .wrap {
 .weight-sparkline-dot-today {
   stroke: white;
   stroke-width: 1.5;
-  animation: pulseDotWeight 2s ease-in-out infinite;
+  animation: dotAppear 0.08s ease-out forwards, pulseDotWeight 2s ease-in-out infinite;
+  animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 0.1s);
   transform-box: fill-box;
   transform-origin: center center;
 }
@@ -6237,13 +6616,13 @@ body:has(.offline-banner) .wrap {
 /* === MACRO RINGS (БЖУ в стиле Apple Watch) === */
 .macro-rings {
   display: flex;
-  justify-content: space-around;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 6px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   flex: 1;
 }
 
@@ -6251,7 +6630,10 @@ body:has(.offline-banner) .wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  max-width: 70px;
 }
 
 .macro-ring {
@@ -6311,17 +6693,134 @@ body:has(.offline-banner) .wrap {
   font-size: 13px;
   font-weight: 700;
   color: #334155;
+  text-align: center;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .macro-ring-label {
   font-size: 11px;
   font-weight: 600;
   color: #334155;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  line-height: 1;
 }
 
 .macro-ring-target {
   font-size: 10px;
   color: #94a3b8;
+}
+
+.macro-ring-badges {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  min-height: 16px;
+}
+
+.macro-ring-badge {
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.macro-ring-badge:active {
+  transform: scale(1.3);
+}
+
+/* === MACRO BADGE POPUP === */
+.macro-badge-popup {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  padding: 12px 14px;
+  min-width: 180px;
+  max-width: 220px;
+  z-index: 1000;
+  animation: popupFadeIn 0.2s ease;
+}
+
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    scale: 0.95;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+.macro-badge-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding-right: 20px; /* место для крестика */
+}
+
+.macro-badge-popup-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.macro-badge-popup-pct {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.macro-badge-popup-value {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.macro-badge-popup-norm {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.macro-badge-popup-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.macro-badge-popup-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.3;
+}
+
+.macro-badge-popup-emoji {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.macro-badge-popup-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.macro-badge-popup-close:hover {
+  color: #64748b;
 }
 
 .macro-ring-percent {
@@ -6332,6 +6831,22 @@ body:has(.offline-banner) .wrap {
   padding: 1px 4px;
   border-radius: 4px;
   margin-top: 2px;
+}
+
+/* Пульсирующая анимация для критических значений */
+.macro-ring-pulse {
+  animation: macroPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes macroPulse {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
 }
 
 /* === MACRO TIP — умная подсказка по БЖУ === */
@@ -6393,15 +6908,15 @@ body:has(.offline-banner) .wrap {
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
-  gap: 4px;
-  padding: 8px 10px;
+  gap: 2px;
+  padding: 6px 8px;
   background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(16, 185, 129, 0.12) 100%);
   border: 1px solid rgba(34, 197, 94, 0.2);
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 68px;
-  max-width: 68px;
+  min-width: 58px;
+  max-width: 58px;
 }
 
 .weight-card-modern:hover {
@@ -6446,14 +6961,14 @@ body:has(.offline-banner) .wrap {
 }
 
 .weight-value-number {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   color: #166534;
 }
 
 .weight-card-empty .weight-value-number {
   color: #c2410c;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .weight-value-unit {
@@ -6495,15 +7010,15 @@ body:has(.offline-banner) .wrap {
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
-  gap: 4px;
-  padding: 8px 10px;
+  gap: 2px;
+  padding: 6px 8px;
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.12) 100%);
   border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 68px;
-  max-width: 68px;
+  min-width: 58px;
+  max-width: 58px;
 }
 
 .deficit-card-modern:hover {
@@ -6516,7 +7031,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .deficit-value-number {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   color: #4f46e5;
 }

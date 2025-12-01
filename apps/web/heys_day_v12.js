@@ -1299,6 +1299,9 @@
     // === Popup для точки на графике ===
     const [sparklinePopup, setSparklinePopup] = useState(null); // { type: 'kcal'|'weight', point, x, y }
     
+    // === Popup для бейджей БЖУ ===
+    const [macroBadgePopup, setMacroBadgePopup] = useState(null); // { macro, emoji, desc, x, y }
+    
     // === Slider для интерактивного просмотра графика ===
     const [sliderPoint, setSliderPoint] = useState(null);
     const sliderPrevPointRef = React.useRef(null);
@@ -1315,15 +1318,18 @@
     
     // Закрытие popup при клике вне
     React.useEffect(() => {
-      if (!sparklinePopup) return;
+      if (!sparklinePopup && !macroBadgePopup) return;
       const handleClickOutside = (e) => {
-        if (!e.target.closest('.sparkline-popup')) {
+        if (sparklinePopup && !e.target.closest('.sparkline-popup')) {
           setSparklinePopup(null);
+        }
+        if (macroBadgePopup && !e.target.closest('.macro-badge-popup')) {
+          setMacroBadgePopup(null);
         }
       };
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
-    }, [sparklinePopup]);
+    }, [sparklinePopup, macroBadgePopup]);
     
     // === Toast для подсказок БЖУ ===
     const [toastVisible, setToastVisible] = useState(false);
@@ -4278,10 +4284,29 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               const dayTrainings = (dayData.trainings || []).filter(t => t && t.z && t.z.some(z => z > 0));
               const hasTraining = dayTrainings.length > 0;
               const trainingTypes = dayTrainings.map(t => t.type || 'cardio');
+              // Вычисляем sleepHours из sleepStart/sleepEnd
+              let fallbackSleepHours = 0;
+              if (dayData.sleepStart && dayData.sleepEnd) {
+                const [sh, sm] = dayData.sleepStart.split(':').map(Number);
+                const [eh, em] = dayData.sleepEnd.split(':').map(Number);
+                let startMin = sh * 60 + sm, endMin = eh * 60 + em;
+                if (endMin < startMin) endMin += 24 * 60;
+                fallbackSleepHours = (endMin - startMin) / 60;
+              }
               // Без target если нет в activeDays, используем текущий optimum
-              days.push({ date: dateStr, kcal: Math.round(totalKcal), target: optimum, isToday: false, hasTraining, trainingTypes });
+              days.push({ 
+                date: dateStr, 
+                kcal: Math.round(totalKcal), 
+                target: optimum, 
+                isToday: false, 
+                hasTraining, 
+                trainingTypes,
+                sleepHours: fallbackSleepHours,
+                moodAvg: +dayData.moodAvg || 0,
+                dayScore: +dayData.dayScore || 0
+              });
             } else {
-              days.push({ date: dateStr, kcal: 0, target: optimum, isToday: false, hasTraining: false, trainingTypes: [] });
+              days.push({ date: dateStr, kcal: 0, target: optimum, isToday: false, hasTraining: false, trainingTypes: [], sleepHours: 0, moodAvg: 0, dayScore: 0 });
             }
           }
         }
@@ -6062,30 +6087,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           sliderPoint.kcal + ' ',
           React.createElement('small', null, '/ ' + sliderPoint.target)
         ),
-        // Теги: БЖУ + сон/тренировка/настроение/оценка
-        (sliderPoint.prot > 0 || sliderPoint.trainingMinutes > 0 || sliderPoint.sleepHours > 0 || sliderPoint.moodAvg > 0 || sliderPoint.dayScore > 0) &&
+        // Теги: сон + настроение + оценка дня
+        (sliderPoint.sleepHours > 0 || sliderPoint.moodAvg > 0 || sliderPoint.dayScore > 0) &&
           React.createElement('div', { className: 'sparkline-slider-tooltip-tags' },
-            sliderPoint.prot > 0 && React.createElement('span', { className: 'sparkline-slider-tooltip-tag' }, '🥩' + sliderPoint.prot),
-            sliderPoint.fat > 0 && React.createElement('span', { className: 'sparkline-slider-tooltip-tag' }, '🧈' + sliderPoint.fat),
-            sliderPoint.carbs > 0 && React.createElement('span', { className: 'sparkline-slider-tooltip-tag' }, '🍞' + sliderPoint.carbs),
-            sliderPoint.trainingMinutes > 0 && React.createElement('span', { className: 'sparkline-slider-tooltip-tag good' },
-              (() => {
-                const typeEmoji = { cardio: '🏃', strength: '🏋️', hobby: '⚽' };
-                const emoji = (sliderPoint.trainingTypes || []).map(t => typeEmoji[t] || '🏃')[0] || '🏃';
-                return emoji + sliderPoint.trainingMinutes + 'м';
-              })()
-            ),
-            // Сон (всегда если есть)
+            // Сон
             sliderPoint.sleepHours > 0 && 
               React.createElement('span', { 
                 className: 'sparkline-slider-tooltip-tag' + (sliderPoint.sleepHours < 6 ? ' bad' : '')
               }, '😴' + sliderPoint.sleepHours.toFixed(1) + 'ч'),
-            // Настроение (всегда если есть)
+            // Настроение
             sliderPoint.moodAvg > 0 && 
               React.createElement('span', { 
                 className: 'sparkline-slider-tooltip-tag' + (sliderPoint.moodAvg < 3 ? ' warn' : sliderPoint.moodAvg >= 4 ? ' good' : '')
               }, '😊' + sliderPoint.moodAvg.toFixed(1)),
-            // Оценка дня (если есть)
+            // Оценка дня
             sliderPoint.dayScore > 0 && 
               React.createElement('span', { 
                 className: 'sparkline-slider-tooltip-tag' + (sliderPoint.dayScore >= 8 ? ' good' : sliderPoint.dayScore < 5 ? ' warn' : '')
@@ -6094,8 +6109,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       ),
       // Полоса оценки дня (dayScore) под графиком
       (() => {
-        // Проверяем наличие данных оценки дня
-        const hasDayScoreData = points.some(p => p.dayScore > 0);
+        // Используем исходные data (до фильтрации excludeFromChart), чтобы включить сегодня
+        const allDaysWithScore = data.filter(d => d.dayScore > 0);
+        const hasDayScoreData = allDaysWithScore.length > 0;
         
         if (hasDayScoreData) {
           // Полоса с градиентом по dayScore (1-10)
@@ -6107,34 +6123,33 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             return '#22c55e'; // 😊 хорошо — зелёный
           };
           
-          const moodStops = points.map((p, i) => ({
-            offset: points.length > 1 ? (i / (points.length - 1)) * 100 : 50,
-            color: getDayScoreColor(p.dayScore)
+          // Используем все дни из data для градиента (включая сегодня)
+          const moodStops = data.map((d, i) => ({
+            offset: data.length > 1 ? (i / (data.length - 1)) * 100 : 50,
+            color: getDayScoreColor(d.dayScore)
           }));
           
+          // Бар заканчивается на сегодня, справа место для надписи
+          // Вычисляем ширину бара: data.length дней из totalPoints (включая прогноз)
+          const barWidthPct = totalPoints > 1 ? ((data.length) / totalPoints) * 100 : 85;
+          
           return React.createElement('div', { className: 'sparkline-mood-container' },
-            React.createElement('svg', { 
-              className: 'sparkline-mood-bar',
-              viewBox: '0 0 100 6',
-              preserveAspectRatio: 'none'
-            },
-              React.createElement('defs', null,
-                React.createElement('linearGradient', { id: 'moodGradient', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
-                  moodStops.map((stop, i) => 
-                    React.createElement('stop', { 
-                      key: i, 
-                      offset: stop.offset + '%', 
-                      stopColor: stop.color
-                    })
-                  )
-                )
-              ),
-              React.createElement('rect', {
-                x: 0, y: 0, width: 100, height: 6, rx: 3,
-                fill: 'url(#moodGradient)'
-              })
-            ),
-            React.createElement('span', { className: 'sparkline-mood-label' }, '⭐ Оценка дня')
+            React.createElement('div', { 
+              className: 'sparkline-mood-bar-modern',
+              style: { 
+                width: barWidthPct + '%',
+                background: 'linear-gradient(to right, ' + 
+                  moodStops.map(s => s.color + ' ' + s.offset + '%').join(', ') + ')'
+              }
+            }),
+            React.createElement('span', { 
+              className: 'sparkline-mood-label',
+              style: { textAlign: 'right', lineHeight: '1.1', fontSize: '8px' }
+            }, 
+              React.createElement('span', null, 'Оценка'),
+              React.createElement('br'),
+              React.createElement('span', null, 'дня')
+            )
           );
         }
         
@@ -6158,39 +6173,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             });
           })
         );
-      })(),
-      // 😴💤😪 Индикаторы сна — отдельный ряд (показывается всегда если есть данные сна)
-      (() => {
-        const hasSleepData = points.some(p => p.sleepHours > 0);
-        if (!hasSleepData) return null;
-        
-        return React.createElement('div', { className: 'sparkline-sleep-row' },
-          points.map((p, i) => {
-            if (p.sleepHours <= 0) return null;
-            // Градация: <5ч красный, 5-6ч оранжевый, 6-7ч жёлтый, 7-8ч зелёный, 8+ч синий
-            let sleepClass = 'sparkline-sleep-indicator';
-            if (p.sleepHours < 5) sleepClass += ' sleep-critical';
-            else if (p.sleepHours < 6) sleepClass += ' sleep-bad';
-            else if (p.sleepHours < 7) sleepClass += ' sleep-low';
-            else if (p.sleepHours <= 8.5) sleepClass += ' sleep-good';
-            else sleepClass += ' sleep-over';
-            
-            const emoji = p.sleepHours < 6 ? '😴' : (p.sleepHours > 8.5 ? '😪' : '💤');
-            // Позиционирование как в графике
-            const offset = points.length > 1 ? (i / (points.length - 1)) * 100 : 50;
-            // Задержка синхронна с точкой
-            const pathProgress = cumulativeLengths[i] / totalPathLength;
-            const animDelay = Math.max(0, pathProgress * 3 - 0.15);
-            
-            return React.createElement('span', {
-              key: 'sleep-' + i,
-              className: sleepClass,
-              style: { left: offset + '%', '--delay': animDelay + 's' },
-              title: p.sleepHours.toFixed(1) + 'ч сна'
-            }, emoji);
-          })
-        );
       })()
+      // Ряд индикаторов сна убран — информация дублируется с баром "Оценка дня"
     );
     };
     
@@ -6458,14 +6442,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const changeColor = weightChange < -0.05 ? '#22c55e' : (weightChange > 0.05 ? '#ef4444' : '#8b5cf6');
           
           return React.createElement('g', { key: 'weight-today-line-group' },
-            // Вертикальная полоса
-            React.createElement('rect', {
-              x: todayPt.x - 1.5,
-              y: paddingTop,
-              width: 3,
-              height: chartHeight,
-              fill: 'rgba(139, 92, 246, 0.15)' // фиолетовый для веса
-            }),
             // Изменение веса над точкой (выше)
             React.createElement('text', {
               x: todayPt.x,
@@ -6553,7 +6529,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           let dotClass = 'weight-sparkline-dot sparkline-dot';
           if (p.isToday) dotClass += ' weight-sparkline-dot-today sparkline-dot-pulse';
           
-          // Задержка анимации
+          // Задержка анимации через CSS переменную
           const animDelay = 3 + i * 0.15;
           
           return React.createElement('circle', {
@@ -6562,7 +6538,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             cy: p.y, 
             r: p.isToday ? 4 : 2.5,
             className: dotClass,
-            style: { cursor: 'pointer', fill: dotColor, animationDelay: animDelay + 's' },
+            style: { cursor: 'pointer', fill: dotColor, '--delay': animDelay + 's' },
             onClick: (e) => {
               e.stopPropagation();
               haptic('light');
@@ -6741,31 +6717,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           sparklinePopup.point.kcal + ' ',
           React.createElement('small', null, '/ ' + sparklinePopup.point.target + ' ккал')
         ),
-        // Теги: БЖУ + сон/тренировка/настроение/оценка
+        // Теги: сон + настроение + оценка дня
         React.createElement('div', { className: 'sparkline-popup-tags' },
-          // БЖУ как компактные теги
-          sparklinePopup.point.prot > 0 && React.createElement('span', { className: 'sparkline-popup-tag' }, '🥩' + sparklinePopup.point.prot),
-          sparklinePopup.point.fat > 0 && React.createElement('span', { className: 'sparkline-popup-tag' }, '🧈' + sparklinePopup.point.fat),
-          sparklinePopup.point.carbs > 0 && React.createElement('span', { className: 'sparkline-popup-tag' }, '🍞' + sparklinePopup.point.carbs),
-          // Тренировка
-          sparklinePopup.point.trainingMinutes > 0 && React.createElement('span', { className: 'sparkline-popup-tag good' },
-            (() => {
-              const typeEmoji = { cardio: '🏃', strength: '🏋️', hobby: '⚽' };
-              const emoji = (sparklinePopup.point.trainingTypes || []).map(t => typeEmoji[t] || '🏃')[0] || '🏃';
-              return emoji + sparklinePopup.point.trainingMinutes + 'м';
-            })()
-          ),
-          // Сон (всегда если есть данные)
+          // Сон
           sparklinePopup.point.sleepHours > 0 && 
             React.createElement('span', { 
               className: 'sparkline-popup-tag' + (sparklinePopup.point.sleepHours < 6 ? ' bad' : '')
             }, '😴' + sparklinePopup.point.sleepHours.toFixed(1) + 'ч'),
-          // Настроение (всегда если есть)
+          // Настроение
           sparklinePopup.point.moodAvg > 0 && 
             React.createElement('span', { 
               className: 'sparkline-popup-tag' + (sparklinePopup.point.moodAvg < 3 ? ' warn' : sparklinePopup.point.moodAvg >= 4 ? ' good' : '')
             }, '😊' + sparklinePopup.point.moodAvg.toFixed(1)),
-          // Оценка дня (если есть)
+          // Оценка дня
           sparklinePopup.point.dayScore > 0 && 
             React.createElement('span', { 
               className: 'sparkline-popup-tag' + (sparklinePopup.point.dayScore >= 8 ? ' good' : sparklinePopup.point.dayScore < 5 ? ' warn' : '')
@@ -6808,6 +6772,70 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             haptic('light');
           }
         }, '→ Перейти к дню')
+      ),
+      // Popup для бейджей БЖУ
+      macroBadgePopup && React.createElement('div', {
+        className: 'macro-badge-popup',
+        style: (() => {
+          const popupWidth = 200; // примерная ширина
+          const x = macroBadgePopup.x;
+          const screenW = window.innerWidth;
+          const margin = 12;
+          // Умная позиция: левый край, центр, правый край
+          let left, transform;
+          if (x < popupWidth / 2 + margin) {
+            // Близко к левому краю — прижать влево
+            left = margin;
+            transform = 'translateX(0)';
+          } else if (x > screenW - popupWidth / 2 - margin) {
+            // Близко к правому краю — прижать вправо
+            left = screenW - margin;
+            transform = 'translateX(-100%)';
+          } else {
+            // Центрировать
+            left = x;
+            transform = 'translateX(-50%)';
+          }
+          return {
+            position: 'fixed',
+            left: left + 'px',
+            top: (macroBadgePopup.y - 90) + 'px',
+            transform: transform
+          };
+        })(),
+        onClick: (e) => e.stopPropagation()
+      },
+        // Header: макрос + процент
+        React.createElement('div', { className: 'macro-badge-popup-header' },
+          React.createElement('span', { className: 'macro-badge-popup-title' }, macroBadgePopup.macro),
+          React.createElement('span', { 
+            className: 'macro-badge-popup-pct',
+            style: { color: macroBadgePopup.color }
+          }, Math.round(macroBadgePopup.ratio * 100) + '%')
+        ),
+        // Значение
+        React.createElement('div', { className: 'macro-badge-popup-value' },
+          React.createElement('span', { style: { color: macroBadgePopup.color, fontWeight: 700 } }, 
+            macroBadgePopup.value + 'г'
+          ),
+          React.createElement('span', { className: 'macro-badge-popup-norm' }, 
+            ' / ' + macroBadgePopup.norm + 'г'
+          )
+        ),
+        // Описание (все бейджи)
+        React.createElement('div', { className: 'macro-badge-popup-desc' },
+          macroBadgePopup.allBadges.map((b, i) => 
+            React.createElement('div', { key: i, className: 'macro-badge-popup-item' },
+              React.createElement('span', { className: 'macro-badge-popup-emoji' }, b.emoji),
+              React.createElement('span', null, b.desc)
+            )
+          )
+        ),
+        // Закрыть
+        React.createElement('button', {
+          className: 'macro-badge-popup-close',
+          onClick: () => setMacroBadgePopup(null)
+        }, '✕')
       ),
       // Fallback: нет данных о весе, но есть калории
       (!weightTrend && kcalTrend) && React.createElement('div', { 
@@ -7064,56 +7092,207 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Контейнер: Макро-кольца + Плашка веса
         React.createElement('div', { className: 'macro-weight-row' },
         // Макро-бар БЖУ (в стиле Apple Watch колец)
-        React.createElement('div', { className: 'macro-rings' },
+        (() => {
+          // === Умная логика цветов по правилам питания ===
+          
+          // БЕЛКИ: больше = лучше (насыщение, мышцы, термогенез)
+          // < 60% — критически мало, мышцы страдают
+          // 60-90% — недобор, но терпимо
+          // 90%+ — отлично! Чем больше белка, тем лучше
+          const getProteinColor = (actual, norm, hasTraining) => {
+            if (!norm || norm === 0) return '#6b7280';
+            const ratio = actual / norm;
+            // После тренировки требования к белку выше
+            const minGood = hasTraining ? 1.0 : 0.9;
+            const minOk = hasTraining ? 0.7 : 0.6;
+            if (ratio < minOk) return '#ef4444';    // красный — критически мало
+            if (ratio < minGood) return '#f59e0b';  // оранжевый — недобор
+            return '#22c55e';                        // зелёный — норма и выше
+          };
+          
+          // ЖИРЫ: баланс важен, но не критичен
+          // < 50% — мало (гормоны, усвоение витаминов)
+          // 50-80% — немного мало
+          // 80-120% — отлично
+          // 120-150% — многовато (но не критично)
+          // > 150% — перебор
+          const getFatColor = (actual, norm) => {
+            if (!norm || norm === 0) return '#6b7280';
+            const ratio = actual / norm;
+            if (ratio < 0.5) return '#ef4444';      // красный — критически мало
+            if (ratio < 0.8) return '#f59e0b';      // оранжевый — маловато
+            if (ratio <= 1.2) return '#22c55e';     // зелёный — в норме
+            if (ratio <= 1.5) return '#f59e0b';     // оранжевый — многовато
+            return '#ef4444';                        // красный — сильный перебор
+          };
+          
+          // УГЛЕВОДЫ: зависит от дефицита калорий
+          // При дефиците: меньше углеводов = лучше (кетоз, жиросжигание)
+          // Без дефицита: норма важна для энергии
+          const getCarbsColor = (actual, norm, hasDeficit) => {
+            if (!norm || norm === 0) return '#6b7280';
+            const ratio = actual / norm;
+            
+            if (hasDeficit) {
+              // При дефиците: меньше углеводов — хорошо!
+              if (ratio < 0.3) return '#f59e0b';    // слишком мало даже для дефицита
+              if (ratio <= 0.8) return '#22c55e';   // отлично для похудения
+              if (ratio <= 1.0) return '#22c55e';   // норма — ОК
+              if (ratio <= 1.2) return '#f59e0b';   // немного много для дефицита
+              return '#ef4444';                      // перебор — плохо для дефицита
+            } else {
+              // Без дефицита: стандартная логика
+              if (ratio < 0.5) return '#ef4444';    // мало энергии
+              if (ratio < 0.8) return '#f59e0b';    // недобор
+              if (ratio <= 1.1) return '#22c55e';   // норма
+              if (ratio <= 1.3) return '#f59e0b';   // немного много
+              return '#ef4444';                      // перебор
+            }
+          };
+          
+          // Собираем массив бейджей с описаниями (до 2 штук)
+          // { emoji, desc } — emoji и описание при тапе
+          const getBadges = (color, isProtein, ratio, contextEmoji, contextDesc) => {
+            const badges = [];
+            
+            // Статус по цвету (приоритет 1)
+            if (color === '#ef4444') {
+              if (ratio < 0.6) {
+                badges.push({ emoji: '⚠️', desc: 'Критически мало! Нужно добавить.' });
+              } else {
+                badges.push({ emoji: '⚠️', desc: 'Перебор! Слишком много.' });
+              }
+            } else if (color === '#22c55e') {
+              if (isProtein && ratio >= 1.2) {
+                badges.push({ emoji: '💪', desc: 'Отлично! Много белка для мышц.' });
+              } else if (ratio >= 0.95 && ratio <= 1.05) {
+                badges.push({ emoji: '✓', desc: 'Идеально! Точно в норме.' });
+              }
+            }
+            
+            // Контекст (приоритет 2) — добавляем если есть место
+            if (contextEmoji && badges.length < 2) {
+              badges.push({ emoji: contextEmoji, desc: contextDesc });
+            }
+            
+            return badges;
+          };
+          
+          const hasDeficit = dayTargetDef < 0; // дефицит если отрицательный %
+          const hasTraining = (day.trainings && day.trainings.length > 0) || train1k + train2k > 0;
+          
+          const protRatio = (dayTot.prot || 0) / (normAbs.prot || 1);
+          const fatRatio = (dayTot.fat || 0) / (normAbs.fat || 1);
+          const carbsRatio = (dayTot.carbs || 0) / (normAbs.carbs || 1);
+          
+          const protColor = getProteinColor(dayTot.prot || 0, normAbs.prot, hasTraining);
+          const fatColor = getFatColor(dayTot.fat || 0, normAbs.fat);
+          const carbsColor = getCarbsColor(dayTot.carbs || 0, normAbs.carbs, hasDeficit);
+          
+          // Бейджи для каждого макроса (расширенные данные для popup)
+          const protBadges = getBadges(protColor, true, protRatio, 
+            hasTraining ? '🏋️' : null, 'Сегодня тренировка — белок важнее!');
+          const fatBadges = getBadges(fatColor, false, fatRatio, null, null);
+          const carbsBadges = getBadges(carbsColor, false, carbsRatio,
+            hasDeficit ? '📉' : null, 'Режим дефицита — меньше углеводов = лучше');
+          
+          // Рендер бейджей с popup по тапу
+          const renderBadges = (badges, macro, value, norm, ratio, color) => {
+            if (!badges || badges.length === 0) return null;
+            return React.createElement('div', { className: 'macro-ring-badges' },
+              badges.map((b, i) => React.createElement('span', {
+                key: i,
+                className: 'macro-ring-badge',
+                onClick: (e) => {
+                  e.stopPropagation();
+                  const rect = e.target.getBoundingClientRect();
+                  setMacroBadgePopup({
+                    macro,
+                    emoji: b.emoji,
+                    desc: b.desc,
+                    value: Math.round(value),
+                    norm: Math.round(norm),
+                    ratio,
+                    color,
+                    allBadges: badges,
+                    x: rect.left + rect.width / 2,
+                    y: rect.top
+                  });
+                  haptic('light');
+                }
+              }, b.emoji))
+            );
+          };
+          
+          return React.createElement('div', { className: 'macro-rings' },
           // Белки
           React.createElement('div', { className: 'macro-ring-item' },
-            React.createElement('div', { className: 'macro-ring protein' },
+            React.createElement('div', { className: 'macro-ring' + (protColor === '#ef4444' ? ' macro-ring-pulse' : '') },
               React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
                 React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
                 React.createElement('circle', { 
                   className: 'macro-ring-fill', 
                   cx: 18, cy: 18, r: 15.9,
-                  style: { strokeDasharray: Math.min(100, ((dayTot.prot || 0) / (normAbs.prot || 1)) * 100) + ' 100' }
+                  style: { 
+                    strokeDasharray: Math.min(100, protRatio * 100) + ' 100',
+                    stroke: protColor
+                  }
                 })
               ),
-              React.createElement('span', { className: 'macro-ring-value' }, Math.round(dayTot.prot || 0))
+              React.createElement('span', { className: 'macro-ring-value', style: { color: protColor } }, 
+                Math.round(dayTot.prot || 0)
+              )
             ),
             React.createElement('span', { className: 'macro-ring-label' }, 'Белки'),
-            React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.prot || 0) + 'г')
+            React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.prot || 0) + 'г'),
+            renderBadges(protBadges, 'Белки', dayTot.prot, normAbs.prot, protRatio, protColor)
           ),
           // Жиры
           React.createElement('div', { className: 'macro-ring-item' },
-            React.createElement('div', { className: 'macro-ring fat' },
+            React.createElement('div', { className: 'macro-ring' + (fatColor === '#ef4444' ? ' macro-ring-pulse' : '') },
               React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
                 React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
                 React.createElement('circle', { 
                   className: 'macro-ring-fill', 
                   cx: 18, cy: 18, r: 15.9,
-                  style: { strokeDasharray: Math.min(100, ((dayTot.fat || 0) / (normAbs.fat || 1)) * 100) + ' 100' }
+                  style: { 
+                    strokeDasharray: Math.min(100, fatRatio * 100) + ' 100',
+                    stroke: fatColor
+                  }
                 })
               ),
-              React.createElement('span', { className: 'macro-ring-value' }, Math.round(dayTot.fat || 0))
+              React.createElement('span', { className: 'macro-ring-value', style: { color: fatColor } }, 
+                Math.round(dayTot.fat || 0)
+              )
             ),
             React.createElement('span', { className: 'macro-ring-label' }, 'Жиры'),
-            React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.fat || 0) + 'г')
+            React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.fat || 0) + 'г'),
+            renderBadges(fatBadges, 'Жиры', dayTot.fat, normAbs.fat, fatRatio, fatColor)
           ),
           // Углеводы
           React.createElement('div', { className: 'macro-ring-item' },
-            React.createElement('div', { className: 'macro-ring carbs' },
+            React.createElement('div', { className: 'macro-ring' + (carbsColor === '#ef4444' ? ' macro-ring-pulse' : '') },
               React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
                 React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.9 }),
                 React.createElement('circle', { 
                   className: 'macro-ring-fill', 
                   cx: 18, cy: 18, r: 15.9,
-                  style: { strokeDasharray: Math.min(100, ((dayTot.carbs || 0) / (normAbs.carbs || 1)) * 100) + ' 100' }
+                  style: { 
+                    strokeDasharray: Math.min(100, carbsRatio * 100) + ' 100',
+                    stroke: carbsColor
+                  }
                 })
               ),
-              React.createElement('span', { className: 'macro-ring-value' }, Math.round(dayTot.carbs || 0))
+              React.createElement('span', { className: 'macro-ring-value', style: { color: carbsColor } }, 
+                Math.round(dayTot.carbs || 0)
+              )
             ),
             React.createElement('span', { className: 'macro-ring-label' }, 'Углеводы'),
-            React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.carbs || 0) + 'г')
+            React.createElement('span', { className: 'macro-ring-target' }, '/ ' + Math.round(normAbs.carbs || 0) + 'г'),
+            renderBadges(carbsBadges, 'Углеводы', dayTot.carbs, normAbs.carbs, carbsRatio, carbsColor)
           )
-        ),
+        );
+        })(),
         // Плашка веса - кликабельная целиком
         React.createElement('div', { 
           className: 'weight-card-modern' + (day.weightMorning ? '' : ' weight-card-empty'),

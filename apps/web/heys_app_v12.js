@@ -214,12 +214,41 @@
             });
             const [expanded, setExpanded] = useState(false);
             const [notification, setNotification] = useState(null);
+            const [isXPCounting, setIsXPCounting] = useState(false);
+            const [isLevelUpFlash, setIsLevelUpFlash] = useState(false);
+            const [dailyBonusAvailable, setDailyBonusAvailable] = useState(() => {
+              return HEYS.game ? HEYS.game.canClaimDailyBonus() : false;
+            });
+            const [justUnlockedAch, setJustUnlockedAch] = useState(null);
+            const prevLevelRef = useRef(stats.level);
+            
+            // Проверяем daily bonus при монтировании
+            useEffect(() => {
+              if (HEYS.game) {
+                setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
+              }
+            }, []);
 
             // Слушаем обновления XP
             useEffect(() => {
               const handleUpdate = (e) => {
                 if (HEYS.game) {
-                  setStats(HEYS.game.getStats());
+                  const newStats = HEYS.game.getStats();
+                  
+                  // XP counting animation
+                  if (e.detail && e.detail.xpGained > 0) {
+                    setIsXPCounting(true);
+                    setTimeout(() => setIsXPCounting(false), 400);
+                  }
+                  
+                  // Level up flash
+                  if (newStats.level > prevLevelRef.current) {
+                    setIsLevelUpFlash(true);
+                    setTimeout(() => setIsLevelUpFlash(false), 1000);
+                    prevLevelRef.current = newStats.level;
+                  }
+                  
+                  setStats(newStats);
                 }
                 // Обновляем streak
                 if (HEYS.Day && HEYS.Day.getStreak) {
@@ -230,6 +259,12 @@
               const handleNotification = (e) => {
                 setNotification(e.detail);
                 setTimeout(() => setNotification(null), e.detail.type === 'level_up' ? 4000 : 3000);
+                
+                // Achievement unlock animation
+                if (e.detail.type === 'achievement') {
+                  setJustUnlockedAch(e.detail.data.achievement.id);
+                  setTimeout(() => setJustUnlockedAch(null), 1000);
+                }
               };
 
               window.addEventListener('heysGameUpdate', handleUpdate);
@@ -260,42 +295,126 @@
             const { title, progress } = stats;
             const progressPercent = Math.max(5, progress.percent); // Minimum 5% для визуального feedback
 
-            // Glow эффект при >90%
+            // Эффекты по уровню прогресса
+            const isShimmering = progress.percent >= 80; // Блик при >80%
+            const isPulsing = progress.percent >= 90;    // Пульсация при >90%
             const isGlowing = progress.percent >= 90;
 
-            return React.createElement('div', { className: 'game-bar-container' },
+            // Streak класс по уровню
+            const getStreakClass = (s) => {
+              if (s >= 30) return 'streak-legendary';  // 30+ дней — радужный
+              if (s >= 14) return 'streak-epic';       // 14+ дней — золотой
+              if (s >= 7) return 'streak-high';        // 7+ дней — яркий
+              if (s >= 3) return 'streak-mid';         // 3+ дней — мерцающий
+              return 'streak-low';                     // 1-2 дня — статичный
+            };
+
+            // Ripple эффект на тапе по progress bar
+            const handleProgressClick = (e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const ripple = document.createElement('span');
+              ripple.className = 'ripple';
+              ripple.style.left = `${e.clientX - rect.left}px`;
+              ripple.style.top = `${e.clientY - rect.top}px`;
+              e.currentTarget.appendChild(ripple);
+              setTimeout(() => ripple.remove(), 600);
+            };
+
+            // Динамический золотой градиент — чем ближе к 100%, тем ярче золото
+            const getProgressGradient = (percent) => {
+              // От приглушённого (#b8860b / darkgoldenrod) до яркого (#ffd700 / gold)
+              const t = percent / 100; // 0..1
+              // Интерполяция RGB: darkgoldenrod(184,134,11) → gold(255,215,0)
+              const r = Math.round(184 + (255 - 184) * t);
+              const g = Math.round(134 + (215 - 134) * t);
+              const b = Math.round(11 + (0 - 11) * t);
+              const brightColor = `rgb(${r}, ${g}, ${b})`;
+              // Начальный цвет ещё темнее
+              const startR = Math.round(140 + (184 - 140) * t);
+              const startG = Math.round(100 + (134 - 100) * t);
+              const startB = Math.round(20 + (11 - 20) * t);
+              const startColor = `rgb(${startR}, ${startG}, ${startB})`;
+              return `linear-gradient(90deg, ${startColor} 0%, ${brightColor} 100%)`;
+            };
+
+            return React.createElement('div', { 
+              className: `game-bar-container ${isLevelUpFlash ? 'level-up-flash' : ''}`
+            },
               // Main bar
               React.createElement('div', { 
                 className: 'game-bar',
                 onClick: toggleExpanded
               },
-                // Level + icon
+                // Level + icon + rank badge + level preview
                 React.createElement('span', { 
                   className: 'game-level',
                   style: { color: title.color }
-                }, `${title.icon} Ур.${stats.level}`),
+                }, 
+                  `${title.icon} Ур.${stats.level}`,
+                  // Rank Badge
+                  HEYS.game && React.createElement('span', {
+                    className: 'game-rank-badge',
+                    style: { 
+                      background: `linear-gradient(135deg, ${HEYS.game.getRankBadge(stats.level).color}66 0%, ${HEYS.game.getRankBadge(stats.level).color} 100%)`,
+                      color: stats.level >= 10 ? '#000' : '#fff'
+                    }
+                  }, HEYS.game.getRankBadge(stats.level).rank),
+                  // Level Preview Tooltip
+                  HEYS.game && HEYS.game.getNextLevelTitle(stats.level) && React.createElement('span', { 
+                    className: 'game-level-preview' 
+                  }, `Следующий: ${HEYS.game.getNextLevelTitle(stats.level).icon} ${HEYS.game.getNextLevelTitle(stats.level).title}`)
+                ),
                 
-                // Progress bar
+                // Progress bar with tooltip
                 React.createElement('div', { 
-                  className: `game-progress ${isGlowing ? 'glowing' : ''}`
+                  className: `game-progress ${isGlowing ? 'glowing' : ''} ${isShimmering ? 'shimmer' : ''} ${isPulsing ? 'pulse' : ''}`,
+                  onClick: handleProgressClick
                 },
                   React.createElement('div', { 
                     className: 'game-progress-fill',
                     style: { 
                       width: `${progressPercent}%`,
-                      background: `linear-gradient(90deg, ${title.color} 0%, ${title.color}cc 100%)`
+                      background: getProgressGradient(progress.percent)
                     }
-                  })
+                  }),
+                  // Tooltip
+                  React.createElement('span', { className: 'game-progress-tooltip' },
+                    `Ещё ${progress.required - progress.current} XP до ур.${stats.level + 1}`
+                  )
                 ),
                 
-                // XP counter
-                React.createElement('span', { className: 'game-xp' }, 
-                  `${progress.current}/${progress.required}`
-                ),
+                // XP counter with counting animation
+                React.createElement('span', { 
+                  className: `game-xp ${isXPCounting ? 'counting' : ''}`
+                }, `${progress.current}/${progress.required}`),
                 
-                // Streak (скрываем если 0)
+                // XP Multiplier badge (при streak 3+)
+                HEYS.game && HEYS.game.getXPMultiplier() > 1 && React.createElement('span', {
+                  className: 'game-multiplier',
+                  title: 'Бонус за streak!'
+                }, `${HEYS.game.getXPMultiplier()}x`),
+                
+                // Daily Bonus button
+                dailyBonusAvailable && React.createElement('button', {
+                  className: 'game-daily-bonus',
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    if (HEYS.game && HEYS.game.claimDailyBonus()) {
+                      setDailyBonusAvailable(false);
+                    }
+                  },
+                  title: 'Забрать ежедневный бонус!'
+                }, '🎁 +10'),
+                
+                // Personal Best indicator
+                HEYS.game && HEYS.game.isNewStreakRecord() && streak > 0 && React.createElement('span', {
+                  className: 'game-personal-best',
+                  title: 'Новый рекорд streak!'
+                }, '🏆 NEW!'),
+                
+                // Streak с анимацией огня по уровню
                 streak > 0 && React.createElement('span', { 
-                  className: 'game-streak',
+                  className: `game-streak ${getStreakClass(streak)}`,
                   title: `${streak} дней подряд в норме!`
                 }, `🔥${streak}`),
                 
@@ -327,7 +446,19 @@
                           React.createElement('div', { className: 'notif-subtitle' }, `+${notification.data.achievement.xp} XP`)
                         )
                       )
-                    : null
+                    : notification.type === 'daily_bonus'
+                      ? React.createElement(React.Fragment, null,
+                          React.createElement('span', { className: 'notif-icon' }, '🎁'),
+                          React.createElement('div', { className: 'notif-content' },
+                            React.createElement('div', { className: 'notif-title' }, 'Ежедневный бонус!'),
+                            React.createElement('div', { className: 'notif-subtitle' }, 
+                              notification.data.multiplier > 1 
+                                ? `+${notification.data.xp} XP (${notification.data.multiplier}x бонус!)` 
+                                : `+${notification.data.xp} XP`
+                            )
+                          )
+                        )
+                      : null
               ),
 
               // Expanded panel (backdrop + content)
