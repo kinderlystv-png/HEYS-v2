@@ -2164,6 +2164,19 @@
             const [loginError, setLoginError] = useState('');
             const [clientSearch, setClientSearch] = useState(''); // Поиск клиентов
             const [showClientDropdown, setShowClientDropdown] = useState(false); // Dropdown в шапке
+            
+            // Morning Check-in — показываем СРАЗУ если нет веса за сегодня
+            // Инициализируем как null (не проверено), потом true/false
+            const [showMorningCheckin, setShowMorningCheckin] = useState(null);
+            
+            // Проверяем morning checkin СРАЗУ при появлении clientId
+            useEffect(() => {
+              if (clientId && !isInitializing && HEYS.shouldShowMorningCheckin) {
+                // Проверяем синхронно — без задержки!
+                const shouldShow = HEYS.shouldShowMorningCheckin();
+                setShowMorningCheckin(shouldShow);
+              }
+            }, [clientId, isInitializing]);
 
             // Закрытие dropdown по Escape
             useEffect(() => {
@@ -2312,26 +2325,16 @@
                             }, 'Умный дневник питания')
                           ),
                           // Email поле
-                          React.createElement('div', { style: { position: 'relative', marginBottom: 12 } },
-                            React.createElement('span', { 
-                              style: { 
-                                position: 'absolute', 
-                                left: 14, 
-                                top: '50%', 
-                                transform: 'translateY(-50%)',
-                                fontSize: 18,
-                                opacity: 0.5
-                              } 
-                            }, '📧'),
+                          React.createElement('div', { style: { marginBottom: 12 } },
                             React.createElement('input', {
                               type: 'email',
-                              placeholder: 'Email',
+                              placeholder: '📧  Email',
                               value: email,
                               onChange: (e) => { setEmail(e.target.value); setLoginError(''); },
                               onKeyDown: (e) => e.key === 'Enter' && doSignIn(),
                               style: { 
                                 width: '100%', 
-                                padding: '14px 14px 14px 44px', 
+                                padding: '14px 16px', 
                                 borderRadius: 12, 
                                 border: '2px solid var(--border)', 
                                 fontSize: 16,
@@ -2341,26 +2344,16 @@
                             })
                           ),
                           // Пароль поле
-                          React.createElement('div', { style: { position: 'relative', marginBottom: 16 } },
-                            React.createElement('span', { 
-                              style: { 
-                                position: 'absolute', 
-                                left: 14, 
-                                top: '50%', 
-                                transform: 'translateY(-50%)',
-                                fontSize: 18,
-                                opacity: 0.5
-                              } 
-                            }, '🔒'),
+                          React.createElement('div', { style: { marginBottom: 16 } },
                             React.createElement('input', {
                               type: 'password',
-                              placeholder: 'Пароль',
+                              placeholder: '🔒  Пароль',
                               value: pwd,
                               onChange: (e) => { setPwd(e.target.value); setLoginError(''); },
                               onKeyDown: (e) => e.key === 'Enter' && doSignIn(),
                               style: { 
                                 width: '100%', 
-                                padding: '14px 14px 14px 44px', 
+                                padding: '14px 16px', 
                                 borderRadius: 12, 
                                 border: '2px solid var(--border)', 
                                 fontSize: 16,
@@ -2931,13 +2924,30 @@
             };
 
             const currentClientName = clients.find((c) => c.id === clientId)?.name || 'Выберите клиента';
+            
+            // Morning Check-in блокирует основной контент (показывается ДО загрузки)
+            const isMorningCheckinBlocking = showMorningCheckin === true && HEYS.MorningCheckin;
 
             return React.createElement(
               React.Fragment,
               null,
               gate,
+              // === MORNING CHECK-IN (вес, сон, шаги — показывается ВМЕСТО контента) ===
+              isMorningCheckinBlocking && React.createElement(HEYS.MorningCheckin, {
+                onComplete: (data) => {
+                  console.log('[App] 🎉 MorningCheckin onComplete вызван');
+                  // Сначала инкрементим syncVer чтобы DayTab перезагрузился с новым key
+                  setSyncVer((v) => {
+                    console.log('[App] 🔄 syncVer:', v, '->', v + 1);
+                    return v + 1;
+                  });
+                  // Потом скрываем check-in — DayTab появится с обновлённым key
+                  console.log('[App] 👁️ Скрываю MorningCheckin');
+                  setShowMorningCheckin(false);
+                }
+              }),
               // === OFFLINE BANNER (показывается 3 сек при потере сети) ===
-              showOfflineBanner && React.createElement(
+              !isMorningCheckinBlocking && showOfflineBanner && React.createElement(
                 'div',
                 { className: 'offline-banner' },
                 React.createElement('span', { className: 'offline-banner-icon' }, '📡'),
@@ -2946,7 +2956,7 @@
                 )
               ),
               // === ONLINE BANNER (показывается 2 сек при восстановлении сети) ===
-              showOnlineBanner && React.createElement(
+              !isMorningCheckinBlocking && showOnlineBanner && React.createElement(
                 'div',
                 { className: 'online-banner' },
                 React.createElement('span', { className: 'online-banner-icon' }, '✓'),
@@ -2955,9 +2965,13 @@
                 )
               ),
               // Toast убран — отвлекает
+              // Основной контент — скрыт во время Morning Check-in (но рендерится для preload)
               React.createElement(
                 'div',
-                { className: 'wrap' },
+                { 
+                  className: 'wrap',
+                  style: isMorningCheckinBlocking ? { display: 'none' } : undefined
+                },
                 React.createElement(
                   'div',
                   { className: 'hdr' },
@@ -3420,8 +3434,8 @@
                               ),
                 ),
               ),
-              // === PWA Install Banner ===
-              showPwaBanner && React.createElement(
+              // === PWA Install Banner (только после Morning Check-in) ===
+              !isMorningCheckinBlocking && showPwaBanner && React.createElement(
                 'div',
                 { className: 'pwa-install-banner' },
                 React.createElement('div', { className: 'pwa-banner-content' },
@@ -3442,8 +3456,8 @@
                   )
                 )
               ),
-              // === Update Toast (новая версия) ===
-              showUpdateToast && React.createElement(
+              // === Update Toast (только после Morning Check-in) ===
+              !isMorningCheckinBlocking && showUpdateToast && React.createElement(
                 'div',
                 { className: 'update-toast' },
                 React.createElement('div', { className: 'update-toast-content' },

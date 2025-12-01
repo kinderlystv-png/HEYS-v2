@@ -19,6 +19,7 @@ vite v4.5.14 building for production...
 <script src="heys_day_hooks.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_day_pickers.js?v=10"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_advice_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_morning_checkin_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_day_v12.js?v=11"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_user_v12.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_reports_v12.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
@@ -29,9 +30,9 @@ transforming...
 rendering chunks...
 computing gzip size...
 dist/assets/heys_simple_analytics-b3f08726.js      10.31 kB
-dist/index.html                                    12.71 kB │ gzip:  3.81 kB
+dist/index.html                                    12.79 kB │ gzip:  3.83 kB
 dist/assets/heys_models_v1-66db76a9.js             22.14 kB
 dist/assets/heys_core_v12-44890dc6.js              44.85 kB
 dist/assets/heys_storage_supabase_v1-4acf3b84.js   62.25 kB
-dist/assets/index-c5dd79f1.css                    200.65 kB │ gzip: 36.11 kB
-✓ built in 1.81s
+dist/assets/index-6c5a3297.css                    209.22 kB │ gzip: 37.54 kB
+✓ built in 710ms
