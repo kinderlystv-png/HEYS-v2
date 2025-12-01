@@ -19653,6 +19653,39 @@ input, textarea, select {
   color: #9ca3af;
 }
 
+/* Детальная таблица параметров */
+.aps-preview-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #d1fae5;
+}
+
+[data-theme="dark"] .aps-preview-details {
+  border-top-color: #065f46;
+}
+
+.aps-preview-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.aps-preview-label {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .aps-preview-label {
+  color: #9ca3af;
+}
+
+.aps-preview-value {
+  font-weight: 600;
+  color: var(--text);
+}
+
 .aps-create-btn {
   width: 100%;
   padding: 14px 20px;
@@ -19707,6 +19740,30 @@ input, textarea, select {
 [data-theme="dark"] .aps-create-tip {
   background: #1f2937;
   color: #9ca3af;
+}
+
+/* Подсказка о поисковом запросе */
+.aps-create-search-hint {
+  padding: 8px 12px;
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1e40af;
+}
+
+.aps-create-search-hint strong {
+  color: #1d4ed8;
+}
+
+[data-theme="dark"] .aps-create-search-hint {
+  background: #1e3a5f;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .aps-create-search-hint strong {
+  color: #60a5fa;
 }
 
 [data-theme="dark"] .aps-day-sum {

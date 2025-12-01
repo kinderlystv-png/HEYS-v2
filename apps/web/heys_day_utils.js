@@ -381,6 +381,38 @@
     return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
   }
 
+  // === Hours Order для Wheel Picker ===
+  // Порядок часов: 03, 04, ..., 23, 00, 01, 02
+  // Это позволяет скроллить от вечера к ночи естественно
+  const HOURS_ORDER = (() => {
+    const order = [];
+    for (let h = NIGHT_HOUR_THRESHOLD; h < 24; h++) order.push(h);
+    for (let h = 0; h < NIGHT_HOUR_THRESHOLD; h++) order.push(h);
+    return order;
+  })();
+
+  /**
+   * Конвертация: индекс колеса → реальный час
+   * @param {number} idx - индекс в HOURS_ORDER
+   * @returns {number} реальный час (0-23)
+   */
+  function wheelIndexToHour(idx) {
+    return HOURS_ORDER[idx] ?? idx;
+  }
+
+  /**
+   * Конвертация: реальный час → индекс колеса
+   * Учитывает ночные часы: 24→0, 25→1, 26→2
+   * @param {number} hour - реальный час (0-26)
+   * @returns {number} индекс в HOURS_ORDER
+   */
+  function hourToWheelIndex(hour) {
+    // Нормализуем ночные часы для поиска в колесе
+    const normalizedHour = hour >= 24 ? hour - 24 : hour;
+    const idx = HOURS_ORDER.indexOf(normalizedHour);
+    return idx >= 0 ? idx : 0;
+  }
+
   /**
    * Определяет тип приёма пищи на основе:
    * - Порядкового номера (первый = завтрак)
@@ -890,6 +922,10 @@
     parseTime,
     sleepHours,
     formatMealTime,
+    // Hours Order (для wheel picker с ночными часами)
+    HOURS_ORDER,
+    wheelIndexToHour,
+    hourToWheelIndex,
     // Meal Type Classification
     MEAL_TYPES,
     MAIN_MEAL_THRESHOLDS,

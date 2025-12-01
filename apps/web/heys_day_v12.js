@@ -739,7 +739,11 @@
       if (!advices?.length) return { sorted: [], groups: {} };
       
       // Фильтруем прочитанные и скрытые до завтра
-      const filtered = advices.filter(a => !dismissedAdvices.has(a.id) && !hiddenUntilTomorrow.has(a.id));
+      // ВАЖНО: оставляем lastDismissedAdvice для показа undo overlay
+      const filtered = advices.filter(a => 
+        (!dismissedAdvices.has(a.id) && !hiddenUntilTomorrow.has(a.id)) || 
+        (lastDismissedAdvice?.id === a.id)
+      );
       
       // Сортируем по приоритету (warning сверху, achievement снизу)
       const sorted = [...filtered].sort((a, b) => 
@@ -755,7 +759,7 @@
       });
       
       return { sorted, groups };
-    }, [dismissedAdvices, hiddenUntilTomorrow]);
+    }, [dismissedAdvices, hiddenUntilTomorrow, lastDismissedAdvice]);
     
     // Handlers для swipe советов (влево = прочитано, вправо = скрыть до завтра)
     const handleAdviceSwipeStart = (adviceId, e) => {
@@ -862,11 +866,9 @@
         // Undo — показываем 3 секунды (прогресс-бар в overlay)
         setUndoFading(false);
         const hideTimeout = setTimeout(() => {
-          console.log('[Advice Undo] Timeout expired, clearing lastDismissedAdvice');
           setLastDismissedAdvice(null);
           setUndoFading(false);
         }, 3000);
-        console.log('[Advice Undo] Setting lastDismissedAdvice:', { id: adviceId, action: 'read' });
         setLastDismissedAdvice({ id: adviceId, action: 'read', hideTimeout });
         
       } else if (swipeX > 100) {
@@ -1808,39 +1810,34 @@
       sheetDragY.current = 0;
     };
     
-    // Генерация значений для часов, минут и оценок 1-10
-    // Часы начинаются с 03:00 (порядок: 03, 04, ... 23, 00, 01, 02)
-    // Ночные часы (00-02) визуально отмечены как относящиеся к следующему календарному дню
+    // Импортируем константы из dayUtils (единый источник правды)
     const NIGHT_HOUR_THRESHOLD = U.NIGHT_HOUR_THRESHOLD || 3;
-    const hoursOrder = useMemo(() => {
-      // Порядок: 03, 04, 05, ..., 23, 00, 01, 02
+    const HOURS_ORDER = U.HOURS_ORDER || (() => {
       const order = [];
-      for (let h = NIGHT_HOUR_THRESHOLD; h < 24; h++) order.push(h);
-      for (let h = 0; h < NIGHT_HOUR_THRESHOLD; h++) order.push(h);
+      for (let h = 3; h < 24; h++) order.push(h);
+      for (let h = 0; h < 3; h++) order.push(h);
       return order;
-    }, []);
+    })();
     
     // Значения для колеса (с подписями для ночных часов)
     const hoursValues = useMemo(() => {
-      return hoursOrder.map(h => pad2(h));
-    }, [hoursOrder]);
+      return HOURS_ORDER.map(h => pad2(h));
+    }, []);
     
     // Конвертация: индекс колеса → реальные часы
-    const wheelIndexToHour = (idx) => hoursOrder[idx] ?? idx;
+    const wheelIndexToHour = U.wheelIndexToHour || ((idx) => HOURS_ORDER[idx] ?? idx);
     // Конвертация: реальные часы → индекс колеса
-    // Учитывает ночные часы: 24→0, 25→1, 26→2
-    const hourToWheelIndex = (hour) => {
-      // Нормализуем ночные часы для поиска в колесе
+    const hourToWheelIndex = U.hourToWheelIndex || ((hour) => {
       const normalizedHour = hour >= 24 ? hour - 24 : hour;
-      const idx = hoursOrder.indexOf(normalizedHour);
+      const idx = HOURS_ORDER.indexOf(normalizedHour);
       return idx >= 0 ? idx : 0;
-    };
+    });
     
     // Проверка: выбранный час относится к ночным (00-02)
     const isNightHourSelected = useMemo(() => {
       const realHour = wheelIndexToHour(pendingMealTime.hours);
       return realHour >= 0 && realHour < NIGHT_HOUR_THRESHOLD;
-    }, [pendingMealTime.hours, hoursOrder]);
+    }, [pendingMealTime.hours]);
     
     // Форматированная дата для отображения
     const currentDateLabel = useMemo(() => {
@@ -8347,8 +8344,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const isLastDismissed = lastDismissedAdvice?.id === advice.id;
           const showUndo = isLastDismissed && (isDismissed || isHidden);
           
-          console.log('[renderAdviceCard]', advice.id, { isDismissed, isHidden, isLastDismissed, showUndo, lastDismissedAdviceId: lastDismissedAdvice?.id });
-          
           // Если совет скрыт и это не последний dismissed — не показываем
           if ((isDismissed || isHidden) && !showUndo) return null;
           
@@ -8370,8 +8365,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 position: 'absolute',
                 inset: 0,
                 background: lastDismissedAdvice.action === 'hidden' 
-                  ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' 
-                  : 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
+                  ? 'linear-gradient(135deg, rgba(251, 146, 60, 0.85) 0%, rgba(234, 88, 12, 0.85) 100%)' 
+                  : 'linear-gradient(135deg, rgba(34, 197, 94, 0.85) 0%, rgba(22, 163, 74, 0.85) 100%)',
                 borderRadius: '12px',
                 display: 'flex',
                 alignItems: 'center',
@@ -8381,7 +8376,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 fontWeight: 600,
                 fontSize: '14px',
                 cursor: 'pointer',
-                zIndex: 10
+                zIndex: 10,
+                backdropFilter: 'blur(4px)'
               }
             },
               React.createElement('span', null, lastDismissedAdvice.action === 'hidden' ? '🔕 Скрыто' : '✓ Прочитано'),

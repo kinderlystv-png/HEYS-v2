@@ -269,11 +269,13 @@
     // Кнопка "Новый продукт" — переход на шаг создания
     const handleNewProduct = useCallback(() => {
       haptic('medium');
+      // Сохраняем поисковый запрос в data для предзаполнения названия
+      onChange({ ...data, searchQuery: search });
       // Переходим на шаг создания нового продукта (шаг 2 — create)
       if (goToStep) {
         goToStep(2, 'left');
       }
-    }, [goToStep]);
+    }, [goToStep, search, data, onChange]);
     
     // Рендер карточки продукта
     const renderProductCard = (product, showFavorite = true) => {
@@ -412,7 +414,9 @@
   }
 
   // === Компонент создания нового продукта (Шаг create) ===
-  function CreateProductStep({ data, onChange, context }) {
+  function CreateProductStep({ data, onChange, context, stepData }) {
+    // Берём поисковый запрос для предзаполнения названия
+    const searchQuery = stepData?.search?.searchQuery || '';
     const [pasteText, setPasteText] = useState('');
     const [error, setError] = useState('');
     const [parsedPreview, setParsedPreview] = useState(null);
@@ -556,6 +560,12 @@
         React.createElement('span', { className: 'aps-create-title' }, 'Создать новый продукт')
       ),
       
+      // Подсказка о поисковом запросе
+      searchQuery && React.createElement('div', { className: 'aps-create-search-hint' },
+        '🔍 Вы искали: ',
+        React.createElement('strong', null, searchQuery)
+      ),
+      
       // Инструкция
       React.createElement('div', { className: 'aps-create-hint' },
         'Вставьте строку с данными продукта:',
@@ -569,7 +579,9 @@
       React.createElement('textarea', {
         ref: textareaRef,
         className: 'aps-create-textarea',
-        placeholder: 'Пример: Овсянка на воде\t120\t22\t2\t20\t4\t2\t0.5\t1.5\t0\t3\t40\t0',
+        placeholder: searchQuery 
+          ? `Пример: ${searchQuery}\t120\t22\t2\t20\t4\t2\t0.5\t1.5\t0\t3\t40\t0`
+          : 'Пример: Овсянка на воде\t120\t22\t2\t20\t4\t2\t0.5\t1.5\t0\t3\t40\t0',
         value: pasteText,
         onChange: (e) => setPasteText(e.target.value),
         rows: 3
@@ -582,14 +594,47 @@
       parsedPreview && React.createElement('div', { className: 'aps-create-preview' },
         React.createElement('div', { className: 'aps-preview-title' }, '✅ Распознано:'),
         React.createElement('div', { className: 'aps-preview-name' }, parsedPreview.name),
+        // Основные макросы
         React.createElement('div', { className: 'aps-preview-macros' },
           React.createElement('span', { className: 'aps-preview-kcal' }, parsedPreview.kcal100 + ' ккал'),
           React.createElement('span', null, 'Б ' + parsedPreview.protein100 + 'г'),
           React.createElement('span', null, 'Ж ' + parsedPreview.fat100 + 'г'),
           React.createElement('span', null, 'У ' + parsedPreview.carbs100 + 'г')
         ),
-        React.createElement('div', { className: 'aps-preview-extra' },
-          'ГИ: ' + parsedPreview.gi + ' · Клетчатка: ' + parsedPreview.fiber100 + 'г · Вред: ' + parsedPreview.harmScore
+        // Детальная таблица всех параметров
+        React.createElement('div', { className: 'aps-preview-details' },
+          React.createElement('div', { className: 'aps-preview-row' },
+            React.createElement('span', { className: 'aps-preview-label' }, 'Углеводы простые'),
+            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.simple100 + 'г')
+          ),
+          React.createElement('div', { className: 'aps-preview-row' },
+            React.createElement('span', { className: 'aps-preview-label' }, 'Углеводы сложные'),
+            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.complex100 + 'г')
+          ),
+          React.createElement('div', { className: 'aps-preview-row' },
+            React.createElement('span', { className: 'aps-preview-label' }, 'Жиры вредные'),
+            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.badFat100 + 'г')
+          ),
+          React.createElement('div', { className: 'aps-preview-row' },
+            React.createElement('span', { className: 'aps-preview-label' }, 'Жиры полезные'),
+            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.goodFat100 + 'г')
+          ),
+          React.createElement('div', { className: 'aps-preview-row' },
+            React.createElement('span', { className: 'aps-preview-label' }, 'Транс-жиры'),
+            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.trans100 + 'г')
+          ),
+          React.createElement('div', { className: 'aps-preview-row' },
+            React.createElement('span', { className: 'aps-preview-label' }, 'Клетчатка'),
+            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.fiber100 + 'г')
+          ),
+          React.createElement('div', { className: 'aps-preview-row' },
+            React.createElement('span', { className: 'aps-preview-label' }, 'Гликемический индекс'),
+            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.gi)
+          ),
+          React.createElement('div', { className: 'aps-preview-row' },
+            React.createElement('span', { className: 'aps-preview-label' }, 'Вредность'),
+            React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.harmScore)
+          )
         )
       ),
       

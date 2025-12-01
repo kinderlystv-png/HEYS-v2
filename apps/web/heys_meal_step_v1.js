@@ -61,34 +61,21 @@
   // STEP 1: ВРЕМЯ И ТИП ПРИЁМА
   // ============================================================
   
-  // Порог ночных часов (00:00-02:59 считаются продолжением предыдущего дня)
-  const NIGHT_HOUR_THRESHOLD = 3;
-  
-  // Порядок часов: 03, 04, ..., 23, 00, 01, 02
-  // Это позволяет скроллить от вечера к ночи естественно
-  const HOURS_ORDER = (() => {
+  // Импортируем из dayUtils (единый источник правды)
+  const dayU = HEYS.dayUtils || {};
+  const NIGHT_HOUR_THRESHOLD = dayU.NIGHT_HOUR_THRESHOLD || 3;
+  const HOURS_ORDER = dayU.HOURS_ORDER || (() => {
     const order = [];
-    for (let h = NIGHT_HOUR_THRESHOLD; h < 24; h++) order.push(h);
-    for (let h = 0; h < NIGHT_HOUR_THRESHOLD; h++) order.push(h);
-    console.log('[HEYS] HOURS_ORDER:', order.join(','));
+    for (let h = 3; h < 24; h++) order.push(h);
+    for (let h = 0; h < 3; h++) order.push(h);
     return order;
   })();
-  
-  // Конвертация: индекс колеса → реальный час
-  const wheelIndexToHour = (idx) => {
-    const result = HOURS_ORDER[idx] ?? idx;
-    console.log('[HEYS] wheelIndexToHour | idx:', idx, '→ hour:', result);
-    return result;
-  };
-  
-  // Конвертация: реальный час → индекс колеса
-  const hourToWheelIndex = (hour) => {
-    // Нормализуем 24-26 → 0-2
+  const wheelIndexToHour = dayU.wheelIndexToHour || ((idx) => HOURS_ORDER[idx] ?? idx);
+  const hourToWheelIndex = dayU.hourToWheelIndex || ((hour) => {
     const normalizedHour = hour >= 24 ? hour - 24 : hour;
     const idx = HOURS_ORDER.indexOf(normalizedHour);
-    console.log('[HEYS] hourToWheelIndex | hour:', hour, '→ normalized:', normalizedHour, '→ idx:', idx);
     return idx >= 0 ? idx : 0;
-  };
+  });
   
   function MealTimeStepComponent({ data, onChange, context }) {
     const { WheelPicker } = HEYS.StepModal;
@@ -101,8 +88,6 @@
     
     // Реальный час для отображения и логики
     const realHours = wheelIndexToHour(currentHourIndex);
-    
-    console.log('[HEYS] MealTimeStep render | data.hourIndex:', data.hourIndex, '| currentHourIndex:', currentHourIndex, '| realHours:', realHours);
     
     // Значения для пикера часов (форматированные строки)
     const hoursValues = useMemo(() => HOURS_ORDER.map(h => pad2(h)), []);
@@ -150,7 +135,6 @@
       // v — это строка вида "00", "01", ..., "23"
       const hourValue = parseInt(v, 10);
       const newIndex = HOURS_ORDER.indexOf(hourValue);
-      console.log('[HEYS] MealTimeStep updateHours | v:', v, '| hourValue:', hourValue, '| newIndex:', newIndex);
       haptic(5);
       onChange({ ...data, hourIndex: newIndex >= 0 ? newIndex : 0, minutes: data.minutes ?? minutes });
     };
@@ -540,8 +524,6 @@
       },
       validate: () => true
     });
-    
-    console.log('[HEYS] Meal steps registered: mealTime, mealMood');
   }
 
   // ============================================================
@@ -570,8 +552,6 @@
         const timeData = stepData.mealTime || {};
         const moodData = stepData.mealMood || {};
         
-        console.log('[HEYS] MealStep onComplete | timeData:', JSON.stringify(timeData));
-        
         // Конвертируем индекс колеса в реальный час
         // Если hourIndex не установлен (пользователь не трогал пикер), 
         // используем текущий час как fallback
@@ -579,15 +559,11 @@
         const hourIndex = timeData.hourIndex ?? defaultHourIndex;
         let realHours = wheelIndexToHour(hourIndex);
         
-        console.log('[HEYS] MealStep | hourIndex:', hourIndex, '(default:', defaultHourIndex, ') | realHours:', realHours);
-        
         // Ночные часы (00-02) записываем как 24-26 для правильной сортировки
         if (realHours < NIGHT_HOUR_THRESHOLD) {
           realHours += 24; // 00:20 → 24:20
         }
-        console.log('[HEYS] MealStep | realHours after adjustment:', realHours);
         const timeStr = `${pad2(realHours)}:${pad2(timeData.minutes || 0)}`;
-        console.log('[HEYS] MealStep | timeStr:', timeStr);
         
         const newMeal = {
           id: uid('m_'),
