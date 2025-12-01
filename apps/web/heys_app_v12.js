@@ -2464,22 +2464,35 @@
             const [clientSearch, setClientSearch] = useState(''); // Поиск клиентов
             const [showClientDropdown, setShowClientDropdown] = useState(false); // Dropdown в шапке
             
-            // Morning Check-in — показываем СРАЗУ если нет веса за сегодня
-            // Проверка СИНХРОННАЯ при инициализации — модалка появляется мгновенно
-            const [showMorningCheckin, setShowMorningCheckin] = useState(() => {
-              // Проверяем сразу при mount, пока clientId ещё не инициализирован
-              if (HEYS.shouldShowMorningCheckin) {
-                return HEYS.shouldShowMorningCheckin();
-              }
-              return false;
-            });
+            // Morning Check-in — показываем ПОСЛЕ синхронизации, если нет веса за сегодня
+            // НЕ показываем сразу — ждём heysSyncCompleted чтобы данные успели подтянуться
+            const [showMorningCheckin, setShowMorningCheckin] = useState(false);
             
-            // Перепроверяем при смене клиента (clientId)
+            // Проверяем после синхронизации (heysSyncCompleted) или смены клиента
             useEffect(() => {
-              if (clientId && !isInitializing && HEYS.shouldShowMorningCheckin) {
-                const shouldShow = HEYS.shouldShowMorningCheckin();
-                setShowMorningCheckin(shouldShow);
+              // Функция проверки
+              const checkMorningCheckin = () => {
+                if (clientId && !isInitializing && HEYS.shouldShowMorningCheckin) {
+                  const shouldShow = HEYS.shouldShowMorningCheckin();
+                  console.log('[App] 🌅 MorningCheckin check | shouldShow:', shouldShow, '| syncCompleted:', HEYS.cloud?.isInitialSyncCompleted?.());
+                  setShowMorningCheckin(shouldShow);
+                }
+              };
+              
+              // Если синхронизация уже завершена — проверяем сразу
+              if (HEYS.cloud?.isInitialSyncCompleted?.()) {
+                checkMorningCheckin();
               }
+              
+              // Слушаем событие завершения синхронизации
+              const handleSyncCompleted = () => {
+                console.log('[App] 🌅 heysSyncCompleted → checking MorningCheckin');
+                // Небольшая задержка чтобы localStorage обновился
+                setTimeout(checkMorningCheckin, 100);
+              };
+              
+              window.addEventListener('heysSyncCompleted', handleSyncCompleted);
+              return () => window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
             }, [clientId, isInitializing]);
 
             // Закрытие dropdown по Escape
