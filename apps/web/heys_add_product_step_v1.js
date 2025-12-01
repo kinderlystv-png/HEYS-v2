@@ -260,9 +260,9 @@
         grams: defaultGrams,
         lastGrams: lastGrams // Для отображения подсказки
       });
-      // Автопереход на шаг 2 (граммы)
+      // Автопереход на шаг граммов (index 2: search → create → grams)
       if (goToStep) {
-        setTimeout(() => goToStep(1, 'left'), 50);
+        setTimeout(() => goToStep(2, 'left'), 50);
       }
     }, [data, onChange, goToStep]);
     
@@ -552,7 +552,11 @@
       };
     }, []);
     
-    // При изменении текста — пытаемся распарсить
+    // Ref для onChange чтобы не вызывать лишние ререндеры
+    const onChangeRef = useRef(onChange);
+    onChangeRef.current = onChange;
+    
+    // При изменении текста — пытаемся распарсить (с debounce)
     useEffect(() => {
       if (!pasteText.trim()) {
         setParsedPreview(null);
@@ -560,17 +564,22 @@
         return;
       }
       
-      const parsed = parseProductLine(pasteText);
-      if (parsed) {
-        setParsedPreview(parsed);
-        setError('');
-        // Сохраняем в data (без зависимости от data чтобы избежать цикла)
-        onChange(prev => ({ ...prev, newProduct: parsed }));
-      } else {
-        setParsedPreview(null);
-        setError('Не удалось распознать данные. Формат: Название + 12 чисел.');
-      }
-    }, [pasteText, parseProductLine, onChange]);
+      // Debounce парсинга чтобы не тормозить при быстром вводе
+      const timer = setTimeout(() => {
+        const parsed = parseProductLine(pasteText);
+        if (parsed) {
+          setParsedPreview(parsed);
+          setError('');
+          // Сохраняем в data через ref (избегаем зависимости от onChange)
+          onChangeRef.current?.(prev => ({ ...prev, newProduct: parsed }));
+        } else {
+          setParsedPreview(null);
+          setError('Не удалось распознать данные. Формат: Название + 12 чисел.');
+        }
+      }, 150);
+      
+      return () => clearTimeout(timer);
+    }, [pasteText, parseProductLine]);
     
     // Добавить продукт в базу и выбрать его
     const handleCreate = useCallback(() => {

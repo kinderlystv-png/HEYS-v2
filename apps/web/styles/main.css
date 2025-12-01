@@ -18325,107 +18325,173 @@ input, textarea, select {
 }
 
 /* Grid из трёх карточек — компактный */
+/* Общий индикатор состояния */
+.meal-overall-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(16, 185, 129, 0.08));
+  border-radius: 10px;
+}
+
+.meal-overall-emoji {
+  font-size: 24px;
+}
+
+.meal-overall-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+[data-theme="dark"] .meal-overall-text {
+  color: #d1d5db;
+}
+
+/* Grid из трёх карточек */
 .meal-ratings-grid {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-/* Карточка оценки — компактная */
-.meal-rating-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-[data-theme="dark"] .meal-rating-card {
-  background: #1e293b;
-  border-color: #334155;
-}
-
-/* Лицо с emoji и текстом — компактное */
-.meal-rating-face {
-  display: flex;
-  align-items: center;
   gap: 8px;
 }
 
-.meal-rating-face-emoji {
-  font-size: 22px;
-  line-height: 1;
-  animation: mood-face-appear 0.3s ease-out;
+/* Карточка оценки — новый layout с градиентом */
+.meal-rating-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px 8px;
+  transition: background 0.3s ease;
 }
 
-.meal-rating-face-emoji.bounce {
+[data-theme="dark"] .meal-rating-card {
+  border-color: #334155;
+}
+
+/* Главная строка: emoji | info | presets */
+.meal-rating-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+/* Большой emoji слева */
+.meal-rating-emoji-lg {
+  font-size: 28px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.meal-rating-emoji-lg.bounce {
   animation: meal-emoji-bounce 0.4s ease;
 }
 
-.meal-rating-face-emoji.shake {
+.meal-rating-emoji-lg.shake {
   animation: meal-emoji-shake 0.4s ease;
 }
 
-.meal-rating-face-text {
-  font-size: 13px;
-  font-weight: 600;
-  color: #6b7280;
+/* Инфо блок: название + значение */
+.meal-rating-info {
   flex: 1;
+  min-width: 0;
 }
 
-[data-theme="dark"] .meal-rating-face-text {
-  color: #9ca3af;
-}
-
-/* Большое число — компактное */
-.meal-rating-big-value {
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-  margin-left: 30px;
-}
-
-.meal-rating-number {
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1;
-  transition: color 0.2s ease;
-}
-
-.meal-rating-of-ten {
-  font-size: 12px;
-  font-weight: 500;
-  color: #9ca3af;
-}
-
-/* Название параметра — компактное */
-.meal-rating-label-text {
-  font-size: 10px;
+.meal-rating-title {
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
   color: #9ca3af;
-  margin-left: 30px;
-  margin-top: 0;
-}
-
-/* Слайдер — компактный */
-.meal-rating-slider-wrap {
-  margin-top: 2px;
-}
-
-.meal-rating-slider-wrap .mood-slider {
   margin-bottom: 2px;
 }
 
-.meal-rating-slider-labels {
+.meal-rating-value-row {
   display: flex;
-  justify-content: space-between;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.meal-rating-num {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.meal-rating-num.num-bounce {
+  animation: num-bounce 0.2s ease;
+}
+
+@keyframes num-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.meal-rating-max {
   font-size: 12px;
-  padding: 0 2px;
-  opacity: 0.6;
+  color: #9ca3af;
+}
+
+.meal-rating-text {
+  font-size: 12px;
+  color: #6b7280;
+  margin-left: 6px;
+}
+
+[data-theme="dark"] .meal-rating-text {
+  color: #9ca3af;
+}
+
+/* Пресеты справа */
+.meal-rating-presets {
+  display: flex;
+  gap: 4px;
+}
+
+.meal-preset-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.meal-preset-btn:active {
+  transform: scale(0.92);
+}
+
+.meal-preset-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+
+[data-theme="dark"] .meal-preset-btn {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+[data-theme="dark"] .meal-preset-btn.active {
+  background: #1e40af;
+  border-color: #3b82f6;
+}
+
+/* Слайдер внизу карточки */
+.meal-rating-card > .mood-slider {
+  width: 100%;
+  margin: 0;
 }
 
 /* Анимации */
@@ -18512,19 +18578,26 @@ input, textarea, select {
 
 .meal-comment-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   margin-bottom: 10px;
+  min-height: 36px;
 }
 
 .meal-comment-icon {
   font-size: 18px;
+  flex-shrink: 0;
 }
 
 .meal-comment-title {
   font-size: 13px;
   font-weight: 600;
   color: #374151;
+  line-height: 1.4;
+  min-height: 36px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .meal-comment-negative .meal-comment-title {

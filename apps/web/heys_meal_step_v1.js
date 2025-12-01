@@ -215,11 +215,15 @@
     const stress = data.stress ?? 5;
     const comment = data.comment ?? '';
     
-    // Состояние анимации эмодзи
+    // Состояние анимации эмодзи и чисел
     const [emojiAnim, setEmojiAnim] = useState({ mood: '', wellbeing: '', stress: '' });
+    const [numAnim, setNumAnim] = useState({ mood: false, wellbeing: false, stress: false });
     
     // Confetti state
     const [showConfetti, setShowConfetti] = useState(false);
+    
+    // Ref для автофокуса на комментарий
+    const commentRef = useRef(null);
     
     // === Динамический комментарий ===
     
@@ -328,8 +332,17 @@
       setEmojiAnim(prev => ({...prev, [field]: animType}));
       setTimeout(() => setEmojiAnim(prev => ({...prev, [field]: ''})), 400);
       
+      // Анимация числа (bounce)
+      setNumAnim(prev => ({...prev, [field]: true}));
+      setTimeout(() => setNumAnim(prev => ({...prev, [field]: false})), 200);
+      
       const newData = {...data, [field]: value};
       onChange(newData);
+      
+      // Автофокус на комментарий при негативных оценках
+      if ((field === 'mood' && value <= 3) || (field === 'stress' && value >= 8)) {
+        setTimeout(() => commentRef.current?.focus(), 300);
+      }
       
       // Проверяем идеальные оценки для confetti
       const isPerfect = (field === 'mood' ? value : mood) >= 8 && 
@@ -356,8 +369,54 @@
     const getMoodText = (v) => v <= 2 ? 'Плохо' : v <= 4 ? 'Так себе' : v <= 6 ? 'Норм' : v <= 8 ? 'Хорошо' : 'Отлично';
     const getWellbeingText = (v) => v <= 2 ? 'Плохо' : v <= 4 ? 'Слабость' : v <= 6 ? 'Норм' : v <= 8 ? 'Хорошо' : 'Отлично';
     const getStressText = (v) => v <= 2 ? 'Спокоен' : v <= 4 ? 'Немного' : v <= 6 ? 'Средне' : v <= 8 ? 'Много' : 'Очень';
+    
+    // Цвет фона карточки по значению (позитивная шкала)
+    const getCardBg = (v) => {
+      if (v <= 2) return 'rgba(239, 68, 68, 0.08)';
+      if (v <= 4) return 'rgba(245, 158, 11, 0.08)';
+      if (v <= 6) return 'rgba(59, 130, 246, 0.06)';
+      if (v <= 8) return 'rgba(34, 197, 94, 0.08)';
+      return 'rgba(16, 185, 129, 0.12)';
+    };
+    // Цвет фона для стресса (инверсная шкала)
+    const getStressCardBg = (v) => {
+      if (v <= 2) return 'rgba(16, 185, 129, 0.12)';
+      if (v <= 4) return 'rgba(34, 197, 94, 0.08)';
+      if (v <= 6) return 'rgba(59, 130, 246, 0.06)';
+      if (v <= 8) return 'rgba(245, 158, 11, 0.08)';
+      return 'rgba(239, 68, 68, 0.08)';
+    };
+    
+    // Общий индикатор состояния
+    const getOverallStatus = () => {
+      const avg = (mood + wellbeing + (11 - stress)) / 3;
+      if (avg >= 8) return { emoji: '🌟', text: 'Отличное состояние!' };
+      if (avg >= 6.5) return { emoji: '😊', text: 'Хорошее состояние' };
+      if (avg >= 5) return { emoji: '😐', text: 'Нормальное состояние' };
+      if (avg >= 3.5) return { emoji: '😕', text: 'Не лучший момент' };
+      return { emoji: '😔', text: 'Тяжёлый момент' };
+    };
+    const overallStatus = getOverallStatus();
+    
+    // Пресеты для быстрого выбора
+    const PRESETS_POSITIVE = [
+      { emoji: '👎', value: 2, label: 'Плохо' },
+      { emoji: '👌', value: 5, label: 'Норм' },
+      { emoji: '👍', value: 8, label: 'Хорошо' }
+    ];
+    const PRESETS_NEGATIVE = [
+      { emoji: '😌', value: 2, label: 'Спокоен' },
+      { emoji: '😐', value: 5, label: 'Средне' },
+      { emoji: '😰', value: 8, label: 'Стресс' }
+    ];
 
     return React.createElement('div', { className: 'meal-mood-step' },
+      // Общий индикатор состояния
+      React.createElement('div', { className: 'meal-overall-status' },
+        React.createElement('span', { className: 'meal-overall-emoji' }, overallStatus.emoji),
+        React.createElement('span', { className: 'meal-overall-text' }, overallStatus.text)
+      ),
+      
       // Confetti
       showConfetti && React.createElement('div', { className: 'confetti-container' },
         ...Array(20).fill(0).map((_, i) => 
@@ -373,107 +432,128 @@
         )
       ),
       
-      // Три карточки оценок
+      // Три карточки оценок — компактный layout
       React.createElement('div', { className: 'meal-ratings-grid' },
         
         // === Настроение ===
-        React.createElement('div', { className: 'meal-rating-card' },
-          // Emoji + Текст
-          React.createElement('div', { className: 'meal-rating-face' },
+        React.createElement('div', { 
+          className: 'meal-rating-card',
+          style: { background: getCardBg(mood) }
+        },
+          React.createElement('div', { className: 'meal-rating-row-main' },
+            // Emoji слева
             React.createElement('span', { 
-              className: `meal-rating-face-emoji ${emojiAnim.mood}`,
+              className: `meal-rating-emoji-lg ${emojiAnim.mood}`,
             }, MOOD_EMOJI[mood] || '😐'),
-            React.createElement('span', { className: 'meal-rating-face-text' }, getMoodText(mood))
-          ),
-          // Число
-          React.createElement('div', { className: 'meal-rating-big-value' },
-            React.createElement('span', { 
-              className: 'meal-rating-number',
-              style: { color: getPositiveColor(mood) }
-            }, mood),
-            React.createElement('span', { className: 'meal-rating-of-ten' }, '/10')
-          ),
-          // Название
-          React.createElement('div', { className: 'meal-rating-label-text' }, '😊 Настроение'),
-          // Слайдер
-          React.createElement('div', { className: 'meal-rating-slider-wrap' },
-            React.createElement('input', {
-              type: 'range',
-              className: 'mood-slider mood-slider-positive',
-              min: 1,
-              max: 10,
-              value: mood,
-              onChange: (e) => handleSliderChange('mood', Number(e.target.value))
-            }),
-            React.createElement('div', { className: 'meal-rating-slider-labels' },
-              React.createElement('span', null, '😢'),
-              React.createElement('span', null, '😊')
+            // Инфо справа
+            React.createElement('div', { className: 'meal-rating-info' },
+              React.createElement('div', { className: 'meal-rating-title' }, 'Настроение'),
+              React.createElement('div', { className: 'meal-rating-value-row' },
+                React.createElement('span', { 
+                  className: `meal-rating-num ${numAnim.mood ? 'num-bounce' : ''}`,
+                  style: { color: getPositiveColor(mood) }
+                }, mood),
+                React.createElement('span', { className: 'meal-rating-max' }, '/10'),
+                React.createElement('span', { className: 'meal-rating-text' }, getMoodText(mood))
+              )
+            ),
+            // Пресеты справа
+            React.createElement('div', { className: 'meal-rating-presets' },
+              PRESETS_POSITIVE.map(p => 
+                React.createElement('button', {
+                  key: p.value,
+                  className: `meal-preset-btn ${mood === p.value ? 'active' : ''}`,
+                  onClick: () => handleSliderChange('mood', p.value),
+                  title: p.label
+                }, p.emoji)
+              )
             )
-          )
+          ),
+          // Слайдер
+          React.createElement('input', {
+            type: 'range',
+            className: 'mood-slider mood-slider-positive',
+            min: 1, max: 10, value: mood,
+            onChange: (e) => handleSliderChange('mood', Number(e.target.value))
+          })
         ),
         
         // === Самочувствие ===
-        React.createElement('div', { className: 'meal-rating-card' },
-          React.createElement('div', { className: 'meal-rating-face' },
+        React.createElement('div', { 
+          className: 'meal-rating-card',
+          style: { background: getCardBg(wellbeing) }
+        },
+          React.createElement('div', { className: 'meal-rating-row-main' },
             React.createElement('span', { 
-              className: `meal-rating-face-emoji ${emojiAnim.wellbeing}`,
+              className: `meal-rating-emoji-lg ${emojiAnim.wellbeing}`,
             }, WELLBEING_EMOJI[wellbeing] || '😐'),
-            React.createElement('span', { className: 'meal-rating-face-text' }, getWellbeingText(wellbeing))
-          ),
-          React.createElement('div', { className: 'meal-rating-big-value' },
-            React.createElement('span', { 
-              className: 'meal-rating-number',
-              style: { color: getPositiveColor(wellbeing) }
-            }, wellbeing),
-            React.createElement('span', { className: 'meal-rating-of-ten' }, '/10')
-          ),
-          React.createElement('div', { className: 'meal-rating-label-text' }, '💪 Самочувствие'),
-          React.createElement('div', { className: 'meal-rating-slider-wrap' },
-            React.createElement('input', {
-              type: 'range',
-              className: 'mood-slider mood-slider-positive',
-              min: 1,
-              max: 10,
-              value: wellbeing,
-              onChange: (e) => handleSliderChange('wellbeing', Number(e.target.value))
-            }),
-            React.createElement('div', { className: 'meal-rating-slider-labels' },
-              React.createElement('span', null, '🤒'),
-              React.createElement('span', null, '💪')
+            React.createElement('div', { className: 'meal-rating-info' },
+              React.createElement('div', { className: 'meal-rating-title' }, 'Самочувствие'),
+              React.createElement('div', { className: 'meal-rating-value-row' },
+                React.createElement('span', { 
+                  className: `meal-rating-num ${numAnim.wellbeing ? 'num-bounce' : ''}`,
+                  style: { color: getPositiveColor(wellbeing) }
+                }, wellbeing),
+                React.createElement('span', { className: 'meal-rating-max' }, '/10'),
+                React.createElement('span', { className: 'meal-rating-text' }, getWellbeingText(wellbeing))
+              )
+            ),
+            React.createElement('div', { className: 'meal-rating-presets' },
+              PRESETS_POSITIVE.map(p => 
+                React.createElement('button', {
+                  key: p.value,
+                  className: `meal-preset-btn ${wellbeing === p.value ? 'active' : ''}`,
+                  onClick: () => handleSliderChange('wellbeing', p.value),
+                  title: p.label
+                }, p.emoji)
+              )
             )
-          )
+          ),
+          React.createElement('input', {
+            type: 'range',
+            className: 'mood-slider mood-slider-positive',
+            min: 1, max: 10, value: wellbeing,
+            onChange: (e) => handleSliderChange('wellbeing', Number(e.target.value))
+          })
         ),
         
         // === Стресс ===
-        React.createElement('div', { className: 'meal-rating-card' },
-          React.createElement('div', { className: 'meal-rating-face' },
+        React.createElement('div', { 
+          className: 'meal-rating-card',
+          style: { background: getStressCardBg(stress) }
+        },
+          React.createElement('div', { className: 'meal-rating-row-main' },
             React.createElement('span', { 
-              className: `meal-rating-face-emoji ${emojiAnim.stress}`,
+              className: `meal-rating-emoji-lg ${emojiAnim.stress}`,
             }, STRESS_EMOJI[stress] || '😐'),
-            React.createElement('span', { className: 'meal-rating-face-text' }, getStressText(stress))
-          ),
-          React.createElement('div', { className: 'meal-rating-big-value' },
-            React.createElement('span', { 
-              className: 'meal-rating-number',
-              style: { color: getNegativeColor(stress) }
-            }, stress),
-            React.createElement('span', { className: 'meal-rating-of-ten' }, '/10')
-          ),
-          React.createElement('div', { className: 'meal-rating-label-text' }, '😰 Стресс'),
-          React.createElement('div', { className: 'meal-rating-slider-wrap' },
-            React.createElement('input', {
-              type: 'range',
-              className: 'mood-slider mood-slider-negative',
-              min: 1,
-              max: 10,
-              value: stress,
-              onChange: (e) => handleSliderChange('stress', Number(e.target.value))
-            }),
-            React.createElement('div', { className: 'meal-rating-slider-labels' },
-              React.createElement('span', null, '😌'),
-              React.createElement('span', null, '😰')
+            React.createElement('div', { className: 'meal-rating-info' },
+              React.createElement('div', { className: 'meal-rating-title' }, 'Стресс'),
+              React.createElement('div', { className: 'meal-rating-value-row' },
+                React.createElement('span', { 
+                  className: `meal-rating-num ${numAnim.stress ? 'num-bounce' : ''}`,
+                  style: { color: getNegativeColor(stress) }
+                }, stress),
+                React.createElement('span', { className: 'meal-rating-max' }, '/10'),
+                React.createElement('span', { className: 'meal-rating-text' }, getStressText(stress))
+              )
+            ),
+            React.createElement('div', { className: 'meal-rating-presets' },
+              PRESETS_NEGATIVE.map(p => 
+                React.createElement('button', {
+                  key: p.value,
+                  className: `meal-preset-btn ${stress === p.value ? 'active' : ''}`,
+                  onClick: () => handleSliderChange('stress', p.value),
+                  title: p.label
+                }, p.emoji)
+              )
             )
-          )
+          ),
+          React.createElement('input', {
+            type: 'range',
+            className: 'mood-slider mood-slider-negative',
+            min: 1, max: 10, value: stress,
+            onChange: (e) => handleSliderChange('stress', Number(e.target.value))
+          })
         )
       ),
       
@@ -501,6 +581,7 @@
         
         // Input
         React.createElement('input', {
+          ref: commentRef,
           type: 'text',
           className: 'meal-comment-input',
           placeholder: getPlaceholder(),

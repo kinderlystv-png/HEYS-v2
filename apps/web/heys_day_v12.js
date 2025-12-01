@@ -85,8 +85,17 @@
   const { selectedDate, setSelectedDate } = props;
   
   // Products приходят из App → DayTabWithCloudSync → DayTab
-  // Используем props.products напрямую (уже синхронизированы wrapper'ом)
-  const products = props.products || [];
+  // FALLBACK: если props.products пустой, берём из HEYS.products.getAll()
+  const propsProducts = props.products || [];
+  const products = useMemo(() => {
+    if (propsProducts.length > 0) return propsProducts;
+    // Fallback: берём из глобального хранилища
+    const fromStore = HEYS.products?.getAll?.() || [];
+    if (fromStore.length > 0) return fromStore;
+    // Последний fallback: из localStorage напрямую
+    const U = HEYS.utils || {};
+    return U.lsGet?.('heys_products', []) || [];
+  }, [propsProducts]);
   
   // Twemoji: reparse emoji after render
   useEffect(() => {
@@ -107,6 +116,11 @@
   window.HEYS.debug = window.HEYS.debug || {};
   window.HEYS.debug.dayProducts = products;
   window.HEYS.debug.dayProductIndex = pIndex;
+  
+  // 🔍 DEBUG: Проверка загрузки products
+  useEffect(() => {
+    console.log('[DayTab] products.length:', products.length, '| pIndex.byId.size:', pIndex?.byId?.size || 0);
+  }, [products.length, pIndex]);
   const prof=getProfile();
   // date приходит из props (selectedDate из App header)
   const date = selectedDate || todayISO();
