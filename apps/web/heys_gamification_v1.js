@@ -624,6 +624,110 @@
     window.dispatchEvent(new CustomEvent('heysCelebrate'));
   }
 
+  // ========== ACHIEVEMENT TOAST ==========
+  function showAchievementToast(ach) {
+    // Удаляем предыдущий toast если есть
+    const existing = document.querySelector('.achievement-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.className = `achievement-toast rarity-${ach.rarity}`;
+    toast.innerHTML = `
+      <div class="toast-icon">${ach.icon}</div>
+      <div class="toast-content">
+        <div class="toast-title">🏆 Достижение!</div>
+        <div class="toast-name">${ach.name}</div>
+        <div class="toast-desc">${ach.desc}</div>
+        <div class="toast-xp">+${ach.xp} XP</div>
+      </div>
+    `;
+    document.body.appendChild(toast);
+
+    // Убираем через 4 секунды
+    setTimeout(() => {
+      toast.classList.add('hiding');
+      setTimeout(() => toast.remove(), 500);
+    }, 4000);
+  }
+
+  // ========== STREAK SHIELD ==========
+  function canUseStreakShield() {
+    const data = loadData();
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return data.streakShieldUsed !== currentMonth;
+  }
+
+  function useStreakShield() {
+    const data = loadData();
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
+    if (data.streakShieldUsed === currentMonth) return false;
+    
+    data.streakShieldUsed = currentMonth;
+    saveData();
+    
+    showNotification('streak_shield', { message: 'Streak спасён! 🛡️' });
+    return true;
+  }
+
+  function getStreakShieldStatus() {
+    const data = loadData();
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return {
+      available: data.streakShieldUsed !== currentMonth,
+      usedThisMonth: data.streakShieldUsed === currentMonth
+    };
+  }
+
+  // ========== XP BREAKDOWN ==========
+  function getXPBreakdown() {
+    const data = loadData();
+    const today = getToday();
+    const todayXP = data.dailyXP[today] || {};
+    
+    const breakdown = [];
+    for (const [reason, count] of Object.entries(todayXP)) {
+      const action = XP_ACTIONS[reason];
+      if (action && count > 0) {
+        breakdown.push({
+          reason,
+          label: action.label,
+          count,
+          xp: count * action.xp
+        });
+      }
+    }
+    
+    return {
+      items: breakdown,
+      total: breakdown.reduce((sum, b) => sum + b.xp, 0)
+    };
+  }
+
+  // ========== LEVEL-UP PREVIEW ==========
+  function getLevelUpPreview() {
+    const data = loadData();
+    const currentTitle = getLevelTitle(data.level);
+    
+    // Найти следующее звание
+    const nextTitleInfo = LEVEL_TITLES.find(t => t.min > data.level);
+    if (!nextTitleInfo) return null;
+    
+    const levelsToNextTitle = nextTitleInfo.min - data.level;
+    const xpToNextTitle = LEVEL_THRESHOLDS[nextTitleInfo.min - 1] - data.totalXP;
+    
+    return {
+      currentTitle: currentTitle.title,
+      nextTitle: nextTitleInfo.title,
+      nextIcon: nextTitleInfo.icon,
+      levelsRemaining: levelsToNextTitle,
+      xpRemaining: Math.max(0, xpToNextTitle)
+    };
+  }
+
   // ========== ДОСТИЖЕНИЯ ==========
 
   function checkAchievements(reason) {
@@ -679,6 +783,66 @@
       newAchievements.push('level_25');
     }
 
+    // === НОВЫЕ ТРИГГЕРЫ ===
+    
+    // Perfect day (проверяется извне через checkDayCompleted)
+    if (reason === 'perfect_day' && !data.unlockedAchievements.includes('perfect_day')) {
+      newAchievements.push('perfect_day');
+    }
+
+    // Water day — проверка 100% воды
+    if (reason === 'water_added' && !data.unlockedAchievements.includes('water_day')) {
+      // Проверяем waterPct из DayTab если доступно
+      if (HEYS.Day && HEYS.Day.getWaterPercent && HEYS.Day.getWaterPercent() >= 100) {
+        newAchievements.push('water_day');
+      }
+    }
+
+    // Balanced macros — все макросы 90-110%
+    if (reason === 'product_added' && !data.unlockedAchievements.includes('balanced_macros')) {
+      if (HEYS.Day && HEYS.Day.getMacroBalance) {
+        const balance = HEYS.Day.getMacroBalance();
+        if (balance && balance.protein >= 0.9 && balance.protein <= 1.1 &&
+            balance.carbs >= 0.9 && balance.carbs <= 1.1 &&
+            balance.fat >= 0.9 && balance.fat <= 1.1) {
+          newAchievements.push('balanced_macros');
+        }
+      }
+    }
+
+    // Early bird — завтрак до 9:00
+    if (reason === 'product_added' && !data.unlockedAchievements.includes('early_bird')) {
+      const hour = new Date().getHours();
+      if (hour < 9) {
+        // Трекаем early bird дни
+        if (!data.earlyBirdDays) data.earlyBirdDays = [];
+        const today = getToday();
+        if (!data.earlyBirdDays.includes(today)) {
+          data.earlyBirdDays.push(today);
+          // Оставляем только последние 7 дней
+          data.earlyBirdDays = data.earlyBirdDays.slice(-7);
+          saveData();
+        }
+        if (data.earlyBirdDays.length >= 7) {
+          newAchievements.push('early_bird');
+        }
+      }
+    }
+
+    // Training week — 5 тренировок за неделю
+    if (reason === 'training_added' && !data.unlockedAchievements.includes('training_week')) {
+      if (!data.weeklyTrainings) data.weeklyTrainings = { week: null, count: 0 };
+      const currentWeek = getWeekStart();
+      if (data.weeklyTrainings.week !== currentWeek) {
+        data.weeklyTrainings = { week: currentWeek, count: 0 };
+      }
+      data.weeklyTrainings.count++;
+      saveData();
+      if (data.weeklyTrainings.count >= 5) {
+        newAchievements.push('training_week');
+      }
+    }
+
     // Unlock new achievements
     for (const achId of newAchievements) {
       unlockAchievement(achId);
@@ -699,7 +863,10 @@
     data.level = calculateLevel(data.totalXP);
     saveData();
 
-    // Показываем уведомление
+    // Achievement Toast (красивый большой toast)
+    showAchievementToast(ach);
+
+    // Также показываем notification (для истории)
     showNotification('achievement', {
       achievement: ach,
       totalXP: data.totalXP,
@@ -854,7 +1021,18 @@
     playXPSound,
     
     // XP History (7 days)
-    getXPHistory
+    getXPHistory,
+    
+    // Streak Shield
+    canUseStreakShield,
+    useStreakShield,
+    getStreakShieldStatus,
+    
+    // XP Breakdown
+    getXPBreakdown,
+    
+    // Level-up Preview
+    getLevelUpPreview
   };
 
   // ========== INTERNAL ==========

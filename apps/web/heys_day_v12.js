@@ -78,6 +78,7 @@
   const M = HEYS.models || {};
 
   HEYS.DayTab=function DayTab(props){
+  
   const {useState,useMemo,useEffect,useRef}=React;
   
   // Дата приходит из шапки App (DatePicker в header)
@@ -206,7 +207,7 @@
   // Ref для отслеживания предыдущей даты (нужен для flush перед сменой)
   const prevDateRef = React.useRef(date);
   
-  const [day,setDay]=useState(()=>{ 
+  const [dayRaw,setDayRaw]=useState(()=>{ 
     const key = 'heys_dayv2_'+date;
     const v=lsGet(key,null); 
     
@@ -240,6 +241,9 @@
       }, prof);
     }
   });
+  
+  const setDay = setDayRaw;
+  const day = dayRaw;
 
   // Функция очистки пустых тренировок (используется при загрузке дня)
   const cleanEmptyTrainings = (trainings) => {
@@ -426,15 +430,39 @@
 
     // Компонент для поиска и добавления продукта в конкретный приём
     function MealAddProduct({mi}){
+      
       const [search, setSearch] = React.useState('');
       const [open, setOpen] = React.useState(false);
       const [selectedIndex, setSelectedIndex] = React.useState(-1);
       const [dropdownPos, setDropdownPos] = React.useState({top:0, left:0, width:0});
       const inputRef = React.useRef(null);
       
-      // 🆕 State для модалки ввода граммов (mobile only)
-      const [gramsModalProduct, setGramsModalProduct] = React.useState(null);
-      const [gramsValue, setGramsValue] = React.useState(100);
+      // 🔧 FIX: Using lifted state from DayTab (gramsModal) instead of local state
+      // This prevents modal from closing when day.meals changes trigger DayTab re-render
+      const gramsModalProduct = gramsModal?.mealIndex === mi ? gramsModal?.product : null;
+      const gramsValue = gramsModal?.gramsValue ?? 100;
+      
+      // 🔧 FIX: No dependencies on gramsModal to avoid re-creating callbacks
+      const setGramsValue = React.useCallback((val) => {
+        setGramsModal(prev => {
+          if (!prev) return null;
+          const newVal = typeof val === 'function' ? val(prev.gramsValue ?? 100) : val;
+          return { ...prev, gramsValue: newVal };
+        });
+      }, []); // No deps - using functional setState
+      
+      const setGramsModalProduct = React.useCallback((product) => {
+        if (product) {
+          // Use functional setState to get current gramsValue
+          setGramsModal(prev => ({ 
+            product, 
+            mealIndex: mi, 
+            gramsValue: prev?.gramsValue ?? 100 
+          }));
+        } else {
+          setGramsModal(null);
+        }
+      }, [mi]); // Only mi as dependency
       const gramsInputRef = React.useRef(null);
       
       // 🆕 Swipe-to-close для grams modal
@@ -632,8 +660,7 @@
         const newItem = {id:uid('it_'), product_id:product.id??product.product_id, name:product.name, grams: grams || 100};
         const meals = day.meals.map((m,i)=> i===mi? {...m, items:[...(m.items||[]), newItem]}:m);
         setDay({...day, meals});
-        setGramsModalProduct(null);
-        setGramsValue(100);
+        setGramsModal(null); // 🔧 FIX: Using lifted state
         setKcalInputMode(false);
         setTargetKcalValue('');
         
@@ -671,8 +698,8 @@
             initialGrams = portions[0]?.grams || 100;
           }
           
-          setGramsValue(initialGrams);
-          setGramsModalProduct(product);
+          // 🔧 FIX: Set both product and gramsValue together to avoid state issues
+          setGramsModal({ product, mealIndex: mi, gramsValue: initialGrams });
           setSearch('');
           setOpen(false);
           setSelectedIndex(-1);
@@ -686,12 +713,11 @@
         } else {
           addProductAndFocusGrams(product);
         }
-      }, [isMobile, addProductAndFocusGrams]);
+      }, [isMobile, addProductAndFocusGrams, mi]);
       
       // 🆕 Закрыть модалку граммов
       const cancelGramsModal = React.useCallback(() => {
-        setGramsModalProduct(null);
-        setGramsValue(100);
+        setGramsModal(null);
         setKcalInputMode(false);
         setTargetKcalValue('');
       }, []);
@@ -1269,6 +1295,15 @@
     const [pendingTrainingFeelAfter, setPendingTrainingFeelAfter] = useState(0); // 0-10
     const [pendingTrainingComment, setPendingTrainingComment] = useState('');
     
+    // === Grams Modal State (lifted from MealAddProduct to survive re-renders) ===
+    // 🔧 FIX: MealAddProduct is defined inside DayTab, so its state resets on every DayTab re-render.
+    // Moving gramsModal state to DayTab level preserves it when meals array changes.
+    const [gramsModalRaw, setGramsModalRaw] = useState(null); // { product, mealIndex, gramsValue }
+    
+    // Direct reference - no wrapper for performance
+    const setGramsModal = setGramsModalRaw;
+    const gramsModal = gramsModalRaw;
+    
     // === Тренировки: количество видимых блоков ===
     const [visibleTrainings, setVisibleTrainings] = useState(() => {
       // Автоопределяем сколько тренировок показывать на основе данных
@@ -1774,6 +1809,13 @@
       setPendingWeightKg(Math.max(0, Math.min(110, kg - 40))); // индекс от 0 (40кг) до 110 (150кг)
       setPendingWeightG(g);
       // Конвертируем savedStepsGoal в индекс колеса (1000=0, 2000=1, ..., 7000=6)
+      setPendingStepsGoalIdx(Math.max(0, Math.min(29, Math.round(savedStepsGoal / 1000) - 1)));
+      setShowWeightPicker(true);
+    }
+    
+    // Открыть пикер напрямую на шаге "Цель шагов" (без веса)
+    function openStepsGoalPicker() {
+      setWeightPickerStep(2); // сразу шаг 2
       setPendingStepsGoalIdx(Math.max(0, Math.min(29, Math.round(savedStepsGoal / 1000) - 1)));
       setShowWeightPicker(true);
     }
@@ -3993,6 +4035,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     
     // Статус ratio для badge
     function getRatioStatus() {
+      // Если ещё ничего не съедено — приветствие, а не ошибка
+      if (eatenKcal === 0) {
+        return { emoji: '👋', text: 'Хорошего дня!', color: '#64748b' };
+      }
+      
       const rz = window.HEYS && window.HEYS.ratioZones;
       const zoneId = rz ? rz.getStatus(currentRatio) : 
         (currentRatio < 0.5 ? 'crash' : currentRatio < 0.75 ? 'low' : currentRatio < 0.9 ? 'good' : currentRatio < 1.1 ? 'perfect' : currentRatio < 1.3 ? 'over' : 'binge');
@@ -8356,30 +8403,45 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       React.createElement('div', { className: 'steps-slider-container no-swipe-zone' },
         React.createElement('div', { className: 'steps-slider-header' },
           React.createElement('span', { className: 'steps-label' }, '👟 Шаги'),
-          React.createElement('span', { 
-            className: 'steps-value',
-            onClick: (e) => {
-              e.stopPropagation();
-              const rect = e.currentTarget.getBoundingClientRect();
-              setMetricPopup({
-                type: 'steps',
-                x: rect.left + rect.width / 2,
-                y: rect.top,
-                data: {
-                  value: stepsValue,
-                  goal: stepsGoal,
-                  ratio: stepsValue / stepsGoal,
-                  kcal: stepsK,
-                  color: stepsColor
-                }
-              });
-              haptic('light');
+          React.createElement('span', { className: 'steps-value' }, 
+            // Фактические шаги — кликабельные с подсказкой
+            React.createElement('span', {
+              onClick: (e) => {
+                e.stopPropagation();
+                const rect = e.currentTarget.getBoundingClientRect();
+                setMetricPopup({
+                  type: 'steps',
+                  x: rect.left + rect.width / 2,
+                  y: rect.top,
+                  data: {
+                    value: stepsValue,
+                    goal: stepsGoal,
+                    ratio: stepsValue / stepsGoal,
+                    kcal: stepsK,
+                    color: stepsColor
+                  }
+                });
+                haptic('light');
+              },
+              style: { cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px' },
+              title: 'Нажмите для подробностей'
             },
-            style: { cursor: 'pointer' }
-          }, 
-            React.createElement('b', null, stepsValue.toLocaleString()),
+              React.createElement('b', { style: { color: stepsColor } }, stepsValue.toLocaleString())
+            ),
             ' / ',
-            React.createElement('b', { className: 'steps-goal' }, stepsGoal.toLocaleString()),
+            // Цель шагов — с кнопкой редактирования
+            React.createElement('span', {
+              onClick: (e) => {
+                e.stopPropagation();
+                openStepsGoalPicker();
+                haptic('light');
+              },
+              style: { cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' },
+              title: 'Изменить цель'
+            },
+              React.createElement('b', { className: 'steps-goal' }, stepsGoal.toLocaleString()),
+              React.createElement('span', { style: { fontSize: '12px', opacity: 0.7 } }, '✏️')
+            ),
             React.createElement('span', { className: 'steps-kcal-hint' }, ' / ' + stepsK + ' ккал')
           )
         ),
