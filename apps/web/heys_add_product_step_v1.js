@@ -271,12 +271,50 @@
       haptic('medium');
       // Сохраняем поисковый запрос в data для предзаполнения названия
       onChange({ ...data, searchQuery: search });
-      // Переходим на шаг создания нового продукта (шаг 2 — create)
+      // Переходим на шаг создания нового продукта (шаг 1 — create)
       if (goToStep) {
-        goToStep(2, 'left');
+        goToStep(1, 'left');
       }
     }, [goToStep, search, data, onChange]);
     
+    // Удаление продукта из базы
+    const handleDeleteProduct = useCallback((e, product) => {
+      e.stopPropagation();
+      
+      const name = product.name || 'продукт';
+      if (!confirm(`Удалить "${name}" из базы?`)) return;
+      
+      haptic('medium');
+      
+      const U = HEYS.utils || {};
+      const allProducts = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
+      const pid = String(product.id ?? product.product_id ?? product.name);
+      
+      // Фильтруем — убираем этот продукт
+      const filtered = allProducts.filter(p => {
+        const id = String(p.id ?? p.product_id ?? p.name);
+        return id !== pid;
+      });
+      
+      // Сохраняем
+      if (HEYS.products?.setAll) {
+        HEYS.products.setAll(filtered);
+      } else if (U.lsSet) {
+        U.lsSet('heys_products', filtered);
+      }
+      
+      // Обновляем context.products
+      if (context?.onProductCreated) {
+        // Костыль: триггерим обновление
+      }
+      
+      console.log('[AddProductStep] Продукт удалён:', name);
+      
+      // Перезапускаем поиск чтобы обновить список
+      setSearch(s => s + ' ');
+      setTimeout(() => setSearch(s => s.trim()), 10);
+    }, [context]);
+
     // Рендер карточки продукта
     const renderProductCard = (product, showFavorite = true) => {
       const pid = String(product.id ?? product.product_id ?? product.name);
@@ -307,11 +345,21 @@
           )
         ),
         
-        // Кнопка избранного
-        showFavorite && React.createElement('button', {
-          className: 'aps-fav-btn' + (isFav ? ' active' : ''),
-          onClick: (e) => toggleFavorite(e, pid)
-        }, isFav ? '★' : '☆')
+        // Кнопки действий
+        React.createElement('div', { className: 'aps-product-actions' },
+          // Кнопка удаления (маленькая)
+          React.createElement('button', {
+            className: 'aps-delete-btn',
+            onClick: (e) => handleDeleteProduct(e, product),
+            title: 'Удалить из базы'
+          }, '🗑'),
+          
+          // Кнопка избранного
+          showFavorite && React.createElement('button', {
+            className: 'aps-fav-btn' + (isFav ? ' active' : ''),
+            onClick: (e) => toggleFavorite(e, pid)
+          }, isFav ? '★' : '☆')
+        )
       );
     };
     
@@ -516,12 +564,13 @@
       if (parsed) {
         setParsedPreview(parsed);
         setError('');
-        onChange({ ...data, newProduct: parsed });
+        // Сохраняем в data (без зависимости от data чтобы избежать цикла)
+        onChange(prev => ({ ...prev, newProduct: parsed }));
       } else {
         setParsedPreview(null);
         setError('Не удалось распознать данные. Формат: Название + 12 чисел.');
       }
-    }, [pasteText, parseProductLine, data, onChange]);
+    }, [pasteText, parseProductLine, onChange]);
     
     // Добавить продукт в базу и выбрать его
     const handleCreate = useCallback(() => {
@@ -529,17 +578,26 @@
       
       haptic('medium');
       
-      // 1. Добавляем в базу продуктов
-      const products = HEYS.products?.getAll?.() || [];
+      // 1. Добавляем в базу продуктов (localStorage)
+      const U = HEYS.utils || {};
+      const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
       const newProducts = [...products, parsedPreview];
-      HEYS.products?.setAll?.(newProducts);
+      
+      // Сохраняем через HEYS.products или напрямую
+      if (HEYS.products?.setAll) {
+        HEYS.products.setAll(newProducts);
+      } else if (U.lsSet) {
+        U.lsSet('heys_products', newProducts);
+      }
+      
+      console.log('[CreateProductStep] Продукт сохранён:', parsedPreview.name, 'Всего продуктов:', newProducts.length);
       
       // 2. Вызываем callback если есть (для обновления списка в родителе)
       if (context?.onProductCreated) {
         context.onProductCreated(parsedPreview);
       }
       
-      // 3. Сохраняем продукт в данные шага для передачи на шаг граммов
+      // 3. Обновляем данные текущего шага
       onChange({ 
         ...data, 
         newProduct: parsedPreview,
@@ -547,11 +605,19 @@
         grams: 100
       });
       
-      // 4. Переходим на шаг граммов
-      if (goToStep) {
-        setTimeout(() => goToStep(1, 'left'), 100);
+      // 4. ТАКЖЕ обновляем данные шага grams напрямую (чтобы GramsStep сразу видел продукт)
+      if (updateStepData) {
+        updateStepData('grams', { 
+          selectedProduct: parsedPreview, 
+          grams: 100 
+        });
       }
-    }, [parsedPreview, data, onChange, context, goToStep]);
+      
+      // 5. Переходим на шаг граммов (index 2)
+      if (goToStep) {
+        setTimeout(() => goToStep(2, 'left'), 50);
+      }
+    }, [parsedPreview, data, onChange, context, goToStep, updateStepData]);
     
     return React.createElement('div', { className: 'aps-create-step' },
       // Заголовок
@@ -695,8 +761,8 @@
 
   // === Компонент выбора граммов (Шаг 2) ===
   function GramsStep({ data, onChange, context, stepData }) {
-    // Продукт берём из данных первого шага (search) или из create
-    const product = stepData?.create?.selectedProduct || stepData?.search?.selectedProduct || data.selectedProduct;
+    // Продукт берём: 1) из своих данных, 2) из create, 3) из search
+    const product = data.selectedProduct || stepData?.create?.selectedProduct || stepData?.search?.selectedProduct;
     const lastGrams = stepData?.search?.lastGrams || stepData?.create?.lastGrams; // Последние использованные
     const grams = data.grams || stepData?.search?.grams || stepData?.create?.grams || 100;
     
@@ -934,12 +1000,18 @@
   function showAddProductModal(options = {}) {
     const { 
       mealIndex = 0, 
-      products = [],
+      products: providedProducts,
       dateKey = new Date().toISOString().slice(0, 10),
       onAdd,
       onNewProduct,
       onClose 
     } = options;
+    
+    // Получаем продукты: переданные (если не пустые) или из глобального хранилища
+    const U = HEYS.utils || {};
+    const products = (providedProducts && providedProducts.length > 0) 
+      ? providedProducts 
+      : (HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || []);
     
     // Mutable ref для обновления продуктов после создания
     let currentProducts = [...products];
@@ -961,14 +1033,6 @@
           validate: (data) => !!data?.selectedProduct
         },
         {
-          id: 'grams',
-          title: 'Порция',
-          hint: 'Укажите количество',
-          icon: '⚖️',
-          component: GramsStep,
-          validate: (data, stepData) => (data?.grams || stepData?.search?.grams || 0) > 0
-        },
-        {
           id: 'create',
           title: 'Новый продукт',
           hint: 'Создайте продукт из данных',
@@ -976,6 +1040,14 @@
           component: CreateProductStep,
           getInitialData: () => ({ newProduct: null }),
           validate: (data) => !!data?.newProduct
+        },
+        {
+          id: 'grams',
+          title: 'Порция',
+          hint: 'Укажите количество',
+          icon: '⚖️',
+          component: GramsStep,
+          validate: (data, stepData) => (data?.grams || stepData?.search?.grams || 0) > 0
         }
       ],
       context: { 
@@ -996,14 +1068,18 @@
       allowSwipe: true,
       title: 'Добавить продукт',
       onComplete: (stepData) => {
+        console.log('[AddProductStep] onComplete stepData:', stepData);
+        
         // Проверяем, был ли создан новый продукт
         const createData = stepData.create || {};
         const searchData = stepData.search || {};
         const gramsData = stepData.grams || {};
         
-        // Приоритет: новый продукт из create, затем выбранный из search
-        const selectedProduct = createData.selectedProduct || searchData.selectedProduct;
+        // Приоритет: продукт из grams (туда кладём при создании), затем create, затем search
+        const selectedProduct = gramsData.selectedProduct || createData.selectedProduct || searchData.selectedProduct;
         const grams = gramsData.grams || createData.grams || searchData.grams || 100;
+        
+        console.log('[AddProductStep] selectedProduct:', selectedProduct?.name, 'grams:', grams);
         
         if (selectedProduct && grams) {
           onAdd?.({

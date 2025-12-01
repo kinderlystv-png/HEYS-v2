@@ -18324,22 +18324,22 @@ input, textarea, select {
   position: relative;
 }
 
-/* Grid из трёх карточек */
+/* Grid из трёх карточек — компактный */
 .meal-ratings-grid {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
 }
 
-/* Карточка оценки */
+/* Карточка оценки — компактная */
 .meal-rating-card {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 12px 16px;
+  border-radius: 12px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 [data-theme="dark"] .meal-rating-card {
@@ -18347,15 +18347,15 @@ input, textarea, select {
   border-color: #334155;
 }
 
-/* Лицо с emoji и текстом */
+/* Лицо с emoji и текстом — компактное */
 .meal-rating-face {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .meal-rating-face-emoji {
-  font-size: 32px;
+  font-size: 22px;
   line-height: 1;
   animation: mood-face-appear 0.3s ease-out;
 }
@@ -18369,7 +18369,7 @@ input, textarea, select {
 }
 
 .meal-rating-face-text {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   color: #6b7280;
   flex: 1;
@@ -18379,52 +18379,52 @@ input, textarea, select {
   color: #9ca3af;
 }
 
-/* Большое число */
+/* Большое число — компактное */
 .meal-rating-big-value {
   display: flex;
   align-items: baseline;
   gap: 2px;
-  margin-left: 42px;
+  margin-left: 30px;
 }
 
 .meal-rating-number {
-  font-size: 36px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1;
   transition: color 0.2s ease;
 }
 
 .meal-rating-of-ten {
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 500;
   color: #9ca3af;
 }
 
-/* Название параметра */
+/* Название параметра — компактное */
 .meal-rating-label-text {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   color: #9ca3af;
-  margin-left: 42px;
+  margin-left: 30px;
+  margin-top: 0;
+}
+
+/* Слайдер — компактный */
+.meal-rating-slider-wrap {
   margin-top: 2px;
 }
 
-/* Слайдер */
-.meal-rating-slider-wrap {
-  margin-top: 6px;
-}
-
 .meal-rating-slider-wrap .mood-slider {
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .meal-rating-slider-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 14px;
-  padding: 0 4px;
+  font-size: 12px;
+  padding: 0 2px;
   opacity: 0.6;
 }
 
@@ -18547,12 +18547,26 @@ input, textarea, select {
   color: #86efac;
 }
 
-/* Quick chips */
+/* Quick chips — одна строка, скролл, фиксированная высота */
 .meal-comment-chips {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  min-height: 28px;
+}
+
+.meal-comment-chips::-webkit-scrollbar {
+  display: none;
+}
+
+/* Пустые chips — резервируем место */
+.meal-comment-chips:empty {
+  min-height: 28px;
 }
 
 .meal-comment-chip {
@@ -18877,6 +18891,38 @@ input, textarea, select {
 
 .aps-product-meta-sep {
   opacity: 0.5;
+}
+
+/* Контейнер кнопок действий */
+.aps-product-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* Кнопка удаления — маленькая */
+.aps-delete-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: 6px;
+  opacity: 0.4;
+}
+
+.aps-delete-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  opacity: 1;
+}
+
+.aps-delete-btn:active {
+  transform: scale(0.9);
 }
 
 .aps-fav-btn {

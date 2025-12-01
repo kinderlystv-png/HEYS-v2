@@ -488,8 +488,8 @@
           React.createElement('span', { className: 'meal-comment-title' }, getJournalText())
         ),
         
-        // Quick chips
-        chips.length > 0 && React.createElement('div', { className: 'meal-comment-chips' },
+        // Quick chips — всегда рендерим контейнер для стабильной высоты
+        React.createElement('div', { className: 'meal-comment-chips' },
           chips.map(chip => 
             React.createElement('button', {
               key: chip,
