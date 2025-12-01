@@ -725,6 +725,9 @@
     user = null;
     status = 'offline';
     clearNamespace();
+    // 🔄 Сброс флага sync — при следующем входе нужна новая синхронизация
+    initialSyncCompleted = false;
+    startFailsafeTimer(); // Перезапустить failsafe для нового входа
     logCritical('🚪 Выход из системы');
   };
 
@@ -1094,9 +1097,9 @@
           const summary = Object.entries(types).map(([k,v]) => `${k}:${v}`).join(' ');
           logCritical('☁️ Сохранено в облако:', summary);
           
-          // Уведомляем о завершении синхронизации
+          // Уведомляем о завершении UPLOAD (НЕ heysSyncCompleted — то для initial download!)
           if (typeof window !== 'undefined' && window.dispatchEvent) {
-            window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { saved: uniqueBatch.length } }));
+            window.dispatchEvent(new CustomEvent('heys:data-uploaded', { detail: { saved: uniqueBatch.length } }));
           }
         }
         
