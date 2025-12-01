@@ -761,7 +761,8 @@
     }catch(e){ err('bootstrap exception', e); muteMirror=false; }
   };
 
-  cloud.bootstrapClientSync = async function(client_id){
+  // options.force = true — bypass throttling (для pull-to-refresh)
+  cloud.bootstrapClientSync = async function(client_id, options){
     if (!client || !user || !client_id) return;
     
     // 🔄 Отменяем длинный failsafe — sync начался, запускаем короткий (20 сек на сам sync)
@@ -795,7 +796,8 @@
     // Throttling 5 секунд — баланс между нагрузкой и актуальностью данных
     // Раньше было 30 сек, но это слишком долго для multi-device sync
     const SYNC_THROTTLE_MS = 5000;
-    if (cloud._lastClientSync && cloud._lastClientSync.clientId === client_id && (now - cloud._lastClientSync.ts) < SYNC_THROTTLE_MS){
+    const forceSync = options && options.force;
+    if (!forceSync && cloud._lastClientSync && cloud._lastClientSync.clientId === client_id && (now - cloud._lastClientSync.ts) < SYNC_THROTTLE_MS){
       // Тихий пропуск throttled запросов
       log('sync throttled, last sync:', Math.round((now - cloud._lastClientSync.ts)/1000), 'sec ago');
       return;

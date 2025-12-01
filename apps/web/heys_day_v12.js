@@ -3848,28 +3848,39 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const U = window.HEYS && window.HEYS.utils;
       const clientId = U && U.getCurrentClientId ? U.getCurrentClientId() : '';
       
+      // Timeout 15 секунд — если sync зависнет, индикатор не будет крутиться вечно
+      const REFRESH_TIMEOUT = 15000;
+      let timeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('Refresh timeout')), REFRESH_TIMEOUT);
+      });
+      
       try {
-        // Реальная синхронизация с Supabase
-        if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
-          await cloud.bootstrapClientSync(clientId);
-        }
+        // Реальная синхронизация с Supabase (с force=true для bypass throttling)
+        const syncPromise = (async () => {
+          if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
+            await cloud.bootstrapClientSync(clientId, { force: true });
+          }
+        })();
+        
+        await Promise.race([syncPromise, timeoutPromise]);
+        clearTimeout(timeoutId);
         
         // Минимальная задержка для плавного UX
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 300));
         
         setRefreshStatus('success');
         triggerHaptic(20);
         
-        // Показываем успех 800ms, затем сброс
-        await new Promise(r => setTimeout(r, 800));
-        
-        // Перезагрузка данных без полного reload
-        window.dispatchEvent(new CustomEvent('heys:refresh'));
+        // Показываем успех 600ms, затем сброс
+        await new Promise(r => setTimeout(r, 600));
         
       } catch (err) {
+        clearTimeout(timeoutId);
         setRefreshStatus('error');
-        // Тихий fallback — pull-refresh некритичен
-        await new Promise(r => setTimeout(r, 1000));
+        console.warn('[PullRefresh] Sync failed:', err.message);
+        // Короткий показ ошибки
+        await new Promise(r => setTimeout(r, 800));
       } finally {
         setIsRefreshing(false);
         setRefreshStatus('idle');
