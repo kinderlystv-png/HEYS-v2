@@ -371,17 +371,27 @@
     React.useEffect(() => {
       const handleDayUpdated = (e) => {
         const updatedDate = e.detail?.date;
-        if (updatedDate === date) {
+        // Если date не указан или совпадает с текущим — перезагружаем
+        if (!updatedDate || updatedDate === date) {
           const profNow = getProfile();
           const key = 'heys_dayv2_' + date;
           const v = lsGet(key, null);
           if (v && v.date) {
+            console.log('[HEYS] 📅 Reloading day after sync/update | meals:', v.meals?.length, '| steps:', v.steps);
             setDay(ensureDay({ ...v, trainings: cleanEmptyTrainings(v.trainings) }, profNow));
           }
         }
       };
+      
+      // Слушаем явное событие обновления дня
       window.addEventListener('heys:day-updated', handleDayUpdated);
-      return () => window.removeEventListener('heys:day-updated', handleDayUpdated);
+      // Слушаем завершение sync (pull-to-refresh) — перезагружаем данные
+      window.addEventListener('heysSyncCompleted', handleDayUpdated);
+      
+      return () => {
+        window.removeEventListener('heys:day-updated', handleDayUpdated);
+        window.removeEventListener('heysSyncCompleted', handleDayUpdated);
+      };
     }, [date]);
 
     const z= (lsGet('heys_hr_zones',[]).map(x=>+x.MET||0)); const mets=[2.5,6,8,10].map((_,i)=>z[i]||[2.5,6,8,10][i]);
