@@ -2457,7 +2457,8 @@
    */
   function getTotalDaysTracked() {
     try {
-      const clientId = localStorage.getItem('heys_client_current') || '';
+      const U = HEYS.utils || {};
+      const clientId = U.getCurrentClientId ? U.getCurrentClientId() : '';
       let count = 0;
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);

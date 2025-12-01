@@ -20,7 +20,7 @@
     const U = HEYS.utils || {};
     
     // Если клиент не выбран — НЕ показываем чек-ин (чтобы не показывать до авторизации)
-    const currentClientId = localStorage.getItem('heys_client_current');
+    const currentClientId = U.getCurrentClientId ? U.getCurrentClientId() : '';
     if (!currentClientId) {
       return false;
     }

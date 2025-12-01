@@ -578,14 +578,9 @@
    */
   function getDayData(dateStr, productsMap, profile) {
     try {
-      // Пробуем несколько источников clientId
-      let clientId = '';
-      if (window.HEYS && window.HEYS.currentClientId) {
-        clientId = window.HEYS.currentClientId;
-      } else {
-        // Fallback: читаем из localStorage
-        clientId = localStorage.getItem('heys_client_current') || '';
-      }
+      // Пробуем несколько источников clientId (через утилиту для корректного JSON.parse)
+      const U = window.HEYS && window.HEYS.utils;
+      const clientId = U && U.getCurrentClientId ? U.getCurrentClientId() : '';
       
       const scopedKey = clientId 
         ? 'heys_' + clientId + '_dayv2_' + dateStr 

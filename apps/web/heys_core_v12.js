@@ -44,6 +44,30 @@
   };
   
   /**
+   * Получение текущего clientId из localStorage или глобального объекта
+   * Корректно обрабатывает JSON-сериализованное значение
+   * @returns {string} clientId или пустая строка
+   */
+  function getCurrentClientId() {
+    // 1) Сначала из глобала (быстрее)
+    if (global.HEYS && HEYS.currentClientId) {
+      return HEYS.currentClientId;
+    }
+    // 2) Из localStorage с JSON.parse
+    try {
+      const raw = localStorage.getItem('heys_client_current');
+      if (!raw) return '';
+      // Пробуем распарсить JSON
+      const parsed = JSON.parse(raw);
+      return typeof parsed === 'string' ? parsed : '';
+    } catch(e) {
+      // Если не JSON — возвращаем как есть (legacy)
+      const raw = localStorage.getItem('heys_client_current');
+      return raw || '';
+    }
+  }
+  
+  /**
    * Вычисление производных значений продукта (углеводы, жиры, ккал)
    * @param {Object} p - Объект продукта с полями *100 (на 100г)
    * @returns {{carbs100: number, fat100: number, kcal100: number}}
@@ -774,7 +798,7 @@
     }
   };
 
-  HEYS.utils = { INVIS, NUM_RE, round1, uuid, toNum, toNumInput, computeDerived, lsGet, lsSet, parsePasted, validateInput, getEmojiStyle, setEmojiStyle };
+  HEYS.utils = { INVIS, NUM_RE, round1, uuid, toNum, toNumInput, computeDerived, lsGet, lsSet, parsePasted, validateInput, getEmojiStyle, setEmojiStyle, getCurrentClientId };
   HEYS.validateInput = validateInput; // Прямой доступ для тестов
   HEYS.core = { validateInput }; // Создаем объект core с валидацией
   

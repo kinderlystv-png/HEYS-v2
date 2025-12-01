@@ -831,7 +831,8 @@
         if (pendingChanges) {
           setSyncMessage('syncing');
           const cloud = window.HEYS && window.HEYS.cloud;
-          const clientId = localStorage.getItem('heys_client_current');
+          const U = window.HEYS && window.HEYS.utils;
+          const clientId = U && U.getCurrentClientId ? U.getCurrentClientId() : '';
           try {
             if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
               await cloud.bootstrapClientSync(clientId);
@@ -3836,7 +3837,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       triggerHaptic(15);
       
       const cloud = window.HEYS && window.HEYS.cloud;
-      const clientId = localStorage.getItem('heys_client_current');
+      const U = window.HEYS && window.HEYS.utils;
+      const clientId = U && U.getCurrentClientId ? U.getCurrentClientId() : '';
       
       try {
         // Реальная синхронизация с Supabase

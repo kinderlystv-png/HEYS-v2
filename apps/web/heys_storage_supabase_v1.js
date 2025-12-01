@@ -53,6 +53,15 @@
   // 🚨 Флаг блокировки сохранения до завершения первого sync
   let initialSyncCompleted = false;
   cloud.isInitialSyncCompleted = function() { return initialSyncCompleted; };
+  
+  // 🔄 FAILSAFE: Если sync не завершился за 15 секунд — разрешаем сохранения
+  // Это предотвращает блокировку изменений при проблемах с сетью
+  setTimeout(() => {
+    if (!initialSyncCompleted) {
+      logCritical('⚠️ [FAILSAFE] Initial sync timeout (15s) — enabling saves');
+      initialSyncCompleted = true;
+    }
+  }, 15000);
 
   // ═══════════════════════════════════════════════════════════════════
   // 📦 ПЕРСИСТЕНТНАЯ ОЧЕРЕДЬ СИНХРОНИЗАЦИИ
@@ -728,15 +737,28 @@
             log(`  📝 [MIGRATION] Mapped '${row.k}' → '${key}'`);
           }
           
-          // Конфликт: если в локальном есть ревизия, сравнить и взять более свежую
+          // Конфликт: сравнить версии и взять более свежую
           let local = null;
           try { local = JSON.parse(ls.getItem(key)); } catch(e){}
-          let remoteRev = row.v && row.v.revision ? row.v.revision : 0;
-          let localRev = local && local.revision ? local.revision : 0;
-          if (localRev > remoteRev) {
-            // локальная версия новее — не затираем
-            log('conflict: keep local', key);
-            return;
+          
+          // Для данных дня используем updatedAt (timestamp), для остального - revision
+          if (key.includes('dayv2_')) {
+            // День: сравниваем по updatedAt
+            const remoteUpdatedAt = row.v?.updatedAt || 0;
+            const localUpdatedAt = local?.updatedAt || 0;
+            if (localUpdatedAt > remoteUpdatedAt) {
+              log('conflict: keep local (by updatedAt)', key, localUpdatedAt, '>', remoteUpdatedAt);
+              return;
+            }
+          } else {
+            // Остальные ключи: сравниваем по revision
+            let remoteRev = row.v && row.v.revision ? row.v.revision : 0;
+            let localRev = local && local.revision ? local.revision : 0;
+            if (localRev > remoteRev) {
+              // локальная версия новее — не затираем
+              log('conflict: keep local (by revision)', key);
+              return;
+            }
           }
           
           // ЗАЩИТА: не затираем локальные продукты пустым массивом из Supabase
@@ -783,6 +805,14 @@
               setTimeout(() => {
                 window.dispatchEvent(new CustomEvent('heysProductsUpdated', { detail: { products: row.v } }));
               }, 100);
+            }
+          }
+          
+          // 🔍 Диагностика: логируем загрузку данных дня с шагами
+          if (key.includes('dayv2_') && row.v) {
+            const steps = row.v.steps || 0;
+            if (steps > 0) {
+              logCritical(`📅 [DAY SYNC] Loaded day ${key} with steps: ${steps}`);
             }
           }
         } catch(e){}
@@ -949,13 +979,9 @@
       cloud.saveClientKey = function(...args) {
         let client_id, k, value;
 
-        // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: Блокируем ВСЕ сохранения до завершения первого sync
-        // Это предотвращает затирание данных при загрузке страницы
-        if (!initialSyncCompleted) {
-            const keyInfo = args.find(a => typeof a === 'string' && a.includes('heys_')) || args[1] || 'unknown';
-            log(`⏳ [SAVE BLOCKED] Waiting for initial sync | key: ${keyInfo}`);
-            return;
-        }
+        // 🔄 ИЗМЕНЕНО: Вместо полной блокировки — добавляем в очередь
+        // Данные будут отправлены когда sync завершится или по таймауту
+        const waitingForSync = !initialSyncCompleted;
 
         if (args.length === 3) {
             client_id = args[0];
@@ -1052,6 +1078,17 @@
                         k.includes('dayv2_') ? '📅 DAY' :
                         k.includes('_profile') ? '👤 PROFILE' : '📝 OTHER';
         const itemsCount = Array.isArray(value) ? value.length : 'N/A';
+        
+        // 🔍 Диагностика: логируем сохранение данных дня с шагами
+        if (k.includes('dayv2_') && value && value.steps > 0) {
+            logCritical(`📅 [DAY SAVE] Saving day ${k} with steps: ${value.steps} | updatedAt: ${value.updatedAt}`);
+        }
+        
+        // Логируем если добавляем в очередь до завершения sync
+        if (waitingForSync) {
+            log(`⏳ [QUEUED] Waiting for sync, queuing: ${k}`);
+        }
+        
         log(`💾 [SAVE] ${dataType} | key: ${k} | items: ${itemsCount} | client: ${client_id.substring(0, 8)}...`);
 
         // Добавляем в очередь вместо немедленной отправки
