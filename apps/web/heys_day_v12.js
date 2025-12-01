@@ -1449,13 +1449,7 @@
     function openEditGramsModal(mealIndex, itemId, currentGrams, product) {
       setEditGramsTarget({ mealIndex, itemId, product });
       setEditGramsValue(currentGrams || 100);
-      // Автофокус на input через задержку
-      setTimeout(() => {
-        if (editGramsInputRef.current) {
-          editGramsInputRef.current.focus();
-          editGramsInputRef.current.select();
-        }
-      }, 100);
+      // Автофокус убран — клавиатура закрывает информацию о продукте
     }
     
     function confirmEditGramsModal() {
@@ -2119,26 +2113,7 @@
       // Dispatch event для advice системы
       window.dispatchEvent(new CustomEvent('heysProductAdded'));
       
-      // Автофокус на поле граммов нового продукта в конкретном приеме пищи
-      setTimeout(() => {
-        // Ищем input с конкретными data-атрибутами
-        const targetInput = document.querySelector(`input[data-grams-input="true"][data-meal-index="${mi}"][data-item-id="${item.id}"]`);
-        if (targetInput) {
-          targetInput.focus();
-          targetInput.select();
-        } else {
-          // Fallback
-          const mealTables = document.querySelectorAll('.meals-table');
-          if (mealTables[mi]) {
-            const gramsInputs = mealTables[mi].querySelectorAll('input[data-grams-input="true"]');
-            const lastGramsInput = gramsInputs[gramsInputs.length - 1];
-            if (lastGramsInput) {
-              lastGramsInput.focus();
-              lastGramsInput.select();
-            }
-          }
-        }
-      }, 200);
+      // Автофокус убран — клавиатура закрывает информацию о продукте на мобильных
     }
     function setGrams(mi, itId, g){ g=+g||0; const meals=day.meals.map((m,i)=> i===mi? {...m, items:(m.items||[]).map(it=> it.id===itId?{...it, grams:g}:it)}:m); setDay({...day, meals}); }
     function removeItem(mi, itId){ haptic('medium'); const meals=day.meals.map((m,i)=> i===mi? {...m, items:(m.items||[]).filter(it=>it.id!==itId)}:m); setDay({...day, meals}); }

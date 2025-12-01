@@ -780,10 +780,7 @@
     const [kcalInput, setKcalInput] = useState('');
     const gramsInputRef = useRef(null);
     
-    // Автофокус на поле граммов
-    useEffect(() => {
-      setTimeout(() => gramsInputRef.current?.focus(), 150);
-    }, []);
+    // Автофокус убран — клавиатура закрывает информацию о продукте на мобильных
     
     if (!product) {
       return React.createElement('div', { className: 'aps-no-product' },
