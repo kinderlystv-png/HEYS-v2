@@ -66,6 +66,120 @@
   // ═══════════════════════════════════════════════════════════════════
   // 📦 ПЕРСИСТЕНТНАЯ ОЧЕРЕДЬ СИНХРОНИЗАЦИИ
   // ═══════════════════════════════════════════════════════════════════
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔀 MERGE ЛОГИКА ДЛЯ КОНФЛИКТОВ
+  // ═══════════════════════════════════════════════════════════════════
+  
+  /**
+   * Умный merge данных дня при конфликте local vs remote
+   * Стратегия: объединить meals по ID, взять максимальные значения для числовых полей
+   * @param {Object} local - локальные данные дня
+   * @param {Object} remote - данные из облака
+   * @returns {Object|null} merged данные или null если merge не нужен
+   */
+  function mergeDayData(local, remote) {
+    if (!local || !remote) return null;
+    
+    // Если данные идентичны — merge не нужен
+    const localJson = JSON.stringify({ ...local, updatedAt: 0, _sourceId: '' });
+    const remoteJson = JSON.stringify({ ...remote, updatedAt: 0, _sourceId: '' });
+    if (localJson === remoteJson) return null;
+    
+    const merged = {
+      ...remote, // База — remote
+      date: local.date || remote.date,
+      updatedAt: Math.max(local.updatedAt || 0, remote.updatedAt || 0, Date.now()),
+      _mergedAt: Date.now(),
+    };
+    
+    // 📊 Числовые поля: берём максимум (шаги, вода, бытовуха)
+    // Логика: если на одном устройстве ввели 5000 шагов, а на другом 8000 — значит 8000 актуальнее
+    merged.steps = Math.max(local.steps || 0, remote.steps || 0);
+    merged.waterMl = Math.max(local.waterMl || 0, remote.waterMl || 0);
+    merged.householdMin = Math.max(local.householdMin || 0, remote.householdMin || 0);
+    
+    // 📊 Вес: берём последний (по updatedAt)
+    if (local.updatedAt > remote.updatedAt) {
+      merged.weightMorning = local.weightMorning || remote.weightMorning;
+    } else {
+      merged.weightMorning = remote.weightMorning || local.weightMorning;
+    }
+    
+    // 😴 Сон: берём непустые значения, приоритет — более свежему
+    merged.sleepStart = local.sleepStart || remote.sleepStart || '';
+    merged.sleepEnd = local.sleepEnd || remote.sleepEnd || '';
+    merged.sleepQuality = local.sleepQuality || remote.sleepQuality || '';
+    merged.sleepNote = local.sleepNote || remote.sleepNote || '';
+    
+    // ⭐ Оценка дня: приоритет вручную установленной
+    if (local.dayScoreManual) {
+      merged.dayScore = local.dayScore;
+      merged.dayScoreManual = true;
+    } else if (remote.dayScoreManual) {
+      merged.dayScore = remote.dayScore;
+      merged.dayScoreManual = true;
+    } else {
+      merged.dayScore = local.dayScore || remote.dayScore || '';
+    }
+    merged.dayComment = local.dayComment || remote.dayComment || '';
+    
+    // 🍽️ Meals: merge по ID, сохраняем уникальные
+    const localMeals = local.meals || [];
+    const remoteMeals = remote.meals || [];
+    const mealsMap = new Map();
+    
+    // Сначала добавляем remote meals
+    remoteMeals.forEach(meal => {
+      if (meal && meal.id) mealsMap.set(meal.id, meal);
+    });
+    
+    // Потом local meals — если ID совпадает, берём более свежий (по items count или времени)
+    localMeals.forEach(meal => {
+      if (!meal || !meal.id) return;
+      const existing = mealsMap.get(meal.id);
+      if (!existing) {
+        mealsMap.set(meal.id, meal);
+      } else {
+        // Конфликт по ID — берём тот где больше items (значит добавили еду)
+        const localItems = (meal.items || []).length;
+        const remoteItems = (existing.items || []).length;
+        if (localItems > remoteItems) {
+          mealsMap.set(meal.id, meal);
+        }
+        // Если items равны — оставляем remote (он уже в map)
+      }
+    });
+    
+    merged.meals = Array.from(mealsMap.values())
+      .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    
+    // 🏋️ Trainings: merge по индексу, берём непустые
+    const localTrainings = local.trainings || [];
+    const remoteTrainings = remote.trainings || [];
+    merged.trainings = [];
+    
+    const maxTrainings = Math.max(localTrainings.length, remoteTrainings.length, 3);
+    for (let i = 0; i < maxTrainings; i++) {
+      const lt = localTrainings[i] || { z: [0,0,0,0] };
+      const rt = remoteTrainings[i] || { z: [0,0,0,0] };
+      
+      // Берём тренировку с большим суммарным временем
+      const ltSum = (lt.z || []).reduce((a, b) => a + (b || 0), 0);
+      const rtSum = (rt.z || []).reduce((a, b) => a + (b || 0), 0);
+      
+      merged.trainings.push(ltSum >= rtSum ? lt : rt);
+    }
+    
+    log('🔀 [MERGE] Result:', {
+      meals: merged.meals.length,
+      steps: merged.steps,
+      water: merged.waterMl,
+      trainings: merged.trainings.filter(t => t.z?.some(z => z > 0)).length
+    });
+    
+    return merged;
+  }
   
   const PENDING_QUEUE_KEY = 'heys_pending_sync_queue';
   const PENDING_CLIENT_QUEUE_KEY = 'heys_pending_client_sync_queue';
@@ -737,15 +851,32 @@
             log(`  📝 [MIGRATION] Mapped '${row.k}' → '${key}'`);
           }
           
-          // Конфликт: сравнить версии и взять более свежую
+          // Конфликт: сравнить версии и объединить если нужно
           let local = null;
           try { local = JSON.parse(ls.getItem(key)); } catch(e){}
           
-          // Для данных дня используем updatedAt (timestamp), для остального - revision
+          // Для данных дня используем MERGE вместо "last write wins"
           if (key.includes('dayv2_')) {
-            // День: сравниваем по updatedAt
             const remoteUpdatedAt = row.v?.updatedAt || 0;
             const localUpdatedAt = local?.updatedAt || 0;
+            
+            // Если есть локальные изменения И облачные изменения — нужен merge
+            if (local && localUpdatedAt > 0 && remoteUpdatedAt > 0) {
+              // MERGE: объединяем данные вместо перезаписи
+              const merged = mergeDayData(local, row.v);
+              if (merged) {
+                logCritical(`🔀 [MERGE] Day conflict resolved | key: ${key} | local: ${new Date(localUpdatedAt).toLocaleTimeString()} | remote: ${new Date(remoteUpdatedAt).toLocaleTimeString()}`);
+                ls.setItem(key, JSON.stringify(merged));
+                // Отправляем merged версию обратно в облако
+                setTimeout(() => {
+                  muteMirror = false;
+                  cloud.saveClientKey(client_id, row.k, merged);
+                }, 200);
+                return; // Уже сохранили merged
+              }
+            }
+            
+            // Нет конфликта — просто берём более свежую версию
             if (localUpdatedAt > remoteUpdatedAt) {
               log('conflict: keep local (by updatedAt)', key, localUpdatedAt, '>', remoteUpdatedAt);
               return;
