@@ -13,6 +13,51 @@
     'Хорошо', 'Отлично', 'Супер', 'Идеально', 'Божественно'
   ];
   
+  // Советы по качеству сна (в зависимости от оценки)
+  const SLEEP_ADVICE = {
+    // Плохой сон (1-3)
+    bad: [
+      { icon: '📵', text: 'Попробуй без экранов за час до сна' },
+      { icon: '🌡️', text: 'Прохладная комната (18-20°C) улучшает сон' },
+      { icon: '🧘', text: 'Лёгкая растяжка перед сном снимает напряжение' },
+      { icon: '☕', text: 'Последний кофе — до 14:00' },
+      { icon: '🚶', text: 'Прогулка вечером поможет расслабиться' }
+    ],
+    // Средний сон (4-6)
+    medium: [
+      { icon: '⏰', text: 'Попробуй ложиться в одно время' },
+      { icon: '🌙', text: 'Затемни комнату для глубокого сна' },
+      { icon: '📖', text: 'Книга перед сном лучше телефона' },
+      { icon: '💨', text: 'Проветри комнату перед сном' }
+    ],
+    // Хороший сон (7-8)
+    good: [
+      { icon: '✨', text: 'Отличный режим! Продолжай в том же духе' },
+      { icon: '💪', text: 'Качественный сон = больше энергии днём' },
+      { icon: '🧠', text: 'Хороший сон улучшает концентрацию' }
+    ],
+    // Отличный сон (9-10)
+    excellent: [
+      { icon: '🌟', text: 'Идеально! Ты мастер сна!' },
+      { icon: '🏆', text: 'Твой секрет успеха — в режиме' },
+      { icon: '🚀', text: 'С таким сном горы свернёшь!' }
+    ]
+  };
+  
+  function getSleepAdvice(quality) {
+    if (quality <= 3) return SLEEP_ADVICE.bad;
+    if (quality <= 6) return SLEEP_ADVICE.medium;
+    if (quality <= 8) return SLEEP_ADVICE.good;
+    return SLEEP_ADVICE.excellent;
+  }
+  
+  function getSleepAdviceColor(quality) {
+    if (quality <= 3) return { bg: '#fef2f2', border: '#fecaca', text: '#991b1b' }; // red
+    if (quality <= 6) return { bg: '#fefce8', border: '#fef08a', text: '#854d0e' }; // yellow
+    if (quality <= 8) return { bg: '#f0fdf4', border: '#bbf7d0', text: '#166534' }; // green
+    return { bg: '#ecfdf5', border: '#6ee7b7', text: '#047857' }; // emerald
+  }
+  
   // === Утилиты ===
   function getTodayKey() {
     return new Date().toISOString().slice(0, 10);
@@ -50,7 +95,14 @@
    */
   function getLastKnownWeight() {
     const U = HEYS.utils || {};
-    const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+    const lsGet = U.lsGet || ((key, def) => {
+      try {
+        const v = localStorage.getItem(key);
+        return v ? JSON.parse(v) : def;
+      } catch { return def; }
+    });
+    
+    const profile = lsGet('heys_profile', { weight: 70 });
     
     // Ищем вес за последние 60 дней
     const today = new Date();
@@ -58,7 +110,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${key}`, {}) : {};
+      const dayData = lsGet(`heys_dayv2_${key}`, {});
       if (dayData.weightMorning) {
         return { weight: dayData.weightMorning, daysAgo: i, date: key };
       }
@@ -208,6 +260,51 @@
     }
     
     return { sleepStart: '23:00', sleepEnd: '07:00', sleepQuality: 7 };
+  }
+  
+  /**
+   * Получить статистику шагов за неделю
+   * @returns {{ avg: number, daysWithData: number, recommended: number, bonusKcal: number }}
+   */
+  function getWeeklyStepsStats(weight = 70) {
+    const U = HEYS.utils || {};
+    const lsGet = U.lsGet || ((key, def) => {
+      try {
+        const v = localStorage.getItem(key);
+        return v ? JSON.parse(v) : def;
+      } catch { return def; }
+    });
+    
+    const today = new Date();
+    const stepsData = [];
+    
+    // Собираем шаги за последние 7 дней
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const dayData = lsGet(`heys_dayv2_${key}`, {});
+      if (dayData.steps && dayData.steps > 0) {
+        stepsData.push(dayData.steps);
+      }
+    }
+    
+    // Если нет данных — возвращаем дефолт
+    if (stepsData.length === 0) {
+      return { avg: 0, daysWithData: 0, recommended: 7000, minHealthy: 7000, bonusKcal: 0, bonusSteps: 0 };
+    }
+    
+    const avg = Math.round(stepsData.reduce((a, b) => a + b, 0) / stepsData.length);
+    const minHealthy = 7000; // минимум для здоровья сосудов
+    // +20% от среднего, но не меньше минимума для здоровья
+    const rawRecommended = Math.round(avg * 1.2 / 100) * 100;
+    const recommended = Math.max(rawRecommended, minHealthy);
+    const bonusSteps = recommended - avg;
+    // ~0.04 ккал на шаг при 70кг, пропорционально весу
+    const kcalPerStep = 0.04 * (weight / 70);
+    const bonusKcal = Math.round(bonusSteps * kcalPerStep);
+    
+    return { avg, daysWithData: stepsData.length, recommended, minHealthy, bonusKcal, bonusSteps };
   }
   
   /**
@@ -364,9 +461,22 @@
     });
     
     const [sleepQuality, setSleepQuality] = useState(lastSleep.sleepQuality || 7);
+    const [sleepNote, setSleepNote] = useState(''); // Комментарий к качеству сна
+    const stepsStats = useMemo(() => getWeeklyStepsStats(lastWeight.weight), [lastWeight.weight]);
     const [stepsGoal, setStepsGoal] = useState(() => {
       const U = HEYS.utils || {};
-      const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+      const lsGet = U.lsGet || ((key, def) => {
+        try {
+          const v = localStorage.getItem(key);
+          return v ? JSON.parse(v) : def;
+        } catch { return def; }
+      });
+      const profile = lsGet('heys_profile', {});
+      // Если есть статистика — рекомендуем среднее +10%, иначе из профиля или 10000
+      const stats = getWeeklyStepsStats(profile.weight || 70);
+      if (stats.daysWithData >= 3) {
+        return stats.recommended;
+      }
       return profile.stepsGoal || 10000;
     });
     
@@ -422,6 +532,7 @@
       const U = HEYS.utils || {};
       const todayKey = getTodayKey();
       const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${todayKey}`, {}) : {};
+      const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
       
       // Обновляем данные дня
       dayData.date = todayKey;
@@ -430,6 +541,21 @@
       dayData.sleepEnd = `${sleepEndH.toString().padStart(2, '0')}:${sleepEndM.toString().padStart(2, '0')}`;
       dayData.sleepHours = Math.round(sleepHours * 10) / 10;
       dayData.sleepQuality = sleepQuality;
+      
+      // Устанавливаем дефицит из профиля, если ещё не задан
+      if (dayData.deficitPct == null && profile.deficitPctTarget != null) {
+        dayData.deficitPct = profile.deficitPctTarget;
+      }
+      
+      // Сохраняем комментарий к сну с timestamp (добавляем к существующему, если есть)
+      if (sleepNote.trim()) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        const noteWithTime = `[${timeStr}] ${sleepNote.trim()}`;
+        dayData.sleepNote = dayData.sleepNote 
+          ? dayData.sleepNote + '\n' + noteWithTime
+          : noteWithTime;
+      }
       dayData.updatedAt = Date.now();
       
       if (U.lsSet) {
@@ -437,7 +563,6 @@
       }
       
       // Сохраняем цель шагов в профиль
-      const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
       profile.stepsGoal = stepsGoal;
       if (U.lsSet) {
         U.lsSet('heys_profile', profile);
@@ -457,7 +582,7 @@
       window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: todayKey } }));
       
       onComplete && onComplete();
-    }, [currentWeight, sleepStartH, sleepStartM, sleepEndH, sleepEndM, sleepHours, sleepQuality, stepsGoal, onComplete]);
+    }, [currentWeight, sleepStartH, sleepStartM, sleepEndH, sleepEndM, sleepHours, sleepQuality, sleepNote, stepsGoal, onComplete]);
     
     const handleNext = () => {
       if (step < TOTAL_STEPS) {
@@ -592,6 +717,24 @@
       
       if (step === 3) {
         // Шаг 3: Качество сна
+        const adviceList = getSleepAdvice(sleepQuality);
+        const adviceColors = getSleepAdviceColor(sleepQuality);
+        // Выбираем случайный совет на основе качества (стабильный при одном значении)
+        const adviceIndex = (sleepQuality * 7) % adviceList.length;
+        const currentAdvice = adviceList[adviceIndex];
+        
+        // Динамический вопрос в зависимости от оценки
+        const commentQuestion = sleepQuality <= 4 
+          ? '😔 Что помешало выспаться?' 
+          : sleepQuality >= 8 
+            ? '✨ Что помогло хорошо выспаться?' 
+            : '💭 Заметка о сне';
+        const commentPlaceholder = sleepQuality <= 4 
+          ? 'Шум, стресс, поздно лёг...' 
+          : sleepQuality >= 8 
+            ? 'Режим, тишина, прохлада...' 
+            : 'Любые заметки...';
+        
         return React.createElement('div', { 
           className: `mc-step-content ${slideClass}`,
           style: { '--quality-color': qualityColor }
@@ -625,23 +768,125 @@
                 style: sleepQuality === q ? { backgroundColor: qualityColor, borderColor: qualityColor } : {}
               }, SLEEP_QUALITY_EMOJI[q - 1])
             )
+          ),
+          
+          // Блок совета (динамический)
+          React.createElement('div', { 
+            className: 'mc-sleep-advice',
+            style: { 
+              backgroundColor: adviceColors.bg,
+              borderColor: adviceColors.border
+            }
+          },
+            React.createElement('span', { className: 'mc-sleep-advice-icon' }, currentAdvice.icon),
+            React.createElement('span', { 
+              className: 'mc-sleep-advice-text',
+              style: { color: adviceColors.text }
+            }, currentAdvice.text)
+          ),
+          
+          // Поле комментария с динамическим вопросом
+          React.createElement('div', { 
+            className: 'mc-sleep-comment',
+            style: { borderColor: adviceColors.border }
+          },
+            React.createElement('label', { 
+              className: 'mc-sleep-comment-label',
+              style: { color: adviceColors.text }
+            }, commentQuestion),
+            React.createElement('input', {
+              type: 'text',
+              className: 'mc-sleep-comment-input',
+              placeholder: commentPlaceholder,
+              value: sleepNote,
+              onChange: (e) => setSleepNote(e.target.value)
+            })
           )
         );
       }
       
       if (step === 4) {
         // Шаг 4: Цель шагов
+        const hasStepsHistory = stepsStats.daysWithData >= 3;
+        // Формула как в карточке шагов: coef * weight * km
+        // coef = 0.5 (жен) или 0.57 (муж), km = steps * 0.7 / 1000
+        const U = HEYS.utils || {};
+        const lsGet = U.lsGet || ((key, def) => { try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; } });
+        const profile = lsGet('heys_profile', {});
+        const isFemale = profile.gender === 'Женский';
+        const coef = isFemale ? 0.5 : 0.57;
+        const bonusSteps = stepsGoal - stepsStats.avg;
+        const bonusKm = bonusSteps * 0.7 / 1000;
+        const bonusKcal = Math.round(coef * currentWeight * bonusKm);
+        
+        // Для слайдера: min 3000, max 20000
+        const sliderMin = 3000;
+        const sliderMax = 20000;
+        const sliderPercent = Math.min(100, Math.max(0, ((stepsGoal - sliderMin) / (sliderMax - sliderMin)) * 100));
+        
+        // Цвет слайдера по цели
+        const sliderColor = stepsGoal < 7000 ? '#eab308' : stepsGoal >= 10000 ? '#22c55e' : '#3b82f6';
+        
         return React.createElement('div', { className: `mc-step-content ${slideClass}` },
           React.createElement('div', { className: 'mc-steps-display' },
             React.createElement('span', { className: 'mc-steps-value' }, stepsGoal.toLocaleString()),
             React.createElement('span', { className: 'mc-steps-unit' }, ' шагов')
           ),
           
+          // Слайдер шагов
+          React.createElement('div', { className: 'mc-steps-slider-container' },
+            React.createElement('input', {
+              type: 'range',
+              className: 'mc-steps-slider',
+              min: sliderMin,
+              max: sliderMax,
+              step: 500,
+              value: stepsGoal,
+              onChange: (e) => setStepsGoal(Number(e.target.value)),
+              style: {
+                background: `linear-gradient(to right, ${sliderColor} ${sliderPercent}%, #e5e7eb ${sliderPercent}%)`
+              }
+            }),
+            React.createElement('div', { className: 'mc-steps-slider-labels' },
+              React.createElement('span', null, '3к'),
+              React.createElement('span', { className: 'mc-steps-slider-label-health' }, '7к ❤️'),
+              React.createElement('span', null, '10к'),
+              React.createElement('span', null, '15к'),
+              React.createElement('span', null, '20к')
+            )
+          ),
+          
+          // Статистика за неделю (если есть данные)
+          hasStepsHistory && React.createElement('div', { className: 'mc-steps-stats' },
+            React.createElement('div', { className: 'mc-steps-avg' },
+              React.createElement('span', { className: 'mc-steps-avg-label' }, '📊 Среднее за неделю: '),
+              React.createElement('span', { className: 'mc-steps-avg-value' }, stepsStats.avg.toLocaleString())
+            ),
+            stepsGoal > stepsStats.avg && React.createElement('div', { className: 'mc-steps-bonus' },
+              React.createElement('span', { className: 'mc-steps-bonus-icon' }, '🔥'),
+              React.createElement('span', { className: 'mc-steps-bonus-text' }, 
+                `+${(stepsGoal - stepsStats.avg).toLocaleString()} шагов = +${bonusKcal} ккал`
+              )
+            )
+          ),
+          
+          // Рекомендация — про здоровье сосудов
+          React.createElement('div', { className: 'mc-steps-recommendation' },
+            stepsGoal < 7000 
+              ? '❤️ Минимум 7000 шагов для здоровья сердца и сосудов'
+              : hasStepsHistory && stepsGoal === stepsStats.recommended
+                ? '✨ Рекомендуем: ваше среднее +20%'
+                : stepsGoal >= 10000
+                  ? '🏆 Отличная цель! 10К+ шагов — активный образ жизни'
+                  : '👍 Хорошая цель для поддержания здоровья'
+          ),
+          
+          // Пресеты быстрого выбора
           React.createElement('div', { className: 'mc-steps-grid' },
             stepsValues.map(v =>
               React.createElement('button', {
                 key: v,
-                className: `mc-steps-btn ${stepsGoal === v ? 'mc-steps-btn--active' : ''}`,
+                className: `mc-steps-btn ${stepsGoal === v ? 'mc-steps-btn--active' : ''} ${v === stepsStats.recommended && hasStepsHistory ? 'mc-steps-btn--recommended' : ''}`,
                 onClick: () => setStepsGoal(v)
               }, v >= 10000 ? `${v / 1000}к` : v.toLocaleString())
             )

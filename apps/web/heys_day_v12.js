@@ -1303,6 +1303,16 @@
     const [sliderPoint, setSliderPoint] = useState(null);
     const sliderPrevPointRef = React.useRef(null);
     
+    // === Zoom & Pan для графика ===
+    const [sparklineZoom, setSparklineZoom] = useState(1); // 1 = 100%, 2 = 200%
+    const [sparklinePan, setSparklinePan] = useState(0); // смещение по X в %
+    const sparklineZoomRef = React.useRef({ initialDistance: 0, initialZoom: 1 });
+    
+    // === Brush selection — выбор диапазона ===
+    const [brushRange, setBrushRange] = useState(null); // { start: idx, end: idx }
+    const [brushing, setBrushing] = useState(false);
+    const brushStartRef = React.useRef(null);
+    
     // Закрытие popup при клике вне
     React.useEffect(() => {
       if (!sparklinePopup) return;
@@ -4085,14 +4095,32 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     // Данные для sparkline веса за N дней
     const weightSparklineData = React.useMemo(() => {
       try {
-        const today = new Date(date);
+        const viewDate = new Date(date); // Просматриваемый день
+        const realTodayStr = fmtDate(new Date()); // Реальный сегодняшний день
         const days = [];
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
         
         for (let i = chartPeriod - 1; i >= 0; i--) {
-          const d = new Date(today);
+          const d = new Date(viewDate);
           d.setDate(d.getDate() - i);
           const dateStr = fmtDate(d);
+          const isRealToday = dateStr === realTodayStr; // Это реальный сегодняшний день?
+          
+          // Для реального сегодняшнего дня берём вес из state (реактивный)
+          if (isRealToday) {
+            const todayWeight = +day.weightMorning || 0;
+            if (todayWeight > 0) {
+              days.push({ 
+                date: dateStr, 
+                weight: todayWeight,
+                isToday: true,
+                dayNum: dateStr.slice(-2).replace(/^0/, '')
+              });
+            }
+            continue;
+          }
+          
+          // Для остальных дней — из localStorage
           const scopedKey = clientId 
             ? 'heys_' + clientId + '_dayv2_' + dateStr 
             : 'heys_dayv2_' + dateStr;
@@ -4109,7 +4137,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             days.push({ 
               date: dateStr, 
               weight: +dayData.weightMorning,
-              isToday: i === 0,
+              isToday: false,
               dayNum: dateStr.slice(-2).replace(/^0/, '')
             });
           }
@@ -4124,7 +4152,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     // Используем products из state (реактивные данные после sync)
     const sparklineData = React.useMemo(() => {
       try {
-        const today = new Date(date);
+        const viewDate = new Date(date); // Просматриваемый день
+        const realTodayStr = fmtDate(new Date()); // Реальный сегодняшний день
         const days = [];
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
         
@@ -4139,23 +4168,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Собираем данные за текущий и предыдущий месяц
         // Важно: передаём products из state как 4-й аргумент!
         for (let monthOffset = 0; monthOffset >= -1; monthOffset--) {
-          const checkDate = new Date(today);
+          const checkDate = new Date(viewDate);
           checkDate.setMonth(checkDate.getMonth() + monthOffset);
           const monthData = getActiveDaysForMonth(checkDate.getFullYear(), checkDate.getMonth(), prof, products);
           monthData.forEach((v, k) => allActiveDays.set(k, v));
         }
         
         for (let i = chartPeriod - 1; i >= 0; i--) {
-          const d = new Date(today);
+          const d = new Date(viewDate);
           d.setDate(d.getDate() - i);
           const dateStr = fmtDate(d);
-          const isToday = i === 0;
+          const isRealToday = dateStr === realTodayStr; // Это реальный сегодняшний день?
           
           // Берём данные из activeDays (там уже вычислены kcal и target)
           const dayInfo = allActiveDays.get(dateStr);
           
-          // Для сегодня используем eatenKcal и текущий optimum
-          if (isToday) {
+          // Для реального сегодняшнего дня используем eatenKcal и текущий optimum
+          if (isRealToday) {
             // Тренировки сегодня берём из day state
             const todayTrainings = (day.trainings || []).filter(t => t && t.z && t.z.some(z => z > 0));
             const hasTraining = todayTrainings.length > 0;
@@ -4261,7 +4290,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       } catch (e) {
         return [];
       }
-    }, [date, eatenKcal, chartPeriod, optimum, prof, products]);
+    }, [date, eatenKcal, chartPeriod, optimum, prof, products, day.trainings, day.sleepStart, day.sleepEnd, day.moodAvg, day.dayScore]);
     
     // Тренд калорий за последние N дней (среднее превышение/дефицит)
     const kcalTrend = React.useMemo(() => {
@@ -5349,6 +5378,22 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // === Pointer events для slider ===
       const handlePointerMove = (e) => {
+        // Если идёт brush — обновляем диапазон
+        if (brushing && brushStartRef.current !== null) {
+          const svg = e.currentTarget;
+          const rect = svg.getBoundingClientRect();
+          const x = (e.clientX - rect.left) * (width / rect.width);
+          const nearestIdx = points.reduce((prevIdx, curr, idx) => 
+            Math.abs(curr.x - x) < Math.abs(points[prevIdx].x - x) ? idx : prevIdx, 0);
+          
+          const startIdx = brushStartRef.current;
+          setBrushRange({
+            start: Math.min(startIdx, nearestIdx),
+            end: Math.max(startIdx, nearestIdx)
+          });
+          return;
+        }
+        
         const svg = e.currentTarget;
         const rect = svg.getBoundingClientRect();
         const x = (e.clientX - rect.left) * (width / rect.width);
@@ -5372,13 +5417,98 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         sliderPrevPointRef.current = null;
       };
       
+      // === Brush selection handlers ===
+      const handleBrushStart = (e) => {
+        // Только при долгом нажатии или с Shift
+        if (!e.shiftKey && e.pointerType !== 'touch') return;
+        
+        e.preventDefault();
+        const svg = e.currentTarget;
+        const rect = svg.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (width / rect.width);
+        const nearestIdx = points.reduce((prevIdx, curr, idx) => 
+          Math.abs(curr.x - x) < Math.abs(points[prevIdx].x - x) ? idx : prevIdx, 0);
+        
+        brushStartRef.current = nearestIdx;
+        setBrushing(true);
+        setBrushRange({ start: nearestIdx, end: nearestIdx });
+        haptic('light');
+      };
+      
+      const handleBrushEnd = () => {
+        if (brushing && brushRange && brushRange.start !== brushRange.end) {
+          haptic('medium');
+          // Brush завершён — можно показать статистику по диапазону
+        }
+        setBrushing(false);
+        brushStartRef.current = null;
+      };
+      
+      const clearBrush = () => {
+        setBrushRange(null);
+        setBrushing(false);
+        brushStartRef.current = null;
+      };
+      
+      // === Pinch zoom handlers ===
+      const handleTouchStart = (e) => {
+        if (e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          sparklineZoomRef.current.initialDistance = Math.hypot(dx, dy);
+          sparklineZoomRef.current.initialZoom = sparklineZoom;
+        }
+      };
+      
+      const handleTouchMove = (e) => {
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const distance = Math.hypot(dx, dy);
+          const initialDist = sparklineZoomRef.current.initialDistance;
+          
+          if (initialDist > 0) {
+            const scale = distance / initialDist;
+            const newZoom = Math.max(1, Math.min(3, sparklineZoomRef.current.initialZoom * scale));
+            setSparklineZoom(newZoom);
+          }
+        }
+      };
+      
+      const handleTouchEnd = () => {
+        sparklineZoomRef.current.initialDistance = 0;
+      };
+      
+      // Сброс zoom по двойному тапу
+      const handleDoubleClick = () => {
+        if (sparklineZoom > 1) {
+          setSparklineZoom(1);
+          setSparklinePan(0);
+          haptic('light');
+        }
+      };
+      
+      // === Точка "сегодня" ===
+      const todayPoint = points.find(p => p.isToday);
+      
+      // === Статистика выбранного диапазона (brush) ===
+      const brushStats = brushRange && brushRange.start !== brushRange.end ? (() => {
+        const rangePoints = points.slice(brushRange.start, brushRange.end + 1);
+        const totalKcal = rangePoints.reduce((s, p) => s + p.kcal, 0);
+        const avgKcal = Math.round(totalKcal / rangePoints.length);
+        const avgRatio = rangePoints.reduce((s, p) => s + p.ratio, 0) / rangePoints.length;
+        const daysInRange = rangePoints.length;
+        return { totalKcal, avgKcal, avgRatio, daysInRange };
+      })() : null;
+      
       // Класс для Goal Achievement badge
       const goalBadgeClass = 'sparkline-goal-badge' + 
         (goalAchievementPct >= 70 ? '' : goalAchievementPct >= 40 ? ' goal-low' : ' goal-critical');
       
       return React.createElement('div', { 
-        className: 'sparkline-container',
-        style: { position: 'relative' },
+        className: 'sparkline-container' + (sparklineZoom > 1 ? ' sparkline-zoomed' : ''),
+        style: { position: 'relative', overflow: 'hidden' },
         ref: (el) => {
           // Вызываем Twemoji после рендера для foreignObject
           if (el && window.applyTwemoji) {
@@ -5386,21 +5516,43 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }
         }
       },
-      // === Goal Achievement Badge ===
-      totalDaysWithData >= 3 && React.createElement('div', {
-        className: goalBadgeClass,
-        title: successDays + ' из ' + totalDaysWithData + ' дней в норме'
-      }, 
-        React.createElement('span', null, goalAchievementPct >= 70 ? '✓' : goalAchievementPct >= 40 ? '~' : '!'),
-        goalAchievementPct + '% в норме'
+      // Goal Achievement Badge перенесён в header (kcal-sparkline-header)
+      // === Brush Stats Badge (при выборе диапазона) ===
+      brushStats && React.createElement('div', {
+        className: 'sparkline-brush-stats',
+        onClick: clearBrush
+      },
+        React.createElement('span', { className: 'brush-days' }, brushStats.daysInRange + ' дн'),
+        React.createElement('span', { className: 'brush-avg' }, 'Ø ' + brushStats.avgKcal + ' ккал'),
+        React.createElement('span', { 
+          className: 'brush-ratio',
+          style: { backgroundColor: rz ? rz.getGradientColor(brushStats.avgRatio, 0.9) : '#22c55e' }
+        }, Math.round(brushStats.avgRatio * 100) + '%'),
+        React.createElement('span', { className: 'brush-close' }, '✕')
       ),
+      // === Zoom indicator ===
+      sparklineZoom > 1 && React.createElement('div', {
+        className: 'sparkline-zoom-indicator',
+        onClick: handleDoubleClick
+      }, Math.round(sparklineZoom * 100) + '%'),
       React.createElement('svg', { 
         className: 'sparkline-svg animate-always',
         viewBox: '0 0 ' + width + ' ' + height,
-        preserveAspectRatio: 'none', // растягиваем по всей ширине
+        preserveAspectRatio: 'none',
         onPointerMove: handlePointerMove,
         onPointerLeave: handlePointerLeave,
-        style: { touchAction: 'none', height: height + 'px' } // явная высота
+        onPointerDown: handleBrushStart,
+        onPointerUp: handleBrushEnd,
+        onTouchStart: handleTouchStart,
+        onTouchMove: handleTouchMove,
+        onTouchEnd: handleTouchEnd,
+        onDoubleClick: handleDoubleClick,
+        style: { 
+          touchAction: sparklineZoom > 1 ? 'pan-x' : 'none', 
+          height: height + 'px',
+          transform: sparklineZoom > 1 ? `scale(${sparklineZoom}) translateX(${sparklinePan}%)` : 'none',
+          transformOrigin: 'center center'
+        }
       },
         // Градиенты с цветами по точкам (для области и линии)
         React.createElement('defs', null,
@@ -5502,24 +5654,41 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           strokeDasharray: '4 3',
           strokeLinecap: 'round'
         }),
-        // === Confidence interval для прогноза (коридор ±σ) ===
-        forecastPts.length > 0 && confidenceMargin > 50 && React.createElement('g', { key: 'confidence-interval' },
-          forecastPts.map((p, i) => {
-            const upperY = Math.max(paddingTop, p.y - (confidenceMargin / scaleRange) * chartHeight);
-            const lowerY = Math.min(paddingTop + chartHeight, p.y + (confidenceMargin / scaleRange) * chartHeight);
-            return React.createElement('line', {
-              key: 'conf-' + i,
-              x1: p.x,
-              y1: upperY,
-              x2: p.x,
-              y2: lowerY,
-              stroke: forecastColor,
-              strokeWidth: 6,
-              strokeOpacity: 0.15,
-              strokeLinecap: 'round'
-            });
-          })
-        ),
+        // === Confidence interval для прогноза (коридор ±σ) — заливка области ===
+        forecastPts.length > 0 && confidenceMargin > 50 && (() => {
+          // Строим path для области: верхняя граница → нижняя граница (обратно)
+          const marginPx = (confidenceMargin / scaleRange) * chartHeight;
+          
+          // Верхняя линия (слева направо)
+          const upperPoints = forecastPts.map(p => ({
+            x: p.x,
+            y: Math.max(paddingTop, p.y - marginPx)
+          }));
+          
+          // Нижняя линия (справа налево)
+          const lowerPoints = forecastPts.map(p => ({
+            x: p.x,
+            y: Math.min(paddingTop + chartHeight, p.y + marginPx)
+          })).reverse();
+          
+          // Добавляем начальную точку от последней реальной точки
+          const lastRealPoint = points[points.length - 1];
+          const startX = lastRealPoint ? lastRealPoint.x : forecastPts[0].x;
+          
+          // Строим path
+          let areaPath = 'M ' + startX + ' ' + upperPoints[0].y;
+          upperPoints.forEach(p => { areaPath += ' L ' + p.x + ' ' + p.y; });
+          lowerPoints.forEach(p => { areaPath += ' L ' + p.x + ' ' + p.y; });
+          areaPath += ' Z';
+          
+          return React.createElement('path', {
+            key: 'confidence-area',
+            d: areaPath,
+            fill: forecastColor,
+            fillOpacity: 0.08,
+            stroke: 'none'
+          });
+        })(),
         // Точки прогноза (с цветом по тренду) — появляются после прогнозной линии
         forecastPts.map((p, i) => {
           // Задержка = 3с (основная линия) + время до этой точки в прогнозе
@@ -5771,7 +5940,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           // Маппинг типов на Twemoji codepoints
           const typeCodepoint = { 
             cardio: '1f3c3',      // 🏃
-            strength: '1f3cb-fe0f', // 🏋️
+            strength: '1f3cb',    // 🏋️ (без -fe0f!)
             hobby: '26bd'         // ⚽
           };
           const emojiDelay = 2.6;
@@ -5815,6 +5984,54 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           cy: sliderPoint.y,
           r: 6,
           className: 'sparkline-slider-point'
+        }),
+        // === TODAY LINE — вертикальная линия на сегодня ===
+        todayPoint && React.createElement('g', { key: 'today-line-group' },
+          // Полупрозрачная полоса
+          React.createElement('rect', {
+            x: todayPoint.x - 1.5,
+            y: paddingTop,
+            width: 3,
+            height: chartHeight,
+            className: 'sparkline-today-line',
+            fill: 'rgba(59, 130, 246, 0.2)'
+          }),
+          // Процент отклонения от нормы (ближе к точке, под графиком)
+          todayPoint.target > 0 && React.createElement('text', {
+            x: todayPoint.x,
+            y: todayPoint.y - 18,
+            textAnchor: 'middle',
+            className: 'sparkline-today-pct',
+            style: { 
+              fill: rz ? rz.getGradientColor(todayPoint.kcal / todayPoint.target, 1) : '#22c55e', 
+              fontSize: '9px', 
+              fontWeight: '700'
+            }
+          }, (() => {
+            const deviation = Math.round((todayPoint.kcal / todayPoint.target - 1) * 100);
+            return deviation >= 0 ? '+' + deviation + '%' : deviation + '%';
+          })()),
+          // Метка "сегодня" — стрелка (над точкой)
+          React.createElement('text', {
+            x: todayPoint.x,
+            y: todayPoint.y - 8,
+            textAnchor: 'middle',
+            className: 'sparkline-today-label',
+            style: { fill: 'rgba(59, 130, 246, 0.9)', fontSize: '8px', fontWeight: '600' }
+          }, '▼')
+        ),
+        // === BRUSH SELECTION — полоса выбора диапазона ===
+        brushRange && points[brushRange.start] && points[brushRange.end] && React.createElement('rect', {
+          key: 'brush-overlay',
+          x: Math.min(points[brushRange.start].x, points[brushRange.end].x),
+          y: paddingTop,
+          width: Math.abs(points[brushRange.end].x - points[brushRange.start].x),
+          height: chartHeight,
+          className: 'sparkline-brush-overlay',
+          fill: 'rgba(59, 130, 246, 0.12)',
+          stroke: 'rgba(59, 130, 246, 0.4)',
+          strokeWidth: 1,
+          rx: 2
         })
       ),
       // Glassmorphism тултип для слайдера (компактный)
@@ -6179,13 +6396,96 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           className: 'weight-sparkline-line weight-sparkline-line-animated',
           style: { stroke: 'url(#weightLineGrad)' }
         }),
-        // Прогнозная линия (пунктирная)
-        forecastPt && React.createElement('path', {
-          d: forecastLineD,
-          fill: 'none',
-          className: 'weight-sparkline-forecast-line',
-          style: { stroke: forecastColor, strokeDasharray: '4 3', opacity: 0.6 }
-        }),
+        // Прогнозная линия (пунктирная) — с маской для анимации
+        forecastPt && forecastLineD && React.createElement('g', { key: 'weight-forecast-group' },
+          // Маска: сплошная линия которая рисуется после основной
+          React.createElement('defs', null,
+            React.createElement('mask', { id: 'weightForecastMask' },
+              React.createElement('path', {
+                d: forecastLineD,
+                fill: 'none',
+                stroke: 'white',
+                strokeWidth: 4,
+                strokeLinecap: 'round',
+                strokeDasharray: 200,
+                strokeDashoffset: 200,
+                className: 'weight-sparkline-forecast-mask'
+              })
+            )
+          ),
+          // Видимая пунктирная линия под маской
+          React.createElement('path', {
+            d: forecastLineD,
+            fill: 'none',
+            stroke: forecastColor,
+            strokeWidth: 2,
+            strokeDasharray: '4 3',
+            strokeOpacity: 0.6,
+            strokeLinecap: 'round',
+            mask: 'url(#weightForecastMask)'
+          })
+        ),
+        // === Confidence interval для прогноза веса (±0.3 кг) ===
+        forecastPt && (() => {
+          const confidenceKg = 0.3; // ±300г погрешность
+          const marginPx = (confidenceKg / range) * chartHeight;
+          const lastPt = points[points.length - 1];
+          if (!lastPt) return null;
+          
+          const upperY = Math.max(paddingTop, forecastPt.y - marginPx);
+          const lowerY = Math.min(paddingTop + chartHeight, forecastPt.y + marginPx);
+          
+          // Треугольная область от последней точки к прогнозу
+          const areaPath = `M ${lastPt.x} ${lastPt.y} L ${forecastPt.x} ${upperY} L ${forecastPt.x} ${lowerY} Z`;
+          
+          return React.createElement('path', {
+            key: 'weight-confidence-area',
+            d: areaPath,
+            fill: forecastColor,
+            fillOpacity: 0.1,
+            stroke: 'none'
+          });
+        })(),
+        // === TODAY LINE для веса ===
+        (() => {
+          const todayPt = points.find(p => p.isToday);
+          if (!todayPt) return null;
+          
+          // Изменение веса с первой точки периода
+          const firstWeight = points[0]?.weight || todayPt.weight;
+          const weightChange = todayPt.weight - firstWeight;
+          const changeText = weightChange >= 0 ? '+' + weightChange.toFixed(1) : weightChange.toFixed(1);
+          const changeColor = weightChange < -0.05 ? '#22c55e' : (weightChange > 0.05 ? '#ef4444' : '#8b5cf6');
+          
+          return React.createElement('g', { key: 'weight-today-line-group' },
+            // Вертикальная полоса
+            React.createElement('rect', {
+              x: todayPt.x - 1.5,
+              y: paddingTop,
+              width: 3,
+              height: chartHeight,
+              fill: 'rgba(139, 92, 246, 0.15)' // фиолетовый для веса
+            }),
+            // Изменение веса над точкой (выше)
+            React.createElement('text', {
+              x: todayPt.x,
+              y: todayPt.y - 26,
+              textAnchor: 'middle',
+              style: { 
+                fill: changeColor, 
+                fontSize: '9px', 
+                fontWeight: '700'
+              }
+            }, changeText + ' кг'),
+            // Стрелка (выше)
+            React.createElement('text', {
+              x: todayPt.x,
+              y: todayPt.y - 16,
+              textAnchor: 'middle',
+              style: { fill: 'rgba(139, 92, 246, 0.9)', fontSize: '8px', fontWeight: '600' }
+            }, '▼')
+          );
+        })(),
         // Пунктирные линии от точек к меткам дней
         points.map((p, i) => {
           const animDelay = 3 + i * 0.15;
@@ -6251,7 +6551,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const dotColor = localTrend < -0.05 ? '#22c55e' : (localTrend > 0.05 ? '#ef4444' : '#8b5cf6');
           
           let dotClass = 'weight-sparkline-dot sparkline-dot';
-          if (p.isToday) dotClass += ' weight-sparkline-dot-today';
+          if (p.isToday) dotClass += ' weight-sparkline-dot-today sparkline-dot-pulse';
           
           // Задержка анимации
           const animDelay = 3 + i * 0.15;
@@ -6368,16 +6668,37 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         )
       ),
       // Спарклайн калорий — карточка в стиле веса
-      React.createElement('div', { className: 'kcal-sparkline-container' },
-        React.createElement('div', { className: 'kcal-sparkline-header' },
-          React.createElement('span', { className: 'kcal-sparkline-title' }, '📊 Калории'),
-          React.createElement('div', { className: 'kcal-period-pills' },
-            [7, 14, 30].map(period => 
-              React.createElement('button', {
-                key: period,
-                className: 'kcal-period-pill' + (chartPeriod === period ? ' active' : ''),
-                onClick: () => handlePeriodChange(period)
-              }, period + 'д')
+      // Вычисляем статистику для badge здесь (до рендера)
+      (() => {
+        const rz = HEYS.ratioZones;
+        const totalDaysWithData = sparklineData.filter(p => p.kcal > 0).length;
+        const successDays = sparklineData.filter(p => p.kcal > 0 && rz && rz.isSuccess(p.kcal / p.target)).length;
+        const goalAchievementPct = totalDaysWithData > 0 ? Math.round((successDays / totalDaysWithData) * 100) : 0;
+        const goalBadgeClass = 'sparkline-goal-badge' + 
+          (goalAchievementPct >= 70 ? '' : goalAchievementPct >= 40 ? ' goal-low' : ' goal-critical');
+        
+        return React.createElement('div', { className: 'kcal-sparkline-container' },
+          React.createElement('div', { className: 'kcal-sparkline-header' },
+            React.createElement('span', { className: 'kcal-sparkline-title' }, '📊 Калории'),
+            // Goal Achievement Badge + Period Pills
+            React.createElement('div', { className: 'kcal-header-right' },
+              // Badge "% в норме" (слева от кнопок)
+              totalDaysWithData >= 3 && React.createElement('div', {
+                className: goalBadgeClass + ' kcal-goal-badge-inline',
+                title: successDays + ' из ' + totalDaysWithData + ' дней в норме'
+              }, 
+                React.createElement('span', null, goalAchievementPct >= 70 ? '✓' : goalAchievementPct >= 40 ? '~' : '!'),
+                goalAchievementPct + '% дней в норме'
+              ),
+              // Кнопки выбора периода
+            React.createElement('div', { className: 'kcal-period-pills' },
+              [7, 14, 30].map(period => 
+                React.createElement('button', {
+                  key: period,
+                  className: 'kcal-period-pill' + (chartPeriod === period ? ' active' : ''),
+                  onClick: () => handlePeriodChange(period)
+                }, period + 'д')
+              )
             )
           )
         ),
@@ -6387,7 +6708,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         },
           renderSparkline(sparklineData, optimum)
         )
-      ),
+      );
+      })(),
       // Popup с деталями при клике на точку — компактный дизайн
       sparklinePopup && sparklinePopup.type === 'kcal' && React.createElement('div', {
         className: 'sparkline-popup',
