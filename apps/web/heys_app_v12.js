@@ -16,6 +16,134 @@
       (function () {
         window.HEYS = window.HEYS || {};
         
+        // === Mobile Debug Panel ===
+        // Тройной тап на заголовок покажет дебаг-панель (для отладки на телефоне)
+        window.HEYS.debugPanel = {
+          _tapCount: 0,
+          _tapTimer: null,
+          _visible: false,
+          _el: null,
+          
+          handleTap() {
+            this._tapCount++;
+            clearTimeout(this._tapTimer);
+            
+            if (this._tapCount >= 3) {
+              this._tapCount = 0;
+              this.toggle();
+            } else {
+              this._tapTimer = setTimeout(() => { this._tapCount = 0; }, 500);
+            }
+          },
+          
+          toggle() {
+            this._visible ? this.hide() : this.show();
+          },
+          
+          show() {
+            if (this._el) this.hide();
+            
+            const syncLog = window.HEYS?.cloud?.getSyncLog?.() || [];
+            const pending = window.HEYS?.cloud?.getPendingCount?.() || 0;
+            const status = window.HEYS?.cloud?.getStatus?.() || 'unknown';
+            const clientId = window.HEYS?.cloud?.getClientId?.() || 'none';
+            
+            // Данные текущего дня
+            const today = new Date().toISOString().slice(0, 10);
+            const dayKey = `heys_dayv2_${today}`;
+            let dayData = null;
+            try {
+              const raw = localStorage.getItem(dayKey);
+              if (raw) dayData = JSON.parse(raw);
+            } catch(e) {}
+            
+            const html = `
+              <div id="heys-debug-panel" style="
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.95); color: #0f0; font-family: monospace;
+                font-size: 11px; padding: 16px; overflow: auto; z-index: 99999;
+              ">
+                <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+                  <b style="color:#fff;font-size:14px;">🔧 HEYS Debug Panel</b>
+                  <button onclick="HEYS.debugPanel.hide()" style="background:#f00;color:#fff;border:none;padding:4px 12px;border-radius:4px;">✕ Close</button>
+                </div>
+                
+                <div style="background:#111;padding:8px;border-radius:4px;margin-bottom:8px;">
+                  <b style="color:#0ff;">📡 Sync Status</b><br>
+                  Status: <span style="color:${status === 'online' ? '#0f0' : '#f00'}">${status}</span><br>
+                  Pending: ${pending}<br>
+                  Client: ${clientId.slice(0, 8)}...
+                </div>
+                
+                <div style="background:#111;padding:8px;border-radius:4px;margin-bottom:8px;">
+                  <b style="color:#0ff;">📅 Today (${today})</b><br>
+                  ${dayData ? `
+                    Weight: ${dayData.weightMorning || '—'}<br>
+                    Meals: ${dayData.meals?.length || 0}<br>
+                    Steps: ${dayData.steps || 0}<br>
+                    Water: ${dayData.waterMl || 0}ml<br>
+                    Updated: ${dayData.updatedAt ? new Date(dayData.updatedAt).toLocaleTimeString() : '—'}
+                  ` : '<span style="color:#f00">No data in localStorage</span>'}
+                </div>
+                
+                <div style="background:#111;padding:8px;border-radius:4px;margin-bottom:8px;">
+                  <b style="color:#0ff;">📜 Sync Log (last 10)</b><br>
+                  ${syncLog.slice(0, 10).map(e => 
+                    `<div style="border-bottom:1px solid #333;padding:2px 0;">
+                      ${new Date(e.time).toLocaleTimeString()} | <b>${e.type}</b> | ${JSON.stringify(e.details || {}).slice(0, 50)}
+                    </div>`
+                  ).join('') || '<span style="color:#888">Empty</span>'}
+                </div>
+                
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button onclick="HEYS.cloud?.forceSync?.();HEYS.debugPanel.refresh();" 
+                    style="background:#00f;color:#fff;border:none;padding:8px 16px;border-radius:4px;">
+                    🔄 Force Sync
+                  </button>
+                  <button onclick="navigator.clipboard?.writeText(JSON.stringify(HEYS.cloud?.getSyncLog?.(),null,2));alert('Copied!');" 
+                    style="background:#555;color:#fff;border:none;padding:8px 16px;border-radius:4px;">
+                    📋 Copy Log
+                  </button>
+                  <button onclick="HEYS.debugPanel.showDayData();" 
+                    style="background:#555;color:#fff;border:none;padding:8px 16px;border-radius:4px;">
+                    📅 Show Day JSON
+                  </button>
+                </div>
+              </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', html);
+            this._el = document.getElementById('heys-debug-panel');
+            this._visible = true;
+          },
+          
+          hide() {
+            if (this._el) {
+              this._el.remove();
+              this._el = null;
+            }
+            this._visible = false;
+          },
+          
+          refresh() {
+            if (this._visible) {
+              this.hide();
+              setTimeout(() => this.show(), 100);
+            }
+          },
+          
+          showDayData() {
+            const today = new Date().toISOString().slice(0, 10);
+            const dayKey = `heys_dayv2_${today}`;
+            try {
+              const raw = localStorage.getItem(dayKey);
+              alert(raw ? JSON.stringify(JSON.parse(raw), null, 2).slice(0, 2000) : 'No data');
+            } catch(e) {
+              alert('Error: ' + e.message);
+            }
+          }
+        };
+        
         // === Badge API Module ===
         // Показывает streak на иконке приложения (Android Chrome PWA)
         window.HEYS.badge = {
@@ -3668,12 +3796,15 @@
                     React.createElement('span', { className: 'tab-icon' }, '🗂️'),
                     React.createElement('span', { className: 'tab-text' }, 'База'),
                   ),
-                  // Обзор — слева
+                  // Обзор — слева (тройной тап = debug panel)
                   React.createElement(
                     'div',
                     {
                       className: 'tab ' + (tab === 'overview' ? 'active' : ''),
-                      onClick: () => setTab('overview'),
+                      onClick: () => {
+                        window.HEYS?.debugPanel?.handleTap();
+                        setTab('overview');
+                      },
                     },
                     React.createElement('span', { className: 'tab-icon' }, '📋'),
                     React.createElement('span', { className: 'tab-text' }, 'Обзор'),
