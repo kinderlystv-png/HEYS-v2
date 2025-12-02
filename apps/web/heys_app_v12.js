@@ -17,7 +17,7 @@
         window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '1.2.0'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.02.1885cc5'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         
         window.HEYS.version = APP_VERSION;

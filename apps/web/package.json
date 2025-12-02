@@ -5,7 +5,7 @@
   "description": "HEYS Web Application - Main web interface",
   "type": "module",
   "scripts": {
-    "prebuild": "node -e \"const fs=require('fs');const f=process.cwd()+'/public/sw.js';let c=fs.readFileSync(f,'utf8');c=c.replace(/heys-[\\w.-]+/,'heys-'+Date.now());fs.writeFileSync(f,c);console.log('SW version:',Date.now())\"",
+    "prebuild": "node scripts/update-version.cjs && node -e \"const fs=require('fs');const f=process.cwd()+'/public/sw.js';let c=fs.readFileSync(f,'utf8');c=c.replace(/heys-[\\w.-]+/,'heys-'+Date.now());fs.writeFileSync(f,c);console.log('SW version:',Date.now())\"",
     "build": "vite build && cp heys_*.js dist/ && cp styles/*.css dist/styles/ 2>/dev/null || mkdir -p dist/styles && cp styles/*.css dist/styles/",
     "build:vercel": "pnpm run prebuild && vite build && cp heys_*.js dist/ && mkdir -p dist/styles && cp styles/*.css dist/styles/",
     "build:analyze": "cross-env ANALYZE=true vite build",
