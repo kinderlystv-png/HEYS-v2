@@ -191,7 +191,15 @@
   }
 
   // Lightweight signature for products (ids/names only)
-  function productsSignature(ps){ return (ps||[]).map(p=>p&& (p.id||p.product_id||p.name)||'').join('|'); }
+  function productsSignature(ps){ 
+    // Ensure ps is an array
+    if (!ps) return '';
+    if (!Array.isArray(ps)) {
+      console.warn('[HEYS] productsSignature: expected array, got', typeof ps);
+      return '';
+    }
+    return ps.map(p=>p&& (p.id||p.product_id||p.name)||'').join('|'); 
+  }
 
   // Cached popular products (per month + signature + TTL)
   const POPULAR_CACHE = {}; // key => {ts, list}

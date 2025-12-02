@@ -86,15 +86,17 @@
   
   // Products приходят из App → DayTabWithCloudSync → DayTab
   // FALLBACK: если props.products пустой, берём из HEYS.products.getAll()
-  const propsProducts = props.products || [];
+  // SAFETY: ensure products is always an array
+  const propsProducts = Array.isArray(props.products) ? props.products : [];
   const products = useMemo(() => {
     if (propsProducts.length > 0) return propsProducts;
     // Fallback: берём из глобального хранилища
     const fromStore = HEYS.products?.getAll?.() || [];
-    if (fromStore.length > 0) return fromStore;
+    if (Array.isArray(fromStore) && fromStore.length > 0) return fromStore;
     // Последний fallback: из localStorage напрямую
     const U = HEYS.utils || {};
-    return U.lsGet?.('heys_products', []) || [];
+    const lsData = U.lsGet?.('heys_products', []) || [];
+    return Array.isArray(lsData) ? lsData : [];
   }, [propsProducts]);
   
   // Twemoji: reparse emoji after render
