@@ -1051,10 +1051,11 @@
       cancelFailsafeTimer(); // Отменяем failsafe — sync успешен
       
       // Уведомляем приложение о завершении синхронизации (для обновления stepsGoal и т.д.)
+      // Задержка 300мс чтобы localStorage успел обновиться и React перечитал данные
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id } }));
-        }, 50);
+        }, 300);
       }
     }catch(e){ 
       // Критический лог ошибки синхронизации (всегда видим)
@@ -1761,10 +1762,11 @@
       log(`📊 Размер localStorage: ${sizeMB.toFixed(2)} MB`);
       
       // 🌅 Уведомляем App о смене клиента — для Morning Check-in и т.д.
+      // Задержка 300мс чтобы localStorage успел обновиться и React перечитал данные
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: newClientId } }));
-        }, 50);
+        }, 300);
       }
       
       return true;

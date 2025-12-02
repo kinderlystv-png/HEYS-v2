@@ -25,6 +25,14 @@
       return false;
     }
     
+    // Ждём завершения синхронизации — чтобы данные точно подтянулись из облака
+    if (HEYS.cloud && typeof HEYS.cloud.isInitialSyncCompleted === 'function') {
+      if (!HEYS.cloud.isInitialSyncCompleted()) {
+        console.log('[MorningCheckin] Sync not completed yet, skip check');
+        return false;
+      }
+    }
+    
     const todayKey = getTodayKey();
     const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${todayKey}`, {}) : {};
     
