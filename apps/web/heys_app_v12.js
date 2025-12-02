@@ -46,16 +46,49 @@
             const syncLog = window.HEYS?.cloud?.getSyncLog?.() || [];
             const pending = window.HEYS?.cloud?.getPendingCount?.() || 0;
             const status = window.HEYS?.cloud?.getStatus?.() || 'unknown';
-            const clientId = window.HEYS?.cloud?.getClientId?.() || 'none';
+            const cloudClientId = window.HEYS?.cloud?.getClientId?.() || '';
             
-            // Данные текущего дня
+            // Получаем clientId из разных источников
+            const lsClientId = localStorage.getItem('heys_client_current') || '';
+            const clientId = cloudClientId || lsClientId || 'none';
+            
+            // Данные текущего дня — ищем с clientId prefix
             const today = new Date().toISOString().slice(0, 10);
-            const dayKey = `heys_dayv2_${today}`;
             let dayData = null;
-            try {
-              const raw = localStorage.getItem(dayKey);
-              if (raw) dayData = JSON.parse(raw);
-            } catch(e) {}
+            let dayKey = '';
+            
+            // Пробуем разные варианты ключей
+            const possibleKeys = [
+              `heys_${clientId}_dayv2_${today}`,
+              `heys_dayv2_${today}`,
+            ];
+            
+            // Также ищем по паттерну в localStorage
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k && k.includes(`dayv2_${today}`) && !k.includes('backup')) {
+                possibleKeys.unshift(k);
+                break;
+              }
+            }
+            
+            for (const key of possibleKeys) {
+              try {
+                const raw = localStorage.getItem(key);
+                if (raw) {
+                  dayData = JSON.parse(raw);
+                  dayKey = key;
+                  break;
+                }
+              } catch(e) {}
+            }
+            
+            // Считаем все ключи в localStorage
+            const allKeys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k && k.startsWith('heys_')) allKeys.push(k);
+            }
             
             const html = `
               <div id="heys-debug-panel" style="
@@ -72,25 +105,28 @@
                   <b style="color:#0ff;">📡 Sync Status</b><br>
                   Status: <span style="color:${status === 'online' ? '#0f0' : '#f00'}">${status}</span><br>
                   Pending: ${pending}<br>
-                  Client: ${clientId.slice(0, 8)}...
+                  Cloud Client: ${cloudClientId ? cloudClientId.slice(0, 8) + '...' : '<span style="color:#f00">NOT SET</span>'}<br>
+                  LS Client: ${lsClientId ? lsClientId.slice(0, 8) + '...' : '<span style="color:#f00">NOT SET</span>'}<br>
+                  Total LS keys: ${allKeys.length}
                 </div>
                 
                 <div style="background:#111;padding:8px;border-radius:4px;margin-bottom:8px;">
                   <b style="color:#0ff;">📅 Today (${today})</b><br>
+                  Key: <span style="color:#888;font-size:9px;">${dayKey || 'NOT FOUND'}</span><br>
                   ${dayData ? `
                     Weight: ${dayData.weightMorning || '—'}<br>
                     Meals: ${dayData.meals?.length || 0}<br>
                     Steps: ${dayData.steps || 0}<br>
                     Water: ${dayData.waterMl || 0}ml<br>
                     Updated: ${dayData.updatedAt ? new Date(dayData.updatedAt).toLocaleTimeString() : '—'}
-                  ` : '<span style="color:#f00">No data in localStorage</span>'}
+                  ` : '<span style="color:#f00">No data in localStorage!</span>'}
                 </div>
                 
                 <div style="background:#111;padding:8px;border-radius:4px;margin-bottom:8px;">
                   <b style="color:#0ff;">📜 Sync Log (last 10)</b><br>
                   ${syncLog.slice(0, 10).map(e => 
                     `<div style="border-bottom:1px solid #333;padding:2px 0;">
-                      ${new Date(e.time).toLocaleTimeString()} | <b>${e.type}</b> | ${JSON.stringify(e.details || {}).slice(0, 50)}
+                      ${e.time ? new Date(e.time).toLocaleTimeString() : '?'} | <b>${e.type}</b> | ${JSON.stringify(e.details || {}).slice(0, 50)}
                     </div>`
                   ).join('') || '<span style="color:#888">Empty</span>'}
                 </div>
@@ -107,6 +143,10 @@
                   <button onclick="HEYS.debugPanel.showDayData();" 
                     style="background:#555;color:#fff;border:none;padding:8px 16px;border-radius:4px;">
                     📅 Show Day JSON
+                  </button>
+                  <button onclick="HEYS.debugPanel.showAllKeys();" 
+                    style="background:#555;color:#fff;border:none;padding:8px 16px;border-radius:4px;">
+                    🗂️ All LS Keys
                   </button>
                 </div>
               </div>
@@ -134,13 +174,32 @@
           
           showDayData() {
             const today = new Date().toISOString().slice(0, 10);
-            const dayKey = `heys_dayv2_${today}`;
-            try {
-              const raw = localStorage.getItem(dayKey);
-              alert(raw ? JSON.stringify(JSON.parse(raw), null, 2).slice(0, 2000) : 'No data');
-            } catch(e) {
-              alert('Error: ' + e.message);
+            // Ищем день с любым clientId
+            let dayData = null;
+            let dayKey = '';
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k && k.includes(`dayv2_${today}`) && !k.includes('backup')) {
+                dayKey = k;
+                try {
+                  dayData = localStorage.getItem(k);
+                } catch(e) {}
+                break;
+              }
             }
+            alert(dayData ? `Key: ${dayKey}\n\n${JSON.stringify(JSON.parse(dayData), null, 2).slice(0, 1500)}` : `No day data found for ${today}`);
+          },
+          
+          showAllKeys() {
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k && k.startsWith('heys_')) {
+                const size = (localStorage.getItem(k) || '').length;
+                keys.push(`${k} (${size}b)`);
+              }
+            }
+            alert(`HEYS keys (${keys.length}):\n\n${keys.slice(0, 30).join('\n')}${keys.length > 30 ? '\n...' : ''}`);
           }
         };
         
