@@ -3833,13 +3833,15 @@
                                     const d = new Date();
                                     if (d.getHours() < 3) d.setDate(d.getDate() - 1);
                                     d.setDate(d.getDate() - 1);
-                                    return d.toISOString().slice(0, 10);
+                                    // Локальное форматирование (не UTC!)
+                                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
                                   })() ? ' active' : ''),
                                   onClick: () => {
                                     const d = new Date();
                                     if (d.getHours() < 3) d.setDate(d.getDate() - 1);
                                     d.setDate(d.getDate() - 1);
-                                    setSelectedDate(d.toISOString().slice(0, 10));
+                                    // Локальное форматирование (не UTC!)
+                                    setSelectedDate(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'));
                                   },
                                   title: 'Перейти на вчера'
                                 }, (() => {
