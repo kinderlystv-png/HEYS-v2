@@ -16,6 +16,57 @@
       (function () {
         window.HEYS = window.HEYS || {};
         
+        // === App Version & Auto-logout on Update ===
+        const APP_VERSION = '1.2.0'; // Инкрементируй при важных изменениях
+        const VERSION_KEY = 'heys_app_version';
+        
+        window.HEYS.version = APP_VERSION;
+        
+        // Проверка обновления версии
+        (function checkVersionUpdate() {
+          const storedVersion = localStorage.getItem(VERSION_KEY);
+          
+          if (storedVersion && storedVersion !== APP_VERSION) {
+            console.log(`[HEYS] 🔄 Version update detected: ${storedVersion} → ${APP_VERSION}`);
+            
+            // Выход из системы при обновлении
+            if (window.HEYS?.cloud?.signOut) {
+              window.HEYS.cloud.signOut();
+              console.log('[HEYS] 🚪 Auto-logout on version update');
+            }
+            
+            // Показать баннер
+            setTimeout(() => {
+              const banner = document.createElement('div');
+              banner.id = 'heys-update-banner';
+              banner.innerHTML = `
+                <div style="
+                  position: fixed; top: 0; left: 0; right: 0;
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                  color: white; padding: 12px 16px;
+                  display: flex; align-items: center; justify-content: space-between;
+                  z-index: 99999; font-family: system-ui, sans-serif;
+                  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                ">
+                  <div>
+                    <strong>🎉 HEYS обновлён до v${APP_VERSION}</strong>
+                    <div style="font-size: 12px; opacity: 0.9;">Пожалуйста, войдите заново</div>
+                  </div>
+                  <button onclick="document.getElementById('heys-update-banner').remove()" 
+                    style="background: rgba(255,255,255,0.2); border: none; color: white; 
+                    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                    ✕
+                  </button>
+                </div>
+              `;
+              document.body.prepend(banner);
+            }, 500);
+          }
+          
+          // Сохраняем текущую версию
+          localStorage.setItem(VERSION_KEY, APP_VERSION);
+        })();
+        
         // === Mobile Debug Panel ===
         // Тройной тап на заголовок покажет дебаг-панель (для отладки на телефоне)
         window.HEYS.debugPanel = {
@@ -97,7 +148,7 @@
                 font-size: 11px; padding: 16px; overflow: auto; z-index: 99999;
               ">
                 <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
-                  <b style="color:#fff;font-size:14px;">🔧 HEYS Debug Panel</b>
+                  <b style="color:#fff;font-size:14px;">🔧 HEYS Debug Panel <span style="color:#888;font-size:11px;">v${window.HEYS?.version || '?'}</span></b>
                   <button onclick="HEYS.debugPanel.hide()" style="background:#f00;color:#fff;border:none;padding:4px 12px;border-radius:4px;">✕ Close</button>
                 </div>
                 
