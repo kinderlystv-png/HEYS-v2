@@ -13,40 +13,16 @@ pnpm type-check && pnpm lint && pnpm build  # Проверка
 
 ## 🔥 ПРИОРИТЕТ
 
-### ⏳ Стабилизация DayTab — Phase P0 (ФИНАЛЬНАЯ ВЕРСИЯ)
-**Файл**: [2025-12-03-daytab-stability-p0.md](./docs/tasks/2025-12-03-daytab-stability-p0.md)  
-**Время**: ~45-60 мин  
-**Статус**: 📝 Пересобран после работы другого агента
+### ⏳ UX & Gamification Sprint
+**Файл**: [2025-12-03-ux-gamification-sprint.md](./docs/tasks/2025-12-03-ux-gamification-sprint.md)  
+**Время**: ~2-3 часа (можно делить)  
+**Статус**: 🆕 Новый
 
-**✅ Уже сделано (другим агентом)**:
-- ProductRow, MealCard, AdviceCard → React.memo
-- setGrams, removeItem, removeMeal, updateMealTime → useCallback
-- changeMealType, changeMealMood/Wellbeing/Stress → useCallback
-- Advice handlers → useCallback
-- `pnpm build` и `pnpm lint` пройдены ✅
-
-**Осталось сделать**:
-1. Модалки (`openEditGramsModal`, `openTimeEditor`, `openMoodEditor`) → useCallback (строки 2079, 2521, 2538)
-2. ~20 мест с `setDay({...day})` → `setDay(prev => ...)` (trainings, water, sleep, dayScore, steps)
-3. (Опционально) `newItemIds` Set → ref для стабильности
-
-**Важно**: `node -c` после КАЖДОГО изменения!
-
----
-
-### ⏳ Рефакторинг MealAddProduct (quick fix НЕ применён)
-**Файл**: [2025-12-01-extract-meal-add-product.md](./docs/tasks/2025-12-01-extract-meal-add-product.md)  
-**Время**: ~5 мин (quick fix) | 60-90 мин (полный рефакторинг)  
-**Статус**: ⚠️ Откатился при git checkout
-
-**Проблема**: `MealAddProduct` (~800 строк) определён ВНУТРИ `DayTab`, пересоздаётся на каждый рендер → UNMOUNT/MOUNT при добавлении приёма.
-
-**Что нужно сделать**:
-1. Обернуть `MealAddProduct` в `React.useMemo()` (строка 432)
-2. Закрыть useMemo после функции (строка ~1234)
-3. Добавить deps: `[gramsModal, setGramsModal, day, setDay, products, pIndex, date, prodSig]`
-
-**Осталось (опционально)**: Полный рефакторинг — вынести MealAddProduct за пределы DayTab.
+**Включает**:
+1. Mini-heatmap недели (20 мин)
+2. Прогресс к цели веса (30 мин)
+3. PWA Badge API + shortcuts (20 мин)
+4. XP система — базовая версия (45 мин)
 
 ---
 

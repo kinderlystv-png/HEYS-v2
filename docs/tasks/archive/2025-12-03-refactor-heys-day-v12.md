@@ -13,10 +13,12 @@
 - [x] `git status` — есть незакоммиченные изменения (не трогать чужие: `apps/web/heys_app_v12.js`, `apps/web/heys_storage_supabase_v1.js`)
 - [x] Учитывать чужие диффы: `apps/web/heys_app_v12.js`, `apps/web/heys_storage_supabase_v1.js` не трогать
 - [x] Бэкап: `cp apps/web/heys_day_v12.js apps/web/heys_day_v12.backup2.js`
+- [ ] Проверить, что активный файл — копия из `backup2.js` (нет частично сломанного refactor-стейта)
 - [ ] Открыть localhost:3001 в браузере
 - [ ] Скриншот текущего UI (день с 2-3 приёмами пищи)
 - [ ] Проверить baseline: добавить продукт → изменить граммы → удалить
 - [ ] Подтвердить загрузку глобалов до файла: `HEYS.dayUtils`, `HEYS.utils.lsGet/lsSet`, `HEYS.models.computeDerivedProduct`, `HEYS.advice.useAdviceEngine`
+- [ ] Подтвердить загрузку `HEYS.SwipeableRow`/`heys_swipeable.js` (моб. удаление в карточках продуктов) — если нет, предусмотреть graceful fallback без обёртки
 - [ ] Убедиться, что сохраняем UMD-формат (никаких import/export), порядок `<script>` не меняем
 - [x] `copilot-instructions.md` в репо нет — правила по LS/console/namespace подтверждаем вручную (не писать в render, не менять тексты/DOM)
 
@@ -24,6 +26,7 @@
 - [ ] Проверить что `pRow` на строке ~2740 (может сдвинуться)
 - [ ] Проверить что `MealAddProduct` на строке ~81 (образец memo)
 - [ ] Проверить формат вызова: `(meal.items||[]).map(pRow)` → нужно менять на JSX
+- [ ] Убедиться, что `sortedMealsForDisplay` не мутирует исходный массив (использовать копию) и `mi` через `findIndex` не даёт `-1` (иначе скипать/логировать, чтобы не упасть)
 
 ### Блокеры:
 1. **`pRow` вызывается как функция, не компонент** — `map(pRow)` → нужно `map(it => <ProductRow item={it} />)`
@@ -31,6 +34,10 @@
 3. **`newItemIds` — Set** — memo сравнивает по ссылке, нужно передавать `isNew={newItemIds.has(it.id)}`
 4. **Хендлеры на замыкании `day`** — `setGrams/removeItem` создают новые объекты без функционального set → до useCallback переписать на `setDay(prev => ...)`
 5. **Глобал `computeDerivedProduct`** — используется в MealCard, но не импортирован; надо брать из `HEYS.models` или прокинуть пропом
+6. **Оставшиеся хендлеры на замыкании `day`** — `addMeal`, `addProductToMeal`, `updateMealTime`, `changeMealType`, инпуты mood/wellbeing/stress, вода/household/snacks используют `setDay({...day,...})`; перед вынесением компонентов переписать на функциональный `setDay(prev => ...)`
+7. **Моб. свайпы советов** — убедиться, что `adviceSwipeState` и `adviceSwipeStart` не получают `undefined` при отсутствии touch (добавить гард), иначе падение при desktop кликах
+8. **Опциональные глобалы** — `useSmartPrefetch`, `HEYS.game.addXP`, `HEYS.SwipeableRow`: оборачивать в проверки, чтобы memo-компоненты не рушились при отсутствии модуля
+9. **findIndex guard** — при поиске `mi` через `findIndex` логировать и скипать рендер, если вернул `-1`, чтобы не упасть при расхождении массивов
 
 ---
 
@@ -417,3 +424,7 @@ const MealAddProduct = React.memo(function MealAddProduct({
 3. **A11y** — добавить `aria-live="polite"` для undo toast в AdviceCard
 
 4. **Измерение эффекта** — после каждого шага проверить в React DevTools → Highlight updates
+
+5. **Perf-трассировка на dev** — временно включить why-did-you-render / простые счётчики ререндеров для MealCard/ProductRow (консольные метки), чтобы показать сокращение ререндеров
+
+6. **UX-мелочи** — в моб. карточках продуктов добавить микро-анимацию expand/collapse (transition-height) без изменения DOM-структуры

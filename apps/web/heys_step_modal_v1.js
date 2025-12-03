@@ -197,7 +197,8 @@
     title = null,
     allowSwipe = true,
     allowSkip = false,
-    context = {} // Контекст для getInitialData (например, dateKey)
+    context = {}, // Контекст для getInitialData (например, dateKey)
+    hidePrimaryOnFirst = false
   }) {
     const [currentStepIndex, setCurrentStepIndex] = useState(initialStep);
     const [animating, setAnimating] = useState(false);
@@ -436,7 +437,7 @@
               onClick: () => goToStep(currentStepIndex + 1, 'left')
             }, 'Пропустить'),
 
-            React.createElement('button', {
+            !(hidePrimaryOnFirst && currentStepIndex === 0) && React.createElement('button', {
               className: 'mc-btn mc-btn--primary',
               onClick: handleNext
             }, currentStepIndex === totalSteps - 1 ? '✓ Готово' : 'Далее →')

@@ -429,12 +429,13 @@
   // 📜 SYNC HISTORY LOG — ЖУРНАЛ СИНХРОНИЗАЦИЙ
   // ═══════════════════════════════════════════════════════════════════
   
-const SYNC_LOG_KEY = 'heys_sync_log';
-const MAX_SYNC_LOG_ENTRIES = 50;
-const SYNC_PROGRESS_EVENT = 'heys:sync-progress';
-const SYNC_COMPLETED_EVENT = 'heysSyncCompleted';
-let syncProgressTotal = 0;
-let syncProgressDone = 0;
+  const SYNC_LOG_KEY = 'heys_sync_log';
+  const MAX_SYNC_LOG_ENTRIES = 50;
+  const SYNC_PROGRESS_EVENT = 'heys:sync-progress';
+  const SYNC_COMPLETED_EVENT = 'heysSyncCompleted';
+  let syncProgressTotal = 0;
+  let syncProgressDone = 0;
+  const AUTH_ERROR_CODES = new Set(['401', '42501']);
   
   /** Добавить запись в журнал синхронизации */
   function addSyncLogEntry(type, details) {
@@ -514,6 +515,17 @@ let syncProgressDone = 0;
       global.dispatchEvent(new CustomEvent('heys:sync-error', { 
         detail: { error: error?.message || String(error), retryIn } 
       }));
+    } catch (e) {}
+  }
+
+  /** Обработка ошибок авторизации/RLS */
+  function handleAuthFailure(err) {
+    try {
+      status = CONNECTION_STATUS.OFFLINE;
+      user = null;
+      addSyncLogEntry('sync_error', { error: 'auth_required' });
+      global.dispatchEvent(new CustomEvent('heys:sync-error', { detail: { error: 'auth_required' } }));
+      logCritical('❌ Требуется повторный вход (auth/RLS error)');
     } catch (e) {}
   }
 
@@ -732,13 +744,23 @@ let syncProgressDone = 0;
       // 🔄 Автовосстановление сессии при старте
       if (client.auth && client.auth.getSession) {
         client.auth.getSession().then(({ data }) => {
-          const restoredUser = data?.session?.user;
+          const session = data?.session;
+          const restoredUser = session?.user;
+          const expiresAt = session?.expires_at ? session.expires_at * 1000 : null;
+          if (expiresAt && expiresAt < Date.now()) {
+            logCritical('⚠️ Сессия истекла, требуется повторный вход');
+            status = CONNECTION_STATUS.OFFLINE;
+            return;
+          }
           if (restoredUser) {
             user = restoredUser;
             status = CONNECTION_STATUS.SYNC;
             logCritical('🔄 Сессия восстановлена:', user.email || user.id);
             const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
-            const finishOnline = () => { status = CONNECTION_STATUS.ONLINE; };
+            const finishOnline = () => {
+              status = CONNECTION_STATUS.ONLINE;
+              cloud.retrySync && cloud.retrySync();
+            };
             if (clientId) {
               cloud.bootstrapClientSync(clientId)
                 .then(finishOnline)
@@ -1292,6 +1314,12 @@ let syncProgressDone = 0;
         notifyPendingChange();
         logCritical('❌ Ошибка сохранения в облако:', e.message || e);
         
+        // Авторизационные ошибки — требуем вход
+        if (e?.code && AUTH_ERROR_CODES.has(String(e.code))) {
+          handleAuthFailure(e);
+          return;
+        }
+        
         // Уведомляем об ошибке с временем до retry (exponential backoff)
         if (typeof window !== 'undefined' && window.dispatchEvent) {
           const retryIn = Math.min(5, Math.ceil(getRetryDelay() / 1000)); // секунд до retry
@@ -1576,6 +1604,10 @@ let syncProgressDone = 0;
           incrementRetry();
           savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
           notifyPendingChange();
+          if (error.code && AUTH_ERROR_CODES.has(String(error.code))) {
+            handleAuthFailure(error);
+            return;
+          }
           notifySyncError(error, Math.min(5, Math.ceil(getRetryDelay() / 1000)));
           err('bulk upsert', error); 
           schedulePush();
@@ -1591,6 +1623,10 @@ let syncProgressDone = 0;
         incrementRetry();
         savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
         notifyPendingChange();
+        if (e?.code && AUTH_ERROR_CODES.has(String(e.code))) {
+          handleAuthFailure(e);
+          return;
+        }
         notifySyncError(e, Math.min(5, Math.ceil(getRetryDelay() / 1000)));
         err('bulk upsert exception', e);
         schedulePush();

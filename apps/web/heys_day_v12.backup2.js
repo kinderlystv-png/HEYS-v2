@@ -155,622 +155,6 @@
     return true;
   });
 
-  const MEAL_HEADER_META = [
-    {label:''},
-    {label:'г'},
-    {label:'ккал<br>/100', per100:true},
-    {label:'У<br>/100', per100:true},
-    {label:'Прост<br>/100', per100:true},
-    {label:'Сл<br>/100', per100:true},
-    {label:'Б<br>/100', per100:true},
-    {label:'Ж<br>/100', per100:true},
-    {label:'ВрЖ<br>/100', per100:true},
-    {label:'ПолЖ<br>/100', per100:true},
-    {label:'СупЖ<br>/100', per100:true},
-    {label:'Клет<br>/100', per100:true},
-    {label:'ккал'},
-    {label:'У'},
-    {label:'Прост'},
-    {label:'Сл'},
-    {label:'Б'},
-    {label:'Ж'},
-    {label:'ВрЖ'},
-    {label:'ПолЖ'},
-    {label:'СупЖ'},
-    {label:'Клет'},
-    {label:'ГИ'},
-    {label:'Вред'},
-    {label:''}
-  ];
-
-  function fmtVal(key, v){
-    const num=+v||0;
-    if(!num) return '-';
-    if(key==='harm') return Math.round(num*10)/10; // вредность с одной десятичной
-    return Math.round(num); // всё остальное до целых
-  }
-
-  const ProductRow = React.memo(function ProductRow({
-    item,
-    mealIndex,
-    isNew,
-    pIndex,
-    setGrams,
-    removeItem
-  }) {
-    const p = getProductFromItem(item, pIndex) || { name: item.name || '?' };
-    const grams = +item.grams || 0;
-    const per = per100(p);
-    const row = {
-      kcal: scale(per.kcal100, grams),
-      carbs: scale(per.carbs100, grams),
-      simple: scale(per.simple100, grams),
-      complex: scale(per.complex100, grams),
-      prot: scale(per.prot100, grams),
-      fat: scale(per.fat100, grams),
-      bad: scale(per.bad100, grams),
-      good: scale(per.good100, grams),
-      trans: scale(per.trans100, grams),
-      fiber: scale(per.fiber100, grams)
-    };
-    const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
-    const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
-    return React.createElement('tr',{ 'data-new': isNew ? 'true' : 'false'},
-      React.createElement('td',{'data-cell':'name'},p.name),
-      React.createElement('td',{'data-cell':'grams'},React.createElement('input',{
-        type:'number',
-        value:grams,
-        'data-grams-input': true,
-        'data-meal-index': mealIndex,
-        'data-item-id': item.id,
-        onChange:e=>setGrams(mealIndex,item.id,e.target.value),
-        onKeyDown:e=>{
-          if(e.key==='Enter') {
-            e.target.blur(); // Убрать фокус после подтверждения
-          }
-        },
-        onFocus:e=>e.target.select(), // Выделить текст при фокусе
-        placeholder:'грамм',
-        style:{textAlign:'center'}
-      })),
-      React.createElement('td',{'data-cell':'per100'},fmtVal('kcal100', per.kcal100)),
-      React.createElement('td',{'data-cell':'per100'},fmtVal('carbs100', per.carbs100)),
-      React.createElement('td',{'data-cell':'per100'},fmtVal('simple100', per.simple100)),
-      React.createElement('td',{'data-cell':'per100'},fmtVal('complex100', per.complex100)),
-      React.createElement('td',{'data-cell':'per100'},fmtVal('prot100', per.prot100)),
-      React.createElement('td',{'data-cell':'per100'},fmtVal('fat100', per.fat100)),
-      React.createElement('td',{'data-cell':'per100'},fmtVal('bad', per.bad100)),
-      React.createElement('td',{'data-cell':'per100'},fmtVal('good100', per.good100)),
-      React.createElement('td',{'data-cell':'per100'},fmtVal('trans100', per.trans100)),
-      React.createElement('td',{'data-cell':'per100'},fmtVal('fiber100', per.fiber100)),
-      React.createElement('td',{'data-cell':'kcal'},fmtVal('kcal', row.kcal)),
-      React.createElement('td',{'data-cell':'carbs'},fmtVal('carbs', row.carbs)),
-      React.createElement('td',{'data-cell':'hidden'},fmtVal('simple', row.simple)),
-      React.createElement('td',{'data-cell':'hidden'},fmtVal('complex', row.complex)),
-      React.createElement('td',{'data-cell':'prot'},fmtVal('prot', row.prot)),
-      React.createElement('td',{'data-cell':'fat'},fmtVal('fat', row.fat)),
-      React.createElement('td',{'data-cell':'hidden'},fmtVal('bad', row.bad)),
-      React.createElement('td',{'data-cell':'hidden'},fmtVal('good', row.good)),
-      React.createElement('td',{'data-cell':'hidden'},fmtVal('trans', row.trans)),
-      React.createElement('td',{'data-cell':'hidden'},fmtVal('fiber', row.fiber)),
-      React.createElement('td',{'data-cell':'hidden'},fmtVal('gi', giVal)),
-      React.createElement('td',{'data-cell':'hidden'},fmtVal('harm', harmVal)),
-      React.createElement('td',{'data-cell':'delete'},React.createElement('button',{className:'btn secondary',onClick:()=>removeItem(mealIndex,item.id)},'×'))
-    );
-  });
-
-  const MealCard = React.memo(function MealCard({
-    meal,
-    mealIndex,
-    displayIndex,
-    products,
-    pIndex,
-    date,
-    setDay,
-    isMobile,
-    isExpanded,
-    onToggleExpand,
-    onChangeMealType,
-    onChangeTime,
-    onChangeMood,
-    onChangeWellbeing,
-    onChangeStress,
-    onRemoveMeal,
-    openEditGramsModal,
-    openTimeEditor,
-    openMoodEditor,
-    setGrams,
-    removeItem,
-    isMealStale,
-    allMeals,
-    isNewItem
-  }) {
-    const headerMeta = MEAL_HEADER_META;
-    function mTotals(m){
-      const t=(M.mealTotals? M.mealTotals(m,pIndex): {kcal:0,carbs:0,simple:0,complex:0,prot:0,fat:0,bad:0,good:0,trans:0,fiber:0});
-      let gSum=0, giSum=0, harmSum=0; (m.items||[]).forEach(it=>{ const p=getProductFromItem(it,pIndex); if(!p)return; const g=+it.grams||0; if(!g)return; const gi=p.gi??p.gi100??p.GI??p.giIndex; const harm=p.harm??p.harmScore??p.harm100??p.harmPct; gSum+=g; if(gi!=null) giSum+=gi*g; if(harm!=null) harmSum+=harm*g; }); t.gi=gSum?giSum/gSum:0; t.harm=gSum?harmSum/gSum:0; return t; }
-    const totals=mTotals(meal);
-    const manualType = meal.mealType;
-    const autoTypeInfo = getMealType(mealIndex, meal, allMeals, pIndex);
-    const mealTypeInfo = manualType && U.MEAL_TYPES && U.MEAL_TYPES[manualType] 
-      ? { type: manualType, ...U.MEAL_TYPES[manualType] }
-      : autoTypeInfo;
-    
-    const changeMealType = (newType) => onChangeMealType(mealIndex, newType);
-    const timeDisplay = U.formatMealTime ? U.formatMealTime(meal.time) : (meal.time || '');
-    const mealKcal = Math.round(totals.kcal || 0);
-    const isStale = isMealStale(meal);
-    const isCurrentMeal = displayIndex === 0 && !isStale;
-    const mealCardClass = isCurrentMeal ? 'card tone-blue meal-card' : 'card tone-slate meal-card';
-    const computeDerivedProductFn = M.computeDerivedProduct || ((prod) => prod || {});
-
-    return React.createElement(React.Fragment,null,
-      // Заголовок приёма: тип (dropdown) · время · калории
-      React.createElement('div',{className:'meal-sep meal-type-' + mealTypeInfo.type},
-        // Обёртка для dropdown
-        React.createElement('div', { className: 'meal-type-wrapper' },
-          // Текущий тип (иконка + название) — кликабельный
-          React.createElement('span', { className: 'meal-type-label' }, 
-            mealTypeInfo.icon + ' ' + mealTypeInfo.name,
-            // Индикатор dropdown
-            React.createElement('span', { className: 'meal-type-arrow' }, ' ▾')
-          ),
-          // Подсказка "изменить"
-          React.createElement('span', { className: 'meal-type-hint' }, 'изменить'),
-          // Скрытый select поверх
-          React.createElement('select', {
-            className: 'meal-type-select',
-            value: manualType || '',
-            onChange: (e) => changeMealType(e.target.value || null),
-            title: 'Изменить тип приёма'
-          }, [
-            { value: '', label: '🔄 Авто' },
-            { value: 'breakfast', label: '🍳 Завтрак' },
-            { value: 'snack1', label: '🍎 Перекус' },
-            { value: 'lunch', label: '🍲 Обед' },
-            { value: 'snack2', label: '🥜 Перекус' },
-            { value: 'dinner', label: '🍽️ Ужин' },
-            { value: 'snack3', label: '🧀 Перекус' },
-            { value: 'night', label: '🌙 Ночной' }
-          ].map(opt => 
-            React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
-          ))
-        ),
-        // Время (если есть)
-        timeDisplay && React.createElement('span', { className: 'meal-time-badge' }, 
-          '· ' + timeDisplay
-        ),
-        // Калории (если есть продукты)
-        mealKcal > 0 && React.createElement('span', { className: 'meal-kcal-badge' }, 
-          mealKcal + ' ккал'
-        )
-      ),
-      React.createElement('div',{className: mealCardClass, 'data-meal-index': mealIndex, style:{marginTop:'4px', width: '100%'}},
-      // MOBILE: Meal totals at top (before search)
-      (meal.items || []).length > 0 && React.createElement('div', { className: 'mpc-totals-wrap mobile-only' },
-        React.createElement('div', { className: 'mpc-grid mpc-header' },
-          React.createElement('span', null, 'ккал'),
-          React.createElement('span', null, 'У'),
-          React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
-          React.createElement('span', null, 'Б'),
-          React.createElement('span', null, 'Ж'),
-          React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
-          React.createElement('span', null, 'Кл'),
-          React.createElement('span', null, 'ГИ'),
-          React.createElement('span', null, 'Вр')
-        ),
-        React.createElement('div', { className: 'mpc-grid mpc-totals-values' },
-          React.createElement('span', null, Math.round(totals.kcal)),
-          React.createElement('span', null, Math.round(totals.carbs)),
-          React.createElement('span', { className: 'mpc-dim' }, Math.round(totals.simple || 0) + '/' + Math.round(totals.complex || 0)),
-          React.createElement('span', null, Math.round(totals.prot)),
-          React.createElement('span', null, Math.round(totals.fat)),
-          React.createElement('span', { className: 'mpc-dim' }, Math.round(totals.bad || 0) + '/' + Math.round(totals.good || 0) + '/' + Math.round(totals.trans || 0)),
-          React.createElement('span', null, Math.round(totals.fiber || 0)),
-          React.createElement('span', null, Math.round(totals.gi || 0)),
-          React.createElement('span', null, fmtVal('harm', totals.harm || 0))
-        )
-      ),
-      React.createElement('div',{className:'row desktop-add-product',style:{justifyContent:'space-between',alignItems:'center'}},
-        React.createElement('div',{className:'section-title'},'Добавить продукт'),
-        React.createElement(MealAddProduct, { mi: mealIndex, products, date, setDay })
-      ),
-      React.createElement('div',{style:{overflowX:'auto',marginTop:'8px'}}, React.createElement('table',{className:'tbl meals-table'},
-        React.createElement('thead',null,React.createElement('tr',null, headerMeta.map((h,i)=>React.createElement('th',{
-            key:'h'+i,
-            className: h.per100? 'per100-col': undefined,
-            dangerouslySetInnerHTML:{__html:h.label}
-          }))
-        )),
-        React.createElement('tbody',null,
-          (meal.items||[]).map(it => React.createElement(ProductRow, {
-            key: it.id,
-            item: it,
-            mealIndex,
-            isNew: isNewItem(it.id),
-            pIndex,
-            setGrams,
-            removeItem
-          })),
-          React.createElement('tr',{className:'tr-sum'},
-            React.createElement('td',{className:'fw-600'},''),
-            React.createElement('td',null,''),
-            React.createElement('td',{colSpan:10},React.createElement('div',{className:'table-divider'})),
-            React.createElement('td',null,fmtVal('kcal', totals.kcal)),
-            React.createElement('td',null,fmtVal('carbs', totals.carbs)),
-            React.createElement('td',null,fmtVal('simple', totals.simple)),
-            React.createElement('td',null,fmtVal('complex', totals.complex)),
-            React.createElement('td',null,fmtVal('prot', totals.prot)),
-            React.createElement('td',null,fmtVal('fat', totals.fat)),
-            React.createElement('td',null,fmtVal('bad', totals.bad)),
-            React.createElement('td',null,fmtVal('good', totals.good)),
-            React.createElement('td',null,fmtVal('trans', totals.trans)),
-            React.createElement('td',null,fmtVal('fiber', totals.fiber)),
-            React.createElement('td',null,fmtVal('gi', totals.gi)),
-            React.createElement('td',null,fmtVal('harm', totals.harm)),
-            React.createElement('td',null,'')
-          )
-        )
-      )),
-      // MOBILE CARDS — компактный вид с grid-сеткой (collapsible)
-        React.createElement('div', { className: 'mobile-products-list' },
-          // Ряд: toggle + добавить (если есть продукты) или только добавить (если пусто)
-          React.createElement('div', { className: 'mpc-toggle-add-row' + ((meal.items || []).length === 0 ? ' single' : '') },
-            // Toggle (только если есть продукты)
-            (meal.items || []).length > 0 && React.createElement('div', { 
-              className: 'mpc-products-toggle' + (isExpanded ? ' expanded' : ''),
-              onClick: () => onToggleExpand(mealIndex, allMeals)
-            },
-              React.createElement('span', { className: 'toggle-arrow' }, '›'),
-              React.createElement('span', null, (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов'))
-            ),
-          // Кнопка добавить
-          React.createElement(MealAddProduct, { mi: mealIndex, products, date, setDay })
-        ),
-        // Products list (shown when expanded)
-        isExpanded && (meal.items || []).map(it => {
-          const p = getProductFromItem(it, pIndex) || { name: it.name || '?' };
-          const G = +it.grams || 0;
-          const per = per100(p);
-          const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
-          const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
-          
-          // Контент карточки
-          // Определяем цвет граммов
-          const gramsClass = G > 500 ? 'grams-danger' : G > 300 ? 'grams-warn' : '';
-          
-          // Фон карточки по полезности: 0=зелёный(полезный), 5=голубой(средний), 10=красный(вредный)
-          const getHarmBg = (h) => {
-            if (h == null) return '#fff';
-            // h: 0=полезный, 5=средний, 10=вредный
-            if (h <= 1) return '#34d399';  // 0-1: насыщенный зелёный — полезный
-            if (h <= 2) return '#6ee7b7';  // 2: зелёный
-            if (h <= 3) return '#a7f3d0';  // 3: мятный
-            if (h <= 4) return '#d1fae5';  // 4: светло-мятный
-            if (h <= 5) return '#bae6fd';  // 5: голубой — средний
-            if (h <= 6) return '#e0f2fe';  // 6: светло-голубой
-            if (h <= 7) return '#fecaca';  // 7: светло-розовый
-            if (h <= 8) return '#fee2e2';  // 8: розовый
-            if (h <= 9) return '#fecdd3';  // 9: красноватый
-            return '#f87171';              // 10: красный — вредный
-          };
-          const harmBg = getHarmBg(harmVal);
-          
-          // Бейдж полезности/вредности: 0=полезный, 10=вредный
-          const getHarmBadge = (h) => {
-            if (h == null) return null;
-            if (h <= 2) return { emoji: '🌿', text: 'полезный', color: '#059669' };
-            if (h >= 8) return { emoji: '⚠️', text: 'вредный', color: '#dc2626' };
-            return null;
-          };
-          const harmBadge = getHarmBadge(harmVal);
-          
-          // Иконка категории продукта
-          const getCategoryIcon = (cat) => {
-            if (!cat) return null;
-            const c = cat.toLowerCase();
-            if (c.includes('молоч') || c.includes('сыр') || c.includes('творог')) return '🥛';
-            if (c.includes('мяс') || c.includes('птиц') || c.includes('курин') || c.includes('говя') || c.includes('свин')) return '🍖';
-            if (c.includes('рыб') || c.includes('морепр')) return '🐟';
-            if (c.includes('овощ') || c.includes('салат') || c.includes('зелен')) return '🥬';
-            if (c.includes('фрукт') || c.includes('ягод')) return '🍎';
-            if (c.includes('круп') || c.includes('каш') || c.includes('злак') || c.includes('хлеб') || c.includes('выпеч')) return '🌾';
-            if (c.includes('яйц')) return '🥚';
-            if (c.includes('орех') || c.includes('семеч')) return '🥜';
-            if (c.includes('масл')) return '🫒';
-            if (c.includes('напит') || c.includes('сок') || c.includes('кофе') || c.includes('чай')) return '🥤';
-            if (c.includes('сладк') || c.includes('десерт') || c.includes('конфет') || c.includes('шокол')) return '🍬';
-            if (c.includes('соус') || c.includes('специ') || c.includes('припра')) return '🧂';
-            return '🍽️';
-          };
-          const categoryIcon = getCategoryIcon(p.category);
-          
-          // Поиск альтернативы с меньшей калорийностью в той же категории
-          const findAlternative = (prod, allProducts) => {
-            if (!prod.category || !allProducts || allProducts.length < 2) return null;
-            const currentKcal = per.kcal100 || 0;
-            if (currentKcal < 50) return null; // уже низкокалорийный
-            
-            const sameCategory = allProducts.filter(alt => 
-              alt.category === prod.category && 
-              alt.id !== prod.id &&
-              (alt.kcal100 || computeDerivedProductFn(alt).kcal100) < currentKcal * 0.7 // на 30%+ меньше
-            );
-            if (sameCategory.length === 0) return null;
-            
-            // Берём самый низкокалорийный
-            const best = sameCategory.reduce((a, b) => {
-              const aKcal = a.kcal100 || computeDerivedProductFn(a).kcal100;
-              const bKcal = b.kcal100 || computeDerivedProductFn(b).kcal100;
-              return aKcal < bKcal ? a : b;
-            });
-            const bestKcal = best.kcal100 || computeDerivedProductFn(best).kcal100;
-            const saving = Math.round((1 - bestKcal / currentKcal) * 100);
-            return { name: best.name, saving };
-          };
-          const alternative = findAlternative(p, products);
-          
-          const cardContent = React.createElement('div', { className: 'mpc', style: { background: harmBg } },
-            // Row 1: category icon + name + badge + grams
-            React.createElement('div', { className: 'mpc-row1' },
-              categoryIcon && React.createElement('span', { className: 'mpc-category-icon' }, categoryIcon),
-              React.createElement('span', { className: 'mpc-name' }, p.name),
-              harmBadge && React.createElement('span', { 
-                className: 'mpc-badge',
-                style: { color: harmBadge.color }
-              }, harmBadge.emoji),
-              // На мобильных — кнопка открывает модалку со слайдером
-              React.createElement('button', {
-                className: 'mpc-grams-btn ' + gramsClass,
-                onClick: (e) => { e.stopPropagation(); openEditGramsModal(mealIndex, it.id, G, p); }
-              }, G + 'г')
-            ),
-            // Row 2: header labels (grid)
-            React.createElement('div', { className: 'mpc-grid mpc-header' },
-              React.createElement('span', null, 'ккал'),
-              React.createElement('span', null, 'У'),
-              React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
-              React.createElement('span', null, 'Б'),
-              React.createElement('span', null, 'Ж'),
-              React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
-              React.createElement('span', null, 'Кл'),
-              React.createElement('span', null, 'ГИ'),
-              React.createElement('span', null, 'Вр')
-            ),
-            // Row 3: values (grid) - абсолютные значения в граммах
-            React.createElement('div', { className: 'mpc-grid mpc-values' },
-              React.createElement('span', null, Math.round(scale(per.kcal100, G))),
-              React.createElement('span', null, Math.round(scale(per.carbs100, G))),
-              React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.simple100, G)) + '/' + Math.round(scale(per.complex100, G))),
-              React.createElement('span', null, Math.round(scale(per.prot100, G))),
-              React.createElement('span', null, Math.round(scale(per.fat100, G))),
-              React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.bad100, G)) + '/' + Math.round(scale(per.good100, G)) + '/' + Math.round(scale(per.trans100 || 0, G))),
-              React.createElement('span', null, Math.round(scale(per.fiber100, G))),
-              React.createElement('span', null, giVal != null ? Math.round(giVal) : '-'),
-              React.createElement('span', null, harmVal != null ? fmtVal('harm', harmVal) : '-')
-            ),
-            // Row 4: альтернатива (если есть)
-            alternative && React.createElement('div', { className: 'mpc-alternative' },
-              React.createElement('span', null, '💡 Замени на '),
-              React.createElement('strong', null, alternative.name),
-              React.createElement('span', null, ' — на ' + alternative.saving + '% меньше ккал')
-            )
-          );
-          
-          // На мобильных — оборачиваем в SwipeableRow
-          if (isMobile && HEYS.SwipeableRow) {
-            return React.createElement(HEYS.SwipeableRow, {
-              key: it.id,
-              onDelete: () => removeItem(mealIndex, it.id)
-            }, cardContent);
-          }
-          
-          // На десктопе — обычная карточка с кнопкой удаления
-          return React.createElement('div', { key: it.id, className: 'mpc', style: { marginBottom: '6px', background: harmBg } },
-            React.createElement('div', { className: 'mpc-row1' },
-              React.createElement('span', { className: 'mpc-name' }, p.name),
-              React.createElement('input', {
-                type: 'number',
-                className: 'mpc-grams',
-                value: G,
-                onChange: e => setGrams(mealIndex, it.id, e.target.value),
-                onFocus: e => e.target.select(),
-                onKeyDown: e => { if (e.key === 'Enter') e.target.blur(); },
-                'data-grams-input': true,
-                'data-meal-index': mealIndex,
-                'data-item-id': it.id,
-                inputMode: 'decimal'
-              }),
-              React.createElement('button', {
-                className: 'mpc-delete',
-                onClick: () => removeItem(mealIndex, it.id)
-              }, '×')
-            ),
-            React.createElement('div', { className: 'mpc-grid mpc-header' },
-              React.createElement('span', null, 'ккал'),
-              React.createElement('span', null, 'У'),
-              React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
-              React.createElement('span', null, 'Б'),
-              React.createElement('span', null, 'Ж'),
-              React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
-              React.createElement('span', null, 'Кл'),
-              React.createElement('span', null, 'ГИ'),
-              React.createElement('span', null, 'Вр')
-            ),
-            React.createElement('div', { className: 'mpc-grid mpc-values' },
-              React.createElement('span', null, Math.round(scale(per.kcal100, G))),
-              React.createElement('span', null, Math.round(scale(per.carbs100, G))),
-              React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.simple100, G)) + '/' + Math.round(scale(per.complex100, G))),
-              React.createElement('span', null, Math.round(scale(per.prot100, G))),
-              React.createElement('span', null, Math.round(scale(per.fat100, G))),
-              React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.bad100, G)) + '/' + Math.round(scale(per.good100, G)) + '/' + Math.round(scale(per.trans100 || 0, G))),
-              React.createElement('span', null, Math.round(scale(per.fiber100, G))),
-              React.createElement('span', null, giVal != null ? Math.round(giVal) : '-'),
-              React.createElement('span', null, harmVal != null ? fmtVal('harm', harmVal) : '-')
-            )
-          );
-        }),
-        // Компактный блок: время + настроение + самочувствие + стресс (SaaS стиль)
-        React.createElement('div', { className: 'meal-meta-row' },
-          // На мобильных — кнопка редактирования времени, на десктопе — input
-          isMobile
-            ? React.createElement('button', { 
-                className: 'compact-input time mobile-time-btn', 
-                onClick: () => openTimeEditor(mealIndex),
-                title: 'Изменить время'
-              }, (U.formatMealTime ? U.formatMealTime(meal.time) : meal.time) || '—:—')
-            : React.createElement('input', { className: 'compact-input time', type: 'time', title: 'Время приёма', value: meal.time || '', onChange: e => onChangeTime(mealIndex, e.target.value) }),
-          // На мобильных — кнопка редактирования оценок, на десктопе — inputs
-          isMobile
-            ? React.createElement('button', {
-                className: 'mobile-mood-btn',
-                onClick: () => openMoodEditor(mealIndex),
-                title: 'Изменить оценки'
-              },
-                React.createElement('span', { className: 'meal-meta-display' }, '😊', React.createElement('span', { className: 'meta-value' }, meal.mood || '—')),
-                React.createElement('span', { className: 'meal-meta-display' }, '💪', React.createElement('span', { className: 'meta-value' }, meal.wellbeing || '—')),
-                React.createElement('span', { className: 'meal-meta-display' }, '😰', React.createElement('span', { className: 'meta-value' }, meal.stress || '—'))
-              )
-            : React.createElement(React.Fragment, null,
-                React.createElement('span', { className: 'meal-meta-field' }, '😊', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Настроение', value: meal.mood || '', onChange: e => onChangeMood(mealIndex, +e.target.value || '') })),
-                React.createElement('span', { className: 'meal-meta-field' }, '💪', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Самочувствие', value: meal.wellbeing || '', onChange: e => onChangeWellbeing(mealIndex, +e.target.value || '') })),
-                React.createElement('span', { className: 'meal-meta-field' }, '😰', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Стресс', value: meal.stress || '', onChange: e => onChangeStress(mealIndex, +e.target.value || '') }))
-              ),
-          React.createElement('button', { className: 'meal-delete-btn', onClick: () => onRemoveMeal(mealIndex), title: 'Удалить приём' }, '🗑')
-        )
-      )
-      )
-    );
-  });
-
-  const AdviceCard = React.memo(function AdviceCard({
-    advice,
-    globalIndex,
-    isDismissed,
-    isHidden,
-    swipeState,
-    isExpanded,
-    isLastDismissed,
-    lastDismissedAction,
-    onUndo,
-    onSwipeStart,
-    onSwipeMove,
-    onSwipeEnd,
-    onLongPressStart,
-    onLongPressEnd,
-    registerCardRef
-  }) {
-    const swipeX = swipeState?.x || 0;
-    const swipeDirection = swipeState?.direction;
-    const swipeProgress = Math.min(1, Math.abs(swipeX) / 100);
-    const showUndo = isLastDismissed && (isDismissed || isHidden);
-    
-    if ((isDismissed || isHidden) && !showUndo) return null;
-    
-    return React.createElement('div', { 
-      className: `advice-list-item-wrapper`,
-      style: { 
-        animationDelay: `${globalIndex * 50}ms`,
-        '--stagger-delay': `${globalIndex * 50}ms`,
-        position: 'relative',
-        overflow: 'hidden'
-      }
-    },
-      // Undo overlay (показывается после свайпа)
-      showUndo && React.createElement('div', {
-        className: 'advice-undo-overlay',
-        onClick: onUndo,
-        style: {
-          position: 'absolute',
-          inset: 0,
-          background: lastDismissedAction === 'hidden' 
-            ? 'linear-gradient(135deg, rgba(251, 146, 60, 0.85) 0%, rgba(234, 88, 12, 0.85) 100%)' 
-            : 'linear-gradient(135deg, rgba(34, 197, 94, 0.85) 0%, rgba(22, 163, 74, 0.85) 100%)',
-          borderRadius: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px',
-          color: 'white',
-          fontWeight: 600,
-          fontSize: '14px',
-          cursor: 'pointer',
-          zIndex: 10,
-          backdropFilter: 'blur(4px)'
-        }
-      },
-        React.createElement('span', null, lastDismissedAction === 'hidden' ? '🔕 Скрыто' : '✓ Прочитано'),
-        React.createElement('span', { 
-          style: { 
-            background: 'rgba(255,255,255,0.3)', 
-            padding: '4px 10px', 
-            borderRadius: '12px',
-            fontSize: '13px'
-          } 
-        }, 'Отменить'),
-        // Прогресс-бар (убывает за 3 сек)
-        React.createElement('div', {
-          style: {
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            height: '3px',
-            background: 'rgba(255,255,255,0.5)',
-            width: '100%',
-            animation: 'undoProgress 3s linear forwards'
-          }
-        })
-      ),
-      // Фон слева "Прочитано" (зелёный) — только если нет undo
-      !showUndo && React.createElement('div', { 
-        className: 'advice-list-item-bg advice-list-item-bg-left',
-        style: { opacity: swipeDirection === 'left' ? swipeProgress : 0 }
-      },
-        React.createElement('span', null, '✓ Прочитано')
-      ),
-      // Фон справа "Скрыть" (оранжевый) — только если нет undo
-      !showUndo && React.createElement('div', { 
-        className: 'advice-list-item-bg advice-list-item-bg-right',
-        style: { opacity: swipeDirection === 'right' ? swipeProgress : 0 }
-      },
-        React.createElement('span', null, '🔕 До завтра')
-      ),
-      // Сам совет (скрыт под undo overlay)
-      React.createElement('div', { 
-        ref: (el) => registerCardRef(advice.id, el),
-        className: `advice-list-item advice-list-item-${advice.type}${isExpanded ? ' expanded' : ''}`,
-        style: { 
-          transform: showUndo ? 'none' : `translateX(${swipeX}px)`,
-          opacity: showUndo ? 0.1 : (1 - swipeProgress * 0.3),
-          pointerEvents: showUndo ? 'none' : 'auto'
-        },
-        onTouchStart: (e) => {
-          if (showUndo) return;
-          onSwipeStart(advice.id, e);
-          onLongPressStart(advice.id);
-        },
-        onTouchMove: (e) => {
-          if (showUndo) return;
-          onSwipeMove(advice.id, e);
-          onLongPressEnd();
-        },
-        onTouchEnd: () => {
-          if (showUndo) return;
-          onSwipeEnd(advice.id);
-          onLongPressEnd();
-        }
-      },
-        React.createElement('span', { className: 'advice-list-icon' }, advice.icon),
-        React.createElement('div', { className: 'advice-list-content' },
-          React.createElement('span', { className: 'advice-list-text' }, advice.text),
-          isExpanded && advice.details && React.createElement('div', { 
-            className: 'advice-list-details'
-          }, advice.details)
-        )
-      )
-    );
-  });
-
   HEYS.DayTab=function DayTab(props){
   
   const {useState,useMemo,useEffect,useRef}=React;
@@ -837,7 +221,7 @@
   }, [expandedMeals, expandedMealsKey]);
   
   // Проверка: устарел ли приём (прошло больше 1 часа с времени приёма)
-  const isMealStale = React.useCallback((meal) => {
+  const isMealStale = (meal) => {
     if (!meal || !meal.time) return false;
     const [hours, minutes] = meal.time.split(':').map(Number);
     if (isNaN(hours) || isNaN(minutes)) return false;
@@ -846,9 +230,9 @@
     mealDate.setHours(hours, minutes, 0, 0);
     const diffMinutes = (now - mealDate) / (1000 * 60);
     return diffMinutes > 60;
-  }, []);
+  };
   
-  const toggleMealExpand = React.useCallback((mealIndex, meals) => {
+  const toggleMealExpand = (mealIndex, meals) => {
     const meal = meals && meals[mealIndex];
     const isStale = meal && isMealStale(meal);
     
@@ -859,7 +243,7 @@
       // Для актуальных — обычный state (кешируется)
       setExpandedMeals(prev => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
     }
-  }, [isMealStale]);
+  };
   
   // Функция для разворачивания нового приёма и сворачивания остальных
   const expandOnlyMeal = (mealIndex) => {
@@ -1155,16 +539,14 @@
   }
 
     function updateTraining(i, zi, mins) {
-      setDay(prevDay => {
-        const arr = (prevDay.trainings || [{z:[0,0,0,0]}, {z:[0,0,0,0]}]).map((t, idx) => {
-          if (idx !== i) return t;
-          return {
-            ...t,  // сохраняем time, type и другие поля
-            z: t.z.map((v, j) => j === zi ? (+mins || 0) : v)
-          };
-        });
-        return { ...prevDay, trainings: arr };
+      const arr = (day.trainings || [{z:[0,0,0,0]}, {z:[0,0,0,0]}]).map((t, idx) => {
+        if (idx !== i) return t;
+        return {
+          ...t,  // сохраняем time, type и другие поля
+          z: t.z.map((v, j) => j === zi ? (+mins || 0) : v)
+        };
       });
+      setDay({ ...day, trainings: arr });
     }
 
     // Функция для вычисления средних оценок из приёмов пищи
@@ -1355,9 +737,6 @@
     const [undoFading, setUndoFading] = useState(false); // для fade-out анимации
     const adviceSwipeStart = React.useRef({});
     const adviceCardRefs = React.useRef({}); // refs для floating XP
-    const registerAdviceCardRef = React.useCallback((adviceId, el) => {
-      if (el) adviceCardRefs.current[adviceId] = el;
-    }, []);
     
     // Группировка и сортировка советов
     const ADVICE_PRIORITY = { warning: 0, insight: 1, tip: 2, achievement: 3, info: 4 };
@@ -1403,16 +782,16 @@
     }, [dismissedAdvices, hiddenUntilTomorrow, lastDismissedAdvice]);
     
     // Handlers для swipe советов (влево = прочитано, вправо = скрыть до завтра)
-    const handleAdviceSwipeStart = React.useCallback((adviceId, e) => {
+    const handleAdviceSwipeStart = (adviceId, e) => {
       adviceSwipeStart.current[adviceId] = e.touches[0].clientX;
-    }, []);
-    const handleAdviceSwipeMove = React.useCallback((adviceId, e) => {
+    };
+    const handleAdviceSwipeMove = (adviceId, e) => {
       const startX = adviceSwipeStart.current[adviceId];
       if (startX === undefined) return;
       const diff = e.touches[0].clientX - startX;
       const direction = diff < 0 ? 'left' : 'right';
       setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: diff, direction } }));
-    }, []);
+    };
     
     // Звук прочтения совета (тихий приятный звук)
     const playAdviceSound = React.useCallback(() => {
@@ -1472,9 +851,9 @@
       
       setLastDismissedAdvice(null);
       haptic('light');
-    }, [haptic, lastDismissedAdvice]);
+    }, [lastDismissedAdvice]);
     
-    const handleAdviceSwipeEnd = React.useCallback((adviceId) => {
+    const handleAdviceSwipeEnd = (adviceId) => {
       const state = adviceSwipeState[adviceId];
       const swipeX = state?.x || 0;
       
@@ -1548,22 +927,22 @@
       
       setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: 0, direction: null } }));
       delete adviceSwipeStart.current[adviceId];
-    }, [adviceSwipeState, haptic, lastDismissedAdvice, playAdviceSound, setDismissedAdvices, setHiddenUntilTomorrow]);
+    };
     
     // Долгий тап для раскрытия деталей
     const adviceLongPressTimer = React.useRef(null);
-    const handleAdviceLongPressStart = React.useCallback((adviceId) => {
+    const handleAdviceLongPressStart = (adviceId) => {
       adviceLongPressTimer.current = setTimeout(() => {
         setExpandedAdviceId(prev => prev === adviceId ? null : adviceId);
         haptic('light');
       }, 500);
-    }, [haptic]);
-    const handleAdviceLongPressEnd = React.useCallback(() => {
+    };
+    const handleAdviceLongPressEnd = () => {
       if (adviceLongPressTimer.current) {
         clearTimeout(adviceLongPressTimer.current);
         adviceLongPressTimer.current = null;
       }
-    }, []);
+    };
     
     // "Прочитать все" с эффектом домино
     const handleDismissAll = () => {
@@ -2022,7 +1401,7 @@
     // Внутренняя функция анимации воды
     function runWaterAnimation(ml) {
       const newWater = (day.waterMl || 0) + ml;
-      setDay(prev => ({ ...prev, waterMl: (prev.waterMl || 0) + ml, lastWaterTime: Date.now() }));
+      setDay({ ...day, waterMl: newWater, lastWaterTime: Date.now() });
       
       // 💧 Анимация падающей капли (длиннее для плавности)
       setShowWaterDrop(true);
@@ -2050,7 +1429,7 @@
     // Убрать воду (для исправления ошибок)
     function removeWater(ml) {
       const newWater = Math.max(0, (day.waterMl || 0) - ml);
-      setDay(prev => ({ ...prev, waterMl: Math.max(0, (prev.waterMl || 0) - ml) }));
+      setDay({ ...day, waterMl: newWater });
       haptic('light');
     }
 
@@ -2069,7 +1448,7 @@
     
     function confirmHouseholdPicker() {
       const newMinutes = pendingHouseholdIdx * 10; // индекс обратно в минуты
-      setDay(prev => ({ ...prev, householdMin: newMinutes }));
+      setDay({ ...day, householdMin: newMinutes });
       setShowHouseholdPicker(false);
     }
     
@@ -2243,7 +1622,7 @@
         comment: pendingTrainingComment
       };
       
-      setDay(prev => ({ ...prev, trainings: newTrainings }));
+      setDay({ ...day, trainings: newTrainings });
       setShowTrainingPicker(false);
       setTrainingPickerStep(1);
       setEditingTrainingIndex(null);
@@ -2343,15 +1722,14 @@
     
     function confirmSleepQualityPicker() {
       const value = pendingSleepQuality === 0 ? 0 : parseInt(sleepQualityValues[pendingSleepQuality]);
-      setDay(prevDay => {
-        let newSleepNote = prevDay.sleepNote || '';
-        if (pendingSleepNote.trim()) {
-          const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-          const entry = `[${time}] ${pendingSleepNote.trim()}`;
-          newSleepNote = newSleepNote ? newSleepNote + '\n' + entry : entry;
-        }
-        return { ...prevDay, sleepQuality: value, sleepNote: newSleepNote };
-      });
+      // Добавляем timestamp если есть новый комментарий
+      let newSleepNote = day.sleepNote || '';
+      if (pendingSleepNote.trim()) {
+        const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        const entry = `[${time}] ${pendingSleepNote.trim()}`;
+        newSleepNote = newSleepNote ? newSleepNote + '\n' + entry : entry;
+      }
+      setDay({...day, sleepQuality: value, sleepNote: newSleepNote});
       setPendingSleepNote('');
       setShowSleepQualityPicker(false);
     }
@@ -2371,17 +1749,18 @@
     
     function confirmDayScorePicker() {
       const value = pendingDayScore === 0 ? 0 : parseInt(dayScoreValues[pendingDayScore]);
-      setDay(prevDay => {
-        const autoScore = calculateMealAverages(prevDay.meals).dayScore;
-        const isManual = value !== 0 && value !== autoScore;
-        let newDayComment = prevDay.dayComment || '';
-        if (pendingDayComment.trim()) {
-          const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-          const entry = `[${time}] ${pendingDayComment.trim()}`;
-          newDayComment = newDayComment ? newDayComment + '\n' + entry : entry;
-        }
-        return { ...prevDay, dayScore: value, dayScoreManual: isManual, dayComment: newDayComment };
-      });
+      // Вычисляем авто-значение для сравнения
+      const autoScore = calculateMealAverages(day.meals).dayScore;
+      // Если значение отличается от авто — это ручной override
+      const isManual = value !== 0 && value !== autoScore;
+      // Добавляем timestamp если есть новый комментарий
+      let newDayComment = day.dayComment || '';
+      if (pendingDayComment.trim()) {
+        const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        const entry = `[${time}] ${pendingDayComment.trim()}`;
+        newDayComment = newDayComment ? newDayComment + '\n' + entry : entry;
+      }
+      setDay({...day, dayScore: value, dayScoreManual: isManual, dayComment: newDayComment});
       setPendingDayComment('');
       setShowDayScorePicker(false);
     }
@@ -2585,12 +1964,10 @@
       const moodVal = pendingMealMood.mood === 0 ? '' : pendingMealMood.mood;
       const wellbeingVal = pendingMealMood.wellbeing === 0 ? '' : pendingMealMood.wellbeing;
       const stressVal = pendingMealMood.stress === 0 ? '' : pendingMealMood.stress;
-      setDay(prevDay => {
-        const updatedMeals = (prevDay.meals || []).map((m, i) => 
-          i === editingMealIndex ? { ...m, mood: moodVal, wellbeing: wellbeingVal, stress: stressVal } : m
-        );
-        return { ...prevDay, meals: updatedMeals };
-      });
+      const updatedMeals = day.meals.map((m, i) => 
+        i === editingMealIndex ? { ...m, mood: moodVal, wellbeing: wellbeingVal, stress: stressVal } : m
+      );
+      setDay({ ...day, meals: updatedMeals });
       setShowTimePicker(false);
       setEditingMealIndex(null);
     }
@@ -2608,15 +1985,15 @@
       const stressVal = pendingMealMood.stress === 0 ? '' : pendingMealMood.stress;
       
       if (editingMealIndex !== null) {
-        setDay(prevDay => {
-          const updatedMeals = (prevDay.meals || []).map((m, i) => 
-            i === editingMealIndex 
-              ? { ...m, time: timeStr, mood: moodVal, wellbeing: wellbeingVal, stress: stressVal }
-              : m
-          );
-          const sortedMeals = sortMealsByTime(updatedMeals);
-          return { ...prevDay, meals: sortedMeals };
-        });
+        // Этот кейс теперь только для нового приёма после 2х шагов
+        const updatedMeals = day.meals.map((m, i) => 
+          i === editingMealIndex 
+            ? { ...m, time: timeStr, mood: moodVal, wellbeing: wellbeingVal, stress: stressVal }
+            : m
+        );
+        // Сортируем после обновления
+        const sortedMeals = sortMealsByTime(updatedMeals);
+        setDay({ ...day, meals: sortedMeals });
       } else {
         // Создание нового
         const newMeal = {
@@ -2628,15 +2005,12 @@
           stress: stressVal, 
           items: []
         };
-        let newIndex = -1;
-        let newMealsLen = 0;
-        setDay(prevDay => {
-          const newMeals = sortMealsByTime([...(prevDay.meals || []), newMeal]);
-          newIndex = newMeals.findIndex(m => m.id === newMeal.id);
-          newMealsLen = newMeals.length;
-          return { ...prevDay, meals: newMeals };
-        });
-        expandOnlyMeal(newIndex >= 0 ? newIndex : Math.max(0, newMealsLen - 1));
+        // Добавляем и сортируем
+        const newMeals = sortMealsByTime([...day.meals, newMeal]);
+        setDay({...day, meals: newMeals});
+        // Находим индекс нового приёма после сортировки
+        const newIndex = newMeals.findIndex(m => m.id === newMeal.id);
+        expandOnlyMeal(newIndex >= 0 ? newIndex : newMeals.length - 1);
       }
       
       setShowTimePicker(false);
@@ -2655,21 +2029,23 @@
     }
 
     // addMeal теперь открывает новую модульную модалку
-    const addMeal = React.useCallback(() => { 
-      console.log('[HEYS] 🍽 addMeal() called | date:', date, '| isHydrated:', isHydrated);
+    function addMeal(){ 
+      console.log('[HEYS] 🍽 addMeal() called | date:', day.date, '| meals before:', day.meals.length, '| isHydrated:', isHydrated);
       if (isMobile && HEYS.MealStep) {
         // Новая модульная модалка с шагами
         HEYS.MealStep.showAddMeal({
           dateKey: date,
           onComplete: (newMeal) => {
             console.log('[HEYS] 🍽 MealStep complete | meal:', newMeal.id, '| time:', newMeal.time);
-            let newIndex = -1;
-            setDay(prevDay => {
-              const newMeals = sortMealsByTime([...(prevDay.meals || []), newMeal]);
-              newIndex = newMeals.findIndex(m => m.id === newMeal.id);
-              return { ...prevDay, meals: newMeals, updatedAt: Date.now() };
-            });
-            if (newIndex >= 0) expandOnlyMeal(newIndex);
+            // Добавляем meal в текущий state и сортируем
+            const newMeals = sortMealsByTime([...day.meals, newMeal]);
+            const updatedDay = { ...day, meals: newMeals, updatedAt: Date.now() };
+            setDay(updatedDay);
+            // Разворачиваем новый приём
+            const newIndex = newMeals.findIndex(m => m.id === newMeal.id);
+            if (newIndex >= 0) {
+              expandOnlyMeal(newIndex);
+            }
             if (window.HEYS && window.HEYS.analytics) {
               window.HEYS.analytics.trackDataOperation('meal-created');
             }
@@ -2681,20 +2057,16 @@
       } else {
         // Десктоп — старое поведение
         const newMealId = uid('m_');
-        let newMealIndex = 0;
-        setDay(prevDay => {
-          const baseMeals = prevDay.meals || [];
-          const newMeals = [...baseMeals, {id:newMealId,name:'Приём',time:'',mood:'',wellbeing:'',stress:'',items:[]}];
-          newMealIndex = newMeals.length - 1;
-          console.log('[HEYS] 🍽 addMeal() creating meal | id:', newMealId, '| new meals count:', newMeals.length);
-          return { ...prevDay, meals: newMeals };
-        }); 
+        const newMealIndex = day.meals.length;
+        const newMeals = [...day.meals, {id:newMealId,name:'Приём',time:'',mood:'',wellbeing:'',stress:'',items:[]}];
+        console.log('[HEYS] 🍽 addMeal() creating meal | id:', newMealId, '| new meals count:', newMeals.length);
+        setDay({...day, meals: newMeals}); 
         expandOnlyMeal(newMealIndex);
         if (window.HEYS && window.HEYS.analytics) {
           window.HEYS.analytics.trackDataOperation('meal-created');
         }
       }
-    }, [date, expandOnlyMeal, isHydrated, isMobile, openTimePickerForNewMeal, setDay]);
+    }
     
     // Сортировка приёмов по времени (последние наверху для удобства)
     function sortMealsByTime(meals) {
@@ -2716,33 +2088,27 @@
     }
     
     // Обновление времени приёма с автосортировкой
-    const updateMealTime = React.useCallback((mealIndex, newTime) => {
-      setDay(prevDay => {
-        const updatedMeals = (prevDay.meals || []).map((m, i) => 
-          i === mealIndex ? { ...m, time: newTime } : m
-        );
-        // Сортируем после обновления
-        const sortedMeals = sortMealsByTime(updatedMeals);
-        return { ...prevDay, meals: sortedMeals };
-      });
-    }, [setDay, sortMealsByTime]);
+    function updateMealTime(mealIndex, newTime) {
+      const updatedMeals = day.meals.map((m, i) => 
+        i === mealIndex ? { ...m, time: newTime } : m
+      );
+      // Сортируем после обновления
+      const sortedMeals = sortMealsByTime(updatedMeals);
+      setDay({ ...day, meals: sortedMeals });
+    }
     
-    const removeMeal = React.useCallback((i) => { 
-      setDay(prevDay => {
-        const meals = (prevDay.meals || []).filter((_, idx) => idx !== i);
-        return { ...prevDay, meals };
-      }); 
-    }, [haptic, setDay]);
+    function removeMeal(i){ 
+      const meals = day.meals.filter((_, idx) => idx !== i); 
+      setDay({...day, meals}); 
+    }
     // Track newly added items for fly-in animation
     const [newItemIds, setNewItemIds] = useState(new Set());
     
-    const addProductToMeal = React.useCallback((mi,p)=>{ 
+    function addProductToMeal(mi,p){ 
       haptic('light'); // Вибрация при добавлении
       const item={id:uid('it_'), product_id:p.id??p.product_id, name:p.name, grams:100}; 
-      setDay(prevDay => {
-        const meals=(prevDay.meals||[]).map((m,i)=> i===mi? {...m, items:[...(m.items||[]), item]}:m); 
-        return {...prevDay, meals}; 
-      }); 
+      const meals=day.meals.map((m,i)=> i===mi? {...m, items:[...(m.items||[]), item]}:m); 
+      setDay({...day, meals}); 
       
       // Track new item for animation
       setNewItemIds(prev => new Set([...prev, item.id]));
@@ -2759,40 +2125,9 @@
       window.dispatchEvent(new CustomEvent('heysProductAdded'));
       
       // Автофокус убран — клавиатура закрывает информацию о продукте на мобильных
-    }, [haptic, setDay, setNewItemIds]);
-    const setGrams = React.useCallback((mi, itId, g) => { 
-      const grams = +g || 0; 
-      setDay(prevDay => {
-        const meals = (prevDay.meals || []).map((m,i)=> i===mi? {...m, items:(m.items||[]).map(it=> it.id===itId?{...it, grams:grams}:it)}:m); 
-        return {...prevDay, meals}; 
-      }); 
-    }, [setDay]);
-    const removeItem = React.useCallback((mi, itId) => { 
-      haptic('medium'); 
-      setDay(prevDay => {
-        const meals=(prevDay.meals||[]).map((m,i)=> i===mi? {...m, items:(m.items||[]).filter(it=>it.id!==itId)}:m); 
-        return {...prevDay, meals}; 
-      }); 
-    }, [haptic, setDay]);
-    const updateMealField = React.useCallback((mealIndex, field, value) => {
-      setDay(prevDay => {
-        const meals = (prevDay.meals || []).map((m, i) => i === mealIndex ? { ...m, [field]: value } : m);
-        return { ...prevDay, meals };
-      });
-    }, [setDay]);
-    const changeMealMood = React.useCallback((mealIndex, value) => updateMealField(mealIndex, 'mood', value), [updateMealField]);
-    const changeMealWellbeing = React.useCallback((mealIndex, value) => updateMealField(mealIndex, 'wellbeing', value), [updateMealField]);
-    const changeMealStress = React.useCallback((mealIndex, value) => updateMealField(mealIndex, 'stress', value), [updateMealField]);
-    const changeMealType = React.useCallback((mealIndex, newType) => {
-      setDay(prevDay => {
-        const meals = (prevDay.meals || []).map((m, i) => 
-          i === mealIndex ? { ...m, mealType: newType } : m
-        );
-        return { ...prevDay, meals };
-      });
-      haptic('light');
-    }, [setDay]);
-    const isNewItem = React.useCallback((itemId) => newItemIds.has(itemId), [newItemIds]);
+    }
+    function setGrams(mi, itId, g){ g=+g||0; const meals=day.meals.map((m,i)=> i===mi? {...m, items:(m.items||[]).map(it=> it.id===itId?{...it, grams:g}:it)}:m); setDay({...day, meals}); }
+    function removeItem(mi, itId){ haptic('medium'); const meals=day.meals.map((m,i)=> i===mi? {...m, items:(m.items||[]).filter(it=>it.id!==itId)}:m); setDay({...day, meals}); }
 
     const sleepH = sleepHours(day.sleepStart, day.sleepEnd);
 
@@ -2994,13 +2329,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const newWeight = +e.target.value || '';
           const prof = getProfile();
           // Если раньше вес был пустой и сейчас вводится первый раз, подставляем целевой дефицит из профиля
-          setDay(prevDay => {
-            const shouldSetDeficit = (!prevDay.weightMorning || prevDay.weightMorning === '') && newWeight && (!prevDay.deficitPct && prevDay.deficitPct !== 0);
-            return {
-              ...prevDay,
-              weightMorning: newWeight,
-              deficitPct: shouldSetDeficit ? (prof.deficitPctTarget || 0) : prevDay.deficitPct
-            };
+          const shouldSetDeficit = (!day.weightMorning || day.weightMorning === '') && newWeight && (!day.deficitPct && day.deficitPct !== 0);
+          setDay({
+            ...day,
+            weightMorning: newWeight,
+            deficitPct: shouldSetDeficit ? (prof.deficitPctTarget || 0) : day.deficitPct
           });
         }})),
         React.createElement('td',null,'вес на утро')
@@ -3009,7 +2342,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       React.createElement('tr',null,
         React.createElement('td',{className:'label muted small'},'Шаги :'),
         React.createElement('td',null, React.createElement('input',{className:'readOnly',value:stepsK,disabled:true,title:'ккал от шагов'})),
-        React.createElement('td',null, React.createElement('input',{type:'number',value:day.steps||0,onChange:e=>setDay(prev=>({...prev,steps:+e.target.value||0}))})),
+        React.createElement('td',null, React.createElement('input',{type:'number',value:day.steps||0,onChange:e=>setDay({...day,steps:+e.target.value||0})})),
         React.createElement('td',null,'шагов')
       ),
       // Row 4 — Тренировки
@@ -3023,7 +2356,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       React.createElement('tr',null,
         React.createElement('td',{className:'label muted small'},'Бытовая активность :'),
         React.createElement('td',null, React.createElement('input',{className:'readOnly',value:householdK,disabled:true})),
-        React.createElement('td',null, React.createElement('input',{type:'number',value:day.householdMin||0,onChange:e=>setDay(prev=>({...prev,householdMin:+e.target.value||0}))})),
+        React.createElement('td',null, React.createElement('input',{type:'number',value:day.householdMin||0,onChange:e=>setDay({...day,householdMin:+e.target.value||0})})),
         React.createElement('td',null,'мин')
       ),
       // Row 6 — Общая активность
@@ -3037,7 +2370,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       React.createElement('tr',{className:'vio-row need-kcal'},
         React.createElement('td',{className:'label small'},React.createElement('strong',null,'Нужно съесть ккал :')),
         React.createElement('td',null, React.createElement('input',{className:'readOnly',value:optimum,disabled:true})),
-        React.createElement('td',null, React.createElement('input',{type:'number',value:day.deficitPct||0,onChange:e=>setDay(prev=>({...prev,deficitPct:Number(e.target.value)||0})),style:{width:'60px',textAlign:'center',fontWeight:600}})),
+        React.createElement('td',null, React.createElement('input',{type:'number',value:day.deficitPct||0,onChange:e=>setDay({...day,deficitPct:Number(e.target.value)||0}),style:{width:'60px',textAlign:'center',fontWeight:600}})),
         React.createElement('td',null,'Целевой дефицит')
       ),
       // Row 7 — Съедено за день
@@ -3084,15 +2417,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     // Удаление тренировки (сдвигаем остальные вверх)
     const removeTraining = (ti) => {
       const emptyTraining = {z:[0,0,0,0], time:'', type:''};
-      setDay(prevDay => {
-        const oldTrainings = prevDay.trainings || [emptyTraining, emptyTraining, emptyTraining];
-        const newTrainings = [
-          ...oldTrainings.slice(0, ti),
-          ...oldTrainings.slice(ti + 1),
-          emptyTraining
-        ].slice(0, 3); // гарантируем ровно 3 элемента
-        return { ...prevDay, trainings: newTrainings };
-      });
+      const oldTrainings = day.trainings || [emptyTraining, emptyTraining, emptyTraining];
+      // Удаляем тренировку по индексу и добавляем пустую в конец
+      const newTrainings = [
+        ...oldTrainings.slice(0, ti),
+        ...oldTrainings.slice(ti + 1),
+        emptyTraining
+      ].slice(0, 3); // гарантируем ровно 3 элемента
+      setDay({...day, trainings: newTrainings});
       setVisibleTrainings(Math.max(0, visibleTrainings - 1));
     };
 
@@ -3197,9 +2529,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('span', { className: 'sleep-card-title' }, 'Сон')
               ),
               React.createElement('div', { className: 'sleep-card-times' },
-                React.createElement('input', { className: 'sleep-time-input', type: 'time', value: day.sleepStart || '', onChange: e => setDay(prev => ({...prev, sleepStart: e.target.value})) }),
+                React.createElement('input', { className: 'sleep-time-input', type: 'time', value: day.sleepStart || '', onChange: e => setDay({...day, sleepStart: e.target.value}) }),
                 React.createElement('span', { className: 'sleep-arrow' }, '→'),
-                React.createElement('input', { className: 'sleep-time-input', type: 'time', value: day.sleepEnd || '', onChange: e => setDay(prev => ({...prev, sleepEnd: e.target.value})) })
+                React.createElement('input', { className: 'sleep-time-input', type: 'time', value: day.sleepEnd || '', onChange: e => setDay({...day, sleepEnd: e.target.value}) })
               ),
               // Качество сна — большой блок как у оценки дня
               React.createElement('div', { 
@@ -3230,7 +2562,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 placeholder: 'Заметка...', 
                 value: day.sleepNote || '', 
                 rows: day.sleepNote && day.sleepNote.includes('\n') ? Math.min(day.sleepNote.split('\n').length, 4) : 1,
-                onChange: e => setDay(prev => ({...prev, sleepNote: e.target.value})) 
+                onChange: e => setDay({...day, sleepNote: e.target.value}) 
               })
             );
           })(),
@@ -3299,10 +2631,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                       onClick: (e) => {
                         e.stopPropagation();
                         // Сброс на авто
-                        setDay(prev => {
-                          const averages = calculateMealAverages(prev.meals);
-                          return {...prev, dayScore: averages.dayScore, dayScoreManual: false};
-                        });
+                        const averages = calculateMealAverages(day.meals);
+                        setDay({...day, dayScore: averages.dayScore, dayScoreManual: false});
                       }
                     }, '✏️ сбросить')
                   : (day.moodAvg || day.wellbeingAvg || day.stressAvg) && 
@@ -3337,7 +2667,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 placeholder: 'Заметка...', 
                 value: day.dayComment || '', 
                 rows: day.dayComment && day.dayComment.includes('\n') ? Math.min(day.dayComment.split('\n').length, 4) : 1,
-                onChange: e => setDay(prev => ({...prev, dayComment: e.target.value})) 
+                onChange: e => setDay({...day, dayComment: e.target.value}) 
               })
             );
           })()
@@ -3346,6 +2676,43 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     );
 
   // compareBlock удалён по требованию
+
+    // Общие метаданные колонок для всех таблиц приёмов
+    const MEAL_HEADER_META = [
+      {label:''},
+      {label:'г'},
+      {label:'ккал<br>/100', per100:true},
+      {label:'У<br>/100', per100:true},
+      {label:'Прост<br>/100', per100:true},
+      {label:'Сл<br>/100', per100:true},
+      {label:'Б<br>/100', per100:true},
+      {label:'Ж<br>/100', per100:true},
+      {label:'ВрЖ<br>/100', per100:true},
+      {label:'ПолЖ<br>/100', per100:true},
+      {label:'СупЖ<br>/100', per100:true},
+      {label:'Клет<br>/100', per100:true},
+      {label:'ккал'},
+      {label:'У'},
+      {label:'Прост'},
+      {label:'Сл'},
+      {label:'Б'},
+      {label:'Ж'},
+      {label:'ВрЖ'},
+      {label:'ПолЖ'},
+      {label:'СупЖ'},
+      {label:'Клет'},
+  {label:'ГИ'},
+  {label:'Вред'},
+      {label:''}
+    ];
+
+    // Форматирование значений для отображения: '-' если 0, целые числа, кроме показателя 'ВрЖ' (bad) — оставляем одну десятичную.
+    function fmtVal(key, v){
+      const num=+v||0;
+      if(!num) return '-';
+      if(key==='harm') return Math.round(num*10)/10; // вредность с одной десятичной
+      return Math.round(num); // всё остальное до целых
+    }
 
     // Сортируем приёмы для отображения (последние наверху)
     const sortedMealsForDisplay = React.useMemo(() => {
@@ -3366,39 +2733,426 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     }, [day.meals]);
 
     const mealsUI = sortedMealsForDisplay.map((meal, displayIndex) => {
+      // Находим реальный индекс в day.meals для правильного обновления
       const mi = (day.meals || []).findIndex(m => m.id === meal.id);
-      if (mi === -1) {
-        console.warn('[HEYS] MealCard: meal not found in day.meals', meal.id);
-        return null;
-      }
-      const isExpanded = isMealExpanded(mi, (day.meals || []).length, day.meals, displayIndex);
-      return React.createElement(MealCard, {
-        key: meal.id,
-        meal,
-        mealIndex: mi,
-        displayIndex,
-        products,
-        pIndex,
-        date,
-        setDay,
-        isMobile,
-        isExpanded,
-        onToggleExpand: toggleMealExpand,
-        onChangeMealType: changeMealType,
-        onChangeTime: updateMealTime,
-        onChangeMood: changeMealMood,
-        onChangeWellbeing: changeMealWellbeing,
-        onChangeStress: changeMealStress,
-        onRemoveMeal: removeMeal,
-        openEditGramsModal,
-        openTimeEditor,
-        openMoodEditor,
-        setGrams,
-        removeItem,
-        isMealStale,
-        allMeals: day.meals,
-        isNewItem
-      });
+      const headerMeta = MEAL_HEADER_META;
+      const header = headerMeta.map(h=>h.label.replace(/<br>/g,'/'));
+  function pRow(it){
+    const p=getProductFromItem(it,pIndex)||{name:it.name||'?'}, G=+it.grams||0, per=per100(p);
+    // Debug убран для чистоты консоли
+    const row={kcal:scale(per.kcal100,G),carbs:scale(per.carbs100,G),simple:scale(per.simple100,G),complex:scale(per.complex100,G),prot:scale(per.prot100,G),fat:scale(per.fat100,G),bad:scale(per.bad100,G),good:scale(per.good100,G),trans:scale(per.trans100,G),fiber:scale(per.fiber100,G)};
+    const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
+  const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
+    const isNew = newItemIds.has(it.id);
+    return React.createElement('tr',{key:it.id, 'data-new': isNew ? 'true' : 'false'},
+      React.createElement('td',{'data-cell':'name'},p.name),
+      React.createElement('td',{'data-cell':'grams'},React.createElement('input',{
+        type:'number',
+        value:G,
+        'data-grams-input': true,
+        'data-meal-index': mi,
+        'data-item-id': it.id,
+        onChange:e=>setGrams(mi,it.id,e.target.value),
+        onKeyDown:e=>{
+          if(e.key==='Enter') {
+            e.target.blur(); // Убрать фокус после подтверждения
+          }
+        },
+        onFocus:e=>e.target.select(), // Выделить текст при фокусе
+        placeholder:'грамм',
+        style:{textAlign:'center'}
+      })),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('kcal100', per.kcal100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('carbs100', per.carbs100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('simple100', per.simple100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('complex100', per.complex100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('prot100', per.prot100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('fat100', per.fat100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('bad', per.bad100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('good100', per.good100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('trans100', per.trans100)),
+      React.createElement('td',{'data-cell':'per100'},fmtVal('fiber100', per.fiber100)),
+      React.createElement('td',{'data-cell':'kcal'},fmtVal('kcal', row.kcal)),
+      React.createElement('td',{'data-cell':'carbs'},fmtVal('carbs', row.carbs)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('simple', row.simple)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('complex', row.complex)),
+      React.createElement('td',{'data-cell':'prot'},fmtVal('prot', row.prot)),
+      React.createElement('td',{'data-cell':'fat'},fmtVal('fat', row.fat)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('bad', row.bad)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('good', row.good)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('trans', row.trans)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('fiber', row.fiber)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('gi', giVal)),
+      React.createElement('td',{'data-cell':'hidden'},fmtVal('harm', harmVal)),
+      React.createElement('td',{'data-cell':'delete'},React.createElement('button',{className:'btn secondary',onClick:()=>removeItem(mi,it.id)},'×'))
+    );
+  }
+  function mTotals(m){
+    const t=(M.mealTotals? M.mealTotals(m,pIndex): {kcal:0,carbs:0,simple:0,complex:0,prot:0,fat:0,bad:0,good:0,trans:0,fiber:0});
+  let gSum=0, giSum=0, harmSum=0; (m.items||[]).forEach(it=>{ const p=getProductFromItem(it,pIndex); if(!p)return; const g=+it.grams||0; if(!g)return; const gi=p.gi??p.gi100??p.GI??p.giIndex; const harm=p.harm??p.harmScore??p.harm100??p.harmPct; gSum+=g; if(gi!=null) giSum+=gi*g; if(harm!=null) harmSum+=harm*g; }); t.gi=gSum?giSum/gSum:0; t.harm=gSum?harmSum/gSum:0; return t; }
+      const totals=mTotals(meal);
+      // Определяем тип приёма пищи (ручной или автоматический)
+      const manualType = meal.mealType; // если пользователь выбрал вручную
+      const autoTypeInfo = getMealType(mi, meal, day.meals, pIndex);
+      const mealTypeInfo = manualType && U.MEAL_TYPES && U.MEAL_TYPES[manualType] 
+        ? { type: manualType, ...U.MEAL_TYPES[manualType] }
+        : autoTypeInfo;
+      
+      // Функция смены типа приёма
+      const changeMealType = (newType) => {
+        const updatedMeals = day.meals.map((m, i) => 
+          i === mi ? { ...m, mealType: newType } : m
+        );
+        setDay({ ...day, meals: updatedMeals });
+        haptic('light');
+      };
+      
+      // Dropdown для выбора типа (на мобильных нативный select, на десктопе custom)
+      const MEAL_TYPE_OPTIONS = [
+        { value: '', label: '🔄 Авто' },
+        { value: 'breakfast', label: '🍳 Завтрак' },
+        { value: 'snack1', label: '🍎 Перекус' },
+        { value: 'lunch', label: '🍲 Обед' },
+        { value: 'snack2', label: '🥜 Перекус' },
+        { value: 'dinner', label: '🍽️ Ужин' },
+        { value: 'snack3', label: '🧀 Перекус' },
+        { value: 'night', label: '🌙 Ночной' }
+      ];
+      
+      // Форматируем время для отображения (24:20 → 00:20)
+      const timeDisplay = U.formatMealTime ? U.formatMealTime(meal.time) : (meal.time || '');
+      
+      // Калории приёма
+      const mealKcal = Math.round(totals.kcal || 0);
+      
+      // Определяем, является ли этот приём "текущим" (голубой) или "прошедшим" (серый)
+      // Текущий = первый в отсортированном списке (последний по времени) И прошло < 1 часа
+      const isFirstInDisplay = displayIndex === 0;
+      const isStale = isMealStale(meal);
+      const isCurrentMeal = isFirstInDisplay && !isStale;
+      
+      const mealCardClass = isCurrentMeal ? 'card tone-blue meal-card' : 'card tone-slate meal-card';
+      
+      return React.createElement(React.Fragment,{key:meal.id},
+        // Заголовок приёма: тип (dropdown) · время · калории
+        React.createElement('div',{className:'meal-sep meal-type-' + mealTypeInfo.type},
+          // Обёртка для dropdown
+          React.createElement('div', { className: 'meal-type-wrapper' },
+            // Текущий тип (иконка + название) — кликабельный
+            React.createElement('span', { className: 'meal-type-label' }, 
+              mealTypeInfo.icon + ' ' + mealTypeInfo.name,
+              // Индикатор dropdown
+              React.createElement('span', { className: 'meal-type-arrow' }, ' ▾')
+            ),
+            // Подсказка "изменить"
+            React.createElement('span', { className: 'meal-type-hint' }, 'изменить'),
+            // Скрытый select поверх
+            React.createElement('select', {
+              className: 'meal-type-select',
+              value: manualType || '',
+              onChange: (e) => changeMealType(e.target.value || null),
+              title: 'Изменить тип приёма'
+            }, MEAL_TYPE_OPTIONS.map(opt => 
+              React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
+            ))
+          ),
+          // Время (если есть)
+          timeDisplay && React.createElement('span', { className: 'meal-time-badge' }, 
+            '· ' + timeDisplay
+          ),
+          // Калории (если есть продукты)
+          mealKcal > 0 && React.createElement('span', { className: 'meal-kcal-badge' }, 
+            mealKcal + ' ккал'
+          )
+        ),
+        React.createElement('div',{className: mealCardClass, 'data-meal-index': mi, style:{marginTop:'4px', width: '100%'}},
+        // MOBILE: Meal totals at top (before search)
+        (meal.items || []).length > 0 && React.createElement('div', { className: 'mpc-totals-wrap mobile-only' },
+          React.createElement('div', { className: 'mpc-grid mpc-header' },
+            React.createElement('span', null, 'ккал'),
+            React.createElement('span', null, 'У'),
+            React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
+            React.createElement('span', null, 'Б'),
+            React.createElement('span', null, 'Ж'),
+            React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
+            React.createElement('span', null, 'Кл'),
+            React.createElement('span', null, 'ГИ'),
+            React.createElement('span', null, 'Вр')
+          ),
+          React.createElement('div', { className: 'mpc-grid mpc-totals-values' },
+            React.createElement('span', null, Math.round(totals.kcal)),
+            React.createElement('span', null, Math.round(totals.carbs)),
+            React.createElement('span', { className: 'mpc-dim' }, Math.round(totals.simple || 0) + '/' + Math.round(totals.complex || 0)),
+            React.createElement('span', null, Math.round(totals.prot)),
+            React.createElement('span', null, Math.round(totals.fat)),
+            React.createElement('span', { className: 'mpc-dim' }, Math.round(totals.bad || 0) + '/' + Math.round(totals.good || 0) + '/' + Math.round(totals.trans || 0)),
+            React.createElement('span', null, Math.round(totals.fiber || 0)),
+            React.createElement('span', null, Math.round(totals.gi || 0)),
+            React.createElement('span', null, fmtVal('harm', totals.harm || 0))
+          )
+        ),
+        React.createElement('div',{className:'row desktop-add-product',style:{justifyContent:'space-between',alignItems:'center'}},
+          React.createElement('div',{className:'section-title'},'Добавить продукт'),
+          React.createElement(MealAddProduct, { mi, products, date, day, setDay })
+        ),
+        React.createElement('div',{style:{overflowX:'auto',marginTop:'8px'}}, React.createElement('table',{className:'tbl meals-table'},
+          React.createElement('thead',null,React.createElement('tr',null, headerMeta.map((h,i)=>React.createElement('th',{
+              key:'h'+i,
+              className: h.per100? 'per100-col': undefined,
+              dangerouslySetInnerHTML:{__html:h.label}
+            }))
+          )),
+          React.createElement('tbody',null,
+            (meal.items||[]).map(pRow),
+            React.createElement('tr',{className:'tr-sum'},
+              React.createElement('td',{className:'fw-600'},''),
+              React.createElement('td',null,''),
+              React.createElement('td',{colSpan:10},React.createElement('div',{className:'table-divider'})),
+              React.createElement('td',null,fmtVal('kcal', totals.kcal)),
+              React.createElement('td',null,fmtVal('carbs', totals.carbs)),
+              React.createElement('td',null,fmtVal('simple', totals.simple)),
+              React.createElement('td',null,fmtVal('complex', totals.complex)),
+              React.createElement('td',null,fmtVal('prot', totals.prot)),
+              React.createElement('td',null,fmtVal('fat', totals.fat)),
+              React.createElement('td',null,fmtVal('bad', totals.bad)),
+              React.createElement('td',null,fmtVal('good', totals.good)),
+              React.createElement('td',null,fmtVal('trans', totals.trans)),
+              React.createElement('td',null,fmtVal('fiber', totals.fiber)),
+              React.createElement('td',null,fmtVal('gi', totals.gi)),
+              React.createElement('td',null,fmtVal('harm', totals.harm)),
+              React.createElement('td',null,'')
+            )
+          )
+        )),
+        // MOBILE CARDS — компактный вид с grid-сеткой (collapsible)
+        React.createElement('div', { className: 'mobile-products-list' },
+          // Ряд: toggle + добавить (если есть продукты) или только добавить (если пусто)
+          React.createElement('div', { className: 'mpc-toggle-add-row' + ((meal.items || []).length === 0 ? ' single' : '') },
+            // Toggle (только если есть продукты)
+            (meal.items || []).length > 0 && React.createElement('div', { 
+              className: 'mpc-products-toggle' + (isMealExpanded(mi, (day.meals||[]).length, day.meals, displayIndex) ? ' expanded' : ''),
+              onClick: () => toggleMealExpand(mi, day.meals)
+            },
+              React.createElement('span', { className: 'toggle-arrow' }, '›'),
+              React.createElement('span', null, (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов'))
+            ),
+            // Кнопка добавить
+            React.createElement(MealAddProduct, { mi, products, date, day, setDay })
+          ),
+          // Products list (shown when expanded)
+          isMealExpanded(mi, (day.meals||[]).length, day.meals, displayIndex) && (meal.items || []).map(it => {
+            const p = getProductFromItem(it, pIndex) || { name: it.name || '?' };
+            const G = +it.grams || 0;
+            const per = per100(p);
+            const giVal = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
+            const harmVal = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
+            
+            // Контент карточки
+            // Определяем цвет граммов
+            const gramsClass = G > 500 ? 'grams-danger' : G > 300 ? 'grams-warn' : '';
+            
+            // Фон карточки по полезности: 0=зелёный(полезный), 5=голубой(средний), 10=красный(вредный)
+            const getHarmBg = (h) => {
+              if (h == null) return '#fff';
+              // h: 0=полезный, 5=средний, 10=вредный
+              if (h <= 1) return '#34d399';  // 0-1: насыщенный зелёный — полезный
+              if (h <= 2) return '#6ee7b7';  // 2: зелёный
+              if (h <= 3) return '#a7f3d0';  // 3: мятный
+              if (h <= 4) return '#d1fae5';  // 4: светло-мятный
+              if (h <= 5) return '#bae6fd';  // 5: голубой — средний
+              if (h <= 6) return '#e0f2fe';  // 6: светло-голубой
+              if (h <= 7) return '#fecaca';  // 7: светло-розовый
+              if (h <= 8) return '#fee2e2';  // 8: розовый
+              if (h <= 9) return '#fecdd3';  // 9: красноватый
+              return '#f87171';              // 10: красный — вредный
+            };
+            const harmBg = getHarmBg(harmVal);
+            
+            // Бейдж полезности/вредности: 0=полезный, 10=вредный
+            const getHarmBadge = (h) => {
+              if (h == null) return null;
+              if (h <= 2) return { emoji: '🌿', text: 'полезный', color: '#059669' };
+              if (h >= 8) return { emoji: '⚠️', text: 'вредный', color: '#dc2626' };
+              return null;
+            };
+            const harmBadge = getHarmBadge(harmVal);
+            
+            // Иконка категории продукта
+            const getCategoryIcon = (cat) => {
+              if (!cat) return null;
+              const c = cat.toLowerCase();
+              if (c.includes('молоч') || c.includes('сыр') || c.includes('творог')) return '🥛';
+              if (c.includes('мяс') || c.includes('птиц') || c.includes('курин') || c.includes('говя') || c.includes('свин')) return '🍖';
+              if (c.includes('рыб') || c.includes('морепр')) return '🐟';
+              if (c.includes('овощ') || c.includes('салат') || c.includes('зелен')) return '🥬';
+              if (c.includes('фрукт') || c.includes('ягод')) return '🍎';
+              if (c.includes('круп') || c.includes('каш') || c.includes('злак') || c.includes('хлеб') || c.includes('выпеч')) return '🌾';
+              if (c.includes('яйц')) return '🥚';
+              if (c.includes('орех') || c.includes('семеч')) return '🥜';
+              if (c.includes('масл')) return '🫒';
+              if (c.includes('напит') || c.includes('сок') || c.includes('кофе') || c.includes('чай')) return '🥤';
+              if (c.includes('сладк') || c.includes('десерт') || c.includes('конфет') || c.includes('шокол')) return '🍬';
+              if (c.includes('соус') || c.includes('специ') || c.includes('припра')) return '🧂';
+              return '🍽️';
+            };
+            const categoryIcon = getCategoryIcon(p.category);
+            
+            // Поиск альтернативы с меньшей калорийностью в той же категории
+            const findAlternative = (prod, allProducts) => {
+              if (!prod.category || !allProducts || allProducts.length < 2) return null;
+              const currentKcal = per.kcal100 || 0;
+              if (currentKcal < 50) return null; // уже низкокалорийный
+              
+              const sameCategory = allProducts.filter(alt => 
+                alt.category === prod.category && 
+                alt.id !== prod.id &&
+                (alt.kcal100 || computeDerivedProduct(alt).kcal100) < currentKcal * 0.7 // на 30%+ меньше
+              );
+              if (sameCategory.length === 0) return null;
+              
+              // Берём самый низкокалорийный
+              const best = sameCategory.reduce((a, b) => {
+                const aKcal = a.kcal100 || computeDerivedProduct(a).kcal100;
+                const bKcal = b.kcal100 || computeDerivedProduct(b).kcal100;
+                return aKcal < bKcal ? a : b;
+              });
+              const bestKcal = best.kcal100 || computeDerivedProduct(best).kcal100;
+              const saving = Math.round((1 - bestKcal / currentKcal) * 100);
+              return { name: best.name, saving };
+            };
+            const alternative = findAlternative(p, products);
+            
+            const cardContent = React.createElement('div', { className: 'mpc', style: { background: harmBg } },
+              // Row 1: category icon + name + badge + grams
+              React.createElement('div', { className: 'mpc-row1' },
+                categoryIcon && React.createElement('span', { className: 'mpc-category-icon' }, categoryIcon),
+                React.createElement('span', { className: 'mpc-name' }, p.name),
+                harmBadge && React.createElement('span', { 
+                  className: 'mpc-badge',
+                  style: { color: harmBadge.color }
+                }, harmBadge.emoji),
+                // На мобильных — кнопка открывает модалку со слайдером
+                React.createElement('button', {
+                  className: 'mpc-grams-btn ' + gramsClass,
+                  onClick: (e) => { e.stopPropagation(); openEditGramsModal(mi, it.id, G, p); }
+                }, G + 'г')
+              ),
+              // Row 2: header labels (grid)
+              React.createElement('div', { className: 'mpc-grid mpc-header' },
+                React.createElement('span', null, 'ккал'),
+                React.createElement('span', null, 'У'),
+                React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
+                React.createElement('span', null, 'Б'),
+                React.createElement('span', null, 'Ж'),
+                React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
+                React.createElement('span', null, 'Кл'),
+                React.createElement('span', null, 'ГИ'),
+                React.createElement('span', null, 'Вр')
+              ),
+              // Row 3: values (grid) - абсолютные значения в граммах
+              React.createElement('div', { className: 'mpc-grid mpc-values' },
+                React.createElement('span', null, Math.round(scale(per.kcal100, G))),
+                React.createElement('span', null, Math.round(scale(per.carbs100, G))),
+                React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.simple100, G)) + '/' + Math.round(scale(per.complex100, G))),
+                React.createElement('span', null, Math.round(scale(per.prot100, G))),
+                React.createElement('span', null, Math.round(scale(per.fat100, G))),
+                React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.bad100, G)) + '/' + Math.round(scale(per.good100, G)) + '/' + Math.round(scale(per.trans100 || 0, G))),
+                React.createElement('span', null, Math.round(scale(per.fiber100, G))),
+                React.createElement('span', null, giVal != null ? Math.round(giVal) : '-'),
+                React.createElement('span', null, harmVal != null ? fmtVal('harm', harmVal) : '-')
+              ),
+              // Row 4: альтернатива (если есть)
+              alternative && React.createElement('div', { className: 'mpc-alternative' },
+                React.createElement('span', null, '💡 Замени на '),
+                React.createElement('strong', null, alternative.name),
+                React.createElement('span', null, ' — на ' + alternative.saving + '% меньше ккал')
+              )
+            );
+            
+            // На мобильных — оборачиваем в SwipeableRow
+            if (isMobile && HEYS.SwipeableRow) {
+              return React.createElement(HEYS.SwipeableRow, {
+                key: it.id,
+                onDelete: () => removeItem(mi, it.id)
+              }, cardContent);
+            }
+            
+            // На десктопе — обычная карточка с кнопкой удаления
+            return React.createElement('div', { key: it.id, className: 'mpc', style: { marginBottom: '6px', background: harmBg } },
+              React.createElement('div', { className: 'mpc-row1' },
+                React.createElement('span', { className: 'mpc-name' }, p.name),
+                React.createElement('input', {
+                  type: 'number',
+                  className: 'mpc-grams',
+                  value: G,
+                  onChange: e => setGrams(mi, it.id, e.target.value),
+                  onFocus: e => e.target.select(),
+                  onKeyDown: e => { if (e.key === 'Enter') e.target.blur(); },
+                  'data-grams-input': true,
+                  'data-meal-index': mi,
+                  'data-item-id': it.id,
+                  inputMode: 'decimal'
+                }),
+                React.createElement('button', {
+                  className: 'mpc-delete',
+                  onClick: () => removeItem(mi, it.id)
+                }, '×')
+              ),
+              React.createElement('div', { className: 'mpc-grid mpc-header' },
+                React.createElement('span', null, 'ккал'),
+                React.createElement('span', null, 'У'),
+                React.createElement('span', { className: 'mpc-dim' }, 'пр/сл'),
+                React.createElement('span', null, 'Б'),
+                React.createElement('span', null, 'Ж'),
+                React.createElement('span', { className: 'mpc-dim' }, 'вр/пол/суп'),
+                React.createElement('span', null, 'Кл'),
+                React.createElement('span', null, 'ГИ'),
+                React.createElement('span', null, 'Вр')
+              ),
+              React.createElement('div', { className: 'mpc-grid mpc-values' },
+                React.createElement('span', null, Math.round(scale(per.kcal100, G))),
+                React.createElement('span', null, Math.round(scale(per.carbs100, G))),
+                React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.simple100, G)) + '/' + Math.round(scale(per.complex100, G))),
+                React.createElement('span', null, Math.round(scale(per.prot100, G))),
+                React.createElement('span', null, Math.round(scale(per.fat100, G))),
+                React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.bad100, G)) + '/' + Math.round(scale(per.good100, G)) + '/' + Math.round(scale(per.trans100 || 0, G))),
+                React.createElement('span', null, Math.round(scale(per.fiber100, G))),
+                React.createElement('span', null, giVal != null ? Math.round(giVal) : '-'),
+                React.createElement('span', null, harmVal != null ? fmtVal('harm', harmVal) : '-')
+              )
+            );
+          }),
+          // Компактный блок: время + настроение + самочувствие + стресс (SaaS стиль)
+          React.createElement('div', { className: 'meal-meta-row' },
+            // На мобильных — кнопка редактирования времени, на десктопе — input
+            isMobile
+              ? React.createElement('button', { 
+                  className: 'compact-input time mobile-time-btn', 
+                  onClick: () => openTimeEditor(mi),
+                  title: 'Изменить время'
+                }, (U.formatMealTime ? U.formatMealTime(meal.time) : meal.time) || '—:—')
+              : React.createElement('input', { className: 'compact-input time', type: 'time', title: 'Время приёма', value: meal.time || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, time: e.target.value} : m); setDay({...day, meals}); } }),
+            // На мобильных — кнопка редактирования оценок, на десктопе — inputs
+            isMobile
+              ? React.createElement('button', {
+                  className: 'mobile-mood-btn',
+                  onClick: () => openMoodEditor(mi),
+                  title: 'Изменить оценки'
+                },
+                  React.createElement('span', { className: 'meal-meta-display' }, '😊', React.createElement('span', { className: 'meta-value' }, meal.mood || '—')),
+                  React.createElement('span', { className: 'meal-meta-display' }, '💪', React.createElement('span', { className: 'meta-value' }, meal.wellbeing || '—')),
+                  React.createElement('span', { className: 'meal-meta-display' }, '😰', React.createElement('span', { className: 'meta-value' }, meal.stress || '—'))
+                )
+              : React.createElement(React.Fragment, null,
+                  React.createElement('span', { className: 'meal-meta-field' }, '😊', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Настроение', value: meal.mood || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, mood: +e.target.value || ''} : m); setDay({...day, meals}); } })),
+                  React.createElement('span', { className: 'meal-meta-field' }, '💪', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Самочувствие', value: meal.wellbeing || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, wellbeing: +e.target.value || ''} : m); setDay({...day, meals}); } })),
+                  React.createElement('span', { className: 'meal-meta-field' }, '😰', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Стресс', value: meal.stress || '', onChange: e => { const meals = day.meals.map((m, i) => i === mi ? {...m, stress: +e.target.value || ''} : m); setDay({...day, meals}); } }))
+                ),
+            React.createElement('button', { className: 'meal-delete-btn', onClick: () => removeMeal(mi), title: 'Удалить приём' }, '🗑')
+          )
+        )
+        )
+      );
     });
 
     // Суточные итоги по всем приёмам (используем totals из compareBlock логики)
@@ -7842,14 +7596,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               onClick: (e) => {
                 e.stopPropagation();
                 if (!confirm('🗑️ Очистить вес за сегодня?\n\nЭто позволит увидеть Morning Check-in заново.')) return;
-                setDay(prev => ({
-                  ...prev,
+                setDay({
+                  ...day,
                   weightMorning: null,
                   sleepStart: null,
                   sleepEnd: null,
                   sleepHours: null,
                   sleepQuality: null
-                }));
+                });
                 setTimeout(() => window.location.reload(), 100);
               },
               title: 'DEV: Очистить вес для теста Morning Check-in'
@@ -8555,48 +8309,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                       React.createElement('div', { className: 'advice-group-header' },
                         ADVICE_CATEGORY_NAMES[category] || category
                       ),
-                      activeCategoryAdvices.map((advice) => 
-                        React.createElement(AdviceCard, {
-                          key: advice.id,
-                          advice,
-                          globalIndex: sorted.indexOf(advice),
-                          isDismissed: dismissedAdvices.has(advice.id),
-                          isHidden: hiddenUntilTomorrow.has(advice.id),
-                          swipeState: adviceSwipeState[advice.id] || { x: 0, direction: null },
-                          isExpanded: expandedAdviceId === advice.id,
-                          isLastDismissed: lastDismissedAdvice?.id === advice.id,
-                          lastDismissedAction: lastDismissedAdvice?.action,
-                          onUndo: undoLastDismiss,
-                          onSwipeStart: handleAdviceSwipeStart,
-                          onSwipeMove: handleAdviceSwipeMove,
-                          onSwipeEnd: handleAdviceSwipeEnd,
-                          onLongPressStart: handleAdviceLongPressStart,
-                          onLongPressEnd: handleAdviceLongPressEnd,
-                          registerCardRef: registerAdviceCardRef
-                        })
+                      activeCategoryAdvices.map((advice, index) => 
+                        renderAdviceCard(advice, index, sorted.indexOf(advice))
                       )
                     );
                   })
                 : // Без группировки (одна категория)
                   sorted.filter(a => !dismissedAdvices.has(a.id) || lastDismissedAdvice?.id === a.id)
-                    .map((advice, index) => React.createElement(AdviceCard, {
-                      key: advice.id,
-                      advice,
-                      globalIndex: index,
-                      isDismissed: dismissedAdvices.has(advice.id),
-                      isHidden: hiddenUntilTomorrow.has(advice.id),
-                      swipeState: adviceSwipeState[advice.id] || { x: 0, direction: null },
-                      isExpanded: expandedAdviceId === advice.id,
-                      isLastDismissed: lastDismissedAdvice?.id === advice.id,
-                      lastDismissedAction: lastDismissedAdvice?.action,
-                      onUndo: undoLastDismiss,
-                      onSwipeStart: handleAdviceSwipeStart,
-                      onSwipeMove: handleAdviceSwipeMove,
-                      onSwipeEnd: handleAdviceSwipeEnd,
-                      onLongPressStart: handleAdviceLongPressStart,
-                      onLongPressEnd: handleAdviceLongPressEnd,
-                      registerCardRef: registerAdviceCardRef
-                    }))
+                    .map((advice, index) => renderAdviceCard(advice, index, index))
             ),
             // Подсказки
             activeCount > 0 && React.createElement('div', { className: 'advice-list-hints' },
@@ -8608,6 +8328,127 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             )
           )
         );
+        
+        function renderAdviceCard(advice, localIndex, globalIndex) {
+          const isDismissed = dismissedAdvices.has(advice.id);
+          const isHidden = hiddenUntilTomorrow.has(advice.id);
+          const swipeState = adviceSwipeState[advice.id] || { x: 0, direction: null };
+          const swipeX = swipeState.x;
+          const swipeDirection = swipeState.direction;
+          const swipeProgress = Math.min(1, Math.abs(swipeX) / 100);
+          const isExpanded = expandedAdviceId === advice.id;
+          
+          // Проверяем, это ли последний dismissed совет (для показа undo)
+          const isLastDismissed = lastDismissedAdvice?.id === advice.id;
+          const showUndo = isLastDismissed && (isDismissed || isHidden);
+          
+          // Если совет скрыт и это не последний dismissed — не показываем
+          if ((isDismissed || isHidden) && !showUndo) return null;
+          
+          return React.createElement('div', { 
+            key: advice.id,
+            className: `advice-list-item-wrapper`,
+            style: { 
+              animationDelay: `${globalIndex * 50}ms`,
+              '--stagger-delay': `${globalIndex * 50}ms`,
+              position: 'relative',
+              overflow: 'hidden'
+            }
+          },
+            // Undo overlay (показывается после свайпа)
+            showUndo && React.createElement('div', {
+              className: 'advice-undo-overlay',
+              onClick: () => undoLastDismiss(),
+              style: {
+                position: 'absolute',
+                inset: 0,
+                background: lastDismissedAdvice.action === 'hidden' 
+                  ? 'linear-gradient(135deg, rgba(251, 146, 60, 0.85) 0%, rgba(234, 88, 12, 0.85) 100%)' 
+                  : 'linear-gradient(135deg, rgba(34, 197, 94, 0.85) 0%, rgba(22, 163, 74, 0.85) 100%)',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                color: 'white',
+                fontWeight: 600,
+                fontSize: '14px',
+                cursor: 'pointer',
+                zIndex: 10,
+                backdropFilter: 'blur(4px)'
+              }
+            },
+              React.createElement('span', null, lastDismissedAdvice.action === 'hidden' ? '🔕 Скрыто' : '✓ Прочитано'),
+              React.createElement('span', { 
+                style: { 
+                  background: 'rgba(255,255,255,0.3)', 
+                  padding: '4px 10px', 
+                  borderRadius: '12px',
+                  fontSize: '13px'
+                } 
+              }, 'Отменить'),
+              // Прогресс-бар (убывает за 3 сек)
+              React.createElement('div', {
+                style: {
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  height: '3px',
+                  background: 'rgba(255,255,255,0.5)',
+                  width: '100%',
+                  animation: 'undoProgress 3s linear forwards'
+                }
+              })
+            ),
+            // Фон слева "Прочитано" (зелёный) — только если нет undo
+            !showUndo && React.createElement('div', { 
+              className: 'advice-list-item-bg advice-list-item-bg-left',
+              style: { opacity: swipeDirection === 'left' ? swipeProgress : 0 }
+            },
+              React.createElement('span', null, '✓ Прочитано')
+            ),
+            // Фон справа "Скрыть" (оранжевый) — только если нет undo
+            !showUndo && React.createElement('div', { 
+              className: 'advice-list-item-bg advice-list-item-bg-right',
+              style: { opacity: swipeDirection === 'right' ? swipeProgress : 0 }
+            },
+              React.createElement('span', null, '🔕 До завтра')
+            ),
+            // Сам совет (скрыт под undo overlay)
+            React.createElement('div', { 
+              ref: (el) => { if (el) adviceCardRefs.current[advice.id] = el; },
+              className: `advice-list-item advice-list-item-${advice.type}${isExpanded ? ' expanded' : ''}`,
+              style: { 
+                transform: showUndo ? 'none' : `translateX(${swipeX}px)`,
+                opacity: showUndo ? 0.1 : (1 - swipeProgress * 0.3),
+                pointerEvents: showUndo ? 'none' : 'auto'
+              },
+              onTouchStart: (e) => {
+                if (showUndo) return;
+                handleAdviceSwipeStart(advice.id, e);
+                handleAdviceLongPressStart(advice.id);
+              },
+              onTouchMove: (e) => {
+                if (showUndo) return;
+                handleAdviceSwipeMove(advice.id, e);
+                handleAdviceLongPressEnd();
+              },
+              onTouchEnd: () => {
+                if (showUndo) return;
+                handleAdviceSwipeEnd(advice.id);
+                handleAdviceLongPressEnd();
+              }
+            },
+              React.createElement('span', { className: 'advice-list-icon' }, advice.icon),
+              React.createElement('div', { className: 'advice-list-content' },
+                React.createElement('span', { className: 'advice-list-text' }, advice.text),
+                isExpanded && advice.details && React.createElement('div', { 
+                  className: 'advice-list-details'
+                }, advice.details)
+              )
+            )
+          );
+        }
       })(),
       
       // === Empty advice toast ===

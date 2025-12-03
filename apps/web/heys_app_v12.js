@@ -1903,6 +1903,15 @@
               
               // Обработчик ошибки синхронизации с retry
               const handleSyncError = (e) => {
+                const code = e.detail?.error;
+                // Auth/RLS ошибка — требуем повторный вход, не крутим retry
+                if (code === 'auth_required') {
+                  setCloudStatus('offline');
+                  setRetryCountdown(0);
+                  try { window.alert('Требуется повторный вход для синхронизации'); } catch (_) {}
+                  return;
+                }
+                
                 const retryIn = e.detail?.retryIn || 5; // секунд до retry
                 setCloudStatus('error');
                 setRetryCountdown(retryIn);

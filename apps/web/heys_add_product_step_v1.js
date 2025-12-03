@@ -1065,6 +1065,7 @@
       showTip: false,
       showProgress: true,
       allowSwipe: true,
+      hidePrimaryOnFirst: true,
       title: 'Добавить продукт',
       onComplete: (stepData) => {
         console.log('[AddProductStep] onComplete stepData:', stepData);

@@ -4,6 +4,20 @@
 
 ---
 
+## 🎉 Декабрь 2025
+
+### DayTab Stability P0 ✅ (2025-12-03)
+- [x] **React.memo** — ProductRow, MealCard, AdviceCard
+- [x] **useCallback** — setGrams, removeItem, removeMeal, updateMealTime, changeMealType, changeMealMood/Wellbeing/Stress
+- [x] **Advice handlers** → useCallback
+- [x] **Guard findIndex === -1** — защита от крашей при рендере
+- [x] **Функциональный setDay** — addMeal, addProductToMeal
+- [x] `pnpm build` и `pnpm lint` пройдены ✅
+
+> Остаточные замыкания (trainings/water/household) — P3, низкий приоритет
+
+---
+
 ## 🎉 Ноябрь 2025
 
 ### Phase 0: UX Foundation ✅
