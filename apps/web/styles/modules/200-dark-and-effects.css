@@ -1401,26 +1401,6 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.metrics-icon {
-  font-size: 16px;
-  margin-bottom: 2px;
-}
-
-.metrics-value {
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.2;
-  margin-bottom: 2px;
-}
-
-.metrics-label {
-  font-size: 9px;
-  color: var(--color-slate-500);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  font-weight: 500;
-}
-
 .metrics-progress {
   height: 4px;
   background: var(--color-slate-200);

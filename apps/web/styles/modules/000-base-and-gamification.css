@@ -2354,7 +2354,7 @@ td:first-child input {
 }
 
 /* z-index hierarchy (Phase 0.5) */
-.theme-fab { z-index: 1000; }
+.theme-fab { z-index: 1000; /* duplicate intentional: base styles above, z-index map here */ }
 .game-panel-backdrop { z-index: 1040; }
 .game-panel-expanded { z-index: 1050; }
 .game-notification { z-index: 1100; }
@@ -3394,6 +3394,8 @@ body:has(.offline-banner) .wrap {
 }
 /* ═══════════════════════════════════════════════════════════════
    Bottom Navigation Bar — компактный светлый tab bar
+   - Base tab styles live here
+   - Dark overrides live in modules/200-dark-and-effects.css
    ═══════════════════════════════════════════════════════════════ */
 /* === 31. SWIPE NAVIGATION === */
 .tab-content-swipeable {

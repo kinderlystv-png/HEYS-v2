@@ -996,12 +996,12 @@
 }
 
 [data-theme="dark"] .mc-sleep-advice {
-  background-color: #1e293b !important;
-  border-color: var(--color-slate-700) !important;
+  background-color: #1e293b;
+  border-color: var(--color-slate-700);
 }
 
 [data-theme="dark"] .mc-sleep-advice-text {
-  color: var(--color-slate-200) !important;
+  color: var(--color-slate-200);
 }
 
 /* Sleep comment field */
@@ -1193,7 +1193,7 @@
 }
 
 [data-theme="dark"] .mc-quality-slider {
-  background: linear-gradient(to right, #8b5cf6 0%, #8b5cf6 var(--progress, 66%), var(--color-slate-700) var(--progress, 66%), var(--color-slate-700) 100%) !important;
+  background: linear-gradient(to right, #8b5cf6 0%, #8b5cf6 var(--progress, 66%), var(--color-slate-700) var(--progress, 66%), var(--color-slate-700) 100%);
 }
 
 [data-theme="dark"] .mc-quality-btn {
@@ -1562,15 +1562,15 @@
 }
 
 .mc-steps-btn--active {
-  color: #f59e0b !important;
-  background: #fef3c7 !important;
-  border-color: #f59e0b !important;
+  color: #f59e0b;
+  background: #fef3c7;
+  border-color: #f59e0b;
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
 }
 
 [data-theme="dark"] .mc-steps-btn--active {
-  background: rgba(245, 158, 11, 0.15) !important;
-  color: #fbbf24 !important;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
 }
 
 /* Steps stats block */
@@ -1682,7 +1682,7 @@
 }
 
 [data-theme="dark"] .mc-steps-slider {
-  background: #374151 !important;
+  background: #374151;
 }
 
 [data-theme="dark"] .mc-steps-slider-labels {

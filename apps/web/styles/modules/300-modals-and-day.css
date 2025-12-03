@@ -1338,13 +1338,13 @@
 /* Desktop: hide mobile cards */
 @media (min-width: 641px) {
   .mobile-products-list {
-    display: none !important;
+    display: none;
   }
   .mobile-daily-summary {
-    display: none !important;
+    display: none;
   }
   .mobile-only {
-    display: none !important;
+    display: none;
   }
 }
 
@@ -1398,7 +1398,7 @@
 /* Первый столбец (метка) - без фона */
 .mds-header > span:first-child,
 .mds-row > span:first-child {
-  background: transparent !important;
+  background: transparent;
   text-align: left;
   padding-right: 6px;
 }
@@ -1435,7 +1435,7 @@
 
 @media (max-width: 640px) {
   .daily-summary {
-    display: none !important;
+    display: none;
   }
 }
 
@@ -2901,16 +2901,15 @@
 }
 
 .pull-refresh-spinner.spinning {
-  animation: spin 0.8s linear infinite !important;
+  animation: spin 0.8s linear infinite;
 }
 
-/* Utility classes для замены inline стилей */
+/* Utility classes для замены inline стилей (modals/day scope) */
 .dev-positive { color: #dc2626; font-weight: 600; }
 .dev-negative { color: #059669; font-weight: 600; }
 .dev-neutral { color: var(--color-gray-500); }
 .fw-600 { font-weight: 600; }
 .text-right { text-align: right; }
-.text-center { text-align: center; }
 .mt-4 { margin-top: 4px; }
 .mt-8 { margin-top: 8px; }
 .mt-16 { margin-top: 16px; }
@@ -3041,6 +3040,9 @@
   animation: scaleIn 0.15s ease-out;
   transform-origin: top center;
 }
+.suggest-list-portal {
+  /* duplicate intentional: layout (fixed/z-index) in 000 module, animation here */
+}
 
 .suggest-item {
   transition: background-color 0.12s ease, transform 0.1s ease;
@@ -3074,7 +3076,7 @@
 }
 
 .favorite-btn:hover {
-  opacity: 1 !important;
+  opacity: 1;
   transform: scale(1.15);
 }
 

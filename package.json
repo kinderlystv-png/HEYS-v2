@@ -19,6 +19,7 @@
     "changeset:publish": "changeset publish",
     "changeset:version": "changeset version",
     "clean": "turbo run clean && rimraf dist node_modules/.cache",
+    "css:audit": "bash scripts/css-audit.sh",
     "deploy": "node scripts/deploy.js",
     "deps:check": "pnpm audit",
     "deps:update": "pnpm update -r",

@@ -449,6 +449,14 @@
 | `heys_day_` | `heys_dayv2_` (v2!) |
 | `localStorage.setItem()` | `U.lsSet()` |
 
+## Meal Quality Score (2025-12-03)
+
+- Расчёт в `apps/web/heys_day_v12.js`: `getMealQualityScore` + `mealsChartData`.
+- Использует `MEAL_KCAL_DISTRIBUTION` (ключи совпадают с `MEAL_TYPES` в `heys_day_utils.js`).
+- Источники данных: `mealTotals` (kcal, prot, carbs, simple, complex, fat, bad, good, trans), `getProductFromItem` (gi, harm).
+- Fallbacks: `gi=50`, `harm=0`, отсутствующие simple/complex/bad/good/trans = 0, `optimum` fallback 2000.
+- Score не пишется в storage: рассчитывается на лету, цвет полосы = `quality.color`, бейджи только проблемные (max 3).
+
 ---
 
 ## Связанные файлы

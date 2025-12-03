@@ -51,8 +51,17 @@
   transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.3s ease, border-color 0.3s ease;
 }
 
+.metrics-icon {
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+
 /* Анимация "прыжка" для значений при изменении */
 .metrics-value {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 2px;
   transition:
     transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
     color 0.3s ease;
@@ -71,6 +80,14 @@
 /* Вздрагивание карточки при сохранении */
 .metrics-card.saved {
   animation: cardPulse 0.4s ease;
+}
+
+.metrics-label {
+  font-size: 9px;
+  color: var(--color-slate-500);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-weight: 500;
 }
 
 @keyframes cardPulse {
@@ -124,10 +141,13 @@
 }
 
 /* Inline badge в header */
+.kcal-header-right .kcal-goal-badge-inline {
+  position: static;
+  top: auto;
+  right: auto;
+}
+
 .kcal-goal-badge-inline {
-  position: static !important;
-  top: auto !important;
-  right: auto !important;
   font-size: 10px;
   padding: 3px 8px;
 }
@@ -1399,13 +1419,13 @@
 
 /* Прогнозная линия */
 .sparkline-forecast-line {
-  stroke: var(--color-slate-400) !important;
-  stroke-width: 1.5 !important;
-  animation: none !important;
+  stroke: var(--color-slate-400);
+  stroke-width: 1.5;
+  animation: none;
 }
 
 .sparkline-forecast-dot {
-  fill: var(--color-slate-400) !important;
+  fill: var(--color-slate-400);
   opacity: 0.5;
 }
 
@@ -1445,14 +1465,14 @@
 
 /* Прогнозные дни — тонкий шрифт */
 .sparkline-day-forecast {
-  font-weight: 300 !important;
+  font-weight: 300;
   opacity: 0.5;
   font-style: italic;
 }
 
 /* Выходные и праздники — красный */
 .sparkline-day-weekend {
-  fill: var(--color-red-500) !important;
+  fill: var(--color-red-500);
 }
 
 /* Дельта (отклонение от нормы) под каждым днём — синхронизирована с точкой */
@@ -1642,10 +1662,55 @@
   margin-left: auto;
 }
 
+/* Контейнер для grid + badge — теперь не используется, badge в header */
+.week-heatmap-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
 .week-heatmap-grid {
   display: flex;
-  justify-content: center;
-  gap: 6px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Строка с grid + статистика "X/Y в норме" */
+.week-heatmap-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.week-heatmap-norm {
+  font-size: 11px;
+  color: var(--color-slate-500);
+  white-space: nowrap;
+  margin-bottom: 2px;
+}
+
+/* Средний дефицит в header - цвет по близости к цели */
+.week-heatmap-stat {
+  font-size: 11px;
+  color: var(--color-slate-500);
+  margin-left: auto;
+}
+
+.week-heatmap-stat.deficit-good {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.week-heatmap-stat.deficit-warn {
+  color: #ca8a04;
+  font-weight: 600;
+}
+
+.week-heatmap-stat.deficit-bad {
+  color: #dc2626;
+  font-weight: 600;
 }
 
 .week-heatmap-day {
@@ -1681,9 +1746,9 @@
 }
 
 .week-heatmap-cell {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   background: var(--color-slate-200);
   transition: background 0.2s ease, transform 0.15s ease;
 }
@@ -1894,6 +1959,7 @@
   width: 100%;
   height: auto; /* адаптируется к inline style */
   min-height: 100px;
+  transition: opacity 0.3s ease;
 }
 
 .weight-sparkline-area {
@@ -1911,10 +1977,6 @@
 /* Hover-эффект для весового графика */
 .weight-sparkline-svg:hover .weight-sparkline-line {
   stroke-width: 4;
-}
-
-.weight-sparkline-svg {
-  transition: opacity 0.3s ease;
 }
 
 .weight-sparkline-svg.transitioning {
@@ -2000,13 +2062,18 @@
 }
 
 /* === 15. GOAL PROGRESS BAR (современный статус-бар) === */
+
+/* Карточка-обёртка для diary tab */
+.goal-progress-card {
+  margin: 0 0 12px 0;
+  position: relative;
+}
+
 .goal-progress-bar {
-  grid-column: 1 / -1;
   background: linear-gradient(135deg, #f8fafc 0%, var(--color-slate-100) 100%);
   border: 1px solid var(--color-slate-200);
   border-radius: 12px;
   padding: 12px 16px;
-  margin-top: 4px;
   position: relative;
   transition: box-shadow 0.3s ease, transform 0.1s ease;
 }
@@ -3928,11 +3995,7 @@
 
 /* Weight card bottom row: trend + mini clear button */
 .weight-card-bottom-row {
-  display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 6px;
-  margin-top: 2px;
 }
 
 /* DEV: Mini clear weight button */
@@ -3982,7 +4045,7 @@
 
 .weight-wheels {
   justify-content: center;
-  gap: 0 !important;
+  gap: 0;
 }
 
 .weight-picker-dot {
@@ -4395,7 +4458,7 @@
 }
 
 .pull-indicator.refreshing {
-  height: 56px !important;
+  height: 56px;
 }
 
 .pull-indicator.success {
