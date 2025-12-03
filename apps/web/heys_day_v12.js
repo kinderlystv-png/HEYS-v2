@@ -77,6 +77,84 @@
   // === Import models module ===
   const M = HEYS.models || {};
 
+  // === MealAddProduct Component (extracted for stable identity) ===
+  const MealAddProduct = React.memo(function MealAddProduct({
+    mi,
+    products,
+    date,
+    day,
+    setDay
+  }) {
+    const handleOpenModal = React.useCallback(() => {
+      try { navigator.vibrate?.(10); } catch(e) {}
+
+      if (window.HEYS?.AddProductStep?.show) {
+        window.HEYS.AddProductStep.show({
+          mealIndex: mi,
+          products,
+          dateKey: date,
+          onAdd: ({ product, grams, mealIndex }) => {
+            const productId = product.id ?? product.product_id ?? product.name;
+            const newItem = {
+              id: uid('it_'),
+              product_id: product.id ?? product.product_id,
+              name: product.name,
+              grams: grams || 100
+            };
+            setDay((prevDay = {}) => {
+              const meals = (prevDay.meals || []).map((m, i) =>
+                i === mealIndex
+                  ? { ...m, items: [...(m.items || []), newItem] }
+                  : m
+              );
+              return { ...prevDay, meals };
+            });
+
+            try { navigator.vibrate?.(10); } catch(e) {}
+
+            window.dispatchEvent(new CustomEvent('heysProductAdded', {
+              detail: { product, grams }
+            }));
+
+            try {
+              U.lsSet(`heys_last_grams_${productId}`, grams);
+              const history = U.lsGet('heys_grams_history', {});
+              if (!history[productId]) history[productId] = [];
+              history[productId].push(grams);
+              if (history[productId].length > 20) history[productId].shift();
+              U.lsSet('heys_grams_history', history);
+            } catch(e) {}
+          },
+          onNewProduct: () => {
+            if (window.HEYS?.products?.showAddModal) {
+              window.HEYS.products.showAddModal();
+            }
+          }
+        });
+      } else {
+        console.error('[HEYS] AddProductStep not loaded');
+      }
+    }, [mi, products, date, setDay]);
+
+    return React.createElement('button', {
+      className: 'aps-open-btn',
+      onClick: handleOpenModal,
+      'aria-label': 'Добавить продукт'
+    },
+      React.createElement('span', { className: 'aps-open-icon' }, '🔍'),
+      React.createElement('span', { className: 'aps-open-text' }, 'Добавить')
+    );
+  }, (prev, next) => {
+    if (prev.mi !== next.mi) return false;
+    if (prev.products !== next.products) return false;
+
+    const prevItems = prev.day?.meals?.[prev.mi]?.items;
+    const nextItems = next.day?.meals?.[next.mi]?.items;
+    if (prevItems !== nextItems) return false;
+
+    return true;
+  });
+
   HEYS.DayTab=function DayTab(props){
   
   const {useState,useMemo,useEffect,useRef}=React;
@@ -469,75 +547,6 @@
         };
       });
       setDay({ ...day, trainings: arr });
-    }
-
-    // Компонент для добавления продукта в конкретный приём
-    // v2: Использует StepModal для fullscreen UX
-    function MealAddProduct({mi}){
-      const handleOpenModal = React.useCallback(() => {
-        // Haptic feedback
-        try { navigator.vibrate?.(10); } catch(e) {}
-        
-        if (window.HEYS?.AddProductStep?.show) {
-          window.HEYS.AddProductStep.show({
-            mealIndex: mi,
-            products: products,
-            dateKey: date,
-            onAdd: ({ product, grams, mealIndex }) => {
-              // Добавляем продукт в приём
-              const newItem = {
-                id: uid('it_'),
-                product_id: product.id ?? product.product_id,
-                name: product.name,
-                grams: grams || 100
-              };
-              const meals = day.meals.map((m, i) => 
-                i === mealIndex 
-                  ? { ...m, items: [...(m.items || []), newItem] } 
-                  : m
-              );
-              setDay({ ...day, meals });
-              
-              // Haptic feedback
-              try { navigator.vibrate?.(10); } catch(e) {}
-              
-              // 🎮 XP: Dispatch для gamification + advice
-              window.dispatchEvent(new CustomEvent('heysProductAdded', { 
-                detail: { product, grams } 
-              }));
-              
-              // Сохраняем последние граммы для этого продукта
-              try {
-                const productId = product.id ?? product.product_id ?? product.name;
-                U.lsSet(`heys_last_grams_${productId}`, grams);
-                // История для умных пресетов
-                const history = U.lsGet('heys_grams_history', {});
-                if (!history[productId]) history[productId] = [];
-                history[productId].push(grams);
-                if (history[productId].length > 20) history[productId].shift();
-                U.lsSet('heys_grams_history', history);
-              } catch(e) {}
-            },
-            onNewProduct: () => {
-              // Открываем форму создания нового продукта если есть
-              if (window.HEYS?.products?.showAddModal) {
-                window.HEYS.products.showAddModal();
-              }
-            }
-          });
-        } else {
-          console.error('[HEYS] AddProductStep not loaded');
-        }
-      }, [mi, products, date, day.meals, setDay]);
-      
-      return React.createElement('button', {
-        className: 'aps-open-btn',
-        onClick: handleOpenModal,
-        'aria-label': 'Добавить продукт'
-      },
-        React.createElement('span', { className: 'aps-open-icon' }, '🔍'),
-        React.createElement('span', { className: 'aps-open-text' }, 'Добавить')
-      );
     }
 
     // Функция для вычисления средних оценок из приёмов пищи
@@ -2884,7 +2893,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         ),
         React.createElement('div',{className:'row desktop-add-product',style:{justifyContent:'space-between',alignItems:'center'}},
           React.createElement('div',{className:'section-title'},'Добавить продукт'),
-          React.createElement(MealAddProduct, {mi})
+          React.createElement(MealAddProduct, { mi, products, date, day, setDay })
         ),
         React.createElement('div',{style:{overflowX:'auto',marginTop:'8px'}}, React.createElement('table',{className:'tbl meals-table'},
           React.createElement('thead',null,React.createElement('tr',null, headerMeta.map((h,i)=>React.createElement('th',{
@@ -2928,7 +2937,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               React.createElement('span', null, (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов'))
             ),
             // Кнопка добавить
-            React.createElement(MealAddProduct, { mi })
+            React.createElement(MealAddProduct, { mi, products, date, day, setDay })
           ),
           // Products list (shown when expanded)
           isMealExpanded(mi, (day.meals||[]).length, day.meals, displayIndex) && (meal.items || []).map(it => {
