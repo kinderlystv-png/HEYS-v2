@@ -919,6 +919,9 @@
   // Ref для отслеживания последнего updatedAt — предотвращает гонку между doLocal и handleDayUpdated
   const lastLoadedUpdatedAtRef = React.useRef(0);
   
+  // Ref для блокировки обновлений от cloud sync во время редактирования
+  const blockCloudUpdatesUntilRef = React.useRef(0);
+  
   const [dayRaw,setDayRaw]=useState(()=>{ 
     const key = 'heys_dayv2_'+date;
     const v=lsGet(key,null); 
@@ -1093,17 +1096,38 @@
     React.useEffect(() => {
       const handleDayUpdated = (e) => {
         const updatedDate = e.detail?.date;
+        const source = e.detail?.source || 'unknown';
+        
+        // Блокируем ВСЕ внешние обновления на 3 секунды после локального изменения
+        if (Date.now() < blockCloudUpdatesUntilRef.current) {
+          console.log('[HEYS] 📅 Blocked external update during local edit | source:', source, '| remaining:', blockCloudUpdatesUntilRef.current - Date.now(), 'ms');
+          return;
+        }
+        
         // Если date не указан или совпадает с текущим — перезагружаем
         if (!updatedDate || updatedDate === date) {
           const profNow = getProfile();
           const key = 'heys_dayv2_' + date;
           const v = lsGet(key, null);
           if (v && v.date) {
-            // Обновляем ref чтобы doLocal() не перезаписал более старыми данными
-            if (v.updatedAt) {
-              lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current, v.updatedAt);
+            // Проверяем: данные из storage новее текущих?
+            const storageUpdatedAt = v.updatedAt || 0;
+            const currentUpdatedAt = lastLoadedUpdatedAtRef.current || 0;
+            
+            // Двойная защита: по timestamp И по количеству meals
+            // Не откатываем если в storage меньше meals чем в текущем state
+            const storageMealsCount = (v.meals || []).length;
+            
+            console.log('[HEYS] 📅 handleDayUpdated | source:', source, '| storage meals:', storageMealsCount, '| storageUpdatedAt:', storageUpdatedAt, '| currentUpdatedAt:', currentUpdatedAt);
+            
+            if (storageUpdatedAt <= currentUpdatedAt) {
+              console.log('[HEYS] 📅 Ignoring outdated day update | storage:', storageUpdatedAt, '| current:', currentUpdatedAt, '| meals in storage:', storageMealsCount);
+              return; // Не перезаписываем более новые данные старыми
             }
-            console.log('[HEYS] 📅 Reloading day after update | meals:', v.meals?.length, '| steps:', v.steps, '| updatedAt:', v.updatedAt);
+            
+            // Обновляем ref чтобы doLocal() не перезаписал более старыми данными
+            lastLoadedUpdatedAtRef.current = storageUpdatedAt;
+            console.log('[HEYS] 📅 Reloading day after update | meals:', storageMealsCount, '| steps:', v.steps, '| updatedAt:', v.updatedAt);
             setDay(ensureDay({ ...v, trainings: cleanEmptyTrainings(v.trainings) }, profNow));
           }
         }
@@ -2663,16 +2687,74 @@
           dateKey: date,
           onComplete: (newMeal) => {
             console.log('[HEYS] 🍽 MealStep complete | meal:', newMeal.id, '| time:', newMeal.time);
-            let newIndex = -1;
+            
+            // Обновляем state и сохраняем ID нового приёма
+            const newMealId = newMeal.id;
+            const newUpdatedAt = Date.now();
+            lastLoadedUpdatedAtRef.current = newUpdatedAt; // Защита от перезаписи cloud sync
+            blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000; // Блокируем cloud sync на 3 сек
             setDay(prevDay => {
               const newMeals = sortMealsByTime([...(prevDay.meals || []), newMeal]);
-              newIndex = newMeals.findIndex(m => m.id === newMeal.id);
-              return { ...prevDay, meals: newMeals, updatedAt: Date.now() };
+              console.log('[HEYS] 🍽 Creating meal | id:', newMealId, '| new meals count:', newMeals.length, '| updatedAt:', newUpdatedAt, '| blockUntil:', blockCloudUpdatesUntilRef.current);
+              return { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
             });
-            if (newIndex >= 0) expandOnlyMeal(newIndex);
+            
             if (window.HEYS && window.HEYS.analytics) {
               window.HEYS.analytics.trackDataOperation('meal-created');
             }
+            
+            // Сразу открываем модалку добавления продукта
+            // Используем setTimeout чтобы state успел обновиться
+            setTimeout(() => {
+              // Находим индекс нового приёма по ID после обновления state
+              setDay(currentDay => {
+                const meals = currentDay.meals || [];
+                const mealIndex = meals.findIndex(m => m.id === newMealId);
+                console.log('[HEYS] 🍽 Found meal index:', mealIndex, '| meals:', meals.length);
+                
+                if (mealIndex >= 0) {
+                  expandOnlyMeal(mealIndex);
+                  
+                  // Открываем модалку добавления продукта
+                  if (window.HEYS?.AddProductStep?.show) {
+                    window.HEYS.AddProductStep.show({
+                      mealIndex: mealIndex,
+                      products: products,
+                      dateKey: date,
+                      onAdd: ({ product, grams, mealIndex: targetMealIndex }) => {
+                        const productId = product.id ?? product.product_id ?? product.name;
+                        const newItem = {
+                          id: uid('it_'),
+                          product_id: product.id ?? product.product_id,
+                          name: product.name,
+                          grams: grams || 100
+                        };
+                        setDay((prevDay = {}) => {
+                          const updatedMeals = (prevDay.meals || []).map((m, i) =>
+                            i === targetMealIndex
+                              ? { ...m, items: [...(m.items || []), newItem] }
+                              : m
+                          );
+                          return { ...prevDay, meals: updatedMeals };
+                        });
+                        try { navigator.vibrate?.(10); } catch(e) {}
+                        window.dispatchEvent(new CustomEvent('heysProductAdded', { detail: { product, grams } }));
+                        try {
+                          U.lsSet(`heys_last_grams_${productId}`, grams);
+                        } catch(e) {}
+                      },
+                      onNewProduct: () => {
+                        if (window.HEYS?.products?.showAddModal) {
+                          window.HEYS.products.showAddModal();
+                        }
+                      }
+                    });
+                  }
+                }
+                
+                return currentDay; // Не меняем state, просто читаем
+              });
+            }, 50);
           }
         });
       } else if (isMobile) {
@@ -2694,7 +2776,7 @@
           window.HEYS.analytics.trackDataOperation('meal-created');
         }
       }
-    }, [date, expandOnlyMeal, isHydrated, isMobile, openTimePickerForNewMeal, setDay]);
+    }, [date, expandOnlyMeal, isHydrated, isMobile, openTimePickerForNewMeal, products, setDay]);
     
     // Сортировка приёмов по времени (последние наверху для удобства)
     function sortMealsByTime(meals) {

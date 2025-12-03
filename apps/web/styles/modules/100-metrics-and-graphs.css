@@ -1,0 +1,4476 @@
+/* === METRICS CARDS (Hero Cards) === */
+.metrics-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.metrics-card {
+  min-width: 0;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 4px;
+  text-align: center;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+/* Анимация "прыжка" для значений при изменении */
+.metrics-value {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.metrics-card.value-changed .metrics-value {
+  animation: valueBounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes valueBounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* Вздрагивание карточки при сохранении */
+.metrics-card.saved {
+  animation: cardPulse 0.4s ease;
+}
+
+@keyframes cardPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  50% { transform: scale(1.02); box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+/* 🔔 Shake при превышении нормы */
+.metrics-card.shake-excess {
+  animation: shakeCard 0.5s ease-in-out;
+}
+
+@keyframes shakeCard {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+  20%, 40%, 60%, 80% { transform: translateX(3px); }
+}
+
+/* === KCAL SPARKLINE — график калорий (стиль как вес) === */
+.kcal-sparkline-container {
+  grid-column: 1 / -1;
+  display: block;
+  background: linear-gradient(135deg, #ecfdf5 0%, #dcfce7 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 12px 12px 14px;
+  padding-top: 24px; /* место для аннотаций сверху */
+  margin-top: 4px;
+  overflow: visible; /* чтобы аннотации не обрезались */
+}
+
+.kcal-sparkline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.kcal-sparkline-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #166534;
+}
+
+/* Header right: badge + pills */
+.kcal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Inline badge в header */
+.kcal-goal-badge-inline {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  font-size: 10px;
+  padding: 3px 8px;
+}
+
+.kcal-period-pills {
+  display: flex;
+  gap: 2px;
+  background: rgba(34, 197, 94, 0.15);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.kcal-period-pill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #166534;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.kcal-period-pill:active {
+  transform: scale(0.95);
+}
+
+.kcal-period-pill.active {
+  background: #ffffff;
+  color: #166534;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* === SPARKLINE — мини-график калорий === */
+.sparkline-container {
+  display: block;
+  position: relative; /* для позиционирования тултипа */
+  padding: 0;
+  overflow: visible; /* чтобы тултип не обрезался */
+}
+
+.sparkline-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.sparkline-svg {
+  display: block;
+  width: 100%;
+  height: auto; /* адаптируется к inline style */
+  min-height: 100px;
+  overflow: visible; /* чтобы аннотации не обрезались */
+}
+
+.sparkline-area {
+  opacity: 0.15;
+}
+
+.sparkline-line {
+  fill: none;
+  stroke: #22c55e;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* Анимация рисования линии — dasharray/offset задаётся inline для точной длины */
+  animation: drawSparkline 3s linear forwards;
+  transition: stroke-width 0.2s ease;
+}
+
+/* Hover-эффект — утолщение линии при наведении */
+.sparkline-svg:hover .sparkline-line {
+  stroke-width: 4;
+}
+
+/* Transition между периодами — плавная смена данных */
+.sparkline-svg {
+  transition: opacity 0.3s ease;
+}
+
+.sparkline-svg.transitioning {
+  opacity: 0.5;
+}
+
+/* Transition между периодами */
+.sparkline-transitioning {
+  opacity: 0.3;
+  transform: scale(0.97);
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+
+@keyframes drawSparkline {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Анимация заливки — появляется вместе с линией */
+.sparkline-area-animated {
+  opacity: 0;
+  animation: fadeInArea 5s ease-in-out forwards;
+}
+
+@keyframes fadeInArea {
+  0% { opacity: 0; }
+  50% { opacity: 0.15; }
+  100% { opacity: 1; }
+}
+
+/* Анимация точек — появляются мгновенно когда линия доходит */
+.sparkline-dot {
+  transition: r 0.1s ease, fill 0.1s ease;
+  opacity: 0;
+  transform: scale(0);
+  transform-box: fill-box;
+  transform-origin: center center;
+  animation: dotAppear 0.08s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes dotAppear {
+  0% { opacity: 0; transform: scale(0); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Skeleton loader для графиков */
+.sparkline-skeleton {
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+}
+
+.sparkline-skeleton-line {
+  height: 2px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 2px;
+}
+
+.sparkline-skeleton-dots {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sparkline-skeleton-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes fadeInDot {
+  0% { opacity: 0; transform: scale(0); }
+  70% { opacity: 1; transform: scale(1.3); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.sparkline-goal {
+  stroke: #94a3b8;
+  stroke-dasharray: 3, 3;
+  stroke-width: 1;
+}
+
+.sparkline-dot:hover {
+  r: 5;
+}
+
+.sparkline-dot-ok {
+  fill: #22c55e; /* зелёный — в норме */
+}
+
+.sparkline-dot-warn {
+  fill: #f59e0b; /* жёлтый — немного превышено */
+}
+
+.sparkline-dot-over {
+  fill: #ef4444; /* красный — сильно превышено */
+}
+
+.sparkline-dot-today {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+  animation: dotAppear 0.08s ease-out forwards, pulseDot 2s ease-in-out infinite;
+  animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 0.1s);
+  transform-box: fill-box;
+  transform-origin: center center;
+}
+
+/* Weekend shading background */
+.sparkline-weekend-bg {
+  opacity: 1;
+  pointer-events: none;
+}
+
+/* Goal achievement badge */
+.sparkline-goal-badge {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: var(--goal-badge-bg, rgba(34, 197, 94, 0.15));
+  color: var(--goal-badge-color, #22c55e);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  z-index: 5;
+}
+
+.sparkline-goal-badge.goal-low {
+  --goal-badge-bg: rgba(234, 179, 8, 0.15);
+  --goal-badge-color: #ca8a04;
+}
+
+.sparkline-goal-badge.goal-critical {
+  --goal-badge-bg: rgba(239, 68, 68, 0.15);
+  --goal-badge-color: #ef4444;
+}
+
+@keyframes pulseDot {
+  0%, 100% { 
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(34, 197, 94, 0));
+  }
+  50% { 
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.5));
+  }
+}
+
+.sparkline-day-label {
+  font-size: 7px;
+  fill: #94a3b8;
+  font-weight: 500;
+}
+
+.sparkline-day-today {
+  fill: #22c55e;
+  font-weight: 600;
+}
+
+/* === SPARKLINE POPUP — компактные детали при тапе на точку === */
+/* Базовые стили переопределяются в v2 */
+.sparkline-popup {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 9999;
+  animation: sparklinePopupFadeIn 0.15s ease-out;
+  will-change: opacity;
+}
+
+@keyframes sparklinePopupFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* === SPARKLINE POPUP V2 — консистентный с metric-popup === */
+.sparkline-popup.sparkline-popup-v2 {
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+  overflow: visible;
+}
+
+/* Скрываем старую стрелку ::after для v2 (у него своя .sparkline-popup-arrow) */
+.sparkline-popup.sparkline-popup-v2::after {
+  display: none;
+}
+
+.sparkline-popup-v2 .sparkline-popup-stripe {
+  height: 4px;
+  border-radius: 16px 16px 0 0;
+}
+
+.sparkline-popup-v2 .sparkline-popup-content {
+  padding: 12px 14px 14px;
+  position: relative;
+}
+
+.sparkline-popup-v2 .sparkline-popup-swipe {
+  width: 32px;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  margin: 0 auto 8px;
+}
+
+.sparkline-popup-v2 .sparkline-popup-header-v2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-right: 24px;
+}
+
+.sparkline-popup-v2 .sparkline-popup-date {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.sparkline-popup-v2 .sparkline-popup-pct {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.sparkline-popup-v2 .sparkline-popup-perfect-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #b45309;
+}
+
+.sparkline-popup-v2 .sparkline-popup-progress {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.sparkline-popup-v2 .sparkline-popup-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sparkline-popup-v2 .sparkline-popup-value-row {
+  font-size: 15px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.sparkline-popup-v2 .sparkline-popup-target {
+  color: #94a3b8;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+.sparkline-popup-v2 .sparkline-popup-compare {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  background: #f1f5f9;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.sparkline-popup-v2 .sparkline-popup-compare.up {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.sparkline-popup-v2 .sparkline-popup-compare.down {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.sparkline-popup-v2 .sparkline-popup-motivation-v2 {
+  font-size: 12px;
+  color: #b45309;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.sparkline-popup-v2 .sparkline-popup-tags-v2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.sparkline-popup-v2 .sparkline-popup-tag-v2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.sparkline-popup-v2 .sparkline-popup-tag-v2.good {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.sparkline-popup-v2 .sparkline-popup-tag-v2.bad {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.sparkline-popup-v2 .sparkline-popup-tag-v2.perfect {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+
+.sparkline-popup-v2 .sparkline-popup-btn-v2 {
+  width: 100%;
+  padding: 8px;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sparkline-popup-v2 .sparkline-popup-btn-v2:hover {
+  background: #e2e8f0;
+}
+
+.sparkline-popup-v2 .sparkline-popup-btn-v2.perfect {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.sparkline-popup-v2 .sparkline-popup-btn-v2.perfect:hover {
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+}
+
+.sparkline-popup-v2 .sparkline-popup-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  font-size: 12px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.sparkline-popup-v2 .sparkline-popup-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #334155;
+}
+
+.sparkline-popup-v2 .sparkline-popup-close.perfect {
+  color: #92400e;
+}
+
+.sparkline-popup-v2 .sparkline-popup-arrow {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 8px solid #fff;
+  filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
+}
+
+.sparkline-popup-v2 .sparkline-popup-arrow.left {
+  left: 24px;
+  transform: none;
+}
+
+.sparkline-popup-v2 .sparkline-popup-arrow.right {
+  left: auto;
+  right: 24px;
+  transform: none;
+}
+
+.sparkline-popup-v2 .sparkline-popup-arrow.perfect {
+  border-bottom-color: #fde68a;
+}
+
+/* Золотой фон для perfect popup */
+.sparkline-popup-v2.sparkline-popup-perfect-v2 {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #fcd34d;
+}
+
+.sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-swipe {
+  background: #fcd34d;
+}
+
+.sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-progress {
+  background: #fef3c7;
+}
+
+/* Стрелка-указатель снизу попапа (для legacy, не v2) */
+.sparkline-popup::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid white;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
+}
+
+@keyframes popupFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sparkline-popup-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sparkline-popup-header .popup-pct {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.sparkline-popup-header .popup-pct.good { background: #dcfce7; color: #16a34a; }
+.sparkline-popup-header .popup-pct.warn { background: #fef3c7; color: #d97706; }
+.sparkline-popup-header .popup-pct.bad { background: #fee2e2; color: #dc2626; }
+
+/* Главная строка — калории */
+.sparkline-popup-main {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 6px;
+  letter-spacing: -0.3px;
+}
+.sparkline-popup-main small {
+  font-size: 11px;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+/* Разделитель */
+.sparkline-popup-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 6px 0;
+}
+
+/* Секция тегов — БЖУ, сон, тренировка */
+.sparkline-popup-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.sparkline-popup-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+}
+.sparkline-popup-tag.good { background: #dcfce7; color: #16a34a; }
+.sparkline-popup-tag.warn { background: #fef3c7; color: #d97706; }
+.sparkline-popup-tag.bad { background: #fee2e2; color: #dc2626; }
+
+/* Золотой стиль для идеальных дней */
+.sparkline-popup-tags.perfect {
+  margin-top: 8px;
+}
+.sparkline-popup-tag.perfect { 
+  background: linear-gradient(135deg, #fef3c7, #fde68a); 
+  color: #92400e; 
+  border: 1px solid #f59e0b;
+  font-weight: 500;
+}
+
+/* Строка данных (устарело, но сохраним для perfect popup) */
+.sparkline-popup-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  padding: 2px 0;
+}
+
+.sparkline-popup-label {
+  color: #64748b;
+}
+
+.sparkline-popup-value {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.sparkline-popup-value.good { color: #22c55e; }
+.sparkline-popup-value.warn { color: #f59e0b; }
+.sparkline-popup-value.bad { color: #ef4444; }
+
+.sparkline-popup-btn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 6px;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sparkline-popup-btn:hover {
+  background: #e2e8f0;
+}
+
+/* Popup для идеального дня */
+.sparkline-popup-perfect {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #f59e0b;
+  text-align: center;
+}
+
+.sparkline-popup-header.perfect {
+  color: #b45309;
+  font-size: 13px;
+  justify-content: center;
+}
+
+.sparkline-popup-motivation {
+  font-size: 11px;
+  color: #78350f;
+  margin: 4px 0;
+}
+
+.sparkline-popup-subtitle {
+  font-size: 10px;
+  color: #92400e;
+  opacity: 0.8;
+}
+
+.sparkline-popup-hint {
+  font-size: 9px;
+  color: var(--text-tertiary, #71717a);
+  margin-top: 4px;
+  text-align: center;
+  font-style: italic;
+}
+
+.sparkline-popup-forecast {
+  border: 1px dashed var(--border-color, #3f3f46);
+}
+
+/* Dark mode */
+[data-theme="dark"] .sparkline-popup {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+[data-theme="dark"] .sparkline-popup-header { color: #f1f5f9; }
+[data-theme="dark"] .sparkline-popup-main { color: #f1f5f9; }
+[data-theme="dark"] .sparkline-popup-main small { color: #64748b; }
+[data-theme="dark"] .sparkline-popup-divider { background: #334155; }
+[data-theme="dark"] .sparkline-popup-tag { background: #334155; color: #94a3b8; }
+[data-theme="dark"] .sparkline-popup-btn { background: #334155; color: #94a3b8; }
+[data-theme="dark"] .sparkline-popup-btn:hover { background: #475569; }
+
+/* Dark mode: sparkline-popup-v2 */
+[data-theme="dark"] .sparkline-popup-v2 {
+  background: #1e293b;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-swipe {
+  background: #475569;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-date {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-progress {
+  background: #334155;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-target {
+  color: #64748b;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-compare {
+  background: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-compare.up {
+  background: #14532d;
+  color: #4ade80;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-compare.down {
+  background: #450a0a;
+  color: #f87171;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2 {
+  background: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.good {
+  background: #14532d;
+  color: #4ade80;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.bad {
+  background: #450a0a;
+  color: #f87171;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.perfect {
+  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+  border-color: #92400e;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2 {
+  background: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2:hover {
+  background: #475569;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2.perfect {
+  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+  border-color: #92400e;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-close {
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-arrow {
+  border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 {
+  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+  border-color: #92400e;
+}
+
+[data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-swipe {
+  background: #92400e;
+}
+
+[data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-perfect-title {
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-motivation-v2 {
+  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+  border-color: #b45309;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-progress {
+  background: #78350f;
+}
+
+[data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-arrow {
+  border-bottom-color: #78350f;
+}
+
+/* === HEATMAP — мини полоска под графиком === */
+.sparkline-heatmap {
+  display: flex;
+  gap: 2px;
+  padding: 4px 16px 0;
+  justify-content: space-between;
+}
+
+.sparkline-heatmap-day {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.sparkline-heatmap-day:hover {
+  transform: scaleY(1.5);
+}
+
+.sparkline-heatmap-day.level-0 { background: #f1f5f9; } /* нет данных */
+.sparkline-heatmap-day.level-1 { background: #bbf7d0; } /* <80% */
+.sparkline-heatmap-day.level-2 { background: #4ade80; } /* 80-95% */
+.sparkline-heatmap-day.level-3 { background: #22c55e; } /* 95-105% - идеал */
+.sparkline-heatmap-day.level-4 { background: #fde047; } /* 105-115% */
+.sparkline-heatmap-day.level-5 { background: #f97316; } /* 115-130% */
+.sparkline-heatmap-day.level-6 { background: #ef4444; } /* >130% */
+
+/* === MOOD-ПОЛОСА — градиентная полоса настроения === */
+.sparkline-mood-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 4px 4px; /* уменьшили боковые отступы */
+  margin-top: 4px;
+  margin-left: -4px;
+  margin-right: -4px;
+}
+
+.sparkline-mood-bar {
+  flex: 1;
+  min-width: 0; /* для корректного flex */
+  height: 6px;
+  border-radius: 3px;
+  overflow: visible;
+}
+
+/* Современный бар оценки дня — CSS градиент вместо SVG */
+.sparkline-mood-bar-modern {
+  height: 8px;
+  border-radius: 4px; /* pill shape */
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+/* Глянцевый блик сверху */
+.sparkline-mood-bar-modern::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  right: 4px;
+  height: 3px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.4), transparent);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.sparkline-mood-label {
+  font-size: 10px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* Ряд индикаторов сна под mood-bar */
+.sparkline-sleep-row {
+  position: relative;
+  width: 100%;
+  height: 14px;
+  margin-top: 2px;
+}
+
+.sparkline-sleep-row .sparkline-sleep-indicator {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 9px;
+  opacity: 0;
+  animation: fadeInSleep 0.3s ease forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes fadeInSleep {
+  from { opacity: 0; transform: translateX(-50%) scale(0.5); }
+  to { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+/* Цвета индикаторов сна по длительности */
+.sparkline-sleep-indicator.sleep-critical { 
+  filter: grayscale(0) brightness(1); /* 😴 <5ч — красный оттенок */
+  text-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+}
+.sparkline-sleep-indicator.sleep-bad { 
+  filter: hue-rotate(-15deg); /* 😴 5-6ч — оранжевый оттенок */
+  text-shadow: 0 0 4px rgba(249, 115, 22, 0.4);
+}
+.sparkline-sleep-indicator.sleep-low { 
+  /* 😴 6-7ч — нормальный */
+  opacity: 0.8;
+}
+.sparkline-sleep-indicator.sleep-good { 
+  /* 💤 7-8.5ч — хорошо */
+  opacity: 1;
+}
+.sparkline-sleep-indicator.sleep-over { 
+  filter: hue-rotate(40deg); /* 😪 8.5+ч — синий оттенок (пересып) */
+  text-shadow: 0 0 4px rgba(59, 130, 246, 0.4);
+}
+
+/* === Slider Elements === */
+.sparkline-slider-line {
+  stroke: #3b82f6;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 2;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.sparkline-slider-point {
+  fill: #3b82f6;
+  stroke: white;
+  stroke-width: 2;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.4));
+}
+
+/* === TODAY LINE — вертикальная линия на текущий день === */
+.sparkline-today-line {
+  pointer-events: none;
+  animation: sparkline-today-pulse 2s ease-in-out infinite;
+}
+
+.sparkline-today-label {
+  pointer-events: none;
+  animation: sparkline-today-bounce 2s ease-in-out infinite;
+}
+
+@keyframes sparkline-today-pulse {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.25; }
+}
+
+@keyframes sparkline-today-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(2px); }
+}
+
+/* === BRUSH SELECTION — выделение диапазона === */
+.sparkline-brush-overlay {
+  pointer-events: none;
+  animation: sparkline-brush-appear 0.15s ease-out;
+}
+
+@keyframes sparkline-brush-appear {
+  from {
+    opacity: 0;
+    transform: scaleX(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+/* Brush Stats Badge */
+.sparkline-brush-stats {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: rgba(59, 130, 246, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #3b82f6;
+  animation: sparkline-brush-stats-appear 0.2s ease-out;
+  z-index: 5;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.sparkline-brush-stats:hover {
+  background: rgba(59, 130, 246, 0.25);
+}
+
+.sparkline-brush-stats span {
+  white-space: nowrap;
+}
+
+.sparkline-brush-stats .brush-days {
+  opacity: 0.8;
+}
+
+.sparkline-brush-stats .brush-ratio {
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: white;
+  font-size: 10px;
+}
+
+.sparkline-brush-stats .brush-close {
+  margin-left: 2px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.sparkline-brush-stats:hover .brush-close {
+  opacity: 1;
+}
+
+@keyframes sparkline-brush-stats-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Zoom Indicator */
+.sparkline-zoom-indicator {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  padding: 3px 6px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  font-size: 10px;
+  color: white;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+  z-index: 5;
+}
+
+.sparkline-zoom-indicator:hover {
+  opacity: 1;
+}
+
+/* Zoomed state — overflow hidden */
+.sparkline-container.sparkline-zoomed {
+  overflow: hidden;
+}
+
+.sparkline-slider-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 8px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  animation: sparkline-tooltip-appear 0.12s ease-out;
+  min-width: 80px;
+}
+
+@keyframes sparkline-tooltip-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Header row: дата + badge процент */
+.sparkline-slider-tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.sparkline-slider-tooltip-date {
+  font-size: 10px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.sparkline-slider-tooltip-ratio {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.sparkline-slider-tooltip-ratio.ratio-ok {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.sparkline-slider-tooltip-ratio.ratio-warn {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.sparkline-slider-tooltip-ratio.ratio-over {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Main row: калории */
+.sparkline-slider-tooltip-kcal {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1e293b;
+  letter-spacing: -0.3px;
+}
+.sparkline-slider-tooltip-kcal small {
+  font-size: 9px;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+/* Tags row: компактные теги */
+.sparkline-slider-tooltip-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+}
+
+.sparkline-slider-tooltip-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #f1f5f9;
+  color: #475569;
+}
+.sparkline-slider-tooltip-tag.good { background: #dcfce7; color: #16a34a; }
+.sparkline-slider-tooltip-tag.warn { background: #fef3c7; color: #d97706; }
+.sparkline-slider-tooltip-tag.bad { background: #fee2e2; color: #dc2626; }
+
+/* Weekly Rhythm — вертикальные сепараторы недель */
+.sparkline-week-separator {
+  stroke: #e2e8f0;
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0.6;
+}
+
+/* Burn Glow — свечение тренировок */
+.sparkline-burn-glow {
+  fill: #f97316;
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+/* 😴 Sleep Warning */
+.sparkline-sleep-warning {
+  font-size: 8px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* === SPARKLINE ANNOTATIONS — иконки событий на графике === */
+.sparkline-annotation {
+  font-size: 11px;
+  text-anchor: middle;
+  pointer-events: none;
+  opacity: 0;
+  animation: fadeInAnnotation 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-delay: 4.5s; /* после рисования линии 5s */
+  dominant-baseline: auto; /* рендерим корректно */
+}
+
+@keyframes fadeInAnnotation {
+  0% { opacity: 0; transform: translateY(4px) scale(0.8); }
+  70% { opacity: 1; transform: translateY(-1px) scale(1.05); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.sparkline-annotation-training {
+  font-size: 10px;
+  fill: #8b5cf6; /* фиолетовый для тренировок */
+  opacity: 0;
+  animation: fadeInSimple 0.3s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes fadeInSimple {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Пунктирная линия от эмодзи тренировки к точке — синхронизирована с точкой */
+.sparkline-training-line {
+  stroke: #a78bfa; /* светло-фиолетовый */
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0;
+  animation: fadeInLine 0.3s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+/* Пунктирная линия от точки к дню — синхронизирована с точкой */
+.sparkline-point-line {
+  stroke: #94a3b8; /* slate-400 — ярче */
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0;
+  animation: fadeInPointLine 0.3s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+.weight-sparkline-point-line {
+  stroke: #c084fc; /* purple-400 — для веса, ярче */
+}
+
+@keyframes fadeInPointLine {
+  0% { opacity: 0; }
+  100% { opacity: 0.5; }
+}
+
+@keyframes fadeInLine {
+  0% { opacity: 0; }
+  100% { opacity: 0.5; }
+}
+
+.sparkline-annotation-holiday {
+  fill: #f59e0b; /* оранжевый для праздников */
+}
+
+/* Прогнозная линия */
+.sparkline-forecast-line {
+  stroke: #94a3b8 !important;
+  stroke-width: 1.5 !important;
+  animation: none !important;
+}
+
+.sparkline-forecast-dot {
+  fill: #94a3b8 !important;
+  opacity: 0.5;
+}
+
+/* Золотая streak-линия между 🔥 днями */
+.sparkline-streak-line {
+  stroke: #f59e0b;
+  stroke-width: 3;
+  fill: none;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Анимированная streak-линия — рисуется синхронно с основной */
+.sparkline-streak-animated {
+  animation: drawSparkline linear forwards;
+  /* animationDelay и animationDuration задаются inline */
+}
+
+/* Прогнозная линия — маска для анимации пунктира */
+.sparkline-forecast-mask {
+  animation: drawSparkline 0.6s linear forwards;
+  animation-delay: 2.9s;
+}
+
+/* Прогнозная линия веса — маска для анимации */
+.weight-sparkline-forecast-mask {
+  animation: drawSparkline 0.5s linear forwards;
+  animation-delay: 3s; /* после основной линии веса */
+}
+
+/* Точки прогноза — появляются синхронно с прогнозной линией */
+.sparkline-forecast-dot {
+  animation: dotAppear 0.15s ease-out forwards;
+  animation-delay: var(--delay, 3s);
+}
+
+/* Прогнозные дни — тонкий шрифт */
+.sparkline-day-forecast {
+  font-weight: 300 !important;
+  opacity: 0.5;
+  font-style: italic;
+}
+
+/* Выходные и праздники — красный */
+.sparkline-day-weekend {
+  fill: #ef4444 !important;
+}
+
+/* Дельта (отклонение от нормы) под каждым днём — синхронизирована с точкой */
+.sparkline-delta-label {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0;
+  animation: fadeInSimple 0.3s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+/* Min/Max метки (deprecated, используется delta) */
+.sparkline-minmax-label {
+  font-size: 9px;
+  font-weight: 600;
+  fill: #64748b;
+  opacity: 0;
+  animation: fadeInAnnotation 0.3s ease forwards;
+  animation-delay: 3.5s;
+}
+
+.sparkline-min-label {
+  fill: #ef4444;
+}
+
+.sparkline-max-label {
+  fill: #22c55e;
+}
+
+/* Золотые пульсирующие точки для идеальных дней */
+.sparkline-dot-gold {
+  fill: #fbbf24; /* золотой */
+  stroke: #f59e0b;
+  stroke-width: 1.5;
+  opacity: 0;
+  transform: scale(0);
+  animation: dotAppear 0.15s ease-out forwards, pulseGold 2s ease-in-out infinite;
+  animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 0.2s);
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.6));
+  transform-box: fill-box;
+  transform-origin: center center;
+}
+
+.sparkline-dot-gold-today {
+  fill: #fbbf24;
+  stroke: #f59e0b;
+  stroke-width: 2;
+  opacity: 0;
+  transform: scale(0);
+  animation: dotAppear 0.15s ease-out forwards, pulseGoldToday 1.5s ease-in-out infinite;
+  animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 0.2s);
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.8));
+  transform-box: fill-box;
+  transform-origin: center center;
+}
+
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0); }
+  60% { opacity: 1; transform: scale(1.4); }
+  80% { transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulseGold {
+  0%, 100% { 
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.5));
+  }
+  50% { 
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.8));
+  }
+}
+
+@keyframes pulseGoldToday {
+  0%, 100% { 
+    transform: scale(1);
+    filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.6));
+  }
+  50% { 
+    transform: scale(1.25);
+    filter: drop-shadow(0 0 12px rgba(251, 191, 36, 1));
+  }
+}
+
+/* === CORRELATION BLOCK — связь калорий и веса === */
+.correlation-block {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-top: 4px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.correlation-block.positive {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: #a7f3d0;
+}
+
+.correlation-block.warning {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-color: #fed7aa;
+}
+
+.correlation-block.mixed {
+  background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+  border-color: #fde047;
+}
+
+.correlation-icon {
+  font-size: 16px;
+}
+
+.correlation-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+  line-height: 1.3;
+}
+
+/* Кликабельный блок корреляции */
+.correlation-clickable {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.correlation-clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.correlation-clickable:active {
+  transform: scale(0.98);
+}
+
+/* Анимация пульсации при обновлении данных */
+@keyframes correlationPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  50% { transform: scale(1.02); box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+.correlation-block.pulse {
+  animation: correlationPulse 0.6s ease-out;
+}
+
+/* === Week Heatmap (compact) === */
+.week-heatmap {
+  grid-column: 1 / -1;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-top: 4px;
+}
+
+.week-heatmap-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.week-heatmap-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.week-heatmap-streak {
+  font-size: 11px;
+  font-weight: 600;
+  color: #f59e0b;
+  background: #fef3c7;
+  padding: 1px 5px;
+  border-radius: 6px;
+}
+
+.week-heatmap-stat {
+  font-size: 11px;
+  color: #64748b;
+  margin-left: auto;
+}
+
+.week-heatmap-grid {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.week-heatmap-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.week-heatmap-day:hover {
+  transform: translateY(-1px);
+}
+
+.week-heatmap-day:active {
+  transform: scale(0.95);
+}
+
+.week-heatmap-name {
+  font-size: 9px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.week-heatmap-day.weekend .week-heatmap-name {
+  color: #94a3b8;
+}
+
+.week-heatmap-day.today .week-heatmap-name {
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+.week-heatmap-cell {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #e2e8f0;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+/* Hover эффект на ячейке */
+.week-heatmap-day:not(.empty) .week-heatmap-cell:hover {
+  transform: scale(1.08);
+}
+
+/* Статусы — fallback если нет inline градиента */
+.week-heatmap-day.low .week-heatmap-cell:not([style*="background"]) {
+  background: #eab308; /* жёлтый для low */
+}
+
+.week-heatmap-day.green .week-heatmap-cell:not([style*="background"]) {
+  background: #22c55e;
+}
+
+.week-heatmap-day.perfect .week-heatmap-cell:not([style*="background"]) {
+  background: #10b981;
+}
+
+.week-heatmap-day.yellow .week-heatmap-cell:not([style*="background"]) {
+  background: #eab308;
+}
+
+.week-heatmap-day.red .week-heatmap-cell:not([style*="background"]) {
+  background: #ef4444;
+}
+
+.week-heatmap-day.empty .week-heatmap-cell {
+  background: #e2e8f0;
+  opacity: 0.5;
+}
+
+/* Today ring с анимацией */
+.week-heatmap-day.today .week-heatmap-cell {
+  box-shadow: 0 0 0 2px #3b82f6;
+  animation: todayPulse 2s ease-in-out infinite;
+}
+
+@keyframes todayPulse {
+  0%, 100% { box-shadow: 0 0 0 2px #3b82f6; }
+  50% { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5); }
+}
+
+/* Паттерн-инсайт */
+.week-heatmap-pattern {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+}
+
+/* Empty state для week heatmap */
+.week-heatmap-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 8px;
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.week-heatmap-empty-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* Hover на всём блоке */
+.week-heatmap:hover {
+  border-color: #cbd5e1;
+}
+
+/* === WEIGHT SPARKLINE — график веса с трендом === */
+.weight-sparkline-container {
+  grid-column: 1 / -1;
+  display: block;
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  border: 1px solid #e9d5ff;
+  border-radius: 12px;
+  padding: 12px 12px 8px;
+  margin-top: 4px;
+  overflow: hidden;
+  transition: background 0.4s ease, border-color 0.4s ease;
+}
+
+/* Цветовые зоны фона по тренду */
+.weight-sparkline-container.trend-down {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: #a7f3d0;
+}
+
+.weight-sparkline-container.trend-up {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #fecaca;
+}
+
+.weight-sparkline-container.trend-same {
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  border-color: #e9d5ff;
+}
+
+/* Single point weight display (когда только 1 точка) */
+.weight-single-point {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  text-align: center;
+}
+
+.weight-single-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.weight-single-number {
+  font-size: 36px;
+  font-weight: 700;
+  color: #7c3aed;
+  line-height: 1;
+}
+
+.weight-single-unit {
+  font-size: 16px;
+  font-weight: 500;
+  color: #a78bfa;
+}
+
+.weight-single-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #8b5cf6;
+  opacity: 0.8;
+}
+
+.weight-sparkline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.weight-sparkline-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b21a8;
+}
+
+.weight-trend-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 8px;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.weight-trend-badge.down {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.weight-trend-badge.up {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.weight-trend-badge.same {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.weight-sparkline-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.weight-forecast-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.weight-forecast-badge.down {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.weight-forecast-badge.up {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.weight-sparkline-svg {
+  display: block;
+  width: 100%;
+  height: auto; /* адаптируется к inline style */
+  min-height: 100px;
+}
+
+.weight-sparkline-area {
+  opacity: 0.2;
+}
+
+.weight-sparkline-line {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke-width 0.2s ease;
+}
+
+/* Hover-эффект для весового графика */
+.weight-sparkline-svg:hover .weight-sparkline-line {
+  stroke-width: 4;
+}
+
+.weight-sparkline-svg {
+  transition: opacity 0.3s ease;
+}
+
+.weight-sparkline-svg.transitioning {
+  opacity: 0.5;
+}
+
+/* Анимация рисования линии веса */
+.weight-sparkline-line-animated {
+  stroke-dasharray: 500;
+  stroke-dashoffset: 500;
+  animation: drawSparkline 3s linear forwards;
+}
+
+/* Цвет линии по тренду (fallback) */
+.weight-sparkline-container.trend-down .weight-sparkline-line {
+  stroke: #10b981;
+}
+
+.weight-sparkline-container.trend-up .weight-sparkline-line {
+  stroke: #ef4444;
+}
+
+.weight-sparkline-container.trend-same .weight-sparkline-line {
+  stroke: #8b5cf6;
+}
+
+.weight-sparkline-dot {
+  transition: r 0.15s ease, fill 0.15s ease;
+  /* Цвет задаётся inline через style */
+}
+
+.weight-sparkline-dot:hover {
+  r: 5;
+  filter: brightness(1.1);
+}
+
+.weight-sparkline-dot-today {
+  stroke: white;
+  stroke-width: 1.5;
+  animation: dotAppear 0.08s ease-out forwards, pulseDotWeight 2s ease-in-out infinite;
+  animation-delay: var(--delay, 0s), calc(var(--delay, 0s) + 0.1s);
+  transform-box: fill-box;
+  transform-origin: center center;
+}
+
+@keyframes pulseDotWeight {
+  0%, 100% { 
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(139, 92, 246, 0));
+  }
+  50% { 
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.5));
+  }
+}
+
+.weight-sparkline-day-label {
+  font-size: 8px;
+  fill: #94a3b8;
+  font-weight: 400;
+}
+
+.weight-sparkline-weight-label {
+  font-size: 8px;
+  fill: #94a3b8;
+  font-weight: 400;
+}
+
+.weight-sparkline-day-today {
+  fill: #64748b;
+  font-weight: 500;
+}
+
+.weight-sparkline-label {
+  font-size: 9px;
+  fill: #a78bfa;
+  font-weight: 500;
+}
+
+.weight-sparkline-label-today {
+  fill: #7c3aed;
+  font-weight: 600;
+}
+
+/* === GOAL PROGRESS BAR (современный статус-бар) === */
+.goal-progress-bar {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-top: 4px;
+  position: relative;
+  transition: box-shadow 0.3s ease, transform 0.1s ease;
+}
+
+/* ⭐ Pulse на "Идеально" (ratio 0.9-1.1) */
+.goal-progress-bar.pulse-perfect {
+  animation: pulsePerfect 2s ease-in-out infinite;
+  border-color: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+}
+
+@keyframes pulsePerfect {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    border-color: #10b981;
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0), 0 0 20px rgba(16, 185, 129, 0.3);
+    border-color: #34d399;
+  }
+}
+
+/* 🔔 Shake на превышение (ratio > 1.25) */
+.goal-progress-bar.shake-excess {
+  animation: shakeExcess 0.5s ease-in-out;
+  border-color: #ef4444;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+@keyframes shakeExcess {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+  20%, 40%, 60%, 80% { transform: translateX(3px); }
+}
+
+.goal-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.goal-progress-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.goal-progress-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.goal-eaten {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0ea5e9;
+}
+
+.goal-divider {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0 2px;
+}
+
+.goal-target {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.goal-unit {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-left: 4px;
+}
+
+.goal-progress-track {
+  position: relative;
+  height: 10px;
+  border-radius: 5px;
+}
+
+/* Серый фон только до маркера при переборе */
+.goal-progress-track::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: #e2e8f0;
+  border-radius: 5px;
+  z-index: 0;
+}
+
+.goal-progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+  border-radius: 5px 0 0 5px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+}
+
+@keyframes progressFillIn {
+  from {
+    transform: scaleX(0);
+    opacity: 0.5;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+.goal-progress-fill.over {
+  background: linear-gradient(90deg, #f97316 0%, #ef4444 100%);
+}
+
+/* Красная часть — перебор калорий */
+.goal-progress-over {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+  border-radius: 0 5px 5px 0;
+  z-index: 2;
+}
+
+.goal-marker {
+  position: absolute;
+  right: 0;
+  top: -3px;
+  width: 3px;
+  height: 16px;
+  background: #334155;
+  border-radius: 2px;
+  z-index: 10;
+  transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Маркер при переборе — позиционирование через left вместо right */
+.goal-marker.over {
+  right: auto;
+  transform: translateX(-50%);
+}
+
+.goal-progress-footer {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #64748b;
+  text-align: center;
+}
+
+.goal-remaining b {
+  color: #22c55e;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.goal-over b {
+  color: #ef4444;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+/* === MACRO + WEIGHT ROW (контейнер для колец и веса) === */
+.macro-weight-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 8px;
+  width: 100%;
+  grid-column: 1 / -1;
+}
+
+/* === MACRO RINGS (БЖУ в стиле Apple Watch) === */
+.macro-rings {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  flex: 1;
+}
+
+.macro-ring-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  max-width: 70px;
+}
+
+.macro-ring {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+
+.macro-ring-svg {
+  transform: rotate(-90deg);
+  width: 100%;
+  height: 100%;
+}
+
+.macro-ring-bg {
+  fill: none;
+  stroke: #e5e7eb;
+  stroke-width: 3;
+}
+
+.macro-ring-fill {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: ringFillIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes ringFillIn {
+  from {
+    stroke-dasharray: 0 100;
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Цвета для каждого макроса */
+.macro-ring.protein .macro-ring-fill {
+  stroke: #ef4444;
+}
+
+.macro-ring.fat .macro-ring-fill {
+  stroke: #f59e0b;
+}
+
+.macro-ring.carbs .macro-ring-fill {
+  stroke: #22c55e;
+}
+
+.macro-ring-value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  text-align: center;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.macro-ring-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  line-height: 1;
+}
+
+.macro-ring-target {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.macro-ring-badges {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  min-height: 16px;
+}
+
+.macro-ring-badge {
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.macro-ring-badge:active {
+  transform: scale(1.3);
+}
+
+/* === MACRO BADGE POPUP === */
+.macro-badge-popup {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  max-width: 240px;
+  z-index: 1000;
+  animation: popupFadeIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+  position: relative;
+  touch-action: pan-y;
+}
+
+/* Цветная полоса сверху */
+.macro-badge-popup-stripe {
+  height: 4px;
+  width: 100%;
+}
+
+/* Контент popup */
+.macro-badge-popup-content {
+  padding: 10px 14px 14px;
+}
+
+/* Стрелка-указатель */
+.macro-badge-popup-arrow {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 8px solid #fff;
+  filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
+}
+
+.macro-badge-popup-arrow.left {
+  left: 24px;
+  transform: none;
+}
+
+.macro-badge-popup-arrow.right {
+  left: auto;
+  right: 24px;
+  transform: none;
+}
+
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.macro-badge-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-right: 24px;
+}
+
+.macro-badge-popup-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.macro-badge-popup-pct {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* Прогресс-бар */
+.macro-badge-popup-progress {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.macro-badge-popup-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 💫 Анимация count-up для чисел */
+.macro-badge-popup-animated {
+  animation: macroCountUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.macro-badge-popup-animated-bar {
+  animation: macroBarFill 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes macroCountUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes macroBarFill {
+  from {
+    width: 0 !important;
+  }
+}
+
+/* 📊 Мини-sparkline */
+.macro-badge-popup-sparkline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.macro-badge-popup-spark-svg {
+  width: 70px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.macro-badge-popup-spark-label {
+  font-size: 10px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.macro-badge-popup-spark-today {
+  animation: sparkPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes sparkPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ⏰ Динамическое сообщение по времени */
+.macro-badge-popup-time-msg {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+  padding: 4px 0;
+}
+
+/* 🏆 Streak макроса */
+.macro-badge-popup-streak {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #d97706;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  animation: streakGlow 2s ease-in-out infinite;
+}
+
+.macro-badge-popup-streak-icon {
+  font-size: 14px;
+}
+
+@keyframes streakGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+  50% { box-shadow: 0 0 8px 2px rgba(251, 191, 36, 0.3); }
+}
+
+.macro-badge-popup-value {
+  font-size: 15px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.macro-badge-popup-norm {
+  color: #94a3b8;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+/* 📊 Сравнение со вчера */
+.macro-badge-popup-compare {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  background: #f1f5f9;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.macro-badge-popup-compare.up {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.macro-badge-popup-compare.down {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.macro-badge-popup-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+  margin-top: 2px;
+}
+
+.macro-badge-popup-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.macro-badge-popup-emoji {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* Рекомендация продукта */
+.macro-badge-popup-rec {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.macro-badge-popup-rec-icon {
+  font-size: 16px;
+}
+
+.macro-badge-popup-rec-text b {
+  font-weight: 600;
+}
+
+.macro-badge-popup-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  font-size: 12px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.macro-badge-popup-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #334155;
+}
+
+.macro-badge-popup-close:active {
+  transform: scale(0.95);
+}
+
+/* Swipe indicator */
+.macro-badge-popup-swipe {
+  width: 32px;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  margin: 0 auto 8px;
+}
+
+/* ====================================
+   METRIC POPUP (вода, шаги, калории)
+   ==================================== */
+
+.metric-popup {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+  animation: popupFadeIn 0.2s ease-out;
+  overflow: visible;
+  z-index: 9999;
+}
+
+.metric-popup-stripe {
+  height: 4px;
+  border-radius: 16px 16px 0 0;
+}
+
+.metric-popup-content {
+  padding: 12px 14px 14px;
+  position: relative;
+}
+
+.metric-popup-swipe {
+  width: 32px;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  margin: 0 auto 8px;
+}
+
+.metric-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-right: 24px;
+}
+
+.metric-popup-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.metric-popup-pct {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* Sparkline */
+.metric-popup-sparkline {
+  position: relative;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metric-popup-spark-svg {
+  flex: 1;
+  height: 20px;
+}
+
+.metric-popup-spark-label {
+  font-size: 10px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+/* Progress bar */
+.metric-popup-progress {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.metric-popup-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Value */
+.metric-popup-value {
+  font-size: 15px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.metric-popup-goal {
+  color: #94a3b8;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+.metric-popup-compare {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  background: #f1f5f9;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.metric-popup-compare.up {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.metric-popup-compare.down {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Extra info */
+.metric-popup-extra {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.metric-popup-extra b {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Streak */
+.metric-popup-streak {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #d97706;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  animation: streakGlow 2s ease-in-out infinite;
+}
+
+/* Reminder */
+.metric-popup-reminder {
+  font-size: 12px;
+  color: #ea580c;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-top: 4px;
+}
+
+/* Close button */
+.metric-popup-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  font-size: 12px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.metric-popup-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #334155;
+}
+
+.metric-popup-close:active {
+  transform: scale(0.95);
+}
+
+/* Arrow */
+.metric-popup-arrow {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 8px solid #fff;
+  filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
+}
+
+.metric-popup-arrow.left {
+  left: 24px;
+  transform: none;
+}
+
+.metric-popup-arrow.right {
+  left: auto;
+  right: 24px;
+  transform: none;
+}
+
+.macro-ring-percent {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  background: rgba(100, 116, 139, 0.1);
+  padding: 1px 4px;
+  border-radius: 4px;
+  margin-top: 2px;
+}
+
+/* Пульсирующая анимация для критических значений */
+.macro-ring-pulse {
+  animation: macroPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes macroPulse {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+/* === MACRO TIP — умная подсказка по БЖУ === */
+.macro-tip {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  margin-top: 4px;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.macro-tip-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.macro-tip-text {
+  color: #334155;
+  line-height: 1.3;
+}
+
+/* Тип: белок */
+.macro-tip-protein {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(248, 113, 113, 0.12) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Тип: жиры */
+.macro-tip-fat {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(251, 191, 36, 0.12) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* Тип: углеводы */
+.macro-tip-carbs {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(96, 165, 250, 0.12) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Тип: успех */
+.macro-tip-success {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(74, 222, 128, 0.12) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+/* Тип: пустой день */
+.macro-tip-empty {
+  background: linear-gradient(135deg, rgba(100, 116, 139, 0.06) 0%, rgba(148, 163, 184, 0.1) 100%);
+  border: 1px solid rgba(100, 116, 139, 0.15);
+}
+
+/* === WEIGHT CARD MODERN (стиль как у goal progress bar) === */
+.weight-card-modern {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 8px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(16, 185, 129, 0.12) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 58px;
+  max-width: 58px;
+}
+
+.weight-card-modern:hover {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(16, 185, 129, 0.18) 100%);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.weight-card-modern:active {
+  transform: scale(0.98);
+}
+
+.weight-card-modern.weight-card-empty {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.08) 0%, rgba(249, 115, 22, 0.12) 100%);
+  border-color: rgba(251, 146, 60, 0.3);
+  animation: pulse-weight 2s ease-in-out infinite;
+}
+
+.weight-card-left {
+  display: flex;
+  align-items: center;
+}
+
+.weight-card-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.weight-card-row {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.weight-card-value {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.weight-value-number {
+  font-size: 18px;
+  font-weight: 700;
+  color: #166534;
+}
+
+.weight-card-empty .weight-value-number {
+  color: #c2410c;
+  font-size: 16px;
+}
+
+.weight-value-unit {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin-left: 2px;
+}
+
+.weight-card-bottom-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.weight-card-trend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Контейнер тренда с DEV кнопкой */
+.weight-trend-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* DEV: Мини-кнопка очистки веса */
+.dev-clear-weight-mini {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(107, 114, 128, 0.2);
+  color: #6b7280;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dev-clear-weight-mini:hover {
+  opacity: 1;
+  background: rgba(220, 38, 38, 0.2);
+  color: #dc2626;
+}
+
+.weight-clear-btn-mini {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(220, 38, 38, 0.15);
+  color: #dc2626;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.weight-clear-btn-mini:hover {
+  opacity: 1;
+  background: rgba(220, 38, 38, 0.25);
+}
+
+.trend-arrow {
+  font-size: 10px;
+}
+
+.weight-card-trend.trend-down {
+  color: #16a34a;
+}
+
+.weight-card-trend.trend-up {
+  color: #dc2626;
+}
+
+.weight-card-trend.trend-same {
+  color: #64748b;
+}
+
+/* === DEFICIT CARD === */
+.deficit-card-modern {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 8px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.12) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 58px;
+  max-width: 58px;
+}
+
+.deficit-card-modern:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.18) 100%);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.deficit-card-modern:active {
+  transform: scale(0.98);
+}
+
+.deficit-value-number {
+  font-size: 18px;
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.deficit-value-number.deficit-negative {
+  color: #16a34a;
+}
+
+.deficit-value-number.deficit-positive {
+  color: #f59e0b;
+}
+
+/* Deficit trend (разница от профиля) */
+.deficit-card-trend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.deficit-card-trend.trend-down {
+  color: #16a34a;
+}
+
+.deficit-card-trend.trend-up {
+  color: #f59e0b;
+}
+
+/* === DEFICIT PICKER MODAL === */
+.deficit-picker-modal {
+  max-width: 280px;
+}
+
+.deficit-picker-hint {
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+  padding: 12px 16px 8px;
+  line-height: 1.4;
+}
+
+.deficit-wheels {
+  justify-content: center;
+  padding-bottom: 16px;
+}
+
+/* === HOUSEHOLD (Бытовая активность) PICKER === */
+.activity-cards-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* Правая колонка: быт + кнопка */
+.activity-right-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.household-activity-card {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.household-activity-card:hover {
+  border-color: #22c55e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+}
+
+.household-activity-card:active {
+  transform: translateY(0);
+}
+
+.household-activity-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.household-activity-icon {
+  font-size: 16px;
+}
+
+.household-activity-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.household-activity-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.household-value-number {
+  font-size: 26px;
+  font-weight: 700;
+  color: #16a34a;
+  line-height: 1;
+}
+
+.household-value-unit {
+  font-size: 13px;
+  color: #15803d;
+  font-weight: 500;
+}
+
+.household-value-kcal {
+  font-size: 12px;
+  color: #22c55e;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.household-activity-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+/* Кнопка добавления тренировки в правой колонке */
+.add-training-btn {
+  padding: 14px 12px;
+  border: 1px dashed #f97316;
+  background: rgba(249, 115, 22, 0.08);
+  color: #ea580c;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.add-training-btn:hover {
+  border-color: #ea580c;
+  color: #c2410c;
+  background: rgba(249, 115, 22, 0.15);
+}
+
+.add-training-btn:active {
+  transform: scale(0.98);
+}
+
+.household-activity-card:active {
+  transform: translateY(0);
+}
+
+.household-activity-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.household-activity-icon {
+  font-size: 18px;
+}
+
+.household-activity-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.household-activity-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.household-value-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.household-value-unit {
+  font-size: 14px;
+  color: #15803d;
+  font-weight: 500;
+}
+
+.household-value-kcal {
+  font-size: 12px;
+  color: #22c55e;
+  margin-left: 8px;
+  font-weight: 500;
+}
+
+/* === FORMULA CARD (Расчёт калорий) === */
+.formula-card {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.formula-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.formula-card-icon {
+  font-size: 16px;
+}
+
+.formula-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.formula-card-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.formula-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.formula-label {
+  color: #6b7280;
+}
+
+.formula-value {
+  font-weight: 600;
+  color: #374151;
+}
+
+.formula-row.formula-total {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.formula-row.formula-total .formula-label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.formula-row.formula-total .formula-value {
+  font-size: 16px;
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.formula-row.formula-subtotal {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.formula-row.formula-subtotal .formula-label {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.formula-row.formula-subtotal .formula-value {
+  font-weight: 600;
+  color: #374151;
+}
+
+.formula-row.deficit .formula-label {
+  color: #dc2626;
+}
+
+.formula-row.deficit .formula-value {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.formula-row.surplus .formula-label {
+  color: #16a34a;
+}
+
+.formula-row.surplus .formula-value {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.household-picker-modal {
+  max-width: 300px;
+}
+
+.household-picker-hint {
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+  padding: 12px 16px 8px;
+  line-height: 1.5;
+}
+
+.household-wheels {
+  justify-content: center;
+  padding-bottom: 16px;
+  gap: 8px;
+}
+
+.household-wheel-unit {
+  font-size: 20px;
+  font-weight: 600;
+  color: #16a34a;
+  align-self: center;
+  margin-left: 8px;
+}
+
+/* Zone Minutes Picker */
+.zone-picker-modal {
+  max-width: 260px;
+}
+
+.zone-picker-kcal-hint {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #f97316;
+  padding: 8px 0 4px;
+}
+
+.zone-wheels {
+  justify-content: center;
+  padding-bottom: 16px;
+}
+
+/* Training Picker Modal */
+.training-picker-modal {
+  max-width: 340px;
+  width: 95vw;
+}
+
+.training-type-section {
+  padding: 12px 16px 8px;
+}
+
+.training-type-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.training-type-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.training-type-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.training-type-btn:active {
+  transform: scale(0.95);
+}
+
+.training-type-btn.active {
+  border-color: #f97316;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+}
+
+.training-type-icon {
+  font-size: 24px;
+}
+
+.training-type-text {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.training-type-btn.active .training-type-text {
+  color: #ea580c;
+  font-weight: 600;
+}
+
+.training-time-section {
+  padding: 8px 16px 0;
+}
+
+.training-time-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 4px;
+  display: block;
+  text-align: center;
+}
+
+.training-time-wheels {
+  justify-content: center;
+  padding-bottom: 8px;
+}
+
+/* Compact train time display */
+.compact-train-time {
+  font-size: 12px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+
+/* Make compact-train-header clickable */
+.compact-train-header {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.compact-train-header:active {
+  background: #f8fafc;
+}
+
+/* Training Zones Section in Modal */
+.training-zones-section {
+  padding: 12px 8px 16px;
+}
+
+.training-zones-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.training-zones-wheels {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+}
+
+.training-zone-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 72px;
+}
+
+.training-zone-header {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+
+.training-zone-header.zone-color-1 { background: #dbeafe; color: #2563eb; }
+.training-zone-header.zone-color-2 { background: #dcfce7; color: #16a34a; }
+.training-zone-header.zone-color-3 { background: #fef3c7; color: #d97706; }
+.training-zone-header.zone-color-4 { background: #fee2e2; color: #dc2626; }
+
+.training-zone-column .wheel-column {
+  width: 70px;
+}
+
+.training-zone-column .wheel-viewport {
+  height: 220px;
+}
+
+.training-zones-kcal {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #f97316;
+  padding: 8px 0 4px;
+}
+
+/* Training zones stats (time + kcal) */
+.training-zones-stats {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 0 8px;
+}
+
+.training-zones-time {
+  font-size: 16px;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.training-zones-stats .training-zones-kcal {
+  padding: 0;
+}
+
+/* Training presets */
+.training-presets-section {
+  padding: 8px 16px 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.training-presets-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.training-presets-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.training-preset-btn {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.training-preset-btn:active {
+  transform: scale(0.97);
+  background: #f1f5f9;
+}
+
+/* Shake animation for validation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+.training-zones-section.shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* === Training Rating Section (Step 3) === */
+.training-rating-section {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.training-rating-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.training-rating-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.training-rating-emoji {
+  font-size: 24px;
+}
+
+.training-rating-label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.training-rating-value {
+  font-size: 16px;
+  font-weight: 600;
+  min-width: 50px;
+  text-align: right;
+}
+
+.training-rating-presets {
+  display: flex;
+  gap: 8px;
+}
+
+.training-rating-presets .mood-preset {
+  flex: 1;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+/* Training Comment Block */
+.training-comment-wrapper {
+  margin: 0 16px 16px;
+  transition: all 0.3s ease;
+}
+
+.training-comment-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  transition: all 0.3s ease;
+}
+
+.training-comment-prompt.neutral {
+  background: rgba(156, 163, 175, 0.08);
+  border: 1px solid rgba(156, 163, 175, 0.15);
+}
+
+.training-comment-prompt.positive {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.training-comment-prompt.negative {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+.training-comment-prompt .training-comment-icon {
+  font-size: 20px;
+}
+
+.training-comment-prompt .training-comment-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.training-comment-prompt.positive .training-comment-text {
+  color: #059669;
+}
+
+.training-comment-prompt.negative .training-comment-text {
+  color: #dc2626;
+}
+
+.training-comment-input {
+  width: 100%;
+  border: none;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #1c1c1e;
+  outline: none;
+}
+
+.training-comment-input::placeholder {
+  color: #9ca3af;
+}
+
+.training-comment-input:focus {
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Training Card Rating Display */
+.training-card-ratings {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.training-card-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.training-card-rating-emoji {
+  font-size: 14px;
+}
+
+.training-card-rating-value {
+  font-weight: 600;
+  color: #6366f1;
+}
+
+.training-card-comment {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(156, 163, 175, 0.08);
+  border-radius: 8px;
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Clickable zone values */
+.zone-clickable {
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.zone-clickable:active {
+  transform: scale(0.95);
+}
+
+.zone-clickable:active .compact-zone-value {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.compact-zone-value {
+  font-weight: 600;
+  font-size: 14px;
+  min-width: 36px;
+  text-align: center;
+  display: inline-block;
+  background: #fff;
+  border-radius: 6px;
+  padding: 4px 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.weight-card-chevron {
+  display: none;
+}
+
+/* Компактные колёса в dropdown */
+.weight-picker-wheels-inline .wheel-column {
+  width: 50px;
+}
+
+.weight-picker-wheels-inline .wheel-viewport {
+  height: 120px;
+}
+
+.weight-picker-wheels-inline .wheel-item {
+  font-size: 18px;
+}
+
+.weight-picker-wheels-inline .wheel-item.selected {
+  font-size: 20px;
+}
+
+.weight-picker-wheels-inline .wheel-highlight {
+  height: 36px;
+}
+
+@keyframes pulse-weight {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* === WEIGHT PICKER MODAL === */
+.weight-picker-modal {
+  max-width: 320px;
+}
+
+/* Step indicator dots */
+.picker-steps-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 0 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.picker-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d1d5db;
+  transition: background 0.2s ease;
+}
+
+.picker-step-dot.active {
+  background: #6366f1;
+}
+
+/* DEV: Clear weight button */
+.dev-clear-weight-btn {
+  display: block;
+  margin: 8px auto;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px dashed #ef4444;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dev-clear-weight-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.dev-clear-weight-btn:active {
+  transform: scale(0.95);
+}
+
+/* Weight card bottom row: trend + mini clear button */
+.weight-card-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* DEV: Mini clear weight button */
+.dev-clear-weight-btn-mini {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  font-size: 12px;
+  line-height: 14px;
+  color: #9ca3af;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.dev-clear-weight-btn-mini:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  opacity: 1;
+}
+
+.dev-clear-weight-btn-mini:active {
+  transform: scale(0.9);
+}
+
+.weight-picker-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.weight-picker-section:last-child {
+  border-bottom: none;
+}
+
+.weight-picker-section-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.weight-wheels {
+  justify-content: center;
+  gap: 0 !important;
+}
+
+.weight-picker-dot {
+  font-size: 28px;
+  font-weight: 600;
+  color: #000;
+  padding: 0 4px;
+  align-self: center;
+}
+
+.weight-picker-unit {
+  font-size: 20px;
+  font-weight: 600;
+  color: #000;
+  align-self: center;
+  margin-left: 4px;
+}
+
+/* Steps Goal Section */
+.steps-goal-section {
+  padding: 12px 16px;
+}
+
+.steps-goal-wheels {
+  justify-content: center;
+  gap: 8px;
+}
+
+.steps-goal-wheel-unit {
+  font-size: 20px;
+  font-weight: 600;
+  color: #000;
+  align-self: center;
+  margin-left: 8px;
+}
+
+.steps-goal-input-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.steps-goal-input {
+  width: 100px;
+  padding: 8px 12px;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #16a34a;
+}
+
+.steps-goal-input:focus {
+  outline: none;
+  border-color: #16a34a;
+  background: #fff;
+}
+
+.steps-goal-unit {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.steps-goal-presets {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.steps-goal-preset {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.steps-goal-preset:active {
+  transform: scale(0.95);
+}
+
+.steps-goal-preset.active {
+  color: #fff;
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+/* === FAB (Floating Action Button) === */
+.fab-add-meal {
+  position: fixed;
+  bottom: 90px; /* над нижней навигацией */
+  right: 20px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  font-size: 36px;
+  font-weight: 300;
+  border: none;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+  z-index: 100;
+}
+
+.fab-add-meal:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+}
+
+.fab-add-meal:active {
+  transform: scale(0.95);
+}
+
+/* === MACRO TOAST — подсказка БЖУ снизу === */
+.macro-toast {
+  position: fixed;
+  bottom: 80px; /* над нижней навигацией */
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  z-index: 1000;
+  opacity: 0;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
+  width: 80%; /* 4/5 ширины экрана */
+  max-width: 400px; /* ограничение на больших экранах */
+  cursor: pointer;
+}
+
+.macro-toast.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.macro-toast-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.macro-toast-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+  line-height: 1.3;
+}
+
+.macro-toast-close {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 50%;
+  font-size: 16px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.macro-toast-close:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+/* Цвета по типу */
+.macro-toast-protein {
+  border-left: 4px solid #ef4444;
+}
+
+.macro-toast-fat {
+  border-left: 4px solid #f59e0b;
+}
+
+.macro-toast-carbs {
+  border-left: 4px solid #3b82f6;
+}
+
+.macro-toast-warning {
+  border-left: 4px solid #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.macro-toast-success {
+  border-left: 4px solid #22c55e;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+/* Fiber - зелёный (клетчатка) */
+.macro-toast-fiber {
+  border-left: 4px solid #10b981;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+}
+
+/* Tip - синий (подсказки) */
+.macro-toast-tip {
+  border-left: 4px solid #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+/* Achievement - золотой с анимацией */
+.macro-toast-achievement {
+  border-left: 4px solid #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fde68a 100%);
+  animation: achievementPulse 0.5s ease-out;
+}
+
+@keyframes achievementPulse {
+  0% { transform: translateX(-50%) scale(0.9); }
+  50% { transform: translateX(-50%) scale(1.05); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* Progress bar для auto-hide */
+.macro-toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: currentColor;
+  opacity: 0.3;
+  border-radius: 0 0 12px 12px;
+  animation: toast-progress 7.5s linear forwards;
+}
+
+@keyframes toast-progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+.macro-toast-achievement .macro-toast-progress {
+  animation-duration: 10s;
+}
+
+/* Анимации иконок */
+.macro-toast-achievement .macro-toast-icon {
+  animation: fire-flicker 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes fire-flicker {
+  0% { transform: scale(1) rotate(-2deg); filter: brightness(1); }
+  100% { transform: scale(1.05) rotate(2deg); filter: brightness(1.1); }
+}
+
+.macro-toast-warning .macro-toast-icon {
+  animation: warning-pulse 1s ease-in-out infinite;
+}
+
+@keyframes warning-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.macro-toast-success .macro-toast-icon,
+.macro-toast-fiber .macro-toast-icon {
+  animation: success-bounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes success-bounce {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.macro-toast-tip .macro-toast-icon {
+  animation: tip-wobble 0.5s ease-in-out;
+}
+
+@keyframes tip-wobble {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+}
+
+/* Swipe-to-dismiss */
+.macro-toast {
+  will-change: transform;
+  touch-action: pan-x;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* === EXPANDABLE ADVICE TOAST === */
+.macro-toast.expanded {
+  bottom: 90px;
+  max-height: 300px;
+  border-radius: 16px;
+}
+
+.macro-toast-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.macro-toast-badge {
+  background: #3b82f6; /* Яркий синий */
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: auto;
+  animation: badgePulse 2s infinite;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.macro-toast-badge::after {
+  content: '▼';
+  font-size: 8px;
+  transition: transform 0.2s;
+}
+
+.macro-toast.expanded .macro-toast-badge::after {
+  transform: rotate(180deg);
+}
+
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.macro-toast-extras {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.macro-toast-extra {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.macro-toast-extra-warning { background: rgba(239, 68, 68, 0.2); }
+.macro-toast-extra-achievement { background: rgba(234, 179, 8, 0.2); }
+.macro-toast-extra-tip { background: rgba(59, 130, 246, 0.2); }
+.macro-toast-extra-fiber { background: rgba(34, 197, 94, 0.2); }
+
+/* Mobile: ограничиваем ширину и высоту */
+@media (max-width: 480px) {
+  .macro-toast.expanded {
+    max-height: 250px;
+    overflow-y: auto;
+  }
+  
+  .macro-toast-extras {
+    max-height: 150px;
+    overflow-y: auto;
+  }
+  
+  .macro-toast-extra {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+}
+
+/* === PULL-TO-REFRESH (Modern Design) === */
+.pull-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  overflow: hidden;
+  transition: height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              opacity 0.2s ease;
+  margin: -12px -12px 8px -12px;
+  padding-top: 12px;
+  background: linear-gradient(
+    180deg, 
+    color-mix(in srgb, var(--acc) 8%, var(--bg)) 0%, 
+    transparent 100%
+  );
+}
+
+.pull-indicator.refreshing {
+  height: 56px !important;
+}
+
+.pull-indicator.success {
+  background: linear-gradient(
+    180deg, 
+    color-mix(in srgb, var(--success) 15%, var(--bg)) 0%, 
+    transparent 100%
+  );
+}
+
+.pull-spinner {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* SVG-based spinner for smooth animation */
+.pull-spinner-ring {
+  width: 28px;
+  height: 28px;
+  stroke: var(--acc);
+  stroke-width: 3;
+  fill: none;
+  stroke-linecap: round;
+  transform-origin: center;
+  transition: stroke-dashoffset 0.15s ease-out;
+}
+
+.pull-spinner-ring.ready {
+  stroke: var(--success);
+}
+
+.pull-spinner-ring.spinning {
+  animation: pull-spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes pull-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Fallback emoji spinner */
+.pull-spinner-icon {
+  font-size: 22px;
+  color: var(--acc);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              color 0.2s ease;
+}
+
+.pull-spinner-icon.ready {
+  color: var(--success);
+  transform: scale(1.15);
+}
+
+.pull-spinner-icon.spinning {
+  animation: pull-spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.pull-spinner-icon.success {
+  color: var(--success);
+  animation: pull-success 0.4s ease-out forwards;
+}
+
+@keyframes pull-success {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.pull-text {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  transition: color 0.2s ease;
+  letter-spacing: 0.02em;
+}
+
+.pull-text.ready {
+  color: var(--success-dark);
+  font-weight: 600;
+}
+
+.pull-text.syncing {
+  color: var(--acc);
+}
+
+/* Ripple effect for threshold */
+.pull-indicator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--success) 20%, transparent) 0%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: width 0.3s ease, height 0.3s ease, opacity 0.3s ease;
+}
+
+.pull-indicator.ready::before {
+  width: 120px;
+  height: 120px;
+  opacity: 1;
+}
+

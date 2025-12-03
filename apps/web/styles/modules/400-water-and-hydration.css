@@ -1,0 +1,1378 @@
+/* =========================================
+   WATER CARD STYLES
+   ========================================= */
+
+/* --- Карточка воды --- */
+.compact-water {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 0 12px;
+}
+
+.compact-water .compact-card-header {
+  color: #0369a1;
+  grid-column: 1;
+  grid-row: 1;
+  margin-bottom: 4px;
+}
+
+.water-card-content {
+  display: contents;
+}
+
+/* Левая часть: большое кольцо */
+.water-ring-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 80px;
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.water-ring-large {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+
+.water-ring-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.water-ring-bg {
+  fill: none;
+  stroke: #bae6fd;
+  stroke-width: 3;
+}
+
+.water-ring-fill {
+  fill: none;
+  stroke: #0ea5e9;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.3s ease;
+}
+
+.water-ring-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.water-ring-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0369a1;
+}
+
+.water-ring-unit {
+  font-size: 11px;
+  color: #0ea5e9;
+  font-weight: 500;
+}
+
+.water-goal-text {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Краткий breakdown под кольцом */
+.water-goal-breakdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.water-breakdown-item {
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+.water-breakdown-bonus {
+  color: #059669;
+  font-weight: 500;
+}
+
+/* Напоминание "Давно не пил" */
+.water-reminder {
+  font-size: 10px;
+  color: #f59e0b;
+  font-weight: 500;
+  margin-top: 4px;
+  padding: 3px 8px;
+  background: #fffbeb;
+  border-radius: 4px;
+  animation: reminderPulse 2s ease-in-out infinite;
+}
+
+@keyframes reminderPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+[data-theme="dark"] .water-reminder {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.15);
+}
+
+/* Тултип с полной формулой */
+.water-formula-tooltip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  margin-top: -8px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  border: 1px solid #e5e7eb;
+  z-index: 1000;
+  min-width: 200px;
+  max-width: 280px;
+  animation: tooltipFadeIn 0.2s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-90%); }
+  to { opacity: 1; transform: translateX(-50%) translateY(-100%); }
+}
+
+.water-formula-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0369a1;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.water-formula-row {
+  font-size: 11px;
+  color: #374151;
+  padding: 3px 0;
+  line-height: 1.4;
+}
+
+.water-formula-sub {
+  color: #6b7280;
+  font-size: 10px;
+  padding-left: 8px;
+}
+
+.water-formula-total {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0ea5e9;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.water-formula-hint {
+  font-size: 9px;
+  color: #9ca3af;
+  text-align: center;
+  margin-top: 6px;
+}
+
+[data-theme="dark"] .water-formula-tooltip {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+[data-theme="dark"] .water-formula-title {
+  color: #7dd3fc;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .water-formula-row {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .water-formula-sub {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .water-formula-total {
+  border-color: #334155;
+}
+
+[data-theme="dark"] .water-breakdown-item {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .water-breakdown-bonus {
+  color: #34d399;
+}
+
+/* Анимация добавления на кольце */
+.water-card-anim {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  font-weight: 700;
+  color: #0ea5e9;
+  animation: waterCardPop 0.8s ease-out forwards;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes waterCardPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -70%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.9);
+  }
+}
+
+/* Правая часть */
+.water-card-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 6px;
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: start;
+}
+
+/* Верхняя строка: мотивация + кнопка удаления */
+.water-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.water-motivation-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.water-motivation-inline .water-motivation-emoji {
+  font-size: 16px;
+}
+
+.water-motivation-inline .water-motivation-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0369a1;
+}
+
+/* Кнопка удаления воды (компактная) */
+.water-minus-compact {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.water-minus-compact:active {
+  background: #fee2e2;
+}
+
+[data-theme="dark"] .water-minus-compact {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .water-minus-compact:active {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+/* Inline прогресс-бар с волной воды */
+.water-progress-inline {
+  position: relative;
+  height: 14px;
+  background: linear-gradient(180deg, #e0f2fe 0%, #bae6fd 100%);
+  border-radius: 7px;
+  overflow: visible;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.water-progress-inline .water-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 50%, #0284c7 100%);
+  border-radius: 7px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 8px rgba(14, 165, 233, 0.5);
+}
+
+/* Волна на краю заливки */
+.water-wave-edge {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  transform: translateX(-4px);
+  background: linear-gradient(90deg, #0ea5e9, transparent);
+  animation: waveEdge 1s ease-in-out infinite;
+  border-radius: 0 7px 7px 0;
+}
+
+@keyframes waveEdge {
+  0%, 100% {
+    transform: translateX(-4px) scaleX(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateX(-2px) scaleX(1.3);
+    opacity: 1;
+  }
+}
+
+/* Пузырьки в воде */
+.water-bubbles {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.water-bubble {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: bubbleRise 1.8s ease-out infinite;
+  box-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+.water-bubble:nth-child(1) { left: 10%; animation-delay: 0s; animation-duration: 1.5s; }
+.water-bubble:nth-child(2) { left: 25%; animation-delay: 0.3s; animation-duration: 1.8s; }
+.water-bubble:nth-child(3) { left: 45%; animation-delay: 0.6s; animation-duration: 1.6s; }
+.water-bubble:nth-child(4) { left: 65%; animation-delay: 0.9s; animation-duration: 2s; }
+.water-bubble:nth-child(5) { left: 85%; animation-delay: 1.2s; animation-duration: 1.7s; }
+
+@keyframes bubbleRise {
+  0% {
+    bottom: 0;
+    opacity: 0;
+    transform: scale(0.3) translateX(0);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1) translateX(-2px);
+  }
+  60% {
+    opacity: 0.8;
+    transform: scale(0.8) translateX(2px);
+  }
+  100% {
+    bottom: 16px;
+    opacity: 0;
+    transform: scale(0.2) translateX(0);
+  }
+}
+
+/* Блик сверху */
+.water-shine {
+  position: absolute;
+  left: 5%;
+  top: 2px;
+  width: 30%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  border-radius: 2px;
+  animation: shineMove 2s ease-in-out infinite;
+}
+
+@keyframes shineMove {
+  0%, 100% {
+    opacity: 0.5;
+    transform: translateX(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(10px);
+  }
+}
+
+/* 💧 Падающая капля воды */
+.water-drop-container {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 80px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.water-drop {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 14px;
+  height: 18px;
+  background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 40%, #0ea5e9 100%);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  transform: translateX(-50%);
+  animation: dropFall 0.9s cubic-bezier(0.4, 0, 0.8, 1) forwards;
+  box-shadow: 
+    0 2px 8px rgba(14, 165, 233, 0.4),
+    inset 2px -2px 4px rgba(255, 255, 255, 0.5),
+    inset -1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.water-drop::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 4px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+}
+
+@keyframes dropFall {
+  0% {
+    top: 0;
+    opacity: 1;
+    transform: translateX(-50%) scale(1) rotate(0deg);
+  }
+  20% {
+    transform: translateX(-50%) scale(1.1) rotate(-3deg);
+  }
+  40% {
+    transform: translateX(-50%) scale(1) rotate(2deg);
+  }
+  70% {
+    opacity: 1;
+    transform: translateX(-50%) scale(0.95) rotate(0deg);
+  }
+  100% {
+    top: 65px;
+    opacity: 0;
+    transform: translateX(-50%) scale(0.7) rotate(0deg);
+  }
+}
+
+.water-splash {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  width: 30px;
+  height: 14px;
+  transform: translateX(-50%);
+  opacity: 0;
+  animation: splashAppear 0.4s ease-out 0.7s forwards;
+}
+
+.water-splash::before,
+.water-splash::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 5px;
+  height: 5px;
+  background: #38bdf8;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(56, 189, 248, 0.5);
+}
+
+.water-splash::before {
+  left: 2px;
+  animation: splashLeft 0.4s ease-out 0.7s forwards;
+}
+
+.water-splash::after {
+  right: 2px;
+  animation: splashRight 0.4s ease-out 0.75s forwards;
+}
+
+@keyframes splashAppear {
+  0% { opacity: 0; }
+  30% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes splashLeft {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+    transform: translate(-8px, -12px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-12px, -18px) scale(0.3);
+  }
+}
+
+@keyframes splashRight {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+    transform: translate(8px, -10px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(12px, -16px) scale(0.3);
+  }
+}
+
+/* Пресеты в ряд */
+.water-presets-row {
+  display: flex;
+  gap: 6px;
+}
+
+.water-preset-compact {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: #fff;
+  border: 1.5px solid #bae6fd;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 52px;
+}
+
+.water-preset-compact:active {
+  background: #0ea5e9;
+  border-color: #0284c7;
+  transform: scale(0.95);
+}
+
+.water-preset-compact:active .water-preset-ml {
+  color: #fff;
+}
+
+.water-preset-compact .water-preset-icon {
+  font-size: 16px;
+}
+
+.water-preset-compact .water-preset-ml {
+  font-size: 10px;
+  font-weight: 600;
+  color: #0369a1;
+}
+
+/* === FAB группа: советы + вода === */
+.fab-group {
+  position: fixed;
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 100;
+}
+
+/* === FAB для советов (💡) === */
+.advice-fab {
+  height: 44px;
+  width: 44px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s ease;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+  opacity: 0.6;
+}
+
+.advice-fab.has-advice {
+  opacity: 1;
+  animation: advice-pulse 2s ease-in-out infinite;
+}
+
+.advice-fab-icon {
+  font-size: 20px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+}
+
+.advice-fab-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.advice-fab:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+}
+
+@keyframes advice-pulse {
+  0%, 100% { box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4); }
+  50% { box-shadow: 0 4px 20px rgba(251, 191, 36, 0.6); }
+}
+
+[data-theme="dark"] .advice-fab {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+/* === Advice List (полноэкранный список советов) === */
+.advice-list-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  animation: fadeIn 0.2s ease;
+}
+
+.advice-list-container {
+  width: 100%;
+  max-width: 500px;
+  max-height: 75vh;
+  background: var(--surface, #fff);
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.advice-list-container.shake-warning {
+  animation: shakeHorizontal 0.4s ease;
+}
+
+@keyframes shakeHorizontal {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.advice-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary, #1f2937);
+}
+
+.advice-list-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.advice-list-dismiss-all {
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.advice-list-dismiss-all:hover {
+  transform: scale(1.05);
+}
+
+.advice-list-dismiss-all:active {
+  transform: scale(0.95);
+}
+
+.advice-list-dismiss-all:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.advice-list-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  background: var(--bg-secondary, #f3f4f6);
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, #6b7280);
+  transition: background 0.15s ease;
+}
+
+.advice-list-close:hover {
+  background: var(--bg-tertiary, #e5e7eb);
+}
+
+.advice-list-items {
+  padding: 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Группы советов */
+.advice-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.advice-group-header {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary, #9ca3af);
+  padding: 8px 12px 4px;
+  margin-top: 4px;
+}
+
+.advice-group:first-child .advice-group-header {
+  margin-top: 0;
+}
+
+/* Карточка совета */
+.advice-list-item-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  transition: height 0.3s ease, opacity 0.3s ease, margin 0.3s ease, transform 0.3s ease;
+  animation: adviceSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: var(--stagger-delay, 0ms);
+}
+
+@keyframes adviceSlideIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px) scale(0.95);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1);
+  }
+}
+
+.advice-list-item-wrapper.dismissed {
+  height: 0 !important;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  animation: adviceDismiss 0.3s ease forwards;
+}
+
+@keyframes adviceDismiss {
+  0% { 
+    opacity: 1; 
+    transform: translateX(0) scale(1);
+  }
+  50% { 
+    opacity: 0.5;
+    transform: translateX(-100px) scale(0.9);
+  }
+  100% { 
+    opacity: 0; 
+    transform: translateX(-150px) scale(0.8);
+    height: 0;
+    margin: 0;
+  }
+}
+
+/* Undo overlay прогресс-бар (убывает за 3 сек) */
+@keyframes undoProgress {
+  0% { width: 100%; }
+  100% { width: 0%; }
+}
+
+/* Фоны при свайпе */
+.advice-list-item-bg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 12px;
+  transition: opacity 0.1s ease;
+}
+
+.advice-list-item-bg-left {
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  justify-content: flex-end;
+  color: #fff;
+}
+
+.advice-list-item-bg-right {
+  background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+  justify-content: flex-start;
+  color: #fff;
+}
+
+.advice-list-item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--bg-secondary, #f9fafb);
+  border-left: 4px solid #9ca3af;
+  touch-action: pan-x;
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+.advice-list-item.expanded {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.advice-list-item-tip {
+  border-left-color: #3b82f6;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, transparent 100%);
+}
+
+.advice-list-item-warning {
+  border-left-color: #ef4444;
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, transparent 100%);
+}
+
+.advice-list-item-achievement {
+  border-left-color: #10b981;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, transparent 100%);
+}
+
+.advice-list-item-insight {
+  border-left-color: #8b5cf6;
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.08) 0%, transparent 100%);
+}
+
+.advice-list-item-info {
+  border-left-color: #6b7280;
+  background: linear-gradient(90deg, rgba(107, 114, 128, 0.08) 0%, transparent 100%);
+}
+
+.advice-list-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  animation: iconGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes iconGlow {
+  from { filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)); }
+  to { filter: drop-shadow(0 2px 8px rgba(59, 130, 246, 0.3)); }
+}
+
+.advice-list-item-warning .advice-list-icon {
+  animation: iconGlowWarning 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes iconGlowWarning {
+  from { filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)); }
+  to { filter: drop-shadow(0 2px 10px rgba(239, 68, 68, 0.4)); }
+}
+
+.advice-list-item-achievement .advice-list-icon {
+  animation: iconGlowSuccess 2s ease-in-out infinite alternate;
+}
+
+@keyframes iconGlowSuccess {
+  from { filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)); }
+  to { filter: drop-shadow(0 2px 10px rgba(16, 185, 129, 0.4)); }
+}
+
+.advice-list-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.advice-list-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary, #1f2937);
+}
+
+.advice-list-details {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary, #6b7280);
+  padding: 8px 12px;
+  background: var(--bg-tertiary, #f3f4f6);
+  border-radius: 8px;
+  animation: detailsSlideIn 0.2s ease;
+}
+
+@keyframes detailsSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Подсказки снизу */
+.advice-list-hints {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 11px;
+  color: var(--text-tertiary, #9ca3af);
+  border-top: 1px solid var(--border, #e5e7eb);
+  flex-wrap: wrap;
+}
+
+.advice-list-hint-item {
+  opacity: 0.8;
+}
+
+.advice-list-hint-divider {
+  opacity: 0.4;
+}
+
+/* === Dark Theme === */
+[data-theme="dark"] .advice-list-overlay {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+[data-theme="dark"] .advice-list-container {
+  background: var(--surface, #1f2937);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .advice-list-item {
+  background: var(--bg-secondary, #374151);
+}
+
+[data-theme="dark"] .advice-list-item-tip {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, transparent 100%);
+}
+
+[data-theme="dark"] .advice-list-item-warning {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.15) 0%, transparent 100%);
+}
+
+[data-theme="dark"] .advice-list-item-achievement {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, transparent 100%);
+}
+
+[data-theme="dark"] .advice-list-item-insight {
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+}
+
+[data-theme="dark"] .advice-list-details {
+  background: var(--bg-primary, #111827);
+}
+
+[data-theme="dark"] .advice-list-hints {
+  border-top-color: var(--border, #374151);
+}
+
+/* === FAB для воды (в группе) === */
+.fab-group .water-fab {
+  position: static;
+}
+
+.water-fab {
+  position: fixed;
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.water-fab:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+}
+
+[data-theme="dark"] .water-fab {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+/* Анимация добавления воды (над кольцом) */
+.water-card-anim-above {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  font-weight: 700;
+  color: #0ea5e9;
+  animation: waterFloatUp 0.8s ease-out forwards;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes waterFloatUp {
+  0% { 
+    opacity: 1; 
+    transform: translateX(-50%) translateY(0) scale(1); 
+  }
+  100% { 
+    opacity: 0; 
+    transform: translateX(-50%) translateY(-30px) scale(1.2); 
+  }
+}
+
+/* Dark theme */
+[data-theme="dark"] .compact-water {
+  background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%);
+  border-color: #0ea5e9;
+}
+
+[data-theme="dark"] .compact-water .compact-card-header {
+  color: #7dd3fc;
+}
+
+[data-theme="dark"] .water-ring-bg {
+  stroke: #0369a1;
+}
+
+[data-theme="dark"] .water-ring-value,
+[data-theme="dark"] .water-motivation-inline .water-motivation-text {
+  color: #e0f2fe;
+}
+
+[data-theme="dark"] .water-ring-unit {
+  color: #7dd3fc;
+}
+
+[data-theme="dark"] .water-goal-text {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .water-progress-inline {
+  background: #0369a1;
+}
+
+[data-theme="dark"] .water-preset-compact {
+  background: #0c4a6e;
+  border-color: #0ea5e9;
+}
+
+[data-theme="dark"] .water-preset-compact .water-preset-ml {
+  color: #7dd3fc;
+}
+
+/* ================================================
+   DATA OVERVIEW TAB — Таблица заполненности данных
+   ================================================ */
+
+.data-overview-tab {
+  padding: 12px;
+  min-height: 100%;
+}
+
+.data-overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+
+.data-overview-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color, #1f2937);
+}
+
+.data-overview-total {
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #d1fae5;
+  color: #059669;
+  font-weight: 500;
+}
+
+.data-overview-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -12px;
+  padding: 0 12px;
+}
+
+.data-overview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 520px;
+}
+
+.data-overview-table th {
+  padding: 8px 4px;
+  text-align: center;
+  font-weight: 500;
+  font-size: 11px;
+  position: sticky;
+  top: 0;
+  background: var(--bg-color, #fff);
+  border-bottom: 2px solid #e5e7eb;
+  z-index: 2;
+}
+
+/* Вертикальный текст в заголовках */
+.data-overview-table th.th-vertical {
+  vertical-align: bottom;
+  padding: 8px 2px 6px;
+  min-width: 28px;
+  height: 80px;
+}
+
+.data-overview-table th.th-vertical .th-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+}
+
+.data-overview-table th.th-date {
+  text-align: left;
+  font-size: 12px;
+  vertical-align: bottom;
+  padding-bottom: 6px;
+}
+
+.data-overview-table th:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+
+.data-overview-table td {
+  padding: 10px 6px;
+  text-align: center;
+  border-bottom: 1px solid #f3f4f6;
+  min-width: 36px;
+}
+
+.data-overview-table td:first-child {
+  text-align: left;
+  font-weight: 500;
+  font-size: 12px;
+  position: sticky;
+  left: 0;
+  background: var(--bg-color, #fff);
+  z-index: 1;
+  white-space: nowrap;
+  padding-right: 12px;
+}
+
+.data-overview-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.data-overview-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.data-overview-table tbody tr:active {
+  background: #f3f4f6;
+}
+
+/* Cell states */
+.cell-filled { 
+  color: #059669;
+  font-weight: 500;
+}
+
+.cell-empty { 
+  color: #9ca3af;
+  background: #fef2f2;
+}
+
+/* Нейтральная ячейка — день почти пустой, не подсвечиваем */
+.cell-neutral {
+  color: #d1d5db;
+  background: transparent;
+}
+
+/* Hint */
+.data-overview-hint {
+  text-align: center;
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 12px;
+  padding: 8px;
+}
+
+/* Empty state */
+.data-overview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.data-overview-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.data-overview-empty-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.data-overview-empty-hint {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* Dark theme */
+[data-theme="dark"] .data-overview-title {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .data-overview-total {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .data-overview-table th {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+[data-theme="dark"] .data-overview-table td {
+  border-color: #374151;
+}
+
+[data-theme="dark"] .data-overview-table td:first-child {
+  background: #1f2937;
+}
+
+[data-theme="dark"] .data-overview-table tbody tr:hover {
+  background: #374151;
+}
+
+[data-theme="dark"] .data-overview-table tbody tr:active {
+  background: #4b5563;
+}
+
+[data-theme="dark"] .cell-empty { 
+  color: #6b7280; 
+  background: #451a1a;
+}
+
+[data-theme="dark"] .data-overview-hint {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .data-overview-empty-text {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .data-overview-empty-hint {
+  color: #6b7280;
+}
+

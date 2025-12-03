@@ -1,0 +1,3131 @@
+/* ====================================
+   Sleep Quality Picker Modal Styles
+   ==================================== */
+.sleep-quality-picker-modal {
+  padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 40px);
+}
+
+.sleep-quality-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0;
+  gap: 4px;
+}
+
+.sleep-quality-face-emoji {
+  font-size: 56px;
+  line-height: 1;
+  animation: mood-face-appear 0.4s ease-out;
+}
+
+.sleep-quality-face-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+.sleep-quality-big-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 0 20px;
+}
+
+.sleep-quality-number {
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+
+.sleep-quality-stars {
+  font-size: 20px;
+  color: #fbbf24;
+  letter-spacing: -2px;
+}
+
+.sleep-quality-of-ten {
+  font-size: 24px;
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+.sleep-quality-presets {
+  display: flex;
+  gap: 10px;
+  padding: 0 16px;
+  margin-bottom: 16px;
+}
+
+.sleep-quality-preset {
+  flex: 1;
+  padding: 12px 8px;
+  border-radius: 14px;
+  border: 2px solid #e5e7eb;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sleep-quality-preset:active {
+  transform: scale(0.96);
+}
+
+.sleep-quality-preset-bad.active {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+.sleep-quality-preset-ok.active {
+  background: rgba(234, 179, 8, 0.1);
+  color: #ca8a04;
+  border-color: #eab308;
+}
+
+.sleep-quality-preset-good.active {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border-color: #10b981;
+}
+
+.sleep-quality-slider-container {
+  padding: 0 20px;
+  margin-bottom: 16px;
+}
+
+.sleep-quality-slider {
+  margin-bottom: 8px;
+}
+
+.sleep-quality-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 18px;
+  padding: 0 4px;
+  opacity: 0.7;
+}
+
+/* Резервируем место для comment-prompt чтобы не прыгало */
+.sleep-quality-comment-wrapper {
+  min-height: 70px;
+  margin: 0 16px 16px;
+  transition: all 0.3s ease;
+}
+
+.sleep-quality-comment-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(156, 163, 175, 0.08);
+  border: 1px solid rgba(156, 163, 175, 0.15);
+  border-radius: 14px;
+  transition: all 0.3s ease;
+}
+
+/* Negative state - плохой сон (1-4) */
+.sleep-quality-comment-prompt.negative {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+/* Positive state - хороший сон (8-10) */
+.sleep-quality-comment-prompt.positive {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+/* Neutral state */
+.sleep-quality-comment-prompt.neutral {
+  background: rgba(156, 163, 175, 0.08);
+  border-color: rgba(156, 163, 175, 0.15);
+}
+
+/* Общие стили для comment prompt header */
+.comment-prompt-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* История комментариев */
+.comment-history {
+  font-size: 12px;
+  color: #6b7280;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 8px 10px;
+  border-radius: 8px;
+  white-space: pre-line;
+  line-height: 1.5;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.sleep-quality-comment-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.sleep-quality-comment-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.sleep-quality-comment-input {
+  width: 100%;
+  border: none;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: #1c1c1e;
+  outline: none;
+}
+
+.sleep-quality-comment-input::placeholder {
+  color: #9ca3af;
+}
+
+.sleep-quality-comment-input:focus {
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.sleep-quality-hours-info {
+  margin-top: 16px;
+  padding: 10px 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.sleep-quality-hours-info strong {
+  color: #6366f1;
+}
+
+/* Dark mode for Sleep Quality */
+.dark .sleep-quality-picker-modal {
+  background: #1c1c1e;
+}
+
+.dark .sleep-quality-face-text {
+  color: #9ca3af;
+}
+
+.dark .sleep-quality-preset {
+  background: #2c2c2e;
+  border-color: #3a3a3c;
+  color: #f3f4f6;
+}
+
+.dark .sleep-quality-preset-bad.active {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.dark .sleep-quality-preset-ok.active {
+  background: rgba(234, 179, 8, 0.2);
+}
+
+.dark .sleep-quality-preset-good.active {
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.dark .sleep-quality-comment-prompt {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.dark .comment-history {
+  background: rgba(255, 255, 255, 0.08);
+  color: #9ca3af;
+}
+
+.dark .sleep-quality-comment-input {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f3f4f6;
+}
+
+.dark .sleep-quality-comment-input::placeholder {
+  color: #6b7280;
+}
+
+.dark .sleep-quality-comment-input:focus {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}
+
+.dark .sleep-quality-hours-info {
+  color: #9ca3af;
+}
+
+.day-score-auto-info {
+  margin: 20px 16px 0;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(139, 92, 246, 0.08));
+  border-radius: 12px;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.day-score-auto-info strong {
+  color: #8b5cf6;
+}
+
+/* Wrapper с фиксированной высотой чтобы модалка не прыгала */
+.day-score-comment-wrapper {
+  min-height: 70px;
+  margin: 0 16px 16px;
+  transition: all 0.3s ease;
+}
+
+/* Prompt для комментария — базовые стили */
+.day-score-comment-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  transition: all 0.3s ease;
+}
+
+/* Негативный стиль (плохая оценка 1-4) — красноватый */
+.day-score-comment-prompt.negative {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+/* Позитивный стиль (хорошая оценка 7-10) — зеленый */
+.day-score-comment-prompt.positive {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+/* Нейтральный стиль (средняя оценка 5-6) — серый */
+.day-score-comment-prompt.neutral {
+  background: rgba(107, 114, 128, 0.06);
+  border: 1px solid rgba(107, 114, 128, 0.12);
+}
+
+@keyframes comment-prompt-appear {
+  0% { opacity: 0; transform: translateY(-8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.day-score-comment-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.day-score-comment-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.day-score-comment-input {
+  width: 100%;
+  border: none;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: #1c1c1e;
+  outline: none;
+}
+
+.day-score-comment-input::placeholder {
+  color: #9ca3af;
+}
+
+.day-score-comment-input:focus {
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.2);
+}
+
+/* Focus стили для разных состояний */
+.day-score-comment-prompt.negative .day-score-comment-input:focus {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.day-score-comment-prompt.positive .day-score-comment-input:focus {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+/* Цвет текста для разных состояний */
+.day-score-comment-prompt.positive .day-score-comment-text {
+  color: #059669;
+}
+
+.day-score-comment-prompt.negative .day-score-comment-text {
+  color: #dc2626;
+}
+
+.day-score-comment-prompt.neutral .day-score-comment-text {
+  color: #6b7280;
+}
+
+/* Legacy (можно удалить) */
+.day-score-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #fce7f3;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.day-score-btn:active {
+  transform: scale(0.98);
+  background: #fdf2f8;
+}
+
+.day-score-label {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.day-score-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #be185d;
+}
+
+/* Dark theme for day score */
+[data-theme="dark"] .day-score-display {
+  background: linear-gradient(135deg, #3d2a35 0%, #4a2a3a 100%);
+}
+
+[data-theme="dark"] .day-score-value-big {
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .day-score-auto-hint {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .day-score-manual-hint {
+  background: rgba(142, 142, 147, 0.2);
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .day-score-display.clickable:active {
+  background: linear-gradient(135deg, #4a2a3a 0%, #5a2a45 100%);
+}
+
+/* Dark theme for sleep quality */
+[data-theme="dark"] .sleep-quality-display {
+  background: linear-gradient(135deg, #2e2a3d 0%, #3a2a4a 100%);
+}
+
+[data-theme="dark"] .sleep-quality-value-big {
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .sleep-duration-hint {
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .sleep-quality-display.clickable:active {
+  background: linear-gradient(135deg, #3a2a4a 0%, #4a2a5a 100%);
+}
+
+[data-theme="dark"] .day-score-face-text {
+  color: #a1a1aa;
+}
+
+[data-theme="dark"] .day-score-of-ten {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .day-score-preset {
+  background: #2c2c2e;
+  border-color: #48484a;
+  color: #e5e5ea;
+}
+
+[data-theme="dark"] .day-score-auto-info {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(139, 92, 246, 0.15));
+  color: #a1a1aa;
+}
+
+[data-theme="dark"] .day-score-auto-info strong {
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .day-score-comment-prompt {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+[data-theme="dark"] .day-score-comment-text {
+  color: #a1a1aa;
+}
+
+[data-theme="dark"] .day-score-comment-input {
+  background: rgba(44, 44, 46, 0.8);
+  color: #f2f2f7;
+}
+
+[data-theme="dark"] .day-score-comment-input::placeholder {
+  color: #636366;
+}
+
+[data-theme="dark"] .day-score-comment-input:focus {
+  background: #2c2c2e;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+}
+
+/* Кнопка качества сна */
+.sleep-quality-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #fff;
+  border: 1px solid #fce7f3;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sleep-quality-btn:active {
+  transform: scale(0.98);
+  background: #fdf2f8;
+}
+
+.sleep-quality-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.sleep-quality-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #f59e0b;
+}
+
+/* Настроение — красивые карточки */
+.day-mood-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+/* Day insights row (last meal, correlations) */
+.day-insights-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+  justify-content: center;
+}
+
+.day-insight {
+  font-size: 11px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  color: #6b7280;
+}
+
+.day-insight.correlation {
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+}
+
+/* Smart tips for low scores */
+.smart-tip {
+  font-size: 12px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 8px;
+  color: #92400e;
+  text-align: center;
+  margin-bottom: 8px;
+  animation: smartTipFade 0.4s ease-out;
+}
+
+@keyframes smartTipFade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mood-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  background: linear-gradient(135deg, #fef7f9 0%, #fff 100%);
+  border: 1px solid #fce7f3;
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+
+.mood-card:active {
+  transform: scale(0.97);
+}
+
+.mood-card-icon {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+.mood-card-label {
+  font-size: 11px;
+  color: #374151;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.mood-card-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* === COMPACT ACTIVITY INPUT === */
+.compact-activity {
+  margin-bottom: 8px;
+  background: var(--activity-bg);
+  border-color: var(--activity-border);
+}
+
+/* Steps Slider */
+.steps-slider-container {
+  margin-bottom: 20px;
+}
+
+/* Зона без свайпа — увеличенный padding для touch */
+.steps-slider-container.no-swipe-zone {
+  padding: 50px 0;
+  margin: -50px 0 -30px 0; /* Компенсируем padding визуально */
+}
+
+.steps-motivation {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  animation: fadeInUp 0.3s ease;
+}
+
+/* === SKELETON LOADER === */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-page {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.skeleton-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.skeleton-header {
+  height: 14px;
+  width: 120px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.skeleton-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.skeleton-metric {
+  height: 64px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+.skeleton-sparkline {
+  height: 44px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.skeleton-progress {
+  height: 48px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.skeleton-macros {
+  display: flex;
+  justify-content: space-around;
+  gap: 16px;
+}
+
+.skeleton-ring {
+  width: 56px;
+  height: 72px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+.skeleton-slider {
+  height: 40px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.skeleton-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.skeleton-block {
+  height: 80px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+.skeleton-meal-header {
+  height: 20px;
+  width: 80px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   APP LOADER — Красивый полноэкранный прелоадер
+   ═══════════════════════════════════════════════════════════════════ */
+
+.app-loader {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 24px;
+  animation: appLoaderFadeIn 0.3s ease;
+}
+
+@keyframes appLoaderFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.app-loader-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.app-loader-logo {
+  font-size: 56px;
+  margin-bottom: 16px;
+  animation: appLoaderPulse 2s ease-in-out infinite;
+}
+
+@keyframes appLoaderPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.app-loader-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 6px;
+}
+
+.app-loader-subtitle {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.app-loader-skeleton {
+  width: 100%;
+  max-width: 430px;
+  background: #fff;
+  border-radius: 24px;
+  padding: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.app-loader-skeleton .skeleton-header {
+  margin-bottom: 16px;
+  height: auto;
+  width: auto;
+}
+
+.app-loader-skeleton .skeleton-bar {
+  height: 8px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.app-loader-skeleton .skeleton-bar-xp {
+  margin-bottom: 12px;
+}
+
+.app-loader-skeleton .skeleton-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-loader-skeleton .skeleton-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  flex-shrink: 0;
+}
+
+.app-loader-skeleton .skeleton-rect {
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.app-loader-skeleton .skeleton-client {
+  flex: 1;
+}
+
+.app-loader-skeleton .skeleton-content {
+  margin: 20px 0;
+}
+
+.app-loader-skeleton .skeleton-sparkline {
+  height: 80px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.app-loader-skeleton .skeleton-dot {
+  flex: 1;
+  min-width: 6px;
+  background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%);
+  border-radius: 3px 3px 0 0;
+  opacity: 0.3;
+  animation: skeletonDotPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeletonDotPulse {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.5; }
+}
+
+.app-loader-skeleton .skeleton-cards {
+  display: flex;
+  gap: 8px;
+}
+
+.app-loader-skeleton .skeleton-card {
+  flex: 1;
+  height: 60px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 12px;
+  border: none;
+  padding: 0;
+}
+
+.app-loader-skeleton .skeleton-card-wide {
+  flex: 2;
+}
+
+.app-loader-skeleton .skeleton-tabs {
+  display: flex;
+  justify-content: space-around;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 16px;
+}
+
+.app-loader-skeleton .skeleton-tab {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.app-loader-skeleton .skeleton-tab-active {
+  background: linear-gradient(90deg, #dbeafe 25%, #bfdbfe 50%, #dbeafe 75%);
+  background-size: 200% 100%;
+}
+
+.app-loader-spinner {
+  margin-top: 24px;
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: appLoaderSpin 0.8s linear infinite;
+}
+
+@keyframes appLoaderSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Dark mode */
+[data-theme="dark"] .app-loader {
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+}
+
+[data-theme="dark"] .app-loader-title {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .app-loader-subtitle {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .app-loader-skeleton {
+  background: #1e293b;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .app-loader-skeleton .skeleton-bar,
+[data-theme="dark"] .app-loader-skeleton .skeleton-circle,
+[data-theme="dark"] .app-loader-skeleton .skeleton-rect,
+[data-theme="dark"] .app-loader-skeleton .skeleton-card,
+[data-theme="dark"] .app-loader-skeleton .skeleton-tab {
+  background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+  background-size: 200% 100%;
+}
+
+[data-theme="dark"] .app-loader-skeleton .skeleton-sparkline {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .app-loader-skeleton .skeleton-tabs {
+  border-top-color: #334155;
+}
+
+[data-theme="dark"] .app-loader-spinner {
+  border-color: #334155;
+  border-top-color: #3b82f6;
+}
+
+.skeleton-search {
+  height: 40px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.skeleton-item {
+  height: 56px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.skeleton-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Stagger animation delays */
+.skeleton-metric:nth-child(1) { animation-delay: 0s; }
+.skeleton-metric:nth-child(2) { animation-delay: 0.1s; }
+.skeleton-metric:nth-child(3) { animation-delay: 0.2s; }
+.skeleton-metric:nth-child(4) { animation-delay: 0.3s; }
+
+.skeleton-ring:nth-child(1) { animation-delay: 0s; }
+.skeleton-ring:nth-child(2) { animation-delay: 0.15s; }
+.skeleton-ring:nth-child(3) { animation-delay: 0.3s; }
+
+.skeleton-item:nth-child(1) { animation-delay: 0s; }
+.skeleton-item:nth-child(2) { animation-delay: 0.1s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.steps-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.steps-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.steps-value {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.steps-value b {
+  color: #0ea5e9;
+  font-weight: 700;
+}
+
+.steps-value .steps-goal {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.steps-kcal-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.steps-slider {
+  position: relative;
+  height: 28px;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.steps-slider-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 8px;
+  transform: translateY(-50%);
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+
+.steps-slider-goal-mark {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  background: #16a34a;
+  border-radius: 1px;
+  z-index: 1;
+  opacity: 0.7;
+}
+
+.steps-goal-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 500;
+  color: #94a3b8;
+  white-space: nowrap;
+  margin-top: 6px;
+}
+
+.steps-slider-fill {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 8px;
+  transform: translateY(-50%);
+  border-radius: 4px;
+  transition: width 0.05s ease-out, background 0.15s ease;
+}
+
+.steps-slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 3px solid;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.15s ease;
+}
+
+.steps-slider-thumb:hover,
+.steps-slider:active .steps-slider-thumb {
+  transform: translate(-50%, -50%) scale(1.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.compact-activity-inputs {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.compact-activity-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.compact-activity-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  min-width: 35px;
+}
+
+.compact-activity-field .compact-input {
+  width: 70px;
+  text-align: center;
+  min-height: 36px;
+  padding: 6px 8px;
+}
+
+.compact-activity-unit {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.compact-activity-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #64748b;
+  padding: 6px 0;
+  border-top: 1px solid #f1f5f9;
+}
+
+.compact-activity-stats b {
+  color: #334155;
+  font-weight: 600;
+}
+
+.compact-activity-stats.secondary {
+  padding-top: 6px;
+  border-top: 1px dashed #e2e8f0;
+  color: #94a3b8;
+}
+
+.compact-activity-stats.secondary b {
+  color: #64748b;
+}
+
+/* Transitions для плавных изменений */
+.metrics-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.metrics-value {
+  transition: color 0.3s ease;
+}
+
+.metrics-progress-bar {
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+/* Кликабельные карточки */
+.metrics-card-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.metrics-card-clickable:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Умная подсказка */
+.metrics-hint {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* Тренд веса */
+.metrics-trend {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* Визуальные связи (стрелки между карточками) */
+.metrics-card:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  right: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: #cbd5e1;
+  pointer-events: none;
+}
+
+.metrics-card {
+  position: relative;
+}
+
+/* Убираем стрелку после карточки "Съедено" (перед Осталось группа другая) */
+.metrics-card:nth-child(3)::after {
+  content: '•';
+  font-size: 8px;
+  color: #e5e7eb;
+}
+
+/* Mobile responsive для metrics cards */
+@media (max-width: 640px) {
+  .metrics-cards {
+    gap: 6px;
+  }
+  
+  .metrics-card {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 4px;
+  }
+  
+  /* Первые 4 карточки в ряд */
+  .metrics-card:not(.metrics-card-wide) {
+    flex: 1 1 calc(25% - 5px);
+  }
+  
+  /* Goal progress bar mobile */
+  .goal-progress-bar {
+    padding: 10px 12px;
+  }
+  
+  .goal-progress-title {
+    font-size: 12px;
+  }
+  
+  .goal-eaten {
+    font-size: 15px;
+  }
+  
+  .goal-target {
+    font-size: 13px;
+  }
+  
+  .goal-progress-footer {
+    font-size: 11px;
+  }
+  
+  .metrics-icon {
+    font-size: 14px;
+  }
+  
+  .metrics-value {
+    font-size: 16px;
+  }
+  
+  .metrics-label {
+    font-size: 8px;
+    letter-spacing: 0;
+  }
+  
+  /* Убираем стрелки на мобильных */
+  .metrics-card::after {
+    display: none;
+  }
+  
+  /* Скрываем тренд и подсказки на маленьких экранах */
+  .metrics-trend,
+  .metrics-hint {
+    display: none;
+  }
+  
+  .compact-activity-inputs {
+    gap: 12px;
+  }
+  
+  .compact-activity-field {
+    flex: 1 1 calc(50% - 6px);
+  }
+  
+  .compact-activity-field .compact-input {
+    width: 60px;
+  }
+  
+  .compact-activity-stats {
+    gap: 12px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 400px) {
+  .tab {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+
+/* Desktop: hide mobile cards */
+@media (min-width: 641px) {
+  .mobile-products-list {
+    display: none !important;
+  }
+  .mobile-daily-summary {
+    display: none !important;
+  }
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+/* Mobile Daily Summary - table layout для синхронизации ширины столбцов */
+.mobile-daily-summary {
+  display: none;
+  background: #faf5ff;
+  border-radius: 8px;
+  padding: 4px 2px;
+  margin-top: 8px;
+  font-size: 11px;
+  overflow-x: auto;
+}
+
+/* Включаем table display только когда виден */
+@media (max-width: 640px) {
+  .mobile-daily-summary {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+  }
+}
+
+.mds-header,
+.mds-row {
+  display: table-row;
+}
+
+/* Zebra striping для столбцов */
+.mds-header > span,
+.mds-row > span {
+  display: table-cell;
+  padding: 1px 3px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* Чётные столбцы (2, 4, 6, 8, 10) - затемнённые */
+.mds-header > span:nth-child(even),
+.mds-row > span:nth-child(even) {
+  background: rgba(124, 58, 237, 0.08);
+}
+
+/* Нечётные столбцы - светлые (по умолчанию) */
+.mds-header > span:nth-child(odd),
+.mds-row > span:nth-child(odd) {
+  background: transparent;
+}
+
+/* Первый столбец (метка) - без фона */
+.mds-header > span:first-child,
+.mds-row > span:first-child {
+  background: transparent !important;
+  text-align: left;
+  padding-right: 6px;
+}
+
+.mds-header {
+  font-weight: 600;
+  color: #7c3aed;
+  font-size: 10px;
+}
+
+.mds-label {
+  font-weight: 600;
+  text-align: left;
+  color: #7c3aed;
+}
+
+.mds-dim {
+  color: #9ca3af;
+  font-size: 10px;
+}
+
+.mds-dev {
+  font-size: 9px;
+}
+
+.mds-dev span {
+  font-weight: 500;
+}
+
+/* Smaller font for slash-separated percentages in dev row */
+.mds-dev .mds-dim {
+  font-size: 8px;
+}
+
+@media (max-width: 640px) {
+  .daily-summary {
+    display: none !important;
+  }
+}
+
+/* === iOS-style Bottom Sheet Modal (Glassmorphism) === */
+.time-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 10000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.time-picker-modal {
+  background: rgba(242, 242, 247, 0.95);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-radius: 14px 14px 0 0;
+  width: 100%;
+  max-width: 500px;
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  touch-action: none;
+  will-change: transform;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15);
+}
+
+/* Bottom sheet handle (ручка для свайпа) */
+.bottom-sheet-handle {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 6px;
+}
+
+.bottom-sheet-handle::before {
+  content: '';
+  width: 36px;
+  height: 5px;
+  background: #d1d1d6;
+  border-radius: 3px;
+}
+
+/* Анимация закрытия */
+.time-picker-modal.closing {
+  animation: slideDown 0.25s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+/* Анимации переходов между шагами */
+@keyframes slideInFromRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInFromLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.time-picker-step {
+  animation: slideInFromRight 0.25s ease-out;
+}
+
+.time-picker-step.back {
+  animation: slideInFromLeft 0.25s ease-out;
+}
+
+.time-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #d1d1d6;
+}
+
+.time-picker-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #000;
+}
+
+.time-picker-cancel,
+.time-picker-confirm {
+  background: none;
+  border: none;
+  font-size: 17px;
+  padding: 8px 4px;
+  cursor: pointer;
+}
+
+.time-picker-cancel {
+  color: #007aff;
+}
+
+.time-picker-confirm {
+  color: #007aff;
+  font-weight: 600;
+}
+
+.time-picker-confirm.disabled,
+.time-picker-confirm:disabled {
+  color: #c7c7cc;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.time-picker-wheels {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  gap: 0;
+}
+
+/* Night time hint for meals 00:00-02:59 */
+.night-time-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  margin: -8px 20px 12px;
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  border-radius: 12px;
+  color: #e0e7ff;
+  font-size: 13px;
+  animation: fadeInHint 0.3s ease-out;
+}
+
+.night-time-hint .night-time-icon {
+  font-size: 16px;
+}
+
+.night-time-hint .night-time-text {
+  color: #c7d2fe;
+}
+
+.night-time-hint .night-time-text b {
+  color: #fff;
+  font-weight: 600;
+}
+
+@keyframes fadeInHint {
+  from { 
+    opacity: 0; 
+    transform: translateY(-8px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.time-picker-wheels.mood-wheels {
+  gap: 16px;
+  padding-bottom: 40px;
+}
+
+.time-picker-wheels.mood-wheels .wheel-column {
+  width: 70px;
+}
+
+.mood-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.mood-emoji {
+  font-size: 32px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.mood-label {
+  font-size: 12px;
+  color: #3c3c43;
+  text-align: center;
+  margin-top: 12px;
+  font-weight: 500;
+}
+
+/* Подсказка для первого приёма */
+.mood-hint-first {
+  text-align: center;
+  font-size: 13px;
+  color: #8e8e93;
+  padding: 8px 20px 16px;
+  line-height: 1.4;
+}
+
+/* Подсказка "изменилось?" для следующих приёмов */
+.mood-hint-change {
+  font-size: 11px;
+  color: #007aff;
+  text-align: center;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* === Mood Sliders === */
+.mood-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 16px 24px 32px;
+}
+
+.mood-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mood-slider-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mood-slider-emoji {
+  font-size: 24px;
+}
+
+.mood-slider-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1c1c1e;
+  flex: 1;
+}
+
+.mood-slider-value {
+  font-size: 20px;
+  font-weight: 600;
+  min-width: 32px;
+  text-align: right;
+  color: #007aff;
+  transition: color 0.2s ease;
+}
+
+/* Dynamic emoji animation */
+.mood-emoji-dynamic {
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+
+.mood-slider-row:active .mood-emoji-dynamic {
+  transform: scale(1.2);
+}
+
+/* Emoji bounce animation on value change */
+@keyframes emoji-bounce {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.25) rotate(-5deg); }
+  50% { transform: scale(1.15) rotate(5deg); }
+  75% { transform: scale(1.2) rotate(-3deg); }
+}
+
+@keyframes emoji-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px) rotate(-5deg); }
+  40% { transform: translateX(4px) rotate(5deg); }
+  60% { transform: translateX(-3px) rotate(-3deg); }
+  80% { transform: translateX(3px) rotate(3deg); }
+}
+
+.mood-emoji-dynamic.animate-bounce {
+  animation: emoji-bounce 0.4s ease-out;
+}
+
+.mood-emoji-dynamic.animate-shake {
+  animation: emoji-shake 0.4s ease-out;
+}
+
+/* Progress dots indicator */
+.rating-progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 0 4px;
+}
+
+.rating-progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.rating-progress-dot.filled {
+  background: #10b981;
+  transform: scale(1.1);
+}
+
+.rating-progress-dot.partial {
+  background: #fbbf24;
+}
+
+/* Quick suggestion chips */
+.quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+.quick-chip {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  background: rgba(107, 114, 128, 0.1);
+  border: 1px solid rgba(107, 114, 128, 0.15);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.quick-chip:active {
+  transform: scale(0.95);
+}
+
+.quick-chip.selected {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #059669;
+}
+
+.quick-chips.negative .quick-chip {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+.quick-chips.positive .quick-chip {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+/* ⏰ Meal timer hint */
+.meal-timer-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin: 0 16px 8px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  animation: fade-in-up 0.3s ease;
+}
+
+.meal-timer-hint.ok {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #059669;
+}
+
+.meal-timer-hint.warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: #d97706;
+}
+
+.meal-timer-icon {
+  font-size: 16px;
+}
+
+.meal-timer-text {
+  flex: 1;
+}
+
+.meal-timer-wave {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* 🎉 Confetti animation */
+.confetti-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  top: -20px;
+  border-radius: 2px;
+  animation: confetti-fall 2s ease-out forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(250px) rotate(720deg) scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* Celebrate emoji animation */
+.mood-face-emoji.celebrate {
+  animation: celebrate-bounce 0.6s ease-out;
+}
+
+@keyframes celebrate-bounce {
+  0%, 100% { transform: scale(1); }
+  20% { transform: scale(1.3) rotate(-10deg); }
+  40% { transform: scale(1.2) rotate(10deg); }
+  60% { transform: scale(1.25) rotate(-5deg); }
+  80% { transform: scale(1.15) rotate(5deg); }
+}
+
+/* Correlation hint */
+.correlation-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin: 8px 16px 0;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 12px;
+  font-size: 12px;
+  color: #3b82f6;
+  animation: fade-in-up 0.3s ease;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.correlation-hint-icon {
+  font-size: 16px;
+}
+
+.correlation-hint-text {
+  flex: 1;
+  line-height: 1.4;
+}
+
+/* Difference indicator */
+.mood-diff {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-left: 6px;
+}
+
+.mood-diff.diff-up {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.mood-diff.diff-down {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.mood-diff.diff-same {
+  background: rgba(107, 114, 128, 0.15);
+  color: #6b7280;
+}
+
+/* Quick preset buttons */
+.mood-presets {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mood-preset {
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: 12px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mood-preset:active {
+  transform: scale(0.96);
+}
+
+.mood-preset.active {
+  border-color: transparent;
+}
+
+.mood-preset-bad.active {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+.mood-preset-ok.active {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.mood-preset-good.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-color: #10b981;
+}
+
+/* Mood Face Avatar */
+.mood-face-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0 12px;
+  gap: 4px;
+}
+
+.mood-face-emoji {
+  font-size: 48px;
+  line-height: 1;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: mood-face-appear 0.4s ease-out;
+}
+
+@keyframes mood-face-appear {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.mood-face-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+/* Time context hint */
+.mood-time-hint {
+  text-align: center;
+  font-size: 14px;
+  color: #6b7280;
+  padding: 4px 0 8px;
+}
+
+/* AI Insight */
+.mood-ai-insight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin: 0 0 12px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
+  border-radius: 12px;
+  font-size: 13px;
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.mood-ai-insight span:first-child {
+  font-size: 18px;
+}
+
+/* Slider track with yesterday mark */
+.mood-slider-track {
+  position: relative;
+  width: 100%;
+}
+
+.yesterday-mark {
+  position: absolute;
+  top: -14px;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: #9ca3af;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Pulse animation for value change */
+.mood-slider-value.pulse {
+  animation: value-pulse 0.3s ease;
+}
+
+@keyframes value-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* Mood Journal Wrapper - фиксированная высота чтобы не прыгало */
+.mood-journal-wrapper {
+  min-height: 60px;
+  margin: 0 16px 16px;
+  transition: all 0.3s ease;
+}
+
+/* Mood Journal Prompt — базовые стили */
+.mood-journal-prompt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+/* Негативный стиль — красноватый */
+.mood-journal-prompt.negative {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+/* Позитивный стиль — зеленый */
+.mood-journal-prompt.positive {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+/* Нейтральный стиль — серый */
+.mood-journal-prompt.neutral {
+  background: rgba(156, 163, 175, 0.08);
+  border: 1px solid rgba(156, 163, 175, 0.15);
+}
+
+.mood-journal-prompt.positive .mood-journal-text {
+  color: #059669;
+}
+
+.mood-journal-prompt.negative .mood-journal-text {
+  color: #dc2626;
+}
+
+.mood-journal-prompt.neutral .mood-journal-text {
+  color: #6b7280;
+}
+
+.mood-journal-icon {
+  font-size: 20px;
+}
+
+.mood-journal-text {
+  flex: 1;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.mood-journal-btn {
+  padding: 6px 14px;
+  background: #6b7280;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mood-journal-btn.positive {
+  background: #10b981;
+}
+
+.mood-journal-wrapper.negative .mood-journal-btn {
+  background: #ef4444;
+}
+
+.mood-journal-btn:active {
+  transform: scale(0.95);
+}
+
+/* Journal input field */
+.mood-journal-input {
+  width: 100%;
+  border: none;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #1c1c1e;
+  outline: none;
+  margin-top: 8px;
+}
+
+.mood-journal-input::placeholder {
+  color: #9ca3af;
+}
+
+.mood-journal-input:focus {
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.mood-journal-prompt.positive .mood-journal-input:focus {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.mood-journal-prompt.negative .mood-journal-input:focus {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+/* Slider footer with sparkline */
+.mood-slider-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.mood-sparkline {
+  opacity: 0.8;
+}
+
+.mood-slider-footer .mood-hint-change {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* Range slider styling */
+.mood-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Positive gradient: red → blue → green */
+.mood-slider-positive {
+  background: linear-gradient(to right, 
+    #ef4444 0%, 
+    #f97316 20%, 
+    #eab308 35%,
+    #3b82f6 50%, 
+    #22c55e 70%,
+    #10b981 100%
+  );
+}
+
+/* Negative gradient (stress): green → blue → red */
+.mood-slider-negative {
+  background: linear-gradient(to right, 
+    #10b981 0%, 
+    #22c55e 30%,
+    #3b82f6 50%, 
+    #eab308 65%,
+    #f97316 80%, 
+    #ef4444 100%
+  );
+}
+
+/* Slider thumb */
+.mood-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.mood-slider::-webkit-slider-thumb:active {
+  transform: scale(1.15);
+}
+
+.mood-slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.1);
+  cursor: pointer;
+  border: none;
+}
+
+.mood-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+  padding: 0 4px;
+  opacity: 0.7;
+}
+
+.mood-slider-row .mood-hint-change {
+  text-align: left;
+  margin-top: 2px;
+}
+
+.time-picker-separator {
+  font-size: 28px;
+  font-weight: 600;
+  color: #000;
+  padding: 0 8px;
+  align-self: center;
+  margin-top: 24px;
+}
+
+.wheel-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  width: 80px;
+}
+
+.wheel-label {
+  font-size: 13px;
+  color: #8e8e93;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wheel-viewport {
+  height: 220px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  touch-action: none; /* Полный контроль над touch */
+  -webkit-overflow-scrolling: auto; /* Отключаем нативный скролл */
+}
+
+.wheel-track {
+  will-change: transform;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.wheel-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: #8e8e93;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  width: 100%;
+  flex-shrink: 0;
+  will-change: transform, opacity;
+}
+
+.wheel-item.selected {
+  color: #000;
+  font-weight: 600;
+  font-size: 24px;
+}
+
+.wheel-highlight {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 44px;
+  transform: translateY(-50%);
+  background: rgba(120, 120, 128, 0.12);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+/* === Grams Input Modal === */
+.grams-modal {
+  padding-bottom: max(env(safe-area-inset-bottom, 20px), 20px);
+  transition: transform 0.2s ease-out;
+}
+
+.grams-modal.closing {
+  transform: translateY(100%);
+  opacity: 0.5;
+}
+
+.grams-modal-title {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grams-preview {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  padding: 20px 16px 16px;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.grams-preview-value {
+  color: #007aff;
+}
+
+.grams-preview-separator {
+  color: #8e8e93;
+  margin: 0 8px;
+  font-weight: 400;
+}
+
+.grams-preview-kcal {
+  color: #000;
+  /* Smooth animation on value change */
+  transition: transform 0.15s ease-out, color 0.15s ease;
+  display: inline-block;
+  font-weight: 500;
+}
+
+/* Kcal color coding */
+.grams-preview-kcal.kcal-low {
+  color: #34c759;
+}
+.grams-preview-kcal.kcal-mid {
+  color: #ff9500;
+}
+.grams-preview-kcal.kcal-high {
+  color: #ff3b30;
+}
+
+.grams-preview-kcal.animating {
+  animation: kcal-pulse 0.3s ease-out;
+}
+
+@keyframes kcal-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* "Обычно вы едите" hint */
+.grams-hint {
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.grams-hint:hover {
+  color: #007aff;
+}
+.grams-hint:active {
+  opacity: 0.7;
+}
+
+/* Kcal Calculator */
+.kcal-calculator {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+}
+.kcal-calc-toggle {
+  font-size: 14px;
+  padding: 6px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  background: #f8f8f8;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.kcal-calc-toggle:hover {
+  background: #f0f0f0;
+}
+.kcal-calc-toggle.active {
+  background: #007aff;
+  border-color: #007aff;
+  color: #fff;
+}
+.kcal-calc-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kcal-calc-input input {
+  width: 80px;
+  padding: 6px 10px;
+  font-size: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  text-align: center;
+  background: #fff;
+}
+.kcal-calc-input input:focus {
+  outline: none;
+  border-color: #007aff;
+}
+.kcal-calc-result {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* === Portion Buttons === */
+.grams-portions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+
+.grams-portion-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 72px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 2px solid #e5e5ea;
+  background: #f2f2f7;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.grams-portion-btn .portion-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #000;
+}
+
+.grams-portion-btn .portion-grams {
+  font-size: 12px;
+  color: #8e8e93;
+  font-weight: 500;
+}
+
+.grams-portion-btn:active {
+  transform: scale(0.96);
+  animation: portion-bounce 0.3s ease;
+}
+
+@keyframes portion-bounce {
+  0% { transform: scale(0.96); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.grams-portion-btn.active {
+  background: #007aff;
+  border-color: #007aff;
+}
+
+.grams-portion-btn.active .portion-name,
+.grams-portion-btn.active .portion-grams {
+  color: #fff;
+}
+
+/* Рекомендованная порция (последняя выбранная) */
+.grams-portion-btn.recommended {
+  border-color: #34c759;
+  box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.2);
+  position: relative;
+}
+
+.grams-portion-btn.recommended::after {
+  content: '★';
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  background: #34c759;
+  color: #fff;
+  font-size: 10px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grams-portion-btn:not(.active):hover {
+  background: #e5e5ea;
+}
+
+/* Dark mode for portions */
+[data-theme="dark"] .grams-portion-btn {
+  background: #2c2c2e;
+  border-color: #48484a;
+}
+
+[data-theme="dark"] .grams-portion-btn .portion-name {
+  color: #fff;
+}
+
+[data-theme="dark"] .grams-portion-btn .portion-grams {
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .grams-portion-btn.active {
+  background: #0a84ff;
+  border-color: #0a84ff;
+}
+
+[data-theme="dark"] .grams-portion-btn:not(.active):hover {
+  background: #3a3a3c;
+}
+
+[data-theme="dark"] .grams-portion-btn.recommended {
+  border-color: #30d158;
+  box-shadow: 0 0 0 2px rgba(48, 209, 88, 0.2);
+}
+
+[data-theme="dark"] .grams-portion-btn.recommended::after {
+  background: #30d158;
+}
+
+/* Свайп контейнер для порций */
+.grams-portions {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.grams-portions::-webkit-scrollbar {
+  display: none;
+}
+
+.grams-portion-btn {
+  scroll-snap-align: center;
+  flex-shrink: 0;
+}
+
+.grams-input-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 16px 20px;
+  gap: 8px;
+}
+
+/* Stepper кнопки +/- */
+.grams-stepper-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 500;
+  color: #007aff;
+  background: #f2f2f7;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.grams-stepper-btn:hover {
+  background: #e5e5ea;
+}
+
+.grams-stepper-btn:active {
+  transform: scale(0.95);
+  background: #d1d1d6;
+}
+
+[data-theme="dark"] .grams-stepper-btn {
+  background: #2c2c2e;
+  color: #0a84ff;
+}
+
+[data-theme="dark"] .grams-stepper-btn:hover {
+  background: #3a3a3c;
+}
+
+[data-theme="dark"] .grams-stepper-btn:active {
+  background: #48484a;
+}
+
+.grams-input {
+  width: 120px;
+  height: 48px;
+  font-size: 24px;
+  font-weight: 600;
+  text-align: center;
+  border: 2px solid #d1d1d6;
+  border-radius: 12px;
+  background: #fff;
+  color: #000;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.grams-input::-webkit-outer-spin-button,
+.grams-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.grams-input:focus {
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+}
+
+.grams-input-suffix {
+  font-size: 20px;
+  color: #8e8e93;
+  font-weight: 500;
+}
+
+/* Grams Slider (like steps slider) */
+.grams-slider-container {
+  padding: 0 20px 16px;
+}
+
+.grams-slider {
+  position: relative;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.grams-slider-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: #e5e5ea;
+  border-radius: 3px;
+}
+
+.grams-slider-fill {
+  position: absolute;
+  left: 0;
+  height: 6px;
+  background: linear-gradient(90deg, #34c759 0%, #007aff 100%);
+  border-radius: 3px;
+  transition: width 0.15s ease-out;
+}
+
+.grams-slider-thumb {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  background: #fff;
+  border: 3px solid #007aff;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: left 0.15s ease-out, transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.grams-slider-thumb:active,
+.grams-slider:active .grams-slider-thumb {
+  transform: translateX(-50%) scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.grams-slider-mark {
+  position: absolute;
+  width: 2px;
+  height: 10px;
+  background: #c7c7cc;
+  border-radius: 1px;
+  transform: translateX(-50%);
+  top: 50%;
+  margin-top: -5px;
+}
+
+.grams-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 4px;
+  font-size: 12px;
+  color: #8e8e93;
+}
+
+/* Grams Presets */
+.grams-presets {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px 20px;
+  flex-wrap: wrap;
+}
+
+.grams-preset {
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  background: #f2f2f7;
+  border: 2px solid transparent;
+  border-radius: 20px;
+  color: #000;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 60px;
+}
+
+.grams-preset:active {
+  transform: scale(0.95);
+}
+
+.grams-preset.active {
+  background: #007aff;
+  color: #fff;
+  border-color: #007aff;
+}
+
+.grams-preset:not(.active):hover {
+  background: #e5e5ea;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .grams-modal {
+  background: rgba(44, 44, 46, 0.95);
+}
+
+[data-theme="dark"] .grams-preview-value {
+  color: #0a84ff;
+}
+
+[data-theme="dark"] .grams-preview-kcal {
+  color: #fff;
+}
+
+/* Dark theme kcal colors */
+[data-theme="dark"] .grams-preview-kcal.kcal-low {
+  color: #30d158;
+}
+[data-theme="dark"] .grams-preview-kcal.kcal-mid {
+  color: #ffd60a;
+}
+[data-theme="dark"] .grams-preview-kcal.kcal-high {
+  color: #ff453a;
+}
+
+[data-theme="dark"] .grams-hint {
+  color: #98989d;
+}
+[data-theme="dark"] .grams-hint:hover {
+  color: #0a84ff;
+}
+
+/* Dark theme kcal calculator */
+[data-theme="dark"] .kcal-calc-toggle {
+  background: #2c2c2e;
+  border-color: #48484a;
+  color: #98989d;
+}
+[data-theme="dark"] .kcal-calc-toggle:hover {
+  background: #3a3a3c;
+}
+[data-theme="dark"] .kcal-calc-toggle.active {
+  background: #0a84ff;
+  border-color: #0a84ff;
+  color: #fff;
+}
+[data-theme="dark"] .kcal-calc-input input {
+  background: #1c1c1e;
+  border-color: #48484a;
+  color: #fff;
+}
+[data-theme="dark"] .kcal-calc-input input:focus {
+  border-color: #0a84ff;
+}
+[data-theme="dark"] .kcal-calc-result {
+  color: #98989d;
+}
+
+[data-theme="dark"] .grams-input {
+  background: #1c1c1e;
+  border-color: #48484a;
+  color: #fff;
+}
+
+[data-theme="dark"] .grams-input:focus {
+  border-color: #0a84ff;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2);
+}
+
+[data-theme="dark"] .grams-slider-track {
+  background: #48484a;
+}
+
+[data-theme="dark"] .grams-slider-thumb {
+  background: #2c2c2e;
+  border-color: #0a84ff;
+}
+
+[data-theme="dark"] .grams-preset {
+  background: #2c2c2e;
+  color: #fff;
+}
+
+[data-theme="dark"] .grams-preset.active {
+  background: #0a84ff;
+}
+
+[data-theme="dark"] .grams-preset:not(.active):hover {
+  background: #3a3a3c;
+}
+
+/* Pull-to-refresh */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.pull-refresh-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.pull-refresh-spinner.spinning {
+  animation: spin 0.8s linear infinite !important;
+}
+
+/* Utility classes для замены inline стилей */
+.dev-positive { color: #dc2626; font-weight: 600; }
+.dev-negative { color: #059669; font-weight: 600; }
+.dev-neutral { color: #6b7280; }
+.fw-600 { font-weight: 600; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.mt-4 { margin-top: 4px; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mb-4 { margin-bottom: 4px; }
+.mb-6 { margin-bottom: 6px; }
+.w-100 { width: 100%; }
+.overflow-hidden { overflow: hidden; }
+.overflow-x-auto { overflow-x: auto; }
+.pos-relative { position: relative; }
+
+/* Muted text helper */
+.text-muted-small {
+  color: var(--muted);
+  font-size: 11px;
+  margin-left: 8px;
+  font-weight: normal;
+}
+
+/* Table column widths */
+.col-40 { width: 40%; }
+.col-20 { width: 20%; }
+.col-15 { width: 15%; }
+
+/* Deficit input styling */
+.input-deficit {
+  width: 60px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Result cell styling */
+.result-good {
+  background: #dcfce7;
+  color: #166534;
+  font-weight: 700;
+  border: 1px solid #86efac;
+}
+
+.result-bad {
+  background: #fee2e2;
+  color: #991b1b;
+  font-weight: 700;
+  border: 1px solid #fecaca;
+}
+
+/* Divider row in table */
+.table-divider {
+  height: 4px;
+  background: #d1d5db;
+  border-radius: 6px;
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   🎬 ANIMATIONS & TRANSITIONS
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* --- Keyframes --- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(12px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes slideInRight {
+  from { 
+    opacity: 0; 
+    transform: translateX(-16px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateX(0); 
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes starPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* --- Meal Cards Animation --- */
+.meal-card {
+  animation: fadeInUp 0.25s ease-out;
+}
+
+/* Stagger animation for multiple cards */
+.meal-card:nth-child(1) { animation-delay: 0ms; }
+.meal-card:nth-child(2) { animation-delay: 50ms; }
+.meal-card:nth-child(3) { animation-delay: 100ms; }
+.meal-card:nth-child(4) { animation-delay: 150ms; }
+.meal-card:nth-child(5) { animation-delay: 200ms; }
+
+/* --- Product Row Animation (slide-in when added) --- */
+.meals-table tbody tr {
+  animation: slideInRight 0.2s ease-out;
+}
+
+/* --- Suggest Dropdown Animation --- */
+.suggest-list,
+.suggest-list-portal {
+  animation: scaleIn 0.15s ease-out;
+  transform-origin: top center;
+}
+
+.suggest-item {
+  transition: background-color 0.12s ease, transform 0.1s ease;
+}
+
+.suggest-item:active {
+  transform: scale(0.98);
+}
+
+/* --- Button Micro-interactions --- */
+.btn {
+  transition: transform 0.1s ease, opacity 0.1s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn:active {
+  transform: scale(0.96);
+  opacity: 0.9;
+}
+
+.btn.acc:hover {
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* --- Favorite Star Animation --- */
+.favorite-btn {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.favorite-btn:hover {
+  opacity: 1 !important;
+  transform: scale(1.15);
+}
+
+.favorite-btn:active {
+  animation: starPop 0.25s ease-out;
+}
+
+/* --- Card Hover Effects (desktop) --- */
+@media (hover: hover) {
+  .card {
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+  }
+  
+  .card.clickable:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+  }
+}
+
+/* --- Input Focus Animation --- */
+input, textarea, select {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* --- Tab Switching --- */
+.tab {
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+/* --- Modal Backdrop Animation --- */
+.modal-backdrop {
+  animation: fadeIn 0.15s ease-out;
+}
+
+.modal {
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* --- Reduce motion for accessibility --- */
+/* Исключаем .animate-always — графики всегда анимируются (это часть UX) */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-always):not(.animate-always *),
+  *:not(.animate-always):not(.animate-always *)::before,
+  *:not(.animate-always):not(.animate-always *)::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+

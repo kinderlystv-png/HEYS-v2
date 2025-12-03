@@ -166,13 +166,33 @@
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
     const { goToStep } = stepContext;
     
-    const { products = [], dateKey = '' } = context || {};
+    const { dateKey = '' } = context || {};
+    
+    // Всегда берём актуальные продукты из глобального стора (если появились новые)
+    const latestProducts = useMemo(() => {
+      const base = context?.products || [];
+      const storeProducts = HEYS.products?.getAll?.() || U().lsGet?.('heys_products', []) || [];
+      // Если store длиннее — используем его как основу
+      const primary = storeProducts.length >= base.length ? storeProducts : base;
+      // Объединяем, убирая дубликаты по id/name
+      const seen = new Set();
+      const merged = [];
+      const pushUnique = (p) => {
+        const pid = String(p.id ?? p.product_id ?? p.name);
+        if (seen.has(pid)) return;
+        seen.add(pid);
+        merged.push(p);
+      };
+      primary.forEach(pushUnique);
+      (primary === storeProducts ? base : storeProducts).forEach(pushUnique);
+      return merged;
+    }, [context]);
     
     // Debug: проверяем что products пришли
     useEffect(() => {
       console.log('[AddProductStep] context:', context);
-      console.log('[AddProductStep] products count:', products?.length);
-    }, [context, products]);
+      console.log('[AddProductStep] products count:', latestProducts?.length);
+    }, [context, latestProducts]);
     
     // Фокус на input при монтировании
     useEffect(() => {
@@ -181,23 +201,23 @@
     
     // Популярные продукты
     const popularProducts = useMemo(() => 
-      computePopularProducts(products, dateKey), 
-      [products, dateKey]
+      computePopularProducts(latestProducts, dateKey), 
+      [latestProducts, dateKey]
     );
     
     // Избранные продукты
     const favoriteProducts = useMemo(() => {
       if (!favorites.size) return [];
-      return products.filter(p => {
+      return latestProducts.filter(p => {
         const pid = String(p.id ?? p.product_id ?? p.name);
         return favorites.has(pid);
       }).slice(0, 10);
-    }, [products, favorites]);
+    }, [latestProducts, favorites]);
     
     // Умные рекомендации
     const smartRecs = useMemo(() => 
-      getSmartRecommendations(products, dateKey),
-      [products, dateKey]
+      getSmartRecommendations(latestProducts, dateKey),
+      [latestProducts, dateKey]
     );
     
     // Поиск с фильтром категории
@@ -209,7 +229,7 @@
         // Умный поиск если доступен
         if (HEYS.SmartSearchWithTypos) {
           try {
-            const result = HEYS.SmartSearchWithTypos.search(lc, products, {
+            const result = HEYS.SmartSearchWithTypos.search(lc, latestProducts, {
               enablePhonetic: true,
               enableSynonyms: true,
               maxSuggestions: 30
@@ -222,7 +242,7 @@
         
         // Fallback
         if (!results.length) {
-          results = products.filter(p => 
+          results = latestProducts.filter(p => 
             String(p.name || '').toLowerCase().includes(lc)
           );
         }
@@ -234,7 +254,7 @@
       }
       
       return results.slice(0, 20);
-    }, [lc, products, selectedCategory]);
+    }, [lc, latestProducts, selectedCategory]);
     
     // Toggle избранного
     const toggleFavorite = useCallback((e, productId) => {
@@ -260,9 +280,9 @@
         grams: defaultGrams,
         lastGrams: lastGrams // Для отображения подсказки
       });
-      // Автопереход на шаг граммов (index 1: search → grams)
+      // Автопереход на шаг граммов (index 2: search → grams)
       if (goToStep) {
-        setTimeout(() => goToStep(1, 'left'), 50);
+        setTimeout(() => goToStep(2, 'left'), 50);
       }
     }, [data, onChange, goToStep]);
     
@@ -270,7 +290,12 @@
     const handleNewProduct = useCallback(() => {
       haptic('medium');
       onChange({ ...data, searchQuery: search });
-      // Если передан onNewProduct из контекста — вызвать и закрыть модалку
+      // Если есть внутренний шаг создания — перейти на него
+      if (goToStep) {
+        setTimeout(() => goToStep(1, 'left'), 10);
+        return;
+      }
+      // Иначе, если передан onNewProduct из контекста — вызвать и закрыть модалку
       if (context?.onNewProduct) {
         context.onNewProduct();
         // Закрываем текущий StepModal, если возможно
@@ -1033,12 +1058,20 @@
       steps: [
         {
           id: 'search',
-          title: 'Добавить продукт',
+          title: '',
           hint: '',
-          icon: '🍽️',
+          icon: '',
           component: ProductSearchStep,
           getInitialData: () => ({ selectedProduct: null, grams: 100 }),
           validate: (data) => !!data?.selectedProduct
+        },
+        {
+          id: 'create',
+          title: 'Новый продукт',
+          hint: 'Вставьте строку с макросами',
+          icon: '➕',
+          component: CreateProductStep,
+          validate: () => true
         },
         {
           id: 'grams',
@@ -1066,7 +1099,7 @@
       showProgress: true,
       allowSwipe: true,
       hidePrimaryOnFirst: true,
-      title: 'Добавить продукт',
+      title: '', // Убрали — и так очевидно
       onComplete: (stepData) => {
         console.log('[AddProductStep] onComplete stepData:', stepData);
         

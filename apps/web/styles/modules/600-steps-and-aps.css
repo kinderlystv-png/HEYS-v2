@@ -1,0 +1,1984 @@
+/* ======================== */
+/* Meal Step (Time + Mood)  */
+/* ======================== */
+
+/* Step 1: Время и тип */
+.meal-time-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.meal-time-display {
+  text-align: center;
+}
+
+.meal-time-value {
+  font-size: 48px;
+  font-weight: 800;
+  color: #3b82f6;
+  letter-spacing: -2px;
+}
+
+.meal-time-pickers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meal-time-separator {
+  font-size: 32px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+/* Night hour hint */
+.meal-night-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(139, 92, 246, 0.1);
+  border-radius: 10px;
+  font-size: 13px;
+  color: #7c3aed;
+}
+
+.meal-night-hint b {
+  font-weight: 700;
+}
+
+[data-theme="dark"] .meal-night-hint {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+}
+
+/* Meal type selection */
+.meal-type-section {
+  width: 100%;
+  padding: 0 8px;
+}
+
+.meal-type-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.meal-type-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.meal-type-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: #f1f5f9;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meal-type-btn:active {
+  transform: scale(0.95);
+}
+
+.meal-type-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+
+.meal-type-btn-icon {
+  font-size: 20px;
+}
+
+.meal-type-btn-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.meal-type-btn.active .meal-type-btn-name {
+  color: #2563eb;
+}
+
+[data-theme="dark"] .meal-type-btn {
+  background: #334155;
+}
+
+[data-theme="dark"] .meal-type-btn-name {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .meal-type-btn.active {
+  background: #1e3a8a;
+  border-color: #3b82f6;
+}
+
+[data-theme="dark"] .meal-type-btn.active .meal-type-btn-name {
+  color: #93c5fd;
+}
+
+/* Step 2: Оценки — в стиле оценки дня */
+.meal-mood-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+  position: relative;
+}
+
+/* Grid из трёх карточек — компактный */
+/* Общий индикатор состояния */
+.meal-overall-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(16, 185, 129, 0.08));
+  border-radius: 10px;
+}
+
+.meal-overall-emoji {
+  font-size: 24px;
+}
+
+.meal-overall-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+[data-theme="dark"] .meal-overall-text {
+  color: #d1d5db;
+}
+
+/* Grid из трёх карточек */
+.meal-ratings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Карточка оценки — новый layout с градиентом */
+.meal-rating-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px 8px;
+  transition: background 0.3s ease;
+}
+
+[data-theme="dark"] .meal-rating-card {
+  border-color: #334155;
+}
+
+/* Главная строка: emoji | info | presets */
+.meal-rating-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+/* Большой emoji слева */
+.meal-rating-emoji-lg {
+  font-size: 28px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.meal-rating-emoji-lg.bounce {
+  animation: meal-emoji-bounce 0.4s ease;
+}
+
+.meal-rating-emoji-lg.shake {
+  animation: meal-emoji-shake 0.4s ease;
+}
+
+/* Инфо блок: название + значение */
+.meal-rating-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.meal-rating-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #9ca3af;
+  margin-bottom: 2px;
+}
+
+.meal-rating-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.meal-rating-num {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.meal-rating-num.num-bounce {
+  animation: num-bounce 0.2s ease;
+}
+
+@keyframes num-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.meal-rating-max {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.meal-rating-text {
+  font-size: 12px;
+  color: #6b7280;
+  margin-left: 6px;
+}
+
+[data-theme="dark"] .meal-rating-text {
+  color: #9ca3af;
+}
+
+/* Пресеты справа */
+.meal-rating-presets {
+  display: flex;
+  gap: 4px;
+}
+
+.meal-preset-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.meal-preset-btn:active {
+  transform: scale(0.92);
+}
+
+.meal-preset-btn.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+
+[data-theme="dark"] .meal-preset-btn {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+[data-theme="dark"] .meal-preset-btn.active {
+  background: #1e40af;
+  border-color: #3b82f6;
+}
+
+/* Слайдер внизу карточки */
+.meal-rating-card > .mood-slider {
+  width: 100%;
+  margin: 0;
+}
+
+/* Анимации */
+@keyframes meal-emoji-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+@keyframes meal-emoji-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* Старые стили для совместимости — можно удалить позже */
+.meal-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px;
+}
+
+.meal-rating-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 110px;
+}
+
+.meal-rating-emoji {
+  font-size: 24px;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.meal-rating-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+[data-theme="dark"] .meal-rating-name {
+  color: #d1d5db;
+}
+
+/* Comment section */
+.meal-comment-section {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.meal-comment-negative {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.meal-comment-positive {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.meal-comment-neutral {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+[data-theme="dark"] .meal-comment-section {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .meal-comment-negative {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .meal-comment-positive {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.meal-comment-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+  min-height: 36px;
+}
+
+.meal-comment-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.meal-comment-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  line-height: 1.4;
+  min-height: 36px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.meal-comment-negative .meal-comment-title {
+  color: #991b1b;
+}
+
+.meal-comment-positive .meal-comment-title {
+  color: #166534;
+}
+
+[data-theme="dark"] .meal-comment-title {
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .meal-comment-negative .meal-comment-title {
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .meal-comment-positive .meal-comment-title {
+  color: #86efac;
+}
+
+/* Quick chips — одна строка, скролл, фиксированная высота */
+.meal-comment-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  min-height: 28px;
+}
+
+.meal-comment-chips::-webkit-scrollbar {
+  display: none;
+}
+
+/* Пустые chips — резервируем место */
+.meal-comment-chips:empty {
+  min-height: 28px;
+}
+
+.meal-comment-chip {
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.meal-comment-chip:active {
+  transform: scale(0.95);
+}
+
+.meal-comment-negative .meal-comment-chip {
+  color: #991b1b;
+  border-color: #fca5a5;
+  background: #fff1f2;
+}
+
+.meal-comment-positive .meal-comment-chip {
+  color: #166534;
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+[data-theme="dark"] .meal-comment-chip {
+  background: #374151;
+  border-color: #4b5563;
+  color: #d1d5db;
+}
+
+/* Comment input */
+.meal-comment-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  color: #374151;
+  resize: none;
+  transition: border-color 0.2s ease;
+}
+
+.meal-comment-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.meal-comment-input::placeholder {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .meal-comment-input {
+  background: #1e293b;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .meal-comment-input::placeholder {
+  color: #64748b;
+}
+
+/* Confetti */
+.confetti-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 100;
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  animation: confetti-fall 2s ease-out forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-20px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(300px) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* === MEAL STEP MICRO-INTERACTIONS === */
+
+/* Emoji tap animation */
+.meal-rating-emoji-lg {
+  cursor: pointer;
+  user-select: none;
+}
+
+.meal-rating-emoji-lg.emoji-tap {
+  animation: emoji-tap-pulse 0.3s ease;
+}
+
+@keyframes emoji-tap-pulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.3); }
+  60% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+/* Presets pulse animation on mount */
+.meal-rating-presets.presets-pulse .meal-preset-btn {
+  animation: preset-pulse 0.4s ease;
+  animation-fill-mode: both;
+}
+
+.meal-rating-presets.presets-pulse .meal-preset-btn:nth-child(1) { animation-delay: 0ms; }
+.meal-rating-presets.presets-pulse .meal-preset-btn:nth-child(2) { animation-delay: 50ms; }
+.meal-rating-presets.presets-pulse .meal-preset-btn:nth-child(3) { animation-delay: 100ms; }
+.meal-rating-presets.presets-pulse .meal-preset-btn:nth-child(4) { animation-delay: 150ms; }
+.meal-rating-presets.presets-pulse .meal-preset-btn:nth-child(5) { animation-delay: 200ms; }
+
+@keyframes preset-pulse {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Border transition for gradient cards */
+.meal-rating-card {
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+/* === MOOD HISTORY MINI-CHART === */
+.meal-mood-history {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.02);
+  border-radius: 10px;
+}
+
+[data-theme="dark"] .meal-mood-history {
+  background: rgba(255,255,255,0.03);
+}
+
+.meal-mood-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.meal-mood-history-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #9ca3af;
+}
+
+.meal-mood-sparkline {
+  width: 100px;
+  height: 24px;
+}
+
+.meal-mood-history-items {
+  display: flex;
+  gap: 6px;
+}
+
+.meal-mood-history-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.02);
+  transition: background 0.2s ease;
+  min-width: 0;
+}
+
+[data-theme="dark"] .meal-mood-history-item {
+  background: rgba(255,255,255,0.02);
+}
+
+.meal-mood-history-current {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.meal-mood-history-name {
+  font-size: 10px;
+  color: #6b7280;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+[data-theme="dark"] .meal-mood-history-name {
+  color: #9ca3af;
+}
+
+.meal-mood-history-avg {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* === STEP MODAL PROGRESS BAR === */
+.mc-progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px 8px;
+}
+
+.mc-progress-fill-container {
+  flex: 1;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .mc-progress-fill-container {
+  background: #374151;
+}
+
+.mc-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #10b981);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.mc-progress-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+/* === STEP MODAL PROGRESS DOTS (кружочки) === */
+.mc-progress-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+}
+
+.mc-progress-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.mc-progress-dot.active {
+  background: #3b82f6;
+  transform: scale(1.2);
+}
+
+.mc-progress-dot.completed {
+  background: #10b981;
+}
+
+[data-theme="dark"] .mc-progress-dot {
+  background: #4b5563;
+}
+
+[data-theme="dark"] .mc-progress-dot.active {
+  background: #60a5fa;
+}
+
+[data-theme="dark"] .mc-progress-dot.completed {
+  background: #34d399;
+}
+
+/* === SWIPE HINT === */
+.mc-swipe-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  margin: 0 auto 8px;
+  width: fit-content;
+  font-size: 11px;
+  color: #9ca3af;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 16px;
+  animation: swipe-hint-fade 3s ease forwards;
+}
+
+@keyframes swipe-hint-fade {
+  0%, 70% { opacity: 1; }
+  100% { opacity: 0; pointer-events: none; }
+}
+
+.mc-swipe-hint-arrow {
+  font-size: 14px;
+  animation: swipe-arrow-move 1s ease-in-out infinite;
+}
+
+@keyframes swipe-arrow-move {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(4px); }
+}
+
+/* === ADD PRODUCT STEP === */
+
+/* === APS (Add Product Step) Modal Override === */
+/* Компактная модалка для добавления продукта */
+.mc-modal:has(.aps-search-step),
+.mc-modal:has(.aps-grams-step) {
+  max-width: 340px;
+}
+
+.mc-modal:has(.aps-search-step) .mc-step-content,
+.mc-modal:has(.aps-grams-step) .mc-step-content {
+  padding: 0 12px 12px;
+  min-height: auto;
+}
+
+.aps-search-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+  height: 540px;
+  max-height: 540px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Кнопка "Новый продукт" */
+.aps-new-product-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
+  border: 1.5px dashed #93c5fd;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.aps-new-product-btn:hover {
+  background: linear-gradient(135deg, #bfdbfe 0%, #ddd6fe 100%);
+  border-color: #60a5fa;
+}
+
+.aps-new-product-btn:active {
+  transform: scale(0.98);
+}
+
+.aps-new-icon {
+  width: 22px;
+  height: 22px;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.aps-new-hint {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+[data-theme="dark"] .aps-new-product-btn {
+  background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .aps-new-icon {
+  background: #3b82f6;
+}
+
+[data-theme="dark"] .aps-new-hint {
+  color: #9ca3af;
+}
+
+/* Поле поиска */
+.aps-search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.aps-search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 14px;
+  pointer-events: none;
+  opacity: 0.5;
+  z-index: 1;
+}
+
+.aps-search-input {
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  padding-left: 38px !important;
+  font-size: 15px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.aps-search-input:focus {
+  outline: none;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.aps-search-clear {
+  position: absolute;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: #e5e7eb;
+  color: #6b7280;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-theme="dark"] .aps-search-clear {
+  background: #4b5563;
+  color: #d1d5db;
+}
+
+/* Секции */
+.aps-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.aps-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-left: 2px;
+}
+
+/* Список продуктов */
+.aps-products-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Карточка продукта */
+.aps-product-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.aps-product-card:hover {
+  background: #f8fafc;
+  border-color: var(--acc);
+}
+
+.aps-product-card:active {
+  transform: scale(0.98);
+  background: #f1f5f9;
+}
+
+[data-theme="dark"] .aps-product-card:hover {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .aps-product-card:active {
+  background: #0f172a;
+}
+
+.aps-product-icon {
+  font-size: 20px;
+  min-width: 26px;
+  text-align: center;
+}
+
+.aps-product-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.aps-product-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aps-product-meta {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  gap: 4px;
+  margin-top: 1px;
+}
+
+.aps-product-meta-sep {
+  opacity: 0.5;
+}
+
+/* Контейнер кнопок действий */
+.aps-product-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* Кнопка удаления — маленькая */
+.aps-delete-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: 6px;
+  opacity: 0.4;
+}
+
+.aps-delete-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  opacity: 1;
+}
+
+.aps-delete-btn:active {
+  transform: scale(0.9);
+}
+
+.aps-fav-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: #d1d5db;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-radius: 8px;
+}
+
+.aps-fav-btn:hover {
+  background: #fef3c7;
+  color: #f59e0b;
+}
+
+.aps-fav-btn.active {
+  color: #f59e0b;
+}
+
+/* Пустое состояние */
+.aps-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--muted);
+}
+
+.aps-empty span:first-child {
+  font-size: 32px;
+}
+
+.aps-add-new-btn {
+  margin-top: 8px;
+  padding: 10px 20px;
+  background: var(--acc);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aps-add-new-btn:hover {
+  opacity: 0.9;
+}
+
+/* === GRAMS STEP === */
+
+.aps-grams-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  height: 520px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.aps-product-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--stats-bg);
+  border: 1px solid var(--stats-border);
+  border-radius: 10px;
+}
+
+.aps-product-icon-lg {
+  font-size: 26px;
+}
+
+.aps-product-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Дисплей калорий — компактный */
+.aps-kcal-display {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.aps-kcal-value {
+  font-size: 42px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.aps-kcal-unit {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-left: 3px;
+}
+
+/* БЖУ — компактный */
+.aps-macros {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.aps-macro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.aps-macro-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.aps-macro-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Поле ввода граммов — компактный */
+.aps-grams-input-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.aps-grams-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aps-grams-btn:hover {
+  background: #f1f5f9;
+  border-color: var(--acc);
+}
+
+.aps-grams-btn:active {
+  transform: scale(0.95);
+}
+
+.aps-grams-input {
+  width: 80px;
+  padding: 8px 6px;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+}
+
+.aps-grams-input:focus {
+  outline: none;
+  border-color: var(--acc);
+}
+
+.aps-grams-unit {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+/* Слайдер */
+.aps-grams-slider {
+  width: 100%;
+  height: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(to right, #22c55e, #eab308, #ef4444);
+  border-radius: 4px;
+  outline: none;
+  margin: 8px 0;
+}
+
+.aps-grams-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border: 2px solid var(--acc);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.aps-grams-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border: 2px solid var(--acc);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Быстрые кнопки */
+.aps-quick-grams {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.aps-quick-btn {
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.aps-quick-btn:hover {
+  border-color: var(--acc);
+}
+
+.aps-quick-btn.active {
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+}
+
+/* Порции продукта */
+.aps-portions {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.aps-portions-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.aps-portions-list {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.aps-portion-btn {
+  padding: 4px 6px;
+  font-size: 11px;
+  border: 1px solid #d1fae5;
+  background: #ecfdf5;
+  color: #059669;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aps-portion-btn:hover {
+  border-color: #10b981;
+}
+
+.aps-portion-btn.active {
+  background: #10b981;
+  color: #fff;
+  border-color: #10b981;
+}
+
+[data-theme="dark"] .aps-portion-btn {
+  background: #064e3b;
+  border-color: #065f46;
+  color: #34d399;
+}
+
+[data-theme="dark"] .aps-portion-btn.active {
+  background: #10b981;
+  color: #fff;
+}
+
+.aps-no-product {
+  text-align: center;
+  padding: 40px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+/* === APS OPEN BUTTON (Кнопка вызова модалки) === */
+
+.aps-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  border: 1px solid #93c5fd;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2563eb;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.aps-open-btn:hover {
+  background: linear-gradient(135deg, #bfdbfe 0%, #c7d2fe 100%);
+  border-color: #60a5fa;
+  transform: translateY(-1px);
+}
+
+.aps-open-btn:active {
+  transform: scale(0.97);
+}
+
+.aps-open-icon {
+  font-size: 16px;
+}
+
+.aps-open-text {
+  font-weight: 600;
+}
+
+[data-theme="dark"] .aps-open-btn {
+  background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .aps-open-btn:hover {
+  background: linear-gradient(135deg, #1e40af 0%, #4338ca 100%);
+}
+
+/* На мобильных — более компактная */
+@media (max-width: 768px) {
+  .aps-open-btn {
+    padding: 12px 20px;
+    font-size: 15px;
+    border-radius: 12px;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .aps-open-icon {
+    font-size: 18px;
+  }
+}
+
+/* === Категории-чипы === */
+.aps-categories {
+  display: flex;
+  gap: 5px;
+  padding: 4px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.aps-categories::-webkit-scrollbar {
+  display: none;
+}
+
+.aps-category-chip {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #374151;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.aps-category-chip:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.aps-category-chip.active {
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+}
+
+[data-theme="dark"] .aps-category-chip {
+  background: #374151;
+  border-color: #4b5563;
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .aps-category-chip.active {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: #fff;
+}
+
+/* === Умные рекомендации === */
+.aps-smart-rec {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 10px;
+  padding: 8px !important;
+  margin-bottom: 8px;
+}
+
+[data-theme="dark"] .aps-smart-rec {
+  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+}
+
+.aps-rec-hint {
+  font-size: 12px;
+  color: #92400e;
+  margin-left: 8px;
+  font-weight: 400;
+}
+
+[data-theme="dark"] .aps-rec-hint {
+  color: #fcd34d;
+}
+
+.aps-products-horizontal {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.aps-products-horizontal::-webkit-scrollbar {
+  display: none;
+}
+
+.aps-products-horizontal .aps-product-card {
+  flex-shrink: 0;
+  min-width: 140px;
+  max-width: 160px;
+}
+
+/* === Подсказка про последние граммы === */
+.aps-last-grams-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #dbeafe;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1e40af;
+  margin-bottom: 8px;
+}
+
+[data-theme="dark"] .aps-last-grams-hint {
+  background: #1e3a5f;
+  color: #93c5fd;
+}
+
+.aps-last-grams-btn {
+  padding: 4px 10px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aps-last-grams-btn:hover {
+  background: #1d4ed8;
+}
+
+.aps-last-grams-btn:active {
+  transform: scale(0.95);
+}
+
+/* === Slide-анимация между шагами === */
+/* Анимации слайда между шагами — временно выключены */
+/*
+.mc-step-content {
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+
+.mc-slide-left {
+  animation: slideFromRight 0.25s ease forwards;
+}
+
+.mc-slide-right {
+  animation: slideFromLeft 0.25s ease forwards;
+}
+*/
+
+@keyframes slideFromRight {
+  from {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideFromLeft {
+  from {
+    transform: translateX(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* === Переключатель граммы/ккал === */
+.aps-input-mode-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.aps-mode-btn {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.aps-mode-btn.active {
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+}
+
+/* === Ввод ккал === */
+.aps-kcal-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: #fef3c7;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.aps-kcal-label {
+  font-size: 13px;
+  color: #92400e;
+}
+
+.aps-kcal-input {
+  width: 70px;
+  padding: 6px 10px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  border: 2px solid #f59e0b;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.aps-kcal-input:focus {
+  outline: none;
+  border-color: #d97706;
+}
+
+.aps-calc-result {
+  font-size: 16px;
+  font-weight: 600;
+  color: #059669;
+}
+
+[data-theme="dark"] .aps-kcal-input-row {
+  background: #78350f;
+}
+
+[data-theme="dark"] .aps-kcal-label {
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .aps-kcal-input {
+  background: #1f2937;
+  border-color: #f59e0b;
+  color: #fff;
+}
+
+/* === Итог дня === */
+.aps-day-total {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  border-radius: 10px;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.aps-day-plus {
+  font-weight: 700;
+  color: #059669;
+}
+
+.aps-day-arrow {
+  color: #6b7280;
+}
+
+.aps-day-sum {
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.aps-day-pct {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .aps-day-total {
+  background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%);
+}
+
+/* === CREATE PRODUCT STEP (Создание нового продукта) === */
+
+.mc-modal:has(.aps-create-step) {
+  max-width: 360px;
+}
+
+.mc-modal:has(.aps-create-step) .mc-step-content {
+  padding: 0 12px 12px;
+  min-height: auto;
+}
+
+.aps-create-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+  min-height: 400px;
+}
+
+.aps-create-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  border-radius: 12px;
+}
+
+.aps-create-icon {
+  font-size: 28px;
+}
+
+.aps-create-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+[data-theme="dark"] .aps-create-header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%);
+}
+
+[data-theme="dark"] .aps-create-title {
+  color: #93c5fd;
+}
+
+.aps-create-hint {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.aps-create-format {
+  font-size: 11px;
+  color: #6b7280;
+  font-family: monospace;
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+[data-theme="dark"] .aps-create-format {
+  background: #374151;
+  color: #9ca3af;
+}
+
+.aps-create-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  resize: vertical;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.aps-create-textarea:focus {
+  outline: none;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.aps-create-textarea::placeholder {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.aps-create-error {
+  padding: 10px 12px;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 13px;
+}
+
+[data-theme="dark"] .aps-create-error {
+  background: #7f1d1d;
+  border-color: #991b1b;
+  color: #fca5a5;
+}
+
+.aps-create-preview {
+  padding: 12px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+}
+
+[data-theme="dark"] .aps-create-preview {
+  background: #064e3b;
+  border-color: #065f46;
+}
+
+.aps-preview-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #059669;
+  margin-bottom: 6px;
+}
+
+[data-theme="dark"] .aps-preview-title {
+  color: #34d399;
+}
+
+.aps-preview-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.aps-preview-macros {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.aps-preview-kcal {
+  font-weight: 700;
+  color: #059669;
+}
+
+[data-theme="dark"] .aps-preview-kcal {
+  color: #34d399;
+}
+
+.aps-preview-extra {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+[data-theme="dark"] .aps-preview-extra {
+  color: #9ca3af;
+}
+
+/* Детальная таблица параметров */
+.aps-preview-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #d1fae5;
+}
+
+[data-theme="dark"] .aps-preview-details {
+  border-top-color: #065f46;
+}
+
+.aps-preview-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.aps-preview-label {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .aps-preview-label {
+  color: #9ca3af;
+}
+
+.aps-preview-value {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.aps-create-btn {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #e5e7eb;
+  color: #9ca3af;
+}
+
+.aps-create-btn.active {
+  background: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.aps-create-btn.active:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+}
+
+.aps-create-btn.active:active {
+  transform: scale(0.98);
+}
+
+.aps-create-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+[data-theme="dark"] .aps-create-btn {
+  background: #374151;
+  color: #6b7280;
+}
+
+[data-theme="dark"] .aps-create-btn.active {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.aps-create-tip {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: center;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+[data-theme="dark"] .aps-create-tip {
+  background: #1f2937;
+  color: #9ca3af;
+}
+
+/* Подсказка о поисковом запросе */
+.aps-create-search-hint {
+  padding: 8px 12px;
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1e40af;
+}
+
+.aps-create-search-hint strong {
+  color: #1d4ed8;
+}
+
+[data-theme="dark"] .aps-create-search-hint {
+  background: #1e3a5f;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .aps-create-search-hint strong {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .aps-day-sum {
+  color: #93c5fd;
+}
+
+/* Кнопка закрытия — используется базовый стиль из .mc-close-btn выше */
+
+
