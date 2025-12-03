@@ -683,14 +683,84 @@
       }
     }
 
+    // Умный импорт: добавляет новые, обновляет существующие по названию
+    async function importMerge(){
+      DEV.log('🔍 [IMPORT] Начинаем импорт в режиме слияния (merge)');
+      DEV.log('📋 [IMPORT] Текст для импорта:', paste.substring(0, 200) + '...');
+      
+      const startTime = performance.now();
+      let rows = [];
+      try {
+        rows = await parsePasted(paste);
+        DEV.log('✅ [IMPORT] parsePasted завершен, строк:', rows.length);
+        
+        const duration = performance.now() - startTime;
+        if (window.HEYS?.analytics) {
+          window.HEYS.analytics.trackApiCall('parsePasted', duration, true);
+        }
+      } catch(e) { 
+        console.error('❌ [IMPORT] Ошибка при парсинге:', e);
+        alert('Ошибка парсинга: '+e.message); 
+        return; 
+      }
+      
+      if(!rows.length){ 
+        alert('Не удалось распознать данные'); 
+        return; 
+      }
+
+      // Создаём Map существующих продуктов по нормализованному названию
+      const normalize = (name) => (name || '').trim().toLowerCase();
+      const existingMap = new Map();
+      products.forEach((p, idx) => {
+        existingMap.set(normalize(p.name), { product: p, index: idx });
+      });
+
+      let updated = 0;
+      let added = 0;
+      const newProducts = [...products]; // Копия для модификации
+
+      for (const row of rows) {
+        const key = normalize(row.name);
+        const existing = existingMap.get(key);
+        
+        if (existing) {
+          // Обновляем существующий продукт (сохраняем id)
+          newProducts[existing.index] = { 
+            ...existing.product, 
+            ...row, 
+            id: existing.product.id // Сохраняем оригинальный id
+          };
+          updated++;
+          DEV.log(`🔄 [MERGE] Обновлён: ${row.name}`);
+        } else {
+          // Добавляем новый продукт
+          newProducts.push(row);
+          added++;
+          DEV.log(`➕ [MERGE] Добавлен: ${row.name}`);
+        }
+      }
+
+      setProducts(newProducts);
+      
+      DEV.log(`✅ [IMPORT] Слияние завершено: +${added} новых, ↻${updated} обновлено`);
+      alert(`Импорт завершён:\n• Добавлено новых: ${added}\n• Обновлено существующих: ${updated}`);
+      
+      if (window.HEYS?.analytics) {
+        window.HEYS.analytics.trackDataOperation('products-merged', rows.length);
+      }
+    }
+
     return React.createElement('div', {className:'page page-ration'},
       React.createElement('div', {className:'card tone-amber', style:{marginBottom:'8px'}},
         React.createElement('div', {className:'section-title'}, 'Импорт из вставки'),
         React.createElement('textarea', {placeholder:'Вставь строки: Название + 12 чисел справа', value:paste, onChange:e=>setPaste(e.target.value)}),
-        React.createElement('div', {className:'row', style:{marginTop:'8px'}},
-          React.createElement('button', {className:'btn acc', onClick:importAppend}, 'Импортировать (добавить)'),
-          React.createElement('button', {className:'btn', onClick:importReplace}, 'Импортировать (заменить)'),
-          React.createElement('span', {className:'muted'}, 'Запятые допустимы. Если чисел меньше 12 — недостающие = 0.')
+        React.createElement('div', {className:'row', style:{marginTop:'8px', flexWrap:'wrap', gap:'8px'}},
+          React.createElement('button', {className:'btn acc', onClick:importMerge, title:'Добавляет новые, обновляет существующие по названию'}, '✨ Импорт (умный)'),
+          React.createElement('button', {className:'btn', onClick:importAppend, title:'Просто добавляет в конец списка'}, '+ Добавить'),
+          React.createElement('button', {className:'btn', onClick:importReplace, title:'Удаляет все старые, загружает только новые'}, '⚠️ Заменить всё')
+        ),
+        React.createElement('span', {className:'muted', style:{marginTop:'4px', fontSize:'12px'}}, 'Умный импорт: новые добавятся, существующие обновятся по названию')
         )
       ),
       React.createElement('div', {className:'card tone-blue'},
