@@ -260,22 +260,26 @@
         grams: defaultGrams,
         lastGrams: lastGrams // Для отображения подсказки
       });
-      // Автопереход на шаг граммов (index 2: search → create → grams)
+      // Автопереход на шаг граммов (index 1: search → grams)
       if (goToStep) {
-        setTimeout(() => goToStep(2, 'left'), 50);
+        setTimeout(() => goToStep(1, 'left'), 50);
       }
     }, [data, onChange, goToStep]);
     
-    // Кнопка "Новый продукт" — переход на шаг создания
+    // Кнопка "Новый продукт" — открытие внешней формы создания
     const handleNewProduct = useCallback(() => {
       haptic('medium');
-      // Сохраняем поисковый запрос в data для предзаполнения названия
       onChange({ ...data, searchQuery: search });
-      // Переходим на шаг создания нового продукта (шаг 1 — create)
-      if (goToStep) {
-        goToStep(1, 'left');
+      // Если передан onNewProduct из контекста — вызвать и закрыть модалку
+      if (context?.onNewProduct) {
+        context.onNewProduct();
+        // Закрываем текущий StepModal, если возможно
+        if (goToStep) {
+          // StepModal не даёт явного close здесь — закроем через глобал
+          HEYS.StepModal?.close?.();
+        }
       }
-    }, [goToStep, search, data, onChange]);
+    }, [context, goToStep, search, data, onChange]);
     
     // Удаление продукта из базы
     const handleDeleteProduct = useCallback((e, product) => {
@@ -1037,15 +1041,6 @@
           validate: (data) => !!data?.selectedProduct
         },
         {
-          id: 'create',
-          title: 'Новый продукт',
-          hint: 'Создайте продукт из данных',
-          icon: '➕',
-          component: CreateProductStep,
-          getInitialData: () => ({ newProduct: null }),
-          validate: (data) => !!data?.newProduct
-        },
-        {
           id: 'grams',
           title: 'Порция',
           hint: 'Укажите количество',
@@ -1060,7 +1055,7 @@
         mealIndex, 
         onNewProduct,
         onAdd, // Передаём callback для добавления в приём пищи
-        // Callback при создании продукта — обновляем список
+        // Callback при создании продукта — обновляем список (не используется при 2 шагах, оставляем для совместимости)
         onProductCreated: (product) => {
           currentProducts = [...currentProducts, product];
         }
@@ -1074,14 +1069,13 @@
       onComplete: (stepData) => {
         console.log('[AddProductStep] onComplete stepData:', stepData);
         
-        // Проверяем, был ли создан новый продукт
-        const createData = stepData.create || {};
+        // Данные шагов
         const searchData = stepData.search || {};
         const gramsData = stepData.grams || {};
         
-        // Приоритет: продукт из grams (туда кладём при создании), затем create, затем search
-        const selectedProduct = gramsData.selectedProduct || createData.selectedProduct || searchData.selectedProduct;
-        const grams = gramsData.grams || createData.grams || searchData.grams || 100;
+        // Приоритет: продукт из grams (последний шаг) или из поиска
+        const selectedProduct = gramsData.selectedProduct || searchData.selectedProduct;
+        const grams = gramsData.grams || searchData.grams || 100;
         
         console.log('[AddProductStep] selectedProduct:', selectedProduct?.name, 'grams:', grams);
         
