@@ -5092,6 +5092,42 @@ body:has(.offline-banner) .wrap {
     color: #0369a1;
   }
 
+  /* Hide desktop add button row on mobile */
+  .desktop-add-product {
+    display: none !important;
+  }
+
+  /* Toggle + Add button row */
+  .mpc-toggle-add-row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  
+  .mpc-toggle-add-row .mpc-products-toggle {
+    flex: 1;
+    margin-bottom: 0;
+    justify-content: center;
+  }
+  
+  .mpc-toggle-add-row .mpc-products-toggle.expanded {
+    margin-bottom: 0;
+  }
+  
+  .mpc-toggle-add-row .aps-open-btn {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 12px;
+    justify-content: center;
+  }
+  
+  /* Когда нет продуктов — кнопка добавить на всю ширину */
+  .mpc-toggle-add-row.single .aps-open-btn {
+    flex: 1;
+    width: 100%;
+  }
+
   /* Products expand/collapse toggle */
   .mpc-products-toggle {
     display: flex;

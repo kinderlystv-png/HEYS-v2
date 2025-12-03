@@ -2882,7 +2882,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             React.createElement('span', null, fmtVal('harm', totals.harm || 0))
           )
         ),
-        React.createElement('div',{className:'row',style:{justifyContent:'space-between',alignItems:'center'}},
+        React.createElement('div',{className:'row desktop-add-product',style:{justifyContent:'space-between',alignItems:'center'}},
           React.createElement('div',{className:'section-title'},'Добавить продукт'),
           React.createElement(MealAddProduct, {mi})
         ),
@@ -2917,13 +2917,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         )),
         // MOBILE CARDS — компактный вид с grid-сеткой (collapsible)
         React.createElement('div', { className: 'mobile-products-list' },
-          // Expandable products section
-          (meal.items || []).length > 0 && React.createElement('div', { 
-            className: 'mpc-products-toggle' + (isMealExpanded(mi, (day.meals||[]).length, day.meals, displayIndex) ? ' expanded' : ''),
-            onClick: () => toggleMealExpand(mi, day.meals)
-          },
-            React.createElement('span', { className: 'toggle-arrow' }, '›'),
-            React.createElement('span', null, (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов'))
+          // Ряд: toggle + добавить (если есть продукты) или только добавить (если пусто)
+          React.createElement('div', { className: 'mpc-toggle-add-row' + ((meal.items || []).length === 0 ? ' single' : '') },
+            // Toggle (только если есть продукты)
+            (meal.items || []).length > 0 && React.createElement('div', { 
+              className: 'mpc-products-toggle' + (isMealExpanded(mi, (day.meals||[]).length, day.meals, displayIndex) ? ' expanded' : ''),
+              onClick: () => toggleMealExpand(mi, day.meals)
+            },
+              React.createElement('span', { className: 'toggle-arrow' }, '›'),
+              React.createElement('span', null, (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов'))
+            ),
+            // Кнопка добавить
+            React.createElement(MealAddProduct, { mi })
           ),
           // Products list (shown when expanded)
           isMealExpanded(mi, (day.meals||[]).length, day.meals, displayIndex) && (meal.items || []).map(it => {
