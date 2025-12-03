@@ -18,7 +18,7 @@
 .meal-time-value {
   font-size: 48px;
   font-weight: 800;
-  color: #3b82f6;
+  color: var(--color-blue-500);
   letter-spacing: -2px;
 }
 
@@ -31,7 +31,7 @@
 .meal-time-separator {
   font-size: 32px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 /* Night hour hint */
@@ -64,7 +64,7 @@
 .meal-type-label {
   font-size: 13px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-slate-500);
   margin-bottom: 10px;
   text-align: center;
 }
@@ -81,7 +81,7 @@
   align-items: center;
   gap: 2px;
   padding: 8px 4px;
-  background: #f1f5f9;
+  background: var(--color-slate-100);
   border: 2px solid transparent;
   border-radius: 10px;
   cursor: pointer;
@@ -94,7 +94,7 @@
 
 .meal-type-btn.active {
   background: #dbeafe;
-  border-color: #3b82f6;
+  border-color: var(--color-blue-500);
 }
 
 .meal-type-btn-icon {
@@ -104,7 +104,7 @@
 .meal-type-btn-name {
   font-size: 10px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-slate-500);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -116,16 +116,16 @@
 }
 
 [data-theme="dark"] .meal-type-btn {
-  background: #334155;
+  background: var(--color-slate-700);
 }
 
 [data-theme="dark"] .meal-type-btn-name {
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .meal-type-btn.active {
   background: #1e3a8a;
-  border-color: #3b82f6;
+  border-color: var(--color-blue-500);
 }
 
 [data-theme="dark"] .meal-type-btn.active .meal-type-btn-name {
@@ -177,14 +177,14 @@
 
 /* Карточка оценки — новый layout с градиентом */
 .meal-rating-card {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-slate-200);
   border-radius: 12px;
   padding: 10px 12px 8px;
   transition: background 0.3s ease;
 }
 
 [data-theme="dark"] .meal-rating-card {
-  border-color: #334155;
+  border-color: var(--color-slate-700);
 }
 
 /* Главная строка: emoji | info | presets */
@@ -258,7 +258,7 @@
 
 .meal-rating-text {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-gray-500);
   margin-left: 6px;
 }
 
@@ -275,7 +275,7 @@
 .meal-preset-btn {
   width: 32px;
   height: 32px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-slate-200);
   border-radius: 8px;
   background: white;
   font-size: 16px;
@@ -292,7 +292,7 @@
 
 .meal-preset-btn.active {
   background: #dbeafe;
-  border-color: #3b82f6;
+  border-color: var(--color-blue-500);
 }
 
 [data-theme="dark"] .meal-preset-btn {
@@ -302,7 +302,7 @@
 
 [data-theme="dark"] .meal-preset-btn.active {
   background: #1e40af;
-  border-color: #3b82f6;
+  border-color: var(--color-blue-500);
 }
 
 /* Слайдер внизу карточки */
@@ -375,12 +375,12 @@
 
 .meal-comment-neutral {
   background: #f8fafc;
-  border-color: #e2e8f0;
+  border-color: var(--color-slate-200);
 }
 
 [data-theme="dark"] .meal-comment-section {
   background: #1e293b;
-  border-color: #334155;
+  border-color: var(--color-slate-700);
 }
 
 [data-theme="dark"] .meal-comment-negative {
@@ -463,7 +463,7 @@
   padding: 5px 10px;
   font-size: 12px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--color-slate-500);
   background: white;
   border: 1px solid #d1d5db;
   border-radius: 16px;
@@ -508,7 +508,7 @@
 
 .meal-comment-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--color-blue-500);
 }
 
 .meal-comment-input::placeholder {
@@ -518,11 +518,11 @@
 [data-theme="dark"] .meal-comment-input {
   background: #1e293b;
   border-color: #475569;
-  color: #f1f5f9;
+  color: var(--color-slate-100);
 }
 
 [data-theme="dark"] .meal-comment-input::placeholder {
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 /* Confetti */
@@ -542,10 +542,10 @@
   width: 8px;
   height: 8px;
   border-radius: 2px;
-  animation: confetti-fall 2s ease-out forwards;
+  animation: confetti-fall-aps 2s ease-out forwards;
 }
 
-@keyframes confetti-fall {
+@keyframes confetti-fall-aps {
   0% {
     transform: translateY(-20px) rotate(0deg);
     opacity: 1;
@@ -659,7 +659,7 @@
 
 .meal-mood-history-name {
   font-size: 10px;
-  color: #6b7280;
+  color: var(--color-gray-500);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -698,7 +698,7 @@
 
 .mc-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #10b981);
+  background: linear-gradient(90deg, var(--color-blue-500), var(--color-emerald-500));
   border-radius: 2px;
   transition: width 0.3s ease;
 }
@@ -728,12 +728,12 @@
 }
 
 .mc-progress-dot.active {
-  background: #3b82f6;
+  background: var(--color-blue-500);
   transform: scale(1.2);
 }
 
 .mc-progress-dot.completed {
-  background: #10b981;
+  background: var(--color-emerald-500);
 }
 
 [data-theme="dark"] .mc-progress-dot {
@@ -834,7 +834,7 @@
   width: 22px;
   height: 22px;
   background: #2563eb;
-  color: #fff;
+  color: var(--color-white);
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -847,17 +847,17 @@
   margin-left: auto;
   font-size: 12px;
   font-weight: 400;
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 [data-theme="dark"] .aps-new-product-btn {
   background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%);
-  border-color: #3b82f6;
+  border-color: var(--color-blue-500);
   color: #93c5fd;
 }
 
 [data-theme="dark"] .aps-new-icon {
-  background: #3b82f6;
+  background: var(--color-blue-500);
 }
 
 [data-theme="dark"] .aps-new-hint {
@@ -906,7 +906,7 @@
   height: 24px;
   border: none;
   background: #e5e7eb;
-  color: #6b7280;
+  color: var(--color-gray-500);
   border-radius: 50%;
   cursor: pointer;
   font-size: 16px;
@@ -963,7 +963,7 @@
 
 .aps-product-card:active {
   transform: scale(0.98);
-  background: #f1f5f9;
+  background: var(--color-slate-100);
 }
 
 [data-theme="dark"] .aps-product-card:hover {
@@ -1030,7 +1030,7 @@
 
 .aps-delete-btn:hover {
   background: #fee2e2;
-  color: #ef4444;
+  color: var(--color-red-500);
   opacity: 1;
 }
 
@@ -1077,7 +1077,7 @@
   margin-top: 8px;
   padding: 10px 20px;
   background: var(--acc);
-  color: #fff;
+  color: var(--color-white);
   border: none;
   border-radius: 10px;
   font-size: 14px;
@@ -1195,7 +1195,7 @@
 }
 
 .aps-grams-btn:hover {
-  background: #f1f5f9;
+  background: var(--color-slate-100);
   border-color: var(--acc);
 }
 
@@ -1231,7 +1231,7 @@
   height: 8px;
   -webkit-appearance: none;
   appearance: none;
-  background: linear-gradient(to right, #22c55e, #eab308, #ef4444);
+  background: linear-gradient(to right, #22c55e, #eab308, var(--color-red-500));
   border-radius: 4px;
   outline: none;
   margin: 8px 0;
@@ -1241,7 +1241,7 @@
   -webkit-appearance: none;
   width: 24px;
   height: 24px;
-  background: #fff;
+  background: var(--color-white);
   border: 2px solid var(--acc);
   border-radius: 50%;
   cursor: pointer;
@@ -1251,7 +1251,7 @@
 .aps-grams-slider::-moz-range-thumb {
   width: 24px;
   height: 24px;
-  background: #fff;
+  background: var(--color-white);
   border: 2px solid var(--acc);
   border-radius: 50%;
   cursor: pointer;
@@ -1286,7 +1286,7 @@
 
 .aps-quick-btn.active {
   background: var(--acc);
-  color: #fff;
+  color: var(--color-white);
   border-color: var(--acc);
 }
 
@@ -1329,13 +1329,13 @@
 }
 
 .aps-portion-btn:hover {
-  border-color: #10b981;
+  border-color: var(--color-emerald-500);
 }
 
 .aps-portion-btn.active {
-  background: #10b981;
-  color: #fff;
-  border-color: #10b981;
+  background: var(--color-emerald-500);
+  color: var(--color-white);
+  border-color: var(--color-emerald-500);
 }
 
 [data-theme="dark"] .aps-portion-btn {
@@ -1345,8 +1345,8 @@
 }
 
 [data-theme="dark"] .aps-portion-btn.active {
-  background: #10b981;
-  color: #fff;
+  background: var(--color-emerald-500);
+  color: var(--color-white);
 }
 
 .aps-no-product {
@@ -1394,7 +1394,7 @@
 
 [data-theme="dark"] .aps-open-btn {
   background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%);
-  border-color: #3b82f6;
+  border-color: var(--color-blue-500);
   color: #93c5fd;
 }
 
@@ -1451,7 +1451,7 @@
 
 .aps-category-chip.active {
   background: var(--acc);
-  color: #fff;
+  color: var(--color-white);
   border-color: var(--acc);
 }
 
@@ -1464,7 +1464,7 @@
 [data-theme="dark"] .aps-category-chip.active {
   background: var(--acc);
   border-color: var(--acc);
-  color: #fff;
+  color: var(--color-white);
 }
 
 /* === Умные рекомендации === */
@@ -1530,7 +1530,7 @@
 .aps-last-grams-btn {
   padding: 4px 10px;
   background: #2563eb;
-  color: #fff;
+  color: var(--color-white);
   border: none;
   border-radius: 6px;
   font-size: 13px;
@@ -1598,7 +1598,7 @@
   font-size: 12px;
   border: 1px solid #e5e7eb;
   background: #f9fafb;
-  color: #6b7280;
+  color: var(--color-gray-500);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s;
@@ -1606,7 +1606,7 @@
 
 .aps-mode-btn.active {
   background: var(--acc);
-  color: #fff;
+  color: var(--color-white);
   border-color: var(--acc);
 }
 
@@ -1634,7 +1634,7 @@
   text-align: center;
   border: 2px solid #f59e0b;
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-white);
 }
 
 .aps-kcal-input:focus {
@@ -1659,7 +1659,7 @@
 [data-theme="dark"] .aps-kcal-input {
   background: #1f2937;
   border-color: #f59e0b;
-  color: #fff;
+  color: var(--color-white);
 }
 
 /* === Итог дня === */
@@ -1681,7 +1681,7 @@
 }
 
 .aps-day-arrow {
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 .aps-day-sum {
@@ -1690,7 +1690,7 @@
 }
 
 .aps-day-pct {
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 [data-theme="dark"] .aps-day-total {
@@ -1751,7 +1751,7 @@
 
 .aps-create-format {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--color-gray-500);
   font-family: monospace;
   background: #f3f4f6;
   padding: 4px 8px;
@@ -1855,7 +1855,7 @@
 
 .aps-preview-extra {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 [data-theme="dark"] .aps-preview-extra {
@@ -1883,7 +1883,7 @@
 }
 
 .aps-preview-label {
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 [data-theme="dark"] .aps-preview-label {
@@ -1909,8 +1909,8 @@
 }
 
 .aps-create-btn.active {
-  background: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #22c55e 0%, var(--color-emerald-500) 100%);
+  color: var(--color-white);
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
@@ -1930,7 +1930,7 @@
 
 [data-theme="dark"] .aps-create-btn {
   background: #374151;
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 [data-theme="dark"] .aps-create-btn.active {
@@ -1939,7 +1939,7 @@
 
 .aps-create-tip {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-gray-500);
   text-align: center;
   padding: 8px;
   background: #f9fafb;
@@ -1967,7 +1967,7 @@
 
 [data-theme="dark"] .aps-create-search-hint {
   background: #1e3a5f;
-  border-color: #3b82f6;
+  border-color: var(--color-blue-500);
   color: #93c5fd;
 }
 
@@ -1981,4 +1981,6 @@
 
 /* Кнопка закрытия — используется базовый стиль из .mc-close-btn выше */
 
-
+/* MODULE 07 — Steps & APS Flow
+ * Scope: step modal UX, meal steps, APS/create product, grams inputs.
+ */

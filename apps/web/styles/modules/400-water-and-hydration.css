@@ -86,7 +86,7 @@
 
 .water-goal-text {
   font-size: 11px;
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 /* Краткий breakdown под кольцом */
@@ -100,7 +100,7 @@
 
 .water-breakdown-item {
   font-size: 10px;
-  color: #64748b;
+  color: var(--color-slate-500);
   line-height: 1.2;
 }
 
@@ -138,7 +138,7 @@
   left: 50%;
   transform: translateX(-50%) translateY(-100%);
   margin-top: -8px;
-  background: #fff;
+  background: var(--color-white);
   border-radius: 12px;
   padding: 12px 14px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
@@ -171,7 +171,7 @@
 }
 
 .water-formula-sub {
-  color: #6b7280;
+  color: var(--color-gray-500);
   font-size: 10px;
   padding-left: 8px;
 }
@@ -194,29 +194,29 @@
 
 [data-theme="dark"] .water-formula-tooltip {
   background: #1e293b;
-  border-color: #334155;
+  border-color: var(--color-slate-700);
   box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 
 [data-theme="dark"] .water-formula-title {
   color: #7dd3fc;
-  border-color: #334155;
+  border-color: var(--color-slate-700);
 }
 
 [data-theme="dark"] .water-formula-row {
-  color: #e2e8f0;
+  color: var(--color-slate-200);
 }
 
 [data-theme="dark"] .water-formula-sub {
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .water-formula-total {
-  border-color: #334155;
+  border-color: var(--color-slate-700);
 }
 
 [data-theme="dark"] .water-breakdown-item {
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .water-breakdown-bonus {
@@ -577,7 +577,7 @@
   align-items: center;
   gap: 2px;
   padding: 8px 4px;
-  background: #fff;
+  background: var(--color-white);
   border: 1.5px solid #bae6fd;
   border-radius: 10px;
   cursor: pointer;
@@ -592,7 +592,7 @@
 }
 
 .water-preset-compact:active .water-preset-ml {
-  color: #fff;
+  color: var(--color-white);
 }
 
 .water-preset-compact .water-preset-icon {
@@ -652,7 +652,7 @@
   padding: 0 5px;
   border-radius: 9px;
   background: #dc2626;
-  color: #fff;
+  color: var(--color-white);
   font-size: 11px;
   font-weight: 700;
   display: flex;
@@ -696,7 +696,7 @@
   width: 100%;
   max-width: 500px;
   max-height: 75vh;
-  background: var(--surface, #fff);
+  background: var(--surface, var(--color-white));
   border-radius: 20px;
   overflow: hidden;
   display: flex;
@@ -742,11 +742,11 @@
 .advice-list-dismiss-all {
   padding: 6px 12px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--color-emerald-500) 0%, #059669 100%);
   border: none;
   font-size: 12px;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-white);
   cursor: pointer;
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
@@ -775,7 +775,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary, #6b7280);
+  color: var(--text-secondary, var(--color-gray-500));
   transition: background 0.15s ease;
 }
 
@@ -879,15 +879,15 @@
 }
 
 .advice-list-item-bg-left {
-  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(90deg, var(--color-emerald-500) 0%, #059669 100%);
   justify-content: flex-end;
-  color: #fff;
+  color: var(--color-white);
 }
 
 .advice-list-item-bg-right {
   background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
   justify-content: flex-start;
-  color: #fff;
+  color: var(--color-white);
 }
 
 .advice-list-item {
@@ -909,17 +909,17 @@
 }
 
 .advice-list-item-tip {
-  border-left-color: #3b82f6;
+  border-left-color: var(--color-blue-500);
   background: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, transparent 100%);
 }
 
 .advice-list-item-warning {
-  border-left-color: #ef4444;
+  border-left-color: var(--color-red-500);
   background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, transparent 100%);
 }
 
 .advice-list-item-achievement {
-  border-left-color: #10b981;
+  border-left-color: var(--color-emerald-500);
   background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, transparent 100%);
 }
 
@@ -929,7 +929,7 @@
 }
 
 .advice-list-item-info {
-  border-left-color: #6b7280;
+  border-left-color: var(--color-gray-500);
   background: linear-gradient(90deg, rgba(107, 114, 128, 0.08) 0%, transparent 100%);
 }
 
@@ -980,7 +980,7 @@
 .advice-list-details {
   font-size: 12px;
   line-height: 1.5;
-  color: var(--text-secondary, #6b7280);
+  color: var(--text-secondary, var(--color-gray-500));
   padding: 8px 12px;
   background: var(--bg-tertiary, #f3f4f6);
   border-radius: 8px;
@@ -1135,7 +1135,7 @@
 }
 
 [data-theme="dark"] .water-goal-text {
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .water-progress-inline {
@@ -1204,7 +1204,7 @@
   font-size: 11px;
   position: sticky;
   top: 0;
-  background: var(--bg-color, #fff);
+  background: var(--bg-color, var(--color-white));
   border-bottom: 2px solid #e5e7eb;
   z-index: 2;
 }
@@ -1224,7 +1224,7 @@
   white-space: nowrap;
   font-size: 11px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--color-gray-500);
   letter-spacing: 0.02em;
 }
 
@@ -1255,7 +1255,7 @@
   font-size: 12px;
   position: sticky;
   left: 0;
-  background: var(--bg-color, #fff);
+  background: var(--bg-color, var(--color-white));
   z-index: 1;
   white-space: nowrap;
   padding-right: 12px;
@@ -1319,7 +1319,7 @@
 .data-overview-empty-text {
   font-size: 16px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--color-gray-500);
   margin-bottom: 8px;
 }
 
@@ -1360,12 +1360,12 @@
 }
 
 [data-theme="dark"] .cell-empty { 
-  color: #6b7280; 
+  color: var(--color-gray-500); 
   background: #451a1a;
 }
 
 [data-theme="dark"] .data-overview-hint {
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 [data-theme="dark"] .data-overview-empty-text {
@@ -1373,6 +1373,8 @@
 }
 
 [data-theme="dark"] .data-overview-empty-hint {
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
-
+/* MODULE 05 — Water & Hydration
+ * Scope: water cards/rings, hydration hints, data overview blocks.
+ */

@@ -22,7 +22,7 @@
 .sleep-quality-face-text {
   font-size: 16px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--color-gray-500);
   transition: color 0.2s ease;
 }
 
@@ -65,7 +65,7 @@
   padding: 12px 8px;
   border-radius: 14px;
   border: 2px solid #e5e7eb;
-  background: #fff;
+  background: var(--color-white);
   font-size: 14px;
   font-weight: 600;
   color: #374151;
@@ -79,8 +79,8 @@
 
 .sleep-quality-preset-bad.active {
   background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border-color: #ef4444;
+  color: var(--color-red-500);
+  border-color: var(--color-red-500);
 }
 
 .sleep-quality-preset-ok.active {
@@ -91,8 +91,8 @@
 
 .sleep-quality-preset-good.active {
   background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-  border-color: #10b981;
+  color: var(--color-emerald-500);
+  border-color: var(--color-emerald-500);
 }
 
 .sleep-quality-slider-container {
@@ -158,7 +158,7 @@
 /* История комментариев */
 .comment-history {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-gray-500);
   background: rgba(255, 255, 255, 0.5);
   padding: 8px 10px;
   border-radius: 8px;
@@ -176,7 +176,7 @@
 .sleep-quality-comment-text {
   font-size: 13px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--color-gray-500);
   white-space: nowrap;
 }
 
@@ -196,7 +196,7 @@
 }
 
 .sleep-quality-comment-input:focus {
-  background: #fff;
+  background: var(--color-white);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
@@ -205,7 +205,7 @@
   padding: 10px 16px;
   text-align: center;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 .sleep-quality-hours-info strong {
@@ -255,7 +255,7 @@
 }
 
 .dark .sleep-quality-comment-input::placeholder {
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 .dark .sleep-quality-comment-input:focus {
@@ -273,7 +273,7 @@
   background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(139, 92, 246, 0.08));
   border-radius: 12px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--color-gray-500);
   text-align: center;
 }
 
@@ -329,7 +329,7 @@
 .day-score-comment-text {
   font-size: 13px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--color-gray-500);
   white-space: nowrap;
 }
 
@@ -349,7 +349,7 @@
 }
 
 .day-score-comment-input:focus {
-  background: #fff;
+  background: var(--color-white);
   box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.2);
 }
 
@@ -372,7 +372,7 @@
 }
 
 .day-score-comment-prompt.neutral .day-score-comment-text {
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 /* Legacy (можно удалить) */
@@ -381,7 +381,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--color-white);
   border: 1px solid #fce7f3;
   border-radius: 10px;
   margin-bottom: 8px;
@@ -451,7 +451,7 @@
 }
 
 [data-theme="dark"] .day-score-of-ten {
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 [data-theme="dark"] .day-score-preset {
@@ -498,7 +498,7 @@
   align-items: center;
   gap: 10px;
   padding: 8px 14px;
-  background: #fff;
+  background: var(--color-white);
   border: 1px solid #fce7f3;
   border-radius: 10px;
   cursor: pointer;
@@ -512,7 +512,7 @@
 
 .sleep-quality-label {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 .sleep-quality-value {
@@ -542,7 +542,7 @@
   padding: 4px 8px;
   background: rgba(0, 0, 0, 0.04);
   border-radius: 8px;
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 .day-insight.correlation {
@@ -573,7 +573,7 @@
   flex-direction: column;
   align-items: center;
   padding: 8px 4px;
-  background: linear-gradient(135deg, #fef7f9 0%, #fff 100%);
+  background: linear-gradient(135deg, #fef7f9 0%, var(--color-white) 100%);
   border: 1px solid #fce7f3;
   border-radius: 10px;
   transition: all 0.2s;
@@ -644,16 +644,16 @@
 }
 
 .skeleton-card {
-  background: #fff;
+  background: var(--color-white);
   border-radius: 12px;
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-slate-200);
 }
 
 .skeleton-header {
   height: 14px;
   width: 120px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, var(--color-slate-100) 25%, var(--color-slate-200) 50%, var(--color-slate-100) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 4px;
@@ -669,7 +669,7 @@
 
 .skeleton-metric {
   height: 64px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, var(--color-slate-100) 25%, var(--color-slate-200) 50%, var(--color-slate-100) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
@@ -677,7 +677,7 @@
 
 .skeleton-sparkline {
   height: 44px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, var(--color-slate-100) 25%, var(--color-slate-200) 50%, var(--color-slate-100) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
@@ -686,7 +686,7 @@
 
 .skeleton-progress {
   height: 48px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, var(--color-slate-100) 25%, var(--color-slate-200) 50%, var(--color-slate-100) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
@@ -702,7 +702,7 @@
 .skeleton-ring {
   width: 56px;
   height: 72px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, var(--color-slate-100) 25%, var(--color-slate-200) 50%, var(--color-slate-100) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
@@ -710,7 +710,7 @@
 
 .skeleton-slider {
   height: 40px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, var(--color-slate-100) 25%, var(--color-slate-200) 50%, var(--color-slate-100) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
@@ -725,7 +725,7 @@
 
 .skeleton-block {
   height: 80px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, var(--color-slate-100) 25%, var(--color-slate-200) 50%, var(--color-slate-100) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
@@ -734,7 +734,7 @@
 .skeleton-meal-header {
   height: 20px;
   width: 80px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, var(--color-slate-100) 25%, var(--color-slate-200) 50%, var(--color-slate-100) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 4px;
@@ -748,7 +748,7 @@
 .app-loader {
   position: fixed;
   inset: 0;
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(180deg, #f8fafc 0%, var(--color-slate-100) 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -788,13 +788,13 @@
 
 .app-loader-subtitle {
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 .app-loader-skeleton {
   width: 100%;
   max-width: 430px;
-  background: #fff;
+  background: var(--color-white);
   border-radius: 24px;
   padding: 16px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
@@ -809,7 +809,7 @@
 
 .app-loader-skeleton .skeleton-bar {
   height: 8px;
-  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, var(--color-slate-200) 25%, #cbd5e1 50%, var(--color-slate-200) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 4px;
@@ -830,7 +830,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, var(--color-slate-200) 25%, #cbd5e1 50%, var(--color-slate-200) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   flex-shrink: 0;
@@ -839,7 +839,7 @@
 .app-loader-skeleton .skeleton-rect {
   height: 36px;
   border-radius: 8px;
-  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, var(--color-slate-200) 25%, #cbd5e1 50%, var(--color-slate-200) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -867,7 +867,7 @@
 .app-loader-skeleton .skeleton-dot {
   flex: 1;
   min-width: 6px;
-  background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%);
+  background: linear-gradient(180deg, var(--color-blue-500) 0%, #60a5fa 100%);
   border-radius: 3px 3px 0 0;
   opacity: 0.3;
   animation: skeletonDotPulse 1.5s ease-in-out infinite;
@@ -886,7 +886,7 @@
 .app-loader-skeleton .skeleton-card {
   flex: 1;
   height: 60px;
-  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, var(--color-slate-200) 25%, #cbd5e1 50%, var(--color-slate-200) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 12px;
@@ -902,7 +902,7 @@
   display: flex;
   justify-content: space-around;
   padding-top: 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--color-slate-200);
   margin-top: 16px;
 }
 
@@ -910,7 +910,7 @@
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, var(--color-slate-200) 25%, #cbd5e1 50%, var(--color-slate-200) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -924,8 +924,8 @@
   margin-top: 24px;
   width: 24px;
   height: 24px;
-  border: 3px solid #e2e8f0;
-  border-top-color: #3b82f6;
+  border: 3px solid var(--color-slate-200);
+  border-top-color: var(--color-blue-500);
   border-radius: 50%;
   animation: appLoaderSpin 0.8s linear infinite;
 }
@@ -941,11 +941,11 @@
 }
 
 [data-theme="dark"] .app-loader-title {
-  color: #f1f5f9;
+  color: var(--color-slate-100);
 }
 
 [data-theme="dark"] .app-loader-subtitle {
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .app-loader-skeleton {
@@ -958,7 +958,7 @@
 [data-theme="dark"] .app-loader-skeleton .skeleton-rect,
 [data-theme="dark"] .app-loader-skeleton .skeleton-card,
 [data-theme="dark"] .app-loader-skeleton .skeleton-tab {
-  background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+  background: linear-gradient(90deg, var(--color-slate-700) 25%, #475569 50%, var(--color-slate-700) 75%);
   background-size: 200% 100%;
 }
 
@@ -967,17 +967,17 @@
 }
 
 [data-theme="dark"] .app-loader-skeleton .skeleton-tabs {
-  border-top-color: #334155;
+  border-top-color: var(--color-slate-700);
 }
 
 [data-theme="dark"] .app-loader-spinner {
-  border-color: #334155;
-  border-top-color: #3b82f6;
+  border-color: var(--color-slate-700);
+  border-top-color: var(--color-blue-500);
 }
 
 .skeleton-search {
   height: 40px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, var(--color-slate-100) 25%, var(--color-slate-200) 50%, var(--color-slate-100) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
@@ -986,7 +986,7 @@
 
 .skeleton-item {
   height: 56px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(90deg, var(--color-slate-100) 25%, var(--color-slate-200) 50%, var(--color-slate-100) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
@@ -1031,12 +1031,12 @@
 .steps-label {
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: var(--color-slate-700);
 }
 
 .steps-value {
   font-size: 13px;
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 .steps-value b {
@@ -1051,7 +1051,7 @@
 
 .steps-kcal-hint {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-slate-400);
   font-weight: 400;
 }
 
@@ -1070,7 +1070,7 @@
   right: 0;
   height: 8px;
   transform: translateY(-50%);
-  background: #e2e8f0;
+  background: var(--color-slate-200);
   border-radius: 4px;
 }
 
@@ -1093,7 +1093,7 @@
   transform: translateX(-50%);
   font-size: 9px;
   font-weight: 500;
-  color: #94a3b8;
+  color: var(--color-slate-400);
   white-space: nowrap;
   margin-top: 6px;
 }
@@ -1114,7 +1114,7 @@
   width: 24px;
   height: 24px;
   transform: translate(-50%, -50%);
-  background: #fff;
+  background: var(--color-white);
   border: 3px solid;
   border-radius: 50%;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -1142,7 +1142,7 @@
 
 .compact-activity-label {
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-slate-500);
   font-weight: 500;
   min-width: 35px;
 }
@@ -1156,7 +1156,7 @@
 
 .compact-activity-unit {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 .compact-activity-stats {
@@ -1164,24 +1164,24 @@
   gap: 16px;
   flex-wrap: wrap;
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-slate-500);
   padding: 6px 0;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--color-slate-100);
 }
 
 .compact-activity-stats b {
-  color: #334155;
+  color: var(--color-slate-700);
   font-weight: 600;
 }
 
 .compact-activity-stats.secondary {
   padding-top: 6px;
-  border-top: 1px dashed #e2e8f0;
-  color: #94a3b8;
+  border-top: 1px dashed var(--color-slate-200);
+  color: var(--color-slate-400);
 }
 
 .compact-activity-stats.secondary b {
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 /* Transitions для плавных изменений */
@@ -1211,7 +1211,7 @@
 /* Умная подсказка */
 .metrics-hint {
   font-size: 10px;
-  color: #64748b;
+  color: var(--color-slate-500);
   margin-top: 4px;
   font-weight: 500;
 }
@@ -1219,7 +1219,7 @@
 /* Тренд веса */
 .metrics-trend {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-slate-400);
   margin-top: 2px;
   font-weight: 500;
 }
@@ -1596,7 +1596,7 @@
 }
 
 .night-time-hint .night-time-text b {
-  color: #fff;
+  color: var(--color-white);
   font-weight: 600;
 }
 
@@ -1750,7 +1750,7 @@
 }
 
 .rating-progress-dot.filled {
-  background: #10b981;
+  background: var(--color-emerald-500);
   transform: scale(1.1);
 }
 
@@ -1771,7 +1771,7 @@
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--color-gray-500);
   background: rgba(107, 114, 128, 0.1);
   border: 1px solid rgba(107, 114, 128, 0.15);
   border-radius: 16px;
@@ -1858,10 +1858,10 @@
   height: 10px;
   top: -20px;
   border-radius: 2px;
-  animation: confetti-fall 2s ease-out forwards;
+  animation: confetti-fall-inline 2s ease-out forwards;
 }
 
-@keyframes confetti-fall {
+@keyframes confetti-fall-inline {
   0% {
     transform: translateY(0) rotate(0deg) scale(1);
     opacity: 1;
@@ -1896,7 +1896,7 @@
   border: 1px solid rgba(59, 130, 246, 0.15);
   border-radius: 12px;
   font-size: 12px;
-  color: #3b82f6;
+  color: var(--color-blue-500);
   animation: fade-in-up 0.3s ease;
 }
 
@@ -1931,17 +1931,17 @@
 
 .mood-diff.diff-up {
   background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  color: var(--color-emerald-500);
 }
 
 .mood-diff.diff-down {
   background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  color: var(--color-red-500);
 }
 
 .mood-diff.diff-same {
   background: rgba(107, 114, 128, 0.15);
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 /* Quick preset buttons */
@@ -1956,7 +1956,7 @@
   padding: 8px 4px;
   border-radius: 12px;
   border: 1.5px solid #e5e7eb;
-  background: #fff;
+  background: var(--color-white);
   font-size: 12px;
   font-weight: 500;
   color: #374151;
@@ -1974,20 +1974,20 @@
 
 .mood-preset-bad.active {
   background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  border-color: #ef4444;
+  color: var(--color-red-500);
+  border-color: var(--color-red-500);
 }
 
 .mood-preset-ok.active {
   background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
-  border-color: #3b82f6;
+  color: var(--color-blue-500);
+  border-color: var(--color-blue-500);
 }
 
 .mood-preset-good.active {
   background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  border-color: #10b981;
+  color: var(--color-emerald-500);
+  border-color: var(--color-emerald-500);
 }
 
 /* Mood Face Avatar */
@@ -2015,7 +2015,7 @@
 .mood-face-text {
   font-size: 14px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--color-gray-500);
   transition: color 0.2s ease;
 }
 
@@ -2023,7 +2023,7 @@
 .mood-time-hint {
   text-align: center;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--color-gray-500);
   padding: 4px 0 8px;
 }
 
@@ -2116,7 +2116,7 @@
 }
 
 .mood-journal-prompt.neutral .mood-journal-text {
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 .mood-journal-icon {
@@ -2126,12 +2126,12 @@
 .mood-journal-text {
   flex: 1;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 .mood-journal-btn {
   padding: 6px 14px;
-  background: #6b7280;
+  background: var(--color-gray-500);
   color: white;
   border: none;
   border-radius: 8px;
@@ -2142,11 +2142,11 @@
 }
 
 .mood-journal-btn.positive {
-  background: #10b981;
+  background: var(--color-emerald-500);
 }
 
 .mood-journal-wrapper.negative .mood-journal-btn {
-  background: #ef4444;
+  background: var(--color-red-500);
 }
 
 .mood-journal-btn:active {
@@ -2171,7 +2171,7 @@
 }
 
 .mood-journal-input:focus {
-  background: #fff;
+  background: var(--color-white);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
@@ -2215,24 +2215,24 @@
 /* Positive gradient: red → blue → green */
 .mood-slider-positive {
   background: linear-gradient(to right, 
-    #ef4444 0%, 
+    var(--color-red-500) 0%, 
     #f97316 20%, 
     #eab308 35%,
-    #3b82f6 50%, 
+    var(--color-blue-500) 50%, 
     #22c55e 70%,
-    #10b981 100%
+    var(--color-emerald-500) 100%
   );
 }
 
 /* Negative gradient (stress): green → blue → red */
 .mood-slider-negative {
   background: linear-gradient(to right, 
-    #10b981 0%, 
+    var(--color-emerald-500) 0%, 
     #22c55e 30%,
-    #3b82f6 50%, 
+    var(--color-blue-500) 50%, 
     #eab308 65%,
     #f97316 80%, 
-    #ef4444 100%
+    var(--color-red-500) 100%
   );
 }
 
@@ -2243,7 +2243,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--color-white);
   box-shadow: 0 2px 8px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.1);
   cursor: pointer;
   transition: transform 0.1s ease;
@@ -2257,7 +2257,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--color-white);
   box-shadow: 0 2px 8px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.1);
   cursor: pointer;
   border: none;
@@ -2456,7 +2456,7 @@
 .kcal-calc-toggle.active {
   background: #007aff;
   border-color: #007aff;
-  color: #fff;
+  color: var(--color-white);
 }
 .kcal-calc-input {
   display: flex;
@@ -2470,7 +2470,7 @@
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   text-align: center;
-  background: #fff;
+  background: var(--color-white);
 }
 .kcal-calc-input input:focus {
   outline: none;
@@ -2536,7 +2536,7 @@
 
 .grams-portion-btn.active .portion-name,
 .grams-portion-btn.active .portion-grams {
-  color: #fff;
+  color: var(--color-white);
 }
 
 /* Рекомендованная порция (последняя выбранная) */
@@ -2554,7 +2554,7 @@
   width: 16px;
   height: 16px;
   background: #34c759;
-  color: #fff;
+  color: var(--color-white);
   font-size: 10px;
   border-radius: 50%;
   display: flex;
@@ -2573,7 +2573,7 @@
 }
 
 [data-theme="dark"] .grams-portion-btn .portion-name {
-  color: #fff;
+  color: var(--color-white);
 }
 
 [data-theme="dark"] .grams-portion-btn .portion-grams {
@@ -2673,7 +2673,7 @@
   text-align: center;
   border: 2px solid #d1d1d6;
   border-radius: 12px;
-  background: #fff;
+  background: var(--color-white);
   color: #000;
   outline: none;
   -moz-appearance: textfield;
@@ -2732,7 +2732,7 @@
   position: absolute;
   width: 28px;
   height: 28px;
-  background: #fff;
+  background: var(--color-white);
   border: 3px solid #007aff;
   border-radius: 50%;
   transform: translateX(-50%);
@@ -2793,7 +2793,7 @@
 
 .grams-preset.active {
   background: #007aff;
-  color: #fff;
+  color: var(--color-white);
   border-color: #007aff;
 }
 
@@ -2811,7 +2811,7 @@
 }
 
 [data-theme="dark"] .grams-preview-kcal {
-  color: #fff;
+  color: var(--color-white);
 }
 
 /* Dark theme kcal colors */
@@ -2844,12 +2844,12 @@
 [data-theme="dark"] .kcal-calc-toggle.active {
   background: #0a84ff;
   border-color: #0a84ff;
-  color: #fff;
+  color: var(--color-white);
 }
 [data-theme="dark"] .kcal-calc-input input {
   background: #1c1c1e;
   border-color: #48484a;
-  color: #fff;
+  color: var(--color-white);
 }
 [data-theme="dark"] .kcal-calc-input input:focus {
   border-color: #0a84ff;
@@ -2861,7 +2861,7 @@
 [data-theme="dark"] .grams-input {
   background: #1c1c1e;
   border-color: #48484a;
-  color: #fff;
+  color: var(--color-white);
 }
 
 [data-theme="dark"] .grams-input:focus {
@@ -2880,7 +2880,7 @@
 
 [data-theme="dark"] .grams-preset {
   background: #2c2c2e;
-  color: #fff;
+  color: var(--color-white);
 }
 
 [data-theme="dark"] .grams-preset.active {
@@ -2911,7 +2911,7 @@
 /* Utility classes для замены inline стилей */
 .dev-positive { color: #dc2626; font-weight: 600; }
 .dev-negative { color: #059669; font-weight: 600; }
-.dev-neutral { color: #6b7280; }
+.dev-neutral { color: var(--color-gray-500); }
 .fw-600 { font-weight: 600; }
 .text-right { text-align: right; }
 .text-center { text-align: center; }
@@ -3128,4 +3128,6 @@ input, textarea, select {
     transition-duration: 0.01ms !important;
   }
 }
-
+/* MODULE 04 — Modals & Day UI
+ * Scope: day score/sleep pickers, modals/bottom-sheets, forms, loaders.
+ */

@@ -10,7 +10,7 @@
 .metrics-card {
   min-width: 0;
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-slate-200);
   border-radius: 10px;
   padding: 8px 4px;
   text-align: center;
@@ -121,7 +121,7 @@
 }
 
 .kcal-period-pill.active {
-  background: #ffffff;
+  background: var(--color-white);
   color: #166534;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
@@ -137,7 +137,7 @@
 .sparkline-label {
   font-size: 11px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--color-slate-500);
   white-space: nowrap;
 }
 
@@ -231,7 +231,7 @@
 
 .sparkline-skeleton-line {
   height: 2px;
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, var(--color-slate-200) 25%, var(--color-slate-100) 50%, var(--color-slate-200) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 2px;
@@ -246,7 +246,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, var(--color-slate-200) 25%, var(--color-slate-100) 50%, var(--color-slate-200) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -263,7 +263,7 @@
 }
 
 .sparkline-goal {
-  stroke: #94a3b8;
+  stroke: var(--color-slate-400);
   stroke-dasharray: 3, 3;
   stroke-width: 1;
 }
@@ -281,7 +281,7 @@
 }
 
 .sparkline-dot-over {
-  fill: #ef4444; /* красный — сильно превышено */
+  fill: var(--color-red-500); /* красный — сильно превышено */
 }
 
 .sparkline-dot-today {
@@ -322,7 +322,7 @@
 
 .sparkline-goal-badge.goal-critical {
   --goal-badge-bg: rgba(239, 68, 68, 0.15);
-  --goal-badge-color: #ef4444;
+  --goal-badge-color: var(--color-red-500);
 }
 
 @keyframes pulseDot {
@@ -338,7 +338,7 @@
 
 .sparkline-day-label {
   font-size: 7px;
-  fill: #94a3b8;
+  fill: var(--color-slate-400);
   font-weight: 500;
 }
 
@@ -388,7 +388,7 @@
 .sparkline-popup-v2 .sparkline-popup-swipe {
   width: 32px;
   height: 4px;
-  background: #e2e8f0;
+  background: var(--color-slate-200);
   border-radius: 2px;
   margin: 0 auto 8px;
 }
@@ -420,7 +420,7 @@
 
 .sparkline-popup-v2 .sparkline-popup-progress {
   height: 6px;
-  background: #e2e8f0;
+  background: var(--color-slate-200);
   border-radius: 3px;
   overflow: hidden;
   margin-bottom: 10px;
@@ -442,7 +442,7 @@
 }
 
 .sparkline-popup-v2 .sparkline-popup-target {
-  color: #94a3b8;
+  color: var(--color-slate-400);
   font-weight: 400;
   font-size: 13px;
 }
@@ -452,8 +452,8 @@
   padding: 2px 6px;
   border-radius: 4px;
   margin-left: 6px;
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--color-slate-100);
+  color: var(--color-slate-500);
   white-space: nowrap;
 }
 
@@ -493,7 +493,7 @@
   font-weight: 500;
   padding: 3px 6px;
   border-radius: 4px;
-  background: #f1f5f9;
+  background: var(--color-slate-100);
   color: #475569;
 }
 
@@ -516,7 +516,7 @@
 .sparkline-popup-v2 .sparkline-popup-btn-v2 {
   width: 100%;
   padding: 8px;
-  background: #f1f5f9;
+  background: var(--color-slate-100);
   border: none;
   border-radius: 8px;
   font-size: 12px;
@@ -527,7 +527,7 @@
 }
 
 .sparkline-popup-v2 .sparkline-popup-btn-v2:hover {
-  background: #e2e8f0;
+  background: var(--color-slate-200);
 }
 
 .sparkline-popup-v2 .sparkline-popup-btn-v2.perfect {
@@ -547,7 +547,7 @@
   background: rgba(0, 0, 0, 0.05);
   border: none;
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-slate-500);
   cursor: pointer;
   padding: 4px 6px;
   line-height: 1;
@@ -557,7 +557,7 @@
 
 .sparkline-popup-v2 .sparkline-popup-close:hover {
   background: rgba(0, 0, 0, 0.1);
-  color: #334155;
+  color: var(--color-slate-700);
 }
 
 .sparkline-popup-v2 .sparkline-popup-close.perfect {
@@ -573,7 +573,7 @@
   height: 0;
   border-left: 10px solid transparent;
   border-right: 10px solid transparent;
-  border-bottom: 8px solid #fff;
+  border-bottom: 8px solid var(--color-white);
   filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
 }
 
@@ -657,13 +657,13 @@
 .sparkline-popup-main small {
   font-size: 11px;
   font-weight: 400;
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 /* Разделитель */
 .sparkline-popup-divider {
   height: 1px;
-  background: #f1f5f9;
+  background: var(--color-slate-100);
   margin: 6px 0;
 }
 
@@ -683,7 +683,7 @@
   font-weight: 500;
   padding: 2px 5px;
   border-radius: 4px;
-  background: #f1f5f9;
+  background: var(--color-slate-100);
   color: #475569;
 }
 .sparkline-popup-tag.good { background: #dcfce7; color: #16a34a; }
@@ -711,7 +711,7 @@
 }
 
 .sparkline-popup-label {
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 .sparkline-popup-value {
@@ -721,13 +721,13 @@
 
 .sparkline-popup-value.good { color: #22c55e; }
 .sparkline-popup-value.warn { color: #f59e0b; }
-.sparkline-popup-value.bad { color: #ef4444; }
+.sparkline-popup-value.bad { color: var(--color-red-500); }
 
 .sparkline-popup-btn {
   margin-top: 6px;
   width: 100%;
   padding: 6px;
-  background: #f1f5f9;
+  background: var(--color-slate-100);
   border: none;
   border-radius: 6px;
   font-size: 11px;
@@ -738,7 +738,7 @@
 }
 
 .sparkline-popup-btn:hover {
-  background: #e2e8f0;
+  background: var(--color-slate-200);
 }
 
 /* Popup для идеального дня */
@@ -781,15 +781,15 @@
 /* Dark mode */
 [data-theme="dark"] .sparkline-popup {
   background: #1e293b;
-  border-color: #334155;
+  border-color: var(--color-slate-700);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
-[data-theme="dark"] .sparkline-popup-header { color: #f1f5f9; }
-[data-theme="dark"] .sparkline-popup-main { color: #f1f5f9; }
-[data-theme="dark"] .sparkline-popup-main small { color: #64748b; }
-[data-theme="dark"] .sparkline-popup-divider { background: #334155; }
-[data-theme="dark"] .sparkline-popup-tag { background: #334155; color: #94a3b8; }
-[data-theme="dark"] .sparkline-popup-btn { background: #334155; color: #94a3b8; }
+[data-theme="dark"] .sparkline-popup-header { color: var(--color-slate-100); }
+[data-theme="dark"] .sparkline-popup-main { color: var(--color-slate-100); }
+[data-theme="dark"] .sparkline-popup-main small { color: var(--color-slate-500); }
+[data-theme="dark"] .sparkline-popup-divider { background: var(--color-slate-700); }
+[data-theme="dark"] .sparkline-popup-tag { background: var(--color-slate-700); color: var(--color-slate-400); }
+[data-theme="dark"] .sparkline-popup-btn { background: var(--color-slate-700); color: var(--color-slate-400); }
 [data-theme="dark"] .sparkline-popup-btn:hover { background: #475569; }
 
 /* Dark mode: sparkline-popup-v2 */
@@ -803,20 +803,20 @@
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-date {
-  color: #f1f5f9;
+  color: var(--color-slate-100);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-progress {
-  background: #334155;
+  background: var(--color-slate-700);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-target {
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-compare {
-  background: #334155;
-  color: #94a3b8;
+  background: var(--color-slate-700);
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-compare.up {
@@ -830,8 +830,8 @@
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2 {
-  background: #334155;
-  color: #94a3b8;
+  background: var(--color-slate-700);
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.good {
@@ -851,8 +851,8 @@
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2 {
-  background: #334155;
-  color: #94a3b8;
+  background: var(--color-slate-700);
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2:hover {
@@ -867,12 +867,12 @@
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-close {
   background: rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-close:hover {
   background: rgba(255, 255, 255, 0.2);
-  color: #f1f5f9;
+  color: var(--color-slate-100);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-arrow {
@@ -925,13 +925,13 @@
   transform: scaleY(1.5);
 }
 
-.sparkline-heatmap-day.level-0 { background: #f1f5f9; } /* нет данных */
+.sparkline-heatmap-day.level-0 { background: var(--color-slate-100); } /* нет данных */
 .sparkline-heatmap-day.level-1 { background: #bbf7d0; } /* <80% */
 .sparkline-heatmap-day.level-2 { background: #4ade80; } /* 80-95% */
 .sparkline-heatmap-day.level-3 { background: #22c55e; } /* 95-105% - идеал */
 .sparkline-heatmap-day.level-4 { background: #fde047; } /* 105-115% */
 .sparkline-heatmap-day.level-5 { background: #f97316; } /* 115-130% */
-.sparkline-heatmap-day.level-6 { background: #ef4444; } /* >130% */
+.sparkline-heatmap-day.level-6 { background: var(--color-red-500); } /* >130% */
 
 /* === MOOD-ПОЛОСА — градиентная полоса настроения === */
 .sparkline-mood-container {
@@ -978,7 +978,7 @@
 
 .sparkline-mood-label {
   font-size: 10px;
-  color: #64748b;
+  color: var(--color-slate-500);
   white-space: nowrap;
 }
 
@@ -1028,7 +1028,7 @@
 
 /* === Slider Elements === */
 .sparkline-slider-line {
-  stroke: #3b82f6;
+  stroke: var(--color-blue-500);
   stroke-width: 1.5;
   stroke-dasharray: 4 2;
   opacity: 0.8;
@@ -1036,7 +1036,7 @@
 }
 
 .sparkline-slider-point {
-  fill: #3b82f6;
+  fill: var(--color-blue-500);
   stroke: white;
   stroke-width: 2;
   pointer-events: none;
@@ -1096,7 +1096,7 @@
   border-radius: 8px;
   font-size: 11px;
   font-weight: 500;
-  color: #3b82f6;
+  color: var(--color-blue-500);
   animation: sparkline-brush-stats-appear 0.2s ease-out;
   z-index: 5;
   cursor: pointer;
@@ -1245,7 +1245,7 @@
 .sparkline-slider-tooltip-kcal small {
   font-size: 9px;
   font-weight: 400;
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 /* Tags row: компактные теги */
@@ -1264,7 +1264,7 @@
   font-weight: 500;
   padding: 1px 4px;
   border-radius: 3px;
-  background: #f1f5f9;
+  background: var(--color-slate-100);
   color: #475569;
 }
 .sparkline-slider-tooltip-tag.good { background: #dcfce7; color: #16a34a; }
@@ -1273,7 +1273,7 @@
 
 /* Weekly Rhythm — вертикальные сепараторы недель */
 .sparkline-week-separator {
-  stroke: #e2e8f0;
+  stroke: var(--color-slate-200);
   stroke-width: 1;
   stroke-dasharray: 2 2;
   opacity: 0.6;
@@ -1335,7 +1335,7 @@
 
 /* Пунктирная линия от точки к дню — синхронизирована с точкой */
 .sparkline-point-line {
-  stroke: #94a3b8; /* slate-400 — ярче */
+  stroke: var(--color-slate-400); /* slate-400 — ярче */
   stroke-width: 1;
   stroke-dasharray: 2 2;
   opacity: 0;
@@ -1363,13 +1363,13 @@
 
 /* Прогнозная линия */
 .sparkline-forecast-line {
-  stroke: #94a3b8 !important;
+  stroke: var(--color-slate-400) !important;
   stroke-width: 1.5 !important;
   animation: none !important;
 }
 
 .sparkline-forecast-dot {
-  fill: #94a3b8 !important;
+  fill: var(--color-slate-400) !important;
   opacity: 0.5;
 }
 
@@ -1416,7 +1416,7 @@
 
 /* Выходные и праздники — красный */
 .sparkline-day-weekend {
-  fill: #ef4444 !important;
+  fill: var(--color-red-500) !important;
 }
 
 /* Дельта (отклонение от нормы) под каждым днём — синхронизирована с точкой */
@@ -1432,14 +1432,14 @@
 .sparkline-minmax-label {
   font-size: 9px;
   font-weight: 600;
-  fill: #64748b;
+  fill: var(--color-slate-500);
   opacity: 0;
   animation: fadeInAnnotation 0.3s ease forwards;
   animation-delay: 3.5s;
 }
 
 .sparkline-min-label {
-  fill: #ef4444;
+  fill: var(--color-red-500);
 }
 
 .sparkline-max-label {
@@ -1510,8 +1510,8 @@
   gap: 8px;
   padding: 10px 14px;
   margin-top: 4px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #f8fafc 0%, var(--color-slate-100) 100%);
+  border: 1px solid var(--color-slate-200);
   border-radius: 10px;
   transition: all 0.3s ease;
 }
@@ -1538,7 +1538,7 @@
 .correlation-text {
   font-size: 12px;
   font-weight: 500;
-  color: #334155;
+  color: var(--color-slate-700);
   line-height: 1.3;
 }
 
@@ -1572,7 +1572,7 @@
 .week-heatmap {
   grid-column: 1 / -1;
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-slate-200);
   border-radius: 10px;
   padding: 8px 12px;
   margin-top: 4px;
@@ -1602,7 +1602,7 @@
 
 .week-heatmap-stat {
   font-size: 11px;
-  color: #64748b;
+  color: var(--color-slate-500);
   margin-left: auto;
 }
 
@@ -1631,16 +1631,16 @@
 
 .week-heatmap-name {
   font-size: 9px;
-  color: #64748b;
+  color: var(--color-slate-500);
   font-weight: 500;
 }
 
 .week-heatmap-day.weekend .week-heatmap-name {
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 .week-heatmap-day.today .week-heatmap-name {
-  color: #3b82f6;
+  color: var(--color-blue-500);
   font-weight: 700;
 }
 
@@ -1648,7 +1648,7 @@
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  background: #e2e8f0;
+  background: var(--color-slate-200);
   transition: background 0.2s ease, transform 0.15s ease;
 }
 
@@ -1667,7 +1667,7 @@
 }
 
 .week-heatmap-day.perfect .week-heatmap-cell:not([style*="background"]) {
-  background: #10b981;
+  background: var(--color-emerald-500);
 }
 
 .week-heatmap-day.yellow .week-heatmap-cell:not([style*="background"]) {
@@ -1675,22 +1675,22 @@
 }
 
 .week-heatmap-day.red .week-heatmap-cell:not([style*="background"]) {
-  background: #ef4444;
+  background: var(--color-red-500);
 }
 
 .week-heatmap-day.empty .week-heatmap-cell {
-  background: #e2e8f0;
+  background: var(--color-slate-200);
   opacity: 0.5;
 }
 
 /* Today ring с анимацией */
 .week-heatmap-day.today .week-heatmap-cell {
-  box-shadow: 0 0 0 2px #3b82f6;
+  box-shadow: 0 0 0 2px var(--color-blue-500);
   animation: todayPulse 2s ease-in-out infinite;
 }
 
 @keyframes todayPulse {
-  0%, 100% { box-shadow: 0 0 0 2px #3b82f6; }
+  0%, 100% { box-shadow: 0 0 0 2px var(--color-blue-500); }
   50% { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5); }
 }
 
@@ -1698,9 +1698,9 @@
 .week-heatmap-pattern {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--color-slate-200);
   font-size: 11px;
-  color: #64748b;
+  color: var(--color-slate-500);
   text-align: center;
 }
 
@@ -1713,12 +1713,12 @@
   padding: 16px 8px;
   text-align: center;
   font-size: 13px;
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 .week-heatmap-empty-hint {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-slate-400);
   margin-top: 4px;
 }
 
@@ -1839,8 +1839,8 @@
   font-weight: 500;
   padding: 2px 6px;
   border-radius: 6px;
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--color-slate-100);
+  color: var(--color-slate-500);
 }
 
 .weight-forecast-badge.down {
@@ -1894,11 +1894,11 @@
 
 /* Цвет линии по тренду (fallback) */
 .weight-sparkline-container.trend-down .weight-sparkline-line {
-  stroke: #10b981;
+  stroke: var(--color-emerald-500);
 }
 
 .weight-sparkline-container.trend-up .weight-sparkline-line {
-  stroke: #ef4444;
+  stroke: var(--color-red-500);
 }
 
 .weight-sparkline-container.trend-same .weight-sparkline-line {
@@ -1937,18 +1937,18 @@
 
 .weight-sparkline-day-label {
   font-size: 8px;
-  fill: #94a3b8;
+  fill: var(--color-slate-400);
   font-weight: 400;
 }
 
 .weight-sparkline-weight-label {
   font-size: 8px;
-  fill: #94a3b8;
+  fill: var(--color-slate-400);
   font-weight: 400;
 }
 
 .weight-sparkline-day-today {
-  fill: #64748b;
+  fill: var(--color-slate-500);
   font-weight: 500;
 }
 
@@ -1966,8 +1966,8 @@
 /* === GOAL PROGRESS BAR (современный статус-бар) === */
 .goal-progress-bar {
   grid-column: 1 / -1;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #f8fafc 0%, var(--color-slate-100) 100%);
+  border: 1px solid var(--color-slate-200);
   border-radius: 12px;
   padding: 12px 16px;
   margin-top: 4px;
@@ -1978,14 +1978,14 @@
 /* ⭐ Pulse на "Идеально" (ratio 0.9-1.1) */
 .goal-progress-bar.pulse-perfect {
   animation: pulsePerfect 2s ease-in-out infinite;
-  border-color: #10b981;
+  border-color: var(--color-emerald-500);
   box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
 }
 
 @keyframes pulsePerfect {
   0%, 100% {
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
-    border-color: #10b981;
+    border-color: var(--color-emerald-500);
   }
   50% {
     box-shadow: 0 0 0 8px rgba(16, 185, 129, 0), 0 0 20px rgba(16, 185, 129, 0.3);
@@ -1996,7 +1996,7 @@
 /* 🔔 Shake на превышение (ratio > 1.25) */
 .goal-progress-bar.shake-excess {
   animation: shakeExcess 0.5s ease-in-out;
-  border-color: #ef4444;
+  border-color: var(--color-red-500);
   background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
 }
 
@@ -2016,7 +2016,7 @@
 .goal-progress-title {
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: var(--color-slate-700);
 }
 
 .goal-progress-stats {
@@ -2033,19 +2033,19 @@
 
 .goal-divider {
   font-size: 14px;
-  color: #94a3b8;
+  color: var(--color-slate-400);
   margin: 0 2px;
 }
 
 .goal-target {
   font-size: 14px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 .goal-unit {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--color-slate-400);
   margin-left: 4px;
 }
 
@@ -2063,7 +2063,7 @@
   left: 0;
   right: 0;
   height: 100%;
-  background: #e2e8f0;
+  background: var(--color-slate-200);
   border-radius: 5px;
   z-index: 0;
 }
@@ -2091,7 +2091,7 @@
 }
 
 .goal-progress-fill.over {
-  background: linear-gradient(90deg, #f97316 0%, #ef4444 100%);
+  background: linear-gradient(90deg, #f97316 0%, var(--color-red-500) 100%);
 }
 
 /* Красная часть — перебор калорий */
@@ -2099,7 +2099,7 @@
   position: absolute;
   top: 0;
   height: 100%;
-  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+  background: linear-gradient(90deg, var(--color-red-500) 0%, #dc2626 100%);
   border-radius: 0 5px 5px 0;
   z-index: 2;
 }
@@ -2110,7 +2110,7 @@
   top: -3px;
   width: 3px;
   height: 16px;
-  background: #334155;
+  background: var(--color-slate-700);
   border-radius: 2px;
   z-index: 10;
   transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2125,7 +2125,7 @@
 .goal-progress-footer {
   margin-top: 8px;
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-slate-500);
   text-align: center;
 }
 
@@ -2136,7 +2136,7 @@
 }
 
 .goal-over b {
-  color: #ef4444;
+  color: var(--color-red-500);
   font-weight: 700;
   font-size: 16px;
 }
@@ -2212,7 +2212,7 @@
 
 /* Цвета для каждого макроса */
 .macro-ring.protein .macro-ring-fill {
-  stroke: #ef4444;
+  stroke: var(--color-red-500);
 }
 
 .macro-ring.fat .macro-ring-fill {
@@ -2230,7 +2230,7 @@
   transform: translate(-50%, -50%);
   font-size: 13px;
   font-weight: 700;
-  color: #334155;
+  color: var(--color-slate-700);
   text-align: center;
   white-space: nowrap;
   display: flex;
@@ -2241,7 +2241,7 @@
 .macro-ring-label {
   font-size: 11px;
   font-weight: 600;
-  color: #334155;
+  color: var(--color-slate-700);
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -2251,7 +2251,7 @@
 
 .macro-ring-target {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 .macro-ring-badges {
@@ -2274,7 +2274,7 @@
 
 /* === MACRO BADGE POPUP === */
 .macro-badge-popup {
-  background: #fff;
+  background: var(--color-white);
   border-radius: 14px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1);
   min-width: 200px;
@@ -2307,7 +2307,7 @@
   height: 0;
   border-left: 10px solid transparent;
   border-right: 10px solid transparent;
-  border-bottom: 8px solid #fff;
+  border-bottom: 8px solid var(--color-white);
   filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
 }
 
@@ -2353,7 +2353,7 @@
 /* Прогресс-бар */
 .macro-badge-popup-progress {
   height: 6px;
-  background: #e2e8f0;
+  background: var(--color-slate-200);
   border-radius: 3px;
   overflow: hidden;
   margin-bottom: 10px;
@@ -2410,7 +2410,7 @@
 
 .macro-badge-popup-spark-label {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--color-slate-400);
   white-space: nowrap;
 }
 
@@ -2429,7 +2429,7 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-slate-500);
   margin-bottom: 8px;
   padding: 4px 0;
 }
@@ -2468,7 +2468,7 @@
 }
 
 .macro-badge-popup-norm {
-  color: #94a3b8;
+  color: var(--color-slate-400);
   font-weight: 400;
   font-size: 13px;
 }
@@ -2479,8 +2479,8 @@
   padding: 2px 6px;
   border-radius: 4px;
   margin-left: 6px;
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--color-slate-100);
+  color: var(--color-slate-500);
   white-space: nowrap;
 }
 
@@ -2498,7 +2498,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--color-slate-100);
   padding-top: 10px;
   margin-top: 2px;
 }
@@ -2546,7 +2546,7 @@
   background: rgba(0, 0, 0, 0.05);
   border: none;
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-slate-500);
   cursor: pointer;
   padding: 4px 6px;
   line-height: 1;
@@ -2556,7 +2556,7 @@
 
 .macro-badge-popup-close:hover {
   background: rgba(0, 0, 0, 0.1);
-  color: #334155;
+  color: var(--color-slate-700);
 }
 
 .macro-badge-popup-close:active {
@@ -2567,7 +2567,7 @@
 .macro-badge-popup-swipe {
   width: 32px;
   height: 4px;
-  background: #e2e8f0;
+  background: var(--color-slate-200);
   border-radius: 2px;
   margin: 0 auto 8px;
 }
@@ -2577,7 +2577,7 @@
    ==================================== */
 
 .metric-popup {
-  background: #fff;
+  background: var(--color-white);
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
   animation: popupFadeIn 0.2s ease-out;
@@ -2598,7 +2598,7 @@
 .metric-popup-swipe {
   width: 32px;
   height: 4px;
-  background: #e2e8f0;
+  background: var(--color-slate-200);
   border-radius: 2px;
   margin: 0 auto 8px;
 }
@@ -2638,14 +2638,14 @@
 
 .metric-popup-spark-label {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--color-slate-400);
   white-space: nowrap;
 }
 
 /* Progress bar */
 .metric-popup-progress {
   height: 6px;
-  background: #e2e8f0;
+  background: var(--color-slate-200);
   border-radius: 3px;
   overflow: hidden;
   margin-bottom: 10px;
@@ -2668,7 +2668,7 @@
 }
 
 .metric-popup-goal {
-  color: #94a3b8;
+  color: var(--color-slate-400);
   font-weight: 400;
   font-size: 13px;
 }
@@ -2678,8 +2678,8 @@
   padding: 2px 6px;
   border-radius: 4px;
   margin-left: 6px;
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--color-slate-100);
+  color: var(--color-slate-500);
   white-space: nowrap;
 }
 
@@ -2696,7 +2696,7 @@
 /* Extra info */
 .metric-popup-extra {
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-slate-500);
   margin-bottom: 8px;
   display: flex;
   flex-wrap: wrap;
@@ -2742,7 +2742,7 @@
   background: rgba(0, 0, 0, 0.05);
   border: none;
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-slate-500);
   cursor: pointer;
   padding: 4px 6px;
   line-height: 1;
@@ -2752,7 +2752,7 @@
 
 .metric-popup-close:hover {
   background: rgba(0, 0, 0, 0.1);
-  color: #334155;
+  color: var(--color-slate-700);
 }
 
 .metric-popup-close:active {
@@ -2769,7 +2769,7 @@
   height: 0;
   border-left: 10px solid transparent;
   border-right: 10px solid transparent;
-  border-bottom: 8px solid #fff;
+  border-bottom: 8px solid var(--color-white);
   filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
 }
 
@@ -2787,7 +2787,7 @@
 .macro-ring-percent {
   font-size: 10px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-slate-500);
   background: rgba(100, 116, 139, 0.1);
   padding: 1px 4px;
   border-radius: 4px;
@@ -2829,7 +2829,7 @@
 }
 
 .macro-tip-text {
-  color: #334155;
+  color: var(--color-slate-700);
   line-height: 1.3;
 }
 
@@ -2903,7 +2903,7 @@
 .weight-card-label {
   font-size: 10px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-slate-500);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -2935,7 +2935,7 @@
 .weight-value-unit {
   font-size: 13px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-slate-500);
   margin-left: 2px;
 }
 
@@ -2973,7 +2973,7 @@
   border: none;
   border-radius: 50%;
   background: rgba(107, 114, 128, 0.2);
-  color: #6b7280;
+  color: var(--color-gray-500);
   font-size: 10px;
   line-height: 1;
   cursor: pointer;
@@ -3026,7 +3026,7 @@
 }
 
 .weight-card-trend.trend-same {
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 /* === DEFICIT CARD === */
@@ -3095,7 +3095,7 @@
 
 .deficit-picker-hint {
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-slate-500);
   text-align: center;
   padding: 12px 16px 8px;
   line-height: 1.4;
@@ -3123,7 +3123,7 @@
 
 .household-activity-card {
   flex: 1;
-  background: #fff;
+  background: var(--color-white);
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 12px 14px;
@@ -3190,7 +3190,7 @@
 
 .household-activity-hint {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--color-slate-400);
   margin-top: auto;
   padding-top: 8px;
 }
@@ -3268,7 +3268,7 @@
 /* === FORMULA CARD (Расчёт калорий) === */
 .formula-card {
   flex: 1;
-  background: #fff;
+  background: var(--color-white);
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 12px 16px;
@@ -3306,7 +3306,7 @@
 }
 
 .formula-label {
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 .formula-value {
@@ -3339,7 +3339,7 @@
 
 .formula-row.formula-subtotal .formula-label {
   font-weight: 500;
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 .formula-row.formula-subtotal .formula-value {
@@ -3371,7 +3371,7 @@
 
 .household-picker-hint {
   font-size: 13px;
-  color: #64748b;
+  color: var(--color-slate-500);
   text-align: center;
   padding: 12px 16px 8px;
   line-height: 1.5;
@@ -3422,7 +3422,7 @@
 .training-type-label {
   font-size: 13px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--color-slate-500);
   margin-bottom: 8px;
   display: block;
 }
@@ -3439,9 +3439,9 @@
   align-items: center;
   gap: 4px;
   padding: 12px 8px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid var(--color-slate-200);
   border-radius: 12px;
-  background: #fff;
+  background: var(--color-white);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -3462,7 +3462,7 @@
 .training-type-text {
   font-size: 11px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 .training-type-btn.active .training-type-text {
@@ -3477,7 +3477,7 @@
 .training-time-label {
   font-size: 13px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--color-slate-500);
   margin-bottom: 4px;
   display: block;
   text-align: center;
@@ -3491,8 +3491,8 @@
 /* Compact train time display */
 .compact-train-time {
   font-size: 12px;
-  color: #64748b;
-  background: #f1f5f9;
+  color: var(--color-slate-500);
+  background: var(--color-slate-100);
   padding: 2px 6px;
   border-radius: 4px;
   margin-left: 4px;
@@ -3516,7 +3516,7 @@
 .training-zones-label {
   font-size: 14px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--color-slate-500);
   margin-bottom: 12px;
   text-align: center;
 }
@@ -3574,7 +3574,7 @@
 .training-zones-time {
   font-size: 16px;
   font-weight: 600;
-  color: #3b82f6;
+  color: var(--color-blue-500);
 }
 
 .training-zones-stats .training-zones-kcal {
@@ -3590,7 +3590,7 @@
 .training-presets-label {
   font-size: 13px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--color-slate-500);
   margin-bottom: 8px;
   text-align: center;
 }
@@ -3607,7 +3607,7 @@
   font-weight: 500;
   color: #374151;
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-slate-200);
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
@@ -3616,7 +3616,7 @@
 
 .training-preset-btn:active {
   transform: scale(0.97);
-  background: #f1f5f9;
+  background: var(--color-slate-100);
 }
 
 /* Shake animation for validation */
@@ -3716,7 +3716,7 @@
 .training-comment-prompt .training-comment-text {
   font-size: 13px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--color-gray-500);
 }
 
 .training-comment-prompt.positive .training-comment-text {
@@ -3743,7 +3743,7 @@
 }
 
 .training-comment-input:focus {
-  background: #fff;
+  background: var(--color-white);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
@@ -3780,7 +3780,7 @@
   background: rgba(156, 163, 175, 0.08);
   border-radius: 8px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-gray-500);
   font-style: italic;
 }
 
@@ -3795,7 +3795,7 @@
 }
 
 .zone-clickable:active .compact-zone-value {
-  background: #f1f5f9;
+  background: var(--color-slate-100);
   border-color: #cbd5e1;
 }
 
@@ -3805,11 +3805,11 @@
   min-width: 36px;
   text-align: center;
   display: inline-block;
-  background: #fff;
+  background: var(--color-white);
   border-radius: 6px;
   padding: 4px 8px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-slate-200);
 }
 
 .weight-card-chevron {
@@ -3874,9 +3874,9 @@
   margin: 8px auto;
   padding: 6px 12px;
   font-size: 12px;
-  color: #ef4444;
+  color: var(--color-red-500);
   background: rgba(239, 68, 68, 0.1);
-  border: 1px dashed #ef4444;
+  border: 1px dashed var(--color-red-500);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -3917,8 +3917,8 @@
 }
 
 .dev-clear-weight-btn-mini:hover {
-  color: #ef4444;
-  border-color: #ef4444;
+  color: var(--color-red-500);
+  border-color: var(--color-red-500);
   background: rgba(239, 68, 68, 0.1);
   opacity: 1;
 }
@@ -3939,7 +3939,7 @@
 .weight-picker-section-label {
   font-size: 13px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-slate-500);
   margin-bottom: 8px;
   text-align: center;
 }
@@ -4006,12 +4006,12 @@
 .steps-goal-input:focus {
   outline: none;
   border-color: #16a34a;
-  background: #fff;
+  background: var(--color-white);
 }
 
 .steps-goal-unit {
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 .steps-goal-presets {
@@ -4024,9 +4024,9 @@
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  color: var(--color-slate-500);
+  background: var(--color-slate-100);
+  border: 1px solid var(--color-slate-200);
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -4037,7 +4037,7 @@
 }
 
 .steps-goal-preset.active {
-  color: #fff;
+  color: var(--color-white);
   background: #16a34a;
   border-color: #16a34a;
 }
@@ -4050,7 +4050,7 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--color-blue-500) 0%, #2563eb 100%);
   color: white;
   font-size: 36px;
   font-weight: 300;
@@ -4083,7 +4083,7 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: #fff;
+  background: var(--color-white);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
   z-index: 1000;
@@ -4107,7 +4107,7 @@
 .macro-toast-text {
   font-size: 14px;
   font-weight: 500;
-  color: #334155;
+  color: var(--color-slate-700);
   line-height: 1.3;
 }
 
@@ -4115,10 +4115,10 @@
   width: 24px;
   height: 24px;
   border: none;
-  background: #f1f5f9;
+  background: var(--color-slate-100);
   border-radius: 50%;
   font-size: 16px;
-  color: #64748b;
+  color: var(--color-slate-500);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -4128,13 +4128,13 @@
 }
 
 .macro-toast-close:hover {
-  background: #e2e8f0;
-  color: #334155;
+  background: var(--color-slate-200);
+  color: var(--color-slate-700);
 }
 
 /* Цвета по типу */
 .macro-toast-protein {
-  border-left: 4px solid #ef4444;
+  border-left: 4px solid var(--color-red-500);
 }
 
 .macro-toast-fat {
@@ -4142,7 +4142,7 @@
 }
 
 .macro-toast-carbs {
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid var(--color-blue-500);
 }
 
 .macro-toast-warning {
@@ -4157,13 +4157,13 @@
 
 /* Fiber - зелёный (клетчатка) */
 .macro-toast-fiber {
-  border-left: 4px solid #10b981;
+  border-left: 4px solid var(--color-emerald-500);
   background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
 }
 
 /* Tip - синий (подсказки) */
 .macro-toast-tip {
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid var(--color-blue-500);
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
 }
 
@@ -4263,8 +4263,8 @@
 }
 
 .macro-toast-badge {
-  background: #3b82f6; /* Яркий синий */
-  color: #fff;
+  background: var(--color-blue-500); /* Яркий синий */
+  color: var(--color-white);
   padding: 3px 10px;
   border-radius: 12px;
   font-size: 12px;
@@ -4473,4 +4473,6 @@
   height: 120px;
   opacity: 1;
 }
-
+/* MODULE 02 — Metrics & Graphs
+ * Scope: metrics cards, sparkline, heatmap, sliders/brush, correlation/weight charts.
+ */

@@ -1,16 +1,28 @@
 /* === DARK THEME === */
 [data-theme="dark"] {
+  /* Color palette overrides */
+  --color-white: #ffffff;
+  --color-slate-100: #1e293b;
+  --color-slate-200: #334155;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #94a3b8;
+  --color-gray-500: #9ca3af;
+  --color-slate-700: #0f172a;
+  --color-blue-500: #3b82f6;
+  --color-emerald-500: #10b981;
+  --color-red-500: #ef4444;
+
   --bg: #0f172a;
   --card: #1e293b;
-  --text: #f1f5f9;
-  --muted: #94a3b8;
-  --border: #334155;
-  --acc: #3b82f6;
-  --acc-contrast: #ffffff;
+  --text: var(--color-slate-100);
+  --muted: var(--color-slate-400);
+  --border: var(--color-slate-700);
+  --acc: var(--color-blue-500);
+  --acc-contrast: var(--color-white);
   
   /* Stats block (тёмно-синий) */
   --stats-bg: #1e3a5f;
-  --stats-border: #3b82f6;
+  --stats-border: var(--color-blue-500);
   
   /* Activity block (тёмно-жёлтый) */
   --activity-bg: #2d2a1f;
@@ -86,12 +98,12 @@
 }
 
 [data-theme="dark"] .macro-toast-fiber {
-  border-left-color: #10b981;
+  border-left-color: var(--color-emerald-500);
   background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
 }
 
 [data-theme="dark"] .macro-toast-tip {
-  border-left-color: #3b82f6;
+  border-left-color: var(--color-blue-500);
   background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%);
 }
 
@@ -115,7 +127,7 @@
 }
 
 [data-theme="dark"] .macro-badge-popup-title {
-  color: #f1f5f9;
+  color: var(--color-slate-100);
 }
 
 [data-theme="dark"] .macro-badge-popup-sparkline {
@@ -123,20 +135,20 @@
 }
 
 [data-theme="dark"] .macro-badge-popup-spark-label {
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 [data-theme="dark"] .macro-badge-popup-progress {
-  background: #334155;
+  background: var(--color-slate-700);
 }
 
 [data-theme="dark"] .macro-badge-popup-norm {
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 [data-theme="dark"] .macro-badge-popup-compare {
-  background: #334155;
-  color: #94a3b8;
+  background: var(--color-slate-700);
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .macro-badge-popup-compare.up {
@@ -150,7 +162,7 @@
 }
 
 [data-theme="dark"] .macro-badge-popup-time-msg {
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .macro-badge-popup-streak {
@@ -160,7 +172,7 @@
 }
 
 [data-theme="dark"] .macro-badge-popup-desc {
-  border-top-color: #334155;
+  border-top-color: var(--color-slate-700);
 }
 
 [data-theme="dark"] .macro-badge-popup-item {
@@ -175,12 +187,12 @@
 
 [data-theme="dark"] .macro-badge-popup-close {
   background: rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .macro-badge-popup-close:hover {
   background: rgba(255, 255, 255, 0.2);
-  color: #f1f5f9;
+  color: var(--color-slate-100);
 }
 
 /* Dark theme: Metric Popup */
@@ -198,7 +210,7 @@
 }
 
 [data-theme="dark"] .metric-popup-title {
-  color: #f1f5f9;
+  color: var(--color-slate-100);
 }
 
 [data-theme="dark"] .metric-popup-sparkline {
@@ -206,20 +218,20 @@
 }
 
 [data-theme="dark"] .metric-popup-spark-label {
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 [data-theme="dark"] .metric-popup-progress {
-  background: #334155;
+  background: var(--color-slate-700);
 }
 
 [data-theme="dark"] .metric-popup-goal {
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 
 [data-theme="dark"] .metric-popup-compare {
-  background: #334155;
-  color: #94a3b8;
+  background: var(--color-slate-700);
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .metric-popup-compare.up {
@@ -233,11 +245,11 @@
 }
 
 [data-theme="dark"] .metric-popup-extra {
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .metric-popup-extra b {
-  color: #f1f5f9;
+  color: var(--color-slate-100);
 }
 
 [data-theme="dark"] .metric-popup-streak {
@@ -254,16 +266,16 @@
 
 [data-theme="dark"] .metric-popup-close {
   background: rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .metric-popup-close:hover {
   background: rgba(255, 255, 255, 0.2);
-  color: #f1f5f9;
+  color: var(--color-slate-100);
 }
 
 [data-theme="dark"] .skeleton-item {
-  background: linear-gradient(90deg, #334155 0%, #475569 50%, #334155 100%);
+  background: linear-gradient(90deg, var(--color-slate-700) 0%, #475569 50%, var(--color-slate-700) 100%);
 }
 
 [data-theme="dark"] .meal-card,
@@ -291,9 +303,9 @@
   color: #93c5fd; 
 }
 [data-theme="dark"] .meal-type-label:hover { background: linear-gradient(135deg, #1e40af 0%, #4338ca 100%); }
-[data-theme="dark"] .meal-type-arrow { color: #94a3b8; }
+[data-theme="dark"] .meal-type-arrow { color: var(--color-slate-400); }
 
-[data-theme="dark"] .meal-kcal-badge { background: #334155; color: #e2e8f0; }
+[data-theme="dark"] .meal-kcal-badge { background: var(--color-slate-700); color: var(--color-slate-200); }
 [data-theme="dark"] .meal-sep.meal-type-breakfast .meal-kcal-badge { background: #431407; color: #fb923c; }
 [data-theme="dark"] .meal-sep.meal-type-lunch .meal-kcal-badge { background: #14532d; color: #4ade80; }
 [data-theme="dark"] .meal-sep.meal-type-dinner .meal-kcal-badge { background: #1e3a8a; color: #60a5fa; }
@@ -334,7 +346,7 @@
 }
 
 [data-theme="dark"] .sparkline-skeleton-line {
-  background: linear-gradient(90deg, #334155 0%, #475569 50%, #334155 100%);
+  background: linear-gradient(90deg, var(--color-slate-700) 0%, #475569 50%, var(--color-slate-700) 100%);
 }
 
 [data-theme="dark"] .sparkline-skeleton-dot {
@@ -375,7 +387,7 @@
 }
 
 [data-theme="dark"] .sparkline-goal {
-  stroke: #64748b;
+  stroke: var(--color-slate-500);
 }
 
 [data-theme="dark"] .sparkline-dot-ok {
@@ -391,7 +403,7 @@
 }
 
 [data-theme="dark"] .sparkline-day-label {
-  fill: #64748b;
+  fill: var(--color-slate-500);
 }
 
 [data-theme="dark"] .sparkline-day-today {
@@ -400,7 +412,7 @@
 
 /* Dark mode для пунктирных линий от точек к дням */
 [data-theme="dark"] .sparkline-point-line {
-  stroke: #64748b; /* slate-500 — ярче */
+  stroke: var(--color-slate-500); /* slate-500 — ярче */
 }
 
 [data-theme="dark"] .weight-sparkline-point-line {
@@ -418,11 +430,11 @@
 }
 
 [data-theme="dark"] .sparkline-day-forecast {
-  fill: #64748b;
+  fill: var(--color-slate-500);
 }
 
 [data-theme="dark"] .sparkline-mood-label {
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .sparkline-slider-line {
@@ -464,11 +476,11 @@
 }
 
 [data-theme="dark"] .sparkline-slider-tooltip-date {
-  color: #f1f5f9;
+  color: var(--color-slate-100);
 }
 
 [data-theme="dark"] .sparkline-slider-tooltip-kcal {
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .sparkline-slider-tooltip-ratio.ratio-ok {
@@ -489,14 +501,14 @@
 /* Dark theme for new sparkline elements */
 /* Dark mode slider tooltip tags */
 [data-theme="dark"] .sparkline-slider-tooltip-kcal {
-  color: #f1f5f9;
+  color: var(--color-slate-100);
 }
 [data-theme="dark"] .sparkline-slider-tooltip-kcal small {
-  color: #64748b;
+  color: var(--color-slate-500);
 }
 [data-theme="dark"] .sparkline-slider-tooltip-tag {
-  background: #334155;
-  color: #94a3b8;
+  background: var(--color-slate-700);
+  color: var(--color-slate-400);
 }
 [data-theme="dark"] .sparkline-slider-tooltip-tag.good {
   background: #064e3b;
@@ -508,7 +520,7 @@
 }
 
 [data-theme="dark"] .sparkline-week-separator {
-  stroke: #334155;
+  stroke: var(--color-slate-700);
 }
 
 [data-theme="dark"] .sparkline-burn-glow {
@@ -518,7 +530,7 @@
 /* Dark theme for correlation block */
 [data-theme="dark"] .correlation-block {
   background: linear-gradient(135deg, #1a1f2e 0%, #151a24 100%);
-  border-color: #334155;
+  border-color: var(--color-slate-700);
 }
 
 [data-theme="dark"] .correlation-block.positive {
@@ -537,7 +549,7 @@
 }
 
 [data-theme="dark"] .correlation-text {
-  color: #e2e8f0;
+  color: var(--color-slate-200);
 }
 
 [data-theme="dark"] .correlation-clickable:hover {
@@ -585,8 +597,8 @@
 }
 
 [data-theme="dark"] .weight-forecast-badge {
-  background: #334155;
-  color: #94a3b8;
+  background: var(--color-slate-700);
+  color: var(--color-slate-400);
 }
 
 [data-theme="dark"] .weight-forecast-badge.down {
@@ -624,11 +636,11 @@
 }
 
 [data-theme="dark"] .weight-sparkline-day-label {
-  fill: #64748b;
+  fill: var(--color-slate-500);
 }
 
 [data-theme="dark"] .weight-sparkline-day-today {
-  fill: #94a3b8;
+  fill: var(--color-slate-400);
 }
 
 /* Dark theme for bottom sheets (Glassmorphism) */
@@ -842,11 +854,11 @@
 }
 [data-theme="dark"] .tone-slate .mpc-totals-wrap .mpc-header,
 [data-theme="dark"] .tone-slate .mpc-totals-wrap .mpc-totals-values {
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 [data-theme="dark"] .tone-slate .mpc-totals {
   background: #2a3040;
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 /* Violet main-violet card */
@@ -862,7 +874,7 @@
 
 [data-theme="dark"] .card.tone-violet.main-violet .violet-table td {
   border-color: #4c3d6e;
-  color: #e2e8f0;
+  color: var(--color-slate-200);
 }
 
 [data-theme="dark"] .card.tone-violet.main-violet .stat {
@@ -871,7 +883,7 @@
 }
 
 [data-theme="dark"] .card.tone-violet.main-violet .stat > label {
-  color: #e2e8f0;
+  color: var(--color-slate-200);
 }
 
 /* Header bottom */
@@ -938,7 +950,7 @@
   box-shadow: 0 2px 4px rgba(96, 165, 250, 0.3);
 }
 [data-theme="dark"] .today-quick-btn:hover {
-  background: #3b82f6;
+  background: var(--color-blue-500);
 }
 [data-theme="dark"] .today-quick-btn.active {
   background: #34d399;
@@ -1010,11 +1022,11 @@
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  animation: confetti-fall 3s ease-out forwards;
+  animation: confetti-fall-global 3s ease-out forwards;
   transform-origin: center;
 }
 
-@keyframes confetti-fall {
+@keyframes confetti-fall-global {
   0% {
     top: -10px;
     opacity: 1;
@@ -1145,7 +1157,7 @@
   padding: 10px 20px;
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-white);
   background: linear-gradient(135deg, #22c55e, #16a34a);
   border: none;
   border-radius: 20px;
@@ -1367,7 +1379,7 @@
 
 .metrics-label {
   font-size: 9px;
-  color: #64748b;
+  color: var(--color-slate-500);
   text-transform: uppercase;
   letter-spacing: 0.3px;
   font-weight: 500;
@@ -1375,7 +1387,7 @@
 
 .metrics-progress {
   height: 4px;
-  background: #e2e8f0;
+  background: var(--color-slate-200);
   border-radius: 2px;
   margin-top: 8px;
   overflow: hidden;
@@ -1481,7 +1493,7 @@
 /* Плашка Сон / Оценка дня */
 .sleep-card {
   flex: 1;
-  background: #fff;
+  background: var(--color-white);
   border: 1px solid #fce7f3;
   border-radius: 12px;
   padding: 12px 14px;
@@ -1520,7 +1532,7 @@
   border-radius: 8px;
   font-size: 15px;
   text-align: center;
-  background: #fff;
+  background: var(--color-white);
   transition: all 0.2s;
   -webkit-appearance: none;
 }
@@ -1528,7 +1540,7 @@
 .sleep-time-input:focus {
   outline: none;
   border-color: #ec4899;
-  background: #fff;
+  background: var(--color-white);
   box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
 }
 
@@ -1624,7 +1636,7 @@
   border: 1px solid #fce7f3;
   border-radius: 8px;
   font-size: 12px;
-  background: #fff;
+  background: var(--color-white);
   transition: all 0.2s;
   resize: none;
   min-height: 28px;
@@ -1636,7 +1648,7 @@
 .sleep-note:focus {
   outline: none;
   border-color: #ec4899;
-  background: #fff;
+  background: var(--color-white);
 }
 
 .sleep-note::placeholder {
@@ -1680,7 +1692,7 @@
 
 .day-score-manual-hint {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--color-gray-500);
   margin-left: 8px;
   padding: 2px 6px;
   background: rgba(107, 114, 128, 0.1);
@@ -1726,7 +1738,7 @@
 .day-score-face-text {
   font-size: 16px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--color-gray-500);
   transition: color 0.2s ease;
 }
 
@@ -1763,7 +1775,7 @@
   padding: 12px 8px;
   border-radius: 14px;
   border: 2px solid #e5e7eb;
-  background: #fff;
+  background: var(--color-white);
   font-size: 14px;
   font-weight: 600;
   color: #374151;
@@ -1777,8 +1789,8 @@
 
 .day-score-preset-bad.active {
   background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border-color: #ef4444;
+  color: var(--color-red-500);
+  border-color: var(--color-red-500);
 }
 
 .day-score-preset-ok.active {
@@ -1789,8 +1801,8 @@
 
 .day-score-preset-good.active {
   background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-  border-color: #10b981;
+  color: var(--color-emerald-500);
+  border-color: var(--color-emerald-500);
 }
 
 .day-score-slider-container {
@@ -1808,4 +1820,6 @@
   padding: 0 4px;
   opacity: 0.7;
 }
-
+/* MODULE 03 — Dark Theme & Effects
+ * Scope: dark tokens/overrides, animations, empty states, skeletons.
+ */

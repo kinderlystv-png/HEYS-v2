@@ -2,6 +2,15 @@
  * Order preserves legacy cascade; edit modules to change styles.
  * 🚫 NO-TOUCH ZONES: @keyframes, .confetti-*, .water-ring/.water-splash,
  *   safe-area rules, .mpc-* (MealProductCard)
+ *
+ * TABLE OF CONTENTS
+ * 01. Base & Gamification ........ modules/000-base-and-gamification.css
+ * 02. Metrics & Graphs ........... modules/100-metrics-and-graphs.css
+ * 03. Dark Theme & Effects ....... modules/200-dark-and-effects.css
+ * 04. Modals & Day UI ............ modules/300-modals-and-day.css
+ * 05. Water & Hydration .......... modules/400-water-and-hydration.css
+ * 06. PWA & Offline UI ........... modules/500-pwa-and-offline.css
+ * 07. Steps & APS Flow ........... modules/600-steps-and-aps.css
  */
 @import url("./modules/000-base-and-gamification.css");
 @import url("./modules/100-metrics-and-graphs.css");
