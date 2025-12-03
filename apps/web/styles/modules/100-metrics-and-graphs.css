@@ -261,13 +261,14 @@
 
 /* Анимация точек — появляются мгновенно когда линия доходит */
 .sparkline-dot {
-  transition: r 0.1s ease, fill 0.1s ease;
+  transition: r 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), fill 0.15s ease, filter 0.2s ease;
   opacity: 0;
   transform: scale(0);
   transform-box: fill-box;
   transform-origin: center center;
   animation: dotAppear 0.08s ease-out forwards;
   animation-delay: var(--delay, 0s);
+  cursor: pointer;
 }
 
 @keyframes dotAppear {
@@ -325,7 +326,8 @@
 }
 
 .sparkline-dot:hover {
-  r: 5;
+  r: 7;
+  filter: drop-shadow(0 0 4px currentColor) brightness(1.1);
 }
 
 .sparkline-dot-ok {
@@ -828,6 +830,16 @@
   margin-top: 4px;
   text-align: center;
   font-style: italic;
+}
+
+.sparkline-popup-hint-v2 {
+  font-size: 10px;
+  color: var(--text-secondary, #6b7280);
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: var(--bg-secondary, #f3f4f6);
+  border-radius: 6px;
+  text-align: center;
 }
 
 .sparkline-popup-forecast {
@@ -2004,13 +2016,14 @@
 }
 
 .weight-sparkline-dot {
-  transition: r 0.15s ease, fill 0.15s ease;
+  transition: r 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), fill 0.15s ease, filter 0.2s ease;
+  cursor: pointer;
   /* Цвет задаётся inline через style */
 }
 
 .weight-sparkline-dot:hover {
-  r: 5;
-  filter: brightness(1.1);
+  r: 7;
+  filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.6)) brightness(1.15);
 }
 
 .weight-sparkline-dot-today {

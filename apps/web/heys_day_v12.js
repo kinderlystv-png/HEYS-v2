@@ -80,19 +80,31 @@
   // === Meal quality scoring helpers ===
   const MEAL_KCAL_DISTRIBUTION = {
     breakfast: { minPct: 0.20, maxPct: 0.30 },
-    snack1:    { minPct: 0.05, maxPct: 0.10 },
+    snack1:    { minPct: 0.05, maxPct: 0.12 },
     lunch:     { minPct: 0.30, maxPct: 0.40 },
-    snack2:    { minPct: 0.05, maxPct: 0.10 },
+    snack2:    { minPct: 0.05, maxPct: 0.12 },
     dinner:    { minPct: 0.20, maxPct: 0.30 },
-    snack3:    { minPct: 0.02, maxPct: 0.05 },
-    night:     { minPct: 0.00, maxPct: 0.05 }
+    snack3:    { minPct: 0.02, maxPct: 0.08 },
+    night:     { minPct: 0.00, maxPct: 0.05 }  // Ночью не более 5% = ~100 ккал
+  };
+
+  // Абсолютные лимиты калорий по типам (независимо от нормы)
+  const MEAL_KCAL_ABSOLUTE = {
+    breakfast: { min: 300, max: 700, ideal: 500 },
+    snack1:    { min: 50,  max: 200, ideal: 150 },
+    lunch:     { min: 400, max: 800, ideal: 600 },
+    snack2:    { min: 50,  max: 200, ideal: 150 },
+    dinner:    { min: 300, max: 600, ideal: 450 },
+    snack3:    { min: 50,  max: 150, ideal: 100 },
+    night:     { min: 0,   max: 150, ideal: 0 }  // Ночью лучше не есть!
   };
 
   const IDEAL_MACROS = {
-    breakfast: { protPct: 0.20, carbPct: 0.50, fatPct: 0.30 },
-    lunch:     { protPct: 0.30, carbPct: 0.40, fatPct: 0.30 },
-    dinner:    { protPct: 0.35, carbPct: 0.35, fatPct: 0.30 },
-    snack:     { protPct: 0.15, carbPct: 0.55, fatPct: 0.30 }
+    breakfast: { protPct: 0.20, carbPct: 0.50, fatPct: 0.30, minProt: 15 },  // Завтрак — больше углеводов
+    lunch:     { protPct: 0.30, carbPct: 0.40, fatPct: 0.30, minProt: 25 },  // Обед — баланс
+    dinner:    { protPct: 0.35, carbPct: 0.30, fatPct: 0.35, minProt: 25 },  // Ужин — больше белка, меньше углеводов
+    snack:     { protPct: 0.15, carbPct: 0.55, fatPct: 0.30, minProt: 5 },   // Перекус — лёгкий
+    night:     { protPct: 0.40, carbPct: 0.20, fatPct: 0.40, minProt: 10 }   // Ночь — минимум углеводов!
   };
 
   const isMainMealType = (type) => ['breakfast', 'lunch', 'dinner'].includes(type);
@@ -106,42 +118,89 @@
 
   function calcKcalScore(kcal, mealType, optimum, timeStr) {
     const dist = MEAL_KCAL_DISTRIBUTION[mealType] || MEAL_KCAL_DISTRIBUTION.snack1;
+    const absLimits = MEAL_KCAL_ABSOLUTE[mealType] || MEAL_KCAL_ABSOLUTE.snack1;
     const opt = optimum > 0 ? optimum : 2000;
     const kcalPct = opt > 0 ? kcal / opt : 0;
     
     let points = 30;
     let ok = true;
+    const issues = [];
     
+    // === 1. Проверка по % от нормы ===
     if (kcalPct > dist.maxPct) {
       const excess = (kcalPct - dist.maxPct) / dist.maxPct;
-      points -= Math.min(20, Math.round(excess * 30));
+      // Более жёсткий штраф: каждые 50% превышения = -10 баллов
+      const penalty = Math.min(25, Math.round(excess * 50));
+      points -= penalty;
       ok = false;
+      issues.push('превышение');
     } else if (isMainMealType(mealType) && kcalPct < dist.minPct * 0.5) {
       points -= 10;
+      issues.push('слишком мало');
     }
     
-    const parsed = parseTime(timeStr || '');
-    if (parsed && parsed.hh >= 21 && kcal > 200) {
-      points -= Math.min(10, Math.round(kcal / 100));
+    // === 2. Проверка абсолютных лимитов ===
+    if (kcal > absLimits.max) {
+      const absExcess = (kcal - absLimits.max) / absLimits.max;
+      // За каждые 100 ккал сверх лимита = -5 баллов
+      const absPenalty = Math.min(15, Math.round((kcal - absLimits.max) / 100) * 5);
+      points -= absPenalty;
       ok = false;
+      issues.push('много ккал');
     }
     
-    return { points: Math.max(0, points), ok };
+    // === 3. Жёсткий штраф за ночные приёмы ===
+    const parsed = parseTime(timeStr || '');
+    if (parsed) {
+      const hour = parsed.hh;
+      
+      // 22:00-05:00 — ночное время
+      if (hour >= 22 || hour < 5) {
+        // Ночью любой приём > 150 ккал — плохо
+        if (kcal > 150) {
+          const nightPenalty = Math.min(20, Math.round(kcal / 50));
+          points -= nightPenalty;
+          ok = false;
+          issues.push('ночь');
+        }
+        // Тяжёлый приём ночью (>400 ккал) — критично
+        if (kcal > 400) {
+          points -= 10; // дополнительно
+          issues.push('тяжёлая еда ночью');
+        }
+      }
+      // 21:00-22:00 — поздний вечер
+      else if (hour >= 21 && kcal > 300) {
+        const latePenalty = Math.min(10, Math.round(kcal / 100));
+        points -= latePenalty;
+        ok = false;
+        issues.push('поздно');
+      }
+    }
+    
+    return { points: Math.max(0, points), ok, issues };
   }
 
-  function calcMacroScore(prot, carbs, fat, kcal, mealType) {
+  function calcMacroScore(prot, carbs, fat, kcal, mealType, timeStr) {
     const ideal = IDEAL_MACROS[mealType] || IDEAL_MACROS.snack;
     let points = 20; // Базовые баллы (из 25)
     let proteinOk = true;
+    const issues = [];
     
-    // Бонус/штраф за белок в основных приёмах
-    if (isMainMealType(mealType)) {
-      if (prot >= 20) {
-        points += 5; // ✅ Бонус за хороший белок!
-      } else {
-        points -= 10; // Штраф за недостаток
-        proteinOk = false;
-      }
+    // Минимум белка зависит от типа приёма
+    const minProt = ideal.minProt || 10;
+    if (prot >= minProt) {
+      points += 5; // ✅ Бонус за достаточный белок
+    } else if (isMainMealType(mealType)) {
+      points -= 10; // Штраф за недостаток белка в основных приёмах
+      proteinOk = false;
+      issues.push('мало белка');
+    }
+    
+    // Слишком много белка (>50г за приём) — неоптимально для усвоения
+    if (prot > 50) {
+      points -= 3;
+      issues.push('много белка');
     }
     
     if (kcal > 0) {
@@ -150,9 +209,16 @@
       const fatPct = (fat * 9) / kcal;
       const deviation = Math.abs(protPct - ideal.protPct) + Math.abs(carbPct - ideal.carbPct) + Math.abs(fatPct - ideal.fatPct);
       points -= Math.min(10, Math.round(deviation * 15)); // max -10
+      
+      // Штраф за много углеводов вечером/ночью
+      const parsed = parseTime(timeStr || '');
+      if (parsed && parsed.hh >= 20 && carbPct > 0.50) {
+        points -= 5;
+        issues.push('углеводы вечером');
+      }
     }
     
-    return { points: Math.max(0, Math.min(25, points)), proteinOk };
+    return { points: Math.max(0, Math.min(25, points)), proteinOk, issues };
   }
 
   function calcCarbQuality(simple, complex) {
@@ -268,10 +334,17 @@
     const kcalScore = calcKcalScore(kcal, mealType, opt, meal.time);
     score += kcalScore.points;
     if (!kcalScore.ok) badges.push({ type: 'К', ok: false });
+    // Бейдж за ночное/позднее время
+    if (kcalScore.issues?.includes('ночь') || kcalScore.issues?.includes('тяжёлая еда ночью')) {
+      badges.push({ type: '🌙', ok: false, label: 'Поздно' });
+    } else if (kcalScore.issues?.includes('поздно')) {
+      badges.push({ type: '⏰', ok: false, label: 'Вечер' });
+    }
     
-    const macroScore = calcMacroScore(prot, carbs, fat, kcal, mealType);
+    const macroScore = calcMacroScore(prot, carbs, fat, kcal, mealType, meal.time);
     score += macroScore.points;
     if (!macroScore.proteinOk) badges.push({ type: 'Б', ok: false });
+    if (macroScore.issues?.includes('углеводы вечером')) badges.push({ type: 'У⬇', ok: false, label: 'Угл вечером' });
     
     const carbScore = calcCarbQuality(simple, complex);
     score += carbScore.points;
@@ -289,6 +362,27 @@
     let bonusPoints = 0;
     const positiveBadges = [];
     
+    // Парсим время для бонусов
+    const timeParsed = parseTime(meal.time || '');
+    const hour = timeParsed?.hh || 12;
+    
+    // Бонус за ранний завтрак (7:00-9:00 для breakfast)
+    if (mealType === 'breakfast' && hour >= 7 && hour <= 9) {
+      bonusPoints += 2;
+      positiveBadges.push({ type: '🌅', ok: true, label: 'Ранний завтрак' });
+    }
+    
+    // Бонус за оптимальное время обеда (12:00-14:00)
+    if (mealType === 'lunch' && hour >= 12 && hour <= 14) {
+      bonusPoints += 1;
+    }
+    
+    // Бонус за ранний ужин (18:00-19:30)
+    if (mealType === 'dinner' && hour >= 18 && hour < 20) {
+      bonusPoints += 2;
+      positiveBadges.push({ type: '🌇', ok: true, label: 'Ранний ужин' });
+    }
+    
     // Бонус за клетчатку (2г+ в приёме = хорошо)
     const fiber = totals.fiber || 0;
     if (fiber >= 5) {
@@ -305,8 +399,11 @@
       positiveBadges.push({ type: '🌈', ok: true, label: 'Разнообразие' });
     }
     
-    // Бонус за идеальный белок (20-40г)
-    if (prot >= 20 && prot <= 40 && macroScore.proteinOk) {
+    // Бонус за идеальный белок (зависит от типа приёма)
+    const ideal = IDEAL_MACROS[mealType] || IDEAL_MACROS.snack;
+    const idealProtMin = ideal.minProt || 10;
+    const idealProtMax = idealProtMin * 2.5; // Например, для обеда 25-62г
+    if (prot >= idealProtMin && prot <= idealProtMax && macroScore.proteinOk) {
       bonusPoints += 2;
       positiveBadges.push({ type: '💪', ok: true, label: 'Белок' });
     }
@@ -317,14 +414,28 @@
       positiveBadges.push({ type: '🎯', ok: true, label: 'Низкий ГИ' });
     }
     
+    // Бонус за сбалансированный приём (все показатели в норме)
+    if (kcalScore.ok && macroScore.proteinOk && carbScore.ok && fatScore.ok && giHarmScore.ok) {
+      bonusPoints += 3;
+      positiveBadges.push({ type: '⭐', ok: true, label: 'Баланс' });
+    }
+    
     score += Math.min(10, bonusPoints); // Max +10 бонус
     
     // Финальный score: 0-110 (100 base + 10 bonus) → нормализуем до 0-100
     const finalScore = Math.min(100, Math.round(score));
     
     const color = finalScore >= 80 ? '#22c55e' : finalScore >= 50 ? '#eab308' : '#ef4444';
+    
+    // Определяем статус времени
+    const timeIssue = kcalScore.issues?.includes('ночь') || kcalScore.issues?.includes('тяжёлая еда ночью');
+    const lateIssue = kcalScore.issues?.includes('поздно');
+    const timeOk = !timeIssue && !lateIssue;
+    const timeValue = timeIssue ? '⚠️ ночь' : lateIssue ? 'поздно' : '✓';
+    
     const details = [
       { label: 'Калории', value: Math.round(kcal) + ' ккал', ok: kcalScore.ok },
+      { label: 'Время', value: timeValue, ok: timeOk },
       { label: 'Белок', value: Math.round(prot) + 'г', ok: macroScore.proteinOk },
       { label: 'Углеводы', value: carbScore.simpleRatio <= 0.3 ? 'сложные ✓' : Math.round(carbScore.simpleRatio * 100) + '% простых', ok: carbScore.ok },
       { label: 'Жиры', value: fatScore.goodRatio >= 0.6 ? 'полезные ✓' : Math.round(fatScore.goodRatio * 100) + '% полезных', ok: fatScore.ok },
@@ -4975,9 +5086,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     
     // === Анимация прогресса калорий при загрузке ===
     React.useEffect(() => {
-      const target = (eatenKcal / optimum) * 100;
+      // При переборе: зелёная часть = доля нормы от съеденного (optimum/eaten)
+      // При норме: зелёная часть = доля съеденного от нормы (eaten/optimum)
+      const isOver = eatenKcal > optimum;
+      const target = isOver 
+        ? (optimum / eatenKcal) * 100  // При переборе: показываем долю нормы
+        : (eatenKcal / optimum) * 100; // При норме: показываем прогресс к цели
+      
       // Анимируем от 0 до target
-      let start = animatedProgress;
+      let start = 0; // Всегда начинаем с 0 для плавной анимации
       const duration = 800;
       const startTime = performance.now();
       
@@ -6282,7 +6399,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             key: 'dot-' + i,
             cx: p.x, 
             cy: p.y, 
-            r: p.isToday ? 4 : 2.5,
+            r: p.isToday ? 5 : 4,
             className: dotClass,
             style: { cursor: 'pointer', '--delay': animDelay + 's', fill: dotColor },
             onClick: (e) => {
@@ -6924,7 +7041,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             key: 'wdot-' + i,
             cx: p.x, 
             cy: p.y, 
-            r: p.isToday ? 4 : 2.5,
+            r: p.isToday ? 5 : 4,
             className: dotClass,
             style: { cursor: 'pointer', fill: dotColor, '--delay': animDelay + 's' },
             onClick: (e) => {
@@ -6984,43 +7101,111 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         className: 'goal-progress-bar' + 
           (eatenKcal / (optimum || 1) >= 0.9 && eatenKcal / (optimum || 1) <= 1.1 ? ' pulse-perfect' : '')
       },
-        React.createElement('div', { className: 'goal-progress-header' },
-          React.createElement('span', { className: 'goal-progress-title' }, 
-            eatenKcal <= optimum ? '🎯 До цели' : '⚠️ Перебор'
-          ),
-          React.createElement('span', { className: 'goal-progress-stats' },
-            React.createElement('span', { className: 'goal-eaten' }, r0(eatenKcal)),
-            React.createElement('span', { className: 'goal-divider' }, '/'),
-            React.createElement('span', { className: 'goal-target' }, optimum),
-            React.createElement('span', { className: 'goal-unit' }, 'ккал')
-          )
-        ),
-        React.createElement('div', { className: 'goal-progress-track' + (eatenKcal > optimum ? ' has-over' : '') },
-          React.createElement('div', { 
-            className: 'goal-progress-fill',
-            style: { width: Math.min(eatenKcal > optimum ? (optimum / eatenKcal * 100) : animatedProgress, 100) + '%' }
-          }),
-          eatenKcal > optimum && React.createElement('div', { 
-            className: 'goal-progress-over',
-            style: { 
-              left: (optimum / eatenKcal * 100) + '%',
-              width: ((eatenKcal - optimum) / eatenKcal * 100) + '%'
-            }
-          }),
-          React.createElement('div', { 
-            className: 'goal-marker' + (eatenKcal > optimum ? ' over' : ''),
-            style: eatenKcal > optimum ? { left: (optimum / eatenKcal * 100) + '%' } : {}
-          })
-        ),
-        React.createElement('div', { className: 'goal-progress-footer' },
-          eatenKcal <= optimum 
-            ? React.createElement('span', { className: 'goal-remaining' }, 
-                'Осталось ', React.createElement('b', null, remainingKcal), ' ккал'
+        // Вычисляем цвета на основе ratio
+        (() => {
+          const ratio = eatenKcal / (optimum || 1);
+          
+          // Цвет части ДО НОРМЫ (goal-progress-fill)
+          // Если съели >= 80% нормы — зелёный, иначе жёлтый
+          let fillGradient;
+          if (ratio < 0.80) {
+            fillGradient = 'linear-gradient(90deg, #fbbf24 0%, #eab308 100%)'; // жёлтый
+          } else {
+            fillGradient = 'linear-gradient(90deg, #22c55e 0%, #16a34a 100%)'; // зелёный
+          }
+          
+          // Цвет части ПОСЛЕ НОРМЫ (goal-progress-over) — зависит от степени превышения
+          let overColor, overGradient;
+          if (ratio <= 1.05) {
+            // 100-105% — зелёный (всё ОК)
+            overColor = '#22c55e';
+            overGradient = 'linear-gradient(90deg, #22c55e 0%, #16a34a 100%)';
+          } else if (ratio <= 1.10) {
+            // 105-110% — жёлтый (лёгкий перебор)
+            overColor = '#eab308';
+            overGradient = 'linear-gradient(90deg, #fbbf24 0%, #eab308 100%)';
+          } else {
+            // > 110% — красный (перебор)
+            overColor = '#ef4444';
+            overGradient = 'linear-gradient(90deg, #f87171 0%, #dc2626 100%)';
+          }
+          
+          // Цвет заголовка — общий статус дня
+          let titleColor, titleIcon, titleText;
+          if (ratio < 0.80) {
+            titleColor = '#eab308';
+            titleIcon = '📉';
+            titleText = 'Маловато';
+          } else if (ratio <= 1.0) {
+            titleColor = '#22c55e';
+            titleIcon = '🎯';
+            titleText = 'До цели';
+          } else if (ratio <= 1.05) {
+            titleColor = '#22c55e';
+            titleIcon = '✅';
+            titleText = 'Отлично';
+          } else if (ratio <= 1.10) {
+            titleColor = '#eab308';
+            titleIcon = '⚠️';
+            titleText = 'Чуть больше';
+          } else {
+            titleColor = '#ef4444';
+            titleIcon = '🚨';
+            titleText = 'Перебор';
+          }
+          
+          return React.createElement(React.Fragment, null,
+            React.createElement('div', { className: 'goal-progress-header' },
+              React.createElement('span', { 
+                className: 'goal-progress-title',
+                style: { color: titleColor }
+              }, titleIcon + ' ' + titleText),
+              React.createElement('span', { className: 'goal-progress-stats' },
+                React.createElement('span', { 
+                  className: 'goal-eaten',
+                  style: { color: titleColor }
+                }, r0(eatenKcal)),
+                React.createElement('span', { className: 'goal-divider' }, '/'),
+                React.createElement('span', { className: 'goal-target' }, optimum),
+                React.createElement('span', { className: 'goal-unit' }, 'ккал')
               )
-            : React.createElement('span', { className: 'goal-over' }, 
-                'Превышение на ', React.createElement('b', null, Math.abs(remainingKcal)), ' ккал'
-              )
-        )
+            ),
+            React.createElement('div', { className: 'goal-progress-track' + (eatenKcal > optimum ? ' has-over' : '') },
+              React.createElement('div', { 
+                className: 'goal-progress-fill',
+                style: { 
+                  width: Math.min(animatedProgress, 100) + '%',
+                  background: fillGradient
+                }
+              }),
+              eatenKcal > optimum && React.createElement('div', { 
+                className: 'goal-progress-over',
+                style: { 
+                  left: (optimum / eatenKcal * 100) + '%',
+                  width: ((eatenKcal - optimum) / eatenKcal * 100) + '%',
+                  background: overGradient
+                }
+              }),
+              React.createElement('div', { 
+                className: 'goal-marker' + (eatenKcal > optimum ? ' over' : ''),
+                style: eatenKcal > optimum ? { left: (optimum / eatenKcal * 100) + '%' } : {}
+              })
+            ),
+            React.createElement('div', { className: 'goal-progress-footer' },
+              eatenKcal <= optimum 
+                ? React.createElement('span', { className: 'goal-remaining' }, 
+                    'Осталось ', React.createElement('b', null, remainingKcal), ' ккал'
+                  )
+                : React.createElement('span', { 
+                    className: 'goal-over',
+                    style: { color: overColor }
+                  }, 
+                    ratio <= 1.05 ? 'Небольшой плюс: ' : 'Превышение на ',
+                    React.createElement('b', null, Math.abs(remainingKcal)), ' ккал'
+                  )
+            )
+          );
+        })()
       ),
       // Confetti overlay
       showConfetti && React.createElement('div', { className: 'confetti-container' },
@@ -7202,7 +7387,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           sparklinePopup.y, 
           popupW, 
           popupH,
-          { preferAbove: false, offset: 15 }
+          { preferAbove: false, offset: 8 }
         );
         const { left, top, arrowPos, showAbove } = pos;
         
@@ -7464,7 +7649,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           macroBadgePopup.y, 
           popupWidth, 
           popupHeight,
-          { preferAbove: false, offset: 15 }
+          { preferAbove: false, offset: 8 }
         );
         const { left, top, arrowPos, showAbove } = pos;
         
@@ -7765,13 +7950,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       metricPopup && (() => {
         // Позиционирование с защитой от выхода за экран
         const popupW = 280;
-        const popupH = 350; // Примерная высота
+        const popupH = 320; // Примерная высота
         const pos = getSmartPopupPosition(
           metricPopup.x, 
           metricPopup.y, 
           popupW, 
           popupH,
-          { preferAbove: false, offset: 15 }
+          { preferAbove: false, offset: 8 }
         );
         const { left, top, arrowPos, showAbove } = pos;
         
@@ -8157,81 +8342,197 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         ), // закрываем условие weightSparklineData.length >= 2
         renderWeightSparkline(weightSparklineData, weightTrend)
       ),
-      // Popup с деталями веса при клике на точку
-      sparklinePopup && sparklinePopup.type === 'weight' && React.createElement('div', {
-        className: 'sparkline-popup',
-        style: { 
-          position: 'fixed',
-          left: Math.min(Math.max(sparklinePopup.x, 100), window.innerWidth - 100) + 'px', 
-          top: (sparklinePopup.y - 100) + 'px'
-        },
-        onClick: (e) => e.stopPropagation(),
-        onTouchStart: (e) => { e.currentTarget._touchStartY = e.touches[0].clientY; },
-        onTouchMove: (e) => {
-          const deltaY = e.touches[0].clientY - (e.currentTarget._touchStartY || 0);
-          if (deltaY > 30) e.currentTarget.style.opacity = Math.max(0, 1 - deltaY / 100);
-        },
-        onTouchEnd: (e) => {
-          const deltaY = e.changedTouches[0].clientY - (e.currentTarget._touchStartY || 0);
-          if (deltaY > 50) { setSparklinePopup(null); haptic('light'); }
-          else e.currentTarget.style.opacity = 1;
-        }
-      },
-        React.createElement('div', { className: 'sparkline-popup-header' },
-          sparklinePopup.point.isToday ? 'Сегодня' : sparklinePopup.point.dayNum + ' число'
-        ),
-        React.createElement('div', { className: 'sparkline-popup-row' },
-          React.createElement('span', { className: 'sparkline-popup-label' }, 'Вес'),
-          React.createElement('span', { className: 'sparkline-popup-value' }, sparklinePopup.point.weight + ' кг')
-        ),
-        React.createElement('div', { className: 'sparkline-popup-row' },
-          React.createElement('span', { className: 'sparkline-popup-label' }, 'Изменение'),
-          React.createElement('span', { 
-            className: 'sparkline-popup-value ' + 
-              (sparklinePopup.point.localTrend < -0.05 ? 'good' : 
-               sparklinePopup.point.localTrend > 0.05 ? 'bad' : '')
-          }, (sparklinePopup.point.localTrend > 0 ? '+' : '') + 
-             sparklinePopup.point.localTrend.toFixed(1) + ' кг')
-        ),
-        !sparklinePopup.point.isToday && sparklinePopup.point.date && React.createElement('button', {
-          className: 'sparkline-popup-btn',
-          onClick: () => {
-            setSparklinePopup(null);
-            setDate(sparklinePopup.point.date);
-            haptic('light');
+      // Popup с деталями веса при клике на точку — V2 STYLE
+      sparklinePopup && sparklinePopup.type === 'weight' && (() => {
+        const point = sparklinePopup.point;
+        const popupW = 240;
+        const popupH = 180;
+        const pos = getSmartPopupPosition(
+          sparklinePopup.x, 
+          sparklinePopup.y, 
+          popupW, 
+          popupH,
+          { preferAbove: true, offset: 8 }
+        );
+        const { left, top, arrowPos, showAbove } = pos;
+        
+        // Цвет по тренду: снижение = зелёный, рост = красный
+        const trend = point.localTrend || 0;
+        const color = trend < -0.05 ? '#22c55e' : trend > 0.05 ? '#ef4444' : '#6b7280';
+        const trendIcon = trend < -0.05 ? '↓' : trend > 0.05 ? '↑' : '→';
+        
+        // Swipe
+        let startY = 0;
+        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
+        const onTouchEnd = (e) => {
+          const deltaY = e.changedTouches[0].clientY - startY;
+          if (deltaY > 50) { 
+            setSparklinePopup(null); 
+            haptic('light'); 
           }
-        }, '→ Перейти к дню')
-      ),
-      // Popup для прогноза веса (завтра)
-      sparklinePopup && sparklinePopup.type === 'weight-forecast' && React.createElement('div', {
-        className: 'sparkline-popup sparkline-popup-forecast',
-        style: { 
-          position: 'fixed',
-          left: Math.min(sparklinePopup.x - 120, window.innerWidth - 200) + 'px', 
-          top: (sparklinePopup.y - 100) + 'px'
+        };
+        
+        return React.createElement('div', {
+          className: 'sparkline-popup sparkline-popup-v2' + (showAbove ? ' show-above' : ''),
+          role: 'dialog',
+          'aria-label': 'Вес ' + point.weight + ' кг',
+          'aria-modal': 'true',
+          style: { 
+            position: 'fixed',
+            left: left + 'px', 
+            top: top + 'px',
+            width: popupW + 'px',
+            zIndex: 9999
+          },
+          onClick: (e) => e.stopPropagation(),
+          onTouchStart: onTouchStart,
+          onTouchEnd: onTouchEnd
         },
-        onClick: (e) => e.stopPropagation()
-      },
-        React.createElement('div', { className: 'sparkline-popup-header' },
-          '🔮 Прогноз на ' + sparklinePopup.point.dayNum + ' число'
-        ),
-        React.createElement('div', { className: 'sparkline-popup-row' },
-          React.createElement('span', { className: 'sparkline-popup-label' }, 'Ожидаемый вес'),
-          React.createElement('span', { className: 'sparkline-popup-value' }, '~' + sparklinePopup.point.weight + ' кг')
-        ),
-        React.createElement('div', { className: 'sparkline-popup-row' },
-          React.createElement('span', { className: 'sparkline-popup-label' }, 'Изменение'),
-          React.createElement('span', { 
-            className: 'sparkline-popup-value ' + 
-              (sparklinePopup.point.forecastChange < -0.05 ? 'good' : 
-               sparklinePopup.point.forecastChange > 0.05 ? 'bad' : '')
-          }, (sparklinePopup.point.forecastChange > 0 ? '+' : '') + 
-             sparklinePopup.point.forecastChange.toFixed(1) + ' кг')
-        ),
-        React.createElement('div', { className: 'sparkline-popup-hint' },
-          'На основе тренда последних дней'
-        )
-      ),
+          // Цветная полоса
+          React.createElement('div', { 
+            className: 'sparkline-popup-stripe',
+            style: { background: color }
+          }),
+          // Контент
+          React.createElement('div', { className: 'sparkline-popup-content' },
+            // Swipe indicator
+            React.createElement('div', { className: 'sparkline-popup-swipe' }),
+            // Header: дата + тренд
+            React.createElement('div', { className: 'sparkline-popup-header-v2' },
+              React.createElement('span', { className: 'sparkline-popup-date' },
+                point.isToday ? '📅 Сегодня' : '📅 ' + point.dayNum + ' число'
+              ),
+              React.createElement('span', { 
+                className: 'sparkline-popup-pct',
+                style: { color: color }
+              }, trendIcon + ' ' + (trend > 0 ? '+' : '') + trend.toFixed(1) + ' кг')
+            ),
+            // Основное значение веса
+            React.createElement('div', { className: 'sparkline-popup-value-row' },
+              React.createElement('span', { style: { color: '#374151', fontWeight: 700, fontSize: '18px' } }, 
+                '⚖️ ' + point.weight + ' кг'
+              )
+            ),
+            // Теги: если есть данные о дне
+            (point.sleepHours > 0 || point.steps > 0) &&
+              React.createElement('div', { className: 'sparkline-popup-tags-v2' },
+                point.sleepHours > 0 && React.createElement('span', { 
+                  className: 'sparkline-popup-tag-v2' + (point.sleepHours < 6 ? ' bad' : point.sleepHours >= 7 ? ' good' : '')
+                }, '😴 ' + point.sleepHours.toFixed(1) + 'ч'),
+                point.steps > 0 && React.createElement('span', { 
+                  className: 'sparkline-popup-tag-v2' + (point.steps >= 10000 ? ' good' : '')
+                }, '👟 ' + point.steps.toLocaleString())
+              ),
+            // Кнопка перехода
+            !point.isToday && point.date && React.createElement('button', {
+              className: 'sparkline-popup-btn-v2',
+              onClick: () => {
+                setSparklinePopup(null);
+                setDate(point.date);
+                haptic('light');
+              }
+            }, '→ Перейти к дню'),
+            // Close
+            React.createElement('button', {
+              className: 'sparkline-popup-close',
+              'aria-label': 'Закрыть',
+              onClick: () => setSparklinePopup(null)
+            }, '✕')
+          ),
+          // Стрелка
+          React.createElement('div', { 
+            className: 'sparkline-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
+          })
+        );
+      })(),
+      // Popup для прогноза веса — V2 STYLE
+      sparklinePopup && sparklinePopup.type === 'weight-forecast' && (() => {
+        const point = sparklinePopup.point;
+        const popupW = 240;
+        const popupH = 160;
+        const pos = getSmartPopupPosition(
+          sparklinePopup.x, 
+          sparklinePopup.y, 
+          popupW, 
+          popupH,
+          { preferAbove: true, offset: 8 }
+        );
+        const { left, top, arrowPos, showAbove } = pos;
+        
+        // Цвет по изменению: снижение = зелёный, рост = красный
+        const change = point.forecastChange || 0;
+        const color = change < -0.05 ? '#22c55e' : change > 0.05 ? '#ef4444' : '#6b7280';
+        const trendIcon = change < -0.05 ? '↓' : change > 0.05 ? '↑' : '→';
+        
+        // Swipe
+        let startY = 0;
+        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
+        const onTouchEnd = (e) => {
+          const deltaY = e.changedTouches[0].clientY - startY;
+          if (deltaY > 50) { 
+            setSparklinePopup(null); 
+            haptic('light'); 
+          }
+        };
+        
+        return React.createElement('div', {
+          className: 'sparkline-popup sparkline-popup-v2' + (showAbove ? ' show-above' : ''),
+          role: 'dialog',
+          'aria-label': 'Прогноз веса ~' + point.weight + ' кг',
+          'aria-modal': 'true',
+          style: { 
+            position: 'fixed',
+            left: left + 'px', 
+            top: top + 'px',
+            width: popupW + 'px',
+            zIndex: 9999
+          },
+          onClick: (e) => e.stopPropagation(),
+          onTouchStart: onTouchStart,
+          onTouchEnd: onTouchEnd
+        },
+          // Цветная полоса (градиент для прогноза)
+          React.createElement('div', { 
+            className: 'sparkline-popup-stripe',
+            style: { background: 'linear-gradient(90deg, #8b5cf6, #a78bfa)' }
+          }),
+          // Контент
+          React.createElement('div', { className: 'sparkline-popup-content' },
+            // Swipe indicator
+            React.createElement('div', { className: 'sparkline-popup-swipe' }),
+            // Header: прогноз + изменение
+            React.createElement('div', { className: 'sparkline-popup-header-v2' },
+              React.createElement('span', { className: 'sparkline-popup-date' },
+                '🔮 Прогноз на ' + point.dayNum
+              ),
+              React.createElement('span', { 
+                className: 'sparkline-popup-pct',
+                style: { color: color }
+              }, trendIcon + ' ' + (change > 0 ? '+' : '') + change.toFixed(1) + ' кг')
+            ),
+            // Основное значение
+            React.createElement('div', { className: 'sparkline-popup-value-row' },
+              React.createElement('span', { style: { color: '#8b5cf6', fontWeight: 700, fontSize: '18px' } }, 
+                '⚖️ ~' + point.weight + ' кг'
+              )
+            ),
+            // Подсказка
+            React.createElement('div', { className: 'sparkline-popup-hint-v2' },
+              'На основе тренда последних дней'
+            ),
+            // Close
+            React.createElement('button', {
+              className: 'sparkline-popup-close',
+              'aria-label': 'Закрыть',
+              onClick: () => setSparklinePopup(null)
+            }, '✕')
+          ),
+          // Стрелка
+          React.createElement('div', { 
+            className: 'sparkline-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
+          })
+        );
+      })(),
       // Контейнер: Макро-кольца + Плашка веса
         React.createElement('div', { className: 'macro-weight-row' },
         // Макро-бар БЖУ (в стиле Apple Watch колец)
@@ -9151,11 +9452,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               return (h || 0) * 60 + (m || 0);
             };
             
-            // Находим диапазон времени
+            // Находим диапазон времени — адаптивный с отступами ±2 часа от данных
             const times = meals.map(m => parseTime(m.time)).filter(t => t > 0);
-            const minTime = Math.min(...times, 6 * 60); // минимум 6:00
-            const maxTime = Math.max(...times, 23 * 60); // максимум 23:00
-            const timeRange = Math.max(maxTime - minTime, 60);
+            const dataMinTime = times.length > 0 ? Math.min(...times) : 12 * 60;
+            const dataMaxTime = times.length > 0 ? Math.max(...times) : 20 * 60;
+            // Добавляем отступы 2 часа с каждой стороны, но не уже 6:00 и не позже 24:00
+            const minTime = Math.max(6 * 60, dataMinTime - 2 * 60);
+            const maxTime = Math.min(24 * 60, dataMaxTime + 2 * 60);
+            // Минимальный диапазон 4 часа для красивого отображения
+            const timeRange = Math.max(maxTime - minTime, 4 * 60);
             
             // Вычисляем точки
             const points = meals.map((m, idx) => {
@@ -11192,7 +11497,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const popupH = 350;
         
         // Используем умное позиционирование
-        const pos = getSmartPopupPosition(x, y, popupW, popupH, { preferAbove: false, offset: 15 });
+        const pos = getSmartPopupPosition(x, y, popupW, popupH, { preferAbove: false, offset: 8 });
         const { left, top, arrowPos, showAbove } = pos;
         
         const getColor = (score) => {

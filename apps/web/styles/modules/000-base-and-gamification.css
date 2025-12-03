@@ -91,7 +91,7 @@
   
   /* Progress colors */
   --success: #22c55e;
-  --success-dark: var(--success-dark);
+  --success-dark: #16a34a;
   --warning: #f59e0b;
   --danger: var(--color-red-500);
   --info: #0ea5e9;
