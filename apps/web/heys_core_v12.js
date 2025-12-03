@@ -761,7 +761,6 @@
           React.createElement('button', {className:'btn', onClick:importReplace, title:'Удаляет все старые, загружает только новые'}, '⚠️ Заменить всё')
         ),
         React.createElement('span', {className:'muted', style:{marginTop:'4px', fontSize:'12px'}}, 'Умный импорт: новые добавятся, существующие обновятся по названию')
-        )
       ),
       React.createElement('div', {className:'card tone-blue'},
         React.createElement('div', {className:'topbar'},
