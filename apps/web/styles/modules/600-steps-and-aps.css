@@ -544,8 +544,8 @@
   color: var(--color-slate-500);
 }
 
-/* Confetti */
-.confetti-container {
+/* Confetti (Meal mood step only) */
+.meal-mood-step .confetti-container {
   position: absolute;
   top: 0;
   left: 0;
@@ -556,7 +556,7 @@
   z-index: 100;
 }
 
-.confetti-piece {
+.meal-mood-step .confetti-piece {
   position: absolute;
   width: 8px;
   height: 8px;

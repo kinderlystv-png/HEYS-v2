@@ -53,7 +53,9 @@
 
 /* Анимация "прыжка" для значений при изменении */
 .metrics-value {
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    color 0.3s ease;
 }
 
 .metrics-card.value-changed .metrics-value {

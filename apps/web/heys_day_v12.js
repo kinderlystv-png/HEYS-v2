@@ -9354,7 +9354,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 
                 return [
               // 🎉 Confetti animation
-              showConfetti && React.createElement('div', { className: 'confetti-container', key: 'confetti' },
+              showConfetti && React.createElement('div', { className: 'confetti-container mood-confetti', key: 'confetti' },
                 ...Array(20).fill(0).map((_, i) => 
                   React.createElement('div', { 
                     key: 'confetti-' + i, 

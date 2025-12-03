@@ -1193,10 +1193,6 @@
 }
 
 /* Transitions для плавных изменений */
-.metrics-value {
-  transition: color 0.3s ease;
-}
-
 .metrics-progress-bar {
   transition: width 0.3s ease, background 0.3s ease;
 }
@@ -1840,8 +1836,8 @@
   opacity: 0.8;
 }
 
-/* 🎉 Confetti animation */
-.confetti-container {
+/* 🎉 Confetti animation (Mood sliders) */
+.mood-confetti {
   position: absolute;
   top: 0;
   left: 0;
@@ -1852,7 +1848,7 @@
   z-index: 10;
 }
 
-.confetti-piece {
+.mood-confetti .confetti-piece {
   position: absolute;
   width: 10px;
   height: 10px;

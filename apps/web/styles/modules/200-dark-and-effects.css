@@ -979,15 +979,15 @@
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3), 0 -1px 4px rgba(0, 0, 0, 0.2);
 }
 
-[data-theme="dark"] .tab {
+[data-theme="dark"] .tabs .tab {
   color: #6c6c70;
 }
 
-[data-theme="dark"] .tab:hover {
+[data-theme="dark"] .tabs .tab:hover {
   background: rgba(255, 255, 255, 0.05);
 }
 
-[data-theme="dark"] .tab.active {
+[data-theme="dark"] .tabs .tab.active {
   color: #818cf8;
 }
 
@@ -1033,6 +1033,27 @@
 }
 
 .confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  animation: confetti-fall-global 3s ease-out forwards;
+  transform-origin: center;
+}
+
+/* Scoped: keep goal-progress confetti unaffected by later module overrides */
+.goal-progress-bar .confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.goal-progress-bar .confetti {
   position: absolute;
   width: 10px;
   height: 10px;
