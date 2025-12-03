@@ -11,6 +11,8 @@
   --color-blue-500: #3b82f6;
   --color-emerald-500: #10b981;
   --color-red-500: #ef4444;
+  --color-gray-400: #9ca3af;
+  --color-blue-ios: #60a5fa;
 
   --bg: #0f172a;
   --card: #1e293b;
@@ -291,7 +293,7 @@
 [data-theme="dark"] .meal-sep.meal-type-dinner { color: #60a5fa; }
 [data-theme="dark"] .meal-sep.meal-type-snack1,
 [data-theme="dark"] .meal-sep.meal-type-snack2,
-[data-theme="dark"] .meal-sep.meal-type-snack3 { color: #9ca3af; }
+[data-theme="dark"] .meal-sep.meal-type-snack3 { color: var(--color-gray-400); }
 [data-theme="dark"] .meal-sep.meal-type-night { color: #a78bfa; }
 
 [data-theme="dark"] .meal-time-badge { 
@@ -895,7 +897,7 @@
 /* Cloud sync indicator dark */
 [data-theme="dark"] .cloud-sync-indicator {
   background: rgba(156, 163, 175, 0.15);
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 [data-theme="dark"] .cloud-sync-indicator.idle {
@@ -1158,7 +1160,7 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--color-white);
-  background: linear-gradient(135deg, #22c55e, #16a34a);
+  background: linear-gradient(135deg, #22c55e, var(--success-dark));
   border: none;
   border-radius: 20px;
   cursor: pointer;
@@ -1579,7 +1581,7 @@
 .sleep-quality-max {
   font-size: 16px;
   font-weight: 500;
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .sleep-duration-hint {
@@ -1678,7 +1680,7 @@
 .day-score-max {
   font-size: 16px;
   font-weight: 500;
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .day-score-auto-hint {
@@ -1760,7 +1762,7 @@
 .day-score-of-ten {
   font-size: 24px;
   font-weight: 500;
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .day-score-presets {

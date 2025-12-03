@@ -499,7 +499,7 @@
 
 .sparkline-popup-v2 .sparkline-popup-tag-v2.good {
   background: #dcfce7;
-  color: #16a34a;
+  color: var(--success-dark);
 }
 
 .sparkline-popup-v2 .sparkline-popup-tag-v2.bad {
@@ -642,7 +642,7 @@
   padding: 2px 6px;
   border-radius: 4px;
 }
-.sparkline-popup-header .popup-pct.good { background: #dcfce7; color: #16a34a; }
+.sparkline-popup-header .popup-pct.good { background: #dcfce7; color: var(--success-dark); }
 .sparkline-popup-header .popup-pct.warn { background: #fef3c7; color: #d97706; }
 .sparkline-popup-header .popup-pct.bad { background: #fee2e2; color: #dc2626; }
 
@@ -686,7 +686,7 @@
   background: var(--color-slate-100);
   color: #475569;
 }
-.sparkline-popup-tag.good { background: #dcfce7; color: #16a34a; }
+.sparkline-popup-tag.good { background: #dcfce7; color: var(--success-dark); }
 .sparkline-popup-tag.warn { background: #fef3c7; color: #d97706; }
 .sparkline-popup-tag.bad { background: #fee2e2; color: #dc2626; }
 
@@ -1222,7 +1222,7 @@
 
 .sparkline-slider-tooltip-ratio.ratio-ok {
   background: #dcfce7;
-  color: #16a34a;
+  color: var(--success-dark);
 }
 
 .sparkline-slider-tooltip-ratio.ratio-warn {
@@ -1267,7 +1267,7 @@
   background: var(--color-slate-100);
   color: #475569;
 }
-.sparkline-slider-tooltip-tag.good { background: #dcfce7; color: #16a34a; }
+.sparkline-slider-tooltip-tag.good { background: #dcfce7; color: var(--success-dark); }
 .sparkline-slider-tooltip-tag.warn { background: #fef3c7; color: #d97706; }
 .sparkline-slider-tooltip-tag.bad { background: #fee2e2; color: #dc2626; }
 
@@ -2073,7 +2073,7 @@
   top: 0;
   left: 0;
   height: 100%;
-  background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(90deg, #22c55e 0%, var(--success-dark) 100%);
   border-radius: 5px 0 0 5px;
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1;
@@ -3018,7 +3018,7 @@
 }
 
 .weight-card-trend.trend-down {
-  color: #16a34a;
+  color: var(--success-dark);
 }
 
 .weight-card-trend.trend-up {
@@ -3062,7 +3062,7 @@
 }
 
 .deficit-value-number.deficit-negative {
-  color: #16a34a;
+  color: var(--success-dark);
 }
 
 .deficit-value-number.deficit-positive {
@@ -3081,7 +3081,7 @@
 }
 
 .deficit-card-trend.trend-down {
-  color: #16a34a;
+  color: var(--success-dark);
 }
 
 .deficit-card-trend.trend-up {
@@ -3171,7 +3171,7 @@
 .household-value-number {
   font-size: 26px;
   font-weight: 700;
-  color: #16a34a;
+  color: var(--success-dark);
   line-height: 1;
 }
 
@@ -3249,7 +3249,7 @@
 .household-value-number {
   font-size: 28px;
   font-weight: 700;
-  color: #16a34a;
+  color: var(--success-dark);
 }
 
 .household-value-unit {
@@ -3327,7 +3327,7 @@
 
 .formula-row.formula-total .formula-value {
   font-size: 16px;
-  color: #16a34a;
+  color: var(--success-dark);
   font-weight: 700;
 }
 
@@ -3357,11 +3357,11 @@
 }
 
 .formula-row.surplus .formula-label {
-  color: #16a34a;
+  color: var(--success-dark);
 }
 
 .formula-row.surplus .formula-value {
-  color: #16a34a;
+  color: var(--success-dark);
   font-weight: 600;
 }
 
@@ -3386,7 +3386,7 @@
 .household-wheel-unit {
   font-size: 20px;
   font-weight: 600;
-  color: #16a34a;
+  color: var(--success-dark);
   align-self: center;
   margin-left: 8px;
 }
@@ -3543,7 +3543,7 @@
 }
 
 .training-zone-header.zone-color-1 { background: #dbeafe; color: #2563eb; }
-.training-zone-header.zone-color-2 { background: #dcfce7; color: #16a34a; }
+.training-zone-header.zone-color-2 { background: #dcfce7; color: var(--success-dark); }
 .training-zone-header.zone-color-3 { background: #fef3c7; color: #d97706; }
 .training-zone-header.zone-color-4 { background: #fee2e2; color: #dc2626; }
 
@@ -3739,7 +3739,7 @@
 }
 
 .training-comment-input::placeholder {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .training-comment-input:focus {
@@ -3906,7 +3906,7 @@
   padding: 0;
   font-size: 12px;
   line-height: 14px;
-  color: #9ca3af;
+  color: var(--color-gray-400);
   background: transparent;
   border: 1px solid #e5e7eb;
   border-radius: 50%;
@@ -4000,12 +4000,12 @@
   border: 2px solid #e5e7eb;
   border-radius: 8px;
   background: #f8fafc;
-  color: #16a34a;
+  color: var(--success-dark);
 }
 
 .steps-goal-input:focus {
   outline: none;
-  border-color: #16a34a;
+  border-color: var(--success-dark);
   background: var(--color-white);
 }
 
@@ -4038,8 +4038,8 @@
 
 .steps-goal-preset.active {
   color: var(--color-white);
-  background: #16a34a;
-  border-color: #16a34a;
+  background: var(--success-dark);
+  border-color: var(--success-dark);
 }
 
 /* === FAB (Floating Action Button) === */

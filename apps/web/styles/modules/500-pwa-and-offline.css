@@ -1032,7 +1032,7 @@
 }
 
 .mc-sleep-comment-input::placeholder {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 [data-theme="dark"] .mc-sleep-comment {
@@ -1409,7 +1409,7 @@
 }
 
 .mc-delta-down {
-  color: #16a34a;
+  color: var(--success-dark);
   background: rgba(22, 163, 74, 0.1);
 }
 
@@ -1667,7 +1667,7 @@
   justify-content: space-between;
   margin-top: 6px;
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .mc-steps-slider-label-health {
@@ -1696,7 +1696,7 @@
 }
 
 [data-theme="dark"] .mc-steps-recommendation {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 /* Recommended steps button */

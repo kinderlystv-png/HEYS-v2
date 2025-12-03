@@ -225,7 +225,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: #9ca3af;
+  color: var(--color-gray-400);
   margin-bottom: 2px;
 }
 
@@ -253,7 +253,7 @@
 
 .meal-rating-max {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .meal-rating-text {
@@ -263,7 +263,7 @@
 }
 
 [data-theme="dark"] .meal-rating-text {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 /* Пресеты справа */
@@ -512,7 +512,7 @@
 }
 
 .meal-comment-input::placeholder {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 [data-theme="dark"] .meal-comment-input {
@@ -622,7 +622,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .meal-mood-sparkline {
@@ -668,7 +668,7 @@
 }
 
 [data-theme="dark"] .meal-mood-history-name {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .meal-mood-history-avg {
@@ -706,7 +706,7 @@
 .mc-progress-text {
   font-size: 11px;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--color-gray-400);
   white-space: nowrap;
 }
 
@@ -758,7 +758,7 @@
   margin: 0 auto 8px;
   width: fit-content;
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--color-gray-400);
   background: rgba(59, 130, 246, 0.05);
   border-radius: 16px;
   animation: swipe-hint-fade 3s ease forwards;
@@ -861,7 +861,7 @@
 }
 
 [data-theme="dark"] .aps-new-hint {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 /* Поле поиска */
@@ -1020,7 +1020,7 @@
   height: 28px;
   border: none;
   background: transparent;
-  color: #9ca3af;
+  color: var(--color-gray-400);
   font-size: 14px;
   cursor: pointer;
   transition: all 0.15s;
@@ -1762,7 +1762,7 @@
 
 [data-theme="dark"] .aps-create-format {
   background: #374151;
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .aps-create-textarea {
@@ -1787,7 +1787,7 @@
 }
 
 .aps-create-textarea::placeholder {
-  color: #9ca3af;
+  color: var(--color-gray-400);
   font-size: 12px;
 }
 
@@ -1859,7 +1859,7 @@
 }
 
 [data-theme="dark"] .aps-preview-extra {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 /* Детальная таблица параметров */
@@ -1887,7 +1887,7 @@
 }
 
 [data-theme="dark"] .aps-preview-label {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .aps-preview-value {
@@ -1905,7 +1905,7 @@
   cursor: pointer;
   transition: all 0.2s;
   background: #e5e7eb;
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .aps-create-btn.active {
@@ -1948,7 +1948,7 @@
 
 [data-theme="dark"] .aps-create-tip {
   background: #1f2937;
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 /* Подсказка о поисковом запросе */

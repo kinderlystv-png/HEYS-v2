@@ -50,7 +50,7 @@
 .sleep-quality-of-ten {
   font-size: 24px;
   font-weight: 500;
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .sleep-quality-presets {
@@ -192,7 +192,7 @@
 }
 
 .sleep-quality-comment-input::placeholder {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .sleep-quality-comment-input:focus {
@@ -218,7 +218,7 @@
 }
 
 .dark .sleep-quality-face-text {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .dark .sleep-quality-preset {
@@ -246,7 +246,7 @@
 
 .dark .comment-history {
   background: rgba(255, 255, 255, 0.08);
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .dark .sleep-quality-comment-input {
@@ -264,7 +264,7 @@
 }
 
 .dark .sleep-quality-hours-info {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .day-score-auto-info {
@@ -345,7 +345,7 @@
 }
 
 .day-score-comment-input::placeholder {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .day-score-comment-input:focus {
@@ -396,7 +396,7 @@
 
 .day-score-label {
   font-size: 13px;
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .day-score-value {
@@ -1045,7 +1045,7 @@
 }
 
 .steps-value .steps-goal {
-  color: #16a34a;
+  color: var(--success-dark);
   font-weight: 700;
 }
 
@@ -1080,7 +1080,7 @@
   width: 2px;
   height: 16px;
   transform: translate(-50%, -50%);
-  background: #16a34a;
+  background: var(--success-dark);
   border-radius: 1px;
   z-index: 1;
   opacity: 0.7;
@@ -1420,7 +1420,7 @@
 }
 
 .mds-dim {
-  color: #9ca3af;
+  color: var(--color-gray-400);
   font-size: 10px;
 }
 
@@ -1549,11 +1549,11 @@
 }
 
 .time-picker-cancel {
-  color: #007aff;
+  color: var(--color-blue-ios);
 }
 
 .time-picker-confirm {
-  color: #007aff;
+  color: var(--color-blue-ios);
   font-weight: 600;
 }
 
@@ -1653,7 +1653,7 @@
 /* Подсказка "изменилось?" для следующих приёмов */
 .mood-hint-change {
   font-size: 11px;
-  color: #007aff;
+  color: var(--color-blue-ios);
   text-align: center;
   margin-top: 4px;
   font-style: italic;
@@ -1695,7 +1695,7 @@
   font-weight: 600;
   min-width: 32px;
   text-align: right;
-  color: #007aff;
+  color: var(--color-blue-ios);
   transition: color 0.2s ease;
 }
 
@@ -2056,7 +2056,7 @@
   top: -14px;
   transform: translateX(-50%);
   font-size: 10px;
-  color: #9ca3af;
+  color: var(--color-gray-400);
   opacity: 0.7;
   pointer-events: none;
 }
@@ -2167,7 +2167,7 @@
 }
 
 .mood-journal-input::placeholder {
-  color: #9ca3af;
+  color: var(--color-gray-400);
 }
 
 .mood-journal-input:focus {
@@ -2197,7 +2197,7 @@
 
 .mood-slider-footer .mood-hint-change {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--color-gray-400);
   margin: 0;
 }
 
@@ -2377,7 +2377,7 @@
 }
 
 .grams-preview-value {
-  color: #007aff;
+  color: var(--color-blue-ios);
 }
 
 .grams-preview-separator {
@@ -2425,7 +2425,7 @@
   transition: color 0.15s;
 }
 .grams-hint:hover {
-  color: #007aff;
+  color: var(--color-blue-ios);
 }
 .grams-hint:active {
   opacity: 0.7;
@@ -2454,8 +2454,8 @@
   background: #f0f0f0;
 }
 .kcal-calc-toggle.active {
-  background: #007aff;
-  border-color: #007aff;
+  background: var(--color-blue-ios);
+  border-color: var(--color-blue-ios);
   color: var(--color-white);
 }
 .kcal-calc-input {
@@ -2474,7 +2474,7 @@
 }
 .kcal-calc-input input:focus {
   outline: none;
-  border-color: #007aff;
+  border-color: var(--color-blue-ios);
 }
 .kcal-calc-result {
   font-size: 14px;
@@ -2530,8 +2530,8 @@
 }
 
 .grams-portion-btn.active {
-  background: #007aff;
-  border-color: #007aff;
+  background: var(--color-blue-ios);
+  border-color: var(--color-blue-ios);
 }
 
 .grams-portion-btn.active .portion-name,
@@ -2633,7 +2633,7 @@
   justify-content: center;
   font-size: 24px;
   font-weight: 500;
-  color: #007aff;
+  color: var(--color-blue-ios);
   background: #f2f2f7;
   border: none;
   border-radius: 12px;
@@ -2686,7 +2686,7 @@
 }
 
 .grams-input:focus {
-  border-color: #007aff;
+  border-color: var(--color-blue-ios);
   box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
 }
 
@@ -2723,7 +2723,7 @@
   position: absolute;
   left: 0;
   height: 6px;
-  background: linear-gradient(90deg, #34c759 0%, #007aff 100%);
+  background: linear-gradient(90deg, #34c759 0%, var(--color-blue-ios) 100%);
   border-radius: 3px;
   transition: width 0.15s ease-out;
 }
@@ -2733,7 +2733,7 @@
   width: 28px;
   height: 28px;
   background: var(--color-white);
-  border: 3px solid #007aff;
+  border: 3px solid var(--color-blue-ios);
   border-radius: 50%;
   transform: translateX(-50%);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -2792,9 +2792,9 @@
 }
 
 .grams-preset.active {
-  background: #007aff;
+  background: var(--color-blue-ios);
   color: var(--color-white);
-  border-color: #007aff;
+  border-color: var(--color-blue-ios);
 }
 
 .grams-preset:not(.active):hover {
