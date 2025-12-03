@@ -2543,21 +2543,50 @@
       setShowTimePicker(true);
     }
     
-    // Открыть модалку для редактирования только времени
+    // Открыть модалку для редактирования времени и типа (новая модульная)
     function openTimeEditor(mealIndex) {
       const meal = day.meals[mealIndex];
       if (!meal) return;
       
-      const timeParts = (meal.time || '').split(':');
-      const hours = parseInt(timeParts[0]) || new Date().getHours();
-      const minutes = parseInt(timeParts[1]) || 0;
-      
-      // Конвертируем реальные часы в индекс колеса
-      setPendingMealTime({ hours: hourToWheelIndex(hours), minutes });
-      setEditingMealIndex(mealIndex);
-      setEditMode('time');
-      setPickerStep(1);
-      setShowTimePicker(true);
+      // Используем новую модульную модалку если доступна
+      if (isMobile && HEYS.MealStep?.showEditMeal) {
+        HEYS.MealStep.showEditMeal({
+          meal,
+          mealIndex,
+          dateKey: date,
+          onComplete: ({ mealIndex: idx, time, mealType, name }) => {
+            // Обновляем приём
+            const newUpdatedAt = Date.now();
+            lastLoadedUpdatedAtRef.current = newUpdatedAt;
+            blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
+            
+            setDay(prevDay => {
+              const updatedMeals = (prevDay.meals || []).map((m, i) =>
+                i === idx ? { ...m, time, mealType, name } : m
+              );
+              // Сортируем по времени
+              const sortedMeals = sortMealsByTime(updatedMeals);
+              return { ...prevDay, meals: sortedMeals, updatedAt: newUpdatedAt };
+            });
+            
+            if (window.HEYS?.analytics) {
+              window.HEYS.analytics.trackDataOperation('meal-time-updated');
+            }
+          }
+        });
+      } else {
+        // Fallback на старую модалку
+        const timeParts = (meal.time || '').split(':');
+        const hours = parseInt(timeParts[0]) || new Date().getHours();
+        const minutes = parseInt(timeParts[1]) || 0;
+        
+        // Конвертируем реальные часы в индекс колеса
+        setPendingMealTime({ hours: hourToWheelIndex(hours), minutes });
+        setEditingMealIndex(mealIndex);
+        setEditMode('time');
+        setPickerStep(1);
+        setShowTimePicker(true);
+      }
     }
     
     // Открыть модалку для редактирования только оценок
@@ -8527,9 +8556,27 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               : 0;
             const isOverTarget = mealsChartData.totalKcal > mealsChartData.targetKcal;
             return React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-              React.createElement('span', { 
-                style: { width: '24px', fontSize: '14px', textAlign: 'center' }
-              }, meal.icon),
+              // Иконка + название типа приёма
+              React.createElement('div', { 
+                style: { 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '4px',
+                  minWidth: '80px',
+                  fontSize: '12px'
+                }
+              },
+                React.createElement('span', { style: { fontSize: '14px' } }, meal.icon),
+                React.createElement('span', { 
+                  style: { 
+                    color: 'var(--text-secondary, #6b7280)',
+                    fontWeight: '500',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }
+                }, meal.name)
+              ),
               React.createElement('div', { 
                 style: { 
                   flex: 1, 

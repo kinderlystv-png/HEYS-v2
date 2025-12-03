@@ -81,10 +81,14 @@
     const { WheelPicker } = HEYS.StepModal;
     
     // Индекс колеса для часов (не реальный час!)
-    // При инициализации берём текущий час и конвертируем в индекс
-    const currentHourIndex = data.hourIndex ?? hourToWheelIndex(new Date().getHours());
-    const minutes = data.minutes ?? Math.floor(new Date().getMinutes() / 5) * 5;
-    const mealType = data.mealType ?? null; // null = авто
+    // При редактировании берём из context, иначе текущий час
+    const defaultHourIndex = context?.initialHourIndex ?? hourToWheelIndex(new Date().getHours());
+    const defaultMinutes = context?.initialMinutes ?? Math.floor(new Date().getMinutes() / 5) * 5;
+    const defaultMealType = context?.initialMealType ?? null;
+    
+    const currentHourIndex = data.hourIndex ?? defaultHourIndex;
+    const minutes = data.minutes ?? defaultMinutes;
+    const mealType = data.mealType ?? defaultMealType;
     
     // Реальный час для отображения и логики
     const realHours = wheelIndexToHour(currentHourIndex);
@@ -746,9 +750,18 @@
       icon: '🕐',
       component: MealTimeStepComponent,
       getInitialData: (ctx) => {
+        // При редактировании берём начальные значения из context
+        if (ctx?.initialHourIndex !== undefined) {
+          return {
+            hourIndex: ctx.initialHourIndex,
+            minutes: ctx.initialMinutes ?? 0,
+            mealType: ctx.initialMealType ?? null
+          };
+        }
+        // Для нового приёма — текущее время
         const now = new Date();
         return {
-          hours: now.getHours(),
+          hourIndex: hourToWheelIndex(now.getHours()),
           minutes: Math.floor(now.getMinutes() / 5) * 5,
           mealType: null // авто
         };
@@ -879,9 +892,83 @@
     return hours * 60 + m;
   }
 
+  /**
+   * Показать модалку редактирования времени и типа приёма (1 шаг)
+   * @param {Object} options
+   * @param {Object} options.meal - Текущий приём для редактирования
+   * @param {number} options.mealIndex - Индекс приёма
+   * @param {string} options.dateKey - Дата (YYYY-MM-DD)
+   * @param {Function} options.onComplete - Callback после сохранения
+   */
+  function showEditMealModal(options = {}) {
+    const { meal, mealIndex, dateKey, onComplete, onClose } = options;
+    if (!meal) {
+      console.error('[MealStep] showEditMeal: meal is required');
+      return;
+    }
+    
+    // Парсим текущее время
+    const timeParts = (meal.time || '').split(':');
+    let hours = parseInt(timeParts[0]) || new Date().getHours();
+    const minutes = parseInt(timeParts[1]) || 0;
+    
+    // Конвертируем 24-26 обратно в 0-2 для отображения
+    if (hours >= 24) hours -= 24;
+    
+    // Конвертируем в индекс колеса
+    const hourIndex = hourToWheelIndex(hours);
+    
+    HEYS.StepModal.show({
+      steps: ['mealTime'],  // Только 1 шаг — время и тип
+      title: '',  // Без заголовка
+      icon: '',   // Без иконки
+      showProgress: false,
+      showStreak: false,
+      showGreeting: false,
+      showTip: false,
+      context: { 
+        dateKey,
+        mealIndex,
+        // Начальные значения
+        initialHourIndex: hourIndex,
+        initialMinutes: minutes,
+        initialMealType: meal.mealType || null
+      },
+      onComplete: (stepData) => {
+        const timeData = stepData.mealTime || {};
+        
+        // Используем initialHourIndex если пользователь не менял
+        const finalHourIndex = timeData.hourIndex ?? hourIndex;
+        let realHours = wheelIndexToHour(finalHourIndex);
+        
+        // Ночные часы (00-02) записываем как 24-26
+        if (realHours < NIGHT_HOUR_THRESHOLD) {
+          realHours += 24;
+        }
+        const timeStr = `${pad2(realHours)}:${pad2(timeData.minutes ?? minutes)}`;
+        
+        // Тип приёма
+        const mealType = timeData.mealType || meal.mealType || null;
+        const mealName = mealType ? (MEAL_TYPES[mealType]?.name || meal.name) : meal.name;
+        
+        // Возвращаем обновлённые данные
+        if (onComplete) {
+          onComplete({
+            mealIndex,
+            time: timeStr,
+            mealType,
+            name: mealName
+          });
+        }
+      },
+      onClose
+    });
+  }
+
   // === Экспорт ===
   HEYS.MealStep = {
     showAddMeal: showAddMealModal,
+    showEditMeal: showEditMealModal,
     TimeStep: MealTimeStepComponent,
     MoodStep: MealMoodStepComponent
   };

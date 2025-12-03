@@ -1,4 +1,10 @@
-/* === PWA Install Banner === */
+/* Table of Contents
+ * 01. PWA Install Banner
+ * 02. iOS Safari PWA Banner
+ * 03. Morning Check-in v2 Enhancements
+ */
+
+/* === 01. PWA Install Banner === */
 .pwa-install-banner {
   position: fixed;
   bottom: 0;
@@ -118,7 +124,7 @@
   background: var(--color-slate-700);
 }
 
-/* === iOS Safari PWA Banner === */
+/* === 02. iOS Safari PWA Banner === */
 .ios-pwa-banner .pwa-banner-content {
   background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
 }
@@ -1238,7 +1244,7 @@
   background: #475569;
 }
 
-/* === Morning Check-in v2 Enhancements === */
+/* === 03. Morning Check-in v2 Enhancements === */
 
 /* Skip button */
 .mc-skip-btn {

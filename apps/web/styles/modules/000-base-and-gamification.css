@@ -1,4 +1,54 @@
-/* === Emoji styles === */
+/* Table of Contents
+ * 01. Emoji styles
+ * 02. MODERN POLISH
+ * 03. common.css
+ * 04. day-stats.css
+ * 05. side-blocks.css
+ * 06. COMPACT CARDS (SaaS style)
+ * 07. COMPACT TRAININGS
+ * 08. TABS WITH ICONS
+ * 09. COMPACT BACKUP INFO
+ * 10. calendar.css
+ * 11. restored base layout & navigation
+ * 12. MODERN HEADER
+ * 13. Theme FAB (Phase 0 Gamification)
+ * 14. Gamification Bar (Phase 1 Live)
+ * 15. Rank Badge
+ * 16. XP Multiplier Badge
+ * 17. Daily Bonus Button
+ * 18. Level Preview Tooltip
+ * 19. Floating XP Text
+ * 20. Daily Action Multiplier
+ * 21. Weekly Challenge Card (в expanded панели)
+ * 22. XP History Chart
+ * 23. Trophy Animation
+ * 24. Daily Goal Pulse
+ * 25. XP Counter Spin Animation
+ * 26. Rare Badge Showcase
+ * 27. Achievement Unlock Animation
+ * 28. Gamification Notification (Level Up / Achievement)
+ * 29. Gamification Expanded Panel
+ * 30. MODERN DATE PICKER
+ * 31. SWIPE NAVIGATION
+ * 32. iOS Switch стиль для stats/diary вкладок
+ * 33. color tone cards
+ * 34. MICRO-ANIMATION: New product fly-in
+ * 35. Login Modal
+ * 36. Client Select Modal
+ * 37. Client Card Animation
+ * 38. Client Dropdown (header)
+ * 39. STREAK визуализация
+ * 40. MOBILE OPTIMIZATION
+ *   40.1 СОВРЕМЕННАЯ ШАПКА НА МОБИЛЬНЫХ
+ *   40.2 MOBILE MEAL CARDS (compact v2.8)
+ *   40.3 Swipeable Row Component
+ *   40.4 ФИОЛЕТОВАЯ ТАБЛИЦА СТАТИСТИКИ
+ *   40.5 УБИРАЕМ ГОРИЗОНТАЛЬНЫЙ СКРОЛЛ ВЕЗДЕ
+ *   40.6 СУТОЧНАЯ СВОДКА (daily-summary)
+ *   40.7 ПРАВАЯ КОЛОНКА (сон, оценка, тренировки)
+ */
+
+/* === 01. Emoji styles === */
 /* Twemoji loaded via JS when 'twemoji' style is selected */
 
 :root {
@@ -52,7 +102,7 @@
   --carbs: #22c55e;
 }
 
-/* === MODERN POLISH === */
+/* === 02. MODERN POLISH === */
 
 html {
   scroll-behavior: smooth;
@@ -85,7 +135,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* === common.css === */
+/* === 03. common.css === */
 body {
   margin: 0;
   font-family:
@@ -257,7 +307,7 @@ td:first-child input {
   width: 1.5cm;
 }
 
-/* === day-stats.css === */
+/* === 04. day-stats.css === */
 .card.tone-violet.main-violet {
   --tb-b: #dad5ff;
   --tb-cell-h: 32px;
@@ -420,7 +470,7 @@ td:first-child input {
   height: 25px;
 }
 
-/* === side-blocks.css === */
+/* === 05. side-blocks.css === */
 .side-row {
   display: flex;
   flex-direction: row;
@@ -435,7 +485,7 @@ td:first-child input {
   gap: 0;
 }
 
-/* === COMPACT CARDS (SaaS style) === */
+/* === 06. COMPACT CARDS (SaaS style) === */
 .compact-card {
   background: var(--color-white);
   border: 1px solid #e5e7eb;
@@ -591,7 +641,7 @@ td:first-child input {
   color: var(--color-gray-400);
 }
 
-/* === COMPACT TRAININGS === */
+/* === 07. COMPACT TRAININGS === */
 .compact-trainings {
   display: flex;
   flex-direction: column;
@@ -728,7 +778,7 @@ td:first-child input {
   background: #f8fafc;
 }
 
-/* === TABS WITH ICONS === */
+/* === 08. TABS WITH ICONS === */
 .tab {
   display: flex;
   flex-direction: column;
@@ -758,7 +808,7 @@ td:first-child input {
   }
 }
 
-/* === COMPACT BACKUP INFO === */
+/* === 09. COMPACT BACKUP INFO === */
 .hdr-backup-info.compact {
   padding: 4px 8px;
   font-size: 11px;
@@ -769,7 +819,7 @@ td:first-child input {
   color: var(--color-slate-500);
 }
 
-/* === calendar.css === */
+/* === 10. calendar.css === */
 /* .area-cal placeholder removed (no styles needed yet) */
 .cal-grid {
   display: grid;
@@ -778,7 +828,7 @@ td:first-child input {
 }
 /* Добавьте сюда остальные стили календаря по мере необходимости */
 
-/* === restored base layout & navigation === */
+/* === 11. restored base layout & navigation === */
 .wrap {
   max-width: 1600px;
   margin: 0 auto;
@@ -801,7 +851,7 @@ td:first-child input {
   }
 }
 
-/* === MODERN HEADER === */
+/* === 12. MODERN HEADER === */
 .hdr {
   display: flex;
   flex-direction: column;
@@ -938,7 +988,7 @@ td:first-child input {
   border-color: rgba(255, 255, 255, 0.35);
 }
 
-/* === Theme FAB (Phase 0 Gamification) === */
+/* === 13. Theme FAB (Phase 0 Gamification) === */
 .theme-fab {
   position: fixed;
   top: 12px;
@@ -976,7 +1026,7 @@ td:first-child input {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* === Gamification Bar (Phase 1 Live) === */
+/* === 14. Gamification Bar (Phase 1 Live) === */
 .hdr-gamification {
   padding: 10px 16px;
   position: relative;
@@ -1259,7 +1309,7 @@ td:first-child input {
   50% { transform: scale(1.15); }
 }
 
-/* === Rank Badge === */
+/* === 15. Rank Badge === */
 .game-rank-badge {
   font-size: 9px;
   padding: 1px 5px;
@@ -1275,7 +1325,7 @@ td:first-child input {
   50% { filter: brightness(1.2); }
 }
 
-/* === XP Multiplier Badge === */
+/* === 16. XP Multiplier Badge === */
 .game-multiplier {
   font-size: 10px;
   font-weight: 700;
@@ -1291,7 +1341,7 @@ td:first-child input {
   50% { transform: scale(1.1); opacity: 0.9; }
 }
 
-/* === Daily Bonus Button === */
+/* === 17. Daily Bonus Button === */
 .game-daily-bonus {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   border: none;
@@ -1321,7 +1371,7 @@ td:first-child input {
   50% { box-shadow: 0 0 12px rgba(245, 158, 11, 0.8); }
 }
 
-/* === Level Preview Tooltip === */
+/* === 18. Level Preview Tooltip === */
 .game-level-group {
   position: relative;
   cursor: help;
@@ -1479,7 +1529,7 @@ td:first-child input {
   border-bottom-color: rgba(15, 23, 42, 0.95);
 }
 
-/* === Floating XP Text === */
+/* === 19. Floating XP Text === */
 @keyframes floatUp {
   0% {
     opacity: 1;
@@ -1534,7 +1584,7 @@ td:first-child input {
   100% { transform: scale(1); }
 }
 
-/* === Daily Action Multiplier === */
+/* === 20. Daily Action Multiplier === */
 .game-daily-mult {
   display: flex;
   align-items: center;
@@ -1578,7 +1628,7 @@ td:first-child input {
   50% { box-shadow: 0 0 12px rgba(249, 115, 22, 0.6); }
 }
 
-/* === Weekly Challenge Card (в expanded панели) === */
+/* === 21. Weekly Challenge Card (в expanded панели) === */
 .game-weekly-card {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
   border: 1px solid rgba(99, 102, 241, 0.3);
@@ -1743,7 +1793,7 @@ td:first-child input {
   text-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
 }
 
-/* === XP History Chart === */
+/* === 22. XP History Chart === */
 .xp-history-section {
   margin-top: 12px;
   margin-bottom: 12px;
@@ -1823,7 +1873,7 @@ td:first-child input {
   opacity: 1;
 }
 
-/* === Trophy Animation === */
+/* === 23. Trophy Animation === */
 .game-personal-best {
   font-size: 11px;
   color: #fbbf24;
@@ -1862,7 +1912,7 @@ td:first-child input {
   }
 }
 
-/* === Daily Goal Pulse === */
+/* === 24. Daily Goal Pulse === */
 .game-progress.near-goal .game-progress-fill {
   animation: goalPulse 1.2s ease-in-out infinite;
 }
@@ -1876,7 +1926,7 @@ td:first-child input {
   }
 }
 
-/* === XP Counter Spin Animation === */
+/* === 25. XP Counter Spin Animation === */
 .game-xp.counting {
   animation: xpCountSpin 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -1896,7 +1946,7 @@ td:first-child input {
   }
 }
 
-/* === Rare Badge Showcase === */
+/* === 26. Rare Badge Showcase === */
 .achievement-badge.rarity-rare {
   animation: rareBadgeShine 3s ease-in-out infinite;
 }
@@ -1951,7 +2001,7 @@ td:first-child input {
   100% { box-shadow: 0 0 20px #ff6b6b; }
 }
 
-/* === Achievement Unlock Animation === */
+/* === 27. Achievement Unlock Animation === */
 .achievement-badge.just-unlocked {
   animation: achievementUnlock 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -1997,7 +2047,7 @@ td:first-child input {
   transform: rotate(180deg);
 }
 
-/* === Gamification Notification (Level Up / Achievement) === */
+/* === 28. Gamification Notification (Level Up / Achievement) === */
 .game-notification {
   position: absolute;
   top: 100%;
@@ -2110,7 +2160,7 @@ td:first-child input {
   color: white;
 }
 
-/* === Gamification Expanded Panel === */
+/* === 29. Gamification Expanded Panel === */
 .game-panel-expanded {
   position: absolute;
   top: calc(100% + 16px);
@@ -2796,7 +2846,7 @@ body:has(.offline-banner) .wrap {
   flex-shrink: 0;
 }
 
-/* === MODERN DATE PICKER === */
+/* === 30. MODERN DATE PICKER === */
 .date-picker {
   position: relative;
   flex-shrink: 0;
@@ -3345,7 +3395,7 @@ body:has(.offline-banner) .wrap {
 /* ═══════════════════════════════════════════════════════════════
    Bottom Navigation Bar — компактный светлый tab bar
    ═══════════════════════════════════════════════════════════════ */
-/* === SWIPE NAVIGATION === */
+/* === 31. SWIPE NAVIGATION === */
 .tab-content-swipeable {
   touch-action: pan-y pinch-zoom;
   min-height: calc(100vh - 180px);
@@ -3524,7 +3574,7 @@ body:has(.offline-banner) .wrap {
   font-weight: 600;
 }
 
-/* === iOS Switch стиль для stats/diary вкладок === */
+/* === 32. iOS Switch стиль для stats/diary вкладок === */
 .tab-switch-group {
   display: flex;
   align-items: center;
@@ -3642,7 +3692,7 @@ body:has(.offline-banner) .wrap {
   margin-bottom: 0;
 }
 
-/* === color tone cards === */
+/* === 33. color tone cards === */
 .card[class*='tone-'] {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
@@ -3872,7 +3922,7 @@ body:has(.offline-banner) .wrap {
   height: 18px;
 }
 
-/* === MICRO-ANIMATION: New product fly-in === */
+/* === 34. MICRO-ANIMATION: New product fly-in === */
 @keyframes productFlyIn {
   0% {
     opacity: 0;
@@ -4217,7 +4267,7 @@ body:has(.offline-banner) .wrap {
   animation: pop 0.25s ease;
 }
 
-/* === Login Modal === */
+/* === 35. Login Modal === */
 .login-modal {
   background: rgba(255, 255, 255, 0.95) !important;
 }
@@ -4250,7 +4300,7 @@ body:has(.offline-banner) .wrap {
   color: var(--muted);
 }
 
-/* === Client Select Modal === */
+/* === 36. Client Select Modal === */
 .client-select-modal {
   background: rgba(255, 255, 255, 0.95) !important;
 }
@@ -4291,7 +4341,7 @@ body:has(.offline-banner) .wrap {
   border-color: rgba(102, 126, 234, 0.3) !important;
 }
 
-/* === Client Card Animation === */
+/* === 37. Client Card Animation === */
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
@@ -4303,7 +4353,7 @@ body:has(.offline-banner) .wrap {
   }
 }
 
-/* === Client Dropdown (header) === */
+/* === 38. Client Dropdown (header) === */
 .hdr-client-clickable:hover {
   background: rgba(0, 0, 0, 0.05);
 }
@@ -4490,7 +4540,7 @@ body:has(.offline-banner) .wrap {
   filter: brightness(0.92);
 }
 
-/* === STREAK визуализация === */
+/* === 39. STREAK визуализация === */
 .cal-cell {
   position: relative;
 }
@@ -4670,9 +4720,9 @@ body:has(.offline-banner) .wrap {
   line-height: 15px;
 }
 
-/* === MOBILE OPTIMIZATION === */
+/* === 40. MOBILE OPTIMIZATION === */
 @media (max-width: 640px) {
-  /* === СОВРЕМЕННАЯ ШАПКА НА МОБИЛЬНЫХ === */
+  /* === 40.1 СОВРЕМЕННАЯ ШАПКА НА МОБИЛЬНЫХ === */
   .hdr {
     padding: 8px 14px 0;
     margin-bottom: 0;
@@ -4797,7 +4847,7 @@ body:has(.offline-banner) .wrap {
     overflow: visible !important;
   }
 
-  /* === MOBILE MEAL CARDS (compact v2.8) === */
+  /* === 40.2 MOBILE MEAL CARDS (compact v2.8) === */
 
   /* Hide table on mobile, show cards */
   .meals-table {
@@ -4811,7 +4861,7 @@ body:has(.offline-banner) .wrap {
     margin-top: 6px;
   }
 
-  /* === Swipeable Row Component === */
+  /* === 40.3 Swipeable Row Component === */
   .swipeable-container {
     position: relative;
     overflow: hidden;
@@ -5290,7 +5340,7 @@ body:has(.offline-banner) .wrap {
     color: #dc2626;
   }
 
-  /* === ФИОЛЕТОВАЯ ТАБЛИЦА СТАТИСТИКИ === */
+  /* === 40.4 ФИОЛЕТОВАЯ ТАБЛИЦА СТАТИСТИКИ === */
   .area-main.card.tone-violet,
   .card.tone-violet {
     width: 100% !important;
@@ -5318,7 +5368,7 @@ body:has(.offline-banner) .wrap {
     font-size: 14px !important;
   }
 
-  /* === УБИРАЕМ ГОРИЗОНТАЛЬНЫЙ СКРОЛЛ ВЕЗДЕ === */
+  /* === 40.5 УБИРАЕМ ГОРИЗОНТАЛЬНЫЙ СКРОЛЛ ВЕЗДЕ === */
   .page,
   .page-day,
   .day-layout,
@@ -5333,7 +5383,7 @@ body:has(.offline-banner) .wrap {
     overflow-y: auto !important;
   }
 
-  /* === СУТОЧНАЯ СВОДКА (daily-summary) === */
+  /* === 40.6 СУТОЧНАЯ СВОДКА (daily-summary) === */
   .daily-summary {
     display: block !important;
     width: 100% !important;
@@ -5375,7 +5425,7 @@ body:has(.offline-banner) .wrap {
     display: block !important;
   }
 
-  /* === ПРАВАЯ КОЛОНКА (сон, оценка, тренировки) === */
+  /* === 40.7 ПРАВАЯ КОЛОНКА (сон, оценка, тренировки) === */
   .area-side {
     width: 100% !important;
     max-width: 100% !important;

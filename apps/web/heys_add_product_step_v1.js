@@ -1075,8 +1075,8 @@
         },
         {
           id: 'grams',
-          title: 'Порция',
-          hint: 'Укажите количество',
+          title: '',
+          hint: '',
           icon: '⚖️',
           component: GramsStep,
           validate: (data, stepData) => (data?.grams || stepData?.search?.grams || 0) > 0

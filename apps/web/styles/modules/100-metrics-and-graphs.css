@@ -1,4 +1,37 @@
-/* === METRICS CARDS (Hero Cards) === */
+/* Table of Contents
+ * 01. METRICS CARDS (Hero Cards)
+ * 02. KCAL SPARKLINE — график калорий (стиль как вес)
+ * 03. SPARKLINE — мини-график калорий
+ * 04. SPARKLINE POPUP — компактные детали при тапе на точку
+ * 05. SPARKLINE POPUP V2 — консистентный с metric-popup
+ * 06. HEATMAP — мини полоска под графиком
+ * 07. MOOD-ПОЛОСА — градиентная полоса настроения
+ * 08. Slider Elements
+ * 09. TODAY LINE — вертикальная линия на текущий день
+ * 10. BRUSH SELECTION — выделение диапазона
+ * 11. SPARKLINE ANNOTATIONS — иконки событий на графике
+ * 12. CORRELATION BLOCK — связь калорий и веса
+ * 13. Week Heatmap (compact)
+ * 14. WEIGHT SPARKLINE — график веса с трендом
+ * 15. GOAL PROGRESS BAR (современный статус-бар)
+ * 16. MACRO + WEIGHT ROW (контейнер для колец и веса)
+ * 17. MACRO RINGS (БЖУ в стиле Apple Watch)
+ * 18. MACRO BADGE POPUP
+ * 19. MACRO TIP — умная подсказка по БЖУ
+ * 20. WEIGHT CARD MODERN (стиль как у goal progress bar)
+ * 21. DEFICIT CARD
+ * 22. DEFICIT PICKER MODAL
+ * 23. HOUSEHOLD (Бытовая активность) PICKER
+ * 24. FORMULA CARD (Расчёт калорий)
+ * 25. Training Rating Section (Step 3)
+ * 26. WEIGHT PICKER MODAL
+ * 27. FAB (Floating Action Button)
+ * 28. MACRO TOAST — подсказка БЖУ снизу
+ * 29. EXPANDABLE ADVICE TOAST
+ * 30. PULL-TO-REFRESH (Modern Design)
+ */
+
+/* === 01. METRICS CARDS (Hero Cards) === */
 .metrics-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -8,13 +41,14 @@
 }
 
 .metrics-card {
+  position: relative;
   min-width: 0;
   background: #f8fafc;
   border: 1px solid var(--color-slate-200);
   border-radius: 10px;
   padding: 8px 4px;
   text-align: center;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.3s ease, border-color 0.3s ease;
 }
 
 /* Анимация "прыжка" для значений при изменении */
@@ -54,7 +88,7 @@
   20%, 40%, 60%, 80% { transform: translateX(3px); }
 }
 
-/* === KCAL SPARKLINE — график калорий (стиль как вес) === */
+/* === 02. KCAL SPARKLINE — график калорий (стиль как вес) === */
 .kcal-sparkline-container {
   grid-column: 1 / -1;
   display: block;
@@ -126,7 +160,7 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-/* === SPARKLINE — мини-график калорий === */
+/* === 03. SPARKLINE — мини-график калорий === */
 .sparkline-container {
   display: block;
   position: relative; /* для позиционирования тултипа */
@@ -347,7 +381,7 @@
   font-weight: 600;
 }
 
-/* === SPARKLINE POPUP — компактные детали при тапе на точку === */
+/* === 04. SPARKLINE POPUP — компактные детали при тапе на точку === */
 /* Базовые стили переопределяются в v2 */
 .sparkline-popup {
   background: white;
@@ -363,7 +397,7 @@
   to { opacity: 1; }
 }
 
-/* === SPARKLINE POPUP V2 — консистентный с metric-popup === */
+/* === 05. SPARKLINE POPUP V2 — консистентный с metric-popup === */
 .sparkline-popup.sparkline-popup-v2 {
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
@@ -906,7 +940,7 @@
   border-bottom-color: #78350f;
 }
 
-/* === HEATMAP — мини полоска под графиком === */
+/* === 06. HEATMAP — мини полоска под графиком === */
 .sparkline-heatmap {
   display: flex;
   gap: 2px;
@@ -933,7 +967,7 @@
 .sparkline-heatmap-day.level-5 { background: #f97316; } /* 115-130% */
 .sparkline-heatmap-day.level-6 { background: var(--color-red-500); } /* >130% */
 
-/* === MOOD-ПОЛОСА — градиентная полоса настроения === */
+/* === 07. MOOD-ПОЛОСА — градиентная полоса настроения === */
 .sparkline-mood-container {
   display: flex;
   flex-wrap: wrap;
@@ -1026,7 +1060,7 @@
   text-shadow: 0 0 4px rgba(59, 130, 246, 0.4);
 }
 
-/* === Slider Elements === */
+/* === 08. Slider Elements === */
 .sparkline-slider-line {
   stroke: var(--color-blue-500);
   stroke-width: 1.5;
@@ -1043,7 +1077,7 @@
   filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.4));
 }
 
-/* === TODAY LINE — вертикальная линия на текущий день === */
+/* === 09. TODAY LINE — вертикальная линия на текущий день === */
 .sparkline-today-line {
   pointer-events: none;
   animation: sparkline-today-pulse 2s ease-in-out infinite;
@@ -1064,7 +1098,7 @@
   50% { transform: translateY(2px); }
 }
 
-/* === BRUSH SELECTION — выделение диапазона === */
+/* === 10. BRUSH SELECTION — выделение диапазона === */
 .sparkline-brush-overlay {
   pointer-events: none;
   animation: sparkline-brush-appear 0.15s ease-out;
@@ -1293,7 +1327,7 @@
   pointer-events: none;
 }
 
-/* === SPARKLINE ANNOTATIONS — иконки событий на графике === */
+/* === 11. SPARKLINE ANNOTATIONS — иконки событий на графике === */
 .sparkline-annotation {
   font-size: 11px;
   text-anchor: middle;
@@ -1502,7 +1536,7 @@
   }
 }
 
-/* === CORRELATION BLOCK — связь калорий и веса === */
+/* === 12. CORRELATION BLOCK — связь калорий и веса === */
 .correlation-block {
   grid-column: 1 / -1;
   display: flex;
@@ -1568,7 +1602,7 @@
   animation: correlationPulse 0.6s ease-out;
 }
 
-/* === Week Heatmap (compact) === */
+/* === 13. Week Heatmap (compact) === */
 .week-heatmap {
   grid-column: 1 / -1;
   background: #f8fafc;
@@ -1727,7 +1761,7 @@
   border-color: #cbd5e1;
 }
 
-/* === WEIGHT SPARKLINE — график веса с трендом === */
+/* === 14. WEIGHT SPARKLINE — график веса с трендом === */
 .weight-sparkline-container {
   grid-column: 1 / -1;
   display: block;
@@ -1963,7 +1997,7 @@
   font-weight: 600;
 }
 
-/* === GOAL PROGRESS BAR (современный статус-бар) === */
+/* === 15. GOAL PROGRESS BAR (современный статус-бар) === */
 .goal-progress-bar {
   grid-column: 1 / -1;
   background: linear-gradient(135deg, #f8fafc 0%, var(--color-slate-100) 100%);
@@ -2141,7 +2175,7 @@
   font-size: 16px;
 }
 
-/* === MACRO + WEIGHT ROW (контейнер для колец и веса) === */
+/* === 16. MACRO + WEIGHT ROW (контейнер для колец и веса) === */
 .macro-weight-row {
   display: flex;
   align-items: stretch;
@@ -2151,7 +2185,7 @@
   grid-column: 1 / -1;
 }
 
-/* === MACRO RINGS (БЖУ в стиле Apple Watch) === */
+/* === 17. MACRO RINGS (БЖУ в стиле Apple Watch) === */
 .macro-rings {
   display: flex;
   justify-content: center;
@@ -2272,7 +2306,7 @@
   transform: scale(1.3);
 }
 
-/* === MACRO BADGE POPUP === */
+/* === 18. MACRO BADGE POPUP === */
 .macro-badge-popup {
   background: var(--color-white);
   border-radius: 14px;
@@ -2810,7 +2844,7 @@
   }
 }
 
-/* === MACRO TIP — умная подсказка по БЖУ === */
+/* === 19. MACRO TIP — умная подсказка по БЖУ === */
 .macro-tip {
   grid-column: 1 / -1;
   display: flex;
@@ -2863,7 +2897,7 @@
   border: 1px solid rgba(100, 116, 139, 0.15);
 }
 
-/* === WEIGHT CARD MODERN (стиль как у goal progress bar) === */
+/* === 20. WEIGHT CARD MODERN (стиль как у goal progress bar) === */
 .weight-card-modern {
   display: flex;
   flex-direction: column;
@@ -3029,7 +3063,7 @@
   color: var(--color-slate-500);
 }
 
-/* === DEFICIT CARD === */
+/* === 21. DEFICIT CARD === */
 .deficit-card-modern {
   display: flex;
   flex-direction: column;
@@ -3088,7 +3122,7 @@
   color: #f59e0b;
 }
 
-/* === DEFICIT PICKER MODAL === */
+/* === 22. DEFICIT PICKER MODAL === */
 .deficit-picker-modal {
   max-width: 280px;
 }
@@ -3106,7 +3140,7 @@
   padding-bottom: 16px;
 }
 
-/* === HOUSEHOLD (Бытовая активность) PICKER === */
+/* === 23. HOUSEHOLD (Бытовая активность) PICKER === */
 .activity-cards-row {
   display: flex;
   gap: 8px;
@@ -3265,7 +3299,7 @@
   font-weight: 500;
 }
 
-/* === FORMULA CARD (Расчёт калорий) === */
+/* === 24. FORMULA CARD (Расчёт калорий) === */
 .formula-card {
   flex: 1;
   background: var(--color-white);
@@ -3630,7 +3664,7 @@
   animation: shake 0.5s ease-in-out;
 }
 
-/* === Training Rating Section (Step 3) === */
+/* === 25. Training Rating Section (Step 3) === */
 .training-rating-section {
   padding: 16px;
   display: flex;
@@ -3842,7 +3876,7 @@
   50% { opacity: 0.7; }
 }
 
-/* === WEIGHT PICKER MODAL === */
+/* === 26. WEIGHT PICKER MODAL === */
 .weight-picker-modal {
   max-width: 320px;
 }
@@ -4042,7 +4076,7 @@
   border-color: var(--success-dark);
 }
 
-/* === FAB (Floating Action Button) === */
+/* === 27. FAB (Floating Action Button) === */
 .fab-add-meal {
   position: fixed;
   bottom: 90px; /* над нижней навигацией */
@@ -4073,7 +4107,7 @@
   transform: scale(0.95);
 }
 
-/* === MACRO TOAST — подсказка БЖУ снизу === */
+/* === 28. MACRO TOAST — подсказка БЖУ снизу === */
 .macro-toast {
   position: fixed;
   bottom: 80px; /* над нижней навигацией */
@@ -4249,7 +4283,7 @@
   transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* === EXPANDABLE ADVICE TOAST === */
+/* === 29. EXPANDABLE ADVICE TOAST === */
 .macro-toast.expanded {
   bottom: 90px;
   max-height: 300px;
@@ -4339,7 +4373,7 @@
   }
 }
 
-/* === PULL-TO-REFRESH (Modern Design) === */
+/* === 30. PULL-TO-REFRESH (Modern Design) === */
 .pull-indicator {
   display: flex;
   flex-direction: column;

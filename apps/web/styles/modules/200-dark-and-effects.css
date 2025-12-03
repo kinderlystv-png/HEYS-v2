@@ -1,4 +1,17 @@
-/* === DARK THEME === */
+/* Table of Contents
+ * 01. DARK THEME
+ * 02. TONE CARDS - DARK
+ * 03. CONFETTI ANIMATION
+ * 04. EMPTY STATE
+ * 05. SPARKLINE EMPTY STATE
+ * 06. SPARKLINE SKELETON
+ * 07. GOAL PROGRESS ANIMATION
+ * 08. DAY SUBTABS (Мобильные под-вкладки)
+ * 09. COMPACT STATS (Статистика)
+ * 10. COMPACT SLEEP BLOCK (суперсветло-розовый)
+ */
+
+/* === 01. DARK THEME === */
 [data-theme="dark"] {
   /* Color palette overrides */
   --color-white: #ffffff;
@@ -819,7 +832,7 @@
   color: #60a5fa;
 }
 
-/* === TONE CARDS - DARK === */
+/* === 02. TONE CARDS - DARK === */
 [data-theme="dark"] .tone-violet,
 [data-theme="dark"] .card.tone-violet {
   background: #2d2640;
@@ -1007,7 +1020,7 @@
   transform: scale(0.95);
 }
 
-/* === CONFETTI ANIMATION === */
+/* === 03. CONFETTI ANIMATION === */
 .confetti-container {
   position: fixed;
   top: 0;
@@ -1050,7 +1063,7 @@
   }
 }
 
-/* === EMPTY STATE === */
+/* === 04. EMPTY STATE === */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -1095,7 +1108,7 @@
   font-weight: 600;
 }
 
-/* === SPARKLINE EMPTY STATE === */
+/* === 05. SPARKLINE EMPTY STATE === */
 .sparkline-empty-state {
   display: flex;
   flex-direction: column;
@@ -1213,7 +1226,7 @@
   color: #86efac;
 }
 
-/* === SPARKLINE SKELETON === */
+/* === 06. SPARKLINE SKELETON === */
 .sparkline-skeleton {
   height: 44px;
   display: flex;
@@ -1255,7 +1268,7 @@
   0%, 100% { opacity: 0.3; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1); }
 }
-/* === GOAL PROGRESS ANIMATION === */
+/* === 07. GOAL PROGRESS ANIMATION === */
 .goal-progress-fill {
   transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -1401,7 +1414,7 @@
   transition: width 0.3s ease;
 }
 
-/* === DAY SUBTABS (Мобильные под-вкладки) === */
+/* === 08. DAY SUBTABS (Мобильные под-вкладки) === */
 .day-subtabs {
   display: flex;
   gap: 8px;
@@ -1458,7 +1471,7 @@
   }
 }
 
-/* === COMPACT STATS (Статистика) === */
+/* === 09. COMPACT STATS (Статистика) === */
 .compact-stats {
   margin-top: 4px;
   margin-bottom: 8px;
@@ -1474,7 +1487,7 @@
   margin-bottom: 12px;
 }
 
-/* === COMPACT SLEEP BLOCK (суперсветло-розовый) === */
+/* === 10. COMPACT SLEEP BLOCK (суперсветло-розовый) === */
 .compact-sleep {
   margin-bottom: 8px;
   background: var(--sleep-bg);

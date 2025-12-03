@@ -492,9 +492,13 @@
     if (clientUpsertQueue.length === 0 && upsertQueue.length === 0) {
       syncProgressTotal = 0;
       syncProgressDone = 0;
-      try {
-        global.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT, { detail: {} }));
-      } catch (e) {}
+      // Дедупликация: отправляем только если ещё не отправляли
+      if (!_syncCompletedEventSent) {
+        _syncCompletedEventSent = true;
+        try {
+          global.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT, { detail: {} }));
+        } catch (e) {}
+      }
     }
   }
   
@@ -547,6 +551,9 @@
   const MAX_RETRY_ATTEMPTS = 5;
   const BASE_RETRY_DELAY = 1000; // 1 сек
   
+  // Флаг для дедупликации события heysSyncCompleted (отправляется только 1 раз за сессию)
+  let _syncCompletedEventSent = false;
+  
   /** Вычислить задержку с exponential backoff */
   function getRetryDelay() {
     // 1s, 2s, 4s, 8s, 16s (max)
@@ -581,7 +588,79 @@
   function logCritical(){ try{ console.info.apply(console, ['[HEYS]'].concat([].slice.call(arguments))); }catch(e){} }
 
   /**
-   * Обёртка для запросов с таймаутом
+   * Проверка, является ли ошибка сетевой (QUIC, fetch failed, network error)
+   * @param {Object|Error} error - Объект ошибки
+   * @returns {boolean} true если это сетевая ошибка
+   */
+  function isNetworkError(error) {
+    if (!error) return false;
+    const msg = (error.message || error.details || '').toLowerCase();
+    return msg.includes('failed to fetch') ||
+           msg.includes('network') ||
+           msg.includes('quic') ||
+           msg.includes('connection') ||
+           msg.includes('timeout') ||
+           msg.includes('aborted');
+  }
+
+  /**
+   * Выполнение запроса с retry и exponential backoff для сетевых ошибок
+   * @param {Function} requestFn - Функция, возвращающая Promise (должна быть функцией, не Promise!)
+   * @param {Object} options - Опции
+   * @param {number} options.maxRetries - Максимум ретраев (по умолчанию 3)
+   * @param {number} options.baseDelayMs - Базовая задержка (по умолчанию 1000)
+   * @param {number} options.timeoutMs - Таймаут каждого запроса (по умолчанию 15000)
+   * @param {string} options.label - Метка для логирования
+   * @returns {Promise} { data, error } или результат запроса
+   */
+  async function fetchWithRetry(requestFn, options = {}) {
+    const maxRetries = options.maxRetries || 3;
+    const baseDelayMs = options.baseDelayMs || 1000;
+    const timeoutMs = options.timeoutMs || 15000;
+    const label = options.label || 'request';
+    
+    let lastError = null;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // Таймаут для каждой попытки
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error(`Timeout: ${label}`)), timeoutMs)
+        );
+        
+        // requestFn — функция, которая создаёт новый Promise при каждом вызове
+        const result = await Promise.race([requestFn(), timeoutPromise]);
+        
+        // Supabase возвращает { data, error } — проверяем error
+        if (result && result.error && isNetworkError(result.error)) {
+          throw new Error(result.error.message || 'Network error');
+        }
+        
+        return result;
+      } catch (e) {
+        lastError = e;
+        
+        // Если это не сетевая ошибка — не ретраим
+        if (!isNetworkError({ message: e.message })) {
+          return { data: null, error: { message: e.message } };
+        }
+        
+        if (attempt < maxRetries) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = baseDelayMs * Math.pow(2, attempt);
+          console.warn(`[HEYS.cloud] ⚡ ${label}: сетевая ошибка, retry ${attempt + 1}/${maxRetries} через ${delay}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+        }
+      }
+    }
+    
+    // Все ретраи исчерпаны
+    console.warn(`[HEYS.cloud] ❌ ${label}: все ${maxRetries} попытки не удались, переход в offline режим`);
+    return { data: null, error: { message: lastError?.message || 'Network error after retries', isNetworkFailure: true } };
+  }
+
+  /**
+   * Обёртка для запросов с таймаутом (legacy, для простых запросов)
    * @param {Promise} promise - Promise для выполнения
    * @param {number} ms - Таймаут в миллисекундах (по умолчанию 10000)
    * @param {string} label - Метка для логирования ошибки
@@ -830,8 +909,9 @@
     user = null;
     status = 'offline';
     clearNamespace();
-    // 🔄 Сброс флага sync — при следующем входе нужна новая синхронизация
+    // 🔄 Сброс флагов sync — при следующем входе нужна новая синхронизация
     initialSyncCompleted = false;
+    _syncCompletedEventSent = false; // Сброс флага события
     startFailsafeTimer(); // Перезапустить failsafe для нового входа
     logCritical('🚪 Выход из системы');
   };
@@ -844,14 +924,22 @@
       muteMirror = true;
       if (!client || !user) { muteMirror = false; return; }
       
-      // Таймаут 20 секунд для медленных мобильных сетей
-      const { data, error } = await withTimeout(
-        client.from('kv_store').select('k,v,updated_at'),
-        20000,
-        'bootstrapSync'
+      // Retry с exponential backoff для сетевых ошибок (QUIC, network)
+      const { data, error } = await fetchWithRetry(
+        () => client.from('kv_store').select('k,v,updated_at'),
+        { maxRetries: 3, timeoutMs: 20000, label: 'bootstrapSync' }
       );
       
-      if (error) { err('bootstrap select', error); muteMirror = false; return; }
+      // Graceful degradation: если сеть не работает — продолжаем с localStorage
+      if (error) { 
+        if (error.isNetworkFailure) {
+          console.warn('[HEYS.cloud] 📴 bootstrapSync: работаем offline с локальными данными');
+        } else {
+          err('bootstrap select', error); 
+        }
+        muteMirror = false; 
+        return; 
+      }
       const ls = global.localStorage;
       // clear only global keys for full bootstrap (no clientId)
       clearNamespace();
@@ -866,9 +954,17 @@
     }catch(e){ err('bootstrap exception', e); muteMirror=false; }
   };
 
+  // Флаг для дедупликации параллельных вызовов bootstrapClientSync
+  let _syncInProgress = null; // null | Promise
   // options.force = true — bypass throttling (для pull-to-refresh)
   cloud.bootstrapClientSync = async function(client_id, options){
     if (!client || !user || !client_id) return;
+    
+    // Дедупликация: если sync уже в процессе для этого клиента — ждём его завершения
+    if (_syncInProgress) {
+      log('sync already in progress, waiting...');
+      return _syncInProgress;
+    }
     
     // 🔄 Отменяем длинный failsafe — sync начался, запускаем короткий (20 сек на сам sync)
     cancelFailsafeTimer();
@@ -908,6 +1004,8 @@
       return;
     }
     
+    // Устанавливаем флаг что sync в процессе
+    _syncInProgress = (async () => {
     try{
       // Проверяем что клиент существует (без автосоздания)
       const _exists = await cloud.ensureClient(client_id);
@@ -918,19 +1016,29 @@
       
       // Проверяем, действительно ли нужна синхронизация
       // Сначала пробуем загрузить только метаданные для проверки
-      // Увеличен таймаут до 10 секунд для мобильных сетей
-      const { data: metaData, error: metaError } = await withTimeout(
-        client
+      // Retry для сетевых ошибок
+      const { data: metaData, error: metaError } = await fetchWithRetry(
+        () => client
           .from('client_kv_store')
           .select('k,updated_at')
           .eq('client_id', client_id)
           .order('updated_at', { ascending: false })
           .limit(5),
-        10000,
-        'clientSync meta check'
+        { maxRetries: 2, timeoutMs: 10000, label: 'clientSync meta check' }
       );
         
       if (metaError) { 
+        // Graceful degradation для сетевых ошибок
+        if (metaError.isNetworkFailure) {
+          console.warn('[HEYS.cloud] 📴 clientSync: сеть недоступна, работаем с локальными данными');
+          cloud._lastClientSync = { clientId: client_id, ts: now };
+          // Помечаем sync как завершённый чтобы разблокировать сохранение
+          if (!initialSyncCompleted) {
+            initialSyncCompleted = true;
+            logCritical('✅ [OFFLINE] Sync пропущен (сеть), локальные данные активны');
+          }
+          return;
+        }
         err('client bootstrap meta check', metaError);
         throw new Error('Sync meta check failed: ' + (metaError.message || metaError));
       }
@@ -949,13 +1057,22 @@
       
       // Теперь загружаем полные данные только если есть обновления
       log('🔄 [CLIENT_SYNC] Loading data for client:', client_id);
-      // Увеличен таймаут до 20 секунд для мобильных сетей
-      const { data, error } = await withTimeout(
-        client.from('client_kv_store').select('k,v,updated_at').eq('client_id', client_id),
-        20000,
-        'clientSync full data'
+      // Retry для сетевых ошибок
+      const { data, error } = await fetchWithRetry(
+        () => client.from('client_kv_store').select('k,v,updated_at').eq('client_id', client_id),
+        { maxRetries: 2, timeoutMs: 20000, label: 'clientSync full data' }
       );
       if (error) { 
+        // Graceful degradation
+        if (error.isNetworkFailure) {
+          console.warn('[HEYS.cloud] 📴 clientSync data: сеть недоступна');
+          cloud._lastClientSync = { clientId: client_id, ts: now };
+          if (!initialSyncCompleted) {
+            initialSyncCompleted = true;
+            logCritical('✅ [OFFLINE] Sync пропущен (сеть), локальные данные активны');
+          }
+          return;
+        }
         err('client bootstrap select', error);
         throw new Error('Sync data fetch failed: ' + (error.message || error));
       }
@@ -1131,7 +1248,9 @@
       
       // Уведомляем приложение о завершении синхронизации (для обновления stepsGoal и т.д.)
       // Задержка 300мс чтобы localStorage успел обновиться и React перечитал данные
-      if (typeof window !== 'undefined' && window.dispatchEvent) {
+      // Дедупликация: отправляем событие только 1 раз за сессию sync
+      if (typeof window !== 'undefined' && window.dispatchEvent && !_syncCompletedEventSent) {
+        _syncCompletedEventSent = true;
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id } }));
         }, 300);
@@ -1143,7 +1262,13 @@
       muteMirror=false;
       // Пробрасываем ошибку чтобы внешний .catch() мог её обработать
       throw e;
+    } finally {
+      // Сбрасываем флаг sync in progress
+      _syncInProgress = null;
     }
+    })(); // end of IIFE
+    
+    return _syncInProgress;
   };
 
   cloud.getCurrentClientId = function() {
@@ -1952,8 +2077,10 @@
       log(`📊 Размер localStorage: ${sizeMB.toFixed(2)} MB`);
       
       // 🌅 Уведомляем App о смене клиента — для Morning Check-in и т.д.
-      // Задержка 300мс чтобы localStorage успел обновиться и React перечитал данные
+      // При смене клиента сбрасываем флаг и отправляем событие заново
       if (typeof window !== 'undefined' && window.dispatchEvent) {
+        _syncCompletedEventSent = false; // Сброс при смене клиента
+        _syncCompletedEventSent = true;
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: newClientId } }));
         }, 300);

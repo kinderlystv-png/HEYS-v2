@@ -824,7 +824,7 @@
       
       // Уведомляем о изменении дня
       window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-        detail: { dateKey, field: 'deficitPct', value: data.deficit }
+        detail: { date: dateKey, field: 'deficitPct', value: data.deficit, source: 'deficit-step' }
       }));
     }
   });

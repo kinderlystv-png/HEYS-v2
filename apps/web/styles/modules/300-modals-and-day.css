@@ -1,6 +1,14 @@
-/* ====================================
-   Sleep Quality Picker Modal Styles
-   ==================================== */
+/* Table of Contents
+ * 01. Sleep Quality Picker Modal
+ * 02. COMPACT ACTIVITY INPUT
+ * 03. SKELETON LOADER
+ * 04. iOS-style Bottom Sheet Modal (Glassmorphism)
+ * 05. Mood Sliders
+ * 06. Grams Input Modal
+ * 07. Portion Buttons
+ */
+
+/* === 01. Sleep Quality Picker Modal === */
 .sleep-quality-picker-modal {
   padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 40px);
 }
@@ -601,7 +609,7 @@
   color: #111827;
 }
 
-/* === COMPACT ACTIVITY INPUT === */
+/* === 02. COMPACT ACTIVITY INPUT === */
 .compact-activity {
   margin-bottom: 8px;
   background: var(--activity-bg);
@@ -630,7 +638,7 @@
   animation: fadeInUp 0.3s ease;
 }
 
-/* === SKELETON LOADER === */
+/* === 03. SKELETON LOADER === */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -1185,10 +1193,6 @@
 }
 
 /* Transitions для плавных изменений */
-.metrics-card {
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.3s ease, border-color 0.3s ease;
-}
-
 .metrics-value {
   transition: color 0.3s ease;
 }
@@ -1234,10 +1238,6 @@
   font-size: 14px;
   color: #cbd5e1;
   pointer-events: none;
-}
-
-.metrics-card {
-  position: relative;
 }
 
 /* Убираем стрелку после карточки "Съедено" (перед Осталось группа другая) */
@@ -1443,7 +1443,7 @@
   }
 }
 
-/* === iOS-style Bottom Sheet Modal (Glassmorphism) === */
+/* === 04. iOS-style Bottom Sheet Modal (Glassmorphism) === */
 .time-picker-backdrop {
   position: fixed;
   inset: 0;
@@ -1659,7 +1659,7 @@
   font-style: italic;
 }
 
-/* === Mood Sliders === */
+/* === 05. Mood Sliders === */
 .mood-sliders {
   display: flex;
   flex-direction: column;
@@ -2349,7 +2349,7 @@
   pointer-events: none;
 }
 
-/* === Grams Input Modal === */
+/* === 06. Grams Input Modal === */
 .grams-modal {
   padding-bottom: max(env(safe-area-inset-bottom, 20px), 20px);
   transition: transform 0.2s ease-out;
@@ -2482,7 +2482,7 @@
   font-weight: 500;
 }
 
-/* === Portion Buttons === */
+/* === 07. Portion Buttons === */
 .grams-portions {
   display: flex;
   flex-wrap: wrap;

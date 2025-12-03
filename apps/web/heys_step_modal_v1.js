@@ -293,10 +293,13 @@
           }
         }
 
-        // Уведомляем об обновлении
-        window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-          detail: { date: getTodayKey() } 
-        }));
+        // Уведомляем об обновлении (только если это НЕ MealStep — он обрабатывает сам)
+        // MealStep сам управляет обновлением дня через onComplete
+        if (!stepConfigs.some(c => c.id === 'mealName' || c.id === 'mealTime')) {
+          window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+            detail: { date: getTodayKey(), source: 'step-modal' } 
+          }));
+        }
         
         onComplete && onComplete(stepData);
       }
@@ -372,7 +375,7 @@
         React.createElement('div', { className: 'mc-modal' },
           // Header
           React.createElement('div', { className: 'mc-header' },
-            showGreeting && React.createElement('div', { className: 'mc-greeting' }, 
+            showGreeting && (title || greeting) && React.createElement('div', { className: 'mc-greeting' }, 
               title || greeting
             ),
             
@@ -389,26 +392,20 @@
             }, '×')
           ),
 
-          // Progress bar (вместо dots)
-          showProgress && totalSteps > 1 && React.createElement('div', { className: 'mc-progress-bar' },
-            React.createElement('div', { 
-              className: 'mc-progress-fill',
-              style: { width: `${((currentStepIndex + 1) / totalSteps) * 100}%` }
-            }),
-            React.createElement('span', { className: 'mc-progress-text' }, 
-              `${currentStepIndex + 1}/${totalSteps}`
+          // Progress dots (кружочки)
+          showProgress && totalSteps > 1 && React.createElement('div', { className: 'mc-progress-dots' },
+            stepConfigs.map((_, i) => 
+              React.createElement('div', { 
+                key: i,
+                className: 'mc-progress-dot' + (i === currentStepIndex ? ' active' : '') + (i < currentStepIndex ? ' completed' : '')
+              })
             )
           ),
-          
-          // Swipe indicator на первом шаге
-          currentStepIndex === 0 && totalSteps > 1 && React.createElement('div', { 
-            className: 'mc-swipe-hint'
-          }, 'Свайп → для продолжения'),
 
-          // Step title
-          React.createElement('div', { className: 'mc-step-header' },
-            React.createElement('h2', { className: 'mc-step-title' }, 
-              `${currentConfig.icon || ''} ${currentConfig.title}`
+          // Step title (скрываем если title пустой)
+          (currentConfig.title || currentConfig.hint) && React.createElement('div', { className: 'mc-step-header' },
+            currentConfig.title && React.createElement('h2', { className: 'mc-step-title' }, 
+              `${currentConfig.icon || ''} ${currentConfig.title}`.trim()
             ),
             currentConfig.hint && React.createElement('p', { className: 'mc-step-hint' }, 
               currentConfig.hint
