@@ -255,6 +255,18 @@ self.addEventListener('message', (event) => {
   if (event.data === 'forceSync') {
     processSyncQueue();
   }
+  
+  if (event.data && event.data.type === 'GET_CACHE_STATUS') {
+    const port = event.ports && event.ports[0];
+    const payload = {
+      version: CACHE_VERSION,
+      caches: {},
+      timestamp: Date.now(),
+    };
+    if (port) {
+      port.postMessage(payload);
+    }
+  }
 });
 
 console.log('[SW] Service Worker loaded, version:', CACHE_VERSION);

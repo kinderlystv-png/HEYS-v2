@@ -429,8 +429,12 @@
   // 📜 SYNC HISTORY LOG — ЖУРНАЛ СИНХРОНИЗАЦИЙ
   // ═══════════════════════════════════════════════════════════════════
   
-  const SYNC_LOG_KEY = 'heys_sync_log';
-  const MAX_SYNC_LOG_ENTRIES = 50;
+const SYNC_LOG_KEY = 'heys_sync_log';
+const MAX_SYNC_LOG_ENTRIES = 50;
+const SYNC_PROGRESS_EVENT = 'heys:sync-progress';
+const SYNC_COMPLETED_EVENT = 'heysSyncCompleted';
+let syncProgressTotal = 0;
+let syncProgressDone = 0;
   
   /** Добавить запись в журнал синхронизации */
   function addSyncLogEntry(type, details) {
@@ -472,6 +476,25 @@
         detail: { count, details } 
       }));
     } catch (e) {}
+    updateSyncProgressTotal();
+  }
+  
+  /** Событие: прогресс синхронизации */
+  function notifySyncProgress(total, done) {
+    try {
+      global.dispatchEvent(new CustomEvent(SYNC_PROGRESS_EVENT, { detail: { total, done } }));
+    } catch (e) {}
+  }
+  
+  /** Событие: завершение синхронизации обеих очередей */
+  function notifySyncCompletedIfDrained() {
+    if (clientUpsertQueue.length === 0 && upsertQueue.length === 0) {
+      syncProgressTotal = 0;
+      syncProgressDone = 0;
+      try {
+        global.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT, { detail: {} }));
+      } catch (e) {}
+    }
   }
   
   /** Событие: синхронизация восстановлена */
@@ -485,27 +508,25 @@
   }
   
   /** Событие: ошибка синхронизации */
-  function notifySyncError(error) {
+  function notifySyncError(error, retryIn) {
     try {
       addSyncLogEntry('sync_error', { error: error?.message || String(error) });
       global.dispatchEvent(new CustomEvent('heys:sync-error', { 
-        detail: { error } 
+        detail: { error: error?.message || String(error), retryIn } 
       }));
     } catch (e) {}
   }
-  
-  /** Принудительный retry синхронизации */
-  cloud.retrySync = function() {
-    resetRetry();
-    if (clientUpsertQueue.length > 0) {
-      scheduleClientPush();
-    }
-    if (upsertQueue.length > 0) {
-      schedulePush();
-    }
-    return cloud.getPendingCount();
-  };
 
+  /** Обновить total прогресса (max между уже сделанным и новым pending) */
+  function updateSyncProgressTotal() {
+    const pending = cloud.getPendingCount();
+    const candidate = syncProgressDone + pending;
+    if (candidate > syncProgressTotal) {
+      syncProgressTotal = candidate;
+      notifySyncProgress(syncProgressTotal, syncProgressDone);
+    }
+  }
+  
   // ═══════════════════════════════════════════════════════════════════
   // 🔄 EXPONENTIAL BACKOFF ДЛЯ RETRY
   // ═══════════════════════════════════════════════════════════════════
@@ -707,6 +728,42 @@
       interceptSetItem();
       cloud._inited = true;
       log('cloud bridge loaded');
+
+      // 🔄 Автовосстановление сессии при старте
+      if (client.auth && client.auth.getSession) {
+        client.auth.getSession().then(({ data }) => {
+          const restoredUser = data?.session?.user;
+          if (restoredUser) {
+            user = restoredUser;
+            status = CONNECTION_STATUS.SYNC;
+            logCritical('🔄 Сессия восстановлена:', user.email || user.id);
+            const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
+            const finishOnline = () => { status = CONNECTION_STATUS.ONLINE; };
+            if (clientId) {
+              cloud.bootstrapClientSync(clientId)
+                .then(finishOnline)
+                .catch((e) => {
+                  logCritical('⚠️ Ошибка bootstrap после восстановления сессии:', e?.message || e);
+                  finishOnline();
+                });
+            } else {
+              finishOnline();
+            }
+          }
+        }).catch(() => {});
+
+        // Подписка на изменения auth
+        client.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_OUT') {
+            user = null;
+            status = CONNECTION_STATUS.OFFLINE;
+            clearNamespace();
+          } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+            user = session.user;
+            status = CONNECTION_STATUS.ONLINE;
+          }
+        });
+      }
     }catch(e){ err('init failed', e); }
   };
 
@@ -1067,6 +1124,83 @@
     }
   };
 
+  cloud.getCurrentClientId = function() {
+    try {
+      const raw = global.localStorage.getItem('heys_client_current');
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) {
+      // уже строка без JSON
+      return global.localStorage.getItem('heys_client_current');
+    }
+  };
+
+  cloud.isAuthenticated = function() {
+    return status === CONNECTION_STATUS.ONLINE && !!user;
+  };
+
+  cloud.fetchDays = async function(dates) {
+    if (!client || !user) return [];
+    if (!Array.isArray(dates) || dates.length === 0) return [];
+    const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
+    if (!clientId) return [];
+
+    const dayKeys = dates.map((d) => `dayv2_${d}`);
+    try {
+      const { data, error } = await withTimeout(
+        client.from('client_kv_store').select('k,v,updated_at').eq('client_id', clientId).in('k', dayKeys),
+        15000,
+        'fetchDays',
+      );
+      if (error) {
+        err('fetchDays select', error);
+        return [];
+      }
+
+      const ls = global.localStorage;
+      muteMirror = true;
+      (data || []).forEach((row) => {
+        try {
+          const originalKey = row.k || '';
+          const isDayKey = originalKey.includes('dayv2_');
+          let targetKey = originalKey;
+          if (!targetKey.startsWith('heys_')) {
+            targetKey = `heys_${clientId}_${targetKey}`;
+          }
+
+          let localVal = null;
+          try {
+            localVal = JSON.parse(ls.getItem(targetKey));
+          } catch (e2) {}
+
+          // Не затираем непустые дни пустыми ответами
+          if (isDayKey) {
+            const remoteHasMeals = Array.isArray(row.v?.meals) && row.v.meals.length > 0;
+            const localHasMeals = Array.isArray(localVal?.meals) && localVal.meals.length > 0;
+            if (!remoteHasMeals && localHasMeals) {
+              return;
+            }
+            const remoteUpdated = new Date(row.updated_at || 0).getTime();
+            const localUpdated = localVal?.updatedAt || 0;
+            if (localUpdated > remoteUpdated) {
+              return;
+            }
+          }
+
+          ls.setItem(targetKey, JSON.stringify(row.v));
+        } catch (e3) {
+          // игнорируем отдельные ошибки записи
+        }
+      });
+      muteMirror = false;
+      return data || [];
+    } catch (e) {
+      muteMirror = false;
+      err('fetchDays exception', e);
+      return [];
+    }
+  };
+
   cloud.shouldSyncClient = function(client_id, maxAgeMs){
     if (!client_id) return false;
     const rec = cloud._lastClientSync;
@@ -1161,14 +1295,20 @@
         // Уведомляем об ошибке с временем до retry (exponential backoff)
         if (typeof window !== 'undefined' && window.dispatchEvent) {
           const retryIn = Math.min(5, Math.ceil(getRetryDelay() / 1000)); // секунд до retry
-          window.dispatchEvent(new CustomEvent('heys:sync-error', { 
-            detail: { error: e.message || 'Sync failed', retryIn } 
-          }));
+          notifySyncError(e, retryIn);
         }
         
         // Запланировать повторную попытку
         scheduleClientPush();
       }
+      
+      // Прогресс и завершение
+      syncProgressDone += uniqueBatch.length;
+      if (syncProgressTotal < syncProgressDone) {
+        syncProgressTotal = syncProgressDone;
+      }
+      notifySyncProgress(syncProgressTotal, syncProgressDone);
+      notifySyncCompletedIfDrained();
     }, delay);
   }
 
@@ -1436,6 +1576,7 @@
           incrementRetry();
           savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
           notifyPendingChange();
+          notifySyncError(error, Math.min(5, Math.ceil(getRetryDelay() / 1000)));
           err('bulk upsert', error); 
           schedulePush();
           return; 
@@ -1450,9 +1591,18 @@
         incrementRetry();
         savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
         notifyPendingChange();
+        notifySyncError(e, Math.min(5, Math.ceil(getRetryDelay() / 1000)));
         err('bulk upsert exception', e);
         schedulePush();
       }
+      
+      // Прогресс и завершение
+      syncProgressDone += uniqueBatch.length;
+      if (syncProgressTotal < syncProgressDone) {
+        syncProgressTotal = syncProgressDone;
+      }
+      notifySyncProgress(syncProgressTotal, syncProgressDone);
+      notifySyncCompletedIfDrained();
     }, delay);
   }
 
@@ -1544,6 +1694,10 @@
     
     return true;
   };
+  
+  // Алиасы для внешних вызовов
+  cloud.sync = cloud.retrySync;
+  cloud.pushAll = cloud.retrySync;
 
   /** Очистить дублирующиеся ключи (двойной clientId, старые форматы) */
   function cleanupDuplicateKeys() {
