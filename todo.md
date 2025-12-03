@@ -13,6 +13,27 @@ pnpm type-check && pnpm lint && pnpm build  # Проверка
 
 ## 🔥 ПРИОРИТЕТ
 
+### ⏳ Стабилизация DayTab — Phase P0 (ФИНАЛЬНАЯ ВЕРСИЯ)
+**Файл**: [2025-12-03-daytab-stability-p0.md](./docs/tasks/2025-12-03-daytab-stability-p0.md)  
+**Время**: ~45-60 мин  
+**Статус**: 📝 Пересобран после работы другого агента
+
+**✅ Уже сделано (другим агентом)**:
+- ProductRow, MealCard, AdviceCard → React.memo
+- setGrams, removeItem, removeMeal, updateMealTime → useCallback
+- changeMealType, changeMealMood/Wellbeing/Stress → useCallback
+- Advice handlers → useCallback
+- `pnpm build` и `pnpm lint` пройдены ✅
+
+**Осталось сделать**:
+1. Модалки (`openEditGramsModal`, `openTimeEditor`, `openMoodEditor`) → useCallback (строки 2079, 2521, 2538)
+2. ~20 мест с `setDay({...day})` → `setDay(prev => ...)` (trainings, water, sleep, dayScore, steps)
+3. (Опционально) `newItemIds` Set → ref для стабильности
+
+**Важно**: `node -c` после КАЖДОГО изменения!
+
+---
+
 ### ⏳ Рефакторинг MealAddProduct (quick fix НЕ применён)
 **Файл**: [2025-12-01-extract-meal-add-product.md](./docs/tasks/2025-12-01-extract-meal-add-product.md)  
 **Время**: ~5 мин (quick fix) | 60-90 мин (полный рефакторинг)  
