@@ -285,22 +285,65 @@
     if (avgGI > 70) badges.push({ type: 'ГИ', ok: false });
     if (avgHarm > 10) badges.push({ type: 'Вр', ok: false });
     
-    const color = score >= 80 ? '#22c55e' : score >= 50 ? '#eab308' : '#ef4444';
+    // === БОНУСЫ (до +10 сверх 100) ===
+    let bonusPoints = 0;
+    const positiveBadges = [];
+    
+    // Бонус за клетчатку (2г+ в приёме = хорошо)
+    const fiber = totals.fiber || 0;
+    if (fiber >= 5) {
+      bonusPoints += 3;
+      positiveBadges.push({ type: '🥗', ok: true, label: 'Клетчатка' });
+    } else if (fiber >= 2) {
+      bonusPoints += 1;
+    }
+    
+    // Бонус за разнообразие (4+ продукта)
+    const itemCount = (meal.items || []).length;
+    if (itemCount >= 4) {
+      bonusPoints += 2;
+      positiveBadges.push({ type: '🌈', ok: true, label: 'Разнообразие' });
+    }
+    
+    // Бонус за идеальный белок (20-40г)
+    if (prot >= 20 && prot <= 40 && macroScore.proteinOk) {
+      bonusPoints += 2;
+      positiveBadges.push({ type: '💪', ok: true, label: 'Белок' });
+    }
+    
+    // Бонус за низкий ГИ (<50)
+    if (avgGI <= 50 && carbSum > 5) {
+      bonusPoints += 2;
+      positiveBadges.push({ type: '🎯', ok: true, label: 'Низкий ГИ' });
+    }
+    
+    score += Math.min(10, bonusPoints); // Max +10 бонус
+    
+    // Финальный score: 0-110 (100 base + 10 bonus) → нормализуем до 0-100
+    const finalScore = Math.min(100, Math.round(score));
+    
+    const color = finalScore >= 80 ? '#22c55e' : finalScore >= 50 ? '#eab308' : '#ef4444';
     const details = [
       { label: 'Калории', value: Math.round(kcal) + ' ккал', ok: kcalScore.ok },
       { label: 'Белок', value: Math.round(prot) + 'г', ok: macroScore.proteinOk },
       { label: 'Углеводы', value: carbScore.simpleRatio <= 0.3 ? 'сложные ✓' : Math.round(carbScore.simpleRatio * 100) + '% простых', ok: carbScore.ok },
       { label: 'Жиры', value: fatScore.goodRatio >= 0.6 ? 'полезные ✓' : Math.round(fatScore.goodRatio * 100) + '% полезных', ok: fatScore.ok },
-      { label: 'ГИ', value: Math.round(avgGI), ok: avgGI <= 70 }
+      { label: 'ГИ', value: Math.round(avgGI), ok: avgGI <= 70 },
+      { label: 'Клетчатка', value: Math.round(fiber) + 'г', ok: fiber >= 2 }
     ];
     
+    // Объединяем бейджи: сначала проблемы, потом позитивные
+    const allBadges = [...badges.slice(0, 2), ...positiveBadges.slice(0, 1)];
+    
     return {
-      score: Math.round(score),
+      score: finalScore,
       color,
-      badges: badges.slice(0, 3),
+      badges: allBadges.slice(0, 3),
       details,
       avgGI,
-      avgHarm
+      avgHarm,
+      fiber,
+      bonusPoints
     };
   }
 
@@ -1562,6 +1605,65 @@
       };
     }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup]);
     
+    // === Утилита для умного позиционирования попапов ===
+    // Не даёт выходить за границы экрана
+    const getSmartPopupPosition = React.useCallback((clickX, clickY, popupWidth, popupHeight, options = {}) => {
+      const {
+        preferAbove = false,      // Предпочитать показ сверху
+        margin = 12,              // Отступ от краёв экрана
+        offset = 15,              // Отступ от точки клика
+        arrowSize = 8             // Размер стрелки (для расчёта)
+      } = options;
+      
+      const screenW = window.innerWidth;
+      const screenH = window.innerHeight;
+      
+      // Горизонтальная позиция
+      let left, arrowPos = 'center';
+      if (clickX < popupWidth / 2 + margin) {
+        left = margin;
+        arrowPos = 'left';
+      } else if (clickX > screenW - popupWidth / 2 - margin) {
+        left = screenW - popupWidth - margin;
+        arrowPos = 'right';
+      } else {
+        left = clickX - popupWidth / 2;
+      }
+      
+      // Вертикальная позиция — проверяем выход за нижнюю границу
+      let top, showAbove = false;
+      const spaceBelow = screenH - clickY - offset;
+      const spaceAbove = clickY - offset;
+      
+      if (preferAbove && spaceAbove >= popupHeight) {
+        // Показываем сверху если есть место и это предпочтительно
+        top = clickY - popupHeight - offset;
+        showAbove = true;
+      } else if (spaceBelow >= popupHeight) {
+        // Есть место снизу
+        top = clickY + offset;
+      } else if (spaceAbove >= popupHeight) {
+        // Нет места снизу, но есть сверху
+        top = clickY - popupHeight - offset;
+        showAbove = true;
+      } else {
+        // Нет места ни сверху ни снизу — центрируем по вертикали
+        top = Math.max(margin, (screenH - popupHeight) / 2);
+      }
+      
+      // Дополнительная проверка: не выходим за верхний край
+      if (top < margin) {
+        top = margin;
+      }
+      
+      // Не выходим за нижний край
+      if (top + popupHeight > screenH - margin) {
+        top = screenH - popupHeight - margin;
+      }
+      
+      return { left, top, arrowPos, showAbove };
+    }, []);
+    
     // === Toast для подсказок БЖУ ===
     const [toastVisible, setToastVisible] = useState(false);
     const [toastDismissed, setToastDismissed] = useState(false);
@@ -2019,6 +2121,19 @@
     const [showConfetti, setShowConfetti] = useState(false);
     const confettiShownRef = React.useRef(false);
     const prevKcalRef = React.useRef(0);
+    
+    // === Подсказка "нажми для деталей" ===
+    const [mealChartHintShown, setMealChartHintShown] = useState(() => {
+      try { return localStorage.getItem('heys_meal_hint_shown') === '1'; } catch { return false; }
+    });
+    
+    // === Ачивка "Первый идеальный приём" ===
+    const [showFirstPerfectAchievement, setShowFirstPerfectAchievement] = useState(false);
+    const firstPerfectShownRef = React.useRef(false);
+    
+    // === Анимация нового приёма в графике ===
+    const [newMealAnimatingIndex, setNewMealAnimatingIndex] = useState(-1);
+    const prevMealsCountRef = React.useRef(0);
     
     // === Emoji анимация в рейтинг модалке ===
     const [emojiAnimating, setEmojiAnimating] = useState({ mood: '', wellbeing: '', stress: '' });
@@ -4624,15 +4739,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const totalKcal = data.reduce((sum, m) => sum + m.kcal, 0);
       const maxKcal = Math.max(...data.map(m => m.kcal), 1);
       const qualityStreak = (() => {
-        let streak = 0;
+        // Ищем максимальную последовательность отличных приёмов (≥80)
+        let maxStreak = 0;
+        let currentStreak = 0;
         for (const m of data) {
           if (m.quality && m.quality.score >= 80) {
-            streak += 1;
+            currentStreak += 1;
+            maxStreak = Math.max(maxStreak, currentStreak);
           } else {
-            break;
+            currentStreak = 0;
           }
         }
-        return streak;
+        return maxStreak;
       })();
       const avgQualityScore = data.length > 0
         ? Math.round(data.reduce((sum, m) => sum + (m.quality?.score || 0), 0) / data.length)
@@ -4690,6 +4808,48 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         lowScoreHapticRef.current = false;
       }
     }, [mealsChartData]);
+
+    // === Ачивка "Первый идеальный приём" ===
+    React.useEffect(() => {
+      const meals = mealsChartData?.meals || [];
+      const hasPerfect = meals.some(m => m.quality && m.quality.score >= 90);
+      
+      if (hasPerfect && !firstPerfectShownRef.current) {
+        try {
+          const alreadyAchieved = localStorage.getItem('heys_first_perfect_meal') === '1';
+          if (!alreadyAchieved) {
+            // Первый раз! Показываем ачивку
+            localStorage.setItem('heys_first_perfect_meal', '1');
+            setShowFirstPerfectAchievement(true);
+            setShowConfetti(true);
+            try { HEYS.dayUtils?.haptic?.('success'); } catch(e) {}
+            // Скрываем через 5 секунд
+            setTimeout(() => {
+              setShowFirstPerfectAchievement(false);
+              setShowConfetti(false);
+            }, 5000);
+            firstPerfectShownRef.current = true;
+          }
+        } catch(e) {}
+      }
+    }, [mealsChartData]);
+
+    // === Анимация нового приёма ===
+    React.useEffect(() => {
+      const mealsCount = day.meals?.length || 0;
+      const prevCount = prevMealsCountRef.current;
+      
+      if (mealsCount > prevCount && prevCount > 0) {
+        // Новый приём добавлен — анимируем его (последний = index 0 после reverse)
+        setTimeout(() => {
+          setNewMealAnimatingIndex(mealsCount - 1);
+          // Убираем анимацию через 600ms
+          setTimeout(() => setNewMealAnimatingIndex(-1), 600);
+        }, 300); // Задержка после закрытия модалки
+      }
+      
+      prevMealsCountRef.current = mealsCount;
+    }, [day.meals?.length]);
 
     // === Pull-to-refresh логика (Enhanced) ===
     const PULL_THRESHOLD = 80;
@@ -6975,9 +7135,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
            (zone.id === 'low' || zone.id === 'over') ? ' goal-low' : ' goal-critical');
         
         // Текст и иконка для badge
+        // Отклонение от 100%: +6% или −8%
+        const deviation = avgRatioPct - 100;
+        const deviationText = deviation >= 0 ? '+' + deviation + '%' : deviation + '%';
         const deficitIcon = isPerfect ? '✓' : isSuccess ? '✓' : 
                             (zone.id === 'low' || zone.id === 'over') ? '~' : '!';
-        const deficitText = 'в среднем ' + deficitIcon + ' ' + avgRatioPct + '%';
+        const deficitText = 'в среднем ' + deficitIcon + ' ' + deviationText;
         
         // Tooltip с подробностями
         const tooltipText = 'Среднее выполнение нормы: ' + avgRatioPct + '% (' + zone.name + ')';
@@ -7031,12 +7194,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
         const color = getColor(ratio);
         
-        // Позиционирование
+        // Позиционирование с защитой от выхода за экран
         const popupW = 260;
-        let left = sparklinePopup.x - popupW / 2;
-        let arrowPos = 'center';
-        if (left < 10) { left = 10; arrowPos = 'left'; }
-        if (left + popupW > window.innerWidth - 10) { left = window.innerWidth - popupW - 10; arrowPos = 'right'; }
+        const popupH = 280;
+        const pos = getSmartPopupPosition(
+          sparklinePopup.x, 
+          sparklinePopup.y, 
+          popupW, 
+          popupH,
+          { preferAbove: false, offset: 15 }
+        );
+        const { left, top, arrowPos, showAbove } = pos;
         
         // Вчера
         const prevPoint = sparklineData[sparklineData.findIndex(p => p.date === point.date) - 1];
@@ -7063,14 +7231,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
         
         return React.createElement('div', {
-          className: 'sparkline-popup sparkline-popup-v2',
+          className: 'sparkline-popup sparkline-popup-v2' + (showAbove ? ' show-above' : ''),
           role: 'dialog',
           'aria-label': (point.isToday ? 'Сегодня' : point.dayNum) + ' — ' + pct + '% от нормы',
           'aria-modal': 'true',
           style: { 
             position: 'fixed',
             left: left + 'px', 
-            top: (sparklinePopup.y + 15) + 'px',
+            top: top + 'px',
             width: popupW + 'px',
             zIndex: 9999
           },
@@ -7288,21 +7456,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Popup для бейджей БЖУ
       macroBadgePopup && (() => {
         const popupWidth = 220;
-        const x = macroBadgePopup.x;
-        const screenW = window.innerWidth;
-        const margin = 12;
+        const popupHeight = 320; // Примерная высота popup
         
-        // Умная позиция: вычисляем left напрямую без transform
-        let left, arrowPos = 'center';
-        if (x < popupWidth / 2 + margin) {
-          left = margin;
-          arrowPos = 'left';
-        } else if (x > screenW - popupWidth / 2 - margin) {
-          left = screenW - popupWidth - margin;
-          arrowPos = 'right';
-        } else {
-          left = x - popupWidth / 2;
-        }
+        // Используем умное позиционирование
+        const pos = getSmartPopupPosition(
+          macroBadgePopup.x, 
+          macroBadgePopup.y, 
+          popupWidth, 
+          popupHeight,
+          { preferAbove: false, offset: 15 }
+        );
+        const { left, top, arrowPos, showAbove } = pos;
         
         // 📊 Сравнение со вчера
         const getYesterdayCompare = () => {
@@ -7463,14 +7627,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
         
         return React.createElement('div', {
-          className: 'macro-badge-popup',
+          className: 'macro-badge-popup' + (showAbove ? ' show-above' : ''),
           role: 'dialog',
           'aria-label': macroBadgePopup.macro + ' — ' + Math.round(macroBadgePopup.ratio * 100) + '% от нормы',
           'aria-modal': 'true',
           style: {
             position: 'fixed',
             left: left + 'px',
-            top: (macroBadgePopup.y + 15) + 'px',
+            top: top + 'px',
             width: popupWidth + 'px'
           },
           onClick: (e) => e.stopPropagation(),
@@ -7599,12 +7763,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       })(),
       // === METRIC POPUP (вода, шаги, калории) ===
       metricPopup && (() => {
-        // Позиционирование
+        // Позиционирование с защитой от выхода за экран
         const popupW = 280;
-        let left = metricPopup.x - popupW / 2;
-        let arrowPos = 'center';
-        if (left < 10) { left = 10; arrowPos = 'left'; }
-        if (left + popupW > window.innerWidth - 10) { left = window.innerWidth - popupW - 10; arrowPos = 'right'; }
+        const popupH = 350; // Примерная высота
+        const pos = getSmartPopupPosition(
+          metricPopup.x, 
+          metricPopup.y, 
+          popupW, 
+          popupH,
+          { preferAbove: false, offset: 15 }
+        );
+        const { left, top, arrowPos, showAbove } = pos;
         
         // Получаем историю для sparkline (7 дней)
         const getMetricHistory = () => {
@@ -7690,14 +7859,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
         
         return React.createElement('div', {
-          className: 'metric-popup',
+          className: 'metric-popup' + (showAbove ? ' show-above' : ''),
           role: 'dialog',
           'aria-label': config.name + ' — ' + pct + '% от нормы',
           'aria-modal': 'true',
           style: {
             position: 'fixed',
             left: left + 'px',
-            top: (metricPopup.y + 15) + 'px',
+            top: top + 'px',
             width: popupW + 'px',
             zIndex: 9999
           },
@@ -7899,6 +8068,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const colorClass = isSuccess ? 'deficit-good' : 
           (zone.id === 'low' || zone.id === 'over') ? 'deficit-warn' : 'deficit-bad';
         
+        // Отклонение от 100%: +6% или −8%
+        const deviation = avgRatioPct - 100;
+        const deviationText = deviation >= 0 ? '+' + deviation + '%' : deviation + '%';
         const deficitIcon = isPerfect ? '✓' : isSuccess ? '✓' : 
                             (zone.id === 'low' || zone.id === 'over') ? '~' : '!';
         
@@ -7915,7 +8087,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               className: 'week-heatmap-stat ' + colorClass,
               title: 'Среднее выполнение нормы за ' + weekHeatmapData.withData + ' дн. (' + zone.name + ')'
             },
-              'в среднем ' + deficitIcon + ' ' + avgRatioPct + '%'
+              'в среднем ' + deficitIcon + ' ' + deviationText
             )
           ),
           // Grid с днями недели + статистика X/Y в норме
@@ -8948,16 +9120,154 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             }
           }, mealsChartData.totalKcal + ' / ' + Math.round(mealsChartData.targetKcal) + ' ккал')
         ),
-        // Горизонтальные полоски для каждого приёма
-        React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
-          mealsChartData.meals.map((meal, i) => {
+        // Подсказка нажми для деталей (скрывается после первого клика)
+        !mealChartHintShown && React.createElement('div', { 
+          className: 'meal-chart-hint'
+        }, 
+          React.createElement('span', null, '👆'),
+          'Нажми на полоску для деталей'
+        ),
+        // Мини-спарклайн калорий за день (линия с точками и временной шкалой)
+        mealsChartData.meals.length > 1 && React.createElement('div', {
+          className: 'meals-day-sparkline',
+          style: {
+            position: 'relative',
+            height: '60px',
+            marginBottom: '12px',
+            padding: '8px 0 16px 0'
+          }
+        },
+          (() => {
+            const meals = mealsChartData.meals;
+            const maxKcal = Math.max(...meals.map(m => m.kcal), 200);
+            const svgW = 280;
+            const svgH = 40;
+            const padding = 10;
+            
+            // Парсим время в минуты от начала дня
+            const parseTime = (t) => {
+              if (!t) return 0;
+              const [h, m] = t.split(':').map(Number);
+              return (h || 0) * 60 + (m || 0);
+            };
+            
+            // Находим диапазон времени
+            const times = meals.map(m => parseTime(m.time)).filter(t => t > 0);
+            const minTime = Math.min(...times, 6 * 60); // минимум 6:00
+            const maxTime = Math.max(...times, 23 * 60); // максимум 23:00
+            const timeRange = Math.max(maxTime - minTime, 60);
+            
+            // Вычисляем точки
+            const points = meals.map((m, idx) => {
+              const t = parseTime(m.time);
+              const x = padding + ((t - minTime) / timeRange) * (svgW - 2 * padding);
+              const y = svgH - padding - ((m.kcal / maxKcal) * (svgH - 2 * padding));
+              return { x, y, meal: m, idx };
+            }).sort((a, b) => a.x - b.x);
+            
+            // Строим path для линии
+            const linePath = points.length > 1 
+              ? 'M ' + points.map(p => `${p.x},${p.y}`).join(' L ')
+              : '';
+            
+            // Строим path для заливки под линией
+            const areaPath = points.length > 1 
+              ? `M ${points[0].x},${svgH - padding} ` + 
+                points.map(p => `L ${p.x},${p.y}`).join(' ') + 
+                ` L ${points[points.length - 1].x},${svgH - padding} Z`
+              : '';
+            
+            // Временные метки (каждые 3 часа)
+            const timeLabels = [];
+            const startHour = Math.floor(minTime / 60);
+            const endHour = Math.ceil(maxTime / 60);
+            for (let h = startHour; h <= endHour; h += 3) {
+              const t = h * 60;
+              const x = padding + ((t - minTime) / timeRange) * (svgW - 2 * padding);
+              if (x >= padding && x <= svgW - padding) {
+                timeLabels.push({ x, label: h + ':00' });
+              }
+            }
+            
+            return React.createElement('svg', {
+              viewBox: `0 0 ${svgW} ${svgH + 12}`,
+              style: { width: '100%', height: '100%' },
+              preserveAspectRatio: 'xMidYMid meet'
+            },
+              // Градиент для заливки
+              React.createElement('defs', null,
+                React.createElement('linearGradient', { id: 'mealSparkGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
+                  React.createElement('stop', { offset: '0%', stopColor: '#10b981', stopOpacity: '0.3' }),
+                  React.createElement('stop', { offset: '100%', stopColor: '#10b981', stopOpacity: '0.05' })
+                )
+              ),
+              // Заливка под линией
+              areaPath && React.createElement('path', {
+                d: areaPath,
+                fill: 'url(#mealSparkGrad)'
+              }),
+              // Линия
+              linePath && React.createElement('path', {
+                d: linePath,
+                fill: 'none',
+                stroke: '#10b981',
+                strokeWidth: '2',
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round'
+              }),
+              // Точки
+              points.map((p, i) => 
+                React.createElement('circle', {
+                  key: i,
+                  cx: p.x,
+                  cy: p.y,
+                  r: 4,
+                  fill: p.meal.quality ? p.meal.quality.color : '#10b981',
+                  stroke: '#fff',
+                  strokeWidth: '1.5'
+                })
+              ),
+              // Временные метки
+              timeLabels.map((tl, i) =>
+                React.createElement('text', {
+                  key: i,
+                  x: tl.x,
+                  y: svgH + 10,
+                  fontSize: '8',
+                  fill: '#9ca3af',
+                  textAnchor: 'middle'
+                }, tl.label)
+              )
+            );
+          })()
+        ),
+        // Горизонтальные полоски для каждого приёма (реверс — ближайшие сверху, как карточки)
+        React.createElement('div', { 
+          style: { display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative' }
+        },
+          // Вертикальная линия цели 100%
+          React.createElement('div', {
+            className: 'meals-target-line',
+            style: {
+              position: 'absolute',
+              left: 'calc(100px + 100%)', // После времени и названия
+              top: 0,
+              bottom: 0,
+              width: '0',
+              borderLeft: '2px dashed rgba(16, 185, 129, 0.4)',
+              pointerEvents: 'none',
+              zIndex: 1
+            }
+          }),
+          mealsChartData.meals.slice().reverse().map((meal, i, arr) => {
+            const originalIndex = arr.length - 1 - i; // Исходный индекс для bestMealIndex
             const widthPct = mealsChartData.targetKcal > 0 
               ? Math.min(100, (meal.kcal / mealsChartData.targetKcal) * 100)
               : 0;
             const barWidthPct = widthPct > 0 && widthPct < 12 ? 12 : widthPct; // минимальная видимость полоски
             const isOverTarget = mealsChartData.totalKcal > mealsChartData.targetKcal;
             const quality = meal.quality;
-            const isBest = mealsChartData.bestMealIndex === i && quality && quality.score >= 70;
+            const isBest = mealsChartData.bestMealIndex === originalIndex && quality && quality.score >= 70;
             const barFill = quality 
               ? `linear-gradient(90deg, ${quality.color} 0%, ${quality.color}cc 100%)`
               : (isOverTarget ? 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)' : 'linear-gradient(90deg, #34d399 0%, #10b981 100%)');
@@ -8967,6 +9277,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               e.stopPropagation();
               const rect = e.currentTarget.getBoundingClientRect();
               console.log('[HEYS] openQualityModal:', { meal: meal.name, quality, rect });
+              // Скрываем подсказку после первого клика
+              if (!mealChartHintShown) {
+                setMealChartHintShown(true);
+                try { localStorage.setItem('heys_meal_hint_shown', '1'); } catch {}
+              }
+              // 🎉 Confetti при идеальном score!
+              if (quality.score >= 95) {
+                setShowConfetti(true);
+                setTimeout(() => setShowConfetti(false), 2000);
+              }
               setMealQualityPopup({
                 meal,
                 quality,
@@ -8975,7 +9295,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 y: rect.bottom
               });
             };
-            return React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+            const isLowScore = quality && quality.score < 50;
+            const isNewMeal = newMealAnimatingIndex === originalIndex;
+            return React.createElement('div', { 
+              key: i, 
+              className: 'meal-bar-row' + (isNewMeal ? ' meal-bar-new' : ''),
+              style: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '6px',
+                padding: '4px 6px',
+                marginLeft: '-6px',
+                marginRight: '-6px',
+                borderRadius: '6px',
+                background: isLowScore ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
+                transition: 'background 0.2s ease'
+              }
+            },
               // Время слева
               meal.time && React.createElement('span', { 
                 style: { width: '36px', fontSize: '10px', color: 'var(--text-secondary, #9ca3af)', textAlign: 'left', flexShrink: 0 }
@@ -9005,7 +9341,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               ),
               // Полоска прогресса с бейджами внутри
               React.createElement('div', { 
-                className: 'meal-bar-container' + (isBest ? ' meal-bar-best' : ''),
+                className: 'meal-bar-container' + (isBest ? ' meal-bar-best' : '') + (quality && quality.score >= 80 ? ' meal-bar-excellent' : ''),
                 role: quality ? 'button' : undefined,
                 tabIndex: quality ? 0 : undefined,
                 onClick: openQualityModal,
@@ -9016,7 +9352,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   height: '22px', 
                   background: 'var(--meal-bar-track, rgba(148,163,184,0.24))', 
                   borderRadius: '4px',
-                  overflow: 'hidden',
+                  overflow: 'visible',
                   position: 'relative',
                   cursor: quality ? 'pointer' : 'default',
                   boxShadow: isBest ? '0 0 0 2px #fbbf24, 0 2px 8px rgba(251,191,36,0.3)' : undefined
@@ -9032,19 +9368,31 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     transition: 'width 0.3s ease'
                   }
                 }),
-                // Калории внутри
+                // Калории справа от заливки + процент от нормы
                 meal.kcal > 0 && React.createElement('span', {
                   style: {
                     position: 'absolute',
-                    left: '6px',
+                    left: `calc(${barWidthPct}% + 6px)`,
                     top: '50%',
                     transform: 'translateY(-50%)',
                     fontSize: '10px',
                     fontWeight: '600',
-                    color: barWidthPct > 30 ? '#fff' : 'var(--text-primary, #1f2937)',
-                    textShadow: barWidthPct > 30 ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
+                    color: 'var(--text-primary, #1f2937)',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
                   }
-                }, meal.kcal + ' ккал'),
+                }, 
+                  meal.kcal + ' ккал',
+                  React.createElement('span', {
+                    style: {
+                      fontSize: '9px',
+                      color: 'var(--text-tertiary, #9ca3af)',
+                      fontWeight: '500'
+                    }
+                  }, '(' + Math.round(widthPct) + '%)')
+                ),
                 // Бейджи внутри полоски справа
                 problemBadges.length > 0 && React.createElement('div', { 
                   style: {
@@ -9078,13 +9426,24 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               }, '⭐' + quality.score)
             );
           }),
+          // Streak banner с улучшенной анимацией
           mealsChartData.qualityStreak >= 3 && React.createElement('div', {
             className: 'meal-quality-streak-banner'
           },
-            React.createElement('span', null, '🔥'),
+            React.createElement('span', { className: 'streak-fire' }, '🔥'),
             React.createElement('span', { style: { fontWeight: '600', color: '#92400e' } },
               mealsChartData.qualityStreak + ' отличных приёмов подряд!'
-            )
+            ),
+            React.createElement('span', { style: { fontSize: '16px' } }, '🏆')
+          ),
+          // Ачивка первого идеального приёма
+          showFirstPerfectAchievement && React.createElement('div', {
+            className: 'first-perfect-meal-badge',
+            style: { marginTop: '8px' }
+          },
+            React.createElement('span', { className: 'trophy' }, '🏆'),
+            'Первый идеальный приём!',
+            React.createElement('span', null, '✨')
           )
         )
       ),
@@ -10831,18 +11190,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const { meal, quality, mealTypeInfo, x, y } = mealQualityPopup;
         const popupW = 300;
         const popupH = 350;
-        let left = x - popupW / 2;
-        let arrowPos = 'center';
-        if (left < 10) { left = 10; arrowPos = 'left'; }
-        if (left + popupW > window.innerWidth - 10) { left = window.innerWidth - popupW - 10; arrowPos = 'right'; }
         
-        let top = y + 15;
-        let showAbove = false;
-        if (top + popupH > window.innerHeight - 20) {
-          top = y - popupH - 15;
-          showAbove = true;
-          if (top < 10) top = 10;
-        }
+        // Используем умное позиционирование
+        const pos = getSmartPopupPosition(x, y, popupW, popupH, { preferAbove: false, offset: 15 });
+        const { left, top, arrowPos, showAbove } = pos;
         
         const getColor = (score) => {
           if (score >= 80) return '#10b981';
@@ -10933,11 +11284,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             (quality.badges && quality.badges.length > 0) && React.createElement('div', { 
               style: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }
             },
-              quality.badges.slice(0, 3).map((badge, i) => 
-                React.createElement('span', { key: i, style: { background: '#fee2e2', color: '#dc2626', padding: '4px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 500 } }, 
-                  typeof badge === 'object' ? badge.type : String(badge)
-                )
-              )
+              quality.badges.slice(0, 3).map((badge, i) => {
+                const isPositive = badge.ok === true;
+                const badgeType = typeof badge === 'object' ? badge.type : String(badge);
+                const badgeLabel = typeof badge === 'object' && badge.label ? badge.label : '';
+                return React.createElement('span', { 
+                  key: i, 
+                  title: badgeLabel,
+                  style: { 
+                    background: isPositive ? '#dcfce7' : '#fee2e2', 
+                    color: isPositive ? '#166534' : '#dc2626', 
+                    padding: '4px 8px', 
+                    borderRadius: '12px', 
+                    fontSize: '0.75rem', 
+                    fontWeight: 500 
+                  } 
+                }, badgeType);
+              })
             ),
             meal.time && React.createElement('div', { style: { fontSize: '0.75rem', color: 'var(--text-muted, #9ca3af)', textAlign: 'center' } }, '🕐 ' + meal.time),
             React.createElement('button', { className: 'metric-popup-close', 'aria-label': 'Закрыть', onClick: () => setMealQualityPopup(null) }, '✕')

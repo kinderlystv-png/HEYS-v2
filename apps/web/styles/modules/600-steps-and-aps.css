@@ -2053,20 +2053,158 @@
 /* Micro-interaction при клике */
 .meal-bar-container {
   transition: transform 0.1s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.meal-bar-container:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .meal-bar-container:active {
   transform: scale(0.98);
 }
 
-/* Лучший приём дня — золотая рамка */
+/* Лучший приём дня — золотая рамка + пульсация */
 .meal-bar-best {
-  animation: bestMealGlow 2s ease-in-out infinite alternate;
+  animation: bestMealGlow 2s ease-in-out infinite alternate, bestMealPulse 1.5s ease-in-out infinite;
+  position: relative;
+}
+
+.meal-bar-best::before {
+  content: '⭐';
+  position: absolute;
+  left: -18px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  animation: starBounce 1s ease-in-out infinite;
+}
+
+@keyframes starBounce {
+  0%, 100% { transform: translateY(-50%) scale(1); }
+  50% { transform: translateY(-50%) scale(1.2); }
+}
+
+@keyframes bestMealPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+/* Подсказка нажми для деталей */
+.meal-chart-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-tertiary, #9ca3af);
+  padding: 4px 0;
+  animation: hintFade 3s ease-in-out infinite;
+}
+
+.meal-chart-hint span {
+  animation: hintBounce 1.5s ease-in-out infinite;
+}
+
+@keyframes hintFade {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes hintBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+/* Попап качества приёма — анимация появления */
+.meal-quality-popup {
+  animation: mealPopupSlideIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: top center;
+}
+
+@keyframes mealPopupSlideIn {
+  0% { 
+    opacity: 0; 
+    transform: translateY(-10px) scale(0.95); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+/* Звёздочки-искры на идеальном приёме */
+.meal-bar-excellent::after {
+  content: '✨';
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  animation: sparkleRotate 2s linear infinite;
+}
+
+@keyframes sparkleRotate {
+  0% { transform: translateY(-50%) rotate(0deg); }
+  50% { transform: translateY(-50%) rotate(10deg); }
+  100% { transform: translateY(-50%) rotate(0deg); }
 }
 
 @keyframes bestMealGlow {
   0% { box-shadow: 0 0 0 2px #fbbf24, 0 2px 8px rgba(251,191,36,0.3); }
   100% { box-shadow: 0 0 0 2px #f59e0b, 0 2px 12px rgba(251,191,36,0.5); }
+}
+
+/* Анимация нового приёма */
+.meal-bar-row {
+  animation: none;
+}
+
+.meal-bar-row.meal-bar-new {
+  animation: mealSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes mealSlideIn {
+  0% { 
+    opacity: 0; 
+    transform: translateY(-20px) scale(0.95); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+/* Мини-спарклайн за день (линейный) */
+.meals-day-sparkline {
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  background: var(--surface-secondary, #f9fafb);
+  border-radius: 8px;
+  margin: 0 -4px;
+  padding: 8px 4px 16px 4px !important;
+}
+
+.meals-day-sparkline svg {
+  overflow: visible;
+}
+
+.meals-day-sparkline circle {
+  transition: r 0.15s ease, filter 0.15s ease;
+  cursor: pointer;
+}
+
+.meals-day-sparkline circle:hover {
+  r: 6;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.meals-day-sparkline path {
+  transition: stroke-width 0.15s ease;
+}
+
+[data-theme="dark"] .meals-day-sparkline {
+  background: var(--surface-secondary, #1f2937);
 }
 
 /* Прогресс-бар в модалке */
@@ -2081,16 +2219,77 @@
 .meal-quality-streak-banner {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
-  border-radius: 8px;
-  animation: streakSlideIn 0.3s ease-out;
+  gap: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(90deg, #fef3c7 0%, #fde68a 50%, #fef3c7 100%);
+  background-size: 200% 100%;
+  border-radius: 10px;
+  animation: streakSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), streakShimmer 3s ease-in-out infinite;
+  box-shadow: 0 2px 12px rgba(251, 191, 36, 0.3);
+  font-size: 13px;
+}
+
+.meal-quality-streak-banner .streak-fire {
+  font-size: 18px;
+  animation: fireFlicker 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes fireFlicker {
+  0% { transform: scale(1) rotate(-5deg); filter: brightness(1); }
+  100% { transform: scale(1.15) rotate(5deg); filter: brightness(1.2); }
 }
 
 @keyframes streakSlideIn {
-  0% { opacity: 0; transform: translateY(-10px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% { opacity: 0; transform: translateY(-15px) scale(0.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes streakShimmer {
+  0% { background-position: 100% 0; }
+  50% { background-position: 0% 0; }
+  100% { background-position: 100% 0; }
+}
+
+/* Ачивка первого идеального приёма */
+.first-perfect-meal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  color: white;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  animation: achievementPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), achievementGlow 2s ease-in-out infinite;
+  box-shadow: 0 2px 12px rgba(168, 85, 247, 0.4);
+}
+
+.first-perfect-meal-badge .trophy {
+  font-size: 16px;
+  animation: trophyBounce 1s ease-in-out infinite;
+}
+
+@keyframes achievementPop {
+  0% { opacity: 0; transform: scale(0.5) rotate(-10deg); }
+  60% { transform: scale(1.1) rotate(5deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@keyframes achievementGlow {
+  0%, 100% { box-shadow: 0 2px 12px rgba(168, 85, 247, 0.4); }
+  50% { box-shadow: 0 4px 20px rgba(168, 85, 247, 0.6); }
+}
+
+@keyframes trophyBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* Dark theme для ачивки */
+[data-theme="dark"] .first-perfect-meal-badge {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  box-shadow: 0 2px 12px rgba(124, 58, 237, 0.5);
 }
 
 [data-theme="dark"] .meal-quality-streak-banner {

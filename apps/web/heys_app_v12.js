@@ -14,24 +14,23 @@
       // }
 
       (function () {
-        window.HEYS = window.HEYS || {};
+        const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
         const APP_VERSION = '2025.12.02.1885cc5'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         
-        window.HEYS.version = APP_VERSION;
+        HEYS.version = APP_VERSION;
         
-        // Проверка обновления версии
-        (function checkVersionUpdate() {
+        function runVersionGuard() {
           const storedVersion = localStorage.getItem(VERSION_KEY);
           
           if (storedVersion && storedVersion !== APP_VERSION) {
             console.log(`[HEYS] 🔄 Version update detected: ${storedVersion} → ${APP_VERSION}`);
             
             // Выход из системы при обновлении
-            if (window.HEYS?.cloud?.signOut) {
-              window.HEYS.cloud.signOut();
+            if (HEYS?.cloud?.signOut) {
+              HEYS.cloud.signOut();
               console.log('[HEYS] 🚪 Auto-logout on version update');
             }
             
@@ -63,85 +62,91 @@
             }, 500);
           }
           
-          // Сохраняем текущую версию
           localStorage.setItem(VERSION_KEY, APP_VERSION);
-        })();
-        
+        }
         // === Mobile Debug Panel ===
         // Тройной тап на заголовок покажет дебаг-панель (для отладки на телефоне)
-        window.HEYS.debugPanel = {
-          _tapCount: 0,
-          _tapTimer: null,
-          _visible: false,
-          _el: null,
-          
-          handleTap() {
-            this._tapCount++;
-            clearTimeout(this._tapTimer);
+        function bootstrapGlobals() {
+          runVersionGuard();
+          HEYS.debugPanel = createDebugPanel();
+          HEYS.badge = createBadgeApi();
+        }
+        bootstrapGlobals();
+        
+        function createDebugPanel() {
+          return {
+            _tapCount: 0,
+            _tapTimer: null,
+            _visible: false,
+            _el: null,
             
-            if (this._tapCount >= 3) {
-              this._tapCount = 0;
-              this.toggle();
-            } else {
-              this._tapTimer = setTimeout(() => { this._tapCount = 0; }, 500);
-            }
-          },
-          
-          toggle() {
-            this._visible ? this.hide() : this.show();
-          },
-          
-          show() {
-            if (this._el) this.hide();
-            
-            const syncLog = window.HEYS?.cloud?.getSyncLog?.() || [];
-            const pending = window.HEYS?.cloud?.getPendingCount?.() || 0;
-            const status = window.HEYS?.cloud?.getStatus?.() || 'unknown';
-            const cloudClientId = window.HEYS?.cloud?.getClientId?.() || '';
-            
-            // Получаем clientId из разных источников
-            const lsClientId = localStorage.getItem('heys_client_current') || '';
-            const clientId = cloudClientId || lsClientId || 'none';
-            
-            // Данные текущего дня — ищем с clientId prefix
-            const today = new Date().toISOString().slice(0, 10);
-            let dayData = null;
-            let dayKey = '';
-            
-            // Пробуем разные варианты ключей
-            const possibleKeys = [
-              `heys_${clientId}_dayv2_${today}`,
-              `heys_dayv2_${today}`,
-            ];
-            
-            // Также ищем по паттерну в localStorage
-            for (let i = 0; i < localStorage.length; i++) {
-              const k = localStorage.key(i);
-              if (k && k.includes(`dayv2_${today}`) && !k.includes('backup')) {
-                possibleKeys.unshift(k);
-                break;
+            handleTap() {
+              this._tapCount++;
+              clearTimeout(this._tapTimer);
+              
+              if (this._tapCount >= 3) {
+                this._tapCount = 0;
+                this.toggle();
+              } else {
+                this._tapTimer = setTimeout(() => { this._tapCount = 0; }, 500);
               }
-            }
+            },
             
-            for (const key of possibleKeys) {
-              try {
-                const raw = localStorage.getItem(key);
-                if (raw) {
-                  dayData = JSON.parse(raw);
-                  dayKey = key;
+            toggle() {
+              this._visible ? this.hide() : this.show();
+            },
+            
+            show() {
+              if (this._el) this.hide();
+              
+              const syncLog = HEYS?.cloud?.getSyncLog?.() || [];
+              const pending = HEYS?.cloud?.getPendingCount?.() || 0;
+              const status = HEYS?.cloud?.getStatus?.() || 'unknown';
+              const cloudClientId = HEYS?.cloud?.getClientId?.() || '';
+              
+              // Получаем clientId из разных источников
+              const lsClientId = localStorage.getItem('heys_client_current') || '';
+              const clientId = cloudClientId || lsClientId || 'none';
+              
+              // Данные текущего дня — ищем с clientId prefix
+              const today = new Date().toISOString().slice(0, 10);
+              let dayData = null;
+              let dayKey = '';
+              
+              // Пробуем разные варианты ключей
+              const possibleKeys = [
+                `heys_${clientId}_dayv2_${today}`,
+                `heys_dayv2_${today}`,
+              ];
+              
+              // Также ищем по паттерну в localStorage
+              for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.includes(`dayv2_${today}`) && !k.includes('backup')) {
+                  possibleKeys.unshift(k);
                   break;
                 }
-              } catch(e) {}
-            }
-            
-            // Считаем все ключи в localStorage
-            const allKeys = [];
-            for (let i = 0; i < localStorage.length; i++) {
-              const k = localStorage.key(i);
-              if (k && k.startsWith('heys_')) allKeys.push(k);
-            }
-            
-            const html = `
+              }
+              
+              for (const key of possibleKeys) {
+                try {
+                  const raw = localStorage.getItem(key);
+                  if (raw) {
+                    dayData = JSON.parse(raw);
+                    dayKey = key;
+                    break;
+                  }
+                } catch(e) {}
+              }
+              
+              // Считаем все ключи в localStorage
+              const allKeys = [];
+              for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('heys_')) allKeys.push(k);
+              }
+              
+              const html = `
               <div id="heys-debug-panel" style="
                 position: fixed; top: 0; left: 0; right: 0; bottom: 0;
                 background: rgba(0,0,0,0.95); color: #0f0; font-family: monospace;
@@ -253,66 +258,77 @@
             alert(`HEYS keys (${keys.length}):\n\n${keys.slice(0, 30).join('\n')}${keys.length > 30 ? '\n...' : ''}`);
           }
         };
+        }
         
         // === Badge API Module ===
         // Показывает streak на иконке приложения (Android Chrome PWA)
-        window.HEYS.badge = {
-          update(count) {
-            if (!('setAppBadge' in navigator)) return;
-            
-            try {
-              if (count > 0) {
-                navigator.setAppBadge(count);
-              } else {
-                navigator.clearAppBadge();
+        function createBadgeApi() {
+          return {
+            update(count) {
+              if (!('setAppBadge' in navigator)) return;
+              
+              try {
+                if (count > 0) {
+                  navigator.setAppBadge(count);
+                } else {
+                  navigator.clearAppBadge();
+                }
+              } catch (e) {
+                // Silently fail — badge не критичен
               }
-            } catch (e) {
-              // Silently fail — badge не критичен
+            },
+            
+            updateFromStreak() {
+              const streak = HEYS?.Day?.getStreak?.() || 0;
+              this.update(streak);
+            },
+            
+            clear() {
+              if ('clearAppBadge' in navigator) {
+                navigator.clearAppBadge().catch(() => {});
+              }
             }
-          },
-          
-          updateFromStreak() {
-            const streak = window.HEYS?.Day?.getStreak?.() || 0;
-            this.update(streak);
-          },
-          
-          clear() {
-            if ('clearAppBadge' in navigator) {
-              navigator.clearAppBadge().catch(() => {});
-            }
-          }
-        };
+          };
+        }
         
         // Wait for React and HEYS components to load
+        const INIT_RETRY_DELAY = 100;
         let reactCheckCount = 0;
-        function initializeApp() {
-          // Проверяем загрузку React
-          if (!window.React || !window.ReactDOM) {
-            reactCheckCount++;
-            // Логи ожидания отключены для чистой консоли
-            setTimeout(initializeApp, 100);
+        const isReactReady = () => Boolean(window.React && window.ReactDOM);
+        const isHeysReady = () => Boolean(
+          HEYS &&
+          HEYS.DayTab &&
+          HEYS.Ration &&
+          HEYS.UserTab &&
+          HEYS.ReportsTab
+        );
+        const retryInit = () => {
+          reactCheckCount++;
+          setTimeout(initializeApp, INIT_RETRY_DELAY);
+        };
+        const waitForDependencies = (onReady) => {
+          if (isReactReady() && isHeysReady()) {
+            onReady();
             return;
           }
-
-          // Проверяем загрузку критичных HEYS компонентов
-          const heysReady =
-            window.HEYS &&
-            window.HEYS.DayTab &&
-            window.HEYS.Ration &&
-            window.HEYS.UserTab &&
-            window.HEYS.ReportsTab;
-
-          if (!heysReady) {
-            reactCheckCount++;
-            // Логи ожидания отключены для чистой консоли
-            setTimeout(initializeApp, 100);
+          reactCheckCount++;
+          setTimeout(() => waitForDependencies(onReady), INIT_RETRY_DELAY);
+        };
+        
+        function initializeApp() {
+          if (!isReactReady()) {
+            retryInit();
+            return;
+          }
+          if (!isHeysReady()) {
+            retryInit();
             return;
           }
 
           // Логи инициализации отключены для чистой консоли
           const React = window.React,
             ReactDOM = window.ReactDOM;
-          const { useState, useEffect, useRef, useCallback } = React;
+          const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
           /* ═══════════════════════════════════════════════════════════════════════════════
            * 🛡️ КОМПОНЕНТ: ErrorBoundary — Защита от ошибок рендеринга
@@ -743,6 +759,10 @@
                   className: 'hdr-theme-btn',
                   onClick: (e) => {
                     e.stopPropagation();
+                    if (HEYS.cycleTheme) {
+                      HEYS.cycleTheme();
+                      return;
+                    }
                     const html = document.documentElement;
                     const current = html.getAttribute('data-theme') || 'light';
                     const next = current === 'dark' ? 'light' : 'dark';
@@ -1485,24 +1505,21 @@
             'heys_dayv2_date',
           ];
 
-          function App() {
-            const ONE_CURATOR_MODE = true; // Включаем автовход для работы с Supabase
-            const [tab, setTab] = useState('stats');
-            
-            // === Dark Theme (3 modes: light / dark / auto) ===
+          // Тема: light / dark / auto
+          function useThemePreference() {
             const [theme, setTheme] = useState(() => {
               const saved = localStorage.getItem('heys_theme');
               return ['light', 'dark', 'auto'].includes(saved) ? saved : 'light';
             });
             
-            const resolvedTheme = React.useMemo(() => {
+            const resolvedTheme = useMemo(() => {
               if (theme === 'auto') {
                 return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
               }
               return theme;
             }, [theme]);
             
-            React.useEffect(() => {
+            useEffect(() => {
               document.documentElement.setAttribute('data-theme', resolvedTheme);
               localStorage.setItem('heys_theme', theme);
               
@@ -1516,14 +1533,633 @@
               return () => mq.removeEventListener('change', handler);
             }, [theme, resolvedTheme]);
             
-            const cycleTheme = () => {
+            const cycleTheme = useCallback(() => {
               setTheme(prev => prev === 'light' ? 'dark' : prev === 'dark' ? 'auto' : 'light');
-            };
+            }, []);
             
+            return { theme, resolvedTheme, cycleTheme };
+          }
+
+          function usePwaPrompts() {
+            const [pwaInstallPrompt, setPwaInstallPrompt] = useState(null);
+            const [showPwaBanner, setShowPwaBanner] = useState(false);
+            const [showIosPwaBanner, setShowIosPwaBanner] = useState(false);
+            
+            // Определяем iOS Safari
+            const isIosSafari = useMemo(() => {
+              const ua = navigator.userAgent || '';
+              const isIos = /iPhone|iPad|iPod/.test(ua);
+              const isWebkit = /WebKit/.test(ua);
+              const isChrome = /CriOS/.test(ua);
+              const isFirefox = /FxiOS/.test(ua);
+              // iOS Safari = iOS + WebKit + не Chrome + не Firefox
+              return isIos && isWebkit && !isChrome && !isFirefox;
+            }, []);
+            
+            // Слушаем beforeinstallprompt событие (Android/Desktop)
+            useEffect(() => {
+              const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                                   window.navigator.standalone === true;
+              if (isStandalone) return;
+              
+              const dismissed = localStorage.getItem('heys_pwa_banner_dismissed');
+              if (dismissed) {
+                const dismissedTime = parseInt(dismissed, 10);
+                if (Date.now() - dismissedTime < 7 * 24 * 60 * 60 * 1000) return;
+              }
+              
+              if (isIosSafari) {
+                setTimeout(() => setShowIosPwaBanner(true), 3000);
+                return;
+              }
+              
+              const handler = (e) => {
+                e.preventDefault();
+                setPwaInstallPrompt(e);
+                setTimeout(() => setShowPwaBanner(true), 3000);
+              };
+              
+              window.addEventListener('beforeinstallprompt', handler);
+              return () => window.removeEventListener('beforeinstallprompt', handler);
+            }, [isIosSafari]);
+            
+            const handlePwaInstall = useCallback(async () => {
+              if (!pwaInstallPrompt) return;
+              pwaInstallPrompt.prompt();
+              const { outcome } = await pwaInstallPrompt.userChoice;
+              if (outcome === 'accepted') {
+                setShowPwaBanner(false);
+                localStorage.setItem('heys_pwa_installed', 'true');
+              }
+              setPwaInstallPrompt(null);
+            }, [pwaInstallPrompt]);
+            
+            const dismissPwaBanner = useCallback(() => {
+              setShowPwaBanner(false);
+              localStorage.setItem('heys_pwa_banner_dismissed', Date.now().toString());
+            }, []);
+            
+            const dismissIosPwaBanner = useCallback(() => {
+              setShowIosPwaBanner(false);
+              localStorage.setItem('heys_pwa_banner_dismissed', Date.now().toString());
+            }, []);
+            
+            return { showPwaBanner, showIosPwaBanner, handlePwaInstall, dismissPwaBanner, dismissIosPwaBanner };
+          }
+
+          function useCloudSyncStatus() {
+            const [cloudStatus, setCloudStatus] = useState(() => navigator.onLine ? 'idle' : 'offline');
+            const [pendingCount, setPendingCount] = useState(0);
+            const [pendingDetails, setPendingDetails] = useState({ days: 0, products: 0, profile: 0, other: 0 });
+            const [showOfflineBanner, setShowOfflineBanner] = useState(false);
+            const [showOnlineBanner, setShowOnlineBanner] = useState(false);
+            const [syncProgress, setSyncProgress] = useState({ synced: 0, total: 0 });
+            const [retryCountdown, setRetryCountdown] = useState(0);
+            
+            const cloudSyncTimeoutRef = useRef(null);
+            const pendingChangesRef = useRef(false);
+            const syncingStartRef = useRef(null);
+            const syncedTimeoutRef = useRef(null);
+            const syncingDelayTimeoutRef = useRef(null);
+            const initialCheckDoneRef = useRef(false);
+            const retryIntervalRef = useRef(null);
+            
+            const MIN_SYNCING_DURATION = 1500;
+            const SYNCING_DELAY = 400;
+            
+            const playSyncSound = useCallback(() => {
+              const soundEnabled = localStorage.getItem('heys_sync_sound') !== 'false';
+              if (!soundEnabled) return;
+              
+              try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+                oscillator.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.1);
+                
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                
+                oscillator.type = 'sine';
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.2);
+              } catch (_) {}
+            }, []);
+            
+            const showSyncedWithMinDuration = useCallback(() => {
+              if (syncedTimeoutRef.current) return;
+              
+              const elapsed = syncingStartRef.current ? Date.now() - syncingStartRef.current : 0;
+              const remaining = Math.max(0, MIN_SYNCING_DURATION - elapsed);
+              
+              syncedTimeoutRef.current = setTimeout(() => {
+                syncedTimeoutRef.current = null;
+                syncingStartRef.current = null;
+                setCloudStatus('synced');
+                playSyncSound();
+                setSyncProgress({ synced: 0, total: 0 });
+                if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+                cloudSyncTimeoutRef.current = setTimeout(() => {
+                  setCloudStatus('idle');
+                }, 2000);
+              }, remaining);
+            }, [playSyncSound]);
+            
+            useEffect(() => {
+              const handleSyncComplete = () => {
+                if (syncingDelayTimeoutRef.current) {
+                  clearTimeout(syncingDelayTimeoutRef.current);
+                  syncingDelayTimeoutRef.current = null;
+                }
+                if (cloudSyncTimeoutRef.current) {
+                  clearTimeout(cloudSyncTimeoutRef.current);
+                  cloudSyncTimeoutRef.current = null;
+                }
+                pendingChangesRef.current = false;
+                if (navigator.onLine) {
+                  showSyncedWithMinDuration();
+                }
+              };
+              
+              const handleDataSaved = () => {
+                pendingChangesRef.current = true;
+                
+                if (!navigator.onLine) {
+                  setCloudStatus('offline');
+                  return;
+                }
+                
+                if (syncedTimeoutRef.current) {
+                  return;
+                }
+                
+                if (cloudSyncTimeoutRef.current) {
+                  clearTimeout(cloudSyncTimeoutRef.current);
+                  cloudSyncTimeoutRef.current = null;
+                }
+                
+                if (!syncingStartRef.current) {
+                  syncingStartRef.current = Date.now();
+                  
+                  if (!syncingDelayTimeoutRef.current) {
+                    syncingDelayTimeoutRef.current = setTimeout(() => {
+                      syncingDelayTimeoutRef.current = null;
+                      if (syncingStartRef.current && !syncedTimeoutRef.current) {
+                        setCloudStatus('syncing');
+                      }
+                    }, SYNCING_DELAY);
+                  }
+                }
+                
+                if (!cloudSyncTimeoutRef.current) {
+                  cloudSyncTimeoutRef.current = setTimeout(() => {
+                    pendingChangesRef.current = false;
+                    showSyncedWithMinDuration();
+                  }, 5000);
+                }
+              };
+              
+              const handlePendingChange = (e) => {
+                const count = e.detail?.count || 0;
+                const details = e.detail?.details || { days: 0, products: 0, profile: 0, other: 0 };
+                setPendingCount(count);
+                setPendingDetails(details);
+                
+                if (syncProgress.total > 0 && count < syncProgress.total) {
+                  setSyncProgress(prev => ({ ...prev, synced: prev.total - count }));
+                }
+                
+                if (count > 0 && !navigator.onLine) {
+                  setCloudStatus('offline');
+                }
+              };
+              
+              const handleSyncProgress = (e) => {
+                const { synced, total } = e.detail || {};
+                if (typeof synced === 'number' && typeof total === 'number') {
+                  setSyncProgress({ synced, total });
+                }
+              };
+              
+              const handleSyncError = (e) => {
+                const code = e.detail?.error;
+                if (code === 'auth_required') {
+                  setCloudStatus('offline');
+                  setRetryCountdown(0);
+                  try { window.alert('Требуется повторный вход для синхронизации'); } catch (_) {}
+                  return;
+                }
+                
+                const retryIn = e.detail?.retryIn || 5;
+                setCloudStatus('error');
+                setRetryCountdown(retryIn);
+                
+                if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
+                retryIntervalRef.current = setInterval(() => {
+                  setRetryCountdown(prev => {
+                    if (prev <= 1) {
+                      clearInterval(retryIntervalRef.current);
+                      retryIntervalRef.current = null;
+                      if (navigator.onLine && window.HEYS?.cloud?.retrySync) {
+                        window.HEYS.cloud.retrySync();
+                        setCloudStatus('syncing');
+                      }
+                      return 0;
+                    }
+                    return prev - 1;
+                  });
+                }, 1000);
+              };
+              
+              const handleNetworkRestored = (e) => {
+                const count = e.detail?.pendingCount || 0;
+                if (count > 0) {
+                  if (!syncingStartRef.current) {
+                    syncingStartRef.current = Date.now();
+                  }
+                  setCloudStatus('syncing');
+                }
+              };
+              
+              const handleOnline = () => {
+                setShowOfflineBanner(false);
+                setShowOnlineBanner(true);
+                setTimeout(() => setShowOnlineBanner(false), 2000);
+                
+                if (pendingChangesRef.current || pendingCount > 0) {
+                  if (!syncingStartRef.current) {
+                    syncingStartRef.current = Date.now();
+                  }
+                  setCloudStatus('syncing');
+                  if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+                  cloudSyncTimeoutRef.current = setTimeout(() => {
+                    pendingChangesRef.current = false;
+                    showSyncedWithMinDuration();
+                  }, 2000);
+                } else {
+                  setCloudStatus('idle');
+                }
+              };
+              
+              const handleOffline = () => {
+                setShowOfflineBanner(true);
+                setCloudStatus('offline');
+                setTimeout(() => {
+                  setShowOfflineBanner(false);
+                }, 3000);
+              };
+              
+              window.addEventListener('heysSyncCompleted', handleSyncComplete);
+              window.addEventListener('heys:data-uploaded', handleSyncComplete);
+              window.addEventListener('heys:data-saved', handleDataSaved);
+              window.addEventListener('heys:pending-change', handlePendingChange);
+              window.addEventListener('heys:network-restored', handleNetworkRestored);
+              window.addEventListener('heys:sync-progress', handleSyncProgress);
+              window.addEventListener('heys:sync-error', handleSyncError);
+              window.addEventListener('online', handleOnline);
+              window.addEventListener('offline', handleOffline);
+              
+              if (!initialCheckDoneRef.current) {
+                initialCheckDoneRef.current = true;
+                if (!navigator.onLine) {
+                  setCloudStatus('offline');
+                  setShowOfflineBanner(true);
+                  setTimeout(() => setShowOfflineBanner(false), 3000);
+                } else {
+                  setCloudStatus('idle');
+                }
+              }
+              
+              if (window.HEYS?.cloud?.getPendingCount) {
+                setPendingCount(window.HEYS.cloud.getPendingCount());
+              }
+              if (window.HEYS?.cloud?.getPendingDetails) {
+                setPendingDetails(window.HEYS.cloud.getPendingDetails());
+              }
+              
+              return () => {
+                window.removeEventListener('heysSyncCompleted', handleSyncComplete);
+                window.removeEventListener('heys:data-uploaded', handleSyncComplete);
+                window.removeEventListener('heys:data-saved', handleDataSaved);
+                window.removeEventListener('heys:pending-change', handlePendingChange);
+                window.removeEventListener('heys:network-restored', handleNetworkRestored);
+                window.removeEventListener('heys:sync-progress', handleSyncProgress);
+                window.removeEventListener('heys:sync-error', handleSyncError);
+                window.removeEventListener('online', handleOnline);
+                window.removeEventListener('offline', handleOffline);
+                if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+                if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
+              };
+            }, [pendingCount, showSyncedWithMinDuration, syncProgress.total]);
+            
+            const handleRetrySync = useCallback(() => {
+              if (window.HEYS?.cloud?.retrySync) {
+                window.HEYS.cloud.retrySync();
+                syncingStartRef.current = Date.now();
+                setCloudStatus('syncing');
+              }
+            }, []);
+            
+            return {
+              cloudStatus,
+              pendingCount,
+              pendingDetails,
+              showOfflineBanner,
+              showOnlineBanner,
+              syncProgress,
+              retryCountdown,
+              handleRetrySync,
+            };
+          }
+
+          function useClientState(cloud, U) {
+            const [status, setStatus] = useState(
+              typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'offline',
+            );
+            const [syncVer, setSyncVer] = useState(0);
+            const [clients, setClients] = useState([]);
+            const [clientId, setClientId] = useState('');
+            const [newName, setNewName] = useState('');
+            const [cloudUser, setCloudUser] = useState(null);
+            const [isInitializing, setIsInitializing] = useState(true);
+            const [products, setProducts] = useState([]);
+            const [backupMeta, setBackupMeta] = useState(() => {
+              if (U && typeof U.lsGet === 'function') {
+                try {
+                  return U.lsGet('heys_backup_meta', null);
+                } catch (_) {}
+              }
+              return null;
+            });
+            const [backupBusy, setBackupBusy] = useState(false);
+            
+            return {
+              status, setStatus,
+              syncVer, setSyncVer,
+              clients, setClients,
+              clientId, setClientId,
+              newName, setNewName,
+              cloudUser, setCloudUser,
+              isInitializing, setIsInitializing,
+              products, setProducts,
+              backupMeta, setBackupMeta,
+              backupBusy, setBackupBusy,
+            };
+          }
+
+          function useCloudClients(cloud, U, {
+            clients, setClients,
+            clientId, setClientId,
+            cloudUser, setCloudUser,
+            setProducts,
+            setStatus,
+            setSyncVer,
+            setLoginError,
+          }) {
+            const ONE_CURATOR_MODE = true;
+            const signInCooldownUntilRef = useRef(0);
+            
+            const fetchClientsFromCloud = useCallback(async (curatorId) => {
+              if (!cloud.client || !curatorId) {
+                return [];
+              }
+              
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout: Supabase request took too long')), 5000)
+              );
+              
+              try {
+                const fetchPromise = cloud.client
+                  .from('clients')
+                  .select('id, name')
+                  .eq('curator_id', curatorId)
+                  .order('updated_at', { ascending: true });
+                
+                const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+                if (error) {
+                  console.error('Ошибка загрузки клиентов:', error);
+                  return [];
+                }
+                return data || [];
+              } catch (e) {
+                console.error('[HEYS] ❌ fetchClientsFromCloud failed:', e.message);
+                return [];
+              }
+            }, [cloud]);
+            
+            const addClientToCloud = useCallback(async (name) => {
+              const clientName = (name || '').trim() || `Клиент ${clients.length + 1}`;
+
+              if (!cloud.client || !cloudUser || !cloudUser.id) {
+                const newClient = {
+                  id: `local-user-${Date.now()}`,
+                  name: clientName,
+                };
+                const updatedClients = [...clients, newClient];
+                setClients(updatedClients);
+                U.lsSet('heys_clients', updatedClients);
+                setClientId(newClient.id);
+                U.lsSet('heys_client_current', newClient.id);
+                return;
+              }
+
+              const userId = cloudUser.id;
+              const { data, error } = await cloud.client
+                .from('clients')
+                .insert([{ name: clientName, curator_id: userId }])
+                .select('id, name')
+                .single();
+              if (error) {
+                console.error('Ошибка создания клиента:', error);
+                alert('Ошибка создания клиента: ' + error.message);
+                return;
+              }
+              const updated = await fetchClientsFromCloud(userId);
+              setClients(updated);
+              setClientId(data.id);
+              U.lsSet('heys_client_current', data.id);
+            }, [clients, cloud, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
+            
+            const renameClient = useCallback(async (id, name) => {
+              if (!cloud.client || !cloudUser || !cloudUser.id) {
+                const updatedClients = clients.map((c) => (c.id === id ? { ...c, name } : c));
+                setClients(updatedClients);
+                U.lsSet('heys_clients', updatedClients);
+                return;
+              }
+
+              const userId = cloudUser.id;
+              await cloud.client.from('clients').update({ name }).eq('id', id);
+              const updated = await fetchClientsFromCloud(userId);
+              setClients(updated);
+            }, [clients, cloud, cloudUser, fetchClientsFromCloud, setClients, U]);
+            
+            const removeClient = useCallback(async (id) => {
+              if (!cloud.client || !cloudUser || !cloudUser.id) {
+                const updatedClients = clients.filter((c) => c.id !== id);
+                setClients(updatedClients);
+                U.lsSet('heys_clients', updatedClients);
+                if (clientId === id) {
+                  setClientId('');
+                  U.lsSet('heys_client_current', '');
+                }
+                return;
+              }
+
+              const userId = cloudUser.id;
+              await cloud.client.from('clients').delete().eq('id', id);
+              const updated = await fetchClientsFromCloud(userId);
+              setClients(updated);
+              if (clientId === id) {
+                setClientId('');
+                U.lsSet('heys_client_current', '');
+              }
+            }, [clientId, clients, cloud, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
+            
+            const cloudSignIn = useCallback(async (email, password, opts = {}) => {
+              if (!email || !password) {
+                setLoginError('Введите email и пароль');
+                setStatus('offline');
+                return { error: 'missing_credentials' };
+              }
+              
+              const now = Date.now();
+              if (now < signInCooldownUntilRef.current) {
+                setLoginError('Слишком много попыток. Подождите 30 сек и попробуйте снова.');
+                setStatus('offline');
+                return { error: 'cooldown' };
+              }
+              
+              const rememberMe = opts.rememberMe === true;
+              if (!cloud || typeof cloud.signIn !== 'function') {
+                alert('Облачный модуль не загружен');
+                return;
+              }
+              
+              try {
+                setStatus('signin');
+                setLoginError(null);
+                
+                if (rememberMe) {
+                  localStorage.setItem('heys_remember_me', 'true');
+                  localStorage.setItem('heys_remember_email', email || '');
+                } else {
+                  localStorage.removeItem('heys_remember_me');
+                  localStorage.removeItem('heys_remember_email');
+                }
+                
+                const res = await cloud.signIn(email, password);
+                if (res.error) {
+                  const message = res.error.message || 'Ошибка входа';
+                  setLoginError(message);
+                  
+                  // Примитивный backoff для 429
+                  if (/Too Many Requests/i.test(message)) {
+                    signInCooldownUntilRef.current = Date.now() + 30_000;
+                  }
+                  setStatus('offline');
+                  return { error: message };
+                }
+                
+                setCloudUser(res.user);
+                setStatus(typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'online');
+                const loadedClients = await fetchClientsFromCloud(res.user.id);
+                setClients(loadedClients);
+                
+                const lastClientId = localStorage.getItem('heys_last_client_id');
+                if (lastClientId && loadedClients.some(c => c.id === lastClientId)) {
+                  setClientId(lastClientId);
+                } else if (loadedClients.length > 0) {
+                  setClientId(loadedClients[0].id);
+                  localStorage.setItem('heys_last_client_id', loadedClients[0].id);
+                }
+                
+                const loadedProducts = Array.isArray(U.lsGet('heys_products', []))
+                  ? U.lsGet('heys_products', [])
+                  : [];
+                setProducts(loadedProducts);
+                setSyncVer((v) => v + 1);
+              } catch (e) {
+                setStatus('offline');
+                setLoginError(e && e.message ? e.message : 'Ошибка подключения');
+              }
+            }, [cloud, fetchClientsFromCloud, setClientId, setClients, setCloudUser, setProducts, setStatus, setSyncVer, U]);
+            
+            const cloudSignOut = useCallback(async () => {
+              try {
+                if (cloud && typeof cloud.signOut === 'function') await cloud.signOut();
+              } catch (_) {}
+              setCloudUser(null);
+              setClientId(null);
+              setClients([]);
+              setProducts([]);
+              setStatus('offline');
+              setSyncVer((v) => v + 1);
+              try { localStorage.removeItem('heys_last_client_id'); } catch (_) {}
+            }, [cloud, setClientId, setClients, setCloudUser, setProducts, setStatus, setSyncVer]);
+            
+            return {
+              ONE_CURATOR_MODE,
+              fetchClientsFromCloud,
+              addClientToCloud,
+              renameClient,
+              removeClient,
+              cloudSignIn,
+              cloudSignOut,
+            };
+          }
+
+          function renderRoot(AppComponent) {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
+          }
+
+          function App() {
+            const [tab, setTab] = useState('stats');
+            const { theme, resolvedTheme, cycleTheme } = useThemePreference();
+            useEffect(() => {
+              HEYS.cycleTheme = cycleTheme;
+            }, [cycleTheme]);
+            
+            const U = window.HEYS.utils || { lsGet: (k, d) => d, lsSet: () => {} };
+            const cloud = window.HEYS.cloud || {};
+            const {
+              status, setStatus,
+              syncVer, setSyncVer,
+              clients, setClients,
+              clientId, setClientId,
+              newName, setNewName,
+              cloudUser, setCloudUser,
+              isInitializing, setIsInitializing,
+              products, setProducts,
+              backupMeta, setBackupMeta,
+              backupBusy, setBackupBusy,
+            } = useClientState(cloud, U);
+            const [loginError, setLoginError] = useState('');
+            const {
+              ONE_CURATOR_MODE,
+              fetchClientsFromCloud,
+              addClientToCloud,
+              renameClient,
+              removeClient,
+              cloudSignIn,
+              cloudSignOut,
+            } = useCloudClients(cloud, U, {
+              clients, setClients,
+              clientId, setClientId,
+              cloudUser, setCloudUser,
+              setProducts,
+              setStatus,
+              setSyncVer,
+              setLoginError,
+            });
             // ...все остальные useState...
             // useEffect автосмены клиента — ниже всех useState!
-            const U = window.HEYS.utils || { lsGet: (k, d) => d, lsSet: () => {} };
-            const [products, setProducts] = useState([]);
             
             // === SWIPE NAVIGATION ===
             const TABS_ORDER = ['ration', 'stats', 'diary', 'reports', 'overview', 'user'];
@@ -1620,87 +2256,25 @@
               return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
             };
             const [selectedDate, setSelectedDate] = useState(todayISO());
-
-            const cloud = window.HEYS.cloud || {};
-            const [status, setStatus] = useState(
-              typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'offline',
-            );
-            const [syncVer, setSyncVer] = useState(0);
-            // === Clients (selector + persistence) ===
-            const [clients, setClients] = useState([]);
-            const [clientId, setClientId] = useState('');
-            const [newName, setNewName] = useState('');
-            const [cloudUser, setCloudUser] = useState(null);
-            const [isInitializing, setIsInitializing] = useState(true); // Флаг начальной загрузки
             
             // === PWA Install Banner ===
-            const [pwaInstallPrompt, setPwaInstallPrompt] = useState(null);
-            const [showPwaBanner, setShowPwaBanner] = useState(false);
-            const [showIosPwaBanner, setShowIosPwaBanner] = useState(false);
-            
-            // Определяем iOS Safari
-            const isIosSafari = React.useMemo(() => {
-              const ua = navigator.userAgent || '';
-              const isIos = /iPhone|iPad|iPod/.test(ua);
-              const isWebkit = /WebKit/.test(ua);
-              const isChrome = /CriOS/.test(ua);
-              const isFirefox = /FxiOS/.test(ua);
-              // iOS Safari = iOS + WebKit + не Chrome + не Firefox
-              return isIos && isWebkit && !isChrome && !isFirefox;
-            }, []);
-            
-            // Слушаем beforeinstallprompt событие (Android/Desktop)
-            React.useEffect(() => {
-              // Проверяем, не установлено ли уже приложение
-              const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                                   window.navigator.standalone === true;
-              if (isStandalone) return;
-              
-              // Проверяем, не отклонил ли пользователь баннер ранее
-              const dismissed = localStorage.getItem('heys_pwa_banner_dismissed');
-              if (dismissed) {
-                const dismissedTime = parseInt(dismissed, 10);
-                // Показываем снова через 7 дней
-                if (Date.now() - dismissedTime < 7 * 24 * 60 * 60 * 1000) return;
-              }
-              
-              // Для iOS Safari — показываем специальный баннер
-              if (isIosSafari) {
-                setTimeout(() => setShowIosPwaBanner(true), 3000);
-                return;
-              }
-              
-              const handler = (e) => {
-                e.preventDefault();
-                setPwaInstallPrompt(e);
-                // Показываем баннер через 3 секунды после загрузки
-                setTimeout(() => setShowPwaBanner(true), 3000);
-              };
-              
-              window.addEventListener('beforeinstallprompt', handler);
-              return () => window.removeEventListener('beforeinstallprompt', handler);
-            }, [isIosSafari]);
-            
-            const handlePwaInstall = async () => {
-              if (!pwaInstallPrompt) return;
-              pwaInstallPrompt.prompt();
-              const { outcome } = await pwaInstallPrompt.userChoice;
-              if (outcome === 'accepted') {
-                setShowPwaBanner(false);
-                localStorage.setItem('heys_pwa_installed', 'true');
-              }
-              setPwaInstallPrompt(null);
-            };
-            
-            const dismissPwaBanner = () => {
-              setShowPwaBanner(false);
-              localStorage.setItem('heys_pwa_banner_dismissed', Date.now().toString());
-            };
-            
-            const dismissIosPwaBanner = () => {
-              setShowIosPwaBanner(false);
-              localStorage.setItem('heys_pwa_banner_dismissed', Date.now().toString());
-            };
+            const {
+              showPwaBanner,
+              showIosPwaBanner,
+              handlePwaInstall,
+              dismissPwaBanner,
+              dismissIosPwaBanner,
+            } = usePwaPrompts();
+            const {
+              cloudStatus,
+              pendingCount,
+              pendingDetails,
+              showOfflineBanner,
+              showOnlineBanner,
+              syncProgress,
+              retryCountdown,
+              handleRetrySync,
+            } = useCloudSyncStatus();
             
             // === Update Toast (новая версия доступна) ===
             const [showUpdateToast, setShowUpdateToast] = useState(false);
@@ -1731,301 +2305,6 @@
               localStorage.setItem('heys_update_dismissed', Date.now().toString());
             };
 
-            // === Cloud Sync Status ===
-            const [cloudStatus, setCloudStatus] = useState(() => navigator.onLine ? 'idle' : 'offline');
-            const [pendingCount, setPendingCount] = useState(0); // Количество ожидающих изменений
-            const [pendingDetails, setPendingDetails] = useState({ days: 0, products: 0, profile: 0, other: 0 });
-            const [showOfflineBanner, setShowOfflineBanner] = useState(false); // Управляется через useEffect
-            const [showOnlineBanner, setShowOnlineBanner] = useState(false); // Баннер "Сеть восстановлена"
-            const [syncProgress, setSyncProgress] = useState({ synced: 0, total: 0 }); // Прогресс синхронизации
-            const [retryCountdown, setRetryCountdown] = useState(0); // Countdown до retry
-            const cloudSyncTimeoutRef = useRef(null);
-            const pendingChangesRef = useRef(false); // Есть ли несинхронизированные изменения
-            const syncingStartRef = useRef(null); // Время начала syncing для минимальной длительности
-            const MIN_SYNCING_DURATION = 1500; // Минимум 1.5 секунды показывать анимацию
-            const SYNCING_DELAY = 400; // Показывать spinner только если sync длится дольше 400ms
-            const syncedTimeoutRef = useRef(null); // Отдельный ref для synced timeout
-            const syncingDelayTimeoutRef = useRef(null); // Задержка перед показом spinner
-            const initialCheckDoneRef = useRef(false); // Начальная проверка сети выполнена
-            const retryIntervalRef = useRef(null); // Интервал для countdown
-            
-            // 🔊 Звук успешной синхронизации (тихий, приятный)
-            const playSyncSound = useCallback(() => {
-              // Проверяем настройку (по умолчанию включено)
-              const soundEnabled = localStorage.getItem('heys_sync_sound') !== 'false';
-              if (!soundEnabled) return;
-              
-              try {
-                // Создаём короткий приятный звук через Web Audio API
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                
-                // Приятная частота (как уведомление)
-                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
-                oscillator.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.1); // C#6
-                
-                // Тихий звук с fade out
-                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                
-                oscillator.type = 'sine';
-                oscillator.start(audioCtx.currentTime);
-                oscillator.stop(audioCtx.currentTime + 0.2);
-              } catch (e) {
-                // Звук не критичен, игнорируем ошибки
-              }
-            }, []);
-            
-            // Функция для показа synced с учётом минимального времени syncing
-            const showSyncedWithMinDuration = useCallback(() => {
-              // Защита от множественных вызовов
-              if (syncedTimeoutRef.current) {
-                // showSyncedWithMinDuration already scheduled, skip
-                return;
-              }
-              
-              const elapsed = syncingStartRef.current ? Date.now() - syncingStartRef.current : 0;
-              const remaining = Math.max(0, MIN_SYNCING_DURATION - elapsed);
-              
-              // showSyncedWithMinDuration: elapsed + remaining = MIN_SYNCING_DURATION
-              
-              syncedTimeoutRef.current = setTimeout(() => {
-                syncedTimeoutRef.current = null;
-                syncingStartRef.current = null;
-                // → synced
-                setCloudStatus('synced');
-                // 🔊 Воспроизводим звук синхронизации
-                playSyncSound();
-                // Сбрасываем прогресс
-                setSyncProgress({ synced: 0, total: 0 });
-                // Скрываем через 2 сек
-                if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
-                cloudSyncTimeoutRef.current = setTimeout(() => {
-                  // → idle
-                  setCloudStatus('idle');
-                }, 2000);
-              }, remaining);
-            }, [playSyncSound]);
-            
-            useEffect(() => {
-              // Слушаем события синхронизации
-              const handleSyncComplete = () => {
-                // Отменяем delay timeout — если sync завершился быстро, не показываем spinner
-                if (syncingDelayTimeoutRef.current) {
-                  clearTimeout(syncingDelayTimeoutRef.current);
-                  syncingDelayTimeoutRef.current = null;
-                }
-                // Отменяем fallback
-                if (cloudSyncTimeoutRef.current) {
-                  clearTimeout(cloudSyncTimeoutRef.current);
-                  cloudSyncTimeoutRef.current = null;
-                }
-                pendingChangesRef.current = false;
-                if (navigator.onLine) {
-                  showSyncedWithMinDuration();
-                }
-              };
-              
-              const handleDataSaved = (e) => {
-                pendingChangesRef.current = true;
-                
-                if (!navigator.onLine) {
-                  // Оффлайн — показываем статус offline
-                  setCloudStatus('offline');
-                  return;
-                }
-                
-                // Если synced уже запланирован — не прерываем, пусть отработает
-                if (syncedTimeoutRef.current) {
-                  return;
-                }
-                
-                // Также отменяем fallback timeout
-                if (cloudSyncTimeoutRef.current) {
-                  clearTimeout(cloudSyncTimeoutRef.current);
-                  cloudSyncTimeoutRef.current = null;
-                }
-                
-                // Запоминаем время начала
-                if (!syncingStartRef.current) {
-                  syncingStartRef.current = Date.now();
-                  
-                  // Показываем spinner только если sync длится дольше SYNCING_DELAY
-                  // Это предотвращает мерцание для быстрых операций
-                  if (!syncingDelayTimeoutRef.current) {
-                    syncingDelayTimeoutRef.current = setTimeout(() => {
-                      syncingDelayTimeoutRef.current = null;
-                      // Проверяем что всё ещё в процессе синхронизации
-                      if (syncingStartRef.current && !syncedTimeoutRef.current) {
-                        setCloudStatus('syncing');
-                      }
-                    }, SYNCING_DELAY);
-                  }
-                }
-                
-                // Fallback на 5 сек — если heysSyncCompleted не сработает
-                if (!cloudSyncTimeoutRef.current) {
-                  cloudSyncTimeoutRef.current = setTimeout(() => {
-                    pendingChangesRef.current = false;
-                    showSyncedWithMinDuration();
-                  }, 5000);
-                }
-              };
-              
-              // Обработчик изменения pending count
-              const handlePendingChange = (e) => {
-                const count = e.detail?.count || 0;
-                const details = e.detail?.details || { days: 0, products: 0, profile: 0, other: 0 };
-                setPendingCount(count);
-                setPendingDetails(details);
-                
-                // Обновляем прогресс синхронизации
-                if (syncProgress.total > 0 && count < syncProgress.total) {
-                  setSyncProgress(prev => ({ ...prev, synced: prev.total - count }));
-                }
-                
-                if (count > 0 && !navigator.onLine) {
-                  setCloudStatus('offline');
-                }
-              };
-              
-              // Обработчик прогресса синхронизации
-              const handleSyncProgress = (e) => {
-                const { synced, total } = e.detail || {};
-                if (typeof synced === 'number' && typeof total === 'number') {
-                  setSyncProgress({ synced, total });
-                }
-              };
-              
-              // Обработчик ошибки синхронизации с retry
-              const handleSyncError = (e) => {
-                const code = e.detail?.error;
-                // Auth/RLS ошибка — требуем повторный вход, не крутим retry
-                if (code === 'auth_required') {
-                  setCloudStatus('offline');
-                  setRetryCountdown(0);
-                  try { window.alert('Требуется повторный вход для синхронизации'); } catch (_) {}
-                  return;
-                }
-                
-                const retryIn = e.detail?.retryIn || 5; // секунд до retry
-                setCloudStatus('error');
-                setRetryCountdown(retryIn);
-                
-                // Запускаем countdown
-                if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
-                retryIntervalRef.current = setInterval(() => {
-                  setRetryCountdown(prev => {
-                    if (prev <= 1) {
-                      clearInterval(retryIntervalRef.current);
-                      retryIntervalRef.current = null;
-                      // Автоматически retry
-                      if (navigator.onLine && window.HEYS?.cloud?.retrySync) {
-                        window.HEYS.cloud.retrySync();
-                        setCloudStatus('syncing');
-                      }
-                      return 0;
-                    }
-                    return prev - 1;
-                  });
-                }, 1000);
-              };
-              
-              // Сеть вернулась с pending данными
-              const handleNetworkRestored = (e) => {
-                const count = e.detail?.pendingCount || 0;
-                if (count > 0) {
-                  if (!syncingStartRef.current) {
-                    syncingStartRef.current = Date.now();
-                  }
-                  setCloudStatus('syncing');
-                }
-              };
-              
-              // Отслеживаем онлайн/оффлайн статус
-              const handleOnline = () => {
-                setShowOfflineBanner(false);
-                // Показываем баннер "Сеть восстановлена" на 2 секунды
-                setShowOnlineBanner(true);
-                setTimeout(() => setShowOnlineBanner(false), 2000);
-                
-                // Сеть появилась — если есть pending изменения, показываем syncing
-                if (pendingChangesRef.current || pendingCount > 0) {
-                  if (!syncingStartRef.current) {
-                    syncingStartRef.current = Date.now();
-                  }
-                  setCloudStatus('syncing');
-                  // Ждём завершения синхронизации
-                  if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
-                  cloudSyncTimeoutRef.current = setTimeout(() => {
-                    pendingChangesRef.current = false;
-                    showSyncedWithMinDuration();
-                  }, 2000);
-                } else {
-                  setCloudStatus('idle');
-                }
-              };
-              
-              const handleOffline = () => {
-                // Показываем баннер на 3 секунды, потом скрываем
-                // Основная индикация — через иконку в header
-                setShowOfflineBanner(true);
-                setCloudStatus('offline');
-                setTimeout(() => {
-                  setShowOfflineBanner(false);
-                }, 3000);
-              };
-              
-              window.addEventListener('heysSyncCompleted', handleSyncComplete);
-              window.addEventListener('heys:data-uploaded', handleSyncComplete); // Upload завершён — тоже сброс spinner
-              window.addEventListener('heys:data-saved', handleDataSaved);
-              window.addEventListener('heys:pending-change', handlePendingChange);
-              window.addEventListener('heys:network-restored', handleNetworkRestored);
-              window.addEventListener('heys:sync-progress', handleSyncProgress);
-              window.addEventListener('heys:sync-error', handleSyncError);
-              window.addEventListener('online', handleOnline);
-              window.addEventListener('offline', handleOffline);
-              
-              // Начальный статус — выполняется только один раз
-              if (!initialCheckDoneRef.current) {
-                initialCheckDoneRef.current = true;
-                if (!navigator.onLine) {
-                  setCloudStatus('offline');
-                  // Показываем баннер на 3 секунды при старте без сети
-                  setShowOfflineBanner(true);
-                  setTimeout(() => setShowOfflineBanner(false), 3000);
-                } else {
-                  setCloudStatus('idle');
-                }
-              }
-              
-              // Получить начальный pending count и details
-              if (window.HEYS?.cloud?.getPendingCount) {
-                setPendingCount(window.HEYS.cloud.getPendingCount());
-              }
-              if (window.HEYS?.cloud?.getPendingDetails) {
-                setPendingDetails(window.HEYS.cloud.getPendingDetails());
-              }
-              
-              return () => {
-                window.removeEventListener('heysSyncCompleted', handleSyncComplete);
-                window.removeEventListener('heys:data-uploaded', handleSyncComplete);
-                window.removeEventListener('heys:data-saved', handleDataSaved);
-                window.removeEventListener('heys:pending-change', handlePendingChange);
-                window.removeEventListener('heys:network-restored', handleNetworkRestored);
-                window.removeEventListener('heys:sync-progress', handleSyncProgress);
-                window.removeEventListener('heys:sync-error', handleSyncError);
-                window.removeEventListener('online', handleOnline);
-                window.removeEventListener('offline', handleOffline);
-                if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
-                if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
-              };
-            }, [pendingCount, showSyncedWithMinDuration]);
-            
             // === Badge API: обновление streak на иконке ===
             useEffect(() => {
               // Обновляем badge при загрузке (с задержкой пока DayTab загрузится)
@@ -2050,27 +2329,6 @@
                 window.removeEventListener('heys:data-saved', handleDataChange);
               };
             }, []);
-            
-            // Retry синхронизации
-            const handleRetrySync = () => {
-              if (window.HEYS?.cloud?.retrySync) {
-                window.HEYS.cloud.retrySync();
-                syncingStartRef.current = Date.now();
-                setCloudStatus('syncing');
-              }
-            };
-
-            const [backupMeta, setBackupMeta] = useState(() => {
-              if (U && typeof U.lsGet === 'function') {
-                try {
-                  return U.lsGet('heys_backup_meta', null);
-                } catch (error) {
-                  // Тихий fallback — метаданные backup не критичны
-                }
-              }
-              return null;
-            });
-            const [backupBusy, setBackupBusy] = useState(false);
             
             // Вычисляем activeDays для DatePicker (после объявления clientId и products)
             // Пересчитывается когда: меняется дата, clientId, products, syncVer (данные дня) или ЗАВЕРШАЕТСЯ синхронизация
@@ -2107,115 +2365,6 @@
                 return new Map();
               }
             }, [selectedDate, clientId, products, isInitializing, syncVer]);
-
-            // Получить клиентов куратора из Supabase
-            async function fetchClientsFromCloud(curatorId) {
-              if (!cloud.client || !curatorId) {
-                return [];
-              }
-              
-              // Таймаут 5 секунд для запроса к Supabase
-              const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout: Supabase request took too long')), 5000)
-              );
-              
-              try {
-                const fetchPromise = cloud.client
-                  .from('clients')
-                  .select('id, name')
-                  .eq('curator_id', curatorId)
-                  .order('updated_at', { ascending: true });
-                
-                const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
-                if (error) {
-                  console.error('Ошибка загрузки клиентов:', error);
-                  return [];
-                }
-                return data || [];
-              } catch (e) {
-                console.error('[HEYS] ❌ fetchClientsFromCloud failed:', e.message);
-                return [];
-              }
-            }
-
-            // Добавить клиента в Supabase или локально
-            async function addClientToCloud(name) {
-              const clientName = (name || '').trim() || `Клиент ${clients.length + 1}`;
-
-              // Локальный режим
-              if (!cloud.client || !cloudUser || !cloudUser.id) {
-                const newClient = {
-                  id: `local-user-${Date.now()}`,
-                  name: clientName,
-                };
-                const updatedClients = [...clients, newClient];
-                setClients(updatedClients);
-                U.lsSet('heys_clients', updatedClients);
-                setClientId(newClient.id);
-                U.lsSet('heys_client_current', newClient.id);
-                return;
-              }
-
-              // Облачный режим
-              const userId = cloudUser.id;
-              const { data, error } = await cloud.client
-                .from('clients')
-                .insert([{ name: clientName, curator_id: userId }])
-                .select('id, name')
-                .single();
-              if (error) {
-                console.error('Ошибка создания клиента:', error);
-                alert('Ошибка создания клиента: ' + error.message);
-                return;
-              }
-              // После создания — обновить список
-              const updated = await fetchClientsFromCloud(userId);
-              setClients(updated);
-              setClientId(data.id);
-              U.lsSet('heys_client_current', data.id);
-            }
-
-            // Переименовать клиента (локально или Supabase)
-            async function renameClient(id, name) {
-              // Локальный режим
-              if (!cloud.client || !cloudUser || !cloudUser.id) {
-                const updatedClients = clients.map((c) => (c.id === id ? { ...c, name } : c));
-                setClients(updatedClients);
-                U.lsSet('heys_clients', updatedClients);
-                return;
-              }
-
-              // Облачный режим
-              const userId = cloudUser.id;
-              await cloud.client.from('clients').update({ name }).eq('id', id);
-              const updated = await fetchClientsFromCloud(userId);
-              setClients(updated);
-            }
-
-            // Удалить клиента (локально или Supabase)
-            async function removeClient(id) {
-              // Локальный режим
-              if (!cloud.client || !cloudUser || !cloudUser.id) {
-                const updatedClients = clients.filter((c) => c.id !== id);
-                setClients(updatedClients);
-                U.lsSet('heys_clients', updatedClients);
-                if (clientId === id) {
-                  setClientId('');
-                  U.lsSet('heys_client_current', '');
-                }
-                return;
-              }
-
-              // Облачный режим
-              const userId = cloudUser.id;
-              await cloud.client.from('clients').delete().eq('id', id);
-              const updated = await fetchClientsFromCloud(userId);
-              setClients(updated);
-              if (clientId === id) {
-                setClientId('');
-                U.lsSet('heys_client_current', '');
-              }
-            }
 
             const downloadBackupFile = React.useCallback((payload, activeClientId, timestamp) => {
               try {
@@ -2742,7 +2891,10 @@
               // Восстанавливаем checkbox из localStorage
               return localStorage.getItem('heys_remember_me') === 'true';
             });
-            const [loginError, setLoginError] = useState('');
+            const handleSignIn = useCallback(() => {
+              return cloudSignIn(email, pwd, { rememberMe });
+            }, [cloudSignIn, email, pwd, rememberMe]);
+            const handleSignOut = cloudSignOut;
             const [clientSearch, setClientSearch] = useState(''); // Поиск клиентов
             const [showClientDropdown, setShowClientDropdown] = useState(false); // Dropdown в шапке
             
@@ -2930,7 +3082,7 @@
                               placeholder: '📧  Email',
                               value: email,
                               onChange: (e) => { setEmail(e.target.value); setLoginError(''); },
-                              onKeyDown: (e) => e.key === 'Enter' && doSignIn(),
+                              onKeyDown: (e) => e.key === 'Enter' && handleSignIn(),
                               style: { 
                                 width: '100%', 
                                 padding: '14px 16px', 
@@ -2949,7 +3101,7 @@
                               placeholder: '🔒  Пароль',
                               value: pwd,
                               onChange: (e) => { setPwd(e.target.value); setLoginError(''); },
-                              onKeyDown: (e) => e.key === 'Enter' && doSignIn(),
+                              onKeyDown: (e) => e.key === 'Enter' && handleSignIn(),
                               style: { 
                                 width: '100%', 
                                 padding: '14px 16px', 
@@ -3003,7 +3155,7 @@
                             'button',
                             { 
                               className: 'btn acc', 
-                              onClick: doSignIn,
+                              onClick: handleSignIn,
                               style: { 
                                 width: '100%', 
                                 padding: '14px', 
@@ -3324,7 +3476,7 @@
                           React.createElement(
                             'button',
                             { 
-                              onClick: doSignOut,
+                              onClick: handleSignOut,
                               style: {
                                 width: '100%',
                                 marginTop: 16,
@@ -3453,64 +3605,21 @@
             }, [products]);
 
             // auto sign-in in single-curator mode
+            // ВАЖНО: НЕ включаем handleSignIn в зависимости — это вызовет бесконечный цикл!
+            // handleSignIn пересоздаётся при изменении email/pwd, что триггерит useEffect снова.
+            const hasTriedAutoSignInRef = React.useRef(false);
             useEffect(() => {
-              if (ONE_CURATOR_MODE && status !== 'online') {
-                doSignIn();
+              // Пытаемся залогиниться только ОДИН раз при старте
+              if (ONE_CURATOR_MODE && status !== 'online' && !hasTriedAutoSignInRef.current) {
+                hasTriedAutoSignInRef.current = true;
+                handleSignIn();
               }
-            }, [ONE_CURATOR_MODE, status]);
-
-            async function doSignIn() {
-              try {
-                if (!email || !pwd) {
-                  setLoginError('Введите email и пароль');
-                  return;
-                }
-                setLoginError('');
-                setStatus('signin');
-                if (cloud && typeof cloud.signIn === 'function') {
-                  const result = await cloud.signIn(email, pwd);
-                  if (result.error) {
-                    setLoginError(result.error.message || 'Неверный email или пароль');
-                    setStatus('offline');
-                    return;
-                  }
-                  setCloudUser(result.user);
-                  
-                  // Сохраняем "Запомнить меня"
-                  if (rememberMe) {
-                    localStorage.setItem('heys_remember_me', 'true');
-                    localStorage.setItem('heys_saved_email', email);
-                  } else {
-                    localStorage.removeItem('heys_remember_me');
-                    localStorage.removeItem('heys_saved_email');
-                  }
-                }
-                setStatus(typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'online');
-                // Загружаем продукты после sign-in
-                const loadedProducts = Array.isArray(U.lsGet('heys_products', []))
-                  ? U.lsGet('heys_products', [])
-                  : [];
-                setProducts(loadedProducts);
-                setSyncVer((v) => v + 1);
-              } catch (e) {
-                setStatus('offline');
-                setLoginError(e && e.message ? e.message : 'Ошибка подключения');
+              // Сбрасываем флаг если вышли из аккаунта (status изменился на offline)
+              if (status === 'offline') {
+                hasTriedAutoSignInRef.current = false;
               }
-            }
-            async function doSignOut() {
-              try {
-                if (cloud && typeof cloud.signOut === 'function') await cloud.signOut();
-              } catch (e) {}
-              // Сбрасываем состояние — покажется форма входа
-              setCloudUser(null);
-              setClientId(null);
-              setClients([]);
-              setProducts([]);
-              setStatus('offline');
-              setSyncVer((v) => v + 1);
-              // Очищаем сохранённый клиент (но не email если "Запомнить меня")
-              try { localStorage.removeItem('heys_last_client_id'); } catch (e) {}
-            }
+              // eslint-disable-next-line react-hooks/exhaustive-deps
+            }, [ONE_CURATOR_MODE, status]); // handleSignIn исключён намеренно!
             
             // Формируем текст для pending details
             const getPendingText = () => {
@@ -3781,7 +3890,7 @@
                                 },
                                 onClick: () => {
                                   setShowClientDropdown(false);
-                                  doSignOut();
+                handleSignOut();
                                 }
                               },
                               React.createElement('div', { 
@@ -4135,10 +4244,9 @@
               ),
             );
           }
-          const root = ReactDOM.createRoot(document.getElementById('root'));
-          root.render(React.createElement(ErrorBoundary, null, React.createElement(App)));
+          renderRoot(App);
         }
 
         // Start initialization
-        initializeApp();
+        waitForDependencies(initializeApp);
       })();
