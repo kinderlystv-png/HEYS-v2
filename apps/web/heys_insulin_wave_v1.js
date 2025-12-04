@@ -1,6 +1,7 @@
 // heys_insulin_wave_v1.js — Модуль инсулиновой волны
-// Версия: 1.0.0 | Дата: 2025-12-04
+// Версия: 1.1.0 | Дата: 2025-12-05
 // Вся логика расчёта и отображения инсулиновой волны
+// Фичи: GI-based, protein/fiber bonus, workout acceleration, circadian rhythm
 (function(global) {
   'use strict';
   
@@ -25,23 +26,53 @@
   const PROTEIN_BONUS = { high: { threshold: 40, bonus: 0.15 }, medium: { threshold: 25, bonus: 0.08 } };
   const FIBER_BONUS = { high: { threshold: 10, bonus: 0.12 }, medium: { threshold: 5, bonus: 0.05 } };
   
+  // 🏃 WORKOUT ACCELERATION — тренировка ускоряет метаболизм
+  const WORKOUT_BONUS = {
+    // Минуты тренировки → бонус к скорости волны (уменьшение длительности)
+    high: { threshold: 45, bonus: -0.15 },   // 45+ мин → волна на 15% короче
+    medium: { threshold: 20, bonus: -0.08 }, // 20+ мин → волна на 8% короче
+    // Интенсивные зоны (z3, z4) дают больший бонус
+    intensityMultiplier: 1.5 // Интенсивные минуты считаются x1.5
+  };
+  
+  // 🌅 CIRCADIAN RHYTHM — метаболизм меняется в течение дня
+  const CIRCADIAN_MULTIPLIERS = {
+    // Часы → множитель длины волны
+    // Утром метаболизм быстрее, вечером — медленнее
+    morning: { from: 6, to: 10, multiplier: 0.9, desc: 'Утренний метаболизм 🌅' },
+    midday: { from: 10, to: 14, multiplier: 0.95, desc: 'Обеденный пик 🌞' },
+    afternoon: { from: 14, to: 18, multiplier: 1.0, desc: 'Дневной баланс ☀️' },
+    evening: { from: 18, to: 22, multiplier: 1.1, desc: 'Вечерний спад 🌆' },
+    night: { from: 22, to: 6, multiplier: 1.2, desc: 'Ночной режим 🌙' }
+  };
+  
   const GAP_HISTORY_KEY = 'heys_meal_gaps_history';
   const GAP_HISTORY_DAYS = 14;
   
   // === УТИЛИТЫ ===
   const utils = {
-    // Время в минуты с полуночи
+    // Время в минуты с полуночи (поддерживает 24:xx, 25:xx формат)
     timeToMinutes: (timeStr) => {
       if (!timeStr) return 0;
       const [h, m] = timeStr.split(':').map(Number);
+      // 24:20 → 0*60 + 20 = 20, но для сортировки сохраняем как есть
       return (h || 0) * 60 + (m || 0);
     },
     
-    // Минуты в HH:MM
+    // Минуты в HH:MM (нормализует 24+ часов)
     minutesToTime: (minutes) => {
       const h = Math.floor(minutes / 60) % 24;
       const m = minutes % 60;
       return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    },
+    
+    // Нормализация времени для отображения (24:20 → 00:20)
+    normalizeTimeForDisplay: (timeStr) => {
+      if (!timeStr) return '';
+      const [h, m] = timeStr.split(':').map(Number);
+      if (isNaN(h)) return timeStr;
+      const normalH = h % 24;
+      return String(normalH).padStart(2, '0') + ':' + String(m || 0).padStart(2, '0');
     },
     
     // Форматирование длительности
@@ -145,6 +176,69 @@
   };
   
   /**
+   * Рассчитать workout бонус (ускорение волны от тренировки)
+   * @param {Array} trainings - массив тренировок дня
+   * @returns {Object} { bonus, totalMinutes, intensityMinutes, desc }
+   */
+  const calculateWorkoutBonus = (trainings) => {
+    if (!trainings || trainings.length === 0) {
+      return { bonus: 0, totalMinutes: 0, intensityMinutes: 0, desc: null };
+    }
+    
+    let totalMinutes = 0;
+    let intensityMinutes = 0;
+    
+    for (const t of trainings) {
+      const zones = t.z || [0, 0, 0, 0];
+      // z[0], z[1] — низкая интенсивность, z[2], z[3] — высокая
+      const lowIntensity = (zones[0] || 0) + (zones[1] || 0);
+      const highIntensity = (zones[2] || 0) + (zones[3] || 0);
+      
+      totalMinutes += lowIntensity + highIntensity;
+      // Интенсивные минуты с множителем
+      intensityMinutes += lowIntensity + highIntensity * WORKOUT_BONUS.intensityMultiplier;
+    }
+    
+    // Определяем бонус
+    let bonus = 0;
+    let desc = null;
+    
+    if (intensityMinutes >= WORKOUT_BONUS.high.threshold) {
+      bonus = WORKOUT_BONUS.high.bonus;
+      desc = `🏃 Тренировка ${Math.round(totalMinutes)} мин → волна ${Math.abs(Math.round(bonus * 100))}% короче`;
+    } else if (intensityMinutes >= WORKOUT_BONUS.medium.threshold) {
+      bonus = WORKOUT_BONUS.medium.bonus;
+      desc = `🏃 Тренировка ${Math.round(totalMinutes)} мин → ускорение`;
+    }
+    
+    return { bonus, totalMinutes: Math.round(totalMinutes), intensityMinutes: Math.round(intensityMinutes), desc };
+  };
+  
+  /**
+   * Рассчитать circadian множитель по времени суток
+   * @param {number} hour - текущий час (0-23)
+   * @returns {Object} { multiplier, period, desc }
+   */
+  const calculateCircadianMultiplier = (hour) => {
+    // Находим период дня
+    for (const [period, config] of Object.entries(CIRCADIAN_MULTIPLIERS)) {
+      if (period === 'night') {
+        // Ночь: 22-6 (переход через полночь)
+        if (hour >= config.from || hour < config.to) {
+          return { multiplier: config.multiplier, period, desc: config.desc };
+        }
+      } else {
+        if (hour >= config.from && hour < config.to) {
+          return { multiplier: config.multiplier, period, desc: config.desc };
+        }
+      }
+    }
+    
+    // Fallback — дневной баланс
+    return { multiplier: 1.0, period: 'afternoon', desc: CIRCADIAN_MULTIPLIERS.afternoon.desc };
+  };
+  
+  /**
    * Главная функция расчёта данных инсулиновой волны
    * @param {Object} params
    * @returns {Object|null}
@@ -154,6 +248,7 @@
     pIndex, 
     getProductFromItem, 
     baseWaveHours = 3,
+    trainings = [],
     now = new Date()
   }) => {
     if (!meals || meals.length === 0) return null;
@@ -177,13 +272,40 @@
     const nutrients = calculateMealNutrients(lastMeal, pIndex, getProductFromItem);
     const multipliers = calculateMultiplier(nutrients.avgGI, nutrients.totalProtein, nutrients.totalFiber);
     
+    // 🏃 Workout бонус
+    const workoutBonus = calculateWorkoutBonus(trainings);
+    
+    // 🌅 Circadian ритм (по времени приёма пищи)
+    const mealHour = parseInt(lastMealTime.split(':')[0]) || 12;
+    const circadian = calculateCircadianMultiplier(mealHour);
+    
+    // Финальный множитель: GI + protein/fiber + workout + circadian
+    // multipliers.total уже включает GI + protein + fiber
+    // workoutBonus.bonus отрицательный (ускоряет)
+    // circadian.multiplier: утром < 1 (быстрее), вечером > 1 (медленнее)
+    const finalMultiplier = (multipliers.total + workoutBonus.bonus) * circadian.multiplier;
+    
     // Скорректированная длина волны
-    const adjustedWaveHours = baseWaveHours * multipliers.total;
+    const adjustedWaveHours = baseWaveHours * finalMultiplier;
     const waveMinutes = adjustedWaveHours * 60;
     
     // Время
+    // mealMinutes может быть 24:xx (1440+) для ночных приёмов "сегодня до 3 ночи"
     const mealMinutes = utils.timeToMinutes(lastMealTime);
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    let nowMinutes = now.getHours() * 60 + now.getMinutes();
+    
+    // Корректировка для перехода через полночь:
+    // 1) Приём в 24:xx формате (ночной), сейчас 00:xx-02:xx → добавляем 24ч к now
+    // 2) Приём вечером (после 18:00), сейчас ночью (00:xx-05:xx) → добавляем 24ч к now
+    const mealHourCalc = Math.floor(mealMinutes / 60);
+    const nowHour = now.getHours();
+    if (mealMinutes >= 24 * 60 && nowMinutes < 3 * 60) {
+      // Случай 1: приём записан как 24:xx
+      nowMinutes += 24 * 60;
+    } else if (mealHourCalc >= 18 && nowHour < 6) {
+      // Случай 2: приём вечером, сейчас ночь (перешли через полночь)
+      nowMinutes += 24 * 60;
+    }
     
     let diffMinutes = nowMinutes - mealMinutes;
     if (diffMinutes < 0) diffMinutes = 0;
@@ -209,8 +331,10 @@
       
       return {
         time: t,
+        timeDisplay: utils.normalizeTimeForDisplay(t),
         startMin,
         endMin,
+        endTimeDisplay: utils.minutesToTime(endMin),
         duration,
         gi: mealNutrients.avgGI,
         protein: mealNutrients.totalProtein,
@@ -228,7 +352,9 @@
         const overlapMin = current.endMin - next.startMin;
         overlaps.push({
           from: current.time,
+          fromDisplay: current.timeDisplay,
           to: next.time,
+          toDisplay: next.timeDisplay,
           overlapMinutes: overlapMin,
           severity: overlapMin > 60 ? 'high' : overlapMin > 30 ? 'medium' : 'low'
         });
@@ -325,9 +451,11 @@
       progress: progressPct,
       remaining: remainingMinutes,
       
-      // Время
+      // Время (для сортировки храним как есть, для отображения нормализуем)
       lastMealTime,
+      lastMealTimeDisplay: utils.normalizeTimeForDisplay(lastMealTime),
       endTime,
+      endTimeDisplay: utils.normalizeTimeForDisplay(endTime),
       
       // Волна
       insulinWaveHours: adjustedWaveHours,
@@ -347,6 +475,17 @@
       proteinBonus: multipliers.protein,
       fiberBonus: multipliers.fiber,
       
+      // 🏃 Workout данные
+      workoutBonus: workoutBonus.bonus,
+      workoutMinutes: workoutBonus.totalMinutes,
+      workoutDesc: workoutBonus.desc,
+      hasWorkoutBonus: workoutBonus.bonus < 0,
+      
+      // 🌅 Circadian данные
+      circadianMultiplier: circadian.multiplier,
+      circadianPeriod: circadian.period,
+      circadianDesc: circadian.desc,
+      
       // История
       waveHistory,
       
@@ -361,7 +500,63 @@
       personalAvgGap,
       recommendedGap,
       gapQuality,
-      gapHistory: gapHistory.slice(-7)
+      gapHistory: gapHistory.slice(-7),
+      
+      // === НОВЫЕ КОНТЕКСТНЫЕ ДАННЫЕ ===
+      
+      // 💡 Рекомендации по еде (если волна активна)
+      foodAdvice: remainingMinutes > 0 ? {
+        good: ['белок', 'овощи', 'орехи', 'яйца'],
+        avoid: ['сладкое', 'белый хлеб', 'сок', 'фрукты'],
+        reason: nutrients.avgGI > 60 
+          ? 'Последний приём был с высоким ГИ — дай инсулину успокоиться'
+          : 'Поддерживай стабильный сахар'
+      } : null,
+      
+      // ⏰ Оптимальное время следующего приёма
+      nextMealTime: (() => {
+        const endMin = utils.timeToMinutes(lastMealTime) + Math.round(waveMinutes);
+        // Если ночь — рекомендуем утро
+        if (isNight || endMin >= 22 * 60) {
+          return { time: '08:00', isNextDay: true, label: 'завтра в 8:00' };
+        }
+        const time = utils.minutesToTime(endMin);
+        return { time, isNextDay: false, label: `в ${time}` };
+      })(),
+      
+      // 💧 Hydration совет
+      hydrationAdvice: remainingMinutes > 15 
+        ? '💧 Вода ускоряет переваривание — выпей стакан'
+        : null,
+      
+      // 😴 Sleep impact (поздний ужин)
+      sleepImpact: (() => {
+        const hour = parseInt(lastMealTime.split(':')[0]) || 0;
+        if (hour >= 21) {
+          return { 
+            warning: true, 
+            text: '😴 Поздний ужин замедляет волну на ~20%',
+            penalty: 0.2
+          };
+        }
+        if (hour >= 20) {
+          return { 
+            warning: false, 
+            text: '🌙 Вечерний приём — волна чуть медленнее',
+            penalty: 0.1
+          };
+        }
+        return null;
+      })(),
+      
+      // 🎯 Краткий совет для подсказки
+      quickTip: (() => {
+        if (remainingMinutes <= 0) return '✅ Можно есть!';
+        if (remainingMinutes <= 15) return '⏰ Почти готово, подожди чуть-чуть';
+        if (nutrients.avgGI > 70) return '⚠️ Был высокий ГИ — лучше подождать';
+        if (remainingMinutes > 60) return '🍵 Выпей воды или чая';
+        return '⏳ Дай организму переварить';
+      })()
     };
   };
   
@@ -547,8 +742,8 @@
     const giCat = data.giCategory;
     
     return React.createElement('div', { 
-      className: 'insulin-wave-expanded',
-      onClick: e => e.stopPropagation()
+      className: 'insulin-wave-expanded'
+      // Клик на expanded также сворачивает (не блокируем propagation)
     },
       // ГИ информация
       React.createElement('div', { className: 'insulin-gi-info' },
@@ -560,6 +755,29 @@
         React.createElement('div', { style: { fontSize: '11px', color: '#64748b', marginTop: '4px' } },
           `Базовая волна: ${data.baseWaveHours}ч → Скорректированная: ${Math.round(data.insulinWaveHours * 10) / 10}ч`
         ),
+        // Формула расчёта (если есть модификаторы)
+        (data.proteinBonus > 0 || data.fiberBonus > 0 || data.hasWorkoutBonus || (data.circadianMultiplier && data.circadianMultiplier !== 1.0)) &&
+          React.createElement('div', { 
+            style: { fontSize: '10px', color: '#94a3b8', marginTop: '6px', padding: '4px 8px', background: 'rgba(0,0,0,0.03)', borderRadius: '4px', fontFamily: 'monospace' } 
+          },
+            (() => {
+              const parts = [];
+              // GI factor
+              const giFactor = data.giMultiplier || 1.0;
+              parts.push(`ГИ×${Math.round(giFactor * 100) / 100}`);
+              // Protein
+              if (data.proteinBonus > 0) parts.push(`+${Math.round(data.proteinBonus * 100)}%🥩`);
+              // Fiber
+              if (data.fiberBonus > 0) parts.push(`+${Math.round(data.fiberBonus * 100)}%🌾`);
+              // Workout
+              if (data.hasWorkoutBonus) parts.push(`${Math.round(data.workoutBonus * 100)}%🏃`);
+              // Circadian
+              if (data.circadianMultiplier && data.circadianMultiplier !== 1.0) {
+                parts.push(`×${data.circadianMultiplier}${data.circadianMultiplier < 1.0 ? '☀️' : '🌙'}`);
+              }
+              return `📐 ${parts.join(' ')} = ${Math.round(data.insulinWaveHours * 10) / 10}ч`;
+            })()
+          ),
         // Модификаторы
         (data.proteinBonus > 0 || data.fiberBonus > 0) && 
           React.createElement('div', { style: { fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap' } },
@@ -569,7 +787,19 @@
             data.totalFiber > 0 && React.createElement('span', null, 
               `🌾 Клетчатка: ${data.totalFiber}г${data.fiberBonus > 0 ? ` (+${Math.round(data.fiberBonus * 100)}%)` : ''}`
             )
-          )
+          ),
+        // Workout bonus
+        data.hasWorkoutBonus && React.createElement('div', { 
+          style: { fontSize: '11px', color: '#10b981', marginTop: '2px' } 
+        }, `🏃 Тренировка ${data.workoutMinutes} мин → волна ${Math.abs(Math.round(data.workoutBonus * 100))}% короче`),
+        // Circadian rhythm
+        data.circadianMultiplier && data.circadianMultiplier !== 1.0 && React.createElement('div', { 
+          style: { 
+            fontSize: '11px', 
+            color: data.circadianMultiplier < 1.0 ? '#10b981' : '#f59e0b', 
+            marginTop: '2px' 
+          } 
+        }, data.circadianDesc)
       ),
       
       // Предупреждение о перекрытии
@@ -587,7 +817,7 @@
         ),
         React.createElement('div', { style: { marginTop: '2px', color: '#64748b' } },
           data.overlaps.map((o, i) => 
-            React.createElement('div', { key: i }, `${o.from} → ${o.to}: перекрытие ${o.overlapMinutes} мин`)
+            React.createElement('div', { key: i }, `${o.fromDisplay || o.from} → ${o.toDisplay || o.to}: перекрытие ${o.overlapMinutes} мин`)
           )
         ),
         React.createElement('div', { style: { marginTop: '4px', fontSize: '11px', fontStyle: 'italic' } },
@@ -629,6 +859,65 @@
           '⚠️ Ешь слишком часто. Дай организму переварить'
         )
       ),
+      
+      // === КОНТЕКСТНЫЕ СОВЕТЫ ===
+      
+      // ⏰ Оптимальное время следующего приёма
+      data.nextMealTime && data.status !== 'ready' && React.createElement('div', {
+        style: { 
+          marginTop: '8px', padding: '8px', 
+          background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1))',
+          borderRadius: '8px', fontSize: '12px',
+          border: '1px solid rgba(16,185,129,0.2)'
+        }
+      },
+        React.createElement('div', { style: { fontWeight: '600', color: '#10b981' } }, 
+          `⏰ Следующий приём лучше ${data.nextMealTime.label}`
+        )
+      ),
+      
+      // 💡 Рекомендации по еде (если волна активна)
+      data.foodAdvice && React.createElement('div', {
+        style: { 
+          marginTop: '8px', padding: '8px', 
+          background: 'rgba(251,191,36,0.1)',
+          borderRadius: '8px', fontSize: '12px',
+          border: '1px solid rgba(251,191,36,0.2)'
+        }
+      },
+        React.createElement('div', { style: { fontWeight: '600', color: '#d97706', marginBottom: '4px' } }, 
+          '💡 Если очень хочется есть:'
+        ),
+        React.createElement('div', { style: { color: '#16a34a', fontSize: '11px' } }, 
+          '✅ Лучше: ' + data.foodAdvice.good.join(', ')
+        ),
+        React.createElement('div', { style: { color: '#dc2626', fontSize: '11px', marginTop: '2px' } }, 
+          '❌ Избегай: ' + data.foodAdvice.avoid.join(', ')
+        ),
+        React.createElement('div', { style: { color: '#64748b', fontSize: '10px', marginTop: '4px', fontStyle: 'italic' } }, 
+          data.foodAdvice.reason
+        )
+      ),
+      
+      // 💧 Hydration совет
+      data.hydrationAdvice && React.createElement('div', {
+        style: { 
+          marginTop: '8px', padding: '6px 8px', 
+          background: 'rgba(59,130,246,0.1)',
+          borderRadius: '6px', fontSize: '11px',
+          color: '#3b82f6'
+        }
+      }, data.hydrationAdvice),
+      
+      // 😴 Sleep impact
+      data.sleepImpact && React.createElement('div', {
+        style: { 
+          marginTop: '8px', padding: '6px 8px', 
+          background: data.sleepImpact.warning ? 'rgba(239,68,68,0.1)' : 'rgba(148,163,184,0.1)',
+          borderRadius: '6px', fontSize: '11px',
+          color: data.sleepImpact.warning ? '#dc2626' : '#64748b'
+        }
+      }, data.sleepImpact.text),
       
       // История волн
       renderWaveHistory(data)
@@ -704,20 +993,24 @@
     utils,
     calculateMealNutrients,
     calculateMultiplier,
+    calculateWorkoutBonus,
+    calculateCircadianMultiplier,
     
     // Константы
     GI_CATEGORIES,
     STATUS_CONFIG,
     PROTEIN_BONUS,
     FIBER_BONUS,
+    WORKOUT_BONUS,
+    CIRCADIAN_MULTIPLIERS,
     
     // Версия
-    VERSION: '1.0.0'
+    VERSION: '1.1.0'
   };
   
   // Алиас
   HEYS.IW = HEYS.InsulinWave;
   
-  console.log('[HEYS] InsulinWave v1.0.0 loaded');
+  console.log('[HEYS] InsulinWave v1.1.0 loaded (workout + circadian)');
   
 })(typeof window !== 'undefined' ? window : global);

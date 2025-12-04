@@ -916,6 +916,28 @@
   animation: wave-pulse 1.5s ease-in-out infinite;
 }
 
+/* === INSULIN FOCUS OVERLAY === */
+.insulin-focus-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 99;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Карточка поверх overlay когда раскрыта */
+.insulin-wave-indicator.expanded {
+  position: relative;
+  z-index: 100;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* === FOCUS MODE для Expandable Cards === */
 /* Overlay за раскрытой карточкой */
 .expand-focus-overlay {

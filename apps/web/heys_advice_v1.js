@@ -4039,6 +4039,65 @@
       });
     }
     
+    // 🆕 Задача: Высокий ГИ при активной инсулиновой волне — усиливает пики
+    // Проверяем через HEYS.InsulinWave если доступен
+    const checkActiveWaveHighGI = () => {
+      if (typeof HEYS === 'undefined' || !HEYS.InsulinWave) return null;
+      
+      const mealsWithItems = (day?.meals || []).filter(m => m.items?.length > 0 && m.time);
+      if (mealsWithItems.length < 2) return null;
+      
+      const insulinWaveHours = prof?.insulinWaveHours || 3;
+      const lastMeal = mealsWithItems[mealsWithItems.length - 1];
+      const prevMeal = mealsWithItems[mealsWithItems.length - 2];
+      
+      // Время между последними приёмами
+      const lastTime = HEYS.InsulinWave.utils?.timeToMinutes?.(lastMeal.time) || 0;
+      const prevTime = HEYS.InsulinWave.utils?.timeToMinutes?.(prevMeal.time) || 0;
+      const gapMinutes = lastTime - prevTime;
+      
+      // Если gap меньше инсулиновой волны — значит ели во время активной волны
+      if (gapMinutes > 0 && gapMinutes < insulinWaveHours * 60) {
+        // Проверяем ГИ последнего приёма
+        const lastMealGI = (() => {
+          let totalW = 0, totalG = 0;
+          for (const item of (lastMeal.items || [])) {
+            const g = item.grams || 100;
+            const prod = pIndex?.byId?.get?.(item.product_id);
+            const gi = prod?.gi || prod?.gi100 || 50;
+            totalW += gi * g;
+            totalG += g;
+          }
+          return totalG > 0 ? totalW / totalG : 50;
+        })();
+        
+        if (lastMealGI > 65) {
+          return {
+            gap: Math.round(gapMinutes),
+            gi: Math.round(lastMealGI),
+            severity: lastMealGI > 75 ? 'high' : 'medium'
+          };
+        }
+      }
+      return null;
+    };
+    
+    const activeWaveHighGI = checkActiveWaveHighGI();
+    if (activeWaveHighGI) {
+      advices.push({
+        id: 'active_wave_high_gi',
+        icon: '⚠️',
+        text: activeWaveHighGI.severity === 'high'
+          ? `ГИ ${activeWaveHighGI.gi} при активной волне — двойной инсулиновый пик!`
+          : `ГИ ${activeWaveHighGI.gi} при активной волне — лучше подождать`,
+        type: 'warning',
+        priority: 42, // Высокий приоритет
+        category: 'timing',
+        triggers: ['product_added'],
+        ttl: 6000
+      });
+    }
+    
     if (avgGI > 0 && avgGI <= 55 && mealCount >= 2) {
       advices.push({
         id: 'low_gi_great',

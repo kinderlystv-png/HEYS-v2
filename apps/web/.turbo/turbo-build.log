@@ -40,5 +40,5 @@ dist/index.html                                    13.37 kB │ gzip:  3.92 kB
 dist/assets/heys_models_v1-66db76a9.js             22.14 kB
 dist/assets/heys_core_v12-b6704538.js              49.19 kB
 dist/assets/heys_storage_supabase_v1-7314866e.js   90.52 kB
-dist/assets/index-fce52d67.css                    327.10 kB │ gzip: 56.09 kB
-✓ built in 1.65s
+dist/assets/index-ca53dd8e.css                    327.33 kB │ gzip: 56.11 kB
+✓ built in 1.05s
