@@ -5235,12 +5235,37 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
 
     // === Haptic при начале липолиза ===
     const prevInsulinStatusRef = React.useRef(null);
+    const lipolysisRecordTriggeredRef = React.useRef(false);
+    
     React.useEffect(() => {
       if (insulinWaveData?.status === 'lipolysis' && prevInsulinStatusRef.current !== 'lipolysis') {
         try { HEYS.dayUtils?.haptic?.('success'); } catch(e) {}
       }
       prevInsulinStatusRef.current = insulinWaveData?.status || null;
     }, [insulinWaveData?.status]);
+    
+    // 🏆 Confetti при новом рекорде липолиза
+    React.useEffect(() => {
+      if (insulinWaveData?.isNewRecord && !lipolysisRecordTriggeredRef.current) {
+        lipolysisRecordTriggeredRef.current = true;
+        
+        // Обновляем рекорд в localStorage
+        if (typeof HEYS !== 'undefined' && HEYS.InsulinWave?.updateLipolysisRecord) {
+          const wasUpdated = HEYS.InsulinWave.updateLipolysisRecord(insulinWaveData.lipolysisMinutes);
+          if (wasUpdated) {
+            // Confetti!
+            setShowConfetti(true);
+            try { HEYS.dayUtils?.haptic?.('success'); } catch(e) {}
+            setTimeout(() => setShowConfetti(false), 3000);
+          }
+        }
+      }
+      
+      // Сбрасываем флаг когда липолиз заканчивается (новый приём)
+      if (insulinWaveData?.status !== 'lipolysis') {
+        lipolysisRecordTriggeredRef.current = false;
+      }
+    }, [insulinWaveData?.isNewRecord, insulinWaveData?.lipolysisMinutes, insulinWaveData?.status]);
 
     // Haptic feedback for streak / low scores
     React.useEffect(() => {
@@ -10375,6 +10400,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               'very-high': { text: 'Очень высокий ГИ', color: '#ef4444', desc: 'очень быстрое' }
             }[insulinWaveData.giCategory] || { text: 'Средний ГИ', color: '#eab308', desc: 'нормальное' };
         
+        // Форматирование времени липолиза
+        const formatLipolysisTime = (minutes) => {
+          if (minutes < 60) return `${minutes} мин`;
+          const h = Math.floor(minutes / 60);
+          const m = minutes % 60;
+          if (m === 0) return `${h}ч`;
+          return `${h}ч ${m}м`;
+        };
+        
         // Прогресс-бар (из модуля или inline)
         const renderProgressBar = () => {
           if (IW && IW.renderProgressBar) {
@@ -10382,8 +10416,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }
           
           const progress = insulinWaveData.progress;
-          const gradientBg = insulinWaveData.status === 'lipolysis' 
-            ? 'linear-gradient(90deg, #22c55e, #4ade80, #86efac)' 
+          const isLipolysis = insulinWaveData.status === 'lipolysis';
+          const lipolysisMinutes = insulinWaveData.lipolysisMinutes || 0;
+          
+          const gradientBg = isLipolysis 
+            ? 'linear-gradient(90deg, #22c55e, #10b981, #059669)' 
             : insulinWaveData.status === 'almost'
               ? 'linear-gradient(90deg, #f97316, #fb923c, #fdba74)'
               : insulinWaveData.status === 'soon'
@@ -10391,9 +10428,33 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 : 'linear-gradient(90deg, #0284c7, #0ea5e9, #38bdf8)';
           
           return React.createElement('div', { className: 'insulin-wave-progress' },
-            React.createElement('div', { className: 'insulin-wave-bar', style: { width: progress + '%', background: gradientBg } }),
-            insulinWaveData.status !== 'lipolysis' && React.createElement('div', { className: 'insulin-wave-animation' }),
-            React.createElement('span', {
+            React.createElement('div', { 
+              className: isLipolysis ? 'insulin-wave-bar lipolysis-progress-fill' : 'insulin-wave-bar', 
+              style: { 
+                width: isLipolysis ? '100%' : progress + '%', 
+                background: gradientBg,
+                height: isLipolysis ? '28px' : undefined,
+                borderRadius: isLipolysis ? '8px' : undefined,
+                transition: 'all 0.3s ease'
+              } 
+            }),
+            !isLipolysis && React.createElement('div', { className: 'insulin-wave-animation' }),
+            // При липолизе: крупный таймер 🔥
+            isLipolysis ? React.createElement('div', {
+              className: 'lipolysis-timer-display',
+              style: { 
+                position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                fontSize: '14px', fontWeight: '800', color: '#fff',
+                textShadow: '0 1px 3px rgba(0,0,0,0.3)', whiteSpace: 'nowrap', zIndex: 2
+              }
+            },
+              React.createElement('span', { className: 'lipolysis-fire-icon', style: { fontSize: '16px' } }, '🔥'),
+              React.createElement('span', null, formatLipolysisTime(lipolysisMinutes)),
+              React.createElement('span', { style: { fontSize: '11px', opacity: 0.9, fontWeight: '600' } }, 'жиросжигание')
+            )
+            // При активной волне: процент
+            : React.createElement('span', {
               className: 'insulin-progress-label',
               style: { position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
                 fontSize: '10px', fontWeight: '700', color: progress > 50 ? '#fff' : '#64748b',
@@ -10655,7 +10716,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             
             // Временные метки + ГИ badge + Overlap warning
             React.createElement('div', { className: 'insulin-wave-times' },
-              React.createElement('span', { className: 'insulin-time-start' }, '🍽️ ' + (insulinWaveData.lastMealTimeDisplay || insulinWaveData.lastMealTime)),
+              // При липолизе показываем время окончания волны (начала жиросжигания)
+              insulinWaveData.status === 'lipolysis' 
+                ? React.createElement('span', { className: 'insulin-time-start', style: { color: '#22c55e' } }, 
+                    '🔥 ' + (insulinWaveData.endTimeDisplay || insulinWaveData.endTime))
+                : React.createElement('span', { className: 'insulin-time-start' }, 
+                    '🍽️ ' + (insulinWaveData.lastMealTimeDisplay || insulinWaveData.lastMealTime)),
               // ГИ badge
               React.createElement('span', { 
                 className: 'insulin-gi-badge',
@@ -10670,14 +10736,67 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 }
               }, '⚠️'),
               React.createElement('span', { className: 'insulin-time-end' }, 
-                insulinWaveData.status === 'ready' ? '✅ Сейчас' 
+                insulinWaveData.status === 'lipolysis' ? '🌙 до утра' 
                   : insulinWaveData.isNightTime ? '🌙 Утром'
-                  : '🎯 ' + insulinWaveData.endTime
+                  : '🎯 ' + (insulinWaveData.endTimeDisplay || insulinWaveData.endTime)
               )
             ),
             
             // Подсказка
             insulinWaveData.subtext && React.createElement('div', { className: 'insulin-wave-suggestion' }, insulinWaveData.subtext),
+            
+            // 🏆 При липолизе: рекорд + streak + ккал
+            insulinWaveData.status === 'lipolysis' && React.createElement('div', { 
+              className: 'lipolysis-stats',
+              style: { 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginTop: '8px',
+                padding: '8px 12px',
+                background: 'rgba(255,255,255,0.5)',
+                borderRadius: '8px',
+                fontSize: '12px',
+                gap: '8px'
+              }
+            },
+              // Рекорд
+              React.createElement('div', { 
+                style: { 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '4px',
+                  color: insulinWaveData.isNewRecord ? '#f59e0b' : '#64748b'
+                }
+              },
+                React.createElement('span', null, insulinWaveData.isNewRecord ? '🏆' : '🎯'),
+                React.createElement('span', { style: { fontWeight: insulinWaveData.isNewRecord ? '700' : '500' } }, 
+                  insulinWaveData.isNewRecord 
+                    ? 'Новый рекорд!' 
+                    : 'Рекорд: ' + formatLipolysisTime(insulinWaveData.lipolysisRecord?.minutes || 0)
+                )
+              ),
+              // Streak
+              insulinWaveData.lipolysisStreak?.current > 0 && React.createElement('div', { 
+                style: { display: 'flex', alignItems: 'center', gap: '4px', color: '#22c55e' }
+              },
+                React.createElement('span', null, '🔥'),
+                React.createElement('span', { style: { fontWeight: '600' } }, 
+                  insulinWaveData.lipolysisStreak.current + ' ' + 
+                  (insulinWaveData.lipolysisStreak.current === 1 ? 'день' : 
+                   insulinWaveData.lipolysisStreak.current < 5 ? 'дня' : 'дней')
+                )
+              ),
+              // Примерно сожжённые ккал
+              insulinWaveData.lipolysisKcal > 0 && React.createElement('div', { 
+                style: { display: 'flex', alignItems: 'center', gap: '4px', color: '#ef4444' }
+              },
+                React.createElement('span', null, '💪'),
+                React.createElement('span', { style: { fontWeight: '600' } }, 
+                  '~' + insulinWaveData.lipolysisKcal + ' ккал'
+                )
+              )
+            ),
             
             // === Expanded секция ===
             insulinExpanded && renderExpandedSection()

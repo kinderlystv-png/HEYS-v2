@@ -53,6 +53,13 @@
   const GAP_HISTORY_KEY = 'heys_meal_gaps_history';
   const GAP_HISTORY_DAYS = 14;
   
+  // 🏆 LIPOLYSIS RECORDS & STREAKS
+  const LIPOLYSIS_RECORD_KEY = 'heys_lipolysis_record';
+  const LIPOLYSIS_STREAK_KEY = 'heys_lipolysis_streak';
+  const LIPOLYSIS_HISTORY_KEY = 'heys_lipolysis_history';
+  const MIN_LIPOLYSIS_FOR_STREAK = 4 * 60; // 4 часа минимум для streak
+  const KCAL_PER_MIN_BASE = 1.0; // ~1 ккал/мин базовый расход в покое
+  
   // === УТИЛИТЫ ===
   const utils = {
     // Время в минуты с полуночи (поддерживает 24:xx, 25:xx формат)
@@ -100,6 +107,9 @@
     // Ночное время?
     isNightTime: (hour) => hour >= 22 || hour < 6,
     
+    // Получить дату в формате YYYY-MM-DD
+    getDateKey: (date = new Date()) => date.toISOString().slice(0, 10),
+    
     // Рекомендуемый приём по времени
     getNextMealSuggestion: (hour) => {
       if (hour >= 22 || hour < 6) return null;
@@ -110,6 +120,150 @@
       if (hour < 20) return { type: 'dinner', icon: '🍽️', name: 'Ужин' };
       return { type: 'light', icon: '🥛', name: 'Лёгкий перекус' };
     }
+  };
+  
+  // === РЕКОРДЫ И STREAK ЛИПОЛИЗА ===
+  
+  /**
+   * Получить рекорд липолиза
+   */
+  const getLipolysisRecord = () => {
+    try {
+      const record = localStorage.getItem(LIPOLYSIS_RECORD_KEY);
+      return record ? JSON.parse(record) : { minutes: 0, date: null };
+    } catch (e) {
+      return { minutes: 0, date: null };
+    }
+  };
+  
+  /**
+   * Обновить рекорд липолиза (если побит)
+   * @returns {boolean} true если рекорд побит
+   */
+  const updateLipolysisRecord = (minutes) => {
+    const current = getLipolysisRecord();
+    if (minutes > current.minutes) {
+      const newRecord = { 
+        minutes, 
+        date: utils.getDateKey(),
+        previousRecord: current.minutes > 0 ? current.minutes : null
+      };
+      try {
+        localStorage.setItem(LIPOLYSIS_RECORD_KEY, JSON.stringify(newRecord));
+      } catch (e) {}
+      return true;
+    }
+    return false;
+  };
+  
+  /**
+   * Получить историю липолиза по дням
+   */
+  const getLipolysisHistory = () => {
+    try {
+      const history = localStorage.getItem(LIPOLYSIS_HISTORY_KEY);
+      return history ? JSON.parse(history) : [];
+    } catch (e) {
+      return [];
+    }
+  };
+  
+  /**
+   * Сохранить липолиз за день (вызывается при закрытии дня или в полночь)
+   */
+  const saveDayLipolysis = (date, minutes) => {
+    const history = getLipolysisHistory();
+    const existing = history.findIndex(h => h.date === date);
+    
+    if (existing >= 0) {
+      history[existing].minutes = Math.max(history[existing].minutes, minutes);
+    } else {
+      history.push({ date, minutes });
+    }
+    
+    // Храним последние 30 дней
+    const sorted = history.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
+    
+    try {
+      localStorage.setItem(LIPOLYSIS_HISTORY_KEY, JSON.stringify(sorted));
+    } catch (e) {}
+    
+    return sorted;
+  };
+  
+  /**
+   * Рассчитать streak липолиза (дни подряд с 4+ часами)
+   */
+  const calculateLipolysisStreak = () => {
+    const history = getLipolysisHistory();
+    if (history.length === 0) return { current: 0, best: 0 };
+    
+    // Сортируем по дате (новые первые)
+    const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
+    
+    let currentStreak = 0;
+    let bestStreak = 0;
+    let tempStreak = 0;
+    
+    const today = utils.getDateKey();
+    const yesterday = utils.getDateKey(new Date(Date.now() - 86400000));
+    
+    // Проверяем непрерывность
+    for (let i = 0; i < sorted.length; i++) {
+      const entry = sorted[i];
+      const prevEntry = sorted[i - 1];
+      
+      // Проверяем достаточно ли липолиза
+      if (entry.minutes >= MIN_LIPOLYSIS_FOR_STREAK) {
+        if (i === 0) {
+          // Первый день (сегодня или вчера)
+          if (entry.date === today || entry.date === yesterday) {
+            tempStreak = 1;
+            currentStreak = 1;
+          } else {
+            tempStreak = 1;
+          }
+        } else {
+          // Проверяем последовательность дней
+          const prevDate = new Date(prevEntry.date);
+          const currDate = new Date(entry.date);
+          const diffDays = Math.round((prevDate - currDate) / 86400000);
+          
+          if (diffDays === 1) {
+            tempStreak++;
+            if (sorted[0].date === today || sorted[0].date === yesterday) {
+              currentStreak = tempStreak;
+            }
+          } else {
+            bestStreak = Math.max(bestStreak, tempStreak);
+            tempStreak = 1;
+          }
+        }
+      } else {
+        bestStreak = Math.max(bestStreak, tempStreak);
+        tempStreak = 0;
+        if (i === 0) currentStreak = 0;
+      }
+    }
+    
+    bestStreak = Math.max(bestStreak, tempStreak);
+    
+    return { current: currentStreak, best: bestStreak };
+  };
+  
+  /**
+   * Рассчитать примерно сожжённые калории за время липолиза
+   * @param {number} minutes - минуты липолиза
+   * @param {number} weight - вес в кг (опционально)
+   */
+  const calculateLipolysisKcal = (minutes, weight = 70) => {
+    // Базовый расход в покое ≈ 1 ккал/мин для 70кг человека
+    // Корректируем по весу: weight/70
+    // Липолиз увеличивает расход примерно на 10-15%
+    const baseRate = KCAL_PER_MIN_BASE * (weight / 70);
+    const lipolysisBonus = 1.12; // +12% при липолизе
+    
+    return Math.round(minutes * baseRate * lipolysisBonus);
   };
   
   // === РАСЧЁТ ДАННЫХ ВОЛНЫ ===
@@ -447,6 +601,12 @@
       subtext = '📈 Инсулин высокий, жир запасается';
     }
     
+    // 🔥 Время липолиза (сколько прошло с конца волны)
+    // diffMinutes - время с последнего приёма
+    // waveMinutes - длина волны
+    // lipolysisMinutes = diffMinutes - waveMinutes (время ПОСЛЕ окончания волны)
+    const lipolysisMinutes = diffMinutes > waveMinutes ? Math.round(diffMinutes - waveMinutes) : 0;
+    
     return {
       // Статус
       status, emoji, text, color, subtext,
@@ -454,6 +614,7 @@
       // Прогресс
       progress: progressPct,
       remaining: remainingMinutes,
+      lipolysisMinutes,
       
       // Время (для сортировки храним как есть, для отображения нормализуем)
       lastMealTime,
@@ -560,17 +721,43 @@
         if (nutrients.avgGI > 70) return '⚠️ Был высокий ГИ — лучше подождать';
         if (remainingMinutes > 60) return '🍵 Выпей воды или чая';
         return '⏳ Дай организму переварить';
-      })()
+      })(),
+      
+      // 🏆 Рекорд липолиза
+      lipolysisRecord: getLipolysisRecord(),
+      
+      // 🔥 Streak липолиза
+      lipolysisStreak: calculateLipolysisStreak(),
+      
+      // 💪 Примерно сожжённые калории (если липолиз активен)
+      lipolysisKcal: lipolysisMinutes > 0 ? calculateLipolysisKcal(lipolysisMinutes) : 0,
+      
+      // Проверка на новый рекорд
+      isNewRecord: lipolysisMinutes > 0 && lipolysisMinutes > getLipolysisRecord().minutes
     };
   };
   
   // === UI КОМПОНЕНТЫ ===
   
   /**
+   * Форматирование времени липолиза
+   */
+  const formatLipolysisTime = (minutes) => {
+    if (minutes < 60) return `${minutes} мин`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (m === 0) return `${h}ч`;
+    return `${h}ч ${m}м`;
+  };
+  
+  /**
    * Рендер прогресс-бара волны
    */
   const renderProgressBar = (data) => {
     const progress = data.progress || 0;
+    const isLipolysis = data.status === 'lipolysis';
+    const lipolysisMinutes = data.lipolysisMinutes || 0;
+    
     const getGradient = (pct) => {
       if (pct < 50) return `linear-gradient(90deg, #0ea5e9 0%, #3b82f6 ${pct * 2}%)`;
       if (pct < 80) return `linear-gradient(90deg, #0ea5e9 0%, #3b82f6 50%, #8b5cf6 ${pct}%)`;
@@ -578,31 +765,62 @@
       return `linear-gradient(90deg, #8b5cf6 0%, #f97316 70%, #22c55e 100%)`;
     };
     
+    // При липолизе — зелёный градиент
+    const lipolysisGradient = 'linear-gradient(90deg, #22c55e 0%, #10b981 50%, #059669 100%)';
+    
     return React.createElement('div', {
       className: 'insulin-wave-progress',
       style: { position: 'relative', marginTop: '8px' }
     },
       React.createElement('div', {
         style: {
-          height: '12px',
+          height: isLipolysis ? '28px' : '12px',
           background: '#e5e7eb',
-          borderRadius: '6px',
+          borderRadius: isLipolysis ? '8px' : '6px',
           overflow: 'hidden',
-          position: 'relative'
+          position: 'relative',
+          transition: 'height 0.3s ease'
         }
       },
         React.createElement('div', {
-          className: 'insulin-progress-fill',
+          className: isLipolysis ? 'lipolysis-progress-fill' : 'insulin-progress-fill',
           style: {
             position: 'absolute',
             left: 0, top: 0, height: '100%',
-            width: `${progress}%`,
-            background: getGradient(progress),
-            borderRadius: '6px',
+            width: '100%',
+            background: isLipolysis ? lipolysisGradient : getGradient(progress),
+            borderRadius: isLipolysis ? '8px' : '6px',
             transition: 'width 0.5s ease-out'
           }
         }),
-        React.createElement('div', {
+        // При липолизе: крупный таймер "🔥 Xч Yм"
+        isLipolysis ? React.createElement('div', {
+          className: 'lipolysis-timer-display',
+          style: {
+            position: 'absolute',
+            left: '50%', top: '50%',
+            transform: 'translate(-50%, -50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '14px',
+            fontWeight: '800',
+            color: '#fff',
+            textShadow: '0 1px 3px rgba(0,0,0,0.3)',
+            whiteSpace: 'nowrap'
+          }
+        },
+          React.createElement('span', { 
+            className: 'lipolysis-fire-icon',
+            style: { fontSize: '16px' } 
+          }, '🔥'),
+          React.createElement('span', null, formatLipolysisTime(lipolysisMinutes)),
+          React.createElement('span', { 
+            style: { fontSize: '11px', opacity: 0.9, fontWeight: '600' } 
+          }, 'жиросжигание')
+        )
+        // При активной волне: процент
+        : React.createElement('div', {
           style: {
             position: 'absolute',
             left: '50%', top: '50%',
@@ -1023,6 +1241,13 @@
     calculateWorkoutBonus,
     calculateCircadianMultiplier,
     
+    // 🏆 Рекорды и streak
+    getLipolysisRecord,
+    updateLipolysisRecord,
+    saveDayLipolysis,
+    calculateLipolysisStreak,
+    calculateLipolysisKcal,
+    
     // Константы
     GI_CATEGORIES,
     STATUS_CONFIG,
@@ -1030,14 +1255,15 @@
     FIBER_BONUS,
     WORKOUT_BONUS,
     CIRCADIAN_MULTIPLIERS,
+    MIN_LIPOLYSIS_FOR_STREAK,
     
     // Версия
-    VERSION: '1.1.0'
+    VERSION: '1.2.0'
   };
   
   // Алиас
   HEYS.IW = HEYS.InsulinWave;
   
-  console.log('[HEYS] InsulinWave v1.1.0 loaded (workout + circadian)');
+  console.log('[HEYS] InsulinWave v1.2.0 loaded (lipolysis records + streak)');
   
 })(typeof window !== 'undefined' ? window : global);
