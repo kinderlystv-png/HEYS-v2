@@ -916,6 +916,64 @@
   animation: wave-pulse 1.5s ease-in-out infinite;
 }
 
+/* === FOCUS MODE для Expandable Cards === */
+/* Overlay за раскрытой карточкой */
+.expand-focus-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 90;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.expand-focus-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Карточка в фокусе поднимается над overlay */
+.insulin-wave-indicator.expanded,
+.expandable-card--expanded {
+  position: relative;
+  z-index: 100;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transform: scale(1.01);
+  transition: all 0.3s ease;
+}
+
+/* Анимация появления контента */
+@keyframes expandFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.insulin-wave-expanded,
+.expandable-card__content {
+  animation: expandFadeIn 0.25s ease-out;
+}
+
+/* Subtle glow вокруг раскрытой карточки */
+.insulin-wave-indicator.expanded::before,
+.expandable-card--expanded::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
+  z-index: -1;
+  opacity: 0.6;
+}
+
 .mood-card {
   flex: 1;
   display: flex;

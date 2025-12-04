@@ -1055,6 +1055,7 @@
     onClearLastDismissed,
     onSchedule,
     onToggleExpand,
+    trackClick,
     onRate,
     onSwipeStart,
     onSwipeMove,
@@ -1206,6 +1207,10 @@
           // Раскрытие по тапу (если не свайп)
           if (showUndo || Math.abs(swipeX) > 10) return;
           e.stopPropagation();
+          // Трекаем клик при раскрытии
+          if (!isExpanded && trackClick) {
+            trackClick(advice.id);
+          }
           onToggleExpand && onToggleExpand(advice.id);
         },
         onTouchStart: (e) => {
@@ -2199,7 +2204,10 @@
     
     // Toggle раскрытия совета по тапу
     const handleAdviceToggleExpand = React.useCallback((adviceId) => {
-      setExpandedAdviceId(prev => prev === adviceId ? null : adviceId);
+      setExpandedAdviceId(prev => {
+        const isExpanding = prev !== adviceId;
+        return isExpanding ? adviceId : null;
+      });
       haptic('light');
     }, [haptic]);
     
@@ -4246,9 +4254,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       uiState,
       prof,        // Профиль пользователя для персонализации
       waterGoal    // Динамическая норма воды из waterGoalBreakdown
-    }) : { primary: null, relevant: [], adviceCount: 0, allAdvices: [], rateAdvice: null, scheduleAdvice: null, scheduledCount: 0 };
+    }) : { primary: null, relevant: [], adviceCount: 0, allAdvices: [], rateAdvice: null, scheduleAdvice: null, scheduledCount: 0, trackClick: null };
     
-    const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, allAdvices, markShown, rateAdvice, scheduleAdvice, scheduledCount } = adviceResult;
+    const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, allAdvices, markShown, rateAdvice, scheduleAdvice, scheduledCount, trackClick } = adviceResult;
     
     // Количество непрочитанных советов (для badge на FAB кнопке)
     const totalAdviceCount = React.useMemo(() => {
@@ -5169,6 +5177,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       let avgGI = 50; // дефолт
       let totalGrams = 0;
       let weightedGI = 0;
+      let totalProtein = 0; // для расчёта белкового бонуса
+      let totalFiber = 0;   // для расчёта клетчаточного бонуса
       const lastMealItems = lastMeal.items || [];
       
       for (const item of lastMealItems) {
@@ -5177,12 +5187,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const gi = prod?.gi || prod?.gi100 || prod?.GI || 50;
         weightedGI += gi * grams;
         totalGrams += grams;
+        // Белок и клетчатка
+        const protein = (prod?.protein100 || 0) * grams / 100;
+        const fiber = (prod?.fiber100 || 0) * grams / 100;
+        totalProtein += protein;
+        totalFiber += fiber;
       }
       if (totalGrams > 0) {
         avgGI = Math.round(weightedGI / totalGrams);
       }
       
-      // === GI Multiplier для длины волны ===
+      // === Модификаторы длины волны ===
+      
+      // 1. GI Multiplier
       // Низкий ГИ = дольше усваивается = больше ждать
       // Высокий ГИ = быстрее = меньше ждать
       let giMultiplier = 1.0;
@@ -5201,8 +5218,27 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         giCategory = 'very-high';
       }
       
+      // 2. Белковый бонус: много белка (>25г) замедляет пищеварение
+      let proteinBonus = 0;
+      if (totalProtein >= 40) {
+        proteinBonus = 0.15; // +15% к длине волны
+      } else if (totalProtein >= 25) {
+        proteinBonus = 0.08; // +8%
+      }
+      
+      // 3. Клетчатка: замедляет всасывание
+      let fiberBonus = 0;
+      if (totalFiber >= 10) {
+        fiberBonus = 0.12; // +12% к длине волны
+      } else if (totalFiber >= 5) {
+        fiberBonus = 0.05; // +5%
+      }
+      
+      // Итоговый множитель
+      const totalMultiplier = giMultiplier + proteinBonus + fiberBonus;
+      
       // Скорректированная длина волны
-      const adjustedWaveHours = baseWaveHours * giMultiplier;
+      const adjustedWaveHours = baseWaveHours * totalMultiplier;
       const waveMinutes = adjustedWaveHours * 60;
       
       const [mealH, mealM] = lastMealTime.split(':').map(Number);
@@ -5236,24 +5272,33 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         if (isNaN(h)) return null;
         const startMin = h * 60 + (m || 0);
         
-        // Считаем ГИ этого приёма
+        // Считаем ГИ, белок и клетчатку этого приёма
         let mealGI = 50;
         let mealGrams = 0, mealWeightedGI = 0;
+        let mealProtein = 0, mealFiber = 0;
         for (const item of (meal.items || [])) {
           const g = item.grams || 100;
           const prod = getProductFromItem(item, pIndex);
           const gi = prod?.gi || prod?.gi100 || 50;
           mealWeightedGI += gi * g;
           mealGrams += g;
+          mealProtein += (prod?.protein100 || 0) * g / 100;
+          mealFiber += (prod?.fiber100 || 0) * g / 100;
         }
         if (mealGrams > 0) mealGI = Math.round(mealWeightedGI / mealGrams);
         
-        // Множитель для этого приёма
+        // Множитель для этого приёма (GI + белок + клетчатка)
         let mult = 1.0;
         if (mealGI <= 35) mult = 1.2;
         else if (mealGI <= 55) mult = 1.0;
         else if (mealGI <= 70) mult = 0.85;
         else mult = 0.7;
+        
+        // Белковый и клетчаточный бонус
+        if (mealProtein >= 40) mult += 0.15;
+        else if (mealProtein >= 25) mult += 0.08;
+        if (mealFiber >= 10) mult += 0.12;
+        else if (mealFiber >= 5) mult += 0.05;
         
         const duration = Math.round(baseWaveHours * mult * 60);
         const endMin = startMin + duration;
@@ -5264,9 +5309,84 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           endMin,
           duration,
           gi: mealGI,
+          protein: Math.round(mealProtein),
+          fiber: Math.round(mealFiber),
           isActive: idx === 0 && remainingMinutes > 0
         };
       }).filter(Boolean).reverse(); // от раннего к позднему
+      
+      // === АНАЛИЗ ПЕРЕКРЫТИЯ ВОЛН ===
+      const overlaps = [];
+      for (let i = 0; i < waveHistory.length - 1; i++) {
+        const current = waveHistory[i];
+        const next = waveHistory[i + 1];
+        if (current.endMin > next.startMin) {
+          // Волна current ещё не закончилась когда началась next
+          const overlapMin = current.endMin - next.startMin;
+          overlaps.push({
+            from: current.time,
+            to: next.time,
+            overlapMinutes: overlapMin,
+            severity: overlapMin > 60 ? 'high' : overlapMin > 30 ? 'medium' : 'low'
+          });
+        }
+      }
+      const hasOverlaps = overlaps.length > 0;
+      const worstOverlap = overlaps.reduce((max, o) => 
+        o.overlapMinutes > (max?.overlapMinutes || 0) ? o : max, null);
+      
+      // === ПЕРСОНАЛЬНАЯ СТАТИСТИКА ===
+      // Сохраняем gaps между приёмами для анализа
+      const gaps = [];
+      for (let i = 0; i < waveHistory.length - 1; i++) {
+        const current = waveHistory[i];
+        const next = waveHistory[i + 1];
+        gaps.push(next.startMin - current.startMin);
+      }
+      const avgGapToday = gaps.length > 0 
+        ? Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length) 
+        : 0;
+      
+      // Загружаем/обновляем историю gaps за 7 дней
+      const gapHistoryKey = 'heys_meal_gaps_history';
+      let gapHistory = [];
+      try {
+        gapHistory = JSON.parse(localStorage.getItem(gapHistoryKey) || '[]');
+      } catch (e) {}
+      
+      // Добавляем сегодняшний средний gap
+      const today = new Date().toISOString().slice(0, 10);
+      const todayEntry = gapHistory.find(g => g.date === today);
+      if (avgGapToday > 0) {
+        if (todayEntry) {
+          todayEntry.avgGap = avgGapToday;
+          todayEntry.count = gaps.length;
+        } else {
+          gapHistory.push({ date: today, avgGap: avgGapToday, count: gaps.length });
+        }
+        // Храним только 14 дней
+        gapHistory = gapHistory.slice(-14);
+        try {
+          localStorage.setItem(gapHistoryKey, JSON.stringify(gapHistory));
+        } catch (e) {}
+      }
+      
+      // Средний gap за всё время (персональный паттерн)
+      const personalAvgGap = gapHistory.length > 0
+        ? Math.round(gapHistory.reduce((sum, g) => sum + g.avgGap, 0) / gapHistory.length)
+        : 0;
+      
+      // Рекомендованный gap (на основе базовой волны)
+      const recommendedGap = Math.round(baseWaveHours * 60);
+      
+      // Оценка: выдерживаешь ли оптимальный gap?
+      let gapQuality = 'unknown';
+      if (personalAvgGap > 0) {
+        if (personalAvgGap >= recommendedGap * 0.9) gapQuality = 'excellent';
+        else if (personalAvgGap >= recommendedGap * 0.75) gapQuality = 'good';
+        else if (personalAvgGap >= recommendedGap * 0.5) gapQuality = 'moderate';
+        else gapQuality = 'needs-work';
+      }
       
       // Определяем следующий рекомендуемый приём (с учётом времени суток)
       const getNextMealSuggestion = () => {
@@ -5332,8 +5452,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         avgGI,
         giCategory,
         giMultiplier,
+        // Белок и клетчатка последнего приёма
+        totalProtein: Math.round(totalProtein),
+        totalFiber: Math.round(totalFiber),
+        proteinBonus,
+        fiberBonus,
         // История волн за день
-        waveHistory
+        waveHistory,
+        // Перекрытие волн
+        overlaps,
+        hasOverlaps,
+        worstOverlap,
+        // Персональная статистика
+        avgGapToday,
+        personalAvgGap,
+        recommendedGap,
+        gapQuality,
+        gapHistory: gapHistory.slice(-7) // последние 7 дней
       };
     }, [day.meals, pIndex, currentMinute]); // currentMinute для авто-обновления
 
@@ -5564,17 +5699,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         console.log('[ProgressBar] Timeout fired, starting animation');
         setIsAnimating(false); // Включаем transition обратно
         
-        const duration = 800;
+        const duration = 1200; // Увеличена длительность для плавности
         const startTime = performance.now();
         const targetKcal = eatenKcal; // Целевое значение калорий
         const targetRatioPct = Math.round((eatenKcal / (optimum || 1)) * 100); // Целевой % для бэджа
         const targetMarkerPos = 100; // Бейдж всегда едет до конца полосы (100%)
         
+        // Ease-out expo — очень плавное замедление в конце
+        const easeOutExpo = (t) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+        
         const animate = (currentTime) => {
           const elapsed = currentTime - startTime;
           const progress = Math.min(elapsed / duration, 1);
-          // Ease out cubic
-          const eased = 1 - Math.pow(1 - progress, 3);
+          // Плавный ease-out expo
+          const eased = easeOutExpo(progress);
           const current = target * eased;
           const currentKcal = Math.round(targetKcal * eased);
           const currentRatioPct = Math.round(targetRatioPct * eased);
@@ -10714,32 +10852,39 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           );
         };
         
-        return React.createElement('div', { 
-          className: 'insulin-wave-indicator insulin-' + insulinWaveData.status + (isShaking ? ' shake' : ''),
-          style: { margin: '8px 0', cursor: 'pointer' },
-          onClick: () => setInsulinExpanded(!insulinExpanded)
-        },
-          // Анимированный фон волны
-          React.createElement('div', { className: 'insulin-wave-bg' }),
+        return React.createElement(React.Fragment, null,
+          // Focus overlay (blur/dim background when expanded)
+          React.createElement('div', {
+            className: 'expand-focus-overlay' + (insulinExpanded ? ' active' : ''),
+            onClick: () => setInsulinExpanded(false)
+          }),
           
-          // Контент
-          React.createElement('div', { className: 'insulin-wave-content' },
-            // Header: иконка + label + статус
-            React.createElement('div', { className: 'insulin-wave-header' },
-              React.createElement('div', { className: 'insulin-wave-left' },
-                React.createElement('span', { className: 'insulin-wave-icon' }, insulinWaveData.emoji),
-                React.createElement('span', { className: 'insulin-wave-label' }, 
-                  insulinWaveData.status === 'ready' ? 'Окно питания открыто!' : 'Инсулиновая волна'
+          React.createElement('div', { 
+            className: 'insulin-wave-indicator insulin-' + insulinWaveData.status + (isShaking ? ' shake' : '') + (insulinExpanded ? ' expanded' : ''),
+            style: { margin: '8px 0', cursor: 'pointer' },
+            onClick: () => setInsulinExpanded(!insulinExpanded)
+          },
+            // Анимированный фон волны
+            React.createElement('div', { className: 'insulin-wave-bg' }),
+            
+            // Контент
+            React.createElement('div', { className: 'insulin-wave-content' },
+              // Header: иконка + label + статус
+              React.createElement('div', { className: 'insulin-wave-header' },
+                React.createElement('div', { className: 'insulin-wave-left' },
+                  React.createElement('span', { className: 'insulin-wave-icon' }, insulinWaveData.emoji),
+                  React.createElement('span', { className: 'insulin-wave-label' }, 
+                    insulinWaveData.status === 'ready' ? 'Окно питания открыто!' : 'Инсулиновая волна'
+                  ),
+                  // Expand indicator
+                  React.createElement('span', { 
+                    style: { fontSize: '10px', color: '#94a3b8', marginLeft: '4px' } 
+                  }, insulinExpanded ? '▲' : '▼')
                 ),
-                // Expand indicator
-                React.createElement('span', { 
-                  style: { fontSize: '10px', color: '#94a3b8', marginLeft: '4px' } 
-                }, insulinExpanded ? '▲' : '▼')
-              ),
-              // Большой таймер/статус справа
-              React.createElement('div', { 
-                className: 'insulin-wave-timer',
-                style: { color: insulinWaveData.color }
+                // Большой таймер/статус справа
+                React.createElement('div', { 
+                  className: 'insulin-wave-timer',
+                  style: { color: insulinWaveData.color }
               }, 
                 insulinWaveData.status === 'ready' 
                   ? React.createElement('span', { className: 'ready-pulse' }, '●')
@@ -10800,11 +10945,110 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     '— ' + giInfo.desc
                   )
                 ),
+                // Базовая формула
                 React.createElement('div', { 
                   style: { fontSize: '11px', color: '#64748b', marginTop: '4px' } 
                 }, 
                   'Базовая волна: ' + insulinWaveData.baseWaveHours + 'ч → Скорректированная: ' + 
                   Math.round(insulinWaveData.insulinWaveHours * 10) / 10 + 'ч'
+                ),
+                // Модификаторы (белок, клетчатка)
+                (insulinWaveData.proteinBonus > 0 || insulinWaveData.fiberBonus > 0) && 
+                  React.createElement('div', { 
+                    style: { fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap' } 
+                  },
+                    insulinWaveData.totalProtein > 0 && React.createElement('span', null, 
+                      '🥩 Белок: ' + insulinWaveData.totalProtein + 'г' + 
+                      (insulinWaveData.proteinBonus > 0 ? ' (+' + Math.round(insulinWaveData.proteinBonus * 100) + '%)' : '')
+                    ),
+                    insulinWaveData.totalFiber > 0 && React.createElement('span', null, 
+                      '🌾 Клетчатка: ' + insulinWaveData.totalFiber + 'г' + 
+                      (insulinWaveData.fiberBonus > 0 ? ' (+' + Math.round(insulinWaveData.fiberBonus * 100) + '%)' : '')
+                    )
+                  )
+              ),
+              
+              // Предупреждение о перекрытии волн
+              insulinWaveData.hasOverlaps && React.createElement('div', { 
+                className: 'insulin-overlap-warning',
+                style: { 
+                  marginTop: '8px', 
+                  padding: '8px', 
+                  background: insulinWaveData.worstOverlap?.severity === 'high' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  border: '1px solid ' + (insulinWaveData.worstOverlap?.severity === 'high' ? '#fca5a5' : '#fcd34d')
+                }
+              },
+                React.createElement('div', { style: { fontWeight: '600', color: insulinWaveData.worstOverlap?.severity === 'high' ? '#dc2626' : '#d97706' } },
+                  '⚠️ Волны пересеклись!'
+                ),
+                React.createElement('div', { style: { marginTop: '2px', color: '#64748b' } },
+                  insulinWaveData.overlaps.map((o, i) => 
+                    React.createElement('div', { key: i },
+                      o.from + ' → ' + o.to + ': перекрытие ' + o.overlapMinutes + ' мин'
+                    )
+                  )
+                ),
+                React.createElement('div', { style: { marginTop: '4px', fontSize: '11px', fontStyle: 'italic' } },
+                  '💡 Совет: подожди минимум ' + Math.round(insulinWaveData.baseWaveHours * 60) + ' мин между приёмами'
+                )
+              ),
+              
+              // Персональная статистика
+              insulinWaveData.personalAvgGap > 0 && React.createElement('div', { 
+                className: 'insulin-personal-stats',
+                style: { 
+                  marginTop: '8px', 
+                  padding: '8px', 
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '8px',
+                  fontSize: '12px'
+                }
+              },
+                React.createElement('div', { style: { fontWeight: '600', color: '#3b82f6', marginBottom: '4px' } },
+                  '📊 Твои паттерны'
+                ),
+                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', color: '#64748b' } },
+                  React.createElement('span', null, 'Сегодня между приёмами:'),
+                  React.createElement('span', { style: { fontWeight: '600' } }, 
+                    insulinWaveData.avgGapToday > 0 
+                      ? Math.floor(insulinWaveData.avgGapToday / 60) + 'ч ' + (insulinWaveData.avgGapToday % 60) + 'м'
+                      : '—'
+                  )
+                ),
+                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', color: '#64748b', marginTop: '2px' } },
+                  React.createElement('span', null, 'Твой средний gap:'),
+                  React.createElement('span', { style: { fontWeight: '600' } }, 
+                    Math.floor(insulinWaveData.personalAvgGap / 60) + 'ч ' + (insulinWaveData.personalAvgGap % 60) + 'м'
+                  )
+                ),
+                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', color: '#64748b', marginTop: '2px' } },
+                  React.createElement('span', null, 'Рекомендуемый:'),
+                  React.createElement('span', { style: { fontWeight: '600' } }, 
+                    Math.floor(insulinWaveData.recommendedGap / 60) + 'ч ' + (insulinWaveData.recommendedGap % 60) + 'м'
+                  )
+                ),
+                // Оценка качества
+                React.createElement('div', { 
+                  style: { 
+                    marginTop: '6px', 
+                    padding: '4px 8px', 
+                    borderRadius: '4px',
+                    textAlign: 'center',
+                    fontWeight: '600',
+                    background: insulinWaveData.gapQuality === 'excellent' ? '#dcfce7' : 
+                               insulinWaveData.gapQuality === 'good' ? '#fef9c3' :
+                               insulinWaveData.gapQuality === 'moderate' ? '#fed7aa' : '#fecaca',
+                    color: insulinWaveData.gapQuality === 'excellent' ? '#166534' : 
+                           insulinWaveData.gapQuality === 'good' ? '#854d0e' :
+                           insulinWaveData.gapQuality === 'moderate' ? '#c2410c' : '#dc2626'
+                  }
+                },
+                  insulinWaveData.gapQuality === 'excellent' ? '🌟 Отлично! Выдерживаешь оптимальные промежутки' :
+                  insulinWaveData.gapQuality === 'good' ? '👍 Хорошо! Почти идеальные промежутки' :
+                  insulinWaveData.gapQuality === 'moderate' ? '😐 Можно лучше. Попробуй увеличить gap' :
+                  '⚠️ Ешь слишком часто. Дай организму переварить'
                 )
               ),
               
@@ -10898,6 +11142,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                           onClearLastDismissed: clearLastDismissed,
                           onSchedule: scheduleAdvice,
                           onToggleExpand: handleAdviceToggleExpand,
+                          trackClick: trackClick,
                           onRate: rateAdvice,
                           onSwipeStart: handleAdviceSwipeStart,
                           onSwipeMove: handleAdviceSwipeMove,
@@ -10925,6 +11170,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                       onClearLastDismissed: clearLastDismissed,
                       onSchedule: scheduleAdvice,
                       onToggleExpand: handleAdviceToggleExpand,
+                      trackClick: trackClick,
                       onRate: rateAdvice,
                       onSwipeStart: handleAdviceSwipeStart,
                       onSwipeMove: handleAdviceSwipeMove,

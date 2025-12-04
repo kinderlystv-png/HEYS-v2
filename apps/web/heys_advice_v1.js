@@ -3,8 +3,65 @@
  * Модульная система умных советов
  * 
  * @file heys_advice_v1.js
- * @version 1.0.0
+ * @version 1.1.0
  * @description Генерация персонализированных советов на основе аналитики дня
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 📋 ПРАВИЛА РАБОТЫ МОДУЛЯ СОВЕТОВ (централизованная документация)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * 🎯 ПРИОРИТИЗАЦИЯ (Smart Scoring)
+ * ────────────────────────────────
+ * Каждый совет получает score = базовый приоритет + модификаторы:
+ * 
+ * 1. CTR Factor (до +20 баллов)
+ *    - Если совет показывался ≥3 раз, учитываем clicked/shown
+ *    - Высокий CTR → чаще показываем
+ * 
+ * 2. Rating Factor (±12 баллов)
+ *    - 👍 увеличивает приоритет, 👎 уменьшает
+ *    - Нужно ≥2 оценки для учёта
+ * 
+ * 3. Recency Factor (до +15 баллов)
+ *    - Давно не показывали → бонус
+ *    - Никогда не показывали → +3 балла
+ * 
+ * 4. Relevance Factor (до +6 баллов)
+ *    - Совет про белок + белка мало → высокая релевантность
+ * 
+ * 🔄 ДЕДУПЛИКАЦИЯ
+ * ────────────────
+ * См. DEDUPLICATION_RULES — группы похожих советов.
+ * Из одной группы показываем только 1 совет за сессию.
+ * 
+ * ⏰ ВРЕМЯ СУТОК
+ * ──────────────
+ * См. TIME_BASED_TEXTS — разные формулировки утром/днём/вечером.
+ * См. TIME_RESTRICTIONS — какие советы НЕ показывать в определённое время.
+ * 
+ * 🔗 СВЯЗАННЫЕ СОВЕТЫ (Chains)
+ * ────────────────────────────
+ * См. ADVICE_CHAINS — после совета A через N минут показать совет B.
+ * Пример: "мало белка" → через 30 мин → "источники белка"
+ * 
+ * 🎭 ЭМОЦИОНАЛЬНАЯ АДАПТАЦИЯ
+ * ──────────────────────────
+ * См. MOOD_TONES — разный тон в зависимости от настроения пользователя.
+ * Плохое настроение → мягче формулировки, меньше критики.
+ * 
+ * 📊 ТРЕКИНГ И АНАЛИТИКА
+ * ──────────────────────
+ * - heys_advice_stats: показы, клики, lastShown (автоочистка >30 дней)
+ * - heys_advice_ratings: 👍/👎 оценки (автоочистка >60 дней)
+ * - heys_scheduled_advices: отложенные советы (⏰ 2ч)
+ * 
+ * 🚫 АНТИ-СПАМ
+ * ────────────
+ * - MAX_ADVICES_PER_SESSION = 10 советов за сессию
+ * - MAX_ADVICES_PER_CATEGORY = 2 совета одной категории
+ * - ADVICE_COOLDOWN_MS = 30 сек между советами
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
  */
 
 (function() {
@@ -156,6 +213,55 @@
   };
   
   // ═══════════════════════════════════════════════════════════
+  // DEDUPLICATION_RULES — Группы похожих советов (показываем 1 из группы)
+  // ═══════════════════════════════════════════════════════════
+  
+  const DEDUPLICATION_RULES = {
+    // Группа "белок" — не показывать несколько советов про белок подряд
+    protein: ['protein_low', 'protein_sources', 'post_training_protein', 'age_protein', 'bedtime_protein', 'protein_champion', 'protein_per_meal_low'],
+    // Группа "вода"
+    water: ['water_reminder', 'water_evening_low', 'water_goal_reached', 'water_benefits', 'super_hydration'],
+    // Группа "углеводы"
+    carbs: ['simple_carbs_warning', 'complex_carbs_tip', 'carbs_balance_perfect', 'simple_complex_ratio', 'evening_carbs_high'],
+    // Группа "клетчатка"
+    fiber: ['fiber_low', 'fiber_good', 'fiber_sources', 'fiber_per_meal_good'],
+    // Группа "жиры"
+    fat: ['fat_quality_low', 'fat_quality_great', 'good_fat_low', 'trans_fat_warning'],
+    // Группа "калории"
+    kcal: ['kcal_excess_critical', 'kcal_excess_mild', 'kcal_under_critical', 'evening_undereating', 'evening_perfect'],
+    // Группа "сон"
+    sleep: ['sleep_low', 'bad_sleep_advice', 'great_sleep', 'sleep_hunger_correlation', 'sleep_debt_accumulating'],
+    // Группа "тренировки"
+    training: ['post_training_protein', 'hard_workout_recovery', 'cardio_carbs_balance', 'great_workout', 'training_recovery_window'],
+    // Группа "настроение"
+    mood: ['stress_support', 'crash_support', 'mood_improving', 'sugar_mood_crash', 'wellbeing_low_food']
+  };
+  
+  // ═══════════════════════════════════════════════════════════
+  // TIME_RESTRICTIONS — Когда НЕ показывать определённые советы
+  // ═══════════════════════════════════════════════════════════
+  
+  const TIME_RESTRICTIONS = {
+    // Не показывать совет про завтрак после 12:00
+    'morning_breakfast': { notAfterHour: 12 },
+    // Совет про обед — только с 11 до 15
+    'lunch_time': { onlyBetweenHours: [11, 15] },
+    // Полдник — с 15 до 18
+    'snack_window': { onlyBetweenHours: [15, 18] },
+    // Вечерние советы — после 18
+    'evening_undereating': { notBeforeHour: 18 },
+    'evening_perfect': { notBeforeHour: 20 },
+    'evening_carbs_high': { notBeforeHour: 19 },
+    'late_dinner_warning': { notBeforeHour: 21 },
+    'bedtime_protein': { onlyBetweenHours: [20, 23] },
+    // Ночные советы
+    'night_owl_warning': { onlyBetweenHours: [1, 5] },
+    // Советы про сон утром
+    'bad_sleep_advice': { notAfterHour: 12 },
+    'sleep_hunger_warning': { notAfterHour: 14 }
+  };
+  
+  // ═══════════════════════════════════════════════════════════
   // ADVICE CHAINS — Связанные советы
   // ═══════════════════════════════════════════════════════════
   
@@ -164,7 +270,9 @@
     'protein_low': { next: 'protein_sources', delayMinutes: 30 },
     'fiber_low': { next: 'fiber_sources', delayMinutes: 30 },
     'water_reminder': { next: 'water_benefits', delayMinutes: 60 },
-    'simple_carbs_warning': { next: 'complex_carbs_tip', delayMinutes: 20 }
+    'simple_carbs_warning': { next: 'complex_carbs_tip', delayMinutes: 20 },
+    'fat_quality_low': { next: 'good_fat_sources', delayMinutes: 45 },
+    'sleep_low': { next: 'sleep_tips', delayMinutes: 120 }
   };
   
   // ═══════════════════════════════════════════════════════════
@@ -874,46 +982,13 @@
   // ═══════════════════════════════════════════════════════════
   
   /**
-   * Вычисляет smart score для совета
+   * Вычисляет smart score для совета (без кэша - для отдельных вызовов)
    * @param {Object} advice
    * @param {Object} ctx
    * @returns {number} Score (выше = лучше)
    */
   function calculateSmartScore(advice, ctx) {
-    let score = 100 - advice.priority; // Базовый score (инвертируем priority)
-    
-    // 1. CTR factor
-    const stats = getTrackingStats();
-    const adviceStats = stats[advice.id]; // Исправлено: прямой доступ
-    if (adviceStats && adviceStats.shown >= 3) {
-      const ctr = adviceStats.clicked / adviceStats.shown;
-      score += ctr * 50 * CTR_WEIGHT; // До +20 баллов за высокий CTR
-    }
-    
-    // 2. Rating factor
-    const rating = getAdviceRating(advice.id);
-    if (rating.total >= 2) {
-      score += rating.score * 30 * CTR_WEIGHT; // До ±12 баллов
-    }
-    
-    // 3. Recency factor (давно не показывали = бонус) — используем stats.lastShown
-    if (adviceStats?.lastShown) {
-      const hoursSince = (Date.now() - adviceStats.lastShown) / (1000 * 60 * 60);
-      if (hoursSince > 24) {
-        score += Math.min(hoursSince / 24, 5) * 10 * RECENCY_WEIGHT; // До +15 за давность
-      }
-    } else {
-      score += 10 * RECENCY_WEIGHT; // Никогда не показывали = бонус
-    }
-    
-    // 4. Relevance to current context
-    // Если совет про белок и белка реально мало — релевантнее
-    if (advice.category === 'nutrition') {
-      const pct = (ctx.dayTot?.[advice.nutrient] || 0) / (ctx.normAbs?.[advice.nutrient] || 100);
-      if (pct < 0.5) score += 20 * RELEVANCE_WEIGHT; // Очень мало = высокая релевантность
-    }
-    
-    return score;
+    return calculateSmartScoreCached(advice, ctx, getTrackingStats(), getAllRatings());
   }
   
   /**
@@ -923,9 +998,58 @@
    * @returns {Array}
    */
   function sortBySmartScore(advices, ctx) {
+    // 🚀 Оптимизация: кэшируем stats и ratings для всей сортировки
+    const cachedStats = getTrackingStats();
+    const cachedRatings = getAllRatings();
+    
     return advices
-      .map(a => ({ ...a, smartScore: calculateSmartScore(a, ctx) }))
+      .map(a => ({ ...a, smartScore: calculateSmartScoreCached(a, ctx, cachedStats, cachedRatings) }))
       .sort((a, b) => b.smartScore - a.smartScore);
+  }
+  
+  /**
+   * Вычисляет smart score с кэшированными данными
+   * @param {Object} advice
+   * @param {Object} ctx
+   * @param {Object} stats - кэшированные stats
+   * @param {Object} ratings - кэшированные ratings
+   * @returns {number}
+   */
+  function calculateSmartScoreCached(advice, ctx, stats, ratings) {
+    let score = 100 - advice.priority;
+    
+    // 1. CTR factor
+    const adviceStats = stats[advice.id];
+    if (adviceStats && adviceStats.shown >= 3) {
+      const ctr = adviceStats.clicked / adviceStats.shown;
+      score += ctr * 50 * CTR_WEIGHT;
+    }
+    
+    // 2. Rating factor
+    const r = ratings[advice.id] || { positive: 0, negative: 0 };
+    const total = r.positive + r.negative;
+    if (total >= 2) {
+      const ratingScore = (r.positive - r.negative) / total;
+      score += ratingScore * 30 * CTR_WEIGHT;
+    }
+    
+    // 3. Recency factor
+    if (adviceStats?.lastShown) {
+      const hoursSince = (Date.now() - adviceStats.lastShown) / (1000 * 60 * 60);
+      if (hoursSince > 24) {
+        score += Math.min(hoursSince / 24, 5) * 10 * RECENCY_WEIGHT;
+      }
+    } else {
+      score += 10 * RECENCY_WEIGHT;
+    }
+    
+    // 4. Relevance
+    if (advice.category === 'nutrition' && advice.nutrient) {
+      const pct = (ctx.dayTot?.[advice.nutrient] || 0) / (ctx.normAbs?.[advice.nutrient] || 100);
+      if (pct < 0.5) score += 20 * RELEVANCE_WEIGHT;
+    }
+    
+    return score;
   }
   
   // ═══════════════════════════════════════════════════════════
@@ -1912,6 +2036,73 @@
   }
   
   /**
+   * Дедупликация — из группы похожих советов показываем только один
+   * @param {Array} advices - Советы (уже отсортированы по приоритету)
+   * @returns {Array}
+   */
+  function deduplicateAdvices(advices) {
+    const shownGroups = new Set();
+    const result = [];
+    
+    for (const advice of advices) {
+      // Найти группу, к которой относится совет
+      let adviceGroup = null;
+      for (const [group, ids] of Object.entries(DEDUPLICATION_RULES)) {
+        if (ids.includes(advice.id)) {
+          adviceGroup = group;
+          break;
+        }
+      }
+      
+      // Если совет принадлежит группе и группа уже показана — пропускаем
+      if (adviceGroup && shownGroups.has(adviceGroup)) {
+        continue;
+      }
+      
+      result.push(advice);
+      if (adviceGroup) {
+        shownGroups.add(adviceGroup);
+      }
+    }
+    
+    return result;
+  }
+  
+  /**
+   * Фильтрует советы по временным ограничениям
+   * @param {Array} advices
+   * @returns {Array}
+   */
+  function filterByTimeRestrictions(advices) {
+    const hour = new Date().getHours();
+    
+    return advices.filter(advice => {
+      const restriction = TIME_RESTRICTIONS[advice.id];
+      if (!restriction) return true; // Нет ограничений
+      
+      // notAfterHour: не показывать после N часов
+      if (restriction.notAfterHour !== undefined && hour >= restriction.notAfterHour) {
+        return false;
+      }
+      
+      // notBeforeHour: не показывать до N часов
+      if (restriction.notBeforeHour !== undefined && hour < restriction.notBeforeHour) {
+        return false;
+      }
+      
+      // onlyBetweenHours: показывать только в диапазоне [from, to]
+      if (restriction.onlyBetweenHours) {
+        const [from, to] = restriction.onlyBetweenHours;
+        if (hour < from || hour >= to) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }
+
+  /**
    * Ограничивает советы по категориям (антиспам)
    * Не более MAX_ADVICES_PER_CATEGORY советов одной категории
    * @param {Array} advices
@@ -2186,6 +2377,11 @@
    * @returns {Array} Массив советов
    */
   function generateAdvices(ctx) {
+    // 🚀 Early exit: если контекст неполный — возвращаем пустой массив
+    if (!ctx || !ctx.normAbs) {
+      return [];
+    }
+    
     const advices = [];
     const {
       dayTot, normAbs, optimum, day, pIndex, currentStreak,
@@ -5129,6 +5325,12 @@
       // 🧠 Smart Prioritization — ML-like scoring
       advices = sortBySmartScore(advices, ctx);
       
+      // ⏰ Применяем временные ограничения
+      advices = filterByTimeRestrictions(advices);
+      
+      // 🔄 Дедупликация — из группы похожих показываем только один
+      advices = deduplicateAdvices(advices);
+      
       // Применяем систему excludes
       advices = filterByExcludes(advices);
       
@@ -5216,17 +5418,22 @@
     getTimePeriod,
     adaptTextToMood,
     getAverageMoodToday,
-    // 📋 Config
+    // 📋 Config — Все правила в одном месте
     THRESHOLDS,
     SEASONAL_TIPS,
     MAX_ADVICES_PER_CATEGORY,
     PRODUCT_CATEGORIES,
     ADVICE_CHAINS,
+    DEDUPLICATION_RULES,    // 🆕 Группы похожих советов
+    TIME_RESTRICTIONS,      // 🆕 Временные ограничения
     STREAK_MILESTONES,
     TTL_CONFIG,
     TIME_BASED_TEXTS,
     COMBO_ACHIEVEMENTS,
     MOOD_TONES,
+    // 🔧 Filtering functions
+    deduplicateAdvices,       // 🆕 Дедупликация
+    filterByTimeRestrictions, // 🆕 Временные ограничения
     // Helper functions для тестирования
     getToneForHour,
     getEmotionalState,
