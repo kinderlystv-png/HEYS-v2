@@ -777,6 +777,16 @@
       allowSwipe: false, // Отключаем свайп — конфликтует со слайдерами
       component: MealMoodStepComponent,
       getInitialData: (ctx) => {
+        // При редактировании берём начальные значения из context
+        if (ctx?.initialMood !== undefined) {
+          return {
+            mood: ctx.initialMood,
+            wellbeing: ctx.initialWellbeing ?? 5,
+            stress: ctx.initialStress ?? 5,
+            comment: ctx.initialComment ?? ''
+          };
+        }
+        
         // Берём оценки из предыдущего приёма если есть
         const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
         const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
@@ -965,10 +975,61 @@
     });
   }
 
+  /**
+   * Показать модалку редактирования оценок приёма (1 шаг)
+   * @param {Object} options
+   * @param {Object} options.meal - Текущий приём для редактирования
+   * @param {number} options.mealIndex - Индекс приёма
+   * @param {string} options.dateKey - Дата (YYYY-MM-DD)
+   * @param {Function} options.onComplete - Callback после сохранения
+   */
+  function showEditMoodModal(options = {}) {
+    const { meal, mealIndex, dateKey, onComplete, onClose } = options;
+    if (!meal) {
+      console.error('[MealStep] showEditMood: meal is required');
+      return;
+    }
+    
+    HEYS.StepModal.show({
+      steps: ['mealMood'],  // Только 1 шаг — оценки
+      title: '',  // Без заголовка
+      icon: '',   // Без иконки
+      showProgress: false,
+      showStreak: false,
+      showGreeting: false,
+      showTip: false,
+      context: { 
+        dateKey,
+        mealIndex,
+        // Начальные значения — берём из текущего приёма
+        initialMood: meal.mood || 5,
+        initialWellbeing: meal.wellbeing || 5,
+        initialStress: meal.stress || 5,
+        initialComment: meal.comment || ''
+      },
+      onComplete: (stepData) => {
+        const moodData = stepData.mealMood || {};
+        
+        // Возвращаем обновлённые данные
+        if (onComplete) {
+          onComplete({
+            mealIndex,
+            mood: moodData.mood ?? meal.mood ?? 5,
+            wellbeing: moodData.wellbeing ?? meal.wellbeing ?? 5,
+            stress: moodData.stress ?? meal.stress ?? 5,
+            comment: moodData.comment ?? meal.comment ?? ''
+          });
+        }
+      },
+      onClose
+    });
+  }
+
   // === Экспорт ===
   HEYS.MealStep = {
     showAddMeal: showAddMealModal,
     showEditMeal: showEditMealModal,
+    showEditMood: showEditMoodModal,
     TimeStep: MealTimeStepComponent,
     MoodStep: MealMoodStepComponent
   };

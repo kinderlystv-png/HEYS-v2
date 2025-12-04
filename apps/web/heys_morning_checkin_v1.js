@@ -15,6 +15,8 @@
   
   /**
    * Проверяем, нужно ли показывать утренний чек-ин
+   * ВАЖНО: Эта функция вызывается ПОСЛЕ события heysSyncCompleted,
+   * поэтому проверка isInitialSyncCompleted не нужна
    */
   function shouldShowMorningCheckin() {
     const U = HEYS.utils || {};
@@ -22,19 +24,14 @@
     // Если клиент не выбран — НЕ показываем чек-ин (чтобы не показывать до авторизации)
     const currentClientId = U.getCurrentClientId ? U.getCurrentClientId() : '';
     if (!currentClientId) {
+      console.log('[MorningCheckin] No clientId, skip check');
       return false;
-    }
-    
-    // Ждём завершения синхронизации — чтобы данные точно подтянулись из облака
-    if (HEYS.cloud && typeof HEYS.cloud.isInitialSyncCompleted === 'function') {
-      if (!HEYS.cloud.isInitialSyncCompleted()) {
-        console.log('[MorningCheckin] Sync not completed yet, skip check');
-        return false;
-      }
     }
     
     const todayKey = getTodayKey();
     const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${todayKey}`, {}) : {};
+    
+    console.log('[MorningCheckin] Checking for clientId:', currentClientId.substring(0,8), '| weightMorning:', dayData.weightMorning);
     
     // Показываем, если сегодня нет веса
     return !dayData.weightMorning;

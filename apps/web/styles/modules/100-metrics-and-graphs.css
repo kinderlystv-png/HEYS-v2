@@ -247,6 +247,57 @@
   }
 }
 
+/* === Meal Sparkline Animations === */
+.meal-sparkline-line {
+  animation: drawMealSparkline 2.5s ease-out forwards;
+}
+
+@keyframes drawMealSparkline {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.meal-sparkline-area {
+  opacity: 0;
+  animation: fadeInMealArea 1.5s ease-out 1s forwards;
+}
+
+@keyframes fadeInMealArea {
+  to {
+    opacity: 1;
+  }
+}
+
+.meal-sparkline-dot {
+  opacity: 0;
+  transform: scale(0);
+  transform-origin: center;
+  animation: mealDotAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-delay: var(--dot-delay, 1s);
+}
+
+@keyframes mealDotAppear {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Hover эффект на точках */
+.meal-sparkline-dot circle {
+  transition: r 0.15s ease, filter 0.15s ease, stroke-width 0.15s ease;
+}
+.meal-sparkline-dot:hover circle {
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+/* Линия вчерашнего дня для сравнения */
+.meal-sparkline-yesterday {
+  opacity: 0.25;
+  stroke-dasharray: 4 3;
+}
+
 /* Анимация заливки — появляется вместе с линией */
 .sparkline-area-animated {
   opacity: 0;

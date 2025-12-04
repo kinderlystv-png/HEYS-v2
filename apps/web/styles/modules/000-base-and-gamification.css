@@ -544,6 +544,16 @@ td:first-child input {
   50% { opacity: 0.7; transform: scale(1.05); }
 }
 
+/* Sparkline best meal pulse animation */
+@keyframes sparklinePulseAnim {
+  0%, 100% { opacity: 0.6; stroke-width: 2; }
+  50% { opacity: 0.2; stroke-width: 4; }
+}
+.sparkline-pulse {
+  animation: sparklinePulseAnim 1.5s ease-in-out infinite;
+  transform-origin: center;
+}
+
 .compact-row {
   display: flex;
   align-items: center;
@@ -4168,7 +4178,7 @@ body:has(.offline-banner) .wrap {
   font-weight: 600;
 }
 .daily-summary tbody tr:nth-child(2) td {
-  background: #eef2ff;
+  background: #f5f3ff;
 }
 .daily-summary tbody tr.daily-dev-row td {
   background: var(--color-slate-100);
@@ -5386,45 +5396,9 @@ body:has(.offline-banner) .wrap {
   }
 
   /* === 40.6 СУТОЧНАЯ СВОДКА (daily-summary) === */
+  /* На мобильных скрываем desktop таблицу — используется mobile-daily-summary */
   .daily-summary {
-    display: block !important;
-    width: 100% !important;
-  }
-
-  .daily-summary thead {
     display: none !important;
-  }
-
-  .daily-summary tbody {
-    display: block !important;
-  }
-
-  .daily-summary tbody tr {
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 4px !important;
-    padding: 8px !important;
-    border-bottom: 1px solid #e5e7eb !important;
-  }
-
-  .daily-summary tbody tr td {
-    display: block !important;
-    text-align: center !important;
-    font-size: 12px !important;
-    padding: 4px !important;
-  }
-
-  /* Скрываем лишние колонки в сводке */
-  .daily-summary tbody tr td:nth-child(n+5) {
-    display: none !important;
-  }
-
-  /* Первые 4 оставляем: Label, Ккал, Б, Ж, У */
-  .daily-summary tbody tr td:nth-child(1),
-  .daily-summary tbody tr td:nth-child(2),
-  .daily-summary tbody tr td:nth-child(3),
-  .daily-summary tbody tr td:nth-child(4) {
-    display: block !important;
   }
 
   /* === 40.7 ПРАВАЯ КОЛОНКА (сон, оценка, тренировки) === */

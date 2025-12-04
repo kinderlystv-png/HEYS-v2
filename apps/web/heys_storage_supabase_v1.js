@@ -487,18 +487,16 @@
     } catch (e) {}
   }
   
-  /** Событие: завершение синхронизации обеих очередей */
+  /** Событие: завершение синхронизации обеих очередей (upload) */
   function notifySyncCompletedIfDrained() {
     if (clientUpsertQueue.length === 0 && upsertQueue.length === 0) {
       syncProgressTotal = 0;
       syncProgressDone = 0;
-      // Дедупликация: отправляем только если ещё не отправляли
-      if (!_syncCompletedEventSent) {
-        _syncCompletedEventSent = true;
-        try {
-          global.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT, { detail: {} }));
-        } catch (e) {}
-      }
+      // Событие "очередь пуста" — для UI индикатора синхронизации
+      // НЕ используем heysSyncCompleted — это для initial sync клиента!
+      try {
+        global.dispatchEvent(new CustomEvent('heys:queue-drained', { detail: {} }));
+      } catch (e) {}
     }
   }
   
@@ -550,9 +548,6 @@
   let retryAttempt = 0;
   const MAX_RETRY_ATTEMPTS = 5;
   const BASE_RETRY_DELAY = 1000; // 1 сек
-  
-  // Флаг для дедупликации события heysSyncCompleted (отправляется только 1 раз за сессию)
-  let _syncCompletedEventSent = false;
   
   /** Вычислить задержку с exponential backoff */
   function getRetryDelay() {
@@ -911,7 +906,6 @@
     clearNamespace();
     // 🔄 Сброс флагов sync — при следующем входе нужна новая синхронизация
     initialSyncCompleted = false;
-    _syncCompletedEventSent = false; // Сброс флага события
     startFailsafeTimer(); // Перезапустить failsafe для нового входа
     logCritical('🚪 Выход из системы');
   };
@@ -1248,9 +1242,9 @@
       
       // Уведомляем приложение о завершении синхронизации (для обновления stepsGoal и т.д.)
       // Задержка 300мс чтобы localStorage успел обновиться и React перечитал данные
-      // Дедупликация: отправляем событие только 1 раз за сессию sync
-      if (typeof window !== 'undefined' && window.dispatchEvent && !_syncCompletedEventSent) {
-        _syncCompletedEventSent = true;
+      // ВСЕГДА отправляем событие — дедупликация на стороне получателя (проверка clientId)
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        logCritical('📢 Dispatching heysSyncCompleted | clientId:', client_id);
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id } }));
         }, 300);
@@ -2076,15 +2070,7 @@
       const sizeMB = getStorageSize();
       log(`📊 Размер localStorage: ${sizeMB.toFixed(2)} MB`);
       
-      // 🌅 Уведомляем App о смене клиента — для Morning Check-in и т.д.
-      // При смене клиента сбрасываем флаг и отправляем событие заново
-      if (typeof window !== 'undefined' && window.dispatchEvent) {
-        _syncCompletedEventSent = false; // Сброс при смене клиента
-        _syncCompletedEventSent = true;
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: newClientId } }));
-        }, 300);
-      }
+      // Событие heysSyncCompleted уже отправлено внутри bootstrapClientSync
       
       return true;
     } catch (e) {

@@ -1351,7 +1351,7 @@
 /* Mobile Daily Summary - table layout для синхронизации ширины столбцов */
 .mobile-daily-summary {
   display: none;
-  background: #faf5ff;
+  background: #fefcff;
   border-radius: 8px;
   padding: 4px 2px;
   margin-top: 8px;
@@ -1386,7 +1386,7 @@
 /* Чётные столбцы (2, 4, 6, 8, 10) - затемнённые */
 .mds-header > span:nth-child(even),
 .mds-row > span:nth-child(even) {
-  background: rgba(124, 58, 237, 0.08);
+  background: rgba(237, 233, 254, 0.5);
 }
 
 /* Нечётные столбцы - светлые (по умолчанию) */
@@ -1405,14 +1405,14 @@
 
 .mds-header {
   font-weight: 600;
-  color: #7c3aed;
+  color: #a78bfa;
   font-size: 10px;
 }
 
 .mds-label {
   font-weight: 600;
   text-align: left;
-  color: #7c3aed;
+  color: #a78bfa;
 }
 
 .mds-dim {

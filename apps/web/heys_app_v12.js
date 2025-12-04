@@ -2071,13 +2071,8 @@
                 const loadedClients = await fetchClientsFromCloud(res.user.id);
                 setClients(loadedClients);
                 
-                const lastClientId = localStorage.getItem('heys_last_client_id');
-                if (lastClientId && loadedClients.some(c => c.id === lastClientId)) {
-                  setClientId(lastClientId);
-                } else if (loadedClients.length > 0) {
-                  setClientId(loadedClients[0].id);
-                  localStorage.setItem('heys_last_client_id', loadedClients[0].id);
-                }
+                // Не автовыбираем клиента — куратор должен выбрать сам через модалку
+                // clientId остаётся null → показывается модалка выбора клиента
                 
                 const loadedProducts = Array.isArray(U.lsGet('heys_products', []))
                   ? U.lsGet('heys_products', [])
@@ -2752,34 +2747,13 @@
               window.HEYS.backupManager.getLastBackupMeta = () => backupMeta;
             }, [backupAllKeys, restoreFromBackup, backupMeta]);
             // overlay (no early return, to keep hooks order stable)
-            // One-time migration of old, namespaced client lists -> global
-            // После входа — загрузить клиентов куратора и автовыбрать последнего
+            // После входа — загрузить клиентов куратора (без автовыбора)
             useEffect(() => {
               if (cloudUser && cloudUser.id) {
                 fetchClientsFromCloud(cloudUser.id)
                   .then((loadedClients) => {
                     setClients(loadedClients);
-                    
-                    // Автовыбор последнего клиента (если он есть в списке)
-                    const lastClientId = localStorage.getItem('heys_last_client_id');
-                    if (lastClientId && loadedClients.some(c => c.id === lastClientId)) {
-                      // Безопасное переключение
-                      if (HEYS.cloud && HEYS.cloud.switchClient) {
-                        HEYS.cloud.switchClient(lastClientId)
-                          .then(() => {
-                            setClientId(lastClientId);
-                          })
-                          .catch((err) => {
-                            console.warn('[HEYS] Switch client failed:', err?.message || err);
-                            // Всё равно ставим clientId локально
-                            U.lsSet('heys_client_current', lastClientId);
-                            setClientId(lastClientId);
-                          });
-                      } else {
-                        U.lsSet('heys_client_current', lastClientId);
-                        setClientId(lastClientId);
-                      }
-                    }
+                    // Не автовыбираем клиента — куратор должен выбрать сам через модалку
                   })
                   .catch((err) => {
                     console.warn('[HEYS] Failed to fetch clients:', err?.message || err);
@@ -2899,35 +2873,54 @@
             const [showClientDropdown, setShowClientDropdown] = useState(false); // Dropdown в шапке
             
             // Morning Check-in — показываем ПОСЛЕ синхронизации, если нет веса за сегодня
-            // НЕ показываем сразу — ждём heysSyncCompleted чтобы данные успели подтянуться
+            // ВАЖНО: НЕ проверяем сразу при смене clientId! Ждём ТОЛЬКО heysSyncCompleted,
+            // потому что данные нового клиента загружаются асинхронно в switchClient
             const [showMorningCheckin, setShowMorningCheckin] = useState(false);
             
-            // Проверяем после синхронизации (heysSyncCompleted) или смены клиента
+            // Ref для актуального clientId (избегаем проблемы closure)
+            const clientIdRef = React.useRef(clientId);
+            React.useEffect(() => { clientIdRef.current = clientId; }, [clientId]);
+            
+            // Проверяем ТОЛЬКО после события heysSyncCompleted (когда данные точно загружены)
             useEffect(() => {
-              // Функция проверки
-              const checkMorningCheckin = () => {
-                if (clientId && !isInitializing && HEYS.shouldShowMorningCheckin) {
-                  const shouldShow = HEYS.shouldShowMorningCheckin();
-                  console.log('[App] 🌅 MorningCheckin check | shouldShow:', shouldShow, '| syncCompleted:', HEYS.cloud?.isInitialSyncCompleted?.());
-                  setShowMorningCheckin(shouldShow);
-                }
-              };
-              
-              // Если синхронизация уже завершена — проверяем сразу
-              if (HEYS.cloud?.isInitialSyncCompleted?.()) {
-                checkMorningCheckin();
-              }
-              
               // Слушаем событие завершения синхронизации
-              const handleSyncCompleted = () => {
-                console.log('[App] 🌅 heysSyncCompleted → checking MorningCheckin');
-                // Небольшая задержка чтобы localStorage обновился
-                setTimeout(checkMorningCheckin, 100);
+              const handleSyncCompleted = (e) => {
+                const eventClientId = e?.detail?.clientId;
+                const currentClientId = clientIdRef.current;
+                
+                console.log('[App] 🌅 heysSyncCompleted', { eventClientId, currentClientId, isInitializing });
+                
+                // Пропускаем если нет clientId в событии
+                if (!eventClientId) {
+                  console.log('[App] 🌅 MorningCheckin skip: no eventClientId');
+                  return;
+                }
+                
+                // Небольшая задержка чтобы:
+                // 1. React state (setClientId) успел обновиться
+                // 2. localStorage точно содержит данные нового клиента
+                setTimeout(() => {
+                  if (isInitializing) return;
+                  
+                  // Проверяем что clientId из события совпадает с текущим в localStorage
+                  // (React state может ещё не обновиться, но localStorage уже правильный)
+                  const lsClientId = HEYS.utils?.getCurrentClientId?.() || '';
+                  if (eventClientId !== lsClientId) {
+                    console.log('[App] 🌅 MorningCheckin skip: eventClientId !== localStorage clientId', { eventClientId, lsClientId });
+                    return;
+                  }
+                  
+                  if (HEYS.shouldShowMorningCheckin) {
+                    const shouldShow = HEYS.shouldShowMorningCheckin();
+                    console.log('[App] 🌅 MorningCheckin check | shouldShow:', shouldShow);
+                    setShowMorningCheckin(shouldShow);
+                  }
+                }, 200);
               };
               
               window.addEventListener('heysSyncCompleted', handleSyncCompleted);
               return () => window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
-            }, [clientId, isInitializing]);
+            }, [isInitializing]); // clientId убран из зависимостей — используем ref
 
             // Закрытие dropdown по Escape
             useEffect(() => {
