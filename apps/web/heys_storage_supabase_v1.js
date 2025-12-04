@@ -1151,12 +1151,17 @@
               return;
             }
           } else {
-            // Остальные ключи: сравниваем по revision
-            let remoteRev = row.v && row.v.revision ? row.v.revision : 0;
-            let localRev = local && local.revision ? local.revision : 0;
-            if (localRev > remoteRev) {
-              // локальная версия новее — не затираем
-              log('conflict: keep local (by revision)', key);
+            // Остальные ключи: сравниваем по revision И updatedAt
+            const remoteRev = row.v && row.v.revision ? row.v.revision : 0;
+            const localRev = local && local.revision ? local.revision : 0;
+            const remoteUpdatedAt = row.v?.updatedAt || 0;
+            const localUpdatedAt = local?.updatedAt || 0;
+            
+            // Если локальная версия новее по revision ИЛИ updatedAt — не затираем
+            if (localRev > remoteRev || localUpdatedAt > remoteUpdatedAt) {
+              log('conflict: keep local (by revision/updatedAt)', key, 
+                `localRev=${localRev} remoteRev=${remoteRev}`,
+                `localUpdatedAt=${localUpdatedAt} remoteUpdatedAt=${remoteUpdatedAt}`);
               return;
             }
           }

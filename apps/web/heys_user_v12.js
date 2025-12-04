@@ -7,6 +7,24 @@
     getEmojiStyle:()=>'android', setEmojiStyle:()=>{}
   };
 
+  // Дефолтный профиль (единый источник)
+  const DEFAULT_PROFILE = {
+    firstName:'', lastName:'', gender:'Мужской',
+    weight:70, height:175, age:30,
+    sleepHours:8, insulinWaveHours:3,
+    deficitPctTarget: 0
+  };
+
+  // Валидация полей профиля
+  const PROFILE_VALIDATORS = {
+    weight: v => Math.max(20, Math.min(300, v || 70)),
+    height: v => Math.max(100, Math.min(250, v || 175)),
+    age: v => Math.max(1, Math.min(120, v || 30)),
+    sleepHours: v => Math.max(0, Math.min(24, v || 8)),
+    insulinWaveHours: v => Math.max(1, Math.min(12, v || 3)),
+    deficitPctTarget: v => Math.max(-50, Math.min(50, v || 0))
+  };
+
   // Emoji Style Selector Component
   function EmojiStyleSelector() {
     const [style, setStyle] = React.useState(() => getEmojiStyle());
@@ -69,13 +87,9 @@
     });
     
     const [profile, setProfile] = React.useState(() => {
-      return lsGet('heys_profile', {
-        firstName:'', lastName:'', gender:'Мужской',
-        weight:70, height:175, age:30,
-        sleepHours:8, insulinWaveHours:3,
-        deficitPctTarget: 0
-      });
+      return lsGet('heys_profile', DEFAULT_PROFILE);
     });
+    const [profileSaved, setProfileSaved] = React.useState(false);
 
     const defaultZones = React.useMemo(()=>{
       const maxHR = Math.max(0, 220 - toNum(profile.age||0));
@@ -89,6 +103,7 @@
     }, [profile.age]);
 
     const [zones, setZones] = React.useState(lsGet('heys_hr_zones', defaultZones));
+    const [zonesSaved, setZonesSaved] = React.useState(false);
 
     // Перезагрузка данных при смене клиента (как в данных дня)
     React.useEffect(() => {
@@ -98,20 +113,33 @@
       
       const reloadData = () => {
         if (cancelled) return;
-        // Тихая перезагрузка данных профиля
         
-        const newProfile = lsGet('heys_profile', {
-          firstName:'', lastName:'', gender:'Мужской',
-          weight:70, height:175, age:30,
-          sleepHours:8, insulinWaveHours:3,
-          deficitPctTarget: 0
+        const newProfile = lsGet('heys_profile', DEFAULT_PROFILE);
+        newProfile.revision = newProfile.revision || 0;
+        newProfile.updatedAt = newProfile.updatedAt || 0;
+        
+        // Умный reload: не перезаписываем если текущее состояние новее
+        setProfile(prev => {
+          const prevUpdatedAt = prev.updatedAt || 0;
+          const newUpdatedAt = newProfile.updatedAt || 0;
+          if (prevUpdatedAt > newUpdatedAt) {
+            return prev; // Текущее состояние новее — не перезаписываем
+          }
+          return newProfile;
         });
-        // Тихая загрузка профиля
-        setProfile(newProfile);
         
         const newZones = lsGet('heys_hr_zones', defaultZones);
-        // Тихая загрузка зон
-        setZones(newZones);
+        newZones.revision = newZones.revision || 0;
+        newZones.updatedAt = newZones.updatedAt || 0;
+        
+        setZones(prev => {
+          const prevUpdatedAt = prev.updatedAt || 0;
+          const newUpdatedAt = newZones.updatedAt || 0;
+          if (prevUpdatedAt > newUpdatedAt) {
+            return prev;
+          }
+          return newZones;
+        });
       };
       
       if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
@@ -135,27 +163,51 @@
     }, [window.HEYS && window.HEYS.currentClientId]);
 
   React.useEffect(() => {
-    // Тихое сохранение профиля без логов
-    lsSet('heys_profile', profile);
+    // Debounced сохранение профиля (300ms)
+    setProfileSaved(false);
+    const timer = setTimeout(() => {
+      lsSet('heys_profile', profile);
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 1500);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [profile]);
   React.useEffect(()=>{
-    // Тихое сохранение зон без логов
-    lsSet('heys_hr_zones', zones);
+    // Debounced сохранение зон (300ms)
+    setZonesSaved(false);
+    const timer = setTimeout(() => {
+      lsSet('heys_hr_zones', zones);
+      setZonesSaved(true);
+      setTimeout(() => setZonesSaved(false), 1500);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [zones]);
 
     const maxHR = Math.max(0, 220 - toNum(profile.age||0));
     const calPerMinPerMET = round1(toNum(profile.weight||0) * 0.0175); // кал/мин на 1 MET
 
     function updateProfileField(key, value){ 
-    const newProfile = { ...profile, [key]: value };
-    setProfile(newProfile); 
+    // Валидация числовых полей
+    const validator = PROFILE_VALIDATORS[key];
+    const validatedValue = validator ? validator(value) : value;
     
-    // Minimal logging for critical updates only
-    if (key === 'height' || key === 'weight' || key === 'firstName' || key === 'lastName') {
-      DEV.log(`[Profile] ${key} updated:`, value);
-    }
+    const newProfile = { 
+      ...profile, 
+      [key]: validatedValue,
+      revision: (profile.revision || 0) + 1,
+      updatedAt: Date.now()
+    };
+    setProfile(newProfile); 
   }
-    function updateZone(i, patch){ setZones(zones.map((z, idx)=> idx===i ? { ...z, ...patch } : z)); }
+    function updateZone(i, patch){ 
+      setZones(prev => {
+        const updated = prev.map((z, idx)=> idx===i ? { ...z, ...patch } : z);
+        // Добавляем revision/updatedAt к массиву (нестандартно, но работает для JSON)
+        updated.revision = (prev.revision || 0) + 1;
+        updated.updatedAt = Date.now();
+        return updated;
+      });
+    }
     function resetZones(){ if (confirm('Сбросить пульсовые зоны к шаблону?')) setZones(defaultZones); }
 
     return React.createElement('div', {className:'page page-user'},
@@ -180,11 +232,35 @@
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Инсулиновая волна (часов)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.5', value:profile.insulinWaveHours, onChange:e=>updateProfileField('insulinWaveHours', Number(e.target.value)||0)})),
           React.createElement(EmojiStyleSelector, null)
         ),
-        React.createElement('div', {className:'row', style:{marginTop:'10px', gap:'20px'}},
-          React.createElement('div', {className:'pill'}, `Максимальный пульс: ${maxHR} уд/мин (220 - возраст)`),
-          React.createElement('div', {className:'pill'}, `Кал/мин на 1 MET: ${calPerMinPerMET}`)
-        ),
-        React.createElement('div', {className:'muted', style:{marginTop:'6px'}}, 'Все значения сохраняются автоматически.')
+        // BMI/BMR расчёт
+        (() => {
+          const w = toNum(profile.weight || 70);
+          const h = toNum(profile.height || 175) / 100; // в метрах
+          const a = toNum(profile.age || 30);
+          const bmi = h > 0 ? round1(w / (h * h)) : 0;
+          const bmr = profile.gender === 'Женский'
+            ? round1(447.593 + 9.247 * w + 3.098 * (h * 100) - 4.330 * a)
+            : round1(88.362 + 13.397 * w + 4.799 * (h * 100) - 5.677 * a);
+          // BMI категория
+          let bmiCat = '', bmiColor = '#6b7280';
+          if (bmi < 18.5) { bmiCat = 'недовес'; bmiColor = '#eab308'; }
+          else if (bmi < 25) { bmiCat = 'норма'; bmiColor = '#22c55e'; }
+          else if (bmi < 30) { bmiCat = 'избыток'; bmiColor = '#f97316'; }
+          else { bmiCat = 'ожирение'; bmiColor = '#ef4444'; }
+          return React.createElement('div', {className:'row', style:{marginTop:'10px', gap:'12px', flexWrap:'wrap'}},
+            React.createElement('div', {className:'pill'}, `Макс. пульс: ${maxHR} уд/мин`),
+            React.createElement('div', {className:'pill'}, `Кал/мин на 1 MET: ${calPerMinPerMET}`),
+            React.createElement('div', {className:'pill', style:{background:'#f0fdf4', border:'1px solid #86efac'}}, `BMR: ${bmr} ккал/сут`),
+            React.createElement('div', {className:'pill', style:{background:'#f0f9ff', border:`1px solid ${bmiColor}`}}, 
+              `BMI: ${bmi}`, 
+              React.createElement('span', {style:{marginLeft:'4px', color:bmiColor, fontSize:'12px'}}, `(${bmiCat})`)
+            )
+          );
+        })(),
+        React.createElement('div', {className:'muted', style:{marginTop:'6px', display:'flex', alignItems:'center', gap:'8px'}}, 
+          'Все значения сохраняются автоматически.',
+          profileSaved && React.createElement('span', {style:{color:'#22c55e', fontSize:'13px', fontWeight:500}}, '✓ Сохранено')
+        )
       ),
 
       React.createElement('div', {className:'card'},
@@ -215,7 +291,10 @@
             )
           )
         ),
-        React.createElement('div', {className:'muted', style:{marginTop:'8px'}}, 'Формулы: Макс пульс = 220 − возраст. Кал/мин = MET × (вес × 0.0175) − 1.')
+        React.createElement('div', {className:'muted', style:{marginTop:'8px', display:'flex', alignItems:'center', gap:'8px'}}, 
+          'Формулы: Макс пульс = 220 − возраст. Кал/мин = MET × (вес × 0.0175) − 1.',
+          zonesSaved && React.createElement('span', {style:{color:'#22c55e', fontSize:'13px', fontWeight:500}}, '✓ Сохранено')
+        )
       ),
 
       // Зоны калорийности (ratio zones)
@@ -343,6 +422,7 @@
   function HEYS_RatioZonesCard() {
     const rz = HEYS.ratioZones;
     const [zones, setZones] = React.useState(() => rz ? rz.getZones() : []);
+    const [saved, setSaved] = React.useState(false);
     
     // Синхронизация с модулем
     React.useEffect(() => {
@@ -365,7 +445,11 @@
       }
       
       setZones(newZones);
-      if (rz) rz.setZones(newZones);
+      if (rz) {
+        rz.setZones(newZones);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1500);
+      }
     };
     
     const resetZones = () => {
@@ -469,8 +553,9 @@
           )
         )
       ),
-      React.createElement('div', {className:'muted', style:{marginTop:'8px'}}, 
-        'Зоны применяются везде: календарь, sparkline, heatmap, советы. Границы соседних зон автоматически синхронизируются.'
+      React.createElement('div', {className:'muted', style:{marginTop:'8px', display:'flex', alignItems:'center', gap:'8px'}}, 
+        'Зоны применяются везде: календарь, sparkline, heatmap, советы.',
+        saved && React.createElement('span', {style:{color:'#22c55e', fontSize:'13px', fontWeight:500}}, '✓ Сохранено')
       )
     );
   }
@@ -480,18 +565,24 @@
   function HEYS_NormsCard(){
     const U = HEYS.utils || {};
     const clamp = (v)=> Math.max(0, Math.min(100, (U.toNum?U.toNum(v):Number(v)||0)));
-    const lsGet = U.lsGet || ((k,d)=>d);
-    const lsSet = U.lsSet || (()=>{});
+    // Используем глобальные lsGet/lsSet из начала модуля
     const [norms, setNorms] = React.useState(() => {
       const val = lsGet('heys_norms', {
         carbsPct:0, proteinPct:0, badFatPct:0, superbadFatPct:0, simpleCarbPct:0, giPct:0, harmPct:0, fiberPct:0
       });
-      return val;
+      // Служебные поля для сравнения версий с облаком
+      return { revision:0, updatedAt:0, ...val };
     });
-    // Больше не подгружаем нормы из облака при каждом рендере — только при смене клиента (bootstrapClientSync вызывается в index.html)
+    // Debounced сохранение норм (300ms)
+    const [normsSaved, setNormsSaved] = React.useState(false);
     React.useEffect(() => {
-      // Тихое сохранение норм без логов
-      lsSet('heys_norms', norms);
+      setNormsSaved(false);
+      const timer = setTimeout(() => {
+        lsSet('heys_norms', norms);
+        setNormsSaved(true);
+        setTimeout(() => setNormsSaved(false), 1500);
+      }, 300);
+      return () => clearTimeout(timer);
     }, [norms]);
     
     // Перезагрузка норм при смене клиента (как в данных дня)
@@ -502,13 +593,22 @@
       
       const reloadNorms = () => {
         if (cancelled) return;
-        // Тихая перезагрузка норм
         
         const newNorms = lsGet('heys_norms', {
           carbsPct:0, proteinPct:0, badFatPct:0, superbadFatPct:0, simpleCarbPct:0, giPct:0, harmPct:0, fiberPct:0
         });
-        // Тихая загрузка норм
-        setNorms(newNorms);
+        newNorms.revision = newNorms.revision || 0;
+        newNorms.updatedAt = newNorms.updatedAt || 0;
+        
+        // Умный reload: не перезаписываем если текущее состояние новее
+        setNorms(prev => {
+          const prevUpdatedAt = prev.updatedAt || 0;
+          const newUpdatedAt = newNorms.updatedAt || 0;
+          if (prevUpdatedAt > newUpdatedAt) {
+            return prev; // Текущее состояние новее — не перезаписываем
+          }
+          return newNorms;
+        });
       };
       
       if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
@@ -542,7 +642,15 @@
     const simpleC = clamp(norms.simpleCarbPct);
     const complexCAuto = clamp(100 - simpleC);
 
-    const update = (k, v)=> setNorms({...norms, [k]: clamp(v)});
+    const update = (k, v)=> {
+      const clamped = clamp(v);
+      setNorms(prev => ({
+        ...prev,
+        [k]: clamped,
+        revision: (prev.revision || 0) + 1,
+        updatedAt: Date.now()
+      }));
+    };
 
     const overMacro = (carb + prot) > 100;
     const overFatSplit = (badF + superBadF) > 100;
@@ -570,7 +678,10 @@
           (overCarbSplit ? 'Предупреждение: Простые% > 100. Сложные будут обнулены.' : '')
         )
       : null,
-      React.createElement('div', {className:'muted', style:{marginTop:'6px'}}, 'Все значения — в процентах, сохраняются автоматически.')
+      React.createElement('div', {className:'muted', style:{marginTop:'6px', display:'flex', alignItems:'center', gap:'8px'}}, 
+        'Все значения — в процентах, сохраняются автоматически.',
+        normsSaved && React.createElement('span', {style:{color:'#22c55e', fontSize:'13px', fontWeight:500}}, '✓ Сохранено')
+      )
     );
   }
 
