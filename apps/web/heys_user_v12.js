@@ -261,12 +261,71 @@
     }
     function resetZones(){ if (confirm('Сбросить пульсовые зоны к шаблону?')) setZones(defaultZones); }
 
+    // Пресеты дефицита/профицита калорий
+    const DEFICIT_PRESETS = [
+      { value: -20, label: 'Агрессивное похудение', emoji: '🔥🔥', color: '#ef4444' },
+      { value: -15, label: 'Активное похудение', emoji: '🔥', color: '#f97316' },
+      { value: -10, label: 'Умеренное похудение', emoji: '🎯', color: '#eab308' },
+      { value: 0, label: 'Поддержание веса', emoji: '⚖️', color: '#22c55e' },
+      { value: 10, label: 'Умеренный набор', emoji: '💪', color: '#3b82f6' },
+      { value: 15, label: 'Активный набор', emoji: '💪💪', color: '#8b5cf6' }
+    ];
+    
+    const getDeficitInfo = (val) => {
+      const preset = DEFICIT_PRESETS.find(p => p.value === val);
+      if (preset) return preset;
+      // Для кастомных значений
+      if (val < -10) return { emoji: '🔥🔥', color: '#ef4444', label: 'Агрессивный дефицит' };
+      if (val < 0) return { emoji: '🔥', color: '#f97316', label: 'Дефицит' };
+      if (val === 0) return { emoji: '⚖️', color: '#22c55e', label: 'Поддержание' };
+      if (val <= 10) return { emoji: '💪', color: '#3b82f6', label: 'Профицит' };
+      return { emoji: '💪💪', color: '#8b5cf6', label: 'Агрессивный набор' };
+    };
+
     return React.createElement('div', {className:'page page-user'},
       React.createElement('div', {className:'user-cards-grid'},
       React.createElement('div', {className:'card tone-blue'},
         React.createElement('div', {style:{fontWeight:'600', marginBottom:'6px'}}, 'Данные пользователя'),
         React.createElement('div', {className:'field-list'},
-            React.createElement('div', {className:'inline-field', style:{fontWeight:700,fontSize:'16px',background:'#f1f5f9',padding:'6px 10px',borderRadius:'8px'}}, React.createElement('label', {style:{fontWeight:700,minWidth:'180px'}}, 'Целевой дефицит (%)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'1', value:profile.deficitPctTarget||0, onChange:e=>updateProfileField('deficitPctTarget', Number(e.target.value)||0), style:{width:'70px',fontWeight:700,fontSize:'16px',textAlign:'center'}})),
+          // Целевой дефицит: пресеты + своё значение
+          (() => {
+            const currentVal = toNum(profile.deficitPctTarget || 0);
+            const isCustom = !DEFICIT_PRESETS.some(p => p.value === currentVal);
+            const info = getDeficitInfo(currentVal);
+            
+            return React.createElement('div', {className:'inline-field', style:{fontWeight:700, fontSize:'16px', background:'#f1f5f9', padding:'8px 12px', borderRadius:'8px', flexWrap:'wrap', gap:'8px'}},
+              React.createElement('label', {style:{fontWeight:700, minWidth:'140px'}}, 'Цель по калориям'),
+              React.createElement('span', {className:'sep'}, '-'),
+              React.createElement('select', {
+                value: isCustom ? 'custom' : String(currentVal),
+                onChange: e => {
+                  if (e.target.value !== 'custom') {
+                    updateProfileField('deficitPctTarget', Number(e.target.value));
+                  }
+                },
+                style: {width:'200px', fontWeight:600}
+              },
+                ...DEFICIT_PRESETS.map(p => 
+                  React.createElement('option', {key:p.value, value:String(p.value)}, 
+                    `${p.emoji} ${p.value > 0 ? '+' : ''}${p.value}% — ${p.label}`
+                  )
+                ),
+                React.createElement('option', {value:'custom'}, '✏️ Своё значение...')
+              ),
+              isCustom && React.createElement('input', {
+                type:'number', 
+                step:'1', 
+                min:'-50',
+                max:'50',
+                value: currentVal, 
+                onChange: e => updateProfileField('deficitPctTarget', Number(e.target.value) || 0),
+                style: {width:'60px', marginLeft:'4px', fontWeight:700, textAlign:'center'}
+              }),
+              React.createElement('span', {style:{color: info.color, fontWeight:600, marginLeft:'6px'}}, 
+                isCustom ? `${info.emoji} ${currentVal > 0 ? '+' : ''}${currentVal}%` : ''
+              )
+            );
+          })(),
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Имя'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {value:profile.firstName, onChange:e=>updateProfileField('firstName', e.target.value)})),
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Фамилия'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {value:profile.lastName, onChange:e=>updateProfileField('lastName', e.target.value)})),
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Пол'), React.createElement('span', {className:'sep'}, '-'),
@@ -297,7 +356,51 @@
               )
             );
           })(),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Инсулиновая волна (часов)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.5', value:profile.insulinWaveHours, onChange:e=>updateProfileField('insulinWaveHours', Number(e.target.value)||0)})),
+          // Инсулиновая волна: предустановки + своё значение
+          (() => {
+            const INSULIN_PRESETS = [
+              { value: 2.5, label: 'Быстрый метаболизм', desc: 'спортсмены, низкоуглеводка' },
+              { value: 3, label: 'Нормальный', desc: 'большинство людей' },
+              { value: 4, label: 'Медленный', desc: 'склонность к полноте' },
+              { value: 4.5, label: 'Инсулинорезистентность', desc: 'преддиабет, СПКЯ' }
+            ];
+            const currentVal = toNum(profile.insulinWaveHours || 3);
+            const isCustom = !INSULIN_PRESETS.some(p => p.value === currentVal);
+            const currentPreset = INSULIN_PRESETS.find(p => p.value === currentVal);
+            
+            return React.createElement('div', {className:'inline-field', style:{flexWrap:'wrap', gap:'8px'}},
+              React.createElement('label', null, 'Инсулиновая волна'),
+              React.createElement('span', {className:'sep'}, '-'),
+              React.createElement('select', {
+                value: isCustom ? 'custom' : String(currentVal),
+                onChange: e => {
+                  if (e.target.value === 'custom') {
+                    // Оставляем текущее значение, просто переключаем на custom
+                  } else {
+                    updateProfileField('insulinWaveHours', Number(e.target.value));
+                  }
+                },
+                style: {width:'180px'}
+              },
+                ...INSULIN_PRESETS.map(p => 
+                  React.createElement('option', {key:p.value, value:String(p.value)}, `${p.value} ч — ${p.label}`)
+                ),
+                React.createElement('option', {value:'custom'}, 'Своё значение...')
+              ),
+              isCustom && React.createElement('input', {
+                type:'number', 
+                step:'0.5', 
+                min:'1',
+                max:'8',
+                value: currentVal, 
+                onChange: e => updateProfileField('insulinWaveHours', Number(e.target.value) || 3),
+                style: {width:'60px', marginLeft:'4px'}
+              }),
+              React.createElement('span', {style:{color:'var(--gray-500)', fontSize:'12px', marginLeft:'4px'}}, 
+                currentPreset ? `(${currentPreset.desc})` : `(${currentVal} ч — своё)`
+              )
+            );
+          })(),
           React.createElement(EmojiStyleSelector, null)
         ),
         // BMI/BMR расчёт + норма воды + прогресс к цели

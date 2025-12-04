@@ -271,7 +271,55 @@
 
 ## Советы (Advice Module)
 
-**Файл**: `heys_advice_v1.js` | **Всего советов: 103**
+**Файл**: `heys_advice_v1.js` | **Всего советов: ~115+**
+
+### 🎯 Goal-aware система (v2.0)
+
+Советы теперь адаптируются к цели пользователя (дефицит/набор/поддержание).
+
+**Режимы цели** (`getGoalMode(deficitPct)`):
+
+| Режим | Условие | Целевой диапазон kcalPct | Критический перебор | Критический недобор |
+|-------|---------|--------------------------|---------------------|---------------------|
+| `deficit` (Похудение) | `deficitPct <= -10%` | 90-105% | >115% | <80% |
+| `deficit` (Лёгкое) | `deficitPct -5% до -9%` | 92-108% | >120% | <75% |
+| `bulk` (Набор) | `deficitPct >= +10%` | 95-110% | >125% | <85% |
+| `bulk` (Лёгкий) | `deficitPct +5% до +9%` | 93-112% | >120% | <80% |
+| `maintenance` (Поддержание) | `deficitPct -4% до +4%` | 90-110% | >125% | <70% |
+
+**Источник цели**:
+1. `day.deficitPct` — коррекция на конкретный день (из вкладки статистики)
+2. `prof.deficitPctTarget` — цель из профиля (fallback)
+
+**Примечание**: `deficitPct` хранится как:
+- **Отрицательное число** для дефицита (например: `-15` = 15% дефицит)
+- **Положительное число** для профицита (например: `+10` = 10% набор)
+
+### Goal-specific советы
+
+| ID | Режим | Условие | Описание |
+|---|---|---|---|
+| `bulk_protein_critical` | bulk | `proteinPct < 0.8` | "Для набора нужен белок!" |
+| `bulk_carbs_low` | bulk | `carbsPct < 0.7` | "Добавь углеводов для энергии" |
+| `bulk_kcal_behind` | bulk | `hour >= 16 && kcalPct < 0.6` | "Только X% от плана набора" |
+| `deficit_protein_save_muscle` | deficit | `proteinPct < 0.9` | "Белок сохраняет мышцы на дефиците" |
+| `deficit_fiber_satiety` | deficit | `fiberPct < 0.5` | "Клетчатка даёт сытость без калорий" |
+| `deficit_too_harsh` | deficit | `hour >= 18 && kcalPct < 0.7` | "Слишком жёсткий дефицит" |
+| `deficit_on_track_motivation` | deficit | `isInTargetRange(kcalPct, goal)` | "Дефицит выдерживается!" |
+| `maintenance_stable` | maintenance | `isInTargetRange(kcalPct, goal)` | "Калории в балансе!" |
+| `goal_on_track` | any | `isInTargetRange(kcalPct, goal)` | "Цель выполняется!" |
+
+### Адаптивные советы (изменённые)
+
+| ID | Изменение |
+|---|---|
+| `kcal_excess_critical` | Порог зависит от `goal.criticalOver` |
+| `kcal_excess_mild` | Порог зависит от `goal.targetRange.max` |
+| `kcal_under_critical` | 🆕 Порог зависит от `goal.criticalUnder` |
+| `evening_undereating` | Текст зависит от режима (bulk/deficit/maintenance) |
+| `evening_perfect` | Текст зависит от режима |
+| `perfect_day` | Текст зависит от режима |
+| `weekend_relax` | Не показывается для bulk режима |
 
 ### Все типы советов
 
@@ -281,14 +329,15 @@
 | `monday_motivation` | Понедельник утро | motivation | tab_open |
 | `friday_reminder` | Пятница вечер | motivation | tab_open |
 | `sunday_planning` | Воскресенье вечер | motivation | tab_open |
-| `crash_support` | `kcalPct > 1.5` | emotional | tab_open, product_added |
+| `crash_support` | `isCriticallyOver/Under(kcalPct, goal)` | emotional | tab_open, product_added |
 | `stress_support` | `avgMood < 3` | emotional | tab_open |
 | `streak_7` | `currentStreak >= 7` | achievement | tab_open |
 | `streak_3` | `currentStreak 3-6` | achievement | tab_open |
-| `perfect_day` | `hour>=18 && kcalPct 0.95-1.05 && macros>=0.9` | achievement | tab_open |
+| `perfect_day` | `hour>=18 && isInTargetRange(kcalPct, goal) && macros>=0.9` | achievement | tab_open |
 | `first_day` | `mealCount === 1` (первый раз) | achievement | product_added |
-| `kcal_excess_critical` | `kcalPct >= 1.25` | nutrition | product_added |
-| `kcal_excess_mild` | `kcalPct 1.1-1.25` | nutrition | product_added |
+| `kcal_excess_critical` | `isCriticallyOver(kcalPct, goal)` | nutrition | product_added |
+| `kcal_excess_mild` | `kcalPct > goal.targetRange.max` | nutrition | product_added |
+| `kcal_under_critical` | `isCriticallyUnder(kcalPct, goal) && hour >= 14` | nutrition | tab_open, product_added |
 | `trans_fat_warning` | `transPct > 1.0` | nutrition | product_added |
 | `simple_carbs_warning` | `simplePct > 1.3` | nutrition | product_added |
 | `harm_warning` | `harmPct > 1.0` | nutrition | product_added |
@@ -297,7 +346,7 @@
 | `fiber_good` | `fiberPct >= 1.0` | nutrition | product_added |
 | `good_fat_low` | `goodFatPct < 0.4 && hour >= 14` | nutrition | tab_open, product_added |
 | `post_training_protein` | `hasTraining && proteinPct < 0.8` | training | tab_open, product_added |
-| `evening_undereating` | `hour >= 20 && kcalPct < 0.7` | nutrition | tab_open |
+| `evening_undereating` | `hour >= 20 && isCriticallyUnder(kcalPct, goal)` | nutrition | tab_open |
 | `evening_perfect` | `hour >= 21 && kcalPct 0.9-1.1` | lifestyle | tab_open |
 | `balanced_macros` | `mealCount>=2 && all macros 0.9-1.2` | nutrition | product_added |
 | `sleep_low` | `sleepHours > 0 && < 6` | lifestyle | tab_open |

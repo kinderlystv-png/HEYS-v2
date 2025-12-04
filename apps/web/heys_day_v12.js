@@ -679,7 +679,9 @@
       ? { type: manualType, ...U.MEAL_TYPES[manualType] }
       : autoTypeInfo;
     
-    const changeMealType = (newType) => onChangeMealType(mealIndex, newType);
+    const changeMealType = (newType) => {
+      onChangeMealType(mealIndex, newType);
+    };
     const timeDisplay = U.formatMealTime ? U.formatMealTime(meal.time) : (meal.time || '');
     const mealKcal = Math.round(totals.kcal || 0);
     const isStale = isMealStale(meal);
@@ -704,7 +706,9 @@
           React.createElement('select', {
             className: 'meal-type-select',
             value: manualType || '',
-            onChange: (e) => changeMealType(e.target.value || null),
+            onChange: (e) => {
+              changeMealType(e.target.value || null);
+            },
             title: 'Изменить тип приёма'
           }, [
             { value: '', label: '🔄 Авто' },
@@ -1024,6 +1028,18 @@
       )
       )
     );
+  }, (prevProps, nextProps) => {
+    // Custom comparison: ререндерим если изменились важные поля meal
+    if (prevProps.meal !== nextProps.meal) return false;
+    if (prevProps.meal?.mealType !== nextProps.meal?.mealType) return false;
+    if (prevProps.meal?.name !== nextProps.meal?.name) return false;
+    if (prevProps.meal?.time !== nextProps.meal?.time) return false;
+    if (prevProps.meal?.items?.length !== nextProps.meal?.items?.length) return false;
+    if (prevProps.mealIndex !== nextProps.mealIndex) return false;
+    if (prevProps.displayIndex !== nextProps.displayIndex) return false;
+    if (prevProps.isExpanded !== nextProps.isExpanded) return false;
+    if (prevProps.allMeals !== nextProps.allMeals) return false;
+    return true;
   });
 
   const AdviceCard = React.memo(function AdviceCard({
@@ -3390,11 +3406,20 @@
     const changeMealWellbeing = React.useCallback((mealIndex, value) => updateMealField(mealIndex, 'wellbeing', value), [updateMealField]);
     const changeMealStress = React.useCallback((mealIndex, value) => updateMealField(mealIndex, 'stress', value), [updateMealField]);
     const changeMealType = React.useCallback((mealIndex, newType) => {
+      const newUpdatedAt = Date.now();
+      lastLoadedUpdatedAtRef.current = newUpdatedAt;
+      blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
+      
       setDay(prevDay => {
-        const meals = (prevDay.meals || []).map((m, i) => 
-          i === mealIndex ? { ...m, mealType: newType } : m
-        );
-        return { ...prevDay, meals };
+        const meals = (prevDay.meals || []).map((m, i) => {
+          if (i !== mealIndex) return m;
+          // Обновляем mealType и name
+          const newName = newType && U.MEAL_TYPES && U.MEAL_TYPES[newType] 
+            ? U.MEAL_TYPES[newType].name 
+            : m.name;
+          return { ...m, mealType: newType, name: newName };
+        });
+        return { ...prevDay, meals, updatedAt: newUpdatedAt };
       });
       haptic('light');
     }, [setDay]);
@@ -3971,15 +3996,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       });
     }, [day.meals]);
 
-    const mealsUI = sortedMealsForDisplay.map((meal, displayIndex) => {
-      const mi = (day.meals || []).findIndex(m => m.id === meal.id);
+    const mealsUI = sortedMealsForDisplay.map((sortedMeal, displayIndex) => {
+      const mi = (day.meals || []).findIndex(m => m.id === sortedMeal.id);
       if (mi === -1) {
-        console.warn('[HEYS] MealCard: meal not found in day.meals', meal.id);
+        console.warn('[HEYS] MealCard: meal not found in day.meals', sortedMeal.id);
         return null;
       }
+      // Берём актуальный meal из day.meals, а не из sorted (который может быть stale)
+      const meal = day.meals[mi];
       const isExpanded = isMealExpanded(mi, (day.meals || []).length, day.meals, displayIndex);
+      // Key включает mealType чтобы форсировать перерендер при смене типа
       return React.createElement(MealCard, {
-        key: meal.id,
+        key: meal.id + '_' + (meal.mealType || 'auto'),
         meal,
         mealIndex: mi,
         displayIndex,
@@ -4060,9 +4088,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       uiState,
       prof,        // Профиль пользователя для персонализации
       waterGoal    // Динамическая норма воды из waterGoalBreakdown
-    }) : { primary: null, relevant: [], adviceCount: 0, allAdvices: [] };
+    }) : { primary: null, relevant: [], adviceCount: 0, allAdvices: [], rateAdvice: null };
     
-    const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, allAdvices, markShown } = adviceResult;
+    const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, allAdvices, markShown, rateAdvice } = adviceResult;
     
     // Количество непрочитанных советов (для badge на FAB кнопке)
     const totalAdviceCount = React.useMemo(() => {
@@ -4861,9 +4889,22 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const meals = day.meals || [];
       if (meals.length === 0) return null;
       
-      const data = meals.map((meal, mi) => {
+      // Сортируем по времени для графика (поздние первые — вверху списка)
+      const parseTimeToMin = (t) => {
+        if (!t) return 0;
+        const [h, m] = t.split(':').map(Number);
+        return (h || 0) * 60 + (m || 0);
+      };
+      const sortedMeals = [...meals].sort((a, b) => parseTimeToMin(b.time) - parseTimeToMin(a.time));
+      
+      const data = sortedMeals.map((meal, mi) => {
         const totals = M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0, carbs:0, simple:0, complex:0, prot:0, fat:0, bad:0, good:0, trans:0, fiber:0 };
-        const mealTypeInfo = getMealType(mi, meal, meals, pIndex);
+        // Используем ручной тип если есть, иначе автоопределение
+        const autoTypeInfo = getMealType(mi, meal, sortedMeals, pIndex);
+        const manualType = meal.mealType;
+        const mealTypeInfo = manualType && U.MEAL_TYPES && U.MEAL_TYPES[manualType]
+          ? { type: manualType, ...U.MEAL_TYPES[manualType] }
+          : autoTypeInfo;
         const quality = getMealQualityScore(meal, mealTypeInfo.type, optimum, pIndex);
         return {
           name: mealTypeInfo.name,
@@ -9742,8 +9783,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               zIndex: 1
             }
           }),
-          mealsChartData.meals.slice().reverse().map((meal, i, arr) => {
-            const originalIndex = arr.length - 1 - i; // Исходный индекс для bestMealIndex
+          // Сортировка: ранние внизу, поздние вверху (без reverse)
+          mealsChartData.meals.map((meal, i) => {
+            const originalIndex = i; // Индекс соответствует порядку в массиве
             const widthPct = mealsChartData.targetKcal > 0 
               ? Math.min(100, (meal.kcal / mealsChartData.targetKcal) * 100)
               : 0;
