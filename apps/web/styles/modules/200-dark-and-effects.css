@@ -437,7 +437,7 @@
   border-color: #0369a1;
 }
 
-[data-theme="dark"] .insulin-wave-indicator.insulin-ready {
+[data-theme="dark"] .insulin-wave-indicator.insulin-lipolysis {
   background: linear-gradient(135deg, #052e16 0%, #064e3b 100%);
   border-color: #22c55e;
   box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
@@ -464,7 +464,7 @@
   );
 }
 
-[data-theme="dark"] .insulin-ready .insulin-wave-bg {
+[data-theme="dark"] .insulin-lipolysis .insulin-wave-bg {
   background: linear-gradient(
     90deg,
     transparent 0%,
@@ -479,7 +479,7 @@
   color: #7dd3fc;
 }
 
-[data-theme="dark"] .insulin-ready .insulin-wave-label {
+[data-theme="dark"] .insulin-lipolysis .insulin-wave-label {
   color: #86efac;
 }
 
@@ -503,7 +503,7 @@
   color: #7dd3fc;
 }
 
-[data-theme="dark"] .insulin-ready .insulin-time-end {
+[data-theme="dark"] .insulin-lipolysis .insulin-time-end {
   color: #86efac;
 }
 
@@ -512,7 +512,7 @@
   color: #cbd5e1;
 }
 
-[data-theme="dark"] .insulin-ready .insulin-wave-suggestion {
+[data-theme="dark"] .insulin-lipolysis .insulin-wave-suggestion {
   background: rgba(34, 197, 94, 0.15);
   color: #86efac;
 }

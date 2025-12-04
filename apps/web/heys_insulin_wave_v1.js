@@ -17,10 +17,14 @@
   };
   
   const STATUS_CONFIG = {
-    ready: { emoji: '✅', color: '#22c55e', label: 'Можно есть!' },
-    almost: { emoji: '🔥', color: '#f97316', label: null }, // dynamic
-    soon: { emoji: '⏰', color: '#eab308', label: null },
-    waiting: { emoji: '🌊', color: '#0ea5e9', label: null }
+    // Липолиз — жиросжигание активно! Каждая минута без еды = сжигание жира
+    lipolysis: { emoji: '🔥', color: '#22c55e', label: 'Липолиз!' },
+    // Почти закончилась волна — скоро липолиз
+    almost: { emoji: '⏳', color: '#f97316', label: null },
+    // Скоро закончится
+    soon: { emoji: '🌊', color: '#eab308', label: null },
+    // Волна активна — инсулин высокий, жир запасается
+    active: { emoji: '📈', color: '#3b82f6', label: null }
   };
   
   const PROTEIN_BONUS = { high: { threshold: 40, bonus: 0.15 }, medium: { threshold: 25, bonus: 0.08 } };
@@ -412,35 +416,35 @@
     let status, emoji, text, color, subtext;
     
     if (remainingMinutes <= 0) {
-      status = 'ready';
-      emoji = STATUS_CONFIG.ready.emoji;
-      text = STATUS_CONFIG.ready.label;
-      color = STATUS_CONFIG.ready.color;
+      status = 'lipolysis';
+      emoji = STATUS_CONFIG.lipolysis.emoji;
+      text = STATUS_CONFIG.lipolysis.label;
+      color = STATUS_CONFIG.lipolysis.color;
       
+      // Липолиз активен! Поощряем продлить это состояние
       if (isNight) {
-        subtext = '🌙 Но лучше отложить до утра';
+        subtext = '🌙 Идеально! Ночной липолиз до утра';
       } else {
-        const suggestion = utils.getNextMealSuggestion(currentHour);
-        subtext = suggestion ? `${suggestion.icon} Время для: ${suggestion.name}` : null;
+        subtext = '💪 Жиросжигание идёт! Продержись подольше';
       }
     } else if (remainingMinutes <= 15) {
       status = 'almost';
       emoji = STATUS_CONFIG.almost.emoji;
       text = `${Math.ceil(remainingMinutes)} мин`;
       color = STATUS_CONFIG.almost.color;
-      subtext = isNight ? '🌙 Но ночью лучше не есть' : '⏰ Скоро можно есть!';
+      subtext = '⏳ Скоро начнётся липолиз!';
     } else if (remainingMinutes <= 30) {
       status = 'soon';
       emoji = STATUS_CONFIG.soon.emoji;
       text = `${Math.ceil(remainingMinutes)} мин`;
       color = STATUS_CONFIG.soon.color;
-      subtext = '🍵 Выпей воды пока ждёшь';
+      subtext = '🍵 Вода не прерывает липолиз';
     } else {
-      status = 'waiting';
-      emoji = STATUS_CONFIG.waiting.emoji;
+      status = 'active';
+      emoji = STATUS_CONFIG.active.emoji;
       text = utils.formatDuration(remainingMinutes);
-      color = STATUS_CONFIG.waiting.color;
-      subtext = '💧 Отличное время для воды';
+      color = STATUS_CONFIG.active.color;
+      subtext = '📈 Инсулин высокий, жир запасается';
     }
     
     return {
@@ -551,8 +555,8 @@
       
       // 🎯 Краткий совет для подсказки
       quickTip: (() => {
-        if (remainingMinutes <= 0) return '✅ Можно есть!';
-        if (remainingMinutes <= 15) return '⏰ Почти готово, подожди чуть-чуть';
+        if (remainingMinutes <= 0) return '🔥 Липолиз! Держись!';
+        if (remainingMinutes <= 15) return '⏳ Скоро липолиз!';
         if (nutrients.avgGI > 70) return '⚠️ Был высокий ГИ — лучше подождать';
         if (remainingMinutes > 60) return '🍵 Выпей воды или чая';
         return '⏳ Дай организму переварить';
@@ -862,21 +866,44 @@
       
       // === КОНТЕКСТНЫЕ СОВЕТЫ ===
       
-      // ⏰ Оптимальное время следующего приёма
-      data.nextMealTime && data.status !== 'ready' && React.createElement('div', {
+      // 🔥 Липолиз активен — поощряем продержаться
+      data.status === 'lipolysis' && React.createElement('div', {
         style: { 
-          marginTop: '8px', padding: '8px', 
-          background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1))',
+          marginTop: '8px', padding: '10px', 
+          background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.15))',
           borderRadius: '8px', fontSize: '12px',
-          border: '1px solid rgba(16,185,129,0.2)'
+          border: '1px solid rgba(34,197,94,0.3)'
         }
       },
-        React.createElement('div', { style: { fontWeight: '600', color: '#10b981' } }, 
-          `⏰ Следующий приём лучше ${data.nextMealTime.label}`
+        React.createElement('div', { style: { fontWeight: '600', color: '#16a34a', marginBottom: '4px' } }, 
+          '🔥 Жиросжигание активно!'
+        ),
+        React.createElement('div', { style: { color: '#15803d', fontSize: '11px' } }, 
+          'Каждая минута без еды = сжигание жира. Продержись как можно дольше!'
+        ),
+        React.createElement('div', { style: { color: '#64748b', fontSize: '10px', marginTop: '4px' } }, 
+          '💧 Вода, чай, кофе без сахара — не прерывают липолиз'
         )
       ),
       
-      // 💡 Рекомендации по еде (если волна активна)
+      // 📈 Волна активна — объясняем что происходит
+      data.status === 'active' && React.createElement('div', {
+        style: { 
+          marginTop: '8px', padding: '8px', 
+          background: 'rgba(59,130,246,0.1)',
+          borderRadius: '8px', fontSize: '12px',
+          border: '1px solid rgba(59,130,246,0.2)'
+        }
+      },
+        React.createElement('div', { style: { fontWeight: '600', color: '#3b82f6', marginBottom: '4px' } }, 
+          '📈 Инсулин высокий'
+        ),
+        React.createElement('div', { style: { color: '#64748b', fontSize: '11px' } }, 
+          'Организм в режиме запасания. Если поешь сейчас — волна продлится ещё дольше.'
+        )
+      ),
+      
+      // 💡 Рекомендации по еде (если волна активна, но очень хочется)
       data.foodAdvice && React.createElement('div', {
         style: { 
           marginTop: '8px', padding: '8px', 

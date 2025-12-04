@@ -5212,31 +5212,31 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       let status, emoji, text, color, subtext;
       
       if (remainingMinutes <= 0) {
-        status = 'ready'; emoji = '✅'; text = 'Можно есть!'; color = '#22c55e';
-        subtext = isNightTime ? '🌙 Но лучше отложить до утра' : null;
+        status = 'lipolysis'; emoji = '🔥'; text = 'Липолиз!'; color = '#22c55e';
+        subtext = isNightTime ? '🌙 Идеально! Ночной липолиз до утра' : '💪 Жиросжигание идёт! Продержись подольше';
       } else if (remainingMinutes <= 15) {
-        status = 'almost'; emoji = '🔥'; text = Math.ceil(remainingMinutes) + ' мин'; color = '#f97316';
-        subtext = '⏰ Скоро можно есть!';
+        status = 'almost'; emoji = '⏳'; text = Math.ceil(remainingMinutes) + ' мин'; color = '#f97316';
+        subtext = '⏳ Скоро начнётся липолиз!';
       } else if (remainingMinutes <= 30) {
-        status = 'soon'; emoji = '⏰'; text = Math.ceil(remainingMinutes) + ' мин'; color = '#eab308';
-        subtext = '🍵 Выпей воды пока ждёшь';
+        status = 'soon'; emoji = '🌊'; text = Math.ceil(remainingMinutes) + ' мин'; color = '#eab308';
+        subtext = '🍵 Вода не прерывает липолиз';
       } else {
         const h = Math.floor(remainingMinutes / 60), m = Math.round(remainingMinutes % 60);
-        status = 'waiting'; emoji = '🌊'; text = h > 0 ? h + 'ч ' + m + 'м' : m + ' мин'; color = '#0ea5e9';
-        subtext = '💧 Отличное время для воды';
+        status = 'active'; emoji = '📈'; text = h > 0 ? h + 'ч ' + m + 'м' : m + ' мин'; color = '#3b82f6';
+        subtext = '📈 Инсулин высокий, жир запасается';
       }
       
       return { status, emoji, text, color, subtext, progress: progressPct, remaining: remainingMinutes,
-        lastMealTime, endTime, insulinWaveHours: baseWaveHours * giMultiplier, baseWaveHours, isNightTime,
+        lastMealTime, lastMealTimeDisplay: lastMealTime, endTime, insulinWaveHours: baseWaveHours * giMultiplier, baseWaveHours, isNightTime,
         avgGI, giCategory: { color: giMultiplier === 1.2 ? '#22c55e' : giMultiplier === 1.0 ? '#eab308' : giMultiplier === 0.85 ? '#f97316' : '#ef4444', text: giCategory }, giMultiplier,
         waveHistory: [], overlaps: [], hasOverlaps: false, gapQuality: 'unknown'
       };
     }, [day.meals, pIndex, currentMinute]); // currentMinute для авто-обновления
 
-    // === Haptic при готовности есть ===
+    // === Haptic при начале липолиза ===
     const prevInsulinStatusRef = React.useRef(null);
     React.useEffect(() => {
-      if (insulinWaveData?.status === 'ready' && prevInsulinStatusRef.current !== 'ready') {
+      if (insulinWaveData?.status === 'lipolysis' && prevInsulinStatusRef.current !== 'lipolysis') {
         try { HEYS.dayUtils?.haptic?.('success'); } catch(e) {}
       }
       prevInsulinStatusRef.current = insulinWaveData?.status || null;
@@ -10382,7 +10382,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }
           
           const progress = insulinWaveData.progress;
-          const gradientBg = insulinWaveData.status === 'ready' 
+          const gradientBg = insulinWaveData.status === 'lipolysis' 
             ? 'linear-gradient(90deg, #22c55e, #4ade80, #86efac)' 
             : insulinWaveData.status === 'almost'
               ? 'linear-gradient(90deg, #f97316, #fb923c, #fdba74)'
@@ -10392,7 +10392,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           
           return React.createElement('div', { className: 'insulin-wave-progress' },
             React.createElement('div', { className: 'insulin-wave-bar', style: { width: progress + '%', background: gradientBg } }),
-            insulinWaveData.status !== 'ready' && React.createElement('div', { className: 'insulin-wave-animation' }),
+            insulinWaveData.status !== 'lipolysis' && React.createElement('div', { className: 'insulin-wave-animation' }),
             React.createElement('span', {
               className: 'insulin-progress-label',
               style: { position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
@@ -10620,7 +10620,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               React.createElement('div', { className: 'insulin-wave-left' },
                 React.createElement('span', { className: 'insulin-wave-icon' }, insulinWaveData.emoji),
                 React.createElement('span', { className: 'insulin-wave-label' }, 
-                  insulinWaveData.status === 'ready' ? 'Окно питания открыто!' : 'Инсулиновая волна'
+                  insulinWaveData.status === 'lipolysis' ? 'Липолиз активен! 🔥' : 'Инсулиновая волна'
                 ),
                 // Бейджи если есть бонусы
                 (insulinWaveData.proteinBonus > 0 || insulinWaveData.fiberBonus > 0) && React.createElement('span', {
@@ -10644,8 +10644,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 className: 'insulin-wave-timer',
                 style: { color: insulinWaveData.color }
               }, 
-                insulinWaveData.status === 'ready' 
-                  ? React.createElement('span', { className: 'ready-pulse' }, '●')
+                insulinWaveData.status === 'lipolysis' 
+                  ? React.createElement('span', { className: 'lipolysis-pulse' }, '🔥')
                   : insulinWaveData.text
               )
             ),

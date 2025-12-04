@@ -3475,16 +3475,30 @@
     }
     
     // long_fast_warning — большой перерыв между приёмами (>7ч днём)
+    // Переосмыслено: долгий перерыв = долгий липолиз = хорошо для жиросжигания!
     if (mealTimes.length >= 1 && hour >= 10 && hour <= 18) {
       const lastMealMinutes = mealTimes[mealTimes.length - 1];
       const nowMinutes = hour * 60 + new Date().getMinutes();
       const gapHours = (nowMinutes - lastMealMinutes) / 60;
       
-      if (gapHours > 7) {
+      if (gapHours > 5 && gapHours <= 7) {
+        // 5-7 часов — отличный липолиз!
+        advices.push({
+          id: 'lipolysis_going_strong',
+          icon: '🔥',
+          text: `${Math.round(gapHours)}ч без еды — липолиз в разгаре! Держись!`,
+          type: 'achievement',
+          priority: 92,
+          category: 'timing',
+          triggers: ['tab_open'],
+          ttl: 5000
+        });
+      } else if (gapHours > 7) {
+        // >7 часов — предупреждение о переедании потом
         advices.push({
           id: 'long_fast_warning',
-          icon: '⏰',
-          text: 'Давно не ел — не переешь потом!',
+          icon: '⚠️',
+          text: `${Math.round(gapHours)}ч без еды — когда поешь, выбирай низкий ГИ!`,
           type: 'tip',
           priority: 92,
           category: 'timing',
@@ -3495,6 +3509,7 @@
     }
     
     // meal_spacing_perfect — идеальные интервалы (3-5ч между приёмами, >=3 приёма)
+    // = Максимальное время в липолизе между приёмами
     if (mealTimes.length >= 3) {
       const gaps = [];
       for (let i = 1; i < mealTimes.length; i++) {
@@ -3505,14 +3520,29 @@
       if (allGapsGood && !sessionStorage.getItem('heys_spacing_perfect')) {
         advices.push({
           id: 'meal_spacing_perfect',
-          icon: '⏱️',
-          text: 'Идеальные интервалы между приёмами!',
+          icon: '🔥',
+          text: 'Идеальные интервалы! Максимум времени в липолизе',
           type: 'achievement',
           priority: 93,
           category: 'timing',
           triggers: ['tab_open'],
           ttl: 5000,
           onShow: () => { try { sessionStorage.setItem('heys_spacing_perfect', '1'); } catch(e) {} }
+        });
+      }
+      
+      // Частые приёмы = постоянно высокий инсулин = нет липолиза
+      const shortGaps = gaps.filter(g => g < 2);
+      if (shortGaps.length >= 2) {
+        advices.push({
+          id: 'frequent_eating_no_lipolysis',
+          icon: '📈',
+          text: 'Частые приёмы — инсулин постоянно высокий, липолиза нет',
+          type: 'warning',
+          priority: 45,
+          category: 'timing',
+          triggers: ['meal_added'],
+          ttl: 6000
         });
       }
     }
@@ -4088,8 +4118,8 @@
         id: 'active_wave_high_gi',
         icon: '⚠️',
         text: activeWaveHighGI.severity === 'high'
-          ? `ГИ ${activeWaveHighGI.gi} при активной волне — двойной инсулиновый пик!`
-          : `ГИ ${activeWaveHighGI.gi} при активной волне — лучше подождать`,
+          ? `ГИ ${activeWaveHighGI.gi} при активной волне — инсулин ещё выше, липолиз отложен!`
+          : `ГИ ${activeWaveHighGI.gi} при активной волне — жиросжигание откладывается`,
         type: 'warning',
         priority: 42, // Высокий приоритет
         category: 'timing',
