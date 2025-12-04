@@ -7,7 +7,29 @@
   // === Контекст для передачи данных между шагами ===
   const StepModalContext = createContext({});
 
-  // === Утилиты ===
+  // === Общие утилиты (переиспользуемые в steps/meal_step) ===
+  
+  // Обёртка для localStorage с поддержкой clientId namespace
+  const U = () => HEYS.utils || {};
+  
+  function lsGet(key, def) {
+    const utils = U();
+    if (utils.lsGet) return utils.lsGet(key, def);
+    try {
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : def;
+    } catch { return def; }
+  }
+  
+  function lsSet(key, val) {
+    const utils = U();
+    if (utils.lsSet) {
+      utils.lsSet(key, val);
+    } else {
+      localStorage.setItem(key, JSON.stringify(val));
+    }
+  }
+
   function getTodayKey() {
     return new Date().toISOString().slice(0, 10);
   }
@@ -67,9 +89,11 @@
   }
 
   // === WheelPicker (переиспользуемый) ===
-  function WheelPicker({ values, value, onChange, label, suffix = '' }) {
+  function WheelPicker({ values, value, onChange, label, suffix = '', currentSuffix = null }) {
     const containerRef = useRef(null);
     const currentIndex = values.indexOf(value);
+    // currentSuffix — единицы для центрального значения (кг, ч), suffix — для остальных
+    const displaySuffix = currentSuffix !== null ? currentSuffix : suffix;
 
     // Wheel scroll event (самый простой способ на десктопе)
     const handleWheel = useCallback((e) => {
@@ -149,7 +173,8 @@
           onClick: handleClickPrev
         }, currentIndex > 0 ? values[prevIndex] + suffix : ''),
         React.createElement('div', { className: 'mc-wheel-value mc-wheel-value--current' },
-          value + suffix
+          value,
+          displaySuffix && React.createElement('span', { className: 'mc-wheel-suffix' }, displaySuffix)
         ),
         React.createElement('div', {
           className: 'mc-wheel-value mc-wheel-value--next',
@@ -204,6 +229,7 @@
     const [animating, setAnimating] = useState(false);
     const [slideDirection, setSlideDirection] = useState(null);
     const [stepData, setStepData] = useState({});
+    const [validationError, setValidationError] = useState(false); // Для shake-анимации
     const containerRef = useRef(null);
     const touchStartX = useRef(0);
     const touchStartY = useRef(0);
@@ -267,6 +293,11 @@
     const handleNext = useCallback(() => {
       // Валидация текущего шага
       if (currentConfig.validate && !currentConfig.validate(stepData[currentConfig.id], stepData)) {
+        // Показываем shake-анимацию при ошибке
+        setValidationError(true);
+        // Haptic feedback при ошибке
+        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+        setTimeout(() => setValidationError(false), 500);
         return;
       }
 
@@ -392,12 +423,18 @@
             }, '×')
           ),
 
-          // Progress dots (кружочки)
+          // Progress dots (кружочки) — кликабельные для навигации
           showProgress && totalSteps > 1 && React.createElement('div', { className: 'mc-progress-dots' },
             stepConfigs.map((_, i) => 
-              React.createElement('div', { 
+              React.createElement('button', { 
                 key: i,
-                className: 'mc-progress-dot' + (i === currentStepIndex ? ' active' : '') + (i < currentStepIndex ? ' completed' : '')
+                className: 'mc-progress-dot' + (i === currentStepIndex ? ' active' : '') + (i < currentStepIndex ? ' completed' : ''),
+                onClick: () => {
+                  if (i !== currentStepIndex) {
+                    goToStep(i, i > currentStepIndex ? 'left' : 'right');
+                  }
+                },
+                'aria-label': `Шаг ${i + 1} из ${totalSteps}`
               })
             )
           ),
@@ -413,7 +450,9 @@
           ),
 
           // Step content
-          React.createElement('div', { className: `mc-step-content ${slideClass}` },
+          React.createElement('div', { 
+            className: `mc-step-content ${slideClass}${validationError ? ' mc-validation-error' : ''}` 
+          },
             StepComponent && React.createElement(StepComponent, {
               data: stepData[currentConfig.id] || {},
               onChange: (data) => updateStepData(currentConfig.id, data),
@@ -494,6 +533,8 @@
     WheelPicker,
     Context: StepModalContext,
     utils: {
+      lsGet,
+      lsSet,
       getTodayKey,
       getCurrentHour,
       getTimeBasedGreeting,

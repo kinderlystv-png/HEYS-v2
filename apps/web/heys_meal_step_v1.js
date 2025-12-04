@@ -9,24 +9,20 @@
     console.warn('[HEYS] MealStep: StepModal not loaded yet');
   }
 
-  // === Утилиты ===
-  const U = () => HEYS.utils || {};
-  const lsGet = (key, def) => {
-    const utils = U();
-    if (utils.lsGet) return utils.lsGet(key, def);
+  // Используем общие утилиты из StepModal
+  const { lsGet, lsSet } = HEYS.StepModal?.utils || {};
+  
+  // Fallback если StepModal ещё не загружен
+  const safeLsGet = lsGet || ((key, def) => {
     try {
       const v = localStorage.getItem(key);
       return v ? JSON.parse(v) : def;
     } catch { return def; }
-  };
-  const lsSet = (key, val) => {
-    const utils = U();
-    if (utils.lsSet) {
-      utils.lsSet(key, val);
-    } else {
-      localStorage.setItem(key, JSON.stringify(val));
-    }
-  };
+  });
+  
+  const safeLsSet = lsSet || ((key, val) => {
+    localStorage.setItem(key, JSON.stringify(val));
+  });
 
   // Haptic feedback
   const haptic = (intensity = 10) => {
@@ -101,7 +97,7 @@
     // Получаем существующие приёмы для определения типа
     const existingMeals = useMemo(() => {
       const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+      const dayData = safeLsGet(`heys_dayv2_${dateKey}`, {});
       return dayData.meals || [];
     }, [context?.dateKey]);
     
@@ -240,7 +236,7 @@
     // История оценок за сегодня
     const todayMoods = useMemo(() => {
       const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+      const dayData = safeLsGet(`heys_dayv2_${dateKey}`, {});
       const meals = dayData.meals || [];
       return meals.map(m => {
         const moodVal = m.mood || 5;
@@ -789,7 +785,7 @@
         
         // Берём оценки из предыдущего приёма если есть
         const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-        const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+        const dayData = safeLsGet(`heys_dayv2_${dateKey}`, {});
         const meals = dayData.meals || [];
         
         if (meals.length > 0) {

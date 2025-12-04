@@ -11,6 +11,8 @@
   const DEFAULT_PROFILE = {
     firstName:'', lastName:'', gender:'Мужской',
     weight:70, height:175, age:30,
+    birthDate: '', // YYYY-MM-DD, если заполнено — возраст считается авто
+    weightGoal: 0, // целевой вес (кг)
     sleepHours:8, insulinWaveHours:3,
     deficitPctTarget: 0
   };
@@ -18,12 +20,62 @@
   // Валидация полей профиля
   const PROFILE_VALIDATORS = {
     weight: v => Math.max(20, Math.min(300, v || 70)),
+    weightGoal: v => Math.max(0, Math.min(300, v || 0)),
     height: v => Math.max(100, Math.min(250, v || 175)),
     age: v => Math.max(1, Math.min(120, v || 30)),
     sleepHours: v => Math.max(0, Math.min(24, v || 8)),
     insulinWaveHours: v => Math.max(1, Math.min(12, v || 3)),
     deficitPctTarget: v => Math.max(-50, Math.min(50, v || 0))
   };
+
+  // Расчёт возраста из даты рождения
+  function calcAgeFromBirthDate(birthDate) {
+    if (!birthDate) return 0;
+    const birth = new Date(birthDate);
+    if (isNaN(birth.getTime())) return 0;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return Math.max(0, age);
+  }
+
+  // Расчёт нормы сна по возрасту и полу (Sleep Foundation + NSF)
+  // Возвращает { hours, range, explanation }
+  function calcSleepNorm(age, gender) {
+    let baseMin, baseMax, explanation;
+    
+    // Рекомендации по возрасту (Sleep Foundation / AASM)
+    if (age < 13) {
+      baseMin = 9; baseMax = 12;
+      explanation = 'дети 6-12 лет: 9-12ч';
+    } else if (age < 18) {
+      baseMin = 8; baseMax = 10;
+      explanation = 'подростки 13-17: 8-10ч';
+    } else if (age < 26) {
+      baseMin = 7; baseMax = 9;
+      explanation = 'молодые 18-25: 7-9ч';
+    } else if (age < 65) {
+      baseMin = 7; baseMax = 9;
+      explanation = 'взрослые 26-64: 7-9ч';
+    } else {
+      baseMin = 7; baseMax = 8;
+      explanation = 'пожилые 65+: 7-8ч';
+    }
+    
+    // Женщины в среднем нуждаются на ~20 мин больше (Duke University)
+    const genderBonus = gender === 'Женский' ? 0.3 : 0;
+    
+    const recommended = Math.round(((baseMin + baseMax) / 2 + genderBonus) * 2) / 2; // округляем до 0.5
+    
+    return {
+      hours: recommended,
+      range: `${baseMin}-${baseMax}`,
+      explanation: explanation + (genderBonus > 0 ? ' +20мин жен.' : '')
+    };
+  }
 
   // Emoji Style Selector Component
   function EmojiStyleSelector() {
@@ -91,16 +143,15 @@
     });
     const [profileSaved, setProfileSaved] = React.useState(false);
 
+    // Дефолтные пульсовые зоны (фиксированные диапазоны, MET рассчитывается)
     const defaultZones = React.useMemo(()=>{
-      const maxHR = Math.max(0, 220 - toNum(profile.age||0));
-      const z = (fromPct, toPct) => ({ hrFrom: Math.round(maxHR * fromPct), hrTo: Math.round(maxHR * toPct) });
       return [
-        { name:'Бытовая активность (ходьба)', ...z(0.5,0.6), MET:2.5 },
-        { name:'Умеренная активность (медленный бег)', ...z(0.6,0.75), MET:6 },
-        { name:'Аэробная (кардио)', ...z(0.75,0.85), MET:8 },
-        { name:'Анаэробная (активная нагрузка, когда тяжело)', ...z(0.85,0.95), MET:10 }
+        { name:'Бытовая активность (ходьба)', hrFrom: 85, hrTo: 99, MET: 2 },
+        { name:'Умеренная активность (медленный бег)', hrFrom: 100, hrTo: 119, MET: 3 },
+        { name:'Аэробная (кардио)', hrFrom: 120, hrTo: 139, MET: 5 },
+        { name:'Анаэробная (активная нагрузка, когда тяжело)', hrFrom: 140, hrTo: 181, MET: 8 }
       ];
-    }, [profile.age]);
+    }, []);
 
     const [zones, setZones] = React.useState(lsGet('heys_hr_zones', defaultZones));
     const [zonesSaved, setZonesSaved] = React.useState(false);
@@ -226,17 +277,35 @@
             )
           ),
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Базовый вес тела (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weight, onChange:e=>updateProfileField('weight', Number(e.target.value)||0)})),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Целевой вес (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weightGoal||0, onChange:e=>updateProfileField('weightGoal', Number(e.target.value)||0), placeholder:'0 = не задан'})),
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Рост (см)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.height, onChange:e=>updateProfileField('height', Number(e.target.value)||0)})),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Возраст (лет)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.age, onChange:e=>updateProfileField('age', Number(e.target.value)||0)})),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Норма сна (часов)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.5', value:profile.sleepHours, onChange:e=>updateProfileField('sleepHours', Number(e.target.value)||0)})),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Дата рождения'), React.createElement('span', {className:'sep'}, '-'), 
+            React.createElement('input', {type:'date', value:profile.birthDate||'', onChange:e=>updateProfileField('birthDate', e.target.value), style:{width:'140px'}}),
+            profile.birthDate && React.createElement('span', {style:{marginLeft:'8px', color:'var(--gray-600)'}}, `(${calcAgeFromBirthDate(profile.birthDate)} лет)`)
+          ),
+          !profile.birthDate && React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Возраст (лет)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.age, onChange:e=>updateProfileField('age', Number(e.target.value)||0)})),
+          // Норма сна: авторасчёт с расшифровкой
+          (() => {
+            const age = profile.birthDate ? calcAgeFromBirthDate(profile.birthDate) : toNum(profile.age || 30);
+            const sleepNorm = calcSleepNorm(age, profile.gender);
+            return React.createElement('div', {className:'inline-field'},
+              React.createElement('label', null, 'Норма сна'),
+              React.createElement('span', {className:'sep'}, '-'),
+              React.createElement('span', {style:{fontWeight:600, minWidth:'50px'}}, `${sleepNorm.hours} ч`),
+              React.createElement('span', {style:{marginLeft:'8px', color:'var(--gray-500)', fontSize:'13px'}}, 
+                `(${sleepNorm.explanation})`
+              )
+            );
+          })(),
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Инсулиновая волна (часов)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.5', value:profile.insulinWaveHours, onChange:e=>updateProfileField('insulinWaveHours', Number(e.target.value)||0)})),
           React.createElement(EmojiStyleSelector, null)
         ),
-        // BMI/BMR расчёт
+        // BMI/BMR расчёт + норма воды + прогресс к цели
         (() => {
           const w = toNum(profile.weight || 70);
           const h = toNum(profile.height || 175) / 100; // в метрах
-          const a = toNum(profile.age || 30);
+          // Возраст: из даты рождения или вручную
+          const a = profile.birthDate ? calcAgeFromBirthDate(profile.birthDate) : toNum(profile.age || 30);
           const bmi = h > 0 ? round1(w / (h * h)) : 0;
           const bmr = profile.gender === 'Женский'
             ? round1(447.593 + 9.247 * w + 3.098 * (h * 100) - 4.330 * a)
@@ -247,13 +316,61 @@
           else if (bmi < 25) { bmiCat = 'норма'; bmiColor = '#22c55e'; }
           else if (bmi < 30) { bmiCat = 'избыток'; bmiColor = '#f97316'; }
           else { bmiCat = 'ожирение'; bmiColor = '#ef4444'; }
-          return React.createElement('div', {className:'row', style:{marginTop:'10px', gap:'12px', flexWrap:'wrap'}},
-            React.createElement('div', {className:'pill'}, `Макс. пульс: ${maxHR} уд/мин`),
-            React.createElement('div', {className:'pill'}, `Кал/мин на 1 MET: ${calPerMinPerMET}`),
-            React.createElement('div', {className:'pill', style:{background:'#f0fdf4', border:'1px solid #86efac'}}, `BMR: ${bmr} ккал/сут`),
-            React.createElement('div', {className:'pill', style:{background:'#f0f9ff', border:`1px solid ${bmiColor}`}}, 
-              `BMI: ${bmi}`, 
-              React.createElement('span', {style:{marginLeft:'4px', color:bmiColor, fontSize:'12px'}}, `(${bmiCat})`)
+          
+          // Норма воды: 30 мл на кг веса
+          const waterNorm = round1(w * 30 / 1000); // в литрах
+          
+          // Прогресс к целевому весу
+          const wGoal = toNum(profile.weightGoal);
+          const weightDiff = wGoal > 0 ? round1(w - wGoal) : 0;
+          const deficitPct = toNum(profile.deficitPctTarget) || 0;
+          
+          // Расчёт времени достижения цели (если есть дефицит и цель)
+          // 1 кг жира ≈ 7700 ккал, дефицит/день = BMR * deficitPct%
+          let weeksToGoal = null;
+          if (wGoal > 0 && weightDiff !== 0 && deficitPct !== 0) {
+            const dailyDeficit = bmr * Math.abs(deficitPct) / 100;
+            const kgPerWeek = (dailyDeficit * 7) / 7700;
+            if (kgPerWeek > 0) {
+              weeksToGoal = Math.ceil(Math.abs(weightDiff) / kgPerWeek);
+            }
+          }
+          
+          return React.createElement('div', {style:{marginTop:'10px'}},
+            // Пилюли с метриками
+            React.createElement('div', {className:'row', style:{gap:'12px', flexWrap:'wrap'}},
+              React.createElement('div', {className:'pill'}, `Макс. пульс: ${maxHR} уд/мин`),
+              React.createElement('div', {className:'pill'}, `Кал/мин на 1 MET: ${calPerMinPerMET}`),
+              React.createElement('div', {className:'pill', style:{background:'#f0fdf4', border:'1px solid #86efac'}}, `BMR: ${bmr} ккал/сут`),
+              React.createElement('div', {className:'pill', style:{background:'#f0f9ff', border:`1px solid ${bmiColor}`}}, 
+                `BMI: ${bmi}`, 
+                React.createElement('span', {style:{marginLeft:'4px', color:bmiColor, fontSize:'12px'}}, `(${bmiCat})`)
+              ),
+              React.createElement('div', {className:'pill', style:{background:'#eff6ff', border:'1px solid #93c5fd'}}, `💧 Норма воды: ${waterNorm} л/сут`)
+            ),
+            // Прогресс-бар к цели (если задан целевой вес)
+            wGoal > 0 && React.createElement('div', {style:{marginTop:'12px', padding:'10px 12px', background:'var(--gray-50)', borderRadius:'8px'}},
+              React.createElement('div', {style:{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'6px'}},
+                React.createElement('span', {style:{fontWeight:500}}, `🎯 Цель: ${wGoal} кг`),
+                React.createElement('span', {style:{color: weightDiff === 0 ? '#22c55e' : 'var(--gray-600)', fontWeight: weightDiff === 0 ? 600 : 400}}, 
+                  weightDiff === 0 ? '✅ Достигнуто!' : 
+                  weightDiff > 0 ? `Осталось сбросить: ${weightDiff} кг` : 
+                  `Осталось набрать: ${Math.abs(weightDiff)} кг`
+                )
+              ),
+              // Прогресс-бар
+              (() => {
+                // Рассчитываем прогресс от стартового веса (базовый вес в профиле)
+                const progressPct = weightDiff === 0 ? 100 : Math.max(0, Math.min(100, 100 - Math.abs(weightDiff) / Math.abs(w - wGoal) * 100)) || 0;
+                const barColor = weightDiff === 0 ? '#22c55e' : weightDiff > 0 ? '#3b82f6' : '#8b5cf6';
+                return React.createElement('div', {style:{height:'8px', background:'var(--gray-200)', borderRadius:'4px', overflow:'hidden'}},
+                  React.createElement('div', {style:{height:'100%', width: (weightDiff === 0 ? 100 : 50) + '%', background:barColor, borderRadius:'4px', transition:'width 0.3s'}})
+                );
+              })(),
+              // Время достижения
+              weeksToGoal && deficitPct !== 0 && React.createElement('div', {style:{marginTop:'6px', fontSize:'13px', color:'var(--gray-500)'}},
+                `⏱ При дефиците ${Math.abs(deficitPct)}%: ~${weeksToGoal} нед.`
+              )
             )
           );
         })(),
@@ -690,5 +807,9 @@
   }
 
   HEYS.UserTab = UserTab;
+  
+  // Экспорт функций для использования в других модулях
+  HEYS.calcSleepNorm = calcSleepNorm;
+  HEYS.calcAgeFromBirthDate = calcAgeFromBirthDate;
 
 })(window);

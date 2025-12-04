@@ -11,26 +11,8 @@
   }
 
   const { WheelPicker, registerStep, utils } = HEYS.StepModal;
-  const { getTodayKey } = utils;
-
-  // === Утилиты для шагов ===
-  const U = () => HEYS.utils || {};
-  const lsGet = (key, def) => {
-    const utils = U();
-    if (utils.lsGet) return utils.lsGet(key, def);
-    try {
-      const v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : def;
-    } catch { return def; }
-  };
-  const lsSet = (key, val) => {
-    const utils = U();
-    if (utils.lsSet) {
-      utils.lsSet(key, val);
-    } else {
-      localStorage.setItem(key, JSON.stringify(val));
-    }
-  };
+  // Используем общие утилиты из StepModal
+  const { lsGet, lsSet, getTodayKey } = utils;
 
   // ============================================================
   // WEIGHT STEP
