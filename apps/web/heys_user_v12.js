@@ -72,7 +72,8 @@
       return lsGet('heys_profile', {
         firstName:'', lastName:'', gender:'Мужской',
         weight:70, height:175, age:30,
-        sleepHours:8, insulinWaveHours:3
+        sleepHours:8, insulinWaveHours:3,
+        deficitPctTarget: 0
       });
     });
 
@@ -102,7 +103,8 @@
         const newProfile = lsGet('heys_profile', {
           firstName:'', lastName:'', gender:'Мужской',
           weight:70, height:175, age:30,
-          sleepHours:8, insulinWaveHours:3
+          sleepHours:8, insulinWaveHours:3,
+          deficitPctTarget: 0
         });
         // Тихая загрузка профиля
         setProfile(newProfile);

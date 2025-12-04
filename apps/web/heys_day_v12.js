@@ -2366,8 +2366,9 @@
     const [showDeficitPicker, setShowDeficitPicker] = useState(false); // для совместимости с uiState
     
     // Дефицит из профиля или дефолт 0
-    const profileDeficit = prof.deficitPctTarget || 0;
-    const currentDeficit = day.deficitPct != null ? day.deficitPct : profileDeficit;
+    const profileDeficit = prof.deficitPctTarget ?? 0;
+    // day.deficitPct может быть '', null, undefined — проверяем все случаи
+    const currentDeficit = (day.deficitPct !== '' && day.deficitPct != null) ? day.deficitPct : profileDeficit;
     
     function openDeficitPicker() {
       // Используем StepModal вместо старого пикера
