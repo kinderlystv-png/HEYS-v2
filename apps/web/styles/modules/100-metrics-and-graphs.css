@@ -2246,6 +2246,11 @@
   z-index: 1;
 }
 
+/* Отключаем transition при сбросе к 0 */
+.goal-progress-fill.no-transition {
+  transition: none !important;
+}
+
 @keyframes progressFillIn {
   from {
     transform: scaleX(0);
@@ -2289,6 +2294,62 @@
   transform: translateX(-50%);
 }
 
+/* === Маркер текущего % на позиции заполнения === */
+.goal-current-marker {
+  position: absolute;
+  top: -20px;
+  transform: translateX(-50%);
+  z-index: 15;
+  transition: left 0.1s ease-out;
+}
+
+.goal-current-marker.no-transition {
+  transition: none !important;
+}
+
+.goal-current-pct {
+  display: inline-block;
+  background: var(--color-slate-700);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Треугольник снизу */
+.goal-current-pct::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid var(--color-slate-700);
+}
+
+/* === Метки зон под полосой (80%, 100%) === */
+.goal-zone-labels {
+  position: relative;
+  height: 14px;
+  margin-top: 2px;
+}
+
+.goal-zone-label {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: var(--color-slate-400);
+  font-weight: 500;
+}
+
+.goal-zone-label-100 {
+  color: var(--color-slate-500);
+  font-weight: 600;
+}
+
 .goal-progress-footer {
   margin-top: 8px;
   font-size: 14px;
@@ -2300,6 +2361,32 @@
   color: #22c55e;
   font-weight: 700;
   font-size: 16px;
+}
+
+/* 🔥 Мотивация при приближении к цели */
+.goal-remaining.almost-there {
+  color: #059669;
+  font-weight: 600;
+  animation: almostThere 1.5s ease-in-out infinite;
+}
+
+.goal-remaining.almost-there b {
+  color: #059669;
+  font-size: 18px;
+}
+
+.goal-remaining.getting-close {
+  color: #0d9488;
+  font-weight: 500;
+}
+
+.goal-remaining.getting-close b {
+  color: #0d9488;
+}
+
+@keyframes almostThere {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.02); }
 }
 
 .goal-over b {
@@ -4362,6 +4449,154 @@
 
 .macro-toast-achievement .macro-toast-progress {
   animation-duration: 10s;
+}
+
+/* Rating buttons (👍/👎) */
+.macro-toast-rating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.macro-toast-rating-label {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.macro-toast-rating-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.macro-toast-rating-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.1);
+}
+
+.macro-toast-rating-btn:active {
+  transform: scale(0.95);
+}
+
+/* Snooze button (отложить совет) */
+.macro-toast-snooze {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.macro-toast-snooze-label {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-right: 4px;
+}
+
+.macro-toast-snooze-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.macro-toast-snooze-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.macro-toast-snooze-btn:active {
+  transform: scale(0.95);
+}
+
+/* Micro-animations по типам советов */
+.macro-toast.anim-bounce {
+  animation: adviceBounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes adviceBounce {
+  0% { transform: translateX(-50%) scale(0.3) translateY(50px); opacity: 0; }
+  50% { transform: translateX(-50%) scale(1.05) translateY(-5px); }
+  100% { transform: translateX(-50%) scale(1) translateY(0); opacity: 1; }
+}
+
+.macro-toast.anim-shake {
+  animation: adviceShake 0.5s ease-out;
+}
+
+@keyframes adviceShake {
+  0%, 100% { transform: translateX(-50%) rotate(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-50%) rotate(-2deg); }
+  20%, 40%, 60%, 80% { transform: translateX(-50%) rotate(2deg); }
+}
+
+.macro-toast.anim-fadeSlide {
+  animation: adviceFadeSlide 0.3s ease-out;
+}
+
+@keyframes adviceFadeSlide {
+  0% { transform: translateX(-50%) translateY(20px); opacity: 0; }
+  100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+.macro-toast.anim-pulse {
+  animation: advicePulse 0.4s ease-out;
+}
+
+@keyframes advicePulse {
+  0% { transform: translateX(-50%) scale(0.8); opacity: 0; }
+  50% { transform: translateX(-50%) scale(1.1); }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+.macro-toast.anim-glow {
+  animation: adviceGlow 0.5s ease-out;
+}
+
+@keyframes adviceGlow {
+  0% { transform: translateX(-50%) scale(0.9); box-shadow: 0 0 0 rgba(245, 158, 11, 0); }
+  50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.5); }
+  100% { transform: translateX(-50%) scale(1); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); }
+}
+
+/* Personal Best celebration */
+.macro-toast.personal-best {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fbbf24 100%);
+  border-left: 4px solid #f59e0b;
+}
+
+.macro-toast.personal-best::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 30px;
+  height: 30px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f59e0b'%3E%3Cpath d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'/%3E%3C/svg%3E") center/contain no-repeat;
+  animation: starSpin 1s ease-out;
+}
+
+@keyframes starSpin {
+  0% { transform: rotate(-180deg) scale(0); opacity: 0; }
+  50% { transform: rotate(0deg) scale(1.2); opacity: 1; }
+  100% { transform: rotate(0deg) scale(1); opacity: 1; }
 }
 
 /* Анимации иконок */

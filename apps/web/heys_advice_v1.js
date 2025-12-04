@@ -305,6 +305,124 @@
   };
   
   // ═══════════════════════════════════════════════════════════
+  // ADVICE CATEGORIES SETTINGS — Настройки категорий
+  // ═══════════════════════════════════════════════════════════
+  
+  const ADVICE_SETTINGS_KEY = 'heys_advice_settings';
+  
+  const DEFAULT_ADVICE_SETTINGS = {
+    // Категории советов (включены по умолчанию)
+    categories: {
+      nutrition: true,      // Питание (БЖУ, калории)
+      hydration: true,      // Вода
+      lifestyle: true,      // Образ жизни
+      training: true,       // Тренировки
+      sleep: true,          // Сон
+      emotional: true,      // Эмоции и настроение
+      achievement: true,    // Достижения
+      timing: true,         // Тайминг приёмов
+      correlation: true     // Корреляции
+    },
+    // Общие настройки
+    soundEnabled: true,     // Звук при советах
+    hapticEnabled: true,    // Вибрация
+    showDetails: true,      // Показывать детали
+    maxPerDay: 20,          // Макс советов в день
+    quietHoursStart: 23,    // Тихие часы начало
+    quietHoursEnd: 7        // Тихие часы конец
+  };
+  
+  const CATEGORY_LABELS = {
+    nutrition: { name: 'Питание', icon: '🥗', desc: 'БЖУ, калории, макросы' },
+    hydration: { name: 'Вода', icon: '💧', desc: 'Гидратация и напоминания' },
+    lifestyle: { name: 'Образ жизни', icon: '🌅', desc: 'Режим, привычки' },
+    training: { name: 'Тренировки', icon: '💪', desc: 'Активность и спорт' },
+    sleep: { name: 'Сон', icon: '😴', desc: 'Качество и количество сна' },
+    emotional: { name: 'Эмоции', icon: '💙', desc: 'Настроение и стресс' },
+    achievement: { name: 'Достижения', icon: '🏆', desc: 'Streak, рекорды' },
+    timing: { name: 'Тайминг', icon: '⏰', desc: 'Время приёмов пищи' },
+    correlation: { name: 'Корреляции', icon: '🔗', desc: 'Связи между показателями' }
+  };
+  
+  // ═══════════════════════════════════════════════════════════
+  // PERSONAL BEST TRACKING — Лучшие результаты
+  // ═══════════════════════════════════════════════════════════
+  
+  const PERSONAL_BESTS_KEY = 'heys_personal_bests';
+  
+  const TRACKABLE_METRICS = {
+    proteinPct: { name: 'Белок', icon: '🥩', unit: '%', higher: true },
+    fiberPct: { name: 'Клетчатка', icon: '🥬', unit: '%', higher: true },
+    waterPct: { name: 'Вода', icon: '💧', unit: '%', higher: true },
+    goodFatRatio: { name: 'Полезные жиры', icon: '🥑', unit: '%', higher: true },
+    streak: { name: 'Серия дней', icon: '🔥', unit: 'дн', higher: true },
+    lowGIday: { name: 'Низкий ГИ', icon: '📊', unit: 'ГИ', higher: false },
+    lowHarmDay: { name: 'Чистый день', icon: '🌿', unit: '%', higher: false }
+  };
+  
+  // ═══════════════════════════════════════════════════════════
+  // GOAL-SPECIFIC ADVICE — Советы по целям
+  // ═══════════════════════════════════════════════════════════
+  
+  const GOAL_MODES = {
+    deficit: {
+      name: 'Похудение',
+      icon: '📉',
+      priorities: ['protein', 'fiber', 'water', 'satiety'],
+      avoidCategories: [],
+      bonusAdvices: [
+        { id: 'deficit_protein_priority', text: 'При дефиците белок — приоритет №1', priority: 25 },
+        { id: 'deficit_fiber_satiety', text: 'Клетчатка даёт сытость без калорий', priority: 26 },
+        { id: 'deficit_water_hunger', text: 'Часто жажду путают с голодом — выпей воды', priority: 27 }
+      ]
+    },
+    bulk: {
+      name: 'Набор массы',
+      icon: '📈',
+      priorities: ['protein', 'carbs', 'calories', 'training'],
+      avoidCategories: [],
+      bonusAdvices: [
+        { id: 'bulk_protein_timing', text: 'Белок после тренировки — окно возможностей', priority: 25 },
+        { id: 'bulk_carbs_energy', text: 'Сложные углеводы = топливо для роста', priority: 26 },
+        { id: 'bulk_sleep_growth', text: 'Мышцы растут во сне — минимум 7-8 часов', priority: 27 }
+      ]
+    },
+    maintenance: {
+      name: 'Поддержание',
+      icon: '⚖️',
+      priorities: ['balance', 'variety', 'consistency'],
+      avoidCategories: [],
+      bonusAdvices: [
+        { id: 'maintenance_balance', text: 'Баланс важнее идеала — держи среднюю', priority: 25 },
+        { id: 'maintenance_variety', text: 'Разнообразие — ключ к устойчивости', priority: 26 }
+      ]
+    }
+  };
+  
+  // ═══════════════════════════════════════════════════════════
+  // ADVICE SCHEDULING — Отложенные советы
+  // ═══════════════════════════════════════════════════════════
+  
+  const SCHEDULED_KEY = 'heys_scheduled_advices';
+  const SNOOZE_OPTIONS = [
+    { label: '30 мин', minutes: 30 },
+    { label: '1 час', minutes: 60 },
+    { label: '2 часа', minutes: 120 }
+  ];
+  
+  // ═══════════════════════════════════════════════════════════
+  // MICRO-ANIMATIONS CONFIG
+  // ═══════════════════════════════════════════════════════════
+  
+  const ADVICE_ANIMATIONS = {
+    achievement: 'bounce',
+    warning: 'shake',
+    tip: 'fadeSlide',
+    success: 'pulse',
+    streak: 'glow'
+  };
+  
+  // ═══════════════════════════════════════════════════════════
   // PROGRESSIVE DISCLOSURE — Краткий/полный текст
   // ═══════════════════════════════════════════════════════════
   
@@ -394,15 +512,50 @@
   }
   
   /**
-   * Выбирает случайный вариант текста если передан массив
+   * Выбирает вариант текста детерминированно (стабильно в рамках сессии)
+   * Используем дату + id для seed, чтобы выбор был стабильным но менялся ежедневно
    * @param {string|string[]} textOrArray
+   * @param {string} [seed] - опциональный seed для детерминированного выбора (id совета)
    * @returns {string}
    */
-  function pickRandomText(textOrArray) {
-    if (Array.isArray(textOrArray)) {
-      return textOrArray[Math.floor(Math.random() * textOrArray.length)];
+  // Кэш выбранных текстов для стабильности в рамках сессии
+  const _textChoiceCache = new Map();
+  
+  function pickRandomText(textOrArray, seed = '') {
+    if (!Array.isArray(textOrArray)) {
+      return textOrArray;
     }
-    return textOrArray;
+    if (textOrArray.length === 1) {
+      return textOrArray[0];
+    }
+    
+    // Создаём ключ кэша из seed + текстов
+    const cacheKey = seed + '|' + textOrArray.join('|');
+    
+    // Проверяем кэш
+    if (_textChoiceCache.has(cacheKey)) {
+      return _textChoiceCache.get(cacheKey);
+    }
+    
+    // Детерминированный выбор на основе даты + seed
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const seedStr = today + seed;
+    
+    // Simple hash function
+    let hash = 0;
+    for (let i = 0; i < seedStr.length; i++) {
+      const char = seedStr.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    
+    const index = Math.abs(hash) % textOrArray.length;
+    const result = textOrArray[index];
+    
+    // Сохраняем в кэш
+    _textChoiceCache.set(cacheKey, result);
+    
+    return result;
   }
   
   // ═══════════════════════════════════════════════════════════
@@ -448,12 +601,29 @@
   }
   
   /**
-   * Получает все рейтинги
+   * Получает все рейтинги (с автоочисткой старых >60 дней)
    * @returns {Object}
    */
   function getAllRatings() {
     try {
-      return JSON.parse(localStorage.getItem(RATING_KEY) || '{}');
+      const data = localStorage.getItem(RATING_KEY);
+      if (!data) return {};
+      const parsed = JSON.parse(data);
+      
+      // Автоочистка: удаляем записи старше 60 дней
+      const now = Date.now();
+      const SIXTY_DAYS = 60 * 24 * 60 * 60 * 1000;
+      let needsSave = false;
+      Object.keys(parsed).forEach(key => {
+        if (parsed[key].lastRated && (now - parsed[key].lastRated) > SIXTY_DAYS) {
+          delete parsed[key];
+          needsSave = true;
+        }
+      });
+      if (needsSave) {
+        localStorage.setItem(RATING_KEY, JSON.stringify(parsed));
+      }
+      return parsed;
     } catch (e) {
       return {};
     }
@@ -714,7 +884,7 @@
     
     // 1. CTR factor
     const stats = getTrackingStats();
-    const adviceStats = stats.byAdvice?.[advice.id];
+    const adviceStats = stats[advice.id]; // Исправлено: прямой доступ
     if (adviceStats && adviceStats.shown >= 3) {
       const ctr = adviceStats.clicked / adviceStats.shown;
       score += ctr * 50 * CTR_WEIGHT; // До +20 баллов за высокий CTR
@@ -726,18 +896,15 @@
       score += rating.score * 30 * CTR_WEIGHT; // До ±12 баллов
     }
     
-    // 3. Recency factor (давно не показывали = бонус)
-    try {
-      const lastShown = sessionStorage.getItem('heys_advice_last_' + advice.id);
-      if (lastShown) {
-        const hoursSince = (Date.now() - parseInt(lastShown, 10)) / (1000 * 60 * 60);
-        if (hoursSince > 24) {
-          score += Math.min(hoursSince / 24, 5) * 10 * RECENCY_WEIGHT; // До +15 за давность
-        }
-      } else {
-        score += 10 * RECENCY_WEIGHT; // Никогда не показывали = бонус
+    // 3. Recency factor (давно не показывали = бонус) — используем stats.lastShown
+    if (adviceStats?.lastShown) {
+      const hoursSince = (Date.now() - adviceStats.lastShown) / (1000 * 60 * 60);
+      if (hoursSince > 24) {
+        score += Math.min(hoursSince / 24, 5) * 10 * RECENCY_WEIGHT; // До +15 за давность
       }
-    } catch (e) {}
+    } else {
+      score += 10 * RECENCY_WEIGHT; // Никогда не показывали = бонус
+    }
     
     // 4. Relevance to current context
     // Если совет про белок и белка реально мало — релевантнее
@@ -759,6 +926,368 @@
     return advices
       .map(a => ({ ...a, smartScore: calculateSmartScore(a, ctx) }))
       .sort((a, b) => b.smartScore - a.smartScore);
+  }
+  
+  // ═══════════════════════════════════════════════════════════
+  // ADVICE SETTINGS — Управление настройками
+  // ═══════════════════════════════════════════════════════════
+  
+  /**
+   * Получает настройки советов
+   * @returns {Object}
+   */
+  function getAdviceSettings() {
+    try {
+      const stored = localStorage.getItem(ADVICE_SETTINGS_KEY);
+      if (stored) {
+        return { ...DEFAULT_ADVICE_SETTINGS, ...JSON.parse(stored) };
+      }
+    } catch (e) {}
+    return { ...DEFAULT_ADVICE_SETTINGS };
+  }
+  
+  /**
+   * Сохраняет настройки советов
+   * @param {Object} settings
+   */
+  function setAdviceSettings(settings) {
+    try {
+      const current = getAdviceSettings();
+      const merged = { ...current, ...settings };
+      localStorage.setItem(ADVICE_SETTINGS_KEY, JSON.stringify(merged));
+      // Emit event для UI
+      window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: merged }));
+    } catch (e) {}
+  }
+  
+  /**
+   * Проверяет, включена ли категория советов
+   * @param {string} category
+   * @returns {boolean}
+   */
+  function isCategoryEnabled(category) {
+    const settings = getAdviceSettings();
+    return settings.categories?.[category] !== false;
+  }
+  
+  /**
+   * Переключает категорию
+   * @param {string} category
+   * @param {boolean} enabled
+   */
+  function toggleCategory(category, enabled) {
+    const settings = getAdviceSettings();
+    settings.categories = settings.categories || {};
+    settings.categories[category] = enabled;
+    setAdviceSettings(settings);
+  }
+  
+  // ═══════════════════════════════════════════════════════════
+  // PERSONAL BEST TRACKING — Отслеживание рекордов
+  // ═══════════════════════════════════════════════════════════
+  
+  /**
+   * Получает все личные рекорды
+   * @returns {Object}
+   */
+  function getPersonalBests() {
+    try {
+      const stored = localStorage.getItem(PERSONAL_BESTS_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+  
+  /**
+   * Проверяет и обновляет личный рекорд
+   * @param {string} metric - Ключ метрики
+   * @param {number} value - Текущее значение
+   * @param {string} date - Дата в ISO формате
+   * @returns {Object|null} { isNewRecord, previousValue, improvement }
+   */
+  function checkAndUpdatePersonalBest(metric, value, date) {
+    const config = TRACKABLE_METRICS[metric];
+    if (!config) return null;
+    
+    const bests = getPersonalBests();
+    const current = bests[metric];
+    
+    let isNewRecord = false;
+    let previousValue = null;
+    
+    if (!current) {
+      isNewRecord = true;
+    } else {
+      previousValue = current.value;
+      if (config.higher) {
+        isNewRecord = value > current.value;
+      } else {
+        isNewRecord = value < current.value;
+      }
+    }
+    
+    if (isNewRecord && value > 0) {
+      bests[metric] = { value, date, previous: previousValue };
+      try {
+        localStorage.setItem(PERSONAL_BESTS_KEY, JSON.stringify(bests));
+      } catch (e) {}
+      
+      return {
+        isNewRecord: true,
+        previousValue,
+        improvement: previousValue ? Math.abs(value - previousValue) : null,
+        metric: config
+      };
+    }
+    
+    return { isNewRecord: false, currentBest: current?.value };
+  }
+  
+  /**
+   * Генерирует совет для нового рекорда
+   * @param {string} metric
+   * @param {Object} recordInfo
+   * @returns {Object|null} Advice object
+   */
+  function createPersonalBestAdvice(metric, recordInfo) {
+    if (!recordInfo?.isNewRecord) return null;
+    
+    const config = TRACKABLE_METRICS[metric];
+    if (!config) return null;
+    
+    const value = recordInfo.improvement 
+      ? `+${recordInfo.improvement.toFixed(1)}${config.unit} от прошлого!`
+      : `${config.unit}`;
+    
+    return {
+      id: 'personal_best_' + metric,
+      icon: '🏆',
+      text: `Новый личный рекорд: ${config.name}! ${value}`,
+      type: 'achievement',
+      priority: 3,
+      category: 'achievement',
+      triggers: ['tab_open'],
+      ttl: 6000,
+      showConfetti: true,
+      animation: 'bounce'
+    };
+  }
+  
+  // ═══════════════════════════════════════════════════════════
+  // ADVICE CHAINS — Связанные советы
+  // ═══════════════════════════════════════════════════════════
+  
+  const CHAIN_STORAGE_KEY = 'heys_advice_chains';
+  
+  /**
+   * Отмечает начало цепочки советов
+   * @param {string} chainId - ID начального совета
+   */
+  function markChainStart(chainId) {
+    try {
+      const chains = JSON.parse(localStorage.getItem(CHAIN_STORAGE_KEY) || '{}');
+      chains[chainId] = Date.now();
+      localStorage.setItem(CHAIN_STORAGE_KEY, JSON.stringify(chains));
+    } catch (e) {}
+  }
+  
+  /**
+   * Проверяет, пора ли показать следующий совет в цепочке
+   * @param {string} chainId
+   * @returns {Object|null} Next advice in chain или null
+   */
+  function checkChainContinuation(chainId) {
+    const chainConfig = ADVICE_CHAINS[chainId];
+    if (!chainConfig) return null;
+    
+    try {
+      const chains = JSON.parse(localStorage.getItem(CHAIN_STORAGE_KEY) || '{}');
+      const startTime = chains[chainId];
+      if (!startTime) return null;
+      
+      const minutesPassed = (Date.now() - startTime) / (1000 * 60);
+      if (minutesPassed >= chainConfig.delayMinutes) {
+        // Удаляем из chains, чтобы не показать снова
+        delete chains[chainId];
+        localStorage.setItem(CHAIN_STORAGE_KEY, JSON.stringify(chains));
+        
+        return chainConfig.next;
+      }
+    } catch (e) {}
+    
+    return null;
+  }
+  
+  /**
+   * Генерирует follow-up советы для цепочек
+   * @returns {Array} Массив follow-up советов
+   */
+  function generateChainAdvices() {
+    const advices = [];
+    
+    // Проверяем все активные цепочки
+    for (const chainId of Object.keys(ADVICE_CHAINS)) {
+      const nextId = checkChainContinuation(chainId);
+      if (nextId) {
+        // Генерируем follow-up совет
+        if (nextId === 'protein_sources') {
+          advices.push({
+            id: 'protein_sources',
+            icon: '🍗',
+            text: 'Идеи для белка: курица, яйца, творог, рыба, греческий йогурт',
+            details: 'Курица — 27г/100г, Творог — 18г/100г, Яйца — 13г/100г, Тунец — 24г/100г',
+            type: 'tip',
+            priority: 28,
+            category: 'nutrition',
+            triggers: ['tab_open'],
+            ttl: 7000
+          });
+        } else if (nextId === 'fiber_sources') {
+          advices.push({
+            id: 'fiber_sources',
+            icon: '🥦',
+            text: 'Лучшие источники клетчатки: брокколи, овсянка, чечевица, авокадо',
+            details: 'Чечевица — 8г/100г, Авокадо — 7г/100г, Брокколи — 3г/100г, Овсянка — 10г/100г',
+            type: 'tip',
+            priority: 28,
+            category: 'nutrition',
+            triggers: ['tab_open'],
+            ttl: 7000
+          });
+        } else if (nextId === 'water_benefits') {
+          advices.push({
+            id: 'water_benefits',
+            icon: '💧',
+            text: 'Вода ускоряет метаболизм на 30% на час после стакана',
+            type: 'tip',
+            priority: 45,
+            category: 'hydration',
+            triggers: ['tab_open'],
+            ttl: 5000
+          });
+        }
+      }
+    }
+    
+    return advices;
+  }
+  
+  // ═══════════════════════════════════════════════════════════
+  // ADVICE SCHEDULING — Отложенные напоминания
+  // ═══════════════════════════════════════════════════════════
+  
+  /**
+   * Откладывает совет на указанное время
+   * @param {Object} advice - Совет
+   * @param {number} minutes - Через сколько минут показать
+   */
+  function scheduleAdvice(advice, minutes) {
+    try {
+      const scheduled = JSON.parse(localStorage.getItem(SCHEDULED_KEY) || '[]');
+      scheduled.push({
+        advice,
+        showAt: Date.now() + minutes * 60 * 1000
+      });
+      localStorage.setItem(SCHEDULED_KEY, JSON.stringify(scheduled));
+      
+      // Уведомление об отложке
+      window.dispatchEvent(new CustomEvent('heysAdviceScheduled', { 
+        detail: { advice, minutes } 
+      }));
+    } catch (e) {}
+  }
+  
+  /**
+   * Получает советы, которые пора показать
+   * @returns {Array}
+   */
+  function getScheduledAdvices() {
+    try {
+      const scheduled = JSON.parse(localStorage.getItem(SCHEDULED_KEY) || '[]');
+      const now = Date.now();
+      
+      const ready = scheduled.filter(s => s.showAt <= now);
+      const remaining = scheduled.filter(s => s.showAt > now);
+      
+      // Обновляем storage
+      localStorage.setItem(SCHEDULED_KEY, JSON.stringify(remaining));
+      
+      return ready.map(s => ({
+        ...s.advice,
+        id: s.advice.id + '_scheduled',
+        isScheduled: true,
+        text: '⏰ ' + s.advice.text,
+        triggers: ['scheduled', 'tab_open', 'product_added'], // Показываем при любом триггере
+        priority: 100 // Высокий приоритет — пользователь сам отложил
+      }));
+    } catch (e) {
+      return [];
+    }
+  }
+  
+  /**
+   * Получает количество отложенных советов
+   * @returns {number}
+   */
+  function getScheduledCount() {
+    try {
+      const scheduled = JSON.parse(localStorage.getItem(SCHEDULED_KEY) || '[]');
+      return scheduled.length;
+    } catch (e) {
+      return 0;
+    }
+  }
+  
+  // ═══════════════════════════════════════════════════════════
+  // GOAL-SPECIFIC ADVICE — Советы по целям
+  // ═══════════════════════════════════════════════════════════
+  
+  /**
+   * Определяет режим цели пользователя
+   * @param {number} deficitPct - % дефицита/профицита
+   * @returns {'deficit'|'bulk'|'maintenance'}
+   */
+  function getGoalMode(deficitPct) {
+    if (deficitPct <= -10) return 'deficit';
+    if (deficitPct >= 10) return 'bulk';
+    return 'maintenance';
+  }
+  
+  /**
+   * Получает бонусные советы для текущей цели
+   * @param {string} goalMode
+   * @returns {Array}
+   */
+  function getGoalSpecificAdvices(goalMode) {
+    const config = GOAL_MODES[goalMode];
+    if (!config || !config.bonusAdvices) return [];
+    
+    return config.bonusAdvices.map(a => ({
+      ...a,
+      type: 'tip',
+      category: 'lifestyle',
+      triggers: ['tab_open'],
+      ttl: 5000,
+      goalSpecific: true
+    }));
+  }
+  
+  // ═══════════════════════════════════════════════════════════
+  // MICRO-ANIMATIONS — Получение анимации для типа совета
+  // ═══════════════════════════════════════════════════════════
+  
+  /**
+   * Получает класс анимации для совета
+   * @param {Object} advice
+   * @returns {string} CSS class name
+   */
+  function getAdviceAnimation(advice) {
+    // Явно заданная анимация
+    if (advice.animation) return advice.animation;
+    
+    // По типу
+    return ADVICE_ANIMATIONS[advice.type] || 'fadeSlide';
   }
   
   // ═══════════════════════════════════════════════════════════
@@ -1442,7 +1971,23 @@
   function getTrackingStats() {
     try {
       const data = localStorage.getItem(TRACKING_KEY);
-      return data ? JSON.parse(data) : {};
+      if (!data) return {};
+      const parsed = JSON.parse(data);
+      
+      // Автоочистка: удаляем записи старше 30 дней
+      const now = Date.now();
+      const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+      let needsSave = false;
+      Object.keys(parsed).forEach(key => {
+        if (parsed[key].lastShown && (now - parsed[key].lastShown) > THIRTY_DAYS) {
+          delete parsed[key];
+          needsSave = true;
+        }
+      });
+      if (needsSave) {
+        localStorage.setItem(TRACKING_KEY, JSON.stringify(parsed));
+      }
+      return parsed;
     } catch (e) {
       return {};
     }
@@ -1616,6 +2161,24 @@
   // ═══════════════════════════════════════════════════════════
   // ADVICE GENERATION
   // ═══════════════════════════════════════════════════════════
+  
+  /**
+   * Создаёт совет со стабильным текстом (детерминированный выбор из вариантов)
+   * @param {Object} advice - Объект совета с id, text (string|array), и др.
+   * @param {Object} ctx - Контекст для personalizeText
+   * @returns {Object} Совет со стабильным текстом
+   */
+  function createAdvice(advice, ctx) {
+    // Если text — массив, выбираем стабильно по id
+    const rawText = Array.isArray(advice.text) 
+      ? pickRandomText(advice.text, advice.id) 
+      : advice.text;
+    
+    // Персонализируем текст
+    const text = ctx ? personalizeText(rawText, ctx) : rawText;
+    
+    return { ...advice, text };
+  }
   
   /**
    * Генерирует все возможные советы на основе контекста
@@ -4472,13 +5035,66 @@
     
     // Генерируем все советы
     const allAdvices = React.useMemo(() => {
-      return generateAdvices(ctx);
+      const baseAdvices = generateAdvices(ctx);
+      
+      // 🔗 Добавляем chain follow-ups
+      const chainAdvices = generateChainAdvices();
+      
+      // ⏰ Добавляем отложенные советы
+      const scheduledAdvices = getScheduledAdvices();
+      
+      // 🎯 Добавляем goal-specific советы
+      const goalAdvices = getGoalSpecificAdvices(ctx.goal);
+      
+      // 🏆 Проверяем personal bests
+      const personalBestAdvices = [];
+      const todayISO = new Date().toISOString().slice(0, 10);
+      
+      // Проверяем рекорды по метрикам
+      const proteinPct = (ctx.dayTot?.prot || 0) / (ctx.normAbs?.prot || 100);
+      const proteinRecord = checkAndUpdatePersonalBest('proteinPct', proteinPct * 100, todayISO);
+      if (proteinRecord?.isNewRecord) {
+        const advice = createPersonalBestAdvice('proteinPct', proteinRecord);
+        if (advice) personalBestAdvices.push(advice);
+      }
+      
+      const fiberPct = (ctx.dayTot?.fiber || 0) / (ctx.normAbs?.fiber || 25);
+      const fiberRecord = checkAndUpdatePersonalBest('fiberPct', fiberPct * 100, todayISO);
+      if (fiberRecord?.isNewRecord) {
+        const advice = createPersonalBestAdvice('fiberPct', fiberRecord);
+        if (advice) personalBestAdvices.push(advice);
+      }
+      
+      // Streak record
+      if (ctx.currentStreak > 0) {
+        const streakRecord = checkAndUpdatePersonalBest('streak', ctx.currentStreak, todayISO);
+        if (streakRecord?.isNewRecord) {
+          const advice = createPersonalBestAdvice('streak', streakRecord);
+          if (advice) personalBestAdvices.push(advice);
+        }
+      }
+      
+      return [
+        ...baseAdvices, 
+        ...chainAdvices, 
+        ...scheduledAdvices, 
+        ...goalAdvices,
+        ...personalBestAdvices
+      ];
     }, [ctx]);
+    
+    // 🔧 Фильтруем по включённым категориям
+    const categoryFilteredAdvices = React.useMemo(() => {
+      return allAdvices.filter(a => {
+        if (!a.category) return true;
+        return isCategoryEnabled(a.category);
+      });
+    }, [allAdvices]);
     
     // Применяем boost для goal-specific советов
     const boostedAdvices = React.useMemo(() => {
-      return applyGoalBoost(allAdvices, ctx.goal);
-    }, [allAdvices, ctx.goal]);
+      return applyGoalBoost(categoryFilteredAdvices, ctx.goal);
+    }, [categoryFilteredAdvices, ctx.goal]);
     
     // Фильтруем по эмоциональному состоянию
     const filteredAdvices = React.useMemo(() => {
@@ -4530,13 +5146,23 @@
     // Основной совет (первый доступный)
     const primary = relevantAdvices[0] || null;
     
+    // Добавляем animation класс
+    const primaryWithAnimation = primary ? {
+      ...primary,
+      animationClass: getAdviceAnimation(primary)
+    } : null;
+    
     // Количество для badge — ВСЕ советы для триггера (без canShowAdvice)
     const adviceCount = allForTrigger.length;
     
+    // Количество отложенных
+    const scheduledCount = getScheduledCount();
+    
     return {
-      primary,
+      primary: primaryWithAnimation,
       relevant: allForTrigger, // Все советы для развёртывания
       adviceCount,
+      scheduledCount,
       allAdvices,
       ctx,
       // Методы
@@ -4546,6 +5172,7 @@
       },
       trackClick: trackAdviceClicked, // 📊 Tracking клика
       rateAdvice, // 👍/👎 Rating
+      scheduleAdvice, // ⏰ Отложить совет
       canShow: canShowAdvice,
       resetSession: resetSessionAdvices
     };
@@ -4638,7 +5265,34 @@
     markComboShown,
     trackProductPattern,
     getSmartRecommendation,
-    calculateSmartScore
+    calculateSmartScore,
+    // 🆕 Phase 5 helpers
+    // Settings
+    getAdviceSettings,
+    setAdviceSettings,
+    isCategoryEnabled,
+    toggleCategory,
+    CATEGORY_LABELS,
+    DEFAULT_ADVICE_SETTINGS,
+    // Personal Bests
+    getPersonalBests,
+    checkAndUpdatePersonalBest,
+    createPersonalBestAdvice,
+    TRACKABLE_METRICS,
+    // Chains
+    checkChainContinuation,
+    generateChainAdvices,
+    // Scheduling
+    scheduleAdvice,
+    getScheduledAdvices,
+    getScheduledCount,
+    SNOOZE_OPTIONS,
+    // Goal-specific
+    getGoalSpecificAdvices,
+    GOAL_MODES,
+    // Animations
+    getAdviceAnimation,
+    ADVICE_ANIMATIONS
   };
   
 })();

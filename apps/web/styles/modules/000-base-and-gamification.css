@@ -4154,6 +4154,119 @@ body:has(.offline-banner) .wrap {
   font-size: 10px;
 }
 
+/* ============================================
+   MEAL HEADER INSIDE CARD
+   Заголовок приёма внутри карточки 
+   ============================================ */
+.meal-header-inside {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: -6px -12px 8px -12px; /* Растягиваем до краёв карточки */
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+/* Тип приёма внутри карточки — наследует стили от meal-type-wrapper */
+.meal-header-inside .meal-type-wrapper {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.meal-header-inside .meal-type-label {
+  font-size: 13px;
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+/* Время приёма внутри карточки */
+.meal-time-badge-inside {
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.meal-time-badge-inside:hover {
+  background: #fde68a;
+  transform: scale(1.02);
+}
+
+.meal-time-badge-inside:active {
+  transform: scale(0.98);
+}
+
+/* Калории приёма — справа */
+.meal-kcal-badge-inside {
+  margin-left: auto;
+  background: #e2e8f0;
+  color: #475569;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+/* Стили для разных типов приёмов пищи ВНУТРИ карточки */
+.meal-header-inside.meal-type-breakfast {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-bottom-color: #fed7aa;
+}
+.meal-header-inside.meal-type-breakfast .meal-kcal-badge-inside { 
+  background: #fff7ed; 
+  color: #c2410c; 
+}
+
+.meal-header-inside.meal-type-lunch {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-bottom-color: #bbf7d0;
+}
+.meal-header-inside.meal-type-lunch .meal-kcal-badge-inside { 
+  background: #f0fdf4; 
+  color: #15803d; 
+}
+
+.meal-header-inside.meal-type-dinner {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-bottom-color: #bfdbfe;
+}
+.meal-header-inside.meal-type-dinner .meal-kcal-badge-inside { 
+  background: #eff6ff; 
+  color: #1d4ed8; 
+}
+
+.meal-header-inside.meal-type-snack1,
+.meal-header-inside.meal-type-snack2,
+.meal-header-inside.meal-type-snack3 {
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border-bottom-color: #e5e7eb;
+}
+.meal-header-inside.meal-type-snack1 .meal-kcal-badge-inside,
+.meal-header-inside.meal-type-snack2 .meal-kcal-badge-inside,
+.meal-header-inside.meal-type-snack3 .meal-kcal-badge-inside { 
+  background: #f3f4f6; 
+  color: #6b7280; 
+}
+
+.meal-header-inside.meal-type-night {
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  border-bottom-color: #c7d2fe;
+}
+.meal-header-inside.meal-type-night .meal-kcal-badge-inside { 
+  background: #eef2ff; 
+  color: #6366f1; 
+}
+
 .meal-card {
   padding-top: 6px;
   padding-bottom: 6px;

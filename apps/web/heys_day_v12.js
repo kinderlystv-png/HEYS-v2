@@ -689,9 +689,9 @@
     const mealCardClass = isCurrentMeal ? 'card tone-blue meal-card' : 'card tone-slate meal-card';
     const computeDerivedProductFn = M.computeDerivedProduct || ((prod) => prod || {});
 
-    return React.createElement(React.Fragment,null,
-      // Заголовок приёма: тип (dropdown) · время · калории
-      React.createElement('div',{className:'meal-sep meal-type-' + mealTypeInfo.type},
+    return React.createElement('div',{className: mealCardClass, 'data-meal-index': mealIndex, style:{marginTop:'8px', width: '100%'}},
+      // Заголовок приёма ВНУТРИ карточки: тип (dropdown) · время · калории
+      React.createElement('div',{className:'meal-header-inside meal-type-' + mealTypeInfo.type},
         // Обёртка для dropdown
         React.createElement('div', { className: 'meal-type-wrapper' },
           // Текущий тип (иконка + название) — кликабельный
@@ -723,16 +723,17 @@
             React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
           ))
         ),
-        // Время (если есть)
-        timeDisplay && React.createElement('span', { className: 'meal-time-badge' }, 
-          '· ' + timeDisplay
-        ),
-        // Калории (если есть продукты)
-        mealKcal > 0 && React.createElement('span', { className: 'meal-kcal-badge' }, 
-          mealKcal + ' ккал'
+        // Время (кликабельное для редактирования)
+        timeDisplay && React.createElement('span', { 
+          className: 'meal-time-badge-inside',
+          onClick: () => openTimeEditor(mealIndex),
+          title: 'Изменить время'
+        }, timeDisplay),
+        // Калории справа
+        React.createElement('span', { className: 'meal-kcal-badge-inside' }, 
+          mealKcal > 0 ? (mealKcal + ' ккал') : '0 ккал'
         )
       ),
-      React.createElement('div',{className: mealCardClass, 'data-meal-index': mealIndex, style:{marginTop:'4px', width: '100%'}},
       // MOBILE: Meal totals at top (before search)
       (meal.items || []).length > 0 && React.createElement('div', { className: 'mpc-totals-wrap mobile-only' },
         React.createElement('div', { className: 'mpc-grid mpc-header' },
@@ -1026,7 +1027,6 @@
           React.createElement('button', { className: 'meal-delete-btn', onClick: () => onRemoveMeal(mealIndex), title: 'Удалить приём' }, '🗑')
         )
       )
-      )
     );
   }, (prevProps, nextProps) => {
     // Custom comparison: ререндерим если изменились важные поля meal
@@ -1052,6 +1052,10 @@
     isLastDismissed,
     lastDismissedAction,
     onUndo,
+    onClearLastDismissed,
+    onSchedule,
+    onToggleExpand,
+    onRate,
     onSwipeStart,
     onSwipeMove,
     onSwipeEnd,
@@ -1059,10 +1063,28 @@
     onLongPressEnd,
     registerCardRef
   }) {
+    const [scheduledConfirm, setScheduledConfirm] = React.useState(false);
+    const [ratedState, setRatedState] = React.useState(null); // 'positive' | 'negative' | null
+    
     const swipeX = swipeState?.x || 0;
     const swipeDirection = swipeState?.direction;
     const swipeProgress = Math.min(1, Math.abs(swipeX) / 100);
     const showUndo = isLastDismissed && (isDismissed || isHidden);
+    
+    // Обработчик "Напомнить через 2ч"
+    const handleSchedule = React.useCallback((e) => {
+      e.stopPropagation();
+      if (onSchedule) {
+        onSchedule(advice, 120); // Передаём полный объект advice
+        setScheduledConfirm(true);
+        // Haptic feedback
+        if (navigator.vibrate) navigator.vibrate(50);
+        // Очистить undo overlay через 1.5 сек (совет остаётся dismissed)
+        setTimeout(() => {
+          onClearLastDismissed && onClearLastDismissed();
+        }, 1500);
+      }
+    }, [advice, onSchedule, onClearLastDismissed]);
     
     if ((isDismissed || isHidden) && !showUndo) return null;
     
@@ -1095,20 +1117,57 @@
           fontSize: '14px',
           cursor: 'pointer',
           zIndex: 10,
-          backdropFilter: 'blur(4px)'
+          backdropFilter: 'blur(4px)',
+          // Меняем фон при подтверждении schedule
+          background: scheduledConfirm 
+            ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(37, 99, 235, 0.9) 100%)'
+            : (lastDismissedAction === 'hidden' 
+              ? 'linear-gradient(135deg, rgba(251, 146, 60, 0.85) 0%, rgba(234, 88, 12, 0.85) 100%)' 
+              : 'linear-gradient(135deg, rgba(34, 197, 94, 0.85) 0%, rgba(22, 163, 74, 0.85) 100%)')
         }
       },
-        React.createElement('span', null, lastDismissedAction === 'hidden' ? '🔕 Скрыто' : '✓ Прочитано'),
-        React.createElement('span', { 
-          style: { 
-            background: 'rgba(255,255,255,0.3)', 
-            padding: '4px 10px', 
-            borderRadius: '12px',
-            fontSize: '13px'
-          } 
-        }, 'Отменить'),
-        // Прогресс-бар (убывает за 3 сек)
-        React.createElement('div', {
+        // Показываем подтверждение или обычные кнопки
+        scheduledConfirm 
+          ? React.createElement('span', { 
+              style: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                animation: 'fadeIn 0.3s ease'
+              } 
+            }, '⏰ Напомню через 2 часа ✓')
+          : React.createElement(React.Fragment, null,
+              React.createElement('span', null, lastDismissedAction === 'hidden' ? '🔕 Скрыто' : '✓ Прочитано'),
+              React.createElement('div', {
+                style: { display: 'flex', gap: '8px' }
+              },
+                React.createElement('span', { 
+                  onClick: (e) => { e.stopPropagation(); onUndo(); },
+                  style: { 
+                    background: 'rgba(255,255,255,0.3)', 
+                    padding: '4px 10px', 
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                    cursor: 'pointer'
+                  } 
+                }, 'Отменить'),
+                onSchedule && React.createElement('span', { 
+                  onClick: handleSchedule,
+                  style: { 
+                    background: 'rgba(255,255,255,0.25)', 
+                    padding: '4px 10px', 
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  } 
+                }, '⏰ 2ч')
+              )
+            ),
+        // Прогресс-бар (убывает за 3 сек) — скрываем при scheduled
+        !scheduledConfirm && React.createElement('div', {
           style: {
             position: 'absolute',
             bottom: 0,
@@ -1143,6 +1202,12 @@
           opacity: showUndo ? 0.1 : (1 - swipeProgress * 0.3),
           pointerEvents: showUndo ? 'none' : 'auto'
         },
+        onClick: (e) => {
+          // Раскрытие по тапу (если не свайп)
+          if (showUndo || Math.abs(swipeX) > 10) return;
+          e.stopPropagation();
+          onToggleExpand && onToggleExpand(advice.id);
+        },
         onTouchStart: (e) => {
           if (showUndo) return;
           onSwipeStart(advice.id, e);
@@ -1162,9 +1227,74 @@
         React.createElement('span', { className: 'advice-list-icon' }, advice.icon),
         React.createElement('div', { className: 'advice-list-content' },
           React.createElement('span', { className: 'advice-list-text' }, advice.text),
+          // Детали при раскрытии
           isExpanded && advice.details && React.createElement('div', { 
             className: 'advice-list-details'
-          }, advice.details)
+          }, advice.details),
+          // Рейтинг при раскрытии
+          isExpanded && onRate && React.createElement('div', {
+            className: 'advice-list-rating',
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginTop: '8px',
+              paddingTop: '8px',
+              borderTop: '1px solid rgba(0,0,0,0.1)'
+            }
+          },
+            // Показываем либо кнопки, либо результат
+            ratedState 
+              ? React.createElement('span', { 
+                  style: { 
+                    fontSize: '13px', 
+                    color: ratedState === 'positive' ? 'var(--green-600)' : 'var(--red-500)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    animation: 'fadeIn 0.3s ease'
+                  } 
+                }, ratedState === 'positive' ? '👍 Спасибо за отзыв!' : '👎 Учтём это!')
+              : React.createElement(React.Fragment, null,
+                  React.createElement('span', { 
+                    style: { fontSize: '12px', color: 'var(--gray-500)' } 
+                  }, 'Полезный совет?'),
+                  React.createElement('button', {
+                    onClick: (e) => { 
+                      e.stopPropagation(); 
+                      onRate(advice.id, true);
+                      setRatedState('positive');
+                      if (navigator.vibrate) navigator.vibrate(30);
+                    },
+                    style: {
+                      background: 'var(--green-100)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      fontSize: '16px',
+                      cursor: 'pointer',
+                      transition: 'transform 0.1s'
+                    }
+                  }, '👍'),
+                  React.createElement('button', {
+                    onClick: (e) => { 
+                      e.stopPropagation(); 
+                      onRate(advice.id, false);
+                      setRatedState('negative');
+                      if (navigator.vibrate) navigator.vibrate(30);
+                    },
+                    style: {
+                      background: 'var(--red-100)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      fontSize: '16px',
+                      cursor: 'pointer',
+                      transition: 'transform 0.1s'
+                    }
+                  }, '👎')
+                )
+          )
         )
       )
     );
@@ -1968,6 +2098,14 @@
       haptic('light');
     }, [haptic, lastDismissedAdvice]);
     
+    // Просто очистить undo overlay (для schedule — совет остаётся dismissed)
+    const clearLastDismissed = React.useCallback(() => {
+      if (lastDismissedAdvice?.hideTimeout) {
+        clearTimeout(lastDismissedAdvice.hideTimeout);
+      }
+      setLastDismissedAdvice(null);
+    }, [lastDismissedAdvice]);
+    
     const handleAdviceSwipeEnd = React.useCallback((adviceId) => {
       const state = adviceSwipeState[adviceId];
       const swipeX = state?.x || 0;
@@ -2059,6 +2197,12 @@
       }
     }, []);
     
+    // Toggle раскрытия совета по тапу
+    const handleAdviceToggleExpand = React.useCallback((adviceId) => {
+      setExpandedAdviceId(prev => prev === adviceId ? null : adviceId);
+      haptic('light');
+    }, [haptic]);
+    
     // "Прочитать все" с эффектом домино
     const handleDismissAll = () => {
       setDismissAllAnimation(true);
@@ -2121,6 +2265,16 @@
     const pullStartY = React.useRef(0);
     const isPulling = React.useRef(false);
     const lastHapticRef = React.useRef(0);
+    
+    // === Current time for Insulin Wave Indicator (updates every minute) ===
+    const [currentMinute, setCurrentMinute] = useState(() => Math.floor(Date.now() / 60000));
+    const [insulinExpanded, setInsulinExpanded] = useState(false);
+    React.useEffect(() => {
+      const intervalId = setInterval(() => {
+        setCurrentMinute(Math.floor(Date.now() / 60000));
+      }, 60000); // Обновляем каждую минуту
+      return () => clearInterval(intervalId);
+    }, []);
     
     // === Offline indicator ===
     const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -2272,6 +2426,10 @@
     
     // === Progress animation ===
     const [animatedProgress, setAnimatedProgress] = useState(0);
+    const [animatedKcal, setAnimatedKcal] = useState(0);
+    const [animatedRatioPct, setAnimatedRatioPct] = useState(0); // Анимированный % для бейджа
+    const [animatedMarkerPos, setAnimatedMarkerPos] = useState(0); // Позиция бейджа (всегда до 100%)
+    const [isAnimating, setIsAnimating] = useState(false);
     
     // === Edit Grams Modal (slider-based, like MealAddProduct) ===
     const [editGramsTarget, setEditGramsTarget] = useState(null); // {mealIndex, itemId, product}
@@ -4088,9 +4246,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       uiState,
       prof,        // Профиль пользователя для персонализации
       waterGoal    // Динамическая норма воды из waterGoalBreakdown
-    }) : { primary: null, relevant: [], adviceCount: 0, allAdvices: [], rateAdvice: null };
+    }) : { primary: null, relevant: [], adviceCount: 0, allAdvices: [], rateAdvice: null, scheduleAdvice: null, scheduledCount: 0 };
     
-    const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, allAdvices, markShown, rateAdvice } = adviceResult;
+    const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, allAdvices, markShown, rateAdvice, scheduleAdvice, scheduledCount } = adviceResult;
     
     // Количество непрочитанных советов (для badge на FAB кнопке)
     const totalAdviceCount = React.useMemo(() => {
@@ -4105,6 +4263,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       };
       window.addEventListener('heysProductAdded', handleProductAdded);
       return () => window.removeEventListener('heysProductAdded', handleProductAdded);
+    }, []);
+    
+    // Интервальная проверка scheduled советов (каждые 30 сек)
+    React.useEffect(() => {
+      const checkScheduled = () => {
+        try {
+          const scheduled = JSON.parse(localStorage.getItem('heys_scheduled_advices') || '[]');
+          const now = Date.now();
+          const ready = scheduled.filter(s => s.showAt <= now);
+          if (ready.length > 0) {
+            // Есть готовые советы — триггерим показ
+            setAdviceTrigger('scheduled');
+          }
+        } catch (e) {}
+      };
+      const intervalId = setInterval(checkScheduled, 30000); // 30 сек
+      return () => clearInterval(intervalId);
     }, []);
     
     // Listener для heysCelebrate event (централизованный confetti от gamification)
@@ -4967,6 +5142,210 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       return { meals: data, totalKcal, maxKcal, targetKcal: optimum || 2000, qualityStreak, avgQualityScore, bestMealIndex, yesterdayAvgScore };
     }, [day.meals, pIndex, optimum]);
 
+    // === INSULIN WAVE INDICATOR DATA ===
+    const insulinWaveData = React.useMemo(() => {
+      const meals = day.meals || [];
+      if (meals.length === 0) return null;
+      
+      // Находим последний приём с временем
+      const mealsWithTime = meals.filter(m => m.time);
+      if (mealsWithTime.length === 0) return null;
+      
+      // Сортируем по времени и берём последний
+      const sorted = [...mealsWithTime].sort((a, b) => {
+        const timeA = (a.time || '').replace(':', '');
+        const timeB = (b.time || '').replace(':', '');
+        return timeB.localeCompare(timeA);
+      });
+      const lastMeal = sorted[0];
+      const lastMealTime = lastMeal?.time;
+      
+      if (!lastMealTime) return null;
+      
+      const prof = getProfile();
+      const baseWaveHours = prof?.insulinWaveHours || 3;
+      
+      // === Расчёт средневзвешенного ГИ последнего приёма ===
+      let avgGI = 50; // дефолт
+      let totalGrams = 0;
+      let weightedGI = 0;
+      const lastMealItems = lastMeal.items || [];
+      
+      for (const item of lastMealItems) {
+        const grams = item.grams || 100;
+        const prod = getProductFromItem(item, pIndex);
+        const gi = prod?.gi || prod?.gi100 || prod?.GI || 50;
+        weightedGI += gi * grams;
+        totalGrams += grams;
+      }
+      if (totalGrams > 0) {
+        avgGI = Math.round(weightedGI / totalGrams);
+      }
+      
+      // === GI Multiplier для длины волны ===
+      // Низкий ГИ = дольше усваивается = больше ждать
+      // Высокий ГИ = быстрее = меньше ждать
+      let giMultiplier = 1.0;
+      let giCategory = 'medium';
+      if (avgGI <= 35) {
+        giMultiplier = 1.2;
+        giCategory = 'low';
+      } else if (avgGI <= 55) {
+        giMultiplier = 1.0;
+        giCategory = 'medium';
+      } else if (avgGI <= 70) {
+        giMultiplier = 0.85;
+        giCategory = 'high';
+      } else {
+        giMultiplier = 0.7;
+        giCategory = 'very-high';
+      }
+      
+      // Скорректированная длина волны
+      const adjustedWaveHours = baseWaveHours * giMultiplier;
+      const waveMinutes = adjustedWaveHours * 60;
+      
+      const [mealH, mealM] = lastMealTime.split(':').map(Number);
+      if (isNaN(mealH) || isNaN(mealM)) return null;
+      
+      // Время последнего приёма в минутах
+      const mealMinutes = mealH * 60 + mealM;
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      
+      // Разница в минутах
+      let diffMinutes = nowMinutes - mealMinutes;
+      if (diffMinutes < 0) diffMinutes = 0;
+      
+      const remainingMinutes = Math.max(0, waveMinutes - diffMinutes);
+      const progressPct = Math.min(100, (diffMinutes / waveMinutes) * 100);
+      
+      // Время окончания волны (когда можно есть)
+      const endTime = (() => {
+        const endMinutes = mealMinutes + Math.round(waveMinutes);
+        const endH = Math.floor(endMinutes / 60) % 24;
+        const endM = endMinutes % 60;
+        return String(endH).padStart(2, '0') + ':' + String(endM).padStart(2, '0');
+      })();
+      
+      // === История волн за день ===
+      const waveHistory = sorted.map((meal, idx) => {
+        const t = meal.time;
+        if (!t) return null;
+        const [h, m] = t.split(':').map(Number);
+        if (isNaN(h)) return null;
+        const startMin = h * 60 + (m || 0);
+        
+        // Считаем ГИ этого приёма
+        let mealGI = 50;
+        let mealGrams = 0, mealWeightedGI = 0;
+        for (const item of (meal.items || [])) {
+          const g = item.grams || 100;
+          const prod = getProductFromItem(item, pIndex);
+          const gi = prod?.gi || prod?.gi100 || 50;
+          mealWeightedGI += gi * g;
+          mealGrams += g;
+        }
+        if (mealGrams > 0) mealGI = Math.round(mealWeightedGI / mealGrams);
+        
+        // Множитель для этого приёма
+        let mult = 1.0;
+        if (mealGI <= 35) mult = 1.2;
+        else if (mealGI <= 55) mult = 1.0;
+        else if (mealGI <= 70) mult = 0.85;
+        else mult = 0.7;
+        
+        const duration = Math.round(baseWaveHours * mult * 60);
+        const endMin = startMin + duration;
+        
+        return {
+          time: t,
+          startMin,
+          endMin,
+          duration,
+          gi: mealGI,
+          isActive: idx === 0 && remainingMinutes > 0
+        };
+      }).filter(Boolean).reverse(); // от раннего к позднему
+      
+      // Определяем следующий рекомендуемый приём (с учётом времени суток)
+      const getNextMealSuggestion = () => {
+        const currentHour = now.getHours();
+        // Ночью (22:00 - 06:00) не предлагаем еду
+        if (currentHour >= 22 || currentHour < 6) {
+          return null; // Не предлагать еду ночью
+        }
+        if (currentHour < 10) return { type: 'breakfast', icon: '🍳', name: 'Завтрак' };
+        if (currentHour < 12) return { type: 'snack', icon: '🍎', name: 'Перекус' };
+        if (currentHour < 14) return { type: 'lunch', icon: '🍲', name: 'Обед' };
+        if (currentHour < 17) return { type: 'snack', icon: '🥜', name: 'Перекус' };
+        if (currentHour < 20) return { type: 'dinner', icon: '🍽️', name: 'Ужин' };
+        return { type: 'light', icon: '🥛', name: 'Лёгкий перекус' }; // 20:00-22:00
+      };
+      
+      // Проверка: ночное время (не стоит есть)
+      const isNightTime = now.getHours() >= 22 || now.getHours() < 6;
+      
+      // Статус
+      let status, emoji, text, color, subtext;
+      if (remainingMinutes <= 0) {
+        status = 'ready'; 
+        emoji = '✅'; 
+        text = 'Можно есть!'; 
+        color = '#22c55e';
+        
+        // Ночью другое сообщение
+        if (isNightTime) {
+          subtext = '🌙 Но лучше отложить до утра';
+        } else {
+          const suggestion = getNextMealSuggestion();
+          subtext = suggestion ? suggestion.icon + ' Время для: ' + suggestion.name : null;
+        }
+      } else if (remainingMinutes <= 15) {
+        status = 'almost';
+        emoji = '🔥';
+        text = Math.ceil(remainingMinutes) + ' мин';
+        color = '#f97316';
+        subtext = isNightTime ? '🌙 Но ночью лучше не есть' : '⏰ Скоро можно есть!';
+      } else if (remainingMinutes <= 30) {
+        const mins = Math.ceil(remainingMinutes);
+        status = 'soon'; emoji = '⏰'; text = mins + ' мин'; color = '#eab308';
+        subtext = '🍵 Выпей воды пока ждёшь';
+      } else {
+        const hours = Math.floor(remainingMinutes / 60);
+        const mins = Math.round(remainingMinutes % 60);
+        text = hours > 0 ? hours + 'ч ' + mins + 'м' : mins + ' мин';
+        status = 'waiting'; emoji = '🌊'; color = '#0ea5e9';
+        subtext = '💧 Отличное время для воды';
+      }
+      
+      return { 
+        status, emoji, text, color, subtext,
+        progress: progressPct, 
+        remaining: remainingMinutes,
+        lastMealTime,
+        endTime,
+        insulinWaveHours: adjustedWaveHours,
+        baseWaveHours,
+        isNightTime,
+        // Данные о ГИ
+        avgGI,
+        giCategory,
+        giMultiplier,
+        // История волн за день
+        waveHistory
+      };
+    }, [day.meals, pIndex, currentMinute]); // currentMinute для авто-обновления
+
+    // === Haptic при готовности есть ===
+    const prevInsulinStatusRef = React.useRef(null);
+    React.useEffect(() => {
+      if (insulinWaveData?.status === 'ready' && prevInsulinStatusRef.current !== 'ready') {
+        try { HEYS.dayUtils?.haptic?.('success'); } catch(e) {}
+      }
+      prevInsulinStatusRef.current = insulinWaveData?.status || null;
+    }, [insulinWaveData?.status]);
+
     // Haptic feedback for streak / low scores
     React.useEffect(() => {
       const currentStreak = mealsChartData?.qualityStreak || 0;
@@ -5153,8 +5532,24 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       };
     }, [pullProgress, isRefreshing, refreshStatus]);
     
-    // === Анимация прогресса калорий при загрузке ===
+    // === Анимация прогресса калорий при загрузке и при переключении на вкладку ===
+    const animationRef = React.useRef(null);
     React.useEffect(() => {
+      console.log('[ProgressBar] Effect triggered, mobileSubTab:', mobileSubTab, 'eatenKcal:', eatenKcal);
+      
+      // Отменяем предыдущую анимацию
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      
+      // Шаг 1: Сбрасываем к 0 мгновенно
+      setIsAnimating(true);
+      setAnimatedProgress(0);
+      setAnimatedKcal(0);
+      setAnimatedRatioPct(0);
+      setAnimatedMarkerPos(0);
+      console.log('[ProgressBar] Reset to 0, isAnimating: true');
+      
       // При переборе: зелёная часть = доля нормы от съеденного (optimum/eaten)
       // При норме: зелёная часть = доля съеденного от нормы (eaten/optimum)
       const isOver = eatenKcal > optimum;
@@ -5162,26 +5557,53 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         ? (optimum / eatenKcal) * 100  // При переборе: показываем долю нормы
         : (eatenKcal / optimum) * 100; // При норме: показываем прогресс к цели
       
-      // Анимируем от 0 до target
-      let start = 0; // Всегда начинаем с 0 для плавной анимации
-      const duration = 800;
-      const startTime = performance.now();
+      console.log('[ProgressBar] Target:', target.toFixed(1) + '%');
       
-      const animate = (currentTime) => {
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        // Ease out cubic
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const current = start + (target - start) * eased;
-        setAnimatedProgress(current);
+      // Шаг 2: Ждём чтобы React применил width: 0, затем запускаем анимацию
+      const timeoutId = setTimeout(() => {
+        console.log('[ProgressBar] Timeout fired, starting animation');
+        setIsAnimating(false); // Включаем transition обратно
         
-        if (progress < 1) {
-          requestAnimationFrame(animate);
+        const duration = 800;
+        const startTime = performance.now();
+        const targetKcal = eatenKcal; // Целевое значение калорий
+        const targetRatioPct = Math.round((eatenKcal / (optimum || 1)) * 100); // Целевой % для бэджа
+        const targetMarkerPos = 100; // Бейдж всегда едет до конца полосы (100%)
+        
+        const animate = (currentTime) => {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          // Ease out cubic
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const current = target * eased;
+          const currentKcal = Math.round(targetKcal * eased);
+          const currentRatioPct = Math.round(targetRatioPct * eased);
+          const currentMarkerPos = targetMarkerPos * eased; // Позиция бейджа 0→100%
+          setAnimatedProgress(current);
+          setAnimatedKcal(currentKcal);
+          setAnimatedRatioPct(currentRatioPct);
+          setAnimatedMarkerPos(currentMarkerPos);
+          
+          if (progress < 1) {
+            animationRef.current = requestAnimationFrame(animate);
+          } else {
+            console.log('[ProgressBar] Animation complete at:', current.toFixed(1) + '%');
+            setAnimatedKcal(targetKcal); // Финальное точное значение
+            setAnimatedRatioPct(targetRatioPct);
+            setAnimatedMarkerPos(100);
+          }
+        };
+        
+        animationRef.current = requestAnimationFrame(animate);
+      }, 50); // 50ms задержка для гарантированного применения width: 0
+      
+      return () => {
+        clearTimeout(timeoutId);
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
         }
       };
-      
-      requestAnimationFrame(animate);
-    }, [eatenKcal, optimum]);
+    }, [eatenKcal, optimum, mobileSubTab]); // mobileSubTab — для анимации при переключении вкладок
     
     // 🔔 Shake после завершения анимации sparkline (последовательно: Съедено → Перебор)
     const shakeTimerRef = React.useRef(null);
@@ -7174,14 +7596,54 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         (() => {
           const ratio = eatenKcal / (optimum || 1);
           
-          // Цвет части ДО НОРМЫ (goal-progress-fill)
-          // Если съели >= 80% нормы — зелёный, иначе жёлтый
-          let fillGradient;
-          if (ratio < 0.80) {
-            fillGradient = 'linear-gradient(90deg, #fbbf24 0%, #eab308 100%)'; // жёлтый
-          } else {
-            fillGradient = 'linear-gradient(90deg, #22c55e 0%, #16a34a 100%)'; // зелёный
-          }
+          // === ДИНАМИЧЕСКИЙ ГРАДИЕНТ ПО ВСЕЙ ПОЛОСЕ ===
+          // Зоны: 0-80% жёлтый → 80-100% зелёный → 100-105% зелёный → 105-110% жёлтый → 110%+ красный
+          
+          const buildDynamicGradient = (currentRatio) => {
+            if (currentRatio <= 0) return '#e5e7eb';
+            
+            const yellow = '#eab308';
+            const yellowLight = '#fbbf24';
+            const green = '#22c55e';
+            const greenDark = '#16a34a';
+            const red = '#ef4444';
+            const redDark = '#dc2626';
+            
+            // Ключевые точки (в % от нормы)
+            const zone80 = 0.80;
+            const zone100 = 1.0;
+            const zone105 = 1.05;
+            const zone110 = 1.10;
+            
+            // Преобразуем точки зон в % от текущего заполнения
+            const toFillPct = (zoneRatio) => Math.min((zoneRatio / currentRatio) * 100, 100);
+            
+            if (currentRatio <= zone80) {
+              // Весь бар жёлтый (недобор)
+              return `linear-gradient(90deg, ${yellowLight} 0%, ${yellow} 100%)`;
+            } else if (currentRatio <= zone100) {
+              // 0→80% жёлтый, 80%→100% зелёный
+              const p80 = toFillPct(zone80);
+              return `linear-gradient(90deg, ${yellowLight} 0%, ${yellow} ${p80 - 5}%, ${green} ${p80 + 5}%, ${greenDark} 100%)`;
+            } else if (currentRatio <= zone105) {
+              // 0→80% жёлтый, 80%→105% зелёный (всё ОК)
+              const p80 = toFillPct(zone80);
+              return `linear-gradient(90deg, ${yellowLight} 0%, ${yellow} ${p80 - 3}%, ${green} ${p80 + 3}%, ${greenDark} 100%)`;
+            } else if (currentRatio <= zone110) {
+              // 0→80% жёлтый, 80%→105% зелёный, 105%→110% жёлтый
+              const p80 = toFillPct(zone80);
+              const p105 = toFillPct(zone105);
+              return `linear-gradient(90deg, ${yellowLight} 0%, ${yellow} ${p80 - 3}%, ${green} ${p80 + 3}%, ${green} ${p105 - 3}%, ${yellow} ${p105 + 3}%, ${yellow} 100%)`;
+            } else {
+              // > 110%: жёлтый → зелёный → жёлтый → красный
+              const p80 = toFillPct(zone80);
+              const p105 = toFillPct(zone105);
+              const p110 = toFillPct(zone110);
+              return `linear-gradient(90deg, ${yellowLight} 0%, ${yellow} ${p80 - 2}%, ${green} ${p80 + 2}%, ${green} ${p105 - 2}%, ${yellow} ${p105 + 2}%, ${yellow} ${p110 - 2}%, ${red} ${p110 + 2}%, ${redDark} 100%)`;
+            }
+          };
+          
+          const fillGradient = buildDynamicGradient(ratio);
           
           // Цвет части ПОСЛЕ НОРМЫ (goal-progress-over) — зависит от степени превышения
           let overColor, overGradient;
@@ -7233,7 +7695,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('span', { 
                   className: 'goal-eaten',
                   style: { color: titleColor }
-                }, r0(eatenKcal)),
+                }, r0(animatedKcal)),
                 React.createElement('span', { className: 'goal-divider' }, '/'),
                 React.createElement('span', { className: 'goal-target' }, optimum),
                 React.createElement('span', { className: 'goal-unit' }, 'ккал')
@@ -7241,7 +7703,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             ),
             React.createElement('div', { className: 'goal-progress-track' + (eatenKcal > optimum ? ' has-over' : '') },
               React.createElement('div', { 
-                className: 'goal-progress-fill',
+                className: 'goal-progress-fill' + (isAnimating ? ' no-transition' : ''),
                 style: { 
                   width: Math.min(animatedProgress, 100) + '%',
                   background: fillGradient
@@ -7255,15 +7717,44 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   background: overGradient
                 }
               }),
+              // Маркер текущего % (на конце всей заполненной полосы, анимируется вместе с ней)
+              React.createElement('div', { 
+                className: 'goal-current-marker' + (isAnimating ? ' no-transition' : ''),
+                style: { 
+                  // Позиция бейджа анимируется от 0 до 100% (независимо от ratio)
+                  left: animatedMarkerPos + '%'
+                }
+              },
+                React.createElement('span', { className: 'goal-current-pct' }, 
+                  animatedRatioPct + '%'
+                )
+              ),
               React.createElement('div', { 
                 className: 'goal-marker' + (eatenKcal > optimum ? ' over' : ''),
                 style: eatenKcal > optimum ? { left: (optimum / eatenKcal * 100) + '%' } : {}
               })
             ),
+            // Метки зон под полосой
+            React.createElement('div', { className: 'goal-zone-labels' },
+              React.createElement('span', { 
+                className: 'goal-zone-label',
+                style: { left: (ratio > 1 ? (0.80 / ratio) * 100 : 80) + '%' }
+              }, '80%'),
+              React.createElement('span', { 
+                className: 'goal-zone-label goal-zone-label-100',
+                style: { left: (ratio > 1 ? (1.0 / ratio) * 100 : 100) + '%' }
+              }, '100%')
+            ),
             React.createElement('div', { className: 'goal-progress-footer' },
               eatenKcal <= optimum 
-                ? React.createElement('span', { className: 'goal-remaining' }, 
-                    'Осталось ', React.createElement('b', null, remainingKcal), ' ккал'
+                ? React.createElement('span', { 
+                    className: 'goal-remaining' + (remainingKcal <= 150 ? ' almost-there' : remainingKcal <= 300 ? ' getting-close' : '')
+                  }, 
+                    remainingKcal <= 150 
+                      ? React.createElement(React.Fragment, null, 'Почти у цели! ', React.createElement('b', null, remainingKcal), ' ккал 🔥')
+                      : remainingKcal <= 300
+                        ? React.createElement(React.Fragment, null, 'Ещё чуть-чуть! ', React.createElement('b', null, remainingKcal), ' ккал 💪')
+                        : React.createElement(React.Fragment, null, 'Осталось ', React.createElement('b', null, remainingKcal), ' ккал')
                   )
                 : React.createElement('span', { 
                     className: 'goal-over',
@@ -9973,6 +10464,357 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         )
       ),
       
+      // === INSULIN WAVE INDICATOR (WOW VERSION v2) ===
+      (!isMobile || mobileSubTab === 'diary') && insulinWaveData && (() => {
+        const isShaking = insulinWaveData.status === 'almost';
+        
+        // GI категории для отображения
+        const giLabels = {
+          'low': { text: 'Низкий ГИ', color: '#22c55e', desc: 'медленное усвоение' },
+          'medium': { text: 'Средний ГИ', color: '#eab308', desc: 'нормальное' },
+          'high': { text: 'Высокий ГИ', color: '#f97316', desc: 'быстрое' },
+          'very-high': { text: 'Очень высокий ГИ', color: '#ef4444', desc: 'очень быстрое' }
+        };
+        const giInfo = giLabels[insulinWaveData.giCategory] || giLabels.medium;
+        
+        // Прогресс-бар с волновым эффектом внутри (понятный + красивый)
+        const renderProgressBar = () => {
+          const progress = insulinWaveData.progress;
+          const barColor = insulinWaveData.status === 'ready' ? '#22c55e' 
+            : insulinWaveData.status === 'almost' ? '#f97316'
+            : insulinWaveData.status === 'soon' ? '#eab308' 
+            : '#0ea5e9';
+          
+          const gradientBg = insulinWaveData.status === 'ready' 
+            ? 'linear-gradient(90deg, #22c55e, #4ade80, #86efac)' 
+            : insulinWaveData.status === 'almost'
+              ? 'linear-gradient(90deg, #f97316, #fb923c, #fdba74)'
+              : insulinWaveData.status === 'soon'
+                ? 'linear-gradient(90deg, #eab308, #facc15, #fde047)'
+                : 'linear-gradient(90deg, #0284c7, #0ea5e9, #38bdf8)';
+          
+          return React.createElement('div', { className: 'insulin-wave-progress' },
+            // Заполненная часть
+            React.createElement('div', { 
+              className: 'insulin-wave-bar',
+              style: { 
+                width: progress + '%',
+                background: gradientBg
+              }
+            }),
+            // Бегущие волны на баре (анимация)
+            insulinWaveData.status !== 'ready' && React.createElement('div', { 
+              className: 'insulin-wave-animation'
+            }),
+            // Процент прогресса
+            React.createElement('span', {
+              className: 'insulin-progress-label',
+              style: {
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                fontSize: '10px',
+                fontWeight: '700',
+                color: progress > 50 ? '#fff' : '#64748b',
+                textShadow: progress > 50 ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                zIndex: 2
+              }
+            }, Math.round(progress) + '%')
+          );
+        };
+        
+        // История волн (мини-график) — улучшенная версия
+        const renderWaveHistory = () => {
+          const history = insulinWaveData.waveHistory || [];
+          if (history.length === 0) return null;
+          
+          // Находим первый и последний приём для масштаба
+          const firstMealMin = Math.min(...history.map(w => w.startMin));
+          const lastMealEnd = Math.max(...history.map(w => w.endMin));
+          const now = new Date();
+          const nowMin = now.getHours() * 60 + now.getMinutes();
+          
+          // Диапазон: от первого приёма до max(сейчас, конец последней волны) + небольшой отступ
+          const rangeStart = firstMealMin - 15; // 15 мин до первого приёма
+          const rangeEnd = Math.max(nowMin, lastMealEnd) + 15; // 15 мин после
+          const totalRange = rangeEnd - rangeStart;
+          
+          const w = 320; // Увеличенная ширина на всю карточку
+          const h = 60;
+          const padding = 4; // Минимальные отступы
+          const barY = 20;
+          const barH = 18;
+          
+          const minToX = (min) => padding + ((min - rangeStart) / totalRange) * (w - 2 * padding);
+          
+          // Форматирование времени
+          const formatTime = (min) => {
+            const hours = Math.floor(min / 60) % 24;
+            const mins = min % 60;
+            return String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+          };
+          
+          return React.createElement('div', { className: 'insulin-history', style: { marginTop: '12px', margin: '12px -8px 0 -8px' } },
+            // Заголовок
+            React.createElement('div', { 
+              style: { fontSize: '11px', color: '#64748b', marginBottom: '8px', fontWeight: '600' } 
+            }, '📊 Волны сегодня'),
+            
+            // График
+            React.createElement('svg', { 
+              width: '100%', 
+              height: h, 
+              viewBox: `0 0 ${w} ${h}`,
+              style: { display: 'block' }
+            },
+              // Градиенты
+              React.createElement('defs', null,
+                React.createElement('linearGradient', { id: 'activeWaveGrad2', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
+                  React.createElement('stop', { offset: '0%', stopColor: '#3b82f6' }),
+                  React.createElement('stop', { offset: '100%', stopColor: '#8b5cf6' })
+                )
+              ),
+              
+              // Фоновая линия (ось времени)
+              React.createElement('line', {
+                x1: padding, y1: barY + barH / 2,
+                x2: w - padding, y2: barY + barH / 2,
+                stroke: '#e5e7eb', strokeWidth: 2, strokeLinecap: 'round'
+              }),
+              
+              // Волны (полоски)
+              history.map((wave, i) => {
+                const x1 = minToX(wave.startMin);
+                const x2 = minToX(wave.endMin);
+                const barW = Math.max(8, x2 - x1);
+                const giColor = wave.gi <= 35 ? '#22c55e' : wave.gi <= 55 ? '#eab308' : wave.gi <= 70 ? '#f97316' : '#ef4444';
+                
+                return React.createElement('g', { key: 'wave-' + i },
+                  // Полоска волны
+                  React.createElement('rect', {
+                    x: x1, y: barY, width: barW, height: barH,
+                    fill: wave.isActive ? 'url(#activeWaveGrad2)' : giColor,
+                    opacity: wave.isActive ? 1 : 0.6,
+                    rx: 4
+                  }),
+                  // Пульсация для активной волны
+                  wave.isActive && React.createElement('rect', {
+                    x: x1, y: barY, width: barW, height: barH,
+                    fill: 'none',
+                    stroke: '#3b82f6',
+                    strokeWidth: 2,
+                    rx: 4,
+                    className: 'wave-active-pulse'
+                  })
+                );
+              }),
+              
+              // Точки приёмов пищи (поверх волн)
+              history.map((wave, i) => {
+                const x = minToX(wave.startMin);
+                return React.createElement('g', { key: 'meal-' + i },
+                  // Точка
+                  React.createElement('circle', {
+                    cx: x, cy: barY + barH / 2, r: 6,
+                    fill: '#fff',
+                    stroke: '#3b82f6',
+                    strokeWidth: 2
+                  }),
+                  // Иконка еды внутри
+                  React.createElement('text', {
+                    x, y: barY + barH / 2 + 1,
+                    fontSize: 8, textAnchor: 'middle', dominantBaseline: 'middle'
+                  }, '🍽'),
+                  // Время под точкой
+                  React.createElement('text', {
+                    x, y: h - 2,
+                    fontSize: 8, fill: '#64748b', textAnchor: 'middle', fontWeight: '500'
+                  }, formatTime(wave.startMin))
+                );
+              }),
+              
+              // Текущее время — вертикальная линия с меткой
+              (() => {
+                const x = minToX(nowMin);
+                if (x < padding || x > w - padding) return null;
+                return React.createElement('g', null,
+                  // Линия
+                  React.createElement('line', {
+                    x1: x, y1: barY - 5, x2: x, y2: barY + barH + 5,
+                    stroke: '#ef4444', strokeWidth: 2, strokeLinecap: 'round'
+                  }),
+                  // Треугольник сверху
+                  React.createElement('polygon', {
+                    points: `${x-4},${barY-5} ${x+4},${barY-5} ${x},${barY}`,
+                    fill: '#ef4444'
+                  }),
+                  // Метка "Сейчас"
+                  React.createElement('text', {
+                    x, y: barY - 8,
+                    fontSize: 8, fill: '#ef4444', textAnchor: 'middle', fontWeight: '600'
+                  }, 'Сейчас')
+                );
+              })()
+            ),
+            
+            // Легенда
+            React.createElement('div', { 
+              className: 'insulin-history-legend',
+              style: { 
+                display: 'flex', 
+                flexWrap: 'wrap',
+                gap: '8px', 
+                marginTop: '8px',
+                fontSize: '10px',
+                color: '#64748b'
+              }
+            },
+              // Точка = приём
+              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '3px' } },
+                React.createElement('span', { 
+                  style: { 
+                    width: '10px', height: '10px', borderRadius: '50%',
+                    border: '2px solid #3b82f6', background: '#fff'
+                  } 
+                }),
+                React.createElement('span', null, 'Приём пищи')
+              ),
+              // Полоска = волна
+              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '3px' } },
+                React.createElement('span', { 
+                  style: { 
+                    width: '16px', height: '8px', borderRadius: '2px',
+                    background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)'
+                  } 
+                }),
+                React.createElement('span', null, 'Активная волна')
+              ),
+              // Цвета ГИ
+              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '3px' } },
+                React.createElement('span', { style: { width: '8px', height: '8px', borderRadius: '2px', background: '#22c55e' } }),
+                React.createElement('span', null, 'Низкий ГИ')
+              ),
+              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '3px' } },
+                React.createElement('span', { style: { width: '8px', height: '8px', borderRadius: '2px', background: '#eab308' } }),
+                React.createElement('span', null, 'Средний')
+              ),
+              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '3px' } },
+                React.createElement('span', { style: { width: '8px', height: '8px', borderRadius: '2px', background: '#f97316' } }),
+                React.createElement('span', null, 'Высокий')
+              ),
+              // Красная линия
+              React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '3px' } },
+                React.createElement('span', { 
+                  style: { width: '12px', height: '2px', background: '#ef4444' } 
+                }),
+                React.createElement('span', null, 'Сейчас')
+              )
+            )
+          );
+        };
+        
+        return React.createElement('div', { 
+          className: 'insulin-wave-indicator insulin-' + insulinWaveData.status + (isShaking ? ' shake' : ''),
+          style: { margin: '8px 0', cursor: 'pointer' },
+          onClick: () => setInsulinExpanded(!insulinExpanded)
+        },
+          // Анимированный фон волны
+          React.createElement('div', { className: 'insulin-wave-bg' }),
+          
+          // Контент
+          React.createElement('div', { className: 'insulin-wave-content' },
+            // Header: иконка + label + статус
+            React.createElement('div', { className: 'insulin-wave-header' },
+              React.createElement('div', { className: 'insulin-wave-left' },
+                React.createElement('span', { className: 'insulin-wave-icon' }, insulinWaveData.emoji),
+                React.createElement('span', { className: 'insulin-wave-label' }, 
+                  insulinWaveData.status === 'ready' ? 'Окно питания открыто!' : 'Инсулиновая волна'
+                ),
+                // Expand indicator
+                React.createElement('span', { 
+                  style: { fontSize: '10px', color: '#94a3b8', marginLeft: '4px' } 
+                }, insulinExpanded ? '▲' : '▼')
+              ),
+              // Большой таймер/статус справа
+              React.createElement('div', { 
+                className: 'insulin-wave-timer',
+                style: { color: insulinWaveData.color }
+              }, 
+                insulinWaveData.status === 'ready' 
+                  ? React.createElement('span', { className: 'ready-pulse' }, '●')
+                  : insulinWaveData.text
+              )
+            ),
+            
+            // Прогресс-бар (понятный + анимированный)
+            renderProgressBar(),
+            
+            // Временные метки + ГИ badge
+            React.createElement('div', { className: 'insulin-wave-times' },
+              React.createElement('span', { className: 'insulin-time-start' }, 
+                '🍽️ ' + insulinWaveData.lastMealTime
+              ),
+              // ГИ badge
+              React.createElement('span', { 
+                className: 'insulin-gi-badge',
+                style: { 
+                  background: giInfo.color + '20',
+                  color: giInfo.color,
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  fontSize: '10px',
+                  fontWeight: '600'
+                }
+              }, 'ГИ ' + insulinWaveData.avgGI),
+              React.createElement('span', { className: 'insulin-time-end' }, 
+                insulinWaveData.status === 'ready' 
+                  ? '✅ Сейчас' 
+                  : insulinWaveData.isNightTime 
+                    ? '🌙 Утром'
+                    : '🎯 ' + insulinWaveData.endTime
+              )
+            ),
+            
+            // Подсказка
+            insulinWaveData.subtext && React.createElement('div', { 
+              className: 'insulin-wave-suggestion'
+            }, insulinWaveData.subtext),
+            
+            // === Expanded секция ===
+            insulinExpanded && React.createElement('div', { 
+              className: 'insulin-wave-expanded',
+              onClick: e => e.stopPropagation()
+            },
+              // ГИ информация
+              React.createElement('div', { className: 'insulin-gi-info' },
+                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                  React.createElement('span', { 
+                    style: { 
+                      width: '10px', height: '10px', borderRadius: '50%', 
+                      background: giInfo.color 
+                    } 
+                  }),
+                  React.createElement('span', { style: { fontWeight: '600' } }, giInfo.text),
+                  React.createElement('span', { style: { color: '#64748b', fontSize: '12px' } }, 
+                    '— ' + giInfo.desc
+                  )
+                ),
+                React.createElement('div', { 
+                  style: { fontSize: '11px', color: '#64748b', marginTop: '4px' } 
+                }, 
+                  'Базовая волна: ' + insulinWaveData.baseWaveHours + 'ч → Скорректированная: ' + 
+                  Math.round(insulinWaveData.insulinWaveHours * 10) / 10 + 'ч'
+                )
+              ),
+              
+              // История волн
+              renderWaveHistory()
+            )
+          )
+        );
+      })(),
+      
       // Empty state когда нет приёмов пищи
       (!isMobile || mobileSubTab === 'diary') && (!day.meals || day.meals.length === 0) && React.createElement('div', { className: 'empty-state' },
         React.createElement('div', { className: 'empty-state-icon' }, '🍽️'),
@@ -10053,6 +10895,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                           isLastDismissed: lastDismissedAdvice?.id === advice.id,
                           lastDismissedAction: lastDismissedAdvice?.action,
                           onUndo: undoLastDismiss,
+                          onClearLastDismissed: clearLastDismissed,
+                          onSchedule: scheduleAdvice,
+                          onToggleExpand: handleAdviceToggleExpand,
+                          onRate: rateAdvice,
                           onSwipeStart: handleAdviceSwipeStart,
                           onSwipeMove: handleAdviceSwipeMove,
                           onSwipeEnd: handleAdviceSwipeEnd,
@@ -10076,6 +10922,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                       isLastDismissed: lastDismissedAdvice?.id === advice.id,
                       lastDismissedAction: lastDismissedAdvice?.action,
                       onUndo: undoLastDismiss,
+                      onClearLastDismissed: clearLastDismissed,
+                      onSchedule: scheduleAdvice,
+                      onToggleExpand: handleAdviceToggleExpand,
+                      onRate: rateAdvice,
                       onSwipeStart: handleAdviceSwipeStart,
                       onSwipeMove: handleAdviceSwipeMove,
                       onSwipeEnd: handleAdviceSwipeEnd,
@@ -10115,7 +10965,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // === Auto Toast (для автоматических советов — tab_open, product_added) ===
       adviceTrigger !== 'manual' && adviceTrigger !== 'manual_empty' && advicePrimary && toastVisible && React.createElement('div', {
-        className: 'macro-toast macro-toast-' + advicePrimary.type + (adviceExpanded ? ' expanded' : '') + ' visible',
+        className: 'macro-toast macro-toast-' + advicePrimary.type + 
+          (adviceExpanded ? ' expanded' : '') + 
+          ' visible' + 
+          (advicePrimary.animationClass ? ' anim-' + advicePrimary.animationClass : '') +
+          (advicePrimary.id?.startsWith('personal_best') ? ' personal-best' : ''),
         role: 'alert',
         'aria-live': 'polite',
         onClick: () => adviceCount > 1 ? setAdviceExpanded(!adviceExpanded) : dismissToast(),
@@ -10138,6 +10992,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         ),
         // Progress bar (только для автоматических)
         React.createElement('div', { className: 'macro-toast-progress' }),
+        // Rating buttons (👍/👎)
+        adviceExpanded && rateAdvice && React.createElement('div', { className: 'macro-toast-rating' },
+          React.createElement('span', { className: 'macro-toast-rating-label' }, 'Полезный совет?'),
+          React.createElement('button', {
+            className: 'macro-toast-rating-btn',
+            onClick: (e) => { e.stopPropagation(); rateAdvice(advicePrimary.id, true); dismissToast(); }
+          }, '👍'),
+          React.createElement('button', {
+            className: 'macro-toast-rating-btn',
+            onClick: (e) => { e.stopPropagation(); rateAdvice(advicePrimary.id, false); dismissToast(); }
+          }, '👎')
+        ),
         // Дополнительные советы (при раскрытии)
         adviceExpanded && adviceRelevant && React.createElement('div', { className: 'macro-toast-extras' },
           adviceRelevant.slice(1, 4).map(advice => 

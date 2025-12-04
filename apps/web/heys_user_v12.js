@@ -524,6 +524,9 @@
 
       // Статистика советов
       React.createElement(HEYS_AdviceStatsCard, null),
+      
+      // Настройки советов
+      React.createElement(HEYS_AdviceSettingsCard, null),
 
       // Аналитика (перенесено из hdr-top)
       window.HEYS.analyticsUI
@@ -635,6 +638,147 @@
           } 
         }, '🏆 Все достижения за советы получены!')
       )
+    );
+  }
+
+  // === Настройки советов ===
+  function HEYS_AdviceSettingsCard() {
+    const advice = window.HEYS?.advice;
+    if (!advice?.getAdviceSettings) return null;
+    
+    const [settings, setSettings] = React.useState(() => advice.getAdviceSettings());
+    const [saved, setSaved] = React.useState(false);
+    
+    const categories = advice.CATEGORY_LABELS || {};
+    
+    const toggleCategory = (cat, enabled) => {
+      const newSettings = {
+        ...settings,
+        categories: { ...settings.categories, [cat]: enabled }
+      };
+      setSettings(newSettings);
+      advice.setAdviceSettings(newSettings);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    };
+    
+    const updateSetting = (key, value) => {
+      const newSettings = { ...settings, [key]: value };
+      setSettings(newSettings);
+      advice.setAdviceSettings(newSettings);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    };
+    
+    return React.createElement('div', { className: 'card', style: { marginTop: '10px' } },
+      React.createElement('div', { className: 'section-title' }, '⚙️ Настройки советов'),
+      
+      // Категории
+      React.createElement('div', { style: { marginTop: '12px' } },
+        React.createElement('div', { 
+          style: { fontSize: '14px', fontWeight: 600, marginBottom: '8px', color: 'var(--gray-700)' } 
+        }, 'Категории советов'),
+        React.createElement('div', { 
+          style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' } 
+        },
+          Object.entries(categories).map(([cat, info]) => 
+            React.createElement('label', { 
+              key: cat,
+              style: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                padding: '8px 10px',
+                background: settings.categories?.[cat] !== false ? 'var(--blue-50)' : 'var(--gray-100)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'background 0.2s'
+              }
+            },
+              React.createElement('input', {
+                type: 'checkbox',
+                checked: settings.categories?.[cat] !== false,
+                onChange: (e) => toggleCategory(cat, e.target.checked),
+                style: { width: '16px', height: '16px' }
+              }),
+              React.createElement('span', { style: { fontSize: '16px' } }, info.icon),
+              React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                React.createElement('div', { style: { fontSize: '13px', fontWeight: 500 } }, info.name),
+                React.createElement('div', { 
+                  style: { fontSize: '11px', color: 'var(--gray-500)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } 
+                }, info.desc)
+              )
+            )
+          )
+        )
+      ),
+      
+      // Общие настройки
+      React.createElement('div', { style: { marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--gray-200)' } },
+        React.createElement('div', { 
+          style: { fontSize: '14px', fontWeight: 600, marginBottom: '8px', color: 'var(--gray-700)' } 
+        }, 'Общие'),
+        
+        React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+          // Haptic
+          React.createElement('label', { 
+            style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' } 
+          },
+            React.createElement('span', { style: { fontSize: '14px' } }, '📳 Вибрация'),
+            React.createElement('input', {
+              type: 'checkbox',
+              checked: settings.hapticEnabled !== false,
+              onChange: (e) => updateSetting('hapticEnabled', e.target.checked),
+              style: { width: '18px', height: '18px' }
+            })
+          ),
+          
+          // Sound
+          React.createElement('label', { 
+            style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' } 
+          },
+            React.createElement('span', { style: { fontSize: '14px' } }, '🔔 Звук'),
+            React.createElement('input', {
+              type: 'checkbox',
+              checked: settings.soundEnabled !== false,
+              onChange: (e) => updateSetting('soundEnabled', e.target.checked),
+              style: { width: '18px', height: '18px' }
+            })
+          ),
+          
+          // Show details
+          React.createElement('label', { 
+            style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' } 
+          },
+            React.createElement('span', { style: { fontSize: '14px' } }, '📖 Показывать детали'),
+            React.createElement('input', {
+              type: 'checkbox',
+              checked: settings.showDetails !== false,
+              onChange: (e) => updateSetting('showDetails', e.target.checked),
+              style: { width: '18px', height: '18px' }
+            })
+          ),
+          
+          // Max per day
+          React.createElement('div', { 
+            style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' } 
+          },
+            React.createElement('span', { style: { fontSize: '14px' } }, '📊 Макс. советов в день'),
+            React.createElement('input', {
+              type: 'number',
+              min: 5,
+              max: 50,
+              value: settings.maxPerDay || 20,
+              onChange: (e) => updateSetting('maxPerDay', parseInt(e.target.value) || 20),
+              style: { width: '60px', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--gray-300)', textAlign: 'center' }
+            })
+          )
+        )
+      ),
+      
+      saved && React.createElement('div', { 
+        style: { marginTop: '8px', color: 'var(--green-600)', fontSize: '13px', textAlign: 'center' } 
+      }, '✓ Сохранено')
     );
   }
 
