@@ -4286,7 +4286,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     
     const adviceEngine = adviceModuleReady ? window.HEYS.advice.useAdviceEngine : null;
     
-    const adviceResult = adviceEngine ? adviceEngine({
+    // 🔐 Guard: не генерируем советы если нет выбранного клиента
+    const hasClient = !!(window.HEYS?.currentClientId);
+    const emptyAdviceResult = { primary: null, relevant: [], adviceCount: 0, allAdvices: [], badgeAdvices: [], rateAdvice: null, scheduleAdvice: null, scheduledCount: 0 };
+    
+    const adviceResult = (adviceEngine && hasClient) ? adviceEngine({
       dayTot,
       normAbs,
       optimum,
@@ -4297,7 +4301,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       uiState,
       prof,        // Профиль пользователя для персонализации
       waterGoal    // Динамическая норма воды из waterGoalBreakdown
-    }) : { primary: null, relevant: [], adviceCount: 0, allAdvices: [], badgeAdvices: [], rateAdvice: null, scheduleAdvice: null, scheduledCount: 0 };
+    }) : emptyAdviceResult;
     
     const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, allAdvices, badgeAdvices, markShown, rateAdvice, scheduleAdvice, scheduledCount } = adviceResult;
     

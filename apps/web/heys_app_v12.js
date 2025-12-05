@@ -1037,6 +1037,11 @@
               };
             }, [clientId]);
             
+            // 🔐 Не рендерим DayTab пока нет клиента — иначе advice показываются до входа!
+            if (!clientId) {
+              return React.createElement(DayTabSkeleton);
+            }
+            
             if (loading || !window.HEYS || !window.HEYS.DayTab) {
               return React.createElement(DayTabSkeleton);
             }
@@ -1069,6 +1074,12 @@
           function RationTabWithCloudSync(props) {
             const { clientId, setProducts, products } = props;
             const [loading, setLoading] = React.useState(true);
+            
+            // 🔐 Не рендерим Ration пока нет клиента
+            if (!clientId) {
+              return React.createElement(RationSkeleton);
+            }
+            
             React.useEffect(() => {
               let cancelled = false;
               if (
@@ -1132,6 +1143,12 @@
           function UserTabWithCloudSync(props) {
             const { clientId } = props;
             const [loading, setLoading] = React.useState(true);
+            
+            // 🔐 Не рендерим UserTab пока нет клиента
+            if (!clientId) {
+              return React.createElement(UserSkeleton);
+            }
+            
             React.useEffect(() => {
               let cancelled = false;
               if (

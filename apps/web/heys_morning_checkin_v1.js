@@ -10,7 +10,53 @@
   
   // === Утилиты ===
   function getTodayKey() {
-    return new Date().toISOString().slice(0, 10);
+    // Используем «эффективную» дату: до 03:00 считаем, что день ещё предыдущий
+    // Приоритет: dayUtils.todayISO (учитывает ночной порог) → models.todayISO → локальный fallback
+    const dayUtils = HEYS.dayUtils || {};
+    if (typeof dayUtils.todayISO === 'function') return dayUtils.todayISO();
+    if (HEYS.models && typeof HEYS.models.todayISO === 'function') return HEYS.models.todayISO();
+
+    // Fallback без зависимостей
+    const d = new Date();
+    if (d.getHours() < 3) {
+      d.setDate(d.getDate() - 1);
+    }
+    const pad2 = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  }
+
+  function debugDayStorage(todayKey, currentClientId) {
+    try {
+      const ls = global.localStorage;
+      if (!ls) return;
+      const directKey = `heys_dayv2_${todayKey}`;
+      const nsKey = currentClientId ? `heys_${currentClientId}_dayv2_${todayKey}` : '';
+      const rawDirect = ls.getItem(directKey);
+      const rawNs = nsKey ? ls.getItem(nsKey) : null;
+      let parsedDirect = null;
+      let parsedNs = null;
+      try { parsedDirect = rawDirect ? JSON.parse(rawDirect) : null; } catch (_) {}
+      try { parsedNs = rawNs ? JSON.parse(rawNs) : null; } catch (_) {}
+      const candidates = [];
+      for (let i = 0; i < ls.length; i++) {
+        const k = ls.key(i);
+        if (k && k.includes('_dayv2_')) {
+          candidates.push(k);
+        }
+      }
+      console.log('[MorningCheckin][debug]', {
+        todayKey,
+        directKeyExists: !!rawDirect,
+        nsKeyExists: !!rawNs,
+        directWeight: parsedDirect?.weightMorning,
+        nsWeight: parsedNs?.weightMorning,
+        directUpdatedAt: parsedDirect?.updatedAt,
+        nsUpdatedAt: parsedNs?.updatedAt,
+        sampleKeys: candidates.slice(0, 10)
+      });
+    } catch (e) {
+      // не ломаем основной поток из-за debug
+    }
   }
   
   /**
@@ -30,11 +76,13 @@
     
     const todayKey = getTodayKey();
     const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${todayKey}`, {}) : {};
-    
-    console.log('[MorningCheckin] Checking for clientId:', currentClientId.substring(0,8), '| weightMorning:', dayData.weightMorning);
-    
-    // Показываем, если сегодня нет веса
-    return !dayData.weightMorning;
+
+    const hasWeight = dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0;
+    console.log('[MorningCheckin] Checking for clientId:', currentClientId.substring(0,8), '| weightMorning:', dayData.weightMorning, '| dayKey:', todayKey);
+    debugDayStorage(todayKey, currentClientId);
+
+    // Показываем, если сегодня нет веса (учитываем ночной порог)
+    return !hasWeight;
   }
 
   /**
