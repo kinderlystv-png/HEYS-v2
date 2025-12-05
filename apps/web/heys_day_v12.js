@@ -1934,14 +1934,18 @@
     const toastTouchStart = React.useRef(0);
     
     // Touch handlers для swipe-to-dismiss
+    // ⚠️ ВАЖНО: stopPropagation чтобы не триггерить свайп вкладок
     const handleToastTouchStart = (e) => {
+      e.stopPropagation();
       toastTouchStart.current = e.touches[0].clientX;
     };
     const handleToastTouchMove = (e) => {
+      e.stopPropagation();
       const diff = e.touches[0].clientX - toastTouchStart.current;
       setToastSwipeX(diff);
     };
-    const handleToastTouchEnd = () => {
+    const handleToastTouchEnd = (e) => {
+      e.stopPropagation();
       if (Math.abs(toastSwipeX) > 80) {
         dismissToast();
       }
@@ -1955,6 +1959,13 @@
     // чтобы избежать race condition при markShown()
     const [displayedAdvice, setDisplayedAdvice] = useState(null);
     const [displayedAdviceList, setDisplayedAdviceList] = useState([]);
+    // Автопоказ тостов (FAB работает всегда)
+    const [toastsEnabled, setToastsEnabled] = useState(() => {
+      try {
+        const settings = JSON.parse(localStorage.getItem('heys_advice_settings') || '{}');
+        return settings.toastsEnabled !== false; // true по умолчанию
+      } catch(e) { return true; }
+    });
     // Прочитанные советы (свайп влево) — сохраняются на день
     const [dismissedAdvices, setDismissedAdvices] = useState(() => {
       try {
@@ -2047,25 +2058,36 @@
       setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: diff, direction } }));
     }, []);
     
-    // Звук прочтения совета (тихий приятный звук)
+    // 🔊 Звуки для swipe действий — используем централизованный модуль
     const playAdviceSound = React.useCallback(() => {
-      try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.setValueAtTime(659.25, ctx.currentTime); // E5
-        osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.08); // G5
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(0.06, ctx.currentTime); // Тихо
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.15);
-      } catch(e) {}
+      // Свайп влево (прочитано) — ding
+      if (window.HEYS?.sounds) {
+        window.HEYS.sounds.ding();
+      }
     }, []);
+    
+    const playAdviceHideSound = React.useCallback(() => {
+      // Свайп вправо (скрыть) — whoosh
+      if (window.HEYS?.sounds) {
+        window.HEYS.sounds.whoosh();
+      }
+    }, []);
+    
+    // Toggle автопоказа тостов (FAB всегда работает)
+    const toggleToastsEnabled = React.useCallback(() => {
+      setToastsEnabled(prev => {
+        const newVal = !prev;
+        try {
+          const settings = JSON.parse(localStorage.getItem('heys_advice_settings') || '{}');
+          settings.toastsEnabled = newVal;
+          localStorage.setItem('heys_advice_settings', JSON.stringify(settings));
+          window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: settings }));
+        } catch(e) {}
+        // Haptic feedback
+        if (typeof haptic === 'function') haptic('light');
+        return newVal;
+      });
+    }, [haptic]);
     
     // Undo последнего действия
     const undoLastDismiss = React.useCallback(() => {
@@ -2176,6 +2198,9 @@
           } catch(e) {}
           return newSet;
         });
+        
+        // 🔊 Звук скрытия совета
+        playAdviceHideSound();
         haptic('medium');
         
         // Undo — показываем 3 секунды (прогресс-бар в overlay)
@@ -2189,7 +2214,7 @@
       
       setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: 0, direction: null } }));
       delete adviceSwipeStart.current[adviceId];
-    }, [adviceSwipeState, haptic, lastDismissedAdvice, playAdviceSound, setDismissedAdvices, setHiddenUntilTomorrow]);
+    }, [adviceSwipeState, haptic, lastDismissedAdvice, playAdviceSound, playAdviceHideSound, setDismissedAdvices, setHiddenUntilTomorrow]);
     
     // Долгий тап для раскрытия деталей
     const adviceLongPressTimer = React.useRef(null);
@@ -4272,15 +4297,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       uiState,
       prof,        // Профиль пользователя для персонализации
       waterGoal    // Динамическая норма воды из waterGoalBreakdown
-    }) : { primary: null, relevant: [], adviceCount: 0, allAdvices: [], rateAdvice: null, scheduleAdvice: null, scheduledCount: 0 };
+    }) : { primary: null, relevant: [], adviceCount: 0, allAdvices: [], badgeAdvices: [], rateAdvice: null, scheduleAdvice: null, scheduledCount: 0 };
     
-    const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, allAdvices, markShown, rateAdvice, scheduleAdvice, scheduledCount } = adviceResult;
+    const { primary: advicePrimary, relevant: adviceRelevant, adviceCount, allAdvices, badgeAdvices, markShown, rateAdvice, scheduleAdvice, scheduledCount } = adviceResult;
     
     // Количество непрочитанных советов (для badge на FAB кнопке)
+    // badgeAdvices — массив советов с полной фильтрацией (как trigger='manual')
     const totalAdviceCount = React.useMemo(() => {
-      if (!allAdvices?.length) return 0;
-      return allAdvices.filter(a => !dismissedAdvices.has(a.id) && !hiddenUntilTomorrow.has(a.id)).length;
-    }, [allAdvices, dismissedAdvices, hiddenUntilTomorrow]);
+      if (!badgeAdvices?.length) return 0;
+      return badgeAdvices.filter(a => !dismissedAdvices.has(a.id) && !hiddenUntilTomorrow.has(a.id)).length;
+    }, [badgeAdvices, dismissedAdvices, hiddenUntilTomorrow]);
     
     // Listener для heysProductAdded event
     React.useEffect(() => {
@@ -4331,12 +4357,33 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     React.useEffect(() => {
       if (!advicePrimary) return;
       
+      // Проверяем: автопоказ тостов (FAB = manual всегда работает)
+      const isManualTrigger = adviceTrigger === 'manual' || adviceTrigger === 'manual_empty';
+      if (!isManualTrigger && !toastsEnabled) {
+        // Тосты отключены — НЕ показываем автоматический тост, но сохраняем данные для FAB
+        setDisplayedAdvice(advicePrimary);
+        setDisplayedAdviceList(adviceRelevant || []);
+        if (markShown) markShown(advicePrimary.id);
+        return;
+      }
+      
       // Сохраняем совет и список для отображения
       setDisplayedAdvice(advicePrimary);
       setDisplayedAdviceList(adviceRelevant || []);
       setAdviceExpanded(false);
       setToastVisible(true);
       setToastDismissed(false);
+      
+      // 🔊 Звук при появлении тоста
+      if (window.HEYS?.sounds) {
+        if (advicePrimary.type === 'achievement' || advicePrimary.showConfetti) {
+          window.HEYS.sounds.success();
+        } else if (advicePrimary.type === 'warning') {
+          window.HEYS.sounds.warning();
+        } else {
+          window.HEYS.sounds.pop();
+        }
+      }
       
       if ((advicePrimary.type === 'achievement' || advicePrimary.type === 'warning') && typeof haptic === 'function') {
         haptic('light');
@@ -5526,7 +5573,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const startTime = performance.now();
         const targetKcal = eatenKcal; // Целевое значение калорий
         const targetRatioPct = Math.round((eatenKcal / (optimum || 1)) * 100); // Целевой % для бэджа
-        const targetMarkerPos = 100; // Бейдж всегда едет до конца полосы (100%)
+        // Бейдж: при переборе — едет до 100%, при норме — до конца заполненной линии
+        const targetMarkerPos = isOver ? 100 : Math.min(target, 100);
         
         const animate = (currentTime) => {
           const elapsed = currentTime - startTime;
@@ -5536,7 +5584,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const current = target * eased;
           const currentKcal = Math.round(targetKcal * eased);
           const currentRatioPct = Math.round(targetRatioPct * eased);
-          const currentMarkerPos = targetMarkerPos * eased; // Позиция бейджа 0→100%
+          const currentMarkerPos = targetMarkerPos * eased; // Позиция бейджа синхронизирована с линией
           setAnimatedProgress(current);
           setAnimatedKcal(currentKcal);
           setAnimatedRatioPct(currentRatioPct);
@@ -5548,7 +5596,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             console.log('[ProgressBar] Animation complete at:', current.toFixed(1) + '%');
             setAnimatedKcal(targetKcal); // Финальное точное значение
             setAnimatedRatioPct(targetRatioPct);
-            setAnimatedMarkerPos(100);
+            setAnimatedMarkerPos(targetMarkerPos); // Бейдж остаётся на конце линии
           }
         };
         
@@ -10486,7 +10534,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 textShadow: '0 1px 3px rgba(0,0,0,0.3)', whiteSpace: 'nowrap', zIndex: 2
               }
             },
-              React.createElement('span', { className: 'lipolysis-fire-icon', style: { fontSize: '16px' } }, '🔥'),
               React.createElement('span', null, formatLipolysisTime(lipolysisMinutes)),
               React.createElement('span', { style: { fontSize: '11px', opacity: 0.9, fontWeight: '600' } }, 'жиросжигание')
             )
@@ -10737,15 +10784,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   style: { fontSize: '10px', color: '#94a3b8', marginLeft: '4px' } 
                 }, insulinExpanded ? '▲' : '▼')
               ),
-              // Большой таймер/статус справа
-              React.createElement('div', { 
+              // Большой таймер/статус справа (при липолизе скрыт — огонь уже в заголовке)
+              insulinWaveData.status !== 'lipolysis' && React.createElement('div', { 
                 className: 'insulin-wave-timer',
                 style: { color: insulinWaveData.color }
-              }, 
-                insulinWaveData.status === 'lipolysis' 
-                  ? React.createElement('span', { className: 'lipolysis-pulse' }, '🔥')
-                  : insulinWaveData.text
-              )
+              }, insulinWaveData.text)
             ),
             
             // Прогресс-бар
@@ -10879,6 +10922,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             // Заголовок
             React.createElement('div', { className: 'advice-list-header' },
               React.createElement('span', null, `💡 Советы (${activeCount})`),
+              // iOS-style toggle для автопоказа тостов
+              React.createElement('label', { 
+                className: 'ios-toggle-label',
+                title: toastsEnabled ? 'Отключить всплывающие советы' : 'Включить всплывающие советы'
+              },
+                React.createElement('span', { className: 'ios-toggle-text' }, '🔔'),
+                React.createElement('div', { 
+                  className: `ios-toggle ${toastsEnabled ? 'ios-toggle-on' : ''}`,
+                  onClick: toggleToastsEnabled
+                },
+                  React.createElement('div', { className: 'ios-toggle-thumb' })
+                )
+              ),
               React.createElement('div', { className: 'advice-list-header-actions' },
                 activeCount > 1 && React.createElement('button', { 
                   className: 'advice-list-dismiss-all',

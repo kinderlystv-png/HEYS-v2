@@ -607,35 +607,27 @@
   border-color: #fde047;
 }
 
-/* Анимированный фон - бегущие волны */
+/* Статичный фон — без анимации для снижения отвлечения */
 .insulin-wave-bg {
   position: absolute;
   top: 0;
-  left: -100%;
-  width: 300%;
+  left: 0;
+  width: 100%;
   height: 100%;
   background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.4) 25%,
-    rgba(255, 255, 255, 0.6) 50%,
-    rgba(255, 255, 255, 0.4) 75%,
-    transparent 100%
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 100%
   );
-  animation: waveMove 3s ease-in-out infinite;
   pointer-events: none;
 }
 
 .insulin-lipolysis .insulin-wave-bg {
   background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(34, 197, 94, 0.1) 25%,
-    rgba(34, 197, 94, 0.2) 50%,
-    rgba(34, 197, 94, 0.1) 75%,
-    transparent 100%
+    135deg,
+    rgba(34, 197, 94, 0.08) 0%,
+    rgba(34, 197, 94, 0.04) 100%
   );
-  animation-duration: 2s;
 }
 
 @keyframes waveMove {

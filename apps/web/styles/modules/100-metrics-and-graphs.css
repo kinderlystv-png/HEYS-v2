@@ -4335,9 +4335,13 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: var(--color-white);
+  /* Gradient border technique */
+  border: 2px solid transparent;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  background: 
+    linear-gradient(var(--color-white), var(--color-white)) padding-box,
+    var(--toast-gradient, linear-gradient(135deg, #94a3b8 0%, #64748b 100%)) border-box;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   opacity: 0;
   transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
@@ -4397,33 +4401,44 @@
   border-left: 4px solid var(--color-blue-500);
 }
 
+/* === Toast Gradient Borders по типам === */
 .macro-toast-warning {
-  border-left: 4px solid #f59e0b;
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  --toast-gradient: linear-gradient(135deg, #fca5a5 0%, #ef4444 100%);
 }
 
 .macro-toast-success {
-  border-left: 4px solid #22c55e;
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  --toast-gradient: linear-gradient(135deg, #6ee7b7 0%, #10b981 100%);
 }
 
 /* Fiber - зелёный (клетчатка) */
 .macro-toast-fiber {
-  border-left: 4px solid var(--color-emerald-500);
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  --toast-gradient: linear-gradient(135deg, #6ee7b7 0%, #10b981 100%);
 }
 
 /* Tip - синий (подсказки) */
 .macro-toast-tip {
-  border-left: 4px solid var(--color-blue-500);
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  --toast-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
 }
 
 /* Achievement - золотой с анимацией */
 .macro-toast-achievement {
-  border-left: 4px solid #f59e0b;
-  background: linear-gradient(135deg, #fffbeb 0%, #fde68a 100%);
+  --toast-gradient: linear-gradient(135deg, #fde047 0%, #f59e0b 100%);
   animation: achievementPulse 0.5s ease-out;
+}
+
+/* Streak - огненный */
+.macro-toast-streak {
+  --toast-gradient: linear-gradient(135deg, #fdba74 0%, #f97316 100%);
+}
+
+/* Emotional - фиолетовый */
+.macro-toast-emotional {
+  --toast-gradient: linear-gradient(135deg, #c4b5fd 0%, #8b5cf6 100%);
+}
+
+/* Hydration - голубой */
+.macro-toast-hydration {
+  --toast-gradient: linear-gradient(135deg, #67e8f9 0%, #06b6d4 100%);
 }
 
 @keyframes achievementPulse {

@@ -2167,9 +2167,9 @@
             const [edgeBounce, setEdgeBounce] = useState(null); // 'left' | 'right' | null
             
             const onTouchStart = React.useCallback((e) => {
-              // Игнорируем свайпы на интерактивных элементах, модалках и слайдерах
+              // Игнорируем свайпы на интерактивных элементах, модалках, слайдерах и тостах
               const target = e.target;
-              if (target.closest('input, textarea, select, button, .swipeable-container, table, .tab-switch-group, .advice-list-overlay, .no-swipe-zone, [type="range"]')) {
+              if (target.closest('input, textarea, select, button, .swipeable-container, table, .tab-switch-group, .advice-list-overlay, .macro-toast, .no-swipe-zone, [type="range"]')) {
                 return;
               }
               const touch = e.touches[0];

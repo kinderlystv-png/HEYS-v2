@@ -351,6 +351,26 @@
       touchStartY.current = e.touches[0].clientY;
     }, [stepAllowSwipe, currentConfig]);
 
+    // Блокируем scroll на backdrop, разрешаем только внутри scrollable контейнеров
+    const handleTouchMove = useCallback((e) => {
+      // Находим ближайший scrollable элемент
+      let target = e.target;
+      while (target && target !== containerRef.current) {
+        const style = window.getComputedStyle(target);
+        const overflowY = style.overflowY;
+        const isScrollable = overflowY === 'auto' || overflowY === 'scroll';
+        
+        if (isScrollable && target.scrollHeight > target.clientHeight) {
+          // Это scrollable контейнер — разрешаем scroll
+          return;
+        }
+        target = target.parentElement;
+      }
+      
+      // Не внутри scrollable — блокируем scroll на backdrop
+      e.preventDefault();
+    }, []);
+
     const handleTouchEnd = useCallback((e) => {
       if (!stepAllowSwipe) return;
       const deltaX = e.changedTouches[0].clientX - touchStartX.current;
@@ -401,6 +421,7 @@
         ref: containerRef,
         onClick: handleBackdropClick,
         onTouchStart: handleTouchStart,
+        onTouchMove: handleTouchMove,
         onTouchEnd: handleTouchEnd
       },
         React.createElement('div', { className: 'mc-modal' },
@@ -498,6 +519,13 @@
       document.body.appendChild(modalRoot);
     }
 
+    // 🔒 Блокируем прокрутку body при открытии модалки
+    document.body.style.overflow = 'hidden';
+    // Для iOS Safari — фиксируем позицию
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.top = `-${window.scrollY}px`;
+
     const handleComplete = (data) => {
       hideStepModal();
       options.onComplete && options.onComplete(data);
@@ -518,6 +546,17 @@
   }
 
   function hideStepModal() {
+    // 🔓 Восстанавливаем прокрутку body при закрытии
+    const scrollY = document.body.style.top;
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    document.body.style.top = '';
+    // Возвращаем скролл на место
+    if (scrollY) {
+      window.scrollTo(0, parseInt(scrollY || '0') * -1);
+    }
+    
     if (modalRoot) {
       ReactDOM.unmountComponentAtNode(modalRoot);
     }

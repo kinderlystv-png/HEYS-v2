@@ -432,6 +432,7 @@
       correlation: true     // Корреляции
     },
     // Общие настройки
+    toastsEnabled: true,    // Автопоказ тостов (FAB всегда работает)
     soundEnabled: true,     // Звук при советах
     hapticEnabled: true,    // Вибрация
     showDetails: true,      // Показывать детали
@@ -5446,6 +5447,31 @@
     // Количество для badge — ВСЕ советы для триггера (без canShowAdvice)
     const adviceCount = allForTrigger.length;
     
+    // 🔢 Badge advices — советы для FAB badge (как trigger='manual', но без зависимости от trigger)
+    // Применяем ВСЕ фильтры
+    const badgeAdvices = React.useMemo(() => {
+      if (isUserBusy(uiState)) return [];
+      
+      let advices = moodAdaptedAdvices;
+      
+      // 🧠 Smart Prioritization
+      advices = sortBySmartScore(advices, ctx);
+      
+      // ⏰ Временные ограничения
+      advices = filterByTimeRestrictions(advices);
+      
+      // 🔄 Дедупликация
+      advices = deduplicateAdvices(advices);
+      
+      // Excludes
+      advices = filterByExcludes(advices);
+      
+      // Лимит по категориям
+      advices = limitByCategory(advices);
+      
+      return advices;
+    }, [moodAdaptedAdvices, uiState, ctx]);
+    
     // Количество отложенных
     const scheduledCount = getScheduledCount();
     
@@ -5453,6 +5479,7 @@
       primary: primaryWithAnimation,
       relevant: allForTrigger, // Все советы для развёртывания
       adviceCount,
+      badgeAdvices, // Для FAB badge — массив советов с полной фильтрацией
       scheduledCount,
       allAdvices,
       ctx,
