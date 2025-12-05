@@ -1179,7 +1179,7 @@
                     alignItems: 'center',
                     gap: '4px'
                   } 
-                }, '⏰ 2ч')
+                }, 'Напомнить через 2ч.')
               )
             ),
         // Прогресс-бар (убывает за 3 сек) — скрываем при scheduled
@@ -1247,6 +1247,18 @@
         React.createElement('span', { className: 'advice-list-icon' }, advice.icon),
         React.createElement('div', { className: 'advice-list-content' },
           React.createElement('span', { className: 'advice-list-text' }, advice.text),
+          // Стрелочка если есть детали
+          advice.details && React.createElement('span', { 
+            className: 'advice-expand-arrow',
+            style: {
+              marginLeft: '6px',
+              fontSize: '10px',
+              opacity: 0.5,
+              transition: 'transform 0.2s',
+              display: 'inline-block',
+              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+            }
+          }, '▼'),
           // Детали при раскрытии
           isExpanded && advice.details && React.createElement('div', { 
             className: 'advice-list-details'
@@ -1885,6 +1897,7 @@
     const [toastSwipeX, setToastSwipeX] = useState(0);
     const [toastSwiped, setToastSwiped] = useState(false); // Показывать overlay с кнопками (как в AdviceCard)
     const [toastScheduledConfirm, setToastScheduledConfirm] = useState(false); // Подтверждение "Через 2ч"
+    const [toastDetailsOpen, setToastDetailsOpen] = useState(false); // Раскрыты ли details в тосте
     const toastTouchStart = React.useRef(0);
     
     // Touch handlers для swipe — показываем overlay с кнопками (как в AdviceCard)
@@ -2746,27 +2759,24 @@
       haptic('light');
     }
 
-    // === Household (Бытовая активность) Picker Modal ===
-    const [showHouseholdPicker, setShowHouseholdPicker] = useState(false);
-    const [pendingHouseholdIdx, setPendingHouseholdIdx] = useState(0); // индекс (0 = 0 минут)
-    // Значения от 0 до 300 минут с шагом 10
-    const householdValues = useMemo(() => Array.from({length: 31}, (_, i) => String(i * 10)), []); // 0, 10, 20, ..., 300
-    
+    // === Household (Бытовая активность) — через модульную модалку ===
     function openHouseholdPicker() {
-      const currentMin = day.householdMin || 0;
-      // Конвертируем минуты в индекс (0=0, 10=1, 20=2, ...)
-      setPendingHouseholdIdx(Math.max(0, Math.min(30, Math.round(currentMin / 10))));
-      setShowHouseholdPicker(true);
-    }
-    
-    function confirmHouseholdPicker() {
-      const newMinutes = pendingHouseholdIdx * 10; // индекс обратно в минуты
-      setDay(prev => ({ ...prev, householdMin: newMinutes }));
-      setShowHouseholdPicker(false);
-    }
-    
-    function cancelHouseholdPicker() {
-      setShowHouseholdPicker(false);
+      if (HEYS.StepModal) {
+        HEYS.StepModal.show({
+          steps: ['household'],
+          title: '🏠 Бытовая активность',
+          showProgress: false,
+          showStreak: false,
+          showGreeting: false,
+          showTip: false,
+          context: { dateKey },
+          onComplete: (stepData) => {
+            // Обновляем локальное состояние из сохранённых данных
+            const savedDay = lsGet(`heys_dayv2_${dateKey}`, {});
+            setDay(prev => ({ ...prev, householdMin: savedDay.householdMin || 0 }));
+          }
+        });
+      }
     }
 
     // === Edit Grams Modal functions (slider-based) ===
@@ -3710,11 +3720,9 @@
       showDeficitPicker,
       showZonePicker,
       showSleepQualityPicker,
-      showDayScorePicker,
-      showHouseholdPicker,
-      showTrainingPicker
+      showDayScorePicker
     }), [showTimePicker, showWeightPicker, showDeficitPicker, 
-        showZonePicker, showSleepQualityPicker, showDayScorePicker, showHouseholdPicker, showTrainingPicker]);
+        showZonePicker, showSleepQualityPicker, showDayScorePicker]);
 
     // --- blocks
     // Получаем Calendar динамически, чтобы HMR работал
@@ -4365,6 +4373,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       setAdviceExpanded(false);
       setToastVisible(true);
       setToastDismissed(false);
+      setToastDetailsOpen(false); // Сбрасываем детали при новом совете
       
       // 🔊 Звук при появлении тоста
       if (window.HEYS?.sounds) {
@@ -4397,6 +4406,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         setAdviceTrigger(null);
         setDisplayedAdvice(null);
         setDisplayedAdviceList([]);
+        setToastDetailsOpen(false);
       }, advicePrimary.ttl || 5000);
       return () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); };
     }, [advicePrimary?.id, adviceTrigger]);
@@ -4408,6 +4418,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       setToastVisible(false);
       setDisplayedAdvice(null);
       setDisplayedAdviceList([]);
+      setToastDetailsOpen(false);
       if (window.HEYS?.advice?.resetSessionAdvices) window.HEYS.advice.resetSessionAdvices();
     }, [date]);
     
@@ -11054,20 +11065,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         onClick: () => {
           // Если overlay показан — клик на overlay обрабатывается отдельно
           if (toastSwiped) return;
-          // По клику на тост — разворачиваем + открываем список всех советов
-          if (!adviceExpanded && Math.abs(toastSwipeX) < 10) {
+          // По клику на тост — toggle details (если есть)
+          if (Math.abs(toastSwipeX) < 10 && displayedAdvice.details) {
             haptic && haptic('light');
-            setAdviceExpanded(true);
-            // Переключаемся на manual чтобы показать список советов
-            setAdviceTrigger('manual');
+            setToastDetailsOpen(!toastDetailsOpen);
           }
         },
         onTouchStart: handleToastTouchStart,
         onTouchMove: handleToastTouchMove,
         onTouchEnd: handleToastTouchEnd,
         style: toastSwiped 
-          ? { transform: 'translateX(-50%)' } 
-          : { transform: `translateX(calc(-50% + ${toastSwipeX}px))`, opacity: 1 - Math.abs(toastSwipeX) / 150 }
+          ? { transform: 'translateX(-50%)', flexDirection: 'column', alignItems: 'stretch' } 
+          : { transform: `translateX(calc(-50% + ${toastSwipeX}px))`, opacity: 1 - Math.abs(toastSwipeX) / 150, flexDirection: 'column', alignItems: 'stretch' }
       },
         // Overlay после свайпа (как в AdviceCard)
         toastSwiped && React.createElement('div', {
@@ -11119,7 +11128,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                       alignItems: 'center',
                       gap: '4px'
                     } 
-                  }, '⏰ 2ч')
+                  }, 'Напомнить через 2ч.')
                 )
               ),
           // Прогресс-бар (убывает за 3 сек)
@@ -11143,16 +11152,88 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         },
           React.createElement('span', { className: 'macro-toast-icon' }, displayedAdvice.icon),
           React.createElement('span', { className: 'macro-toast-text' }, displayedAdvice.text),
-          React.createElement('button', { 
-            className: 'macro-toast-close', 
-            onClick: (e) => { e.stopPropagation(); dismissToast(); } 
-          }, '×')
+          // Стрелка вверх для раскрытия списка + текст "все советы"
+          React.createElement('div', { 
+            className: 'macro-toast-expand',
+            onClick: (e) => { 
+              e.stopPropagation(); 
+              haptic && haptic('light');
+              setAdviceExpanded(true);
+              setAdviceTrigger('manual');
+            },
+            style: {
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '4px 8px',
+              cursor: 'pointer',
+              opacity: 0.7,
+              transition: 'opacity 0.2s',
+              lineHeight: 1.1
+            }
+          },
+            React.createElement('span', { style: { fontSize: '14px' } }, '▲'),
+            React.createElement('span', { style: { fontSize: '9px' } }, 'все'),
+            React.createElement('span', { style: { fontSize: '9px' } }, 'советы')
+          )
         ),
-        // Подсказка "нажмите для подробностей" (скрыта когда overlay)
-        React.createElement('div', { 
-          className: 'macro-toast-tap-hint',
-          style: toastSwiped ? { visibility: 'hidden' } : undefined
-        }, 'нажмите для подробностей')
+        // Строка с кнопкой "Подробнее" слева и подсказкой "свайп" справа
+        !toastSwiped && React.createElement('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: displayedAdvice.details ? 'space-between' : 'flex-end',
+            padding: '6px 0 2px 0',
+            marginTop: '2px'
+          }
+        },
+          // Кнопка "▼ Подробнее" — если есть details
+          displayedAdvice.details && React.createElement('div', {
+            onClick: (e) => {
+              e.stopPropagation();
+              haptic && haptic('light');
+              setToastDetailsOpen(!toastDetailsOpen);
+            },
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              color: 'rgba(100, 100, 100, 0.8)',
+              fontWeight: 500
+            }
+          },
+            React.createElement('span', {
+              style: {
+                display: 'inline-block',
+                transition: 'transform 0.2s',
+                transform: toastDetailsOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+              }
+            }, '▼'),
+            toastDetailsOpen ? 'Скрыть' : 'Детали'
+          ),
+          // Подсказка свайп влево
+          React.createElement('span', { 
+            style: {
+              fontSize: '11px',
+              color: 'rgba(128, 128, 128, 0.6)'
+            }
+          }, '← свайп — прочитано')
+        ),
+        // Развёрнутые details
+        !toastSwiped && toastDetailsOpen && displayedAdvice.details && React.createElement('div', {
+          style: {
+            padding: '8px 12px',
+            fontSize: '13px',
+            lineHeight: '1.4',
+            color: 'rgba(80, 80, 80, 0.9)',
+            background: 'rgba(0, 0, 0, 0.03)',
+            borderRadius: '8px',
+            marginTop: '4px',
+            marginBottom: '4px'
+          }
+        }, displayedAdvice.details)
       ),
       
       // Meal Creation/Edit Modal (mobile only)
@@ -11942,40 +12023,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               )
                 ];
               })()
-            )
-          )
-        ),
-        document.body
-      ),
-      
-      // Household (Бытовая активность) Picker Modal
-      showHouseholdPicker && ReactDOM.createPortal(
-        React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelHouseholdPicker },
-          React.createElement('div', { className: 'time-picker-modal household-picker-modal', onClick: e => e.stopPropagation() },
-            // Ручка для свайпа
-            React.createElement('div', { 
-              className: 'bottom-sheet-handle',
-              onTouchStart: handleSheetTouchStart,
-              onTouchMove: handleSheetTouchMove,
-              onTouchEnd: () => handleSheetTouchEnd(cancelHouseholdPicker)
-            }),
-            React.createElement('div', { className: 'time-picker-header' },
-              React.createElement('button', { className: 'time-picker-cancel', onClick: cancelHouseholdPicker }, 'Отмена'),
-              React.createElement('span', { className: 'time-picker-title' }, '🏠 Бытовая активность'),
-              React.createElement('button', { className: 'time-picker-confirm', onClick: confirmHouseholdPicker }, 'Готово')
-            ),
-            React.createElement('div', { className: 'household-picker-hint' }, 
-              'Добавьте примерное время бытовой активности,',
-              React.createElement('br'),
-              'если были на ногах помимо тренировок'
-            ),
-            React.createElement('div', { className: 'time-picker-wheels household-wheels' },
-              React.createElement(WheelColumn, {
-                values: householdValues,
-                selected: pendingHouseholdIdx,
-                onChange: (i) => setPendingHouseholdIdx(i)
-              }),
-              React.createElement('span', { className: 'household-wheel-unit' }, 'мин')
             )
           )
         ),
