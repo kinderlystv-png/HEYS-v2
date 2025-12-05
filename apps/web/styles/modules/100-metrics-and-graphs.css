@@ -4654,6 +4654,8 @@
   bottom: 90px;
   max-height: 300px;
   border-radius: 16px;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .macro-toast-main {
@@ -4726,6 +4728,8 @@
   .macro-toast.expanded {
     max-height: 250px;
     overflow-y: auto;
+    flex-direction: column;
+    align-items: stretch;
   }
   
   .macro-toast-extras {
