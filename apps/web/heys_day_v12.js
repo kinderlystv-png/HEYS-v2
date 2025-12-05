@@ -10994,13 +10994,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // 🔧 FIX: Используем displayedAdvice вместо advicePrimary для избежания race condition
       adviceTrigger !== 'manual' && adviceTrigger !== 'manual_empty' && displayedAdvice && toastVisible && React.createElement('div', {
         className: 'macro-toast macro-toast-' + displayedAdvice.type + 
-          (adviceExpanded ? ' expanded' : '') + 
           ' visible' + 
           (displayedAdvice.animationClass ? ' anim-' + displayedAdvice.animationClass : '') +
           (displayedAdvice.id?.startsWith('personal_best') ? ' personal-best' : ''),
         role: 'alert',
         'aria-live': 'polite',
-        onClick: () => displayedAdviceList.length > 1 ? setAdviceExpanded(!adviceExpanded) : dismissToast(),
+        onClick: () => {
+          // По клику на тост — открываем полный список советов (как FAB)
+          if (displayedAdviceList.length > 1) {
+            haptic && haptic('light');
+            // Сначала скрываем тост с анимацией, потом показываем список
+            setToastVisible(false);
+            setTimeout(() => {
+              setAdviceTrigger('manual');
+              setToastVisible(true);
+            }, 150); // Даём тосту время на fade out
+          } else {
+            dismissToast();
+          }
+        },
         onTouchStart: handleToastTouchStart,
         onTouchMove: handleToastTouchMove,
         onTouchEnd: handleToastTouchEnd,
@@ -11012,7 +11024,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         React.createElement('div', { className: 'macro-toast-main' },
           React.createElement('span', { className: 'macro-toast-icon' }, displayedAdvice.icon),
           React.createElement('span', { className: 'macro-toast-text' }, displayedAdvice.text),
-          // Используем displayedAdviceList.length для badge
+          // Badge показывает сколько ещё советов — клик откроет полный список
           displayedAdviceList.length > 1 && React.createElement('span', { className: 'macro-toast-badge' }, `+${displayedAdviceList.length - 1}`),
           React.createElement('button', { 
             className: 'macro-toast-close', 
@@ -11020,31 +11032,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }, '×')
         ),
         // Progress bar (только для автоматических)
-        React.createElement('div', { className: 'macro-toast-progress' }),
-        // Rating buttons (👍/👎)
-        adviceExpanded && rateAdvice && React.createElement('div', { className: 'macro-toast-rating' },
-          React.createElement('span', { className: 'macro-toast-rating-label' }, 'Полезный совет?'),
-          React.createElement('button', {
-            className: 'macro-toast-rating-btn',
-            onClick: (e) => { e.stopPropagation(); rateAdvice(displayedAdvice.id, true); dismissToast(); }
-          }, '👍'),
-          React.createElement('button', {
-            className: 'macro-toast-rating-btn',
-            onClick: (e) => { e.stopPropagation(); rateAdvice(displayedAdvice.id, false); dismissToast(); }
-          }, '👎')
-        ),
-        // Дополнительные советы (при раскрытии) — используем displayedAdviceList
-        adviceExpanded && displayedAdviceList.length > 1 && React.createElement('div', { className: 'macro-toast-extras' },
-          displayedAdviceList.slice(1, 4).map(advice => 
-            React.createElement('div', { 
-              key: advice.id,
-              className: `macro-toast-extra macro-toast-extra-${advice.type}`
-            },
-              React.createElement('span', null, advice.icon),
-              React.createElement('span', null, advice.text)
-            )
-          )
-        )
+        React.createElement('div', { className: 'macro-toast-progress' })
       ),
       
       // Meal Creation/Edit Modal (mobile only)
