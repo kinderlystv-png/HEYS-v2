@@ -859,6 +859,339 @@
   line-height: 1.5;
 }
 
+/* ======================== */
+/* Household Step            */
+/* ======================== */
+
+.step-household {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 12px;
+}
+
+.household-display {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.household-value {
+  font-size: 56px;
+  font-weight: 800;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+
+.household-unit {
+  font-size: 16px;
+  margin-left: 4px;
+  color: var(--color-slate-500);
+}
+
+.household-kcal {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-slate-500);
+}
+
+.household-status {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-slate-600);
+}
+
+.household-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.household-inc-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.household-inc-btn {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--color-slate-200);
+  background: #fff;
+  font-weight: 700;
+  color: var(--color-slate-600);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.household-inc-btn.primary {
+  background: #ecfdf3;
+  border-color: #d1fae5;
+  color: #047857;
+}
+
+.household-inc-btn:active {
+  transform: scale(0.97);
+}
+
+.household-slider {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--color-slate-200);
+  outline: none;
+  transition: background 0.2s ease;
+}
+
+.household-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--color-emerald-500, #10b981);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.household-slider::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--color-emerald-500, #10b981);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.household-slider:active::-webkit-slider-thumb,
+.household-slider:active::-moz-range-thumb {
+  transform: scale(1.05);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.2);
+}
+
+.household-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--color-slate-500);
+  padding: 0 4px;
+}
+
+.household-presets {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.household-preset {
+  width: 100%;
+  padding: 8px 6px;
+  border-radius: 12px;
+  border: 1.5px solid var(--color-slate-200);
+  background: #fff;
+  color: var(--color-slate-600);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.household-preset:active {
+  transform: scale(0.97);
+}
+
+.household-preset.active {
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+
+.household-examples {
+  background: var(--color-slate-50);
+  border: 1px solid var(--color-slate-200);
+  border-radius: 14px;
+  padding: 8px 12px 10px;
+}
+
+.household-examples-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.household-example {
+  font-size: 13px;
+  color: var(--color-slate-600);
+  background: #fff;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 10px;
+  padding: 6px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.household-example:hover {
+  border-color: var(--color-emerald-400, #34d399);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+}
+
+.household-example:active {
+  transform: scale(0.98);
+  background: #ecfdf3;
+  border-color: var(--color-emerald-500, #10b981);
+}
+
+.household-weekly-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ecfeff;
+  border: 1px solid #a5f3fc;
+  color: #0f172a;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.household-stats-icon {
+  font-size: 16px;
+}
+
+.household-stats-text {
+  line-height: 1.4;
+}
+
+.household-hint {
+  font-size: 12px;
+  color: var(--color-slate-500);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.household-target {
+  font-size: 12px;
+  font-weight: 700;
+  background: #f1f5f9;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.household-spark {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 2px 0;
+}
+
+.household-spark-values {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  font-size: 10px;
+  color: var(--color-slate-500);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.household-spark-values span.today {
+  color: #047857;
+  font-weight: 800;
+}
+
+.household-spark-bars {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  align-items: end;
+  height: 70px;
+}
+
+.household-spark-bar {
+  width: 100%;
+  border-radius: 6px 6px 2px 2px;
+  background: #e5e7eb;
+  transition: background 0.2s ease, height 0.2s ease;
+}
+
+.household-spark-bar.today {
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45);
+  animation: householdPulse 1.6s ease-out infinite;
+}
+
+@keyframes householdPulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+  70% { box-shadow: 0 0 0 14px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.household-spark-labels {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  font-size: 10px;
+  color: var(--color-slate-500);
+  text-align: center;
+  padding: 0 2px 4px;
+}
+
+.household-spark-labels span.today {
+  color: #047857;
+  font-weight: 800;
+}
+
+.household-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.household-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.household-badge.success {
+  background: #ecfdf3;
+  color: #047857;
+  border-color: #bbf7d0;
+}
+
+.household-badge.info {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.household-steps-hint {
+  background: #fff7ed;
+  color: #9a3412;
+  border: 1px solid #fed7aa;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .deficit-presets {
   display: flex;
   flex-wrap: wrap;

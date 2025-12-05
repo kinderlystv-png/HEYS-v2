@@ -25,7 +25,7 @@
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
   }
 
-  function debugDayStorage(todayKey, currentClientId) {
+  function debugDayStorage(todayKey, currentClientId, altKey) {
     try {
       const ls = global.localStorage;
       if (!ls) return;
@@ -44,6 +44,7 @@
           candidates.push(k);
         }
       }
+      // Основной (эффективный) ключ
       console.log('[MorningCheckin][debug]', {
         todayKey,
         directKeyExists: !!rawDirect,
@@ -54,6 +55,25 @@
         nsUpdatedAt: parsedNs?.updatedAt,
         sampleKeys: candidates.slice(0, 10)
       });
+
+      // Альтернативный календарный ключ (UTC) — для отладки рассинхрона
+      if (altKey && altKey !== todayKey) {
+        const altDirect = ls.getItem(`heys_dayv2_${altKey}`);
+        const altNsKey = currentClientId ? `heys_${currentClientId}_dayv2_${altKey}` : '';
+        const altNs = altNsKey ? ls.getItem(altNsKey) : null;
+        let altDirectParsed = null, altNsParsed = null;
+        try { altDirectParsed = altDirect ? JSON.parse(altDirect) : null; } catch(_){}
+        try { altNsParsed = altNs ? JSON.parse(altNs) : null; } catch(_){}
+        console.log('[MorningCheckin][debug-alt]', {
+          altKey,
+          altDirectExists: !!altDirect,
+          altNsExists: !!altNs,
+          altDirectWeight: altDirectParsed?.weightMorning,
+          altNsWeight: altNsParsed?.weightMorning,
+          altDirectUpdatedAt: altDirectParsed?.updatedAt,
+          altNsUpdatedAt: altNsParsed?.updatedAt
+        });
+      }
     } catch (e) {
       // не ломаем основной поток из-за debug
     }
@@ -76,12 +96,17 @@
     
     const todayKey = getTodayKey();
     const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${todayKey}`, {}) : {};
+    const calendarKey = new Date().toISOString().slice(0, 10);
+    const altDayData = calendarKey !== todayKey && U.lsGet ? U.lsGet(`heys_dayv2_${calendarKey}`, {}) : {};
 
-    const hasWeight = dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0;
-    console.log('[MorningCheckin] Checking for clientId:', currentClientId.substring(0,8), '| weightMorning:', dayData.weightMorning, '| dayKey:', todayKey);
-    debugDayStorage(todayKey, currentClientId);
+    const hasWeightPrimary = dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0;
+    const hasWeightAlt = altDayData && altDayData.weightMorning != null && altDayData.weightMorning !== '' && altDayData.weightMorning !== 0;
+    const hasWeight = hasWeightPrimary || hasWeightAlt;
 
-    // Показываем, если сегодня нет веса (учитываем ночной порог)
+    console.log('[MorningCheckin] Checking for clientId:', currentClientId.substring(0,8), '| weightMorning:', dayData.weightMorning, '| dayKey:', todayKey, '| altKey:', calendarKey, '| altWeight:', altDayData.weightMorning);
+    debugDayStorage(todayKey, currentClientId, calendarKey);
+
+    // Показываем, если ни в эффективном дне (до 3:00 = вчера), ни в календарном ключе нет веса
     return !hasWeight;
   }
 

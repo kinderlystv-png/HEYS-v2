@@ -31,6 +31,11 @@
   }
 
   function getTodayKey() {
+    // Используем «эффективную» дату (до 03:00 считаем, что день ещё предыдущий)
+    // Приоритет: dayUtils.todayISO → models.todayISO → fallback на ISO без смещения
+    const dayUtils = HEYS.dayUtils || {};
+    if (typeof dayUtils.todayISO === 'function') return dayUtils.todayISO();
+    if (HEYS.models && typeof HEYS.models.todayISO === 'function') return HEYS.models.todayISO();
     return new Date().toISOString().slice(0, 10);
   }
 

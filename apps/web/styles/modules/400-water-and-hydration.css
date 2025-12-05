@@ -755,13 +755,35 @@
 
 .advice-list-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 6px;
   padding: 16px 16px 12px;
   border-bottom: 1px solid var(--border, #e5e7eb);
   font-weight: 600;
   font-size: 16px;
   color: var(--text-primary, #1f2937);
+}
+
+.advice-list-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.advice-list-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+}
+
+.advice-list-toggles {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
 .advice-list-header-actions {
@@ -770,19 +792,33 @@
   align-items: center;
 }
 
-/* iOS-style Toggle для автопоказа тостов */
+/* iOS-style Toggle для автопоказа тостов и звука */
 .ios-toggle-label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
-  margin-left: auto;
-  margin-right: 8px;
 }
 
 .ios-toggle-text {
   font-size: 14px;
   opacity: 0.8;
+}
+
+.advice-toggle-text-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.advice-toggle-hint {
+  font-size: 12px;
+  line-height: 1.05;
+  font-weight: 400;
+  color: var(--text-secondary, #6b7280);
+  white-space: normal;
 }
 
 .ios-toggle {

@@ -1971,6 +1971,14 @@
         return settings.toastsEnabled !== false; // true по умолчанию
       } catch(e) { return true; }
     });
+    // Звук для модуля советов (ding/whoosh/pop)
+    const [adviceSoundEnabled, setAdviceSoundEnabled] = useState(() => {
+      try {
+        const settings = JSON.parse(localStorage.getItem('heys_advice_settings') || '{}');
+        // true по умолчанию, выключить можно вручную
+        return settings.adviceSoundEnabled !== false;
+      } catch(e) { return true; }
+    });
     // Прочитанные советы (свайп влево) — сохраняются на день
     const [dismissedAdvices, setDismissedAdvices] = useState(() => {
       try {
@@ -2004,8 +2012,30 @@
     const [undoFading, setUndoFading] = useState(false); // для fade-out анимации
     const adviceSwipeStart = React.useRef({});
     const adviceCardRefs = React.useRef({}); // refs для floating XP
+    const dismissToastRef = React.useRef(null);
     const registerAdviceCardRef = React.useCallback((adviceId, el) => {
       if (el) adviceCardRefs.current[adviceId] = el;
+    }, []);
+    // Свайп вниз для закрытия списка советов
+    const adviceListTouchStartY = React.useRef(null);
+    const adviceListTouchLastY = React.useRef(null);
+    const handleAdviceListTouchStart = React.useCallback((e) => {
+      if (!e.touches?.length) return;
+      adviceListTouchStartY.current = e.touches[0].clientY;
+      adviceListTouchLastY.current = e.touches[0].clientY;
+    }, []);
+    const handleAdviceListTouchMove = React.useCallback((e) => {
+      if (!e.touches?.length || adviceListTouchStartY.current === null) return;
+      adviceListTouchLastY.current = e.touches[0].clientY;
+    }, []);
+    const handleAdviceListTouchEnd = React.useCallback(() => {
+      if (adviceListTouchStartY.current === null || adviceListTouchLastY.current === null) return;
+      const diff = adviceListTouchLastY.current - adviceListTouchStartY.current;
+      adviceListTouchStartY.current = null;
+      adviceListTouchLastY.current = null;
+      if (diff > 50 && typeof dismissToastRef.current === 'function') {
+        dismissToastRef.current();
+      }
     }, []);
     
     // Группировка и сортировка советов
@@ -2066,17 +2096,17 @@
     // 🔊 Звуки для swipe действий — используем централизованный модуль
     const playAdviceSound = React.useCallback(() => {
       // Свайп влево (прочитано) — ding
-      if (window.HEYS?.sounds) {
+      if (adviceSoundEnabled && window.HEYS?.sounds) {
         window.HEYS.sounds.ding();
       }
-    }, []);
+    }, [adviceSoundEnabled]);
     
     const playAdviceHideSound = React.useCallback(() => {
       // Свайп вправо (скрыть) — whoosh
-      if (window.HEYS?.sounds) {
+      if (adviceSoundEnabled && window.HEYS?.sounds) {
         window.HEYS.sounds.whoosh();
       }
-    }, []);
+    }, [adviceSoundEnabled]);
     
     // Toggle автопоказа тостов (FAB всегда работает)
     const toggleToastsEnabled = React.useCallback(() => {
@@ -2089,6 +2119,21 @@
           window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: settings }));
         } catch(e) {}
         // Haptic feedback
+        if (typeof haptic === 'function') haptic('light');
+        return newVal;
+      });
+    }, [haptic]);
+
+    // Вкл/выкл звук в модуле советов
+    const toggleAdviceSoundEnabled = React.useCallback(() => {
+      setAdviceSoundEnabled(prev => {
+        const newVal = !prev;
+        try {
+          const settings = JSON.parse(localStorage.getItem('heys_advice_settings') || '{}');
+          settings.adviceSoundEnabled = newVal;
+          localStorage.setItem('heys_advice_settings', JSON.stringify(settings));
+          window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: settings }));
+        } catch(e) {}
         if (typeof haptic === 'function') haptic('light');
         return newVal;
       });
@@ -2761,6 +2806,7 @@
 
     // === Household (Бытовая активность) — через модульную модалку ===
     function openHouseholdPicker() {
+      const dateKey = date; // ключ дня (YYYY-MM-DD)
       if (HEYS.StepModal) {
         HEYS.StepModal.show({
           steps: ['household'],
@@ -4380,7 +4426,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       setToastDetailsOpen(false); // Сбрасываем детали при новом совете
       
       // 🔊 Звук при появлении тоста
-      if (window.HEYS?.sounds) {
+      if (adviceSoundEnabled && window.HEYS?.sounds) {
         if (advicePrimary.type === 'achievement' || advicePrimary.showConfetti) {
           window.HEYS.sounds.success();
         } else if (advicePrimary.type === 'warning') {
@@ -4413,7 +4459,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         setToastDetailsOpen(false);
       }, advicePrimary.ttl || 5000);
       return () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); };
-    }, [advicePrimary?.id, adviceTrigger]);
+    }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled]);
     
     // Сброс advice при смене даты
     React.useEffect(() => {
@@ -5154,6 +5200,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       setDisplayedAdviceList([]);
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
+
+    // Сохраняем ссылку для обработчиков свайпа вниз
+    dismissToastRef.current = dismissToast;
 
     const prevQualityStreakRef = useRef(0);
     const lowScoreHapticRef = useRef(false);
@@ -10925,36 +10974,59 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           className: 'advice-list-overlay',
           onClick: dismissToast
         },
-          React.createElement('div', { 
-            className: `advice-list-container${dismissAllAnimation ? ' shake-warning' : ''}`,
-            onClick: e => e.stopPropagation()
-          },
+            React.createElement('div', { 
+              className: `advice-list-container${dismissAllAnimation ? ' shake-warning' : ''}`,
+              onClick: e => e.stopPropagation(),
+              onTouchStart: handleAdviceListTouchStart,
+              onTouchMove: handleAdviceListTouchMove,
+              onTouchEnd: handleAdviceListTouchEnd
+            },
             // Заголовок
             React.createElement('div', { className: 'advice-list-header' },
-              React.createElement('span', null, `💡 Советы (${activeCount})`),
-              // iOS-style toggle для автопоказа тостов
-              React.createElement('label', { 
-                className: 'ios-toggle-label',
-                title: toastsEnabled ? 'Отключить всплывающие советы' : 'Включить всплывающие советы'
-              },
-                React.createElement('span', { className: 'ios-toggle-text' }, '🔔'),
-                React.createElement('div', { 
-                  className: `ios-toggle ${toastsEnabled ? 'ios-toggle-on' : ''}`,
-                  onClick: toggleToastsEnabled
-                },
-                  React.createElement('div', { className: 'ios-toggle-thumb' })
-                )
-              ),
-              React.createElement('div', { className: 'advice-list-header-actions' },
+              React.createElement('div', { className: 'advice-list-header-top' },
+                React.createElement('span', null, `💡 Советы (${activeCount})`),
                 activeCount > 1 && React.createElement('button', { 
                   className: 'advice-list-dismiss-all',
                   onClick: handleDismissAll,
-                  disabled: dismissAllAnimation
-                }, '✓ Все'),
-                React.createElement('button', { 
-                  className: 'advice-list-close',
-                  onClick: dismissToast
-                }, '×')
+                  disabled: dismissAllAnimation,
+                  title: 'Пометить все советы прочитанными'
+                }, 'Прочитать все')
+              ),
+              React.createElement('div', { className: 'advice-list-header-left' },
+                React.createElement('div', { className: 'advice-list-toggles' },
+                  // Автопоказ всплывающих советов (сначала переключатель, затем описание)
+                  React.createElement('label', { 
+                    className: 'ios-toggle-label',
+                    title: toastsEnabled ? 'Отключить всплывающие советы' : 'Включить всплывающие советы'
+                  },
+                    React.createElement('div', { 
+                      className: `ios-toggle ${toastsEnabled ? 'ios-toggle-on' : ''}`,
+                      onClick: toggleToastsEnabled
+                    },
+                      React.createElement('div', { className: 'ios-toggle-thumb' })
+                    ),
+                    React.createElement('div', { className: 'advice-toggle-text-group' },
+                      React.createElement('span', { className: 'ios-toggle-text' }, '🔔'),
+                      React.createElement('span', { className: 'advice-toggle-hint' }, 'Автопоказ всплывающих советов')
+                    )
+                  ),
+                  // Звук для советов
+                  React.createElement('label', { 
+                    className: 'ios-toggle-label',
+                    title: adviceSoundEnabled ? 'Выключить звук советов' : 'Включить звук советов'
+                  },
+                    React.createElement('div', { 
+                      className: `ios-toggle ${adviceSoundEnabled ? 'ios-toggle-on' : ''}`,
+                      onClick: toggleAdviceSoundEnabled
+                    },
+                      React.createElement('div', { className: 'ios-toggle-thumb' })
+                    ),
+                    React.createElement('div', { className: 'advice-toggle-text-group' },
+                      React.createElement('span', { className: 'ios-toggle-text' }, adviceSoundEnabled ? '🔊' : '🔇'),
+                      React.createElement('span', { className: 'advice-toggle-hint' }, adviceSoundEnabled ? 'Звук советов включён' : 'Звук советов выключен')
+                    )
+                  )
+                )
               )
             ),
             // Список советов с группировкой
