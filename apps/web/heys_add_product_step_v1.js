@@ -1080,7 +1080,8 @@
           hint: 'Вставьте строку с макросами',
           icon: '➕',
           component: CreateProductStep,
-          validate: () => true
+          validate: () => true,
+          hidden: true // Скрытый шаг — не отображается в progress dots
         },
         {
           id: 'grams',

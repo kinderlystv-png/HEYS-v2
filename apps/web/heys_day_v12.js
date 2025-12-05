@@ -1883,28 +1883,33 @@
     const [toastDismissed, setToastDismissed] = useState(false);
     const toastTimeoutRef = React.useRef(null);
     const [toastSwipeX, setToastSwipeX] = useState(0);
-    const [toastSwiped, setToastSwiped] = useState(false); // Показывать overlay с кнопками
+    const [toastSwiped, setToastSwiped] = useState(false); // Показывать overlay с кнопками (как в AdviceCard)
+    const [toastScheduledConfirm, setToastScheduledConfirm] = useState(false); // Подтверждение "Через 2ч"
     const toastTouchStart = React.useRef(0);
     
-    // Touch handlers для swipe-to-dismiss
+    // Touch handlers для swipe — показываем overlay с кнопками (как в AdviceCard)
     // ⚠️ ВАЖНО: stopPropagation чтобы не триггерить свайп вкладок
     const handleToastTouchStart = (e) => {
+      if (toastSwiped) return; // Если overlay показан — не свайпаем
       e.stopPropagation();
       toastTouchStart.current = e.touches[0].clientX;
     };
     const handleToastTouchMove = (e) => {
+      if (toastSwiped) return;
       e.stopPropagation();
       const diff = e.touches[0].clientX - toastTouchStart.current;
-      // Только влево
+      // Только влево (как в списке советов)
       if (diff < 0) {
         setToastSwipeX(diff);
       }
     };
     const handleToastTouchEnd = (e) => {
+      if (toastSwiped) return;
       e.stopPropagation();
-      // Свайп влево > 60px — показываем overlay с кнопками
-      if (toastSwipeX < -60) {
+      // Свайп влево > 80px — показываем overlay с кнопками + таймер 3 сек
+      if (toastSwipeX < -80) {
         setToastSwiped(true);
+        setToastScheduledConfirm(false);
         // Таймер 3 сек — потом dismiss
         if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
         toastTimeoutRef.current = setTimeout(() => {
@@ -1917,6 +1922,7 @@
     // Отмена свайпа (вернуть тост)
     const handleToastUndo = () => {
       setToastSwiped(false);
+      setToastScheduledConfirm(false);
       if (toastTimeoutRef.current) {
         clearTimeout(toastTimeoutRef.current);
         toastTimeoutRef.current = null;
@@ -1924,11 +1930,18 @@
     };
     
     // Отложить совет на 2 часа
-    const handleToastSnooze = () => {
+    const handleToastSchedule = (e) => {
+      e && e.stopPropagation();
       if (displayedAdvice && scheduleAdvice) {
         scheduleAdvice(displayedAdvice, 120);
+        setToastScheduledConfirm(true);
+        // Haptic feedback
+        if (navigator.vibrate) navigator.vibrate(50);
+        // Закрыть через 1.5 сек
+        setTimeout(() => {
+          dismissToast();
+        }, 1500);
       }
-      dismissToast();
     };
     
     // === Advice Module State ===
@@ -5120,6 +5133,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       setToastVisible(false);
       setToastDismissed(true);
       setToastSwiped(false);
+      setToastScheduledConfirm(false);
       setAdviceExpanded(false);
       setDisplayedAdvice(null);
       setDisplayedAdviceList([]);
@@ -11038,50 +11052,107 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         role: 'alert',
         'aria-live': 'polite',
         onClick: () => {
-          // Если свайпнут — не реагируем на клик
+          // Если overlay показан — клик на overlay обрабатывается отдельно
           if (toastSwiped) return;
           // По клику на тост — разворачиваем + открываем список всех советов
-          if (!adviceExpanded) {
+          if (!adviceExpanded && Math.abs(toastSwipeX) < 10) {
             haptic && haptic('light');
             setAdviceExpanded(true);
             // Переключаемся на manual чтобы показать список советов
             setAdviceTrigger('manual');
           }
         },
-        onTouchStart: toastSwiped ? undefined : handleToastTouchStart,
-        onTouchMove: toastSwiped ? undefined : handleToastTouchMove,
-        onTouchEnd: toastSwiped ? undefined : handleToastTouchEnd,
-        style: toastSwiped ? { transform: 'translateX(-50%)' } : { 
-          transform: `translateX(calc(-50% + ${toastSwipeX}px))`, 
-          opacity: 1 - Math.abs(toastSwipeX) / 150 
-        }
+        onTouchStart: handleToastTouchStart,
+        onTouchMove: handleToastTouchMove,
+        onTouchEnd: handleToastTouchEnd,
+        style: toastSwiped 
+          ? { transform: 'translateX(-50%)' } 
+          : { transform: `translateX(calc(-50% + ${toastSwipeX}px))`, opacity: 1 - Math.abs(toastSwipeX) / 150 }
       },
-        // Overlay после свайпа (кнопки Отмена и Повторить)
-        toastSwiped ? React.createElement('div', { className: 'macro-toast-swiped-overlay' },
-          React.createElement('div', { className: 'macro-toast-swiped-buttons' },
-            React.createElement('button', { 
-              className: 'macro-toast-swiped-btn undo',
-              onClick: (e) => { e.stopPropagation(); handleToastUndo(); }
-            }, '↩ Отмена'),
-            React.createElement('button', { 
-              className: 'macro-toast-swiped-btn snooze',
-              onClick: (e) => { e.stopPropagation(); handleToastSnooze(); }
-            }, '⏰ Через 2ч')
-          ),
-          React.createElement('div', { className: 'macro-toast-swiped-progress' })
-        ) : React.createElement(React.Fragment, null,
-          // Основной контент тоста
-          React.createElement('div', { className: 'macro-toast-main' },
-            React.createElement('span', { className: 'macro-toast-icon' }, displayedAdvice.icon),
-            React.createElement('span', { className: 'macro-toast-text' }, displayedAdvice.text),
-            React.createElement('button', { 
-              className: 'macro-toast-close', 
-              onClick: (e) => { e.stopPropagation(); dismissToast(); } 
-            }, '×')
-          ),
-          // Подсказка "нажмите для подробностей"
-          React.createElement('div', { className: 'macro-toast-tap-hint' }, 'нажмите для подробностей')
-        )
+        // Overlay после свайпа (как в AdviceCard)
+        toastSwiped && React.createElement('div', {
+          className: 'advice-undo-overlay',
+          style: {
+            position: 'absolute',
+            inset: 0,
+            background: toastScheduledConfirm 
+              ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%)'
+              : 'linear-gradient(135deg, rgba(34, 197, 94, 0.95) 0%, rgba(22, 163, 74, 0.95) 100%)',
+            borderRadius: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            color: 'white',
+            fontWeight: 600,
+            fontSize: '14px',
+            zIndex: 10,
+            backdropFilter: 'blur(4px)'
+          }
+        },
+          toastScheduledConfirm 
+            ? React.createElement('span', { 
+                style: { display: 'flex', alignItems: 'center', gap: '8px' } 
+              }, '⏰ Напомню через 2 часа ✓')
+            : React.createElement(React.Fragment, null,
+                React.createElement('span', null, '✓ Прочитано'),
+                React.createElement('div', { style: { display: 'flex', gap: '8px' } },
+                  React.createElement('span', { 
+                    onClick: (e) => { e.stopPropagation(); handleToastUndo(); },
+                    style: { 
+                      background: 'rgba(255,255,255,0.3)', 
+                      padding: '6px 12px', 
+                      borderRadius: '12px',
+                      fontSize: '13px',
+                      cursor: 'pointer'
+                    } 
+                  }, 'Отменить'),
+                  React.createElement('span', { 
+                    onClick: handleToastSchedule,
+                    style: { 
+                      background: 'rgba(255,255,255,0.25)', 
+                      padding: '6px 12px', 
+                      borderRadius: '12px',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    } 
+                  }, '⏰ 2ч')
+                )
+              ),
+          // Прогресс-бар (убывает за 3 сек)
+          !toastScheduledConfirm && React.createElement('div', {
+            style: {
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              height: '3px',
+              background: 'rgba(255,255,255,0.5)',
+              width: '100%',
+              borderRadius: '0 0 16px 16px',
+              animation: 'undoProgress 3s linear forwards'
+            }
+          })
+        ),
+        // Основной контент тоста (невидим когда overlay, но занимает место)
+        React.createElement('div', { 
+          className: 'macro-toast-main',
+          style: toastSwiped ? { visibility: 'hidden' } : undefined
+        },
+          React.createElement('span', { className: 'macro-toast-icon' }, displayedAdvice.icon),
+          React.createElement('span', { className: 'macro-toast-text' }, displayedAdvice.text),
+          React.createElement('button', { 
+            className: 'macro-toast-close', 
+            onClick: (e) => { e.stopPropagation(); dismissToast(); } 
+          }, '×')
+        ),
+        // Подсказка "нажмите для подробностей" (скрыта когда overlay)
+        React.createElement('div', { 
+          className: 'macro-toast-tap-hint',
+          style: toastSwiped ? { visibility: 'hidden' } : undefined
+        }, 'нажмите для подробностей')
       ),
       
       // Meal Creation/Edit Modal (mobile only)

@@ -445,9 +445,11 @@
           ),
 
           // Progress dots (кружочки) — кликабельные для навигации
+          // Скрытые шаги (hidden: true) не отображаются в progress
           showProgress && totalSteps > 1 && React.createElement('div', { className: 'mc-progress-dots' },
-            stepConfigs.map((_, i) => 
-              React.createElement('button', { 
+            stepConfigs.map((config, i) => 
+              // Пропускаем скрытые шаги
+              config.hidden ? null : React.createElement('button', { 
                 key: i,
                 className: 'mc-progress-dot' + (i === currentStepIndex ? ' active' : '') + (i < currentStepIndex ? ' completed' : ''),
                 onClick: () => {
@@ -455,7 +457,7 @@
                     goToStep(i, i > currentStepIndex ? 'left' : 'right');
                   }
                 },
-                'aria-label': `Шаг ${i + 1} из ${totalSteps}`
+                'aria-label': `Шаг ${i + 1}`
               })
             )
           ),
