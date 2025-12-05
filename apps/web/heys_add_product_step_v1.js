@@ -1122,6 +1122,11 @@
             grams: grams,
             mealIndex
           });
+          
+          // 🔔 Dispatch event для advice module
+          window.dispatchEvent(new CustomEvent('heysProductAdded', { 
+            detail: { product: selectedProduct, grams } 
+          }));
         }
       },
       onClose

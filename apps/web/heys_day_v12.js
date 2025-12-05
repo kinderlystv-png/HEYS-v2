@@ -1951,6 +1951,9 @@
     // === Advice Module State ===
     const [adviceTrigger, setAdviceTrigger] = useState(null);
     const [adviceExpanded, setAdviceExpanded] = useState(false);
+    // 🔧 FIX: Храним текущий отображаемый совет отдельно от advicePrimary
+    // чтобы избежать race condition при markShown()
+    const [displayedAdvice, setDisplayedAdvice] = useState(null);
     // Прочитанные советы (свайп влево) — сохраняются на день
     const [dismissedAdvices, setDismissedAdvices] = useState(() => {
       try {
@@ -4235,10 +4238,27 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     const normAbs = computeDailyNorms();
     
     // === Advice Module Integration (после dayTot и normAbs) ===
-    const adviceEngine = React.useMemo(() => {
-      if (!window.HEYS?.advice?.useAdviceEngine) return null;
-      return window.HEYS.advice.useAdviceEngine;
-    }, []);
+    // 🔧 FIX: Используем state для отслеживания готовности модуля advice
+    const [adviceModuleReady, setAdviceModuleReady] = React.useState(!!window.HEYS?.advice?.useAdviceEngine);
+    
+    React.useEffect(() => {
+      if (adviceModuleReady) return;
+      // Проверяем готовность модуля каждые 100мс пока не загрузится
+      const checkInterval = setInterval(() => {
+        if (window.HEYS?.advice?.useAdviceEngine) {
+          setAdviceModuleReady(true);
+          clearInterval(checkInterval);
+        }
+      }, 100);
+      // Таймаут на 5 секунд
+      const timeout = setTimeout(() => clearInterval(checkInterval), 5000);
+      return () => {
+        clearInterval(checkInterval);
+        clearTimeout(timeout);
+      };
+    }, [adviceModuleReady]);
+    
+    const adviceEngine = adviceModuleReady ? window.HEYS.advice.useAdviceEngine : null;
     
     const adviceResult = adviceEngine ? adviceEngine({
       dayTot,
@@ -4305,11 +4325,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     }, [date]);
     
     // Показ toast при получении совета
+    // 🔧 FIX: Сохраняем совет в displayedAdvice ПЕРЕД markShown,
+    // чтобы тост отображался даже после того как advicePrimary станет null
     React.useEffect(() => {
       if (!advicePrimary) return;
+      
+      // Сохраняем совет для отображения
+      setDisplayedAdvice(advicePrimary);
       setAdviceExpanded(false);
       setToastVisible(true);
       setToastDismissed(false);
+      
       if ((advicePrimary.type === 'achievement' || advicePrimary.type === 'warning') && typeof haptic === 'function') {
         haptic('light');
       }
@@ -4319,12 +4345,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         if (typeof haptic === 'function') haptic('success');
         setTimeout(() => setShowConfetti(false), 2000);
       }
+      
+      // Помечаем как показанный ПОСЛЕ сохранения в displayedAdvice
       if (markShown) markShown(advicePrimary.id);
+      
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
       toastTimeoutRef.current = setTimeout(() => {
         setToastVisible(false);
         setAdviceExpanded(false);
         setAdviceTrigger(null);
+        setDisplayedAdvice(null); // Очищаем после скрытия тоста
       }, advicePrimary.ttl || 5000);
       return () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); };
     }, [advicePrimary?.id, adviceTrigger]);
@@ -4334,6 +4364,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       setAdviceTrigger(null);
       setAdviceExpanded(false);
       setToastVisible(false);
+      setDisplayedAdvice(null);
       if (window.HEYS?.advice?.resetSessionAdvices) window.HEYS.advice.resetSessionAdvices();
     }, [date]);
     
@@ -5058,6 +5089,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     const dismissToast = () => {
       setToastVisible(false);
       setToastDismissed(true);
+      setDisplayedAdvice(null); // 🔧 FIX: Очищаем displayedAdvice при dismiss
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
 
@@ -10954,12 +10986,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       ),
       
       // === Auto Toast (для автоматических советов — tab_open, product_added) ===
-      adviceTrigger !== 'manual' && adviceTrigger !== 'manual_empty' && advicePrimary && toastVisible && React.createElement('div', {
-        className: 'macro-toast macro-toast-' + advicePrimary.type + 
+      // 🔧 FIX: Используем displayedAdvice вместо advicePrimary для избежания race condition
+      adviceTrigger !== 'manual' && adviceTrigger !== 'manual_empty' && displayedAdvice && toastVisible && React.createElement('div', {
+        className: 'macro-toast macro-toast-' + displayedAdvice.type + 
           (adviceExpanded ? ' expanded' : '') + 
           ' visible' + 
-          (advicePrimary.animationClass ? ' anim-' + advicePrimary.animationClass : '') +
-          (advicePrimary.id?.startsWith('personal_best') ? ' personal-best' : ''),
+          (displayedAdvice.animationClass ? ' anim-' + displayedAdvice.animationClass : '') +
+          (displayedAdvice.id?.startsWith('personal_best') ? ' personal-best' : ''),
         role: 'alert',
         'aria-live': 'polite',
         onClick: () => adviceCount > 1 ? setAdviceExpanded(!adviceExpanded) : dismissToast(),
@@ -10972,8 +11005,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         }
       },
         React.createElement('div', { className: 'macro-toast-main' },
-          React.createElement('span', { className: 'macro-toast-icon' }, advicePrimary.icon),
-          React.createElement('span', { className: 'macro-toast-text' }, advicePrimary.text),
+          React.createElement('span', { className: 'macro-toast-icon' }, displayedAdvice.icon),
+          React.createElement('span', { className: 'macro-toast-text' }, displayedAdvice.text),
           adviceCount > 1 && React.createElement('span', { className: 'macro-toast-badge' }, `+${adviceCount - 1}`),
           React.createElement('button', { 
             className: 'macro-toast-close', 
@@ -10987,11 +11020,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('span', { className: 'macro-toast-rating-label' }, 'Полезный совет?'),
           React.createElement('button', {
             className: 'macro-toast-rating-btn',
-            onClick: (e) => { e.stopPropagation(); rateAdvice(advicePrimary.id, true); dismissToast(); }
+            onClick: (e) => { e.stopPropagation(); rateAdvice(displayedAdvice.id, true); dismissToast(); }
           }, '👍'),
           React.createElement('button', {
             className: 'macro-toast-rating-btn',
-            onClick: (e) => { e.stopPropagation(); rateAdvice(advicePrimary.id, false); dismissToast(); }
+            onClick: (e) => { e.stopPropagation(); rateAdvice(displayedAdvice.id, false); dismissToast(); }
           }, '👎')
         ),
         // Дополнительные советы (при раскрытии)
