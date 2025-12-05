@@ -401,93 +401,99 @@
     const showPopular = !showSearch;
     
     return React.createElement('div', { className: 'aps-search-step' },
-      // Кнопка "Новый продукт"
-      React.createElement('button', {
-        className: 'aps-new-product-btn',
-        onClick: handleNewProduct
-      },
-        React.createElement('span', { className: 'aps-new-icon' }, '+'),
-        React.createElement('span', null, 'Новый продукт'),
-        React.createElement('span', { className: 'aps-new-hint' }, 'если не нашли нужный')
-      ),
-      
-      // Поле поиска
-      React.createElement('div', { className: 'aps-search-container' },
-        React.createElement('span', { className: 'aps-search-icon' }, '🔍'),
-        React.createElement('input', {
-          ref: inputRef,
-          type: 'text',
-          className: 'aps-search-input',
-          placeholder: 'Поиск продукта...',
-          value: search,
-          onChange: (e) => setSearch(e.target.value),
-          autoComplete: 'off',
-          autoCorrect: 'off',
-          spellCheck: false
-        }),
-        search && React.createElement('button', {
-          className: 'aps-search-clear',
-          onClick: () => setSearch('')
-        }, '×')
-      ),
-      
-      // Фильтр по категориям
-      React.createElement('div', { className: 'aps-categories' },
-        CATEGORIES.map(cat => 
-          React.createElement('button', {
-            key: cat.id,
-            className: 'aps-category-chip' + (selectedCategory === cat.id ? ' active' : ''),
-            onClick: () => setSelectedCategory(cat.id)
-          }, cat.icon + ' ' + cat.name)
-        )
-      ),
-      
-      // Умные рекомендации (если нет поиска и есть рекомендации)
-      !showSearch && smartRecs.length > 0 && smartRecs.map((rec, ri) =>
-        React.createElement('div', { key: ri, className: 'aps-section aps-smart-rec' },
-          React.createElement('div', { className: 'aps-section-title' }, 
-            rec.title,
-            React.createElement('span', { className: 'aps-rec-hint' }, rec.hint)
-          ),
-          React.createElement('div', { className: 'aps-products-list' },
-            rec.products.map(p => renderProductCard(p, false))
+      // === Фиксированная шапка: кнопка + поиск + категории ===
+      React.createElement('div', { className: 'aps-fixed-header' },
+        // Кнопка "Новый продукт"
+        React.createElement('button', {
+          className: 'aps-new-product-btn',
+          onClick: handleNewProduct
+        },
+          React.createElement('span', { className: 'aps-new-icon' }, '+'),
+          React.createElement('span', null, 'Новый продукт'),
+          React.createElement('span', { className: 'aps-new-hint' }, 'если не нашли нужный')
+        ),
+        
+        // Поле поиска
+        React.createElement('div', { className: 'aps-search-container' },
+          React.createElement('span', { className: 'aps-search-icon' }, '🔍'),
+          React.createElement('input', {
+            ref: inputRef,
+            type: 'text',
+            className: 'aps-search-input',
+            placeholder: 'Поиск продукта...',
+            value: search,
+            onChange: (e) => setSearch(e.target.value),
+            autoComplete: 'off',
+            autoCorrect: 'off',
+            spellCheck: false
+          }),
+          search && React.createElement('button', {
+            className: 'aps-search-clear',
+            onClick: () => setSearch('')
+          }, '×')
+        ),
+        
+        // Фильтр по категориям
+        React.createElement('div', { className: 'aps-categories' },
+          CATEGORIES.map(cat => 
+            React.createElement('button', {
+              key: cat.id,
+              className: 'aps-category-chip' + (selectedCategory === cat.id ? ' active' : ''),
+              onClick: () => setSelectedCategory(cat.id)
+            }, cat.icon + ' ' + cat.name)
           )
         )
       ),
       
-      // Результаты поиска
-      showSearch && React.createElement('div', { className: 'aps-section' },
-        React.createElement('div', { className: 'aps-section-title' }, 
-          searchResults.length > 0 
-            ? `Найдено: ${searchResults.length}` 
-            : 'Ничего не найдено'
+      // === Скроллируемый список продуктов ===
+      React.createElement('div', { className: 'aps-products-scroll' },
+        // Умные рекомендации (если нет поиска и есть рекомендации)
+        !showSearch && smartRecs.length > 0 && smartRecs.map((rec, ri) =>
+          React.createElement('div', { key: ri, className: 'aps-section aps-smart-rec' },
+            React.createElement('div', { className: 'aps-section-title' }, 
+              rec.title,
+              React.createElement('span', { className: 'aps-rec-hint' }, rec.hint)
+            ),
+            React.createElement('div', { className: 'aps-products-list' },
+              rec.products.map(p => renderProductCard(p, false))
+            )
+          )
         ),
-        searchResults.length > 0 && React.createElement('div', { className: 'aps-products-list' },
-          searchResults.map(p => renderProductCard(p))
+        
+        // Результаты поиска
+        showSearch && React.createElement('div', { className: 'aps-section' },
+          React.createElement('div', { className: 'aps-section-title' }, 
+            searchResults.length > 0 
+              ? `Найдено: ${searchResults.length}` 
+              : 'Ничего не найдено'
+          ),
+          searchResults.length > 0 && React.createElement('div', { className: 'aps-products-list' },
+            searchResults.map(p => renderProductCard(p))
+          ),
+          searchResults.length === 0 && React.createElement('div', { className: 'aps-empty' },
+            React.createElement('span', null, '😕'),
+            React.createElement('span', null, 'Попробуйте другой запрос'),
+            React.createElement('button', {
+              className: 'aps-add-new-btn',
+              onClick: handleNewProduct
+            }, '+ Добавить "' + search + '"')
+          )
         ),
-        searchResults.length === 0 && React.createElement('div', { className: 'aps-empty' },
-          React.createElement('span', null, '😕'),
-          React.createElement('span', null, 'Попробуйте другой запрос'),
-          React.createElement('button', {
-            className: 'aps-add-new-btn',
-            onClick: handleNewProduct
-          }, '+ Добавить "' + search + '"')
-        )
-      ),
-      
-      // Избранные
-      showFavorites && React.createElement('div', { className: 'aps-section' },
-        React.createElement('div', { className: 'aps-section-title' }, '⭐ Избранные'),
-        React.createElement('div', { className: 'aps-products-list' },
-          favoriteProducts.map(p => renderProductCard(p))
-        )
-      ),
-      
-      // Популярные / Часто используемые
-      showPopular && React.createElement('div', { className: 'aps-section' },
-        React.createElement('div', { className: 'aps-section-title' }, '🔥 Часто используемые'),
-        React.createElement('div', { className: 'aps-products-list' },
-          popularProducts.slice(0, showFavorites ? 10 : 15).map(p => renderProductCard(p, !showFavorites))
+        
+        // Избранные
+        showFavorites && React.createElement('div', { className: 'aps-section' },
+          React.createElement('div', { className: 'aps-section-title' }, '⭐ Избранные'),
+          React.createElement('div', { className: 'aps-products-list' },
+            favoriteProducts.map(p => renderProductCard(p))
+          )
+        ),
+        
+        // Популярные / Часто используемые
+        showPopular && React.createElement('div', { className: 'aps-section' },
+          React.createElement('div', { className: 'aps-section-title' }, '🔥 Часто используемые'),
+          React.createElement('div', { className: 'aps-products-list' },
+            popularProducts.slice(0, showFavorites ? 10 : 15).map(p => renderProductCard(p, !showFavorites))
+          )
         )
       )
     );

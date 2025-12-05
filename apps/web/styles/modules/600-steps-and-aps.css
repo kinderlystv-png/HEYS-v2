@@ -832,13 +832,35 @@
 .aps-search-step {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
   padding: 0;
   flex: 1;
   min-height: 0; /* Важно для flex + overflow! */
+  overflow: hidden; /* Скролл будет в .aps-products-scroll */
+}
+
+/* === Фиксированная шапка: кнопка + поиск + категории === */
+.aps-fixed-header {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 10px;
+  background: var(--card, #fff);
+  border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+/* === Скроллируемый список продуктов === */
+.aps-products-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
 }
 
 /* Кнопка "Новый продукт" */

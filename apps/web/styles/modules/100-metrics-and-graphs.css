@@ -4335,11 +4335,11 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  /* Gradient border technique */
+  /* Gradient border + pastel background */
   border: 2px solid transparent;
   border-radius: 12px;
   background: 
-    linear-gradient(var(--color-white), var(--color-white)) padding-box,
+    linear-gradient(var(--toast-bg, var(--color-white)), var(--toast-bg, var(--color-white))) padding-box,
     var(--toast-gradient, linear-gradient(135deg, #94a3b8 0%, #64748b 100%)) border-box;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   z-index: 1000;
@@ -4401,45 +4401,78 @@
   border-left: 4px solid var(--color-blue-500);
 }
 
-/* === Toast Gradient Borders по типам === */
+/* === Toast Gradient Borders + Pastel Backgrounds по типам === */
 .macro-toast-warning {
   --toast-gradient: linear-gradient(135deg, #fca5a5 0%, #ef4444 100%);
+  --toast-bg: #fef2f2; /* red-50 */
 }
 
 .macro-toast-success {
   --toast-gradient: linear-gradient(135deg, #6ee7b7 0%, #10b981 100%);
+  --toast-bg: #ecfdf5; /* emerald-50 */
 }
 
 /* Fiber - зелёный (клетчатка) */
 .macro-toast-fiber {
   --toast-gradient: linear-gradient(135deg, #6ee7b7 0%, #10b981 100%);
+  --toast-bg: #ecfdf5; /* emerald-50 */
 }
 
 /* Tip - синий (подсказки) */
 .macro-toast-tip {
   --toast-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
+  --toast-bg: #eff6ff; /* blue-50 */
 }
 
 /* Achievement - золотой с анимацией */
 .macro-toast-achievement {
   --toast-gradient: linear-gradient(135deg, #fde047 0%, #f59e0b 100%);
+  --toast-bg: #fefce8; /* yellow-50 */
   animation: achievementPulse 0.5s ease-out;
 }
 
 /* Streak - огненный */
 .macro-toast-streak {
   --toast-gradient: linear-gradient(135deg, #fdba74 0%, #f97316 100%);
+  --toast-bg: #fff7ed; /* orange-50 */
 }
 
 /* Emotional - фиолетовый */
 .macro-toast-emotional {
   --toast-gradient: linear-gradient(135deg, #c4b5fd 0%, #8b5cf6 100%);
+  --toast-bg: #f5f3ff; /* violet-50 */
 }
 
 /* Hydration - голубой */
 .macro-toast-hydration {
   --toast-gradient: linear-gradient(135deg, #67e8f9 0%, #06b6d4 100%);
+  --toast-bg: #ecfeff; /* cyan-50 */
 }
+
+/* Nutrition - зеленоватый */
+.macro-toast-nutrition {
+  --toast-gradient: linear-gradient(135deg, #86efac 0%, #22c55e 100%);
+  --toast-bg: #f0fdf4; /* green-50 */
+}
+
+/* Lifestyle - индиго */
+.macro-toast-lifestyle {
+  --toast-gradient: linear-gradient(135deg, #a5b4fc 0%, #6366f1 100%);
+  --toast-bg: #eef2ff; /* indigo-50 */
+}
+
+/* Dark mode — более тёмные пастельные оттенки */
+[data-theme="dark"] .macro-toast { --toast-bg: var(--bg-primary, #1f2937); }
+[data-theme="dark"] .macro-toast-warning { --toast-bg: rgba(239, 68, 68, 0.15); }
+[data-theme="dark"] .macro-toast-success { --toast-bg: rgba(16, 185, 129, 0.15); }
+[data-theme="dark"] .macro-toast-fiber { --toast-bg: rgba(16, 185, 129, 0.15); }
+[data-theme="dark"] .macro-toast-tip { --toast-bg: rgba(59, 130, 246, 0.15); }
+[data-theme="dark"] .macro-toast-achievement { --toast-bg: rgba(245, 158, 11, 0.15); }
+[data-theme="dark"] .macro-toast-streak { --toast-bg: rgba(249, 115, 22, 0.15); }
+[data-theme="dark"] .macro-toast-emotional { --toast-bg: rgba(139, 92, 246, 0.15); }
+[data-theme="dark"] .macro-toast-hydration { --toast-bg: rgba(6, 182, 212, 0.15); }
+[data-theme="dark"] .macro-toast-nutrition { --toast-bg: rgba(34, 197, 94, 0.15); }
+[data-theme="dark"] .macro-toast-lifestyle { --toast-bg: rgba(99, 102, 241, 0.15); }
 
 @keyframes achievementPulse {
   0% { transform: translateX(-50%) scale(0.9); }
@@ -4466,6 +4499,78 @@
 
 .macro-toast-achievement .macro-toast-progress {
   animation-duration: 10s;
+}
+
+/* === Swiped Toast Overlay (после свайпа влево) === */
+.macro-toast.swiped {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.95) 0%, rgba(22, 163, 74, 0.95) 100%) !important;
+  border: none !important;
+}
+
+.macro-toast-swiped-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  animation: fadeIn 0.2s ease;
+}
+
+.macro-toast-swiped-buttons {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.macro-toast-swiped-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+}
+
+.macro-toast-swiped-btn:active {
+  transform: scale(0.95);
+}
+
+.macro-toast-swiped-btn.undo {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.macro-toast-swiped-btn.snooze {
+  background: rgba(255, 255, 255, 0.9);
+  color: #16a34a;
+}
+
+.macro-toast-swiped-progress {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.macro-toast-swiped-progress::after {
+  content: '';
+  display: block;
+  height: 100%;
+  background: white;
+  animation: swipedProgress 3s linear forwards;
+}
+
+@keyframes swipedProgress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Rating buttons (👍/👎) */
@@ -4667,7 +4772,7 @@
 /* === 29. EXPANDABLE ADVICE TOAST === */
 .macro-toast.expanded {
   bottom: 90px;
-  max-height: 300px;
+  max-height: 400px;
   border-radius: 16px;
   flex-direction: column;
   align-items: stretch;
@@ -4679,33 +4784,81 @@
   gap: 10px;
 }
 
-.macro-toast-badge {
-  background: var(--color-blue-500); /* Яркий синий */
-  color: var(--color-white);
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  margin-left: auto;
-  animation: badgePulse 2s infinite;
+/* Детали совета при разворачивании */
+.macro-toast-details {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Убрана .macro-toast-badge — теперь используем hint вместо badge */
+
+/* Подсказка "Ещё X советов" внизу тоста */
+.macro-toast-hint {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.macro-toast-badge::after {
-  content: '▼';
-  font-size: 8px;
-  transition: transform 0.2s;
+.macro-toast-hint:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
-.macro-toast.expanded .macro-toast-badge::after {
-  transform: rotate(180deg);
+.macro-toast-hint:active {
+  transform: scale(0.98);
 }
 
-@keyframes badgePulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+.macro-toast-hint-arrow {
+  font-size: 14px;
+  animation: hintArrowPulse 1.5s infinite;
+}
+
+@keyframes hintArrowPulse {
+  0%, 100% { transform: translateX(0); opacity: 0.7; }
+  50% { transform: translateX(3px); opacity: 1; }
+}
+
+/* Подсказка "нажмите для подробностей" */
+.macro-toast-tap-hint {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--color-slate-400, #94a3b8);
+  text-align: center;
+  animation: tapHintPulse 2s infinite;
+}
+
+@keyframes tapHintPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
 }
 
 .macro-toast-extras {

@@ -334,7 +334,29 @@
     return {byId, byName};
   }
 
-  function getProductFromItem(it, idx){ if(!it) return null; if(it.product_id!=null) return idx.byId.get(String(it.product_id).toLowerCase())||null; if(it.productId!=null) return idx.byId.get(String(it.productId).toLowerCase())||null; const nm=String(it.name||it.title||'').trim().toLowerCase(); return nm? (idx.byName.get(nm)||null):null; }
+  function getProductFromItem(it, idx){ 
+    if(!it) return null; 
+    // Сначала ищем в индексе по product_id
+    if(it.product_id!=null) { 
+      const found = idx.byId.get(String(it.product_id).toLowerCase()); 
+      if(found) return found; 
+    } 
+    if(it.productId!=null) { 
+      const found = idx.byId.get(String(it.productId).toLowerCase()); 
+      if(found) return found; 
+    } 
+    // Потом по имени
+    const nm=String(it.name||it.title||'').trim().toLowerCase(); 
+    if(nm) { 
+      const found = idx.byName.get(nm); 
+      if(found) return found; 
+    }
+    // FALLBACK: если продукт не найден в индексе, но в item есть нутриенты — возвращаем сам item как продукт
+    if(it.kcal100 !== undefined || it.protein100 !== undefined) {
+      return it;
+    }
+    return null; 
+  }
 
   function per100(p){ const d=computeDerivedProduct(p); return {kcal100:d.kcal100,carbs100:d.carbs100,prot100:+p.protein100||0,fat100:d.fat100,simple100:+p.simple100||0,complex100:+p.complex100||0,bad100:+p.badFat100||0,good100:+p.goodFat100||0,trans100:+p.trans100||0,fiber100:+p.fiber100||0}; }
 

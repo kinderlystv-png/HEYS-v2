@@ -983,10 +983,10 @@
   gap: 12px;
   padding: 14px 16px;
   border-radius: 12px;
-  /* Gradient border technique */
+  /* Gradient border + pastel background */
   border: 2px solid transparent;
   background: 
-    linear-gradient(var(--bg-secondary, #f9fafb), var(--bg-secondary, #f9fafb)) padding-box,
+    linear-gradient(var(--advice-bg, #f9fafb), var(--advice-bg, #f9fafb)) padding-box,
     var(--advice-gradient, linear-gradient(135deg, #94a3b8 0%, #64748b 100%)) border-box;
   touch-action: pan-x;
   transition: transform 0.1s ease, box-shadow 0.2s ease;
@@ -996,42 +996,62 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* === Gradient Borders по типам советов === */
+/* === Gradient Borders + Pastel Backgrounds по типам советов === */
 .advice-list-item-tip {
   --advice-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
+  --advice-bg: #eff6ff; /* blue-50 */
 }
 
 .advice-list-item-warning {
   --advice-gradient: linear-gradient(135deg, #fca5a5 0%, #ef4444 100%);
+  --advice-bg: #fef2f2; /* red-50 */
 }
 
 .advice-list-item-achievement {
   --advice-gradient: linear-gradient(135deg, #fde047 0%, #f59e0b 100%);
+  --advice-bg: #fefce8; /* yellow-50 */
 }
 
 .advice-list-item-success {
   --advice-gradient: linear-gradient(135deg, #6ee7b7 0%, #10b981 100%);
+  --advice-bg: #ecfdf5; /* emerald-50 */
 }
 
 .advice-list-item-streak {
   --advice-gradient: linear-gradient(135deg, #fdba74 0%, #f97316 100%);
+  --advice-bg: #fff7ed; /* orange-50 */
 }
 
 .advice-list-item-emotional {
   --advice-gradient: linear-gradient(135deg, #c4b5fd 0%, #8b5cf6 100%);
+  --advice-bg: #f5f3ff; /* violet-50 */
 }
 
 .advice-list-item-hydration {
   --advice-gradient: linear-gradient(135deg, #67e8f9 0%, #06b6d4 100%);
+  --advice-bg: #ecfeff; /* cyan-50 */
 }
 
 .advice-list-item-insight {
   --advice-gradient: linear-gradient(135deg, #c4b5fd 0%, #8b5cf6 100%);
+  --advice-bg: #f5f3ff; /* violet-50 */
 }
 
 .advice-list-item-info {
   --advice-gradient: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  --advice-bg: #f8fafc; /* slate-50 */
 }
+
+/* Dark mode — более тёмные пастельные оттенки */
+[data-theme="dark"] .advice-list-item-tip { --advice-bg: rgba(59, 130, 246, 0.1); }
+[data-theme="dark"] .advice-list-item-warning { --advice-bg: rgba(239, 68, 68, 0.1); }
+[data-theme="dark"] .advice-list-item-achievement { --advice-bg: rgba(245, 158, 11, 0.1); }
+[data-theme="dark"] .advice-list-item-success { --advice-bg: rgba(16, 185, 129, 0.1); }
+[data-theme="dark"] .advice-list-item-streak { --advice-bg: rgba(249, 115, 22, 0.1); }
+[data-theme="dark"] .advice-list-item-emotional { --advice-bg: rgba(139, 92, 246, 0.1); }
+[data-theme="dark"] .advice-list-item-hydration { --advice-bg: rgba(6, 182, 212, 0.1); }
+[data-theme="dark"] .advice-list-item-insight { --advice-bg: rgba(139, 92, 246, 0.1); }
+[data-theme="dark"] .advice-list-item-info { --advice-bg: rgba(100, 116, 139, 0.1); }
 
 .advice-list-icon {
   font-size: 22px;

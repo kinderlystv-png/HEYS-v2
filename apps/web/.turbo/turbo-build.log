@@ -38,8 +38,8 @@ rendering chunks...
 computing gzip size...
 dist/assets/heys_simple_analytics-b3f08726.js      10.31 kB
 dist/index.html                                    13.45 kB │ gzip:  3.93 kB
-dist/assets/heys_models_v1-66db76a9.js             22.14 kB
+dist/assets/heys_models_v1-13a6c1a3.js             22.69 kB
 dist/assets/heys_core_v12-b6704538.js              49.19 kB
 dist/assets/heys_storage_supabase_v1-7314866e.js   90.52 kB
-dist/assets/index-db4ddd6a.css                    329.39 kB │ gzip: 56.66 kB
-✓ built in 971ms
+dist/assets/index-4f6c1871.css                    332.39 kB │ gzip: 57.23 kB
+✓ built in 954ms
