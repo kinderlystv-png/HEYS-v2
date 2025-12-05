@@ -170,21 +170,24 @@
     
     // Всегда берём актуальные продукты из глобального стора (если появились новые)
     const latestProducts = useMemo(() => {
-      const base = context?.products || [];
-      const storeProducts = HEYS.products?.getAll?.() || U().lsGet?.('heys_products', []) || [];
+      const base = Array.isArray(context?.products) ? context.products : [];
+      const storeRaw = HEYS.products?.getAll?.() || U().lsGet?.('heys_products', []);
+      const storeProducts = Array.isArray(storeRaw) ? storeRaw : [];
       // Если store длиннее — используем его как основу
       const primary = storeProducts.length >= base.length ? storeProducts : base;
+      const secondary = primary === storeProducts ? base : storeProducts;
       // Объединяем, убирая дубликаты по id/name
       const seen = new Set();
       const merged = [];
       const pushUnique = (p) => {
+        if (!p) return;
         const pid = String(p.id ?? p.product_id ?? p.name);
         if (seen.has(pid)) return;
         seen.add(pid);
         merged.push(p);
       };
       primary.forEach(pushUnique);
-      (primary === storeProducts ? base : storeProducts).forEach(pushUnique);
+      secondary.forEach(pushUnique);
       return merged;
     }, [context]);
     
