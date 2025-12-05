@@ -1951,9 +1951,10 @@
     // === Advice Module State ===
     const [adviceTrigger, setAdviceTrigger] = useState(null);
     const [adviceExpanded, setAdviceExpanded] = useState(false);
-    // 🔧 FIX: Храним текущий отображаемый совет отдельно от advicePrimary
+    // 🔧 FIX: Храним текущий отображаемый совет и список советов отдельно
     // чтобы избежать race condition при markShown()
     const [displayedAdvice, setDisplayedAdvice] = useState(null);
+    const [displayedAdviceList, setDisplayedAdviceList] = useState([]);
     // Прочитанные советы (свайп влево) — сохраняются на день
     const [dismissedAdvices, setDismissedAdvices] = useState(() => {
       try {
@@ -4325,13 +4326,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     }, [date]);
     
     // Показ toast при получении совета
-    // 🔧 FIX: Сохраняем совет в displayedAdvice ПЕРЕД markShown,
+    // 🔧 FIX: Сохраняем совет и список в displayedAdvice/displayedAdviceList ПЕРЕД markShown,
     // чтобы тост отображался даже после того как advicePrimary станет null
     React.useEffect(() => {
       if (!advicePrimary) return;
       
-      // Сохраняем совет для отображения
+      // Сохраняем совет и список для отображения
       setDisplayedAdvice(advicePrimary);
+      setDisplayedAdviceList(adviceRelevant || []);
       setAdviceExpanded(false);
       setToastVisible(true);
       setToastDismissed(false);
@@ -4354,7 +4356,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         setToastVisible(false);
         setAdviceExpanded(false);
         setAdviceTrigger(null);
-        setDisplayedAdvice(null); // Очищаем после скрытия тоста
+        setDisplayedAdvice(null);
+        setDisplayedAdviceList([]);
       }, advicePrimary.ttl || 5000);
       return () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); };
     }, [advicePrimary?.id, adviceTrigger]);
@@ -4365,6 +4368,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       setAdviceExpanded(false);
       setToastVisible(false);
       setDisplayedAdvice(null);
+      setDisplayedAdviceList([]);
       if (window.HEYS?.advice?.resetSessionAdvices) window.HEYS.advice.resetSessionAdvices();
     }, [date]);
     
@@ -5089,7 +5093,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     const dismissToast = () => {
       setToastVisible(false);
       setToastDismissed(true);
-      setDisplayedAdvice(null); // 🔧 FIX: Очищаем displayedAdvice при dismiss
+      setDisplayedAdvice(null);
+      setDisplayedAdviceList([]);
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
 
@@ -10995,7 +11000,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           (displayedAdvice.id?.startsWith('personal_best') ? ' personal-best' : ''),
         role: 'alert',
         'aria-live': 'polite',
-        onClick: () => adviceCount > 1 ? setAdviceExpanded(!adviceExpanded) : dismissToast(),
+        onClick: () => displayedAdviceList.length > 1 ? setAdviceExpanded(!adviceExpanded) : dismissToast(),
         onTouchStart: handleToastTouchStart,
         onTouchMove: handleToastTouchMove,
         onTouchEnd: handleToastTouchEnd,
@@ -11007,7 +11012,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         React.createElement('div', { className: 'macro-toast-main' },
           React.createElement('span', { className: 'macro-toast-icon' }, displayedAdvice.icon),
           React.createElement('span', { className: 'macro-toast-text' }, displayedAdvice.text),
-          adviceCount > 1 && React.createElement('span', { className: 'macro-toast-badge' }, `+${adviceCount - 1}`),
+          // Используем displayedAdviceList.length для badge
+          displayedAdviceList.length > 1 && React.createElement('span', { className: 'macro-toast-badge' }, `+${displayedAdviceList.length - 1}`),
           React.createElement('button', { 
             className: 'macro-toast-close', 
             onClick: (e) => { e.stopPropagation(); dismissToast(); } 
@@ -11027,9 +11033,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             onClick: (e) => { e.stopPropagation(); rateAdvice(displayedAdvice.id, false); dismissToast(); }
           }, '👎')
         ),
-        // Дополнительные советы (при раскрытии)
-        adviceExpanded && adviceRelevant && React.createElement('div', { className: 'macro-toast-extras' },
-          adviceRelevant.slice(1, 4).map(advice => 
+        // Дополнительные советы (при раскрытии) — используем displayedAdviceList
+        adviceExpanded && displayedAdviceList.length > 1 && React.createElement('div', { className: 'macro-toast-extras' },
+          displayedAdviceList.slice(1, 4).map(advice => 
             React.createElement('div', { 
               key: advice.id,
               className: `macro-toast-extra macro-toast-extra-${advice.type}`
