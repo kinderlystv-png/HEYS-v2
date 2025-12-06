@@ -1498,9 +1498,19 @@
               : null;
             
             // Удаление фото
-            const handleDelete = (e) => {
+            const handleDelete = async (e) => {
               e.stopPropagation();
               if (!confirm('Удалить это фото?')) return;
+              
+              // Удаляем из Supabase Storage если загружено
+              if (photo.path && photo.uploaded && window.HEYS?.cloud?.deletePhoto) {
+                try {
+                  await window.HEYS.cloud.deletePhoto(photo.path);
+                } catch (err) {
+                  console.warn('[MealCard] Failed to delete from storage:', err);
+                }
+              }
+              
               setDay((prevDay = {}) => {
                 const meals = (prevDay.meals || []).map((m, i) => {
                   if (i !== mealIndex || !m.photos) return m;
@@ -1508,7 +1518,6 @@
                 });
                 return { ...prevDay, meals };
               });
-              // TODO: удалить из Supabase Storage если uploaded
             };
             
             // Собираем классы

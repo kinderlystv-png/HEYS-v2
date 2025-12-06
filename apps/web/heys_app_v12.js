@@ -965,12 +965,12 @@
 
           // init cloud (safe if no cloud module)
           // 🌐 Используем proxy через Vercel для обхода блокировок Supabase в РФ
-          // В production: /api/supabase → ukqolcziqcuplqfgrmsh.supabase.co (через vercel.json rewrite)
+          // В production: /api/supabase → ukqolcziqcuplqfgrmsh.supabase.co (через Vercel Edge Function)
           // В dev: напрямую к Supabase (localhost не блокируется)
           if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
             const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
             const supabaseUrl = isProduction 
-              ? '/api/supabase'  // Proxy через Vercel edge — обходит блокировки РФ
+              ? `${window.location.origin}/api/supabase`  // Полный URL для Supabase SDK
               : 'https://ukqolcziqcuplqfgrmsh.supabase.co';  // Dev — напрямую
             HEYS.cloud.init({
               url: supabaseUrl,

@@ -162,6 +162,8 @@
     );
     const [selectedPhoto, setSelectedPhoto] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
+    const [showPhotoConfirm, setShowPhotoConfirm] = useState(false); // Модалка подтверждения
+    const [pendingPhotoData, setPendingPhotoData] = useState(null);  // Данные для подтверждения
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
     

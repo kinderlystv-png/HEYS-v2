@@ -2279,6 +2279,40 @@
     }
   }
   
+  /**
+   * Удалить фото из Supabase Storage
+   * @param {string} path - путь к файлу (clientId/YYYY-MM/filename.jpg)
+   * @returns {Promise<boolean>}
+   */
+  cloud.deletePhoto = async function(path) {
+    if (!client) {
+      log('📷 deletePhoto: нет клиента');
+      return false;
+    }
+    
+    if (!path) {
+      log('📷 deletePhoto: нет пути');
+      return false;
+    }
+    
+    try {
+      const { error } = await client.storage
+        .from(PHOTO_BUCKET)
+        .remove([path]);
+      
+      if (error) {
+        logCritical('📷 deletePhoto error:', error.message);
+        return false;
+      }
+      
+      log('📷 Photo deleted from storage:', path);
+      return true;
+    } catch (e) {
+      logCritical('📷 deletePhoto exception:', e?.message || e);
+      return false;
+    }
+  };
+
   // Слушаем online событие для загрузки pending фото
   if (typeof global.addEventListener === 'function') {
     global.addEventListener('online', () => {
