@@ -1829,13 +1829,20 @@
     React.useEffect(() => {
       if (!sparklinePopup && !macroBadgePopup && !metricPopup && !mealQualityPopup && !tdeePopup) return;
       const handleClickOutside = (e) => {
-        const insideSparkline = e.target.closest('.sparkline-popup');
-        const insideMacro = e.target.closest('.macro-badge-popup');
-        const insideMetric = e.target.closest('.metric-popup');
-        const insideMealQuality = e.target.closest('.meal-quality-popup') || e.target.closest('.meal-bar-container');
-        const insideTdee = e.target.closest('.tdee-popup');
-        if (!insideSparkline && !insideMacro && !insideMetric && !insideMealQuality && !insideTdee) {
-          closeAllPopups();
+        if (sparklinePopup && !e.target.closest('.sparkline-popup')) {
+          setSparklinePopup(null);
+        }
+        if (macroBadgePopup && !e.target.closest('.macro-badge-popup')) {
+          setMacroBadgePopup(null);
+        }
+        if (metricPopup && !e.target.closest('.metric-popup')) {
+          setMetricPopup(null);
+        }
+        if (mealQualityPopup && !e.target.closest('.meal-quality-popup') && !e.target.closest('.meal-bar-container')) {
+          setMealQualityPopup(null);
+        }
+        if (tdeePopup && !e.target.closest('.tdee-popup')) {
+          setTdeePopup(null);
         }
       };
       // Delay to avoid closing immediately on the same click
@@ -1846,7 +1853,7 @@
         clearTimeout(timerId);
         document.removeEventListener('click', handleClickOutside);
       };
-    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup, closeAllPopups]);
+    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup]);
     
     // === Утилита для умного позиционирования попапов ===
     // Не даёт выходить за границы экрана
@@ -2372,41 +2379,12 @@
     // === Current time for Insulin Wave Indicator (updates every minute) ===
     const [currentMinute, setCurrentMinute] = useState(() => Math.floor(Date.now() / 60000));
     const [insulinExpanded, setInsulinExpanded] = useState(false);
-    const insulinExpandedRef = React.useRef(null);
-    const [insulinExpandedHeight, setInsulinExpandedHeight] = useState(0);
     React.useEffect(() => {
       const intervalId = setInterval(() => {
         setCurrentMinute(Math.floor(Date.now() / 60000));
       }, 60000); // Обновляем каждую минуту
       return () => clearInterval(intervalId);
     }, []);
-
-    // Обновляем высоту блока расширения для плавной анимации
-    React.useEffect(() => {
-      const el = insulinExpandedRef.current;
-      if (!el) return;
-      const measure = () => {
-        const h = el.scrollHeight || 0;
-        if (h !== insulinExpandedHeight) setInsulinExpandedHeight(h);
-      };
-      // measure в текущем кадре
-      measure();
-      // И на resize
-      window.addEventListener('resize', measure);
-      return () => window.removeEventListener('resize', measure);
-    }, [insulinExpandedHeight]);
-
-    // При открытии пересчитываем высоту на следующем кадре, чтобы max-height анимировался до реального размера
-    React.useEffect(() => {
-      if (!insulinExpanded) return;
-      const id = requestAnimationFrame(() => {
-        const el = insulinExpandedRef.current;
-        if (!el) return;
-        const h = el.scrollHeight || 0;
-        if (h !== insulinExpandedHeight) setInsulinExpandedHeight(h);
-      });
-      return () => cancelAnimationFrame(id);
-    }, [insulinExpanded, insulinExpandedHeight]);
     
     // === Offline indicator ===
     const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -9515,7 +9493,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 onClick: (e) => {
                   e.stopPropagation();
                   const rect = e.target.getBoundingClientRect();
-                  openExclusivePopup('macro', {
+                  setMacroBadgePopup({
                     macro,
                     emoji: b.emoji,
                     desc: b.desc,
@@ -9537,7 +9515,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const openRingPopup = (e, macro, value, norm, ratio, color, badges) => {
             e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
-            openExclusivePopup('macro', {
+            setMacroBadgePopup({
               macro,
               emoji: null,
               desc: null,
@@ -9959,7 +9937,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               onClick: (e) => {
                 e.stopPropagation();
                 const rect = e.currentTarget.getBoundingClientRect();
-                openExclusivePopup('metric', {
+                setMetricPopup({
                   type: 'steps',
                   x: rect.left + rect.width / 2,
                   y: rect.top,
@@ -10536,7 +10514,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                         setShowConfetti(true);
                         setTimeout(() => setShowConfetti(false), 2000);
                       }
-                      openExclusivePopup('mealQuality', {
+                      setMealQualityPopup({
                         meal: p.meal,
                         quality,
                         mealTypeInfo: { label: p.meal.name, icon: p.meal.icon },
@@ -10608,7 +10586,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 2000);
               }
-              openExclusivePopup('mealQuality', {
+              setMealQualityPopup({
                 meal,
                 quality,
                 mealTypeInfo: { label: meal.name, icon: meal.icon },
@@ -11177,17 +11155,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               )
             ),
             
-            // === Expanded секция — держим в DOM для плавного раскрытия ===
-            React.createElement('div', {
-              className: 'insulin-expanded-wrapper' + (insulinExpanded ? ' show' : ''),
-              'aria-expanded': insulinExpanded,
-              ref: insulinExpandedRef,
-              style: {
-                maxHeight: insulinExpanded ? (insulinExpandedHeight || 1200) + 'px' : '0px',
-                opacity: insulinExpanded ? 1 : 0,
-                transform: insulinExpanded ? 'translateY(0)' : 'translateY(-6px)'
-              }
-            }, renderExpandedSection())
+            // === Expanded секция ===
+            insulinExpanded && renderExpandedSection()
           )
         )  // закрываем Fragment
         );
