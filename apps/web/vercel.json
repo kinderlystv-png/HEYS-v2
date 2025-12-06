@@ -5,7 +5,9 @@
   "installCommand": "cd ../.. && pnpm install",
   "framework": "vite",
   "functions": {
-    "api/**/*.ts": {}
+    "api/**/*.ts": {
+      "maxDuration": 10
+    }
   },
   "rewrites": [
     {
