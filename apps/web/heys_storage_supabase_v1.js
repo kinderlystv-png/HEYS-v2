@@ -649,10 +649,58 @@
       }
     }
     
-    // Все ретраи исчерпаны
+    // Все ретраи исчерпаны — попробуем fallback на прямое подключение
+    if (!_usingDirectConnection && cloud._directUrl && cloud._proxyUrl !== cloud._directUrl) {
+      console.warn(`[HEYS.cloud] 🔄 ${label}: переключаемся на прямое подключение к Supabase...`);
+      try {
+        await switchToDirectConnection();
+        // После переключения пробуем ещё раз
+        return await fetchWithRetry(requestFn, { ...options, _afterFallback: true });
+      } catch (fallbackErr) {
+        console.warn(`[HEYS.cloud] ❌ Fallback тоже не сработал:`, fallbackErr?.message);
+      }
+    }
+    
     console.warn(`[HEYS.cloud] ❌ ${label}: все ${maxRetries} попытки не удались, переход в offline режим`);
     return { data: null, error: { message: lastError?.message || 'Network error after retries', isNetworkFailure: true } };
   }
+  
+  /**
+   * Переключение на прямое подключение к Supabase (fallback при недоступности proxy)
+   */
+  async function switchToDirectConnection() {
+    if (_usingDirectConnection) return; // Уже переключились
+    if (!cloud._directUrl || !cloud._anonKey) {
+      throw new Error('Direct URL not configured');
+    }
+    
+    _usingDirectConnection = true;
+    logCritical('🔄 [FALLBACK] Переключение на прямое подключение к Supabase');
+    
+    // Пересоздаём клиент с прямым URL
+    try {
+      client = global.supabase.createClient(cloud._directUrl, cloud._anonKey);
+      cloud.client = client;
+      
+      // Восстанавливаем сессию если была
+      if (user && client.auth) {
+        const { data } = await client.auth.getSession();
+        if (data?.session) {
+          user = data.session.user;
+          status = CONNECTION_STATUS.ONLINE;
+          logCritical('✅ [FALLBACK] Сессия восстановлена через прямое подключение');
+        }
+      }
+      
+      addSyncLogEntry('online', { fallback: true });
+    } catch (e) {
+      _usingDirectConnection = false;
+      throw e;
+    }
+  }
+  
+  // Экспортируем для отладки
+  cloud.switchToDirectConnection = switchToDirectConnection;
 
   /**
    * Обёртка для запросов с таймаутом (legacy, для простых запросов)
@@ -799,6 +847,10 @@
       err('intercept setItem failed', e); 
     }
   }
+  
+  // Флаг для fallback на прямое подключение
+  let _usingDirectConnection = false;
+  cloud.isUsingDirectConnection = function() { return _usingDirectConnection; };
 
   cloud.init = function({ url, anonKey }){
     // Idempotent init: avoid double creation & duplicate intercept logs
@@ -809,6 +861,12 @@
       cloud._loadError = 'Библиотека Supabase не загружена. Возможно, CDN заблокирован провайдером.';
       return;
     }
+    
+    // Сохраняем оба URL для fallback
+    cloud._proxyUrl = url;
+    cloud._directUrl = 'https://ukqolcziqcuplqfgrmsh.supabase.co';
+    cloud._anonKey = anonKey;
+    
     try{
       client = global.supabase.createClient(url, anonKey);
       cloud.client = client;

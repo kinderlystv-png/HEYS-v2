@@ -1078,9 +1078,14 @@
             );
           }
           
+          // Кэш синхронизированных клиентов (в рамках сессии) — обычная переменная модуля
+          const syncedClientsCache = new Set();
+          
           function RationTabWithCloudSync(props) {
             const { clientId, setProducts, products } = props;
-            const [loading, setLoading] = React.useState(true);
+            // Проверяем был ли sync для ЭТОГО клиента
+            const alreadySynced = clientId && syncedClientsCache.has(clientId);
+            const [loading, setLoading] = React.useState(!alreadySynced);
             
             // 🔐 Не рендерим Ration пока нет клиента
             if (!clientId) {
@@ -1089,6 +1094,15 @@
             
             React.useEffect(() => {
               let cancelled = false;
+              
+              // Если sync для этого клиента уже был — сразу загружаем продукты
+              if (syncedClientsCache.has(clientId)) {
+                const loadedProducts = window.HEYS.utils.lsGet('heys_products', []);
+                setProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
+                setLoading(false);
+                return;
+              }
+              
               if (
                 clientId &&
                 window.HEYS.cloud &&
@@ -1098,6 +1112,7 @@
                 window.HEYS.cloud.bootstrapClientSync(clientId)
                   .then(() => {
                     if (!cancelled) {
+                      syncedClientsCache.add(clientId);
                       const loadedProducts = Array.isArray(
                         window.HEYS.utils.lsGet('heys_products', []),
                       )
@@ -1116,6 +1131,9 @@
                     }
                   });
               } else {
+                // Нет cloud — загружаем локально
+                const loadedProducts = window.HEYS.utils.lsGet('heys_products', []);
+                setProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
                 setLoading(false);
               }
               return () => {

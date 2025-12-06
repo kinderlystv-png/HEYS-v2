@@ -386,6 +386,10 @@
         return index;
       }, [products]);
       
+      // Лимит отображения продуктов для производительности
+      const DISPLAY_LIMIT = 100;
+      const [showAll, setShowAll] = React.useState(false);
+      
       const filtered = React.useMemo(() => {
         const startTime = performance.now();
         const result = performSearch();
@@ -481,6 +485,18 @@
               if (window.DEV) {
                 window.DEV.log('🔄 [SYNC] После bootstrapClientSync прочитали из localStorage:', latest.length, 'items');
                 window.DEV.log('🔄 [SYNC] Текущее состояние products:', products.length, 'items');
+              }
+              
+              // 🧹 Автоматическая дедупликация при подозрительно большом количестве (>1000)
+              if (Array.isArray(latest) && latest.length > 1000) {
+                console.warn('[HEYS] ⚠️ Обнаружено много продуктов:', latest.length, '— запускаем дедупликацию');
+                if (window.HEYS.products && window.HEYS.products.deduplicate) {
+                  window.HEYS.products.deduplicate();
+                  // Перечитываем после дедупликации
+                  const deduplicated = window.HEYS.products.getAll();
+                  setProducts(Array.isArray(deduplicated) ? deduplicated : []);
+                  return;
+                }
               }
               
               // Не перезаписываем продукты, если sync вернул пустой массив, а у нас уже есть данные
@@ -793,7 +809,8 @@
               )
             ),
             React.createElement('tbody', null,
-              filtered.map(p=> React.createElement('tr', {key:p.id},
+              // Ограничиваем рендеринг для производительности (29k+ продуктов = тормоза)
+              (showAll ? filtered : filtered.slice(0, DISPLAY_LIMIT)).map(p=> React.createElement('tr', {key:p.id},
                 React.createElement('td', null, React.createElement('input', {value:p.name, onChange:e=>updateRow(p.id, {name:e.target.value})})),
                 React.createElement('td', null, React.createElement('input', {className:'readOnly', value:p.kcal100, readOnly:true})),
                 React.createElement('td', null, React.createElement('input', {className:'readOnly', value:p.carbs100, readOnly:true})),
@@ -810,6 +827,15 @@
                 React.createElement('td', null, React.createElement('button', {className:'btn', onClick:()=>deleteRow(p.id)}, 'Удалить'))
               ))
             )
+          )
+        ),
+        // Кнопка "Показать ещё" если продуктов больше лимита
+        filtered.length > DISPLAY_LIMIT && !showAll && React.createElement('div', {style:{textAlign:'center', marginTop:'8px'}},
+          React.createElement('button', {className:'btn', onClick:()=>setShowAll(true)}, 
+            `Показать все ${filtered.length} продуктов (может тормозить)`
+          ),
+          React.createElement('div', {className:'muted', style:{marginTop:'4px', fontSize:'12px'}}, 
+            `Показано ${DISPLAY_LIMIT} из ${filtered.length}. Используйте поиск для быстрого нахождения.`
           )
         ),
         React.createElement('div', {className:'muted', style:{marginTop:'8px'}}, 'Серые поля — авто: У=простые+сложные; Ж=вредные+полезные+супервредные; Ккал=4×(Б+У)+8×Ж.')
@@ -876,7 +902,38 @@
   HEYS.products = HEYS.products || {
     getAll: ()=> (HEYS.store&&HEYS.store.get&&HEYS.store.get('heys_products', [])) || (HEYS.utils&&HEYS.utils.lsGet&&HEYS.utils.lsGet('heys_products', [])) || [],
     setAll: (arr)=> { if(HEYS.store&&HEYS.store.set) HEYS.store.set('heys_products', arr); else if(HEYS.utils&&HEYS.utils.lsSet) HEYS.utils.lsSet('heys_products', arr); },
-    watch: (fn)=> { if(HEYS.store&&HEYS.store.watch) return HEYS.store.watch('heys_products', fn); return ()=>{}; }
+    watch: (fn)=> { if(HEYS.store&&HEYS.store.watch) return HEYS.store.watch('heys_products', fn); return ()=>{}; },
+    
+    /**
+     * Дедупликация продуктов по названию (первый с таким названием остаётся)
+     * @returns {{original: number, deduplicated: number, removed: number}} Статистика
+     */
+    deduplicate: () => {
+      const products = HEYS.products.getAll();
+      const original = products.length;
+      
+      const seen = new Map();
+      const unique = [];
+      
+      for (const p of products) {
+        const key = (p.name || '').trim().toLowerCase();
+        if (!seen.has(key)) {
+          seen.set(key, true);
+          unique.push(p);
+        }
+      }
+      
+      const removed = original - unique.length;
+      
+      if (removed > 0) {
+        HEYS.products.setAll(unique);
+        console.log(`[HEYS] ✅ Дедупликация: было ${original}, стало ${unique.length}, удалено дублей: ${removed}`);
+      } else {
+        console.log(`[HEYS] ℹ️ Дублей не найдено (${original} продуктов)`);
+      }
+      
+      return { original, deduplicated: unique.length, removed };
+    }
   };
   HEYS.RationTab = RationTab;
   HEYS.Ration = RationTab;

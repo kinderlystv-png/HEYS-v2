@@ -4,11 +4,12 @@
   "outputDirectory": "dist",
   "installCommand": "cd ../.. && pnpm install",
   "framework": "vite",
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node@3.0.0"
+    }
+  },
   "rewrites": [
-    {
-      "source": "/api/supabase/:path*",
-      "destination": "https://ukqolcziqcuplqfgrmsh.supabase.co/:path*"
-    },
     {
       "source": "/:path((?!api/).*)",
       "destination": "/index.html"
