@@ -826,23 +826,25 @@
   color: #c2410c;
 }
 
-/* === Shake animation for almost status === */
-/* ПОЛНОСТЬЮ ОТКЛЮЧЕНА АНИМАЦИЯ ДЛЯ ТЕСТА */
-.insulin-wave-indicator.shake {
-  animation: none !important;
-  /* Добавим красную рамку для проверки что стиль применяется */
-  outline: 3px solid red !important;
+/* === Subtle shake animation — приближение липолиза === */
+/* Мягкий периодический shake: 4 сек пауза → 0.8 сек вздрагивание */
+.insulin-wave-indicator.shake-subtle {
+  animation: insulinShakeSubtle 5s ease-in-out infinite;
+  /* Карточка выше родительского overflow */
+  z-index: 10;
+  overflow: visible;
 }
 
 @keyframes insulinShakeSubtle {
-  /* 0-90% — неподвижно (5.4 сек) */
-  0%, 90% { transform: translateX(0) rotate(0deg); }
-  /* 90-100% — мягкий shake (0.6 сек) */
-  92% { transform: translateX(-1.5px) rotate(-0.3deg); }
-  94% { transform: translateX(1.5px) rotate(0.3deg); }
-  96% { transform: translateX(-1px) rotate(-0.2deg); }
-  98% { transform: translateX(1px) rotate(0.2deg); }
-  100% { transform: translateX(0) rotate(0deg); }
+  /* 0-84% — неподвижно (4.2 сек) */
+  0%, 84% { transform: translateX(0); }
+  /* 84-100% — мягкий shake (0.8 сек) */
+  86% { transform: translateX(-2px); }
+  89% { transform: translateX(2px); }
+  92% { transform: translateX(-1px); }
+  95% { transform: translateX(1px); }
+  98% { transform: translateX(-0.5px); }
+  100% { transform: translateX(0); }
 }
 
 /* === SVG Wave container === */

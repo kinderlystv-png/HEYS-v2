@@ -928,6 +928,8 @@
   }) {
     const handleOpenModal = React.useCallback(() => {
       try { navigator.vibrate?.(10); } catch(e) {}
+      
+      const meal = day?.meals?.[mi] || {};
 
       if (window.HEYS?.AddProductStep?.show) {
         window.HEYS.AddProductStep.show({
@@ -1092,7 +1094,7 @@
       } else {
         console.error('[HEYS] AddProductStep not loaded');
       }
-    }, [mi, products, date, setDay]);
+    }, [mi, products, date, day, setDay]);
 
     return React.createElement('button', {
       className: 'aps-open-btn',
@@ -11387,6 +11389,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // === INSULIN WAVE INDICATOR (WOW VERSION v3 — модуль) ===
       (!isMobile || mobileSubTab === 'diary') && insulinWaveData && (() => {
+        // Мягкий shake когда осталось ≤30 мин до липолиза (almost или soon)
+        const shouldShake = insulinWaveData.status === 'almost' || insulinWaveData.status === 'soon';
         const IW = typeof HEYS !== 'undefined' && HEYS.InsulinWave;
         
         // GI info — из модуля или fallback
@@ -11657,9 +11661,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             className: 'insulin-focus-overlay',
             onClick: () => setInsulinExpanded(false)
           }),
-          // Сама карточка — SHAKE ПОЛНОСТЬЮ УБРАН
+          // Сама карточка с мягким shake при приближении липолиза
           React.createElement('div', { 
-            className: 'insulin-wave-indicator insulin-' + insulinWaveData.status + (insulinExpanded ? ' expanded' : ''),
+            className: 'insulin-wave-indicator insulin-' + insulinWaveData.status + (shouldShake ? ' shake-subtle' : '') + (insulinExpanded ? ' expanded' : ''),
             style: { 
               margin: '8px 0', 
               cursor: 'pointer',
