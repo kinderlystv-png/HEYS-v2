@@ -21,56 +21,20 @@ export default async function handler(req, res) {
     return res.end(JSON.stringify({ error: 'Missing SUPABASE_ANON_KEY env' }))
   }
 
-  // Vercel rewrites change req.url, so we need the original path from headers
-  const originalUrl = req.headers['x-vercel-proxy-signature-override'] 
-    || req.headers['x-original-url']
-    || req.headers['x-invoke-path']
-    || req.url
+  const url = new URL(req.url, `http://${req.headers.host}`)
   
-  // Try to get table from Vercel's matched params first
-  // Format: /api/supabase/rest/v1/TABLE_NAME?query...
-  const fullUrl = originalUrl.startsWith('http') ? originalUrl : `http://localhost${originalUrl}`
-  const url = new URL(fullUrl)
+  // Vercel rewrite adds 'table' param from :table in source path
+  const tableName = url.searchParams.get('table') || url.searchParams.get('_table') || ''
   
-  // Get path from x-matched-path or parse from original URL
-  let tableName = ''
-  const matchedPath = req.headers['x-matched-path'] || ''
-  
-  if (matchedPath.includes(':table')) {
-    // Vercel provides matched params - extract from original path
-    const pathMatch = (req.headers['x-invoke-path'] || url.pathname).match(/\/api\/supabase\/rest\/v1\/([^/?]+)/)
-    tableName = pathMatch ? pathMatch[1] : ''
-  }
-  
-  // Fallback: check query param or try parsing URL
-  if (!tableName) {
-    tableName = url.searchParams.get('_table') || ''
-  }
-  
-  // Last resort: try parsing the invoke query
-  if (!tableName && req.headers['x-invoke-query']) {
-    try {
-      const invokeQuery = JSON.parse(decodeURIComponent(req.headers['x-invoke-query']))
-      tableName = invokeQuery.table || ''
-    } catch {}
-  }
-
   if (!tableName) {
     res.status(400)
     res.setHeader('Content-Type', 'application/json')
-    return res.end(JSON.stringify({ 
-      error: 'Missing table name', 
-      debug: { 
-        url: req.url,
-        invokeQuery: req.headers['x-invoke-query'],
-        invokePath: req.headers['x-invoke-path'],
-        matchedPath: req.headers['x-matched-path']
-      }
-    }))
+    return res.end(JSON.stringify({ error: 'Missing table name' }))
   }
 
-  // Reconstruct query string without _table param
+  // Remove table param, keep the rest for Supabase
   const queryParams = new URLSearchParams(url.search)
+  queryParams.delete('table')
   queryParams.delete('_table')
   const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
   
