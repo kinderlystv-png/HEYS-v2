@@ -1,12 +1,17 @@
 // Supabase password grant proxy
 
-const SUPABASE_URL = 'https://ukqolcziqcuplqfgrmsh.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE2ODc0MjAsImV4cCI6MjA0NzI2MzQyMH0.OKwSzfNqQA7q_LdxkcmGRmA_J5OUPpzuUbDah8TLN64'
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ukqolcziqcuplqfgrmsh.supabase.co'
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY
 
 export default async function handler(req, res) {
+  if (!SUPABASE_ANON_KEY) {
+    res.status(500)
+    res.setHeader('Content-Type', 'application/json')
+    return res.end(JSON.stringify({ error: 'Missing SUPABASE_ANON_KEY env' }))
+  }
+
   const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''
-  const joiner = query.includes('?') || query.includes('&') ? (query.startsWith('?') ? '&' : '&') : '?'
-  const targetUrl = `${SUPABASE_URL}/auth/v1/token${query}${joiner}apikey=${encodeURIComponent(SUPABASE_ANON_KEY)}`
+  const targetUrl = `${SUPABASE_URL}/auth/v1/token${query}`
 
   if (req.method === 'OPTIONS') {
     res.status(204)
