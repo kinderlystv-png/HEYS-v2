@@ -6,7 +6,11 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/api/supabase/:path*",
+      "destination": "https://ukqolcziqcuplqfgrmsh.supabase.co/:path*"
+    },
+    {
+      "source": "/:path((?!api/).*)",
       "destination": "/index.html"
     }
   ],

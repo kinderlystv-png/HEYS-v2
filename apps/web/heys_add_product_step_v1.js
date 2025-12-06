@@ -359,18 +359,13 @@
         
         setPhotoPreview(compressedData);
         
-        // Сохраняем фото в meal через callback
-        if (context?.onAddPhoto) {
-          context.onAddPhoto({
-            mealIndex: context.mealIndex,
-            photo: compressedData,
-            filename: file.name,
-            timestamp: Date.now()
-          });
-          console.log('[AddProductStep] Photo added to meal:', context.mealIndex);
-        } else {
-          console.warn('[AddProductStep] onAddPhoto callback not provided');
-        }
+        // Показываем превью для подтверждения
+        setPendingPhotoData({
+          compressedData,
+          filename: file.name,
+          originalSize: file.size
+        });
+        setShowPhotoConfirm(true);
       };
       
       img.onerror = () => {
@@ -383,7 +378,40 @@
         img.src = event.target.result;
       };
       reader.readAsDataURL(file);
-    }, [context]);
+      
+      // Сбрасываем input чтобы можно было выбрать то же фото повторно
+      e.target.value = '';
+    }, []);
+    
+    // Подтверждение сохранения фото
+    const confirmPhoto = useCallback(() => {
+      if (!pendingPhotoData || !context?.onAddPhoto) {
+        console.warn('[AddProductStep] Cannot confirm photo - missing data or callback');
+        setShowPhotoConfirm(false);
+        return;
+      }
+      
+      haptic('success');
+      context.onAddPhoto({
+        mealIndex: context.mealIndex,
+        photo: pendingPhotoData.compressedData,
+        filename: pendingPhotoData.filename,
+        timestamp: Date.now()
+      });
+      console.log('[AddProductStep] Photo confirmed and added to meal:', context.mealIndex);
+      
+      setShowPhotoConfirm(false);
+      setPendingPhotoData(null);
+    }, [pendingPhotoData, context]);
+    
+    // Отмена фото
+    const cancelPhoto = useCallback(() => {
+      haptic('light');
+      setShowPhotoConfirm(false);
+      setPendingPhotoData(null);
+      setPhotoPreview(null);
+      console.log('[AddProductStep] Photo cancelled');
+    }, []);
     
     // Открыть выбор фото
     const handlePhotoClick = useCallback(() => {
@@ -482,7 +510,44 @@
     const showFavorites = !showSearch && favoriteProducts.length > 0;
     const showPopular = !showSearch;
     
+    // Счётчик фото в текущем приёме
+    const currentPhotoCount = context?.mealPhotos?.length || 0;
+    const photoLimit = 10;
+    const canAddPhoto = currentPhotoCount < photoLimit;
+    
     return React.createElement('div', { className: 'aps-search-step' },
+      // Модалка подтверждения фото
+      showPhotoConfirm && pendingPhotoData && React.createElement('div', { 
+        className: 'photo-confirm-overlay',
+        onClick: cancelPhoto
+      },
+        React.createElement('div', { 
+          className: 'photo-confirm-modal',
+          onClick: e => e.stopPropagation()
+        },
+          React.createElement('div', { className: 'photo-confirm-header' }, 'Сохранить это фото?'),
+          React.createElement('div', { className: 'photo-confirm-preview' },
+            React.createElement('img', { 
+              src: pendingPhotoData.compressedData,
+              alt: 'Превью фото'
+            })
+          ),
+          React.createElement('div', { className: 'photo-confirm-info' },
+            Math.round(pendingPhotoData.compressedData.length / 1024) + ' КБ'
+          ),
+          React.createElement('div', { className: 'photo-confirm-buttons' },
+            React.createElement('button', {
+              className: 'photo-confirm-btn cancel',
+              onClick: cancelPhoto
+            }, 'Отмена'),
+            React.createElement('button', {
+              className: 'photo-confirm-btn confirm',
+              onClick: confirmPhoto
+            }, 'Сохранить')
+          )
+        )
+      ),
+      
       // Скрытый input для выбора фото
       React.createElement('input', {
         ref: fileInputRef,
@@ -497,13 +562,19 @@
       React.createElement('div', { className: 'aps-fixed-header' },
         // Ряд кнопок: Добавить фото + Новый продукт
         React.createElement('div', { className: 'aps-action-buttons' },
-          // Кнопка "Добавить фото"
+          // Кнопка "Добавить фото" с счётчиком
           React.createElement('button', {
-            className: 'aps-new-product-btn aps-photo-btn',
-            onClick: handlePhotoClick
+            className: 'aps-new-product-btn aps-photo-btn' + (!canAddPhoto ? ' disabled' : ''),
+            onClick: canAddPhoto ? handlePhotoClick : null,
+            disabled: !canAddPhoto,
+            title: !canAddPhoto ? `Лимит ${photoLimit} фото` : 'Добавить фото'
           },
             React.createElement('span', { className: 'aps-new-icon' }, '📷'),
-            React.createElement('span', null, 'Добавить фото')
+            React.createElement('span', null, 
+              currentPhotoCount > 0 
+                ? `Фото ${currentPhotoCount}/${photoLimit}` 
+                : 'Добавить фото'
+            )
           ),
           // Кнопка "Новый продукт"
           React.createElement('button', {

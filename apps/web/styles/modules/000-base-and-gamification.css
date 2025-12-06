@@ -5675,6 +5675,151 @@ body:has(.offline-banner) .wrap {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
 
+  /* === PHOTO CONFIRM MODAL — подтверждение сохранения фото === */
+  .photo-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .photo-confirm-modal {
+    background: #fff;
+    border-radius: 16px;
+    max-width: 320px;
+    width: 100%;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .photo-confirm-header {
+    padding: 16px;
+    font-size: 17px;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .photo-confirm-preview {
+    padding: 16px;
+    background: #f3f4f6;
+    display: flex;
+    justify-content: center;
+  }
+
+  .photo-confirm-preview img {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    object-fit: contain;
+  }
+
+  .photo-confirm-info {
+    padding: 8px 16px;
+    text-align: center;
+    font-size: 13px;
+    color: #6b7280;
+  }
+
+  .photo-confirm-buttons {
+    display: flex;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .photo-confirm-btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    background: none;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .photo-confirm-btn.cancel {
+    color: #6b7280;
+    border-right: 1px solid #e5e7eb;
+  }
+
+  .photo-confirm-btn.cancel:active {
+    background: #f3f4f6;
+  }
+
+  .photo-confirm-btn.confirm {
+    color: #10b981;
+  }
+
+  .photo-confirm-btn.confirm:active {
+    background: #ecfdf5;
+  }
+
+  [data-theme="dark"] .photo-confirm-modal {
+    background: #1f2937;
+  }
+
+  [data-theme="dark"] .photo-confirm-header {
+    border-color: #374151;
+    color: #f3f4f6;
+  }
+
+  [data-theme="dark"] .photo-confirm-preview {
+    background: #111827;
+  }
+
+  [data-theme="dark"] .photo-confirm-info {
+    color: #9ca3af;
+  }
+
+  [data-theme="dark"] .photo-confirm-buttons {
+    border-color: #374151;
+  }
+
+  [data-theme="dark"] .photo-confirm-btn.cancel {
+    color: #9ca3af;
+    border-color: #374151;
+  }
+
+  [data-theme="dark"] .photo-confirm-btn.cancel:active {
+    background: #374151;
+  }
+
+  [data-theme="dark"] .photo-confirm-btn.confirm:active {
+    background: rgba(16, 185, 129, 0.2);
+  }
+
+  /* === PHOTO SKELETON LOADING — пульсирующий placeholder === */
+  .meal-photo-thumb.skeleton {
+    background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .meal-photo-thumb.skeleton img {
+    opacity: 0;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  [data-theme="dark"] .meal-photo-thumb.skeleton {
+    background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+    background-size: 200% 100%;
+  }
+
+  /* Disabled photo button */
+  .aps-photo-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   /* === PHOTO VIEWER — полноэкранный просмотр фото === */
   @keyframes fadeIn {
     from { opacity: 0; }

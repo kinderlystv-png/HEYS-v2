@@ -82,6 +82,93 @@
   const PHOTO_LIMIT_PER_MEAL = 10;
   
   /**
+   * Lazy Photo Thumbnail с IntersectionObserver и skeleton loading
+   */
+  const LazyPhotoThumb = React.memo(function LazyPhotoThumb({
+    photo, photoSrc, thumbClass, timeStr, mealIndex, photoIndex, mealPhotos, handleDelete, setDay
+  }) {
+    const [isLoaded, setIsLoaded] = React.useState(false);
+    const [isVisible, setIsVisible] = React.useState(false);
+    const containerRef = React.useRef(null);
+    
+    // IntersectionObserver для lazy loading
+    React.useEffect(() => {
+      const el = containerRef.current;
+      if (!el) return;
+      
+      // Если это base64 data, показываем сразу (уже в памяти)
+      if (photoSrc?.startsWith('data:')) {
+        setIsVisible(true);
+        return;
+      }
+      
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            observer.disconnect();
+          }
+        },
+        { rootMargin: '100px' } // Предзагружаем за 100px до видимости
+      );
+      
+      observer.observe(el);
+      return () => observer.disconnect();
+    }, [photoSrc]);
+    
+    // Открытие галереи
+    const handleClick = React.useCallback(() => {
+      if (window.HEYS?.showPhotoViewer) {
+        const onDeleteInViewer = (photoId) => {
+          setDay((prevDay = {}) => {
+            const meals = (prevDay.meals || []).map((m, i) => {
+              if (i !== mealIndex || !m.photos) return m;
+              return { ...m, photos: m.photos.filter(p => p.id !== photoId) };
+            });
+            return { ...prevDay, meals };
+          });
+        };
+        window.HEYS.showPhotoViewer(mealPhotos, photoIndex, onDeleteInViewer);
+      } else {
+        window.open(photoSrc, '_blank');
+      }
+    }, [mealPhotos, photoIndex, photoSrc, mealIndex, setDay]);
+    
+    // Классы с skeleton
+    let finalClass = thumbClass;
+    if (!isLoaded && isVisible) finalClass += ' skeleton';
+    
+    return React.createElement('div', { 
+      ref: containerRef,
+      className: finalClass,
+      onClick: handleClick
+    },
+      // Изображение (показываем только когда видимо)
+      isVisible && React.createElement('img', { 
+        src: photoSrc, 
+        alt: 'Фото приёма',
+        onLoad: () => setIsLoaded(true),
+        onError: () => setIsLoaded(true) // Убираем skeleton даже при ошибке
+      }),
+      // Timestamp badge
+      timeStr && isLoaded && React.createElement('div', { 
+        className: 'photo-time-badge'
+      }, timeStr),
+      // Кнопка удаления
+      isLoaded && React.createElement('button', {
+        className: 'photo-delete-btn',
+        onClick: handleDelete,
+        title: 'Удалить фото'
+      }, '✕'),
+      // Индикатор pending
+      photo.pending && isLoaded && React.createElement('div', { 
+        className: 'photo-pending-badge',
+        title: 'Ожидает загрузки в облако'
+      }, '⏳')
+    );
+  });
+
+  /**
    * Показать галерею фото на весь экран
    * @param {Array} photos - массив фото [{url, data, id, timestamp, pending}]
    * @param {number} startIndex - индекс начального фото
@@ -1525,48 +1612,18 @@
             if (photo.pending) thumbClass += ' pending';
             if (photo.uploading) thumbClass += ' uploading';
             
-            return React.createElement('div', { 
-              key: photo.id || photoIndex, 
-              className: thumbClass,
-              onClick: () => {
-                // Открыть галерею фото на весь экран
-                if (window.HEYS?.showPhotoViewer) {
-                  const onDeleteInViewer = (photoId) => {
-                    setDay((prevDay = {}) => {
-                      const meals = (prevDay.meals || []).map((m, i) => {
-                        if (i !== mealIndex || !m.photos) return m;
-                        return { ...m, photos: m.photos.filter(p => p.id !== photoId) };
-                      });
-                      return { ...prevDay, meals };
-                    });
-                  };
-                  window.HEYS.showPhotoViewer(meal.photos, photoIndex, onDeleteInViewer);
-                } else {
-                  window.open(photoSrc, '_blank');
-                }
-              }
-            },
-              React.createElement('img', { 
-                src: photoSrc, 
-                alt: 'Фото приёма',
-                loading: 'lazy'
-              }),
-              // Timestamp badge
-              timeStr && React.createElement('div', { 
-                className: 'photo-time-badge'
-              }, timeStr),
-              // Кнопка удаления
-              React.createElement('button', {
-                className: 'photo-delete-btn',
-                onClick: handleDelete,
-                title: 'Удалить фото'
-              }, '✕'),
-              // Индикатор pending (ещё не загружено в облако)
-              photo.pending && React.createElement('div', { 
-                className: 'photo-pending-badge',
-                title: 'Ожидает загрузки в облако'
-              }, '⏳')
-            );
+            return React.createElement(LazyPhotoThumb, { 
+              key: photo.id || photoIndex,
+              photo,
+              photoSrc,
+              thumbClass,
+              timeStr,
+              mealIndex,
+              photoIndex,
+              mealPhotos: meal.photos,
+              handleDelete,
+              setDay
+            });
           })
         )
       )
