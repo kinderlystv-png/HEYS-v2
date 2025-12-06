@@ -5,6 +5,9 @@
   "description": "HEYS - Monorepo for nutrition and training management system",
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0 <21.0.0"
+  },
   "workspaces": [
     "packages/*",
     "apps/*",
