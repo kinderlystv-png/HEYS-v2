@@ -74,6 +74,36 @@
       }catch(e){ return null; }
     },[lsGetFunc]);
 
+    // Очистка фото от base64 данных перед сохранением (экономия localStorage)
+    const stripPhotoData = React.useCallback((payload) => {
+      if (!payload?.meals) return payload;
+      return {
+        ...payload,
+        meals: payload.meals.map(meal => {
+          if (!meal?.photos?.length) return meal;
+          return {
+            ...meal,
+            photos: meal.photos.map(photo => {
+              // Если есть URL — удаляем data (base64)
+              // Если нет URL (pending) — сохраняем data для offline
+              if (photo.url) {
+                const { data, ...rest } = photo;
+                return rest;
+              }
+              // Pending фото: сохраняем, но ограничиваем размер
+              // Если data > 100KB — не сохраняем в localStorage (только в pending queue)
+              if (photo.data && photo.data.length > 100000) {
+                console.warn('[AUTOSAVE] Photo too large for localStorage, skipping data');
+                const { data, ...rest } = photo;
+                return { ...rest, dataSkipped: true };
+              }
+              return photo;
+            })
+          };
+        })
+      };
+    }, []);
+
     // Сохранение данных дня под конкретную дату
     const saveToDate = React.useCallback((dateStr, payload)=>{
       if(!dateStr || !payload) return;
@@ -84,8 +114,11 @@
       if(current && current.updatedAt > incomingUpdatedAt) return;
       if(current && current.updatedAt===incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) return;
 
+      // Очищаем фото от base64 перед сохранением
+      const cleanedPayload = stripPhotoData(payload);
+
       const toStore = {
-        ...payload,
+        ...cleanedPayload,
         date: dateStr,
         schemaVersion: payload.schemaVersion!=null? payload.schemaVersion:3,
         updatedAt: incomingUpdatedAt,
@@ -102,7 +135,7 @@
       }catch(error){
         console.error('[AUTOSAVE] localStorage write failed:', error);
       }
-    },[getKey,lsSetFn,now,readExisting]);
+    },[getKey,lsSetFn,now,readExisting,stripPhotoData]);
 
     const flush = React.useCallback(()=>{
       if(disabled || isUnmountedRef.current || !day || !day.date) return;
