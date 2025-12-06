@@ -996,7 +996,10 @@
         max: 500,
         step: 5,
         value: Math.min(500, grams),
-        onChange: (e) => setGrams(Number(e.target.value))
+        onChange: (e) => setGrams(Number(e.target.value)),
+        onTouchStart: (e) => e.stopPropagation(),
+        onTouchEnd: (e) => e.stopPropagation(),
+        onTouchMove: (e) => e.stopPropagation()
       }),
       
       // Быстрые кнопки
@@ -1107,7 +1110,7 @@
       showStreak: false,
       showTip: false,
       showProgress: true,
-      allowSwipe: true,
+      allowSwipe: false,
       hidePrimaryOnFirst: true,
       title: '', // Убрали — и так очевидно
       onComplete: (stepData) => {

@@ -363,6 +363,11 @@
       if (!container) return;
       
       const handleTouchMove = (e) => {
+        // Разрешаем touch на range inputs (слайдерах)
+        if (e.target.tagName === 'INPUT' && e.target.type === 'range') {
+          return;
+        }
+        
         // Находим ближайший scrollable элемент
         let target = e.target;
         while (target && target !== container) {
