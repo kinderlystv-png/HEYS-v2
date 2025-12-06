@@ -273,13 +273,15 @@
    * @param {Object} meal - приём пищи
    * @param {Object} pIndex - индекс продуктов
    * @param {Function} getProductFromItem - функция получения продукта
-   * @returns {Object} { avgGI, totalProtein, totalFiber, totalGrams }
+   * @returns {Object} { avgGI, totalProtein, totalFiber, totalGrams, totalCarbs, totalSimple }
    */
   const calculateMealNutrients = (meal, pIndex, getProductFromItem) => {
     let totalGrams = 0;
     let weightedGI = 0;
     let totalProtein = 0;
     let totalFiber = 0;
+    let totalCarbs = 0;
+    let totalSimple = 0;
     
     const items = meal?.items || [];
     
@@ -293,6 +295,12 @@
       
       totalProtein += (prod?.protein100 || 0) * grams / 100;
       totalFiber += (prod?.fiber100 || 0) * grams / 100;
+      
+      // Углеводы для расчёта силы инсулиновой реакции
+      const simple = prod?.simple100 || 0;
+      const complex = prod?.complex100 || 0;
+      totalSimple += simple * grams / 100;
+      totalCarbs += (simple + complex) * grams / 100;
     }
     
     const avgGI = totalGrams > 0 ? Math.round(weightedGI / totalGrams) : 50;
@@ -301,18 +309,51 @@
       avgGI,
       totalProtein: Math.round(totalProtein),
       totalFiber: Math.round(totalFiber),
-      totalGrams
+      totalGrams,
+      totalCarbs: Math.round(totalCarbs * 10) / 10,
+      totalSimple: Math.round(totalSimple * 10) / 10
     };
   };
   
+  // === CARBS SCALING — длина волны зависит от количества углеводов ===
+  // Меньше углеводов = короче волна (инсулиновый отклик пропорционален углеводам)
+  const CARBS_SCALING = {
+    // Минимальный порог — ниже этого инсулиновая реакция минимальна
+    minThreshold: 5,     // < 5г углеводов = почти нет реакции
+    // Порог для полной волны
+    fullWaveThreshold: 30, // >= 30г = полная волна (100%)
+    // Минимальный множитель волны при малых углеводах
+    minMultiplier: 0.25   // 25% от базовой волны для минимальных углеводов
+  };
+
+  /**
+   * Рассчитать множитель длины волны на основе количества углеводов
+   * @param {number} carbs - общее количество углеводов в граммах
+   * @returns {number} множитель 0.25-1.0
+   */
+  const calculateCarbsMultiplier = (carbs) => {
+    if (carbs < CARBS_SCALING.minThreshold) {
+      return CARBS_SCALING.minMultiplier;
+    }
+    if (carbs >= CARBS_SCALING.fullWaveThreshold) {
+      return 1.0;
+    }
+    // Линейная интерполяция между minThreshold и fullWaveThreshold
+    const range = CARBS_SCALING.fullWaveThreshold - CARBS_SCALING.minThreshold;
+    const carbsAboveMin = carbs - CARBS_SCALING.minThreshold;
+    const ratio = carbsAboveMin / range;
+    return CARBS_SCALING.minMultiplier + ratio * (1 - CARBS_SCALING.minMultiplier);
+  };
+
   /**
    * Рассчитать множитель длины волны
    * @param {number} gi - ГИ
    * @param {number} protein - белок в граммах
    * @param {number} fiber - клетчатка в граммах
-   * @returns {Object} { total, gi, protein, fiber }
+   * @param {number} carbs - углеводы в граммах (опционально)
+   * @returns {Object} { total, gi, protein, fiber, carbs }
    */
-  const calculateMultiplier = (gi, protein, fiber) => {
+  const calculateMultiplier = (gi, protein, fiber, carbs = null) => {
     const giCat = utils.getGICategory(gi);
     let giMult = giCat.multiplier;
     
@@ -324,11 +365,18 @@
     if (fiber >= FIBER_BONUS.high.threshold) fiberBonus = FIBER_BONUS.high.bonus;
     else if (fiber >= FIBER_BONUS.medium.threshold) fiberBonus = FIBER_BONUS.medium.bonus;
     
+    // Базовый множитель от GI, белка и клетчатки
+    const baseMult = giMult + proteinBonus + fiberBonus;
+    
+    // Множитель от количества углеводов (если переданы)
+    const carbsMult = carbs !== null ? calculateCarbsMultiplier(carbs) : 1.0;
+    
     return {
-      total: giMult + proteinBonus + fiberBonus,
+      total: baseMult * carbsMult,
       gi: giMult,
       protein: proteinBonus,
       fiber: fiberBonus,
+      carbs: carbsMult,
       category: giCat
     };
   };
@@ -428,7 +476,7 @@
     
     // Расчёт нутриентов последнего приёма
     const nutrients = calculateMealNutrients(lastMeal, pIndex, getProductFromItem);
-    const multipliers = calculateMultiplier(nutrients.avgGI, nutrients.totalProtein, nutrients.totalFiber);
+    const multipliers = calculateMultiplier(nutrients.avgGI, nutrients.totalProtein, nutrients.totalFiber, nutrients.totalCarbs);
     
     // 🏃 Workout бонус
     const workoutBonus = calculateWorkoutBonus(trainings);
@@ -482,7 +530,7 @@
       
       const startMin = utils.timeToMinutes(t);
       const mealNutrients = calculateMealNutrients(meal, pIndex, getProductFromItem);
-      const mealMult = calculateMultiplier(mealNutrients.avgGI, mealNutrients.totalProtein, mealNutrients.totalFiber);
+      const mealMult = calculateMultiplier(mealNutrients.avgGI, mealNutrients.totalProtein, mealNutrients.totalFiber, mealNutrients.totalCarbs);
       
       const duration = Math.round(baseWaveHours * mealMult.total * 60);
       const endMin = startMin + duration;
@@ -497,6 +545,8 @@
         gi: mealNutrients.avgGI,
         protein: mealNutrients.totalProtein,
         fiber: mealNutrients.totalFiber,
+        carbs: mealNutrients.totalCarbs,
+        carbsMultiplier: mealMult.carbs,
         isActive: idx === 0 && remainingMinutes > 0
       };
     }).filter(Boolean).reverse();
@@ -637,8 +687,11 @@
       // Нутриенты
       totalProtein: nutrients.totalProtein,
       totalFiber: nutrients.totalFiber,
+      totalCarbs: nutrients.totalCarbs,
+      totalSimple: nutrients.totalSimple,
       proteinBonus: multipliers.protein,
       fiberBonus: multipliers.fiber,
+      carbsMultiplier: multipliers.carbs,
       
       // 🏃 Workout данные
       workoutBonus: workoutBonus.bonus,
@@ -978,12 +1031,16 @@
           `Базовая волна: ${data.baseWaveHours}ч → Скорректированная: ${Math.round(data.insulinWaveHours * 10) / 10}ч`
         ),
         // Формула расчёта (если есть модификаторы)
-        (data.proteinBonus > 0 || data.fiberBonus > 0 || data.hasWorkoutBonus || (data.circadianMultiplier && data.circadianMultiplier !== 1.0)) &&
+        (data.carbsMultiplier < 1 || data.proteinBonus > 0 || data.fiberBonus > 0 || data.hasWorkoutBonus || (data.circadianMultiplier && data.circadianMultiplier !== 1.0)) &&
           React.createElement('div', { 
             style: { fontSize: '10px', color: '#94a3b8', marginTop: '6px', padding: '4px 8px', background: 'rgba(0,0,0,0.03)', borderRadius: '4px', fontFamily: 'monospace' } 
           },
             (() => {
               const parts = [];
+              // Carbs factor (если малое количество углеводов)
+              if (data.carbsMultiplier && data.carbsMultiplier < 1) {
+                parts.push(`углев.${data.totalCarbs}г×${Math.round(data.carbsMultiplier * 100) / 100}`);
+              }
               // GI factor
               const giFactor = data.giMultiplier || 1.0;
               parts.push(`ГИ×${Math.round(giFactor * 100) / 100}`);
@@ -1000,6 +1057,10 @@
               return `📐 ${parts.join(' ')} = ${Math.round(data.insulinWaveHours * 10) / 10}ч`;
             })()
           ),
+        // Углеводы (если мало = короче волна)
+        data.carbsMultiplier && data.carbsMultiplier < 1 && React.createElement('div', { 
+          style: { fontSize: '11px', color: '#3b82f6', marginTop: '2px' } 
+        }, `🍬 Углеводов ${data.totalCarbs}г — волна ${Math.round((1 - data.carbsMultiplier) * 100)}% короче`),
         // Модификаторы
         (data.proteinBonus > 0 || data.fiberBonus > 0) && 
           React.createElement('div', { style: { fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap' } },
