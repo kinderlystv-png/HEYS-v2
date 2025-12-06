@@ -4,6 +4,11 @@
   "outputDirectory": "dist",
   "installCommand": "cd ../.. && pnpm install",
   "framework": "vite",
+  "functions": {
+    "api/supabase/[...path].ts": {
+      "runtime": "edge"
+    }
+  },
   "rewrites": [
     {
       "source": "/:path((?!api/).*)",
