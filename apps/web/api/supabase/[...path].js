@@ -1,11 +1,7 @@
 /**
- * Vercel Edge Function — Supabase Proxy
- * JavaScript version for better Vercel compatibility
+ * Vercel Serverless Function — Supabase Proxy
+ * Node runtime (без Edge), т.к. Edge-функции не подхватываются в этом проекте.
  */
-
-export const config = {
-  runtime: 'edge',
-}
 
 const SUPABASE_URL = 'https://ukqolcziqcuplqfgrmsh.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE2ODc0MjAsImV4cCI6MjA0NzI2MzQyMH0.OKwSzfNqQA7q_LdxkcmGRmA_J5OUPpzuUbDah8TLN64'
@@ -18,8 +14,8 @@ const ALLOWED_ORIGINS = [
   'http://127.0.0.1:3001',
 ]
 
-export default async function handler(request) {
-  const url = new URL(request.url)
+export default async function handler(req, res) {
+  const url = new URL(req.url, `http://${req.headers.host}`)
   
   // Извлекаем путь после /api/supabase/
   const pathMatch = url.pathname.match(/^\/api\/supabase\/(.*)$/)
@@ -29,31 +25,28 @@ export default async function handler(request) {
   const targetUrl = `${SUPABASE_URL}/${supabasePath}${url.search}`
   
   // CORS
-  const origin = request.headers.get('origin') || ''
+  const origin = req.headers.origin || ''
   const isAllowedOrigin = ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))
   const corsOrigin = isAllowedOrigin ? origin : ALLOWED_ORIGINS[0]
   
   // CORS preflight
-  if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': corsOrigin,
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Authorization, Content-Type, apikey, x-client-info, Accept, Prefer',
-        'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Max-Age': '86400',
-      },
-    })
+  if (req.method === 'OPTIONS') {
+    res.status(204)
+    res.setHeader('Access-Control-Allow-Origin', corsOrigin)
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, apikey, x-client-info, Accept, Prefer')
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader('Access-Control-Max-Age', '86400')
+    return res.end()
   }
   
   // Копируем заголовки
   const headers = new Headers()
   headers.set('apikey', SUPABASE_ANON_KEY)
-  headers.set('Content-Type', request.headers.get('Content-Type') || 'application/json')
+  headers.set('Content-Type', req.headers['content-type'] || 'application/json')
   
   // Копируем Authorization если есть
-  const auth = request.headers.get('Authorization')
+  const auth = req.headers['authorization']
   if (auth) {
     headers.set('Authorization', auth)
   } else {
@@ -61,7 +54,7 @@ export default async function handler(request) {
   }
   
   // Prefer header для PostgREST
-  const prefer = request.headers.get('Prefer')
+  const prefer = req.headers['prefer']
   if (prefer) {
     headers.set('Prefer', prefer)
   }
@@ -69,33 +62,27 @@ export default async function handler(request) {
   try {
     // Прокси запрос
     const response = await fetch(targetUrl, {
-      method: request.method,
+      method: req.method,
       headers: headers,
-      body: request.method !== 'GET' && request.method !== 'HEAD' 
-        ? await request.text() 
+      body: req.method !== 'GET' && req.method !== 'HEAD' 
+        ? req.body && typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {})
         : undefined,
     })
     
-    // Создаём новые headers для ответа
-    const responseHeaders = new Headers(response.headers)
-    responseHeaders.set('Access-Control-Allow-Origin', corsOrigin)
-    responseHeaders.set('Access-Control-Allow-Credentials', 'true')
-    
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: responseHeaders,
+    // Прокидываем тело и статус в ответ
+    res.status(response.status)
+    res.setHeader('Access-Control-Allow-Origin', corsOrigin)
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    // Копируем все заголовки ответа
+    response.headers.forEach((value, key) => {
+      res.setHeader(key, value)
     })
+    const buf = Buffer.from(await response.arrayBuffer())
+    return res.end(buf)
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: 'Proxy error', message: error.message }),
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': corsOrigin,
-        },
-      }
-    )
+    res.status(500)
+    res.setHeader('Content-Type', 'application/json')
+    res.setHeader('Access-Control-Allow-Origin', corsOrigin)
+    return res.end(JSON.stringify({ error: 'Proxy error', message: error.message }))
   }
 }
