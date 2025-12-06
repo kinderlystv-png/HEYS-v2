@@ -202,28 +202,25 @@
     </script>
 
     <!-- libs with defer and priority for optimal loading -->
-    <!-- React with fallback CDNs (unpkg → jsDelivr → cdnjs) -->
+    <!-- React CDN (jsDelivr - more reliable in RU) -->
     <script
       defer
-      src="https://unpkg.com/react@18/umd/react.production.min.js"
+      src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"
       fetchpriority="high"
       crossorigin="anonymous"
-      onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"
     ></script>
     <script
       defer
-      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+      src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"
       fetchpriority="high"
       crossorigin="anonymous"
-      onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js'"
     ></script>
-    <!-- Supabase with fallback CDNs -->
+    <!-- Supabase CDN -->
     <script
       defer
-      src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"
+      src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"
       fetchpriority="low"
       crossorigin="anonymous"
-      onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'"
     ></script>
 
     <!-- app modules with defer and optimized priority -->
