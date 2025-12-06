@@ -4076,12 +4076,13 @@
                         React.createElement('span', { className: 'tab-text' }, 'Еда'),
                       ),
                     ),
-                    React.createElement(
-                      'div',
-                      { className: 'tab-switch-labels' },
-                      React.createElement('span', { className: 'tab-switch-label' }, 'ОТЧЕТЫ'),
-                      React.createElement('span', { className: 'tab-switch-label' }, 'ДНЕВНИК'),
-                    ),
+                    // Временно закомментированы подписи ОТЧЕТЫ/ДНЕВНИК
+                    // React.createElement(
+                    //   'div',
+                    //   { className: 'tab-switch-labels' },
+                    //   React.createElement('span', { className: 'tab-switch-label' }, 'ОТЧЕТЫ'),
+                    //   React.createElement('span', { className: 'tab-switch-label' }, 'ДНЕВНИК'),
+                    // ),
                   ),
                   // Графики — только для десктопа
                   React.createElement(

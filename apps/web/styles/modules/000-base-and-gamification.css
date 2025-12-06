@@ -3531,9 +3531,9 @@ body:has(.offline-banner) .wrap {
   right: 0;
   z-index: 1000;
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08), 0 -1px 4px rgba(0, 0, 0, 0.04);
-  padding-bottom: max(4px, env(safe-area-inset-bottom));
-  padding-top: 4px;
-  min-height: 46px;
+  padding-bottom: max(2px, env(safe-area-inset-bottom));
+  padding-top: 2px;
+  min-height: 40px;
 }
 
 /* Скрыть технические вкладки на мобилке */
@@ -3545,8 +3545,8 @@ body:has(.offline-banner) .wrap {
 
 .tab {
   cursor: pointer;
-  padding: 4px 12px;
-  min-height: 48px;
+  padding: 2px 12px;
+  min-height: 40px;
   border-radius: 0;
   font-weight: 500;
   font-size: 10px;
@@ -3562,15 +3562,15 @@ body:has(.offline-banner) .wrap {
   flex: 1;
   min-width: 60px;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse; /* Текст наверху, иконка внизу */
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   -webkit-tap-highlight-color: transparent;
 }
 
 .tab .tab-icon {
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
   transition: transform 0.12s ease;
 }
@@ -3619,10 +3619,10 @@ body:has(.offline-banner) .wrap {
 
 .tab-switch-wrapper {
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse; /* Текст сверху, переключатель снизу */
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   flex: 1;
   min-width: 120px;
 }

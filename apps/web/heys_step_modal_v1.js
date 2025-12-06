@@ -234,7 +234,9 @@
     const [animating, setAnimating] = useState(false);
     const [slideDirection, setSlideDirection] = useState(null);
     const [stepData, setStepData] = useState({});
-    const [validationError, setValidationError] = useState(false); // Для shake-анимации
+    const [validationError, setValidationError] = useState(false);
+    const [validationMessage, setValidationMessage] = useState(null);
+    const [slideInDirection, setSlideInDirection] = useState(null); // Для shake-анимации
     const containerRef = useRef(null);
     const touchStartX = useRef(0);
     const touchStartY = useRef(0);
@@ -291,18 +293,30 @@
       setTimeout(() => {
         setCurrentStepIndex(newIndex);
         setSlideDirection(null);
+        // Запускаем slide-in анимацию для нового шага
+        setSlideInDirection(direction === 'left' ? 'from-right' : 'from-left');
         setAnimating(false);
+        // Сбрасываем slide-in после анимации
+        setTimeout(() => setSlideInDirection(null), 250);
       }, 200);
     }, [animating, totalSteps]);
 
     const handleNext = useCallback(() => {
       // Валидация текущего шага
       if (currentConfig.validate && !currentConfig.validate(stepData[currentConfig.id], stepData)) {
+        // Получаем сообщение об ошибке если есть
+        const errorMsg = currentConfig.getValidationMessage 
+          ? currentConfig.getValidationMessage(stepData[currentConfig.id], stepData)
+          : null;
+        setValidationMessage(errorMsg);
         // Показываем shake-анимацию при ошибке
         setValidationError(true);
         // Haptic feedback при ошибке
         if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-        setTimeout(() => setValidationError(false), 500);
+        setTimeout(() => {
+          setValidationError(false);
+          setValidationMessage(null);
+        }, 2500);
         return;
       }
 
@@ -423,7 +437,9 @@
     }
 
     const slideClass = slideDirection === 'left' ? 'mc-slide-left' : 
-                       slideDirection === 'right' ? 'mc-slide-right' : '';
+                       slideDirection === 'right' ? 'mc-slide-right' : 
+                       slideInDirection === 'from-right' ? 'mc-slide-in-right' :
+                       slideInDirection === 'from-left' ? 'mc-slide-in-left' : '';
 
     const StepComponent = currentConfig.component;
 
@@ -501,6 +517,12 @@
               stepData: stepData,
               context: context
             })
+          ),
+
+          // Validation message
+          validationMessage && React.createElement('div', { className: 'mc-validation-message' },
+            React.createElement('span', { className: 'mc-validation-icon' }, '⚠️'),
+            React.createElement('span', null, validationMessage)
           ),
 
           // Buttons

@@ -410,6 +410,11 @@
       const total = (data.zones || []).reduce((s, z) => s + z, 0);
       return total > 0; // Хотя бы 1 минута
     },
+    getValidationMessage: (data) => {
+      const total = (data.zones || []).reduce((s, z) => s + z, 0);
+      if (total === 0) return 'Укажите хотя бы 1 минуту в любой зоне';
+      return null;
+    },
     save: (data, ctx) => {
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
       const trainingIndex = ctx?.trainingIndex ?? 0;
