@@ -357,9 +357,14 @@
 
     const handlePrev = useCallback(() => {
       if (currentStepIndex > 0) {
-        goToStep(currentStepIndex - 1, 'right');
+        // Пропускаем скрытые шаги при навигации назад
+        let prevIndex = currentStepIndex - 1;
+        while (prevIndex > 0 && stepConfigs[prevIndex]?.hidden) {
+          prevIndex--;
+        }
+        goToStep(prevIndex, 'right');
       }
-    }, [currentStepIndex, goToStep]);
+    }, [currentStepIndex, goToStep, stepConfigs]);
 
     // Swipe handlers — учитываем allowSwipe из конфига шага
     const stepAllowSwipe = currentConfig?.allowSwipe !== false && allowSwipe;

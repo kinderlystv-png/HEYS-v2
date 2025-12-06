@@ -4080,8 +4080,8 @@
                     React.createElement(
                       'div',
                       { className: 'tab-switch-labels' },
-                      React.createElement('span', { className: 'tab-switch-label' + (tab === 'stats' ? ' active' : '') }, 'Итоги'),
-                      React.createElement('span', { className: 'tab-switch-label' + (tab === 'diary' ? ' active' : '') }, 'Еда'),
+                      React.createElement('span', { className: 'tab-switch-label' + (tab === 'stats' ? ' active' : '') }, 'Отчёты'),
+                      React.createElement('span', { className: 'tab-switch-label' + (tab === 'diary' ? ' active' : '') }, 'Дневник'),
                     ),
                   ),
                   // Графики — только для десктопа

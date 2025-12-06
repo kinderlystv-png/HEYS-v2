@@ -1507,7 +1507,7 @@
   }
   
   .fab-add-meal {
-    bottom: 80px; /* над нижней навигацией */
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px)); /* над нижней навигацией + safe-area */
     right: 24px;
     width: 52px;
     height: 52px;

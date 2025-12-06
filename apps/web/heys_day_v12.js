@@ -9995,9 +9995,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           )
         ),
         React.createElement('div', { 
-          className: 'steps-slider',
-          onMouseDown: handleStepsDrag,
-          onTouchStart: handleStepsDrag
+          className: 'steps-slider'
         },
           React.createElement('div', { className: 'steps-slider-track' }),
           React.createElement('div', { className: 'steps-slider-goal-mark', style: { left: '80%' } },
@@ -10009,7 +10007,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }),
           React.createElement('div', { 
             className: 'steps-slider-thumb',
-            style: { left: stepsPercent + '%', borderColor: stepsColor }
+            style: { left: stepsPercent + '%', borderColor: stepsColor },
+            onMouseDown: handleStepsDrag,
+            onTouchStart: handleStepsDrag
           })
         )
       ),

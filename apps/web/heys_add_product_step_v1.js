@@ -277,6 +277,8 @@
       const lastGrams = lsGet(`heys_last_grams_${productId}`, null);
       const defaultGrams = lastGrams || 100;
       
+      console.log('[ProductSearchStep] selectProduct:', product.name, 'grams:', defaultGrams);
+      
       onChange({ 
         ...data, 
         selectedProduct: product,
@@ -284,8 +286,9 @@
         lastGrams: lastGrams // Для отображения подсказки
       });
       // Автопереход на шаг граммов (index 2: search → grams)
+      // Увеличен таймаут для гарантии обновления state
       if (goToStep) {
-        setTimeout(() => goToStep(2, 'left'), 50);
+        setTimeout(() => goToStep(2, 'left'), 150);
       }
     }, [data, onChange, goToStep]);
     
@@ -661,8 +664,9 @@
       }
       
       // 5. Переходим на шаг граммов (index 2)
+      // Увеличен таймаут для гарантии обновления state
       if (goToStep) {
-        setTimeout(() => goToStep(2, 'left'), 50);
+        setTimeout(() => goToStep(2, 'left'), 150);
       }
     }, [parsedPreview, data, onChange, context, goToStep, updateStepData]);
     
@@ -810,6 +814,9 @@
     const product = data.selectedProduct || stepData?.create?.selectedProduct || stepData?.search?.selectedProduct;
     const lastGrams = stepData?.search?.lastGrams || stepData?.create?.lastGrams; // Последние использованные
     const grams = data.grams || stepData?.search?.grams || stepData?.create?.grams || 100;
+    
+    // Debug log
+    console.log('[GramsStep] data:', data, 'stepData:', stepData, 'product:', product?.name);
     
     // Режим ввода: grams или kcal
     const [inputMode, setInputMode] = useState('grams');

@@ -4397,7 +4397,7 @@
 /* === 27. FAB (Floating Action Button) === */
 .fab-add-meal {
   position: fixed;
-  bottom: 90px; /* над нижней навигацией */
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px)); /* над нижней навигацией + safe-area для iPhone */
   right: 20px;
   width: 64px;
   height: 64px;
@@ -4428,7 +4428,7 @@
 /* === 28. MACRO TOAST — подсказка БЖУ снизу === */
 .macro-toast {
   position: fixed;
-  bottom: 80px; /* над нижней навигацией */
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px)); /* над нижней навигацией + safe-area */
   left: 50%;
   transform: translateX(-50%) translateY(100px);
   display: flex;
