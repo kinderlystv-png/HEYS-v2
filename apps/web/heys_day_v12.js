@@ -3469,11 +3469,24 @@
       }
     }
 
-    // === Edit Grams Modal functions (slider-based) ===
+    // === Edit Grams Modal — теперь использует AddProductStep.showEditGrams ===
     function openEditGramsModal(mealIndex, itemId, currentGrams, product) {
-      setEditGramsTarget({ mealIndex, itemId, product });
-      setEditGramsValue(currentGrams || 100);
-      // Автофокус убран — клавиатура закрывает информацию о продукте
+      if (HEYS.AddProductStep?.showEditGrams) {
+        HEYS.AddProductStep.showEditGrams({
+          product,
+          currentGrams: currentGrams || 100,
+          mealIndex,
+          itemId,
+          dateKey: date,
+          onSave: ({ mealIndex: mi, itemId: id, grams }) => {
+            setGrams(mi, id, grams);
+          }
+        });
+      } else {
+        // Fallback на старую модалку (если AddProductStep не загружен)
+        setEditGramsTarget({ mealIndex, itemId, product });
+        setEditGramsValue(currentGrams || 100);
+      }
     }
     
     function confirmEditGramsModal() {
@@ -3489,7 +3502,7 @@
       setEditGramsValue(100);
     }
     
-    // Drag handler для слайдера граммов (edit mode)
+    // Drag handler для слайдера граммов (edit mode) — legacy fallback
     function handleEditGramsDrag(e) {
       e.preventDefault();
       const slider = e.currentTarget;
@@ -5072,9 +5085,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     React.useEffect(() => {
       if (!advicePrimary) return;
       
+      console.log('[Advice] advicePrimary:', advicePrimary.id, 'trigger:', adviceTrigger, 'toastsEnabled:', toastsEnabled);
+      
       // Проверяем: автопоказ тостов (FAB = manual всегда работает)
       const isManualTrigger = adviceTrigger === 'manual' || adviceTrigger === 'manual_empty';
       if (!isManualTrigger && !toastsEnabled) {
+        console.log('[Advice] Toasts disabled, skipping auto-show');
         // Тосты отключены — НЕ показываем автоматический тост, но сохраняем данные для FAB
         setDisplayedAdvice(advicePrimary);
         setDisplayedAdviceList(adviceRelevant || []);
@@ -5082,6 +5098,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         return;
       }
       
+      console.log('[Advice] Setting toast visible!');
       // Сохраняем совет и список для отображения
       setDisplayedAdvice(advicePrimary);
       setDisplayedAdviceList(adviceRelevant || []);
@@ -5115,16 +5132,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Помечаем как показанный ПОСЛЕ сохранения в displayedAdvice
       if (markShown) markShown(advicePrimary.id);
       
-      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-      toastTimeoutRef.current = setTimeout(() => {
-        setToastVisible(false);
-        setAdviceExpanded(false);
-        setAdviceTrigger(null);
-        setDisplayedAdvice(null);
-        setDisplayedAdviceList([]);
-        setToastDetailsOpen(false);
-      }, advicePrimary.ttl || 5000);
-      return () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); };
+      // 🔧 Таймер автозакрытия ОТКЛЮЧЁН — тост закрывается только свайпом
+      // if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      // toastTimeoutRef.current = setTimeout(() => {
+      //   setToastVisible(false);
+      //   setAdviceExpanded(false);
+      //   setAdviceTrigger(null);
+      //   setDisplayedAdvice(null);
+      //   setDisplayedAdviceList([]);
+      //   setToastDetailsOpen(false);
+      // }, advicePrimary.ttl || 5000);
+      // return () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); };
     }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled]);
     
     // Сброс advice при смене даты
@@ -12009,81 +12027,68 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         onTouchStart: handleToastTouchStart,
         onTouchMove: handleToastTouchMove,
         onTouchEnd: handleToastTouchEnd,
-        style: toastSwiped 
-          ? { transform: 'translateX(-50%)', flexDirection: 'column', alignItems: 'stretch' } 
-          : { transform: `translateX(calc(-50% + ${toastSwipeX}px))`, opacity: 1 - Math.abs(toastSwipeX) / 150, flexDirection: 'column', alignItems: 'stretch' }
+        style: { 
+          transform: toastSwiped ? 'translateX(-50%)' : `translateX(calc(-50% + ${toastSwipeX}px))`, 
+          opacity: toastSwiped ? 1 : 1 - Math.abs(toastSwipeX) / 150, 
+          flexDirection: 'column', 
+          alignItems: 'stretch',
+          position: 'relative'
+        }
       },
-        // Overlay после свайпа (как в AdviceCard)
-        toastSwiped && React.createElement('div', {
+        // Overlay после свайпа — тот же фон что и у тоста
+        (toastSwiped ? React.createElement('div', {
           className: 'advice-undo-overlay',
           style: {
-            position: 'absolute',
-            inset: 0,
-            background: toastScheduledConfirm 
-              ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%)'
-              : 'linear-gradient(135deg, rgba(34, 197, 94, 0.95) 0%, rgba(22, 163, 74, 0.95) 100%)',
-            borderRadius: '16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px',
-            color: 'white',
+            gap: '12px',
+            padding: '16px',
+            color: 'var(--gray-700)',
             fontWeight: 600,
-            fontSize: '14px',
-            zIndex: 10,
-            backdropFilter: 'blur(4px)'
+            fontSize: '14px'
           }
         },
           toastScheduledConfirm 
             ? React.createElement('span', { 
-                style: { display: 'flex', alignItems: 'center', gap: '8px' } 
+                style: { display: 'flex', alignItems: 'center', gap: '8px', color: '#3b82f6' } 
               }, '⏰ Напомню через 2 часа ✓')
             : React.createElement(React.Fragment, null,
-                React.createElement('span', null, '✓ Прочитано'),
+                React.createElement('span', { style: { color: '#22c55e' } }, '✓ Прочитано'),
                 React.createElement('div', { style: { display: 'flex', gap: '8px' } },
-                  React.createElement('span', { 
+                  React.createElement('button', { 
                     onClick: (e) => { e.stopPropagation(); handleToastUndo(); },
                     style: { 
-                      background: 'rgba(255,255,255,0.3)', 
-                      padding: '6px 12px', 
-                      borderRadius: '12px',
-                      fontSize: '13px',
-                      cursor: 'pointer'
-                    } 
-                  }, 'Отменить'),
-                  React.createElement('span', { 
-                    onClick: handleToastSchedule,
-                    style: { 
-                      background: 'rgba(255,255,255,0.25)', 
+                      background: 'var(--gray-200)', 
+                      color: 'var(--gray-700)',
                       padding: '6px 12px', 
                       borderRadius: '12px',
                       fontSize: '13px',
                       cursor: 'pointer',
+                      border: 'none'
+                    } 
+                  }, 'Отменить'),
+                  React.createElement('button', { 
+                    onClick: handleToastSchedule,
+                    style: { 
+                      background: 'var(--gray-200)', 
+                      color: 'var(--gray-700)',
+                      padding: '6px 12px', 
+                      borderRadius: '12px',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      border: 'none',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px'
                     } 
-                  }, 'Напомнить через 2ч.')
+                  }, '⏰ 2ч')
                 )
-              ),
-          // Прогресс-бар (убывает за 3 сек)
-          !toastScheduledConfirm && React.createElement('div', {
-            style: {
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              height: '3px',
-              background: 'rgba(255,255,255,0.5)',
-              width: '100%',
-              borderRadius: '0 0 16px 16px',
-              animation: 'undoProgress 3s linear forwards'
-            }
-          })
-        ),
-        // Основной контент тоста (невидим когда overlay, но занимает место)
-        React.createElement('div', { 
-          className: 'macro-toast-main',
-          style: toastSwiped ? { visibility: 'hidden' } : undefined
+              )
+        ) : null),
+        // Основной контент тоста (только когда нет overlay)
+        (!toastSwiped ? React.createElement('div', { 
+          className: 'macro-toast-main'
         },
           React.createElement('span', { className: 'macro-toast-icon' }, displayedAdvice.icon),
           React.createElement('span', { className: 'macro-toast-text' }, displayedAdvice.text),
@@ -12114,9 +12119,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             React.createElement('span', { style: { fontSize: '9px' } }, 'все'),
             React.createElement('span', { style: { fontSize: '9px' } }, 'советы')
           )
-        ),
+        ) : null),
         // Строка с кнопкой "Подробнее" слева и подсказкой "свайп" справа
-        !toastSwiped && React.createElement('div', {
+        (!toastSwiped ? React.createElement('div', {
           style: {
             display: 'flex',
             alignItems: 'center',
@@ -12158,9 +12163,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               color: 'rgba(128, 128, 128, 0.6)'
             }
           }, '← свайп — прочитано')
-        ),
+        ) : null),
         // Развёрнутые details
-        !toastSwiped && toastDetailsOpen && displayedAdvice.details && React.createElement('div', {
+        (!toastSwiped && toastDetailsOpen && displayedAdvice.details ? React.createElement('div', {
           style: {
             padding: '8px 12px',
             fontSize: '13px',
@@ -12171,7 +12176,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             marginTop: '4px',
             marginBottom: '4px'
           }
-        }, displayedAdvice.details)
+        }, displayedAdvice.details) : null)
       ),
       
       // Meal Creation/Edit Modal (mobile only)
@@ -12987,11 +12992,41 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               ),
               React.createElement('button', { className: 'time-picker-confirm', onClick: confirmEditGramsModal }, 'Готово')
             ),
-            // Preview: граммы = калории
-            React.createElement('div', { className: 'grams-preview' },
-              React.createElement('span', { className: 'grams-preview-value' }, editGramsValue + 'г'),
-              React.createElement('span', { className: 'grams-preview-separator' }, '='),
-              React.createElement('span', { className: 'grams-preview-kcal' }, 
+            // Главный input граммов (HERO)
+            React.createElement('div', { className: 'grams-input-hero' },
+              React.createElement('button', {
+                className: 'grams-stepper-btn grams-stepper-btn--hero',
+                onClick: () => {
+                  const step = editPortions.length > 0 ? editPortions[0].grams : 10;
+                  setEditGramsValue(Math.max(step, editGramsValue - step));
+                  if (typeof haptic === 'function') haptic('light');
+                }
+              }, '−'),
+              React.createElement('div', { className: 'grams-input-hero__field' },
+                React.createElement('input', {
+                  ref: editGramsInputRef,
+                  type: 'number',
+                  inputMode: 'numeric',
+                  className: 'grams-input grams-input--hero',
+                  value: editGramsValue,
+                  onChange: e => setEditGramsValue(Math.max(1, Math.min(2000, parseInt(e.target.value) || 0))),
+                  onFocus: e => e.target.select(),
+                  onClick: e => e.target.select()
+                }),
+                React.createElement('span', { className: 'grams-input-suffix--hero' }, 'г')
+              ),
+              React.createElement('button', {
+                className: 'grams-stepper-btn grams-stepper-btn--hero',
+                onClick: () => {
+                  const step = editPortions.length > 0 ? editPortions[0].grams : 10;
+                  setEditGramsValue(Math.min(2000, editGramsValue + step));
+                  if (typeof haptic === 'function') haptic('light');
+                }
+              }, '+')
+            ),
+            // Калории (вторичная информация)
+            React.createElement('div', { className: 'grams-kcal-secondary' },
+              React.createElement('span', { className: 'grams-kcal-secondary__value' }, 
                 Math.round((editGramsTarget.product?.kcal100 || 0) * editGramsValue / 100) + ' ккал'
               )
             ),
@@ -13012,35 +13047,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   React.createElement('span', { className: 'portion-grams' }, portion.grams + 'г')
                 );
               })
-            ),
-            // Input field with stepper
-            React.createElement('div', { className: 'grams-input-container' },
-              React.createElement('button', {
-                className: 'grams-stepper-btn',
-                onClick: () => {
-                  const step = editPortions.length > 0 ? editPortions[0].grams : 10;
-                  setEditGramsValue(Math.max(step, editGramsValue - step));
-                  if (typeof haptic === 'function') haptic('light');
-                }
-              }, '−'),
-              React.createElement('input', {
-                ref: editGramsInputRef,
-                type: 'number',
-                inputMode: 'numeric',
-                className: 'grams-input',
-                value: editGramsValue,
-                onChange: e => setEditGramsValue(Math.max(1, Math.min(2000, parseInt(e.target.value) || 0))),
-                onFocus: e => e.target.select()
-              }),
-              React.createElement('span', { className: 'grams-input-suffix' }, 'г'),
-              React.createElement('button', {
-                className: 'grams-stepper-btn',
-                onClick: () => {
-                  const step = editPortions.length > 0 ? editPortions[0].grams : 10;
-                  setEditGramsValue(Math.min(2000, editGramsValue + step));
-                  if (typeof haptic === 'function') haptic('light');
-                }
-              }, '+')
             ),
             // Slider
             React.createElement('div', { className: 'grams-slider-container' },

@@ -2847,6 +2847,86 @@
   font-weight: 500;
 }
 
+/* === HERO Input граммов (главный элемент) === */
+.grams-input-hero {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 16px 8px;
+  gap: 12px;
+}
+
+.grams-input-hero__field {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.grams-input--hero {
+  width: 140px;
+  height: 64px;
+  font-size: 48px;
+  font-weight: 700;
+  text-align: center;
+  border: none;
+  border-bottom: 3px solid var(--color-blue-ios);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-blue-ios);
+  -moz-appearance: textfield;
+  padding: 0;
+}
+
+.grams-input--hero::-webkit-outer-spin-button,
+.grams-input--hero::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.grams-input--hero:focus {
+  outline: none;
+  border-bottom-color: var(--color-blue-ios);
+}
+
+.grams-input-suffix--hero {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--color-blue-ios);
+  margin-left: 2px;
+}
+
+.grams-stepper-btn--hero {
+  width: 52px;
+  height: 52px;
+  font-size: 28px;
+  border-radius: 50%;
+}
+
+/* Калории как вторичная информация */
+.grams-kcal-secondary {
+  text-align: center;
+  padding: 4px 16px 12px;
+}
+
+.grams-kcal-secondary__value {
+  font-size: 18px;
+  font-weight: 500;
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .grams-input--hero {
+  color: #0a84ff;
+  border-bottom-color: #0a84ff;
+}
+
+[data-theme="dark"] .grams-input-suffix--hero {
+  color: #0a84ff;
+}
+
+[data-theme="dark"] .grams-kcal-secondary__value {
+  color: #98989d;
+}
+
 /* Kcal color coding */
 .grams-preview-kcal.kcal-low {
   color: #34c759;

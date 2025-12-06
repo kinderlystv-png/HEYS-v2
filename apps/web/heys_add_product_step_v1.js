@@ -254,6 +254,21 @@
             String(p.name || '').toLowerCase().includes(lc)
           );
         }
+        
+        // Умная сортировка: точные совпадения первыми
+        results.sort((a, b) => {
+          const aName = String(a.name || '').toLowerCase();
+          const bName = String(b.name || '').toLowerCase();
+          const aStartsWith = aName.startsWith(lc) ? 0 : 1;
+          const bStartsWith = bName.startsWith(lc) ? 0 : 1;
+          if (aStartsWith !== bStartsWith) return aStartsWith - bStartsWith;
+          // Затем по точному вхождению слова
+          const aExact = aName.split(/\s+/).some(w => w === lc) ? 0 : 1;
+          const bExact = bName.split(/\s+/).some(w => w === lc) ? 0 : 1;
+          if (aExact !== bExact) return aExact - bExact;
+          // Затем по длине названия (короткие = точнее)
+          return aName.length - bName.length;
+        });
       }
       
       // Фильтр по категории
@@ -463,6 +478,8 @@
       const isFav = favorites.has(pid);
       const kcal = Math.round(product.kcal100 || 0);
       const prot = Math.round(product.protein100 || 0);
+      const carbs = Math.round((product.simple100 || 0) + (product.complex100 || 0));
+      const fat = Math.round((product.badFat100 || 0) + (product.goodFat100 || 0) + (product.trans100 || 0));
       const harmVal = product.harm ?? product.harmScore ?? product.harm100;
       const harmBg = getHarmBg(harmVal);
       
@@ -481,9 +498,11 @@
         React.createElement('div', { className: 'aps-product-info' },
           React.createElement('div', { className: 'aps-product-name' }, product.name),
           React.createElement('div', { className: 'aps-product-meta' },
-            React.createElement('span', null, kcal + ' ккал'),
-            React.createElement('span', { className: 'aps-product-meta-sep' }, '·'),
-            React.createElement('span', null, 'Б ' + prot + 'г')
+            React.createElement('span', { className: 'aps-meta-kcal' }, kcal + ' ккал'),
+            React.createElement('span', { className: 'aps-meta-sep' }, '·'),
+            React.createElement('span', { className: 'aps-meta-macros' }, 
+              'Б ' + prot + ' | Ж ' + fat + ' | У ' + carbs
+            )
           )
         ),
         
@@ -604,17 +623,6 @@
             className: 'aps-search-clear',
             onClick: () => setSearch('')
           }, '×')
-        ),
-        
-        // Фильтр по категориям
-        React.createElement('div', { className: 'aps-categories' },
-          CATEGORIES.map(cat => 
-            React.createElement('button', {
-              key: cat.id,
-              className: 'aps-category-chip' + (selectedCategory === cat.id ? ' active' : ''),
-              onClick: () => setSelectedCategory(cat.id)
-            }, cat.icon + ' ' + cat.name)
-          )
         )
       ),
       
@@ -980,40 +988,33 @@
 
   // === Компонент выбора граммов (Шаг 2) ===
   function GramsStep({ data, onChange, context, stepData }) {
-    // Продукт берём: 1) из своих данных, 2) из create, 3) из search
-    const product = data.selectedProduct || stepData?.create?.selectedProduct || stepData?.search?.selectedProduct;
+    // Продукт берём: 1) из context (для edit mode), 2) из своих данных, 3) из create, 4) из search
+    const product = context?.editProduct || data.selectedProduct || stepData?.create?.selectedProduct || stepData?.search?.selectedProduct;
     const lastGrams = stepData?.search?.lastGrams || stepData?.create?.lastGrams; // Последние использованные
-    const grams = data.grams || stepData?.search?.grams || stepData?.create?.grams || 100;
-    
-    // Debug log
-    console.log('[GramsStep] data:', data, 'stepData:', stepData, 'product:', product?.name);
+    const grams = data.grams || context?.editGrams || stepData?.search?.grams || stepData?.create?.grams || 100;
     
     // Режим ввода: grams или kcal
     const [inputMode, setInputMode] = useState('grams');
     const [kcalInput, setKcalInput] = useState('');
     const gramsInputRef = useRef(null);
     
-    // Автофокус убран — клавиатура закрывает информацию о продукте на мобильных
+    // ВАЖНО: Значения продукта с fallback для ситуации когда product ещё не загружен
+    const kcal100 = product?.kcal100 || 0;
+    const protein100 = product?.protein100 || 0;
+    const carbs100 = (product?.simple100 || 0) + (product?.complex100 || 0);
+    const fat100 = (product?.badFat100 || 0) + (product?.goodFat100 || 0) + (product?.trans100 || 0);
     
-    if (!product) {
-      return React.createElement('div', { className: 'aps-no-product' },
-        'Сначала выберите продукт'
-      );
-    }
-    
-    const kcal100 = product.kcal100 || 0;
-    const protein100 = product.protein100 || 0;
-    const carbs100 = (product.simple100 || 0) + (product.complex100 || 0);
-    const fat100 = (product.badFat100 || 0) + (product.goodFat100 || 0) + (product.trans100 || 0);
-    
-    // Расчёт на текущую порцию
+    // Расчёт на текущую порцию (safe with fallbacks)
     const currentKcal = Math.round(kcal100 * grams / 100);
     const currentProt = Math.round(protein100 * grams / 100);
     const currentCarbs = Math.round(carbs100 * grams / 100);
     const currentFat = Math.round(fat100 * grams / 100);
     
+    // === ВСЕ ХУКИ ДОЛЖНЫ БЫТЬ ДО ЛЮБОГО RETURN ===
+    
     // Авто-порции продукта
     const portions = useMemo(() => {
+      if (!product) return [{ name: '100г', grams: 100 }];
       if (product.portions && product.portions.length) {
         return product.portions;
       }
@@ -1065,6 +1066,13 @@
       return profile.optimum || profile.tdee || 1800;
     }, []);
     
+    // === ТЕПЕРЬ МОЖНО ДЕЛАТЬ EARLY RETURN ===
+    if (!product) {
+      return React.createElement('div', { className: 'aps-no-product' },
+        'Сначала выберите продукт'
+      );
+    }
+    
     // Быстрые кнопки порций
     const quickPortions = [50, 100, 150, 200, 300];
     
@@ -1093,10 +1101,48 @@
         }, lastGrams + 'г')
       ),
       
-      // Большой дисплей калорий
-      React.createElement('div', { className: 'aps-kcal-display' },
-        React.createElement('span', { className: 'aps-kcal-value' }, currentKcal),
-        React.createElement('span', { className: 'aps-kcal-unit' }, ' ккал')
+      // === HERO: Большой input (граммы или ккал в зависимости от режима) ===
+      React.createElement('div', { className: 'aps-grams-hero' },
+        React.createElement('button', {
+          className: 'aps-grams-hero-btn',
+          onClick: () => inputMode === 'grams' 
+            ? setGrams(grams - 10)
+            : setKcalAndCalcGrams(Math.max(10, (Number(kcalInput) || 0) - 10))
+        }, '−'),
+        React.createElement('div', { className: 'aps-grams-hero-field' },
+          React.createElement('input', {
+            ref: gramsInputRef,
+            type: 'number',
+            className: 'aps-grams-hero-input',
+            value: inputMode === 'grams' ? grams : kcalInput,
+            onChange: (e) => inputMode === 'grams' 
+              ? setGrams(e.target.value)
+              : setKcalAndCalcGrams(e.target.value),
+            onFocus: (e) => e.target.select(),
+            onClick: (e) => e.target.select(),
+            inputMode: 'numeric',
+            min: 1,
+            max: inputMode === 'grams' ? 2000 : 5000
+          })
+        ),
+        React.createElement('button', {
+          className: 'aps-grams-hero-btn',
+          onClick: () => inputMode === 'grams'
+            ? setGrams(grams + 10)
+            : setKcalAndCalcGrams((Number(kcalInput) || 0) + 10)
+        }, '+')
+      ),
+      
+      // Подпись под инпутом (грамм / ккал)
+      React.createElement('div', { className: 'aps-grams-hero-label' },
+        inputMode === 'grams' ? 'грамм' : 'ккал'
+      ),
+      
+      // Вторичная информация (калории или граммы)
+      React.createElement('div', { className: 'aps-kcal-secondary' },
+        React.createElement('span', { className: 'aps-kcal-secondary-value' }, 
+          inputMode === 'grams' ? (currentKcal + ' ккал') : ('= ' + grams + 'г')
+        )
       ),
       
       // БЖУ
@@ -1125,44 +1171,6 @@
           className: 'aps-mode-btn' + (inputMode === 'kcal' ? ' active' : ''),
           onClick: () => setInputMode('kcal')
         }, '🔥 Ккал')
-      ),
-      
-      // Поле ввода граммов
-      inputMode === 'grams' && React.createElement('div', { className: 'aps-grams-input-row' },
-        React.createElement('button', {
-          className: 'aps-grams-btn',
-          onClick: () => setGrams(grams - 10)
-        }, '−10'),
-        React.createElement('input', {
-          ref: gramsInputRef,
-          type: 'number',
-          className: 'aps-grams-input',
-          value: grams,
-          onChange: (e) => setGrams(e.target.value),
-          inputMode: 'numeric',
-          min: 1,
-          max: 2000
-        }),
-        React.createElement('span', { className: 'aps-grams-unit' }, 'г'),
-        React.createElement('button', {
-          className: 'aps-grams-btn',
-          onClick: () => setGrams(grams + 10)
-        }, '+10')
-      ),
-      
-      // Поле ввода ккал (для расчёта граммов)
-      inputMode === 'kcal' && React.createElement('div', { className: 'aps-kcal-input-row' },
-        React.createElement('span', { className: 'aps-kcal-label' }, 'Хочу съесть:'),
-        React.createElement('input', {
-          type: 'number',
-          className: 'aps-kcal-input',
-          value: kcalInput,
-          onChange: (e) => setKcalAndCalcGrams(e.target.value),
-          placeholder: 'ккал',
-          inputMode: 'numeric'
-        }),
-        React.createElement('span', { className: 'aps-kcal-unit' }, 'ккал'),
-        React.createElement('span', { className: 'aps-calc-result' }, '= ' + grams + 'г')
       ),
       
       // Слайдер (только в режиме граммов)
@@ -1280,6 +1288,7 @@
         onNewProduct,
         onAdd, // Передаём callback для добавления в приём пищи
         onAddPhoto, // Callback для добавления фото к приёму
+        headerExtra: `🗃️ ${currentProducts.length}`, // Счётчик продуктов в header
         // Callback при создании продукта — обновляем список (не используется при 2 шагах, оставляем для совместимости)
         onProductCreated: (product) => {
           currentProducts = [...currentProducts, product];
@@ -1322,9 +1331,74 @@
     });
   }
 
+  // === Функция редактирования граммов (для карточки продукта) ===
+  function showEditGramsModal(options = {}) {
+    const { 
+      product,
+      currentGrams = 100,
+      mealIndex = 0,
+      itemId,
+      dateKey = new Date().toISOString().slice(0, 10),
+      onSave,
+      onClose 
+    } = options;
+    
+    if (!product) {
+      console.error('[EditGramsModal] No product provided');
+      return;
+    }
+    
+    if (!HEYS.StepModal) {
+      console.error('[EditGramsModal] StepModal not loaded');
+      return;
+    }
+    
+    HEYS.StepModal.show({
+      steps: [
+        {
+          id: 'grams',
+          title: '',
+          hint: '',
+          icon: '⚖️',
+          component: GramsStep,
+          validate: (data) => (data?.grams || 0) > 0
+        }
+      ],
+      context: { 
+        products: [], 
+        dateKey, 
+        mealIndex,
+        itemId,
+        isEditMode: true,
+        editProduct: product,   // Продукт через context — доступен сразу
+        editGrams: currentGrams // Граммы через context
+      },
+      showGreeting: false,
+      showStreak: false,
+      showTip: false,
+      showProgress: false,
+      allowSwipe: false,
+      title: '',
+      onComplete: (stepData) => {
+        const gramsData = stepData.grams || {};
+        const grams = gramsData.grams || currentGrams;
+        
+        if (grams > 0) {
+          onSave?.({
+            mealIndex,
+            itemId,
+            grams
+          });
+        }
+      },
+      onClose
+    });
+  }
+
   // === Экспорт ===
   HEYS.AddProductStep = {
     show: showAddProductModal,
+    showEditGrams: showEditGramsModal,
     ProductSearchStep,
     GramsStep,
     CreateProductStep,

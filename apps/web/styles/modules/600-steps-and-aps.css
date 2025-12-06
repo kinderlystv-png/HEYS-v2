@@ -837,6 +837,7 @@
   flex: 1;
   min-height: 0; /* Важно для flex + overflow! */
   overflow: hidden; /* Скролл будет в .aps-products-scroll */
+  position: relative; /* Для позиционирования счётчика */
 }
 
 /* === Фиксированная шапка: кнопка + поиск + категории === */
@@ -1091,14 +1092,36 @@
 
 .aps-product-meta {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--muted, #6b7280);
   display: flex;
-  gap: 4px;
-  margin-top: 1px;
+  align-items: baseline; /* Выравнивание по базовой линии текста */
+  gap: 6px;
+  margin-top: 2px;
 }
 
-.aps-product-meta-sep {
-  opacity: 0.5;
+.aps-meta-kcal {
+  color: var(--text, #1f2937);
+}
+
+.aps-meta-sep {
+  color: #d1d5db;
+}
+
+.aps-meta-macros {
+  color: #9ca3af;
+  font-size: 12px; /* Тот же размер что и калории */
+}
+
+[data-theme="dark"] .aps-meta-kcal {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .aps-meta-sep {
+  color: #4b5563;
+}
+
+[data-theme="dark"] .aps-meta-macros {
+  color: #6b7280;
 }
 
 /* Контейнер кнопок действий */
@@ -1219,7 +1242,104 @@
   color: var(--text);
 }
 
-/* Дисплей калорий — компактный */
+/* === HERO Input граммов (главный элемент) === */
+.aps-grams-hero {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 12px 8px;
+  gap: 16px;
+}
+
+.aps-grams-hero-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 500;
+  color: #6b7280;
+  background: var(--card);
+  border: 1px solid #d1d5db;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.aps-grams-hero-btn:hover {
+  background: var(--color-slate-100);
+  border-color: #9ca3af;
+}
+
+.aps-grams-hero-btn:active {
+  transform: scale(0.95);
+  background: var(--color-slate-200);
+}
+
+.aps-grams-hero-field {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.aps-grams-hero-input {
+  width: 140px;
+  height: 70px;
+  font-size: 56px !important;
+  font-weight: 700;
+  text-align: center;
+  border: 1px solid #6b7280;
+  border-radius: 12px;
+  background: transparent;
+  color: #374151;
+  -moz-appearance: textfield;
+  padding: 0;
+}
+
+.aps-grams-hero-input::-webkit-outer-spin-button,
+.aps-grams-hero-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.aps-grams-hero-input:focus {
+  outline: none;
+  border-color: var(--acc);
+}
+
+.aps-grams-hero-unit {
+  font-size: 40px;
+  font-weight: 600;
+  color: #374151;
+  margin-left: 2px;
+}
+
+/* Подпись под hero-input */
+.aps-grams-hero-label {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 500;
+  color: #374151;
+  margin: -14px 0 0 0;
+  padding: 0;
+}
+
+/* Калории как вторичная информация */
+.aps-kcal-secondary {
+  text-align: center;
+  padding: 4px 16px 8px;
+}
+
+.aps-kcal-secondary-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* Дисплей калорий — компактный (legacy) */
 .aps-kcal-display {
   display: flex;
   align-items: baseline;

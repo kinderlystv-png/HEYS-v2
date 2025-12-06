@@ -477,6 +477,13 @@
             ),
             
             // Greeting (если есть и нет title шага)
+            // Крестик закрытия (слева)
+            onClose && React.createElement('button', {
+              className: 'mc-close-btn',
+              onClick: handleClose,
+              'aria-label': 'Закрыть'
+            }, '×'),
+            
             showGreeting && (title || greeting) && !currentConfig.title && React.createElement('div', { className: 'mc-greeting' }, 
               title || greeting
             ),
@@ -486,12 +493,11 @@
               React.createElement('span', { className: 'mc-streak-count' }, currentStreak),
               React.createElement('span', { className: 'mc-streak-text' }, ' дн')
             ),
-
-            onClose && React.createElement('button', {
-              className: 'mc-close-btn',
-              onClick: handleClose,
-              'aria-label': 'Закрыть'
-            }, '×')
+            
+            // Дополнительный контент в header (справа, например счётчик продуктов)
+            context.headerExtra && React.createElement('div', { className: 'mc-header-extra' },
+              context.headerExtra
+            )
           ),
 
           // Progress dots (кружочки) — кликабельные для навигации

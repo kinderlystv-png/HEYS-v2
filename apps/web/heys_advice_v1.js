@@ -59,7 +59,7 @@
  * ────────────
  * - MAX_ADVICES_PER_SESSION = 10 советов за сессию
  * - MAX_ADVICES_PER_CATEGORY = 2 совета одной категории
- * - ADVICE_COOLDOWN_MS = 30 сек между советами
+ * - ADVICE_COOLDOWN_MS = 45 сек между советами
  * 
  * ═══════════════════════════════════════════════════════════════════════════════
  */
@@ -72,7 +72,7 @@
   // ═══════════════════════════════════════════════════════════
   
   const MAX_ADVICES_PER_SESSION = 10;
-  const ADVICE_COOLDOWN_MS = 30000; // 30 секунд между советами
+  const ADVICE_COOLDOWN_MS = 45000; // 45 секунд между советами
   const SESSION_KEY = 'heys_advice_session';
   const TRACKING_KEY = 'heys_advice_stats';
   const MAX_ADVICES_PER_CATEGORY = 2; // Анти-спам: max советов одной категории

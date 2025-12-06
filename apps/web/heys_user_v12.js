@@ -17,15 +17,44 @@
     deficitPctTarget: 0
   };
 
-  // Валидация полей профиля
+  // Валидация полей профиля — мягкая (разрешаем ввод, не форсируем fallback)
+  // Fallback применяется только при чтении/использовании, не при вводе
   const PROFILE_VALIDATORS = {
-    weight: v => Math.max(20, Math.min(300, v || 70)),
-    weightGoal: v => Math.max(0, Math.min(300, v || 0)),
-    height: v => Math.max(100, Math.min(250, v || 175)),
-    age: v => Math.max(1, Math.min(120, v || 30)),
-    sleepHours: v => Math.max(0, Math.min(24, v || 8)),
-    insulinWaveHours: v => Math.max(1, Math.min(12, v || 3)),
-    deficitPctTarget: v => Math.max(-50, Math.min(50, v || 0))
+    weight: v => {
+      if (v === '' || v === null || v === undefined) return v; // Разрешаем пустое при вводе
+      const n = Number(v);
+      return isNaN(n) ? v : Math.max(0, Math.min(500, n));
+    },
+    weightGoal: v => {
+      if (v === '' || v === null || v === undefined) return 0;
+      const n = Number(v);
+      return isNaN(n) ? 0 : Math.max(0, Math.min(500, n));
+    },
+    height: v => {
+      if (v === '' || v === null || v === undefined) return v;
+      const n = Number(v);
+      return isNaN(n) ? v : Math.max(0, Math.min(300, n));
+    },
+    age: v => {
+      if (v === '' || v === null || v === undefined) return v;
+      const n = Number(v);
+      return isNaN(n) ? v : Math.max(0, Math.min(150, n));
+    },
+    sleepHours: v => {
+      if (v === '' || v === null || v === undefined) return v;
+      const n = Number(v);
+      return isNaN(n) ? v : Math.max(0, Math.min(24, n));
+    },
+    insulinWaveHours: v => {
+      if (v === '' || v === null || v === undefined) return v;
+      const n = Number(v);
+      return isNaN(n) ? v : Math.max(0.5, Math.min(12, n));
+    },
+    deficitPctTarget: v => {
+      if (v === '' || v === null || v === undefined) return 0;
+      const n = Number(v);
+      return isNaN(n) ? 0 : Math.max(-50, Math.min(50, n));
+    }
   };
 
   // Расчёт возраста из даты рождения
@@ -213,34 +242,84 @@
       return () => { cancelled = true; };
     }, [window.HEYS && window.HEYS.currentClientId]);
 
+  // Состояние "идёт ввод" для индикации
+  const [profilePending, setProfilePending] = React.useState(false);
+  const [zonesPending, setZonesPending] = React.useState(false);
+  const profileInitRef = React.useRef(true);
+  const zonesInitRef = React.useRef(true);
+
   React.useEffect(() => {
-    // Debounced сохранение профиля (300ms)
+    // Пропускаем первый рендер (начальная загрузка)
+    if (profileInitRef.current) {
+      profileInitRef.current = false;
+      return;
+    }
+    // Debounced сохранение профиля (1000ms — чтобы успеть ввести число)
+    setProfilePending(true);
     setProfileSaved(false);
+    setFieldStatus('pending');
     const timer = setTimeout(() => {
       lsSet('heys_profile', profile);
+      setProfilePending(false);
       setProfileSaved(true);
-      setTimeout(() => setProfileSaved(false), 1500);
-    }, 300);
+      setFieldStatus('saved');
+      setTimeout(() => {
+        setProfileSaved(false);
+        setFieldStatus('idle');
+        setLastEditedField(null);
+      }, 2000);
+    }, 1000);
     return () => clearTimeout(timer);
   }, [profile]);
   React.useEffect(()=>{
-    // Debounced сохранение зон (300ms)
+    // Пропускаем первый рендер
+    if (zonesInitRef.current) {
+      zonesInitRef.current = false;
+      return;
+    }
+    // Debounced сохранение зон (1000ms)
+    setZonesPending(true);
     setZonesSaved(false);
     const timer = setTimeout(() => {
       lsSet('heys_hr_zones', zones);
+      setZonesPending(false);
       setZonesSaved(true);
-      setTimeout(() => setZonesSaved(false), 1500);
-    }, 300);
+      setTimeout(() => setZonesSaved(false), 2000);
+    }, 1000);
     return () => clearTimeout(timer);
   }, [zones]);
 
     const maxHR = Math.max(0, 220 - toNum(profile.age||0));
     const calPerMinPerMET = round1(toNum(profile.weight||0) * 0.0175); // кал/мин на 1 MET
 
+    // Отслеживание последнего изменённого поля для индикации
+    const [lastEditedField, setLastEditedField] = React.useState(null);
+    const [fieldStatus, setFieldStatus] = React.useState('idle'); // 'idle' | 'pending' | 'saved'
+
+    // Индикатор статуса поля — показывается рядом с полем
+    const FieldStatus = ({ fieldKey }) => {
+      if (lastEditedField !== fieldKey) return null;
+      if (fieldStatus === 'pending') {
+        return React.createElement('span', {
+          style: { marginLeft: '6px', color: '#f59e0b', fontSize: '12px', fontWeight: 500 }
+        }, '⏳ Сохраняется...');
+      }
+      if (fieldStatus === 'saved') {
+        return React.createElement('span', {
+          style: { marginLeft: '6px', color: '#22c55e', fontSize: '12px', fontWeight: 500 }
+        }, '✓ Сохранено');
+      }
+      return null;
+    };
+
     function updateProfileField(key, value){ 
     // Валидация числовых полей
     const validator = PROFILE_VALIDATORS[key];
     const validatedValue = validator ? validator(value) : value;
+    
+    // Устанавливаем статус "pending" для этого поля
+    setLastEditedField(key);
+    setFieldStatus('pending');
     
     const newProfile = { 
       ...profile, 
@@ -323,26 +402,29 @@
               }),
               React.createElement('span', {style:{color: info.color, fontWeight:600, marginLeft:'6px'}}, 
                 isCustom ? `${info.emoji} ${currentVal > 0 ? '+' : ''}${currentVal}%` : ''
-              )
+              ),
+              React.createElement(FieldStatus, {fieldKey:'deficitPctTarget'})
             );
           })(),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Имя'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {value:profile.firstName, onChange:e=>updateProfileField('firstName', e.target.value)})),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Фамилия'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {value:profile.lastName, onChange:e=>updateProfileField('lastName', e.target.value)})),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Имя'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {value:profile.firstName, onChange:e=>updateProfileField('firstName', e.target.value)}), React.createElement(FieldStatus, {fieldKey:'firstName'})),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Фамилия'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {value:profile.lastName, onChange:e=>updateProfileField('lastName', e.target.value)}), React.createElement(FieldStatus, {fieldKey:'lastName'})),
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Пол'), React.createElement('span', {className:'sep'}, '-'),
             React.createElement('select', {value:profile.gender, onChange:e=>updateProfileField('gender', e.target.value)},
               React.createElement('option', {value:'Мужской'}, 'Мужской'),
               React.createElement('option', {value:'Женский'}, 'Женский'),
               React.createElement('option', {value:'Другое'}, 'Другое')
-            )
+            ),
+            React.createElement(FieldStatus, {fieldKey:'gender'})
           ),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Базовый вес тела (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weight, onChange:e=>updateProfileField('weight', Number(e.target.value)||0)})),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Целевой вес (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weightGoal||0, onChange:e=>updateProfileField('weightGoal', Number(e.target.value)||0), placeholder:'0 = не задан'})),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Рост (см)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.height, onChange:e=>updateProfileField('height', Number(e.target.value)||0)})),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Базовый вес тела (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weight, onChange:e=>updateProfileField('weight', Number(e.target.value)||0), onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'weight'})),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Целевой вес (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weightGoal||0, onChange:e=>updateProfileField('weightGoal', Number(e.target.value)||0), placeholder:'0 = не задан', onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'weightGoal'})),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Рост (см)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.height, onChange:e=>updateProfileField('height', Number(e.target.value)||0), onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'height'})),
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Дата рождения'), React.createElement('span', {className:'sep'}, '-'), 
             React.createElement('input', {type:'date', value:profile.birthDate||'', onChange:e=>updateProfileField('birthDate', e.target.value), style:{width:'140px'}}),
+            React.createElement(FieldStatus, {fieldKey:'birthDate'}),
             profile.birthDate && React.createElement('span', {style:{marginLeft:'8px', color:'var(--gray-600)'}}, `(${calcAgeFromBirthDate(profile.birthDate)} лет)`)
           ),
-          !profile.birthDate && React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Возраст (лет)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.age, onChange:e=>updateProfileField('age', Number(e.target.value)||0)})),
+          !profile.birthDate && React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Возраст (лет)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.age, onChange:e=>updateProfileField('age', Number(e.target.value)||0), onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'age'})),
           // Норма сна: авторасчёт с расшифровкой
           (() => {
             const age = profile.birthDate ? calcAgeFromBirthDate(profile.birthDate) : toNum(profile.age || 30);
@@ -398,7 +480,8 @@
               }),
               React.createElement('span', {style:{color:'var(--gray-500)', fontSize:'12px', marginLeft:'4px'}}, 
                 currentPreset ? `(${currentPreset.desc})` : `(${currentVal} ч — своё)`
-              )
+              ),
+              React.createElement(FieldStatus, {fieldKey:'insulinWaveHours'})
             );
           })(),
           React.createElement(EmojiStyleSelector, null)
@@ -477,9 +560,8 @@
             )
           );
         })(),
-        React.createElement('div', {className:'muted', style:{marginTop:'6px', display:'flex', alignItems:'center', gap:'8px'}}, 
-          'Все значения сохраняются автоматически.',
-          profileSaved && React.createElement('span', {style:{color:'#22c55e', fontSize:'13px', fontWeight:500}}, '✓ Сохранено')
+        React.createElement('div', {className:'muted', style:{marginTop:'6px'}}, 
+          'Все значения сохраняются автоматически.'
         )
       ),
 
@@ -501,10 +583,10 @@
               zones.map((z, i)=>{
                 const calPerMin = round1((toNum(z.MET||0) * calPerMinPerMET) - 1); // поправка -1
                 return React.createElement('tr', {key:i},
-                  React.createElement('td', null, React.createElement('input', {value:z.name, onChange:e=>updateZone(i, {name:e.target.value})})),
-                  React.createElement('td', null, React.createElement('input', {type:'number', value:z.hrFrom, onChange:e=>updateZone(i, {hrFrom:Number(e.target.value)||0})})),
-                  React.createElement('td', null, React.createElement('input', {type:'number', value:z.hrTo, onChange:e=>updateZone(i, {hrTo:Number(e.target.value)||0})})),
-                  React.createElement('td', null, React.createElement('input', {type:'number', step:'0.1', value:z.MET, onChange:e=>updateZone(i, {MET:Number(e.target.value)||0})})),
+                  React.createElement('td', null, React.createElement('input', {value:z.name, onChange:e=>updateZone(i, {name:e.target.value}), onFocus:e=>e.target.select()})),
+                  React.createElement('td', null, React.createElement('input', {type:'number', value:z.hrFrom, onChange:e=>updateZone(i, {hrFrom:Number(e.target.value)||0}), onFocus:e=>e.target.select()})),
+                  React.createElement('td', null, React.createElement('input', {type:'number', value:z.hrTo, onChange:e=>updateZone(i, {hrTo:Number(e.target.value)||0}), onFocus:e=>e.target.select()})),
+                  React.createElement('td', null, React.createElement('input', {type:'number', step:'0.1', value:z.MET, onChange:e=>updateZone(i, {MET:Number(e.target.value)||0}), onFocus:e=>e.target.select()})),
                   React.createElement('td', null, calPerMin)
                 );
               })
@@ -513,6 +595,7 @@
         ),
         React.createElement('div', {className:'muted', style:{marginTop:'8px', display:'flex', alignItems:'center', gap:'8px'}}, 
           'Формулы: Макс пульс = 220 − возраст. Кал/мин = MET × (вес × 0.0175) − 1.',
+          zonesPending && React.createElement('span', {style:{color:'#f59e0b', fontSize:'13px', fontWeight:500}}, '⏳ Сохраняется...'),
           zonesSaved && React.createElement('span', {style:{color:'#22c55e', fontSize:'13px', fontWeight:500}}, '✓ Сохранено')
         )
       ),
@@ -937,14 +1020,27 @@
       // Служебные поля для сравнения версий с облаком
       return { revision:0, updatedAt:0, ...val };
     });
-    // Debounced сохранение норм (300ms)
+    // Debounced сохранение норм (1000ms)
     const [normsSaved, setNormsSaved] = React.useState(false);
+    const [normsPending, setNormsPending] = React.useState(false);
+    const [lastEditedNorm, setLastEditedNorm] = React.useState(null);
+    const normsInitRef = React.useRef(true);
+    
     React.useEffect(() => {
+      if (normsInitRef.current) {
+        normsInitRef.current = false;
+        return;
+      }
+      setNormsPending(true);
       setNormsSaved(false);
       const timer = setTimeout(() => {
         lsSet('heys_norms', norms);
+        setNormsPending(false);
         setNormsSaved(true);
-        setTimeout(() => setNormsSaved(false), 1500);
+        setTimeout(() => {
+          setNormsSaved(false);
+          setLastEditedNorm(null);
+        }, 2000);
       }, 300);
       return () => clearTimeout(timer);
     }, [norms]);
@@ -1006,8 +1102,26 @@
     const simpleC = clamp(norms.simpleCarbPct);
     const complexCAuto = clamp(100 - simpleC);
 
+    // Индикатор статуса для норм
+    const NormFieldStatus = ({ fieldKey }) => {
+      if (lastEditedNorm !== fieldKey) return null;
+      if (normsPending) {
+        return React.createElement('span', {
+          style: { marginLeft: '6px', color: '#f59e0b', fontSize: '12px', fontWeight: 500 }
+        }, '⏳ Сохраняется...');
+      }
+      if (normsSaved) {
+        return React.createElement('span', {
+          style: { marginLeft: '6px', color: '#22c55e', fontSize: '12px', fontWeight: 500 }
+        }, '✓ Сохранено');
+      }
+      return null;
+    };
+
     const update = (k, v)=> {
       const clamped = clamp(v);
+      setLastEditedNorm(k);
+      setNormsPending(true);
       setNorms(prev => ({
         ...prev,
         [k]: clamped,
@@ -1023,17 +1137,17 @@
     return React.createElement('div', {className:'card', style:{marginTop:'10px'}},
       React.createElement('div', {className:'section-title'}, 'Нормы'),
       React.createElement('div', {className:'field-list'},
-        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Углеводы (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:carb, onChange:e=>update('carbsPct', e.target.value)})),
-        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Белки (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:prot, onChange:e=>update('proteinPct', e.target.value)})),
+        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Углеводы (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:carb, onChange:e=>update('carbsPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'carbsPct'})),
+        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Белки (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:prot, onChange:e=>update('proteinPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'proteinPct'})),
         React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Жиры (%) — авто = 100 − У − Б'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {className:'readOnly', readOnly:true, value:fatAuto})),
-        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Вредные жиры (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:badF, onChange:e=>update('badFatPct', e.target.value)})),
-        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Супервредные жиры (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:superBadF, onChange:e=>update('superbadFatPct', e.target.value)})),
+        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Вредные жиры (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:badF, onChange:e=>update('badFatPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'badFatPct'})),
+        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Супервредные жиры (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:superBadF, onChange:e=>update('superbadFatPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'superbadFatPct'})),
         React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Полезные жиры (%) — авто = 100 − вредные − супервредные'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {className:'readOnly', readOnly:true, value:goodFAuto})),
-        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Простые углеводы (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:simpleC, onChange:e=>update('simpleCarbPct', e.target.value)})),
+        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Простые углеводы (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:simpleC, onChange:e=>update('simpleCarbPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'simpleCarbPct'})),
         React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Сложные углеводы (%) — авто = 100 − простые'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {className:'readOnly', readOnly:true, value:complexCAuto})),
-        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'ГИ (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:clamp(norms.giPct), onChange:e=>update('giPct', e.target.value)})),
-        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Вредность (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:clamp(norms.harmPct), onChange:e=>update('harmPct', e.target.value)})),
-        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Клетчатка (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:clamp(norms.fiberPct), onChange:e=>update('fiberPct', e.target.value)}))
+        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'ГИ (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:clamp(norms.giPct), onChange:e=>update('giPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'giPct'})),
+        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Вредность (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:clamp(norms.harmPct), onChange:e=>update('harmPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'harmPct'})),
+        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Клетчатка (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:clamp(norms.fiberPct), onChange:e=>update('fiberPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'fiberPct'}))
       ),
       (overMacro || overFatSplit || overCarbSplit) ?
         React.createElement('div', {className:'muted', style:{marginTop:'6px', color:'#dc2626'}}, 
@@ -1042,9 +1156,8 @@
           (overCarbSplit ? 'Предупреждение: Простые% > 100. Сложные будут обнулены.' : '')
         )
       : null,
-      React.createElement('div', {className:'muted', style:{marginTop:'6px', display:'flex', alignItems:'center', gap:'8px'}}, 
-        'Все значения — в процентах, сохраняются автоматически.',
-        normsSaved && React.createElement('span', {style:{color:'#22c55e', fontSize:'13px', fontWeight:500}}, '✓ Сохранено')
+      React.createElement('div', {className:'muted', style:{marginTop:'6px'}}, 
+        'Все значения — в процентах, сохраняются автоматически.'
       )
     );
   }
