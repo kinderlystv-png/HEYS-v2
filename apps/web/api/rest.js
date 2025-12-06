@@ -21,19 +21,60 @@ export default async function handler(req, res) {
     return res.end(JSON.stringify({ error: 'Missing SUPABASE_ANON_KEY env' }))
   }
 
-  const url = new URL(req.url, `http://${req.headers.host}`)
+  // Vercel rewrites change req.url, so we need the original path from headers
+  const originalUrl = req.headers['x-vercel-proxy-signature-override'] 
+    || req.headers['x-original-url']
+    || req.headers['x-invoke-path']
+    || req.url
   
-  // Extract table name from path: /api/supabase/rest/v1/TABLE_NAME
-  const pathMatch = url.pathname.match(/\/api\/supabase\/rest\/v1\/([^/?]+)/)
-  const tableName = pathMatch ? pathMatch[1] : ''
+  // Try to get table from Vercel's matched params first
+  // Format: /api/supabase/rest/v1/TABLE_NAME?query...
+  const fullUrl = originalUrl.startsWith('http') ? originalUrl : `http://localhost${originalUrl}`
+  const url = new URL(fullUrl)
   
+  // Get path from x-matched-path or parse from original URL
+  let tableName = ''
+  const matchedPath = req.headers['x-matched-path'] || ''
+  
+  if (matchedPath.includes(':table')) {
+    // Vercel provides matched params - extract from original path
+    const pathMatch = (req.headers['x-invoke-path'] || url.pathname).match(/\/api\/supabase\/rest\/v1\/([^/?]+)/)
+    tableName = pathMatch ? pathMatch[1] : ''
+  }
+  
+  // Fallback: check query param or try parsing URL
+  if (!tableName) {
+    tableName = url.searchParams.get('_table') || ''
+  }
+  
+  // Last resort: try parsing the invoke query
+  if (!tableName && req.headers['x-invoke-query']) {
+    try {
+      const invokeQuery = JSON.parse(decodeURIComponent(req.headers['x-invoke-query']))
+      tableName = invokeQuery.table || ''
+    } catch {}
+  }
+
   if (!tableName) {
     res.status(400)
     res.setHeader('Content-Type', 'application/json')
-    return res.end(JSON.stringify({ error: 'Missing table name in path' }))
+    return res.end(JSON.stringify({ 
+      error: 'Missing table name', 
+      debug: { 
+        url: req.url,
+        invokeQuery: req.headers['x-invoke-query'],
+        invokePath: req.headers['x-invoke-path'],
+        matchedPath: req.headers['x-matched-path']
+      }
+    }))
   }
 
-  const targetUrl = `${SUPABASE_URL}/rest/v1/${tableName}${url.search}`
+  // Reconstruct query string without _table param
+  const queryParams = new URLSearchParams(url.search)
+  queryParams.delete('_table')
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
+  
+  const targetUrl = `${SUPABASE_URL}/rest/v1/${tableName}${queryString}`
 
   const origin = req.headers.origin || ''
   const isAllowedOrigin = ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))

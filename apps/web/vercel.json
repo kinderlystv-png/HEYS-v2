@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/supabase/rest/v1/:table",
-      "destination": "/api/rest"
+      "destination": "/api/rest?_table=:table"
     },
     {
       "source": "/api/supabase/storage/v1/:path*",
