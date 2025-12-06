@@ -1127,6 +1127,175 @@
     xpAction: 'household_logged'
   });
 
+  // ============================================================
+  // MEASUREMENTS STEP — Замеры тела (талия, бёдра, бедро, бицепс)
+  // ============================================================
+
+  const MEASUREMENT_FIELDS = [
+    { key: 'waist', label: 'Талия', icon: '📏', hint: 'На уровне пупка', min: 40, max: 150, default: 80 },
+    { key: 'hips', label: 'Бёдра', icon: '🍑', hint: 'По ягодицам', min: 60, max: 150, default: 95 },
+    { key: 'thigh', label: 'Бедро', icon: '🦵', hint: 'Самая широкая часть', min: 30, max: 100, default: 55 },
+    { key: 'biceps', label: 'Бицепс', icon: '💪', hint: 'В напряжении', min: 20, max: 60, default: 35 }
+  ];
+
+  /**
+   * Поиск последних замеров за 60 дней
+   */
+  function getLastMeasurements() {
+    const today = new Date();
+    for (let i = 0; i <= 60; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const dayData = lsGet(`heys_dayv2_${key}`, {});
+      if (dayData.measurements && dayData.measurements.measuredAt) {
+        return {
+          ...dayData.measurements,
+          daysAgo: i,
+          foundDate: key
+        };
+      }
+    }
+    // Нет данных — возвращаем дефолты
+    return {
+      waist: null,
+      hips: null,
+      thigh: null,
+      biceps: null,
+      measuredAt: null,
+      daysAgo: null,
+      foundDate: null
+    };
+  }
+
+  /**
+   * Проверка: нужно ли показывать шаг замеров (прошло ≥7 дней)
+   */
+  function shouldShowMeasurements() {
+    const last = getLastMeasurements();
+    if (!last.measuredAt) return true; // Нет данных → показываем
+    
+    const lastDate = new Date(last.measuredAt);
+    const today = new Date();
+    const diffMs = today - lastDate;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    return diffDays >= 7;
+  }
+
+  function MeasurementsStepComponent({ data, onChange }) {
+    const lastMeasurements = useMemo(() => getLastMeasurements(), []);
+    
+    // Инициализация значений из data или последних замеров
+    const getValue = (key, fieldDef) => {
+      if (data[key] !== undefined) return data[key];
+      if (lastMeasurements[key]) return lastMeasurements[key];
+      return fieldDef.default;
+    };
+
+    const updateField = (key, value) => {
+      // Валидация
+      const field = MEASUREMENT_FIELDS.find(f => f.key === key);
+      if (field) {
+        value = Math.max(field.min, Math.min(field.max, value || field.min));
+      }
+      onChange({ ...data, [key]: value });
+    };
+
+    // Показываем дату последнего замера
+    const lastMeasuredInfo = lastMeasurements.measuredAt 
+      ? `Последний замер: ${lastMeasurements.daysAgo === 0 ? 'сегодня' : lastMeasurements.daysAgo === 1 ? 'вчера' : lastMeasurements.daysAgo + ' дн. назад'}`
+      : 'Первый замер';
+
+    return React.createElement('div', { className: 'mc-measurements-step' },
+      // Инфо о последнем замере
+      React.createElement('div', { className: 'mc-measurements-info' },
+        React.createElement('span', { className: 'mc-measurements-info-icon' }, '📅'),
+        React.createElement('span', { className: 'mc-measurements-info-text' }, lastMeasuredInfo)
+      ),
+      
+      // Поля замеров
+      React.createElement('div', { className: 'mc-measurements-fields' },
+        MEASUREMENT_FIELDS.map(field => {
+          const value = getValue(field.key, field);
+          return React.createElement('div', { 
+            key: field.key, 
+            className: 'mc-measurement-field' 
+          },
+            React.createElement('div', { className: 'mc-measurement-header' },
+              React.createElement('span', { className: 'mc-measurement-icon' }, field.icon),
+              React.createElement('span', { className: 'mc-measurement-label' }, field.label)
+            ),
+            React.createElement('div', { className: 'mc-measurement-input-row' },
+              React.createElement('input', {
+                type: 'number',
+                inputMode: 'decimal',
+                className: 'mc-measurement-input',
+                value: value || '',
+                placeholder: lastMeasurements[field.key] ? String(lastMeasurements[field.key]) : String(field.default),
+                min: field.min,
+                max: field.max,
+                onChange: (e) => updateField(field.key, parseFloat(e.target.value) || null)
+              }),
+              React.createElement('span', { className: 'mc-measurement-unit' }, 'см')
+            ),
+            React.createElement('div', { className: 'mc-measurement-hint' }, field.hint)
+          );
+        })
+      ),
+      
+      // Подсказка
+      React.createElement('div', { className: 'mc-measurements-tip' },
+        React.createElement('span', { className: 'mc-measurements-tip-icon' }, '💡'),
+        React.createElement('span', { className: 'mc-measurements-tip-text' }, 
+          'Измеряй одну и ту же сторону каждый раз'
+        )
+      )
+    );
+  }
+
+  // Регистрация шага замеров
+  registerStep('measurements', {
+    title: 'Замеры тела',
+    hint: 'Еженедельный контроль',
+    icon: '📏',
+    component: MeasurementsStepComponent,
+    canSkip: true,  // Можно пропустить
+    getInitialData: () => {
+      const last = getLastMeasurements();
+      return {
+        waist: last.waist || null,
+        hips: last.hips || null,
+        thigh: last.thigh || null,
+        biceps: last.biceps || null
+      };
+    },
+    save: (data) => {
+      const todayKey = getTodayKey();
+      const dayData = lsGet(`heys_dayv2_${todayKey}`, { date: todayKey });
+      
+      // Сохраняем только если есть хотя бы одно значение
+      const hasData = data.waist || data.hips || data.thigh || data.biceps;
+      if (hasData) {
+        dayData.measurements = {
+          waist: data.waist || null,
+          hips: data.hips || null,
+          thigh: data.thigh || null,
+          biceps: data.biceps || null,
+          measuredAt: todayKey
+        };
+        dayData.updatedAt = Date.now();
+        lsSet(`heys_dayv2_${todayKey}`, dayData);
+        
+        // Уведомляем о изменении дня
+        window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+          detail: { date: todayKey, field: 'measurements', value: dayData.measurements, source: 'measurements-step' }
+        }));
+      }
+    },
+    xpAction: 'measurements_logged'
+  });
+
   // =============================================
 
   // === Экспорт шагов ===
@@ -1137,6 +1306,7 @@
     StepsGoal: StepsGoalStepComponent,
     Deficit: DeficitStepComponent,
     Household: HouseholdStepComponent,
+    Measurements: MeasurementsStepComponent,
     // Утилиты
     getLastKnownWeight,
     getYesterdayWeight,
@@ -1146,9 +1316,11 @@
     calcSleepHours,
     getCurrentDeficit,
     calcHouseholdKcal,
-    getWeeklyHouseholdStats
+    getWeeklyHouseholdStats,
+    getLastMeasurements,
+    shouldShowMeasurements
   };
 
-  console.log('[HEYS] Steps registered: weight, sleepTime, sleepQuality, stepsGoal, deficit, household');
+  console.log('[HEYS] Steps registered: weight, sleepTime, sleepQuality, stepsGoal, deficit, household, measurements');
 
 })(typeof window !== 'undefined' ? window : global);

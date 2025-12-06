@@ -2996,3 +2996,187 @@
   color: var(--color-slate-100);
 }
 
+
+/* ==============================
+   09. MEASUREMENTS STEP
+   Замеры тела: талия, бёдра, бедро, бицепс
+   ============================== */
+
+.mc-measurements-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0;
+}
+
+/* Информационный блок сверху */
+.mc-measurements-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #1e40af;
+}
+
+.mc-measurements-info-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+/* Сетка полей замеров */
+.mc-measurements-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Одно поле замера */
+.mc-measurement-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.mc-measurement-field:focus-within {
+  border-color: var(--acc, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Шапка поля: эмодзи + название + предыдущее значение */
+.mc-measurement-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mc-measurement-emoji {
+  font-size: 16px;
+}
+
+.mc-measurement-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text, #1f2937);
+}
+
+.mc-measurement-prev {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted, #6b7280);
+  white-space: nowrap;
+}
+
+/* Ряд ввода: инпут + единица измерения */
+.mc-measurement-input-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mc-measurement-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  background: var(--bg, #f9fafb);
+  color: var(--text, #1f2937);
+  transition: border-color 0.2s;
+}
+
+.mc-measurement-input:focus {
+  outline: none;
+  border-color: var(--acc, #3b82f6);
+}
+
+.mc-measurement-input::placeholder {
+  color: var(--text-muted, #9ca3af);
+  font-weight: 400;
+}
+
+.mc-measurement-unit {
+  font-size: 14px;
+  color: var(--text-muted, #6b7280);
+  flex-shrink: 0;
+}
+
+/* Подсказка под полем (напр. "одна сторона") */
+.mc-measurement-hint {
+  font-size: 11px;
+  color: var(--text-muted, #9ca3af);
+  text-align: center;
+}
+
+/* Совет внизу */
+.mc-measurements-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg, #f9fafb);
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted, #6b7280);
+}
+
+.mc-measurements-tip-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* ====== Dark Mode ====== */
+
+[data-theme="dark"] .mc-measurements-info {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .mc-measurement-field {
+  background: var(--color-slate-800);
+  border-color: var(--color-slate-600);
+}
+
+[data-theme="dark"] .mc-measurement-label {
+  color: var(--color-slate-100);
+}
+
+[data-theme="dark"] .mc-measurement-prev {
+  color: var(--color-slate-400);
+}
+
+[data-theme="dark"] .mc-measurement-input {
+  background: var(--color-slate-700);
+  border-color: var(--color-slate-600);
+  color: var(--color-slate-100);
+}
+
+[data-theme="dark"] .mc-measurement-input::placeholder {
+  color: var(--color-slate-500);
+}
+
+[data-theme="dark"] .mc-measurement-unit {
+  color: var(--color-slate-400);
+}
+
+[data-theme="dark"] .mc-measurement-hint {
+  color: var(--color-slate-500);
+}
+
+[data-theme="dark"] .mc-measurements-tip {
+  background: var(--color-slate-700);
+  color: var(--color-slate-400);
+}
+

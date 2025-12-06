@@ -112,13 +112,25 @@
 
   /**
    * MorningCheckin — обёртка над новым StepModal
-   * Использует шаги: weight, sleepTime, sleepQuality, stepsGoal
+   * Использует шаги: weight, sleepTime, sleepQuality, [measurements], stepsGoal
+   * Шаг measurements показывается условно — если прошло ≥7 дней
    */
   function MorningCheckin({ onComplete }) {
     // Если StepModal доступен — используем его
     if (HEYS.StepModal && HEYS.StepModal.Component) {
+      // Базовые шаги
+      const steps = ['weight', 'sleepTime', 'sleepQuality'];
+      
+      // Условно добавляем замеры (если прошло ≥7 дней)
+      if (HEYS.Steps && HEYS.Steps.shouldShowMeasurements && HEYS.Steps.shouldShowMeasurements()) {
+        steps.push('measurements');
+      }
+      
+      // Завершающий шаг
+      steps.push('stepsGoal');
+      
       return React.createElement(HEYS.StepModal.Component, {
-        steps: ['weight', 'sleepTime', 'sleepQuality', 'stepsGoal'],
+        steps: steps,
         onComplete: onComplete,
         showProgress: true,
         showStreak: true,
@@ -156,8 +168,18 @@
     // Полный утренний чек-ин
     morning: (onComplete) => {
       if (HEYS.StepModal) {
+        // Базовые шаги
+        const steps = ['weight', 'sleepTime', 'sleepQuality'];
+        
+        // Условно добавляем замеры
+        if (HEYS.Steps && HEYS.Steps.shouldShowMeasurements && HEYS.Steps.shouldShowMeasurements()) {
+          steps.push('measurements');
+        }
+        
+        steps.push('stepsGoal');
+        
         HEYS.StepModal.show({
-          steps: ['weight', 'sleepTime', 'sleepQuality', 'stepsGoal'],
+          steps,
           onComplete
         });
       }
@@ -193,6 +215,18 @@
         HEYS.StepModal.show({
           steps: ['sleepTime', 'sleepQuality'],
           title: 'Сон',
+          onComplete
+        });
+      }
+    },
+    
+    // Только замеры тела
+    measurements: (onComplete) => {
+      if (HEYS.StepModal) {
+        HEYS.StepModal.show({
+          steps: ['measurements'],
+          title: 'Замеры тела',
+          showProgress: false,
           onComplete
         });
       }
