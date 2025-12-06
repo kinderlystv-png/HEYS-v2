@@ -3,8 +3,8 @@
  * Node runtime (без Edge), т.к. Edge-функции не подхватываются в этом проекте.
  */
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ukqolcziqcuplqfgrmsh.supabase.co'
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://ukqolcziqcuplqfgrmsh.supabase.co'
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
 
 const ALLOWED_ORIGINS = [
   'https://heys-v2-web.vercel.app',

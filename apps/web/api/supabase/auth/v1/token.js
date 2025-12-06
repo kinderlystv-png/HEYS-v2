@@ -1,7 +1,7 @@
 // Supabase password grant proxy
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ukqolcziqcuplqfgrmsh.supabase.co'
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://ukqolcziqcuplqfgrmsh.supabase.co'
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
 
 export default async function handler(req, res) {
   if (!SUPABASE_ANON_KEY) {
