@@ -22,7 +22,8 @@ export default async function handler(req, res) {
   const supabasePath = pathMatch ? pathMatch[1] : ''
   
   // Строим URL для Supabase
-  const targetUrl = `${SUPABASE_URL}/${supabasePath}${url.search}`
+  const joiner = url.search ? '&' : '?'
+  const targetUrl = `${SUPABASE_URL}/${supabasePath}${url.search}${joiner}apikey=${encodeURIComponent(SUPABASE_ANON_KEY)}`
   
   // CORS
   const origin = req.headers.origin || ''

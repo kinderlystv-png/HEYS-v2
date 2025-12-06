@@ -4,7 +4,9 @@ const SUPABASE_URL = 'https://ukqolcziqcuplqfgrmsh.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE2ODc0MjAsImV4cCI6MjA0NzI2MzQyMH0.OKwSzfNqQA7q_LdxkcmGRmA_J5OUPpzuUbDah8TLN64'
 
 export default async function handler(req, res) {
-  const targetUrl = `${SUPABASE_URL}/auth/v1/token${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`
+  const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''
+  const joiner = query.includes('?') || query.includes('&') ? (query.startsWith('?') ? '&' : '&') : '?'
+  const targetUrl = `${SUPABASE_URL}/auth/v1/token${query}${joiner}apikey=${encodeURIComponent(SUPABASE_ANON_KEY)}`
 
   if (req.method === 'OPTIONS') {
     res.status(204)
