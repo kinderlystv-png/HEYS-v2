@@ -17,6 +17,7 @@ export default async function handler(req, res) {
   const headers = {
     apikey: SUPABASE_ANON_KEY,
     'Content-Type': req.headers['content-type'] || 'application/json',
+    Accept: 'application/json',
     authorization: req.headers['authorization'] || `Bearer ${SUPABASE_ANON_KEY}`,
   }
 
@@ -40,10 +41,16 @@ export default async function handler(req, res) {
 
     const buf = Buffer.from(await upstream.arrayBuffer())
 
+    // Если Supabase вернул ошибку — вернём тело как есть
     res.status(upstream.status)
     upstream.headers.forEach((value, key) => res.setHeader(key, value))
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Credentials', 'true')
+
+    // В случае 4xx/5xx вернём текст/JSON, чтобы увидеть причину
+    if (upstream.status >= 400) {
+      return res.end(buf)
+    }
 
     return res.end(buf)
   } catch (error) {
