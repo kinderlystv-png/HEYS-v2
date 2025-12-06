@@ -11,6 +11,9 @@
     "tools/*"
   ],
   "scripts": {
+    "DISABLED_dev:tg-mini": "pnpm --filter='@heys/tg-mini' run dev",
+    "DISABLED_mobile": "pnpm --filter mobile run start",
+    "DISABLED_mobile:clear": "pnpm --filter mobile run start:clear",
     "build": "turbo run build",
     "build:analyze": "tsx scripts/analyze-bundle.ts",
     "build:apps": "turbo run build --filter='./apps/*'",
@@ -24,9 +27,8 @@
     "deps:check": "pnpm audit",
     "deps:update": "pnpm update -r",
     "dev": "cross-env PORT=3001 turbo run dev --concurrency=15",
-    "dev:web": "cross-env PORT=3001 pnpm --filter='@heys/web' run dev",
-    "DISABLED_dev:tg-mini": "pnpm --filter='@heys/tg-mini' run dev",
     "dev:api": "node -r dotenv/config packages/core/src/server.js dotenv_config_path=.env.development.local",
+    "dev:web": "cross-env PORT=3001 pnpm --filter='@heys/web' run dev",
     "docker:build": "docker build -t heys:latest .",
     "docker:build:dev": "docker build --target development -t heys:dev .",
     "docker:compose:dev": "docker-compose up heys-dev",
@@ -42,8 +44,6 @@
     "legacy:test": "jest",
     "lint": "turbo run lint",
     "lint:fix": "pnpm -r run lint:fix",
-    "DISABLED_mobile": "pnpm --filter mobile run start",
-    "DISABLED_mobile:clear": "pnpm --filter mobile run start:clear",
     "monitoring:check": "node scripts/monitoring.js check",
     "monitoring:metrics": "node scripts/monitoring.js metrics",
     "monitoring:start": "node scripts/monitoring.js start",
@@ -70,7 +70,7 @@
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
       "prettier --write",
-      "eslint --fix --max-warnings 0"
+      "eslint --fix --max-warnings 0 --no-error-on-unmatched-pattern"
     ],
     "*.{json,md,yml,yaml}": [
       "prettier --write"
