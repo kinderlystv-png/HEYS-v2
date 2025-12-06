@@ -3,6 +3,11 @@
   "buildCommand": "pnpm run prebuild && vite build && cp heys_*.js dist/ && mkdir -p dist/styles && cp styles/*.css dist/styles/",
   "outputDirectory": "dist",
   "installCommand": "cd ../.. && pnpm install",
+  "functions": {
+    "api/**": {
+      "runtime": "nodejs20.x"
+    }
+  },
   "rewrites": [
     {
       "source": "/:path((?!api/).*)",
