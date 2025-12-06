@@ -4241,6 +4241,7 @@ body:has(.offline-banner) .wrap {
   display: inline-flex;
   align-items: center;
   line-height: 1;
+  margin-bottom: 0; /* Сбрасываем margin из 600-steps-and-aps.css */
 }
 
 /* Время приёма внутри карточки */
