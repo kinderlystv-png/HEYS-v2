@@ -44,6 +44,7 @@ export default async function handler(req, res) {
   const headers = new Headers()
   headers.set('apikey', SUPABASE_ANON_KEY)
   headers.set('Content-Type', req.headers['content-type'] || 'application/json')
+  headers.set('Accept', 'application/json')
   
   // Копируем Authorization если есть
   const auth = req.headers['authorization']
@@ -52,6 +53,7 @@ export default async function handler(req, res) {
   } else {
     headers.set('Authorization', `Bearer ${SUPABASE_ANON_KEY}`)
   }
+  headers.set('x-client-info', req.headers['x-client-info'] || 'heys-proxy')
   
   // Prefer header для PostgREST
   const prefer = req.headers['prefer']

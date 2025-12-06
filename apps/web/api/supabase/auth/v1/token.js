@@ -18,7 +18,8 @@ export default async function handler(req, res) {
     apikey: SUPABASE_ANON_KEY,
     'Content-Type': req.headers['content-type'] || 'application/json',
     Accept: 'application/json',
-    authorization: req.headers['authorization'] || `Bearer ${SUPABASE_ANON_KEY}`,
+    Authorization: req.headers['authorization'] || `Bearer ${SUPABASE_ANON_KEY}`,
+    'x-client-info': req.headers['x-client-info'] || 'heys-proxy',
   }
 
   // Читаем тело запроса вручную (для Node serverless)
