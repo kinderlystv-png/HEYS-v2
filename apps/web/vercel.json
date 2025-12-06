@@ -5,6 +5,10 @@
   "installCommand": "cd ../.. && pnpm install",
   "rewrites": [
     {
+      "source": "/api/supabase/rest/v1/:table",
+      "destination": "/api/rest"
+    },
+    {
       "source": "/:path((?!api/).*)",
       "destination": "/index.html"
     }

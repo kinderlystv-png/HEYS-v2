@@ -1,6 +1,7 @@
 /**
- * Supabase REST API proxy (PostgREST)
- * Handles /api/supabase/rest/v1/* requests
+ * Supabase REST proxy — generic handler for all tables
+ * Since [...path].js doesn't work reliably in Vercel nested folders,
+ * this is a flat proxy that handles the path from query param
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://ukqolcziqcuplqfgrmsh.supabase.co'
@@ -11,7 +12,6 @@ const ALLOWED_ORIGINS = [
   'https://heys-v2.vercel.app',
   'http://localhost:3001',
   'http://localhost:5173',
-  'http://127.0.0.1:3001',
 ]
 
 export default async function handler(req, res) {
@@ -23,19 +23,22 @@ export default async function handler(req, res) {
 
   const url = new URL(req.url, `http://${req.headers.host}`)
   
-  // Extract path after /api/supabase/rest/v1/
-  const pathMatch = url.pathname.match(/^\/api\/supabase\/rest\/v1\/(.*)$/)
-  const restPath = pathMatch ? pathMatch[1] : ''
+  // Extract table name from path: /api/supabase/rest/v1/TABLE_NAME
+  const pathMatch = url.pathname.match(/\/api\/supabase\/rest\/v1\/([^/?]+)/)
+  const tableName = pathMatch ? pathMatch[1] : ''
   
-  // Build Supabase REST URL
-  const targetUrl = `${SUPABASE_URL}/rest/v1/${restPath}${url.search}`
+  if (!tableName) {
+    res.status(400)
+    res.setHeader('Content-Type', 'application/json')
+    return res.end(JSON.stringify({ error: 'Missing table name in path' }))
+  }
 
-  // CORS
+  const targetUrl = `${SUPABASE_URL}/rest/v1/${tableName}${url.search}`
+
   const origin = req.headers.origin || ''
   const isAllowedOrigin = ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))
   const corsOrigin = isAllowedOrigin ? origin : ALLOWED_ORIGINS[0]
 
-  // CORS preflight
   if (req.method === 'OPTIONS') {
     res.status(204)
     res.setHeader('Access-Control-Allow-Origin', corsOrigin)
@@ -46,7 +49,6 @@ export default async function handler(req, res) {
     return res.end()
   }
 
-  // Build headers for Supabase
   const headers = {
     apikey: SUPABASE_ANON_KEY,
     'Content-Type': req.headers['content-type'] || 'application/json',
@@ -55,17 +57,13 @@ export default async function handler(req, res) {
     'x-client-info': req.headers['x-client-info'] || 'heys-proxy',
   }
 
-  // Copy Prefer header for PostgREST
   if (req.headers['prefer']) {
     headers['Prefer'] = req.headers['prefer']
   }
-
-  // Copy Range header for pagination
   if (req.headers['range']) {
     headers['Range'] = req.headers['range']
   }
 
-  // Read body for non-GET requests
   let body
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     body = await new Promise((resolve, reject) => {
@@ -86,7 +84,6 @@ export default async function handler(req, res) {
     const buf = Buffer.from(await upstream.arrayBuffer())
 
     res.status(upstream.status)
-    // Copy headers except problematic ones
     const skipHeaders = ['content-encoding', 'transfer-encoding', 'content-length']
     upstream.headers.forEach((value, key) => {
       if (!skipHeaders.includes(key.toLowerCase())) {
