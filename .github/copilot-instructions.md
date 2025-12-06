@@ -11,6 +11,8 @@ applyTo: '**/*'
 
 🎯 **[heys_ratio_zones_v1.js](../apps/web/heys_ratio_zones_v1.js)** — централизованная логика цветов по ratio (калории/норма). Единый источник для calendar, sparkline, heatmap, advice.
 
+🌐 **[SUPABASE_PROXY.md](../docs/SUPABASE_PROXY.md)** — Supabase прокси на Vercel (обход блокировки РФ). Архитектура API, rewrites, troubleshooting.
+
 📝 **[todo.md](../todo.md)** — текущие задачи и приоритеты
 
 ---
