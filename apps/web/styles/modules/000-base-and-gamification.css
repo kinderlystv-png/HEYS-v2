@@ -5552,6 +5552,20 @@ body:has(.offline-banner) .wrap {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
+  /* Обработанное фото — зелёная рамка */
+  .meal-photo-thumb.processed {
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .meal-photo-thumb.processed::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(16, 185, 129, 0.1);
+    pointer-events: none;
+  }
+
   .meal-photo-thumb:active {
     transform: scale(0.95);
     border-color: var(--color-blue-500);
@@ -5561,6 +5575,37 @@ body:has(.offline-banner) .wrap {
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  /* Чекбокс "обработано" — круглый, левый верхний угол */
+  .photo-processed-checkbox {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 24px;
+    height: 24px;
+    border: 2px solid white;
+    background: rgba(0, 0, 0, 0.4);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.15s ease;
+  }
+
+  .photo-processed-checkbox:active {
+    transform: scale(0.9);
+  }
+
+  .photo-processed-checkbox.checked {
+    background: #10b981;
+    border-color: #10b981;
   }
 
   /* Кнопка удаления фото */
@@ -5673,6 +5718,15 @@ body:has(.offline-banner) .wrap {
   [data-theme="dark"] .meal-photo-thumb {
     border-color: #4b5563;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  [data-theme="dark"] .meal-photo-thumb.processed {
+    border-color: #10b981;
+  }
+
+  [data-theme="dark"] .photo-processed-checkbox {
+    border-color: rgba(255, 255, 255, 0.7);
+    background: rgba(0, 0, 0, 0.5);
   }
 
   /* === PHOTO CONFIRM MODAL — подтверждение сохранения фото === */

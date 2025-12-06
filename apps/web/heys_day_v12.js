@@ -117,7 +117,10 @@
     }, [photoSrc]);
     
     // Открытие галереи
-    const handleClick = React.useCallback(() => {
+    const handleClick = React.useCallback((e) => {
+      // Не открывать галерею если кликнули по чекбоксу
+      if (e.target.closest('.photo-processed-checkbox')) return;
+      
       if (window.HEYS?.showPhotoViewer) {
         const onDeleteInViewer = (photoId) => {
           setDay((prevDay = {}) => {
@@ -134,9 +137,29 @@
       }
     }, [mealPhotos, photoIndex, photoSrc, mealIndex, setDay]);
     
+    // Toggle "обработано"
+    const handleToggleProcessed = React.useCallback((e) => {
+      e.stopPropagation();
+      setDay((prevDay = {}) => {
+        const meals = (prevDay.meals || []).map((m, i) => {
+          if (i !== mealIndex || !m.photos) return m;
+          return { 
+            ...m, 
+            photos: m.photos.map(p => 
+              p.id === photo.id ? { ...p, processed: !p.processed } : p
+            )
+          };
+        });
+        return { ...prevDay, meals };
+      });
+      // Haptic feedback
+      try { navigator.vibrate?.(10); } catch(e) {}
+    }, [photo.id, mealIndex, setDay]);
+    
     // Классы с skeleton
     let finalClass = thumbClass;
     if (!isLoaded && isVisible) finalClass += ' skeleton';
+    if (photo.processed) finalClass += ' processed';
     
     return React.createElement('div', { 
       ref: containerRef,
@@ -150,6 +173,12 @@
         onLoad: () => setIsLoaded(true),
         onError: () => setIsLoaded(true) // Убираем skeleton даже при ошибке
       }),
+      // Чекбокс "обработано" (круглый, в левом верхнем углу)
+      isLoaded && React.createElement('button', {
+        className: 'photo-processed-checkbox' + (photo.processed ? ' checked' : ''),
+        onClick: handleToggleProcessed,
+        title: photo.processed ? 'Снять отметку' : 'Отметить как обработано'
+      }, photo.processed ? '✓' : ''),
       // Timestamp badge
       timeStr && isLoaded && React.createElement('div', { 
         className: 'photo-time-badge'
@@ -903,6 +932,7 @@
       if (window.HEYS?.AddProductStep?.show) {
         window.HEYS.AddProductStep.show({
           mealIndex: mi,
+          mealPhotos: meal.photos || [], // Текущие фото для счётчика
           products,
           dateKey: date,
           onAdd: ({ product, grams, mealIndex }) => {
@@ -11357,7 +11387,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // === INSULIN WAVE INDICATOR (WOW VERSION v3 — модуль) ===
       (!isMobile || mobileSubTab === 'diary') && insulinWaveData && (() => {
-        const isShaking = insulinWaveData.status === 'almost';
+        // ВРЕМЕННО ОТКЛЮЧЕН SHAKE ДЛЯ ДЕБАГА
+        const isShaking = false; // insulinWaveData.status === 'almost';
+        
+        // ГЛОБАЛЬНЫЙ ДЕБАГ — ищем ВСЕ анимации на странице
+        React.useEffect(() => {
+          const checkAnimations = () => {
+            const el = document.querySelector('.insulin-wave-indicator');
+            if (el) {
+              const style = getComputedStyle(el);
+              const rect = el.getBoundingClientRect();
+              console.log('[INSULIN] x:', Math.round(rect.x), 'anim:', style.animationName, 'transform:', style.transform, 'classes:', el.className);
+            }
+          };
+          const id = setInterval(checkAnimations, 300);
+          return () => clearInterval(id);
+        }, []);
+        
         const IW = typeof HEYS !== 'undefined' && HEYS.InsulinWave;
         
         // GI info — из модуля или fallback
@@ -11631,6 +11677,21 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           // Сама карточка
           React.createElement('div', { 
             className: 'insulin-wave-indicator insulin-' + insulinWaveData.status + (isShaking ? ' shake' : '') + (insulinExpanded ? ' expanded' : ''),
+            ref: (el) => {
+              if (el && !window._insulinDebugInterval) {
+                window._insulinDebugInterval = setInterval(() => {
+                  const rect = el.getBoundingClientRect();
+                  const style = getComputedStyle(el);
+                  console.log('[INSULIN DEBUG] x:', Math.round(rect.x), 'transform:', style.transform, 'animation:', style.animationName);
+                }, 500);
+                // Остановим через 10 сек
+                setTimeout(() => {
+                  clearInterval(window._insulinDebugInterval);
+                  window._insulinDebugInterval = null;
+                  console.log('[INSULIN DEBUG] Stopped logging');
+                }, 10000);
+              }
+            },
             style: { 
               margin: '8px 0', 
               cursor: 'pointer',
