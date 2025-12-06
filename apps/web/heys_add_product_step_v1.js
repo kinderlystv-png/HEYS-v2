@@ -322,18 +322,46 @@
       
       haptic('medium');
       setSelectedPhoto(file);
+      console.log('[AddProductStep] Photo selected:', file.name, file.size, 'bytes');
       
-      // Создаём превью (base64)
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const photoData = event.target.result;
-        setPhotoPreview(photoData);
+      // Сжимаем фото перед сохранением (localStorage лимит ~5МБ)
+      const MAX_SIZE = 800; // Максимальный размер по большей стороне
+      const QUALITY = 0.7;  // Качество JPEG
+      
+      const img = new Image();
+      img.onload = () => {
+        // Расчёт новых размеров
+        let { width, height } = img;
+        if (width > MAX_SIZE || height > MAX_SIZE) {
+          if (width > height) {
+            height = Math.round(height * MAX_SIZE / width);
+            width = MAX_SIZE;
+          } else {
+            width = Math.round(width * MAX_SIZE / height);
+            height = MAX_SIZE;
+          }
+        }
+        
+        // Canvas для сжатия
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Конвертируем в JPEG (меньше размер чем PNG)
+        const compressedData = canvas.toDataURL('image/jpeg', QUALITY);
+        console.log('[AddProductStep] Photo compressed:', 
+          Math.round(compressedData.length / 1024), 'KB (was', 
+          Math.round(file.size / 1024), 'KB)');
+        
+        setPhotoPreview(compressedData);
         
         // Сохраняем фото в meal через callback
         if (context?.onAddPhoto) {
           context.onAddPhoto({
             mealIndex: context.mealIndex,
-            photo: photoData,
+            photo: compressedData,
             filename: file.name,
             timestamp: Date.now()
           });
@@ -342,9 +370,17 @@
           console.warn('[AddProductStep] onAddPhoto callback not provided');
         }
       };
-      reader.readAsDataURL(file);
       
-      console.log('[AddProductStep] Photo selected:', file.name, file.size, 'bytes');
+      img.onerror = () => {
+        console.error('[AddProductStep] Failed to load image');
+      };
+      
+      // Загружаем изображение из файла
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
     }, [context]);
     
     // Открыть выбор фото

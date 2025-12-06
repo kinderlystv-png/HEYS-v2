@@ -804,7 +804,9 @@
     // Idempotent init: avoid double creation & duplicate intercept logs
     if (cloud._inited) { return; }
     if (!global.supabase || !global.supabase.createClient){
-      err('supabase-js не загружен');
+      err('supabase-js не загружен — CDN заблокирован?');
+      // Сохраняем флаг для показа сообщения пользователю
+      cloud._loadError = 'Библиотека Supabase не загружена. Возможно, CDN заблокирован провайдером.';
       return;
     }
     try{
@@ -866,7 +868,8 @@
   cloud.signIn = async function(email, password){
     if (!client) { 
       err('client not initialized'); 
-      return { error: { message: 'Сервис авторизации недоступен. Попробуйте позже.' } }; 
+      const reason = cloud._loadError || 'Сервис авторизации недоступен. Попробуйте позже.';
+      return { error: { message: reason } }; 
     }
     // Проверяем сеть перед попыткой входа
     if (!navigator.onLine) {
@@ -2088,5 +2091,200 @@
   };
 
   // Убрано избыточное логирование utils lsSet wrapped
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 📷 PHOTO STORAGE — загрузка фото в Supabase Storage
+  // ═══════════════════════════════════════════════════════════════════
+  
+  const PHOTO_BUCKET = 'meal-photos';
+  const PENDING_PHOTOS_KEY = 'heys_pending_photos';
+  
+  /**
+   * Загрузить фото в Supabase Storage
+   * @param {string} base64Data - base64 изображение (data:image/jpeg;base64,...)
+   * @param {string} clientId - ID клиента
+   * @param {string} date - дата в формате YYYY-MM-DD
+   * @param {string} mealId - ID приёма пищи
+   * @returns {Promise<{url: string, path: string} | null>}
+   */
+  cloud.uploadPhoto = async function(base64Data, clientId, date, mealId) {
+    if (!client) {
+      log('📷 uploadPhoto: нет клиента, сохраняем в pending');
+      return savePendingPhoto(base64Data, clientId, date, mealId);
+    }
+    
+    if (!navigator.onLine) {
+      log('📷 uploadPhoto: offline, сохраняем в pending');
+      return savePendingPhoto(base64Data, clientId, date, mealId);
+    }
+    
+    try {
+      // Конвертируем base64 в blob
+      const response = await fetch(base64Data);
+      const blob = await response.blob();
+      
+      // Генерируем уникальный путь: clientId/YYYY-MM/date_mealId_timestamp.jpg
+      const yearMonth = date.slice(0, 7); // YYYY-MM
+      const timestamp = Date.now();
+      const filename = `${date}_${mealId}_${timestamp}.jpg`;
+      const path = `${clientId}/${yearMonth}/${filename}`;
+      
+      // Загружаем в Supabase Storage
+      const { data, error } = await client.storage
+        .from(PHOTO_BUCKET)
+        .upload(path, blob, {
+          contentType: 'image/jpeg',
+          upsert: false
+        });
+      
+      if (error) {
+        logCritical('📷 uploadPhoto error:', error.message);
+        // Сохраняем в pending для повторной попытки
+        return savePendingPhoto(base64Data, clientId, date, mealId);
+      }
+      
+      // Получаем публичный URL
+      const { data: urlData } = client.storage
+        .from(PHOTO_BUCKET)
+        .getPublicUrl(path);
+      
+      log('📷 Photo uploaded:', path);
+      
+      return {
+        url: urlData?.publicUrl || null,
+        path: path,
+        uploaded: true
+      };
+    } catch (e) {
+      logCritical('📷 uploadPhoto exception:', e?.message || e);
+      return savePendingPhoto(base64Data, clientId, date, mealId);
+    }
+  };
+  
+  /**
+   * Сохранить фото в pending (для offline режима)
+   */
+  function savePendingPhoto(base64Data, clientId, date, mealId) {
+    try {
+      const pending = JSON.parse(global.localStorage.getItem(PENDING_PHOTOS_KEY) || '[]');
+      const photoId = 'photo_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      
+      pending.push({
+        id: photoId,
+        data: base64Data,
+        clientId,
+        date,
+        mealId,
+        createdAt: Date.now()
+      });
+      
+      global.localStorage.setItem(PENDING_PHOTOS_KEY, JSON.stringify(pending));
+      log('📷 Photo saved to pending:', photoId);
+      
+      return {
+        id: photoId,
+        data: base64Data,  // Для отображения пока offline
+        pending: true,
+        uploaded: false
+      };
+    } catch (e) {
+      logCritical('📷 savePendingPhoto error:', e?.message || e);
+      // Fallback: возвращаем base64 напрямую
+      return {
+        data: base64Data,
+        pending: true,
+        uploaded: false
+      };
+    }
+  }
+  
+  /**
+   * Загрузить все pending фото при появлении сети
+   */
+  cloud.uploadPendingPhotos = async function() {
+    if (!client || !navigator.onLine) return;
+    
+    try {
+      const pending = JSON.parse(global.localStorage.getItem(PENDING_PHOTOS_KEY) || '[]');
+      if (pending.length === 0) return;
+      
+      log('📷 Uploading', pending.length, 'pending photos...');
+      
+      const stillPending = [];
+      
+      for (const photo of pending) {
+        try {
+          const result = await cloud.uploadPhoto(
+            photo.data, 
+            photo.clientId, 
+            photo.date, 
+            photo.mealId
+          );
+          
+          if (result?.uploaded) {
+            // Успешно загружено — обновить URL в данных дня
+            await updatePhotoUrlInDay(photo.clientId, photo.date, photo.id, result.url);
+            log('📷 Pending photo uploaded:', photo.id);
+          } else {
+            stillPending.push(photo);
+          }
+        } catch (e) {
+          stillPending.push(photo);
+        }
+      }
+      
+      global.localStorage.setItem(PENDING_PHOTOS_KEY, JSON.stringify(stillPending));
+      
+      if (stillPending.length < pending.length) {
+        log('📷 Uploaded', pending.length - stillPending.length, 'photos,', stillPending.length, 'still pending');
+      }
+    } catch (e) {
+      logCritical('📷 uploadPendingPhotos error:', e?.message || e);
+    }
+  };
+  
+  /**
+   * Обновить URL фото в данных дня после загрузки
+   */
+  async function updatePhotoUrlInDay(clientId, date, photoId, newUrl) {
+    const utils = global.HEYS?.utils;
+    if (!utils?.lsGet || !utils?.lsSet) return;
+    
+    const dayKey = 'heys_dayv2_' + date;
+    const day = utils.lsGet(dayKey, null);
+    if (!day?.meals) return;
+    
+    let updated = false;
+    day.meals = day.meals.map(meal => {
+      if (!meal.photos) return meal;
+      meal.photos = meal.photos.map(photo => {
+        if (photo.id === photoId || photo.pending) {
+          updated = true;
+          return {
+            ...photo,
+            url: newUrl,
+            data: undefined, // Удаляем base64 после загрузки
+            pending: false,
+            uploaded: true
+          };
+        }
+        return photo;
+      });
+      return meal;
+    });
+    
+    if (updated) {
+      utils.lsSet(dayKey, day);
+      log('📷 Updated photo URL in day:', date, photoId);
+    }
+  }
+  
+  // Слушаем online событие для загрузки pending фото
+  if (typeof global.addEventListener === 'function') {
+    global.addEventListener('online', () => {
+      log('🌐 Online detected, uploading pending photos...');
+      setTimeout(() => cloud.uploadPendingPhotos(), 2000);
+    });
+  }
 
 })(window);

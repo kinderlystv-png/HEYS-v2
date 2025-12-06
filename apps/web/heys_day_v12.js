@@ -77,6 +77,348 @@
   // === Import models module ===
   const M = HEYS.models || {};
 
+  // === Photo Gallery (fullscreen with swipe, zoom, delete) ===
+  // Константы
+  const PHOTO_LIMIT_PER_MEAL = 10;
+  
+  /**
+   * Показать галерею фото на весь экран
+   * @param {Array} photos - массив фото [{url, data, id, timestamp, pending}]
+   * @param {number} startIndex - индекс начального фото
+   * @param {Function} onDelete - callback для удаления (photoId) => void
+   */
+  HEYS.showPhotoViewer = function showPhotoViewer(photos, startIndex = 0, onDelete = null) {
+    // Поддержка старого API (один imageSrc)
+    if (typeof photos === 'string') {
+      photos = [{ data: photos, id: 'single' }];
+      startIndex = 0;
+    }
+    if (!photos || photos.length === 0) return;
+    
+    let currentIndex = startIndex;
+    let scale = 1;
+    let translateX = 0;
+    let translateY = 0;
+    let isPinching = false;
+    let startDistance = 0;
+    let startScale = 1;
+    
+    // Создаём overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'photo-viewer-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+      user-select: none;
+    `;
+    
+    // Верхняя панель
+    const topBar = document.createElement('div');
+    topBar.style.cssText = `
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      padding: max(16px, env(safe-area-inset-top, 16px)) 16px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+      z-index: 10001;
+    `;
+    
+    // Счётчик фото
+    const counter = document.createElement('span');
+    counter.style.cssText = 'color: white; font-size: 16px; font-weight: 500;';
+    const updateCounter = () => {
+      counter.textContent = photos.length > 1 ? `${currentIndex + 1} / ${photos.length}` : '';
+    };
+    updateCounter();
+    
+    // Кнопки
+    const buttonsWrap = document.createElement('div');
+    buttonsWrap.style.cssText = 'display: flex; gap: 12px;';
+    
+    // Кнопка удаления
+    if (onDelete) {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.innerHTML = '🗑';
+      deleteBtn.style.cssText = `
+        width: 44px; height: 44px; border: none;
+        background: rgba(239, 68, 68, 0.8);
+        color: white; font-size: 20px; border-radius: 50%;
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+      `;
+      deleteBtn.onclick = () => {
+        const photo = photos[currentIndex];
+        if (photo && confirm('Удалить это фото?')) {
+          onDelete(photo.id);
+          photos.splice(currentIndex, 1);
+          if (photos.length === 0) {
+            close();
+          } else {
+            currentIndex = Math.min(currentIndex, photos.length - 1);
+            showPhoto(currentIndex);
+            updateCounter();
+            updateDots();
+          }
+        }
+      };
+      buttonsWrap.appendChild(deleteBtn);
+    }
+    
+    // Кнопка закрытия
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '✕';
+    closeBtn.style.cssText = `
+      width: 44px; height: 44px; border: none;
+      background: rgba(255, 255, 255, 0.2);
+      color: white; font-size: 24px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    `;
+    closeBtn.onclick = close;
+    buttonsWrap.appendChild(closeBtn);
+    
+    topBar.appendChild(counter);
+    topBar.appendChild(buttonsWrap);
+    
+    // Контейнер для изображения (для zoom/pan)
+    const imgContainer = document.createElement('div');
+    imgContainer.style.cssText = `
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      overflow: hidden;
+    `;
+    
+    // Изображение
+    const img = document.createElement('img');
+    img.alt = 'Фото приёма';
+    img.style.cssText = `
+      max-width: calc(100% - 32px);
+      max-height: calc(100% - 120px);
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      transition: transform 0.1s ease-out;
+      touch-action: none;
+    `;
+    
+    function showPhoto(index) {
+      const photo = photos[index];
+      if (!photo) return;
+      img.src = photo.url || photo.data;
+      scale = 1;
+      translateX = 0;
+      translateY = 0;
+      updateTransform();
+    }
+    
+    function updateTransform() {
+      img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    }
+    
+    showPhoto(currentIndex);
+    imgContainer.appendChild(img);
+    
+    // Точки-индикаторы (если > 1 фото)
+    let dotsContainer = null;
+    function updateDots() {
+      if (!dotsContainer) return;
+      dotsContainer.innerHTML = '';
+      if (photos.length <= 1) return;
+      photos.forEach((_, i) => {
+        const dot = document.createElement('span');
+        dot.style.cssText = `
+          width: 8px; height: 8px; border-radius: 50%;
+          background: ${i === currentIndex ? 'white' : 'rgba(255,255,255,0.4)'};
+          transition: background 0.2s;
+        `;
+        dotsContainer.appendChild(dot);
+      });
+    }
+    
+    if (photos.length > 1) {
+      dotsContainer = document.createElement('div');
+      dotsContainer.style.cssText = `
+        position: absolute;
+        bottom: max(24px, env(safe-area-inset-bottom, 24px));
+        display: flex; gap: 8px;
+        z-index: 10001;
+      `;
+      updateDots();
+    }
+    
+    // Timestamp badge
+    const timestampBadge = document.createElement('div');
+    timestampBadge.style.cssText = `
+      position: absolute;
+      bottom: max(60px, calc(env(safe-area-inset-bottom, 24px) + 36px));
+      color: rgba(255,255,255,0.7);
+      font-size: 14px;
+      z-index: 10001;
+    `;
+    function updateTimestamp() {
+      const photo = photos[currentIndex];
+      if (photo?.timestamp) {
+        const d = new Date(photo.timestamp);
+        timestampBadge.textContent = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      } else {
+        timestampBadge.textContent = '';
+      }
+    }
+    updateTimestamp();
+    
+    // === Gesture handling ===
+    let startX = 0, startY = 0;
+    let isDragging = false;
+    let swipeStartX = 0;
+    
+    function getDistance(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    imgContainer.ontouchstart = function(e) {
+      if (e.touches.length === 2) {
+        // Pinch start
+        isPinching = true;
+        startDistance = getDistance(e.touches);
+        startScale = scale;
+      } else if (e.touches.length === 1) {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        swipeStartX = startX;
+        isDragging = scale > 1;
+      }
+    };
+    
+    imgContainer.ontouchmove = function(e) {
+      if (isPinching && e.touches.length === 2) {
+        // Pinch zoom
+        const distance = getDistance(e.touches);
+        scale = Math.max(1, Math.min(5, startScale * (distance / startDistance)));
+        updateTransform();
+        e.preventDefault();
+      } else if (e.touches.length === 1) {
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+        
+        if (scale > 1 && isDragging) {
+          // Pan when zoomed
+          translateX += dx;
+          translateY += dy;
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          updateTransform();
+          e.preventDefault();
+        } else if (Math.abs(dy) > 80 && dy > 0) {
+          // Swipe down to close
+          close();
+        }
+      }
+    };
+    
+    imgContainer.ontouchend = function(e) {
+      if (isPinching) {
+        isPinching = false;
+        if (scale < 1.1) {
+          scale = 1;
+          translateX = 0;
+          translateY = 0;
+          updateTransform();
+        }
+        return;
+      }
+      
+      // Swipe left/right for navigation (only when not zoomed)
+      if (scale <= 1 && photos.length > 1) {
+        const dx = e.changedTouches[0].clientX - swipeStartX;
+        if (Math.abs(dx) > 50) {
+          if (dx < 0 && currentIndex < photos.length - 1) {
+            currentIndex++;
+          } else if (dx > 0 && currentIndex > 0) {
+            currentIndex--;
+          }
+          showPhoto(currentIndex);
+          updateCounter();
+          updateDots();
+          updateTimestamp();
+        }
+      }
+      isDragging = false;
+    };
+    
+    // Double tap to zoom
+    let lastTap = 0;
+    imgContainer.onclick = function(e) {
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        // Double tap
+        if (scale > 1) {
+          scale = 1;
+          translateX = 0;
+          translateY = 0;
+        } else {
+          scale = 2.5;
+        }
+        updateTransform();
+      }
+      lastTap = now;
+    };
+    
+    // Keyboard navigation
+    function onKeydown(e) {
+      if (e.key === 'Escape') close();
+      if (e.key === 'ArrowLeft' && currentIndex > 0) {
+        currentIndex--;
+        showPhoto(currentIndex);
+        updateCounter();
+        updateDots();
+        updateTimestamp();
+      }
+      if (e.key === 'ArrowRight' && currentIndex < photos.length - 1) {
+        currentIndex++;
+        showPhoto(currentIndex);
+        updateCounter();
+        updateDots();
+        updateTimestamp();
+      }
+    }
+    document.addEventListener('keydown', onKeydown);
+    
+    // Close on overlay click (not on image)
+    overlay.onclick = function(e) {
+      if (e.target === overlay) close();
+    };
+    
+    function close() {
+      overlay.style.animation = 'fadeOut 0.15s ease forwards';
+      document.removeEventListener('keydown', onKeydown);
+      setTimeout(() => overlay.remove(), 150);
+    }
+    
+    // Assemble
+    overlay.appendChild(topBar);
+    overlay.appendChild(imgContainer);
+    if (dotsContainer) overlay.appendChild(dotsContainer);
+    overlay.appendChild(timestampBadge);
+    document.body.appendChild(overlay);
+    
+    overlay.tabIndex = -1;
+    overlay.focus();
+  };
+
   // === Meal quality scoring helpers ===
   const MEAL_KCAL_DISTRIBUTION = {
     breakfast: { minPct: 0.20, maxPct: 0.30 },
@@ -523,26 +865,106 @@
               U.lsSet('heys_grams_history', history);
             } catch(e) {}
           },
-          onAddPhoto: ({ mealIndex, photo, filename, timestamp }) => {
-            // Добавляем фото к приёму пищи
+          onAddPhoto: async ({ mealIndex, photo, filename, timestamp }) => {
+            // Проверяем лимит фото (10 на приём)
+            const meal = day?.meals?.[mealIndex];
+            const currentPhotos = meal?.photos?.length || 0;
+            if (currentPhotos >= PHOTO_LIMIT_PER_MEAL) {
+              alert(`Максимум ${PHOTO_LIMIT_PER_MEAL} фото на приём пищи`);
+              return;
+            }
+            
+            // Получаем данные для загрузки
+            const clientId = HEYS.utils?.getCurrentClientId?.() || 'default';
+            const mealId = meal?.id || uid('meal_');
+            const photoId = uid('photo_');
+            
+            // Пытаемся загрузить в облако
+            let photoData = {
+              id: photoId,
+              data: photo, // Временно храним base64 для отображения
+              filename,
+              timestamp,
+              pending: true,
+              uploading: true, // Индикатор загрузки
+              uploaded: false
+            };
+            
+            // Сначала добавляем в UI (для мгновенного отображения)
             setDay((prevDay = {}) => {
               const meals = (prevDay.meals || []).map((m, i) =>
                 i === mealIndex
                   ? { 
                       ...m, 
-                      photos: [...(m.photos || []), { 
-                        id: uid('photo_'),
-                        data: photo, 
-                        filename, 
-                        timestamp 
-                      }] 
+                      photos: [...(m.photos || []), photoData] 
                     }
                   : m
               );
               return { ...prevDay, meals };
             });
-            console.log('[HEYS] Photo added to meal', mealIndex);
+            
+            console.log('[HEYS] Photo added to meal', mealIndex, '(pending upload)');
             try { navigator.vibrate?.(10); } catch(e) {}
+            
+            // Асинхронно загружаем в облако
+            if (HEYS.cloud?.uploadPhoto) {
+              try {
+                const result = await HEYS.cloud.uploadPhoto(photo, clientId, date, mealId);
+                
+                if (result?.uploaded && result?.url) {
+                  // Успешно загружено — обновляем фото в состоянии
+                  setDay((prevDay = {}) => {
+                    const meals = (prevDay.meals || []).map((m, i) => {
+                      if (i !== mealIndex || !m.photos) return m;
+                      return {
+                        ...m,
+                        photos: m.photos.map(p => 
+                          p.id === photoId 
+                            ? { ...p, url: result.url, data: undefined, pending: false, uploading: false, uploaded: true }
+                            : p
+                        )
+                      };
+                    });
+                    return { ...prevDay, meals };
+                  });
+                  console.log('[HEYS] Photo uploaded to cloud:', result.url);
+                } else if (result?.pending) {
+                  // Сохранено для загрузки позже (offline)
+                  setDay((prevDay = {}) => {
+                    const meals = (prevDay.meals || []).map((m, i) => {
+                      if (i !== mealIndex || !m.photos) return m;
+                      return {
+                        ...m,
+                        photos: m.photos.map(p => 
+                          p.id === photoId 
+                            ? { ...p, uploading: false }
+                            : p
+                        )
+                      };
+                    });
+                    return { ...prevDay, meals };
+                  });
+                  console.log('[HEYS] Photo saved for later upload (offline)');
+                }
+              } catch (e) {
+                // Убираем флаг uploading при ошибке
+                setDay((prevDay = {}) => {
+                  const meals = (prevDay.meals || []).map((m, i) => {
+                    if (i !== mealIndex || !m.photos) return m;
+                    return {
+                      ...m,
+                      photos: m.photos.map(p => 
+                        p.id === photoId 
+                          ? { ...p, uploading: false }
+                          : p
+                      )
+                    };
+                  });
+                  return { ...prevDay, meals };
+                });
+                console.warn('[HEYS] Photo upload failed, will retry later:', e);
+              }
+            }
           },
           onNewProduct: () => {
             if (window.HEYS?.products?.showAddModal) {
@@ -1065,26 +1487,78 @@
         
         // Фотографии приёма (если есть)
         (meal.photos && meal.photos.length > 0) && React.createElement('div', { className: 'meal-photos' },
-          meal.photos.map((photo, photoIndex) => 
-            React.createElement('div', { 
+          meal.photos.map((photo, photoIndex) => {
+            // Используем url если загружено, иначе data (для pending)
+            const photoSrc = photo.url || photo.data;
+            if (!photoSrc) return null;
+            
+            // Форматируем timestamp
+            const timeStr = photo.timestamp 
+              ? new Date(photo.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+              : null;
+            
+            // Удаление фото
+            const handleDelete = (e) => {
+              e.stopPropagation();
+              if (!confirm('Удалить это фото?')) return;
+              setDay((prevDay = {}) => {
+                const meals = (prevDay.meals || []).map((m, i) => {
+                  if (i !== mealIndex || !m.photos) return m;
+                  return { ...m, photos: m.photos.filter(p => p.id !== photo.id) };
+                });
+                return { ...prevDay, meals };
+              });
+              // TODO: удалить из Supabase Storage если uploaded
+            };
+            
+            // Собираем классы
+            let thumbClass = 'meal-photo-thumb';
+            if (photo.pending) thumbClass += ' pending';
+            if (photo.uploading) thumbClass += ' uploading';
+            
+            return React.createElement('div', { 
               key: photo.id || photoIndex, 
-              className: 'meal-photo-thumb',
+              className: thumbClass,
               onClick: () => {
-                // Открыть фото на весь экран
+                // Открыть галерею фото на весь экран
                 if (window.HEYS?.showPhotoViewer) {
-                  window.HEYS.showPhotoViewer(photo.data);
+                  const onDeleteInViewer = (photoId) => {
+                    setDay((prevDay = {}) => {
+                      const meals = (prevDay.meals || []).map((m, i) => {
+                        if (i !== mealIndex || !m.photos) return m;
+                        return { ...m, photos: m.photos.filter(p => p.id !== photoId) };
+                      });
+                      return { ...prevDay, meals };
+                    });
+                  };
+                  window.HEYS.showPhotoViewer(meal.photos, photoIndex, onDeleteInViewer);
                 } else {
-                  window.open(photo.data, '_blank');
+                  window.open(photoSrc, '_blank');
                 }
               }
             },
               React.createElement('img', { 
-                src: photo.data, 
+                src: photoSrc, 
                 alt: 'Фото приёма',
                 loading: 'lazy'
-              })
-            )
-          )
+              }),
+              // Timestamp badge
+              timeStr && React.createElement('div', { 
+                className: 'photo-time-badge'
+              }, timeStr),
+              // Кнопка удаления
+              React.createElement('button', {
+                className: 'photo-delete-btn',
+                onClick: handleDelete,
+                title: 'Удалить фото'
+              }, '✕'),
+              // Индикатор pending (ещё не загружено в облако)
+              photo.pending && React.createElement('div', { 
+                className: 'photo-pending-badge',
+                title: 'Ожидает загрузки в облако'
+              }, '⏳')
+            );
+          })
         )
       )
     );
