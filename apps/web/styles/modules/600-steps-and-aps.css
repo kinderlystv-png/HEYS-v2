@@ -863,6 +863,17 @@
   padding-top: 10px;
 }
 
+/* Ряд кнопок действий (Добавить фото + Новый продукт) */
+.aps-action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.aps-action-buttons .aps-new-product-btn {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Кнопка "Новый продукт" */
 .aps-new-product-btn {
   display: flex;
@@ -877,6 +888,22 @@
   font-size: 13px;
   font-weight: 600;
   color: #2563eb;
+}
+
+/* Кнопка "Добавить фото" — зелёная тема */
+.aps-new-product-btn.aps-photo-btn {
+  background: linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%);
+  border-color: #86efac;
+  color: #16a34a;
+}
+
+.aps-new-product-btn.aps-photo-btn .aps-new-icon {
+  background: #16a34a;
+}
+
+.aps-new-product-btn.aps-photo-btn:hover {
+  background: linear-gradient(135deg, #bbf7d0 0%, #a7f3d0 100%);
+  border-color: #4ade80;
 }
 
 .aps-new-product-btn:hover {
@@ -912,6 +939,16 @@
   background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%);
   border-color: var(--color-blue-500);
   color: #93c5fd;
+}
+
+[data-theme="dark"] .aps-new-product-btn.aps-photo-btn {
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  border-color: #10b981;
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .aps-new-product-btn.aps-photo-btn .aps-new-icon {
+  background: #10b981;
 }
 
 [data-theme="dark"] .aps-new-icon {

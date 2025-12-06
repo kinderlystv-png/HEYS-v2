@@ -964,9 +964,16 @@
           window.HEYS.GamificationBar = GamificationBar;
 
           // init cloud (safe if no cloud module)
+          // 🌐 Используем proxy через Vercel для обхода блокировок Supabase в РФ
+          // В production: /api/supabase → ukqolcziqcuplqfgrmsh.supabase.co (через vercel.json rewrite)
+          // В dev: напрямую к Supabase (localhost не блокируется)
           if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
+            const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
+            const supabaseUrl = isProduction 
+              ? '/api/supabase'  // Proxy через Vercel edge — обходит блокировки РФ
+              : 'https://ukqolcziqcuplqfgrmsh.supabase.co';  // Dev — напрямую
             HEYS.cloud.init({
-              url: 'https://ukqolcziqcuplqfgrmsh.supabase.co',
+              url: supabaseUrl,
               anonKey:
                 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
             });

@@ -404,16 +404,32 @@
     const showPopular = !showSearch;
     
     return React.createElement('div', { className: 'aps-search-step' },
-      // === Фиксированная шапка: кнопка + поиск + категории ===
+      // === Фиксированная шапка: кнопки + поиск + категории ===
       React.createElement('div', { className: 'aps-fixed-header' },
-        // Кнопка "Новый продукт"
-        React.createElement('button', {
-          className: 'aps-new-product-btn',
-          onClick: handleNewProduct
-        },
-          React.createElement('span', { className: 'aps-new-icon' }, '+'),
-          React.createElement('span', null, 'Новый продукт'),
-          React.createElement('span', { className: 'aps-new-hint' }, 'если не нашли нужный')
+        // Ряд кнопок: Добавить фото + Новый продукт
+        React.createElement('div', { className: 'aps-action-buttons' },
+          // Кнопка "Добавить фото"
+          React.createElement('button', {
+            className: 'aps-new-product-btn aps-photo-btn',
+            onClick: () => {
+              haptic('medium');
+              // TODO: Открыть камеру/галерею и распознать продукт
+              alert('🚧 Распознавание фото — скоро!');
+            }
+          },
+            React.createElement('span', { className: 'aps-new-icon' }, '📷'),
+            React.createElement('span', null, 'Добавить фото'),
+            React.createElement('span', { className: 'aps-new-hint' }, 'распознаем автоматом')
+          ),
+          // Кнопка "Новый продукт"
+          React.createElement('button', {
+            className: 'aps-new-product-btn',
+            onClick: handleNewProduct
+          },
+            React.createElement('span', { className: 'aps-new-icon' }, '+'),
+            React.createElement('span', null, 'Новый продукт'),
+            React.createElement('span', { className: 'aps-new-hint' }, 'ввести вручную')
+          )
         ),
         
         // Поле поиска
