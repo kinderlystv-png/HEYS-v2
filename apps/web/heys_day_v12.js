@@ -523,6 +523,27 @@
               U.lsSet('heys_grams_history', history);
             } catch(e) {}
           },
+          onAddPhoto: ({ mealIndex, photo, filename, timestamp }) => {
+            // Добавляем фото к приёму пищи
+            setDay((prevDay = {}) => {
+              const meals = (prevDay.meals || []).map((m, i) =>
+                i === mealIndex
+                  ? { 
+                      ...m, 
+                      photos: [...(m.photos || []), { 
+                        id: uid('photo_'),
+                        data: photo, 
+                        filename, 
+                        timestamp 
+                      }] 
+                    }
+                  : m
+              );
+              return { ...prevDay, meals };
+            });
+            console.log('[HEYS] Photo added to meal', mealIndex);
+            try { navigator.vibrate?.(10); } catch(e) {}
+          },
           onNewProduct: () => {
             if (window.HEYS?.products?.showAddModal) {
               window.HEYS.products.showAddModal();
@@ -1040,6 +1061,30 @@
                 React.createElement('span', { className: 'meal-meta-field' }, '😰', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Стресс', value: meal.stress || '', onChange: e => onChangeStress(mealIndex, +e.target.value || '') }))
               ),
           React.createElement('button', { className: 'meal-delete-btn', onClick: () => onRemoveMeal(mealIndex), title: 'Удалить приём' }, '🗑')
+        ),
+        
+        // Фотографии приёма (если есть)
+        (meal.photos && meal.photos.length > 0) && React.createElement('div', { className: 'meal-photos' },
+          meal.photos.map((photo, photoIndex) => 
+            React.createElement('div', { 
+              key: photo.id || photoIndex, 
+              className: 'meal-photo-thumb',
+              onClick: () => {
+                // Открыть фото на весь экран
+                if (window.HEYS?.showPhotoViewer) {
+                  window.HEYS.showPhotoViewer(photo.data);
+                } else {
+                  window.open(photo.data, '_blank');
+                }
+              }
+            },
+              React.createElement('img', { 
+                src: photo.data, 
+                alt: 'Фото приёма',
+                loading: 'lazy'
+              })
+            )
+          )
         )
       )
     );
@@ -1050,6 +1095,7 @@
     if (prevProps.meal?.name !== nextProps.meal?.name) return false;
     if (prevProps.meal?.time !== nextProps.meal?.time) return false;
     if (prevProps.meal?.items?.length !== nextProps.meal?.items?.length) return false;
+    if (prevProps.meal?.photos?.length !== nextProps.meal?.photos?.length) return false;
     if (prevProps.mealIndex !== nextProps.mealIndex) return false;
     if (prevProps.displayIndex !== nextProps.displayIndex) return false;
     if (prevProps.isExpanded !== nextProps.isExpanded) return false;

@@ -160,7 +160,10 @@
     const [favorites, setFavorites] = useState(() => 
       HEYS.store?.getFavorites?.() || new Set()
     );
+    const [selectedPhoto, setSelectedPhoto] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState(null);
     const inputRef = useRef(null);
+    const fileInputRef = useRef(null);
     
     // Доступ к навигации StepModal
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
@@ -312,6 +315,44 @@
       }
     }, [context, goToStep, search, data, onChange]);
     
+    // Обработчик выбора фото
+    const handlePhotoSelect = useCallback((e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      
+      haptic('medium');
+      setSelectedPhoto(file);
+      
+      // Создаём превью (base64)
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const photoData = event.target.result;
+        setPhotoPreview(photoData);
+        
+        // Сохраняем фото в meal через callback
+        if (context?.onAddPhoto) {
+          context.onAddPhoto({
+            mealIndex: context.mealIndex,
+            photo: photoData,
+            filename: file.name,
+            timestamp: Date.now()
+          });
+          console.log('[AddProductStep] Photo added to meal:', context.mealIndex);
+        } else {
+          console.warn('[AddProductStep] onAddPhoto callback not provided');
+        }
+      };
+      reader.readAsDataURL(file);
+      
+      console.log('[AddProductStep] Photo selected:', file.name, file.size, 'bytes');
+    }, [context]);
+    
+    // Открыть выбор фото
+    const handlePhotoClick = useCallback(() => {
+      haptic('medium');
+      fileInputRef.current?.click();
+    }, []);
+    
     // Удаление продукта из базы
     const handleDeleteProduct = useCallback((e, product) => {
       e.stopPropagation();
@@ -404,6 +445,16 @@
     const showPopular = !showSearch;
     
     return React.createElement('div', { className: 'aps-search-step' },
+      // Скрытый input для выбора фото
+      React.createElement('input', {
+        ref: fileInputRef,
+        type: 'file',
+        accept: 'image/*',
+        capture: 'environment', // Камера на мобильных
+        style: { display: 'none' },
+        onChange: handlePhotoSelect
+      }),
+      
       // === Фиксированная шапка: кнопки + поиск + категории ===
       React.createElement('div', { className: 'aps-fixed-header' },
         // Ряд кнопок: Добавить фото + Новый продукт
@@ -411,15 +462,10 @@
           // Кнопка "Добавить фото"
           React.createElement('button', {
             className: 'aps-new-product-btn aps-photo-btn',
-            onClick: () => {
-              haptic('medium');
-              // TODO: Открыть камеру/галерею и распознать продукт
-              alert('🚧 Распознавание фото — скоро!');
-            }
+            onClick: handlePhotoClick
           },
             React.createElement('span', { className: 'aps-new-icon' }, '📷'),
-            React.createElement('span', null, 'Добавить фото'),
-            React.createElement('span', { className: 'aps-new-hint' }, 'распознаем автоматом')
+            React.createElement('span', null, 'Добавить фото')
           ),
           // Кнопка "Новый продукт"
           React.createElement('button', {
@@ -427,8 +473,7 @@
             onClick: handleNewProduct
           },
             React.createElement('span', { className: 'aps-new-icon' }, '+'),
-            React.createElement('span', null, 'Новый продукт'),
-            React.createElement('span', { className: 'aps-new-hint' }, 'ввести вручную')
+            React.createElement('span', null, 'Новый продукт')
           )
         ),
         
@@ -1071,6 +1116,7 @@
       products: providedProducts,
       dateKey = new Date().toISOString().slice(0, 10),
       onAdd,
+      onAddPhoto, // Callback для добавления фото к приёму
       onNewProduct,
       onClose 
     } = options;
@@ -1124,6 +1170,7 @@
         mealIndex, 
         onNewProduct,
         onAdd, // Передаём callback для добавления в приём пищи
+        onAddPhoto, // Callback для добавления фото к приёму
         // Callback при создании продукта — обновляем список (не используется при 2 шагах, оставляем для совместимости)
         onProductCreated: (product) => {
           currentProducts = [...currentProducts, product];

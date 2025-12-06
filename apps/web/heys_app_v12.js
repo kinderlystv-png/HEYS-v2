@@ -2078,8 +2078,8 @@
                 }
                 
                 const res = await cloud.signIn(email, password);
-                if (res.error) {
-                  const message = res.error.message || 'Ошибка входа';
+                if (!res || res.error) {
+                  const message = res?.error?.message || 'Ошибка подключения к серверу';
                   setLoginError(message);
                   
                   // Примитивный backoff для 429

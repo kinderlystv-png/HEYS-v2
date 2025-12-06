@@ -864,7 +864,10 @@
   };
 
   cloud.signIn = async function(email, password){
-    if (!client) { err('client not initialized'); return; }
+    if (!client) { 
+      err('client not initialized'); 
+      return { error: { message: 'Сервис авторизации недоступен. Попробуйте позже.' } }; 
+    }
     // Проверяем сеть перед попыткой входа
     if (!navigator.onLine) {
       status = 'offline';
