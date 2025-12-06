@@ -819,12 +819,14 @@
 
   /**
    * Примеры бытовой активности с MET коэффициентами
+   * (активность на ногах БЕЗ движения — шаги считаем отдельно браслетом)
    */
   const HOUSEHOLD_EXAMPLES = [
     { icon: '🧹', name: 'Уборка', met: 3.0, minutes: 30 },
     { icon: '👶', name: 'Игры с детьми', met: 3.5, minutes: 40 },
     { icon: '🏢', name: 'Работа стоя', met: 2.0, minutes: 25 },
-    { icon: '🔧', name: 'Дом. дела / ремонт', met: 3.5, minutes: 35 }
+    { icon: '🍳', name: 'Готовка', met: 2.5, minutes: 30 },
+    { icon: '🔧', name: 'Дом. дела', met: 3.5, minutes: 35 }
   ];
 
   /**
@@ -1029,7 +1031,7 @@
       // Примеры активности
       React.createElement('div', { className: 'household-examples' },
         React.createElement('div', { className: 'household-examples-grid' },
-          HOUSEHOLD_EXAMPLES.slice(0, 4).map((ex, i) => 
+          HOUSEHOLD_EXAMPLES.map((ex, i) => 
             React.createElement('span', { 
               key: i, 
               className: 'household-example',

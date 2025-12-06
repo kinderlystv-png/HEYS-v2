@@ -669,13 +669,18 @@
       (dayData.meals || []).forEach(meal => {
         (meal.items || []).forEach(item => {
           const grams = +item.grams || 0;
+          if (grams <= 0) return;
+          
+          // Сначала ищем в productsMap, потом fallback на inline данные item
           const product = productsMap.get(item.product_id);
-          if (product && grams > 0) {
+          const src = product || item; // item может иметь inline kcal100, protein100 и т.д.
+          
+          if (src.kcal100 != null || src.protein100 != null) {
             const mult = grams / 100;
-            totalKcal += (+product.kcal100 || 0) * mult;
-            totalProt += (+product.protein100 || 0) * mult;
-            totalFat += (+product.fat100 || 0) * mult;
-            totalCarbs += (+product.carbs100 || (+product.simple100 || 0) + (+product.complex100 || 0)) * mult;
+            totalKcal += (+src.kcal100 || 0) * mult;
+            totalProt += (+src.protein100 || 0) * mult;
+            totalFat += (+src.fat100 || 0) * mult;
+            totalCarbs += (+src.carbs100 || (+src.simple100 || 0) + (+src.complex100 || 0)) * mult;
           }
         });
       });

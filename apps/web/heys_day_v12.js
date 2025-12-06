@@ -3726,9 +3726,12 @@
             (dayData.meals || []).forEach(meal => {
               (meal.items || []).forEach(item => {
                 const grams = +item.grams || 0;
+                if (grams <= 0) return;
+                // Fallback: сначала pIndex, потом inline данные item
                 const product = pIndex?.byId?.get(item.product_id);
-                if (product && grams > 0) {
-                  totalKcal += ((+product.kcal100 || 0) * grams / 100);
+                const src = product || item;
+                if (src.kcal100 != null) {
+                  totalKcal += ((+src.kcal100 || 0) * grams / 100);
                 }
               });
             });
@@ -5007,15 +5010,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             } catch(e) {}
             
             if (dayData && dayData.meals) {
-              // Вычисляем калории через продукты
+              // Вычисляем калории через продукты (fallback на inline данные item)
               let totalKcal = 0;
               (dayData.meals || []).forEach(meal => {
                 (meal.items || []).forEach(item => {
                   const grams = +item.grams || 0;
+                  if (grams <= 0) return;
+                  // Fallback: сначала productsMap, потом inline данные item
                   const product = productsMap.get(item.product_id);
-                  if (product && grams > 0) {
-                    const kcal100 = +product.kcal100 || 0;
-                    totalKcal += (kcal100 * grams / 100);
+                  const src = product || item;
+                  if (src.kcal100 != null) {
+                    totalKcal += ((+src.kcal100 || 0) * grams / 100);
                   }
                 });
               });
@@ -8344,12 +8349,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             dayData.meals.forEach(meal => {
               (meal.items || []).forEach(item => {
                 const prod = pIndex.byId.get(item.product_id);
-                if (prod) {
-                  const g = item.grams || 100;
-                  if (macroKey === 'prot') macroSum += (prod.protein100 || 0) * g / 100;
-                  else if (macroKey === 'fat') macroSum += ((prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0)) * g / 100;
-                  else macroSum += ((prod.simple100 || 0) + (prod.complex100 || 0)) * g / 100;
-                }
+                const src = prod || item; // fallback to inline data
+                const g = item.grams || 100;
+                if (macroKey === 'prot') macroSum += (+src.protein100 || 0) * g / 100;
+                else if (macroKey === 'fat') macroSum += ((+src.badFat100 || 0) + (+src.goodFat100 || 0) + (+src.trans100 || 0)) * g / 100;
+                else macroSum += ((+src.simple100 || 0) + (+src.complex100 || 0)) * g / 100;
               });
             });
             
@@ -8412,12 +8416,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               dayData.meals.forEach(meal => {
                 (meal.items || []).forEach(item => {
                   const prod = pIndex.byId.get(item.product_id);
-                  if (prod) {
-                    const g = item.grams || 100;
-                    if (macroKey === 'prot') macroSum += (prod.protein100 || 0) * g / 100;
-                    else if (macroKey === 'fat') macroSum += ((prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0)) * g / 100;
-                    else macroSum += ((prod.simple100 || 0) + (prod.complex100 || 0)) * g / 100;
-                  }
+                  const src = prod || item; // fallback to inline data
+                  const g = item.grams || 100;
+                  if (macroKey === 'prot') macroSum += (+src.protein100 || 0) * g / 100;
+                  else if (macroKey === 'fat') macroSum += ((+src.badFat100 || 0) + (+src.goodFat100 || 0) + (+src.trans100 || 0)) * g / 100;
+                  else macroSum += ((+src.simple100 || 0) + (+src.complex100 || 0)) * g / 100;
                 });
               });
               
@@ -8452,12 +8455,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               dayData.meals.forEach(meal => {
                 (meal.items || []).forEach(item => {
                   const prod = pIndex.byId.get(item.product_id);
-                  if (prod) {
-                    const g = item.grams || 100;
-                    if (macroKey === 'prot') macroSum += (prod.protein100 || 0) * g / 100;
-                    else if (macroKey === 'fat') macroSum += ((prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0)) * g / 100;
-                    else macroSum += ((prod.simple100 || 0) + (prod.complex100 || 0)) * g / 100;
-                  }
+                  const src = prod || item; // fallback to inline data
+                  const g = item.grams || 100;
+                  if (macroKey === 'prot') macroSum += (+src.protein100 || 0) * g / 100;
+                  else if (macroKey === 'fat') macroSum += ((+src.badFat100 || 0) + (+src.goodFat100 || 0) + (+src.trans100 || 0)) * g / 100;
+                  else macroSum += ((+src.simple100 || 0) + (+src.complex100 || 0)) * g / 100;
                 });
               });
               data.push(macroSum);
@@ -10350,7 +10352,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   (m.items || []).forEach(item => {
                     const g = +item.grams || 0;
                     const prod = pIndex?.byId?.get(item.product_id);
-                    if (prod && g > 0) kcal += (+prod.kcal100 || 0) * g / 100;
+                    const src = prod || item; // fallback to inline data
+                    if (src.kcal100 != null && g > 0) kcal += (+src.kcal100 || 0) * g / 100;
                   });
                   return { t, kcal };
                 }).filter(p => p.t > 0 && p.kcal > 0);
@@ -11877,7 +11880,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                         let kcal = 0;
                         dData.meals.forEach(m => (m.items || []).forEach(item => {
                           const p = pIndex?.byId?.get(item.product_id);
-                          if (p) kcal += ((+p.kcal100 || 0) * (+item.grams || 0) / 100);
+                          const src = p || item; // fallback to inline data
+                          if (src.kcal100 != null) kcal += ((+src.kcal100 || 0) * (+item.grams || 0) / 100);
                         }));
                         const ratio = kcal / (optimum || 2000);
                         history.push({ avgMood, ratio });

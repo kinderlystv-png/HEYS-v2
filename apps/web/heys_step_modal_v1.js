@@ -443,9 +443,20 @@
         onTouchEnd: handleTouchEnd
       },
         React.createElement('div', { className: 'mc-modal' },
-          // Header
+          // Header — объединённый с title шага
           React.createElement('div', { className: 'mc-header' },
-            showGreeting && (title || greeting) && React.createElement('div', { className: 'mc-greeting' }, 
+            // Title и hint шага — слева
+            (currentConfig.title || currentConfig.hint) && React.createElement('div', { className: 'mc-header-titles' },
+              currentConfig.title && React.createElement('span', { className: 'mc-header-title' }, 
+                `${currentConfig.icon || ''} ${currentConfig.title}`.trim()
+              ),
+              currentConfig.hint && React.createElement('span', { className: 'mc-header-hint' }, 
+                currentConfig.hint
+              )
+            ),
+            
+            // Greeting (если есть и нет title шага)
+            showGreeting && (title || greeting) && !currentConfig.title && React.createElement('div', { className: 'mc-greeting' }, 
               title || greeting
             ),
             
@@ -477,16 +488,6 @@
                 },
                 'aria-label': `Шаг ${i + 1}`
               })
-            )
-          ),
-
-          // Step title (скрываем если title пустой)
-          (currentConfig.title || currentConfig.hint) && React.createElement('div', { className: 'mc-step-header' },
-            currentConfig.title && React.createElement('h2', { className: 'mc-step-title' }, 
-              `${currentConfig.icon || ''} ${currentConfig.title}`.trim()
-            ),
-            currentConfig.hint && React.createElement('p', { className: 'mc-step-hint' }, 
-              currentConfig.hint
             )
           ),
 
