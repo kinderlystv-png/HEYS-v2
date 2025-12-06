@@ -5983,7 +5983,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           pIndex,
           getProductFromItem,
           baseWaveHours,
-          trainings: day.trainings || [] // 🏃 Передаём тренировки для workout acceleration
+          trainings: day.trainings || [], // 🏃 Передаём тренировки для workout acceleration
+          // 🆕 v1.4: Данные дня для stress и sleep факторов
+          dayData: {
+            sleepHours: day.sleepHours || null,  // часы сна предыдущей ночи
+            stressAvg: day.stressAvg || 0        // средний стресс за день (1-5)
+          }
         });
       }
       

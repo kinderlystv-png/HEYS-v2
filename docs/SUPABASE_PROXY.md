@@ -90,8 +90,8 @@ apps/web/api/
       "destination": "/api/rest?table=:table"
     },
     {
-      "source": "/api/supabase/storage/v1/:path*",
-      "destination": "/api/storage"
+      "source": "/api/supabase/storage/v1/:path(.*)",
+      "destination": "/api/storage?storagePath=:path"
     }
   ]
 }

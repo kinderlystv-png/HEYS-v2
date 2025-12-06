@@ -22,17 +22,37 @@ export default async function handler(req, res) {
 
   const url = new URL(req.url, `http://${req.headers.host}`)
   
-  // Extract path after /api/supabase/storage/v1/
-  const pathMatch = url.pathname.match(/\/api\/supabase\/storage\/v1\/(.+)/)
-  const storagePath = pathMatch ? pathMatch[1] : ''
+  // Get storage path from multiple sources (in order of priority):
+  // 1. Query param 'storagePath' (added by Vercel rewrite)
+  // 2. x-invoke-path header (fallback)
+  // 3. Extract from req.url directly
+  let storagePath = url.searchParams.get('storagePath') || ''
+  
+  if (!storagePath) {
+    // Fallback to x-invoke-path header
+    const invokePath = req.headers['x-invoke-path'] || req.url
+    const pathMatch = invokePath.match(/\/api\/supabase\/storage\/v1\/(.+?)(?:\?|$)/)
+    storagePath = pathMatch ? pathMatch[1] : ''
+  }
+  
+  // Remove storagePath from query params for target URL
+  url.searchParams.delete('storagePath')
+  const queryString = url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''
   
   if (!storagePath) {
     res.status(400)
     res.setHeader('Content-Type', 'application/json')
-    return res.end(JSON.stringify({ error: 'Missing storage path' }))
+    return res.end(JSON.stringify({ 
+      error: 'Missing storage path',
+      debug: {
+        reqUrl: req.url,
+        invokePath: req.headers['x-invoke-path'],
+        matchedPath: req.headers['x-matched-path']
+      }
+    }))
   }
 
-  const targetUrl = `${SUPABASE_URL}/storage/v1/${storagePath}${url.search}`
+  const targetUrl = `${SUPABASE_URL}/storage/v1/${storagePath}${queryString}`
 
   const origin = req.headers.origin || ''
   const isAllowedOrigin = ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))

@@ -1,7 +1,24 @@
 // heys_insulin_wave_v1.js — Модуль инсулиновой волны
-// Версия: 1.1.0 | Дата: 2025-12-05
+// Версия: 1.4.0 | Дата: 2025-12-07
 // Вся логика расчёта и отображения инсулиновой волны
-// Фичи: GI-based, protein/fiber bonus, workout acceleration, circadian rhythm
+// 
+// Факторы влияющие на длину волны (16 факторов):
+// ✅ ГИ (гликемический индекс) — высокий = быстрее волна
+// ✅ GL (гликемическая нагрузка) — GI × углеводы / 100 — точнее чем просто GI
+// ✅ Количество углеводов — мало = короче волна (5г → 25%, 30г+ → 100%)
+// ✅ Жиры — значительно замедляют пищеварение (+8-30% к длине)
+// ✅ Белок — замедляет усвоение (+8-15%)
+// ✅ Клетчатка — замедляет усвоение (+5-12%)
+// ✅ Жидкая пища — усваивается быстрее (×0.7 = на 30% короче)
+// ✅ Инсулиногенность — молочка (+15%) и чистый белок (+8%) стимулируют инсулин
+// ✅ Тренировки — ускоряют метаболизм (-8-15%)
+// ✅ Циркадные ритмы — утром быстрее, вечером медленнее (×0.9-1.2)
+// ✅ Голодание (fasting) — после 12+ часов первый приём = больший пик (+15-20%)
+// ✅ Острая пища — капсаицин ускоряет метаболизм (-5-10%)
+// ✅ Алкоголь — замедляет метаболизм, блокирует липолиз (+15-25%)
+// ✅ Кофеин — может повышать инсулин (+10-15%)
+// ✅ Стресс — кортизол повышает инсулин (+10-15%)
+// ✅ Недосып — инсулинорезистентность (+10-20%)
 (function(global) {
   'use strict';
   
@@ -30,6 +47,64 @@
   const PROTEIN_BONUS = { high: { threshold: 40, bonus: 0.15 }, medium: { threshold: 25, bonus: 0.08 } };
   const FIBER_BONUS = { high: { threshold: 10, bonus: 0.12 }, medium: { threshold: 5, bonus: 0.05 } };
   
+  // 🧈 FAT SLOWDOWN — жиры значительно замедляют опорожнение желудка (gastric emptying)
+  // Исследования: жирная пища может замедлить пищеварение на 30-50%
+  // Примеры: пицца, бургер, жареное — волна 4-5 часов вместо 3
+  const FAT_BONUS = {
+    high: { threshold: 25, bonus: 0.30 },    // 25+ г жира → +30% к длине волны
+    medium: { threshold: 15, bonus: 0.18 },  // 15+ г жира → +18% к длине волны
+    low: { threshold: 8, bonus: 0.08 }       // 8+ г жира → +8%
+  };
+  
+  // 🥤 LIQUID FOOD — жидкая пища усваивается быстрее (меньше времени на механическое переваривание)
+  // Сок, смузи, молоко → быстрый всплеск и быстрое падение инсулина
+  const LIQUID_FOOD = {
+    multiplier: 0.7,  // Жидкое усваивается на 30% быстрее
+    // Паттерны для определения жидкой пищи по названию
+    patterns: [
+      /сок\b/i, /\bсока\b/i, /\bсоки\b/i,
+      /смузи/i, /коктейль/i, /shake/i,
+      /молоко/i, /кефир/i, /ряженка/i, /айран/i, /тан\b/i,
+      /йогурт.*питьевой/i, /питьевой.*йогурт/i,
+      /какао/i, /горячий шоколад/i,
+      /бульон/i, /суп.*пюре/i, /крем.*суп/i,
+      /кола/i, /пепси/i, /фанта/i, /спрайт/i, /лимонад/i, /газировка/i,
+      /энергетик/i, /energy/i,
+      /протеин.*коктейль/i, /protein.*shake/i
+    ],
+    // Категории которые считаются жидкими
+    categories: ['Напитки', 'Соки', 'Молочные напитки']
+  };
+  
+  // 🥛 INSULINOGENIC CATEGORIES — некоторые продукты вызывают сильный инсулиновый ответ
+  // даже при низком ГИ (молоко ГИ=30, но инсулиновый индекс=90!)
+  const INSULINOGENIC_BONUS = {
+    // Молочные продукты — сильно стимулируют инсулин из-за сывороточного белка
+    dairy: {
+      bonus: 0.15,  // +15% к длине волны
+      patterns: [/молоко/i, /кефир/i, /йогурт/i, /творог/i, /сыр/i, /сметана/i, /сливки/i, /ряженка/i, /простокваша/i],
+      categories: ['Молочные', 'Молочные продукты', 'Dairy']
+    },
+    // Белковые продукты — вызывают инсулиновый ответ даже без углеводов
+    protein: {
+      bonus: 0.08,  // +8% к длине волны
+      patterns: [/говядина/i, /свинина/i, /курица/i, /индейка/i, /рыба/i, /лосось/i, /тунец/i, /треска/i, /креветки/i, /мясо/i, /стейк/i, /филе/i, /грудка/i, /фарш/i],
+      categories: ['Мясо', 'Рыба', 'Птица', 'Морепродукты', 'Meat', 'Fish']
+    }
+  };
+  
+  // 📊 GLYCEMIC LOAD SCALING — GL точнее предсказывает инсулиновый ответ чем просто GI
+  // GL = GI × углеводы / 100
+  // Пример: арбуз GI=72 высокий, но 100г арбуза = 6г углеводов → GL=4.3 (низкая!)
+  // Пример: белый рис GI=73, 150г = 45г углеводов → GL=33 (очень высокая!)
+  const GL_CATEGORIES = {
+    veryLow: { max: 5, multiplier: 0.5, desc: 'минимальный инсулин' },      // почти нет реакции
+    low: { max: 10, multiplier: 0.7, desc: 'слабый инсулиновый ответ' },    // умеренная реакция
+    medium: { max: 20, multiplier: 1.0, desc: 'нормальный инсулин' },       // стандартная волна
+    high: { max: 30, multiplier: 1.15, desc: 'сильный инсулиновый ответ' }, // удлинённая волна
+    veryHigh: { max: Infinity, multiplier: 1.25, desc: 'максимальный инсулин' } // пиковая реакция
+  };
+  
   // 🏃 WORKOUT ACCELERATION — тренировка ускоряет метаболизм
   const WORKOUT_BONUS = {
     // Минуты тренировки → бонус к скорости волны (уменьшение длительности)
@@ -50,6 +125,86 @@
     night: { from: 22, to: 6, multiplier: 1.2, desc: 'Ночной режим 🌙' }
   };
   
+  // 🍽️ FASTING — голодание увеличивает инсулиновый пик первого приёма
+  // После 12+ часов без еды организм становится более чувствителен к инсулину
+  // Первый приём после голодания = больший и дольше инсулиновый ответ
+  const FASTING_BONUS = {
+    // Часы голодания → бонус к длине волны
+    long: { threshold: 16, bonus: 0.20 },    // 16+ часов = +20% волна
+    medium: { threshold: 12, bonus: 0.15 },  // 12+ часов = +15% волна
+    short: { threshold: 8, bonus: 0.05 }     // 8+ часов = +5% (минимальный эффект)
+  };
+
+  // 🌶️ SPICY FOOD — острая пища ускоряет метаболизм через термогенез
+  // Капсаицин увеличивает расход энергии на 5-10%
+  const SPICY_FOOD = {
+    multiplier: 0.92,  // На 8% быстрее
+    patterns: [
+      /перец.*чили/i, /чили/i, /халапеньо/i, /jalapeno/i,
+      /табаско/i, /sriracha/i, /шрирача/i,
+      /карри/i, /curry/i, /васаби/i, /wasabi/i,
+      /горчица.*острая/i, /хрен/i,
+      /острый.*соус/i, /hot.*sauce/i,
+      /кимчи/i, /kimchi/i, /аджика/i,
+      /харисса/i, /harissa/i
+    ]
+  };
+
+  // 🍷 ALCOHOL — алкоголь замедляет метаболизм и блокирует липолиз
+  // Печень переключается на переработку алкоголя, инсулин дольше в крови
+  const ALCOHOL_BONUS = {
+    high: { bonus: 0.25 },    // Крепкие напитки, много
+    medium: { bonus: 0.18 },  // Вино, пиво
+    low: { bonus: 0.10 },     // Слабоалкогольные
+    patterns: [
+      /водка/i, /виски/i, /whisky/i, /whiskey/i, /коньяк/i, /cognac/i,
+      /ром/i, /rum/i, /текила/i, /tequila/i, /джин/i, /gin/i,
+      /вино/i, /wine/i, /шампанское/i, /champagne/i, /просекко/i,
+      /пиво/i, /beer/i, /эль/i, /ale/i, /лагер/i, /lager/i,
+      /сидр/i, /cider/i, /ликёр/i, /liqueur/i,
+      /мартини/i, /вермут/i, /vermouth/i,
+      /коктейль.*алкогол/i, /алкогол.*коктейль/i
+    ],
+    // Категории крепости
+    strong: [/водка/i, /виски/i, /коньяк/i, /ром/i, /текила/i, /джин/i],
+    medium: [/вино/i, /шампанское/i, /просекко/i, /мартини/i, /вермут/i],
+    weak: [/пиво/i, /сидр/i, /эль/i]
+  };
+
+  // ☕ CAFFEINE — кофеин стимулирует выброс инсулина
+  // Исследования показывают +15-25% инсулина при кофеине
+  const CAFFEINE_BONUS = {
+    bonus: 0.12,  // +12% к волне
+    patterns: [
+      /кофе/i, /coffee/i, /эспрессо/i, /espresso/i,
+      /капучино/i, /cappuccino/i, /латте/i, /latte/i,
+      /американо/i, /americano/i, /мокко/i, /mocha/i,
+      /чай.*чёрный/i, /чёрный.*чай/i, /black.*tea/i,
+      /чай.*зелёный/i, /зелёный.*чай/i, /green.*tea/i,
+      /матча/i, /matcha/i, /пуэр/i,
+      /энергетик/i, /energy.*drink/i, /red.*bull/i, /monster/i,
+      /кола/i, /cola/i, /пепси/i, /pepsi/i
+    ]
+  };
+
+  // 😰 STRESS — кортизол повышает инсулин и инсулинорезистентность
+  // Высокий стресс = дольше инсулиновая волна
+  // ⚠️ Шкала стресса в HEYS: 1-10 (не 1-5!)
+  const STRESS_BONUS = {
+    high: { threshold: 7, bonus: 0.15 },    // Стресс 7-10 → +15%
+    medium: { threshold: 5, bonus: 0.08 },  // Стресс 5-6 → +8%
+    low: { threshold: 3, bonus: 0.00 }      // Стресс 1-4 → нет эффекта
+  };
+
+  // 😴 SLEEP DEPRIVATION — недосып повышает инсулинорезистентность
+  // Даже одна ночь плохого сна увеличивает инсулинорезистентность на 20-30%
+  const SLEEP_BONUS = {
+    severe: { maxHours: 4, bonus: 0.20 },   // <4ч сна → +20%
+    moderate: { maxHours: 5, bonus: 0.15 }, // 4-5ч → +15%
+    mild: { maxHours: 6, bonus: 0.08 },     // 5-6ч → +8%
+    normal: { maxHours: 24, bonus: 0.00 }   // 6+ часов → нет эффекта
+  };
+
   const GAP_HISTORY_KEY = 'heys_meal_gaps_history';
   const GAP_HISTORY_DAYS = 14;
   
@@ -269,11 +424,165 @@
   // === РАСЧЁТ ДАННЫХ ВОЛНЫ ===
   
   /**
+   * Проверить, является ли продукт жидким
+   * @param {Object} prod - продукт
+   * @returns {boolean}
+   */
+  const isLiquidFood = (prod) => {
+    if (!prod) return false;
+    const name = (prod.name || '').toLowerCase();
+    const category = (prod.category || '').toLowerCase();
+    
+    // Проверяем категории
+    for (const cat of LIQUID_FOOD.categories) {
+      if (category.includes(cat.toLowerCase())) return true;
+    }
+    
+    // Проверяем паттерны в названии
+    for (const pattern of LIQUID_FOOD.patterns) {
+      if (pattern.test(name)) return true;
+    }
+    
+    return false;
+  };
+  
+  /**
+   * Получить инсулиногенный бонус продукта (молочка, белок)
+   * @param {Object} prod - продукт
+   * @returns {{ type: string|null, bonus: number }}
+   */
+  const getInsulinogenicBonus = (prod) => {
+    if (!prod) return { type: null, bonus: 0 };
+    const name = (prod.name || '').toLowerCase();
+    const category = (prod.category || '').toLowerCase();
+    
+    // Проверяем молочные (приоритет выше)
+    const dairy = INSULINOGENIC_BONUS.dairy;
+    for (const cat of dairy.categories) {
+      if (category.includes(cat.toLowerCase())) return { type: 'dairy', bonus: dairy.bonus };
+    }
+    for (const pattern of dairy.patterns) {
+      if (pattern.test(name)) return { type: 'dairy', bonus: dairy.bonus };
+    }
+    
+    // Проверяем белковые
+    const protein = INSULINOGENIC_BONUS.protein;
+    for (const cat of protein.categories) {
+      if (category.includes(cat.toLowerCase())) return { type: 'protein', bonus: protein.bonus };
+    }
+    for (const pattern of protein.patterns) {
+      if (pattern.test(name)) return { type: 'protein', bonus: protein.bonus };
+    }
+    
+    return { type: null, bonus: 0 };
+  };
+
+  /**
+   * 🌶️ Проверить, содержит ли приём острую пищу
+   * @param {Object} prod - продукт
+   * @returns {boolean}
+   */
+  const isSpicyFood = (prod) => {
+    if (!prod) return false;
+    const name = (prod.name || '').toLowerCase();
+    
+    for (const pattern of SPICY_FOOD.patterns) {
+      if (pattern.test(name)) return true;
+    }
+    return false;
+  };
+
+  /**
+   * 🍷 Получить алкогольный бонус продукта
+   * @param {Object} prod - продукт
+   * @returns {{ type: string|null, bonus: number }}
+   */
+  const getAlcoholBonus = (prod) => {
+    if (!prod) return { type: null, bonus: 0 };
+    const name = (prod.name || '').toLowerCase();
+    
+    // Проверяем крепкие напитки (приоритет выше)
+    for (const pattern of ALCOHOL_BONUS.strong) {
+      if (pattern.test(name)) return { type: 'strong', bonus: ALCOHOL_BONUS.high.bonus };
+    }
+    
+    // Проверяем средней крепости
+    for (const pattern of ALCOHOL_BONUS.medium) {
+      if (pattern.test(name)) return { type: 'medium', bonus: ALCOHOL_BONUS.medium.bonus };
+    }
+    
+    // Проверяем слабоалкогольные
+    for (const pattern of ALCOHOL_BONUS.weak) {
+      if (pattern.test(name)) return { type: 'weak', bonus: ALCOHOL_BONUS.low.bonus };
+    }
+    
+    // Общая проверка по паттернам
+    for (const pattern of ALCOHOL_BONUS.patterns) {
+      if (pattern.test(name)) return { type: 'general', bonus: ALCOHOL_BONUS.low.bonus };
+    }
+    
+    return { type: null, bonus: 0 };
+  };
+
+  /**
+   * ☕ Проверить, содержит ли продукт кофеин
+   * @param {Object} prod - продукт
+   * @returns {boolean}
+   */
+  const hasCaffeine = (prod) => {
+    if (!prod) return false;
+    const name = (prod.name || '').toLowerCase();
+    
+    for (const pattern of CAFFEINE_BONUS.patterns) {
+      if (pattern.test(name)) return true;
+    }
+    return false;
+  };
+
+  /**
+   * 😰 Рассчитать бонус от стресса
+   * @param {number} stressLevel - уровень стресса (1-5)
+   * @returns {number} бонус к волне
+   */
+  const calculateStressBonus = (stressLevel) => {
+    if (!stressLevel || stressLevel <= 0) return 0;
+    if (stressLevel >= STRESS_BONUS.high.threshold) return STRESS_BONUS.high.bonus;
+    if (stressLevel >= STRESS_BONUS.medium.threshold) return STRESS_BONUS.medium.bonus;
+    return 0;
+  };
+
+  /**
+   * 😴 Рассчитать бонус от недосыпа
+   * @param {number} sleepHours - часов сна
+   * @returns {number} бонус к волне
+   */
+  const calculateSleepBonus = (sleepHours) => {
+    if (sleepHours === null || sleepHours === undefined || sleepHours < 0) return 0;
+    if (sleepHours < SLEEP_BONUS.severe.maxHours) return SLEEP_BONUS.severe.bonus;
+    if (sleepHours < SLEEP_BONUS.moderate.maxHours) return SLEEP_BONUS.moderate.bonus;
+    if (sleepHours < SLEEP_BONUS.mild.maxHours) return SLEEP_BONUS.mild.bonus;
+    return 0;
+  };
+
+  /**
+   * 🍽️ Рассчитать бонус от голодания
+   * @param {number} fastingHours - часов без еды до текущего приёма
+   * @returns {number} бонус к волне
+   */
+  const calculateFastingBonus = (fastingHours) => {
+    if (!fastingHours || fastingHours <= 0) return 0;
+    if (fastingHours >= FASTING_BONUS.long.threshold) return FASTING_BONUS.long.bonus;
+    if (fastingHours >= FASTING_BONUS.medium.threshold) return FASTING_BONUS.medium.bonus;
+    if (fastingHours >= FASTING_BONUS.short.threshold) return FASTING_BONUS.short.bonus;
+    return 0;
+  };
+
+  /**
    * Рассчитать нутриенты приёма пищи
    * @param {Object} meal - приём пищи
    * @param {Object} pIndex - индекс продуктов
    * @param {Function} getProductFromItem - функция получения продукта
-   * @returns {Object} { avgGI, totalProtein, totalFiber, totalGrams, totalCarbs, totalSimple }
+   * @returns {Object} { avgGI, totalProtein, totalFiber, totalGrams, totalCarbs, totalSimple, totalFat, glycemicLoad, hasLiquid, insulinogenicType, insulinogenicBonus, hasSpicy, hasAlcohol, alcoholBonus, alcoholType, hasCaffeine }
    */
   const calculateMealNutrients = (meal, pIndex, getProductFromItem) => {
     let totalGrams = 0;
@@ -282,6 +591,18 @@
     let totalFiber = 0;
     let totalCarbs = 0;
     let totalSimple = 0;
+    let totalFat = 0;
+    
+    // Новые факторы
+    let liquidGrams = 0;  // Сколько грамм жидкой пищи
+    let maxInsulinogenicBonus = 0;
+    let insulinogenicType = null;
+    
+    // 🆕 v1.4: Острая пища, алкоголь, кофеин
+    let hasSpicy = false;
+    let maxAlcoholBonus = 0;
+    let alcoholType = null;
+    let caffeineDetected = false;
     
     const items = meal?.items || [];
     
@@ -301,9 +622,53 @@
       const complex = prod?.complex100 || 0;
       totalSimple += simple * grams / 100;
       totalCarbs += (simple + complex) * grams / 100;
+      
+      // Жиры — замедляют переваривание (gastric emptying)
+      const badFat = prod?.badFat100 || 0;
+      const goodFat = prod?.goodFat100 || 0;
+      const transFat = prod?.trans100 || 0;
+      totalFat += (badFat + goodFat + transFat) * grams / 100;
+      
+      // 🥤 Жидкая пища — усваивается быстрее
+      if (isLiquidFood(prod)) {
+        liquidGrams += grams;
+      }
+      
+      // 🥛 Инсулиногенность — молочка и белок стимулируют инсулин
+      const insBonus = getInsulinogenicBonus(prod);
+      if (insBonus.bonus > maxInsulinogenicBonus) {
+        maxInsulinogenicBonus = insBonus.bonus;
+        insulinogenicType = insBonus.type;
+      }
+      
+      // 🌶️ Острая пища — ускоряет метаболизм
+      if (isSpicyFood(prod)) {
+        hasSpicy = true;
+      }
+      
+      // 🍷 Алкоголь — замедляет метаболизм
+      const alcBonus = getAlcoholBonus(prod);
+      if (alcBonus.bonus > maxAlcoholBonus) {
+        maxAlcoholBonus = alcBonus.bonus;
+        alcoholType = alcBonus.type;
+      }
+      
+      // ☕ Кофеин — стимулирует инсулин
+      if (hasCaffeine(prod)) {
+        caffeineDetected = true;
+      }
     }
     
     const avgGI = totalGrams > 0 ? Math.round(weightedGI / totalGrams) : 50;
+    
+    // Гликемическая нагрузка (GL) = GI × углеводы / 100
+    // GL более точно предсказывает инсулиновую реакцию чем просто GI
+    // GL < 10 = низкая, 10-20 = средняя, > 20 = высокая
+    const glycemicLoad = Math.round(avgGI * totalCarbs / 100 * 10) / 10;
+    
+    // Доля жидкой пищи (если >50% — приём считается жидким)
+    const liquidRatio = totalGrams > 0 ? liquidGrams / totalGrams : 0;
+    const hasLiquid = liquidRatio > 0.5;
     
     return {
       avgGI,
@@ -311,7 +676,20 @@
       totalFiber: Math.round(totalFiber),
       totalGrams,
       totalCarbs: Math.round(totalCarbs * 10) / 10,
-      totalSimple: Math.round(totalSimple * 10) / 10
+      totalSimple: Math.round(totalSimple * 10) / 10,
+      totalFat: Math.round(totalFat * 10) / 10,
+      glycemicLoad,
+      // Факторы v1.3
+      hasLiquid,
+      liquidRatio: Math.round(liquidRatio * 100),
+      insulinogenicType,
+      insulinogenicBonus: maxInsulinogenicBonus,
+      // 🆕 Факторы v1.4
+      hasSpicy,
+      hasAlcohol: maxAlcoholBonus > 0,
+      alcoholBonus: maxAlcoholBonus,
+      alcoholType,
+      hasCaffeine: caffeineDetected
     };
   };
   
@@ -346,14 +724,43 @@
   };
 
   /**
+   * Получить категорию гликемической нагрузки
+   * @param {number} gl - гликемическая нагрузка
+   * @returns {Object} { multiplier, desc, category }
+   */
+  const getGLCategory = (gl) => {
+    if (gl < GL_CATEGORIES.veryLow.max) return { ...GL_CATEGORIES.veryLow, id: 'veryLow' };
+    if (gl < GL_CATEGORIES.low.max) return { ...GL_CATEGORIES.low, id: 'low' };
+    if (gl < GL_CATEGORIES.medium.max) return { ...GL_CATEGORIES.medium, id: 'medium' };
+    if (gl < GL_CATEGORIES.high.max) return { ...GL_CATEGORIES.high, id: 'high' };
+    return { ...GL_CATEGORIES.veryHigh, id: 'veryHigh' };
+  };
+
+  /**
+   * Рассчитать бонус от жиров (замедление пищеварения)
+   * @param {number} fat - жиры в граммах
+   * @returns {number} бонус (положительный = удлиняет волну)
+   */
+  const calculateFatBonus = (fat) => {
+    if (fat >= FAT_BONUS.high.threshold) return FAT_BONUS.high.bonus;
+    if (fat >= FAT_BONUS.medium.threshold) return FAT_BONUS.medium.bonus;
+    if (fat >= FAT_BONUS.low.threshold) return FAT_BONUS.low.bonus;
+    return 0;
+  };
+
+  /**
    * Рассчитать множитель длины волны
    * @param {number} gi - ГИ
    * @param {number} protein - белок в граммах
    * @param {number} fiber - клетчатка в граммах
    * @param {number} carbs - углеводы в граммах (опционально)
-   * @returns {Object} { total, gi, protein, fiber, carbs }
+   * @param {number} fat - жиры в граммах (опционально)
+   * @param {number} gl - гликемическая нагрузка (опционально)
+   * @param {boolean} hasLiquid - содержит жидкую пищу (опционально)
+   * @param {number} insulinogenicBonus - бонус от инсулиногенных продуктов (опционально)
+   * @returns {Object} { total, gi, protein, fiber, carbs, fat, gl, glCategory, liquid, insulinogenic }
    */
-  const calculateMultiplier = (gi, protein, fiber, carbs = null) => {
+  const calculateMultiplier = (gi, protein, fiber, carbs = null, fat = null, gl = null, hasLiquid = false, insulinogenicBonus = 0) => {
     const giCat = utils.getGICategory(gi);
     let giMult = giCat.multiplier;
     
@@ -365,18 +772,49 @@
     if (fiber >= FIBER_BONUS.high.threshold) fiberBonus = FIBER_BONUS.high.bonus;
     else if (fiber >= FIBER_BONUS.medium.threshold) fiberBonus = FIBER_BONUS.medium.bonus;
     
-    // Базовый множитель от GI, белка и клетчатки
-    const baseMult = giMult + proteinBonus + fiberBonus;
+    // 🧈 Жиры — значительно замедляют пищеварение
+    const fatBonus = fat !== null ? calculateFatBonus(fat) : 0;
+    
+    // 🥛 Инсулиногенность (молочка, белок) — удлиняют волну даже без углеводов
+    const insBonus = insulinogenicBonus || 0;
+    
+    // 📊 Гликемическая нагрузка — модифицирует финальный результат
+    // GL учитывает И количество углеводов И их тип (ГИ)
+    // Это более точный предиктор инсулинового ответа
+    const glCategory = gl !== null ? getGLCategory(gl) : null;
+    const glMultiplier = glCategory?.multiplier || 1.0;
+    
+    // 🥤 Жидкая пища — усваивается быстрее (умножаем на 0.7)
+    const liquidMult = hasLiquid ? LIQUID_FOOD.multiplier : 1.0;
+    
+    // Базовый множитель от GI, белка, клетчатки, жиров и инсулиногенности
+    // giMult уже учитывает скорость (высокий GI = быстрее = меньше giMult)
+    // proteinBonus, fiberBonus, fatBonus, insBonus добавляются (увеличивают длину)
+    const baseMult = giMult + proteinBonus + fiberBonus + fatBonus + insBonus;
     
     // Множитель от количества углеводов (если переданы)
-    const carbsMult = carbs !== null ? calculateCarbsMultiplier(carbs) : 1.0;
+    // ВАЖНО: если есть GL, carbs scaling избыточен (GL уже учитывает количество)
+    // Используем GL как приоритет над простым carbs scaling
+    let carbsMult = 1.0;
+    if (gl !== null && glCategory) {
+      // GL уже включает в себя и GI и количество углеводов
+      // Применяем GL multiplier вместо отдельных carbs scaling
+      carbsMult = glMultiplier;
+    } else if (carbs !== null) {
+      // Fallback на старый метод если GL не передан
+      carbsMult = calculateCarbsMultiplier(carbs);
+    }
     
     return {
-      total: baseMult * carbsMult,
+      total: baseMult * carbsMult * liquidMult,
       gi: giMult,
       protein: proteinBonus,
       fiber: fiberBonus,
+      fat: fatBonus,
       carbs: carbsMult,
+      liquid: liquidMult,
+      insulinogenic: insBonus,
+      glCategory,
       category: giCat
     };
   };
@@ -447,6 +885,13 @@
   /**
    * Главная функция расчёта данных инсулиновой волны
    * @param {Object} params
+   * @param {Array} params.meals - массив приёмов пищи
+   * @param {Object} params.pIndex - индекс продуктов
+   * @param {Function} params.getProductFromItem - функция получения продукта
+   * @param {number} params.baseWaveHours - базовая длина волны (по умолчанию 3)
+   * @param {Array} params.trainings - массив тренировок
+   * @param {Object} params.dayData - данные дня { sleepHours, stressAvg }
+   * @param {Date} params.now - текущее время
    * @returns {Object|null}
    */
   const calculateInsulinWaveData = ({ 
@@ -455,6 +900,7 @@
     getProductFromItem, 
     baseWaveHours = 3,
     trainings = [],
+    dayData = {},
     now = new Date()
   }) => {
     if (!meals || meals.length === 0) return null;
@@ -476,7 +922,16 @@
     
     // Расчёт нутриентов последнего приёма
     const nutrients = calculateMealNutrients(lastMeal, pIndex, getProductFromItem);
-    const multipliers = calculateMultiplier(nutrients.avgGI, nutrients.totalProtein, nutrients.totalFiber, nutrients.totalCarbs);
+    const multipliers = calculateMultiplier(
+      nutrients.avgGI, 
+      nutrients.totalProtein, 
+      nutrients.totalFiber, 
+      nutrients.totalCarbs,
+      nutrients.totalFat,
+      nutrients.glycemicLoad,
+      nutrients.hasLiquid,
+      nutrients.insulinogenicBonus
+    );
     
     // 🏃 Workout бонус
     const workoutBonus = calculateWorkoutBonus(trainings);
@@ -485,11 +940,51 @@
     const mealHour = parseInt(lastMealTime.split(':')[0]) || 12;
     const circadian = calculateCircadianMultiplier(mealHour);
     
-    // Финальный множитель: GI + protein/fiber + workout + circadian
-    // multipliers.total уже включает GI + protein + fiber
-    // workoutBonus.bonus отрицательный (ускоряет)
-    // circadian.multiplier: утром < 1 (быстрее), вечером > 1 (медленнее)
-    const finalMultiplier = (multipliers.total + workoutBonus.bonus) * circadian.multiplier;
+    // 🆕 v1.4: Новые факторы
+    
+    // 🍽️ Голодание — сколько часов до последнего приёма
+    let fastingHours = 0;
+    let fastingBonus = 0;
+    if (sorted.length >= 2) {
+      // Есть предыдущий приём — считаем разницу
+      const prevMeal = sorted[1];
+      const prevMealMinutes = utils.timeToMinutes(prevMeal.time);
+      const lastMealMinutes = utils.timeToMinutes(lastMealTime);
+      let gapMinutes = lastMealMinutes - prevMealMinutes;
+      // Если перешли через полночь
+      if (gapMinutes < 0) gapMinutes += 24 * 60;
+      fastingHours = gapMinutes / 60;
+    } else {
+      // Первый приём за день — считаем от последнего приёма вчера (упрощённо 12ч)
+      // Если первый приём до полудня, вероятно голодание было ночью ~8-12ч
+      if (mealHour <= 12) {
+        fastingHours = mealHour + 8; // Примерно с 22:00-00:00 вчера
+      }
+    }
+    fastingBonus = calculateFastingBonus(fastingHours);
+    
+    // 🌶️ Острая пища
+    const spicyMultiplier = nutrients.hasSpicy ? SPICY_FOOD.multiplier : 1.0;
+    
+    // 🍷 Алкоголь
+    const alcoholBonus = nutrients.alcoholBonus || 0;
+    
+    // ☕ Кофеин
+    const caffeineBonus = nutrients.hasCaffeine ? CAFFEINE_BONUS.bonus : 0;
+    
+    // 😰 Стресс (из данных дня)
+    const stressLevel = dayData.stressAvg || 0;
+    const stressBonus = calculateStressBonus(stressLevel);
+    
+    // 😴 Недосып (из данных дня)
+    const sleepHours = dayData.sleepHours;
+    const sleepBonus = calculateSleepBonus(sleepHours);
+    
+    // Финальный множитель: все факторы
+    // multipliers.total уже включает GI + protein + fiber + fat + liquid + insulinogenic
+    // Добавляем: workout (отрицательный), circadian, fasting, spicy, alcohol, caffeine, stress, sleep
+    const allBonuses = workoutBonus.bonus + fastingBonus + alcoholBonus + caffeineBonus + stressBonus + sleepBonus;
+    const finalMultiplier = (multipliers.total + allBonuses) * circadian.multiplier * spicyMultiplier;
     
     // Скорректированная длина волны
     const adjustedWaveHours = baseWaveHours * finalMultiplier;
@@ -530,7 +1025,16 @@
       
       const startMin = utils.timeToMinutes(t);
       const mealNutrients = calculateMealNutrients(meal, pIndex, getProductFromItem);
-      const mealMult = calculateMultiplier(mealNutrients.avgGI, mealNutrients.totalProtein, mealNutrients.totalFiber, mealNutrients.totalCarbs);
+      const mealMult = calculateMultiplier(
+        mealNutrients.avgGI, 
+        mealNutrients.totalProtein, 
+        mealNutrients.totalFiber, 
+        mealNutrients.totalCarbs,
+        mealNutrients.totalFat,
+        mealNutrients.glycemicLoad,
+        mealNutrients.hasLiquid,
+        mealNutrients.insulinogenicBonus
+      );
       
       const duration = Math.round(baseWaveHours * mealMult.total * 60);
       const endMin = startMin + duration;
@@ -543,10 +1047,18 @@
         endTimeDisplay: utils.minutesToTime(endMin),
         duration,
         gi: mealNutrients.avgGI,
+        gl: mealNutrients.glycemicLoad,
         protein: mealNutrients.totalProtein,
         fiber: mealNutrients.totalFiber,
         carbs: mealNutrients.totalCarbs,
+        fat: mealNutrients.totalFat,
         carbsMultiplier: mealMult.carbs,
+        fatBonus: mealMult.fat,
+        glCategory: mealMult.glCategory,
+        hasLiquid: mealNutrients.hasLiquid,
+        liquidMultiplier: mealMult.liquid,
+        insulinogenicType: mealNutrients.insulinogenicType,
+        insulinogenicBonus: mealMult.insulinogenic,
         isActive: idx === 0 && remainingMinutes > 0
       };
     }).filter(Boolean).reverse();
@@ -689,9 +1201,22 @@
       totalFiber: nutrients.totalFiber,
       totalCarbs: nutrients.totalCarbs,
       totalSimple: nutrients.totalSimple,
+      totalFat: nutrients.totalFat,
+      glycemicLoad: nutrients.glycemicLoad,
       proteinBonus: multipliers.protein,
       fiberBonus: multipliers.fiber,
+      fatBonus: multipliers.fat,
       carbsMultiplier: multipliers.carbs,
+      glCategory: multipliers.glCategory,
+      
+      // 🥤 Жидкая пища
+      hasLiquid: nutrients.hasLiquid,
+      liquidRatio: nutrients.liquidRatio,
+      liquidMultiplier: multipliers.liquid,
+      
+      // 🥛 Инсулиногенность (молочка, белок)
+      insulinogenicType: nutrients.insulinogenicType,
+      insulinogenicBonus: multipliers.insulinogenic,
       
       // 🏃 Workout данные
       workoutBonus: workoutBonus.bonus,
@@ -703,6 +1228,39 @@
       circadianMultiplier: circadian.multiplier,
       circadianPeriod: circadian.period,
       circadianDesc: circadian.desc,
+      
+      // 🆕 v1.4: Новые факторы
+      
+      // 🍽️ Голодание (fasting)
+      fastingHours: Math.round(fastingHours * 10) / 10,
+      fastingBonus,
+      hasFastingBonus: fastingBonus > 0,
+      
+      // 🌶️ Острая пища
+      hasSpicy: nutrients.hasSpicy,
+      spicyMultiplier,
+      hasSpicyBonus: nutrients.hasSpicy,
+      
+      // 🍷 Алкоголь
+      hasAlcohol: nutrients.hasAlcohol,
+      alcoholBonus,
+      alcoholType: nutrients.alcoholType,
+      hasAlcoholBonus: alcoholBonus > 0,
+      
+      // ☕ Кофеин
+      hasCaffeine: nutrients.hasCaffeine,
+      caffeineBonus,
+      hasCaffeineBonus: caffeineBonus > 0,
+      
+      // 😰 Стресс
+      stressLevel,
+      stressBonus,
+      hasStressBonus: stressBonus > 0,
+      
+      // 😴 Недосып (sleepBonus)
+      sleepHoursTracked: sleepHours,
+      sleepDeprivationBonus: sleepBonus,
+      hasSleepBonus: sleepBonus > 0,
       
       // История
       waveHistory,
@@ -1030,37 +1588,90 @@
         React.createElement('div', { style: { fontSize: '11px', color: '#64748b', marginTop: '4px' } },
           `Базовая волна: ${data.baseWaveHours}ч → Скорректированная: ${Math.round(data.insulinWaveHours * 10) / 10}ч`
         ),
-        // Формула расчёта (если есть модификаторы)
-        (data.carbsMultiplier < 1 || data.proteinBonus > 0 || data.fiberBonus > 0 || data.hasWorkoutBonus || (data.circadianMultiplier && data.circadianMultiplier !== 1.0)) &&
-          React.createElement('div', { 
-            style: { fontSize: '10px', color: '#94a3b8', marginTop: '6px', padding: '4px 8px', background: 'rgba(0,0,0,0.03)', borderRadius: '4px', fontFamily: 'monospace' } 
-          },
-            (() => {
-              const parts = [];
-              // Carbs factor (если малое количество углеводов)
-              if (data.carbsMultiplier && data.carbsMultiplier < 1) {
-                parts.push(`углев.${data.totalCarbs}г×${Math.round(data.carbsMultiplier * 100) / 100}`);
+        // Формула расчёта — показываем всегда для прозрачности
+        React.createElement('div', { 
+          style: { fontSize: '10px', color: '#94a3b8', marginTop: '6px', padding: '4px 8px', background: 'rgba(0,0,0,0.03)', borderRadius: '4px', fontFamily: 'monospace' } 
+        },
+          (() => {
+            const parts = [];
+            
+            // Базовая волна
+            parts.push(`база${data.baseWaveHours}ч`);
+            
+            // GL (гликемическая нагрузка) — всегда показываем если есть
+            if (data.glycemicLoad > 0) {
+              const glMult = data.glCategory?.multiplier || 1.0;
+              if (glMult !== 1.0) {
+                parts.push(`GL${data.glycemicLoad}×${glMult}`);
+              } else {
+                parts.push(`GL${data.glycemicLoad}`);
               }
-              // GI factor
-              const giFactor = data.giMultiplier || 1.0;
-              parts.push(`ГИ×${Math.round(giFactor * 100) / 100}`);
-              // Protein
-              if (data.proteinBonus > 0) parts.push(`+${Math.round(data.proteinBonus * 100)}%🥩`);
-              // Fiber
-              if (data.fiberBonus > 0) parts.push(`+${Math.round(data.fiberBonus * 100)}%🌾`);
-              // Workout
-              if (data.hasWorkoutBonus) parts.push(`${Math.round(data.workoutBonus * 100)}%🏃`);
-              // Circadian
-              if (data.circadianMultiplier && data.circadianMultiplier !== 1.0) {
-                parts.push(`×${data.circadianMultiplier}${data.circadianMultiplier < 1.0 ? '☀️' : '🌙'}`);
-              }
-              return `📐 ${parts.join(' ')} = ${Math.round(data.insulinWaveHours * 10) / 10}ч`;
-            })()
-          ),
-        // Углеводы (если мало = короче волна)
-        data.carbsMultiplier && data.carbsMultiplier < 1 && React.createElement('div', { 
+            }
+            
+            // GI factor — показываем если не 1.0
+            const giFactor = data.giMultiplier || 1.0;
+            if (giFactor !== 1.0) {
+              parts.push(`ГИ${data.avgGI}×${Math.round(giFactor * 100) / 100}`);
+            }
+            
+            // Fat (жиры замедляют)
+            if (data.fatBonus > 0) parts.push(`+${Math.round(data.fatBonus * 100)}%🧈`);
+            // Insulinogenic (молочка, белок)
+            if (data.insulinogenicBonus > 0) parts.push(`+${Math.round(data.insulinogenicBonus * 100)}%🥛`);
+            // Protein
+            if (data.proteinBonus > 0) parts.push(`+${Math.round(data.proteinBonus * 100)}%🥩`);
+            // Fiber
+            if (data.fiberBonus > 0) parts.push(`+${Math.round(data.fiberBonus * 100)}%🌾`);
+            // Liquid (ускоряет)
+            if (data.hasLiquid) parts.push(`×${data.liquidMultiplier}🥤`);
+            // Workout
+            if (data.hasWorkoutBonus) parts.push(`${Math.round(data.workoutBonus * 100)}%🏃`);
+            // Circadian
+            if (data.circadianMultiplier && data.circadianMultiplier !== 1.0) {
+              parts.push(`×${data.circadianMultiplier}${data.circadianMultiplier < 1.0 ? '☀️' : '🌙'}`);
+            }
+            
+            // 🆕 v1.4: Новые факторы
+            // Fasting (голодание)
+            if (data.hasFastingBonus) parts.push(`+${Math.round(data.fastingBonus * 100)}%🍽️`);
+            // Spicy (острая пища ускоряет)
+            if (data.hasSpicy) parts.push(`×${data.spicyMultiplier}🌶️`);
+            // Alcohol
+            if (data.hasAlcoholBonus) parts.push(`+${Math.round(data.alcoholBonus * 100)}%🍷`);
+            // Caffeine
+            if (data.hasCaffeineBonus) parts.push(`+${Math.round(data.caffeineBonus * 100)}%☕`);
+            // Stress
+            if (data.hasStressBonus) parts.push(`+${Math.round(data.stressBonus * 100)}%😰`);
+            // Sleep deprivation
+            if (data.hasSleepBonus) parts.push(`+${Math.round(data.sleepDeprivationBonus * 100)}%😴`);
+            
+            return `📐 ${parts.join(' ')} = ${Math.round(data.insulinWaveHours * 10) / 10}ч`;
+          })()
+        ),
+        // GL (гликемическая нагрузка) — показываем описание если не средний уровень
+        data.glCategory && data.glCategory.id !== 'medium' && React.createElement('div', { 
+          style: { 
+            fontSize: '11px', 
+            color: data.glCategory.id === 'veryLow' || data.glCategory.id === 'low' ? '#22c55e' : '#f59e0b',
+            marginTop: '2px' 
+          } 
+        }, `📊 GL ${data.glycemicLoad} — ${data.glCategory.desc}`),
+        // Углеводы (если мало = короче волна) — только если нет GL или GL очень низкая
+        !data.glCategory && data.carbsMultiplier && data.carbsMultiplier < 1 && React.createElement('div', { 
           style: { fontSize: '11px', color: '#3b82f6', marginTop: '2px' } 
         }, `🍬 Углеводов ${data.totalCarbs}г — волна ${Math.round((1 - data.carbsMultiplier) * 100)}% короче`),
+        // Жиры (замедляют пищеварение)
+        data.fatBonus > 0 && React.createElement('div', { 
+          style: { fontSize: '11px', color: '#f59e0b', marginTop: '2px' } 
+        }, `🧈 Жиры ${data.totalFat}г — волна +${Math.round(data.fatBonus * 100)}% дольше`),
+        // Жидкая пища (ускоряет)
+        data.hasLiquid && React.createElement('div', { 
+          style: { fontSize: '11px', color: '#06b6d4', marginTop: '2px' } 
+        }, `🥤 Жидкая пища — волна ${Math.round((1 - data.liquidMultiplier) * 100)}% короче`),
+        // Инсулиногенность (молочка, белок)
+        data.insulinogenicBonus > 0 && React.createElement('div', { 
+          style: { fontSize: '11px', color: '#8b5cf6', marginTop: '2px' } 
+        }, `🥛 ${data.insulinogenicType === 'dairy' ? 'Молочка' : 'Белок'} — инсулин +${Math.round(data.insulinogenicBonus * 100)}%`),
         // Модификаторы
         (data.proteinBonus > 0 || data.fiberBonus > 0) && 
           React.createElement('div', { style: { fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap' } },
@@ -1082,7 +1693,33 @@
             color: data.circadianMultiplier < 1.0 ? '#10b981' : '#f59e0b', 
             marginTop: '2px' 
           } 
-        }, data.circadianDesc)
+        }, data.circadianDesc),
+        
+        // 🆕 v1.4: Новые факторы
+        // Fasting (голодание)
+        data.hasFastingBonus && React.createElement('div', { 
+          style: { fontSize: '11px', color: '#f59e0b', marginTop: '2px' } 
+        }, `🍽️ ${data.fastingHours}ч без еды → инсулиновый пик +${Math.round(data.fastingBonus * 100)}%`),
+        // Spicy (острая пища)
+        data.hasSpicy && React.createElement('div', { 
+          style: { fontSize: '11px', color: '#10b981', marginTop: '2px' } 
+        }, `🌶️ Острая пища → волна ${Math.round((1 - data.spicyMultiplier) * 100)}% короче`),
+        // Alcohol
+        data.hasAlcoholBonus && React.createElement('div', { 
+          style: { fontSize: '11px', color: '#dc2626', marginTop: '2px' } 
+        }, `🍷 Алкоголь (${data.alcoholType}) → волна +${Math.round(data.alcoholBonus * 100)}% дольше`),
+        // Caffeine
+        data.hasCaffeineBonus && React.createElement('div', { 
+          style: { fontSize: '11px', color: '#f59e0b', marginTop: '2px' } 
+        }, `☕ Кофеин → инсулин +${Math.round(data.caffeineBonus * 100)}%`),
+        // Stress
+        data.hasStressBonus && React.createElement('div', { 
+          style: { fontSize: '11px', color: '#f59e0b', marginTop: '2px' } 
+        }, `😰 Стресс ${data.stressLevel}/10 → волна +${Math.round(data.stressBonus * 100)}% дольше`),
+        // Sleep deprivation
+        data.hasSleepBonus && React.createElement('div', { 
+          style: { fontSize: '11px', color: '#dc2626', marginTop: '2px' } 
+        }, `😴 Недосып (${data.sleepHoursTracked}ч) → инсулинорезистентность +${Math.round(data.sleepDeprivationBonus * 100)}%`)
       ),
       
       // Предупреждение о перекрытии
@@ -1231,7 +1868,7 @@
   };
   
   // === Hook для использования в компоненте ===
-  const useInsulinWave = ({ meals, pIndex, getProductFromItem, baseWaveHours = 3 }) => {
+  const useInsulinWave = ({ meals, pIndex, getProductFromItem, baseWaveHours = 3, trainings = [], dayData = {} }) => {
     const [expanded, setExpanded] = React.useState(false);
     const [isShaking, setIsShaking] = React.useState(false);
     
@@ -1256,9 +1893,11 @@
         meals,
         pIndex,
         getProductFromItem,
-        baseWaveHours
+        baseWaveHours,
+        trainings,
+        dayData
       });
-    }, [meals, pIndex, baseWaveHours, currentMinute]);
+    }, [meals, pIndex, baseWaveHours, trainings, dayData, currentMinute]);
     
     // Shake при almost
     React.useEffect(() => {
@@ -1302,6 +1941,16 @@
     calculateWorkoutBonus,
     calculateCircadianMultiplier,
     
+    // 🆕 v1.4: Новые детекторы факторов
+    isLiquidFood,
+    getInsulinogenicBonus,
+    isSpicyFood,
+    getAlcoholBonus,
+    hasCaffeine,
+    calculateStressBonus,
+    calculateSleepBonus,
+    calculateFastingBonus,
+    
     // 🏆 Рекорды и streak
     getLipolysisRecord,
     updateLipolysisRecord,
@@ -1314,17 +1963,27 @@
     STATUS_CONFIG,
     PROTEIN_BONUS,
     FIBER_BONUS,
+    FAT_BONUS,
+    LIQUID_FOOD,
+    INSULINOGENIC_BONUS,
+    GL_CATEGORIES,
     WORKOUT_BONUS,
     CIRCADIAN_MULTIPLIERS,
+    FASTING_BONUS,
+    SPICY_FOOD,
+    ALCOHOL_BONUS,
+    CAFFEINE_BONUS,
+    STRESS_BONUS,
+    SLEEP_BONUS,
     MIN_LIPOLYSIS_FOR_STREAK,
     
     // Версия
-    VERSION: '1.2.0'
+    VERSION: '1.4.0'
   };
   
   // Алиас
   HEYS.IW = HEYS.InsulinWave;
   
-  console.log('[HEYS] InsulinWave v1.2.0 loaded (lipolysis records + streak)');
+  console.log('[HEYS] InsulinWave v1.4.0 loaded (16 factors: +fasting, +spicy, +alcohol, +caffeine, +stress, +sleep)');
   
 })(typeof window !== 'undefined' ? window : global);
