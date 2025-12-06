@@ -853,8 +853,8 @@
         });
         
         const tdee = bmr + stepsK + householdK + trainingsK;
-        // Используем дефицит дня если есть, иначе из профиля
-        const dayDeficit = dayInfo.deficitPct != null ? dayInfo.deficitPct : deficitPct;
+        // Используем дефицит дня если есть (не пустая строка и не null), иначе из профиля
+        const dayDeficit = (dayInfo.deficitPct !== '' && dayInfo.deficitPct != null) ? +dayInfo.deficitPct : deficitPct;
         const target = Math.round(tdee * (1 + dayDeficit / 100));
         
         // ratio: 1.0 = идеально в цель, <1 недоел, >1 переел

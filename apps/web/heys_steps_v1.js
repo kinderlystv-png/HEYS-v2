@@ -619,9 +619,11 @@
    */
   function getCurrentDeficit(dateKey) {
     const day = lsGet(`heys_dayv2_${dateKey}`, {});
-    if (day.deficitPct !== undefined) return day.deficitPct;
+    if (day.deficitPct !== undefined && day.deficitPct !== null && day.deficitPct !== '') {
+      return day.deficitPct;
+    }
     const profile = lsGet('heys_profile', {});
-    return profile.deficitPctTarget ?? 15; // default 15%
+    return profile.deficitPctTarget ?? 15;
   }
 
   /**

@@ -357,23 +357,32 @@
     }, [stepAllowSwipe, currentConfig]);
 
     // Блокируем scroll на backdrop, разрешаем только внутри scrollable контейнеров
-    const handleTouchMove = useCallback((e) => {
-      // Находим ближайший scrollable элемент
-      let target = e.target;
-      while (target && target !== containerRef.current) {
-        const style = window.getComputedStyle(target);
-        const overflowY = style.overflowY;
-        const isScrollable = overflowY === 'auto' || overflowY === 'scroll';
-        
-        if (isScrollable && target.scrollHeight > target.clientHeight) {
-          // Это scrollable контейнер — разрешаем scroll
-          return;
-        }
-        target = target.parentElement;
-      }
+    // Используем useEffect для регистрации с { passive: false }, иначе preventDefault() не работает
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
       
-      // Не внутри scrollable — блокируем scroll на backdrop
-      e.preventDefault();
+      const handleTouchMove = (e) => {
+        // Находим ближайший scrollable элемент
+        let target = e.target;
+        while (target && target !== container) {
+          const style = window.getComputedStyle(target);
+          const overflowY = style.overflowY;
+          const isScrollable = overflowY === 'auto' || overflowY === 'scroll';
+          
+          if (isScrollable && target.scrollHeight > target.clientHeight) {
+            // Это scrollable контейнер — разрешаем scroll
+            return;
+          }
+          target = target.parentElement;
+        }
+        
+        // Не внутри scrollable — блокируем scroll на backdrop
+        e.preventDefault();
+      };
+      
+      container.addEventListener('touchmove', handleTouchMove, { passive: false });
+      return () => container.removeEventListener('touchmove', handleTouchMove);
     }, []);
 
     const handleTouchEnd = useCallback((e) => {
@@ -426,7 +435,6 @@
         ref: containerRef,
         onClick: handleBackdropClick,
         onTouchStart: handleTouchStart,
-        onTouchMove: handleTouchMove,
         onTouchEnd: handleTouchEnd
       },
         React.createElement('div', { className: 'mc-modal' },

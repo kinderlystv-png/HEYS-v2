@@ -330,8 +330,8 @@
 
     // Подсчёт приёмов с хотя бы одним продуктом
     const mealsCount = (meals||[]).filter(m=>{ const its=(m && (m.items||m.food||m.list||m.products))||[]; return its.length>0; }).length;
-    // Получаем целевой дефицит из дня (если есть) или из профиля (по умолчанию)
-    const dayTargetDef = (dayObj.deficitPct != null ? dayObj.deficitPct : (profile.deficitPctTarget||0));
+    // Получаем целевой дефицит из дня (если есть и не пустая строка) или из профиля (по умолчанию)
+    const dayTargetDef = (dayObj.deficitPct !== '' && dayObj.deficitPct != null) ? +dayObj.deficitPct : +(profile.deficitPctTarget)||0;
     // Убрано избыточное логирование дефицита калорий
     // sleepComment в дневнике хранится как sleepNote (ранее) — поддержим оба поля
     const calculatedSleepHours = sleepHours(dayObj.sleepStart, dayObj.sleepEnd);

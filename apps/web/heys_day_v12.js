@@ -1648,8 +1648,9 @@
   const householdK=r0((+day.householdMin||0)*kcalPerMin(2.5,weight));
   const actTotal=r0(train1k+train2k+train3k+stepsK+householdK);
   const bmr=calcBMR(weight,prof), tdee=r0(bmr+actTotal);
-  const profileTargetDef=(lsGet('heys_profile',{}).deficitPctTarget||0); // отрицательное число для дефицита
-  const dayTargetDef = (day.deficitPct != null ? day.deficitPct : profileTargetDef); // используем дефицит дня, если есть
+  const profileTargetDef=+(lsGet('heys_profile',{}).deficitPctTarget)||0; // отрицательное число для дефицита
+  // day.deficitPct может быть '', null, undefined — проверяем все случаи (как в currentDeficit для UI)
+  const dayTargetDef = (day.deficitPct !== '' && day.deficitPct != null) ? +day.deficitPct : profileTargetDef;
   const optimum=r0(tdee*(1+dayTargetDef/100));
 
   const eatenKcal=(day.meals||[]).reduce((a,m)=>{ const t=(M.mealTotals? M.mealTotals(m,pIndex): {kcal:0}); return a+(t.kcal||0); },0);
@@ -1787,6 +1788,9 @@
     // === Popup для метрик (вода, шаги, калории) ===
     const [metricPopup, setMetricPopup] = useState(null); // { type: 'water'|'steps'|'kcal', x, y, data }
     
+    // === Popup для TDEE (затраты) ===
+    const [tdeePopup, setTdeePopup] = useState(null); // { x, y, data: { bmr, stepsK, householdK, train1k, train2k, train3k, tdee, weight, steps, householdMin } }
+    
     // === Popup для качества приёма пищи ===
     const [mealQualityPopup, setMealQualityPopup] = useState(null); // { meal, quality, mealTypeInfo, x, y }
     
@@ -1806,7 +1810,7 @@
     
     // Закрытие popup при клике вне
     React.useEffect(() => {
-      if (!sparklinePopup && !macroBadgePopup && !metricPopup && !mealQualityPopup) return;
+      if (!sparklinePopup && !macroBadgePopup && !metricPopup && !mealQualityPopup && !tdeePopup) return;
       const handleClickOutside = (e) => {
         if (sparklinePopup && !e.target.closest('.sparkline-popup')) {
           setSparklinePopup(null);
@@ -1820,6 +1824,9 @@
         if (mealQualityPopup && !e.target.closest('.meal-quality-popup') && !e.target.closest('.meal-bar-container')) {
           setMealQualityPopup(null);
         }
+        if (tdeePopup && !e.target.closest('.tdee-popup')) {
+          setTdeePopup(null);
+        }
       };
       // Delay to avoid closing immediately on the same click
       const timerId = setTimeout(() => {
@@ -1829,7 +1836,7 @@
         clearTimeout(timerId);
         document.removeEventListener('click', handleClickOutside);
       };
-    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup]);
+    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup]);
     
     // === Утилита для умного позиционирования попапов ===
     // Не даёт выходить за границы экрана
@@ -1960,6 +1967,8 @@
     // === Advice Module State ===
     const [adviceTrigger, setAdviceTrigger] = useState(null);
     const [adviceExpanded, setAdviceExpanded] = useState(false);
+    // 🔧 Защита от случайных кликов — игнорируем первые 500ms после появления тоста
+    const toastAppearedAtRef = useRef(0);
     // 🔧 FIX: Храним текущий отображаемый совет и список советов отдельно
     // чтобы избежать race condition при markShown()
     const [displayedAdvice, setDisplayedAdvice] = useState(null);
@@ -4375,12 +4384,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const now = Date.now();
           const ready = scheduled.filter(s => s.showAt <= now);
           if (ready.length > 0) {
-            // Есть готовые советы — триггерим показ
             setAdviceTrigger('scheduled');
           }
         } catch (e) {}
       };
-      const intervalId = setInterval(checkScheduled, 30000); // 30 сек
+      const intervalId = setInterval(checkScheduled, 30000);
       return () => clearInterval(intervalId);
     }, []);
     
@@ -4422,6 +4430,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       setDisplayedAdviceList(adviceRelevant || []);
       setAdviceExpanded(false);
       setToastVisible(true);
+      toastAppearedAtRef.current = Date.now();
       setToastDismissed(false);
       setToastDetailsOpen(false); // Сбрасываем детали при новом совете
       
@@ -5196,6 +5205,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       setToastSwiped(false);
       setToastScheduledConfirm(false);
       setAdviceExpanded(false);
+      setAdviceTrigger(null); // 🔧 FIX: Сбрасываем триггер при закрытии!
       setDisplayedAdvice(null);
       setDisplayedAdviceList([]);
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
@@ -7859,20 +7869,44 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       ),
       // 4 карточки метрик внутри статистики
       React.createElement('div', { className: 'metrics-cards' },
-        // Затраты (TDEE)
+        // Затраты (TDEE) — кликабельная для расшифровки
         React.createElement('div', { 
           className: 'metrics-card',
-          style: { background: '#f8fafc', borderColor: '#e2e8f0' },
-          title: 'Затраты: ' + tdee + ' ккал'
+          style: { background: '#f8fafc', borderColor: '#e2e8f0', cursor: 'pointer' },
+          title: 'Нажми для расшифровки затрат',
+          onClick: (e) => {
+            e.stopPropagation();
+            const rect = e.currentTarget.getBoundingClientRect();
+            setTdeePopup({
+              x: rect.left + rect.width / 2,
+              y: rect.bottom,
+              data: {
+                bmr,
+                stepsK,
+                householdK,
+                train1k,
+                train2k,
+                train3k,
+                tdee,
+                weight,
+                steps: day.steps || 0,
+                householdMin: day.householdMin || 0,
+                trainings: TR
+              }
+            });
+            haptic('light');
+          }
         },
           React.createElement('div', { className: 'metrics-icon' }, '⚡'),
           React.createElement('div', { className: 'metrics-value', style: { color: '#64748b' } }, tdee),
           React.createElement('div', { className: 'metrics-label' }, 'Затраты')
         ),
-        // Цель
+        // Цель — кликабельная для изменения дефицита
         React.createElement('div', { 
           className: 'metrics-card',
-          style: { background: '#f0f9ff', borderColor: '#bae6fd' }
+          style: { background: '#f0f9ff', borderColor: '#bae6fd', cursor: 'pointer' },
+          onClick: openDeficitPicker,
+          title: 'Нажми чтобы изменить цель дефицита'
         },
           React.createElement('div', { className: 'metrics-icon' }, '🎯'),
           React.createElement('div', { className: 'metrics-value', style: { color: '#0369a1' } }, optimum),
@@ -8568,6 +8602,173 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           // Стрелка-указатель
           React.createElement('div', { 
             className: 'macro-badge-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
+          })
+        );
+      })(),
+      // === TDEE POPUP (расшифровка затрат) ===
+      tdeePopup && (() => {
+        const d = tdeePopup.data;
+        const popupW = 300;
+        const popupH = 400;
+        const pos = getSmartPopupPosition(
+          tdeePopup.x, 
+          tdeePopup.y, 
+          popupW, 
+          popupH,
+          { preferAbove: false, offset: 8 }
+        );
+        const { left, top, arrowPos, showAbove } = pos;
+        
+        // Подсчёт всех активностей
+        const trainTotal = (d.train1k || 0) + (d.train2k || 0) + (d.train3k || 0);
+        const actTotal = trainTotal + (d.stepsK || 0) + (d.householdK || 0);
+        
+        // Проценты для визуализации
+        const bmrPct = d.tdee > 0 ? Math.round((d.bmr / d.tdee) * 100) : 0;
+        const actPct = 100 - bmrPct;
+        
+        // Тренировки — только те, что > 0
+        const trainMinutes = (idx) => {
+          const t = d.trainings && d.trainings[idx];
+          if (!t || !t.z) return 0;
+          return t.z.reduce((sum, m) => sum + (+m || 0), 0);
+        };
+        
+        // Swipe handler
+        let startY = 0;
+        const onTouchStart = (e) => { startY = e.touches[0].clientY; };
+        const onTouchEnd = (e) => {
+          const diffY = e.changedTouches[0].clientY - startY;
+          if (diffY > 50) setTdeePopup(null);
+        };
+        
+        return React.createElement('div', {
+          className: 'tdee-popup sparkline-popup sparkline-popup-v2',
+          role: 'dialog',
+          'aria-label': 'Расшифровка затрат: ' + d.tdee + ' ккал',
+          'aria-modal': 'true',
+          style: {
+            position: 'fixed',
+            left: left + 'px',
+            top: top + 'px',
+            width: popupW + 'px',
+            zIndex: 9999
+          },
+          onClick: (e) => e.stopPropagation(),
+          onTouchStart: onTouchStart,
+          onTouchEnd: onTouchEnd
+        },
+          // Цветная полоса
+          React.createElement('div', { 
+            className: 'sparkline-popup-stripe',
+            style: { background: 'linear-gradient(90deg, #64748b 0%, #94a3b8 100%)' }
+          }),
+          // Контент
+          React.createElement('div', { className: 'sparkline-popup-content' },
+            // Swipe indicator
+            React.createElement('div', { className: 'sparkline-popup-swipe' }),
+            // Header
+            React.createElement('div', { className: 'sparkline-popup-header-v2' },
+              React.createElement('span', { className: 'sparkline-popup-date' }, '⚡ Затраты энергии'),
+              React.createElement('span', { 
+                className: 'sparkline-popup-pct',
+                style: { color: '#475569', fontSize: '18px', fontWeight: 800 }
+              }, d.tdee + ' ккал')
+            ),
+            // Визуальная полоса BMR + Activity
+            React.createElement('div', { className: 'tdee-bar-container' },
+              React.createElement('div', { className: 'tdee-bar' },
+                React.createElement('div', { 
+                  className: 'tdee-bar-bmr',
+                  style: { width: bmrPct + '%' }
+                }),
+                React.createElement('div', { 
+                  className: 'tdee-bar-activity',
+                  style: { width: actPct + '%' }
+                })
+              ),
+              React.createElement('div', { className: 'tdee-bar-labels' },
+                React.createElement('span', null, '🧬 Базовый: ' + bmrPct + '%'),
+                React.createElement('span', null, '🏃 Активность: ' + actPct + '%')
+              )
+            ),
+            // Детали — строки
+            React.createElement('div', { className: 'tdee-details' },
+              // BMR
+              React.createElement('div', { className: 'tdee-row tdee-row-main' },
+                React.createElement('span', { className: 'tdee-row-icon' }, '🧬'),
+                React.createElement('span', { className: 'tdee-row-label' }, 'Базовый метаболизм (BMR)'),
+                React.createElement('span', { className: 'tdee-row-value' }, d.bmr + ' ккал')
+              ),
+              React.createElement('div', { className: 'tdee-row-hint' }, 
+                'Формула Миффлина-Сан Жеора, вес ' + d.weight + ' кг'
+              ),
+              // Разделитель
+              React.createElement('div', { className: 'tdee-divider' }),
+              // Шаги
+              d.stepsK > 0 && React.createElement('div', { className: 'tdee-row' },
+                React.createElement('span', { className: 'tdee-row-icon' }, '👟'),
+                React.createElement('span', { className: 'tdee-row-label' }, 
+                  'Шаги (' + (d.steps || 0).toLocaleString() + ')'
+                ),
+                React.createElement('span', { className: 'tdee-row-value tdee-positive' }, '+' + d.stepsK + ' ккал')
+              ),
+              // Бытовая активность
+              d.householdK > 0 && React.createElement('div', { className: 'tdee-row' },
+                React.createElement('span', { className: 'tdee-row-icon' }, '🏠'),
+                React.createElement('span', { className: 'tdee-row-label' }, 
+                  'Быт. активность (' + (d.householdMin || 0) + ' мин)'
+                ),
+                React.createElement('span', { className: 'tdee-row-value tdee-positive' }, '+' + d.householdK + ' ккал')
+              ),
+              // Тренировка 1
+              d.train1k > 0 && React.createElement('div', { className: 'tdee-row' },
+                React.createElement('span', { className: 'tdee-row-icon' }, '🏋️'),
+                React.createElement('span', { className: 'tdee-row-label' }, 
+                  'Тренировка 1 (' + trainMinutes(0) + ' мин)'
+                ),
+                React.createElement('span', { className: 'tdee-row-value tdee-positive' }, '+' + d.train1k + ' ккал')
+              ),
+              // Тренировка 2
+              d.train2k > 0 && React.createElement('div', { className: 'tdee-row' },
+                React.createElement('span', { className: 'tdee-row-icon' }, '🏋️'),
+                React.createElement('span', { className: 'tdee-row-label' }, 
+                  'Тренировка 2 (' + trainMinutes(1) + ' мин)'
+                ),
+                React.createElement('span', { className: 'tdee-row-value tdee-positive' }, '+' + d.train2k + ' ккал')
+              ),
+              // Тренировка 3
+              d.train3k > 0 && React.createElement('div', { className: 'tdee-row' },
+                React.createElement('span', { className: 'tdee-row-icon' }, '🏋️'),
+                React.createElement('span', { className: 'tdee-row-label' }, 
+                  'Тренировка 3 (' + trainMinutes(2) + ' мин)'
+                ),
+                React.createElement('span', { className: 'tdee-row-value tdee-positive' }, '+' + d.train3k + ' ккал')
+              ),
+              // Если нет активности
+              actTotal === 0 && React.createElement('div', { className: 'tdee-row tdee-row-empty' },
+                React.createElement('span', { className: 'tdee-row-icon' }, '💤'),
+                React.createElement('span', { className: 'tdee-row-label' }, 'Нет активности за сегодня'),
+                React.createElement('span', { className: 'tdee-row-value' }, '+0 ккал')
+              ),
+              // Итого
+              React.createElement('div', { className: 'tdee-divider' }),
+              React.createElement('div', { className: 'tdee-row tdee-row-total' },
+                React.createElement('span', { className: 'tdee-row-icon' }, '⚡'),
+                React.createElement('span', { className: 'tdee-row-label' }, 'ИТОГО затраты'),
+                React.createElement('span', { className: 'tdee-row-value' }, d.tdee + ' ккал')
+              )
+            ),
+            // Close button
+            React.createElement('button', {
+              className: 'sparkline-popup-close',
+              'aria-label': 'Закрыть',
+              onClick: () => setTdeePopup(null)
+            }, '✕')
+          ),
+          // Стрелка
+          React.createElement('div', { 
+            className: 'sparkline-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
           })
         );
       })(),
@@ -11232,7 +11433,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('div', { 
             className: 'macro-toast-expand',
             onClick: (e) => { 
-              e.stopPropagation(); 
+              e.stopPropagation();
+              // 🔧 Защита от случайных кликов — игнорируем первые 500ms после появления тоста
+              const timeSinceAppear = Date.now() - toastAppearedAtRef.current;
+              if (timeSinceAppear < 500) return;
               haptic && haptic('light');
               setAdviceExpanded(true);
               setAdviceTrigger('manual');
