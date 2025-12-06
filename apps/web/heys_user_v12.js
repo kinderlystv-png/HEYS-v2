@@ -2,6 +2,14 @@
 (function(global){
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
+  
+  // 🔍 DEBUG: Проверяем что HEYS.utils загружен
+  if (!HEYS.utils || !HEYS.utils.lsGet) {
+    console.error('[heys_user_v12] ❌ HEYS.utils.lsGet не определён! Это приведёт к сбросу профиля');
+  } else {
+    console.log('[heys_user_v12] ✅ HEYS.utils.lsGet определён, __clientScoped:', HEYS.utils.__clientScoped);
+  }
+  
   const { lsGet, lsSet, toNum, round1, getEmojiStyle, setEmojiStyle } = HEYS.utils || {
     lsGet:(k,d)=>d, lsSet:()=>{}, toNum:(x)=>Number(x)||0, round1:(v)=>Math.round(v*10)/10,
     getEmojiStyle:()=>'android', setEmojiStyle:()=>{}
@@ -198,6 +206,13 @@
         newProfile.revision = newProfile.revision || 0;
         newProfile.updatedAt = newProfile.updatedAt || 0;
         
+        // 🔍 DEBUG: Логируем загрузку профиля
+        const isDefault = newProfile.weight === 70 && newProfile.height === 175 && newProfile.age === 30;
+        console.log('[Profile Load] clientId:', (window.HEYS?.currentClientId || '').substring(0,8), 
+          '| isDefault:', isDefault, 
+          '| weight:', newProfile.weight, '| height:', newProfile.height, '| age:', newProfile.age,
+          '| updatedAt:', newProfile.updatedAt, '| revision:', newProfile.revision);
+        
         // Умный reload: не перезаписываем если текущее состояние новее
         setProfile(prev => {
           const prevUpdatedAt = prev.updatedAt || 0;
@@ -259,6 +274,9 @@
     setProfileSaved(false);
     setFieldStatus('pending');
     const timer = setTimeout(() => {
+      // 🔍 DEBUG: Логируем сохранение профиля
+      const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
+      console.log('[Profile Save] clientId:', clientId?.substring(0,8), '| weight:', profile.weight, '| height:', profile.height, '| age:', profile.age, '| updatedAt:', profile.updatedAt);
       lsSet('heys_profile', profile);
       setProfilePending(false);
       setProfileSaved(true);

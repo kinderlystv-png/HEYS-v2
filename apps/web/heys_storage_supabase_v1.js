@@ -1228,6 +1228,23 @@
                 `localUpdatedAt=${localUpdatedAt} remoteUpdatedAt=${remoteUpdatedAt}`);
               return;
             }
+            
+            // 🛡️ ЗАЩИТА ПРОФИЛЯ: Не затираем заполненный профиль дефолтными значениями
+            if (key.includes('_profile')) {
+              const remoteIsDefault = row.v && 
+                (row.v.weight === 70 && row.v.height === 175 && row.v.age === 30) && 
+                (!row.v.updatedAt || row.v.updatedAt === 0);
+              const localHasData = local && 
+                (local.weight !== 70 || local.height !== 175 || local.age !== 30 || 
+                 local.firstName || local.lastName || (local.updatedAt && local.updatedAt > 0));
+              
+              if (remoteIsDefault && localHasData) {
+                logCritical(`⚠️ [PROFILE] BLOCKED: Refusing to overwrite filled profile with default values`);
+                logCritical(`  Local: weight=${local.weight}, height=${local.height}, age=${local.age}, updatedAt=${local.updatedAt}`);
+                logCritical(`  Remote: weight=${row.v?.weight}, height=${row.v?.height}, age=${row.v?.age}, updatedAt=${row.v?.updatedAt}`);
+                return; // Пропускаем сохранение
+              }
+            }
           }
           
           // ЗАЩИТА: не затираем локальные продукты пустым массивом из Supabase
