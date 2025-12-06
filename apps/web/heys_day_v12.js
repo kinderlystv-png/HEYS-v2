@@ -1731,33 +1731,24 @@
         overflow: 'hidden'
       }
     },
-      // Undo overlay (показывается после свайпа)
+      // Undo overlay (показывается после свайпа) — сохраняет фон по типу совета
       showUndo && React.createElement('div', {
-        className: 'advice-undo-overlay',
+        className: `advice-undo-overlay advice-list-item-${advice.type}`,
         onClick: onUndo,
         style: {
           position: 'absolute',
           inset: 0,
-          background: lastDismissedAction === 'hidden' 
-            ? 'linear-gradient(135deg, rgba(251, 146, 60, 0.85) 0%, rgba(234, 88, 12, 0.85) 100%)' 
-            : 'linear-gradient(135deg, rgba(34, 197, 94, 0.85) 0%, rgba(22, 163, 74, 0.85) 100%)',
+          background: 'var(--advice-bg, #ecfdf5)',
           borderRadius: '12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: '8px',
-          color: 'white',
+          color: 'var(--color-slate-700, #334155)',
           fontWeight: 600,
           fontSize: '14px',
           cursor: 'pointer',
-          zIndex: 10,
-          backdropFilter: 'blur(4px)',
-          // Меняем фон при подтверждении schedule
-          background: scheduledConfirm 
-            ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(37, 99, 235, 0.9) 100%)'
-            : (lastDismissedAction === 'hidden' 
-              ? 'linear-gradient(135deg, rgba(251, 146, 60, 0.85) 0%, rgba(234, 88, 12, 0.85) 100%)' 
-              : 'linear-gradient(135deg, rgba(34, 197, 94, 0.85) 0%, rgba(22, 163, 74, 0.85) 100%)')
+          zIndex: 10
         }
       },
         // Показываем подтверждение или обычные кнопки
@@ -1767,18 +1758,21 @@
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '8px',
+                color: '#3b82f6',
                 animation: 'fadeIn 0.3s ease'
               } 
             }, '⏰ Напомню через 2 часа ✓')
           : React.createElement(React.Fragment, null,
-              React.createElement('span', null, lastDismissedAction === 'hidden' ? '🔕 Скрыто' : '✓ Прочитано'),
+              React.createElement('span', { 
+                style: { color: lastDismissedAction === 'hidden' ? '#f97316' : '#22c55e' } 
+              }, lastDismissedAction === 'hidden' ? '🔕 Скрыто' : '✓ Прочитано'),
               React.createElement('div', {
                 style: { display: 'flex', gap: '8px' }
               },
                 React.createElement('span', { 
                   onClick: (e) => { e.stopPropagation(); onUndo(); },
                   style: { 
-                    background: 'rgba(255,255,255,0.3)', 
+                    background: 'rgba(0,0,0,0.08)', 
                     padding: '4px 10px', 
                     borderRadius: '12px',
                     fontSize: '13px',
@@ -1788,7 +1782,7 @@
                 onSchedule && React.createElement('span', { 
                   onClick: handleSchedule,
                   style: { 
-                    background: 'rgba(255,255,255,0.25)', 
+                    background: 'rgba(0,0,0,0.06)', 
                     padding: '4px 10px', 
                     borderRadius: '12px',
                     fontSize: '13px',
@@ -1800,14 +1794,14 @@
                 }, 'Напомнить через 2ч.')
               )
             ),
-        // Прогресс-бар (убывает за 3 сек) — скрываем при scheduled
+        // Прогресс-бар (убывает за 3 сек)
         !scheduledConfirm && React.createElement('div', {
           style: {
             position: 'absolute',
             bottom: 0,
             left: 0,
             height: '3px',
-            background: 'rgba(255,255,255,0.5)',
+            background: 'rgba(0,0,0,0.15)',
             width: '100%',
             animation: 'undoProgress 3s linear forwards'
           }
@@ -11993,7 +11987,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         className: 'macro-toast macro-toast-success visible',
         role: 'alert',
         onClick: dismissToast,
-        style: { transform: 'translateX(-50%)' }
+        style: { transform: 'translateX(-50%) translateY(0)' }
       },
         React.createElement('div', { className: 'macro-toast-main' },
           React.createElement('span', { className: 'macro-toast-icon' }, '✨'),
@@ -12028,25 +12022,28 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         onTouchMove: handleToastTouchMove,
         onTouchEnd: handleToastTouchEnd,
         style: { 
-          transform: toastSwiped ? 'translateX(-50%)' : `translateX(calc(-50% + ${toastSwipeX}px))`, 
-          opacity: toastSwiped ? 1 : 1 - Math.abs(toastSwipeX) / 150, 
-          flexDirection: 'column', 
-          alignItems: 'stretch',
-          position: 'relative'
+          transform: toastSwiped 
+            ? 'translateX(-50%) translateY(0)' 
+            : `translateX(calc(-50% + ${toastSwipeX}px)) translateY(0)`, 
+          opacity: toastSwiped ? 1 : 1 - Math.abs(toastSwipeX) / 150
         }
       },
-        // Overlay после свайпа — тот же фон что и у тоста
-        (toastSwiped ? React.createElement('div', {
+        // Overlay после свайпа — абсолютно поверх контента, сохраняя размер и фон
+        toastSwiped && React.createElement('div', {
           className: 'advice-undo-overlay',
           style: {
+            position: 'absolute',
+            inset: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '12px',
-            padding: '16px',
-            color: 'var(--gray-700)',
+            background: 'var(--toast-bg, #ecfdf5)',
+            borderRadius: '10px',
+            color: 'var(--color-slate-700, #334155)',
             fontWeight: 600,
-            fontSize: '14px'
+            fontSize: '14px',
+            zIndex: 10
           }
         },
           toastScheduledConfirm 
@@ -12059,8 +12056,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   React.createElement('button', { 
                     onClick: (e) => { e.stopPropagation(); handleToastUndo(); },
                     style: { 
-                      background: 'var(--gray-200)', 
-                      color: 'var(--gray-700)',
+                      background: 'rgba(0,0,0,0.08)', 
+                      color: 'var(--color-slate-700, #334155)',
                       padding: '6px 12px', 
                       borderRadius: '12px',
                       fontSize: '13px',
@@ -12071,8 +12068,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   React.createElement('button', { 
                     onClick: handleToastSchedule,
                     style: { 
-                      background: 'var(--gray-200)', 
-                      color: 'var(--gray-700)',
+                      background: 'rgba(0,0,0,0.06)', 
+                      color: 'var(--color-slate-700, #334155)',
                       padding: '6px 12px', 
                       borderRadius: '12px',
                       fontSize: '13px',
@@ -12085,10 +12082,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   }, '⏰ 2ч')
                 )
               )
-        ) : null),
-        // Основной контент тоста (только когда нет overlay)
-        (!toastSwiped ? React.createElement('div', { 
-          className: 'macro-toast-main'
+        ),
+        // Основной контент тоста — всегда в DOM для сохранения размера
+        React.createElement('div', { 
+          className: 'macro-toast-main',
+          style: { visibility: toastSwiped ? 'hidden' : 'visible' }
         },
           React.createElement('span', { className: 'macro-toast-icon' }, displayedAdvice.icon),
           React.createElement('span', { className: 'macro-toast-text' }, displayedAdvice.text),
@@ -12119,11 +12117,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             React.createElement('span', { style: { fontSize: '9px' } }, 'все'),
             React.createElement('span', { style: { fontSize: '9px' } }, 'советы')
           )
-        ) : null),
+        ),
         // Строка с кнопкой "Подробнее" слева и подсказкой "свайп" справа
-        (!toastSwiped ? React.createElement('div', {
+        React.createElement('div', {
           style: {
             display: 'flex',
+            visibility: toastSwiped ? 'hidden' : 'visible',
             alignItems: 'center',
             justifyContent: displayedAdvice.details ? 'space-between' : 'flex-end',
             padding: '6px 0 2px 0',
@@ -12163,9 +12162,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               color: 'rgba(128, 128, 128, 0.6)'
             }
           }, '← свайп — прочитано')
-        ) : null),
-        // Развёрнутые details
-        (!toastSwiped && toastDetailsOpen && displayedAdvice.details ? React.createElement('div', {
+        ),
+        // Развёрнутые details (скрываем при swipe)
+        !toastSwiped && toastDetailsOpen && displayedAdvice.details && React.createElement('div', {
           style: {
             padding: '8px 12px',
             fontSize: '13px',
@@ -12176,7 +12175,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             marginTop: '4px',
             marginBottom: '4px'
           }
-        }, displayedAdvice.details) : null)
+        }, displayedAdvice.details)
       ),
       
       // Meal Creation/Edit Modal (mobile only)

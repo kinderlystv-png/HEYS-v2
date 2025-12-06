@@ -3704,12 +3704,12 @@
                 )
               ),
               // Toast убран — отвлекает
-              // Основной контент — скрыт во время Morning Check-in (но рендерится для preload)
+              // Основной контент — скрыт во время Morning Check-in или когда показывается gate (login/client select)
               React.createElement(
                 'div',
                 { 
                   className: 'wrap',
-                  style: isMorningCheckinBlocking ? { display: 'none' } : undefined
+                  style: (isMorningCheckinBlocking || !clientId) ? { display: 'none' } : undefined
                 },
                 React.createElement(
                   'div',

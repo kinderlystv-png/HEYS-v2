@@ -4429,9 +4429,9 @@ body:has(.offline-banner) .wrap {
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding: 60px 20px;
+  padding: 20px;
   z-index: 200;
 }
 .modal {
@@ -5014,8 +5014,8 @@ body:has(.offline-banner) .wrap {
   }
 
   .modal-backdrop {
-    padding: 40px 12px;
-    align-items: flex-start;
+    padding: 16px;
+    align-items: center;
   }
 
   .modal {
