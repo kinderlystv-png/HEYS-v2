@@ -4,11 +4,6 @@
   "outputDirectory": "dist",
   "installCommand": "cd ../.. && pnpm install",
   "framework": "vite",
-  "functions": {
-    "api/**/*.ts": {
-      "maxDuration": 10
-    }
-  },
   "rewrites": [
     {
       "source": "/:path((?!api/).*)",
