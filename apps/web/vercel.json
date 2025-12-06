@@ -9,6 +9,10 @@
       "destination": "/api/rest"
     },
     {
+      "source": "/api/supabase/storage/v1/:path*",
+      "destination": "/api/storage"
+    },
+    {
       "source": "/:path((?!api/).*)",
       "destination": "/index.html"
     }
