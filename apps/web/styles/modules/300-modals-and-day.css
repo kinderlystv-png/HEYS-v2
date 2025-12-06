@@ -893,24 +893,27 @@
 }
 
 /* === Expanded section === */
-.insulin-wave-expanded {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-  animation: expandIn 0.3s ease-out;
+.insulin-expanded-wrapper {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-8px);
+  overflow: hidden;
+  pointer-events: none;
+  transition: max-height 0.55s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease, transform 0.45s ease;
+  margin-top: 0;
 }
 
-@keyframes expandIn {
-  0% { 
-    opacity: 0; 
-    max-height: 0;
-    transform: translateY(-10px);
-  }
-  100% { 
-    opacity: 1; 
-    max-height: 200px;
-    transform: translateY(0);
-  }
+.insulin-expanded-wrapper.show {
+  max-height: 1200px;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  margin-top: 12px;
+}
+
+.insulin-wave-expanded {
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .insulin-gi-info {
@@ -950,7 +953,14 @@
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   z-index: 99;
-  animation: fadeIn 0.2s ease-out;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), backdrop-filter 0.4s ease;
+}
+
+.insulin-focus-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* Карточка поверх overlay когда раскрыта */

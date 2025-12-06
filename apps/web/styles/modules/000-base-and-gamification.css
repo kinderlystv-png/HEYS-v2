@@ -3555,7 +3555,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .tab .tab-icon {
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1;
   transition: transform 0.12s ease;
 }
@@ -3592,44 +3592,54 @@ body:has(.offline-banner) .wrap {
   align-items: center;
   justify-content: center;
   background: #e5e5ea;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 2px;
   gap: 0;
-  height: 40px;
+  height: 30px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   flex: 1;
-  max-width: 140px;
+  max-width: 118px;
+}
+
+.tab-switch-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 120px;
 }
 
 .tab.tab-switch {
   flex: 1;
-  min-width: 60px;
-  min-height: 36px;
-  padding: 6px 10px;
+  min-width: 46px;
+  min-height: 26px;
+  padding: 3px 6px;
   border-radius: 0;
   background: transparent;
   color: #666;
   transition: all 0.2s ease;
-  gap: 2px;
+  gap: 1px;
 }
 
 /* Скругление только на внешних краях */
 .tab.tab-switch:first-child {
-  border-radius: 6px 0 0 6px;
+  border-radius: 4px 0 0 4px;
 }
 
 .tab.tab-switch:last-child {
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 4px 4px 0;
 }
 
 .tab.tab-switch .tab-icon {
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .tab.tab-switch .tab-text {
-  font-size: 9px;
-  font-weight: 500;
+  font-size: 8px;
+  font-weight: 600;
 }
 
 .tab.tab-switch.active {
@@ -3658,6 +3668,26 @@ body:has(.offline-banner) .wrap {
 [data-theme="dark"] .tab.tab-switch.active {
   background: #0a84ff;
   color: var(--color-white);
+}
+
+.tab-switch-labels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  justify-items: center;
+  width: 118px;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7280;
+  line-height: 1.1;
+  white-space: nowrap;
+  text-align: center;
+}
+
+[data-theme="dark"] .tab-switch-labels {
+  color: #e5e7eb;
 }
 
 /* Отступ для контента страницы */

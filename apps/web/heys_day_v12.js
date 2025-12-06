@@ -1793,6 +1793,23 @@
     
     // === Popup для качества приёма пищи ===
     const [mealQualityPopup, setMealQualityPopup] = useState(null); // { meal, quality, mealTypeInfo, x, y }
+
+    // === Управление попапами: одновременно может быть только один ===
+    const closeAllPopups = React.useCallback(() => {
+      setSparklinePopup(null);
+      setMacroBadgePopup(null);
+      setMetricPopup(null);
+      setTdeePopup(null);
+      setMealQualityPopup(null);
+    }, []);
+
+    const openExclusivePopup = React.useCallback((type, payload) => {
+      setSparklinePopup(type === 'sparkline' ? payload : null);
+      setMacroBadgePopup(type === 'macro' ? payload : null);
+      setMetricPopup(type === 'metric' ? payload : null);
+      setTdeePopup(type === 'tdee' ? payload : null);
+      setMealQualityPopup(type === 'mealQuality' ? payload : null);
+    }, []);
     
     // === Slider для интерактивного просмотра графика ===
     const [sliderPoint, setSliderPoint] = useState(null);
@@ -1812,20 +1829,13 @@
     React.useEffect(() => {
       if (!sparklinePopup && !macroBadgePopup && !metricPopup && !mealQualityPopup && !tdeePopup) return;
       const handleClickOutside = (e) => {
-        if (sparklinePopup && !e.target.closest('.sparkline-popup')) {
-          setSparklinePopup(null);
-        }
-        if (macroBadgePopup && !e.target.closest('.macro-badge-popup')) {
-          setMacroBadgePopup(null);
-        }
-        if (metricPopup && !e.target.closest('.metric-popup')) {
-          setMetricPopup(null);
-        }
-        if (mealQualityPopup && !e.target.closest('.meal-quality-popup') && !e.target.closest('.meal-bar-container')) {
-          setMealQualityPopup(null);
-        }
-        if (tdeePopup && !e.target.closest('.tdee-popup')) {
-          setTdeePopup(null);
+        const insideSparkline = e.target.closest('.sparkline-popup');
+        const insideMacro = e.target.closest('.macro-badge-popup');
+        const insideMetric = e.target.closest('.metric-popup');
+        const insideMealQuality = e.target.closest('.meal-quality-popup') || e.target.closest('.meal-bar-container');
+        const insideTdee = e.target.closest('.tdee-popup');
+        if (!insideSparkline && !insideMacro && !insideMetric && !insideMealQuality && !insideTdee) {
+          closeAllPopups();
         }
       };
       // Delay to avoid closing immediately on the same click
@@ -1836,7 +1846,7 @@
         clearTimeout(timerId);
         document.removeEventListener('click', handleClickOutside);
       };
-    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup]);
+    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup, closeAllPopups]);
     
     // === Утилита для умного позиционирования попапов ===
     // Не даёт выходить за границы экрана
@@ -2362,12 +2372,41 @@
     // === Current time for Insulin Wave Indicator (updates every minute) ===
     const [currentMinute, setCurrentMinute] = useState(() => Math.floor(Date.now() / 60000));
     const [insulinExpanded, setInsulinExpanded] = useState(false);
+    const insulinExpandedRef = React.useRef(null);
+    const [insulinExpandedHeight, setInsulinExpandedHeight] = useState(0);
     React.useEffect(() => {
       const intervalId = setInterval(() => {
         setCurrentMinute(Math.floor(Date.now() / 60000));
       }, 60000); // Обновляем каждую минуту
       return () => clearInterval(intervalId);
     }, []);
+
+    // Обновляем высоту блока расширения для плавной анимации
+    React.useEffect(() => {
+      const el = insulinExpandedRef.current;
+      if (!el) return;
+      const measure = () => {
+        const h = el.scrollHeight || 0;
+        if (h !== insulinExpandedHeight) setInsulinExpandedHeight(h);
+      };
+      // measure в текущем кадре
+      measure();
+      // И на resize
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }, [insulinExpandedHeight]);
+
+    // При открытии пересчитываем высоту на следующем кадре, чтобы max-height анимировался до реального размера
+    React.useEffect(() => {
+      if (!insulinExpanded) return;
+      const id = requestAnimationFrame(() => {
+        const el = insulinExpandedRef.current;
+        if (!el) return;
+        const h = el.scrollHeight || 0;
+        if (h !== insulinExpandedHeight) setInsulinExpandedHeight(h);
+      });
+      return () => cancelAnimationFrame(id);
+    }, [insulinExpanded, insulinExpandedHeight]);
     
     // === Offline indicator ===
     const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -3689,8 +3728,8 @@
     const activeDays = useMemo(() => {
       const getActiveDaysForMonth = (HEYS.dayUtils && HEYS.dayUtils.getActiveDaysForMonth) || (() => new Map());
       const d = new Date(date);
-      return getActiveDaysForMonth(d.getFullYear(), d.getMonth(), prof);
-    }, [date, prof.weight, prof.height, prof.age, prof.sex, prof.deficitPctTarget, products.length]);
+      return getActiveDaysForMonth(d.getFullYear(), d.getMonth(), prof, products);
+    }, [date, prof.weight, prof.height, prof.age, prof.sex, prof.deficitPctTarget, products]);
 
     // Вычисляем текущий streak (дней подряд в норме 75-115%)
     const currentStreak = React.useMemo(() => {
@@ -6921,7 +6960,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   onClick: (e) => {
                     e.stopPropagation();
                     haptic('light');
-                    setSparklinePopup({ type: 'unknown', point: p, x: e.clientX, y: e.clientY });
+                    openExclusivePopup('sparkline', { type: 'unknown', point: p, x: e.clientX, y: e.clientY });
                   }
                 }),
                 React.createElement('text', {
@@ -6951,7 +6990,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 onClick: (e) => {
                   e.stopPropagation();
                   haptic('medium');
-                  setSparklinePopup({ type: 'perfect', point: p, x: e.clientX, y: e.clientY });
+                  openExclusivePopup('sparkline', { type: 'perfect', point: p, x: e.clientX, y: e.clientY });
                 }
               });
             }
@@ -6971,7 +7010,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             onClick: (e) => {
               e.stopPropagation();
               haptic('light');
-              setSparklinePopup({ type: 'kcal', point: p, x: e.clientX, y: e.clientY });
+              openExclusivePopup('sparkline', { type: 'kcal', point: p, x: e.clientX, y: e.clientY });
             }
           },
             React.createElement('title', null, p.dayNum + ': ' + p.kcal + ' / ' + p.target + ' ккал')
@@ -7613,7 +7652,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             onClick: (e) => {
               e.stopPropagation();
               haptic('light');
-              setSparklinePopup({ 
+              openExclusivePopup('sparkline', { 
                 type: 'weight', 
                 point: { ...p, localTrend },
                 x: e.clientX, 
@@ -7644,7 +7683,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             haptic('light');
             const lastWeight = points[points.length - 1]?.weight || forecastPt.weight;
             const forecastChange = forecastPt.weight - lastWeight;
-            setSparklinePopup({ 
+            openExclusivePopup('sparkline', { 
               type: 'weight-forecast', 
               point: { 
                 ...forecastPt, 
@@ -7877,7 +7916,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           onClick: (e) => {
             e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
-            setTdeePopup({
+            openExclusivePopup('tdee', {
               x: rect.left + rect.width / 2,
               y: rect.bottom,
               data: {
@@ -7919,7 +7958,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           onClick: (e) => {
             e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
-            setMetricPopup({
+            openExclusivePopup('metric', {
               type: 'kcal',
               x: rect.left + rect.width / 2,
               y: rect.top,
@@ -9476,7 +9515,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 onClick: (e) => {
                   e.stopPropagation();
                   const rect = e.target.getBoundingClientRect();
-                  setMacroBadgePopup({
+                  openExclusivePopup('macro', {
                     macro,
                     emoji: b.emoji,
                     desc: b.desc,
@@ -9498,7 +9537,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const openRingPopup = (e, macro, value, norm, ratio, color, badges) => {
             e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
-            setMacroBadgePopup({
+            openExclusivePopup('macro', {
               macro,
               emoji: null,
               desc: null,
@@ -9767,7 +9806,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               onClick: (e) => {
                 e.stopPropagation();
                 const rect = e.currentTarget.getBoundingClientRect();
-                setMetricPopup({
+                openExclusivePopup('metric', {
                   type: 'water',
                   x: rect.left + rect.width / 2,
                   y: rect.top,
@@ -9920,7 +9959,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               onClick: (e) => {
                 e.stopPropagation();
                 const rect = e.currentTarget.getBoundingClientRect();
-                setMetricPopup({
+                openExclusivePopup('metric', {
                   type: 'steps',
                   x: rect.left + rect.width / 2,
                   y: rect.top,
@@ -10497,7 +10536,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                         setShowConfetti(true);
                         setTimeout(() => setShowConfetti(false), 2000);
                       }
-                      setMealQualityPopup({
+                      openExclusivePopup('mealQuality', {
                         meal: p.meal,
                         quality,
                         mealTypeInfo: { label: p.meal.name, icon: p.meal.icon },
@@ -10569,7 +10608,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 setShowConfetti(true);
                 setTimeout(() => setShowConfetti(false), 2000);
               }
-              setMealQualityPopup({
+              openExclusivePopup('mealQuality', {
                 meal,
                 quality,
                 mealTypeInfo: { label: meal.name, icon: meal.icon },
@@ -11138,8 +11177,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               )
             ),
             
-            // === Expanded секция ===
-            insulinExpanded && renderExpandedSection()
+            // === Expanded секция — держим в DOM для плавного раскрытия ===
+            React.createElement('div', {
+              className: 'insulin-expanded-wrapper' + (insulinExpanded ? ' show' : ''),
+              'aria-expanded': insulinExpanded,
+              ref: insulinExpandedRef,
+              style: {
+                maxHeight: insulinExpanded ? (insulinExpandedHeight || 1200) + 'px' : '0px',
+                opacity: insulinExpanded ? 1 : 0,
+                transform: insulinExpanded ? 'translateY(0)' : 'translateY(-6px)'
+              }
+            }, renderExpandedSection())
           )
         )  // закрываем Fragment
         );

@@ -4049,28 +4049,38 @@
                     React.createElement('span', { className: 'tab-icon' }, '📋'),
                     React.createElement('span', { className: 'tab-text' }, 'Обзор'),
                   ),
-                  // iOS Switch группа для stats/diary — ПО ЦЕНТРУ
+                  // iOS Switch группа для stats/diary — ПО ЦЕНТРУ + подписи
                   React.createElement(
                     'div',
-                    { 
-                      className: 'tab-switch-group',
-                      onClick: () => setTab(tab === 'stats' ? 'diary' : 'stats'),
-                    },
+                    { className: 'tab-switch-wrapper' },
                     React.createElement(
                       'div',
-                      {
-                        className: 'tab tab-switch ' + (tab === 'stats' ? 'active' : ''),
+                      { 
+                        className: 'tab-switch-group',
+                        onClick: () => setTab(tab === 'stats' ? 'diary' : 'stats'),
                       },
-                      React.createElement('span', { className: 'tab-icon' }, '📊'),
-                      React.createElement('span', { className: 'tab-text' }, 'Итоги'),
+                      React.createElement(
+                        'div',
+                        {
+                          className: 'tab tab-switch ' + (tab === 'stats' ? 'active' : ''),
+                        },
+                        React.createElement('span', { className: 'tab-icon' }, '📊'),
+                        React.createElement('span', { className: 'tab-text' }, 'Итоги'),
+                      ),
+                      React.createElement(
+                        'div',
+                        {
+                          className: 'tab tab-switch ' + (tab === 'diary' ? 'active' : ''),
+                        },
+                        React.createElement('span', { className: 'tab-icon' }, '🍴'),
+                        React.createElement('span', { className: 'tab-text' }, 'Еда'),
+                      ),
                     ),
                     React.createElement(
                       'div',
-                      {
-                        className: 'tab tab-switch ' + (tab === 'diary' ? 'active' : ''),
-                      },
-                      React.createElement('span', { className: 'tab-icon' }, '🍴'),
-                      React.createElement('span', { className: 'tab-text' }, 'Еда'),
+                      { className: 'tab-switch-labels' },
+                      React.createElement('span', { className: 'tab-switch-label' }, 'ОТЧЕТЫ'),
+                      React.createElement('span', { className: 'tab-switch-label' }, 'ДНЕВНИК'),
                     ),
                   ),
                   // Графики — только для десктопа
