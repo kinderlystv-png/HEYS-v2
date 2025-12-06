@@ -3,12 +3,6 @@
   "buildCommand": "pnpm run prebuild && vite build && cp heys_*.js dist/ && mkdir -p dist/styles && cp styles/*.css dist/styles/",
   "outputDirectory": "dist",
   "installCommand": "cd ../.. && pnpm install",
-  "framework": "vite",
-  "functions": {
-    "api/supabase/[...path].ts": {
-      "runtime": "edge"
-    }
-  },
   "rewrites": [
     {
       "source": "/:path((?!api/).*)",
