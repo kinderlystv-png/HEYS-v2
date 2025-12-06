@@ -11387,23 +11387,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // === INSULIN WAVE INDICATOR (WOW VERSION v3 — модуль) ===
       (!isMobile || mobileSubTab === 'diary') && insulinWaveData && (() => {
-        // ВРЕМЕННО ОТКЛЮЧЕН SHAKE ДЛЯ ДЕБАГА
-        const isShaking = false; // insulinWaveData.status === 'almost';
-        
-        // ГЛОБАЛЬНЫЙ ДЕБАГ — ищем ВСЕ анимации на странице
-        React.useEffect(() => {
-          const checkAnimations = () => {
-            const el = document.querySelector('.insulin-wave-indicator');
-            if (el) {
-              const style = getComputedStyle(el);
-              const rect = el.getBoundingClientRect();
-              console.log('[INSULIN] x:', Math.round(rect.x), 'anim:', style.animationName, 'transform:', style.transform, 'classes:', el.className);
-            }
-          };
-          const id = setInterval(checkAnimations, 300);
-          return () => clearInterval(id);
-        }, []);
-        
         const IW = typeof HEYS !== 'undefined' && HEYS.InsulinWave;
         
         // GI info — из модуля или fallback
@@ -11674,24 +11657,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             className: 'insulin-focus-overlay',
             onClick: () => setInsulinExpanded(false)
           }),
-          // Сама карточка
+          // Сама карточка — SHAKE ПОЛНОСТЬЮ УБРАН
           React.createElement('div', { 
-            className: 'insulin-wave-indicator insulin-' + insulinWaveData.status + (isShaking ? ' shake' : '') + (insulinExpanded ? ' expanded' : ''),
-            ref: (el) => {
-              if (el && !window._insulinDebugInterval) {
-                window._insulinDebugInterval = setInterval(() => {
-                  const rect = el.getBoundingClientRect();
-                  const style = getComputedStyle(el);
-                  console.log('[INSULIN DEBUG] x:', Math.round(rect.x), 'transform:', style.transform, 'animation:', style.animationName);
-                }, 500);
-                // Остановим через 10 сек
-                setTimeout(() => {
-                  clearInterval(window._insulinDebugInterval);
-                  window._insulinDebugInterval = null;
-                  console.log('[INSULIN DEBUG] Stopped logging');
-                }, 10000);
-              }
-            },
+            className: 'insulin-wave-indicator insulin-' + insulinWaveData.status + (insulinExpanded ? ' expanded' : ''),
             style: { 
               margin: '8px 0', 
               cursor: 'pointer',
