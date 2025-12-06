@@ -806,14 +806,15 @@ td:first-child input {
   white-space: nowrap;
 }
 
+/* Скрываем текст только в ВЕРХНИХ табах (не в нижнем меню .tabs) */
 @media (max-width: 500px) {
-  .tab-text {
+  .hdr-tabs .tab-text {
     display: none;
   }
-  .tab-icon {
+  .hdr-tabs .tab-icon {
     font-size: 22px;
   }
-  .tab {
+  .hdr-tabs .tab {
     padding: 10px 12px;
   }
 }
@@ -3531,9 +3532,9 @@ body:has(.offline-banner) .wrap {
   right: 0;
   z-index: 1000;
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08), 0 -1px 4px rgba(0, 0, 0, 0.04);
-  padding-bottom: max(2px, env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom, 0);
   padding-top: 2px;
-  min-height: 40px;
+  min-height: 42px;
 }
 
 /* Скрыть технические вкладки на мобилке */
@@ -3545,8 +3546,8 @@ body:has(.offline-banner) .wrap {
 
 .tab {
   cursor: pointer;
-  padding: 2px 12px;
-  min-height: 40px;
+  padding: 4px 12px;
+  min-height: 42px;
   border-radius: 0;
   font-weight: 500;
   font-size: 10px;
@@ -3562,23 +3563,21 @@ body:has(.offline-banner) .wrap {
   flex: 1;
   min-width: 60px;
   display: flex;
-  flex-direction: column-reverse; /* Текст наверху, иконка внизу */
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   -webkit-tap-highlight-color: transparent;
 }
 
 .tab .tab-icon {
-  font-size: 18px;
+  font-size: 24px;
   line-height: 1;
   transition: transform 0.12s ease;
 }
 
 .tab .tab-text {
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  display: none; /* Скрываем текст в обычных табах — показываем только иконки */
 }
 
 .tab:hover {
@@ -3619,12 +3618,13 @@ body:has(.offline-banner) .wrap {
 
 .tab-switch-wrapper {
   display: flex;
-  flex-direction: column-reverse; /* Текст сверху, переключатель снизу */
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 0;
   flex: 1;
   min-width: 120px;
+  margin-top: 3px;
 }
 
 .tab.tab-switch {
@@ -3653,8 +3653,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .tab.tab-switch .tab-text {
-  font-size: 8px;
-  font-weight: 600;
+  display: none; /* Текст под переключателем, не внутри */
 }
 
 .tab.tab-switch.active {
@@ -3691,18 +3690,32 @@ body:has(.offline-banner) .wrap {
   align-items: center;
   justify-items: center;
   width: 118px;
-  font-size: 8px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: #6b7280;
+  color: #8e8e93;
   line-height: 1.1;
   white-space: nowrap;
   text-align: center;
+  margin-top: 1px;
+}
+
+.tab-switch-label {
+  transition: color 0.15s ease, font-weight 0.15s ease;
+}
+
+.tab-switch-label.active {
+  color: #000;
+  font-weight: 600;
 }
 
 [data-theme="dark"] .tab-switch-labels {
-  color: #e5e7eb;
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .tab-switch-label.active {
+  color: #fff;
 }
 
 /* Отступ для контента страницы */
