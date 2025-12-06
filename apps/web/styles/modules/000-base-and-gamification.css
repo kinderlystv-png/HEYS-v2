@@ -1051,10 +1051,11 @@ td:first-child input {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  overflow: hidden; /* Предотвращаем выход за границы */
 }
 
 /* Legacy row layout — kept for compatibility */
@@ -1108,7 +1109,7 @@ td:first-child input {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 4px;
   overflow: hidden;
-  min-width: 60px;
+  min-width: 40px; /* Уменьшили для лучшего сжатия */
   position: relative;
 }
 
@@ -1169,6 +1170,7 @@ td:first-child input {
   white-space: nowrap;
   transition: transform 0.3s ease, color 0.3s ease;
   position: relative;
+  flex-shrink: 0;
 }
 
 /* XP counting animation */
@@ -1264,6 +1266,7 @@ td:first-child input {
   display: inline-flex;
   align-items: center;
   gap: 1px;
+  flex-shrink: 0;
 }
 
 /* Streak уровни анимации */
@@ -1359,10 +1362,11 @@ td:first-child input {
   color: white;
   font-size: 12px;
   font-weight: 600;
-  padding: 2px 6px;
+  padding: 2px 4px;
   cursor: pointer;
   animation: bonusGlow 2s ease-in-out infinite;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .game-daily-bonus:hover {
@@ -1606,6 +1610,7 @@ td:first-child input {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   transition: all 0.3s ease;
+  flex-shrink: 0;
 }
 
 .game-daily-mult.active {
@@ -1889,6 +1894,7 @@ td:first-child input {
   color: #fbbf24;
   font-weight: 600;
   animation: trophyBounce 2s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
 @keyframes trophyBounce {
@@ -2046,6 +2052,7 @@ td:first-child input {
   cursor: pointer;
   font-size: 12px;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .game-expand-btn:hover {
@@ -2374,7 +2381,7 @@ td:first-child input {
 /* Mobile: compact gamification bar */
 @media (max-width: 400px) {
   .game-bar {
-    gap: 8px;
+    gap: 6px;
   }
   .game-xp {
     display: none; /* Скрыть XP счётчик на очень узких экранах */
@@ -2384,6 +2391,14 @@ td:first-child input {
   }
   .game-stats-section {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .game-daily-bonus {
+    padding: 2px 3px;
+    font-size: 11px;
+  }
+  .game-rank-badge {
+    font-size: 8px;
+    padding: 1px 4px;
   }
 }
 

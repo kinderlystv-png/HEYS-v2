@@ -2931,6 +2931,25 @@
     
     // === Training Picker functions ===
     function openTrainingPicker(trainingIndex) {
+      // Используем новую модалку TrainingStep (StepModal)
+      if (HEYS.TrainingStep?.show) {
+        HEYS.TrainingStep.show({
+          dateKey: date,
+          trainingIndex,
+          onComplete: (data) => {
+            // Данные уже сохранены через save() в TrainingStep
+            // Обновляем локальное состояние
+            const savedDay = lsGet(`heys_dayv2_${date}`, {});
+            setDay(prev => ({ 
+              ...prev, 
+              trainings: savedDay.trainings || prev.trainings 
+            }));
+          }
+        });
+        return;
+      }
+      
+      // Fallback: старая логика (если TrainingStep не загружен)
       const now = new Date();
       const T = TR[trainingIndex] || { z: [0,0,0,0], time: '', type: '', quality: 0, feelAfter: 0, comment: '' };
       

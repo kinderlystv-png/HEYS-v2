@@ -2340,3 +2340,502 @@
 [data-theme="dark"] {
   --meal-bar-track: rgba(226, 232, 240, 0.16);
 }
+
+/* ============================================
+ * 19. TRAINING STEP — Модалка тренировки
+ * ============================================ */
+
+.training-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.ts-section {
+  background: var(--color-slate-50, #f8fafc);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+/* === Тип тренировки === */
+.ts-type-section {
+  padding: 8px;
+}
+
+.ts-type-grid {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.ts-type-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  background: #fff;
+  border: 2px solid var(--color-slate-200, #e2e8f0);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ts-type-btn:active {
+  transform: scale(0.97);
+}
+
+.ts-type-btn.active {
+  border-color: var(--acc, #3b82f6);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.ts-type-icon {
+  font-size: 24px;
+}
+
+.ts-type-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-slate-600, #475569);
+}
+
+.ts-type-btn.active .ts-type-label {
+  color: var(--acc, #3b82f6);
+}
+
+/* === Время тренировки (колесо) === */
+.ts-time-wheel-section {
+  padding: 12px 16px;
+}
+
+.ts-time-wheel-label {
+  font-size: 14px;
+  color: var(--color-slate-600);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.ts-time-wheels {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.ts-time-wheels .mc-wheel-picker {
+  flex: 0 0 80px;
+}
+
+.ts-time-wheel-sep {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-slate-400);
+  line-height: 1;
+  padding: 0 4px;
+}
+
+/* Legacy время (+-) — оставим на всякий случай */
+.ts-time-section {
+  padding: 8px 12px;
+}
+
+.ts-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ts-time-label {
+  font-size: 14px;
+  color: var(--color-slate-600);
+}
+
+.ts-time-picker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ts-time-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--color-slate-100);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--color-slate-600);
+  transition: all 0.15s ease;
+}
+
+.ts-time-btn:active {
+  transform: scale(0.95);
+  background: var(--color-slate-200);
+}
+
+.ts-time-value {
+  font-size: 18px;
+  font-weight: 600;
+  min-width: 28px;
+  text-align: center;
+  color: var(--color-slate-800);
+}
+
+.ts-time-sep {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-slate-400);
+}
+
+/* === Зоны пульса === */
+.ts-zones-section {
+  padding: 10px 12px;
+}
+
+.ts-zones-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ts-zones-total {
+  font-size: 12px;
+  color: var(--color-slate-500);
+  background: var(--color-slate-100);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+/* Новая сетка с колёсами (2x2) */
+.ts-zones-wheels-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ts-zone-wheel-item {
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px;
+  border: 1px solid var(--color-slate-200);
+}
+
+.ts-zone-wheel-header {
+  text-align: center;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: 2px solid var(--zone-color, #ccc);
+}
+
+.ts-zone-wheel-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-slate-700);
+}
+
+.ts-zone-wheel-range {
+  font-size: 10px;
+  color: var(--color-slate-400);
+}
+
+.ts-zone-wheel-picker {
+  display: flex;
+  justify-content: center;
+}
+
+.ts-zone-wheel-picker .mc-wheel-picker {
+  flex: 0 0 auto;
+  min-width: 70px;
+}
+
+.ts-zone-wheel-picker .mc-wheel-label {
+  display: none;
+}
+
+.ts-zone-wheel-picker .mc-wheel-value--current {
+  font-size: 20px;
+}
+
+/* Legacy сетка (строки) */
+.ts-zones-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ts-zone-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 6px 10px;
+  background: #fff;
+  border-radius: 8px;
+  border-left: 3px solid;
+}
+
+.ts-zone-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ts-zone-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-slate-700);
+}
+
+.ts-zone-range {
+  font-size: 10px;
+  color: var(--color-slate-400);
+}
+
+.ts-zone-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ts-zone-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--color-slate-100);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-slate-600);
+  transition: all 0.15s ease;
+}
+
+.ts-zone-btn:active {
+  transform: scale(0.92);
+  background: var(--color-slate-200);
+}
+
+.ts-zone-value {
+  width: 36px;
+  height: 28px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--color-slate-800);
+}
+
+.ts-zone-value:focus {
+  outline: none;
+  border-color: var(--acc);
+}
+
+.ts-zone-unit {
+  font-size: 11px;
+  color: var(--color-slate-400);
+  min-width: 24px;
+}
+
+/* Быстрые пресеты длительности */
+.ts-quick-durations {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.ts-quick-btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #fff;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 16px;
+  cursor: pointer;
+  color: var(--color-slate-600);
+  transition: all 0.15s ease;
+}
+
+.ts-quick-btn:active {
+  transform: scale(0.97);
+}
+
+.ts-quick-btn.active {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: #fff;
+}
+
+/* === Оценки после тренировки === */
+.ts-ratings-section {
+  padding: 10px 12px;
+}
+
+.ts-ratings-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.ts-rating-row {
+  margin-bottom: 12px;
+}
+
+.ts-rating-row:last-child {
+  margin-bottom: 0;
+}
+
+.ts-rating-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ts-rating-emoji {
+  font-size: 18px;
+}
+
+.ts-rating-label {
+  flex: 1;
+  font-size: 13px;
+  color: var(--color-slate-600);
+}
+
+.ts-rating-value {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Слайдеры */
+.ts-slider {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 3px;
+  outline: none;
+  background: linear-gradient(to right, #ef4444, #eab308, #22c55e);
+}
+
+.ts-slider-negative {
+  background: linear-gradient(to right, #22c55e, #eab308, #ef4444);
+}
+
+.ts-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border: 2px solid var(--acc, #3b82f6);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.ts-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border: 2px solid var(--acc, #3b82f6);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* === Комментарий === */
+.ts-comment-section {
+  padding: 8px 12px;
+}
+
+.ts-comment-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--color-slate-800);
+}
+
+.ts-comment-input::placeholder {
+  color: var(--color-slate-400);
+}
+
+.ts-comment-input:focus {
+  outline: none;
+  border-color: var(--acc);
+}
+
+/* === Dark mode === */
+[data-theme="dark"] .ts-section {
+  background: var(--color-slate-800);
+}
+
+[data-theme="dark"] .ts-type-btn {
+  background: var(--color-slate-700);
+  border-color: var(--color-slate-600);
+}
+
+[data-theme="dark"] .ts-type-btn.active {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: var(--acc);
+}
+
+[data-theme="dark"] .ts-type-label,
+[data-theme="dark"] .ts-time-label,
+[data-theme="dark"] .ts-zone-name,
+[data-theme="dark"] .ts-rating-label {
+  color: var(--color-slate-300);
+}
+
+[data-theme="dark"] .ts-time-value,
+[data-theme="dark"] .ts-zone-value {
+  color: var(--color-slate-100);
+  background: var(--color-slate-700);
+  border-color: var(--color-slate-600);
+}
+
+[data-theme="dark"] .ts-time-btn,
+[data-theme="dark"] .ts-zone-btn {
+  background: var(--color-slate-700);
+  color: var(--color-slate-300);
+}
+
+[data-theme="dark"] .ts-zone-row {
+  background: var(--color-slate-700);
+}
+
+[data-theme="dark"] .ts-quick-btn {
+  background: var(--color-slate-700);
+  border-color: var(--color-slate-600);
+  color: var(--color-slate-300);
+}
+
+[data-theme="dark"] .ts-zones-total {
+  background: var(--color-slate-700);
+  color: var(--color-slate-400);
+}
+
+[data-theme="dark"] .ts-comment-input {
+  background: var(--color-slate-700);
+  border-color: var(--color-slate-600);
+  color: var(--color-slate-100);
+}
+
