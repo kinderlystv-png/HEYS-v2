@@ -51,7 +51,13 @@ export default async function handler(req, res) {
 
     // Если Supabase вернул ошибку — вернём тело как есть
     res.status(upstream.status)
-    upstream.headers.forEach((value, key) => res.setHeader(key, value))
+    // Копируем заголовки, кроме проблемных (content-encoding вызывает ERR_CONTENT_DECODING_FAILED)
+    const skipHeaders = ['content-encoding', 'transfer-encoding', 'content-length']
+    upstream.headers.forEach((value, key) => {
+      if (!skipHeaders.includes(key.toLowerCase())) {
+        res.setHeader(key, value)
+      }
+    })
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Credentials', 'true')
 

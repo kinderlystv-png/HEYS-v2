@@ -80,9 +80,12 @@ export default async function handler(req, res) {
     res.status(response.status)
     res.setHeader('Access-Control-Allow-Origin', corsOrigin)
     res.setHeader('Access-Control-Allow-Credentials', 'true')
-    // Копируем все заголовки ответа
+    // Копируем заголовки ответа (кроме проблемных)
+    const skipHeaders = ['content-encoding', 'transfer-encoding', 'content-length']
     response.headers.forEach((value, key) => {
-      res.setHeader(key, value)
+      if (!skipHeaders.includes(key.toLowerCase())) {
+        res.setHeader(key, value)
+      }
     })
     const buf = Buffer.from(await response.arrayBuffer())
     return res.end(buf)
