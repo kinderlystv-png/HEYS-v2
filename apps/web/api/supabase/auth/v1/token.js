@@ -20,11 +20,22 @@ module.exports = async (req, res) => {
     authorization: req.headers['authorization'] || `Bearer ${SUPABASE_ANON_KEY}`,
   }
 
+  // Читаем тело запроса вручную (для Node serverless)
+  let body
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    body = await new Promise((resolve, reject) => {
+      const chunks = []
+      req.on('data', (c) => chunks.push(c))
+      req.on('end', () => resolve(Buffer.concat(chunks)))
+      req.on('error', reject)
+    })
+  }
+
   try {
     const upstream = await fetch(targetUrl, {
       method: req.method,
       headers,
-      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
+      body,
     })
 
     const buf = Buffer.from(await upstream.arrayBuffer())
