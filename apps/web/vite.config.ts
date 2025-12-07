@@ -2,12 +2,22 @@ import path from 'path';
 
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
   plugins: [
     react(),
     // Bundle analyzer отключен из-за конфликта версий rollup
     // Используем отдельный скрипт для анализа
+    // Копирование CSS модулей в dist для production
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'styles/modules',
+          dest: 'styles'
+        }
+      ]
+    })
   ],
   resolve: {
     alias: {
