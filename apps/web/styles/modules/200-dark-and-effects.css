@@ -1061,6 +1061,58 @@
   color: #8e8e93;
 }
 
+/* Dark theme: Minimal training card */
+[data-theme="dark"] .compact-zone-inline {
+  background: #2c2c2e;
+  border-color: #38383a;
+}
+
+[data-theme="dark"] .compact-zone-inline:hover {
+  background: #3a3a3c;
+  border-color: #48484a;
+}
+
+[data-theme="dark"] .compact-zone-inline.has-value {
+  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+  border-color: #d97706;
+}
+
+[data-theme="dark"] .compact-zone-inline .zone-label {
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .compact-zone-inline .zone-value {
+  color: #e5e5ea;
+}
+
+[data-theme="dark"] .compact-train-footer {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .train-duration-badge {
+  background: #14532d;
+  border-color: #22c55e;
+  color: #86efac;
+}
+
+[data-theme="dark"] .train-rating-mini.mood {
+  background: #14532d;
+  border-color: #22c55e;
+  color: #86efac;
+}
+
+[data-theme="dark"] .train-rating-mini.wellbeing {
+  background: #2e1065;
+  border-color: #8b5cf6;
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .train-rating-mini.stress {
+  background: #1e3a8a;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
 /* Dark theme for training zones */
 [data-theme="dark"] .training-zones-label {
   color: #8e8e93;

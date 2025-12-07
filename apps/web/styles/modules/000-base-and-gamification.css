@@ -788,6 +788,132 @@ td:first-child input {
   background: #f8fafc;
 }
 
+/* === Minimal Training Card (new compact design) === */
+.compact-train--minimal {
+  padding: 10px 12px !important;
+}
+
+.compact-train--minimal .compact-train-header {
+  margin-bottom: 8px;
+}
+
+.compact-train--minimal .compact-train-title {
+  font-weight: 600;
+  color: var(--color-slate-700);
+}
+
+/* Inline zones row */
+.compact-train-zones-inline {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.compact-zone-inline {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.compact-zone-inline:hover {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+}
+
+.compact-zone-inline.has-value {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #fcd34d;
+}
+
+.compact-zone-inline .zone-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.compact-zone-inline .zone-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.compact-zone-inline .zone-kcal {
+  font-size: 9px;
+  color: #f97316;
+  font-weight: 500;
+}
+
+/* Footer: duration + ratings */
+.compact-train-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  flex-wrap: wrap;
+}
+
+.train-duration-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid #bbf7d0;
+}
+
+/* Inline ratings */
+.train-ratings-inline {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.train-rating-mini {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: default;
+  transition: transform 0.15s ease;
+}
+
+.train-rating-mini:hover {
+  transform: scale(1.05);
+}
+
+.train-rating-mini.mood {
+  background: #dcfce7;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.train-rating-mini.wellbeing {
+  background: #ede9fe;
+  color: #7c3aed;
+  border: 1px solid #c4b5fd;
+}
+
+.train-rating-mini.stress {
+  background: #dbeafe;
+  color: #2563eb;
+  border: 1px solid #93c5fd;
+}
+
 /* === 08. TABS WITH ICONS === */
 .tab {
   display: flex;

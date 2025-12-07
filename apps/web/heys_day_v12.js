@@ -4930,65 +4930,45 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         
         return React.createElement('div', { 
           key: 'tr' + ti, 
-          className: 'compact-card compact-train'
+          className: 'compact-card compact-train compact-train--minimal'
         },
+          // Заголовок: иконка + тип + время + ккал + ×
           React.createElement('div', { 
             className: 'compact-train-header',
             onClick: () => openTrainingPicker(ti)
           },
             React.createElement('span', { className: 'compact-train-icon' }, trainingType ? trainingType.icon : (trainIcons[ti] || '💪')),
-            React.createElement('span', null, trainingType ? trainingType.label : ('Тренировка ' + (ti + 1))),
+            React.createElement('span', { className: 'compact-train-title' }, trainingType ? trainingType.label : ('Тренировка ' + (ti + 1))),
             T.time && React.createElement('span', { className: 'compact-train-time' }, T.time),
             React.createElement('span', { className: 'compact-badge train' }, total + ' ккал'),
-            // Кнопка удаления (всегда показываем)
             React.createElement('button', {
               className: 'compact-train-remove',
               onClick: (e) => { e.stopPropagation(); removeTraining(ti); },
               title: 'Убрать тренировку'
             }, '×')
           ),
-          React.createElement('div', { className: 'compact-train-zones' },
-            [0, 1, 2, 3].map((zi) => React.createElement('div', { 
-              key: 'z' + zi, 
-              className: 'compact-zone zone-clickable',
-              onClick: () => openZonePicker(ti, zi)
-            },
-              React.createElement('span', { className: 'compact-zone-label' }, 'Z' + (zi + 1)),
-              React.createElement('span', { className: 'compact-zone-value' }, +T.z[zi] || '—'),
-              // Показываем ккал если есть значение
-              +T.z[zi] > 0 && React.createElement('span', { className: 'compact-zone-kcal' }, kcalZ(zi) + ' ккал'),
-            )),
+          // Зоны: inline строка
+          React.createElement('div', { className: 'compact-train-zones-inline' },
+            [0, 1, 2, 3].map((zi) => {
+              const hasValue = +T.z[zi] > 0;
+              return React.createElement('span', { 
+                key: 'z' + zi, 
+                className: 'compact-zone-inline' + (hasValue ? ' has-value' : ''),
+                onClick: () => openZonePicker(ti, zi)
+              },
+                React.createElement('span', { className: 'zone-label' }, 'Z' + (zi + 1)),
+                React.createElement('span', { className: 'zone-value' }, hasValue ? T.z[zi] : '—'),
+                hasValue && React.createElement('span', { className: 'zone-kcal' }, kcalZ(zi))
+              );
+            })
           ),
-          // Итоговая строка: длительность и оценки
-          (hasDuration || hasRatings) && React.createElement('div', { className: 'training-card-summary' },
-            // Длительность тренировки
-            hasDuration && React.createElement('div', { className: 'training-card-duration' },
-              React.createElement('span', { className: 'training-card-duration-icon' }, '⏱'),
-              React.createElement('span', { className: 'training-card-duration-value' }, totalMinutes + ' мин')
-            ),
-            // Оценки (mood, wellbeing, stress) - как в приёмах пищи
-            hasRatings && React.createElement('div', { className: 'training-card-ratings' },
-              moodEmoji && React.createElement('div', { className: 'training-card-rating mood' },
-                React.createElement('span', { className: 'training-card-rating-emoji' }, moodEmoji),
-                React.createElement('span', { className: 'training-card-rating-text' },
-                  React.createElement('span', { className: 'training-card-rating-label' }, 'Настр.'),
-                  React.createElement('span', { className: 'training-card-rating-value' }, T.mood + '/10')
-                )
-              ),
-              wellbeingEmoji && React.createElement('div', { className: 'training-card-rating wellbeing' },
-                React.createElement('span', { className: 'training-card-rating-emoji' }, wellbeingEmoji),
-                React.createElement('span', { className: 'training-card-rating-text' },
-                  React.createElement('span', { className: 'training-card-rating-label' }, 'Самоч.'),
-                  React.createElement('span', { className: 'training-card-rating-value' }, T.wellbeing + '/10')
-                )
-              ),
-              stressEmoji && React.createElement('div', { className: 'training-card-rating stress' },
-                React.createElement('span', { className: 'training-card-rating-emoji' }, stressEmoji),
-                React.createElement('span', { className: 'training-card-rating-text' },
-                  React.createElement('span', { className: 'training-card-rating-label' }, 'Стресс'),
-                  React.createElement('span', { className: 'training-card-rating-value' }, T.stress + '/10')
-                )
-              )
+          // Нижняя строка: длительность + компактные оценки
+          (hasDuration || hasRatings) && React.createElement('div', { className: 'compact-train-footer' },
+            hasDuration && React.createElement('span', { className: 'train-duration-badge' }, '⏱ ' + totalMinutes + ' мин'),
+            hasRatings && React.createElement('div', { className: 'train-ratings-inline' },
+              moodEmoji && React.createElement('span', { className: 'train-rating-mini mood', title: 'Настроение' }, moodEmoji + ' ' + T.mood),
+              wellbeingEmoji && React.createElement('span', { className: 'train-rating-mini wellbeing', title: 'Самочувствие' }, wellbeingEmoji + ' ' + T.wellbeing),
+              stressEmoji && React.createElement('span', { className: 'train-rating-mini stress', title: 'Усталость' }, stressEmoji + ' ' + T.stress)
             )
           ),
           // Комментарий (если есть)
