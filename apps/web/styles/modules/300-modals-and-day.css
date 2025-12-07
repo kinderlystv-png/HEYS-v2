@@ -1059,6 +1059,51 @@
   color: #111827;
 }
 
+/* === Mood Sparkline — динамика настроения === */
+.mood-sparkline-container {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(139, 92, 246, 0.03) 100%);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin: 10px 0 6px 0;
+}
+
+.mood-sparkline-line {
+  transition: stroke 0.3s ease;
+}
+
+.mood-sparkline-area {
+  opacity: 0;
+  animation: moodAreaFadeIn 0.5s ease-out 0.2s forwards;
+}
+
+@keyframes moodAreaFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mood-point-best {
+  animation: moodBestPulse 2s ease-in-out infinite;
+}
+
+@keyframes moodBestPulse {
+  0%, 100% { filter: drop-shadow(0 0 2px #fbbf24); }
+  50% { filter: drop-shadow(0 0 6px #fbbf24); }
+}
+
+.mood-point-worst {
+  animation: moodWorstPulse 2s ease-in-out infinite;
+}
+
+@keyframes moodWorstPulse {
+  0%, 100% { filter: drop-shadow(0 0 2px #f87171); }
+  50% { filter: drop-shadow(0 0 4px #f87171); }
+}
+
+/* Dark theme для mood sparkline */
+[data-theme="dark"] .mood-sparkline-container {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+}
+
 /* === 02. COMPACT ACTIVITY INPUT === */
 .compact-activity {
   margin-bottom: 8px;

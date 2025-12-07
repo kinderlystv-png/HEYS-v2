@@ -270,6 +270,136 @@
     
     return merged;
   }
+
+  /**
+   * Умный merge продуктов при конфликте local vs remote
+   * Стратегия: объединить по id/name, сохранить уникальные из обеих версий
+   * @param {Array} localProducts - локальные продукты
+   * @param {Array} remoteProducts - продукты из облака
+   * @returns {Array} объединённый массив продуктов
+   */
+  function mergeProductsData(localProducts, remoteProducts) {
+    const local = Array.isArray(localProducts) ? localProducts : [];
+    const remote = Array.isArray(remoteProducts) ? remoteProducts : [];
+    
+    // Функция нормализации имени для сравнения
+    const normalizeName = (name) => String(name || '').trim().toLowerCase();
+    
+    // Функция проверки валидности продукта
+    const isValidProduct = (p) => {
+      if (!p) return false;
+      const name = normalizeName(p.name);
+      return name.length > 0;
+    };
+    
+    // КРИТИЧНО: Фильтруем невалидные продукты СРАЗУ
+    const localValid = local.filter(isValidProduct);
+    const remoteValid = remote.filter(isValidProduct);
+    
+    // Если одна из сторон пуста — возвращаем другую (уже отфильтрованную)
+    if (localValid.length === 0) return remoteValid;
+    if (remoteValid.length === 0) return localValid;
+    
+    // Создаём индексы для быстрого поиска
+    const resultMap = new Map(); // key → product (итоговый результат)
+    const localById = new Map();
+    const localByName = new Map();
+    
+    // Функция получения уникального ключа продукта
+    // Возвращает null для невалидных продуктов (без name)
+    const getProductKey = (p) => {
+      if (!p) return null;
+      const name = normalizeName(p.name);
+      // Продукт без названия — невалидный, пропускаем
+      if (!name) return null;
+      // Ключ по названию (приоритет) — это единый источник уникальности
+      return `name:${name}`;
+    };
+    
+    // Функция подсчёта "полноты" продукта (сколько полей заполнено)
+    const getProductScore = (p) => {
+      let score = 0;
+      if (p.id) score += 1;
+      if (p.name) score += 1;
+      if (p.kcal100 > 0) score += 1;
+      if (p.protein100 > 0) score += 1;
+      if (p.carbs100 > 0 || p.simple100 > 0 || p.complex100 > 0) score += 1;
+      if (p.fat100 > 0 || p.badFat100 > 0 || p.goodFat100 > 0) score += 1;
+      if (p.fiber100 > 0) score += 1;
+      if (p.gi > 0) score += 1;
+      if (p.portions && p.portions.length > 0) score += 1;
+      if (p.createdAt) score += 1; // Бонус за наличие timestamp
+      return score;
+    };
+    
+    // Функция сравнения двух продуктов: какой "лучше"
+    // Возвращает true если p1 лучше p2
+    const isBetterProduct = (p1, p2) => {
+      const score1 = getProductScore(p1);
+      const score2 = getProductScore(p2);
+      
+      // 1. Сначала сравниваем по полноте данных
+      if (score1 !== score2) return score1 > score2;
+      
+      // 2. При равном score — предпочитаем более новый (по createdAt)
+      const time1 = p1.createdAt || 0;
+      const time2 = p2.createdAt || 0;
+      if (time1 !== time2) return time1 > time2;
+      
+      // 3. Fallback: предпочитаем первый (оставляем как есть)
+      return false;
+    };
+    
+    // 1. Индексируем локальные продукты (уже отфильтрованные)
+    localValid.forEach(p => {
+      if (p.id) localById.set(String(p.id), p);
+      const name = normalizeName(p.name);
+      if (name) localByName.set(name, p);
+    });
+    
+    // 2. Сначала добавляем все remote продукты (база, уже отфильтрованные)
+    remoteValid.forEach(p => {
+      const key = getProductKey(p);
+      if (!key) return; // Пропускаем невалидные (дополнительная защита)
+      resultMap.set(key, p);
+    });
+    
+    // 3. Затем мержим/добавляем локальные продукты (уже отфильтрованные)
+    localValid.forEach(p => {
+      const key = getProductKey(p);
+      if (!key) return; // Пропускаем невалидные
+      
+      // Проверяем: есть ли уже такой продукт в результате?
+      const existing = resultMap.get(key);
+      
+      if (!existing) {
+        // Нет в remote — добавляем локальный (это НОВЫЙ продукт!)
+        resultMap.set(key, p);
+        log(`📦 [MERGE PRODUCTS] Added new local product: "${p.name}"`);
+      } else {
+        // Конфликт: выбираем лучшую версию
+        if (isBetterProduct(p, existing)) {
+          resultMap.set(key, p);
+          log(`📦 [MERGE PRODUCTS] Kept local version: "${p.name}"`);
+        }
+        // Иначе оставляем remote (уже в map)
+      }
+    });
+    
+    // 4. Берём все продукты из resultMap (уже валидные, ключ по названию)
+    const deduplicated = Array.from(resultMap.values()).filter(isValidProduct);
+    
+    const stats = {
+      local: local.length,
+      remote: remote.length,
+      merged: deduplicated.length,
+      added: deduplicated.length - remote.length
+    };
+    
+    logCritical(`🔀 [MERGE PRODUCTS] local: ${stats.local}, remote: ${stats.remote} → merged: ${stats.merged} (added: ${stats.added > 0 ? '+' : ''}${stats.added})`);
+    
+    return deduplicated;
+  }
   
   const PENDING_QUEUE_KEY = 'heys_pending_sync_queue';
   const PENDING_CLIENT_QUEUE_KEY = 'heys_pending_client_sync_queue';
@@ -1026,10 +1156,283 @@
   cloud.getUser = function(){ return user; };
   cloud.getStatus = function(){ return status; };
 
+  /**
+   * Очищает невалидные продукты из localStorage (без name)
+   * Вызывать для восстановления после бага с undefined продуктами
+   */
+  cloud.cleanupProducts = function() {
+    try {
+      const clientId = HEYS.utils?.getCurrentClientId?.() || '';
+      const key = clientId ? `heys_${clientId}_products` : 'heys_products';
+      const raw = localStorage.getItem(key);
+      if (!raw) return { cleaned: 0, total: 0 };
+      
+      // Защита от повреждённых данных (не-JSON)
+      let products;
+      try {
+        products = JSON.parse(raw);
+      } catch (parseError) {
+        // Данные повреждены — удаляем их, пусть загрузятся из облака
+        logCritical(`🧹 [CLEANUP] Corrupted localStorage data for ${key}, removing`);
+        localStorage.removeItem(key);
+        return { cleaned: 0, total: 0, corrupted: true };
+      }
+      
+      if (!Array.isArray(products)) return { cleaned: 0, total: 0 };
+      
+      const before = products.length;
+      const cleaned = products.filter(p => 
+        p && typeof p.name === 'string' && p.name.trim().length > 0
+      );
+      const after = cleaned.length;
+      
+      if (after < before) {
+        localStorage.setItem(key, JSON.stringify(cleaned));
+        logCritical(`🧹 [CLEANUP] Removed ${before - after} invalid products (${before} → ${after})`);
+      }
+      
+      return { cleaned: before - after, total: after };
+    } catch (e) {
+      console.error('[CLEANUP] Error:', e);
+      return { error: e.message };
+    }
+  };
+
+  /**
+   * Удаляет orphan продукты из приёмов пищи
+   * @param {string[]} orphanNames - список названий продуктов для удаления
+   * @returns {Object} статистика { daysAffected, itemsRemoved }
+   */
+  cloud.cleanupOrphanMealItems = function(orphanNames) {
+    if (!Array.isArray(orphanNames) || orphanNames.length === 0) {
+      console.warn('[CLEANUP ORPHANS] No orphan names provided');
+      return { daysAffected: 0, itemsRemoved: 0 };
+    }
+    
+    const clientId = HEYS.utils?.getCurrentClientId?.() || '';
+    const prefix = clientId ? `heys_${clientId}_dayv2_` : 'heys_dayv2_';
+    const orphanSet = new Set(orphanNames.map(n => n.toLowerCase().trim()));
+    
+    let daysAffected = 0;
+    let itemsRemoved = 0;
+    
+    // Проходим по всем ключам localStorage
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.includes('dayv2_')) continue;
+      
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        
+        const dayData = JSON.parse(raw);
+        if (!dayData || !Array.isArray(dayData.meals)) continue;
+        
+        let dayModified = false;
+        
+        // Фильтруем items в каждом meal
+        dayData.meals = dayData.meals.map(meal => {
+          if (!meal || !Array.isArray(meal.items)) return meal;
+          
+          const beforeCount = meal.items.length;
+          meal.items = meal.items.filter(item => {
+            const itemName = (item.name || '').toLowerCase().trim();
+            const isOrphan = orphanSet.has(itemName);
+            if (isOrphan) itemsRemoved++;
+            return !isOrphan;
+          });
+          
+          if (meal.items.length !== beforeCount) {
+            dayModified = true;
+          }
+          
+          return meal;
+        });
+        
+        // Удаляем пустые meals
+        dayData.meals = dayData.meals.filter(meal => 
+          meal && Array.isArray(meal.items) && meal.items.length > 0
+        );
+        
+        if (dayModified) {
+          daysAffected++;
+          dayData.updatedAt = Date.now();
+          localStorage.setItem(key, JSON.stringify(dayData));
+          
+          // Синхронизируем изменения в облако
+          const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+          if (dateMatch && clientId) {
+            const dayKey = `heys_dayv2_${dateMatch[1]}`;
+            cloud.saveClientKey(clientId, dayKey, dayData);
+          }
+        }
+      } catch (e) {
+        console.warn('[CLEANUP ORPHANS] Error processing', key, e);
+      }
+    }
+    
+    if (itemsRemoved > 0) {
+      logCritical(`🧹 [CLEANUP ORPHANS] Removed ${itemsRemoved} orphan items from ${daysAffected} days: ${orphanNames.join(', ')}`);
+    } else {
+      log(`🧹 [CLEANUP ORPHANS] No orphan items found for: ${orphanNames.join(', ')}`);
+    }
+    
+    return { daysAffected, itemsRemoved };
+  };
+
+  /**
+   * Очищает невалидные продукты в ОБЛАКЕ
+   * Проверяет ОБЕ таблицы: kv_store И client_kv_store
+   * Удаляет записи с мусорными продуктами и пустые legacy записи
+   */
+  cloud.cleanupCloudProducts = async function() {
+    try {
+      if (!client || !user) return { error: 'Not authenticated' };
+      
+      const clientId = HEYS.utils?.getCurrentClientId?.() || '';
+      if (!clientId) return { error: 'No clientId' };
+      
+      let totalCleaned = 0;
+      let totalAfter = 0;
+      let totalDeleted = 0;
+      let totalRecords = 0;
+      
+      // ===== 1. ОЧИСТКА kv_store (глобальные данные) =====
+      const { data: kvData, error: kvError } = await client
+        .from('kv_store')
+        .select('k,v')
+        .eq('user_id', user.id)
+        .like('k', '%products%');
+      
+      if (kvError) {
+        logCritical('☁️ [CLOUD CLEANUP] kv_store error:', kvError.message);
+      } else if (kvData && kvData.length > 0) {
+        totalRecords += kvData.length;
+        for (const row of kvData) {
+          const result = await cleanupProductRecord('kv_store', row, { user_id: user.id }, clientId);
+          totalCleaned += result.cleaned;
+          totalAfter += result.kept;
+          if (result.deleted) totalDeleted++;
+        }
+      }
+      
+      // ===== 2. ОЧИСТКА client_kv_store (данные клиента) =====
+      const { data: clientData, error: clientError } = await client
+        .from('client_kv_store')
+        .select('k,v')
+        .eq('client_id', clientId)
+        .like('k', '%products%');
+      
+      if (clientError) {
+        logCritical('☁️ [CLOUD CLEANUP] client_kv_store error:', clientError.message);
+      } else if (clientData && clientData.length > 0) {
+        totalRecords += clientData.length;
+        for (const row of clientData) {
+          const result = await cleanupProductRecord('client_kv_store', row, { client_id: clientId }, clientId);
+          totalCleaned += result.cleaned;
+          totalAfter += result.kept;
+          if (result.deleted) totalDeleted++;
+        }
+      }
+      
+      // Логируем только если были изменения или много записей
+      if (totalDeleted > 0 || totalCleaned > 0) {
+        logCritical(`☁️ [CLOUD CLEANUP] Done: ${totalRecords} records, deleted ${totalDeleted} empty, cleaned ${totalCleaned} invalid, kept ${totalAfter} valid`);
+      } else if (totalRecords > 0) {
+        log(`☁️ [CLOUD CLEANUP] OK: ${totalRecords} records, ${totalAfter} products`);
+      }
+      
+      return { cleaned: totalCleaned, deleted: totalDeleted, total: totalAfter };
+    } catch (e) {
+      console.error('[CLOUD CLEANUP] Error:', e);
+      return { error: e.message };
+    }
+  };
+  
+  /**
+   * Хелпер: очистка одной записи продуктов
+   * - Удаляет записи с 0 продуктами (мусор)
+   * - Удаляет невалидные продукты из записей
+   * - Тихий режим для OK записей
+   */
+  async function cleanupProductRecord(table, row, filters, clientId) {
+    const products = row.v;
+    
+    // Пустой массив или не массив — удаляем запись
+    if (!Array.isArray(products) || products.length === 0) {
+      let query = client.from(table).delete();
+      for (const [key, val] of Object.entries(filters)) {
+        query = query.eq(key, val);
+      }
+      query = query.eq('k', row.k);
+      
+      const { error: deleteError } = await query;
+      
+      if (!deleteError) {
+        logCritical(`☁️ [CLOUD CLEANUP] DELETED empty ${table}.${row.k}`);
+      }
+      return { cleaned: 0, kept: 0, deleted: true };
+    }
+    
+    const before = products.length;
+    const cleaned = products.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
+    const after = cleaned.length;
+    
+    // Все продукты валидные — тихий OK (не логируем каждую запись)
+    if (after === before) {
+      return { cleaned: 0, kept: after };
+    }
+    
+    // 🚨 Если ВСЕ продукты невалидные — удаляем запись полностью!
+    if (after === 0) {
+      let query = client.from(table).delete();
+      for (const [key, val] of Object.entries(filters)) {
+        query = query.eq(key, val);
+      }
+      query = query.eq('k', row.k);
+      
+      const { error: deleteError } = await query;
+      
+      if (deleteError) {
+        logCritical(`☁️ [CLOUD CLEANUP] Failed to delete ${table}.${row.k}:`, deleteError.message);
+        return { cleaned: 0, kept: 0 };
+      } else {
+        logCritical(`☁️ [CLOUD CLEANUP] DELETED garbage ${table}.${row.k} (had ${before} invalid)`);
+        return { cleaned: before, kept: 0, deleted: true };
+      }
+    }
+    
+    // Сохраняем очищенные обратно
+    const upsertData = {
+      ...filters,
+      k: row.k,
+      v: cleaned,
+      updated_at: new Date().toISOString()
+    };
+    // client_kv_store требует client_id
+    if (table === 'client_kv_store' && !upsertData.client_id) {
+      upsertData.client_id = clientId;
+    }
+    
+    const onConflict = table === 'kv_store' ? 'user_id,k' : 'client_id,k';
+    const { error: upsertError } = await client.from(table).upsert(upsertData, { onConflict });
+    
+    if (upsertError) {
+      logCritical(`☁️ [CLOUD CLEANUP] Failed to save ${table}.${row.k}:`, upsertError.message);
+      return { cleaned: 0, kept: after };
+    } else {
+      logCritical(`☁️ [CLOUD CLEANUP] ${table}.${row.k}: Cleaned ${before - after} invalid (${before} → ${after})`);
+      return { cleaned: before - after, kept: after };
+    }
+  }
+
   cloud.bootstrapSync = async function(){
     try{
       muteMirror = true;
       if (!client || !user) { muteMirror = false; return; }
+      
+      // 🧹 Очистка невалидных продуктов перед синхронизацией
+      cloud.cleanupProducts();
       
       // Retry с exponential backoff для сетевых ошибок (QUIC, network)
       const { data, error } = await fetchWithRetry(
@@ -1114,6 +1517,16 @@
     // Устанавливаем флаг что sync в процессе
     _syncInProgress = (async () => {
     try{
+      // 🧹 Очистка невалидных продуктов перед синхронизацией (локальные)
+      cloud.cleanupProducts();
+      
+      // 🧹 Очистка невалидных продуктов в ОБЛАКЕ (с дедупликацией, не чаще раз в 5 минут)
+      const now = Date.now();
+      if (!cloud._lastCloudCleanup || (now - cloud._lastCloudCleanup) > 300000) {
+        cloud._lastCloudCleanup = now;
+        cloud.cleanupCloudProducts().catch(e => console.warn('[CLOUD CLEANUP] Error:', e));
+      }
+      
       // Проверяем что клиент существует (без автосоздания)
       const _exists = await cloud.ensureClient(client_id);
       if (!_exists){
@@ -1296,19 +1709,46 @@
             }
           }
           
-          // ЗАЩИТА: не затираем локальные продукты пустым массивом из Supabase
+          // ЗАЩИТА И MERGE: Умное объединение продуктов (не затираем локальные)
           if (key.includes('_products')) {
             // Читаем актуальное локальное значение по scoped ключу
             let currentLocal = null;
             try { 
               const rawLocal = ls.getItem(key);
-              if (rawLocal) currentLocal = JSON.parse(rawLocal);
+              if (rawLocal) {
+                const parsed = JSON.parse(rawLocal);
+                // Фильтруем невалидные продукты (без name)
+                currentLocal = Array.isArray(parsed) 
+                  ? parsed.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0)
+                  : null;
+              }
             } catch(e) {}
             
+            // 🛡️ КРИТИЧНО: Фильтруем невалидные продукты из облака ПЕРЕД любой обработкой
+            let remoteProducts = row.v;
+            if (Array.isArray(row.v)) {
+              const before = row.v.length;
+              remoteProducts = row.v.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
+              if (remoteProducts.length !== before) {
+                logCritical(`🧹 [CLOUD PRODUCTS] Pre-filtered ${before - remoteProducts.length} invalid (${before} → ${remoteProducts.length})`);
+              }
+            }
+            
             // КРИТИЧЕСКАЯ ЗАЩИТА: НЕ ЗАТИРАЕМ непустые продукты пустым массивом
-            if (Array.isArray(row.v) && row.v.length === 0) {
+            if (Array.isArray(remoteProducts) && remoteProducts.length === 0) {
               if (Array.isArray(currentLocal) && currentLocal.length > 0) {
                 log(`⚠️ [PRODUCTS] BLOCKED: Refusing to overwrite ${currentLocal.length} local products with empty cloud array`);
+                // 🔄 Отправляем локальные продукты в облако чтобы заменить мусор
+                logCritical(`🔄 [CLOUD RECOVERY] Pushing ${currentLocal.length} local products to replace cloud garbage`);
+                const recoveryUpsertObj = {
+                  user_id: user.id,
+                  client_id: client_id,
+                  k: row.k,
+                  v: currentLocal,
+                  updated_at: new Date().toISOString(),
+                };
+                clientUpsertQueue.push(recoveryUpsertObj);
+                scheduleClientPush();
                 return; // Пропускаем сохранение
               } else {
                 // Оба пусты - пытаемся восстановить из backup
@@ -1328,6 +1768,38 @@
                   } catch(e) {}
                 }
               }
+            }
+            
+            // 🔀 MERGE: Объединяем локальные и облачные продукты (уже отфильтрованные!)
+            // Это решает проблему: новый продукт добавлен локально, но облако ещё не обновилось
+            if (Array.isArray(currentLocal) && currentLocal.length > 0 && Array.isArray(remoteProducts) && remoteProducts.length > 0) {
+              const merged = mergeProductsData(currentLocal, remoteProducts);
+              
+              // Если merge добавил новые продукты — сохраняем и синхронизируем обратно в облако
+              if (merged.length > remoteProducts.length) {
+                logCritical(`📦 [PRODUCTS MERGE] ${currentLocal.length} local + ${remoteProducts.length} remote → ${merged.length} merged`);
+                ls.setItem(key, JSON.stringify(merged));
+                
+                // Уведомляем приложение об обновлении
+                if (typeof window !== 'undefined' && window.dispatchEvent) {
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('heysProductsUpdated', { detail: { products: merged } }));
+                  }, 100);
+                }
+                
+                // Отправляем merged версию обратно в облако
+                const mergedUpsertObj = {
+                  user_id: user.id,
+                  client_id: client_id,
+                  k: row.k, // Оригинальный ключ из БД
+                  v: merged,
+                  updated_at: (new Date()).toISOString(),
+                };
+                clientUpsertQueue.push(mergedUpsertObj);
+                scheduleClientPush();
+                return; // Уже обработали products
+              }
+              // Если merge не добавил новых — просто сохраняем remote (продолжаем ниже)
             }
           }
           
@@ -1355,14 +1827,122 @@
             }
           }
           
-          ls.setItem(key, JSON.stringify(row.v));
+          // 🔄 Миграция: добавляем inline данные к старым MealItems (если нет kcal100)
+          // Это гарантирует что калории считаются даже если продукт удалён из базы
+          if (key.includes('dayv2_') && row.v?.meals?.length) {
+            // Получаем продукты для поиска
+            let productsForMigration = null;
+            try {
+              // Пытаемся получить из HEYS.store (актуальные данные)
+              if (global.HEYS?.store?.get) {
+                productsForMigration = global.HEYS.store.get('heys_products', []);
+              }
+              // Fallback: читаем из localStorage по scoped key
+              if (!productsForMigration || productsForMigration.length === 0) {
+                const scopedProductsKey = key.replace(/dayv2_.*/, 'products');
+                const rawProducts = ls.getItem(scopedProductsKey);
+                if (rawProducts) productsForMigration = JSON.parse(rawProducts);
+              }
+            } catch(e) { productsForMigration = []; }
+            
+            if (Array.isArray(productsForMigration) && productsForMigration.length > 0) {
+              // Создаём индексы продуктов по ID и по названию
+              const productsById = new Map();
+              const productsByName = new Map();
+              productsForMigration.forEach(p => {
+                if (p && p.id) productsById.set(String(p.id), p);
+                if (p && p.name) {
+                  const name = String(p.name).trim();
+                  if (name) productsByName.set(name, p);
+                }
+              });
+              
+              let itemsMigrated = 0;
+              row.v.meals = row.v.meals.map(meal => {
+                if (!meal || !Array.isArray(meal.items)) return meal;
+                
+                const migratedItems = meal.items.map(item => {
+                  // Если уже есть inline kcal100 — пропускаем
+                  if (item.kcal100 !== undefined) return item;
+                  
+                  // Ищем продукт сначала по названию, потом по product_id
+                  const itemName = String(item.name || '').trim();
+                  let product = itemName ? productsByName.get(itemName) : null;
+                  if (!product) {
+                    const productId = String(item.product_id || item.id || '');
+                    product = productId ? productsById.get(productId) : null;
+                  }
+                  
+                  if (product && product.kcal100 !== undefined) {
+                    itemsMigrated++;
+                    return {
+                      ...item,
+                      kcal100: product.kcal100,
+                      protein100: product.protein100,
+                      fat100: product.fat100,
+                      simple100: product.simple100,
+                      complex100: product.complex100,
+                      badFat100: product.badFat100,
+                      goodFat100: product.goodFat100,
+                      trans100: product.trans100,
+                      fiber100: product.fiber100,
+                      gi: product.gi ?? product.gi100,
+                      harm: product.harm ?? product.harm100
+                    };
+                  }
+                  return item;
+                });
+                
+                return { ...meal, items: migratedItems };
+              });
+              
+              if (itemsMigrated > 0) {
+                logCritical(`  🔄 [MIGRATION] Added inline data to ${itemsMigrated} items in ${key}`);
+                
+                // 🔄 Сохраняем мигрированные данные обратно в облако
+                const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+                if (dateMatch) {
+                  const dayKey = `heys_dayv2_${dateMatch[1]}`;
+                  row.v.updatedAt = Date.now();
+                  const migrationUpsertObj = {
+                    client_id: client_id,
+                    k: dayKey,
+                    v: row.v,
+                    updated_at: new Date().toISOString()
+                  };
+                  clientUpsertQueue.push(migrationUpsertObj);
+                  scheduleClientPush();
+                }
+              }
+            }
+          }
+          
+          // Для products используем отфильтрованные данные (уже обработаны выше)
+          // Если дошли сюда — значит merge не произошёл (local пуст)
+          // Используем remoteProducts которые уже отфильтрованы
+          let valueToSave = row.v;
+          if (key.includes('_products')) {
+            // remoteProducts уже отфильтрован выше — используем его
+            // Если он пустой и мы дошли сюда — значит recovery уже запущен выше
+            // Но на всякий случай проверим ещё раз
+            if (typeof remoteProducts !== 'undefined') {
+              valueToSave = remoteProducts;
+              if (valueToSave.length === 0) {
+                // Не сохраняем пустой массив — recovery уже запущен
+                log(`⚠️ [PRODUCTS] Skipping save of 0 products (recovery should handle this)`);
+                return;
+              }
+            }
+          }
+          
+          ls.setItem(key, JSON.stringify(valueToSave));
           log(`  ✅ Saved to localStorage: ${key}`);
           
           // Уведомляем приложение об обновлении продуктов
-          if (key === 'heys_products' && row.v) {
+          if (key.includes('_products') && valueToSave) {
             if (typeof window !== 'undefined' && window.dispatchEvent) {
               setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('heysProductsUpdated', { detail: { products: row.v } }));
+                window.dispatchEvent(new CustomEvent('heysProductsUpdated', { detail: { products: valueToSave } }));
               }, 100);
             }
           }
@@ -1399,6 +1979,20 @@
       initialSyncCompleted = true;
       cancelFailsafeTimer(); // Отменяем failsafe — sync успешен
       
+      // 🧹 Однократная очистка облака от невалидных продуктов (после первой синхронизации)
+      if (!cloud._cloudCleanupDone) {
+        cloud._cloudCleanupDone = true;
+        setTimeout(() => {
+          cloud.cleanupCloudProducts().then(result => {
+            if (result.cleaned > 0) {
+              logCritical(`☁️ [AUTO CLOUD CLEANUP] Cleaned ${result.cleaned} invalid products from cloud`);
+            }
+          }).catch(e => {
+            console.error('[AUTO CLOUD CLEANUP] Error:', e);
+          });
+        }, 2000); // Задержка 2 сек чтобы не блокировать UI
+      }
+
       // Уведомляем приложение о завершении синхронизации (для обновления stepsGoal и т.д.)
       // Задержка 300мс чтобы localStorage успел обновиться и React перечитал данные
       // ВСЕГДА отправляем событие — дедупликация на стороне получателя (проверка clientId)
@@ -1541,12 +2135,12 @@
         return;
       }
       
-      // Удаляем дубликаты по комбинации user_id+client_id+k, оставляя последние значения
+      // Удаляем дубликаты по комбинации client_id+k, оставляя последние значения
       const uniqueBatch = [];
       const seenKeys = new Set();
       for (let i = batch.length - 1; i >= 0; i--) {
         const item = batch[i];
-        const key = `${item.user_id}:${item.client_id}:${item.k}`;
+        const key = `${item.client_id}:${item.k}`;
         if (!seenKeys.has(key)) {
           seenKeys.add(key);
           uniqueBatch.unshift(item);
@@ -1554,10 +2148,19 @@
       }
       
       try{
-        const promises = uniqueBatch.map(item => 
-          cloud.upsert('client_kv_store', item, 'user_id,client_id,k')
-            .catch(() => {}) // Тихо игнорируем ошибки
-        );
+        const promises = uniqueBatch.map(item => {
+          // Добавляем user_id если его нет (таблица требует NOT NULL)
+          const itemWithUser = item.user_id ? item : { ...item, user_id: user.id };
+          // DEBUG: логируем первый item для диагностики
+          if (uniqueBatch.indexOf(item) === 0) {
+            console.log('[DEBUG] client_kv_store upsert payload:', JSON.stringify(itemWithUser, null, 2).substring(0, 500));
+          }
+          // Primary key = (user_id, client_id, k), используем его для onConflict
+          return cloud.upsert('client_kv_store', itemWithUser, 'user_id,client_id,k')
+            .catch(err => {
+              console.error('[DEBUG] Upsert error:', err?.message || err, 'for key:', itemWithUser?.k);
+            });
+        });
         await Promise.allSettled(promises);
         
         // Успех — сбрасываем retry счётчик
@@ -1747,6 +2350,21 @@
         if (k === 'heys_products' && Array.isArray(value) && value.length === 0) {
             log(`🚫 [SAVE BLOCKED] Refused to save empty products array to Supabase (key: ${k})`);
             return; // Блокируем затирание реальных данных пустым массивом
+        }
+        
+        // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: Фильтруем невалидные продукты перед сохранением
+        if (k === 'heys_products' && Array.isArray(value)) {
+            const validProducts = value.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
+            if (validProducts.length !== value.length) {
+                logCritical(`🧹 [SAVE FILTER] Filtered ${value.length - validProducts.length} invalid products before save (${value.length} → ${validProducts.length})`);
+                value = validProducts;
+                upsertObj.v = validProducts;
+            }
+            // Если после фильтрации массив пуст — не сохраняем
+            if (validProducts.length === 0) {
+                log(`🚫 [SAVE BLOCKED] All products invalid, refusing to save empty array`);
+                return;
+            }
         }
 
         // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем "пустой" профиль (без ключевых полей)

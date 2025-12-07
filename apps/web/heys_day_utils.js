@@ -6,6 +6,158 @@
   // Создаём namespace для утилит дня
   HEYS.dayUtils = {};
 
+  // === Orphan Products Tracking ===
+  // Отслеживание продуктов, для которых данные берутся из штампа вместо базы
+  const orphanProductsMap = new Map(); // name => { name, usedInDays: Set, firstSeen }
+  
+  function trackOrphanProduct(item, dateStr) {
+    if (!item || !item.name) return;
+    const name = String(item.name).trim();
+    if (!name) return;
+    
+    if (!orphanProductsMap.has(name)) {
+      orphanProductsMap.set(name, {
+        name: name,
+        usedInDays: new Set([dateStr]),
+        firstSeen: Date.now(),
+        hasInlineData: item.kcal100 != null
+      });
+      // Первое обнаружение — логируем
+      console.warn(`[HEYS] Orphan product: "${name}" — используются данные из штампа`);
+    } else {
+      orphanProductsMap.get(name).usedInDays.add(dateStr);
+    }
+  }
+  
+  // API для просмотра orphan-продуктов
+  HEYS.orphanProducts = {
+    // Получить список всех orphan-продуктов
+    getAll() {
+      return Array.from(orphanProductsMap.values()).map(o => ({
+        ...o,
+        usedInDays: Array.from(o.usedInDays),
+        daysCount: o.usedInDays.size
+      }));
+    },
+    
+    // Количество orphan-продуктов
+    count() {
+      return orphanProductsMap.size;
+    },
+    
+    // Есть ли orphan-продукты?
+    hasAny() {
+      return orphanProductsMap.size > 0;
+    },
+    
+    // Очистить (после синхронизации или исправления)
+    clear() {
+      orphanProductsMap.clear();
+    },
+    
+    // Удалить конкретный (если продукт добавили обратно в базу)
+    remove(productId) {
+      orphanProductsMap.delete(String(productId));
+    },
+    
+    // Показать в консоли красивую таблицу
+    log() {
+      const all = this.getAll();
+      if (all.length === 0) {
+        console.log('✅ Нет orphan-продуктов — все данные берутся из базы');
+        return;
+      }
+      console.warn(`⚠️ Найдено ${all.length} orphan-продуктов (данные из штампа):`);
+      console.table(all.map(o => ({
+        Название: o.name,
+        'Дней использования': o.daysCount,
+        'Есть данные': o.hasInlineData ? '✓' : '✗'
+      })));
+    },
+    
+    // Восстановить orphan-продукты в базу из штампов в днях
+    async restore() {
+      const U = HEYS.utils || {};
+      const lsGet = U.lsGet || ((k, d) => {
+        try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+      });
+      const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
+      
+      // Получаем текущие продукты (ключ = name)
+      const products = lsGet('heys_products', []);
+      const productsMap = new Map();
+      products.forEach(p => {
+        if (p && p.name) {
+          const name = String(p.name).trim();
+          if (name) productsMap.set(name, p);
+        }
+      });
+      
+      // Собираем orphan-продукты из всех дней
+      const restored = [];
+      const keys = Object.keys(localStorage).filter(k => k.includes('heys_dayv2_'));
+      
+      for (const key of keys) {
+        try {
+          const day = JSON.parse(localStorage.getItem(key));
+          if (!day || !day.meals) continue;
+          
+          for (const meal of day.meals) {
+            for (const item of (meal.items || [])) {
+              const itemName = String(item.name || '').trim();
+              // Если продукта нет в базе по имени И есть inline данные
+              if (itemName && !productsMap.has(itemName) && item.kcal100 != null) {
+                const restoredProduct = {
+                  id: item.product_id || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
+                  name: itemName,
+                  kcal100: item.kcal100,
+                  protein100: item.protein100 || 0,
+                  fat100: item.fat100 || 0,
+                  carbs100: item.carbs100 || 0,
+                  simple100: item.simple100 || 0,
+                  complex100: item.complex100 || 0,
+                  badFat100: item.badFat100 || 0,
+                  goodFat100: item.goodFat100 || 0,
+                  trans100: item.trans100 || 0,
+                  fiber100: item.fiber100 || 0,
+                  gi: item.gi || 50,
+                  harm: item.harm || 0,
+                  restoredAt: Date.now(),
+                  restoredFrom: 'orphan_stamp'
+                };
+                productsMap.set(itemName, restoredProduct);
+                restored.push(restoredProduct);
+                console.log(`[HEYS] Восстановлен: "${itemName}"`);
+              }
+            }
+          }
+        } catch (e) {
+          // Пропускаем битые записи
+        }
+      }
+      
+      if (restored.length > 0) {
+        // Сохраняем обновлённую базу
+        const newProducts = Array.from(productsMap.values());
+        lsSet('heys_products', newProducts);
+        
+        // Очищаем orphan-трекинг
+        this.clear();
+        
+        // Обновляем индекс продуктов если есть
+        if (HEYS.products?.buildSearchIndex) {
+          HEYS.products.buildSearchIndex();
+        }
+        
+        console.log(`✅ Восстановлено ${restored.length} продуктов в базу`);
+        return { success: true, count: restored.length, products: restored };
+      }
+      
+      console.log('ℹ️ Нечего восстанавливать — нет данных в штампах');
+      return { success: false, count: 0, products: [] };
+    }
+  };
+
   // === Haptic Feedback ===
   // Track if user has interacted (required for vibrate API)
   let userHasInteracted = false;
@@ -671,9 +823,15 @@
           const grams = +item.grams || 0;
           if (grams <= 0) return;
           
-          // Сначала ищем в productsMap, потом fallback на inline данные item
-          const product = productsMap.get(item.product_id);
+          // Ищем в productsMap по названию, потом fallback на inline данные item
+          const itemName = String(item.name || '').trim();
+          const product = itemName ? productsMap.get(itemName) : null;
           const src = product || item; // item может иметь inline kcal100, protein100 и т.д.
+          
+          // Трекаем orphan-продукты (когда используется штамп вместо базы)
+          if (!product && itemName) {
+            trackOrphanProduct(item, dateStr);
+          }
           
           if (src.kcal100 != null || src.protein100 != null) {
             const mult = grams / 100;
@@ -734,7 +892,7 @@
 
   /**
    * Получает Map продуктов для вычисления калорий
-   * @returns {Map} productsMap (id => product)
+   * @returns {Map} productsMap (name => product)
    */
   function getProductsMap() {
     const productsMap = new Map();
@@ -777,7 +935,12 @@
       if (!Array.isArray(products)) {
         products = [];
       }
-      products.forEach(p => { if(p && p.id) productsMap.set(p.id, p); });
+      products.forEach(p => { 
+        if (p && p.name) {
+          const name = String(p.name).trim();
+          if (name) productsMap.set(name, p); 
+        }
+      });
     } catch (e) {
       // Тихий fallback — productsMap не критичен
     }
@@ -805,10 +968,15 @@
       const baseBmr = calcBMR(profileWeight, profile || {});
       const threshold = Math.round(baseBmr / 3); // 1/3 BMR — минимум для "активного" дня
       
-      // Строим Map продуктов из переданного массива
+      // Строим Map продуктов из переданного массива (ключ = name)
       const productsMap = new Map();
       const productsArr = Array.isArray(products) ? products : [];
-      productsArr.forEach(p => { if(p && p.id) productsMap.set(p.id, p); });
+      productsArr.forEach(p => { 
+        if (p && p.name) {
+          const name = String(p.name).trim();
+          if (name) productsMap.set(name, p);
+        }
+      });
       
       // Проходим по всем дням месяца
       const daysInMonth = new Date(year, month + 1, 0).getDate();

@@ -134,10 +134,15 @@
       items.forEach(it=>{
         const grams = +(it.grams!=null?it.grams:it.g)||+(it.qty||0)||+(it.weight||0)||0;
         let p = null;
-        if (it.product_id!=null) p = prodIndex.byId.get(String(it.product_id));
+        // Сначала ищем по названию (новый приоритет)
+        const nm = String(it.name||it.title||'').trim().toLowerCase();
+        if (nm) p = prodIndex.byName.get(nm);
+        // Fallback на product_id/id для обратной совместимости
+        if (!p && it.product_id!=null) p = prodIndex.byId.get(String(it.product_id));
         if (!p && it.productId!=null) p = prodIndex.byId.get(String(it.productId));
         if (!p && it.id!=null && typeof it.name!=='string') p = prodIndex.byId.get(String(it.id));
-        if (!p){ const nm = String(it.name||it.title||'').trim().toLowerCase(); if (nm) p = prodIndex.byName.get(nm); }
+        // Fallback на inline данные
+        if (!p && (it.kcal100 !== undefined || it.protein100 !== undefined)) p = it;
         if (!p || !grams) return;
 
         const k = grams/100;

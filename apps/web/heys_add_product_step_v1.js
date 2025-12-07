@@ -767,7 +767,8 @@
         harmScore: harm,
         carbs100: Math.round(carbs100 * 10) / 10,
         fat100: Math.round(fat100 * 10) / 10,
-        kcal100: Math.round(kcal100 * 10) / 10
+        kcal100: Math.round(kcal100 * 10) / 10,
+        createdAt: Date.now()
       };
     }, []);
     

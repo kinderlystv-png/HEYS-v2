@@ -68,6 +68,29 @@
   'use strict';
   
   // ═══════════════════════════════════════════════════════════
+  // HELPER: Get product for item (by name first, then by id)
+  // ═══════════════════════════════════════════════════════════
+  function getProductForItem(item, pIndex) {
+    if (!item || !pIndex) return null;
+    // Сначала ищем по названию
+    const nameKey = (item.name || '').trim().toLowerCase();
+    if (nameKey && pIndex.byName) {
+      const found = pIndex.byName.get(nameKey);
+      if (found) return found;
+    }
+    // Fallback на product_id для обратной совместимости
+    if (item.product_id != null && pIndex.byId) {
+      const found = pIndex.byId.get(String(item.product_id).toLowerCase());
+      if (found) return found;
+    }
+    // Если есть inline данные — возвращаем сам item
+    if (item.kcal100 !== undefined || item.protein100 !== undefined) {
+      return item;
+    }
+    return null;
+  }
+  
+  // ═══════════════════════════════════════════════════════════
   // CONFIGURATION
   // ═══════════════════════════════════════════════════════════
   
@@ -1433,8 +1456,8 @@
     
     for (const item of allItems) {
       let productName = item.name || '';
-      if (!productName && pIndex?.byId && item.product_id) {
-        const product = pIndex.byId.get(item.product_id) || pIndex.byId.get(String(item.product_id));
+      if (!productName) {
+        const product = getProductForItem(item, pIndex);
         if (product) productName = product.name || '';
       }
       
@@ -2510,7 +2533,7 @@
           let dayKcal = 0;
           for (const meal of dayMeals) {
             for (const item of (meal.items || [])) {
-              const product = pIndex?.byId?.get(item.product_id);
+              const product = getProductForItem(item, pIndex);
               if (product) dayKcal += (product.kcal100 || 0) * (item.grams || 100) / 100;
             }
           }
@@ -3230,7 +3253,7 @@
     // Разнообразие рациона
     const allItems = (day?.meals || []).flatMap(m => m.items || []);
     const productNames = allItems.map(it => {
-      const product = pIndex?.byId?.get(it.product_id);
+      const product = getProductForItem(it, pIndex);
       return (product?.name || it.name || '').toLowerCase().trim();
     }).filter(Boolean);
     const uniqueProducts = new Set(productNames).size;
@@ -3936,7 +3959,7 @@
     if (lastMeal && lastMeal.items?.length > 0) {
       let lastMealSimple = 0, lastMealCarbs = 0, lastMealKcal = 0;
       for (const item of lastMeal.items) {
-        const product = pIndex?.byId?.get(item.product_id);
+        const product = getProductForItem(item, pIndex);
         if (!product) continue;
         const grams = item.grams || 100;
         lastMealSimple += (product.simple100 || 0) * grams / 100;
@@ -4295,7 +4318,7 @@
           let totalW = 0, totalG = 0;
           for (const item of (lastMeal.items || [])) {
             const g = item.grams || 100;
-            const prod = pIndex?.byId?.get?.(item.product_id);
+            const prod = getProductForItem(item, pIndex);
             const gi = prod?.gi || prod?.gi100 || 50;
             totalW += gi * g;
             totalG += g;
@@ -4541,7 +4564,7 @@
       if (lastH >= 21 && lastH < 22 && lastMealByTime && !sessionStorage.getItem('heys_late_heavy_shown')) {
         let lateMealKcal = 0;
         for (const item of (lastMealByTime.items || [])) {
-          const product = pIndex?.byId?.get(item.product_id);
+          const product = getProductForItem(item, pIndex);
           if (product) lateMealKcal += (product.kcal100 || 0) * (item.grams || 100) / 100;
         }
         
@@ -4648,7 +4671,7 @@
         // Много сахара в предыдущем приёме?
         let prevSimple = 0;
         for (const item of prevMeal.items || []) {
-          const product = pIndex?.byId?.get(item.product_id);
+          const product = getProductForItem(item, pIndex);
           if (product) prevSimple += (product.simple100 || 0) * (item.grams || 100) / 100;
         }
         
@@ -4870,7 +4893,7 @@
       const ironRichKeywords = ['мясо', 'печень', 'говядина', 'гречка', 'шпинат', 'чечевица'];
       const allItemsP = (day?.meals || []).flatMap(m => m.items || []);
       const hasIronRichFood = allItemsP.some(item => {
-        const product = pIndex?.byId?.get(item.product_id);
+        const product = getProductForItem(item, pIndex);
         const name = (product?.name || item.name || '').toLowerCase();
         return ironRichKeywords.some(kw => name.includes(kw));
       });
@@ -5277,8 +5300,8 @@
       for (const item of (meal.items || [])) {
         // Получаем название продукта
         let name = item.name || '';
-        if (!name && pIndex?.byId && item.product_id) {
-          const product = pIndex.byId.get(item.product_id);
+        if (!name) {
+          const product = getProductForItem(item, pIndex);
           if (product) name = product.name || '';
         }
         
@@ -5318,11 +5341,8 @@
       const grams = item.grams || 0;
       if (grams <= 0) continue;
       
-      // Получаем продукт из индекса
-      let product = null;
-      if (pIndex?.byId && item.product_id) {
-        product = pIndex.byId.get(item.product_id) || pIndex.byId.get(String(item.product_id));
-      }
+      // Получаем продукт из индекса (по названию, fallback на id)
+      const product = getProductForItem(item, pIndex);
       if (!product) continue;
       
       const ratio = grams / 100;
@@ -5392,13 +5412,15 @@
    * @returns {number}
    */
   function countUniqueProducts(day) {
-    const ids = new Set();
+    const names = new Set();
     (day?.meals || []).forEach(meal => {
       (meal.items || []).forEach(item => {
-        if (item.product_id) ids.add(String(item.product_id));
+        // Используем название как уникальный идентификатор
+        const name = String(item.name || '').trim().toLowerCase();
+        if (name) names.add(name);
       });
     });
-    return ids.size;
+    return names.size;
   }
   
   /**

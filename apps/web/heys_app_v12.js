@@ -3214,7 +3214,7 @@
                           React.createElement(
                             'div',
                             { style: { marginTop: 20, textAlign: 'center', color: 'var(--muted)', fontSize: 13 } },
-                            status === 'offline' 
+                            !navigator.onLine
                               ? '📡 Нет подключения к сети'
                               : (() => {
                                   const hour = new Date().getHours();

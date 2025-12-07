@@ -345,21 +345,21 @@
 
   function getProductFromItem(it, idx){ 
     if(!it) return null; 
-    // Сначала ищем в индексе по product_id
-    if(it.product_id!=null) { 
-      const found = idx.byId.get(String(it.product_id).toLowerCase()); 
-      if(found) return found; 
-    } 
-    if(it.productId!=null) { 
-      const found = idx.byId.get(String(it.productId).toLowerCase()); 
-      if(found) return found; 
-    } 
-    // Потом по имени
+    // Сначала ищем по названию (приоритет)
     const nm=String(it.name||it.title||'').trim().toLowerCase(); 
-    if(nm) { 
+    if(nm && idx.byName) { 
       const found = idx.byName.get(nm); 
       if(found) return found; 
     }
+    // Fallback: ищем в индексе по product_id для обратной совместимости
+    if(it.product_id!=null && idx.byId) { 
+      const found = idx.byId.get(String(it.product_id).toLowerCase()); 
+      if(found) return found; 
+    } 
+    if(it.productId!=null && idx.byId) { 
+      const found = idx.byId.get(String(it.productId).toLowerCase()); 
+      if(found) return found; 
+    } 
     // FALLBACK: если продукт не найден в индексе, но в item есть нутриенты — возвращаем сам item как продукт
     if(it.kcal100 !== undefined || it.protein100 !== undefined) {
       return it;

@@ -314,7 +314,7 @@
       DEV.log(`✅ [PARSE_SYNC] Извлечены данные из строки ${i + 1}:`, st.name, st.nums);
       
       const [kcal, carbs, simple, complex, protein, fat, bad, good, trans, fiber, gi, harm] = st.nums;
-      const base = { id: uuid(), name: st.name, simple100:simple, complex100:complex, protein100:protein, badFat100:bad, goodFat100:good, trans100:trans, fiber100:fiber, gi:gi, harmScore:harm };
+      const base = { id: uuid(), name: st.name, simple100:simple, complex100:complex, protein100:protein, badFat100:bad, goodFat100:good, trans100:trans, fiber100:fiber, gi:gi, harmScore:harm, createdAt: Date.now() };
       
       try {
         const d = computeDerived(base);
@@ -563,7 +563,18 @@
 
     function resetDraft(){ setDraft({name:'', simple100:0, complex100:0, protein100:0, badFat100:0, goodFat100:0, trans100:0, fiber100:0, gi:0, harmScore:0}); }
     function addProduct(){ 
-      const base = { id: uuid(), name: draft.name || 'Без названия', simple100: toNum(draft.simple100), complex100: toNum(draft.complex100), protein100: toNum(draft.protein100), badFat100: toNum(draft.badFat100), goodFat100: toNum(draft.goodFat100), trans100: toNum(draft.trans100), fiber100: toNum(draft.fiber100), gi: toNum(draft.gi), harmScore: toNum(draft.harmScore) }; 
+      const name = (draft.name || '').trim();
+      if (!name) {
+        alert('Введите название продукта');
+        return;
+      }
+      // Проверка уникальности названия
+      const existingProduct = products.find(p => p.name && p.name.trim().toLowerCase() === name.toLowerCase());
+      if (existingProduct) {
+        alert(`Продукт "${name}" уже существует в базе!\\nИспользуйте другое название или отредактируйте существующий.`);
+        return;
+      }
+      const base = { id: uuid(), name: name, simple100: toNum(draft.simple100), complex100: toNum(draft.complex100), protein100: toNum(draft.protein100), badFat100: toNum(draft.badFat100), goodFat100: toNum(draft.goodFat100), trans100: toNum(draft.trans100), fiber100: toNum(draft.fiber100), gi: toNum(draft.gi), harmScore: toNum(draft.harmScore), createdAt: Date.now() }; 
       const d = computeDerived(base); 
       setProducts([...products, { ...base, ...d }]); 
       if (window.HEYS && window.HEYS.analytics) {
@@ -573,6 +584,20 @@
       setShowModal(false); 
     }
     function updateRow(id, patch){ 
+      // Проверка уникальности названия при переименовании
+      if (patch.name !== undefined) {
+        const newName = (patch.name || '').trim();
+        if (!newName) {
+          alert('Название не может быть пустым');
+          return;
+        }
+        const existingProduct = products.find(p => p.id !== id && p.name && p.name.trim().toLowerCase() === newName.toLowerCase());
+        if (existingProduct) {
+          alert(`Продукт "${newName}" уже существует в базе!`);
+          return;
+        }
+        patch.name = newName;
+      }
       setProducts(products.map(p=>{ if(p.id !== id) return p; const changed = { ...p, ...patch }; const d = computeDerived(changed); return { ...changed, ...d }; })); 
       if (window.HEYS && window.HEYS.analytics) {
         window.HEYS.analytics.trackDataOperation('storage-op');

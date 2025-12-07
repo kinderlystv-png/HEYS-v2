@@ -2390,6 +2390,72 @@
       day.dayScoreManual
     ]);
 
+    // === Sparkline данные: динамика настроения в течение дня ===
+    const moodSparklineData = React.useMemo(() => {
+      const points = [];
+      const parseTime = (t) => {
+        if (!t) return 0;
+        const [h, m] = t.split(':').map(Number);
+        return (h || 0) * 60 + (m || 0);
+      };
+      
+      // Собираем точки из приёмов пищи
+      (day.meals || []).forEach((meal, idx) => {
+        const mood = +meal.mood || 0;
+        const wellbeing = +meal.wellbeing || 0;
+        const stress = +meal.stress || 0;
+        // Нужна хотя бы одна оценка
+        if (!mood && !wellbeing && !stress) return;
+        const time = parseTime(meal.time);
+        if (!time) return;
+        // Комбинированная оценка: (mood + wellbeing + (10 - stress)) / 3
+        // Если какой-то параметр отсутствует, используем нейтральное 5
+        const m = mood || 5;
+        const w = wellbeing || 5;
+        const s = stress || 5;
+        const score = (m + w + (10 - s)) / 3;
+        points.push({
+          time,
+          score: Math.round(score * 10) / 10,
+          type: 'meal',
+          name: meal.name || 'Приём ' + (idx + 1),
+          mood, wellbeing, stress,
+          icon: '🍽️'
+        });
+      });
+      
+      // Собираем точки из тренировок
+      (day.trainings || []).forEach((tr, idx) => {
+        const mood = +tr.mood || 0;
+        const wellbeing = +tr.wellbeing || 0;
+        const stress = +tr.stress || 0;
+        if (!mood && !wellbeing && !stress) return;
+        const time = parseTime(tr.time);
+        if (!time) return;
+        const m = mood || 5;
+        const w = wellbeing || 5;
+        const s = stress || 5;
+        const score = (m + w + (10 - s)) / 3;
+        const typeIcons = { cardio: '🏃', strength: '🏋️', hobby: '⚽' };
+        points.push({
+          time,
+          score: Math.round(score * 10) / 10,
+          type: 'training',
+          name: tr.type === 'cardio' ? 'Кардио' : tr.type === 'strength' ? 'Силовая' : 'Хобби',
+          mood, wellbeing, stress,
+          icon: typeIcons[tr.type] || '🏃'
+        });
+      });
+      
+      // Сортируем по времени
+      points.sort((a, b) => a.time - b.time);
+      
+      return points;
+    }, [
+      day.meals?.map(m => `${m.time}-${m.mood}-${m.wellbeing}-${m.stress}`).join('|'),
+      day.trainings?.map(t => `${t.time}-${t.mood}-${t.wellbeing}-${t.stress}`).join('|')
+    ]);
+
     // === iOS-style Time Picker Modal (mobile only) ===
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [pendingMealTime, setPendingMealTime] = useState({hours: 12, minutes: 0});
@@ -4525,7 +4591,25 @@
     
     const addProductToMeal = React.useCallback((mi,p)=>{ 
       haptic('light'); // Вибрация при добавлении
-      const item={id:uid('it_'), product_id:p.id??p.product_id, name:p.name, grams:100}; 
+      // Сохраняем ключевые нутриенты inline чтобы не зависеть от базы продуктов
+      const item = {
+        id: uid('it_'), 
+        product_id: p.id ?? p.product_id, 
+        name: p.name, 
+        grams: 100,
+        // Inline данные — гарантируют корректный расчёт даже если продукт удалён из базы
+        kcal100: p.kcal100,
+        protein100: p.protein100,
+        fat100: p.fat100,
+        simple100: p.simple100,
+        complex100: p.complex100,
+        badFat100: p.badFat100,
+        goodFat100: p.goodFat100,
+        trans100: p.trans100,
+        fiber100: p.fiber100,
+        gi: p.gi ?? p.gi100,
+        harm: p.harm ?? p.harm100
+      }; 
       setDay(prevDay => {
         const meals=(prevDay.meals||[]).map((m,i)=> i===mi? {...m, items:[...(m.items||[]), item]}:m); 
         return {...prevDay, meals}; 
@@ -4626,8 +4710,10 @@
               (meal.items || []).forEach(item => {
                 const grams = +item.grams || 0;
                 if (grams <= 0) return;
-                // Fallback: сначала pIndex, потом inline данные item
-                const product = pIndex?.byId?.get(item.product_id);
+                // Fallback: сначала pIndex по названию/ID, потом inline данные item
+                const nameKey = (item.name || '').trim().toLowerCase();
+                const product = nameKey && pIndex?.byName?.get(nameKey)
+                  || (item.product_id != null ? pIndex?.byId?.get(String(item.product_id).toLowerCase()) : null);
                 const src = product || item;
                 if (src.kcal100 != null) {
                   totalKcal += ((+src.kcal100 || 0) * grams / 100);
@@ -5143,6 +5229,191 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   React.createElement('span', { className: 'mood-card-label' }, 'Стресс'),
                   React.createElement('span', { className: 'mood-card-value' }, day.stressAvg || '—')
                 )
+              ),
+              // === Sparkline динамики настроения в течение дня ===
+              moodSparklineData.length >= 2 && React.createElement('div', {
+                className: 'mood-sparkline-container',
+                style: {
+                  position: 'relative',
+                  height: '85px',
+                  margin: '12px 0 8px 0',
+                  padding: '8px 0'
+                }
+              },
+                (() => {
+                  const points = moodSparklineData;
+                  const svgW = 280;
+                  const svgH = 60; // Увеличил высоту для лучшей видимости
+                  const padding = 12;
+                  
+                  // Диапазон времени
+                  const minTime = Math.min(...points.map(p => p.time)) - 30;
+                  const maxTime = Math.max(...points.map(p => p.time)) + 30;
+                  const timeRange = Math.max(maxTime - minTime, 60);
+                  
+                  // Динамический масштаб: точно по данным + минимальный padding
+                  const scores = points.map(p => p.score);
+                  const dataMin = Math.min(...scores);
+                  const dataMax = Math.max(...scores);
+                  const dataRange = dataMax - dataMin;
+                  
+                  // Минимальный диапазон 1.5 для наглядности, padding 15% от диапазона
+                  const effectiveRange = Math.max(dataRange, 0.5);
+                  const paddingAmount = effectiveRange * 0.25;
+                  // НЕ округляем — используем точные значения для максимальной детализации
+                  const minScore = Math.max(1, dataMin - paddingAmount);
+                  const maxScore = Math.min(10, dataMax + paddingAmount);
+                  const scoreRange = Math.max(maxScore - minScore, 0.5);
+                  
+                  // Вычисляем координаты точек
+                  const coords = points.map((p, idx) => {
+                    const x = padding + ((p.time - minTime) / timeRange) * (svgW - 2 * padding);
+                    const y = svgH - padding - ((p.score - minScore) / scoreRange) * (svgH - 2 * padding);
+                    return { ...p, x, y, idx };
+                  });
+                  
+                  // Находим лучшую и худшую точку
+                  const bestIdx = coords.reduce((best, p, i) => p.score > coords[best].score ? i : best, 0);
+                  const worstIdx = coords.reduce((worst, p, i) => p.score < coords[worst].score ? i : worst, 0);
+                  
+                  // Строим path для линии
+                  const linePath = coords.length > 1 
+                    ? 'M ' + coords.map(c => `${c.x},${c.y}`).join(' L ')
+                    : '';
+                  
+                  // Строим path для градиентной заливки
+                  const areaPath = coords.length > 1 
+                    ? `M ${coords[0].x},${svgH - padding} ` + 
+                      coords.map(c => `L ${c.x},${c.y}`).join(' ') + 
+                      ` L ${coords[coords.length - 1].x},${svgH - padding} Z`
+                    : '';
+                  
+                  // Определяем тренд
+                  const trend = coords.length >= 2 
+                    ? coords[coords.length - 1].score - coords[0].score 
+                    : 0;
+                  const trendIcon = trend > 0.5 ? '📈' : trend < -0.5 ? '📉' : '➡️';
+                  const trendColor = trend > 0.5 ? '#16a34a' : trend < -0.5 ? '#dc2626' : '#6b7280';
+                  
+                  // Цвет линии по среднему score
+                  const avgScore = coords.reduce((sum, c) => sum + c.score, 0) / coords.length;
+                  const lineColor = avgScore >= 7 ? '#10b981' : avgScore >= 5 ? '#eab308' : '#ef4444';
+                  
+                  return React.createElement('div', { style: { position: 'relative' } },
+                    // Заголовок с трендом
+                    React.createElement('div', { 
+                      style: { 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginBottom: '4px',
+                        padding: '0 4px'
+                      }
+                    },
+                      React.createElement('span', { 
+                        style: { fontSize: '11px', color: 'var(--text-tertiary, #9ca3af)', fontWeight: '500' }
+                      }, '📊 Динамика дня'),
+                      React.createElement('span', { 
+                        style: { fontSize: '11px', color: trendColor, fontWeight: '600' }
+                      }, trendIcon + ' ' + (trend > 0 ? '+' : '') + trend.toFixed(1))
+                    ),
+                    // SVG график
+                    React.createElement('svg', {
+                      viewBox: `0 0 ${svgW} ${svgH + 16}`,
+                      style: { width: '100%', height: '60px' },
+                      preserveAspectRatio: 'xMidYMid meet'
+                    },
+                      // Градиенты
+                      React.createElement('defs', null,
+                        React.createElement('linearGradient', { id: 'moodSparkGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
+                          React.createElement('stop', { offset: '0%', stopColor: lineColor, stopOpacity: '0.4' }),
+                          React.createElement('stop', { offset: '100%', stopColor: lineColor, stopOpacity: '0.05' })
+                        )
+                      ),
+                      // Горизонтальные референсные линии (хорошо/плохо) — только если в видимом диапазоне
+                      // Линия "хорошо" = 7 (показываем если 7 попадает в диапазон)
+                      (7 >= minScore && 7 <= maxScore) && React.createElement('line', {
+                        x1: padding, y1: svgH - padding - ((7 - minScore) / scoreRange) * (svgH - 2 * padding),
+                        x2: svgW - padding, y2: svgH - padding - ((7 - minScore) / scoreRange) * (svgH - 2 * padding),
+                        stroke: '#22c55e', strokeWidth: '0.5', strokeDasharray: '3,3', opacity: '0.5'
+                      }),
+                      // Линия "плохо" = 4 (показываем если 4 попадает в диапазон)
+                      (4 >= minScore && 4 <= maxScore) && React.createElement('line', {
+                        x1: padding, y1: svgH - padding - ((4 - minScore) / scoreRange) * (svgH - 2 * padding),
+                        x2: svgW - padding, y2: svgH - padding - ((4 - minScore) / scoreRange) * (svgH - 2 * padding),
+                        stroke: '#ef4444', strokeWidth: '0.5', strokeDasharray: '3,3', opacity: '0.5'
+                      }),
+                      // Подписи min/max шкалы слева (округляем до 1 знака)
+                      React.createElement('text', {
+                        x: 2, y: padding + 3,
+                        fontSize: '8', fill: 'var(--text-tertiary, #9ca3af)', textAnchor: 'start'
+                      }, Math.round(maxScore * 10) / 10),
+                      React.createElement('text', {
+                        x: 2, y: svgH - padding + 3,
+                        fontSize: '8', fill: 'var(--text-tertiary, #9ca3af)', textAnchor: 'start'
+                      }, Math.round(minScore * 10) / 10),
+                      // Заливка под линией
+                      areaPath && React.createElement('path', {
+                        d: areaPath,
+                        fill: 'url(#moodSparkGrad)',
+                        className: 'mood-sparkline-area'
+                      }),
+                      // Основная линия
+                      linePath && React.createElement('path', {
+                        d: linePath,
+                        fill: 'none',
+                        stroke: lineColor,
+                        strokeWidth: '2',
+                        strokeLinecap: 'round',
+                        strokeLinejoin: 'round',
+                        className: 'mood-sparkline-line'
+                      }),
+                      // Точки
+                      coords.map((c, i) => {
+                        const isBest = i === bestIdx && coords.length > 2;
+                        const isWorst = i === worstIdx && coords.length > 2;
+                        const pointColor = c.score >= 7 ? '#10b981' : c.score >= 5 ? '#eab308' : '#ef4444';
+                        const r = isBest || isWorst ? 5 : 4;
+                        return React.createElement('g', { key: 'mood-pt-' + i },
+                          // Белый ореол
+                          React.createElement('circle', {
+                            cx: c.x, cy: c.y, r: r + 1.5,
+                            fill: 'white'
+                          }),
+                          // Точка
+                          React.createElement('circle', {
+                            cx: c.x, cy: c.y, r: r,
+                            fill: pointColor,
+                            stroke: isBest ? '#fbbf24' : isWorst ? '#f87171' : 'white',
+                            strokeWidth: isBest || isWorst ? 2 : 1,
+                            className: isBest ? 'mood-point-best' : isWorst ? 'mood-point-worst' : ''
+                          }),
+                          // Иконка типа над точкой
+                          React.createElement('text', {
+                            x: c.x, y: c.y - 10,
+                            textAnchor: 'middle',
+                            fontSize: '8',
+                            fill: 'var(--text-secondary, #6b7280)'
+                          }, c.icon)
+                        );
+                      }),
+                      // Подписи времени
+                      coords.filter((c, i) => i === 0 || i === coords.length - 1).map((c, i) => {
+                        const hours = Math.floor(c.time / 60);
+                        const mins = c.time % 60;
+                        const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+                        return React.createElement('text', {
+                          key: 'time-' + i,
+                          x: c.x,
+                          y: svgH + 8,
+                          textAnchor: i === 0 ? 'start' : 'end',
+                          fontSize: '9',
+                          fill: 'var(--text-tertiary, #9ca3af)'
+                        }, timeStr);
+                      })
+                    )
+                  );
+                })()
               ),
               // Время последнего приёма и корреляция
               (lastMealTime || sleepCorrelation) && React.createElement('div', { className: 'day-insights-row' },
@@ -5902,9 +6173,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const days = [];
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
         
-        // Строим Map продуктов из state (а не из localStorage!)
+        // Строим Map продуктов из state (ключ = name для поиска по названию)
         const productsMap = new Map();
-        (products || []).forEach(p => { if(p && p.id) productsMap.set(p.id, p); });
+        (products || []).forEach(p => { 
+          if (p && p.name) {
+            const name = String(p.name).trim();
+            if (name) productsMap.set(name, p);
+          }
+        });
         
         // Получаем данные activeDays для нескольких месяцев (chartPeriod может охватывать 2 месяца)
         const getActiveDaysForMonth = (HEYS.dayUtils && HEYS.dayUtils.getActiveDaysForMonth) || (() => new Map());
@@ -6014,8 +6290,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 (meal.items || []).forEach(item => {
                   const grams = +item.grams || 0;
                   if (grams <= 0) return;
-                  // Fallback: сначала productsMap, потом inline данные item
-                  const product = productsMap.get(item.product_id);
+                  // Fallback: сначала productsMap (ключ = name), потом inline данные item
+                  const nameKey = (item.name || '').trim();
+                  const product = nameKey ? productsMap.get(nameKey) : null;
                   const src = product || item;
                   if (src.kcal100 != null) {
                     totalKcal += ((+src.kcal100 || 0) * grams / 100);
@@ -8962,6 +9239,96 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       )
     );
     
+    // === ALERT: Orphan-продукты (данные из штампа вместо базы) ===
+    const orphanCount = HEYS.orphanProducts?.count?.() || 0;
+    const orphanAlert = orphanCount > 0 && React.createElement('div', {
+      className: 'orphan-alert compact-card',
+      style: {
+        background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+        border: '1px solid #f59e0b',
+        borderRadius: '12px',
+        padding: '12px 16px',
+        marginBottom: '12px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '12px'
+      }
+    },
+      React.createElement('span', { style: { fontSize: '20px' } }, '⚠️'),
+      React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+        React.createElement('div', { 
+          style: { 
+            fontWeight: 600, 
+            color: '#92400e', 
+            marginBottom: '4px',
+            fontSize: '14px'
+          } 
+        }, `${orphanCount} продукт${orphanCount === 1 ? '' : orphanCount < 5 ? 'а' : 'ов'} не найден${orphanCount === 1 ? '' : 'о'} в базе`),
+        React.createElement('div', { 
+          style: { 
+            color: '#a16207', 
+            fontSize: '12px',
+            lineHeight: '1.4'
+          } 
+        }, 'Калории считаются по сохранённым данным. Нажми чтобы увидеть список.'),
+        // Список orphan-продуктов
+        React.createElement('details', { 
+          style: { marginTop: '8px' }
+        },
+          React.createElement('summary', { 
+            style: { 
+              cursor: 'pointer', 
+              color: '#92400e',
+              fontSize: '12px',
+              fontWeight: 500
+            } 
+          }, 'Показать продукты'),
+          React.createElement('ul', { 
+            style: { 
+              margin: '8px 0 0 0', 
+              padding: '0 0 0 20px',
+              fontSize: '12px',
+              color: '#78350f'
+            } 
+          },
+            (HEYS.orphanProducts?.getAll?.() || []).map((o, i) => 
+              React.createElement('li', { key: o.name || i, style: { marginBottom: '2px' } },
+                React.createElement('strong', null, o.name),
+                ` — ${o.hasInlineData ? '✓ можно восстановить' : '⚠️ нет данных, нельзя восстановить!'}`,
+                o.daysCount > 1 && ` (${o.daysCount} дней)`
+              )
+            )
+          ),
+          // Кнопка восстановления
+          React.createElement('button', {
+            style: {
+              marginTop: '10px',
+              padding: '8px 16px',
+              background: '#f59e0b',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            },
+            onClick: async () => {
+              const result = await HEYS.orphanProducts?.restore?.();
+              if (result?.success) {
+                alert(`✅ Восстановлено ${result.count} продуктов!\nОбновите страницу для применения.`);
+                window.location.reload();
+              } else {
+                alert('⚠️ Не удалось восстановить — нет данных в штампах.');
+              }
+            }
+          }, '🔧 Восстановить в базу')
+        )
+      )
+    );
+    
     // === БЛОК СТАТИСТИКА ===
     const statsBlock = React.createElement('div', { className: 'compact-stats compact-card' },
       React.createElement('div', { className: 'compact-card-header stats-header-with-badge' },
@@ -9430,7 +9797,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             let macroSum = 0;
             dayData.meals.forEach(meal => {
               (meal.items || []).forEach(item => {
-                const prod = pIndex.byId.get(item.product_id);
+                const nameKey = (item.name || '').trim().toLowerCase();
+                const prod = (nameKey && pIndex.byName.get(nameKey)) || (item.product_id != null ? pIndex.byId.get(String(item.product_id).toLowerCase()) : null);
                 const src = prod || item; // fallback to inline data
                 const g = item.grams || 100;
                 if (macroKey === 'prot') macroSum += (+src.protein100 || 0) * g / 100;
@@ -9497,7 +9865,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               let macroSum = 0;
               dayData.meals.forEach(meal => {
                 (meal.items || []).forEach(item => {
-                  const prod = pIndex.byId.get(item.product_id);
+                  const nameKey = (item.name || '').trim().toLowerCase();
+                  const prod = (nameKey && pIndex.byName.get(nameKey)) || (item.product_id != null ? pIndex.byId.get(String(item.product_id).toLowerCase()) : null);
                   const src = prod || item; // fallback to inline data
                   const g = item.grams || 100;
                   if (macroKey === 'prot') macroSum += (+src.protein100 || 0) * g / 100;
@@ -9536,7 +9905,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               let macroSum = 0;
               dayData.meals.forEach(meal => {
                 (meal.items || []).forEach(item => {
-                  const prod = pIndex.byId.get(item.product_id);
+                  const nameKey = (item.name || '').trim().toLowerCase();
+                  const prod = (nameKey && pIndex.byName.get(nameKey)) || (item.product_id != null ? pIndex.byId.get(String(item.product_id).toLowerCase()) : null);
                   const src = prod || item; // fallback to inline data
                   const g = item.grams || 100;
                   if (macroKey === 'prot') macroSum += (+src.protein100 || 0) * g / 100;
@@ -11260,6 +11630,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       ),
       
       // === ПОД-ВКЛАДКА 1: Статистика дня (или всё на десктопе) ===
+      (!isMobile || mobileSubTab === 'stats') && orphanAlert,
       (!isMobile || mobileSubTab === 'stats') && statsBlock,
       (!isMobile || mobileSubTab === 'stats') && waterCard,
       (!isMobile || mobileSubTab === 'stats') && compactActivity,
@@ -11450,7 +11821,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   let kcal = 0;
                   (m.items || []).forEach(item => {
                     const g = +item.grams || 0;
-                    const prod = pIndex?.byId?.get(item.product_id);
+                    const nameKey = (item.name || '').trim().toLowerCase();
+                    const prod = (nameKey && pIndex?.byName?.get(nameKey)) || (item.product_id != null ? pIndex?.byId?.get(String(item.product_id).toLowerCase()) : null);
                     const src = prod || item; // fallback to inline data
                     if (src.kcal100 != null && g > 0) kcal += (+src.kcal100 || 0) * g / 100;
                   });
@@ -12954,7 +13326,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                         // Калории за день
                         let kcal = 0;
                         dData.meals.forEach(m => (m.items || []).forEach(item => {
-                          const p = pIndex?.byId?.get(item.product_id);
+                          const nameKey = (item.name || '').trim().toLowerCase();
+                          const p = (nameKey && pIndex?.byName?.get(nameKey)) || (item.product_id != null ? pIndex?.byId?.get(String(item.product_id).toLowerCase()) : null);
                           const src = p || item; // fallback to inline data
                           if (src.kcal100 != null) kcal += ((+src.kcal100 || 0) * (+item.grams || 0) / 100);
                         }));
