@@ -5607,16 +5607,52 @@ body:has(.offline-banner) .wrap {
   .mobile-mood-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     background: transparent;
     border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    padding: 4px 10px;
+    border-radius: 8px;
+    padding: 4px 8px;
     cursor: pointer;
   }
   
   .mobile-mood-btn:active {
     background: #f3f4f6;
+  }
+  
+  /* Компактные цветные badge оценок в приёмах пищи (как в тренировках) */
+  .meal-rating-mini {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 7px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  .meal-rating-mini.mood {
+    background: #dcfce7;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+  }
+  
+  .meal-rating-mini.wellbeing {
+    background: #ede9fe;
+    color: #7c3aed;
+    border: 1px solid #c4b5fd;
+  }
+  
+  .meal-rating-mini.stress {
+    background: #dbeafe;
+    color: #2563eb;
+    border: 1px solid #93c5fd;
+  }
+  
+  /* Пустое состояние оценок */
+  .meal-rating-empty {
+    font-size: 12px;
+    color: #9ca3af;
+    font-weight: 500;
   }
   
   /* Отображение метрик на мобильных (без input) */

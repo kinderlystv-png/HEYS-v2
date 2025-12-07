@@ -1265,6 +1265,22 @@
     const isCurrentMeal = displayIndex === 0 && !isStale;
     const mealCardClass = isCurrentMeal ? 'card tone-blue meal-card' : 'card tone-slate meal-card';
     const computeDerivedProductFn = M.computeDerivedProduct || ((prod) => prod || {});
+    
+    // Helper functions для эмодзи оценок (как в тренировках)
+    const getMoodEmoji = (v) => 
+      v <= 0 ? null : v <= 2 ? '😢' : v <= 4 ? '😕' : v <= 6 ? '😐' : v <= 8 ? '😊' : '😄';
+    const getWellbeingEmoji = (v) => 
+      v <= 0 ? null : v <= 2 ? '🤒' : v <= 4 ? '😓' : v <= 6 ? '😐' : v <= 8 ? '💪' : '🏆';
+    const getStressEmoji = (v) => 
+      v <= 0 ? null : v <= 2 ? '😌' : v <= 4 ? '🙂' : v <= 6 ? '😐' : v <= 8 ? '😟' : '😰';
+    
+    const moodVal = +meal.mood || 0;
+    const wellbeingVal = +meal.wellbeing || 0;
+    const stressVal = +meal.stress || 0;
+    const moodEmoji = getMoodEmoji(moodVal);
+    const wellbeingEmoji = getWellbeingEmoji(wellbeingVal);
+    const stressEmoji = getStressEmoji(stressVal);
+    const hasRatings = moodVal > 0 || wellbeingVal > 0 || stressVal > 0;
 
     return React.createElement('div',{className: mealCardClass, 'data-meal-index': mealIndex, style:{marginTop:'8px', width: '100%'}},
       // Заголовок приёма ВНУТРИ карточки: время слева, тип по центру, калории справа (ОДНА СТРОКА)
@@ -1574,28 +1590,24 @@
             )
           );
         }),
-        // Компактный блок: время + настроение + самочувствие + стресс (SaaS стиль)
+        // Компактный блок: оценки (время уже в заголовке)
         React.createElement('div', { className: 'meal-meta-row' },
-          // На мобильных — кнопка редактирования времени, на десктопе — input
-          isMobile
-            ? React.createElement('button', { 
-                className: 'compact-input time mobile-time-btn', 
-                onClick: () => openTimeEditor(mealIndex),
-                title: 'Изменить время'
-              }, (U.formatMealTime ? U.formatMealTime(meal.time) : meal.time) || '—:—')
-            : React.createElement('input', { className: 'compact-input time', type: 'time', title: 'Время приёма', value: meal.time || '', onChange: e => onChangeTime(mealIndex, e.target.value) }),
-          // На мобильных — кнопка редактирования оценок, на десктопе — inputs
+          // На мобильных — только кнопка редактирования оценок (время в заголовке)
           isMobile
             ? React.createElement('button', {
                 className: 'mobile-mood-btn',
                 onClick: () => openMoodEditor(mealIndex),
                 title: 'Изменить оценки'
               },
-                React.createElement('span', { className: 'meal-meta-display' }, '😊', React.createElement('span', { className: 'meta-value' }, meal.mood || '—')),
-                React.createElement('span', { className: 'meal-meta-display' }, '💪', React.createElement('span', { className: 'meta-value' }, meal.wellbeing || '—')),
-                React.createElement('span', { className: 'meal-meta-display' }, '😰', React.createElement('span', { className: 'meta-value' }, meal.stress || '—'))
+                hasRatings ? React.createElement(React.Fragment, null,
+                  moodEmoji && React.createElement('span', { className: 'meal-rating-mini mood' }, moodEmoji + ' ' + moodVal),
+                  wellbeingEmoji && React.createElement('span', { className: 'meal-rating-mini wellbeing' }, wellbeingEmoji + ' ' + wellbeingVal),
+                  stressEmoji && React.createElement('span', { className: 'meal-rating-mini stress' }, stressEmoji + ' ' + stressVal)
+                ) : React.createElement('span', { className: 'meal-rating-empty' }, '+ оценки')
               )
+            // На десктопе — время + inputs для оценок
             : React.createElement(React.Fragment, null,
+                React.createElement('input', { className: 'compact-input time', type: 'time', title: 'Время приёма', value: meal.time || '', onChange: e => onChangeTime(mealIndex, e.target.value) }),
                 React.createElement('span', { className: 'meal-meta-field' }, '😊', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Настроение', value: meal.mood || '', onChange: e => onChangeMood(mealIndex, +e.target.value || '') })),
                 React.createElement('span', { className: 'meal-meta-field' }, '💪', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Самочувствие', value: meal.wellbeing || '', onChange: e => onChangeWellbeing(mealIndex, +e.target.value || '') })),
                 React.createElement('span', { className: 'meal-meta-field' }, '😰', React.createElement('input', { className: 'compact-input tiny', type: 'number', min: 1, max: 10, placeholder: '—', title: 'Стресс', value: meal.stress || '', onChange: e => onChangeStress(mealIndex, +e.target.value || '') }))

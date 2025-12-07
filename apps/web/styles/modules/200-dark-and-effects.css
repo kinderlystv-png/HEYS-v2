@@ -1113,6 +1113,37 @@
   color: #93c5fd;
 }
 
+/* Dark theme: Meal rating badges (как train-rating-mini) */
+[data-theme="dark"] .meal-rating-mini.mood {
+  background: #14532d;
+  border-color: #22c55e;
+  color: #86efac;
+}
+
+[data-theme="dark"] .meal-rating-mini.wellbeing {
+  background: #2e1065;
+  border-color: #8b5cf6;
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .meal-rating-mini.stress {
+  background: #1e3a8a;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .meal-rating-empty {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .mobile-mood-btn {
+  border-color: #38383a;
+}
+
+[data-theme="dark"] .mobile-mood-btn:active {
+  background: #2c2c2e;
+}
+
 /* Dark theme for training zones */
 [data-theme="dark"] .training-zones-label {
   color: #8e8e93;
