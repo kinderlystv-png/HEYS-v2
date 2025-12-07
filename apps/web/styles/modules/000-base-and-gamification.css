@@ -6217,6 +6217,284 @@ body:has(.offline-banner) .wrap {
     min-height: 50px !important;
   }
 }
+
+/* === Measurements card (замеры тела) === */
+.measurements-card {
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+  border: 1px solid #e0e7ff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.measurements-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.measurements-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.measurements-card__icon {
+  font-size: 14px;
+}
+
+.measurements-card__header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.measurements-card__date {
+  font-size: 12px;
+  color: var(--color-gray-500);
+}
+
+.measurements-card__edit {
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.measurements-card__edit:active {
+  transform: scale(0.97);
+  background: #eef2ff;
+}
+
+.measurements-card__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.measurements-card__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px dashed #e5e7eb;
+  border-radius: 10px;
+  background: var(--color-white);
+}
+
+.measurements-card__row--warn {
+  border-color: #fbbf24;
+  background: #fffbeb;
+}
+
+.measurements-card__main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.measurements-card__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.measurements-card__label-icon {
+  font-size: 13px;
+}
+
+.measurements-card__values {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.measurements-card__value {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.measurements-card__delta {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #111827;
+  font-weight: 600;
+}
+
+.measurements-card__delta.up {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.measurements-card__delta.down {
+  background: #ecfdf3;
+  color: #166534;
+}
+
+.measurements-card__warn {
+  font-size: 11px;
+  font-weight: 700;
+  color: #b45309;
+}
+
+.measurements-card__spark-row {
+  margin-top: 2px;
+}
+
+.measurement-spark-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+
+.measurement-spark-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.measurement-spark {
+  width: 100%;
+  height: 20px;
+}
+
+.measurement-spark-dates {
+  position: relative;
+  height: 14px;
+  margin-top: 2px;
+}
+
+.measurement-spark-date-label {
+  position: absolute;
+  font-size: 9px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.measurement-spark-date {
+  font-size: 10px;
+  color: #9ca3af;
+  white-space: nowrap;
+  min-width: 38px;
+}
+
+.measurements-card__badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ea580c;
+  background: #fff7ed;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.measurements-card--needs-update {
+  border: 1px solid #fed7aa;
+}
+
+.measurements-card__monthly {
+  font-size: 12px;
+  color: #6b7280;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-top: 4px;
+}
+
+.measurements-card__monthly-item {
+  font-weight: 600;
+}
+
+.measurements-card__monthly-item.down {
+  color: #16a34a;
+}
+
+.measurements-card__monthly-item.up {
+  color: #dc2626;
+}
+
+.measurements-card__empty {
+  border: 1px dashed #e5e7eb;
+  border-radius: 10px;
+  padding: 14px 12px;
+  text-align: center;
+  color: var(--color-gray-500);
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.measurements-card__empty-icon {
+  font-size: 18px;
+}
+
+.measurements-card__empty-text {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.measurements-card__button {
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: var(--color-white);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.measurements-card__button:active {
+  transform: scale(0.98);
+  background: #eef2ff;
+}
+
+.measurements-card__footer {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--color-gray-500);
+}
+
+.measurements-card__history {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.measurements-card__footer-date {
+  color: var(--color-gray-500);
+}
+
 /* MODULE 01 — Base & Gamification
  * Scope: base/modern polish, cards, tabs, compact layouts, gamification badges/animations.
  */
