@@ -221,13 +221,18 @@
     },
     
     // Только замеры тела
-    measurements: (onComplete) => {
+    measurements: (dateKey, onComplete) => {
       if (HEYS.StepModal) {
+        // Если первый аргумент — функция, это onComplete (обратная совместимость)
+        const actualDateKey = typeof dateKey === 'function' ? null : dateKey;
+        const actualOnComplete = typeof dateKey === 'function' ? dateKey : onComplete;
+        
         HEYS.StepModal.show({
           steps: ['measurements'],
           title: 'Замеры тела',
           showProgress: false,
-          onComplete
+          context: { dateKey: actualDateKey || new Date().toISOString().slice(0, 10) },
+          onComplete: actualOnComplete
         });
       }
     },

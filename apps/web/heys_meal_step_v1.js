@@ -520,6 +520,12 @@
   
   function MealTimeStepComponent({ data, onChange, context }) {
     const { WheelPicker } = HEYS.StepModal;
+    const insulinWave = HEYS.InsulinWave;
+    const analytics = HEYS.analytics;
+    const isEditMode = context?.mealIndex !== undefined || context?.initialHourIndex !== undefined;
+    const [hasShownWarning, setHasShownWarning] = useState(false);
+    const [warningOpen, setWarningOpen] = useState(false);
+    const [cachedWave, setCachedWave] = useState(null);
     
     // Индекс колеса для часов (не реальный час!)
     // При редактировании берём из context, иначе текущий час
@@ -575,11 +581,17 @@
       const newIndex = HOURS_ORDER.indexOf(hourValue);
       haptic(5);
       onChange({ ...data, hourIndex: newIndex >= 0 ? newIndex : 0, minutes: data.minutes ?? minutes });
+
+      // Первое взаимодействие с колесом — проверяем волну
+      maybeShowInsulinWaveWarning();
     };
     
     const updateMinutes = (v) => {
       haptic(5);
       onChange({ ...data, hourIndex: data.hourIndex ?? currentHourIndex, minutes: v });
+
+      // Первое взаимодействие с колесом — проверяем волну
+      maybeShowInsulinWaveWarning();
     };
     
     const selectType = (type) => {
@@ -590,7 +602,197 @@
     // Текущее значение для пикера часов (форматированная строка)
     const currentHourValue = pad2(realHours);
 
+    // === Инсулиновая волна — предупреждение ===
+    const isBulkMode = useMemo(() => {
+      const deficit = context?.deficitPct;
+      const profDeficit = context?.prof?.deficitPctTarget;
+      const dayDeficit = context?.dayData?.deficitPct;
+      const val = deficit ?? dayDeficit ?? profDeficit ?? 0;
+      return typeof val === 'number' && val >= 10;
+    }, [context?.deficitPct, context?.prof?.deficitPctTarget, context?.dayData?.deficitPct]);
+
+    const mealsForWave = useMemo(() => {
+      if (context?.meals && Array.isArray(context.meals)) return context.meals;
+      return existingMeals;
+    }, [context?.meals, existingMeals]);
+
+    const trainingsForWave = useMemo(() => {
+      if (context?.trainings && Array.isArray(context.trainings)) return context.trainings;
+      return context?.dayData?.trainings || [];
+    }, [context?.trainings, context?.dayData?.trainings]);
+
+    const pIndexForWave = useMemo(() => {
+      if (context?.pIndex) return context.pIndex;
+      if (HEYS.dayUtils?.buildProductIndex) {
+        const products = HEYS.products?.getAll?.() || safeLsGet('heys_products', []);
+        return HEYS.dayUtils.buildProductIndex(products);
+      }
+      return null;
+    }, [context?.pIndex]);
+
+    const getProductFromItemFn = useMemo(() => {
+      if (context?.getProductFromItem) return context.getProductFromItem;
+      if (HEYS.dayUtils?.getProductFromItem) return HEYS.dayUtils.getProductFromItem;
+      return () => null;
+    }, [context?.getProductFromItem]);
+
+    const baseWaveHours = useMemo(() => {
+      return context?.prof?.insulinWaveHours || context?.dayData?.insulinWaveHours || 3;
+    }, [context?.prof?.insulinWaveHours, context?.dayData?.insulinWaveHours]);
+
+    const shouldSkipWarning = useMemo(() => {
+      if (isEditMode) return true;
+      if (isBulkMode) return true;
+      if (!insulinWave || !insulinWave.calculate) return true;
+      if (!mealsForWave || mealsForWave.length === 0) return true;
+      return false;
+    }, [isEditMode, isBulkMode, insulinWave, mealsForWave]);
+
+    const trackInsulinEvent = useCallback((action, wave) => {
+      if (!analytics || !analytics.trackDataOperation) return;
+      analytics.trackDataOperation('insulin_wave_warning', {
+        action,
+        remainingMinutes: wave?.remaining ?? null,
+        status: wave?.status || null
+      });
+    }, [analytics]);
+
+    const computeWaveData = useCallback(() => {
+      if (shouldSkipWarning) return null;
+      const wave = insulinWave.calculate({
+        meals: mealsForWave,
+        pIndex: pIndexForWave,
+        getProductFromItem: getProductFromItemFn,
+        baseWaveHours,
+        trainings: trainingsForWave,
+        dayData: context?.dayData || { meals: mealsForWave, trainings: trainingsForWave, deficitPct: context?.deficitPct }
+      });
+      setCachedWave(wave);
+      return wave;
+    }, [shouldSkipWarning, insulinWave, mealsForWave, pIndexForWave, getProductFromItemFn, baseWaveHours, trainingsForWave, context?.dayData, context?.deficitPct]);
+
+    const maybeShowInsulinWaveWarning = useCallback(() => {
+      if (hasShownWarning) return;
+      if (shouldSkipWarning) return;
+      const wave = cachedWave || computeWaveData();
+      if (!wave) return;
+      if (wave.status === 'lipolysis') return;
+      setHasShownWarning(true);
+      setWarningOpen(true);
+      trackInsulinEvent('show', wave);
+    }, [hasShownWarning, shouldSkipWarning, cachedWave, computeWaveData, trackInsulinEvent]);
+
+    const handleWait = useCallback(() => {
+      setWarningOpen(false);
+      trackInsulinEvent('wait', cachedWave);
+      HEYS.StepModal?.hide?.();
+    }, [cachedWave, trackInsulinEvent]);
+
+    const handleContinue = useCallback(() => {
+      setWarningOpen(false);
+      setHasShownWarning(true);
+      trackInsulinEvent('continue', cachedWave);
+    }, [cachedWave, trackInsulinEvent]);
+
+    // Keyboard Escape handler
+    useEffect(() => {
+      if (!warningOpen) return;
+      const handleEscape = (e) => {
+        if (e.key === 'Escape') handleWait();
+      };
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }, [warningOpen, handleWait]);
+
     return React.createElement('div', { className: 'meal-time-step' },
+      warningOpen && React.createElement('div', {
+        style: {
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem',
+          backgroundColor: 'rgba(0, 0, 0, 0.75)'
+        }
+      },
+        React.createElement('div', {
+          style: {
+            width: '100%',
+            maxWidth: '400px',
+            borderRadius: '16px',
+            backgroundColor: '#fff',
+            padding: '20px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }
+        },
+          React.createElement('div', {
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#d97706',
+              fontWeight: 600,
+              fontSize: '18px'
+            }
+          },
+            React.createElement('span', null, '⚠️'),
+            React.createElement('span', null, 'Инсулиновая волна ещё активна')
+          ),
+          // Progress bar wrapper с отступами
+          React.createElement('div', { style: { margin: '4px 0' } },
+            (insulinWave?.renderProgressBar && cachedWave)
+              ? insulinWave.renderProgressBar(cachedWave)
+              : React.createElement('div', { style: { fontSize: '14px', color: '#475569' } },
+                  (cachedWave?.endTimeDisplay || cachedWave?.endTime)
+                    ? `Липолиз откроется в ${cachedWave.endTimeDisplay || cachedWave.endTime}`
+                    : 'Волна ещё не завершена — подождите немного')
+          ),
+          React.createElement('div', { style: { fontSize: '14px', color: '#334155', lineHeight: 1.6 } },
+            'Если поесть сейчас, волна продлится и липолиз отложится.'
+          ),
+          React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } },
+            '💧 Вода, чай или кофе без сахара — не прерывают липолиз'
+          ),
+          React.createElement('div', { style: { display: 'flex', gap: '12px', paddingTop: '4px' } },
+            React.createElement('button', {
+              style: {
+                flex: 1,
+                borderRadius: '12px',
+                backgroundColor: '#f1f5f9',
+                padding: '12px 16px',
+                minHeight: '44px',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#334155',
+                border: 'none',
+                cursor: 'pointer'
+              },
+              onClick: handleWait
+            }, 'Подождать'),
+            React.createElement('button', {
+              style: {
+                flex: 1,
+                borderRadius: '12px',
+                backgroundColor: '#10b981',
+                padding: '12px 16px',
+                minHeight: '44px',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              },
+              onClick: handleContinue
+            }, 'Всё равно добавить')
+          )
+        )
+      ),
       // Время
       React.createElement('div', { className: 'meal-time-display' },
         React.createElement('span', { className: 'meal-time-value' }, 
@@ -934,7 +1136,16 @@
       showStreak: false,
       showGreeting: false,
       showTip: false,
-      context: { dateKey },
+      context: {
+        dateKey,
+        meals: options.meals,
+        pIndex: options.pIndex,
+        getProductFromItem: options.getProductFromItem,
+        trainings: options.trainings,
+        deficitPct: options.deficitPct,
+        prof: options.prof,
+        dayData: options.dayData
+      },
       onComplete: (stepData) => {
         // Создаём приём
         const timeData = stepData.mealTime || {};

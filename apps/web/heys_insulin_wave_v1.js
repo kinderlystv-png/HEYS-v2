@@ -1282,11 +1282,9 @@
       
       // 💡 Рекомендации по еде (если волна активна)
       foodAdvice: remainingMinutes > 0 ? {
-        good: ['белок', 'овощи', 'орехи', 'яйца'],
-        avoid: ['сладкое', 'белый хлеб', 'сок', 'фрукты'],
-        reason: nutrients.avgGI > 60 
-          ? 'Последний приём был с высоким ГИ — дай инсулину успокоиться'
-          : 'Поддерживай стабильный сахар'
+        good: ['вода', 'чай без сахара', 'кофе без сахара'],
+        avoid: ['сладкое', 'белый хлеб', 'сок', 'фрукты', 'любая еда'],
+        reason: 'Любая еда вызывает инсулиновый ответ и продлит волну'
       } : null,
       
       // ⏰ Оптимальное время следующего приёма
@@ -1361,89 +1359,287 @@
     return `${h}ч ${m}м`;
   };
   
+  // === SVG ГРАФИК ВОЛНЫ (выносим наружу для использования в основной карточке) ===
+  const renderWaveChart = (data) => {
+    if (!data || data.remaining <= 0) return null; // Не показываем если волна завершена
+    
+    const width = 280;
+    const height = 80;
+    const padding = { left: 25, right: 10, top: 10, bottom: 20 };
+    const chartW = width - padding.left - padding.right;
+    const chartH = height - padding.top - padding.bottom;
+    
+    // Данные волны
+    const totalMinutes = data.insulinWaveHours * 60;
+    const elapsedMinutes = totalMinutes - data.remaining;
+    const progress = Math.min(1, elapsedMinutes / totalMinutes); // 0-1
+    
+    // Форма кривой зависит от ГИ
+    const gi = data.avgGI || 50;
+    const peakPosition = gi >= 70 ? 0.15 : gi <= 40 ? 0.35 : 0.25;
+    const peakHeight = gi >= 70 ? 0.95 : gi <= 40 ? 0.7 : 0.85;
+    
+    // Генерируем точки кривой
+    const generateWavePath = () => {
+      const points = [];
+      const steps = 50;
+      
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        let y;
+        if (t <= peakPosition) {
+          const tNorm = t / peakPosition;
+          y = peakHeight * Math.pow(tNorm, 1.5);
+        } else {
+          const tNorm = (t - peakPosition) / (1 - peakPosition);
+          y = peakHeight * Math.exp(-2.5 * tNorm);
+        }
+        const x = padding.left + t * chartW;
+        const yPx = padding.top + chartH * (1 - y);
+        points.push({ x, y: yPx, t, value: y });
+      }
+      return points;
+    };
+    
+    const wavePoints = generateWavePath();
+    const pathD = wavePoints.map((p, i) => 
+      `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`
+    ).join(' ');
+    const fillPathD = `${pathD} L ${padding.left + chartW} ${padding.top + chartH} L ${padding.left} ${padding.top + chartH} Z`;
+    
+    const currentIdx = Math.round(progress * (wavePoints.length - 1));
+    const currentPoint = wavePoints[Math.min(currentIdx, wavePoints.length - 1)];
+    
+    // Время начала и конца волны
+    const startTime = data.lastMealTimeDisplay || data.lastMealTime || '';
+    const endTime = data.endTimeDisplay || data.endTime || '';
+    
+    return React.createElement('div', {
+      style: {
+        background: 'rgba(255,255,255,0.15)',
+        borderRadius: '12px',
+        padding: '8px',
+        marginTop: '12px'
+      }
+    },
+      React.createElement('svg', {
+        width: '100%',
+        height: height,
+        viewBox: `0 0 ${width} ${height}`,
+        style: { display: 'block' }
+      },
+        // Градиент
+        React.createElement('defs', null,
+          React.createElement('linearGradient', { id: 'waveGradientMain', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
+            React.createElement('stop', { offset: '0%', stopColor: '#fff', stopOpacity: 0.4 }),
+            React.createElement('stop', { offset: '100%', stopColor: '#fff', stopOpacity: 0.1 })
+          )
+        ),
+        // Базовая линия
+        React.createElement('line', {
+          x1: padding.left, y1: padding.top + chartH,
+          x2: padding.left + chartW, y2: padding.top + chartH,
+          stroke: 'rgba(255,255,255,0.3)', strokeWidth: 1
+        }),
+        
+        // === Пунктирная линия НАЧАЛА (время приёма пищи) ===
+        React.createElement('line', {
+          x1: padding.left, y1: padding.top - 5,
+          x2: padding.left, y2: padding.top + chartH + 5,
+          stroke: 'rgba(255,255,255,0.5)', strokeWidth: 1, strokeDasharray: '3,2'
+        }),
+        // Время начала
+        React.createElement('text', {
+          x: padding.left, y: height - 2,
+          fontSize: 9, fill: 'rgba(255,255,255,0.9)', textAnchor: 'middle', fontWeight: 500
+        }, '🍽️ ' + startTime),
+        
+        // === Пунктирная линия КОНЦА (время окончания волны) ===
+        React.createElement('line', {
+          x1: padding.left + chartW, y1: padding.top - 5,
+          x2: padding.left + chartW, y2: padding.top + chartH + 5,
+          stroke: 'rgba(255,255,255,0.5)', strokeWidth: 1, strokeDasharray: '3,2'
+        }),
+        // Время конца
+        React.createElement('text', {
+          x: padding.left + chartW, y: height - 2,
+          fontSize: 9, fill: 'rgba(255,255,255,0.9)', textAnchor: 'middle', fontWeight: 500
+        }, '🔥 ' + endTime),
+        
+        // Заливка под кривой
+        React.createElement('path', { d: fillPathD, fill: 'url(#waveGradientMain)' }),
+        // Линия кривой
+        React.createElement('path', {
+          d: pathD, fill: 'none', stroke: 'rgba(255,255,255,0.9)',
+          strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round'
+        }),
+        // Вертикальная линия текущей позиции
+        React.createElement('line', {
+          x1: currentPoint.x, y1: padding.top,
+          x2: currentPoint.x, y2: padding.top + chartH,
+          stroke: '#fff', strokeWidth: 1.5, strokeDasharray: '3,3'
+        }),
+        // Точка текущей позиции
+        React.createElement('circle', {
+          cx: currentPoint.x, cy: currentPoint.y, r: 5,
+          fill: '#fff', stroke: 'rgba(0,0,0,0.2)', strokeWidth: 1.5
+        }),
+        // Пульсирующий круг
+        React.createElement('circle', {
+          cx: currentPoint.x, cy: currentPoint.y, r: 9,
+          fill: 'none', stroke: '#fff', strokeWidth: 1, opacity: 0.5,
+          style: { animation: 'pulse 2s ease-in-out infinite' }
+        }),
+        // Подпись "сейчас"
+        React.createElement('text', {
+          x: currentPoint.x, y: padding.top - 2,
+          fontSize: 9, fill: '#fff', textAnchor: 'middle', fontWeight: 600
+        }, 'сейчас')
+      )
+    );
+  };
+  
   /**
    * Рендер прогресс-бара волны
    */
-  const renderProgressBar = (data) => {
-    const progress = data.progress || 0;
+  // === Компонент таймера с секундами ===
+  const ProgressBarComponent = ({ data }) => {
     const isLipolysis = data.status === 'lipolysis';
     const lipolysisMinutes = data.lipolysisMinutes || 0;
+    const remainingMinutes = data.remaining || 0;
     
-    const getGradient = (pct) => {
-      if (pct < 50) return `linear-gradient(90deg, #0ea5e9 0%, #3b82f6 ${pct * 2}%)`;
-      if (pct < 80) return `linear-gradient(90deg, #0ea5e9 0%, #3b82f6 50%, #8b5cf6 ${pct}%)`;
-      if (pct < 95) return `linear-gradient(90deg, #3b82f6 0%, #8b5cf6 60%, #f97316 ${pct}%)`;
-      return `linear-gradient(90deg, #8b5cf6 0%, #f97316 70%, #22c55e 100%)`;
-    };
+    // Состояние для секунд (обновляется каждую секунду)
+    const [seconds, setSeconds] = React.useState(() => {
+      const now = new Date();
+      return 60 - now.getSeconds();
+    });
+    
+    // Обновление секунд каждую секунду
+    React.useEffect(() => {
+      if (isLipolysis) return; // При липолизе не нужен countdown
+      
+      const interval = setInterval(() => {
+        const now = new Date();
+        setSeconds(60 - now.getSeconds());
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    }, [isLipolysis]);
     
     // При липолизе — зелёный градиент
-    const lipolysisGradient = 'linear-gradient(90deg, #22c55e 0%, #10b981 50%, #059669 100%)';
+    const lipolysisGradient = 'linear-gradient(135deg, #22c55e 0%, #10b981 50%, #059669 100%)';
     
-    return React.createElement('div', {
-      className: 'insulin-wave-progress',
-      style: { position: 'relative', marginTop: '8px' }
-    },
-      React.createElement('div', {
+    // Форматирование времени для таймера
+    const formatCountdown = (mins, secs) => {
+      if (mins <= 0) return { h: '00', m: '00', s: '00' };
+      const totalSecs = Math.max(0, Math.floor(mins * 60) - (60 - secs));
+      const h = Math.floor(totalSecs / 3600);
+      const m = Math.floor((totalSecs % 3600) / 60);
+      const s = totalSecs % 60;
+      return {
+        h: String(h).padStart(2, '0'),
+        m: String(m).padStart(2, '0'),
+        s: String(s).padStart(2, '0')
+      };
+    };
+    
+    const countdown = formatCountdown(remainingMinutes, seconds);
+    
+    // При липолизе: большой зелёный блок с таймером жиросжигания
+    if (isLipolysis) {
+      return React.createElement('div', {
         style: {
-          height: isLipolysis ? '28px' : '12px',
-          background: '#e5e7eb',
-          borderRadius: isLipolysis ? '8px' : '6px',
-          overflow: 'hidden',
-          position: 'relative',
-          transition: 'height 0.3s ease'
+          background: lipolysisGradient,
+          borderRadius: '16px',
+          padding: '20px',
+          textAlign: 'center',
+          marginTop: '8px',
+          boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)'
         }
       },
         React.createElement('div', {
-          className: isLipolysis ? 'lipolysis-progress-fill' : 'insulin-progress-fill',
-          style: {
-            position: 'absolute',
-            left: 0, top: 0, height: '100%',
-            width: '100%',
-            background: isLipolysis ? lipolysisGradient : getGradient(progress),
-            borderRadius: isLipolysis ? '8px' : '6px',
-            transition: 'width 0.5s ease-out'
-          }
-        }),
-        // При липолизе: крупный таймер "🔥 Xч Yм"
-        isLipolysis ? React.createElement('div', {
-          className: 'lipolysis-timer-display',
-          style: {
-            position: 'absolute',
-            left: '50%', top: '50%',
-            transform: 'translate(-50%, -50%)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '14px',
-            fontWeight: '800',
+          style: { fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginBottom: '8px', fontWeight: '500' }
+        }, '🔥 Жиросжигание активно'),
+        React.createElement('div', {
+          style: { 
+            fontSize: '36px', 
+            fontWeight: '800', 
             color: '#fff',
-            textShadow: '0 1px 3px rgba(0,0,0,0.3)',
-            whiteSpace: 'nowrap'
+            fontVariantNumeric: 'tabular-nums',
+            letterSpacing: '2px',
+            textShadow: '0 2px 8px rgba(0,0,0,0.2)'
           }
-        },
-          React.createElement('span', { 
-            className: 'lipolysis-fire-icon',
-            style: { fontSize: '16px' } 
-          }, '🔥'),
-          React.createElement('span', null, formatLipolysisTime(lipolysisMinutes)),
-          React.createElement('span', { 
-            style: { fontSize: '11px', opacity: 0.9, fontWeight: '600' } 
-          }, 'жиросжигание')
-        )
-        // При активной волне: процент
-        : React.createElement('div', {
-          style: {
-            position: 'absolute',
-            left: '50%', top: '50%',
-            transform: 'translate(-50%, -50%)',
-            fontSize: '10px',
-            fontWeight: '700',
-            color: progress > 50 ? '#fff' : '#64748b',
-            textShadow: progress > 50 ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
-          }
-        }, `${Math.round(progress)}%`)
-      )
+        }, formatLipolysisTime(lipolysisMinutes))
+      );
+    }
+    
+    // При активной волне: большой таймер обратного отсчёта
+    return React.createElement('div', {
+      style: {
+        background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)',
+        borderRadius: '16px',
+        padding: '20px',
+        textAlign: 'center',
+        marginTop: '8px',
+        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+      }
+    },
+      React.createElement('div', {
+        style: { fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginBottom: '8px', fontWeight: '500' }
+      }, '⏱ Жиросжигание начнётся через'),
+      // Большие цифры таймера
+      React.createElement('div', {
+        style: { 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'baseline',
+          gap: '4px',
+          fontVariantNumeric: 'tabular-nums'
+        }
+      },
+        // Часы
+        React.createElement('span', {
+          style: { fontSize: '42px', fontWeight: '800', color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }
+        }, countdown.h),
+        React.createElement('span', {
+          style: { fontSize: '24px', fontWeight: '600', color: 'rgba(255,255,255,0.7)', marginRight: '8px' }
+        }, ':'),
+        // Минуты
+        React.createElement('span', {
+          style: { fontSize: '42px', fontWeight: '800', color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }
+        }, countdown.m),
+        React.createElement('span', {
+          style: { fontSize: '24px', fontWeight: '600', color: 'rgba(255,255,255,0.7)', marginRight: '8px' }
+        }, ':'),
+        // Секунды
+        React.createElement('span', {
+          style: { fontSize: '42px', fontWeight: '800', color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }
+        }, countdown.s)
+      ),
+      // Подписи
+      React.createElement('div', {
+        style: { 
+          display: 'flex', 
+          justifyContent: 'center', 
+          gap: '24px',
+          marginTop: '4px',
+          fontSize: '11px',
+          color: 'rgba(255,255,255,0.7)',
+          fontWeight: '500'
+        }
+      },
+        React.createElement('span', null, 'часов'),
+        React.createElement('span', null, 'минут'),
+        React.createElement('span', null, 'секунд')
+      ),
+      // График волны
+      renderWaveChart(data)
     );
+  };
+  
+  // Wrapper для вызова как функции
+  const renderProgressBar = (data) => {
+    return React.createElement(ProgressBarComponent, { data, key: 'progress-bar' });
   };
   
   /**
@@ -1571,300 +1767,365 @@
   /**
    * Рендер expanded секции с детальной информацией
    */
-  const renderExpandedSection = (data) => {
+  // === МИНИМАЛИСТИЧНЫЙ EXPANDED v2 (React Component) ===
+  const ExpandedSectionComponent = ({ data }) => {
+    const [expandedMetric, setExpandedMetric] = React.useState('wave'); // 'wave' | 'gi' | 'gl' | null — волна раскрыта по умолчанию
     const giCat = data.giCategory;
     
-    return React.createElement('div', { 
-      className: 'insulin-wave-expanded'
-      // Клик на expanded также сворачивает (не блокируем propagation)
-    },
-      // ГИ информация
-      React.createElement('div', { className: 'insulin-gi-info' },
-        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-          React.createElement('span', { style: { width: '10px', height: '10px', borderRadius: '50%', background: giCat.color } }),
-          React.createElement('span', { style: { fontWeight: '600' } }, giCat.text),
-          React.createElement('span', { style: { color: '#64748b', fontSize: '12px' } }, '— ' + giCat.desc)
-        ),
-        React.createElement('div', { style: { fontSize: '11px', color: '#64748b', marginTop: '4px' } },
-          `Базовая волна: ${data.baseWaveHours}ч → Скорректированная: ${Math.round(data.insulinWaveHours * 10) / 10}ч`
-        ),
-        // Формула расчёта — показываем всегда для прозрачности
-        React.createElement('div', { 
-          style: { fontSize: '10px', color: '#94a3b8', marginTop: '6px', padding: '4px 8px', background: 'rgba(0,0,0,0.03)', borderRadius: '4px', fontFamily: 'monospace' } 
-        },
-          (() => {
-            const parts = [];
-            
-            // Базовая волна
-            parts.push(`база${data.baseWaveHours}ч`);
-            
-            // GL (гликемическая нагрузка) — всегда показываем если есть
-            if (data.glycemicLoad > 0) {
-              const glMult = data.glCategory?.multiplier || 1.0;
-              if (glMult !== 1.0) {
-                parts.push(`GL${data.glycemicLoad}×${glMult}`);
-              } else {
-                parts.push(`GL${data.glycemicLoad}`);
-              }
-            }
-            
-            // GI factor — показываем если не 1.0
-            const giFactor = data.giMultiplier || 1.0;
-            if (giFactor !== 1.0) {
-              parts.push(`ГИ${data.avgGI}×${Math.round(giFactor * 100) / 100}`);
-            }
-            
-            // Fat (жиры замедляют)
-            if (data.fatBonus > 0) parts.push(`+${Math.round(data.fatBonus * 100)}%🧈`);
-            // Insulinogenic (молочка, белок)
-            if (data.insulinogenicBonus > 0) parts.push(`+${Math.round(data.insulinogenicBonus * 100)}%🥛`);
-            // Protein
-            if (data.proteinBonus > 0) parts.push(`+${Math.round(data.proteinBonus * 100)}%🥩`);
-            // Fiber
-            if (data.fiberBonus > 0) parts.push(`+${Math.round(data.fiberBonus * 100)}%🌾`);
-            // Liquid (ускоряет)
-            if (data.hasLiquid) parts.push(`×${data.liquidMultiplier}🥤`);
-            // Workout
-            if (data.hasWorkoutBonus) parts.push(`${Math.round(data.workoutBonus * 100)}%🏃`);
-            // Circadian
-            if (data.circadianMultiplier && data.circadianMultiplier !== 1.0) {
-              parts.push(`×${data.circadianMultiplier}${data.circadianMultiplier < 1.0 ? '☀️' : '🌙'}`);
-            }
-            
-            // 🆕 v1.4: Новые факторы
-            // Fasting (голодание)
-            if (data.hasFastingBonus) parts.push(`+${Math.round(data.fastingBonus * 100)}%🍽️`);
-            // Spicy (острая пища ускоряет)
-            if (data.hasSpicy) parts.push(`×${data.spicyMultiplier}🌶️`);
-            // Alcohol
-            if (data.hasAlcoholBonus) parts.push(`+${Math.round(data.alcoholBonus * 100)}%🍷`);
-            // Caffeine
-            if (data.hasCaffeineBonus) parts.push(`+${Math.round(data.caffeineBonus * 100)}%☕`);
-            // Stress
-            if (data.hasStressBonus) parts.push(`+${Math.round(data.stressBonus * 100)}%😰`);
-            // Sleep deprivation
-            if (data.hasSleepBonus) parts.push(`+${Math.round(data.sleepDeprivationBonus * 100)}%😴`);
-            
-            return `📐 ${parts.join(' ')} = ${Math.round(data.insulinWaveHours * 10) / 10}ч`;
-          })()
-        ),
-        // GL (гликемическая нагрузка) — показываем описание если не средний уровень
-        data.glCategory && data.glCategory.id !== 'medium' && React.createElement('div', { 
-          style: { 
-            fontSize: '11px', 
-            color: data.glCategory.id === 'veryLow' || data.glCategory.id === 'low' ? '#22c55e' : '#f59e0b',
-            marginTop: '2px' 
-          } 
-        }, `📊 GL ${data.glycemicLoad} — ${data.glCategory.desc}`),
-        // Углеводы (если мало = короче волна) — только если нет GL или GL очень низкая
-        !data.glCategory && data.carbsMultiplier && data.carbsMultiplier < 1 && React.createElement('div', { 
-          style: { fontSize: '11px', color: '#3b82f6', marginTop: '2px' } 
-        }, `🍬 Углеводов ${data.totalCarbs}г — волна ${Math.round((1 - data.carbsMultiplier) * 100)}% короче`),
-        // Жиры (замедляют пищеварение)
-        data.fatBonus > 0 && React.createElement('div', { 
-          style: { fontSize: '11px', color: '#f59e0b', marginTop: '2px' } 
-        }, `🧈 Жиры ${data.totalFat}г — волна +${Math.round(data.fatBonus * 100)}% дольше`),
-        // Жидкая пища (ускоряет)
-        data.hasLiquid && React.createElement('div', { 
-          style: { fontSize: '11px', color: '#06b6d4', marginTop: '2px' } 
-        }, `🥤 Жидкая пища — волна ${Math.round((1 - data.liquidMultiplier) * 100)}% короче`),
-        // Инсулиногенность (молочка, белок)
-        data.insulinogenicBonus > 0 && React.createElement('div', { 
-          style: { fontSize: '11px', color: '#8b5cf6', marginTop: '2px' } 
-        }, `🥛 ${data.insulinogenicType === 'dairy' ? 'Молочка' : 'Белок'} — инсулин +${Math.round(data.insulinogenicBonus * 100)}%`),
-        // Модификаторы
-        (data.proteinBonus > 0 || data.fiberBonus > 0) && 
-          React.createElement('div', { style: { fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-            data.totalProtein > 0 && React.createElement('span', null, 
-              `🥩 Белок: ${data.totalProtein}г${data.proteinBonus > 0 ? ` (+${Math.round(data.proteinBonus * 100)}%)` : ''}`
-            ),
-            data.totalFiber > 0 && React.createElement('span', null, 
-              `🌾 Клетчатка: ${data.totalFiber}г${data.fiberBonus > 0 ? ` (+${Math.round(data.fiberBonus * 100)}%)` : ''}`
-            )
-          ),
-        // Workout bonus
-        data.hasWorkoutBonus && React.createElement('div', { 
-          style: { fontSize: '11px', color: '#10b981', marginTop: '2px' } 
-        }, `🏃 Тренировка ${data.workoutMinutes} мин → волна ${Math.abs(Math.round(data.workoutBonus * 100))}% короче`),
-        // Circadian rhythm
-        data.circadianMultiplier && data.circadianMultiplier !== 1.0 && React.createElement('div', { 
-          style: { 
-            fontSize: '11px', 
-            color: data.circadianMultiplier < 1.0 ? '#10b981' : '#f59e0b', 
-            marginTop: '2px' 
-          } 
-        }, data.circadianDesc),
-        
-        // 🆕 v1.4: Новые факторы
-        // Fasting (голодание)
-        data.hasFastingBonus && React.createElement('div', { 
-          style: { fontSize: '11px', color: '#f59e0b', marginTop: '2px' } 
-        }, `🍽️ ${data.fastingHours}ч без еды → инсулиновый пик +${Math.round(data.fastingBonus * 100)}%`),
-        // Spicy (острая пища)
-        data.hasSpicy && React.createElement('div', { 
-          style: { fontSize: '11px', color: '#10b981', marginTop: '2px' } 
-        }, `🌶️ Острая пища → волна ${Math.round((1 - data.spicyMultiplier) * 100)}% короче`),
-        // Alcohol
-        data.hasAlcoholBonus && React.createElement('div', { 
-          style: { fontSize: '11px', color: '#dc2626', marginTop: '2px' } 
-        }, `🍷 Алкоголь (${data.alcoholType}) → волна +${Math.round(data.alcoholBonus * 100)}% дольше`),
-        // Caffeine
-        data.hasCaffeineBonus && React.createElement('div', { 
-          style: { fontSize: '11px', color: '#f59e0b', marginTop: '2px' } 
-        }, `☕ Кофеин → инсулин +${Math.round(data.caffeineBonus * 100)}%`),
-        // Stress
-        data.hasStressBonus && React.createElement('div', { 
-          style: { fontSize: '11px', color: '#f59e0b', marginTop: '2px' } 
-        }, `😰 Стресс ${data.stressLevel}/10 → волна +${Math.round(data.stressBonus * 100)}% дольше`),
-        // Sleep deprivation
-        data.hasSleepBonus && React.createElement('div', { 
-          style: { fontSize: '11px', color: '#dc2626', marginTop: '2px' } 
-        }, `😴 Недосып (${data.sleepHoursTracked}ч) → инсулинорезистентность +${Math.round(data.sleepDeprivationBonus * 100)}%`)
-      ),
-      
-      // Предупреждение о перекрытии
-      data.hasOverlaps && React.createElement('div', { 
-        className: 'insulin-overlap-warning',
-        style: { 
-          marginTop: '8px', padding: '8px', 
-          background: data.worstOverlap?.severity === 'high' ? 'rgba(239,68,68,0.15)' : 'rgba(234,179,8,0.15)',
-          borderRadius: '8px', fontSize: '12px',
-          border: `1px solid ${data.worstOverlap?.severity === 'high' ? '#fca5a5' : '#fcd34d'}`
+    // Стили для метрик-карточек
+    const metricCardStyle = (isActive) => ({
+      flex: '1 1 0',
+      minWidth: '80px',
+      padding: '12px 8px',
+      background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'rgba(248, 250, 252, 0.8)',
+      borderRadius: '12px',
+      textAlign: 'center',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      border: isActive ? '2px solid #3b82f6' : '2px solid transparent'
+    });
+    
+    const metricValueStyle = {
+      fontSize: '20px',
+      fontWeight: '700',
+      color: '#1e293b',
+      lineHeight: 1.2
+    };
+    
+    const metricLabelStyle = {
+      fontSize: '11px',
+      color: '#64748b',
+      marginTop: '4px'
+    };
+    
+    // Собираем активные модификаторы
+    const getModifiers = () => {
+      const mods = [];
+      if (data.fatBonus > 0) mods.push({ icon: '🧈', name: 'Жиры', value: `+${Math.round(data.fatBonus * 100)}%`, desc: `${data.totalFat}г замедляют усвоение` });
+      if (data.proteinBonus > 0) mods.push({ icon: '🥩', name: 'Белок', value: `+${Math.round(data.proteinBonus * 100)}%`, desc: `${data.totalProtein}г продлевают волну` });
+      if (data.fiberBonus > 0) mods.push({ icon: '🌾', name: 'Клетчатка', value: `+${Math.round(data.fiberBonus * 100)}%`, desc: `${data.totalFiber}г замедляют` });
+      if (data.insulinogenicBonus > 0) mods.push({ icon: '🥛', name: 'Молочка', value: `+${Math.round(data.insulinogenicBonus * 100)}%`, desc: 'повышает инсулин' });
+      if (data.hasLiquid) mods.push({ icon: '🥤', name: 'Жидкое', value: `×${data.liquidMultiplier}`, desc: 'быстрее усваивается' });
+      if (data.hasWorkoutBonus) mods.push({ icon: '🏃', name: 'Тренировка', value: `-${Math.abs(Math.round(data.workoutBonus * 100))}%`, desc: `${data.workoutMinutes} мин ускоряют` });
+      if (data.circadianMultiplier && data.circadianMultiplier !== 1.0) {
+        mods.push({ 
+          icon: data.circadianMultiplier < 1 ? '☀️' : '🌙', 
+          name: 'Время суток', 
+          value: `×${data.circadianMultiplier}`, 
+          desc: data.circadianMultiplier < 1 ? 'днём быстрее' : 'ночью медленнее' 
+        });
+      }
+      if (data.hasCaffeineBonus) mods.push({ icon: '☕', name: 'Кофеин', value: `+${Math.round(data.caffeineBonus * 100)}%`, desc: 'повышает инсулин' });
+      if (data.hasStressBonus) mods.push({ icon: '😰', name: 'Стресс', value: `+${Math.round(data.stressBonus * 100)}%`, desc: 'кортизол влияет' });
+      if (data.hasSleepBonus) mods.push({ icon: '😴', name: 'Недосып', value: `+${Math.round(data.sleepDeprivationBonus * 100)}%`, desc: 'инсулинорезистентность' });
+      return mods;
+    };
+    
+    const modifiers = getModifiers();
+    
+    // Детали для каждой метрики
+    const getMetricDetails = (metric) => {
+      switch (metric) {
+        case 'wave': {
+          // Формируем формулу расчёта
+          const parts = [`${data.baseWaveHours}ч (база)`];
+          if (data.giMultiplier && data.giMultiplier !== 1) parts.push(`×${data.giMultiplier} ГИ`);
+          if (data.fatBonus > 0) parts.push(`+${Math.round(data.fatBonus * 100)}% жиры`);
+          if (data.proteinBonus > 0) parts.push(`+${Math.round(data.proteinBonus * 100)}% белок`);
+          if (data.fiberBonus > 0) parts.push(`+${Math.round(data.fiberBonus * 100)}% клетчатка`);
+          if (data.insulinogenicBonus > 0) parts.push(`+${Math.round(data.insulinogenicBonus * 100)}% молочка`);
+          if (data.hasLiquid) parts.push(`×${data.liquidMultiplier} жидкое`);
+          if (data.hasWorkoutBonus) parts.push(`-${Math.abs(Math.round(data.workoutBonus * 100))}% тренировка`);
+          if (data.circadianMultiplier && data.circadianMultiplier !== 1.0) parts.push(`×${data.circadianMultiplier} ${data.circadianMultiplier < 1 ? 'день' : 'ночь'}`);
+          if (data.hasCaffeineBonus) parts.push(`+${Math.round(data.caffeineBonus * 100)}% кофеин`);
+          if (data.hasStressBonus) parts.push(`+${Math.round(data.stressBonus * 100)}% стресс`);
+          if (data.hasSleepBonus) parts.push(`+${Math.round(data.sleepDeprivationBonus * 100)}% недосып`);
+          
+          const formula = parts.join(' ');
+          
+          return {
+            title: '📊 Расчёт волны',
+            formula: formula,
+            result: `= ${Math.round(data.insulinWaveHours * 10) / 10}ч`,
+            items: modifiers.map(m => ({ label: `${m.icon} ${m.name}`, value: m.value, desc: m.desc })),
+            desc: 'Время, пока инсулин высокий и жир не сжигается'
+          };
         }
+        case 'gi':
+          return {
+            title: '🍬 Гликемический индекс',
+            items: [
+              { label: 'Средний ГИ', value: data.avgGI || '—' },
+              { label: 'Категория', value: giCat.text },
+              { label: 'Усвоение', value: giCat.desc }
+            ],
+            desc: giCat.id === 'low' ? 'Низкий ГИ = медленный подъём сахара' :
+                  giCat.id === 'high' ? 'Высокий ГИ = быстрый скачок сахара' :
+                  'Средний ГИ = умеренный подъём сахара'
+          };
+        case 'gl':
+          return {
+            title: '📈 Гликемическая нагрузка',
+            items: [
+              { label: 'GL', value: data.glycemicLoad || '—' },
+              { label: 'Категория', value: data.glCategory?.text || 'Средняя' },
+              { label: 'Углеводы', value: `${data.totalCarbs || 0}г` }
+            ],
+            desc: 'GL = ГИ × углеводы / 100. Показывает реальную нагрузку на поджелудочную'
+          };
+        default:
+          return null;
+      }
+    };
+    
+    const toggleMetric = (metric) => {
+      setExpandedMetric(expandedMetric === metric ? null : metric);
+    };
+    
+    const details = expandedMetric ? getMetricDetails(expandedMetric) : null;
+    
+    return React.createElement('div', { 
+      className: 'insulin-wave-expanded',
+      onClick: (e) => e.stopPropagation()
+    },
+      
+      // === БЛОК 1: Метрики (3 кликабельные карточки) ===
+      React.createElement('div', { 
+        style: { display: 'flex', gap: '8px', marginBottom: details ? '12px' : '16px' }
       },
-        React.createElement('div', { style: { fontWeight: '600', color: data.worstOverlap?.severity === 'high' ? '#dc2626' : '#d97706' } },
-          '⚠️ Волны пересеклись!'
+        // Карточка: Волна
+        React.createElement('div', { 
+          style: metricCardStyle(expandedMetric === 'wave'),
+          onClick: () => toggleMetric('wave')
+        },
+          React.createElement('div', { style: metricValueStyle }, 
+            `${Math.round(data.insulinWaveHours * 10) / 10}ч`
+          ),
+          React.createElement('div', { style: metricLabelStyle }, 'волна ⓘ')
         ),
-        React.createElement('div', { style: { marginTop: '2px', color: '#64748b' } },
-          data.overlaps.map((o, i) => 
-            React.createElement('div', { key: i }, `${o.fromDisplay || o.from} → ${o.toDisplay || o.to}: перекрытие ${o.overlapMinutes} мин`)
-          )
+        // Карточка: ГИ
+        React.createElement('div', { 
+          style: { ...metricCardStyle(expandedMetric === 'gi'), background: expandedMetric === 'gi' ? `${giCat.color}20` : `${giCat.color}15` },
+          onClick: () => toggleMetric('gi')
+        },
+          React.createElement('div', { style: { ...metricValueStyle, color: giCat.color } }, 
+            data.avgGI || '—'
+          ),
+          React.createElement('div', { style: metricLabelStyle }, 'ГИ ⓘ')
         ),
-        React.createElement('div', { style: { marginTop: '4px', fontSize: '11px', fontStyle: 'italic' } },
-          `💡 Совет: подожди минимум ${Math.round(data.baseWaveHours * 60)} мин между приёмами`
+        // Карточка: GL
+        React.createElement('div', { 
+          style: metricCardStyle(expandedMetric === 'gl'),
+          onClick: () => toggleMetric('gl')
+        },
+          React.createElement('div', { style: metricValueStyle }, 
+            data.glycemicLoad > 0 ? data.glycemicLoad : '—'
+          ),
+          React.createElement('div', { style: metricLabelStyle }, 'GL ⓘ')
         )
       ),
       
-      // Персональная статистика
-      data.personalAvgGap > 0 && React.createElement('div', { 
-        className: 'insulin-personal-stats',
-        style: { marginTop: '8px', padding: '8px', background: 'rgba(59,130,246,0.1)', borderRadius: '8px', fontSize: '12px' }
+      // === Детали выбранной метрики (выпадающий блок) ===
+      details && React.createElement('div', {
+        style: {
+          padding: '12px 16px',
+          background: '#f8fafc',
+          borderRadius: '12px',
+          marginBottom: '16px',
+          animation: 'fadeIn 0.2s ease'
+        }
       },
-        React.createElement('div', { style: { fontWeight: '600', color: '#3b82f6', marginBottom: '4px' } }, '📊 Твои паттерны'),
-        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', color: '#64748b' } },
-          React.createElement('span', null, 'Сегодня между приёмами:'),
-          React.createElement('span', { style: { fontWeight: '600' } }, 
-            data.avgGapToday > 0 ? utils.formatDuration(data.avgGapToday) : '—'
-          )
-        ),
-        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', color: '#64748b', marginTop: '2px' } },
-          React.createElement('span', null, 'Твой средний gap:'),
-          React.createElement('span', { style: { fontWeight: '600' } }, utils.formatDuration(data.personalAvgGap))
-        ),
-        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', color: '#64748b', marginTop: '2px' } },
-          React.createElement('span', null, 'Рекомендуемый:'),
-          React.createElement('span', { style: { fontWeight: '600' } }, utils.formatDuration(data.recommendedGap))
-        ),
-        // Оценка
-        React.createElement('div', { 
-          style: { 
-            marginTop: '6px', padding: '4px 8px', borderRadius: '4px', textAlign: 'center', fontWeight: '600',
-            background: data.gapQuality === 'excellent' ? '#dcfce7' : data.gapQuality === 'good' ? '#fef9c3' : data.gapQuality === 'moderate' ? '#fed7aa' : '#fecaca',
-            color: data.gapQuality === 'excellent' ? '#166534' : data.gapQuality === 'good' ? '#854d0e' : data.gapQuality === 'moderate' ? '#c2410c' : '#dc2626'
+        React.createElement('div', {
+          style: { fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '10px' }
+        }, details.title),
+        
+        // Для волны — формула расчёта
+        details.formula && React.createElement('div', {
+          style: {
+            padding: '10px 12px',
+            background: 'rgba(0,0,0,0.03)',
+            borderRadius: '8px',
+            marginBottom: '12px',
+            fontFamily: 'system-ui, -apple-system, sans-serif'
           }
         },
-          data.gapQuality === 'excellent' ? '🌟 Отлично! Выдерживаешь оптимальные промежутки' :
-          data.gapQuality === 'good' ? '👍 Хорошо! Почти идеальные промежутки' :
-          data.gapQuality === 'moderate' ? '😐 Можно лучше. Попробуй увеличить gap' :
-          '⚠️ Ешь слишком часто. Дай организму переварить'
-        )
+          // Формула
+          React.createElement('div', {
+            style: { fontSize: '12px', color: '#64748b', lineHeight: 1.6, wordBreak: 'break-word' }
+          }, details.formula),
+          // Результат
+          React.createElement('div', {
+            style: { 
+              fontSize: '18px', 
+              fontWeight: '700', 
+              color: '#1e293b', 
+              marginTop: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }
+          }, 
+            React.createElement('span', null, details.result),
+            React.createElement('span', { 
+              style: { fontSize: '12px', color: '#64748b', fontWeight: '400' }
+            }, 'инсулиновая волна')
+          )
+        ),
+        
+        // Список модификаторов (для волны) или значений (для других)
+        details.items && details.items.length > 0 && React.createElement('div', { 
+          style: { display: 'flex', flexDirection: 'column', gap: '6px' }
+        },
+          details.items.map((item, i) => 
+            React.createElement('div', {
+              key: i,
+              style: { display: 'flex', justifyContent: 'space-between', fontSize: '13px' }
+            },
+              React.createElement('span', { style: { color: '#64748b' } }, item.label),
+              React.createElement('span', { 
+                style: { 
+                  fontWeight: '600', 
+                  color: item.value?.startsWith?.('-') ? '#16a34a' : 
+                         item.value?.startsWith?.('+') ? '#f59e0b' : '#1e293b'
+                }
+              }, item.value)
+            )
+          )
+        ),
+        
+        // Описание
+        React.createElement('div', {
+          style: { marginTop: '10px', fontSize: '12px', color: '#64748b', fontStyle: 'italic' }
+        }, details.desc)
       ),
       
-      // === КОНТЕКСТНЫЕ СОВЕТЫ ===
-      
-      // 🔥 Липолиз активен — поощряем продержаться
-      data.status === 'lipolysis' && React.createElement('div', {
+      // === БЛОК 2: Паттерны (если есть данные) ===
+      data.personalAvgGap > 0 && React.createElement('div', { 
         style: { 
-          marginTop: '8px', padding: '10px', 
-          background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.15))',
-          borderRadius: '8px', fontSize: '12px',
-          border: '1px solid rgba(34,197,94,0.3)'
+          padding: '12px 16px',
+          background: 'rgba(248, 250, 252, 0.8)',
+          borderRadius: '12px',
+          marginBottom: '16px'
         }
       },
-        React.createElement('div', { style: { fontWeight: '600', color: '#16a34a', marginBottom: '4px' } }, 
-          '🔥 Жиросжигание активно!'
+        React.createElement('div', { 
+          style: { 
+            fontSize: '13px', 
+            fontWeight: '600', 
+            color: '#475569',
+            marginBottom: '8px'
+          }
+        }, '🎯 Паттерны'),
+        React.createElement('div', { 
+          style: { 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '14px'
+          }
+        },
+          React.createElement('span', { style: { color: '#64748b' } }, 'Средний gap'),
+          React.createElement('span', { style: { fontWeight: '600', color: '#1e293b' } }, 
+            utils.formatDuration(data.personalAvgGap)
+          )
         ),
-        React.createElement('div', { style: { color: '#15803d', fontSize: '11px' } }, 
-          'Каждая минута без еды = сжигание жира. Продержись как можно дольше!'
-        ),
-        React.createElement('div', { style: { color: '#64748b', fontSize: '10px', marginTop: '4px' } }, 
-          '💧 Вода, чай, кофе без сахара — не прерывают липолиз'
+        // Оценка качества
+        React.createElement('div', { 
+          style: { 
+            marginTop: '10px',
+            padding: '8px 12px',
+            borderRadius: '8px',
+            fontSize: '13px',
+            fontWeight: '500',
+            textAlign: 'center',
+            background: data.gapQuality === 'excellent' ? '#dcfce7' : 
+                        data.gapQuality === 'good' ? '#fef9c3' : 
+                        data.gapQuality === 'moderate' ? '#fed7aa' : '#fecaca',
+            color: data.gapQuality === 'excellent' ? '#166534' : 
+                   data.gapQuality === 'good' ? '#854d0e' : 
+                   data.gapQuality === 'moderate' ? '#c2410c' : '#dc2626'
+          }
+        },
+          data.gapQuality === 'excellent' ? '✓ Отлично!' :
+          data.gapQuality === 'good' ? '👍 Хорошо' :
+          data.gapQuality === 'moderate' ? '→ Можно лучше' : '⚠️ Слишком часто'
         )
       ),
       
-      // 📈 Волна активна — объясняем что происходит
-      data.status === 'active' && React.createElement('div', {
+      // === БЛОК 3: Текущее состояние ===
+      React.createElement('div', { 
         style: { 
-          marginTop: '8px', padding: '8px', 
-          background: 'rgba(59,130,246,0.1)',
-          borderRadius: '8px', fontSize: '12px',
-          border: '1px solid rgba(59,130,246,0.2)'
+          padding: '12px 16px',
+          background: data.status === 'lipolysis' 
+            ? 'linear-gradient(135deg, rgba(34,197,94,0.12), rgba(16,185,129,0.12))'
+            : 'rgba(248, 250, 252, 0.8)',
+          borderRadius: '12px',
+          marginBottom: modifiers.length > 0 || data.hasOverlaps ? '12px' : '0'
         }
       },
-        React.createElement('div', { style: { fontWeight: '600', color: '#3b82f6', marginBottom: '4px' } }, 
-          '📈 Инсулин высокий'
+        React.createElement('div', { 
+          style: { 
+            fontSize: '13px', 
+            fontWeight: '600', 
+            color: data.status === 'lipolysis' ? '#16a34a' : '#475569',
+            marginBottom: '6px'
+          }
+        }, data.status === 'lipolysis' ? '🔥 Жиросжигание' : '💡 Сейчас'),
+        React.createElement('div', { 
+          style: { 
+            fontSize: '14px', 
+            color: '#334155',
+            lineHeight: 1.5
+          }
+        }, 
+          data.status === 'lipolysis' 
+            ? 'Каждая минута без еды = сжигание жира' 
+            : 'Инсулин высокий → жир запасается'
         ),
-        React.createElement('div', { style: { color: '#64748b', fontSize: '11px' } }, 
-          'Организм в режиме запасания. Если поешь сейчас — волна продлится ещё дольше.'
+        // Подсказка
+        React.createElement('div', { 
+          style: { 
+            marginTop: '8px',
+            fontSize: '13px',
+            color: '#64748b',
+            display: 'flex',
+            gap: '12px',
+            flexWrap: 'wrap'
+          }
+        },
+          React.createElement('span', null, '💧 Вода ок'),
+          data.status !== 'lipolysis' && React.createElement('span', null, '🚫 Еда продлит волну')
         )
       ),
       
-      // 💡 Рекомендации по еде (если волна активна, но очень хочется)
-      data.foodAdvice && React.createElement('div', {
+      // === Предупреждение о перекрытии ===
+      data.hasOverlaps && React.createElement('div', { 
         style: { 
-          marginTop: '8px', padding: '8px', 
-          background: 'rgba(251,191,36,0.1)',
-          borderRadius: '8px', fontSize: '12px',
-          border: '1px solid rgba(251,191,36,0.2)'
+          padding: '12px 16px',
+          background: 'rgba(239,68,68,0.08)',
+          borderRadius: '12px',
+          marginBottom: '12px',
+          border: '1px solid rgba(239,68,68,0.2)'
         }
       },
-        React.createElement('div', { style: { fontWeight: '600', color: '#d97706', marginBottom: '4px' } }, 
-          '💡 Если очень хочется есть:'
-        ),
-        React.createElement('div', { style: { color: '#16a34a', fontSize: '11px' } }, 
-          '✅ Лучше: ' + data.foodAdvice.good.join(', ')
-        ),
-        React.createElement('div', { style: { color: '#dc2626', fontSize: '11px', marginTop: '2px' } }, 
-          '❌ Избегай: ' + data.foodAdvice.avoid.join(', ')
-        ),
-        React.createElement('div', { style: { color: '#64748b', fontSize: '10px', marginTop: '4px', fontStyle: 'italic' } }, 
-          data.foodAdvice.reason
-        )
+        React.createElement('div', { 
+          style: { fontSize: '13px', fontWeight: '600', color: '#dc2626' }
+        }, '⚠️ Волны пересеклись'),
+        React.createElement('div', { 
+          style: { fontSize: '13px', color: '#64748b', marginTop: '4px' }
+        }, `Совет: подожди ${Math.round(data.baseWaveHours * 60)} мин между приёмами`)
       ),
       
-      // 💧 Hydration совет
-      data.hydrationAdvice && React.createElement('div', {
-        style: { 
-          marginTop: '8px', padding: '6px 8px', 
-          background: 'rgba(59,130,246,0.1)',
-          borderRadius: '6px', fontSize: '11px',
-          color: '#3b82f6'
-        }
-      }, data.hydrationAdvice),
+      // Блок модификаторов убран — формула теперь в деталях волны
       
-      // 😴 Sleep impact
-      data.sleepImpact && React.createElement('div', {
-        style: { 
-          marginTop: '8px', padding: '6px 8px', 
-          background: data.sleepImpact.warning ? 'rgba(239,68,68,0.1)' : 'rgba(148,163,184,0.1)',
-          borderRadius: '6px', fontSize: '11px',
-          color: data.sleepImpact.warning ? '#dc2626' : '#64748b'
-        }
-      }, data.sleepImpact.text),
-      
-      // История волн
+      // === История волн ===
       renderWaveHistory(data)
     );
+  };
+  
+  // Wrapper для вызова как функции (возвращает React element)
+  const renderExpandedSection = (data) => {
+    return React.createElement(ExpandedSectionComponent, { data, key: 'expanded-section' });
   };
   
   // === Hook для использования в компоненте ===

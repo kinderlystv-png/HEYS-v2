@@ -1132,11 +1132,20 @@
   // ============================================================
 
   const MEASUREMENT_FIELDS = [
-    { key: 'waist', label: 'Талия', icon: '📏', hint: 'На уровне пупка', min: 40, max: 150, default: 80 },
-    { key: 'hips', label: 'Бёдра', icon: '🍑', hint: 'По ягодицам', min: 60, max: 150, default: 95 },
-    { key: 'thigh', label: 'Бедро', icon: '🦵', hint: 'Самая широкая часть', min: 30, max: 100, default: 55 },
-    { key: 'biceps', label: 'Бицепс', icon: '💪', hint: 'В напряжении', min: 20, max: 60, default: 35 }
+    { key: 'waist', label: 'Талия', icon: '📏', hint: 'На уровне пупка', min: 40, max: 150, hasSide: false },
+    { key: 'hips', label: 'Бёдра', icon: '🍑', hint: 'По ягодицам', min: 60, max: 150, hasSide: false },
+    { key: 'thigh', label: 'Бедро', icon: '🦵', hint: 'Одна сторона', min: 30, max: 100, hasSide: true },
+    { key: 'biceps', label: 'Бицепс', icon: '💪', hint: 'В напряжении', min: 20, max: 60, hasSide: true }
   ];
+
+  // Сохранённая сторона (левая/правая) — запоминаем выбор
+  const MEASUREMENT_SIDE_KEY = 'heys_measurement_side';
+  function getMeasurementSide() {
+    try { return lsGet(MEASUREMENT_SIDE_KEY, 'right'); } catch { return 'right'; }
+  }
+  function setMeasurementSide(side) {
+    try { lsSet(MEASUREMENT_SIDE_KEY, side); } catch {}
+  }
 
   /**
    * Поиск последних замеров за 60 дней
@@ -1148,15 +1157,15 @@
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
       const dayData = lsGet(`heys_dayv2_${key}`, {});
-      if (dayData.measurements && dayData.measurements.measuredAt) {
+      const m = dayData.measurements;
+      if (m && m.measuredAt && (m.waist || m.hips || m.thigh || m.biceps)) {
         return {
-          ...dayData.measurements,
+          ...m,
           daysAgo: i,
           foundDate: key
         };
       }
     }
-    // Нет данных — возвращаем дефолты
     return {
       waist: null,
       hips: null,
@@ -1168,12 +1177,45 @@
     };
   }
 
+  function getLastMeasurementByField(field) {
+    const today = new Date();
+    for (let i = 0; i <= 90; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const dayData = lsGet(`heys_dayv2_${key}`, {});
+      const m = dayData.measurements;
+      if (m && m.measuredAt && m[field]) {
+        return { value: m[field], date: key, daysAgo: i };
+      }
+    }
+    return { value: null, date: null, daysAgo: null };
+  }
+
+  function getMeasurementsHistory(days = 30) {
+    const today = new Date();
+    const list = [];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const dayData = lsGet(`heys_dayv2_${key}`, {});
+      const m = dayData.measurements;
+      if (m && m.measuredAt) {
+        list.push({ date: key, ...m });
+      }
+    }
+    return list;
+  }
+
   /**
    * Проверка: нужно ли показывать шаг замеров (прошло ≥7 дней)
    */
   function shouldShowMeasurements() {
     const last = getLastMeasurements();
     if (!last.measuredAt) return true; // Нет данных → показываем
+    // Если прошлый замер был неполным — продолжаем показывать
+    if (last.waist && (!last.hips || !last.thigh || !last.biceps)) return true;
     
     const lastDate = new Date(last.measuredAt);
     const today = new Date();
@@ -1185,70 +1227,137 @@
 
   function MeasurementsStepComponent({ data, onChange }) {
     const lastMeasurements = useMemo(() => getLastMeasurements(), []);
-    
-    // Инициализация значений из data или последних замеров
-    const getValue = (key, fieldDef) => {
-      if (data[key] !== undefined) return data[key];
-      if (lastMeasurements[key]) return lastMeasurements[key];
-      return fieldDef.default;
+
+    // Сторона измерения (левая/правая)
+    const [side, setSideState] = useState(() => getMeasurementSide());
+    const setSide = (newSide) => {
+      setSideState(newSide);
+      setMeasurementSide(newSide);
     };
 
-    const updateField = (key, value) => {
-      // Валидация
-      const field = MEASUREMENT_FIELDS.find(f => f.key === key);
-      if (field) {
-        value = Math.max(field.min, Math.min(field.max, value || field.min));
+    // Локальный текстовый state для инпутов — инициализируем из data
+    const [inputValues, setInputValues] = useState(() => {
+      const init = {};
+      MEASUREMENT_FIELDS.forEach(f => {
+        if (data[f.key] !== null && data[f.key] !== undefined) {
+          init[f.key] = String(data[f.key]);
+        }
+      });
+      return init;
+    });
+
+    const lastByField = useMemo(() => {
+      const res = {};
+      MEASUREMENT_FIELDS.forEach((f) => {
+        res[f.key] = getLastMeasurementByField(f.key);
+      });
+      return res;
+    }, []);
+
+    // Получаем значение: из локального state
+    const getInputValue = (key) => {
+      return inputValues[key] ?? '';
+    };
+
+    const handleInputChange = (key, textValue) => {
+      // Сохраняем текст как есть (для нормального ввода)
+      setInputValues(prev => ({ ...prev, [key]: textValue }));
+      
+      // Парсим число и обновляем данные
+      const cleaned = textValue.replace(',', '.');
+      if (cleaned === '' || cleaned === '.') {
+        onChange({ ...data, [key]: null });
+      } else {
+        const num = parseFloat(cleaned);
+        if (!isNaN(num)) {
+          onChange({ ...data, [key]: num });
+        }
       }
-      onChange({ ...data, [key]: value });
     };
 
-    // Показываем дату последнего замера
+    const handleFocus = (key, e) => {
+      // При фокусе выделяем всё
+      e.target.select();
+    };
+
     const lastMeasuredInfo = lastMeasurements.measuredAt 
       ? `Последний замер: ${lastMeasurements.daysAgo === 0 ? 'сегодня' : lastMeasurements.daysAgo === 1 ? 'вчера' : lastMeasurements.daysAgo + ' дн. назад'}`
       : 'Первый замер';
 
     return React.createElement('div', { className: 'mc-measurements-step' },
-      // Инфо о последнем замере
       React.createElement('div', { className: 'mc-measurements-info' },
         React.createElement('span', { className: 'mc-measurements-info-icon' }, '📅'),
         React.createElement('span', { className: 'mc-measurements-info-text' }, lastMeasuredInfo)
       ),
-      
-      // Поля замеров
+
       React.createElement('div', { className: 'mc-measurements-fields' },
         MEASUREMENT_FIELDS.map(field => {
-          const value = getValue(field.key, field);
+          const numValue = data[field.key];
+          const last = lastByField[field.key];
+          const placeholder = last.value ? String(last.value) : '—';
+          const delta = last.value && numValue ? numValue - last.value : null;
+          const deltaPct = (last.value && numValue) ? (numValue - last.value) / last.value : null;
+          const showWarning = deltaPct !== null && Math.abs(deltaPct) > 0.15;
+          const progressLabel = last.value && numValue ? `${delta > 0 ? '+' : ''}${(Math.round(delta * 10) / 10)} см` : null;
+
           return React.createElement('div', { 
             key: field.key, 
             className: 'mc-measurement-field' 
           },
             React.createElement('div', { className: 'mc-measurement-header' },
               React.createElement('span', { className: 'mc-measurement-icon' }, field.icon),
-              React.createElement('span', { className: 'mc-measurement-label' }, field.label)
+              React.createElement('span', { className: 'mc-measurement-label' }, field.label),
+              last.value && React.createElement('span', { className: 'mc-measurement-prev' }, `было: ${last.value}`)
             ),
             React.createElement('div', { className: 'mc-measurement-input-row' },
               React.createElement('input', {
-                type: 'number',
+                type: 'text',
                 inputMode: 'decimal',
+                pattern: '[0-9]*\\.?[0-9]*',
                 className: 'mc-measurement-input',
-                value: value || '',
-                placeholder: lastMeasurements[field.key] ? String(lastMeasurements[field.key]) : String(field.default),
-                min: field.min,
-                max: field.max,
-                onChange: (e) => updateField(field.key, parseFloat(e.target.value) || null)
+                value: getInputValue(field.key),
+                placeholder,
+                onFocus: (e) => handleFocus(field.key, e),
+                onChange: (e) => handleInputChange(field.key, e.target.value)
               }),
-              React.createElement('span', { className: 'mc-measurement-unit' }, 'см')
+              React.createElement('span', { className: 'mc-measurement-unit' }, 'см'),
+              progressLabel && React.createElement('span', { 
+                className: 'mc-measurement-delta' + (delta > 0 ? ' up' : delta < 0 ? ' down' : '')
+              }, progressLabel)
             ),
-            React.createElement('div', { className: 'mc-measurement-hint' }, field.hint)
+            !last.value && React.createElement('div', { className: 'mc-measurement-no-data' }, 'Первый замер'),
+            showWarning && React.createElement('div', { className: 'mc-measurement-warning', role: 'alert' }, '⚠️ Проверьте ввод'),
+            // Хинт + индикатор стороны для бедра/бицепса
+            React.createElement('div', { className: 'mc-measurement-hint' }, 
+              field.hasSide 
+                ? `${field.hint} (${side === 'left' ? 'левая' : 'правая'})`
+                : field.hint
+            )
           );
         })
       ),
-      
-      // Подсказка
+
+      // Переключатель стороны (только если есть поля с hasSide)
+      MEASUREMENT_FIELDS.some(f => f.hasSide) && React.createElement('div', { className: 'mc-measurements-side-toggle' },
+        React.createElement('span', { className: 'mc-measurements-side-label' }, 'Сторона замера:'),
+        React.createElement('div', { className: 'mc-measurements-side-buttons' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-measurements-side-btn' + (side === 'left' ? ' active' : ''),
+            onClick: () => setSide('left')
+          }, '← Левая'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-measurements-side-btn' + (side === 'right' ? ' active' : ''),
+            onClick: () => setSide('right')
+          }, 'Правая →')
+        )
+      ),
+
       React.createElement('div', { className: 'mc-measurements-tip' },
         React.createElement('span', { className: 'mc-measurements-tip-icon' }, '💡'),
         React.createElement('span', { className: 'mc-measurements-tip-text' }, 
-          'Измеряй одну и ту же сторону каждый раз'
+          'Мерьте утром, одна сторона, без одежды'
         )
       )
     );
@@ -1261,35 +1370,69 @@
     icon: '📏',
     component: MeasurementsStepComponent,
     canSkip: true,  // Можно пропустить
-    getInitialData: () => {
-      const last = getLastMeasurements();
+    getInitialData: (context = {}) => {
+      // Используем дату из context или сегодня
+      const dateKey = context.dateKey || getTodayKey();
+      
+      // Получаем clientId для правильного ключа
+      const clientId = HEYS.currentClientId || (() => {
+        try { 
+          const raw = localStorage.getItem('heys_client_current'); 
+          return raw ? JSON.parse(raw) : ''; 
+        } catch { return ''; }
+      })();
+      const fullKey = clientId ? `heys_${clientId}_dayv2_${dateKey}` : `heys_dayv2_${dateKey}`;
+      
+      let rawData = null;
+      try {
+        const raw = localStorage.getItem(fullKey);
+        rawData = raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        console.error('[MEASUREMENTS] Read error:', e);
+      }
+      
+      const m = rawData?.measurements || {};
       return {
-        waist: last.waist || null,
-        hips: last.hips || null,
-        thigh: last.thigh || null,
-        biceps: last.biceps || null
+        waist: m.waist ?? null,
+        hips: m.hips ?? null,
+        thigh: m.thigh ?? null,
+        biceps: m.biceps ?? null,
+        _dateKey: dateKey // Передаём дату для save
       };
     },
     save: (data) => {
-      const todayKey = getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${todayKey}`, { date: todayKey });
+      // Используем дату из data._dateKey (переданную из getInitialData) или сегодня
+      const dateKey = data._dateKey || getTodayKey();
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      const hasData = ['waist', 'hips', 'thigh', 'biceps'].some(k => data[k] !== null && data[k] !== undefined && !Number.isNaN(data[k]));
       
-      // Сохраняем только если есть хотя бы одно значение
-      const hasData = data.waist || data.hips || data.thigh || data.biceps;
       if (hasData) {
+        const newUpdatedAt = Date.now();
         dayData.measurements = {
-          waist: data.waist || null,
-          hips: data.hips || null,
-          thigh: data.thigh || null,
-          biceps: data.biceps || null,
-          measuredAt: todayKey
+          waist: data.waist ?? null,
+          hips: data.hips ?? null,
+          thigh: data.thigh ?? null,
+          biceps: data.biceps ?? null,
+          measuredAt: dateKey
         };
-        dayData.updatedAt = Date.now();
-        lsSet(`heys_dayv2_${todayKey}`, dayData);
+        dayData.updatedAt = newUpdatedAt;
+        lsSet(`heys_dayv2_${dateKey}`, dayData);
         
-        // Уведомляем о изменении дня
+        // Триггер облачной синхронизации
+        window.dispatchEvent(new CustomEvent('heys:data-saved', { 
+          detail: { key: `day:${dateKey}`, type: 'measurements' }
+        }));
+        
+        // Уведомляем DayTab о изменении (с forceReload)
         window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-          detail: { date: todayKey, field: 'measurements', value: dayData.measurements, source: 'measurements-step' }
+          detail: { 
+            date: dateKey, 
+            field: 'measurements', 
+            value: dayData.measurements, 
+            source: 'measurements-step',
+            updatedAt: newUpdatedAt,
+            forceReload: true 
+          }
         }));
       }
     },
@@ -1307,6 +1450,8 @@
     Deficit: DeficitStepComponent,
     Household: HouseholdStepComponent,
     Measurements: MeasurementsStepComponent,
+    getLastMeasurementByField,
+    getMeasurementsHistory,
     // Утилиты
     getLastKnownWeight,
     getYesterdayWeight,

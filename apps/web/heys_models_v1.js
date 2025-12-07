@@ -306,7 +306,9 @@
       stressAvg:(d.stressAvg==='')? '' : (d.stressAvg!=null?d.stressAvg:''),
       dayComment:d.dayComment||'',
       waterMl: +d.waterMl || 0,
-      meals:Array.isArray(d.meals)?d.meals:[{id:uuid(),name:'Приём пищи',time:'',mood:'',wellbeing:'',stress:'',items:[]}]
+      meals:Array.isArray(d.meals)?d.meals:[{id:uuid(),name:'Приём пищи',time:'',mood:'',wellbeing:'',stress:'',items:[]}],
+      // Замеры тела (сохраняем как есть если есть)
+      measurements: d.measurements || undefined
     };
     if(!Array.isArray(base.trainings)) base.trainings=[{z:[0,0,0,0],time:'',type:'',quality:0,feelAfter:0,comment:''},{z:[0,0,0,0],time:'',type:'',quality:0,feelAfter:0,comment:''}];
     if(base.trainings.length<2) while(base.trainings.length<2) base.trainings.push({z:[0,0,0,0],time:'',type:'',quality:0,feelAfter:0,comment:''});

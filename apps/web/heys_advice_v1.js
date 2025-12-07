@@ -3798,6 +3798,136 @@
     }
     
     // ─────────────────────────────────────────────────────────
+    // 📏 BODY MEASUREMENTS INSIGHTS (priority: 4-15)
+    // ─────────────────────────────────────────────────────────
+    
+    // Получаем историю замеров
+    const getMeasurementsHistory = HEYS?.Steps?.getMeasurementsHistory;
+    if (typeof getMeasurementsHistory === 'function') {
+      const measurementsHistory = getMeasurementsHistory(30);
+      
+      if (measurementsHistory && measurementsHistory.length >= 2) {
+        const latest = measurementsHistory[0];
+        const oldest = measurementsHistory[measurementsHistory.length - 1];
+        
+        // Расчёт изменений по талии
+        const waistChange = (latest.waist && oldest.waist) ? latest.waist - oldest.waist : null;
+        const hipsChange = (latest.hips && oldest.hips) ? latest.hips - oldest.hips : null;
+        const bicepsChange = (latest.biceps && oldest.biceps) ? latest.biceps - oldest.biceps : null;
+        
+        // Талия уменьшилась — отлично!
+        if (waistChange !== null && waistChange < -1 && !sessionStorage.getItem('heys_waist_down')) {
+          advices.push({
+            id: 'waist_down_progress',
+            icon: '📏',
+            text: `Талия -${Math.abs(waistChange).toFixed(1)} см за месяц! Прогресс`,
+            details: '🏆 Уменьшение талии = уход висцерального жира. Это важнее цифры на весах!',
+            type: 'achievement',
+            priority: 5,
+            category: 'measurements',
+            triggers: ['tab_open'],
+            ttl: 6000,
+            showConfetti: true,
+            onShow: () => { try { sessionStorage.setItem('heys_waist_down', '1'); } catch(e) {} }
+          });
+        }
+        
+        // Бицепс растёт (для набора массы)
+        if (bicepsChange !== null && bicepsChange > 0.5 && !sessionStorage.getItem('heys_biceps_up')) {
+          advices.push({
+            id: 'biceps_growing',
+            icon: '💪',
+            text: `Бицепс +${bicepsChange.toFixed(1)} см! Мышцы растут`,
+            details: '💪 Рост мышц = правильные тренировки + достаточно белка. Продолжай!',
+            type: 'achievement',
+            priority: 6,
+            category: 'measurements',
+            triggers: ['tab_open'],
+            ttl: 5000,
+            onShow: () => { try { sessionStorage.setItem('heys_biceps_up', '1'); } catch(e) {} }
+          });
+        }
+        
+        // Корреляция с weightGoal — вес и талия идут вниз
+        const weightGoal = prof?.weightGoal || 0;
+        const currentWeight = day?.weightMorning || prof?.weight || 0;
+        
+        if (weightGoal > 0 && currentWeight > 0 && waistChange !== null) {
+          const weightDiff = currentWeight - weightGoal;
+          
+          // Цель — похудеть, и замеры улучшаются
+          if (weightDiff > 0 && waistChange < -0.5 && !sessionStorage.getItem('heys_weight_waist_corr')) {
+            advices.push({
+              id: 'weight_waist_correlation',
+              icon: '📊',
+              text: `Талия -${Math.abs(waistChange).toFixed(1)} см = приближение к цели`,
+              details: `🎯 До цели ${weightDiff.toFixed(1)} кг. Талия уменьшается — значит жир уходит!`,
+              type: 'insight',
+              priority: 8,
+              category: 'correlation',
+              triggers: ['tab_open'],
+              ttl: 6000,
+              onShow: () => { try { sessionStorage.setItem('heys_weight_waist_corr', '1'); } catch(e) {} }
+            });
+          }
+          
+          // Вес растёт, но бицепс тоже — возможно набор массы
+          if (weightDiff < -2 && bicepsChange !== null && bicepsChange > 0.3 && !sessionStorage.getItem('heys_bulk_corr')) {
+            advices.push({
+              id: 'bulk_muscle_correlation',
+              icon: '🏋️',
+              text: 'Вес выше цели, но мышцы растут — это нормально',
+              details: '💡 Набор мышц = набор веса. Отслеживай замеры, не только весы.',
+              type: 'insight',
+              priority: 9,
+              category: 'correlation',
+              triggers: ['tab_open'],
+              ttl: 5000,
+              onShow: () => { try { sessionStorage.setItem('heys_bulk_corr', '1'); } catch(e) {} }
+            });
+          }
+        }
+        
+        // Напоминание измериться (если >14 дней без замеров)
+        const lastMeasuredDate = latest?.measuredAt;
+        if (lastMeasuredDate) {
+          const daysSinceMeasured = Math.floor((Date.now() - new Date(lastMeasuredDate).getTime()) / (1000 * 60 * 60 * 24));
+          if (daysSinceMeasured >= 14 && !sessionStorage.getItem('heys_measure_reminder')) {
+            advices.push({
+              id: 'measure_reminder',
+              icon: '📐',
+              text: `${daysSinceMeasured} дней без замеров — пора измериться`,
+              details: '📏 Еженедельные замеры помогают отслеживать реальный прогресс, а не только вес.',
+              type: 'tip',
+              priority: 15,
+              category: 'measurements',
+              triggers: ['tab_open'],
+              ttl: 5000,
+              onShow: () => { try { sessionStorage.setItem('heys_measure_reminder', '1'); } catch(e) {} }
+            });
+          }
+        }
+      }
+      
+      // Первый замер — поздравить
+      if (measurementsHistory && measurementsHistory.length === 1 && !isMilestoneShown('first_measurement')) {
+        advices.push({
+          id: 'first_measurement',
+          icon: '📏',
+          text: 'Первый замер сделан! Отслеживай прогресс',
+          details: '🎯 Замеры тела точнее показывают изменения, чем весы. Измеряйся раз в неделю.',
+          type: 'achievement',
+          priority: 4,
+          category: 'achievement',
+          triggers: ['tab_open'],
+          ttl: 6000,
+          showConfetti: true,
+          onShow: () => markMilestoneShown('first_measurement')
+        });
+      }
+    }
+    
+    // ─────────────────────────────────────────────────────────
     // 🥜 TIMING TIPS (priority: 55-59)
     // ─────────────────────────────────────────────────────────
     
