@@ -115,6 +115,29 @@
    * @returns {Object|null} merged данные или null если merge не нужен
    */
   function mergeDayData(local, remote) {
+    // Приводим тренировки к новой схеме (quality/feelAfter → mood/wellbeing/stress)
+    const normalizeTrainings = (trainings = []) => trainings.map((t = {}) => {
+      if (t.quality !== undefined || t.feelAfter !== undefined) {
+        const { quality, feelAfter, ...rest } = t;
+        return {
+          ...rest,
+          mood: rest.mood ?? quality ?? 5,
+          wellbeing: rest.wellbeing ?? feelAfter ?? 5,
+          stress: rest.stress ?? 5
+        };
+      }
+      return t;
+    });
+
+    local = {
+      ...local,
+      trainings: normalizeTrainings(local?.trainings)
+    };
+    remote = {
+      ...remote,
+      trainings: normalizeTrainings(remote?.trainings)
+    };
+
     if (!local || !remote) return null;
     
     // Если данные идентичны — merge не нужен

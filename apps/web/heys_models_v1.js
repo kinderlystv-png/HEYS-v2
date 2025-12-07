@@ -310,16 +310,23 @@
       // Замеры тела (сохраняем как есть если есть)
       measurements: d.measurements || undefined
     };
-    if(!Array.isArray(base.trainings)) base.trainings=[{z:[0,0,0,0],time:'',type:'',quality:0,feelAfter:0,comment:''},{z:[0,0,0,0],time:'',type:'',quality:0,feelAfter:0,comment:''}];
-    if(base.trainings.length<2) while(base.trainings.length<2) base.trainings.push({z:[0,0,0,0],time:'',type:'',quality:0,feelAfter:0,comment:''});
-    base.trainings = base.trainings.map(t => ({
-      z: (t && Array.isArray(t.z)) ? [+t.z[0]||0, +t.z[1]||0, +t.z[2]||0, +t.z[3]||0] : [0,0,0,0],
-      time: (t && t.time) || '',
-      type: (t && t.type) || '',
-      quality: (t && +t.quality) || 0,
-      feelAfter: (t && +t.feelAfter) || 0,
-      comment: (t && t.comment) || ''
-    }));
+    if(!Array.isArray(base.trainings)) base.trainings=[{z:[0,0,0,0],time:'',type:'',mood:5,wellbeing:5,stress:5,comment:''},{z:[0,0,0,0],time:'',type:'',mood:5,wellbeing:5,stress:5,comment:''}];
+    if(base.trainings.length<2) while(base.trainings.length<2) base.trainings.push({z:[0,0,0,0],time:'',type:'',mood:5,wellbeing:5,stress:5,comment:''});
+    base.trainings = base.trainings.map(t => {
+      // Миграция: quality → mood, feelAfter → wellbeing
+      const mood = (t && t.mood !== undefined) ? +t.mood : (t && t.quality !== undefined) ? +t.quality : 5;
+      const wellbeing = (t && t.wellbeing !== undefined) ? +t.wellbeing : (t && t.feelAfter !== undefined) ? +t.feelAfter : 5;
+      const stress = (t && t.stress !== undefined) ? +t.stress : 5;
+      return {
+        z: (t && Array.isArray(t.z)) ? [+t.z[0]||0, +t.z[1]||0, +t.z[2]||0, +t.z[3]||0] : [0,0,0,0],
+        time: (t && t.time) || '',
+        type: (t && t.type) || '',
+        mood: mood,
+        wellbeing: wellbeing,
+        stress: stress,
+        comment: (t && t.comment) || ''
+      };
+    });
     return base;
   }
 

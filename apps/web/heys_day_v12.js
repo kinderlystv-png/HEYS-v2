@@ -2030,23 +2030,39 @@
   
   // Ref для блокировки обновлений от cloud sync во время редактирования
   const blockCloudUpdatesUntilRef = React.useRef(0);
+
+  // Миграция тренировок: quality/feelAfter → mood/wellbeing/stress
+  const normalizeTrainings = (trainings = []) => trainings.map((t = {}) => {
+    if (t.quality !== undefined || t.feelAfter !== undefined) {
+      const { quality, feelAfter, ...rest } = t;
+      return {
+        ...rest,
+        mood: rest.mood ?? quality ?? 5,
+        wellbeing: rest.wellbeing ?? feelAfter ?? 5,
+        stress: rest.stress ?? 5
+      };
+    }
+    return t;
+  });
+
+  // Очистка пустых тренировок (все зоны = 0)
+  const cleanEmptyTrainings = (trainings) => {
+    if (!Array.isArray(trainings)) return [];
+    return trainings.filter(t => t && t.z && t.z.some(z => z > 0));
+  };
   
   const [dayRaw,setDayRaw]=useState(()=>{ 
     const key = 'heys_dayv2_'+date;
     const v=lsGet(key,null); 
     
-    // Функция очистки пустых тренировок
-    const cleanEmptyTrainings = (trainings) => {
-      if (!Array.isArray(trainings)) return [];
-      return trainings.filter(t => t && t.z && t.z.some(z => z > 0));
-    };
-    
     if (v && v.date) {
-      // Очищаем пустые тренировки при загрузке
-      return ensureDay({
-        ...v,
-        trainings: cleanEmptyTrainings(v.trainings)
-      }, prof);
+      // Мигрируем оценки тренировок и очищаем пустые при загрузке
+      const normalizedTrainings = normalizeTrainings(v.trainings);
+      const cleanedTrainings = cleanEmptyTrainings(normalizedTrainings);
+      const migratedDay = { ...v, trainings: cleanedTrainings };
+      // Сохраняем миграцию обратно, чтобы больше не попадались старые поля
+      lsSet(key, migratedDay);
+      return ensureDay(migratedDay, prof);
     } else {
       // Для нового дня — пустой массив тренировок
       return ensureDay({
@@ -2069,15 +2085,7 @@
   const setDay = setDayRaw;
   const day = dayRaw;
 
-  // Функция очистки пустых тренировок (используется при загрузке дня)
-  const cleanEmptyTrainings = (trainings) => {
-    if (!Array.isArray(trainings)) return [];
-    return trainings.filter(t => {
-      if (!t) return false;
-      // Тренировка непустая если есть хотя бы одна зона > 0
-      return t.z && t.z.some(z => z > 0);
-    });
-  };
+  // cleanEmptyTrainings определена выше (для совместимости с прежним кодом вызовы остаются)
 
     // ЗАЩИТА: не сохранять до завершения гидратации (чтобы не затереть данные из Supabase)
     const { flush } = useDayAutosave({ day, date, lsSet, lsGetFn: lsGet, disabled: !isHydrated });
@@ -2145,11 +2153,15 @@
           }
           lastLoadedUpdatedAtRef.current = v.updatedAt || Date.now();
           
-          // Очищаем пустые тренировки при загрузке
+          // Мигрируем оценки тренировок и очищаем пустые
+          const normalizedTrainings = normalizeTrainings(v.trainings);
+          const cleanedTrainings = cleanEmptyTrainings(normalizedTrainings);
           const cleanedDay = {
             ...v,
-            trainings: cleanEmptyTrainings(v.trainings)
+            trainings: cleanedTrainings
           };
+          // Сохраняем миграцию обратно
+          lsSet(key, cleanedDay);
           setDay(ensureDay(cleanedDay, profNow));
           console.log('[HEYS] 📅 doLocal() loaded existing day | meals:', cleanedDay.meals?.length, '| steps:', cleanedDay.steps);
         } else {
@@ -2238,8 +2250,13 @@
             
             // Обновляем ref чтобы doLocal() не перезаписал более старыми данными
             lastLoadedUpdatedAtRef.current = storageUpdatedAt;
-            console.log('[HEYS] 📅 Reloading day after update | meals:', storageMealsCount, '| steps:', v.steps, '| updatedAt:', v.updatedAt);
-            setDay(ensureDay({ ...v, trainings: cleanEmptyTrainings(v.trainings) }, profNow));
+            const migratedTrainings = normalizeTrainings(v.trainings);
+            const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
+            const migratedDay = { ...v, trainings: cleanedTrainings };
+            // Сохраняем миграцию, чтобы не вернуть старые поля quality/feelAfter при следующей загрузке
+            lsSet(key, migratedDay);
+            console.log('[HEYS] 📅 Reloading day after update | meals:', storageMealsCount, '| steps:', migratedDay.steps, '| updatedAt:', migratedDay.updatedAt);
+            setDay(ensureDay(migratedDay, profNow));
           }
         }
       };
@@ -3793,7 +3810,7 @@
       
       // Fallback: старая логика (если TrainingStep не загружен)
       const now = new Date();
-      const T = TR[trainingIndex] || { z: [0,0,0,0], time: '', type: '', quality: 0, feelAfter: 0, comment: '' };
+      const T = TR[trainingIndex] || { z: [0,0,0,0], time: '', type: '', mood: 5, wellbeing: 5, stress: 5, comment: '' };
       
       // Если уже есть время — парсим, иначе текущее
       if (T.time) {
@@ -3864,7 +3881,7 @@
       
       // Заполняем пустые слоты если нужно (для idx=2 при length=2)
       while (newTrainings.length <= idx) {
-        newTrainings.push({ z: [0, 0, 0, 0], time: '', type: '', quality: 0, feelAfter: 0, comment: '' });
+        newTrainings.push({ z: [0, 0, 0, 0], time: '', type: '', mood: 5, wellbeing: 5, stress: 5, comment: '' });
       }
       
       // Теперь безопасно обновляем
@@ -3873,8 +3890,10 @@
         z: zoneMinutes,
         time: timeStr,
         type: pendingTrainingType,
-        quality: pendingTrainingQuality,
-        feelAfter: pendingTrainingFeelAfter,
+        // Legacy fallback: используем pendingTrainingQuality/FeelAfter как mood/wellbeing
+        mood: pendingTrainingQuality || 5,
+        wellbeing: pendingTrainingFeelAfter || 5,
+        stress: 5,
         comment: pendingTrainingComment
       };
       
@@ -4682,7 +4701,12 @@
           const v = lsGet('heys_dayv2_'+d,null);
           const profNow = getProfile();
           if (v && v.date) {
-            setDay(ensureDay(v, profNow));
+            const migratedTrainings = normalizeTrainings(v.trainings);
+            const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
+            const migratedDay = { ...v, trainings: cleanedTrainings };
+            // Сохраняем миграцию, чтобы не возвращались legacy поля при дальнейших загрузках
+            lsSet('heys_dayv2_'+d, migratedDay);
+            setDay(ensureDay(migratedDay, profNow));
           } else {
             setDay(ensureDay({ 
               date: d, 
