@@ -269,7 +269,8 @@
       const initialData = {};
       stepConfigs.forEach(config => {
         if (config.getInitialData) {
-          initialData[config.id] = config.getInitialData(context);
+          // Передаём context и уже собранные данные других шагов
+          initialData[config.id] = config.getInitialData(context, initialData);
         }
       });
       setStepData(initialData);
@@ -326,7 +327,8 @@
         // Сохраняем все данные
         stepConfigs.forEach(config => {
           if (config.save) {
-            config.save(stepData[config.id]);
+            // Передаём: данные этого шага, context, и все данные всех шагов
+            config.save(stepData[config.id], context, stepData);
           }
         });
         

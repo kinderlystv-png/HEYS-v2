@@ -209,7 +209,33 @@
       const ltSum = (lt.z || []).reduce((a, b) => a + (b || 0), 0);
       const rtSum = (rt.z || []).reduce((a, b) => a + (b || 0), 0);
       
-      merged.trainings.push(ltSum >= rtSum ? lt : rt);
+      // Выбираем базовую версию по зонам
+      let winner = ltSum >= rtSum ? lt : rt;
+      const loser = ltSum >= rtSum ? rt : lt;
+      
+      // ВСЕГДА объединяем оценки (mood/wellbeing/stress) из обеих версий
+      // Берём значение которое ЗАДАНО (не undefined), предпочитаем winner
+      const getMergedRating = (field) => {
+        const wVal = winner[field];
+        const lVal = loser[field];
+        // Предпочитаем значение от winner если оно задано (включая 0!)
+        if (wVal !== undefined) return wVal;
+        if (lVal !== undefined) return lVal;
+        return undefined; // Не задано ни там ни там
+      };
+      
+      winner = {
+        ...winner,
+        // Объединяем оценки — берём заданные из любой версии
+        mood: getMergedRating('mood'),
+        wellbeing: getMergedRating('wellbeing'),
+        stress: getMergedRating('stress'),
+        // Удаляем старые поля если они пустые
+        quality: undefined,
+        feelAfter: undefined
+      };
+      
+      merged.trainings.push(winner);
     }
     
     log('🔀 [MERGE] Result:', {
@@ -1279,6 +1305,30 @@
                   } catch(e) {}
                 }
               }
+            }
+          }
+          
+          // 🔄 Миграция: конвертируем устаревшие поля тренировок (quality/feelAfter → mood/wellbeing/stress)
+          if (key.includes('dayv2_') && row.v?.trainings?.length) {
+            let migrated = false;
+            row.v.trainings = row.v.trainings.map(t => {
+              // Если есть старые поля — мигрируем их значения в новые
+              if (t.quality !== undefined || t.feelAfter !== undefined) {
+                migrated = true;
+                const { quality, feelAfter, ...rest } = t;
+                return {
+                  ...rest,
+                  // Конвертируем: quality → mood, feelAfter → wellbeing
+                  // Если новые поля уже есть — приоритет им
+                  mood: rest.mood ?? quality ?? 5,
+                  wellbeing: rest.wellbeing ?? feelAfter ?? 5,
+                  stress: rest.stress ?? 5  // дефолт для stress (нейтральное значение)
+                };
+              }
+              return t;
+            });
+            if (migrated) {
+              log(`  🔄 Migrated training fields for ${key}`);
             }
           }
           

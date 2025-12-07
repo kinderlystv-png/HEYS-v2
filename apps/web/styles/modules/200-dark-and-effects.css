@@ -982,6 +982,85 @@
   background: #2c2c2e;
 }
 
+/* Dark theme for training card summary */
+[data-theme="dark"] .training-card-summary {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .training-card-duration {
+  background: linear-gradient(135deg, #14532d 0%, #166534 100%);
+  border-color: #22c55e;
+  color: #86efac;
+}
+
+[data-theme="dark"] .training-card-rating.quality {
+  background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
+  border-color: #d97706;
+}
+
+[data-theme="dark"] .training-card-rating.quality .training-card-rating-value {
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .training-card-rating.feel {
+  background: linear-gradient(135deg, #2e1065 0%, #4c1d95 100%);
+  border-color: #8b5cf6;
+}
+
+[data-theme="dark"] .training-card-rating.feel .training-card-rating-value {
+  color: #a78bfa;
+}
+
+/* Dark theme: physical (оранжевый) */
+[data-theme="dark"] .training-card-rating.physical {
+  background: linear-gradient(135deg, #431407 0%, #7c2d12 100%);
+  border-color: #ea580c;
+}
+
+[data-theme="dark"] .training-card-rating.physical .training-card-rating-value {
+  color: #fb923c;
+}
+
+/* Dark theme: wellbeing (фиолетовый) */
+[data-theme="dark"] .training-card-rating.wellbeing {
+  background: linear-gradient(135deg, #2e1065 0%, #4c1d95 100%);
+  border-color: #8b5cf6;
+}
+
+[data-theme="dark"] .training-card-rating.wellbeing .training-card-rating-value {
+  color: #a78bfa;
+}
+
+/* Dark theme: mood (зелёный) */
+[data-theme="dark"] .training-card-rating.mood {
+  background: linear-gradient(135deg, #14532d 0%, #166534 100%);
+  border-color: #22c55e;
+}
+
+[data-theme="dark"] .training-card-rating.mood .training-card-rating-value {
+  color: #4ade80;
+}
+
+/* Dark theme: stress (синий) */
+[data-theme="dark"] .training-card-rating.stress {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+  border-color: #3b82f6;
+}
+
+[data-theme="dark"] .training-card-rating.stress .training-card-rating-value {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .training-card-rating-label {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+[data-theme="dark"] .training-card-comment {
+  background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
+  border-color: #38383a;
+  color: #8e8e93;
+}
+
 /* Dark theme for training zones */
 [data-theme="dark"] .training-zones-label {
   color: #8e8e93;

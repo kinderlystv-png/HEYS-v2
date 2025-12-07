@@ -2075,8 +2075,7 @@
     return trainings.filter(t => {
       if (!t) return false;
       // Тренировка непустая если есть хотя бы одна зона > 0
-      const hasZones = t.z && t.z.some(z => z > 0);
-      return hasZones;
+      return t.z && t.z.some(z => z > 0);
     });
   };
 
@@ -2304,17 +2303,26 @@
       });
     }
 
-    // Функция для вычисления средних оценок из приёмов пищи
-    function calculateMealAverages(meals) {
-      if (!meals || !meals.length) return { moodAvg: '', wellbeingAvg: '', stressAvg: '' };
+    // Функция для вычисления средних оценок из приёмов пищи И тренировок
+    function calculateDayAverages(meals, trainings) {
+      // Собираем все оценки из приёмов пищи
+      const mealMoods = (meals || []).filter(m => m.mood && !isNaN(+m.mood)).map(m => +m.mood);
+      const mealWellbeing = (meals || []).filter(m => m.wellbeing && !isNaN(+m.wellbeing)).map(m => +m.wellbeing);
+      const mealStress = (meals || []).filter(m => m.stress && !isNaN(+m.stress)).map(m => +m.stress);
       
-      const validMoods = meals.filter(m => m.mood && !isNaN(+m.mood)).map(m => +m.mood);
-      const validWellbeing = meals.filter(m => m.wellbeing && !isNaN(+m.wellbeing)).map(m => +m.wellbeing);
-      const validStress = meals.filter(m => m.stress && !isNaN(+m.stress)).map(m => +m.stress);
+      // Собираем оценки из тренировок (mood, wellbeing, stress - теперь такие же как в meals)
+      const trainingMoods = (trainings || []).filter(t => t.mood && !isNaN(+t.mood)).map(t => +t.mood);
+      const trainingWellbeing = (trainings || []).filter(t => t.wellbeing && !isNaN(+t.wellbeing)).map(t => +t.wellbeing);
+      const trainingStress = (trainings || []).filter(t => t.stress && !isNaN(+t.stress)).map(t => +t.stress);
       
-      const moodAvg = validMoods.length ? r1(validMoods.reduce((sum, val) => sum + val, 0) / validMoods.length) : '';
-      const wellbeingAvg = validWellbeing.length ? r1(validWellbeing.reduce((sum, val) => sum + val, 0) / validWellbeing.length) : '';
-      const stressAvg = validStress.length ? r1(validStress.reduce((sum, val) => sum + val, 0) / validStress.length) : '';
+      // Объединяем все оценки
+      const allMoods = [...mealMoods, ...trainingMoods];
+      const allWellbeing = [...mealWellbeing, ...trainingWellbeing];
+      const allStress = [...mealStress, ...trainingStress];
+      
+      const moodAvg = allMoods.length ? r1(allMoods.reduce((sum, val) => sum + val, 0) / allMoods.length) : '';
+      const wellbeingAvg = allWellbeing.length ? r1(allWellbeing.reduce((sum, val) => sum + val, 0) / allWellbeing.length) : '';
+      const stressAvg = allStress.length ? r1(allStress.reduce((sum, val) => sum + val, 0) / allStress.length) : '';
       
       // Автоматический расчёт dayScore на основе трёх оценок
       // Формула: (mood + wellbeing + (10 - stress)) / 3, округлено до целого
@@ -2330,9 +2338,9 @@
       return { moodAvg, wellbeingAvg, stressAvg, dayScore };
     }
 
-    // Автоматическое обновление средних оценок и dayScore при изменении приёмов пищи
+    // Автоматическое обновление средних оценок и dayScore при изменении приёмов пищи или тренировок
     useEffect(() => {
-      const averages = calculateMealAverages(day.meals);
+      const averages = calculateDayAverages(day.meals, day.trainings);
       // Не перезаписываем dayScore если есть ручной override (dayScoreManual)
       const shouldUpdateDayScore = !day.dayScoreManual && averages.dayScore !== day.dayScore;
       
@@ -2347,7 +2355,11 @@
           ...(shouldUpdateDayScore ? { dayScore: averages.dayScore } : {})
         }));
       }
-    }, [day.meals?.map(m => `${m.mood}-${m.wellbeing}-${m.stress}`).join('|'), day.dayScoreManual]);
+    }, [
+      day.meals?.map(m => `${m.mood}-${m.wellbeing}-${m.stress}`).join('|'), 
+      day.trainings?.map(t => `${t.mood}-${t.wellbeing}-${t.stress}`).join('|'),
+      day.dayScoreManual
+    ]);
 
     // === iOS-style Time Picker Modal (mobile only) ===
     const [showTimePicker, setShowTimePicker] = useState(false);
@@ -4859,20 +4871,38 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       ),
       // Показываем только видимые тренировки
       Array.from({length: visibleTrainings}, (_, ti) => {
-        const T = TR[ti] || { z: [0, 0, 0, 0], time: '', type: '', quality: 0, feelAfter: 0, comment: '' };
+        const rawT = TR[ti] || {};
+        // Fallback для старых данных без оценок
+        const T = {
+          z: rawT.z || [0, 0, 0, 0],
+          time: rawT.time || '',
+          type: rawT.type || '',
+          mood: rawT.mood ?? 0,
+          wellbeing: rawT.wellbeing ?? 0,
+          stress: rawT.stress ?? 0,
+          comment: rawT.comment || ''
+        };
+        
         const kcalZ = i => r0((+T.z[i] || 0) * (kcalMin[i] || 0));
         const total = r0(kcalZ(0) + kcalZ(1) + kcalZ(2) + kcalZ(3));
         const trainingType = trainingTypes.find(t => t.id === T.type);
         
-        // Эмодзи для оценок
-        const getQualityEmoji = (v) => 
-          v === 0 ? null : v <= 2 ? '😫' : v <= 4 ? '😕' : v <= 6 ? '😐' : v <= 8 ? '💪' : '🔥';
-        const getFeelEmoji = (v) => 
-          v === 0 ? null : v <= 2 ? '🥵' : v <= 4 ? '😓' : v <= 6 ? '😌' : v <= 8 ? '😊' : '✨';
+        // Эмодзи для оценок (mood, wellbeing, stress) - как в приёмах пищи
+        const getMoodEmoji = (v) => 
+          v <= 0 ? null : v <= 2 ? '😢' : v <= 4 ? '😕' : v <= 6 ? '😐' : v <= 8 ? '😊' : '😄';
+        const getWellbeingEmoji = (v) => 
+          v <= 0 ? null : v <= 2 ? '🤒' : v <= 4 ? '😓' : v <= 6 ? '😐' : v <= 8 ? '💪' : '🏆';
+        const getStressEmoji = (v) => 
+          v <= 0 ? null : v <= 2 ? '😌' : v <= 4 ? '🙂' : v <= 6 ? '😐' : v <= 8 ? '😟' : '😰';
         
-        const qualityEmoji = getQualityEmoji(T.quality);
-        const feelEmoji = getFeelEmoji(T.feelAfter);
-        const hasRatings = T.quality > 0 || T.feelAfter > 0;
+        const moodEmoji = getMoodEmoji(T.mood);
+        const wellbeingEmoji = getWellbeingEmoji(T.wellbeing);
+        const stressEmoji = getStressEmoji(T.stress);
+        const hasRatings = T.mood > 0 || T.wellbeing > 0 || T.stress > 0;
+        
+        // Общая длительность тренировки (сумма минут)
+        const totalMinutes = (T.z || []).reduce((sum, m) => sum + (+m || 0), 0);
+        const hasDuration = totalMinutes > 0;
         
         return React.createElement('div', { 
           key: 'tr' + ti, 
@@ -4905,17 +4935,36 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               +T.z[zi] > 0 && React.createElement('span', { className: 'compact-zone-kcal' }, kcalZ(zi) + ' ккал'),
             )),
           ),
-          // Оценки тренировки (если есть)
-          hasRatings && React.createElement('div', { className: 'training-card-ratings' },
-            qualityEmoji && React.createElement('div', { className: 'training-card-rating' },
-              React.createElement('span', { className: 'training-card-rating-emoji' }, qualityEmoji),
-              React.createElement('span', { className: 'training-card-rating-label' }, 'Качество'),
-              React.createElement('span', { className: 'training-card-rating-value' }, T.quality + '/10')
+          // Итоговая строка: длительность и оценки
+          (hasDuration || hasRatings) && React.createElement('div', { className: 'training-card-summary' },
+            // Длительность тренировки
+            hasDuration && React.createElement('div', { className: 'training-card-duration' },
+              React.createElement('span', { className: 'training-card-duration-icon' }, '⏱'),
+              React.createElement('span', { className: 'training-card-duration-value' }, totalMinutes + ' мин')
             ),
-            feelEmoji && React.createElement('div', { className: 'training-card-rating' },
-              React.createElement('span', { className: 'training-card-rating-emoji' }, feelEmoji),
-              React.createElement('span', { className: 'training-card-rating-label' }, 'После'),
-              React.createElement('span', { className: 'training-card-rating-value' }, T.feelAfter + '/10')
+            // Оценки (mood, wellbeing, stress) - как в приёмах пищи
+            hasRatings && React.createElement('div', { className: 'training-card-ratings' },
+              moodEmoji && React.createElement('div', { className: 'training-card-rating mood' },
+                React.createElement('span', { className: 'training-card-rating-emoji' }, moodEmoji),
+                React.createElement('span', { className: 'training-card-rating-text' },
+                  React.createElement('span', { className: 'training-card-rating-label' }, 'Настр.'),
+                  React.createElement('span', { className: 'training-card-rating-value' }, T.mood + '/10')
+                )
+              ),
+              wellbeingEmoji && React.createElement('div', { className: 'training-card-rating wellbeing' },
+                React.createElement('span', { className: 'training-card-rating-emoji' }, wellbeingEmoji),
+                React.createElement('span', { className: 'training-card-rating-text' },
+                  React.createElement('span', { className: 'training-card-rating-label' }, 'Самоч.'),
+                  React.createElement('span', { className: 'training-card-rating-value' }, T.wellbeing + '/10')
+                )
+              ),
+              stressEmoji && React.createElement('div', { className: 'training-card-rating stress' },
+                React.createElement('span', { className: 'training-card-rating-emoji' }, stressEmoji),
+                React.createElement('span', { className: 'training-card-rating-text' },
+                  React.createElement('span', { className: 'training-card-rating-label' }, 'Стресс'),
+                  React.createElement('span', { className: 'training-card-rating-value' }, T.stress + '/10')
+                )
+              )
             )
           ),
           // Комментарий (если есть)
@@ -8767,37 +8816,116 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               React.createElement('div', { 
                 className: 'goal-marker' + (eatenKcal > optimum ? ' over' : ''),
                 style: eatenKcal > optimum ? { left: (optimum / eatenKcal * 100) + '%' } : {}
-              })
+              }),
+              // Показываем остаток калорий на пустой части полосы ИЛИ внутри бара когда мало места ИЛИ перебор
+              (() => {
+                if (eatenKcal > optimum) {
+                  // Перебор — показываем слева от маркера (перед чёрной линией)
+                  const overKcal = Math.round(eatenKcal - optimum);
+                  const markerPos = (optimum / eatenKcal * 100); // позиция маркера в %
+                  return React.createElement('div', {
+                    className: 'goal-remaining-inside goal-over-inside pulse-glow',
+                    style: {
+                      position: 'absolute',
+                      right: (100 - markerPos + 2) + '%', // справа от маркера
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '3px',
+                      padding: '2px 8px',
+                      borderRadius: '10px',
+                      background: 'rgba(255,255,255,0.95)',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                      pointerEvents: 'none',
+                      whiteSpace: 'nowrap',
+                      zIndex: 10
+                    }
+                  }, 
+                    React.createElement('span', { style: { fontSize: '10px', fontWeight: '500', color: '#dc2626' } }, 'Перебор'),
+                    React.createElement('span', { style: { fontSize: '13px', fontWeight: '800', color: '#dc2626' } }, '+' + overKcal)
+                  );
+                }
+                
+                if (eatenKcal >= optimum) return null;
+                
+                // Округляем остаток
+                const remainingRounded = Math.round(remainingKcal);
+                
+                // Цвет зависит от того сколько осталось: много = зелёный, мало = красный, средне = жёлтый
+                const remainingRatio = 1 - ratio; // 1 = много осталось, 0 = мало
+                let remainingColor;
+                if (remainingRatio > 0.5) {
+                  remainingColor = '#16a34a';
+                } else if (remainingRatio > 0.2) {
+                  remainingColor = '#ca8a04';
+                } else {
+                  remainingColor = '#dc2626';
+                }
+                
+                // Когда прогресс > 80%, перемещаем внутрь бара
+                const isInsideBar = animatedProgress >= 80;
+                
+                if (isInsideBar) {
+                  // Внутри заполненной части — справа, с пульсацией
+                  return React.createElement('div', {
+                    className: 'goal-remaining-inside pulse-glow',
+                    style: {
+                      position: 'absolute',
+                      right: (100 - Math.min(animatedProgress, 100) + 2) + '%',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '3px',
+                      padding: '2px 8px',
+                      borderRadius: '10px',
+                      background: 'rgba(255,255,255,0.95)',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                      pointerEvents: 'none',
+                      whiteSpace: 'nowrap',
+                      zIndex: 10
+                    }
+                  }, 
+                    React.createElement('span', { style: { fontSize: '10px', fontWeight: '500', color: '#6b7280' } }, 'Осталось всего'),
+                    React.createElement('span', { style: { fontSize: '13px', fontWeight: '800', color: remainingColor } }, remainingRounded)
+                  );
+                } else {
+                  // На пустой части полосы
+                  return React.createElement('div', {
+                    className: 'goal-remaining-inline',
+                    style: {
+                      position: 'absolute',
+                      left: Math.max(animatedProgress + 2, 5) + '%',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      pointerEvents: 'none',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }
+                  }, 
+                    React.createElement('span', { style: { fontSize: '12px', fontWeight: '500', color: '#6b7280' } }, 'Ещё'),
+                    React.createElement('span', { style: { fontSize: '15px', fontWeight: '800', color: remainingColor } }, remainingRounded)
+                  );
+                }
+              })()
             ),
             // Метки зон под полосой
             React.createElement('div', { className: 'goal-zone-labels' },
               React.createElement('span', { 
-                className: 'goal-zone-label',
-                style: { left: (ratio > 1 ? (0.80 / ratio) * 100 : 80) + '%' }
-              }, '80%'),
-              React.createElement('span', { 
                 className: 'goal-zone-label goal-zone-label-100',
                 style: { left: (ratio > 1 ? (1.0 / ratio) * 100 : 100) + '%' }
               }, '100%')
-            ),
-            React.createElement('div', { className: 'goal-progress-footer' },
-              eatenKcal <= optimum 
-                ? React.createElement('span', { 
-                    className: 'goal-remaining' + (remainingKcal <= 150 ? ' almost-there' : remainingKcal <= 300 ? ' getting-close' : '')
-                  }, 
-                    remainingKcal <= 150 
-                      ? React.createElement(React.Fragment, null, 'Почти у цели! ', React.createElement('b', null, remainingKcal), ' ккал 🔥')
-                      : remainingKcal <= 300
-                        ? React.createElement(React.Fragment, null, 'Ещё чуть-чуть! ', React.createElement('b', null, remainingKcal), ' ккал 💪')
-                        : React.createElement(React.Fragment, null, 'Осталось ', React.createElement('b', null, remainingKcal), ' ккал')
-                  )
-                : React.createElement('span', { 
-                    className: 'goal-over',
-                    style: { color: overColor }
-                  }, 
-                    ratio <= 1.05 ? 'Небольшой плюс: ' : 'Превышение на ',
-                    React.createElement('b', null, Math.abs(remainingKcal)), ' ккал'
-                  )
             )
           );
         })()

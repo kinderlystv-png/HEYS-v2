@@ -2318,8 +2318,8 @@
 
 .goal-progress-track {
   position: relative;
-  height: 10px;
-  border-radius: 5px;
+  height: 24px;
+  border-radius: 12px;
 }
 
 /* Серый фон только до маркера при переборе */
@@ -2331,7 +2331,7 @@
   right: 0;
   height: 100%;
   background: var(--color-slate-200);
-  border-radius: 5px;
+  border-radius: 12px;
   z-index: 0;
 }
 
@@ -2341,7 +2341,7 @@
   left: 0;
   height: 100%;
   background: linear-gradient(90deg, #22c55e 0%, var(--success-dark) 100%);
-  border-radius: 5px 0 0 5px;
+  border-radius: 12px 0 0 12px;
   transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: width;
   z-index: 1;
@@ -2373,26 +2373,28 @@
   top: 0;
   height: 100%;
   background: linear-gradient(90deg, var(--color-red-500) 0%, #dc2626 100%);
-  border-radius: 0 5px 5px 0;
+  border-radius: 0 12px 12px 0;
   z-index: 2;
 }
 
 .goal-marker {
   position: absolute;
   right: 0;
-  top: -3px;
+  top: 0;
   width: 3px;
-  height: 16px;
-  background: var(--color-slate-700);
+  height: 100%;
+  background: transparent;
   border-radius: 2px;
   z-index: 10;
   transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Маркер при переборе — позиционирование через left вместо right */
+/* Маркер при переборе — чёрная линия на всю высоту */
 .goal-marker.over {
   right: auto;
   transform: translateX(-50%);
+  background: #1f2937;
+  box-shadow: 0 0 4px rgba(0,0,0,0.3);
 }
 
 /* === Маркер текущего % на позиции заполнения === */
@@ -2450,6 +2452,22 @@
 .goal-zone-label-100 {
   color: var(--color-slate-500);
   font-weight: 600;
+}
+
+/* === Остаток калорий внутри заполненной части бара (когда >80%) === */
+.goal-remaining-inside {
+  animation: pulseGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    transform: translateY(-50%) scale(1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  50% {
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25), 0 0 12px rgba(255,255,255,0.5);
+  }
 }
 
 .goal-progress-footer {
@@ -4103,41 +4121,152 @@
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
+/* Training Card Summary (duration + ratings) */
+.training-card-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+}
+
+/* Training Card Duration */
+.training-card-duration {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.training-card-duration-icon {
+  font-size: 14px;
+}
+
+.training-card-duration-value {
+  letter-spacing: 0.3px;
+}
+
 /* Training Card Rating Display */
 .training-card-ratings {
   display: flex;
   gap: 8px;
-  margin-top: 8px;
   flex-wrap: wrap;
+  flex: 1;
 }
 
 .training-card-rating {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  background: rgba(99, 102, 241, 0.08);
-  border-radius: 8px;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
   font-size: 12px;
+  transition: transform 0.15s ease;
+}
+
+.training-card-rating:hover {
+  transform: translateY(-1px);
+}
+
+.training-card-rating.quality {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #fcd34d;
+}
+
+.training-card-rating.feel {
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  border: 1px solid #c4b5fd;
+}
+
+/* Physical (physical состояние) - оранжевый */
+.training-card-rating.physical {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  border: 1px solid #fdba74;
+}
+
+.training-card-rating.physical .training-card-rating-value {
+  color: #ea580c;
+}
+
+/* Wellbeing (самочувствие) - фиолетовый */
+.training-card-rating.wellbeing {
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  border: 1px solid #c4b5fd;
+}
+
+.training-card-rating.wellbeing .training-card-rating-value {
+  color: #7c3aed;
+}
+
+/* Mood (настроение) - зелёный */
+.training-card-rating.mood {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  border: 1px solid #86efac;
+}
+
+.training-card-rating.mood .training-card-rating-value {
+  color: #16a34a;
+}
+
+/* Stress (усталость) - синий */
+.training-card-rating.stress {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border: 1px solid #93c5fd;
+}
+
+.training-card-rating.stress .training-card-rating-value {
+  color: #2563eb;
 }
 
 .training-card-rating-emoji {
-  font-size: 14px;
+  font-size: 18px;
+}
+
+.training-card-rating-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.training-card-rating-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .training-card-rating-value {
-  font-weight: 600;
-  color: #6366f1;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.training-card-rating.quality .training-card-rating-value {
+  color: #d97706;
+}
+
+.training-card-rating.feel .training-card-rating-value {
+  color: #7c3aed;
 }
 
 .training-card-comment {
-  margin-top: 8px;
-  padding: 8px 10px;
-  background: rgba(156, 163, 175, 0.08);
-  border-radius: 8px;
-  font-size: 12px;
-  color: var(--color-gray-500);
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--color-gray-600);
   font-style: italic;
+  line-height: 1.4;
 }
 
 /* Clickable zone values */

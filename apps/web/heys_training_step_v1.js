@@ -63,16 +63,16 @@
     if (v <= 2) return '😌';
     if (v <= 4) return '🙂';
     if (v <= 6) return '😐';
-    if (v <= 8) return '😤';
-    return '🤯';
+    if (v <= 8) return '😟';
+    return '😰';
   }
 
-  function getPhysicalEmoji(v) {
-    if (v <= 2) return '🥵';
-    if (v <= 4) return '😮‍💨';
-    if (v <= 6) return '💪';
-    if (v <= 8) return '🔥';
-    return '⚡';
+  function getWellbeingEmoji(v) {
+    if (v <= 2) return '🤒';
+    if (v <= 4) return '😓';
+    if (v <= 6) return '😐';
+    if (v <= 8) return '💪';
+    return '🏆';
   }
 
   function getMoodColor(v) {
@@ -104,8 +104,8 @@
   function TrainingInfoStep({ data, onChange, context }) {
     const type = data.type || 'cardio';
     const time = data.time || '';
-    const physical = data.physical || 5;
     const mood = data.mood || 5;
+    const wellbeing = data.wellbeing || 5;
     const stress = data.stress || 5;
     const comment = data.comment || '';
 
@@ -176,31 +176,8 @@
 
       // === Оценки после тренировки ===
       React.createElement('div', { className: 'ts-section ts-ratings-section' },
-        React.createElement('div', { className: 'ts-ratings-title' }, '📊 Ощущения'),
+        React.createElement('div', { className: 'ts-ratings-title' }, '📊 Какие ощущения после тренировки?'),
         
-        // Физическое состояние
-        React.createElement('div', { className: 'ts-rating-row' },
-          React.createElement('div', { className: 'ts-rating-header' },
-            React.createElement('span', { className: 'ts-rating-emoji' }, getPhysicalEmoji(physical)),
-            React.createElement('span', { className: 'ts-rating-label' }, 'Физ. состояние'),
-            React.createElement('span', { 
-              className: 'ts-rating-value',
-              style: { color: getMoodColor(physical) }
-            }, physical + '/10')
-          ),
-          React.createElement('input', {
-            type: 'range',
-            className: 'ts-slider ts-slider-positive',
-            min: 1,
-            max: 10,
-            value: physical,
-            onChange: e => updateField('physical', Number(e.target.value)),
-            onTouchStart: e => e.stopPropagation(),
-            onTouchMove: e => e.stopPropagation(),
-            onTouchEnd: e => e.stopPropagation()
-          })
-        ),
-
         // Настроение
         React.createElement('div', { className: 'ts-rating-row' },
           React.createElement('div', { className: 'ts-rating-header' },
@@ -224,11 +201,34 @@
           })
         ),
 
-        // Усталость
+        // Самочувствие
+        React.createElement('div', { className: 'ts-rating-row' },
+          React.createElement('div', { className: 'ts-rating-header' },
+            React.createElement('span', { className: 'ts-rating-emoji' }, getWellbeingEmoji(wellbeing)),
+            React.createElement('span', { className: 'ts-rating-label' }, 'Самочувствие'),
+            React.createElement('span', { 
+              className: 'ts-rating-value',
+              style: { color: getMoodColor(wellbeing) }
+            }, wellbeing + '/10')
+          ),
+          React.createElement('input', {
+            type: 'range',
+            className: 'ts-slider ts-slider-positive',
+            min: 1,
+            max: 10,
+            value: wellbeing,
+            onChange: e => updateField('wellbeing', Number(e.target.value)),
+            onTouchStart: e => e.stopPropagation(),
+            onTouchMove: e => e.stopPropagation(),
+            onTouchEnd: e => e.stopPropagation()
+          })
+        ),
+
+        // Стресс
         React.createElement('div', { className: 'ts-rating-row' },
           React.createElement('div', { className: 'ts-rating-header' },
             React.createElement('span', { className: 'ts-rating-emoji' }, getStressEmoji(stress)),
-            React.createElement('span', { className: 'ts-rating-label' }, 'Усталость'),
+            React.createElement('span', { className: 'ts-rating-label' }, 'Стресс'),
             React.createElement('span', { 
               className: 'ts-rating-value',
               style: { color: getStressColor(stress) }
@@ -370,8 +370,8 @@
         type: T.type || 'cardio',
         time: T.time || '',
         zones: T.z || [0, 0, 0, 0],
-        physical: T.physical || 5,
         mood: T.mood || 5,
+        wellbeing: T.wellbeing || 5,
         stress: T.stress || 5,
         comment: T.comment || ''
       };
@@ -400,8 +400,8 @@
         type: T.type || 'cardio',
         time: T.time || '',
         zones: T.z || [0, 0, 0, 0],
-        physical: T.physical || 5,
         mood: T.mood || 5,
+        wellbeing: T.wellbeing || 5,
         stress: T.stress || 5,
         comment: T.comment || ''
       };
@@ -415,7 +415,8 @@
       if (total === 0) return 'Укажите хотя бы 1 минуту в любой зоне';
       return null;
     },
-    save: (data, ctx) => {
+    save: (data, ctx, allStepData) => {
+      console.log('[TrainingStep] SAVE called:', { data, ctx, allStepData });
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
       const trainingIndex = ctx?.trainingIndex ?? 0;
       const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
@@ -425,22 +426,32 @@
         trainings.push({ z: [0, 0, 0, 0] });
       }
       
-      trainings[trainingIndex] = {
-        z: data.zones || [0, 0, 0, 0],
-        time: data.time || '',
-        type: data.type || 'cardio',
-        physical: data.physical || 5,
-        mood: data.mood || 5,
-        stress: data.stress || 5,
-        comment: data.comment || ''
+      // Объединяем данные из шага 1 (info) и шага 2 (zones)
+      const infoData = allStepData?.['training-info'] || {};
+      const zonesData = data || {};
+      
+      const finalTraining = {
+        z: zonesData.zones || [0, 0, 0, 0],
+        time: infoData.time || zonesData.time || '',
+        type: infoData.type || zonesData.type || 'cardio',
+        mood: infoData.mood ?? zonesData.mood ?? 5,
+        wellbeing: infoData.wellbeing ?? zonesData.wellbeing ?? 5,
+        stress: infoData.stress ?? zonesData.stress ?? 5,
+        comment: infoData.comment || zonesData.comment || ''
       };
+      
+      console.log('[TrainingStep] Saving training:', finalTraining);
+      
+      trainings[trainingIndex] = finalTraining;
       
       day.trainings = trainings;
       day.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, day);
       
+      console.log('[TrainingStep] Saved day:', day.trainings[trainingIndex]);
+      
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
-        detail: { date: dateKey, field: 'trainings', source: 'training-step' }
+        detail: { date: dateKey, field: 'trainings', source: 'training-step', forceReload: true }
       }));
     }
   });
