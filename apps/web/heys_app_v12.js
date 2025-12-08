@@ -9,6 +9,11 @@
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
         
+        // === Update Attempt Tracking (защита от бесконечного цикла) ===
+        const UPDATE_ATTEMPT_KEY = 'heys_update_attempt';
+        const MAX_UPDATE_ATTEMPTS = 2;
+        const UPDATE_COOLDOWN_MS = 60000; // 1 минута между попытками
+        
         HEYS.version = APP_VERSION;
         
         // Проверка блокировки обновления
@@ -182,6 +187,74 @@
             setTimeout(() => modal.remove(), 300);
           }
         }
+        
+        // === Ручной промпт обновления (когда автообновление застряло) ===
+        function showManualRefreshPrompt(targetVersion) {
+          document.getElementById('heys-update-modal')?.remove();
+          
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+          
+          const modal = document.createElement('div');
+          modal.id = 'heys-update-modal';
+          modal.innerHTML = `
+            <div style="
+              position: fixed; inset: 0;
+              background: rgba(0, 0, 0, 0.8);
+              display: flex; align-items: center; justify-content: center;
+              z-index: 999999;
+            ">
+              <div style="
+                background: #1a1a2e;
+                border-radius: 20px;
+                padding: 32px;
+                text-align: center;
+                max-width: 320px;
+                margin: 20px;
+              ">
+                <div style="font-size: 48px; margin-bottom: 16px;">🔄</div>
+                <h2 style="color: white; margin: 0 0 8px; font-family: system-ui, sans-serif;">Требуется обновление</h2>
+                <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin: 0 0 20px; font-family: system-ui, sans-serif;">
+                  ${isIOS 
+                    ? 'Закройте приложение и откройте заново для обновления до v' + targetVersion
+                    : 'Нажмите кнопку для обновления до v' + targetVersion}
+                </p>
+                ${isIOS ? '' : `
+                  <button id="heys-manual-update-btn" style="
+                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    color: white; border: none; padding: 12px 24px; border-radius: 12px;
+                    font-size: 16px; cursor: pointer; width: 100%;
+                    font-family: system-ui, sans-serif;
+                  ">Обновить сейчас</button>
+                `}
+                <button id="heys-update-later-btn" style="
+                  background: transparent; color: rgba(255,255,255,0.5); border: none;
+                  padding: 12px; font-size: 14px; cursor: pointer; margin-top: 12px;
+                  font-family: system-ui, sans-serif;
+                ">Позже</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+          
+          // Event handlers
+          const updateBtn = document.getElementById('heys-manual-update-btn');
+          if (updateBtn) {
+            updateBtn.addEventListener('click', () => {
+              localStorage.removeItem(UPDATE_ATTEMPT_KEY);
+              // Hard reload с cache-bust
+              const url = new URL(window.location.href);
+              url.searchParams.set('_v', Date.now().toString());
+              window.location.href = url.toString();
+            });
+          }
+          
+          const laterBtn = document.getElementById('heys-update-later-btn');
+          if (laterBtn) {
+            laterBtn.addEventListener('click', () => {
+              modal.remove();
+            });
+          }
+        }
 
         // === Service Worker Registration (Production) ===
         function registerServiceWorker() {
@@ -282,15 +355,27 @@
           // и выполнил auto-logout + баннер об обновлении
           localStorage.setItem(VERSION_KEY, APP_VERSION);
           
-          // Активируем новый SW
+          // Отправляем skipWaiting — новый SW должен активироваться
+          // После активации глобальный controllerchange listener (выше) сделает reload
           if (navigator.serviceWorker?.controller) {
             navigator.serviceWorker.controller.postMessage('skipWaiting');
           }
           
-          // Перезагружаем через 800ms (даём время увидеть анимацию)
+          // ✅ НЕ делаем reload здесь сразу!
+          // Глобальный controllerchange listener сделает reload когда новый SW реально активируется.
+          
+          // Fallback: если controllerchange не сработал за 5 секунд
           setTimeout(() => {
-            window.location.reload();
-          }, 800);
+            // Проверяем, не сделал ли уже controllerchange reload
+            if (sessionStorage.getItem('heys_pending_update') === 'true') {
+              console.warn('[HEYS] controllerchange timeout, forcing reload with cache-bust');
+              sessionStorage.removeItem('heys_pending_update');
+              // Hard reload с cache-bust параметром
+              const url = new URL(window.location.href);
+              url.searchParams.set('_v', Date.now().toString());
+              window.location.href = url.toString();
+            }
+          }, 5000);
         }
         
         // === Проверка версии с сервера (обход кэша) ===
@@ -309,6 +394,33 @@
             
             if (data.version && data.version !== APP_VERSION) {
               console.log(`[HEYS] 🆕 Server has new version: ${data.version} (current: ${APP_VERSION})`);
+              
+              // === Защита от бесконечного цикла обновлений ===
+              const attempt = JSON.parse(localStorage.getItem(UPDATE_ATTEMPT_KEY) || '{}');
+              const now = Date.now();
+              
+              // Cooldown — не пытаться чаще чем раз в минуту
+              if (attempt.timestamp && (now - attempt.timestamp) < UPDATE_COOLDOWN_MS) {
+                console.log('[HEYS] Update cooldown active, skipping');
+                return false;
+              }
+              
+              // Счётчик попыток для этой версии
+              if (attempt.targetVersion === data.version) {
+                attempt.count = (attempt.count || 0) + 1;
+              } else {
+                attempt.targetVersion = data.version;
+                attempt.count = 1;
+              }
+              attempt.timestamp = now;
+              localStorage.setItem(UPDATE_ATTEMPT_KEY, JSON.stringify(attempt));
+              
+              // Если много попыток — показать ручной промпт
+              if (attempt.count > MAX_UPDATE_ATTEMPTS) {
+                console.warn('[HEYS] Update stuck after', attempt.count, 'attempts');
+                showManualRefreshPrompt(data.version);
+                return true;
+              }
               
               // Предотвращаем дублирование обновления (надёжный флаг в localStorage)
               if (isUpdateLocked()) {
@@ -338,8 +450,16 @@
         }
         
         function runVersionGuard() {
+          // === Убираем ?_v= параметр из URL (косметика) ===
+          if (window.location.search.includes('_v=')) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('_v');
+            window.history.replaceState({}, '', url.toString());
+          }
+          
           const storedVersion = localStorage.getItem(VERSION_KEY);
           const hadPendingUpdate = sessionStorage.getItem('heys_pending_update') === 'true';
+          const attempt = JSON.parse(localStorage.getItem(UPDATE_ATTEMPT_KEY) || '{}');
           
           // Убираем флаги
           sessionStorage.removeItem('heys_pending_update');
@@ -347,6 +467,12 @@
           
           // Проверяем реальное изменение версии
           const isRealVersionChange = storedVersion && storedVersion !== APP_VERSION;
+          
+          // === Сброс счётчика попыток при успешном обновлении ===
+          if (isRealVersionChange || attempt.targetVersion === APP_VERSION) {
+            console.log('[HEYS] ✅ Update target reached, clearing attempts');
+            localStorage.removeItem(UPDATE_ATTEMPT_KEY);
+          }
           
           if (isRealVersionChange && hadPendingUpdate) {
             console.log(`[HEYS] ✅ Updated: ${storedVersion} → ${APP_VERSION}`);
@@ -4437,7 +4563,7 @@
                       className: 'tab ' + (tab === 'ration' ? 'active' : ''),
                       onClick: () => setTab('ration'),
                     },
-                    React.createElement('span', { className: 'tab-icon' }, '📦'),
+                    React.createElement('span', { className: 'tab-icon', style: { fontSize: '16px' } }, '📦'),
                     React.createElement('span', { className: 'tab-text' }, 'База'),
                   ),
                   // Обзор — слева (тройной тап = debug panel)
