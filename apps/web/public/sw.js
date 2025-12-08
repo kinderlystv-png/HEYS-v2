@@ -2,7 +2,7 @@
 // Стратегия: Cache-First для статики, Network-First для API
 // Версия обновляется автоматически при билде
 
-const CACHE_VERSION = 'heys-1764528254379'; // Заменяется при билде
+const CACHE_VERSION = 'heys-1765178482';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
@@ -197,6 +197,23 @@ async function networkFirst(request) {
   }
 }
 
+// === Проверка соответствия MIME type файлу ===
+function isValidMimeType(request, response) {
+  const url = new URL(request.url);
+  const contentType = response.headers.get('content-type') || '';
+  
+  // CSS файлы должны иметь text/css
+  if (url.pathname.endsWith('.css')) {
+    return contentType.includes('text/css');
+  }
+  // JS файлы должны иметь javascript
+  if (url.pathname.endsWith('.js')) {
+    return contentType.includes('javascript');
+  }
+  // Остальные — ОК
+  return true;
+}
+
 // === Стратегия: Stale While Revalidate ===
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(STATIC_CACHE);
@@ -212,15 +229,21 @@ async function staleWhileRevalidate(request) {
     })
     .catch(() => null);
   
-  // Возвращаем кэш сразу, если есть
-  if (cached) {
+  // Проверяем MIME type в кеше — если неправильный, ждём сеть
+  if (cached && isValidMimeType(request, cached)) {
     return cached;
   }
   
-  // Иначе ждём сеть
+  // Кеш пустой или испорченный — ждём сеть
   const response = await fetchPromise;
   if (response) {
     return response;
+  }
+  
+  // Последний шанс — вернуть даже испорченный кеш (лучше чем ничего)
+  if (cached) {
+    console.warn('[SW] Returning cached response with mismatched MIME type:', request.url);
+    return cached;
   }
   
   return new Response('Offline', { status: 503 });
