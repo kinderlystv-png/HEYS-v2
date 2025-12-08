@@ -47,16 +47,25 @@
     active: { emoji: '📈', color: '#3b82f6', label: null }
   };
   
-  const PROTEIN_BONUS = { high: { threshold: 35, bonus: 0.18 }, medium: { threshold: 20, bonus: 0.10 } };
+  // 🔬 НАУЧНЫЙ АУДИТ 2025-12-09:
+  // Белок вызывает инсулиновый ответ, но СЛАБЕЕ чем углеводы (Nuttall et al. 1984)
+  // 50г белка ≈ 15-20г углеводов по инсулиновому ответу
+  // Снижены бонусы с +18%/+10% до +10%/+5%
+  const PROTEIN_BONUS = { high: { threshold: 35, bonus: 0.10 }, medium: { threshold: 20, bonus: 0.05 } };
   const FIBER_BONUS = { high: { threshold: 10, bonus: 0.18 }, medium: { threshold: 5, bonus: 0.08 } };
   
   // 🧈 FAT SLOWDOWN — жиры значительно замедляют опорожнение желудка (gastric emptying)
   // Исследования: жирная пища может замедлить пищеварение на 30-50% (Liddle et al., 1991)
   // Примеры: пицца, бургер, жареное — волна 4-5 часов вместо 3
+  // 
+  // 🔬 НАУЧНЫЙ АУДИТ 2025-12-09:
+  // Жиры замедляют УСВОЕНИЕ углеводов, но если углеводов мало — эффект минимален
+  // Бонус теперь применяется пропорционально GL (см. calculateMultiplier)
+  // Снижены бонусы: +35%→+25%, +20%→+15%, +10%→+8%
   const FAT_BONUS = {
-    high: { threshold: 25, bonus: 0.35 },    // 25+ г жира → +35% к длине волны
-    medium: { threshold: 15, bonus: 0.20 },  // 15+ г жира → +20% к длине волны
-    low: { threshold: 8, bonus: 0.10 }       // 8+ г жира → +10%
+    high: { threshold: 25, bonus: 0.25 },    // 25+ г жира → +25% к длине волны
+    medium: { threshold: 15, bonus: 0.15 },  // 15+ г жира → +15% к длине волны
+    low: { threshold: 8, bonus: 0.08 }       // 8+ г жира → +8%
   };
   
   // 🥤 LIQUID FOOD — жидкая пища усваивается быстрее (меньше времени на механическое переваривание)
@@ -115,12 +124,17 @@
   // Пример: арбуз GI=72 высокий, но 100г арбуза = 6г углеводов → GL=4.3 (низкая!)
   // Пример: белый рис GI=73, 150г = 45г углеводов → GL=33 (очень высокая!)
   // Стандартные пороги: низкая <10, средняя 10-20, высокая >20
+  // 
+  // 🔬 НАУЧНЫЙ АУДИТ 2025-12-09:
+  // При GL < 5 инсулиновый ответ МИНИМАЛЕН — волна не может быть долгой
+  // Mayer (1995): при <10г доступных углеводов инсулин возвращается к базовому за 1-2ч
+  // Поэтому multiplier для veryLow более агрессивный (0.5 вместо 0.7)
   const GL_CATEGORIES = {
-    veryLow: { max: 5, multiplier: 0.7, desc: 'минимальный инсулин' },      // почти нет реакции
-    low: { max: 10, multiplier: 0.85, desc: 'слабый инсулиновый ответ' },   // умеренная реакция
+    veryLow: { max: 5, multiplier: 0.5, desc: 'минимальный инсулин' },      // ~50% волны (GL<5 = почти кето-еда)
+    low: { max: 10, multiplier: 0.7, desc: 'слабый инсулиновый ответ' },    // 70% волны
     medium: { max: 20, multiplier: 1.0, desc: 'нормальный инсулин' },       // стандартная волна
-    high: { max: 30, multiplier: 1.2, desc: 'сильный инсулиновый ответ' },  // удлинённая волна
-    veryHigh: { max: Infinity, multiplier: 1.35, desc: 'максимальный инсулин' } // пиковая реакция
+    high: { max: 30, multiplier: 1.15, desc: 'сильный инсулиновый ответ' }, // +15% волны
+    veryHigh: { max: Infinity, multiplier: 1.25, desc: 'максимальный инсулин' } // +25% (снижено с 1.35)
   };
   
   // 🏃 WORKOUT ACCELERATION — тренировка ускоряет метаболизм
@@ -968,6 +982,16 @@
 
   /**
    * Рассчитать множитель длины волны
+   * 
+   * 🔬 НАУЧНЫЙ АУДИТ 2025-12-09:
+   * Формула переработана для корректной обработки низкоуглеводной еды.
+   * 
+   * КЛЮЧЕВЫЕ ПРИНЦИПЫ:
+   * 1. GL (гликемическая нагрузка) — главный предиктор инсулинового ответа
+   * 2. При низкой GL (< 10) все бонусы масштабируются пропорционально
+   * 3. GI имеет смысл только при достаточном количестве углеводов (GL ≥ 10)
+   * 4. Белок/жиры/инсулиногенность — вторичные факторы при низкой GL
+   * 
    * @param {number} gi - ГИ
    * @param {number} protein - белок в граммах
    * @param {number} fiber - клетчатка в граммах
@@ -980,48 +1004,69 @@
    */
   const calculateMultiplier = (gi, protein, fiber, carbs = null, fat = null, gl = null, hasLiquid = false, insulinogenicBonus = 0) => {
     const giCat = utils.getGICategory(gi);
-    let giMult = giCat.multiplier;
     
+    // 📊 Гликемическая нагрузка — определяем категорию и множитель
+    const glCategory = gl !== null ? getGLCategory(gl) : null;
+    const glMultiplier = glCategory?.multiplier || 1.0;
+    
+    // 🔬 НОВАЯ ЛОГИКА: GL-зависимое скалирование всех факторов
+    // При GL < 10 факторы (белок, жиры, инсулиногенность) применяются частично
+    // Это отражает научный факт: без углеводов инсулиновая волна не может быть долгой
+    // 
+    // glScaleFactor:
+    // - GL >= 20: 1.0 (полное применение всех факторов)
+    // - GL = 10: 0.6 (60% от факторов)
+    // - GL = 5: 0.4 (40% от факторов) 
+    // - GL = 0: 0.25 (25% — минимум, т.к. белок всё же даёт небольшой инсулин)
+    let glScaleFactor = 1.0;
+    if (gl !== null && gl < 20) {
+      // Формула: 0.25 + (GL/20) * 0.75
+      // GL=0 → 0.25, GL=10 → 0.625, GL=20 → 1.0
+      glScaleFactor = Math.max(0.25, 0.25 + (gl / 20) * 0.75);
+    }
+    
+    // GI множитель — применяется только при достаточной GL
+    // При GL < 10: GI не имеет практического смысла, используем 1.0
+    let giMult = 1.0;
+    if (gl === null || gl >= 10) {
+      giMult = giCat.multiplier;
+    } else {
+      // Плавный переход: при GL 5-10 частично учитываем GI
+      const giWeight = Math.max(0, (gl - 5) / 5); // 0 при GL=5, 1 при GL=10
+      giMult = 1.0 + (giCat.multiplier - 1.0) * giWeight;
+    }
+    
+    // Бонусы от нутриентов — масштабируются по glScaleFactor
     let proteinBonus = 0;
     if (protein >= PROTEIN_BONUS.high.threshold) proteinBonus = PROTEIN_BONUS.high.bonus;
     else if (protein >= PROTEIN_BONUS.medium.threshold) proteinBonus = PROTEIN_BONUS.medium.bonus;
+    proteinBonus *= glScaleFactor;
     
     let fiberBonus = 0;
     if (fiber >= FIBER_BONUS.high.threshold) fiberBonus = FIBER_BONUS.high.bonus;
     else if (fiber >= FIBER_BONUS.medium.threshold) fiberBonus = FIBER_BONUS.medium.bonus;
+    fiberBonus *= glScaleFactor;
     
-    // 🧈 Жиры — значительно замедляют пищеварение
-    const fatBonus = fat !== null ? calculateFatBonus(fat) : 0;
+    // 🧈 Жиры — замедляют усвоение УГЛЕВОДОВ, при низкой GL эффект минимален
+    const rawFatBonus = fat !== null ? calculateFatBonus(fat) : 0;
+    const fatBonus = rawFatBonus * glScaleFactor;
     
-    // 🥛 Инсулиногенность (молочка, белок) — удлиняют волну даже без углеводов
-    const insBonus = insulinogenicBonus || 0;
+    // 🥛 Инсулиногенность — молочка и белок стимулируют инсулин независимо от углеводов
+    // НО: эффект всё равно меньше чем от углеводов, поэтому частично скалируем
+    const rawInsBonus = insulinogenicBonus || 0;
+    // Инсулиногенность скалируется мягче (коэффициент 0.5-1.0 вместо 0.25-1.0)
+    const insScaleFactor = gl !== null && gl < 20 ? Math.max(0.5, 0.5 + (gl / 20) * 0.5) : 1.0;
+    const insBonus = rawInsBonus * insScaleFactor;
     
-    // 📊 Гликемическая нагрузка — модифицирует финальный результат
-    // GL учитывает И количество углеводов И их тип (ГИ)
-    // Это более точный предиктор инсулинового ответа
-    const glCategory = gl !== null ? getGLCategory(gl) : null;
-    const glMultiplier = glCategory?.multiplier || 1.0;
-    
-    // 🥤 Жидкая пища — усваивается быстрее (умножаем на 0.7)
+    // 🥤 Жидкая пища — усваивается быстрее
     const liquidMult = hasLiquid ? LIQUID_FOOD.multiplier : 1.0;
     
-    // Базовый множитель от GI, белка, клетчатки, жиров и инсулиногенности
-    // giMult уже учитывает скорость (высокий GI = быстрее = меньше giMult)
-    // proteinBonus, fiberBonus, fatBonus, insBonus добавляются (увеличивают длину)
+    // Базовый множитель: GI + все бонусы (уже скалированные)
     const baseMult = giMult + proteinBonus + fiberBonus + fatBonus + insBonus;
     
-    // Множитель от количества углеводов (если переданы)
-    // ВАЖНО: если есть GL, carbs scaling избыточен (GL уже учитывает количество)
-    // Используем GL как приоритет над простым carbs scaling
-    let carbsMult = 1.0;
-    if (gl !== null && glCategory) {
-      // GL уже включает в себя и GI и количество углеводов
-      // Применяем GL multiplier вместо отдельных carbs scaling
-      carbsMult = glMultiplier;
-    } else if (carbs !== null) {
-      // Fallback на старый метод если GL не передан
-      carbsMult = calculateCarbsMultiplier(carbs);
-    }
+    // GL множитель применяется к базе
+    // При GL < 5: glMultiplier = 0.5 → волна в 2 раза короче
+    const carbsMult = glMultiplier;
     
     return {
       total: baseMult * carbsMult * liquidMult,
@@ -1033,6 +1078,7 @@
       liquid: liquidMult,
       insulinogenic: insBonus,
       glCategory,
+      glScaleFactor, // 🆕 Для отладки
       category: giCat
     };
   };
@@ -1236,6 +1282,107 @@
     // Fallback — дневной баланс
     return { multiplier: 1.0, period: 'afternoon', desc: CIRCADIAN_MULTIPLIERS.afternoon.desc };
   };
+
+  /**
+   * Рассчитать все дневные факторы для конкретного приёма
+   * Включает: circadian, sleep, sleepQuality, hydration, age, bmi, gender, stress, cycle
+   * НЕ включает: workout, postprandial, NEAT, steps — эти зависят от тренировок
+   * @param {Object} dayData - данные дня
+   * @param {number} mealHour - час приёма (0-23)
+   * @returns {Object} { totalBonus, circadianMultiplier, details }
+   */
+  const calculateDayFactorsForMeal = (dayData = {}, mealHour = 12) => {
+    // 🌅 Circadian ритм
+    const circadian = calculateCircadianMultiplier(mealHour);
+    
+    // 😴 Недосып
+    const sleepHours = dayData.sleepHours;
+    const sleepBonus = calculateSleepBonus(sleepHours);
+    
+    // 🌟 Качество сна
+    const sleepQuality = dayData.sleepQuality || 0;
+    const sleepQualityBonus = calculateSleepQualityBonus(sleepQuality);
+    
+    // 💧 Гидратация
+    const waterMl = dayData.waterMl || 0;
+    const userWeight = dayData.profile?.weight || 70;
+    const hydrationBonus = calculateHydrationBonus(waterMl, userWeight);
+    
+    // 👴 Возраст
+    const age = dayData.profile?.age || 0;
+    const ageBonus = calculateAgeBonus(age);
+    
+    // 🏋️ BMI
+    const weight = dayData.profile?.weight || 0;
+    const height = dayData.profile?.height || 0;
+    const bmiBonus = calculateBMIBonus(weight, height);
+    
+    // 🚺🚹 Пол
+    const gender = dayData.profile?.gender || '';
+    const genderBonus = getGenderBonus(gender);
+    
+    // 😰 Стресс
+    const stressLevel = dayData.stressAvg || 0;
+    const stressBonus = calculateStressBonus(stressLevel);
+    
+    // 🌸 Менструальный цикл
+    const cycleDay = dayData.cycleDay || null;
+    const cycleMultiplier = HEYS.Cycle?.getInsulinWaveMultiplier?.(cycleDay) || 1;
+    const cycleBonusValue = cycleMultiplier > 1 ? (cycleMultiplier - 1) : 0;
+    
+    // Суммируем все персональные бонусы
+    const personalBonuses = sleepBonus + sleepQualityBonus + hydrationBonus + ageBonus + bmiBonus + genderBonus + stressBonus + cycleBonusValue;
+    
+    return {
+      totalBonus: personalBonuses,
+      circadianMultiplier: circadian.multiplier,
+      details: {
+        circadian,
+        sleepBonus,
+        sleepQualityBonus,
+        hydrationBonus,
+        ageBonus,
+        bmiBonus,
+        genderBonus,
+        stressBonus,
+        cycleBonusValue
+      }
+    };
+  };
+
+  /**
+   * Рассчитать факторы активности для конкретного приёма
+   * @param {Array} trainings - тренировки дня
+   * @param {number} mealMinutes - минуты приёма (от 00:00)
+   * @param {number} householdMin - бытовая активность
+   * @param {number} steps - шаги
+   * @returns {Object} { totalBonus, details }
+   */
+  const calculateActivityFactorsForMeal = (trainings = [], mealMinutes = 0, householdMin = 0, steps = 0) => {
+    // 🏃 Workout (общий за день)
+    const workoutBonus = calculateWorkoutBonus(trainings);
+    
+    // 🏃‍♂️ Постпрандиальная тренировка
+    const postprandialBonus = calculatePostprandialExerciseBonus(trainings, mealMinutes);
+    
+    // 🏡 NEAT
+    const neatBonus = calculateNEATBonus(householdMin);
+    
+    // 👟 Шаги
+    const stepsBonus = calculateStepsBonus(steps);
+    
+    const totalBonus = workoutBonus.bonus + postprandialBonus.bonus + neatBonus.bonus + stepsBonus.bonus;
+    
+    return {
+      totalBonus,
+      details: {
+        workoutBonus,
+        postprandialBonus,
+        neatBonus,
+        stepsBonus
+      }
+    };
+  };
   
   /**
    * Главная функция расчёта данных инсулиновой волны
@@ -1382,17 +1529,32 @@
     // Преобразуем множитель в бонус (1.12 → +0.12)
     const cycleBonusValue = cycleBonus > 1 ? (cycleBonus - 1) : 0;
     
+    // 🔬 НАУЧНЫЙ АУДИТ 2025-12-09: GL-скалирование всех дневных факторов
+    // При низкой GL дневные факторы применяются частично
+    const gl = nutrients.glycemicLoad;
+    let dayFactorsScale = 1.0;
+    let circadianScale = 1.0;
+    if (gl !== null && gl < 20) {
+      // Формула: 0.3 + (GL/20) * 0.7 
+      // GL=0 → 0.3, GL=10 → 0.65, GL=20 → 1.0
+      dayFactorsScale = Math.max(0.3, 0.3 + (gl / 20) * 0.7);
+      // Циркадные ритмы — более мягкое скалирование
+      circadianScale = Math.max(0.5, 0.5 + (gl / 20) * 0.5);
+    }
+    
     // Финальный множитель: все факторы
-    // multipliers.total уже включает GI + protein + fiber + fat + liquid + insulinogenic
+    // multipliers.total уже включает GI + protein + fiber + fat + liquid + insulinogenic (со скалированием внутри)
     // Добавляем все бонусы (отрицательные = укорачивают волну):
     // - workout (общий), postprandial (после еды), NEAT, steps — физическая активность
     // - fasting, alcohol, caffeine, stress, sleep — другие факторы
     // - 🆕 v2.0: sleepQuality, hydration, age, bmi, gender, transFat, cycle
-    const activityBonuses = workoutBonus.bonus + postprandialBonus.bonus + neatBonus.bonus + stepsBonus.bonus;
-    const metabolicBonuses = fastingBonus + alcoholBonus + caffeineBonus + stressBonus + sleepBonus;
-    const personalBonuses = sleepQualityBonus + hydrationBonus + ageBonus + bmiBonus + genderBonus + transFatBonus + cycleBonusValue;
+    const activityBonuses = (workoutBonus.bonus + postprandialBonus.bonus + neatBonus.bonus + stepsBonus.bonus) * dayFactorsScale;
+    const metabolicBonuses = (fastingBonus + alcoholBonus + caffeineBonus + stressBonus + sleepBonus) * dayFactorsScale;
+    const personalBonuses = (sleepQualityBonus + hydrationBonus + ageBonus + bmiBonus + genderBonus + transFatBonus + cycleBonusValue) * dayFactorsScale;
     const allBonuses = activityBonuses + metabolicBonuses + personalBonuses;
-    const finalMultiplier = (multipliers.total + allBonuses) * circadian.multiplier * spicyMultiplier;
+    // Циркадный множитель: приближаем к 1.0 при низкой GL
+    const scaledCircadian = 1.0 + (circadian.multiplier - 1.0) * circadianScale;
+    const finalMultiplier = (multipliers.total + allBonuses) * scaledCircadian * spicyMultiplier;
     
     // Скорректированная длина волны
     const adjustedWaveHours = baseWaveHours * finalMultiplier;
@@ -1451,6 +1613,7 @@
       if (!t) return null;
       
       const startMin = utils.timeToMinutes(t);
+      const mealHour = parseInt(t.split(':')[0]) || 12;
       const mealNutrients = calculateMealNutrients(meal, pIndex, getProductFromItem);
       const mealMult = calculateMultiplier(
         mealNutrients.avgGI, 
@@ -1463,7 +1626,50 @@
         mealNutrients.insulinogenicBonus
       );
       
-      const duration = Math.round(baseWaveHours * mealMult.total * 60);
+      // 🆕 Применяем ВСЕ дневные факторы (не только еда)
+      const dayFactors = calculateDayFactorsForMeal(dayData, mealHour);
+      const activityFactors = calculateActivityFactorsForMeal(
+        trainings, 
+        startMin, 
+        dayData.householdMin || 0, 
+        dayData.steps || 0
+      );
+      
+      // 🔬 НАУЧНЫЙ АУДИТ 2025-12-09: GL-скалирование дневных факторов
+      // При низкой GL дневные факторы (стресс, недосып, циркадные ритмы) 
+      // применяются частично, т.к. они влияют на ИНСУЛИНОРЕЗИСТЕНТНОСТЬ,
+      // но если инсулина мало — эффект минимален
+      const gl = mealNutrients.glycemicLoad;
+      let dayFactorsScale = 1.0;
+      let circadianScale = 1.0;
+      if (gl !== null && gl < 20) {
+        // Формула: 0.3 + (GL/20) * 0.7 
+        // GL=0 → 0.3, GL=10 → 0.65, GL=20 → 1.0
+        dayFactorsScale = Math.max(0.3, 0.3 + (gl / 20) * 0.7);
+        // Циркадные ритмы — более мягкое скалирование (они всё равно влияют на метаболизм)
+        // GL=0 → 0.5, GL=10 → 0.75, GL=20 → 1.0
+        circadianScale = Math.max(0.5, 0.5 + (gl / 20) * 0.5);
+      }
+      
+      // Применяем скалированные факторы
+      const scaledDayBonus = dayFactors.totalBonus * dayFactorsScale;
+      const scaledActivityBonus = activityFactors.totalBonus * dayFactorsScale;
+      // Циркадный множитель: приближаем к 1.0 при низкой GL
+      // Если circadian = 1.2 (ночь) и circadianScale = 0.5, то: 1.0 + (1.2-1.0)*0.5 = 1.1
+      const scaledCircadian = 1.0 + (dayFactors.circadianMultiplier - 1.0) * circadianScale;
+      
+      // Еда-специфичные бонусы
+      const spicyMultiplier = mealNutrients.hasSpicy ? SPICY_FOOD.multiplier : 1.0;
+      const alcoholBonus = mealNutrients.alcoholBonus || 0;
+      const caffeineBonus = mealNutrients.hasCaffeine ? CAFFEINE_BONUS.bonus : 0;
+      const transFatBonus = calculateTransFatBonus(mealNutrients.totalTrans || 0);
+      
+      // Финальный множитель
+      const mealSpecificBonuses = alcoholBonus + caffeineBonus + transFatBonus;
+      const allBonuses = scaledDayBonus + scaledActivityBonus + mealSpecificBonuses;
+      const finalMultiplier = (mealMult.total + allBonuses) * scaledCircadian * spicyMultiplier;
+      
+      const duration = Math.round(baseWaveHours * finalMultiplier * 60);
       const endMin = startMin + duration;
       
       return {
@@ -1473,6 +1679,8 @@
         endMin,
         endTimeDisplay: utils.minutesToTime(endMin),
         duration,
+        waveHours: duration / 60, // 🆕 Для отображения в часах
+        finalMultiplier, // 🆕 Для отладки
         mealName: getMealTypeName(meal),
         mealType: meal.mealType || null,
         gi: mealNutrients.avgGI,
@@ -1488,6 +1696,11 @@
         liquidMultiplier: mealMult.liquid,
         insulinogenicType: mealNutrients.insulinogenicType,
         insulinogenicBonus: mealMult.insulinogenic,
+        // 🆕 Добавляем детали факторов (скалированные)
+        dayFactorsBonus: scaledDayBonus,
+        activityBonus: scaledActivityBonus,
+        circadianMultiplier: scaledCircadian,
+        dayFactorsScale, // 🆕 Для отладки
         isActive: idx === 0 && remainingMinutes > 0
       };
     }).filter(Boolean).reverse();
