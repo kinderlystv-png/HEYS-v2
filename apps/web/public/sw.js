@@ -2,7 +2,7 @@
 // Стратегия: Cache-First для статики, Network-First для API
 // Версия обновляется автоматически при билде
 
-const CACHE_VERSION = 'heys-1765178482';
+const CACHE_VERSION = 'heys-1765189999';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
@@ -135,7 +135,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // === Локальные статические файлы — Stale While Revalidate ===
+  // === Локальные статические файлы ===
   if (url.origin === self.location.origin) {
     // HTML — Network First (чтобы обновления были видны)
     if (request.headers.get('accept')?.includes('text/html')) {
@@ -143,7 +143,15 @@ self.addEventListener('fetch', (event) => {
       return;
     }
     
-    // JS/CSS/Images — Stale While Revalidate
+    // JS — Network First с no-store (чтобы не отдавать старый бандл)
+    if (url.pathname.endsWith('.js')) {
+      if (url.pathname.startsWith('/heys_') || url.pathname === '/heys_app_v12.js') {
+        event.respondWith(networkFirstNoStore(request));
+        return;
+      }
+    }
+    
+    // Остальное (CSS/Images) — Stale While Revalidate
     event.respondWith(staleWhileRevalidate(request));
     return;
   }
@@ -195,6 +203,23 @@ async function networkFirst(request) {
     
     return new Response('Offline', { status: 503 });
   }
+}
+
+// === Стратегия: Network First без повторного использования кэша браузера ===
+async function networkFirstNoStore(request) {
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    if (response && response.ok) {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, response.clone());
+      return response;
+    }
+  } catch (error) {
+    // игнорируем и пытаемся взять из кеша
+  }
+  const cached = await caches.match(request, { ignoreSearch: true });
+  if (cached) return cached;
+  return new Response('Offline', { status: 503 });
 }
 
 // === Проверка соответствия MIME type файлу ===

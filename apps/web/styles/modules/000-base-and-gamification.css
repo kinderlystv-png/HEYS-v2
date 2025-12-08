@@ -293,45 +293,134 @@ td:first-child input {
   background: #f8fafc;
 }
 
-/* Mobile table - Excel-like compact style */
+/* Mobile table - Excel-like ultra compact style */
 @media (max-width: 768px) {
   table {
-    font-size: 9px;
-    border-collapse: collapse;
+    font-size: 9px !important;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+    width: 100% !important;
   }
   th,
   td {
-    padding: 1px 2px;
-    white-space: nowrap;
-    border: 1px solid #ccc;
+    padding: 1px 0 !important;
+    white-space: nowrap !important;
+    border: 1px solid #888 !important;
+    overflow: hidden !important;
+    height: auto !important;
+    line-height: 1.1 !important;
+  }
+  /* First column (name) - maximum width, wrap text */
+  th:first-child,
+  td:first-child {
+    width: auto !important;
+    max-width: none !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    padding: 1px 2px !important;
+  }
+  /* Value columns - minimum width, no padding */
+  th:not(:first-child):not(:last-child),
+  td:not(:first-child):not(:last-child) {
+    width: 20px !important;
+    min-width: 20px !important;
+    max-width: 20px !important;
+    padding: 1px 0 !important;
+    text-align: center !important;
   }
   th {
-    font-size: 8px;
-    font-weight: 600;
-    background: #f0f0f0;
-    padding: 2px 1px;
+    font-size: 7px !important;
+    font-weight: 600 !important;
+    background: #ddd !important;
+    color: #000 !important;
   }
-  td input {
-    width: 100%;
-    min-width: 0;
-    padding: 0;
-    margin: 0;
-    border: none;
-    background: transparent;
-    font-size: 9px;
-    text-align: center;
-    height: 20px;
-    line-height: 20px;
+  td input,
+  td input[type="text"],
+  td input[type="number"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    font-size: 9px !important;
+    text-align: center !important;
+    height: 14px !important;
+    line-height: 14px !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
   }
   td:first-child input {
-    min-width: 0;
-    text-align: left;
-    font-size: 8px;
+    text-align: left !important;
+    font-size: 9px !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    height: auto !important;
+    min-height: 14px !important;
+    line-height: 1.2 !important;
   }
-  /* Remove delete button column on mobile */
+  /* Hide delete column on mobile */
   td:last-child,
   th:last-child {
-    display: none;
+    display: none !important;
+  }
+  /* Remove .readOnly styling on mobile */
+  td input.readOnly {
+    background: transparent !important;
+    opacity: 1 !important;
+  }
+  
+  /* Products table - ultra compact rows */
+  .products-table {
+    border-spacing: 0 !important;
+  }
+  .products-table tr {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .products-table td,
+  .products-table th {
+    padding: 0 !important;
+    height: auto !important;
+    line-height: 1 !important;
+    vertical-align: middle !important;
+    border: 1px solid #ccc !important;
+  }
+  .products-table td:first-child {
+    padding: 0 2px !important;
+  }
+  .products-table td input,
+  .products-table td input[type="text"],
+  .products-table td input[type="number"] {
+    height: 11px !important;
+    min-height: 11px !important;
+    max-height: 11px !important;
+    line-height: 11px !important;
+    font-size: 8px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-width: 0 !important;
+    border: none !important;
+    box-sizing: border-box !important;
+  }
+  .products-table td:first-child input {
+    height: auto !important;
+    min-height: 11px !important;
+    max-height: none !important;
+    line-height: 1.1 !important;
+    font-size: 9px !important;
+    min-width: 0 !important;
+  }
+  .products-table th {
+    font-size: 7px !important;
+    padding: 1px 0 !important;
+    height: 14px !important;
   }
 }
 

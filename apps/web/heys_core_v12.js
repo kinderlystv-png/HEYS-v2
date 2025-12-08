@@ -836,7 +836,7 @@
           )
         ),
         React.createElement('div', {style:{overflowX:'auto'}},
-          React.createElement('table', null,
+          React.createElement('table', {className: 'products-table'},
             React.createElement('thead', null,
               React.createElement('tr', null,
                 React.createElement('th', null, 'Название'),
