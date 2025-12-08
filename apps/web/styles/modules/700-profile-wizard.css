@@ -1,0 +1,23 @@
+/* 700-profile-wizard.css — Profile Wizard Onboarding Styles
+ * WOW effects: spring animations, pulse, scale, fade-in
+ */
+
+/* W9: Scale-in animation for selected cards */
+@keyframes scaleIn {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Override for profile wizard animations if needed */
+.profile-wizard__card--selected {
+  animation: scaleIn 0.2s ease-out;
+}
