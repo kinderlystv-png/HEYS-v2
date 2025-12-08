@@ -4195,9 +4195,28 @@
             const hasTriedAutoSignInRef = React.useRef(false);
             useEffect(() => {
               // Пытаемся залогиниться только ОДИН раз при старте
+              // И только если НЕТ активной сессии (чтобы не конфликтовать с восстановлением)
               if (ONE_CURATOR_MODE && status !== 'online' && !hasTriedAutoSignInRef.current) {
                 hasTriedAutoSignInRef.current = true;
-                handleSignIn();
+                
+                // Проверяем, нет ли уже активной сессии
+                const cloud = window.HEYS?.cloud;
+                if (cloud?.client?.auth?.getSession) {
+                  cloud.client.auth.getSession().then(({ data }) => {
+                    if (data?.session?.user) {
+                      // Сессия уже есть — не делаем signIn
+                      console.log('[App] Session already exists, skipping auto signIn');
+                    } else {
+                      // Сессии нет — делаем signIn
+                      handleSignIn();
+                    }
+                  }).catch(() => {
+                    // Ошибка getSession — пробуем signIn
+                    handleSignIn();
+                  });
+                } else {
+                  handleSignIn();
+                }
               }
               // Сбрасываем флаг если вышли из аккаунта (status изменился на offline)
               if (status === 'offline') {
