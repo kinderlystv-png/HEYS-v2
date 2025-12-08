@@ -12700,7 +12700,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           margin: '28px 0 20px 0',
           textTransform: 'uppercase',
           letterSpacing: '1px',
-          textAlign: 'center'
+          textAlign: 'center',
+          scrollMarginTop: '80px' // Учитываем высоту шапки при прокрутке
         }
       }, 'ДНЕВНИК ПИТАНИЯ'),
       
