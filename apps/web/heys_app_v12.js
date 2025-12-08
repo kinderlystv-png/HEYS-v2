@@ -3456,31 +3456,31 @@
                               }
                             })
                           ),
-                          // Checkbox "Запомнить меня"
-                          React.createElement('label', { 
-                            style: { 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: 8, 
-                              marginBottom: 20,
-                              cursor: 'pointer',
-                              fontSize: 14,
-                              color: 'var(--muted)'
-                            } 
-                          },
-                            React.createElement('input', {
-                              type: 'checkbox',
-                              checked: rememberMe,
-                              onChange: (e) => setRememberMe(e.target.checked),
-                              style: { 
-                                width: 18, 
-                                height: 18, 
-                                accentColor: '#667eea',
-                                cursor: 'pointer'
-                              }
-                            }),
-                            'Запомнить меня'
-                          ),
+                          // TODO: Checkbox "Запомнить меня" — временно скрыт, так как Supabase всегда сохраняет сессию
+                          // React.createElement('label', { 
+                          //   style: { 
+                          //     display: 'flex', 
+                          //     alignItems: 'center', 
+                          //     gap: 8, 
+                          //     marginBottom: 20,
+                          //     cursor: 'pointer',
+                          //     fontSize: 14,
+                          //     color: 'var(--muted)'
+                          //   } 
+                          // },
+                          //   React.createElement('input', {
+                          //     type: 'checkbox',
+                          //     checked: rememberMe,
+                          //     onChange: (e) => setRememberMe(e.target.checked),
+                          //     style: { 
+                          //       width: 18, 
+                          //       height: 18, 
+                          //       accentColor: '#667eea',
+                          //       cursor: 'pointer'
+                          //     }
+                          //   }),
+                          //   'Запомнить меня'
+                          // ),
                           // Ошибка входа
                           loginError && React.createElement('div', { 
                             style: { 
