@@ -3765,6 +3765,7 @@
           showStreak: false,
           showGreeting: false,
           showTip: false,
+          finishLabel: 'Сохранить',
           context: { dateKey },
           onComplete: (stepData) => {
             // Обновляем локальное состояние из сохранённых данных

@@ -1136,6 +1136,7 @@
       showStreak: false,
       showGreeting: false,
       showTip: false,
+      finishLabel: 'Добавить', // Создание — "Добавить"
       context: {
         dateKey,
         meals: options.meals,
@@ -1231,6 +1232,7 @@
       showStreak: false,
       showGreeting: false,
       showTip: false,
+      finishLabel: 'Сохранить', // Редактирование — "Сохранить"
       context: { 
         dateKey,
         mealIndex,
@@ -1291,6 +1293,7 @@
       showStreak: false,
       showGreeting: false,
       showTip: false,
+      finishLabel: 'Сохранить', // Редактирование — "Сохранить"
       context: { 
         dateKey,
         mealIndex,

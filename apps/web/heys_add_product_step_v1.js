@@ -1321,6 +1321,7 @@
       showProgress: true,
       allowSwipe: false,
       hidePrimaryOnFirst: true,
+      finishLabel: 'Добавить', // Кнопка на последнем шаге
       title: '', // Убрали — и так очевидно
       onComplete: (stepData) => {
         console.log('[AddProductStep] onComplete stepData:', stepData);
@@ -1399,6 +1400,7 @@
       showTip: false,
       showProgress: false,
       allowSwipe: false,
+      finishLabel: 'Сохранить', // Редактирование — "Сохранить"
       title: '',
       onComplete: (stepData) => {
         const gramsData = stepData.grams || {};

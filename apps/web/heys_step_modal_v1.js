@@ -228,7 +228,8 @@
     allowSwipe = true,
     allowSkip = false,
     context = {}, // Контекст для getInitialData (например, dateKey)
-    hidePrimaryOnFirst = false
+    hidePrimaryOnFirst = false,
+    finishLabel = 'Готово' // Текст кнопки на последнем шаге (по умолчанию "Готово")
   }) {
     const [currentStepIndex, setCurrentStepIndex] = useState(initialStep);
     const [animating, setAnimating] = useState(false);
@@ -497,11 +498,15 @@
             ),
             
             // Правая часть: Готово/Далее (скрывается если шаг имеет hideHeaderNext: true)
+            // finishLabel — кастомный текст для последнего шага (например "Добавить")
+            // currentConfig.nextLabel — кастомный текст для конкретного шага
             React.createElement('div', { className: 'mc-header-right' },
               !(hidePrimaryOnFirst && currentStepIndex === 0) && !currentConfig.hideHeaderNext && React.createElement('button', {
                 className: 'mc-header-btn mc-header-btn--primary',
                 onClick: handleNext
-              }, currentStepIndex === totalSteps - 1 ? 'Готово' : 'Далее')
+              }, currentStepIndex === totalSteps - 1 
+                ? (currentConfig.nextLabel || finishLabel) 
+                : (currentConfig.nextLabel || 'Далее'))
             )
           ),
 

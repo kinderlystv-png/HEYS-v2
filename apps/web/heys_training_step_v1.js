@@ -473,6 +473,7 @@
       showGreeting: false,
       showTip: false,
       allowSwipe: false,
+      finishLabel: 'Добавить', // Кнопка на последнем шаге
       context: { dateKey, trainingIndex },
       onComplete: (stepData) => {
         const data = stepData['training-zones'] || stepData['training-info'] || {};
