@@ -1813,6 +1813,23 @@
             if (Array.isArray(currentLocal) && currentLocal.length > 0 && Array.isArray(remoteProducts) && remoteProducts.length > 0) {
               const merged = mergeProductsData(currentLocal, remoteProducts);
               
+              // 🛡️ ЗАЩИТА: Никогда не уменьшаем количество продуктов!
+              // Если локальных больше чем merged — значит sync "опоздал" и пытается удалить новые продукты
+              if (currentLocal.length > merged.length) {
+                logCritical(`⚠️ [PRODUCTS SYNC] BLOCKED: local (${currentLocal.length}) > merged (${merged.length}). Keeping local.`);
+                // Отправляем локальные в облако чтобы синхронизировать
+                const localUpsertObj = {
+                  user_id: user.id,
+                  client_id: client_id,
+                  k: row.k,
+                  v: currentLocal,
+                  updated_at: (new Date()).toISOString(),
+                };
+                clientUpsertQueue.push(localUpsertObj);
+                scheduleClientPush();
+                return; // Не перезаписываем localStorage
+              }
+              
               // Если merge добавил новые продукты — сохраняем и синхронизируем обратно в облако
               if (merged.length > remoteProducts.length) {
                 logCritical(`📦 [PRODUCTS MERGE] ${currentLocal.length} local + ${remoteProducts.length} remote → ${merged.length} merged`);
@@ -1837,7 +1854,17 @@
                 scheduleClientPush();
                 return; // Уже обработали products
               }
-              // Если merge не добавил новых — просто сохраняем remote (продолжаем ниже)
+              
+              // Если merged.length === remoteProducts.length (нет изменений) — сохраняем merged
+              // Это безопасно т.к. merged уже включает все локальные продукты
+              if (merged.length === remoteProducts.length && merged.length === currentLocal.length) {
+                ls.setItem(key, JSON.stringify(merged));
+                return; // Данные одинаковые, нет смысла обновлять облако
+              }
+              
+              // Fallback: сохраняем merged и синхронизируем
+              ls.setItem(key, JSON.stringify(merged));
+              return;
             }
           }
           
