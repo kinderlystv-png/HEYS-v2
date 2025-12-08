@@ -347,6 +347,16 @@
           }
         }
         
+        // 🛡️ ЗАЩИТА от race condition: не сохраняем если в storage больше продуктов
+        const existingProducts = (window.HEYS && window.HEYS.store && window.HEYS.store.get && window.HEYS.store.get('heys_products', null)) || 
+                                (window.HEYS && window.HEYS.utils && window.HEYS.utils.lsGet && window.HEYS.utils.lsGet('heys_products', null));
+        if (existingProducts && Array.isArray(existingProducts) && existingProducts.length > products.length) {
+          if (window.DEV) {
+            window.DEV.log('⚠️ [useEffect] BLOCKED: не уменьшаем', existingProducts.length, '→', products.length);
+          }
+          return;
+        }
+        
         if (window.DEV) {
           window.DEV.log('💾 [useEffect] Сохраняем products в localStorage:', products.length, 'items');
         }
@@ -475,7 +485,16 @@
             if (window.DEV) {
               window.DEV.log('📦 [RATION] Products updated via event:', latest.length, 'items');
             }
-            setProducts(latest);
+            // 🛡️ ЗАЩИТА: не уменьшаем количество продуктов (race condition защита)
+            setProducts(prev => {
+              if (Array.isArray(prev) && prev.length > latest.length) {
+                if (window.DEV) {
+                  window.DEV.log('⚠️ [RATION] BLOCKED: не уменьшаем', prev.length, '→', latest.length);
+                }
+                return prev;
+              }
+              return latest;
+            });
           }
         };
         
@@ -521,10 +540,10 @@
                 }
               }
               
-              // Не перезаписываем продукты, если sync вернул пустой массив, а у нас уже есть данные
-              if (latest.length === 0 && products.length > 0) {
+              // 🛡️ ЗАЩИТА: не уменьшаем количество продуктов (race condition)
+              if (latest.length < products.length) {
                 if (window.DEV) {
-                  window.DEV.log('⚠️ [SYNC] SKIP: Не перезаписываем', products.length, 'продуктов пустым массивом');
+                  window.DEV.log('⚠️ [SYNC] BLOCKED: не уменьшаем', products.length, '→', latest.length);
                 }
                 return;
               }
@@ -549,10 +568,10 @@
               window.DEV.log('🔄 [SYNC] Sync не нужен, читаем из localStorage:', latest.length, 'items');
             }
             
-            // Не перезаписываем продукты пустым массивом
-            if (latest.length === 0 && products.length > 0) {
+            // 🛡️ ЗАЩИТА: не уменьшаем количество продуктов
+            if (latest.length < products.length) {
               if (window.DEV) {
-                window.DEV.log('⚠️ [SYNC] SKIP: Не перезаписываем', products.length, 'продуктов');
+                window.DEV.log('⚠️ [SYNC] BLOCKED: не уменьшаем', products.length, '→', latest.length);
               }
               return;
             }
@@ -571,10 +590,10 @@
             window.DEV.log('🔄 [SYNC] Нет cloud/clientId, читаем из localStorage:', latest.length, 'items');
           }
           
-          // Не перезаписываем продукты пустым массивом
-          if (latest.length === 0 && products.length > 0) {
+          // 🛡️ ЗАЩИТА: не уменьшаем количество продуктов
+          if (latest.length < products.length) {
             if (window.DEV) {
-              window.DEV.log('⚠️ [SYNC] SKIP: Не перезаписываем', products.length, 'продуктов');
+              window.DEV.log('⚠️ [SYNC] BLOCKED: не уменьшаем', products.length, '→', latest.length);
             }
             return;
           }
