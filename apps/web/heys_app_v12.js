@@ -2517,6 +2517,31 @@
               HEYS.cycleTheme = cycleTheme;
             }, [cycleTheme]);
             
+            // Twemoji: reparse emoji on mount and tab change
+            useEffect(() => {
+              console.log('[App] 🎨 Twemoji effect triggered', {
+                tab,
+                applyTwemoji: !!window.applyTwemoji,
+                twemojiReady: window.twemojiReady,
+                twemoji: !!window.twemoji,
+                heysEmojiStyle: window.heysEmojiStyle
+              });
+              if (window.applyTwemoji) {
+                // Immediate + delayed to catch React render
+                window.applyTwemoji();
+                setTimeout(() => {
+                  console.log('[App] 🎨 Twemoji delayed parse (50ms)');
+                  window.applyTwemoji();
+                }, 50);
+                setTimeout(() => {
+                  console.log('[App] 🎨 Twemoji delayed parse (150ms)');
+                  window.applyTwemoji();
+                }, 150);
+              } else {
+                console.warn('[App] ⚠️ applyTwemoji not available');
+              }
+            }, [tab]);
+            
             const U = window.HEYS.utils || { lsGet: (k, d) => d, lsSet: () => {} };
             const cloud = window.HEYS.cloud || {};
             const {
@@ -4412,7 +4437,7 @@
                       className: 'tab ' + (tab === 'ration' ? 'active' : ''),
                       onClick: () => setTab('ration'),
                     },
-                    React.createElement('span', { className: 'tab-icon' }, '🗂️'),
+                    React.createElement('span', { className: 'tab-icon' }, '📦'),
                     React.createElement('span', { className: 'tab-text' }, 'База'),
                   ),
                   // Обзор — слева (тройной тап = debug panel)
