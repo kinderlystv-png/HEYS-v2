@@ -13,6 +13,21 @@ pnpm type-check && pnpm lint && pnpm build  # Проверка
 
 ## 🔥 ПРИОРИТЕТ
 
+### 🔧 Рефакторинг heys_day_v12.js — God Object → модули
+**Файл**: [2025-12-09-refactor-heys-day-v12.md](./docs/tasks/2025-12-09-refactor-heys-day-v12.md)  
+**Время**: ~4-6 часов (можно делить на фазы)  
+**Статус**: 🆕 Новый
+
+**Что**: Разбить 15,647-строчный God Object на модули:
+- `heys_day_components/` — MealCard, PhotoGallery, WaterCard и др.
+- `heys_day_charts/` — KcalSparkline, WeightSparkline
+- `heys_day_modals/` — TimePickerModal, ZoneMinutesPicker
+- `heys_day_scoring/` — mealQualityScore, nutrientColors
+
+**Метрики**: 1,184 if/else, 1,621 React.createElement, 6 компонентов в одном файле
+
+---
+
 ### 🔬 Научный аудит инсулиновой волны
 **Файл**: [2025-12-08-insulin-wave-scientific-audit.md](./docs/tasks/2025-12-08-insulin-wave-scientific-audit.md)  
 **Время**: ~2-4 часа  
