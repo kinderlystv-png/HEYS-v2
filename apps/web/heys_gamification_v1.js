@@ -868,6 +868,9 @@
       level: data.level
     });
 
+    // Звук при получении достижения!
+    playXPSound(true); // Level-up мелодия для достижений
+    
     // Confetti для rare+ достижений
     if (['rare', 'epic', 'legendary', 'mythic'].includes(ach.rarity)) {
       celebrate();

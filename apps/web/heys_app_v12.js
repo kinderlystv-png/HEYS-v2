@@ -187,21 +187,25 @@
                 const newWorker = registration.installing;
                 console.log('[SW] 🔄 New version downloading...');
                 
+                // Предотвращаем дублирование обновления
+                if (window._heysUpdateInProgress) {
+                  console.log('[SW] Update already in progress, skipping');
+                  return;
+                }
+                window._heysUpdateInProgress = true;
+                
                 // Показываем UI обновления
                 showUpdateModal('downloading');
                 
                 newWorker?.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                     console.log('[SW] 🎉 New version ready!');
-                    // Плавно обновляем UI и перезагружаем
-                    updateModalStage('installing');
+                    // Упрощённая анимация: ready → reloading → reload
+                    updateModalStage('ready');
                     setTimeout(() => {
-                      updateModalStage('ready');
-                      setTimeout(() => {
-                        updateModalStage('reloading');
-                        forceUpdateAndReload(false); // false = не показывать модалку повторно
-                      }, 800);
-                    }, 600);
+                      updateModalStage('reloading');
+                      forceUpdateAndReload(false);
+                    }, 800);
                   }
                 });
               });
@@ -221,9 +225,18 @@
           });
           
           // Слушаем контроллер изменений (когда SW взял контроль)
+          // НЕ делаем автоматический reload! Это вызывает потерю сессии.
+          // Reload только при явном запросе обновления (флаг heys_pending_update).
           navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('[SW] Controller changed, reloading...');
-            window.location.reload();
+            console.log('[SW] Controller changed');
+            // Проверяем, было ли это явное обновление (с новой версией)
+            if (sessionStorage.getItem('heys_pending_update') === 'true') {
+              sessionStorage.removeItem('heys_pending_update');
+              console.log('[SW] Pending update confirmed, reloading...');
+              window.location.reload();
+            } else {
+              console.log('[SW] Controller changed but no pending update, skipping reload');
+            }
           });
         }
         
@@ -234,6 +247,9 @@
           if (showModal) {
             showUpdateModal('reloading');
           }
+          
+          // Устанавливаем флаг что это явное обновление (не случайная перезагрузка)
+          sessionStorage.setItem('heys_pending_update', 'true');
           
           // Запоминаем старую версию, чтобы после перезагрузки runVersionGuard увидел рассинхрон
           // и выполнил auto-logout + баннер об обновлении
@@ -267,22 +283,21 @@
             if (data.version && data.version !== APP_VERSION) {
               console.log(`[HEYS] 🆕 Server has new version: ${data.version} (current: ${APP_VERSION})`);
               
+              // Предотвращаем дублирование обновления
+              if (window._heysUpdateInProgress) {
+                console.log('[HEYS] Update already in progress, skipping');
+                return true;
+              }
+              window._heysUpdateInProgress = true;
+              
               // Показываем красивый UI обновления
               showUpdateModal('found');
               
+              // Упрощённая анимация: found → reloading → reload
               setTimeout(() => {
-                updateModalStage('downloading');
-                setTimeout(() => {
-                  updateModalStage('installing');
-                  setTimeout(() => {
-                    updateModalStage('ready');
-                    setTimeout(() => {
-                      updateModalStage('reloading');
-                      forceUpdateAndReload(false);
-                    }, 800);
-                  }, 600);
-                }, 800);
-              }, 600);
+                updateModalStage('reloading');
+                forceUpdateAndReload(false);
+              }, 1500);
               
               return true;
             } else {
@@ -297,17 +312,22 @@
         
         function runVersionGuard() {
           const storedVersion = localStorage.getItem(VERSION_KEY);
+          const hadPendingUpdate = sessionStorage.getItem('heys_pending_update') === 'true';
           
-          if (storedVersion && storedVersion !== APP_VERSION) {
-            console.log(`[HEYS] 🔄 Version update detected: ${storedVersion} → ${APP_VERSION}`);
+          // Убираем флаги
+          sessionStorage.removeItem('heys_pending_update');
+          window._heysUpdateInProgress = false;
+          
+          // Проверяем реальное изменение версии
+          const isRealVersionChange = storedVersion && storedVersion !== APP_VERSION;
+          
+          if (isRealVersionChange && hadPendingUpdate) {
+            console.log(`[HEYS] ✅ Updated: ${storedVersion} → ${APP_VERSION}`);
             
-            // Выход из системы при обновлении
-            if (HEYS?.cloud?.signOut) {
-              HEYS.cloud.signOut();
-              console.log('[HEYS] 🚪 Auto-logout on version update');
-            }
+            // НЕ выходим из системы — это плохой UX!
+            // Пользователь не должен терять сессию при обновлении.
             
-            // Показать баннер об успешном обновлении (после перезагрузки)
+            // Показать баннер об успешном обновлении
             setTimeout(() => {
               const banner = document.createElement('div');
               banner.id = 'heys-update-banner';
@@ -1981,30 +2001,6 @@
             const MIN_SYNCING_DURATION = 1500;
             const SYNCING_DELAY = 400;
             
-            const playSyncSound = useCallback(() => {
-              const soundEnabled = localStorage.getItem('heys_sync_sound') !== 'false';
-              if (!soundEnabled) return;
-              
-              try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                
-                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
-                oscillator.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.1);
-                
-                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                
-                oscillator.type = 'sine';
-                oscillator.start(audioCtx.currentTime);
-                oscillator.stop(audioCtx.currentTime + 0.2);
-              } catch (_) {}
-            }, []);
-            
             const showSyncedWithMinDuration = useCallback(() => {
               if (syncedTimeoutRef.current) return;
               
@@ -2015,14 +2011,14 @@
                 syncedTimeoutRef.current = null;
                 syncingStartRef.current = null;
                 setCloudStatus('synced');
-                playSyncSound();
+                // Звук синхронизации убран — теперь звуки только в геймификации
                 setSyncProgress({ synced: 0, total: 0 });
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
                 cloudSyncTimeoutRef.current = setTimeout(() => {
                   setCloudStatus('idle');
                 }, 2000);
               }, remaining);
-            }, [playSyncSound]);
+            }, []);
             
             useEffect(() => {
               const handleSyncComplete = () => {

@@ -70,10 +70,9 @@ self.addEventListener('install', (event) => {
           )
         );
       })
-      .then(() => {
-        // Сразу активируем новый SW
-        return self.skipWaiting();
-      })
+      // НЕ вызываем skipWaiting() автоматически!
+      // SW будет ждать явной команды от клиента при реальном обновлении.
+      // Это предотвращает потерю сессии при обычном открытии PWA.
   );
 });
 
@@ -93,10 +92,9 @@ self.addEventListener('activate', (event) => {
             })
         );
       })
-      .then(() => {
-        // Берём контроль над всеми клиентами
-        return self.clients.claim();
-      })
+      // НЕ вызываем clients.claim() автоматически!
+      // Это вызывает controllerchange → reload и теряет сессию.
+      // Клиенты получат новый SW при следующем открытии PWA.
   );
 });
 
