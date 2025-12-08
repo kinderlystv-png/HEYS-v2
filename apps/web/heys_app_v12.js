@@ -1583,7 +1583,15 @@
                 const latest = window.HEYS.utils?.lsGet?.('heys_products', []) || 
                               window.HEYS.store?.get?.('heys_products', []) || [];
                 if (Array.isArray(latest) && latest.length > 0) {
-                  setProducts(latest);
+                  // 🛡️ ЗАЩИТА: не уменьшаем количество продуктов в UI
+                  // Это предотвращает "мерцание" когда приходят разные ключи из облака
+                  setProducts(prev => {
+                    if (Array.isArray(prev) && prev.length > latest.length) {
+                      console.log(`[HEYS] ⚠️ Products update blocked: ${prev.length} > ${latest.length}`);
+                      return prev;
+                    }
+                    return latest;
+                  });
                 }
               };
               
