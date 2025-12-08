@@ -979,18 +979,24 @@
   
   /**
    * Проверка, требует ли ключ client-specific хранилища
-   * @param {string} k - Ключ для проверки
+   * @param {string} k - Ключ для проверки (может быть scoped: heys_{clientId}_game)
    * @returns {boolean} true если нужен client_kv_store
    */
   function needsClientStorage(k) {
     if (!k) return false;
     // Проверяем дни пользователя
     if (k.includes(CLIENT_KEY_PATTERNS.DAY_V2)) return true;
+    
+    // Извлекаем базовый ключ из scoped (heys_{clientId}_game → heys_game)
+    // Pattern: heys_{uuid}_suffix → heys_suffix
+    const baseKey = k.replace(/^heys_[a-f0-9-]{36}_/, 'heys_');
+    
     // Проверяем общие client-specific ключи
-    if (CLIENT_SPECIFIC_KEYS.includes(k)) return true;
+    if (CLIENT_SPECIFIC_KEYS.includes(k) || CLIENT_SPECIFIC_KEYS.includes(baseKey)) return true;
+    
     // Проверяем префиксы (динамические ключи типа heys_milestone_7_days)
     for (const prefix of CLIENT_SPECIFIC_PREFIXES) {
-      if (k.startsWith(prefix)) return true;
+      if (k.startsWith(prefix) || baseKey.startsWith(prefix)) return true;
     }
     return false;
   }
@@ -1705,6 +1711,40 @@
                 logCritical(`  Local: weight=${local.weight}, height=${local.height}, age=${local.age}, updatedAt=${local.updatedAt}`);
                 logCritical(`  Remote: weight=${row.v?.weight}, height=${row.v?.height}, age=${row.v?.age}, updatedAt=${row.v?.updatedAt}`);
                 return; // Пропускаем сохранение
+              }
+            }
+            
+            // 🛡️ ЗАЩИТА GAMIFICATION: XP должен только расти, не сбрасываться
+            if (key.includes('_game')) {
+              const remoteTotalXP = row.v?.totalXP || 0;
+              const localTotalXP = local?.totalXP || 0;
+              
+              // Если локальный XP больше — сохраняем локальные данные
+              if (localTotalXP > remoteTotalXP) {
+                logCritical(`🎮 [GAME] BLOCKED: Keeping local XP (${localTotalXP}) > remote (${remoteTotalXP})`);
+                return;
+              }
+              
+              // Если remote XP больше — берём remote, но сохраняем локальные achievements
+              if (remoteTotalXP > localTotalXP && local?.unlockedAchievements?.length > 0) {
+                const mergedAchievements = [...new Set([
+                  ...(row.v?.unlockedAchievements || []),
+                  ...(local.unlockedAchievements || [])
+                ])];
+                row.v = {
+                  ...row.v,
+                  unlockedAchievements: mergedAchievements,
+                  // Сохраняем максимальные stats
+                  stats: {
+                    ...row.v?.stats,
+                    bestStreak: Math.max(row.v?.stats?.bestStreak || 0, local.stats?.bestStreak || 0),
+                    perfectDays: Math.max(row.v?.stats?.perfectDays || 0, local.stats?.perfectDays || 0),
+                    totalProducts: Math.max(row.v?.stats?.totalProducts || 0, local.stats?.totalProducts || 0),
+                    totalWater: Math.max(row.v?.stats?.totalWater || 0, local.stats?.totalWater || 0),
+                    totalTrainings: Math.max(row.v?.stats?.totalTrainings || 0, local.stats?.totalTrainings || 0)
+                  }
+                };
+                logCritical(`🎮 [GAME] MERGED: XP ${localTotalXP} → ${remoteTotalXP}, achievements: ${mergedAchievements.length}`);
               }
             }
           }

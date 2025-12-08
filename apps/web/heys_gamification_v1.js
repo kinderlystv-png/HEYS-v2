@@ -1157,6 +1157,15 @@
     game.addXP(0, 'weight_logged', e.detail?.sourceEl);
   });
 
+  // 🔄 КРИТИЧНО: Слушаем sync из облака — сбрасываем кеш чтобы не затереть свежие данные
+  window.addEventListener('heysSyncCompleted', (e) => {
+    // Сбрасываем in-memory кеш — при следующем loadData() прочитаем свежие данные из localStorage
+    _data = null;
+    // Уведомляем UI об обновлении (GamificationBar перечитает stats)
+    window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: game.getStats() }));
+    console.log('[HEYS.game] ♻️ Cache invalidated after cloud sync');
+  });
+
   // ========== ЭКСПОРТ ==========
 
   HEYS.game = game;
