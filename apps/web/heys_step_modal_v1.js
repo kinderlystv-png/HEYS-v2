@@ -93,6 +93,53 @@
     }
   }
 
+  // === AutoFitText — автоматическое уменьшение шрифта при переполнении ===
+  function AutoFitText({ text, className, minFontSize = 10, maxFontSize = 16, style = {} }) {
+    const containerRef = useRef(null);
+    const textRef = useRef(null);
+    const [fontSize, setFontSize] = useState(maxFontSize);
+    
+    useEffect(() => {
+      const container = containerRef.current;
+      const textEl = textRef.current;
+      if (!container || !textEl) return;
+      
+      // Начинаем с максимального размера
+      let currentSize = maxFontSize;
+      textEl.style.fontSize = `${currentSize}px`;
+      
+      // Уменьшаем пока текст не влезет в контейнер
+      const containerWidth = container.offsetWidth;
+      while (textEl.offsetWidth > containerWidth && currentSize > minFontSize) {
+        currentSize -= 0.5;
+        textEl.style.fontSize = `${currentSize}px`;
+      }
+      
+      setFontSize(currentSize);
+    }, [text, maxFontSize, minFontSize]);
+    
+    return React.createElement('div', {
+      ref: containerRef,
+      className: className + '-container',
+      style: { 
+        width: '100%', 
+        overflow: 'hidden',
+        display: 'flex',
+        justifyContent: 'center'
+      }
+    }, 
+      React.createElement('span', {
+        ref: textRef,
+        className,
+        style: { 
+          ...style, 
+          fontSize: `${fontSize}px`,
+          whiteSpace: 'nowrap'
+        }
+      }, text)
+    );
+  }
+
   // === WheelPicker (переиспользуемый) ===
   function WheelPicker({ values, value, onChange, label, suffix = '', currentSuffix = null }) {
     const containerRef = useRef(null);
@@ -488,12 +535,18 @@
               context.headerExtra 
                 ? context.headerExtra
                 : (currentConfig.title || currentConfig.hint) && React.createElement('div', { className: 'mc-header-titles' },
-                    currentConfig.title && React.createElement('span', { className: 'mc-header-title' }, 
-                      `${currentConfig.icon || ''} ${currentConfig.title}`.trim()
-                    ),
-                    currentConfig.hint && React.createElement('span', { className: 'mc-header-hint' }, 
-                      currentConfig.hint
-                    )
+                    currentConfig.title && React.createElement(AutoFitText, { 
+                      className: 'mc-header-title',
+                      text: `${currentConfig.icon || ''} ${currentConfig.title}`.trim(),
+                      maxFontSize: 16,
+                      minFontSize: 11
+                    }),
+                    currentConfig.hint && React.createElement(AutoFitText, { 
+                      className: 'mc-header-hint',
+                      text: currentConfig.hint,
+                      maxFontSize: 12,
+                      minFontSize: 9
+                    })
                   )
             ),
             

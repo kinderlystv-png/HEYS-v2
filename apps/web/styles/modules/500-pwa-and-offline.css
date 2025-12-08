@@ -395,12 +395,12 @@
 
 .mc-header-left,
 .mc-header-right {
-  min-width: 70px;
   display: flex;
+  flex-shrink: 0;
 }
 
 .mc-header-left {
-  justify-content: flex-start;
+  min-width: 44px;
 }
 
 .mc-header-right {
@@ -414,6 +414,7 @@
   align-items: center;
   text-align: center;
   min-width: 0;
+  overflow: hidden;
 }
 
 .mc-header-center .mc-header-titles {
@@ -449,9 +450,14 @@
 }
 
 .mc-header-btn--primary {
-  color: #22c55e;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: #fff;
   font-weight: 600;
   font-size: 17px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.25);
+  margin-right: 4px;
 }
 
 /* Skip-only buttons container */

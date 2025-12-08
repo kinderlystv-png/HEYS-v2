@@ -4312,7 +4312,7 @@
           showStreak: false,
           showGreeting: false,
           showTip: false,
-          finishLabel: 'Сохранить',
+          finishLabel: 'Готово',
           context: { dateKey },
           onComplete: (stepData) => {
             // Обновляем локальное состояние из сохранённых данных
