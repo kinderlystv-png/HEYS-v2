@@ -564,6 +564,7 @@
   // === API для показа модалки ===
   let modalRoot = null;
   let currentModalElement = null;
+  let savedScrollY = 0; // Сохраняем позицию скролла
 
   function showStepModal(options) {
     // Создаём контейнер если нет
@@ -573,12 +574,12 @@
       document.body.appendChild(modalRoot);
     }
 
-    // 🔒 Блокируем прокрутку body при открытии модалки
+    // Сохраняем текущую позицию скролла
+    savedScrollY = window.scrollY;
+    
+    // 🔒 Блокируем прокрутку body при открытии модалки (без position:fixed чтобы не прыгал фон)
     document.body.style.overflow = 'hidden';
-    // Для iOS Safari — фиксируем позицию
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
-    document.body.style.top = `-${window.scrollY}px`;
+    document.documentElement.style.overflow = 'hidden';
 
     const handleComplete = (data) => {
       // Для приёмов пищи и продуктов — прокрутка к дневнику
@@ -603,24 +604,19 @@
 
   function hideStepModal(options = {}) {
     // 🔓 Восстанавливаем прокрутку body при закрытии
-    const scrollY = document.body.style.top;
     document.body.style.overflow = '';
-    document.body.style.position = '';
-    document.body.style.width = '';
-    document.body.style.top = '';
+    document.documentElement.style.overflow = '';
     
-    // Если указано scrollToDiary — прокручиваем к заголовку дневника
+    // Если указано scrollToDiary — моментально прокручиваем к заголовку дневника
     if (options.scrollToDiary) {
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         const heading = document.getElementById('diary-heading');
         if (heading) {
-          heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          heading.scrollIntoView({ behavior: 'auto', block: 'start' });
         }
-      }, 50);
-    } else if (scrollY) {
-      // Иначе возвращаем скролл на старое место
-      window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      });
     }
+    // Иначе скролл остаётся на месте (не нужно восстанавливать, т.к. мы не меняли position)
     
     if (modalRoot) {
       ReactDOM.unmountComponentAtNode(modalRoot);
