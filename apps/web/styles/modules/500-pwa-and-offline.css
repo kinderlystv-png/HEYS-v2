@@ -384,12 +384,86 @@
   gap: 8px;
 }
 
+/* iOS-style navigation header */
+.mc-header--nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 8px;
+  min-height: 44px;
+}
+
+.mc-header-left,
+.mc-header-right {
+  min-width: 70px;
+  display: flex;
+}
+
+.mc-header-left {
+  justify-content: flex-start;
+}
+
+.mc-header-right {
+  justify-content: flex-end;
+}
+
+.mc-header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+
+.mc-header-center .mc-header-titles {
+  align-items: center;
+}
+
+/* Header buttons */
+.mc-header-btn {
+  background: none;
+  border: none;
+  padding: 10px 14px;
+  font-size: 17px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.mc-header-btn:active {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.mc-header-btn--back {
+  color: #3b82f6;
+  font-size: 17px;
+}
+
+.mc-header-btn--close {
+  color: #dc2626;
+  font-size: 26px;
+  font-weight: 400;
+  padding: 4px 12px;
+}
+
+.mc-header-btn--primary {
+  color: #22c55e;
+  font-weight: 600;
+  font-size: 17px;
+}
+
+/* Skip-only buttons container */
+.mc-buttons--skip-only {
+  justify-content: center;
+  padding: 8px;
+}
+
 /* Дополнительный контент в header (например, счётчик продуктов) */
 .mc-header-extra {
   font-size: 13px;
   color: #9ca3af;
-  margin-left: auto;
-  margin-right: 8px;
 }
 
 /* Header titles (title + hint в одну строку) */

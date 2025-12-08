@@ -5658,6 +5658,39 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       return badgeAdvices.filter(a => !dismissedAdvices.has(a.id) && !hiddenUntilTomorrow.has(a.id)).length;
     }, [badgeAdvices, dismissedAdvices, hiddenUntilTomorrow]);
     
+    // Обновляем badge в нижней навигации
+    React.useEffect(() => {
+      const badge = document.getElementById('nav-advice-badge');
+      if (badge) {
+        badge.textContent = totalAdviceCount > 0 ? totalAdviceCount : '';
+        badge.style.display = totalAdviceCount > 0 ? 'flex' : 'none';
+      }
+    }, [totalAdviceCount]);
+    
+    // Listener для heysShowAdvice (из нижней навигации)
+    React.useEffect(() => {
+      const handleShowAdvice = () => {
+        if (totalAdviceCount > 0) {
+          setAdviceTrigger('manual');
+          setAdviceExpanded(true);
+          setToastVisible(true);
+          setToastDismissed(false);
+          haptic('light');
+        } else {
+          setAdviceTrigger('manual_empty');
+          setToastVisible(true);
+          setToastDismissed(false);
+          if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+          toastTimeoutRef.current = setTimeout(() => {
+            setToastVisible(false);
+            setAdviceTrigger(null);
+          }, 2000);
+        }
+      };
+      window.addEventListener('heysShowAdvice', handleShowAdvice);
+      return () => window.removeEventListener('heysShowAdvice', handleShowAdvice);
+    }, [totalAdviceCount]);
+    
     // Listener для heysProductAdded event
     React.useEffect(() => {
       const handleProductAdded = () => {
@@ -11673,37 +11706,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       (!isMobile || mobileSubTab === 'stats') && compactActivity,
       (!isMobile || mobileSubTab === 'stats') && sideBlock,
       
-      // === FAB группа: вода + советы ===
+      // === FAB группа: приём пищи + вода ===
       (!isMobile || mobileSubTab === 'stats') && React.createElement('div', {
         className: 'fab-group'
       },
-        // FAB для показа советов (💡)
+        // FAB для добавления приёма пищи (+)
         React.createElement('button', {
-          className: 'advice-fab' + (totalAdviceCount > 0 ? ' has-advice' : ''),
-          onClick: () => {
-            if (totalAdviceCount > 0) {
-              setAdviceTrigger('manual');
-              setAdviceExpanded(true);
-              setToastVisible(true);
-              setToastDismissed(false);
-              haptic('light');
-            } else {
-              // Нет активных советов — показываем мини-сообщение
-              setAdviceTrigger('manual_empty');
-              setToastVisible(true);
-              setToastDismissed(false);
-              if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-              toastTimeoutRef.current = setTimeout(() => {
-                setToastVisible(false);
-                setAdviceTrigger(null);
-              }, 2000);
-            }
-          },
-          'aria-label': totalAdviceCount > 0 ? `Показать ${totalAdviceCount} советов` : 'Советов нет'
-        },
-          React.createElement('span', { className: 'advice-fab-icon' }, '💡'),
-          totalAdviceCount > 0 && React.createElement('span', { className: 'advice-fab-badge' }, totalAdviceCount)
-        ),
+          className: 'meal-fab',
+          onClick: addMeal,
+          'aria-label': 'Добавить приём пищи'
+        }, '🍽️'),
         // FAB для быстрого добавления воды (+200мл)
         React.createElement('button', {
           className: 'water-fab',

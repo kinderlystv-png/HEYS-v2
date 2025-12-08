@@ -466,39 +466,42 @@
         onTouchEnd: handleTouchEnd
       },
         React.createElement('div', { className: 'mc-modal' },
-          // Header — объединённый с title шага
-          React.createElement('div', { className: 'mc-header' },
-            // Title и hint шага — слева
-            (currentConfig.title || currentConfig.hint) && React.createElement('div', { className: 'mc-header-titles' },
-              currentConfig.title && React.createElement('span', { className: 'mc-header-title' }, 
-                `${currentConfig.icon || ''} ${currentConfig.title}`.trim()
-              ),
-              currentConfig.hint && React.createElement('span', { className: 'mc-header-hint' }, 
-                currentConfig.hint
-              )
+          // Header — iOS-style с кнопками слева/справа
+          React.createElement('div', { className: 'mc-header mc-header--nav' },
+            // Левая часть: Назад или Закрыть
+            React.createElement('div', { className: 'mc-header-left' },
+              currentStepIndex > 0 
+                ? React.createElement('button', {
+                    className: 'mc-header-btn mc-header-btn--back',
+                    onClick: handlePrev
+                  }, '← Назад')
+                : onClose && React.createElement('button', {
+                    className: 'mc-header-btn mc-header-btn--close',
+                    onClick: handleClose,
+                    'aria-label': 'Закрыть'
+                  }, '×')
             ),
             
-            // Greeting (если есть и нет title шага)
-            // Крестик закрытия (слева)
-            onClose && React.createElement('button', {
-              className: 'mc-close-btn',
-              onClick: handleClose,
-              'aria-label': 'Закрыть'
-            }, '×'),
-            
-            showGreeting && (title || greeting) && !currentConfig.title && React.createElement('div', { className: 'mc-greeting' }, 
-              title || greeting
+            // Центр: Title или счётчик продуктов
+            React.createElement('div', { className: 'mc-header-center' },
+              context.headerExtra 
+                ? context.headerExtra
+                : (currentConfig.title || currentConfig.hint) && React.createElement('div', { className: 'mc-header-titles' },
+                    currentConfig.title && React.createElement('span', { className: 'mc-header-title' }, 
+                      `${currentConfig.icon || ''} ${currentConfig.title}`.trim()
+                    ),
+                    currentConfig.hint && React.createElement('span', { className: 'mc-header-hint' }, 
+                      currentConfig.hint
+                    )
+                  )
             ),
             
-            showStreak && currentStreak > 0 && React.createElement('div', { className: 'mc-streak-badge' },
-              React.createElement('span', { className: 'mc-streak-fire' }, '🔥'),
-              React.createElement('span', { className: 'mc-streak-count' }, currentStreak),
-              React.createElement('span', { className: 'mc-streak-text' }, ' дн')
-            ),
-            
-            // Дополнительный контент в header (справа, например счётчик продуктов)
-            context.headerExtra && React.createElement('div', { className: 'mc-header-extra' },
-              context.headerExtra
+            // Правая часть: Готово/Далее (скрывается если шаг имеет hideHeaderNext: true)
+            React.createElement('div', { className: 'mc-header-right' },
+              !(hidePrimaryOnFirst && currentStepIndex === 0) && !currentConfig.hideHeaderNext && React.createElement('button', {
+                className: 'mc-header-btn mc-header-btn--primary',
+                onClick: handleNext
+              }, currentStepIndex === totalSteps - 1 ? 'Готово' : 'Далее')
             )
           ),
 
@@ -538,22 +541,12 @@
             React.createElement('span', null, validationMessage)
           ),
 
-          // Buttons
-          React.createElement('div', { className: 'mc-buttons' },
-            currentStepIndex > 0 && React.createElement('button', {
-              className: 'mc-btn mc-btn--secondary',
-              onClick: handlePrev
-            }, '← Назад'),
-
-            allowSkip && currentStepIndex < totalSteps - 1 && React.createElement('button', {
+          // Skip button (если разрешён пропуск) — оставляем внизу
+          allowSkip && currentStepIndex < totalSteps - 1 && React.createElement('div', { className: 'mc-buttons mc-buttons--skip-only' },
+            React.createElement('button', {
               className: 'mc-btn mc-btn--ghost',
               onClick: () => goToStep(currentStepIndex + 1, 'left')
-            }, 'Пропустить'),
-
-            !(hidePrimaryOnFirst && currentStepIndex === 0) && React.createElement('button', {
-              className: 'mc-btn mc-btn--primary',
-              onClick: handleNext
-            }, currentStepIndex === totalSteps - 1 ? '✓ Готово' : 'Далее →')
+            }, 'Пропустить')
           ),
 
           // Daily tip

@@ -1290,7 +1290,8 @@
           icon: '➕',
           component: CreateProductStep,
           validate: () => true,
-          hidden: true // Скрытый шаг — не отображается в progress dots
+          hidden: true, // Скрытый шаг — не отображается в progress dots
+          hideHeaderNext: true // Скрываем "Далее" — есть своя кнопка "Добавить"
         },
         {
           id: 'grams',
