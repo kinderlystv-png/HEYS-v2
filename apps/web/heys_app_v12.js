@@ -1628,10 +1628,22 @@
             React.useEffect(() => {
               let cancelled = false;
               
+              // 🛡️ Хелпер: безопасное обновление продуктов (не уменьшаем количество)
+              const safeSetProducts = (newProducts) => {
+                if (!Array.isArray(newProducts)) return;
+                setProducts(prev => {
+                  if (Array.isArray(prev) && prev.length > newProducts.length) {
+                    console.log(`[HEYS] ⚠️ RationTab BLOCKED: ${prev.length} > ${newProducts.length}`);
+                    return prev;
+                  }
+                  return newProducts;
+                });
+              };
+              
               // Если sync для этого клиента уже был — сразу загружаем продукты
               if (syncedClientsCache.has(clientId)) {
                 const loadedProducts = window.HEYS.utils.lsGet('heys_products', []);
-                setProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
+                safeSetProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
                 setLoading(false);
                 return;
               }
@@ -1651,7 +1663,7 @@
                       )
                         ? window.HEYS.utils.lsGet('heys_products', [])
                         : [];
-                      setProducts(loadedProducts);
+                      safeSetProducts(loadedProducts);
                       setLoading(false);
                     }
                   })
@@ -1659,14 +1671,14 @@
                     console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
                     if (!cancelled) {
                       const loadedProducts = window.HEYS.utils.lsGet('heys_products', []);
-                      setProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
+                      safeSetProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
                       setLoading(false);
                     }
                   });
               } else {
                 // Нет cloud — загружаем локально
                 const loadedProducts = window.HEYS.utils.lsGet('heys_products', []);
-                setProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
+                safeSetProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
                 setLoading(false);
               }
               return () => {
