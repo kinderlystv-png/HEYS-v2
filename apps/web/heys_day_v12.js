@@ -6815,15 +6815,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       });
       
       try {
-        // 1. Проверяем обновление приложения (параллельно с sync)
-        const checkUpdatePromise = window.HEYS?.checkForUpdates 
-          ? Promise.resolve() // checkForUpdates сам покажет модалку если есть обновление
-          : Promise.resolve();
-        
-        // Вызываем проверку версии (если есть обновление — покажется модалка)
-        if (typeof window.HEYS?.checkForUpdates === 'function') {
-          // Не ждём результата — пусть проверка идёт параллельно
-          window.HEYS.checkForUpdates();
+        // 1. Тихая проверка версии (без модалки — SW сам обновится в фоне)
+        if (navigator.serviceWorker?.controller) {
+          navigator.serviceWorker.ready.then(reg => reg.update?.()).catch(() => {});
         }
         
         // 2. Реальная синхронизация с Supabase (с force=true для bypass throttling)
