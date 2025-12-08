@@ -6,8 +6,35 @@
         // === App Version & Auto-logout on Update ===
         const APP_VERSION = '2025.12.02.1885cc5'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
+        const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
+        const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
         
         HEYS.version = APP_VERSION;
+        
+        // Проверка блокировки обновления
+        function isUpdateLocked() {
+          try {
+            const lockData = localStorage.getItem(UPDATE_LOCK_KEY);
+            if (!lockData) return false;
+            const { timestamp } = JSON.parse(lockData);
+            // Блокировка истекает через 30 сек
+            if (Date.now() - timestamp > UPDATE_LOCK_TIMEOUT) {
+              localStorage.removeItem(UPDATE_LOCK_KEY);
+              return false;
+            }
+            return true;
+          } catch {
+            return false;
+          }
+        }
+        
+        function setUpdateLock() {
+          localStorage.setItem(UPDATE_LOCK_KEY, JSON.stringify({ timestamp: Date.now() }));
+        }
+        
+        function clearUpdateLock() {
+          localStorage.removeItem(UPDATE_LOCK_KEY);
+        }
         
         // === Update UI ===
         // Красивая модалка для показа процесса обновления
@@ -187,12 +214,12 @@
                 const newWorker = registration.installing;
                 console.log('[SW] 🔄 New version downloading...');
                 
-                // Предотвращаем дублирование обновления
-                if (window._heysUpdateInProgress) {
-                  console.log('[SW] Update already in progress, skipping');
+                // Предотвращаем дублирование обновления (надёжный флаг в localStorage)
+                if (isUpdateLocked()) {
+                  console.log('[SW] Update already in progress (locked), skipping');
                   return;
                 }
-                window._heysUpdateInProgress = true;
+                setUpdateLock();
                 
                 // Показываем UI обновления
                 showUpdateModal('downloading');
@@ -283,12 +310,12 @@
             if (data.version && data.version !== APP_VERSION) {
               console.log(`[HEYS] 🆕 Server has new version: ${data.version} (current: ${APP_VERSION})`);
               
-              // Предотвращаем дублирование обновления
-              if (window._heysUpdateInProgress) {
-                console.log('[HEYS] Update already in progress, skipping');
+              // Предотвращаем дублирование обновления (надёжный флаг в localStorage)
+              if (isUpdateLocked()) {
+                console.log('[HEYS] Update already in progress (locked), skipping');
                 return true;
               }
-              window._heysUpdateInProgress = true;
+              setUpdateLock();
               
               // Показываем красивый UI обновления
               showUpdateModal('found');
@@ -316,7 +343,7 @@
           
           // Убираем флаги
           sessionStorage.removeItem('heys_pending_update');
-          window._heysUpdateInProgress = false;
+          clearUpdateLock(); // Сбрасываем блокировку после перезагрузки
           
           // Проверяем реальное изменение версии
           const isRealVersionChange = storedVersion && storedVersion !== APP_VERSION;
