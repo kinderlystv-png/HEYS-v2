@@ -3406,8 +3406,9 @@
             }
 
             // Login form state (нужно до gate!)
-            const [email, setEmail] = useState('');
-            const [pwd, setPwd] = useState('');
+            // DEV: дефолтные данные для тестирования — убрать перед продакшеном!
+            const [email, setEmail] = useState('poplanton@mail.ru');
+            const [pwd, setPwd] = useState('007670');
             const [rememberMe, setRememberMe] = useState(() => {
               // Восстанавливаем checkbox из localStorage
               return localStorage.getItem('heys_remember_me') === 'true';
@@ -4563,7 +4564,7 @@
                       className: 'tab ' + (tab === 'ration' ? 'active' : ''),
                       onClick: () => setTab('ration'),
                     },
-                    React.createElement('span', { className: 'tab-icon', style: { fontSize: '16px' } }, '📦'),
+                    React.createElement('span', { className: 'tab-icon' }, '📦'),
                     React.createElement('span', { className: 'tab-text' }, 'База'),
                   ),
                   // Обзор — слева (тройной тап = debug panel)
@@ -4635,6 +4636,23 @@
                     },
                     React.createElement('span', { className: 'tab-icon' }, '📈'),
                     React.createElement('span', { className: 'tab-text' }, 'Графики'),
+                  ),
+                  // Советы — кнопка между переключателем и настройками
+                  React.createElement(
+                    'div',
+                    {
+                      className: 'tab tab-advice',
+                      onClick: () => {
+                        // Переключаемся на stats если не там, и показываем советы
+                        if (tab !== 'stats' && tab !== 'diary') {
+                          setTab('stats');
+                        }
+                        // Триггерим показ советов через глобальный event
+                        window.dispatchEvent(new CustomEvent('heysShowAdvice'));
+                      },
+                    },
+                    React.createElement('span', { className: 'tab-icon' }, '💡'),
+                    React.createElement('span', { className: 'tab-advice-badge', id: 'nav-advice-badge' }),
                   ),
                   // Настройки — справа
                   React.createElement(
