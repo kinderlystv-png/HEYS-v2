@@ -1293,6 +1293,10 @@
     try {
       if (!client || !user) return { error: 'Not authenticated' };
       
+      // Сохраняем user.id локально — user может стать null во время async операций
+      const userId = user.id;
+      if (!userId) return { error: 'No userId' };
+      
       const clientId = HEYS.utils?.getCurrentClientId?.() || '';
       if (!clientId) return { error: 'No clientId' };
       
@@ -1305,7 +1309,7 @@
       const { data: kvData, error: kvError } = await client
         .from('kv_store')
         .select('k,v')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .like('k', '%products%');
       
       if (kvError) {
@@ -1313,7 +1317,12 @@
       } else if (kvData && kvData.length > 0) {
         totalRecords += kvData.length;
         for (const row of kvData) {
-          const result = await cleanupProductRecord('kv_store', row, { user_id: user.id }, clientId);
+          // Проверяем что user ещё авторизован (мог logout во время цикла)
+          if (!user) {
+            log('☁️ [CLOUD CLEANUP] Aborted — user logged out');
+            return { error: 'User logged out during cleanup' };
+          }
+          const result = await cleanupProductRecord('kv_store', row, { user_id: userId }, clientId);
           totalCleaned += result.cleaned;
           totalAfter += result.kept;
           if (result.deleted) totalDeleted++;
@@ -1332,6 +1341,11 @@
       } else if (clientData && clientData.length > 0) {
         totalRecords += clientData.length;
         for (const row of clientData) {
+          // Проверяем что user ещё авторизован (мог logout во время цикла)
+          if (!user) {
+            log('☁️ [CLOUD CLEANUP] Aborted — user logged out');
+            return { error: 'User logged out during cleanup' };
+          }
           const result = await cleanupProductRecord('client_kv_store', row, { client_id: clientId }, clientId);
           totalCleaned += result.cleaned;
           totalAfter += result.kept;
@@ -1360,6 +1374,11 @@
    * - Тихий режим для OK записей
    */
   async function cleanupProductRecord(table, row, filters, clientId) {
+    // Защита от race condition при logout
+    if (!client || !user) {
+      return { cleaned: 0, kept: 0, error: 'Not authenticated' };
+    }
+    
     const products = row.v;
     
     // Пустой массив или не массив — удаляем запись
