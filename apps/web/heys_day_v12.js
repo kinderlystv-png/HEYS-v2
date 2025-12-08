@@ -13816,7 +13816,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   value: editGramsValue,
                   onChange: e => setEditGramsValue(Math.max(1, Math.min(2000, parseInt(e.target.value) || 0))),
                   onFocus: e => e.target.select(),
-                  onClick: e => e.target.select()
+                  onClick: e => e.target.select(),
+                  onKeyDown: e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      confirmEditGramsModal();
+                    }
+                  }
                 }),
                 React.createElement('span', { className: 'grams-input-suffix--hero' }, 'г')
               ),

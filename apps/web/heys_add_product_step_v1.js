@@ -453,11 +453,14 @@
         return id !== pid;
       });
       
-      // Сохраняем
+      // Сохраняем через HEYS.products или HEYS.store.set (для синхронизации с облаком)
       if (HEYS.products?.setAll) {
         HEYS.products.setAll(filtered);
+      } else if (HEYS.store?.set) {
+        HEYS.store.set('products', filtered);
       } else if (U.lsSet) {
         U.lsSet('heys_products', filtered);
+        console.warn('[AddProductStep] ⚠️ Продукт удалён только локально (нет HEYS.store)');
       }
       
       // Обновляем context.products
@@ -807,16 +810,23 @@
       
       haptic('medium');
       
-      // 1. Добавляем в базу продуктов (localStorage)
+      // 1. Добавляем в базу продуктов
       const U = HEYS.utils || {};
       const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
       const newProducts = [...products, parsedPreview];
       
-      // Сохраняем через HEYS.products или напрямую
+      // Сохраняем через HEYS.products (React state + localStorage + cloud sync)
+      // или через HEYS.store.set (localStorage + cloud sync)
+      // ⚠️ ВАЖНО: Не использовать U.lsSet — он не синхронизирует с облаком!
       if (HEYS.products?.setAll) {
         HEYS.products.setAll(newProducts);
+      } else if (HEYS.store?.set) {
+        // Используем store.set для синхронизации с облаком
+        HEYS.store.set('products', newProducts);
       } else if (U.lsSet) {
+        // Fallback: только localStorage (без облака)
         U.lsSet('heys_products', newProducts);
+        console.warn('[CreateProductStep] ⚠️ Продукт сохранён только локально (нет HEYS.store)');
       }
       
       console.log('[CreateProductStep] Продукт сохранён:', parsedPreview.name, 'Всего продуктов:', newProducts.length);
