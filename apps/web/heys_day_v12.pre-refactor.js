@@ -77,16 +77,6 @@
   // === Import models module ===
   const M = HEYS.models || {};
 
-  // === Import scoring module (Phase 1 refactor) ===
-  const Scoring = HEYS.DayScoring || {};
-  const getMealQualityScore = Scoring.getMealQualityScore || (() => null);
-  const getMealQualityBadges = Scoring.getMealQualityBadges || (() => []);
-  const getNutrientColor = Scoring.getNutrientColor || (() => null);
-  const getNutrientTooltip = Scoring.getNutrientTooltip || (() => null);
-  const getDailyNutrientColor = Scoring.getDailyNutrientColor || (() => null);
-  const getDailyNutrientTooltip = Scoring.getDailyNutrientTooltip || (() => '');
-  const NUTRIENT_COLORS = Scoring.NUTRIENT_COLORS || { good: '#16a34a', medium: '#ca8a04', bad: '#dc2626' };
-
   // === Photo Gallery (fullscreen with swipe, zoom, delete) ===
   // Константы
   const PHOTO_LIMIT_PER_MEAL = 10;
@@ -545,8 +535,772 @@
     overlay.focus();
   };
 
-  // === Meal quality scoring - extracted to heys_day_scoring/ (Phase 1) ===
-  // All scoring logic moved to external modules for better maintainability
+  // === Meal quality scoring helpers ===
+  const MEAL_KCAL_DISTRIBUTION = {
+    breakfast: { minPct: 0.20, maxPct: 0.30 },
+    snack1:    { minPct: 0.05, maxPct: 0.12 },
+    lunch:     { minPct: 0.30, maxPct: 0.40 },
+    snack2:    { minPct: 0.05, maxPct: 0.12 },
+    dinner:    { minPct: 0.20, maxPct: 0.30 },
+    snack3:    { minPct: 0.02, maxPct: 0.08 },
+    night:     { minPct: 0.00, maxPct: 0.05 }  // Ночью не более 5% = ~100 ккал
+  };
+
+  // Абсолютные лимиты калорий по типам (независимо от нормы)
+  const MEAL_KCAL_ABSOLUTE = {
+    breakfast: { min: 300, max: 700, ideal: 500 },
+    snack1:    { min: 50,  max: 200, ideal: 150 },
+    lunch:     { min: 400, max: 800, ideal: 600 },
+    snack2:    { min: 50,  max: 200, ideal: 150 },
+    dinner:    { min: 300, max: 600, ideal: 450 },
+    snack3:    { min: 50,  max: 150, ideal: 100 },
+    night:     { min: 0,   max: 150, ideal: 0 }  // Ночью лучше не есть!
+  };
+
+  const IDEAL_MACROS = {
+    breakfast: { protPct: 0.20, carbPct: 0.50, fatPct: 0.30, minProt: 15 },  // Завтрак — больше углеводов
+    lunch:     { protPct: 0.30, carbPct: 0.40, fatPct: 0.30, minProt: 25 },  // Обед — баланс
+    dinner:    { protPct: 0.35, carbPct: 0.30, fatPct: 0.35, minProt: 25 },  // Ужин — больше белка, меньше углеводов
+    snack:     { protPct: 0.15, carbPct: 0.55, fatPct: 0.30, minProt: 5 },   // Перекус — лёгкий
+    night:     { protPct: 0.40, carbPct: 0.20, fatPct: 0.40, minProt: 10 }   // Ночь — минимум углеводов!
+  };
+
+  const isMainMealType = (type) => ['breakfast', 'lunch', 'dinner'].includes(type);
+
+  const safeRatio = (num, denom, fallback = 0.5) => {
+    const n = +num || 0;
+    const d = +denom || 0;
+    if (d <= 0) return fallback;
+    return n / d;
+  };
+
+  // === Цветовая оценка нутриентов для сводки приёма ===
+  const NUTRIENT_COLORS = {
+    good: '#16a34a',    // зелёный
+    medium: '#ca8a04',  // жёлтый
+    bad: '#dc2626'      // красный
+  };
+
+  /**
+   * Получить цвет для значения нутриента в сводке приёма
+   * @param {string} nutrient - тип нутриента
+   * @param {number} value - значение
+   * @param {object} totals - все totals приёма для контекста
+   * @returns {string|null} - цвет или null (дефолтный)
+   */
+  function getNutrientColor(nutrient, value, totals = {}) {
+    const v = +value || 0;
+    const { kcal = 0, carbs = 0, simple = 0, complex = 0, prot = 0, fat = 0, bad = 0, good = 0, trans = 0, fiber = 0 } = totals;
+    
+    switch (nutrient) {
+      // === КАЛОРИИ (за приём) ===
+      case 'kcal':
+        if (v <= 0) return null;
+        if (v <= 150) return NUTRIENT_COLORS.good;      // Лёгкий перекус
+        if (v <= 500) return null;                       // Нормально
+        if (v <= 700) return NUTRIENT_COLORS.medium;    // Тяжеловато
+        return NUTRIENT_COLORS.bad;                      // Переедание за приём
+      
+      // === УГЛЕВОДЫ (за приём) ===
+      case 'carbs':
+        if (v <= 0) return null;
+        if (v <= 60) return NUTRIENT_COLORS.good;       // Норма
+        if (v <= 100) return NUTRIENT_COLORS.medium;    // Много
+        return NUTRIENT_COLORS.bad;                      // Слишком много
+      
+      // === ПРОСТЫЕ УГЛЕВОДЫ (за приём) ===
+      case 'simple':
+        if (v <= 0) return NUTRIENT_COLORS.good;        // Нет простых = отлично
+        if (v <= 10) return NUTRIENT_COLORS.good;       // Минимум
+        if (v <= 25) return NUTRIENT_COLORS.medium;     // Терпимо
+        return NUTRIENT_COLORS.bad;                      // Много сахара
+      
+      // === СЛОЖНЫЕ УГЛЕВОДЫ (за приём) ===
+      case 'complex':
+        if (v <= 0) return null;
+        if (v >= 30 && carbs > 0 && v / carbs >= 0.7) return NUTRIENT_COLORS.good;  // Хорошо — сложных много
+        return null;                                     // Нейтрально
+      
+      // === СООТНОШЕНИЕ ПРОСТЫЕ/СЛОЖНЫЕ ===
+      case 'simple_complex_ratio':
+        if (carbs <= 5) return null;                    // Мало углеводов — неважно
+        const simpleRatio = simple / carbs;
+        if (simpleRatio <= 0.3) return NUTRIENT_COLORS.good;   // Отлично
+        if (simpleRatio <= 0.5) return NUTRIENT_COLORS.medium; // Терпимо
+        return NUTRIENT_COLORS.bad;                             // Плохо
+      
+      // === БЕЛОК (за приём) ===
+      case 'prot':
+        if (v <= 0) return null;
+        if (v >= 20 && v <= 40) return NUTRIENT_COLORS.good;   // Оптимум
+        if (v >= 10 && v <= 50) return null;                    // Нормально
+        if (v < 10 && kcal > 200) return NUTRIENT_COLORS.medium; // Мало белка для сытного приёма
+        if (v > 50) return NUTRIENT_COLORS.medium;              // Много — избыток не усвоится
+        return null;
+      
+      // === ЖИРЫ (за приём) ===
+      case 'fat':
+        if (v <= 0) return null;
+        if (v <= 20) return NUTRIENT_COLORS.good;       // Норма
+        if (v <= 35) return null;                        // Нормально
+        if (v <= 50) return NUTRIENT_COLORS.medium;     // Много
+        return NUTRIENT_COLORS.bad;                      // Очень много
+      
+      // === ВРЕДНЫЕ ЖИРЫ ===
+      case 'bad':
+        if (v <= 0) return NUTRIENT_COLORS.good;        // Нет = отлично
+        if (v <= 5) return null;                         // Минимум
+        if (v <= 10) return NUTRIENT_COLORS.medium;     // Терпимо
+        return NUTRIENT_COLORS.bad;                      // Много
+      
+      // === ПОЛЕЗНЫЕ ЖИРЫ ===
+      case 'good':
+        if (fat <= 0) return null;
+        if (v >= fat * 0.6) return NUTRIENT_COLORS.good;  // >60% полезных
+        if (v >= fat * 0.4) return null;                   // 40-60%
+        return NUTRIENT_COLORS.medium;                     // <40% полезных
+      
+      // === ТРАНС-ЖИРЫ ===
+      case 'trans':
+        if (v <= 0) return NUTRIENT_COLORS.good;        // Нет = идеально
+        if (v <= 0.5) return NUTRIENT_COLORS.medium;    // Минимум
+        return NUTRIENT_COLORS.bad;                      // Любое количество плохо
+      
+      // === СООТНОШЕНИЕ ЖИРОВ ===
+      case 'fat_ratio':
+        if (fat <= 3) return null;                       // Мало жиров — неважно
+        const goodRatio = good / fat;
+        const badRatio = bad / fat;
+        if (goodRatio >= 0.6 && trans <= 0) return NUTRIENT_COLORS.good;
+        if (badRatio > 0.5 || trans > 0.5) return NUTRIENT_COLORS.bad;
+        return NUTRIENT_COLORS.medium;
+      
+      // === КЛЕТЧАТКА ===
+      case 'fiber':
+        if (v <= 0) return null;
+        if (v >= 8) return NUTRIENT_COLORS.good;        // Отлично
+        if (v >= 4) return null;                         // Нормально
+        if (kcal > 300 && v < 2) return NUTRIENT_COLORS.medium; // Мало для сытного приёма
+        return null;
+      
+      // === ГЛИКЕМИЧЕСКИЙ ИНДЕКС ===
+      case 'gi':
+        if (v <= 0 || carbs <= 5) return null;          // Нет углеводов — GI неважен
+        if (v <= 40) return NUTRIENT_COLORS.good;       // Низкий
+        if (v <= 55) return NUTRIENT_COLORS.good;       // Умеренный — хорошо
+        if (v <= 70) return NUTRIENT_COLORS.medium;     // Средний
+        return NUTRIENT_COLORS.bad;                      // Высокий
+      
+      // === ВРЕДНОСТЬ ===
+      case 'harm':
+        if (v <= 0) return NUTRIENT_COLORS.good;        // Полезная еда
+        if (v <= 2) return NUTRIENT_COLORS.good;        // Минимально
+        if (v <= 4) return null;                         // Нормально
+        if (v <= 6) return NUTRIENT_COLORS.medium;      // Терпимо
+        return NUTRIENT_COLORS.bad;                      // Вредно
+      
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Получить tooltip для значения нутриента (объяснение цвета)
+   */
+  function getNutrientTooltip(nutrient, value, totals = {}) {
+    const v = +value || 0;
+    const { kcal = 0, carbs = 0, simple = 0, fat = 0, bad = 0, good = 0, trans = 0 } = totals;
+    
+    switch (nutrient) {
+      case 'kcal':
+        if (v <= 0) return 'Нет калорий';
+        if (v <= 150) return '✅ Лёгкий приём (≤150 ккал)';
+        if (v <= 500) return 'Нормальный приём';
+        if (v <= 700) return '⚠️ Много для одного приёма (500-700 ккал)';
+        return '❌ Переедание (>700 ккал за раз)';
+      
+      case 'carbs':
+        if (v <= 0) return 'Без углеводов';
+        if (v <= 60) return '✅ Умеренно углеводов (≤60г)';
+        if (v <= 100) return '⚠️ Много углеводов (60-100г)';
+        return '❌ Очень много углеводов (>100г)';
+      
+      case 'simple':
+        if (v <= 0) return '✅ Без простых углеводов — идеально!';
+        if (v <= 10) return '✅ Минимум простых (≤10г)';
+        if (v <= 25) return '⚠️ Терпимо простых (10-25г)';
+        return '❌ Много сахара (>25г) — инсулиновый скачок';
+      
+      case 'complex':
+        if (v <= 0) return 'Без сложных углеводов';
+        if (carbs > 0 && v / carbs >= 0.7) return '✅ Отлично! Сложных ≥70%';
+        return 'Сложные углеводы';
+      
+      case 'prot':
+        if (v <= 0) return 'Без белка';
+        if (v >= 20 && v <= 40) return '✅ Оптимум белка (20-40г)';
+        if (v < 10 && kcal > 200) return '⚠️ Мало белка для сытного приёма';
+        if (v > 50) return '⚠️ Много белка (>50г) — избыток не усвоится';
+        return 'Белок в норме';
+      
+      case 'fat':
+        if (v <= 0) return 'Без жиров';
+        if (v <= 20) return '✅ Умеренно жиров (≤20г)';
+        if (v <= 35) return 'Жиры в норме';
+        if (v <= 50) return '⚠️ Много жиров (35-50г)';
+        return '❌ Очень много жиров (>50г)';
+      
+      case 'bad':
+        if (v <= 0) return '✅ Без вредных жиров — отлично!';
+        if (v <= 5) return 'Минимум вредных жиров';
+        if (v <= 10) return '⚠️ Терпимо вредных жиров (5-10г)';
+        return '❌ Много вредных жиров (>10г)';
+      
+      case 'good':
+        if (fat <= 0) return 'Нет жиров';
+        if (v >= fat * 0.6) return '✅ Полезных жиров ≥60%';
+        if (v >= fat * 0.4) return 'Полезные жиры в норме';
+        return '⚠️ Мало полезных жиров (<40%)';
+      
+      case 'trans':
+        if (v <= 0) return '✅ Без транс-жиров — идеально!';
+        if (v <= 0.5) return '⚠️ Есть транс-жиры (≤0.5г)';
+        return '❌ Транс-жиры опасны (>0.5г)';
+      
+      case 'fiber':
+        if (v <= 0) return 'Без клетчатки';
+        if (v >= 8) return '✅ Отлично! Много клетчатки (≥8г)';
+        if (v >= 4) return 'Клетчатка в норме';
+        if (kcal > 300 && v < 2) return '⚠️ Мало клетчатки для сытного приёма';
+        return 'Клетчатка';
+      
+      case 'gi':
+        if (carbs <= 5) return 'Мало углеводов — ГИ неважен';
+        if (v <= 40) return '✅ Низкий ГИ (≤40) — медленные углеводы';
+        if (v <= 55) return '✅ Умеренный ГИ (40-55)';
+        if (v <= 70) return '⚠️ Средний ГИ (55-70) — инсулин повышен';
+        return '❌ Высокий ГИ (>70) — быстрый сахар в крови';
+      
+      case 'harm':
+        if (v <= 0) return '✅ Полезная еда';
+        if (v <= 2) return '✅ Минимальный вред';
+        if (v <= 4) return 'Умеренный вред';
+        if (v <= 6) return '⚠️ Заметный вред (4-6)';
+        return '❌ Вредная еда (>6)';
+      
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Получить цвет для СУТОЧНОГО значения (сравнение факта с нормой)
+   * @param {string} nutrient - тип нутриента
+   * @param {number} fact - фактическое значение
+   * @param {number} norm - норма
+   * @returns {string|null} - цвет или null
+   */
+  function getDailyNutrientColor(nutrient, fact, norm) {
+    if (!norm || norm <= 0) return null;
+    const pct = fact / norm; // процент выполнения
+    
+    switch (nutrient) {
+      // === КАЛОРИИ — ключевой параметр ===
+      case 'kcal':
+        if (pct >= 0.90 && pct <= 1.10) return NUTRIENT_COLORS.good;  // 90-110% — идеально
+        if (pct >= 0.75 && pct <= 1.20) return NUTRIENT_COLORS.medium; // 75-120% — терпимо
+        return NUTRIENT_COLORS.bad;                                     // <75% или >120%
+      
+      // === БЕЛОК — чем больше, тем лучше (до 150%) ===
+      case 'prot':
+        if (pct >= 0.90 && pct <= 1.30) return NUTRIENT_COLORS.good;  // 90-130% — отлично
+        if (pct >= 0.70) return NUTRIENT_COLORS.medium;                // 70-90% — маловато
+        return NUTRIENT_COLORS.bad;                                     // <70% — критично мало
+      
+      // === УГЛЕВОДЫ — близко к норме ===
+      case 'carbs':
+        if (pct >= 0.85 && pct <= 1.15) return NUTRIENT_COLORS.good;
+        if (pct >= 0.60 && pct <= 1.30) return NUTRIENT_COLORS.medium;
+        return NUTRIENT_COLORS.bad;
+      
+      // === ПРОСТЫЕ — чем меньше, тем лучше ===
+      case 'simple':
+        if (pct <= 0.80) return NUTRIENT_COLORS.good;                  // <80% нормы — отлично
+        if (pct <= 1.10) return null;                                   // 80-110% — норма
+        if (pct <= 1.30) return NUTRIENT_COLORS.medium;                // 110-130% — многовато
+        return NUTRIENT_COLORS.bad;                                     // >130% — плохо
+      
+      // === СЛОЖНЫЕ — чем больше, тем лучше ===
+      case 'complex':
+        if (pct >= 1.00) return NUTRIENT_COLORS.good;                  // ≥100% — отлично
+        if (pct >= 0.70) return null;                                   // 70-100% — норма
+        return NUTRIENT_COLORS.medium;                                  // <70% — маловато
+      
+      // === ЖИРЫ — близко к норме ===
+      case 'fat':
+        if (pct >= 0.85 && pct <= 1.15) return NUTRIENT_COLORS.good;
+        if (pct >= 0.60 && pct <= 1.30) return NUTRIENT_COLORS.medium;
+        return NUTRIENT_COLORS.bad;
+      
+      // === ВРЕДНЫЕ ЖИРЫ — чем меньше, тем лучше ===
+      case 'bad':
+        if (pct <= 0.70) return NUTRIENT_COLORS.good;                  // <70% — отлично
+        if (pct <= 1.00) return null;                                   // 70-100% — норма
+        if (pct <= 1.30) return NUTRIENT_COLORS.medium;                // 100-130% — многовато
+        return NUTRIENT_COLORS.bad;                                     // >130%
+      
+      // === ПОЛЕЗНЫЕ ЖИРЫ — чем больше, тем лучше ===
+      case 'good':
+        if (pct >= 1.00) return NUTRIENT_COLORS.good;
+        if (pct >= 0.70) return null;
+        return NUTRIENT_COLORS.medium;
+      
+      // === ТРАНС-ЖИРЫ — чем меньше, тем лучше (особо вредные) ===
+      case 'trans':
+        if (pct <= 0.50) return NUTRIENT_COLORS.good;                  // <50% — отлично
+        if (pct <= 1.00) return NUTRIENT_COLORS.medium;                // 50-100%
+        return NUTRIENT_COLORS.bad;                                     // >100%
+      
+      // === КЛЕТЧАТКА — чем больше, тем лучше ===
+      case 'fiber':
+        if (pct >= 1.00) return NUTRIENT_COLORS.good;                  // ≥100% — отлично
+        if (pct >= 0.70) return null;                                   // 70-100% — норма
+        if (pct >= 0.40) return NUTRIENT_COLORS.medium;                // 40-70% — маловато
+        return NUTRIENT_COLORS.bad;                                     // <40%
+      
+      // === ГИ — чем ниже, тем лучше ===
+      case 'gi':
+        if (pct <= 0.80) return NUTRIENT_COLORS.good;                  // <80% от целевого
+        if (pct <= 1.10) return null;                                   // 80-110%
+        if (pct <= 1.30) return NUTRIENT_COLORS.medium;
+        return NUTRIENT_COLORS.bad;
+      
+      // === ВРЕДНОСТЬ — чем меньше, тем лучше ===
+      case 'harm':
+        if (pct <= 0.50) return NUTRIENT_COLORS.good;                  // <50% — отлично
+        if (pct <= 1.00) return null;                                   // 50-100% — норма
+        if (pct <= 1.50) return NUTRIENT_COLORS.medium;
+        return NUTRIENT_COLORS.bad;
+      
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Получить tooltip для СУТОЧНОГО значения
+   */
+  function getDailyNutrientTooltip(nutrient, fact, norm) {
+    if (!norm || norm <= 0) return 'Норма не задана';
+    const pct = Math.round((fact / norm) * 100);
+    const diff = fact - norm;
+    const diffStr = diff >= 0 ? '+' + Math.round(diff) : Math.round(diff);
+    
+    const baseInfo = `${Math.round(fact)} из ${Math.round(norm)} (${pct}%)`;
+    
+    switch (nutrient) {
+      case 'kcal':
+        if (pct >= 90 && pct <= 110) return `✅ Калории в норме: ${baseInfo}`;
+        if (pct < 90) return `⚠️ Недобор калорий: ${baseInfo}`;
+        return `❌ Перебор калорий: ${baseInfo}`;
+      
+      case 'prot':
+        if (pct >= 90) return `✅ Белок в норме: ${baseInfo}`;
+        if (pct >= 70) return `⚠️ Маловато белка: ${baseInfo}`;
+        return `❌ Мало белка: ${baseInfo}`;
+      
+      case 'carbs':
+        if (pct >= 85 && pct <= 115) return `✅ Углеводы в норме: ${baseInfo}`;
+        if (pct < 85) return `⚠️ Мало углеводов: ${baseInfo}`;
+        return `⚠️ Много углеводов: ${baseInfo}`;
+      
+      case 'simple':
+        if (pct <= 80) return `✅ Мало простых — отлично: ${baseInfo}`;
+        if (pct <= 110) return `Простые углеводы: ${baseInfo}`;
+        return `❌ Много простых углеводов: ${baseInfo}`;
+      
+      case 'complex':
+        if (pct >= 100) return `✅ Достаточно сложных: ${baseInfo}`;
+        return `Сложные углеводы: ${baseInfo}`;
+      
+      case 'fat':
+        if (pct >= 85 && pct <= 115) return `✅ Жиры в норме: ${baseInfo}`;
+        return `Жиры: ${baseInfo}`;
+      
+      case 'bad':
+        if (pct <= 70) return `✅ Мало вредных жиров: ${baseInfo}`;
+        if (pct <= 100) return `Вредные жиры: ${baseInfo}`;
+        return `❌ Много вредных жиров: ${baseInfo}`;
+      
+      case 'good':
+        if (pct >= 100) return `✅ Достаточно полезных жиров: ${baseInfo}`;
+        return `Полезные жиры: ${baseInfo}`;
+      
+      case 'trans':
+        if (pct <= 50) return `✅ Минимум транс-жиров: ${baseInfo}`;
+        return `❌ Транс-жиры: ${baseInfo}`;
+      
+      case 'fiber':
+        if (pct >= 100) return `✅ Достаточно клетчатки: ${baseInfo}`;
+        if (pct >= 70) return `Клетчатка: ${baseInfo}`;
+        return `⚠️ Мало клетчатки: ${baseInfo}`;
+      
+      case 'gi':
+        if (pct <= 80) return `✅ Низкий средний ГИ: ${baseInfo}`;
+        if (pct <= 110) return `Средний ГИ: ${baseInfo}`;
+        return `⚠️ Высокий средний ГИ: ${baseInfo}`;
+      
+      case 'harm':
+        if (pct <= 50) return `✅ Минимальный вред: ${baseInfo}`;
+        if (pct <= 100) return `Вредность: ${baseInfo}`;
+        return `❌ Высокая вредность: ${baseInfo}`;
+      
+      default:
+        return baseInfo;
+    }
+  }
+
+  function calcKcalScore(kcal, mealType, optimum, timeStr) {
+    const dist = MEAL_KCAL_DISTRIBUTION[mealType] || MEAL_KCAL_DISTRIBUTION.snack1;
+    const absLimits = MEAL_KCAL_ABSOLUTE[mealType] || MEAL_KCAL_ABSOLUTE.snack1;
+    const opt = optimum > 0 ? optimum : 2000;
+    const kcalPct = opt > 0 ? kcal / opt : 0;
+    
+    let points = 30;
+    let ok = true;
+    const issues = [];
+    
+    // === 1. Проверка по % от нормы ===
+    if (kcalPct > dist.maxPct) {
+      const excess = (kcalPct - dist.maxPct) / dist.maxPct;
+      // Более жёсткий штраф: каждые 50% превышения = -10 баллов
+      const penalty = Math.min(25, Math.round(excess * 50));
+      points -= penalty;
+      ok = false;
+      issues.push('превышение');
+    } else if (isMainMealType(mealType) && kcalPct < dist.minPct * 0.5) {
+      points -= 10;
+      issues.push('слишком мало');
+    }
+    
+    // === 2. Проверка абсолютных лимитов ===
+    if (kcal > absLimits.max) {
+      const absExcess = (kcal - absLimits.max) / absLimits.max;
+      // За каждые 100 ккал сверх лимита = -5 баллов
+      const absPenalty = Math.min(15, Math.round((kcal - absLimits.max) / 100) * 5);
+      points -= absPenalty;
+      ok = false;
+      issues.push('много ккал');
+    }
+    
+    // === 3. Жёсткий штраф за ночные приёмы ===
+    const parsed = parseTime(timeStr || '');
+    if (parsed) {
+      const hour = parsed.hh;
+      
+      // 22:00-05:00 — ночное время
+      if (hour >= 22 || hour < 5) {
+        // Ночью любой приём > 150 ккал — плохо
+        if (kcal > 150) {
+          const nightPenalty = Math.min(20, Math.round(kcal / 50));
+          points -= nightPenalty;
+          ok = false;
+          issues.push('ночь');
+        }
+        // Тяжёлый приём ночью (>400 ккал) — критично
+        if (kcal > 400) {
+          points -= 10; // дополнительно
+          issues.push('тяжёлая еда ночью');
+        }
+      }
+      // 21:00-22:00 — поздний вечер
+      else if (hour >= 21 && kcal > 300) {
+        const latePenalty = Math.min(10, Math.round(kcal / 100));
+        points -= latePenalty;
+        ok = false;
+        issues.push('поздно');
+      }
+    }
+    
+    return { points: Math.max(0, points), ok, issues };
+  }
+
+  function calcMacroScore(prot, carbs, fat, kcal, mealType, timeStr) {
+    const ideal = IDEAL_MACROS[mealType] || IDEAL_MACROS.snack;
+    let points = 20; // Базовые баллы (из 25)
+    let proteinOk = true;
+    const issues = [];
+    
+    // Минимум белка зависит от типа приёма
+    const minProt = ideal.minProt || 10;
+    if (prot >= minProt) {
+      points += 5; // ✅ Бонус за достаточный белок
+    } else if (isMainMealType(mealType)) {
+      points -= 10; // Штраф за недостаток белка в основных приёмах
+      proteinOk = false;
+      issues.push('мало белка');
+    }
+    
+    // Слишком много белка (>50г за приём) — неоптимально для усвоения
+    if (prot > 50) {
+      points -= 3;
+      issues.push('много белка');
+    }
+    
+    if (kcal > 0) {
+      const protPct = (prot * 4) / kcal;
+      const carbPct = (carbs * 4) / kcal;
+      const fatPct = (fat * 9) / kcal;
+      const deviation = Math.abs(protPct - ideal.protPct) + Math.abs(carbPct - ideal.carbPct) + Math.abs(fatPct - ideal.fatPct);
+      points -= Math.min(10, Math.round(deviation * 15)); // max -10
+      
+      // Штраф за много углеводов вечером/ночью
+      const parsed = parseTime(timeStr || '');
+      if (parsed && parsed.hh >= 20 && carbPct > 0.50) {
+        points -= 5;
+        issues.push('углеводы вечером');
+      }
+    }
+    
+    return { points: Math.max(0, Math.min(25, points)), proteinOk, issues };
+  }
+
+  function calcCarbQuality(simple, complex) {
+    const total = simple + complex;
+    const simpleRatio = safeRatio(simple, total, 0.5);
+    
+    let points = 15;
+    let ok = true;
+    
+    if (simpleRatio <= 0.30) {
+      points = 15;
+    } else if (simpleRatio <= 0.50) {
+      points = 10;
+      ok = simpleRatio <= 0.35;
+    } else if (simpleRatio <= 0.70) {
+      points = 5;
+      ok = false;
+    } else {
+      points = 0;
+      ok = false;
+    }
+    
+    return { points, simpleRatio, ok };
+  }
+
+  function calcFatQuality(bad, good, trans) {
+    const total = bad + good + trans;
+    const goodRatio = safeRatio(good, total, 0.5);
+    const badRatio = safeRatio(bad, total, 0.5);
+    
+    let points = 15;
+    let ok = true;
+    
+    if (goodRatio >= 0.60) {
+      points = 15;
+    } else if (goodRatio >= 0.40) {
+      points = 10;
+    } else {
+      points = 5;
+      ok = false;
+    }
+    
+    // Штраф за много плохих жиров (> 50%)
+    if (badRatio > 0.50) {
+      points -= 5;
+      ok = false;
+    }
+    
+    // Штраф за транс-жиры (> 0.5г)
+    if (trans > 0.5) {
+      points -= 5;
+      ok = false;
+    }
+    
+    return { points: Math.max(0, points), goodRatio, badRatio, ok };
+  }
+
+  function calcGiHarmScore(avgGI, avgHarm) {
+    let points = 15;
+    let ok = true;
+    
+    if (avgGI <= 55) {
+      points = 15;
+    } else if (avgGI <= 70) {
+      points = 10;
+    } else {
+      points = 5;
+      ok = false;
+    }
+    
+    if (avgHarm > 5) {
+      points -= Math.min(5, Math.round(avgHarm / 5));
+      ok = avgHarm <= 10;
+    }
+    
+    return { points: Math.max(0, points), ok };
+  }
+
+  function getMealQualityScore(meal, mealType, optimum, pIndex) {
+    if (!meal?.items || meal.items.length === 0) return null;
+    
+    const opt = optimum > 0 ? optimum : 2000;
+    const totals = M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal:0, carbs:0, simple:0, complex:0, prot:0, fat:0, bad:0, good:0, trans:0, fiber:0 };
+    
+    // GI взвешиваем по УГЛЕВОДАМ (не по граммам!) — для мяса/рыбы будет нейтральный 50
+    let gramSum = 0, carbSum = 0, giSum = 0, harmSum = 0;
+    (meal.items || []).forEach(it => {
+      const p = getProductFromItem(it, pIndex) || {};
+      const g = +it.grams || 0;
+      if (!g) return;
+      
+      // Вычисляем углеводы для взвешивания GI
+      const simple100 = +p.simple100 || 0;
+      const complex100 = +p.complex100 || 0;
+      const itemCarbs = (simple100 + complex100) * g / 100;
+      
+      const gi = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex ?? 50;
+      const harm = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct ?? 0;
+      
+      gramSum += g;
+      carbSum += itemCarbs;
+      giSum += gi * itemCarbs; // взвешиваем по углеводам!
+      harmSum += harm * g;
+    });
+    // Для мясных блюд (carbs ≈ 0) → нейтральный GI = 50
+    const avgGI = carbSum > 0 ? giSum / carbSum : 50;
+    const avgHarm = gramSum > 0 ? harmSum / gramSum : 0;
+    
+    const { kcal, prot, carbs, simple, complex, fat, bad, good, trans } = totals;
+    let score = 0;
+    const badges = [];
+    
+    const kcalScore = calcKcalScore(kcal, mealType, opt, meal.time);
+    score += kcalScore.points;
+    if (!kcalScore.ok) badges.push({ type: 'К', ok: false });
+    // Бейдж за ночное/позднее время
+    if (kcalScore.issues?.includes('ночь') || kcalScore.issues?.includes('тяжёлая еда ночью')) {
+      badges.push({ type: '🌙', ok: false, label: 'Поздно' });
+    } else if (kcalScore.issues?.includes('поздно')) {
+      badges.push({ type: '⏰', ok: false, label: 'Вечер' });
+    }
+    
+    const macroScore = calcMacroScore(prot, carbs, fat, kcal, mealType, meal.time);
+    score += macroScore.points;
+    if (!macroScore.proteinOk) badges.push({ type: 'Б', ok: false });
+    if (macroScore.issues?.includes('углеводы вечером')) badges.push({ type: 'У⬇', ok: false, label: 'Угл вечером' });
+    
+    const carbScore = calcCarbQuality(simple, complex);
+    score += carbScore.points;
+    
+    const fatScore = calcFatQuality(bad, good, trans);
+    score += fatScore.points;
+    if (trans > 0.5) badges.push({ type: 'ТЖ', ok: false });
+    
+    const giHarmScore = calcGiHarmScore(avgGI, avgHarm);
+    score += giHarmScore.points;
+    if (avgGI > 70) badges.push({ type: 'ГИ', ok: false });
+    if (avgHarm > 10) badges.push({ type: 'Вр', ok: false });
+    
+    // === БОНУСЫ (до +10 сверх 100) ===
+    let bonusPoints = 0;
+    const positiveBadges = [];
+    
+    // Парсим время для бонусов
+    const timeParsed = parseTime(meal.time || '');
+    const hour = timeParsed?.hh || 12;
+    
+    // Бонус за ранний завтрак (7:00-9:00 для breakfast)
+    if (mealType === 'breakfast' && hour >= 7 && hour <= 9) {
+      bonusPoints += 2;
+      positiveBadges.push({ type: '🌅', ok: true, label: 'Ранний завтрак' });
+    }
+    
+    // Бонус за оптимальное время обеда (12:00-14:00)
+    if (mealType === 'lunch' && hour >= 12 && hour <= 14) {
+      bonusPoints += 1;
+    }
+    
+    // Бонус за ранний ужин (18:00-19:30)
+    if (mealType === 'dinner' && hour >= 18 && hour < 20) {
+      bonusPoints += 2;
+      positiveBadges.push({ type: '🌇', ok: true, label: 'Ранний ужин' });
+    }
+    
+    // Бонус за клетчатку (2г+ в приёме = хорошо)
+    const fiber = totals.fiber || 0;
+    if (fiber >= 5) {
+      bonusPoints += 3;
+      positiveBadges.push({ type: '🥗', ok: true, label: 'Клетчатка' });
+    } else if (fiber >= 2) {
+      bonusPoints += 1;
+    }
+    
+    // Бонус за разнообразие (4+ продукта)
+    const itemCount = (meal.items || []).length;
+    if (itemCount >= 4) {
+      bonusPoints += 2;
+      positiveBadges.push({ type: '🌈', ok: true, label: 'Разнообразие' });
+    }
+    
+    // Бонус за идеальный белок (зависит от типа приёма)
+    const ideal = IDEAL_MACROS[mealType] || IDEAL_MACROS.snack;
+    const idealProtMin = ideal.minProt || 10;
+    const idealProtMax = idealProtMin * 2.5; // Например, для обеда 25-62г
+    if (prot >= idealProtMin && prot <= idealProtMax && macroScore.proteinOk) {
+      bonusPoints += 2;
+      positiveBadges.push({ type: '💪', ok: true, label: 'Белок' });
+    }
+    
+    // Бонус за низкий ГИ (<50)
+    if (avgGI <= 50 && carbSum > 5) {
+      bonusPoints += 2;
+      positiveBadges.push({ type: '🎯', ok: true, label: 'Низкий ГИ' });
+    }
+    
+    // Бонус за сбалансированный приём (все показатели в норме)
+    if (kcalScore.ok && macroScore.proteinOk && carbScore.ok && fatScore.ok && giHarmScore.ok) {
+      bonusPoints += 3;
+      positiveBadges.push({ type: '⭐', ok: true, label: 'Баланс' });
+    }
+    
+    score += Math.min(10, bonusPoints); // Max +10 бонус
+    
+    // Финальный score: 0-110 (100 base + 10 bonus) → нормализуем до 0-100
+    const finalScore = Math.min(100, Math.round(score));
+    
+    const color = finalScore >= 80 ? '#22c55e' : finalScore >= 50 ? '#eab308' : '#ef4444';
+    
+    // Определяем статус времени
+    const timeIssue = kcalScore.issues?.includes('ночь') || kcalScore.issues?.includes('тяжёлая еда ночью');
+    const lateIssue = kcalScore.issues?.includes('поздно');
+    const timeOk = !timeIssue && !lateIssue;
+    const timeValue = timeIssue ? '⚠️ ночь' : lateIssue ? 'поздно' : '✓';
+    
+    const details = [
+      { label: 'Калории', value: Math.round(kcal) + ' ккал', ok: kcalScore.ok },
+      { label: 'Время', value: timeValue, ok: timeOk },
+      { label: 'Белок', value: Math.round(prot) + 'г', ok: macroScore.proteinOk },
+      { label: 'Углеводы', value: carbScore.simpleRatio <= 0.3 ? 'сложные ✓' : Math.round(carbScore.simpleRatio * 100) + '% простых', ok: carbScore.ok },
+      { label: 'Жиры', value: fatScore.goodRatio >= 0.6 ? 'полезные ✓' : Math.round(fatScore.goodRatio * 100) + '% полезных', ok: fatScore.ok },
+      { label: 'ГИ', value: Math.round(avgGI), ok: avgGI <= 70 },
+      { label: 'Клетчатка', value: Math.round(fiber) + 'г', ok: fiber >= 2 }
+    ];
+    
+    // Объединяем бейджи: сначала проблемы, потом позитивные
+    const allBadges = [...badges.slice(0, 2), ...positiveBadges.slice(0, 1)];
+    
+    return {
+      score: finalScore,
+      color,
+      badges: allBadges.slice(0, 3),
+      details,
+      avgGI,
+      avgHarm,
+      fiber,
+      bonusPoints
+    };
+  }
 
   // showMealQualityDetails удалена - используется mealQualityPopup state
 
