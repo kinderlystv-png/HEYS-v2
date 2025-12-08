@@ -1,18 +1,5 @@
 // heys_app_v12.js — Main app entry, React root, tab navigation, Supabase integration
 
-      // Service Worker отключен для dev режима
-      // if ('serviceWorker' in navigator) {
-      //   window.addEventListener('load', () => {
-      //     navigator.serviceWorker.register('/sw.js')
-      //       .then((registration) => {
-      //         console.log('✅ SW: Registered successfully', registration.scope);
-      //       })
-      //       .catch((error) => {
-      //         console.log('❌ SW: Registration failed', error);
-      //       });
-      //   });
-      // }
-
       (function () {
         const HEYS = window.HEYS = window.HEYS || {};
         
@@ -21,6 +8,292 @@
         const VERSION_KEY = 'heys_app_version';
         
         HEYS.version = APP_VERSION;
+        
+        // === Update UI ===
+        // Красивая модалка для показа процесса обновления
+        function showUpdateModal(stage = 'checking') {
+          // Удаляем предыдущую если есть
+          document.getElementById('heys-update-modal')?.remove();
+          
+          const stages = {
+            checking: { icon: '🔍', title: 'Проверка обновлений', subtitle: 'Подождите...' },
+            found: { icon: '🆕', title: 'Найдено обновление!', subtitle: 'Загружаем новую версию...' },
+            downloading: { icon: '📥', title: 'Загрузка', subtitle: 'Это займёт пару секунд...' },
+            installing: { icon: '⚙️', title: 'Установка', subtitle: 'Почти готово...' },
+            ready: { icon: '✨', title: 'Готово!', subtitle: 'Приложение обновлено' },
+            reloading: { icon: '🔄', title: 'Перезагрузка', subtitle: 'Применяем изменения...' }
+          };
+          
+          const s = stages[stage] || stages.checking;
+          
+          const modal = document.createElement('div');
+          modal.id = 'heys-update-modal';
+          modal.innerHTML = `
+            <style>
+              @keyframes heys-update-pulse {
+                0%, 100% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.1); opacity: 0.8; }
+              }
+              @keyframes heys-update-spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+              @keyframes heys-update-progress {
+                0% { width: 0%; }
+                100% { width: 100%; }
+              }
+              @keyframes heys-update-fade-in {
+                from { opacity: 0; transform: scale(0.9); }
+                to { opacity: 1; transform: scale(1); }
+              }
+            </style>
+            <div style="
+              position: fixed; inset: 0;
+              background: rgba(0, 0, 0, 0.7);
+              backdrop-filter: blur(8px);
+              display: flex; align-items: center; justify-content: center;
+              z-index: 999999;
+              animation: heys-update-fade-in 0.3s ease-out;
+            ">
+              <div style="
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                border-radius: 24px;
+                padding: 40px;
+                text-align: center;
+                max-width: 320px;
+                margin: 20px;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                border: 1px solid rgba(255,255,255,0.1);
+              ">
+                <div id="heys-update-icon" style="
+                  font-size: 64px;
+                  margin-bottom: 20px;
+                  animation: ${stage === 'reloading' ? 'heys-update-spin 1s linear infinite' : 'heys-update-pulse 2s ease-in-out infinite'};
+                ">${s.icon}</div>
+                
+                <h2 id="heys-update-title" style="
+                  color: white;
+                  font-size: 22px;
+                  font-weight: 600;
+                  margin: 0 0 8px 0;
+                  font-family: system-ui, -apple-system, sans-serif;
+                ">${s.title}</h2>
+                
+                <p id="heys-update-subtitle" style="
+                  color: rgba(255,255,255,0.7);
+                  font-size: 14px;
+                  margin: 0 0 24px 0;
+                  font-family: system-ui, -apple-system, sans-serif;
+                ">${s.subtitle}</p>
+                
+                <!-- Progress bar -->
+                <div style="
+                  background: rgba(255,255,255,0.1);
+                  border-radius: 10px;
+                  height: 6px;
+                  overflow: hidden;
+                  margin-bottom: 16px;
+                ">
+                  <div id="heys-update-progress" style="
+                    height: 100%;
+                    background: linear-gradient(90deg, #667eea, #764ba2);
+                    border-radius: 10px;
+                    width: ${stage === 'checking' ? '20%' : stage === 'found' ? '40%' : stage === 'downloading' ? '60%' : stage === 'installing' ? '80%' : '100%'};
+                    transition: width 0.5s ease-out;
+                  "></div>
+                </div>
+                
+                <p style="
+                  color: rgba(255,255,255,0.4);
+                  font-size: 11px;
+                  margin: 0;
+                ">Версия ${APP_VERSION}</p>
+              </div>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          return modal;
+        }
+        
+        // Обновить стадию в модалке
+        function updateModalStage(stage) {
+          const stages = {
+            checking: { icon: '🔍', title: 'Проверка обновлений', subtitle: 'Подождите...', progress: 20 },
+            found: { icon: '🆕', title: 'Найдено обновление!', subtitle: 'Загружаем новую версию...', progress: 40 },
+            downloading: { icon: '📥', title: 'Загрузка', subtitle: 'Это займёт пару секунд...', progress: 60 },
+            installing: { icon: '⚙️', title: 'Установка', subtitle: 'Почти готово...', progress: 80 },
+            ready: { icon: '✨', title: 'Готово!', subtitle: 'Приложение обновлено', progress: 100 },
+            reloading: { icon: '🔄', title: 'Перезагрузка', subtitle: 'Применяем изменения...', progress: 100 }
+          };
+          
+          const s = stages[stage];
+          if (!s) return;
+          
+          const icon = document.getElementById('heys-update-icon');
+          const title = document.getElementById('heys-update-title');
+          const subtitle = document.getElementById('heys-update-subtitle');
+          const progress = document.getElementById('heys-update-progress');
+          
+          if (icon) {
+            icon.textContent = s.icon;
+            icon.style.animation = stage === 'reloading' 
+              ? 'heys-update-spin 1s linear infinite' 
+              : 'heys-update-pulse 2s ease-in-out infinite';
+          }
+          if (title) title.textContent = s.title;
+          if (subtitle) subtitle.textContent = s.subtitle;
+          if (progress) progress.style.width = s.progress + '%';
+        }
+        
+        // Скрыть модалку
+        function hideUpdateModal() {
+          const modal = document.getElementById('heys-update-modal');
+          if (modal) {
+            modal.style.opacity = '0';
+            modal.style.transition = 'opacity 0.3s';
+            setTimeout(() => modal.remove(), 300);
+          }
+        }
+
+        // === Service Worker Registration (Production) ===
+        function registerServiceWorker() {
+          if (!('serviceWorker' in navigator)) return;
+          
+          // Всегда регистрируем SW (и для dev, и для prod)
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('[SW] ✅ Registered successfully');
+              
+              // Сохраняем регистрацию для Background Sync
+              window.swRegistration = registration;
+              
+              // Background Sync — регистрируем при изменениях данных
+              window.requestBackgroundSync = function() {
+                if ('sync' in registration) {
+                  registration.sync.register('heys-sync')
+                    .then(function() { console.log('[SW] Background sync scheduled'); })
+                    .catch(function() { /* Background sync not available */ });
+                }
+              };
+              
+              // Проверяем обновления каждые 60 секунд
+              setInterval(() => {
+                registration.update().catch(() => {});
+              }, 60000);
+              
+              // Слушаем обновления
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                console.log('[SW] 🔄 New version downloading...');
+                
+                // Показываем UI обновления
+                showUpdateModal('downloading');
+                
+                newWorker?.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('[SW] 🎉 New version ready!');
+                    // Плавно обновляем UI и перезагружаем
+                    updateModalStage('installing');
+                    setTimeout(() => {
+                      updateModalStage('ready');
+                      setTimeout(() => {
+                        updateModalStage('reloading');
+                        forceUpdateAndReload(false); // false = не показывать модалку повторно
+                      }, 800);
+                    }, 600);
+                  }
+                });
+              });
+            })
+            .catch((error) => {
+              console.log('[SW] ❌ Registration failed', error);
+            });
+          
+          // Слушаем сообщения от SW
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data?.type === 'SYNC_START' && window.HEYS?.cloud?.sync) {
+              window.HEYS.cloud.sync();
+            }
+            if (event.data?.type === 'SYNC_COMPLETE') {
+              window.dispatchEvent(new CustomEvent('heys:sync-complete'));
+            }
+          });
+          
+          // Слушаем контроллер изменений (когда SW взял контроль)
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('[SW] Controller changed, reloading...');
+            window.location.reload();
+          });
+        }
+        
+        // === Принудительное обновление ===
+        function forceUpdateAndReload(showModal = true) {
+          console.log('[HEYS] 🔄 Forcing update and reload...');
+          
+          if (showModal) {
+            showUpdateModal('reloading');
+          }
+          
+          // Запоминаем старую версию, чтобы после перезагрузки runVersionGuard увидел рассинхрон
+          // и выполнил auto-logout + баннер об обновлении
+          localStorage.setItem(VERSION_KEY, APP_VERSION);
+          
+          // Активируем новый SW
+          if (navigator.serviceWorker?.controller) {
+            navigator.serviceWorker.controller.postMessage('skipWaiting');
+          }
+          
+          // Перезагружаем через 800ms (даём время увидеть анимацию)
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
+        }
+        
+        // === Проверка версии с сервера (обход кэша) ===
+        async function checkServerVersion(silent = true) {
+          try {
+            // Загружаем version.json который генерируется при каждом билде
+            const cacheBust = Date.now();
+            const response = await fetch(`/version.json?_cb=${cacheBust}`, {
+              cache: 'no-store',
+              headers: { 'Cache-Control': 'no-cache' }
+            });
+            
+            if (!response.ok) return false;
+            
+            const data = await response.json();
+            
+            if (data.version && data.version !== APP_VERSION) {
+              console.log(`[HEYS] 🆕 Server has new version: ${data.version} (current: ${APP_VERSION})`);
+              
+              // Показываем красивый UI обновления
+              showUpdateModal('found');
+              
+              setTimeout(() => {
+                updateModalStage('downloading');
+                setTimeout(() => {
+                  updateModalStage('installing');
+                  setTimeout(() => {
+                    updateModalStage('ready');
+                    setTimeout(() => {
+                      updateModalStage('reloading');
+                      forceUpdateAndReload(false);
+                    }, 800);
+                  }, 600);
+                }, 800);
+              }, 600);
+              
+              return true;
+            } else {
+              console.log(`[HEYS] ✅ Version up-to-date: ${APP_VERSION}`);
+              return false;
+            }
+          } catch (e) {
+            console.log('[HEYS] ⚠️ Version check failed (offline?)');
+            return false;
+          }
+        }
         
         function runVersionGuard() {
           const storedVersion = localStorage.getItem(VERSION_KEY);
@@ -34,24 +307,31 @@
               console.log('[HEYS] 🚪 Auto-logout on version update');
             }
             
-            // Показать баннер
+            // Показать баннер об успешном обновлении (после перезагрузки)
             setTimeout(() => {
               const banner = document.createElement('div');
               banner.id = 'heys-update-banner';
               banner.innerHTML = `
                 <div style="
                   position: fixed; top: 0; left: 0; right: 0;
-                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
                   color: white; padding: 12px 16px;
                   display: flex; align-items: center; justify-content: space-between;
                   z-index: 99999; font-family: system-ui, sans-serif;
                   box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                  animation: slideDown 0.3s ease-out;
                 ">
+                  <style>
+                    @keyframes slideDown {
+                      from { transform: translateY(-100%); }
+                      to { transform: translateY(0); }
+                    }
+                  </style>
                   <div>
-                    <strong>🎉 HEYS обновлён до v${APP_VERSION}</strong>
-                    <div style="font-size: 12px; opacity: 0.9;">Пожалуйста, войдите заново</div>
+                    <strong>✨ HEYS обновлён!</strong>
+                    <span style="font-size: 12px; opacity: 0.9; margin-left: 8px;">v${APP_VERSION}</span>
                   </div>
-                  <button onclick="document.getElementById('heys-update-banner').remove()" 
+                  <button onclick="this.parentElement.style.transform='translateY(-100%)'; setTimeout(() => document.getElementById('heys-update-banner').remove(), 300)" 
                     style="background: rgba(255,255,255,0.2); border: none; color: white; 
                     padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">
                     ✕
@@ -59,11 +339,43 @@
                 </div>
               `;
               document.body.prepend(banner);
+              
+              // Автоскрытие через 5 секунд
+              setTimeout(() => {
+                const b = document.getElementById('heys-update-banner');
+                if (b) {
+                  b.querySelector('div').style.transform = 'translateY(-100%)';
+                  b.querySelector('div').style.transition = 'transform 0.3s';
+                  setTimeout(() => b.remove(), 300);
+                }
+              }, 5000);
             }, 500);
           }
           
           localStorage.setItem(VERSION_KEY, APP_VERSION);
+          
+          // Регистрируем SW
+          registerServiceWorker();
+          
+          // Проверяем версию с сервера (с небольшой задержкой, чтобы не блокировать загрузку)
+          setTimeout(checkServerVersion, 3000);
         }
+        
+        // Экспорт для ручного вызова
+        HEYS.checkForUpdates = () => {
+          showUpdateModal('checking');
+          setTimeout(async () => {
+            const hasUpdate = await checkServerVersion(false);
+            if (!hasUpdate) {
+              updateModalStage('ready');
+              document.getElementById('heys-update-title').textContent = 'Всё актуально!';
+              document.getElementById('heys-update-subtitle').textContent = 'У вас последняя версия';
+              document.getElementById('heys-update-icon').textContent = '✅';
+              setTimeout(hideUpdateModal, 1500);
+            }
+          }, 800);
+        };
+        
         // === Mobile Debug Panel ===
         // Тройной тап на заголовок покажет дебаг-панель (для отладки на телефоне)
         function bootstrapGlobals() {

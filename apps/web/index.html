@@ -258,70 +258,8 @@
     <script defer src="heys_user_v12.js?v=2" fetchpriority="low"></script>
     <script defer src="heys_reports_v12.js?v=2" fetchpriority="low"></script>
     <script defer src="heys_data_overview_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_app_v12.js?v=13" fetchpriority="high"></script>
+    <script defer src="heys_app_v12.js?v=16" fetchpriority="high"></script>
     
-    <!-- Service Worker Registration (PWA offline support) -->
-    <!-- Только в production (не localhost) чтобы избежать конфликтов с Vite HMR -->
-    <script>
-      if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js')
-            .then(function(registration) {
-              console.log('[App] SW registered, scope:', registration.scope);
-              
-              // Сохраняем регистрацию для Background Sync
-              window.swRegistration = registration;
-              
-              // Проверка обновлений каждые 60 минут
-              setInterval(function() {
-                registration.update();
-              }, 60 * 60 * 1000);
-              
-              // Уведомление о новой версии
-              registration.addEventListener('updatefound', function() {
-                var newWorker = registration.installing;
-                newWorker.addEventListener('statechange', function() {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // Новая версия готова
-                    console.log('[App] New version available!');
-                    // Можно показать toast "Доступно обновление"
-                    if (window.HEYS && window.HEYS.showUpdateToast) {
-                      window.HEYS.showUpdateToast();
-                    }
-                  }
-                });
-              });
-              
-              // Background Sync — регистрируем при изменениях данных
-              window.requestBackgroundSync = function() {
-                if ('sync' in registration) {
-                  registration.sync.register('heys-sync')
-                    .then(function() { console.log('[App] Background sync scheduled'); })
-                    .catch(function() { console.log('[App] Background sync not available'); });
-                }
-              };
-            })
-            .catch(function(error) {
-              console.warn('[App] SW registration failed:', error);
-            });
-            
-          // Обработка сообщений от Service Worker
-          navigator.serviceWorker.addEventListener('message', function(event) {
-            if (event.data.type === 'SYNC_START') {
-              console.log('[App] Background sync starting...');
-              // Триггерим синхронизацию через HEYS.cloud
-              if (window.HEYS && window.HEYS.cloud && window.HEYS.cloud.sync) {
-                window.HEYS.cloud.sync();
-              }
-            }
-            
-            if (event.data.type === 'SYNC_COMPLETE') {
-              console.log('[App] Background sync complete');
-              window.dispatchEvent(new CustomEvent('heys:sync-complete'));
-            }
-          });
-        });
-      }
-    </script>
+    <!-- Service Worker регистрируется в heys_app_v12.js → registerServiceWorker() -->
   </body>
 </html>

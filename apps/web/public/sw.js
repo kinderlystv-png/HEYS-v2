@@ -100,6 +100,14 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// === MESSAGE: Обработка сообщений от клиента ===
+self.addEventListener('message', (event) => {
+  if (event.data === 'skipWaiting') {
+    console.log('[SW] skipWaiting requested');
+    self.skipWaiting();
+  }
+});
+
 // === FETCH: Стратегии кэширования ===
 self.addEventListener('fetch', (event) => {
   const { request } = event;
@@ -110,6 +118,12 @@ self.addEventListener('fetch', (event) => {
   
   // Пропускаем chrome-extension и другие нестандартные протоколы
   if (!url.protocol.startsWith('http')) return;
+  
+  // === version.json — ВСЕГДА с сервера (для проверки обновлений) ===
+  if (url.pathname === '/version.json') {
+    event.respondWith(fetch(request));
+    return;
+  }
   
   // === API запросы (Supabase) — Network First ===
   if (url.hostname.includes('supabase') || url.pathname.startsWith('/api/')) {

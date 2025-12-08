@@ -6,6 +6,9 @@
  * - Git commit hash (если доступен)
  * 
  * Формат: YYYY.MM.DD.HHMM или git short hash
+ * 
+ * Также создаёт:
+ * - /public/version.json — для проверки версии с сервера (PWA forced update)
  */
 
 const fs = require('fs');
@@ -13,6 +16,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const APP_FILE = path.join(__dirname, '..', 'heys_app_v12.js');
+const VERSION_JSON = path.join(__dirname, '..', 'public', 'version.json');
 
 // Получаем git short hash если доступен
 function getGitHash() {
@@ -38,9 +42,8 @@ function generateVersion() {
 function updateVersion() {
   const newVersion = generateVersion();
   
+  // 1. Обновляем APP_VERSION в heys_app_v12.js
   let content = fs.readFileSync(APP_FILE, 'utf8');
-  
-  // Заменяем APP_VERSION = 'xxx' на новую версию
   const versionRegex = /const APP_VERSION = '[^']+'/;
   
   if (versionRegex.test(content)) {
@@ -50,6 +53,16 @@ function updateVersion() {
   } else {
     console.log('⚠️ APP_VERSION not found in file');
   }
+  
+  // 2. Создаём version.json для проверки с сервера (PWA forced update)
+  const versionData = {
+    version: newVersion,
+    buildTime: new Date().toISOString(),
+    hash: getGitHash() || 'unknown'
+  };
+  
+  fs.writeFileSync(VERSION_JSON, JSON.stringify(versionData, null, 2));
+  console.log(`✅ version.json created: ${newVersion}`);
   
   return newVersion;
 }
