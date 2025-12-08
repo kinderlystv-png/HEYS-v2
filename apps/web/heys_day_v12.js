@@ -11736,7 +11736,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 if (heading) {
                   heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
-                setTimeout(() => addMeal(), 400);
+                setTimeout(() => addMeal(), 500);
               }, 200);
             } else {
               // Уже на diary — сразу скроллим и открываем
@@ -11744,7 +11744,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               if (heading) {
                 heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }
-              setTimeout(() => addMeal(), 300);
+              setTimeout(() => addMeal(), 500);
             }
           },
           'aria-label': 'Добавить приём пищи'
