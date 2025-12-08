@@ -831,6 +831,15 @@
       
       console.log('[CreateProductStep] Продукт сохранён:', parsedPreview.name, 'Всего продуктов:', newProducts.length);
       
+      // 🔄 Пересчитываем orphan-продукты (новый продукт мог быть orphan)
+      if (HEYS.orphanProducts?.recalculate) {
+        HEYS.orphanProducts.recalculate();
+      }
+      // Также удаляем конкретно этот продукт из orphan (на случай если recalculate не сработал)
+      if (HEYS.orphanProducts?.remove && parsedPreview.name) {
+        HEYS.orphanProducts.remove(parsedPreview.name);
+      }
+      
       // 2. Вызываем callback если есть (для обновления списка в родителе)
       if (context?.onProductCreated) {
         context.onProductCreated(parsedPreview);

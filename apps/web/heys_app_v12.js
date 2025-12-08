@@ -4386,11 +4386,11 @@
                 React.createElement(
                   'div',
                   { className: 'tabs' },
-                  // Рацион — только для десктопа
+                  // Рацион — доступен на всех устройствах
                   React.createElement(
                     'div',
                     {
-                      className: 'tab tab-desktop-only ' + (tab === 'ration' ? 'active' : ''),
+                      className: 'tab ' + (tab === 'ration' ? 'active' : ''),
                       onClick: () => setTab('ration'),
                     },
                     React.createElement('span', { className: 'tab-icon' }, '🗂️'),

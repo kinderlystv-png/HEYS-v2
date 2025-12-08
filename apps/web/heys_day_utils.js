@@ -55,9 +55,43 @@
       orphanProductsMap.clear();
     },
     
-    // Удалить конкретный (если продукт добавили обратно в базу)
-    remove(productId) {
-      orphanProductsMap.delete(String(productId));
+    // Удалить конкретный по имени (если продукт добавили обратно в базу)
+    remove(productName) {
+      const name = String(productName || '').trim();
+      if (name) {
+        orphanProductsMap.delete(name);
+        // Также пробуем lowercase
+        orphanProductsMap.delete(name.toLowerCase());
+      }
+    },
+    
+    // Пересчитать orphan-продукты на основе актуальной базы
+    // Вызывается после добавления продукта или удаления item из meal
+    recalculate() {
+      if (!global.HEYS?.products?.getAll) return;
+      
+      const products = global.HEYS.products.getAll();
+      const productNames = new Set(
+        products.map(p => String(p.name || '').trim().toLowerCase()).filter(Boolean)
+      );
+      
+      const beforeCount = orphanProductsMap.size;
+      
+      // Удаляем из orphan те, что теперь есть в базе
+      for (const [name] of orphanProductsMap) {
+        if (productNames.has(name.toLowerCase())) {
+          orphanProductsMap.delete(name);
+        }
+      }
+      
+      const afterCount = orphanProductsMap.size;
+      
+      // Если количество изменилось — диспатчим событие для обновления UI
+      if (beforeCount !== afterCount && typeof global.dispatchEvent === 'function') {
+        global.dispatchEvent(new CustomEvent('heys:orphan-updated', { 
+          detail: { count: afterCount, removed: beforeCount - afterCount } 
+        }));
+      }
     },
     
     // Показать в консоли красивую таблицу
@@ -825,7 +859,26 @@
           
           // Ищем в productsMap по названию, потом fallback на inline данные item
           const itemName = String(item.name || '').trim();
-          const product = itemName ? productsMap.get(itemName) : null;
+          let product = itemName ? productsMap.get(itemName) : null;
+          
+          // 🔄 Fallback: если не найден в переданном productsMap, проверяем актуальную базу
+          // Это решает проблему когда продукт только что добавлен но props ещё не обновились
+          if (!product && itemName && global.HEYS?.products?.getAll) {
+            const freshProducts = global.HEYS.products.getAll();
+            const freshProduct = freshProducts.find(p => 
+              String(p.name || '').trim().toLowerCase() === itemName.toLowerCase()
+            );
+            if (freshProduct) {
+              product = freshProduct;
+              // Добавляем в productsMap для следующих итераций
+              productsMap.set(itemName, freshProduct);
+              // Убираем из orphan если был там
+              if (orphanProductsMap.has(itemName)) {
+                orphanProductsMap.delete(itemName);
+              }
+            }
+          }
+          
           const src = product || item; // item может иметь inline kcal100, protein100 и т.д.
           
           // Трекаем orphan-продукты (когда используется штамп вместо базы)

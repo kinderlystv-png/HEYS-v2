@@ -4643,7 +4643,14 @@
       setDay(prevDay => {
         const meals=(prevDay.meals||[]).map((m,i)=> i===mi? {...m, items:(m.items||[]).filter(it=>it.id!==itId)}:m); 
         return {...prevDay, meals}; 
-      }); 
+      });
+      // 🔄 Пересчитываем orphan-продукты после удаления item
+      // (возможно этот item был единственным использованием orphan продукта)
+      setTimeout(() => {
+        if (window.HEYS?.orphanProducts?.recalculate) {
+          window.HEYS.orphanProducts.recalculate();
+        }
+      }, 100);
     }, [haptic, setDay]);
     const updateMealField = React.useCallback((mealIndex, field, value) => {
       setDay(prevDay => {
@@ -5685,6 +5692,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       };
       window.addEventListener('heysCelebrate', handleCelebrate);
       return () => window.removeEventListener('heysCelebrate', handleCelebrate);
+    }, []);
+    
+    // 🔄 Orphan products state — обновляется при добавлении/удалении продуктов
+    const [orphanVersion, setOrphanVersion] = React.useState(0);
+    React.useEffect(() => {
+      const handleOrphanUpdated = () => {
+        setOrphanVersion(v => v + 1);
+      };
+      window.addEventListener('heys:orphan-updated', handleOrphanUpdated);
+      // Также слушаем heysProductsUpdated — когда продукты обновились
+      window.addEventListener('heysProductsUpdated', () => {
+        // Пересчитываем orphan при обновлении продуктов
+        if (window.HEYS?.orphanProducts?.recalculate) {
+          window.HEYS.orphanProducts.recalculate();
+        }
+      });
+      return () => {
+        window.removeEventListener('heys:orphan-updated', handleOrphanUpdated);
+      };
     }, []);
     
     // Trigger на открытие вкладки
@@ -9245,7 +9271,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     );
     
     // === ALERT: Orphan-продукты (данные из штампа вместо базы) ===
-    const orphanCount = HEYS.orphanProducts?.count?.() || 0;
+    // orphanVersion используется для триггера ререндера при изменении orphan
+    const orphanCount = React.useMemo(() => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      void orphanVersion; // Зависимость для пересчёта
+      return HEYS.orphanProducts?.count?.() || 0;
+    }, [orphanVersion, day.meals]); // Пересчитываем при изменении orphanVersion или meals
+    
     const orphanAlert = orphanCount > 0 && React.createElement('div', {
       className: 'orphan-alert compact-card',
       style: {
