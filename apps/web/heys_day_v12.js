@@ -4442,6 +4442,16 @@
       setEditingMealIndex(null);
       setEditMode('new');
     }
+    
+    // Вспомогательная функция: плавная прокрутка к заголовку дневника
+    const scrollToDiaryHeading = React.useCallback(() => {
+      setTimeout(() => {
+        const heading = document.getElementById('diary-heading');
+        if (heading) {
+          heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }, []);
 
     // addMeal теперь открывает новую модульную модалку
     const addMeal = React.useCallback(() => { 
@@ -4514,6 +4524,8 @@
                         try {
                           U.lsSet(`heys_last_grams_${productId}`, grams);
                         } catch(e) {}
+                        // Прокручиваем к дневнику после добавления продукта
+                        scrollToDiaryHeading();
                       },
                       onNewProduct: () => {
                         if (window.HEYS?.products?.showAddModal) {

@@ -581,12 +581,14 @@
     document.body.style.top = `-${window.scrollY}px`;
 
     const handleComplete = (data) => {
-      hideStepModal();
+      // Для приёмов пищи и продуктов — прокрутка к дневнику
+      hideStepModal({ scrollToDiary: options.scrollToDiary !== false });
       options.onComplete && options.onComplete(data);
     };
 
     const handleClose = () => {
-      hideStepModal();
+      // При закрытии без сохранения тоже прокручиваем к дневнику
+      hideStepModal({ scrollToDiary: options.scrollToDiary !== false });
       options.onClose && options.onClose();
     };
 
@@ -599,15 +601,24 @@
     ReactDOM.render(currentModalElement, modalRoot);
   }
 
-  function hideStepModal() {
+  function hideStepModal(options = {}) {
     // 🔓 Восстанавливаем прокрутку body при закрытии
     const scrollY = document.body.style.top;
     document.body.style.overflow = '';
     document.body.style.position = '';
     document.body.style.width = '';
     document.body.style.top = '';
-    // Возвращаем скролл на место
-    if (scrollY) {
+    
+    // Если указано scrollToDiary — прокручиваем к заголовку дневника
+    if (options.scrollToDiary) {
+      setTimeout(() => {
+        const heading = document.getElementById('diary-heading');
+        if (heading) {
+          heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 50);
+    } else if (scrollY) {
+      // Иначе возвращаем скролл на старое место
       window.scrollTo(0, parseInt(scrollY || '0') * -1);
     }
     
