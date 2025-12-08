@@ -1085,9 +1085,10 @@
   font-size: 14px;
   font-weight: 500;
   color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Разрешаем перенос строки чтобы видеть полное название */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.3;
 }
 
 .aps-product-meta {
