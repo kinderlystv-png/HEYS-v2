@@ -497,16 +497,19 @@
                   )
             ),
             
-            // Правая часть: Готово/Далее (скрывается если шаг имеет hideHeaderNext: true)
+            // Правая часть: headerRight ИЛИ кнопка Готово/Далее
+            // headerRight — кастомный контент справа (например счётчик продуктов)
             // finishLabel — кастомный текст для последнего шага (например "Добавить")
             // currentConfig.nextLabel — кастомный текст для конкретного шага
             React.createElement('div', { className: 'mc-header-right' },
-              !(hidePrimaryOnFirst && currentStepIndex === 0) && !currentConfig.hideHeaderNext && React.createElement('button', {
-                className: 'mc-header-btn mc-header-btn--primary',
-                onClick: handleNext
-              }, currentStepIndex === totalSteps - 1 
-                ? (currentConfig.nextLabel || finishLabel) 
-                : (currentConfig.nextLabel || 'Далее'))
+              context.headerRight 
+                ? React.createElement('span', { className: 'mc-header-right-text' }, context.headerRight)
+                : (!(hidePrimaryOnFirst && currentStepIndex === 0) && !currentConfig.hideHeaderNext && React.createElement('button', {
+                    className: 'mc-header-btn mc-header-btn--primary',
+                    onClick: handleNext
+                  }, currentStepIndex === totalSteps - 1 
+                    ? (currentConfig.nextLabel || finishLabel) 
+                    : (currentConfig.nextLabel || 'Далее')))
             )
           ),
 

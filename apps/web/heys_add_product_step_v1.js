@@ -1181,6 +1181,46 @@
         )
       ),
       
+      // === БОЛЬШАЯ КНОПКА ДОБАВИТЬ (дублирует финальную) ===
+      React.createElement('button', {
+        className: 'aps-add-hero-btn',
+        onClick: () => {
+          if (product && grams > 0 && context?.onAdd) {
+            // Передаём mealIndex из контекста (как ожидает onAdd callback)
+            context.onAdd({
+              product,
+              grams,
+              mealIndex: context.mealIndex
+            });
+            
+            // 🔔 Dispatch event для advice module
+            window.dispatchEvent(new CustomEvent('heysProductAdded', { 
+              detail: { product, grams } 
+            }));
+            
+            // Закрыть модалку
+            if (HEYS.StepModal?.hide) {
+              HEYS.StepModal.hide({ scrollToDiary: true });
+            }
+          }
+        },
+        style: {
+          display: 'block',
+          width: '100%',
+          padding: '16px',
+          marginTop: '16px',
+          marginBottom: '16px',
+          fontSize: '18px',
+          fontWeight: '600',
+          color: '#fff',
+          background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+          border: 'none',
+          borderRadius: '12px',
+          boxShadow: '0 4px 14px rgba(34, 197, 94, 0.4)',
+          cursor: 'pointer'
+        }
+      }, '✓ Добавить'),
+      
       // Переключатель режима: граммы / ккал
       React.createElement('div', { className: 'aps-input-mode-toggle' },
         React.createElement('button', {
@@ -1258,11 +1298,9 @@
       onClose 
     } = options;
     
-    // Получаем продукты: переданные (если не пустые) или из глобального хранилища
+    // Всегда берём актуальные продукты из хранилища (providedProducts может быть устаревшим)
     const U = HEYS.utils || {};
-    const products = (providedProducts && providedProducts.length > 0) 
-      ? providedProducts 
-      : (HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || []);
+    const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
     
     // Mutable ref для обновления продуктов после создания
     let currentProducts = [...products];
@@ -1299,7 +1337,8 @@
           hint: '',
           icon: '⚖️',
           component: GramsStep,
-          validate: (data, stepData) => (data?.grams || stepData?.search?.grams || 0) > 0
+          validate: (data, stepData) => (data?.grams || stepData?.search?.grams || 0) > 0,
+          hideHeaderNext: true // Скрываем кнопку в хедере — есть большая зелёная кнопка внизу
         }
       ],
       context: { 
@@ -1309,7 +1348,7 @@
         onNewProduct,
         onAdd, // Передаём callback для добавления в приём пищи
         onAddPhoto, // Callback для добавления фото к приёму
-        headerExtra: `🗃️ ${currentProducts.length}`, // Счётчик продуктов в header
+        headerRight: `🗃️ ${currentProducts.length}`, // Счётчик продуктов справа в header
         // Callback при создании продукта — обновляем список (не используется при 2 шагах, оставляем для совместимости)
         onProductCreated: (product) => {
           currentProducts = [...currentProducts, product];
