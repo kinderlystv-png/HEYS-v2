@@ -905,10 +905,28 @@
             // Fallback: читаем напрямую из localStorage если HEYS.products пуст
             if (freshProducts.length === 0) {
               try {
-                const lsKey = 'heys_products';
-                const stored = localStorage.getItem(lsKey);
-                if (stored) {
-                  freshProducts = JSON.parse(stored) || [];
+                // Пробуем разные варианты ключей
+                const U = global.HEYS?.utils;
+                if (U && U.lsGet) {
+                  freshProducts = U.lsGet('heys_products', []) || [];
+                } else {
+                  // Fallback без clientId-aware функции
+                  const clientId = localStorage.getItem('heys_client_current') || '';
+                  const keys = [
+                    clientId ? `heys_${clientId}_products` : null,
+                    'heys_products'
+                  ].filter(Boolean);
+                  
+                  for (const key of keys) {
+                    const stored = localStorage.getItem(key);
+                    if (stored) {
+                      const parsed = JSON.parse(stored);
+                      if (Array.isArray(parsed) && parsed.length > 0) {
+                        freshProducts = parsed;
+                        break;
+                      }
+                    }
+                  }
                 }
               } catch (e) { /* ignore */ }
             }
