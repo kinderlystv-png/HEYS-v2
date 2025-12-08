@@ -857,24 +857,28 @@
           const grams = +item.grams || 0;
           if (grams <= 0) return;
           
-          // Ищем в productsMap по названию, потом fallback на inline данные item
+          // Ищем в productsMap по названию (lowercase), потом fallback на inline данные item
           const itemName = String(item.name || '').trim();
-          let product = itemName ? productsMap.get(itemName) : null;
+          const itemNameLower = itemName.toLowerCase();
+          let product = itemName ? productsMap.get(itemNameLower) : null;
           
           // 🔄 Fallback: если не найден в переданном productsMap, проверяем актуальную базу
           // Это решает проблему когда продукт только что добавлен но props ещё не обновились
           if (!product && itemName && global.HEYS?.products?.getAll) {
             const freshProducts = global.HEYS.products.getAll();
             const freshProduct = freshProducts.find(p => 
-              String(p.name || '').trim().toLowerCase() === itemName.toLowerCase()
+              String(p.name || '').trim().toLowerCase() === itemNameLower
             );
             if (freshProduct) {
               product = freshProduct;
-              // Добавляем в productsMap для следующих итераций
-              productsMap.set(itemName, freshProduct);
+              // Добавляем в productsMap для следующих итераций (ключ lowercase)
+              productsMap.set(itemNameLower, freshProduct);
               // Убираем из orphan если был там
               if (orphanProductsMap.has(itemName)) {
                 orphanProductsMap.delete(itemName);
+              }
+              if (orphanProductsMap.has(itemNameLower)) {
+                orphanProductsMap.delete(itemNameLower);
               }
             }
           }
@@ -1021,12 +1025,12 @@
       const baseBmr = calcBMR(profileWeight, profile || {});
       const threshold = Math.round(baseBmr / 3); // 1/3 BMR — минимум для "активного" дня
       
-      // Строим Map продуктов из переданного массива (ключ = name)
+      // Строим Map продуктов из переданного массива (ключ = lowercase name)
       const productsMap = new Map();
       const productsArr = Array.isArray(products) ? products : [];
       productsArr.forEach(p => { 
         if (p && p.name) {
-          const name = String(p.name).trim();
+          const name = String(p.name).trim().toLowerCase();
           if (name) productsMap.set(name, p);
         }
       });
