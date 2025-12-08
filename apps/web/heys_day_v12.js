@@ -6815,7 +6815,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       });
       
       try {
-        // Реальная синхронизация с Supabase (с force=true для bypass throttling)
+        // 1. Проверяем обновление приложения (параллельно с sync)
+        const checkUpdatePromise = window.HEYS?.checkForUpdates 
+          ? Promise.resolve() // checkForUpdates сам покажет модалку если есть обновление
+          : Promise.resolve();
+        
+        // Вызываем проверку версии (если есть обновление — покажется модалка)
+        if (typeof window.HEYS?.checkForUpdates === 'function') {
+          // Не ждём результата — пусть проверка идёт параллельно
+          window.HEYS.checkForUpdates();
+        }
+        
+        // 2. Реальная синхронизация с Supabase (с force=true для bypass throttling)
         const syncPromise = (async () => {
           if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
             await cloud.bootstrapClientSync(clientId, { force: true });
@@ -13807,22 +13818,27 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   if (typeof haptic === 'function') haptic('light');
                 }
               }, '−'),
-              React.createElement('div', { className: 'grams-input-hero__field' },
+              React.createElement('form', { 
+                className: 'grams-input-hero__field',
+                onSubmit: e => {
+                  e.preventDefault();
+                  confirmEditGramsModal();
+                }
+              },
                 React.createElement('input', {
                   ref: editGramsInputRef,
-                  type: 'number',
+                  type: 'text',
                   inputMode: 'numeric',
+                  pattern: '[0-9]*',
+                  enterKeyHint: 'done',
                   className: 'grams-input grams-input--hero',
                   value: editGramsValue,
-                  onChange: e => setEditGramsValue(Math.max(1, Math.min(2000, parseInt(e.target.value) || 0))),
+                  onChange: e => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    setEditGramsValue(Math.max(1, Math.min(2000, parseInt(val) || 0)));
+                  },
                   onFocus: e => e.target.select(),
-                  onClick: e => e.target.select(),
-                  onKeyDown: e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      confirmEditGramsModal();
-                    }
-                  }
+                  onClick: e => e.target.select()
                 }),
                 React.createElement('span', { className: 'grams-input-suffix--hero' }, 'г')
               ),
