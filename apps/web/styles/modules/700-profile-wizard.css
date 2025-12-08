@@ -17,6 +17,16 @@
   }
 }
 
+/* Fade out animation for modal close */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 /* Override for profile wizard animations if needed */
 .profile-wizard__card--selected {
   animation: scaleIn 0.2s ease-out;

@@ -151,13 +151,22 @@
     if (HEYS.StepModal && HEYS.StepModal.Component) {
       const U = HEYS.utils || {};
       const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+      const hadProfileSteps = HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete && HEYS.ProfileSteps.isProfileIncomplete(profile);
       const steps = getCheckinSteps(profile);
       
-      console.log('[MorningCheckin] Final steps:', steps, 'profileCompleted:', profile.profileCompleted);
+      console.log('[MorningCheckin] Final steps:', steps, 'profileCompleted:', profile.profileCompleted, 'hadProfileSteps:', hadProfileSteps);
+      
+      // Обёртка для onComplete: показать поздравления если были profile-шаги
+      const wrappedOnComplete = () => {
+        if (hadProfileSteps && HEYS.ProfileSteps && HEYS.ProfileSteps.showCongratulationsModal) {
+          HEYS.ProfileSteps.showCongratulationsModal();
+        }
+        if (onComplete) onComplete();
+      };
       
       return React.createElement(HEYS.StepModal.Component, {
         steps: steps,
-        onComplete: onComplete,
+        onComplete: wrappedOnComplete,
         showProgress: true,
         showStreak: true,
         showGreeting: true,
@@ -196,11 +205,20 @@
       if (HEYS.StepModal) {
         const U = HEYS.utils || {};
         const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+        const hadProfileSteps = HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete && HEYS.ProfileSteps.isProfileIncomplete(profile);
         const steps = getCheckinSteps(profile);
+        
+        // Обёртка для onComplete: показать поздравления если были profile-шаги
+        const wrappedOnComplete = () => {
+          if (hadProfileSteps && HEYS.ProfileSteps && HEYS.ProfileSteps.showCongratulationsModal) {
+            HEYS.ProfileSteps.showCongratulationsModal();
+          }
+          if (onComplete) onComplete();
+        };
         
         HEYS.StepModal.show({
           steps,
-          onComplete
+          onComplete: wrappedOnComplete
         });
       }
     },

@@ -535,7 +535,7 @@
             `Б ${norms.proteinPct}% / У ${norms.carbsPct}% / Ж ${100 - norms.proteinPct - norms.carbsPct}%`
           )
         ),
-        isFemale && deficitPct <= -10 && React.createElement('div', {
+        isFemale && deficitPctTarget <= -10 && React.createElement('div', {
           className: 'text-xs text-gray-600 text-center'
         }, 'ℹ️ Больше жиров для гормонального баланса')
       )
@@ -760,6 +760,84 @@
   });
 
   // ============================================================
+  // ЭКРАН ПОЗДРАВЛЕНИЯ (W4)
+  // ============================================================
+
+  function showCongratulationsModal() {
+    const profile = lsGet('heys_profile', {});
+    const norms = lsGet('heys_norms', {});
+    
+    const firstName = profile.firstName || 'друг';
+    const weightDiff = profile.weightGoal - profile.weight;
+    const diffSign = weightDiff > 0 ? '+' : '';
+    const weeks = calcTimeToGoal(profile.weight, profile.weightGoal, profile.deficitPctTarget);
+    
+    // Простая модалка с поздравлением
+    const modalHTML = `
+      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+           style="animation: fadeIn 0.3s ease-out">
+        <div class="bg-white rounded-2xl p-6 max-w-md mx-4 shadow-2xl"
+             style="animation: scaleIn 0.4s ease-out 0.1s both">
+          <div class="text-center">
+            <div class="text-6xl mb-4">🎉</div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Добро пожаловать, ${firstName}!</h2>
+            <p class="text-gray-600 mb-6">Ваш персональный план готов</p>
+            
+            <div class="bg-emerald-50 rounded-xl p-4 mb-6 text-left space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-700">🎯 Цель:</span>
+                <span class="font-medium text-emerald-700">${profile.weightGoal} кг (${diffSign}${Math.abs(weightDiff).toFixed(1)} кг)</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-700">📊 БЖУ:</span>
+                <span class="font-medium text-emerald-700">Б${norms.proteinPct}% У${norms.carbsPct}% Ж${100 - norms.proteinPct - norms.carbsPct}%</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-700">⏱ Прогноз:</span>
+                <span class="font-medium text-emerald-700">${weeks}</span>
+              </div>
+            </div>
+            
+            <p class="text-sm text-gray-500 mb-4">
+              Нормы рассчитаны по вашим данным. Можете изменить в Профиле.
+            </p>
+            
+            <button id="congrats-close-btn" 
+                    class="w-full bg-emerald-500 text-white py-3 rounded-xl font-medium hover:bg-emerald-600 transition-colors">
+              Начать! →
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    const container = document.createElement('div');
+    container.innerHTML = modalHTML;
+    document.body.appendChild(container);
+    
+    // Кнопка закрытия
+    const closeBtn = container.querySelector('#congrats-close-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        container.style.animation = 'fadeOut 0.2s ease-out';
+        setTimeout(() => {
+          container.remove();
+        }, 200);
+      });
+    }
+    
+    // Закрытие по клику на фон
+    const backdrop = container.querySelector('.fixed');
+    if (backdrop) {
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) {
+          closeBtn.click();
+        }
+      });
+    }
+  }
+
+  // ============================================================
   // ЭКСПОРТ
   // ============================================================
 
@@ -780,7 +858,8 @@
     isProfileIncomplete,
     calcNormsFromGoal,
     calcAgeFromBirthDate,
-    calcSleepNorm
+    calcSleepNorm,
+    showCongratulationsModal
   };
 
   console.log('[heys_profile_step_v1] Profile steps registered:', [
