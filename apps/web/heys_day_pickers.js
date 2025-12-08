@@ -205,11 +205,16 @@
             const dayData = daysDataMap.get(dateStr);
             const isSel = same(dt, sel);
             const isToday = same(dt, today);
-            const bgColor = dayData ? getDayBgColor(dayData.ratio) : null;
+            const hasCycle = dayData?.cycleDay != null;
+            const hasRealData = dayData && dayData.kcal > 0; // Есть реальные данные (еда)
+            
+            // Фон только для дней с едой
+            const bgColor = hasRealData ? getDayBgColor(dayData.ratio) : null;
             // Не показываем градиентный фон для сегодня и выбранного дня
             const cellStyle = bgColor && !isSel && !isToday ? { background: bgColor } : undefined;
-            const statusEmoji = dayData ? getStatusEmoji(dayData.ratio) : '';
-            const hasCycle = dayData?.cycleDay != null;
+            
+            // Emoji только для дней с едой (не для пустых дней с cycleDay)
+            const statusEmoji = hasRealData ? getStatusEmoji(dayData.ratio) : '';
             
             return React.createElement('div', {
               key: dt.toISOString(),
@@ -217,7 +222,7 @@
                 'date-picker-day',
                 isSel ? 'selected' : '',
                 isToday ? 'today' : '',
-                dayData ? 'has-data' : '',
+                hasRealData ? 'has-data' : '',
                 hasCycle ? 'has-cycle' : ''
               ].join(' ').trim(),
               style: cellStyle,
@@ -227,7 +232,7 @@
             }, 
               React.createElement('span', { className: 'day-number' }, dt.getDate()),
               statusEmoji && React.createElement('span', { className: 'day-status' }, statusEmoji),
-              hasCycle && React.createElement('span', { className: 'day-cycle-dot' }, '•')
+              hasCycle && React.createElement('span', { className: 'day-cycle-dot' }, '🌸')
             );
           })
         ),
@@ -239,7 +244,8 @@
         React.createElement('div', { className: 'date-picker-legend' },
           React.createElement('span', { className: 'legend-item good' }, '● норма'),
           React.createElement('span', { className: 'legend-item warn' }, '● мало'),
-          React.createElement('span', { className: 'legend-item bad' }, '● переел')
+          React.createElement('span', { className: 'legend-item bad' }, '● переел'),
+          React.createElement('span', { className: 'legend-item cycle' }, '🌸 цикл')
         ),
         React.createElement('div', { className: 'date-picker-footer' },
           React.createElement('button', {

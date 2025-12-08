@@ -1098,7 +1098,21 @@
         const dateStr = fmtDate(new Date(year, month, d));
         const dayInfo = getDayData(dateStr, productsMap, profile);
         
-        if (!dayInfo || dayInfo.kcal < threshold) continue;
+        // Пропускаем дни без данных, НО добавляем дни с cycleDay даже без еды
+        const hasCycleDay = dayInfo && dayInfo.cycleDay != null;
+        if (!dayInfo || (dayInfo.kcal < threshold && !hasCycleDay)) continue;
+        
+        // Если день только с cycleDay (без еды) — добавляем минимальную запись
+        if (dayInfo.kcal < threshold && hasCycleDay) {
+          daysData.set(dateStr, { 
+            kcal: 0, target: 0, ratio: 0,
+            hasTraining: false, trainingTypes: [], trainingMinutes: 0,
+            moodAvg: null, sleepHours: 0, dayScore: 0,
+            prot: 0, fat: 0, carbs: 0,
+            cycleDay: dayInfo.cycleDay
+          });
+          continue;
+        }
         
         // Используем вес дня если есть, иначе из профиля
         const weight = dayInfo.weightMorning || profileWeight;

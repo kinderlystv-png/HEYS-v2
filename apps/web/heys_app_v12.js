@@ -3322,6 +3322,17 @@
               return () => window.removeEventListener('heysProductsUpdated', handleProductsUpdate);
             }, []);
 
+            // Слушаем событие обновления данных дня (cycleDay, meals, etc.)
+            // Нужно для инвалидации datePickerActiveDays при изменении cycleDay
+            useEffect(() => {
+              const handleDayUpdate = () => {
+                setSyncVer((v) => v + 1);
+              };
+
+              window.addEventListener('heys:day-updated', handleDayUpdate);
+              return () => window.removeEventListener('heys:day-updated', handleDayUpdate);
+            }, []);
+
             // Обертка для сохранения данных клиента в облако
             // ВАЖНО: Поддерживает ДВА формата вызова:
             //   - saveClientKey(key, value) — старый формат, 2 аргумента

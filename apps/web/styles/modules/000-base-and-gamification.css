@@ -3447,13 +3447,12 @@ body:has(.offline-banner) .wrap {
 /* Cycle dot indicator (особый период) */
 .day-cycle-dot {
   position: absolute;
-  bottom: 2px;
+  bottom: 1px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 10px;
+  font-size: 7px;
   line-height: 1;
-  color: #ec4899;
-  opacity: 0.9;
+  opacity: 0.85;
 }
 
 .date-picker-day.has-cycle {
@@ -3492,6 +3491,7 @@ body:has(.offline-banner) .wrap {
 .legend-item.good { color: #22c55e; }
 .legend-item.warn { color: #eab308; }
 .legend-item.bad { color: var(--color-red-500); }
+.legend-item.cycle { color: #ec4899; font-size: 11px; }
 
 /* Сегодняшний день - синий как в навигации */
 .date-picker-day.today {

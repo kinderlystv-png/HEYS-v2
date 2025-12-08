@@ -25,8 +25,8 @@
       days: [1, 2, 3, 4, 5],
       icon: '🌸',
       color: '#ec4899', // pink-500
-      // Метаболизм снижен, повышенная инсулиновая чувствительность
-      kcalMultiplier: 1.0,      // Без коррекции (естественное снижение аппетита)
+      // Повышенные энергозатраты (спазмы, терморегуляция)
+      kcalMultiplier: 1.05,     // +5% к норме (компенсация дискомфорта)
       waterMultiplier: 1.1,     // +10% к норме воды (потеря жидкости)
       insulinWaveMultiplier: 1.12, // +12% к длине волны (снижение чувствительности)
       advice: {
@@ -251,6 +251,10 @@
         window.dispatchEvent(new CustomEvent('heys:day-updated', { 
           detail: { date, field: 'cycleDay', source: 'cycle-auto' }
         }));
+        // Триггер облачной синхронизации
+        window.dispatchEvent(new CustomEvent('heys:data-saved', { 
+          detail: { key: `day:${date}`, type: 'cycle' }
+        }));
       });
       // Общее событие для batch-операций
       window.dispatchEvent(new CustomEvent('heys:cycle-updated', { 
@@ -303,6 +307,10 @@
         clearedDates.forEach(date => {
           window.dispatchEvent(new CustomEvent('heys:day-updated', { 
             detail: { date, field: 'cycleDay', value: null, source: 'cycle-clear' }
+          }));
+          // Триггер облачной синхронизации
+          window.dispatchEvent(new CustomEvent('heys:data-saved', { 
+            detail: { key: `day:${date}`, type: 'cycle' }
           }));
         });
         // Общее событие для batch-операций

@@ -2829,7 +2829,11 @@
   const profileTargetDef=+(lsGet('heys_profile',{}).deficitPctTarget)||0; // отрицательное число для дефицита
   // day.deficitPct может быть '', null, undefined — проверяем все случаи (как в currentDeficit для UI)
   const dayTargetDef = (day.deficitPct !== '' && day.deficitPct != null) ? +day.deficitPct : profileTargetDef;
-  const optimum=r0(tdee*(1+dayTargetDef/100));
+  
+  // Коррекция на менструальный цикл (×1.05-1.10 в менструальную фазу)
+  const cycleKcalMultiplier = HEYS.Cycle?.getKcalMultiplier?.(day.cycleDay) || 1;
+  const baseOptimum = r0(tdee*(1+dayTargetDef/100));
+  const optimum = r0(baseOptimum * cycleKcalMultiplier);
 
   const eatenKcal=(day.meals||[]).reduce((a,m)=>{ const t=(M.mealTotals? M.mealTotals(m,pIndex): {kcal:0}); return a+(t.kcal||0); },0);
   const factDefPct = tdee? r0(((eatenKcal - tdee)/tdee)*100) : 0; // <0 значит дефицит
@@ -5486,7 +5490,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       ),
       // Row 6 — Нужно съесть ккал + Целевой дефицит (редактируемый по дням)
       React.createElement('tr',{className:'vio-row need-kcal'},
-        React.createElement('td',{className:'label small'},React.createElement('strong',null,'Нужно съесть ккал :')),
+        React.createElement('td',{className:'label small'},
+          React.createElement('strong',null,'Нужно съесть ккал :'),
+          // Индикатор коррекции на цикл
+          cycleKcalMultiplier > 1 && React.createElement('span',{
+            style:{marginLeft:'6px',fontSize:'11px',color:'#ec4899'}
+          }, '🌸 +' + Math.round((cycleKcalMultiplier - 1) * 100) + '%')
+        ),
         React.createElement('td',null, React.createElement('input',{className:'readOnly',value:optimum,disabled:true})),
         React.createElement('td',null, React.createElement('input',{type:'number',value:day.deficitPct||0,onChange:e=>setDay(prev=>({...prev,deficitPct:Number(e.target.value)||0})),style:{width:'60px',textAlign:'center',fontWeight:600}})),
         React.createElement('td',null,'Целевой дефицит')
