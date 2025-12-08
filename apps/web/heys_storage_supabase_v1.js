@@ -198,20 +198,18 @@
       if (meal && meal.id) mealsMap.set(meal.id, meal);
     });
     
-    // Потом local meals — если ID совпадает, берём более свежий (по items count или времени)
+    // Потом local meals — если ID совпадает, берём ЛОКАЛЬНУЮ версию (она более свежая)
+    // ВАЖНО: При удалении item из приёма — locаl имеет меньше items, но это правильно!
+    // Раньше брали версию с бОльшим количеством items — это НЕПРАВИЛЬНО при удалении
     localMeals.forEach(meal => {
       if (!meal || !meal.id) return;
       const existing = mealsMap.get(meal.id);
       if (!existing) {
         mealsMap.set(meal.id, meal);
       } else {
-        // Конфликт по ID — берём тот где больше items (значит добавили еду)
-        const localItems = (meal.items || []).length;
-        const remoteItems = (existing.items || []).length;
-        if (localItems > remoteItems) {
-          mealsMap.set(meal.id, meal);
-        }
-        // Если items равны — оставляем remote (он уже в map)
+        // Конфликт по ID — берём локальную версию (пользователь только что её изменил)
+        // Local всегда свежее чем remote при активной сессии
+        mealsMap.set(meal.id, meal);
       }
     });
     

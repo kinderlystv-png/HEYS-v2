@@ -38,10 +38,10 @@ transforming...
 rendering chunks...
 computing gzip size...
 dist/assets/heys_simple_analytics-b3f08726.js      10.31 kB
-dist/index.html                                    10.93 kB │ gzip:  3.11 kB
+dist/index.html                                    10.93 kB │ gzip:  3.10 kB
 dist/assets/heys_models_v1-fbced590.js             23.36 kB
 dist/assets/heys_core_v12-604c5d5c.js              53.49 kB
-dist/assets/heys_storage_supabase_v1-4fc11a1a.js  136.73 kB
+dist/assets/heys_storage_supabase_v1-dbe43650.js  136.88 kB
 dist/assets/index-9df23950.css                    375.32 kB │ gzip: 64.07 kB
 [vite-plugin-static-copy] Copied 1 items.
-✓ built in 900ms
+✓ built in 726ms
