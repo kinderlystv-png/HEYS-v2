@@ -466,6 +466,28 @@
         }
       }, [products, query, searchIndex]);
 
+      // Слушатель события обновления продуктов (для реактивности после sync)
+      React.useEffect(() => {
+        const handleProductsUpdated = () => {
+          const latest = (window.HEYS.store?.get?.('heys_products', null)) || 
+                        (window.HEYS.utils?.lsGet?.('heys_products', [])) || [];
+          if (Array.isArray(latest) && latest.length > 0) {
+            if (window.DEV) {
+              window.DEV.log('📦 [RATION] Products updated via event:', latest.length, 'items');
+            }
+            setProducts(latest);
+          }
+        };
+        
+        window.addEventListener('heysProductsUpdated', handleProductsUpdated);
+        window.addEventListener('heysSyncCompleted', handleProductsUpdated);
+        
+        return () => {
+          window.removeEventListener('heysProductsUpdated', handleProductsUpdated);
+          window.removeEventListener('heysSyncCompleted', handleProductsUpdated);
+        };
+      }, []);
+      
       // Подгружать продукты из облака при смене клиента
       React.useEffect(()=>{
         const clientId = window.HEYS && window.HEYS.currentClientId;
@@ -818,18 +840,18 @@
             React.createElement('thead', null,
               React.createElement('tr', null,
                 React.createElement('th', null, 'Название'),
-                React.createElement('th', null, 'Ккал (100г)'),
-                React.createElement('th', null, 'Углеводы'),
-                React.createElement('th', null, 'Простые'),
-                React.createElement('th', null, 'Сложные'),
-                React.createElement('th', null, 'Белки'),
-                React.createElement('th', null, 'Жиры'),
-                React.createElement('th', null, 'Вредные'),
-                React.createElement('th', null, 'Полезные'),
-                React.createElement('th', null, 'Супервредные'),
-                React.createElement('th', null, 'Клетчатка'),
-                React.createElement('th', null, 'ГИ'),
-                React.createElement('th', null, 'Вредность'),
+                React.createElement('th', {title: 'Калории на 100г'}, 'Ккал'),
+                React.createElement('th', {title: 'Углеводы (авто)'}, 'У'),
+                React.createElement('th', {title: 'Простые углеводы'}, 'Пр'),
+                React.createElement('th', {title: 'Сложные углеводы'}, 'Сл'),
+                React.createElement('th', {title: 'Белки'}, 'Б'),
+                React.createElement('th', {title: 'Жиры (авто)'}, 'Ж'),
+                React.createElement('th', {title: 'Вредные жиры'}, 'Вр'),
+                React.createElement('th', {title: 'Полезные жиры'}, 'Пол'),
+                React.createElement('th', {title: 'Транс-жиры'}, 'Тр'),
+                React.createElement('th', {title: 'Клетчатка'}, 'Кл'),
+                React.createElement('th', {title: 'Гликемический индекс'}, 'ГИ'),
+                React.createElement('th', {title: 'Индекс вредности'}, 'Вред'),
                 React.createElement('th', null, '')
               )
             ),

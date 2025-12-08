@@ -1451,6 +1451,25 @@
               return React.createElement(RationSkeleton);
             }
             
+            // 📦 Слушатель событий для гарантированного обновления продуктов
+            React.useEffect(() => {
+              const handleProductsUpdated = () => {
+                const latest = window.HEYS.utils?.lsGet?.('heys_products', []) || 
+                              window.HEYS.store?.get?.('heys_products', []) || [];
+                if (Array.isArray(latest) && latest.length > 0) {
+                  setProducts(latest);
+                }
+              };
+              
+              window.addEventListener('heysProductsUpdated', handleProductsUpdated);
+              window.addEventListener('heysSyncCompleted', handleProductsUpdated);
+              
+              return () => {
+                window.removeEventListener('heysProductsUpdated', handleProductsUpdated);
+                window.removeEventListener('heysSyncCompleted', handleProductsUpdated);
+              };
+            }, [setProducts]);
+            
             React.useEffect(() => {
               let cancelled = false;
               

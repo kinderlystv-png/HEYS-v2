@@ -1176,10 +1176,10 @@
       try {
         products = JSON.parse(raw);
       } catch (parseError) {
-        // Данные повреждены — удаляем их, пусть загрузятся из облака
-        logCritical(`🧹 [CLEANUP] Corrupted localStorage data for ${key}, removing`);
-        localStorage.removeItem(key);
-        return { cleaned: 0, total: 0, corrupted: true };
+        // Данные временно некорректны (возможно race condition при записи)
+        // НЕ удаляем — пусть следующий sync перезапишет
+        console.warn(`⚠️ [CLEANUP] Temporary parse error for ${key}, skipping (will retry)`);
+        return { cleaned: 0, total: 0, parseError: true };
       }
       
       if (!Array.isArray(products)) return { cleaned: 0, total: 0 };
