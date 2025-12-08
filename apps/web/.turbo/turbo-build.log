@@ -35,10 +35,10 @@ polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 <script src="heys_app_v12.js?v=16"> in "/index.html" can't be bundled without type="module" attribute
 [2K[1Gtransforming (1) [2mindex.html[22m[2K[1G[32m✓[39m 3 modules transformed.
 [2K[1Grendering chunks (1)...[2K[1G[2K[1Gcomputing gzip size (0)...[2K[1Gcomputing gzip size (1)...[2K[1Gcomputing gzip size (2)...[2K[1G[2mdist/[22m[2massets/[22m[32mheys_simple_analytics-b3f08726.js     [39m[1m[2m 10.31 kB[22m[1m[22m
-[2mdist/[22m[32mindex.html                                   [39m[1m[2m 10.93 kB[22m[1m[22m[2m │ gzip:  3.11 kB[22m
+[2mdist/[22m[32mindex.html                                   [39m[1m[2m 10.93 kB[22m[1m[22m[2m │ gzip:  3.10 kB[22m
 [2mdist/[22m[2massets/[22m[32mheys_models_v1-fbced590.js            [39m[1m[2m 23.36 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[32mheys_core_v12-3ba2f354.js             [39m[1m[2m 54.77 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mheys_core_v12-cc70ed57.js             [39m[1m[2m 54.80 kB[22m[1m[22m
 [2mdist/[22m[2massets/[22m[32mheys_storage_supabase_v1-c0700b6a.js  [39m[1m[2m138.60 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[35mindex-f9284651.css                    [39m[1m[2m375.53 kB[22m[1m[22m[2m │ gzip: 64.12 kB[22m
+[2mdist/[22m[2massets/[22m[35mindex-b4169493.css                    [39m[1m[2m377.86 kB[22m[1m[22m[2m │ gzip: 64.49 kB[22m
 [36m[vite-plugin-static-copy][39m [32mCopied 1 items.[39m
-[32m✓ built in 741ms[39m
+[32m✓ built in 866ms[39m

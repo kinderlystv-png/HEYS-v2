@@ -13863,6 +13863,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     const val = e.target.value.replace(/[^0-9]/g, '');
                     setEditGramsValue(Math.max(1, Math.min(2000, parseInt(val) || 0)));
                   },
+                  onKeyDown: e => {
+                    if (e.key === 'Enter' || e.keyCode === 13) {
+                      e.preventDefault();
+                      e.target.blur();
+                      confirmEditGramsModal();
+                    }
+                  },
                   onFocus: e => e.target.select(),
                   onClick: e => e.target.select()
                 }),
