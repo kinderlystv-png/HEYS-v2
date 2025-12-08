@@ -51,6 +51,19 @@
 /* === 01. Emoji styles === */
 /* Twemoji loaded via JS when 'twemoji' style is selected */
 
+/* === iOS Auto-Zoom Prevention ===
+ * Safari зумит страницу при фокусе на input с font-size < 16px.
+ * Решение: устанавливаем font-size: 16px при фокусе, сохраняя визуальный размер.
+ */
+@supports (-webkit-touch-callout: none) {
+  /* iOS only */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    font-size: 16px !important;
+  }
+}
+
 :root {
   /* Color palette */
   --color-white: #ffffff;
@@ -3778,20 +3791,21 @@ body:has(.offline-banner) .wrap {
   justify-content: space-around;
   align-items: center;
   gap: 0;
-  padding: 0 16px;
+  padding: 8px 12px;
   margin: 0;
-  background: var(--color-white);
-  border-top: 1px solid #e0e0e0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 0.5px solid rgba(0, 0, 0, 0.1);
   border-radius: 0;
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 1000;
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08), 0 -1px 4px rgba(0, 0, 0, 0.04);
-  padding-bottom: env(safe-area-inset-bottom, 0);
-  padding-top: 2px;
-  min-height: 42px;
+  box-shadow: 0 -1px 20px rgba(0, 0, 0, 0.06);
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  min-height: 56px;
 }
 
 /* Скрыть технические вкладки на мобилке */
@@ -3803,34 +3817,36 @@ body:has(.offline-banner) .wrap {
 
 .tab {
   cursor: pointer;
-  padding: 4px 12px;
-  min-height: 42px;
-  border-radius: 0;
+  padding: 6px 8px;
+  min-height: 44px;
+  border-radius: 12px;
   font-weight: 500;
   font-size: 10px;
   color: #8e8e93;
   user-select: none;
   touch-action: manipulation;
-  transition: color 0.15s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
   text-align: center;
   line-height: 1.2;
   border: none;
   background: transparent;
-  flex: 1;
-  min-width: 60px;
+  flex: 0 0 auto;
+  min-width: 48px;
+  max-width: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   -webkit-tap-highlight-color: transparent;
 }
 
 .tab .tab-icon {
-  font-size: 24px;
+  font-size: 26px;
   line-height: 1;
-  transition: transform 0.12s ease;
+  transition: transform 0.15s ease;
+  filter: grayscale(20%);
 }
 
 .tab .tab-text {
@@ -3846,11 +3862,13 @@ body:has(.offline-banner) .wrap {
 }
 
 .tab.active {
-  color: #667eea;
+  color: #007aff;
+  background: rgba(0, 122, 255, 0.08);
 }
 
 .tab.active .tab-icon {
-  transform: scale(1.05);
+  transform: scale(1.08);
+  filter: grayscale(0%) drop-shadow(0 1px 2px rgba(0, 122, 255, 0.2));
 }
 
 .tab.active .tab-text {
@@ -3862,15 +3880,15 @@ body:has(.offline-banner) .wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #e5e5ea;
-  border-radius: 6px;
+  background: rgba(120, 120, 128, 0.12);
+  border-radius: 8px;
   padding: 2px;
   gap: 0;
-  height: 30px;
+  height: 36px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  flex: 1;
-  max-width: 118px;
+  flex: 0 1 auto;
+  min-width: 110px;
 }
 
 .tab-switch-wrapper {
@@ -3878,35 +3896,36 @@ body:has(.offline-banner) .wrap {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0;
-  flex: 1;
-  min-width: 120px;
-  margin-top: 3px;
+  gap: 2px;
+  flex: 0 1 auto;
+  min-width: 110px;
 }
 
 .tab.tab-switch {
   flex: 1;
-  min-width: 46px;
-  min-height: 26px;
-  padding: 3px 6px;
+  min-width: 48px;
+  min-height: 32px;
+  padding: 4px 8px;
   border-radius: 0;
   background: transparent;
   color: #666;
   transition: all 0.2s ease;
   gap: 1px;
+  max-width: none;
 }
 
 /* Скругление только на внешних краях */
 .tab.tab-switch:first-child {
-  border-radius: 4px 0 0 4px;
+  border-radius: 6px 0 0 6px;
 }
 
 .tab.tab-switch:last-child {
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 6px 6px 0;
 }
 
 .tab.tab-switch .tab-icon {
-  font-size: 18px;
+  font-size: 20px;
+  filter: none;
 }
 
 .tab.tab-switch .tab-text {
@@ -3914,9 +3933,42 @@ body:has(.offline-banner) .wrap {
 }
 
 .tab.tab-switch.active {
-  background: var(--color-blue-ios);
+  background: linear-gradient(135deg, #007aff 0%, #0056d6 100%);
   color: var(--color-white);
-  box-shadow: 0 1px 3px rgba(0, 122, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.35);
+}
+
+.tab.tab-switch.active .tab-icon {
+  filter: brightness(1.1) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+}
+
+/* === Кнопка советов в навигации === */
+.tab.tab-advice {
+  flex: 0 1 auto;
+  min-width: 48px;
+  max-width: 64px;
+  position: relative;
+}
+
+.tab.tab-advice .tab-icon {
+  font-size: 26px;
+}
+
+.tab-advice-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #fbbf24;
+  color: #78350f;
+  font-size: 10px;
+  font-weight: 600;
+  display: none;
+  align-items: center;
+  justify-content: center;
 }
 
 .tab.tab-switch.active .tab-icon {
