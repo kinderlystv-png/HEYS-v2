@@ -11707,14 +11707,34 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       (!isMobile || mobileSubTab === 'stats') && compactActivity,
       (!isMobile || mobileSubTab === 'stats') && sideBlock,
       
-      // === FAB группа: приём пищи + вода ===
-      (!isMobile || mobileSubTab === 'stats') && React.createElement('div', {
+      // === FAB группа: приём пищи + вода (на обеих вкладках) ===
+      isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && React.createElement('div', {
         className: 'fab-group'
       },
-        // FAB для добавления приёма пищи (+)
+        // FAB для добавления приёма пищи (🍽️)
         React.createElement('button', {
           className: 'meal-fab',
-          onClick: addMeal,
+          onClick: () => {
+            // Если на вкладке stats — сначала переключаемся на diary
+            if (mobileSubTab === 'stats' && window.HEYS?.App?.setTab) {
+              window.HEYS.App.setTab('diary');
+              // Ждём переключения, затем скроллим и открываем модалку
+              setTimeout(() => {
+                const heading = document.getElementById('diary-heading');
+                if (heading) {
+                  heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                setTimeout(() => addMeal(), 400);
+              }, 200);
+            } else {
+              // Уже на diary — сразу скроллим и открываем
+              const heading = document.getElementById('diary-heading');
+              if (heading) {
+                heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+              setTimeout(() => addMeal(), 300);
+            }
+          },
           'aria-label': 'Добавить приём пищи'
         }, '🍽️'),
         // FAB для быстрого добавления воды (+200мл)
@@ -12684,34 +12704,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       ),
       (!isMobile || mobileSubTab === 'diary') && mealsUI,
       React.createElement('div',{className:'row desktop-only',style:{justifyContent:'flex-start',marginTop:'8px'}}, React.createElement('button',{className:'btn',onClick:addMeal},'+ Приём')),
-      
-      // FAB - Floating Action Button (мобильный, на stats и diary)
-      isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && React.createElement('button', {
-        className: 'fab-add-meal',
-        onClick: () => {
-          // Если на вкладке stats — сначала переключаемся на diary
-          if (mobileSubTab === 'stats' && window.HEYS?.App?.setTab) {
-            window.HEYS.App.setTab('diary');
-            // Ждём переключения, затем скроллим и открываем модалку
-            setTimeout(() => {
-              const heading = document.getElementById('diary-heading');
-              if (heading) {
-                heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }
-              // Открываем модалку после скролла
-              setTimeout(() => addMeal(), 400);
-            }, 200);
-          } else {
-            // Уже на diary — сразу скроллим и открываем
-            const heading = document.getElementById('diary-heading');
-            if (heading) {
-              heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-            setTimeout(() => addMeal(), 300);
-          }
-        },
-        title: 'Добавить приём пищи'
-      }, '+'),
       
       // === Manual Advice List (полноэкранный список советов) ===
       adviceTrigger === 'manual' && adviceRelevant?.length > 0 && toastVisible && (() => {
