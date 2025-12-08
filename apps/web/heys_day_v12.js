@@ -12659,6 +12659,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // === ЗАГОЛОВОК ДНЕВНИКА ПИТАНИЯ ===
       (!isMobile || mobileSubTab === 'diary') && React.createElement('h2', {
+        id: 'diary-heading',
         style: {
           fontSize: '24px',
           fontWeight: '800',
@@ -12683,10 +12684,31 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       (!isMobile || mobileSubTab === 'diary') && mealsUI,
       React.createElement('div',{className:'row desktop-only',style:{justifyContent:'flex-start',marginTop:'8px'}}, React.createElement('button',{className:'btn',onClick:addMeal},'+ Приём')),
       
-      // FAB - Floating Action Button (только mobile + только на вкладке diary)
-      isMobile && mobileSubTab === 'diary' && React.createElement('button', {
+      // FAB - Floating Action Button (мобильный, на stats и diary)
+      isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && React.createElement('button', {
         className: 'fab-add-meal',
-        onClick: addMeal,
+        onClick: () => {
+          // Если на вкладке stats — сначала переключаемся на diary
+          if (mobileSubTab === 'stats' && window.HEYS?.App?.setTab) {
+            window.HEYS.App.setTab('diary');
+            // Ждём переключения, затем скроллим и открываем модалку
+            setTimeout(() => {
+              const heading = document.getElementById('diary-heading');
+              if (heading) {
+                heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+              // Открываем модалку после скролла
+              setTimeout(() => addMeal(), 400);
+            }, 200);
+          } else {
+            // Уже на diary — сразу скроллим и открываем
+            const heading = document.getElementById('diary-heading');
+            if (heading) {
+              heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            setTimeout(() => addMeal(), 300);
+          }
+        },
         title: 'Добавить приём пищи'
       }, '+'),
       

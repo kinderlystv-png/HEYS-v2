@@ -2638,6 +2638,21 @@
 
           function App() {
             const [tab, setTab] = useState('stats');
+            
+            // Экспортируем setTab для доступа из DayTab (FAB)
+            useEffect(() => {
+              window.HEYS = window.HEYS || {};
+              window.HEYS.App = window.HEYS.App || {};
+              window.HEYS.App.setTab = setTab;
+              window.HEYS.App.getTab = () => tab;
+              return () => {
+                if (window.HEYS?.App) {
+                  delete window.HEYS.App.setTab;
+                  delete window.HEYS.App.getTab;
+                }
+              };
+            }, [tab, setTab]);
+            
             const { theme, resolvedTheme, cycleTheme } = useThemePreference();
             useEffect(() => {
               HEYS.cycleTheme = cycleTheme;
