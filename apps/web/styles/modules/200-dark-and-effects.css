@@ -845,6 +845,42 @@
   fill: var(--color-slate-400);
 }
 
+/* === ЗАДЕРЖКА ВОДЫ — DARK THEME === */
+[data-theme="dark"] .weight-clean-trend-badge {
+  background: rgba(236, 72, 153, 0.2);
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .weight-retention-note {
+  background: linear-gradient(135deg, rgba(157, 23, 77, 0.15) 0%, rgba(190, 24, 93, 0.1) 100%);
+  border-left-color: #f472b6;
+}
+
+[data-theme="dark"] .weight-retention-note-text {
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .weight-retention-note-text b {
+  color: #fbcfe8;
+}
+
+[data-theme="dark"] .weight-retention-forecast {
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .weight-retention-insight {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .weight-retention-stats {
+  color: #6b7280;
+  border-top-color: rgba(244, 114, 182, 0.15);
+}
+
+[data-theme="dark"] .weight-retention-stats b {
+  color: #f9a8d4;
+}
+
 /* Dark theme for bottom sheets (Glassmorphism) */
 [data-theme="dark"] .time-picker-backdrop {
   background: rgba(0, 0, 0, 0.5);

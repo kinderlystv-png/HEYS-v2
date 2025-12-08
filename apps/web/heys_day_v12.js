@@ -6786,11 +6786,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     const deficitProgress = Math.min(100, Math.abs(factDefPct) / 50 * 100);
     
     // Вычисление тренда веса за последние 7 дней
+    // С учётом цикла: дни с задержкой воды исключаются для "чистого" тренда
     const weightTrend = React.useMemo(() => {
       try {
         const today = new Date(date);
         const weights = [];
+        const weightsClean = []; // Без дней с задержкой воды
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
+        let hasRetentionDays = false; // Есть ли дни с задержкой воды
         
         // Собираем вес за последние 7 дней (включая сегодня)
         for (let i = 0; i < 7; i++) {
@@ -6810,22 +6813,43 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           } catch(e) {}
           
           if (dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0) {
-            weights.push({ date: dateStr, weight: +dayData.weightMorning, dayIndex: 6 - i });
+            const cycleDayValue = dayData.cycleDay || null;
+            const shouldExclude = HEYS.Cycle?.shouldExcludeFromWeightTrend?.(cycleDayValue) || false;
+            
+            const weightEntry = { 
+              date: dateStr, 
+              weight: +dayData.weightMorning, 
+              dayIndex: 6 - i,
+              cycleDay: cycleDayValue,
+              hasRetention: shouldExclude
+            };
+            
+            weights.push(weightEntry);
+            
+            if (shouldExclude) {
+              hasRetentionDays = true;
+            } else {
+              weightsClean.push(weightEntry);
+            }
           }
         }
         
         // Нужно минимум 2 точки для тренда
         if (weights.length < 2) return null;
         
+        // Используем чистые данные если есть минимум 2 точки, иначе все
+        const useClean = weightsClean.length >= 2 && hasRetentionDays;
+        const dataForTrend = useClean ? weightsClean : weights;
+        
         // Сортируем по дате (от старой к новой)
-        weights.sort((a, b) => a.date.localeCompare(b.date));
+        dataForTrend.sort((a, b) => a.date.localeCompare(b.date));
         
         // Линейная регрессия для более точного тренда
-        const n = weights.length;
+        const n = dataForTrend.length;
         let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
         for (let i = 0; i < n; i++) {
-          const x = weights[i].dayIndex;
-          const y = weights[i].weight;
+          const x = dataForTrend[i].dayIndex;
+          const y = dataForTrend[i].weight;
           sumX += x;
           sumY += y;
           sumXY += x * y;
@@ -6840,8 +6864,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const clampedSlope = Math.max(-0.3, Math.min(0.3, slope));
         
         // Вычисляем изменение за период
-        const firstWeight = weights[0].weight;
-        const lastWeight = weights[weights.length - 1].weight;
+        const firstWeight = dataForTrend[0].weight;
+        const lastWeight = dataForTrend[dataForTrend.length - 1].weight;
         const diff = lastWeight - firstWeight;
         
         // Определяем направление
@@ -6854,11 +6878,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const sign = diff > 0 ? '+' : '';
         const text = arrow + ' ' + sign + r1(diff) + ' кг';
         
-        return { text, diff, direction, slope: clampedSlope, dataPoints: n };
+        // Добавляем информацию о чистом тренде
+        return { 
+          text, 
+          diff, 
+          direction, 
+          slope: clampedSlope, 
+          dataPoints: n,
+          isCleanTrend: useClean, // Тренд исключает дни с задержкой воды
+          retentionDaysExcluded: hasRetentionDays ? weights.length - weightsClean.length : 0
+        };
       } catch (e) {
         return null;
       }
-    }, [date, day.weightMorning]);
+    }, [date, day.weightMorning, day.cycleDay]);
     
     // Прогноз веса на месяц (~Xкг/мес)
     const monthForecast = React.useMemo(() => {
@@ -6886,6 +6919,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const days = [];
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
         
+        // Получаем cycleDay для сегодняшнего дня из state
+        const todayCycleDay = day.cycleDay || null;
+        
         for (let i = chartPeriod - 1; i >= 0; i--) {
           const d = new Date(viewDate);
           d.setDate(d.getDate() - i);
@@ -6896,11 +6932,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           if (isRealToday) {
             const todayWeight = +day.weightMorning || 0;
             if (todayWeight > 0) {
+              // Получаем информацию о задержке воды
+              const retentionInfo = HEYS.Cycle?.getWaterRetentionInfo?.(todayCycleDay) || { hasRetention: false };
               days.push({ 
                 date: dateStr, 
                 weight: todayWeight,
                 isToday: true,
-                dayNum: dateStr.slice(-2).replace(/^0/, '')
+                dayNum: dateStr.slice(-2).replace(/^0/, ''),
+                cycleDay: todayCycleDay,
+                hasWaterRetention: retentionInfo.hasRetention,
+                retentionSeverity: retentionInfo.severity,
+                retentionAdvice: retentionInfo.advice
               });
             }
             continue;
@@ -6920,11 +6962,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           } catch(e) {}
           
           if (dayData?.weightMorning > 0) {
+            const cycleDayValue = dayData.cycleDay || null;
+            const retentionInfo = HEYS.Cycle?.getWaterRetentionInfo?.(cycleDayValue) || { hasRetention: false };
             days.push({ 
               date: dateStr, 
               weight: +dayData.weightMorning,
               isToday: false,
-              dayNum: dateStr.slice(-2).replace(/^0/, '')
+              dayNum: dateStr.slice(-2).replace(/^0/, ''),
+              cycleDay: cycleDayValue,
+              hasWaterRetention: retentionInfo.hasRetention,
+              retentionSeverity: retentionInfo.severity,
+              retentionAdvice: retentionInfo.advice
             });
           }
         }
@@ -6932,7 +6980,36 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       } catch (e) {
         return [];
       }
-    }, [date, day.weightMorning, chartPeriod]);
+    }, [date, day.weightMorning, day.cycleDay, chartPeriod]);
+    
+    // Анализ исторических паттернов цикла (для блока задержки воды)
+    const cycleHistoryAnalysis = React.useMemo(() => {
+      // Анализируем только если есть дни с задержкой воды
+      if (!day.cycleDay) return null;
+      
+      try {
+        // Получаем lsGet из HEYS.utils или используем fallback
+        const lsGet = (key, def) => {
+          const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
+          const scopedKey = clientId ? 'heys_' + clientId + '_' + key.replace('heys_', '') : key;
+          try {
+            const raw = localStorage.getItem(scopedKey);
+            if (!raw) return def;
+            return raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+          } catch(e) { return def; }
+        };
+        
+        const analysis = HEYS.Cycle?.analyzeWaterRetentionHistory?.(6, lsGet);
+        const forecast = HEYS.Cycle?.getWeightNormalizationForecast?.(day.cycleDay);
+        
+        return {
+          ...analysis,
+          forecast
+        };
+      } catch (e) {
+        return null;
+      }
+    }, [day.cycleDay]);
     
     // Данные для sparkline калорий за chartPeriod дней
     // Используем products из state (реактивные данные после sync)
@@ -9401,10 +9478,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       const totalPoints = data.length + (forecastPoint ? 1 : 0);
       
+      // Проверяем есть ли дни с задержкой воды
+      const hasAnyRetentionDays = data.some(d => d.hasWaterRetention);
+      
       const points = data.map((d, i) => {
         const x = paddingX + (i / (totalPoints - 1)) * (width - paddingX * 2);
         const y = paddingTop + chartHeight - ((d.weight - adjustedMin) / range) * chartHeight;
-        return { x, y, weight: d.weight, isToday: d.isToday, dayNum: d.dayNum, date: d.date };
+        return { 
+          x, 
+          y, 
+          weight: d.weight, 
+          isToday: d.isToday, 
+          dayNum: d.dayNum, 
+          date: d.date,
+          // Данные о цикле
+          cycleDay: d.cycleDay,
+          hasWaterRetention: d.hasWaterRetention,
+          retentionSeverity: d.retentionSeverity,
+          retentionAdvice: d.retentionAdvice
+        };
       });
       
       // Точка прогноза
@@ -9522,8 +9614,53 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 stopOpacity: 1 
               })
             )
+          ),
+          // Градиент для зоны задержки воды (розовый, вертикальный)
+          React.createElement('linearGradient', { id: 'retentionZoneGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
+            React.createElement('stop', { offset: '0%', stopColor: '#ec4899', stopOpacity: '0.15' }),
+            React.createElement('stop', { offset: '100%', stopColor: '#ec4899', stopOpacity: '0.03' })
           )
         ),
+        // === Розовые зоны для дней с задержкой воды (рисуем ДО основного графика) ===
+        hasAnyRetentionDays && (() => {
+          // Находим группы последовательных дней с задержкой
+          const retentionRanges = [];
+          let rangeStart = null;
+          
+          for (let i = 0; i < points.length; i++) {
+            if (points[i].hasWaterRetention) {
+              if (rangeStart === null) rangeStart = i;
+            } else {
+              if (rangeStart !== null) {
+                retentionRanges.push({ start: rangeStart, end: i - 1 });
+                rangeStart = null;
+              }
+            }
+          }
+          if (rangeStart !== null) {
+            retentionRanges.push({ start: rangeStart, end: points.length - 1 });
+          }
+          
+          // Ширина одной "колонки" для точки
+          const colWidth = (width - paddingX * 2) / (totalPoints - 1);
+          
+          return retentionRanges.map((range, idx) => {
+            const startX = points[range.start].x - colWidth * 0.4;
+            const endX = points[range.end].x + colWidth * 0.4;
+            const rectWidth = Math.max(endX - startX, colWidth * 0.8);
+            
+            return React.createElement('rect', {
+              key: 'retention-zone-' + idx,
+              x: Math.max(0, startX),
+              y: 0,
+              width: rectWidth,
+              height: height,
+              fill: 'url(#retentionZoneGrad)',
+              className: 'weight-retention-zone',
+              rx: 4 // скруглённые углы
+            });
+          });
+        })(),
         // Заливка под графиком (анимированная)
         React.createElement('path', {
           d: areaPath,
@@ -9684,9 +9821,32 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           
           let dotClass = 'weight-sparkline-dot sparkline-dot';
           if (p.isToday) dotClass += ' weight-sparkline-dot-today sparkline-dot-pulse';
+          if (p.hasWaterRetention) dotClass += ' weight-sparkline-dot-retention';
           
           // Задержка анимации через CSS переменную
           const animDelay = 3 + i * 0.15;
+          
+          // Стили для точки с задержкой воды
+          const dotStyle = { 
+            cursor: 'pointer', 
+            fill: dotColor, 
+            '--delay': animDelay + 's'
+          };
+          
+          // Розовая обводка для дней с задержкой воды
+          if (p.hasWaterRetention) {
+            dotStyle.stroke = '#ec4899';
+            dotStyle.strokeWidth = 2;
+          }
+          
+          // Tooltip с учётом задержки воды
+          let tooltipText = p.dayNum + ': ' + p.weight + ' кг';
+          if (localTrend !== 0) {
+            tooltipText += ' (' + (localTrend > 0 ? '+' : '') + localTrend.toFixed(1) + ')';
+          }
+          if (p.hasWaterRetention) {
+            tooltipText += ' 🌸 День ' + p.cycleDay + ' — возможна задержка воды';
+          }
           
           return React.createElement('circle', {
             key: 'wdot-' + i,
@@ -9694,7 +9854,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             cy: p.y, 
             r: p.isToday ? 5 : 4,
             className: dotClass,
-            style: { cursor: 'pointer', fill: dotColor, '--delay': animDelay + 's' },
+            style: dotStyle,
             onClick: (e) => {
               e.stopPropagation();
               haptic('light');
@@ -9706,7 +9866,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               });
             }
           },
-            React.createElement('title', null, p.dayNum + ': ' + p.weight + ' кг' + (localTrend !== 0 ? ' (' + (localTrend > 0 ? '+' : '') + localTrend.toFixed(1) + ')' : ''))
+            React.createElement('title', null, tooltipText)
           );
         }),
         // Точка прогноза (полупрозрачная, пунктирная обводка)
@@ -11423,10 +11583,49 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               className: 'weight-forecast-badge' + 
                 (monthForecast.direction === 'down' ? ' down' : 
                  monthForecast.direction === 'up' ? ' up' : '')
-            }, monthForecast.text)
+            }, monthForecast.text),
+            // Бейдж "чистый тренд" если дни с задержкой воды исключены
+            weightTrend.isCleanTrend && React.createElement('span', { 
+              className: 'weight-clean-trend-badge',
+              title: 'Дни с задержкой воды исключены из тренда'
+            }, '🌸 чистый')
           ) // закрываем badges div
         ), // закрываем условие weightSparklineData.length >= 2
-        renderWeightSparkline(weightSparklineData, weightTrend)
+        renderWeightSparkline(weightSparklineData, weightTrend),
+        // Сноска о задержке воды если есть такие дни
+        weightSparklineData.some(d => d.hasWaterRetention) && React.createElement('div', { 
+          className: 'weight-retention-note' 
+        },
+          React.createElement('span', { className: 'weight-retention-note-icon' }, '🌸'),
+          React.createElement('div', { className: 'weight-retention-note-content' }, 
+            // Основной текст
+            React.createElement('span', { className: 'weight-retention-note-text' }, 
+              'Розовые зоны — дни с возможной задержкой воды (', 
+              React.createElement('b', null, '+1-3 кг'),
+              '). Это НЕ жир!'
+            ),
+            // Прогноз нормализации
+            cycleHistoryAnalysis?.forecast?.message && React.createElement('div', { 
+              className: 'weight-retention-forecast' 
+            },
+              '⏱️ ', cycleHistoryAnalysis.forecast.message
+            ),
+            // Персональный инсайт из истории
+            cycleHistoryAnalysis?.hasSufficientData && cycleHistoryAnalysis?.insight && React.createElement('div', { 
+              className: 'weight-retention-insight' 
+            },
+              '📊 ', cycleHistoryAnalysis.insight
+            ),
+            // Статистика по циклам (если >=2 циклов)
+            cycleHistoryAnalysis?.cyclesAnalyzed >= 2 && React.createElement('div', { 
+              className: 'weight-retention-stats' 
+            },
+              'Твоя типичная задержка: ',
+              React.createElement('b', null, '~' + cycleHistoryAnalysis.avgRetentionKg + ' кг'),
+              ' (на основе ', cycleHistoryAnalysis.cyclesAnalyzed, ' циклов)'
+            )
+          )
+        )
       ),
       // Popup с деталями веса при клике на точку — V2 STYLE
       sparklinePopup && sparklinePopup.type === 'weight' && (() => {

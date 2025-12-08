@@ -375,6 +375,20 @@
 
   // mealTotals с кэшированием по meal.id/hash и сигнатуре продуктов
   const _mealTotalsCache = new Map();
+  
+  // Функция очистки кэша — вызывать при обновлении продуктов
+  function clearMealTotalsCache() {
+    _mealTotalsCache.clear();
+    console.log('[HEYS] mealTotals cache cleared');
+  }
+  
+  // Автоочистка при обновлении продуктов (fix: нули при синхронизации)
+  if (typeof window !== 'undefined') {
+    window.addEventListener('heysProductsUpdated', () => {
+      clearMealTotalsCache();
+    });
+  }
+  
   function mealSignature(meal) {
     if (!meal || !Array.isArray(meal.items)) return '';
     return meal.items.map(it => `${it.product_id||it.productId||it.name||''}:${it.grams||0}`).join('|');
@@ -419,6 +433,7 @@
   M.buildProductIndex = buildProductIndex;
   M.getProductFromItem = getProductFromItem;
   M.mealTotals = mealTotals;
+  M.clearMealTotalsCache = clearMealTotalsCache;
   M.computeDerivedProduct = computeDerivedProduct;
   M.uuid = uuid;
   M.round1 = round1;

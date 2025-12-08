@@ -2117,6 +2117,93 @@
   color: #b91c1c;
 }
 
+/* === ЗАДЕРЖКА ВОДЫ — CYCLE INTEGRATION === */
+
+/* Бейдж "чистый тренд" */
+.weight-clean-trend-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #fce7f3;
+  color: #be185d;
+  cursor: help;
+}
+
+/* Розовая зона задержки воды на графике */
+.weight-retention-zone {
+  opacity: 0;
+  animation: fadeIn 0.5s ease 2s forwards;
+}
+
+/* Точка в зоне задержки воды */
+.weight-sparkline-dot-retention {
+  filter: drop-shadow(0 0 3px rgba(236, 72, 153, 0.5));
+}
+
+/* Сноска о задержке воды под графиком */
+.weight-retention-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+  border-radius: 8px;
+  border-left: 3px solid #ec4899;
+}
+
+.weight-retention-note-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.weight-retention-note-text {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #9d174d;
+}
+
+.weight-retention-note-text b {
+  color: #be185d;
+}
+
+/* Контент сноски (flex column) */
+.weight-retention-note-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+/* Прогноз нормализации */
+.weight-retention-forecast {
+  font-size: 11px;
+  color: #9d174d;
+  font-weight: 500;
+}
+
+/* Персональный инсайт */
+.weight-retention-insight {
+  font-size: 11px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Статистика по циклам */
+.weight-retention-stats {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px dashed rgba(236, 72, 153, 0.2);
+}
+
+.weight-retention-stats b {
+  color: #be185d;
+  font-weight: 600;
+}
+
 .weight-sparkline-svg {
   display: block;
   width: 100%;

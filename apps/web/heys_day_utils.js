@@ -376,7 +376,8 @@
     return allMeals;
   }
 
-  // Lightweight signature for products (ids/names only)
+  // Lightweight signature for products (ids/names + kcal для инвалидации при синхронизации)
+  // FIX: добавлен kcal100 чтобы пересобрать индекс когда продукт обновился с нулей на реальные данные
   function productsSignature(ps){ 
     // Ensure ps is an array
     if (!ps) return '';
@@ -384,7 +385,13 @@
       console.warn('[HEYS] productsSignature: expected array, got', typeof ps);
       return '';
     }
-    return ps.map(p=>p&& (p.id||p.product_id||p.name)||'').join('|'); 
+    // Включаем id/name + kcal100 для детектирования обновлений содержимого
+    return ps.map(p => {
+      if (!p) return '';
+      const id = p.id || p.product_id || p.name || '';
+      const kcal = p.kcal100 ?? p.kcal ?? 0;
+      return `${id}:${kcal}`;
+    }).join('|'); 
   }
 
   // Cached popular products (per month + signature + TTL)

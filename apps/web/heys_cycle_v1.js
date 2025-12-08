@@ -326,6 +326,78 @@
     }
   }
 
+  // ============================================================
+  // ЗАДЕРЖКА ВОДЫ И ВЕС
+  // ============================================================
+
+  /**
+   * Информация о задержке воды по фазе цикла
+   * 
+   * Научное обоснование:
+   * - Stachenfeld et al. 2008: "Estrogen influences body water regulation"
+   * - White et al. 2011: "Menstrual cycle phase and fluid retention"
+   * - Повышение прогестерона в лютеиновой фазе → задержка Na+ и воды
+   * - Пик задержки: 1-3 дня до и 1-3 дня после начала менструации
+   * - Типичная задержка: 0.5-3 кг (зависит от индивидуальных особенностей)
+   * 
+   * @param {number|null} cycleDay 
+   * @returns {Object} { hasRetention, severity, kgEstimate, advice }
+   */
+  function getWaterRetentionInfo(cycleDay) {
+    if (!cycleDay || typeof cycleDay !== 'number' || cycleDay < 1) {
+      return { 
+        hasRetention: false, 
+        severity: 'none', 
+        kgEstimate: 0, 
+        advice: null,
+        excludeFromTrend: false
+      };
+    }
+
+    // Дни 1-5: Менструальная фаза — максимальная задержка
+    if (cycleDay >= 1 && cycleDay <= 5) {
+      return {
+        hasRetention: true,
+        severity: cycleDay <= 3 ? 'high' : 'medium', // Пик в первые 3 дня
+        kgEstimate: cycleDay <= 3 ? 2.0 : 1.0, // Средняя оценка
+        advice: 'Вес может быть выше на 1-3 кг из-за задержки воды. Это НЕ жир!',
+        excludeFromTrend: true,
+        phaseColor: '#ec4899' // pink
+      };
+    }
+
+    // Дни 6-7: Переходная фаза — остаточная задержка
+    if (cycleDay >= 6 && cycleDay <= 7) {
+      return {
+        hasRetention: true,
+        severity: 'low',
+        kgEstimate: 0.5,
+        advice: 'Вода уходит, вес постепенно нормализуется',
+        excludeFromTrend: true, // Всё ещё лучше исключить
+        phaseColor: '#f9a8d4' // pink-300 (светлее)
+      };
+    }
+
+    // Дни 8-14: Фолликулярная/Овуляция — нет задержки
+    return { 
+      hasRetention: false, 
+      severity: 'none', 
+      kgEstimate: 0, 
+      advice: null,
+      excludeFromTrend: false
+    };
+  }
+
+  /**
+   * Проверить, нужно ли исключать день из тренда веса
+   * @param {number|null} cycleDay 
+   * @returns {boolean}
+   */
+  function shouldExcludeFromWeightTrend(cycleDay) {
+    const info = getWaterRetentionInfo(cycleDay);
+    return info.excludeFromTrend;
+  }
+
   /**
    * Найти дату "День 1" цикла по любой дате в цикле
    * @param {string} dateStr - YYYY-MM-DD
@@ -348,6 +420,250 @@
   }
 
   // ============================================================
+  // ИСТОРИЧЕСКИЙ АНАЛИЗ ЦИКЛОВ
+  // ============================================================
+
+  /**
+   * Найти все циклы за указанный период
+   * @param {number} monthsBack - Сколько месяцев назад искать (по умолчанию 6)
+   * @param {function} lsGet - Функция чтения из localStorage
+   * @returns {Array} Массив циклов [{ startDate, endDate, days: [...] }]
+   */
+  function findAllCycles(monthsBack = 6, lsGet) {
+    const cycles = [];
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setMonth(startDate.getMonth() - monthsBack);
+    
+    let currentCycle = null;
+    
+    // Проходим по всем дням
+    for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().slice(0, 10);
+      const key = 'heys_dayv2_' + dateStr;
+      
+      try {
+        const dayData = lsGet ? lsGet(key, null) : null;
+        
+        if (dayData && dayData.cycleDay) {
+          // Нашли день цикла
+          if (dayData.cycleDay === 1) {
+            // Начало нового цикла
+            if (currentCycle) {
+              cycles.push(currentCycle);
+            }
+            currentCycle = {
+              startDate: dateStr,
+              endDate: dateStr,
+              days: [{
+                date: dateStr,
+                cycleDay: dayData.cycleDay,
+                weight: dayData.weightMorning || null
+              }]
+            };
+          } else if (currentCycle) {
+            // Продолжение цикла
+            currentCycle.endDate = dateStr;
+            currentCycle.days.push({
+              date: dateStr,
+              cycleDay: dayData.cycleDay,
+              weight: dayData.weightMorning || null
+            });
+          }
+        }
+      } catch (e) {
+        // Игнорируем ошибки чтения
+      }
+    }
+    
+    // Добавляем последний цикл
+    if (currentCycle) {
+      cycles.push(currentCycle);
+    }
+    
+    return cycles;
+  }
+
+  /**
+   * Анализ задержки воды по историческим данным
+   * @param {number} monthsBack - Период анализа в месяцах
+   * @param {function} lsGet - Функция чтения
+   * @returns {Object} Статистика по циклам
+   */
+  function analyzeWaterRetentionHistory(monthsBack = 6, lsGet) {
+    const cycles = findAllCycles(monthsBack, lsGet);
+    
+    if (cycles.length === 0) {
+      return {
+        hasSufficientData: false,
+        cyclesAnalyzed: 0,
+        message: 'Недостаточно данных для анализа'
+      };
+    }
+
+    const retentionData = [];
+    
+    for (const cycle of cycles) {
+      // Для анализа нужен вес в дни 1-5 и "нормальный" вес после (дни 8-14)
+      const retentionDays = cycle.days.filter(d => d.cycleDay >= 1 && d.cycleDay <= 5 && d.weight > 0);
+      const normalDays = cycle.days.filter(d => d.cycleDay >= 8 && d.weight > 0);
+      
+      if (retentionDays.length >= 2 && normalDays.length >= 1) {
+        const avgRetentionWeight = retentionDays.reduce((s, d) => s + d.weight, 0) / retentionDays.length;
+        const avgNormalWeight = normalDays.reduce((s, d) => s + d.weight, 0) / normalDays.length;
+        const retention = avgRetentionWeight - avgNormalWeight;
+        
+        if (retention > 0) {
+          retentionData.push({
+            cycleStart: cycle.startDate,
+            retentionKg: retention,
+            peakDay: retentionDays.reduce((max, d) => d.weight > (max?.weight || 0) ? d : max, null)?.cycleDay || 2,
+            avgRetentionWeight,
+            avgNormalWeight,
+            daysTracked: cycle.days.length
+          });
+        }
+      }
+    }
+
+    if (retentionData.length === 0) {
+      return {
+        hasSufficientData: false,
+        cyclesAnalyzed: cycles.length,
+        message: 'Нет данных о весе для анализа задержки воды'
+      };
+    }
+
+    // Статистика
+    const avgRetention = retentionData.reduce((s, d) => s + d.retentionKg, 0) / retentionData.length;
+    const maxRetention = Math.max(...retentionData.map(d => d.retentionKg));
+    const minRetention = Math.min(...retentionData.map(d => d.retentionKg));
+    const lastCycle = retentionData[retentionData.length - 1];
+    const prevCycle = retentionData.length >= 2 ? retentionData[retentionData.length - 2] : null;
+
+    // Тренд (улучшается/ухудшается)
+    let trend = 'stable';
+    if (retentionData.length >= 3) {
+      const firstHalf = retentionData.slice(0, Math.floor(retentionData.length / 2));
+      const secondHalf = retentionData.slice(Math.floor(retentionData.length / 2));
+      const avgFirst = firstHalf.reduce((s, d) => s + d.retentionKg, 0) / firstHalf.length;
+      const avgSecond = secondHalf.reduce((s, d) => s + d.retentionKg, 0) / secondHalf.length;
+      
+      if (avgSecond < avgFirst - 0.3) trend = 'improving';
+      else if (avgSecond > avgFirst + 0.3) trend = 'worsening';
+    }
+
+    return {
+      hasSufficientData: true,
+      cyclesAnalyzed: retentionData.length,
+      totalCyclesFound: cycles.length,
+      
+      // Средние значения
+      avgRetentionKg: Math.round(avgRetention * 10) / 10,
+      maxRetentionKg: Math.round(maxRetention * 10) / 10,
+      minRetentionKg: Math.round(minRetention * 10) / 10,
+      
+      // Последний цикл
+      lastCycle: lastCycle ? {
+        date: lastCycle.cycleStart,
+        retentionKg: Math.round(lastCycle.retentionKg * 10) / 10,
+        peakDay: lastCycle.peakDay
+      } : null,
+      
+      // Сравнение с предыдущим
+      comparison: prevCycle ? {
+        diff: Math.round((lastCycle.retentionKg - prevCycle.retentionKg) * 10) / 10,
+        improved: lastCycle.retentionKg < prevCycle.retentionKg
+      } : null,
+      
+      // Тренд
+      trend,
+      trendText: trend === 'improving' ? 'Задержка воды уменьшается! 🎉' :
+                 trend === 'worsening' ? 'Задержка воды увеличивается' : 
+                 'Стабильно',
+      
+      // Персональный инсайт
+      insight: generateRetentionInsight(avgRetention, lastCycle, prevCycle, trend)
+    };
+  }
+
+  /**
+   * Генерация персонального инсайта
+   */
+  function generateRetentionInsight(avgRetention, lastCycle, prevCycle, trend) {
+    const insights = [];
+    
+    // Средняя задержка
+    if (avgRetention <= 1.0) {
+      insights.push('У тебя небольшая задержка воды (~' + avgRetention.toFixed(1) + ' кг), это отлично!');
+    } else if (avgRetention <= 2.0) {
+      insights.push('Твоя типичная задержка воды: ~' + avgRetention.toFixed(1) + ' кг — это норма.');
+    } else {
+      insights.push('Задержка воды выше среднего (~' + avgRetention.toFixed(1) + ' кг). Попробуй снизить соль в эти дни.');
+    }
+    
+    // Сравнение с прошлым циклом
+    if (prevCycle && lastCycle) {
+      const diff = lastCycle.retentionKg - prevCycle.retentionKg;
+      if (Math.abs(diff) >= 0.5) {
+        if (diff < 0) {
+          insights.push('В прошлый раз задержка была меньше на ' + Math.abs(diff).toFixed(1) + ' кг! 💪');
+        } else {
+          insights.push('В этот раз задержка на ' + diff.toFixed(1) + ' кг больше — это может быть из-за питания.');
+        }
+      }
+    }
+    
+    // Тренд
+    if (trend === 'improving') {
+      insights.push('За последние циклы задержка воды уменьшается — отличная динамика!');
+    }
+    
+    return insights.length > 0 ? insights[0] : 'Вес после цикла всегда возвращается к норме.';
+  }
+
+  /**
+   * Получить прогноз нормализации веса
+   * @param {number} currentCycleDay - Текущий день цикла
+   * @returns {Object} { daysUntilNormal, message }
+   */
+  function getWeightNormalizationForecast(currentCycleDay) {
+    if (!currentCycleDay || currentCycleDay < 1) {
+      return { daysUntilNormal: null, message: null };
+    }
+
+    // Вес нормализуется примерно к дню 8
+    const targetDay = 8;
+    const daysUntilNormal = Math.max(0, targetDay - currentCycleDay);
+    
+    if (currentCycleDay >= 8) {
+      return { 
+        daysUntilNormal: 0, 
+        message: 'Вес уже должен быть в норме' 
+      };
+    }
+    
+    if (daysUntilNormal === 0) {
+      return { 
+        daysUntilNormal: 0, 
+        message: 'Вес нормализуется уже завтра!' 
+      };
+    }
+    
+    if (daysUntilNormal === 1) {
+      return { 
+        daysUntilNormal: 1, 
+        message: 'Ещё ~1 день до нормализации веса' 
+      };
+    }
+    
+    return { 
+      daysUntilNormal, 
+      message: 'Вес нормализуется примерно через ' + daysUntilNormal + ' дней' 
+    };
+  }
+
+  // ============================================================
   // ЭКСПОРТ
   // ============================================================
 
@@ -364,6 +680,15 @@
     // Проверки
     isInMenstrualPhase,
     
+    // Задержка воды и вес
+    getWaterRetentionInfo,
+    shouldExcludeFromWeightTrend,
+    
+    // Исторический анализ
+    findAllCycles,
+    analyzeWaterRetentionHistory,
+    getWeightNormalizationForecast,
+    
     // UI helpers
     getCycleDisplay,
     getCycleDescription,
@@ -376,6 +701,6 @@
     addDays
   };
 
-  console.log('[HEYS] Cycle module loaded v1.1.0 (+auto-fill)');
+  console.log('[HEYS] Cycle module loaded v1.3.0 (+history analysis)');
 
 })(typeof window !== 'undefined' ? window : global);
