@@ -899,7 +899,20 @@
           // Трекаем orphan-продукты (когда используется штамп вместо базы)
           // НЕ трекаем если база продуктов пуста или синхронизация не завершена
           if (!product && itemName) {
-            const freshProducts = global.HEYS?.products?.getAll?.() || [];
+            // Получаем продукты из всех возможных источников
+            let freshProducts = global.HEYS?.products?.getAll?.() || [];
+            
+            // Fallback: читаем напрямую из localStorage если HEYS.products пуст
+            if (freshProducts.length === 0) {
+              try {
+                const lsKey = 'heys_products';
+                const stored = localStorage.getItem(lsKey);
+                if (stored) {
+                  freshProducts = JSON.parse(stored) || [];
+                }
+              } catch (e) { /* ignore */ }
+            }
+            
             const hasProductsLoaded = productsMap.size > 0 || freshProducts.length > 0;
             
             // Дополнительная проверка: ищем продукт напрямую в свежей базе
