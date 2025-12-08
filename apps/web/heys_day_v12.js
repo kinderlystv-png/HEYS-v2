@@ -574,6 +574,392 @@
     return n / d;
   };
 
+  // === Цветовая оценка нутриентов для сводки приёма ===
+  const NUTRIENT_COLORS = {
+    good: '#16a34a',    // зелёный
+    medium: '#ca8a04',  // жёлтый
+    bad: '#dc2626'      // красный
+  };
+
+  /**
+   * Получить цвет для значения нутриента в сводке приёма
+   * @param {string} nutrient - тип нутриента
+   * @param {number} value - значение
+   * @param {object} totals - все totals приёма для контекста
+   * @returns {string|null} - цвет или null (дефолтный)
+   */
+  function getNutrientColor(nutrient, value, totals = {}) {
+    const v = +value || 0;
+    const { kcal = 0, carbs = 0, simple = 0, complex = 0, prot = 0, fat = 0, bad = 0, good = 0, trans = 0, fiber = 0 } = totals;
+    
+    switch (nutrient) {
+      // === КАЛОРИИ (за приём) ===
+      case 'kcal':
+        if (v <= 0) return null;
+        if (v <= 150) return NUTRIENT_COLORS.good;      // Лёгкий перекус
+        if (v <= 500) return null;                       // Нормально
+        if (v <= 700) return NUTRIENT_COLORS.medium;    // Тяжеловато
+        return NUTRIENT_COLORS.bad;                      // Переедание за приём
+      
+      // === УГЛЕВОДЫ (за приём) ===
+      case 'carbs':
+        if (v <= 0) return null;
+        if (v <= 60) return NUTRIENT_COLORS.good;       // Норма
+        if (v <= 100) return NUTRIENT_COLORS.medium;    // Много
+        return NUTRIENT_COLORS.bad;                      // Слишком много
+      
+      // === ПРОСТЫЕ УГЛЕВОДЫ (за приём) ===
+      case 'simple':
+        if (v <= 0) return NUTRIENT_COLORS.good;        // Нет простых = отлично
+        if (v <= 10) return NUTRIENT_COLORS.good;       // Минимум
+        if (v <= 25) return NUTRIENT_COLORS.medium;     // Терпимо
+        return NUTRIENT_COLORS.bad;                      // Много сахара
+      
+      // === СЛОЖНЫЕ УГЛЕВОДЫ (за приём) ===
+      case 'complex':
+        if (v <= 0) return null;
+        if (v >= 30 && carbs > 0 && v / carbs >= 0.7) return NUTRIENT_COLORS.good;  // Хорошо — сложных много
+        return null;                                     // Нейтрально
+      
+      // === СООТНОШЕНИЕ ПРОСТЫЕ/СЛОЖНЫЕ ===
+      case 'simple_complex_ratio':
+        if (carbs <= 5) return null;                    // Мало углеводов — неважно
+        const simpleRatio = simple / carbs;
+        if (simpleRatio <= 0.3) return NUTRIENT_COLORS.good;   // Отлично
+        if (simpleRatio <= 0.5) return NUTRIENT_COLORS.medium; // Терпимо
+        return NUTRIENT_COLORS.bad;                             // Плохо
+      
+      // === БЕЛОК (за приём) ===
+      case 'prot':
+        if (v <= 0) return null;
+        if (v >= 20 && v <= 40) return NUTRIENT_COLORS.good;   // Оптимум
+        if (v >= 10 && v <= 50) return null;                    // Нормально
+        if (v < 10 && kcal > 200) return NUTRIENT_COLORS.medium; // Мало белка для сытного приёма
+        if (v > 50) return NUTRIENT_COLORS.medium;              // Много — избыток не усвоится
+        return null;
+      
+      // === ЖИРЫ (за приём) ===
+      case 'fat':
+        if (v <= 0) return null;
+        if (v <= 20) return NUTRIENT_COLORS.good;       // Норма
+        if (v <= 35) return null;                        // Нормально
+        if (v <= 50) return NUTRIENT_COLORS.medium;     // Много
+        return NUTRIENT_COLORS.bad;                      // Очень много
+      
+      // === ВРЕДНЫЕ ЖИРЫ ===
+      case 'bad':
+        if (v <= 0) return NUTRIENT_COLORS.good;        // Нет = отлично
+        if (v <= 5) return null;                         // Минимум
+        if (v <= 10) return NUTRIENT_COLORS.medium;     // Терпимо
+        return NUTRIENT_COLORS.bad;                      // Много
+      
+      // === ПОЛЕЗНЫЕ ЖИРЫ ===
+      case 'good':
+        if (fat <= 0) return null;
+        if (v >= fat * 0.6) return NUTRIENT_COLORS.good;  // >60% полезных
+        if (v >= fat * 0.4) return null;                   // 40-60%
+        return NUTRIENT_COLORS.medium;                     // <40% полезных
+      
+      // === ТРАНС-ЖИРЫ ===
+      case 'trans':
+        if (v <= 0) return NUTRIENT_COLORS.good;        // Нет = идеально
+        if (v <= 0.5) return NUTRIENT_COLORS.medium;    // Минимум
+        return NUTRIENT_COLORS.bad;                      // Любое количество плохо
+      
+      // === СООТНОШЕНИЕ ЖИРОВ ===
+      case 'fat_ratio':
+        if (fat <= 3) return null;                       // Мало жиров — неважно
+        const goodRatio = good / fat;
+        const badRatio = bad / fat;
+        if (goodRatio >= 0.6 && trans <= 0) return NUTRIENT_COLORS.good;
+        if (badRatio > 0.5 || trans > 0.5) return NUTRIENT_COLORS.bad;
+        return NUTRIENT_COLORS.medium;
+      
+      // === КЛЕТЧАТКА ===
+      case 'fiber':
+        if (v <= 0) return null;
+        if (v >= 8) return NUTRIENT_COLORS.good;        // Отлично
+        if (v >= 4) return null;                         // Нормально
+        if (kcal > 300 && v < 2) return NUTRIENT_COLORS.medium; // Мало для сытного приёма
+        return null;
+      
+      // === ГЛИКЕМИЧЕСКИЙ ИНДЕКС ===
+      case 'gi':
+        if (v <= 0 || carbs <= 5) return null;          // Нет углеводов — GI неважен
+        if (v <= 40) return NUTRIENT_COLORS.good;       // Низкий
+        if (v <= 55) return NUTRIENT_COLORS.good;       // Умеренный — хорошо
+        if (v <= 70) return NUTRIENT_COLORS.medium;     // Средний
+        return NUTRIENT_COLORS.bad;                      // Высокий
+      
+      // === ВРЕДНОСТЬ ===
+      case 'harm':
+        if (v <= 0) return NUTRIENT_COLORS.good;        // Полезная еда
+        if (v <= 2) return NUTRIENT_COLORS.good;        // Минимально
+        if (v <= 4) return null;                         // Нормально
+        if (v <= 6) return NUTRIENT_COLORS.medium;      // Терпимо
+        return NUTRIENT_COLORS.bad;                      // Вредно
+      
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Получить tooltip для значения нутриента (объяснение цвета)
+   */
+  function getNutrientTooltip(nutrient, value, totals = {}) {
+    const v = +value || 0;
+    const { kcal = 0, carbs = 0, simple = 0, fat = 0, bad = 0, good = 0, trans = 0 } = totals;
+    
+    switch (nutrient) {
+      case 'kcal':
+        if (v <= 0) return 'Нет калорий';
+        if (v <= 150) return '✅ Лёгкий приём (≤150 ккал)';
+        if (v <= 500) return 'Нормальный приём';
+        if (v <= 700) return '⚠️ Много для одного приёма (500-700 ккал)';
+        return '❌ Переедание (>700 ккал за раз)';
+      
+      case 'carbs':
+        if (v <= 0) return 'Без углеводов';
+        if (v <= 60) return '✅ Умеренно углеводов (≤60г)';
+        if (v <= 100) return '⚠️ Много углеводов (60-100г)';
+        return '❌ Очень много углеводов (>100г)';
+      
+      case 'simple':
+        if (v <= 0) return '✅ Без простых углеводов — идеально!';
+        if (v <= 10) return '✅ Минимум простых (≤10г)';
+        if (v <= 25) return '⚠️ Терпимо простых (10-25г)';
+        return '❌ Много сахара (>25г) — инсулиновый скачок';
+      
+      case 'complex':
+        if (v <= 0) return 'Без сложных углеводов';
+        if (carbs > 0 && v / carbs >= 0.7) return '✅ Отлично! Сложных ≥70%';
+        return 'Сложные углеводы';
+      
+      case 'prot':
+        if (v <= 0) return 'Без белка';
+        if (v >= 20 && v <= 40) return '✅ Оптимум белка (20-40г)';
+        if (v < 10 && kcal > 200) return '⚠️ Мало белка для сытного приёма';
+        if (v > 50) return '⚠️ Много белка (>50г) — избыток не усвоится';
+        return 'Белок в норме';
+      
+      case 'fat':
+        if (v <= 0) return 'Без жиров';
+        if (v <= 20) return '✅ Умеренно жиров (≤20г)';
+        if (v <= 35) return 'Жиры в норме';
+        if (v <= 50) return '⚠️ Много жиров (35-50г)';
+        return '❌ Очень много жиров (>50г)';
+      
+      case 'bad':
+        if (v <= 0) return '✅ Без вредных жиров — отлично!';
+        if (v <= 5) return 'Минимум вредных жиров';
+        if (v <= 10) return '⚠️ Терпимо вредных жиров (5-10г)';
+        return '❌ Много вредных жиров (>10г)';
+      
+      case 'good':
+        if (fat <= 0) return 'Нет жиров';
+        if (v >= fat * 0.6) return '✅ Полезных жиров ≥60%';
+        if (v >= fat * 0.4) return 'Полезные жиры в норме';
+        return '⚠️ Мало полезных жиров (<40%)';
+      
+      case 'trans':
+        if (v <= 0) return '✅ Без транс-жиров — идеально!';
+        if (v <= 0.5) return '⚠️ Есть транс-жиры (≤0.5г)';
+        return '❌ Транс-жиры опасны (>0.5г)';
+      
+      case 'fiber':
+        if (v <= 0) return 'Без клетчатки';
+        if (v >= 8) return '✅ Отлично! Много клетчатки (≥8г)';
+        if (v >= 4) return 'Клетчатка в норме';
+        if (kcal > 300 && v < 2) return '⚠️ Мало клетчатки для сытного приёма';
+        return 'Клетчатка';
+      
+      case 'gi':
+        if (carbs <= 5) return 'Мало углеводов — ГИ неважен';
+        if (v <= 40) return '✅ Низкий ГИ (≤40) — медленные углеводы';
+        if (v <= 55) return '✅ Умеренный ГИ (40-55)';
+        if (v <= 70) return '⚠️ Средний ГИ (55-70) — инсулин повышен';
+        return '❌ Высокий ГИ (>70) — быстрый сахар в крови';
+      
+      case 'harm':
+        if (v <= 0) return '✅ Полезная еда';
+        if (v <= 2) return '✅ Минимальный вред';
+        if (v <= 4) return 'Умеренный вред';
+        if (v <= 6) return '⚠️ Заметный вред (4-6)';
+        return '❌ Вредная еда (>6)';
+      
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Получить цвет для СУТОЧНОГО значения (сравнение факта с нормой)
+   * @param {string} nutrient - тип нутриента
+   * @param {number} fact - фактическое значение
+   * @param {number} norm - норма
+   * @returns {string|null} - цвет или null
+   */
+  function getDailyNutrientColor(nutrient, fact, norm) {
+    if (!norm || norm <= 0) return null;
+    const pct = fact / norm; // процент выполнения
+    
+    switch (nutrient) {
+      // === КАЛОРИИ — ключевой параметр ===
+      case 'kcal':
+        if (pct >= 0.90 && pct <= 1.10) return NUTRIENT_COLORS.good;  // 90-110% — идеально
+        if (pct >= 0.75 && pct <= 1.20) return NUTRIENT_COLORS.medium; // 75-120% — терпимо
+        return NUTRIENT_COLORS.bad;                                     // <75% или >120%
+      
+      // === БЕЛОК — чем больше, тем лучше (до 150%) ===
+      case 'prot':
+        if (pct >= 0.90 && pct <= 1.30) return NUTRIENT_COLORS.good;  // 90-130% — отлично
+        if (pct >= 0.70) return NUTRIENT_COLORS.medium;                // 70-90% — маловато
+        return NUTRIENT_COLORS.bad;                                     // <70% — критично мало
+      
+      // === УГЛЕВОДЫ — близко к норме ===
+      case 'carbs':
+        if (pct >= 0.85 && pct <= 1.15) return NUTRIENT_COLORS.good;
+        if (pct >= 0.60 && pct <= 1.30) return NUTRIENT_COLORS.medium;
+        return NUTRIENT_COLORS.bad;
+      
+      // === ПРОСТЫЕ — чем меньше, тем лучше ===
+      case 'simple':
+        if (pct <= 0.80) return NUTRIENT_COLORS.good;                  // <80% нормы — отлично
+        if (pct <= 1.10) return null;                                   // 80-110% — норма
+        if (pct <= 1.30) return NUTRIENT_COLORS.medium;                // 110-130% — многовато
+        return NUTRIENT_COLORS.bad;                                     // >130% — плохо
+      
+      // === СЛОЖНЫЕ — чем больше, тем лучше ===
+      case 'complex':
+        if (pct >= 1.00) return NUTRIENT_COLORS.good;                  // ≥100% — отлично
+        if (pct >= 0.70) return null;                                   // 70-100% — норма
+        return NUTRIENT_COLORS.medium;                                  // <70% — маловато
+      
+      // === ЖИРЫ — близко к норме ===
+      case 'fat':
+        if (pct >= 0.85 && pct <= 1.15) return NUTRIENT_COLORS.good;
+        if (pct >= 0.60 && pct <= 1.30) return NUTRIENT_COLORS.medium;
+        return NUTRIENT_COLORS.bad;
+      
+      // === ВРЕДНЫЕ ЖИРЫ — чем меньше, тем лучше ===
+      case 'bad':
+        if (pct <= 0.70) return NUTRIENT_COLORS.good;                  // <70% — отлично
+        if (pct <= 1.00) return null;                                   // 70-100% — норма
+        if (pct <= 1.30) return NUTRIENT_COLORS.medium;                // 100-130% — многовато
+        return NUTRIENT_COLORS.bad;                                     // >130%
+      
+      // === ПОЛЕЗНЫЕ ЖИРЫ — чем больше, тем лучше ===
+      case 'good':
+        if (pct >= 1.00) return NUTRIENT_COLORS.good;
+        if (pct >= 0.70) return null;
+        return NUTRIENT_COLORS.medium;
+      
+      // === ТРАНС-ЖИРЫ — чем меньше, тем лучше (особо вредные) ===
+      case 'trans':
+        if (pct <= 0.50) return NUTRIENT_COLORS.good;                  // <50% — отлично
+        if (pct <= 1.00) return NUTRIENT_COLORS.medium;                // 50-100%
+        return NUTRIENT_COLORS.bad;                                     // >100%
+      
+      // === КЛЕТЧАТКА — чем больше, тем лучше ===
+      case 'fiber':
+        if (pct >= 1.00) return NUTRIENT_COLORS.good;                  // ≥100% — отлично
+        if (pct >= 0.70) return null;                                   // 70-100% — норма
+        if (pct >= 0.40) return NUTRIENT_COLORS.medium;                // 40-70% — маловато
+        return NUTRIENT_COLORS.bad;                                     // <40%
+      
+      // === ГИ — чем ниже, тем лучше ===
+      case 'gi':
+        if (pct <= 0.80) return NUTRIENT_COLORS.good;                  // <80% от целевого
+        if (pct <= 1.10) return null;                                   // 80-110%
+        if (pct <= 1.30) return NUTRIENT_COLORS.medium;
+        return NUTRIENT_COLORS.bad;
+      
+      // === ВРЕДНОСТЬ — чем меньше, тем лучше ===
+      case 'harm':
+        if (pct <= 0.50) return NUTRIENT_COLORS.good;                  // <50% — отлично
+        if (pct <= 1.00) return null;                                   // 50-100% — норма
+        if (pct <= 1.50) return NUTRIENT_COLORS.medium;
+        return NUTRIENT_COLORS.bad;
+      
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Получить tooltip для СУТОЧНОГО значения
+   */
+  function getDailyNutrientTooltip(nutrient, fact, norm) {
+    if (!norm || norm <= 0) return 'Норма не задана';
+    const pct = Math.round((fact / norm) * 100);
+    const diff = fact - norm;
+    const diffStr = diff >= 0 ? '+' + Math.round(diff) : Math.round(diff);
+    
+    const baseInfo = `${Math.round(fact)} из ${Math.round(norm)} (${pct}%)`;
+    
+    switch (nutrient) {
+      case 'kcal':
+        if (pct >= 90 && pct <= 110) return `✅ Калории в норме: ${baseInfo}`;
+        if (pct < 90) return `⚠️ Недобор калорий: ${baseInfo}`;
+        return `❌ Перебор калорий: ${baseInfo}`;
+      
+      case 'prot':
+        if (pct >= 90) return `✅ Белок в норме: ${baseInfo}`;
+        if (pct >= 70) return `⚠️ Маловато белка: ${baseInfo}`;
+        return `❌ Мало белка: ${baseInfo}`;
+      
+      case 'carbs':
+        if (pct >= 85 && pct <= 115) return `✅ Углеводы в норме: ${baseInfo}`;
+        if (pct < 85) return `⚠️ Мало углеводов: ${baseInfo}`;
+        return `⚠️ Много углеводов: ${baseInfo}`;
+      
+      case 'simple':
+        if (pct <= 80) return `✅ Мало простых — отлично: ${baseInfo}`;
+        if (pct <= 110) return `Простые углеводы: ${baseInfo}`;
+        return `❌ Много простых углеводов: ${baseInfo}`;
+      
+      case 'complex':
+        if (pct >= 100) return `✅ Достаточно сложных: ${baseInfo}`;
+        return `Сложные углеводы: ${baseInfo}`;
+      
+      case 'fat':
+        if (pct >= 85 && pct <= 115) return `✅ Жиры в норме: ${baseInfo}`;
+        return `Жиры: ${baseInfo}`;
+      
+      case 'bad':
+        if (pct <= 70) return `✅ Мало вредных жиров: ${baseInfo}`;
+        if (pct <= 100) return `Вредные жиры: ${baseInfo}`;
+        return `❌ Много вредных жиров: ${baseInfo}`;
+      
+      case 'good':
+        if (pct >= 100) return `✅ Достаточно полезных жиров: ${baseInfo}`;
+        return `Полезные жиры: ${baseInfo}`;
+      
+      case 'trans':
+        if (pct <= 50) return `✅ Минимум транс-жиров: ${baseInfo}`;
+        return `❌ Транс-жиры: ${baseInfo}`;
+      
+      case 'fiber':
+        if (pct >= 100) return `✅ Достаточно клетчатки: ${baseInfo}`;
+        if (pct >= 70) return `Клетчатка: ${baseInfo}`;
+        return `⚠️ Мало клетчатки: ${baseInfo}`;
+      
+      case 'gi':
+        if (pct <= 80) return `✅ Низкий средний ГИ: ${baseInfo}`;
+        if (pct <= 110) return `Средний ГИ: ${baseInfo}`;
+        return `⚠️ Высокий средний ГИ: ${baseInfo}`;
+      
+      case 'harm':
+        if (pct <= 50) return `✅ Минимальный вред: ${baseInfo}`;
+        if (pct <= 100) return `Вредность: ${baseInfo}`;
+        return `❌ Высокая вредность: ${baseInfo}`;
+      
+      default:
+        return baseInfo;
+    }
+  }
+
   function calcKcalScore(kcal, mealType, optimum, timeStr) {
     const dist = MEAL_KCAL_DISTRIBUTION[mealType] || MEAL_KCAL_DISTRIBUTION.snack1;
     const absLimits = MEAL_KCAL_ABSOLUTE[mealType] || MEAL_KCAL_ABSOLUTE.snack1;
@@ -1265,6 +1651,53 @@
     const isCurrentMeal = displayIndex === 0 && !isStale;
     const mealCardClass = isCurrentMeal ? 'card tone-blue meal-card' : 'card tone-slate meal-card';
     const computeDerivedProductFn = M.computeDerivedProduct || ((prod) => prod || {});
+
+    // === Инсулиновая волна в карточке приёма ===
+    const InsulinWave = HEYS.InsulinWave || {};
+    const IWUtils = InsulinWave.utils || {};
+    const insulinWaveData = HEYS.insulinWaveData || {};
+    const waveHistorySorted = React.useMemo(() => {
+      const list = insulinWaveData.waveHistory || [];
+      // Сортировка по времени приёма (используем normalizeToHeysDay, день = 03:00→03:00)
+      if (!IWUtils.normalizeToHeysDay) return [...list].sort((a, b) => a.startMin - b.startMin);
+      return [...list].sort((a, b) => IWUtils.normalizeToHeysDay(a.startMin) - IWUtils.normalizeToHeysDay(b.startMin));
+    }, [insulinWaveData.waveHistory]);
+
+    const currentWaveIndex = React.useMemo(() => waveHistorySorted.findIndex(w => w.time === meal.time), [waveHistorySorted, meal.time]);
+    const currentWave = currentWaveIndex >= 0 ? waveHistorySorted[currentWaveIndex] : null;
+    const prevWave = currentWaveIndex > 0 ? waveHistorySorted[currentWaveIndex - 1] : null;
+    const nextWave = (currentWaveIndex >= 0 && currentWaveIndex < waveHistorySorted.length - 1) ? waveHistorySorted[currentWaveIndex + 1] : null;
+    const hasOverlapWithNext = currentWave && nextWave ? currentWave.endMin > nextWave.startMin : false;
+    const hasOverlapWithPrev = currentWave && prevWave ? prevWave.endMin > currentWave.startMin : false;
+    const hasAnyOverlap = hasOverlapWithNext || hasOverlapWithPrev;
+    const lipolysisGapNext = currentWave && nextWave ? Math.max(0, nextWave.startMin - currentWave.endMin) : 0;
+    const overlapMinutes = hasOverlapWithNext
+      ? currentWave.endMin - nextWave.startMin
+      : hasOverlapWithPrev
+        ? prevWave.endMin - currentWave.startMin
+        : 0;
+    const [waveExpanded, setWaveExpanded] = React.useState(true);
+    const isCurrentActiveMeal = !!(currentWave && currentWave.isActive);
+    const showWaveButton = !!(currentWave && meal.time && (meal.items || []).length > 0);
+    const formatMinutes = React.useCallback((mins) => {
+      if (IWUtils.formatDuration) return IWUtils.formatDuration(mins);
+      return `${Math.max(0, Math.round(mins))}м`;
+    }, [IWUtils.formatDuration]);
+
+    const toggleWave = React.useCallback(() => {
+      const newState = !waveExpanded;
+      setWaveExpanded(newState);
+      if (HEYS.dayUtils?.haptic) HEYS.dayUtils.haptic('light');
+      if (HEYS.analytics?.trackDataOperation) {
+        HEYS.analytics.trackDataOperation('insulin_wave_meal_expand', {
+          action: newState ? 'open' : 'close',
+          hasOverlap: hasAnyOverlap,
+          overlapMinutes,
+          lipolysisGap: lipolysisGapNext,
+          mealIndex
+        });
+      }
+    }, [waveExpanded, hasAnyOverlap, overlapMinutes, lipolysisGapNext, mealIndex]);
     
     // Helper functions для эмодзи оценок (как в тренировках)
     const getMoodEmoji = (v) => 
@@ -1340,15 +1773,25 @@
           React.createElement('span', null, 'Вр')
         ),
         React.createElement('div', { className: 'mpc-grid mpc-totals-values' },
-          React.createElement('span', null, Math.round(totals.kcal)),
-          React.createElement('span', null, Math.round(totals.carbs)),
-          React.createElement('span', { className: 'mpc-dim' }, Math.round(totals.simple || 0) + '/' + Math.round(totals.complex || 0)),
-          React.createElement('span', null, Math.round(totals.prot)),
-          React.createElement('span', null, Math.round(totals.fat)),
-          React.createElement('span', { className: 'mpc-dim' }, Math.round(totals.bad || 0) + '/' + Math.round(totals.good || 0) + '/' + Math.round(totals.trans || 0)),
-          React.createElement('span', null, Math.round(totals.fiber || 0)),
-          React.createElement('span', null, Math.round(totals.gi || 0)),
-          React.createElement('span', null, fmtVal('harm', totals.harm || 0))
+          React.createElement('span', { title: getNutrientTooltip('kcal', totals.kcal, totals), style: { color: getNutrientColor('kcal', totals.kcal, totals), fontWeight: getNutrientColor('kcal', totals.kcal, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.kcal)),
+          React.createElement('span', { title: getNutrientTooltip('carbs', totals.carbs, totals), style: { color: getNutrientColor('carbs', totals.carbs, totals), fontWeight: getNutrientColor('carbs', totals.carbs, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.carbs)),
+          React.createElement('span', { className: 'mpc-dim' }, 
+            React.createElement('span', { title: getNutrientTooltip('simple', totals.simple, totals), style: { color: getNutrientColor('simple', totals.simple, totals), fontWeight: getNutrientColor('simple', totals.simple, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.simple || 0)),
+            '/',
+            React.createElement('span', { title: getNutrientTooltip('complex', totals.complex, totals), style: { color: getNutrientColor('complex', totals.complex, totals), cursor: 'help' } }, Math.round(totals.complex || 0))
+          ),
+          React.createElement('span', { title: getNutrientTooltip('prot', totals.prot, totals), style: { color: getNutrientColor('prot', totals.prot, totals), fontWeight: getNutrientColor('prot', totals.prot, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.prot)),
+          React.createElement('span', { title: getNutrientTooltip('fat', totals.fat, totals), style: { color: getNutrientColor('fat', totals.fat, totals), fontWeight: getNutrientColor('fat', totals.fat, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.fat)),
+          React.createElement('span', { className: 'mpc-dim' }, 
+            React.createElement('span', { title: getNutrientTooltip('bad', totals.bad, totals), style: { color: getNutrientColor('bad', totals.bad, totals), fontWeight: getNutrientColor('bad', totals.bad, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.bad || 0)),
+            '/',
+            React.createElement('span', { title: getNutrientTooltip('good', totals.good, totals), style: { color: getNutrientColor('good', totals.good, totals), fontWeight: getNutrientColor('good', totals.good, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.good || 0)),
+            '/',
+            React.createElement('span', { title: getNutrientTooltip('trans', totals.trans, totals), style: { color: getNutrientColor('trans', totals.trans, totals), fontWeight: getNutrientColor('trans', totals.trans, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.trans || 0))
+          ),
+          React.createElement('span', { title: getNutrientTooltip('fiber', totals.fiber, totals), style: { color: getNutrientColor('fiber', totals.fiber, totals), fontWeight: getNutrientColor('fiber', totals.fiber, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.fiber || 0)),
+          React.createElement('span', { title: getNutrientTooltip('gi', totals.gi, totals), style: { color: getNutrientColor('gi', totals.gi, totals), fontWeight: getNutrientColor('gi', totals.gi, totals) ? 600 : 400, cursor: 'help' } }, Math.round(totals.gi || 0)),
+          React.createElement('span', { title: getNutrientTooltip('harm', totals.harm, totals), style: { color: getNutrientColor('harm', totals.harm, totals), fontWeight: getNutrientColor('harm', totals.harm, totals) ? 600 : 400, cursor: 'help' } }, fmtVal('harm', totals.harm || 0))
         )
       ),
       React.createElement('div',{className:'row desktop-add-product',style:{justifyContent:'space-between',alignItems:'center'}},
@@ -1517,18 +1960,44 @@
               React.createElement('span', null, 'ГИ'),
               React.createElement('span', null, 'Вр')
             ),
-            // Row 3: values (grid) - абсолютные значения в граммах
-            React.createElement('div', { className: 'mpc-grid mpc-values' },
-              React.createElement('span', null, Math.round(scale(per.kcal100, G))),
-              React.createElement('span', null, Math.round(scale(per.carbs100, G))),
-              React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.simple100, G)) + '/' + Math.round(scale(per.complex100, G))),
-              React.createElement('span', null, Math.round(scale(per.prot100, G))),
-              React.createElement('span', null, Math.round(scale(per.fat100, G))),
-              React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.bad100, G)) + '/' + Math.round(scale(per.good100, G)) + '/' + Math.round(scale(per.trans100 || 0, G))),
-              React.createElement('span', null, Math.round(scale(per.fiber100, G))),
-              React.createElement('span', null, giVal != null ? Math.round(giVal) : '-'),
-              React.createElement('span', null, harmVal != null ? fmtVal('harm', harmVal) : '-')
-            ),
+            // Row 3: values (grid) - абсолютные значения в граммах с цветовой индикацией и tooltips
+            (() => {
+              const itemTotals = {
+                kcal: scale(per.kcal100, G),
+                carbs: scale(per.carbs100, G),
+                simple: scale(per.simple100, G),
+                complex: scale(per.complex100, G),
+                prot: scale(per.prot100, G),
+                fat: scale(per.fat100, G),
+                bad: scale(per.bad100, G),
+                good: scale(per.good100, G),
+                trans: scale(per.trans100 || 0, G),
+                fiber: scale(per.fiber100, G),
+                gi: giVal || 0,
+                harm: harmVal || 0
+              };
+              return React.createElement('div', { className: 'mpc-grid mpc-values' },
+                React.createElement('span', { title: getNutrientTooltip('kcal', itemTotals.kcal, itemTotals), style: { color: getNutrientColor('kcal', itemTotals.kcal, itemTotals), fontWeight: getNutrientColor('kcal', itemTotals.kcal, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.kcal)),
+                React.createElement('span', { title: getNutrientTooltip('carbs', itemTotals.carbs, itemTotals), style: { color: getNutrientColor('carbs', itemTotals.carbs, itemTotals), fontWeight: getNutrientColor('carbs', itemTotals.carbs, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.carbs)),
+                React.createElement('span', { className: 'mpc-dim' },
+                  React.createElement('span', { title: getNutrientTooltip('simple', itemTotals.simple, itemTotals), style: { color: getNutrientColor('simple', itemTotals.simple, itemTotals), fontWeight: getNutrientColor('simple', itemTotals.simple, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.simple)),
+                  '/',
+                  React.createElement('span', { title: getNutrientTooltip('complex', itemTotals.complex, itemTotals), style: { color: getNutrientColor('complex', itemTotals.complex, itemTotals), cursor: 'help' } }, Math.round(itemTotals.complex))
+                ),
+                React.createElement('span', { title: getNutrientTooltip('prot', itemTotals.prot, itemTotals), style: { color: getNutrientColor('prot', itemTotals.prot, itemTotals), fontWeight: getNutrientColor('prot', itemTotals.prot, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.prot)),
+                React.createElement('span', { title: getNutrientTooltip('fat', itemTotals.fat, itemTotals), style: { color: getNutrientColor('fat', itemTotals.fat, itemTotals), fontWeight: getNutrientColor('fat', itemTotals.fat, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.fat)),
+                React.createElement('span', { className: 'mpc-dim' },
+                  React.createElement('span', { title: getNutrientTooltip('bad', itemTotals.bad, itemTotals), style: { color: getNutrientColor('bad', itemTotals.bad, itemTotals), fontWeight: getNutrientColor('bad', itemTotals.bad, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.bad)),
+                  '/',
+                  React.createElement('span', { title: getNutrientTooltip('good', itemTotals.good, itemTotals), style: { color: getNutrientColor('good', itemTotals.good, itemTotals), fontWeight: getNutrientColor('good', itemTotals.good, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.good)),
+                  '/',
+                  React.createElement('span', { title: getNutrientTooltip('trans', itemTotals.trans, itemTotals), style: { color: getNutrientColor('trans', itemTotals.trans, itemTotals), fontWeight: getNutrientColor('trans', itemTotals.trans, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.trans))
+                ),
+                React.createElement('span', { title: getNutrientTooltip('fiber', itemTotals.fiber, itemTotals), style: { color: getNutrientColor('fiber', itemTotals.fiber, itemTotals), fontWeight: getNutrientColor('fiber', itemTotals.fiber, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.fiber)),
+                React.createElement('span', { title: getNutrientTooltip('gi', itemTotals.gi, itemTotals), style: { color: getNutrientColor('gi', itemTotals.gi, itemTotals), fontWeight: getNutrientColor('gi', itemTotals.gi, itemTotals) ? 600 : 400, cursor: 'help' } }, giVal != null ? Math.round(giVal) : '-'),
+                React.createElement('span', { title: getNutrientTooltip('harm', itemTotals.harm, itemTotals), style: { color: getNutrientColor('harm', itemTotals.harm, itemTotals), fontWeight: getNutrientColor('harm', itemTotals.harm, itemTotals) ? 600 : 400, cursor: 'help' } }, harmVal != null ? fmtVal('harm', harmVal) : '-')
+              );
+            })(),
             // Row 4: альтернатива (если есть)
             alternative && React.createElement('div', { className: 'mpc-alternative' },
               React.createElement('span', null, '💡 Замени на '),
@@ -1577,17 +2046,43 @@
               React.createElement('span', null, 'ГИ'),
               React.createElement('span', null, 'Вр')
             ),
-            React.createElement('div', { className: 'mpc-grid mpc-values' },
-              React.createElement('span', null, Math.round(scale(per.kcal100, G))),
-              React.createElement('span', null, Math.round(scale(per.carbs100, G))),
-              React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.simple100, G)) + '/' + Math.round(scale(per.complex100, G))),
-              React.createElement('span', null, Math.round(scale(per.prot100, G))),
-              React.createElement('span', null, Math.round(scale(per.fat100, G))),
-              React.createElement('span', { className: 'mpc-dim' }, Math.round(scale(per.bad100, G)) + '/' + Math.round(scale(per.good100, G)) + '/' + Math.round(scale(per.trans100 || 0, G))),
-              React.createElement('span', null, Math.round(scale(per.fiber100, G))),
-              React.createElement('span', null, giVal != null ? Math.round(giVal) : '-'),
-              React.createElement('span', null, harmVal != null ? fmtVal('harm', harmVal) : '-')
-            )
+            (() => {
+              const itemTotals = {
+                kcal: scale(per.kcal100, G),
+                carbs: scale(per.carbs100, G),
+                simple: scale(per.simple100, G),
+                complex: scale(per.complex100, G),
+                prot: scale(per.prot100, G),
+                fat: scale(per.fat100, G),
+                bad: scale(per.bad100, G),
+                good: scale(per.good100, G),
+                trans: scale(per.trans100 || 0, G),
+                fiber: scale(per.fiber100, G),
+                gi: giVal || 0,
+                harm: harmVal || 0
+              };
+              return React.createElement('div', { className: 'mpc-grid mpc-values' },
+                React.createElement('span', { title: getNutrientTooltip('kcal', itemTotals.kcal, itemTotals), style: { color: getNutrientColor('kcal', itemTotals.kcal, itemTotals), fontWeight: getNutrientColor('kcal', itemTotals.kcal, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.kcal)),
+                React.createElement('span', { title: getNutrientTooltip('carbs', itemTotals.carbs, itemTotals), style: { color: getNutrientColor('carbs', itemTotals.carbs, itemTotals), fontWeight: getNutrientColor('carbs', itemTotals.carbs, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.carbs)),
+                React.createElement('span', { className: 'mpc-dim' },
+                  React.createElement('span', { title: getNutrientTooltip('simple', itemTotals.simple, itemTotals), style: { color: getNutrientColor('simple', itemTotals.simple, itemTotals), fontWeight: getNutrientColor('simple', itemTotals.simple, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.simple)),
+                  '/',
+                  React.createElement('span', { title: getNutrientTooltip('complex', itemTotals.complex, itemTotals), style: { color: getNutrientColor('complex', itemTotals.complex, itemTotals), cursor: 'help' } }, Math.round(itemTotals.complex))
+                ),
+                React.createElement('span', { title: getNutrientTooltip('prot', itemTotals.prot, itemTotals), style: { color: getNutrientColor('prot', itemTotals.prot, itemTotals), fontWeight: getNutrientColor('prot', itemTotals.prot, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.prot)),
+                React.createElement('span', { title: getNutrientTooltip('fat', itemTotals.fat, itemTotals), style: { color: getNutrientColor('fat', itemTotals.fat, itemTotals), fontWeight: getNutrientColor('fat', itemTotals.fat, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.fat)),
+                React.createElement('span', { className: 'mpc-dim' },
+                  React.createElement('span', { title: getNutrientTooltip('bad', itemTotals.bad, itemTotals), style: { color: getNutrientColor('bad', itemTotals.bad, itemTotals), fontWeight: getNutrientColor('bad', itemTotals.bad, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.bad)),
+                  '/',
+                  React.createElement('span', { title: getNutrientTooltip('good', itemTotals.good, itemTotals), style: { color: getNutrientColor('good', itemTotals.good, itemTotals), fontWeight: getNutrientColor('good', itemTotals.good, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.good)),
+                  '/',
+                  React.createElement('span', { title: getNutrientTooltip('trans', itemTotals.trans, itemTotals), style: { color: getNutrientColor('trans', itemTotals.trans, itemTotals), fontWeight: getNutrientColor('trans', itemTotals.trans, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.trans))
+                ),
+                React.createElement('span', { title: getNutrientTooltip('fiber', itemTotals.fiber, itemTotals), style: { color: getNutrientColor('fiber', itemTotals.fiber, itemTotals), fontWeight: getNutrientColor('fiber', itemTotals.fiber, itemTotals) ? 600 : 400, cursor: 'help' } }, Math.round(itemTotals.fiber)),
+                React.createElement('span', { title: getNutrientTooltip('gi', itemTotals.gi, itemTotals), style: { color: getNutrientColor('gi', itemTotals.gi, itemTotals), fontWeight: getNutrientColor('gi', itemTotals.gi, itemTotals) ? 600 : 400, cursor: 'help' } }, giVal != null ? Math.round(giVal) : '-'),
+                React.createElement('span', { title: getNutrientTooltip('harm', itemTotals.harm, itemTotals), style: { color: getNutrientColor('harm', itemTotals.harm, itemTotals), fontWeight: getNutrientColor('harm', itemTotals.harm, itemTotals) ? 600 : 400, cursor: 'help' } }, harmVal != null ? fmtVal('harm', harmVal) : '-')
+              );
+            })()
           );
         }),
         // Компактный блок: оценки (время уже в заголовке)
@@ -1667,6 +2162,47 @@
               handleDelete,
               setDay
             });
+          })
+        ),
+
+        // Инсулиновая волна в карточке приёма — единый блок
+        showWaveButton && React.createElement('div', {
+          className: 'meal-wave-block' + (waveExpanded ? ' expanded' : ''),
+          style: {
+            marginTop: '10px',
+            background: hasAnyOverlap ? 'rgba(239,68,68,0.08)' : 'rgba(59,130,246,0.08)',
+            borderRadius: '12px',
+            overflow: 'hidden'
+          }
+        },
+          // Заголовок (кликабельный toggle)
+          React.createElement('div', {
+            className: 'meal-wave-toggle',
+            onClick: toggleWave,
+            style: {
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '10px 12px',
+              cursor: 'pointer',
+              fontSize: '13px', fontWeight: 600,
+              color: hasAnyOverlap ? '#b91c1c' : '#1f2937'
+            }
+          },
+            React.createElement('span', null,
+              `📉 Волна ${(currentWave.duration / 60).toFixed(1)}ч • ` + (
+                hasAnyOverlap
+                  ? `⚠️ перехлёст ${formatMinutes(overlapMinutes)}`
+                  : nextWave
+                    ? `✅ липолиз ${formatMinutes(lipolysisGapNext)}`
+                    : '🟢 последний приём'
+              )
+            ),
+            React.createElement('span', { className: 'toggle-arrow' }, waveExpanded ? '▴' : '▾')
+          ),
+          // Expand-секция (график) — внутри того же блока
+          waveExpanded && InsulinWave.MealWaveExpandSection && React.createElement(InsulinWave.MealWaveExpandSection, {
+            waveData: currentWave,
+            prevWave,
+            nextWave
           })
         )
       )
@@ -3630,8 +4166,13 @@
       const seasonBonus = isHotSeason ? 300 : 0;
       const seasonNote = isHotSeason ? '☀️ Лето' : '';
       
+      // Бонус за особый период (менструальный цикл)
+      const cycleMultiplier = HEYS.Cycle?.getWaterMultiplier?.(day.cycleDay) || 1;
+      const cycleBonus = cycleMultiplier > 1 ? Math.round(base * (cycleMultiplier - 1)) : 0;
+      const cycleNote = cycleBonus > 0 ? '🌸 Особый период' : '';
+      
       // Итого
-      const total = Math.round((base + stepsBonus + trainBonus + seasonBonus) / 100) * 100;
+      const total = Math.round((base + stepsBonus + trainBonus + seasonBonus + cycleBonus) / 100) * 100;
       const finalGoal = Math.max(1500, Math.min(5000, total));
       
       return {
@@ -3647,10 +4188,12 @@
         trainBonus,
         seasonBonus,
         seasonNote,
+        cycleBonus,
+        cycleNote,
         total: Math.round(total),
         finalGoal
       };
-    }, [day.weightMorning, day.steps, train1k, train2k, train3k, prof.weight, prof.age, prof.sex]);
+    }, [day.weightMorning, day.steps, day.cycleDay, train1k, train2k, train3k, prof.weight, prof.age, prof.sex]);
 
     const waterGoal = waterGoalBreakdown.finalGoal;
 
@@ -5527,6 +6070,102 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       )
     );
 
+    // Карточка особого периода (показывается для женщин с включённым трекингом)
+    const showCycleCard = prof.cycleTrackingEnabled && prof.sex === 'female';
+    const cyclePhase = HEYS.Cycle?.getCyclePhase?.(day.cycleDay);
+    
+    // Состояние для inline-редактирования дня цикла
+    const [cycleEditMode, setCycleEditMode] = React.useState(false);
+    const [cycleDayInput, setCycleDayInput] = React.useState(day.cycleDay || '');
+    
+    // Сохранить день цикла с автоматическим проставлением всех 7 дней
+    const saveCycleDay = React.useCallback((newDay) => {
+      const validDay = newDay === null ? null : Math.min(Math.max(1, parseInt(newDay) || 1), 7);
+      
+      // Обновляем текущий день в state
+      setDay(prev => ({ ...prev, cycleDay: validDay }));
+      setCycleEditMode(false);
+      
+      // Автоматически проставляем все 7 дней
+      if (validDay && HEYS.Cycle?.setCycleDaysAuto && lsGet && lsSet) {
+        const result = HEYS.Cycle.setCycleDaysAuto(date, validDay, lsGet, lsSet);
+        console.log('[Cycle] Auto-filled', result.updated, 'days:', result.dates.join(', '));
+      }
+    }, [setDay, date, lsGet, lsSet]);
+    
+    // Сбросить день цикла и все связанные дни
+    const clearCycleDay = React.useCallback(() => {
+      setDay(prev => ({ ...prev, cycleDay: null }));
+      setCycleEditMode(false);
+      
+      // Очищаем все связанные дни
+      if (HEYS.Cycle?.clearCycleDays && lsGet && lsSet) {
+        const result = HEYS.Cycle.clearCycleDays(date, lsGet, lsSet);
+        console.log('[Cycle] Cleared', result.cleared, 'days');
+      }
+    }, [setDay, date, lsGet, lsSet]);
+    
+    const cycleCard = showCycleCard && React.createElement('div', {
+      className: 'cycle-card compact-card' + (cycleEditMode ? ' cycle-card--editing' : ''),
+      key: 'cycle-card'
+    },
+      // Если есть данные — показываем фазу
+      cyclePhase ? React.createElement(React.Fragment, null,
+        React.createElement('div', { 
+          className: 'cycle-card__header',
+          onClick: () => setCycleEditMode(!cycleEditMode)
+        },
+          React.createElement('span', { className: 'cycle-card__icon' }, cyclePhase.icon),
+          React.createElement('span', { className: 'cycle-card__title' }, cyclePhase.shortName),
+          React.createElement('span', { className: 'cycle-card__day' }, 'День ' + day.cycleDay),
+          React.createElement('span', { className: 'cycle-card__edit-hint' }, '✏️')
+        ),
+        !cycleEditMode && React.createElement('div', { className: 'cycle-card__info' },
+          cyclePhase.kcalMultiplier !== 1 && React.createElement('span', { className: 'cycle-card__badge' }, 
+            '🔥 ' + (cyclePhase.kcalMultiplier > 1 ? '+' : '') + Math.round((cyclePhase.kcalMultiplier - 1) * 100) + '% ккал'
+          ),
+          cyclePhase.waterMultiplier !== 1 && React.createElement('span', { className: 'cycle-card__badge' }, 
+            '💧 +' + Math.round((cyclePhase.waterMultiplier - 1) * 100) + '% вода'
+          ),
+          cyclePhase.insulinWaveMultiplier !== 1 && React.createElement('span', { className: 'cycle-card__badge' }, 
+            '📈 +' + Math.round((cyclePhase.insulinWaveMultiplier - 1) * 100) + '% волна'
+          )
+        )
+      ) 
+      // Если нет данных — показываем "Указать"
+      : React.createElement('div', { 
+          className: 'cycle-card__header cycle-card__header--empty',
+          onClick: () => setCycleEditMode(true)
+        },
+          React.createElement('span', { className: 'cycle-card__icon' }, '🌸'),
+          React.createElement('span', { className: 'cycle-card__title' }, 'Особый период'),
+          React.createElement('span', { className: 'cycle-card__empty-hint' }, 'Указать день →')
+        ),
+      
+      // Режим редактирования — кнопки выбора дня
+      cycleEditMode && React.createElement('div', { className: 'cycle-card__edit' },
+        React.createElement('div', { className: 'cycle-card__days' },
+          [1,2,3,4,5,6,7].map(d => 
+            React.createElement('button', {
+              key: d,
+              className: 'cycle-card__day-btn' + (day.cycleDay === d ? ' cycle-card__day-btn--active' : ''),
+              onClick: () => saveCycleDay(d)
+            }, d)
+          )
+        ),
+        React.createElement('div', { className: 'cycle-card__actions' },
+          day.cycleDay && React.createElement('button', {
+            className: 'cycle-card__clear-btn',
+            onClick: clearCycleDay
+          }, 'Сбросить'),
+          React.createElement('button', {
+            className: 'cycle-card__cancel-btn',
+            onClick: () => setCycleEditMode(false)
+          }, 'Отмена')
+        )
+      )
+    );
+
   // compareBlock удалён по требованию
 
     // Сортируем приёмы для отображения (последние наверху)
@@ -5556,34 +6195,73 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Берём актуальный meal из day.meals, а не из sorted (который может быть stale)
       const meal = day.meals[mi];
       const isExpanded = isMealExpanded(mi, (day.meals || []).length, day.meals, displayIndex);
+      // Номер приёма (1-based, хронологический: первый по времени = 1)
+      const mealNumber = sortedMealsForDisplay.length - displayIndex;
+      const isFirst = displayIndex === 0;
+      
       // Key включает mealType чтобы форсировать перерендер при смене типа
-      return React.createElement(MealCard, {
+      return React.createElement('div', {
         key: meal.id + '_' + (meal.mealType || 'auto'),
-        meal,
-        mealIndex: mi,
-        displayIndex,
-        products,
-        pIndex,
-        date,
-        setDay,
-        isMobile,
-        isExpanded,
-        onToggleExpand: toggleMealExpand,
-        onChangeMealType: changeMealType,
-        onChangeTime: updateMealTime,
-        onChangeMood: changeMealMood,
-        onChangeWellbeing: changeMealWellbeing,
-        onChangeStress: changeMealStress,
-        onRemoveMeal: removeMeal,
-        openEditGramsModal,
-        openTimeEditor,
-        openMoodEditor,
-        setGrams,
-        removeItem,
-        isMealStale,
-        allMeals: day.meals,
-        isNewItem
-      });
+        className: 'meal-with-number',
+        style: {
+          marginTop: isFirst ? '0' : '24px'
+        }
+      },
+        // Номер приёма над карточкой
+        React.createElement('div', {
+          className: 'meal-number-header',
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '6px'
+          }
+        },
+          React.createElement('div', {
+            className: 'meal-number-badge',
+            style: {
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '16px',
+              fontWeight: '700',
+              boxShadow: '0 2px 8px rgba(59,130,246,0.35)'
+            }
+          }, mealNumber)
+        ),
+        // Карточка приёма
+        React.createElement(MealCard, {
+          meal,
+          mealIndex: mi,
+          displayIndex,
+          products,
+          pIndex,
+          date,
+          setDay,
+          isMobile,
+          isExpanded,
+          onToggleExpand: toggleMealExpand,
+          onChangeMealType: changeMealType,
+          onChangeTime: updateMealTime,
+          onChangeMood: changeMealMood,
+          onChangeWellbeing: changeMealWellbeing,
+          onChangeStress: changeMealStress,
+          onRemoveMeal: removeMeal,
+          openEditGramsModal,
+          openTimeEditor,
+          openMoodEditor,
+          setGrams,
+          removeItem,
+          isMealStale,
+          allMeals: day.meals,
+          isNewItem
+        })
+      );
     });
 
     // Суточные итоги по всем приёмам (используем totals из compareBlock логики)
@@ -5605,7 +6283,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const fatPct = Math.max(0,100 - carbPct - protPct);
       const carbs = K? (K * carbPct/100)/4 : 0;
       const prot  = K? (K * protPct/100)/4 : 0;
-      const fat   = K? (K * fatPct/100)/8 : 0;
+      const fat   = K? (K * fatPct/100)/9 : 0; // 9 ккал/г
       const simplePct = +normPerc.simpleCarbPct||0;
       const simple = carbs * simplePct/100;
       const complex = Math.max(0, carbs - simple);
@@ -5614,8 +6292,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const bad = fat * badPct/100;
       const trans = fat * transPct/100;
       const good = Math.max(0, fat - bad - trans);
-      const fiberPct = +normPerc.fiberPct||0; // интерпретируем как % от углеводов по массе
-      const fiber = carbs * fiberPct/100;
+      const fiberPct = +normPerc.fiberPct||0; // трактуем как г клетчатки на 1000 ккал
+      const fiber = K? (K/1000) * fiberPct : 0;
       const gi = +normPerc.giPct||0; // целевой средний ГИ
       const harm = +normPerc.harmPct||0; // целевая вредность
       return {kcal:K, carbs, simple, complex, prot, fat, bad, good, trans, fiber, gi, harm};
@@ -5926,18 +6604,28 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('span', null, 'ГИ'),
           React.createElement('span', null, 'Вр')
         ),
-        // Fact row
+        // Fact row - с цветовой индикацией относительно нормы
         React.createElement('div', { className: 'mds-row' },
           React.createElement('span', { className: 'mds-label', title: 'Факт' }, 'Ф'),
-          React.createElement('span', null, Math.round(dayTot.kcal)),
-          React.createElement('span', null, Math.round(dayTot.carbs)),
-          React.createElement('span', { className: 'mds-dim' }, pct(dayTot.simple, dayTot.carbs) + '/' + pct(dayTot.complex, dayTot.carbs)),
-          React.createElement('span', null, Math.round(dayTot.prot)),
-          React.createElement('span', null, Math.round(dayTot.fat)),
-          React.createElement('span', { className: 'mds-dim' }, pct(dayTot.bad, dayTot.fat) + '/' + pct(dayTot.good, dayTot.fat) + '/' + pct(dayTot.trans || 0, dayTot.fat)),
-          React.createElement('span', null, Math.round(dayTot.fiber)),
-          React.createElement('span', null, Math.round(dayTot.gi || 0)),
-          React.createElement('span', null, fmtVal('harm', dayTot.harm || 0))
+          React.createElement('span', { title: getDailyNutrientTooltip('kcal', dayTot.kcal, normAbs.kcal), style: { color: getDailyNutrientColor('kcal', dayTot.kcal, normAbs.kcal), fontWeight: getDailyNutrientColor('kcal', dayTot.kcal, normAbs.kcal) ? 600 : 400, cursor: 'help' } }, Math.round(dayTot.kcal)),
+          React.createElement('span', { title: getDailyNutrientTooltip('carbs', dayTot.carbs, normAbs.carbs), style: { color: getDailyNutrientColor('carbs', dayTot.carbs, normAbs.carbs), fontWeight: getDailyNutrientColor('carbs', dayTot.carbs, normAbs.carbs) ? 600 : 400, cursor: 'help' } }, Math.round(dayTot.carbs)),
+          React.createElement('span', { className: 'mds-dim' }, 
+            React.createElement('span', { title: getDailyNutrientTooltip('simple', dayTot.simple, normAbs.simple), style: { color: getDailyNutrientColor('simple', dayTot.simple, normAbs.simple), fontWeight: getDailyNutrientColor('simple', dayTot.simple, normAbs.simple) ? 600 : 400, cursor: 'help' } }, pct(dayTot.simple, dayTot.carbs)),
+            '/',
+            React.createElement('span', { title: getDailyNutrientTooltip('complex', dayTot.complex, normAbs.complex), style: { color: getDailyNutrientColor('complex', dayTot.complex, normAbs.complex), cursor: 'help' } }, pct(dayTot.complex, dayTot.carbs))
+          ),
+          React.createElement('span', { title: getDailyNutrientTooltip('prot', dayTot.prot, normAbs.prot), style: { color: getDailyNutrientColor('prot', dayTot.prot, normAbs.prot), fontWeight: getDailyNutrientColor('prot', dayTot.prot, normAbs.prot) ? 600 : 400, cursor: 'help' } }, Math.round(dayTot.prot)),
+          React.createElement('span', { title: getDailyNutrientTooltip('fat', dayTot.fat, normAbs.fat), style: { color: getDailyNutrientColor('fat', dayTot.fat, normAbs.fat), fontWeight: getDailyNutrientColor('fat', dayTot.fat, normAbs.fat) ? 600 : 400, cursor: 'help' } }, Math.round(dayTot.fat)),
+          React.createElement('span', { className: 'mds-dim' }, 
+            React.createElement('span', { title: getDailyNutrientTooltip('bad', dayTot.bad, normAbs.bad), style: { color: getDailyNutrientColor('bad', dayTot.bad, normAbs.bad), fontWeight: getDailyNutrientColor('bad', dayTot.bad, normAbs.bad) ? 600 : 400, cursor: 'help' } }, pct(dayTot.bad, dayTot.fat)),
+            '/',
+            React.createElement('span', { title: getDailyNutrientTooltip('good', dayTot.good, normAbs.good), style: { color: getDailyNutrientColor('good', dayTot.good, normAbs.good), fontWeight: getDailyNutrientColor('good', dayTot.good, normAbs.good) ? 600 : 400, cursor: 'help' } }, pct(dayTot.good, dayTot.fat)),
+            '/',
+            React.createElement('span', { title: getDailyNutrientTooltip('trans', dayTot.trans, normAbs.trans), style: { color: getDailyNutrientColor('trans', dayTot.trans, normAbs.trans), fontWeight: getDailyNutrientColor('trans', dayTot.trans, normAbs.trans) ? 600 : 400, cursor: 'help' } }, pct(dayTot.trans || 0, dayTot.fat))
+          ),
+          React.createElement('span', { title: getDailyNutrientTooltip('fiber', dayTot.fiber, normAbs.fiber), style: { color: getDailyNutrientColor('fiber', dayTot.fiber, normAbs.fiber), fontWeight: getDailyNutrientColor('fiber', dayTot.fiber, normAbs.fiber) ? 600 : 400, cursor: 'help' } }, Math.round(dayTot.fiber)),
+          React.createElement('span', { title: getDailyNutrientTooltip('gi', dayTot.gi, normAbs.gi), style: { color: getDailyNutrientColor('gi', dayTot.gi, normAbs.gi), fontWeight: getDailyNutrientColor('gi', dayTot.gi, normAbs.gi) ? 600 : 400, cursor: 'help' } }, Math.round(dayTot.gi || 0)),
+          React.createElement('span', { title: getDailyNutrientTooltip('harm', dayTot.harm, normAbs.harm), style: { color: getDailyNutrientColor('harm', dayTot.harm, normAbs.harm), fontWeight: getDailyNutrientColor('harm', dayTot.harm, normAbs.harm) ? 600 : 400, cursor: 'help' } }, fmtVal('harm', dayTot.harm || 0))
         ),
         // Norm row
         React.createElement('div', { className: 'mds-row' },
@@ -6759,6 +7447,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         waveHistory: [], overlaps: [], hasOverlaps: false, gapQuality: 'unknown'
       };
     }, [day.meals, pIndex, currentMinute]); // currentMinute для авто-обновления
+
+    // Делаем данные волны доступными глобально для карточек приёмов
+    React.useEffect(() => {
+      try {
+        const h = window.HEYS = window.HEYS || {};
+        h.insulinWaveData = insulinWaveData || null;
+      } catch (e) {}
+    }, [insulinWaveData]);
 
     // === Haptic при начале липолиза ===
     const prevInsulinStatusRef = React.useRef(null);
@@ -11382,6 +12078,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             ),
             waterGoalBreakdown.seasonBonus > 0 && React.createElement('span', { className: 'water-breakdown-item water-breakdown-bonus' }, 
               '☀️ +' + waterGoalBreakdown.seasonBonus
+            ),
+            waterGoalBreakdown.cycleBonus > 0 && React.createElement('span', { className: 'water-breakdown-item water-breakdown-bonus water-breakdown-cycle' }, 
+              '🌸 +' + waterGoalBreakdown.cycleBonus
             )
           ),
           // Напоминание "Давно не пил" (если >2ч)
@@ -11410,6 +12109,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           ),
           waterGoalBreakdown.seasonBonus > 0 && React.createElement('div', { className: 'water-formula-row' }, 
             'Сезон: ☀️ Лето → +' + waterGoalBreakdown.seasonBonus + ' мл'
+          ),
+          waterGoalBreakdown.cycleBonus > 0 && React.createElement('div', { className: 'water-formula-row water-formula-cycle' }, 
+            '🌸 Особый период → +' + waterGoalBreakdown.cycleBonus + ' мл'
           ),
           React.createElement('div', { className: 'water-formula-total' }, 
             'Итого: ' + (waterGoal / 1000).toFixed(1) + ' л'
@@ -11718,6 +12420,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       (!isMobile || mobileSubTab === 'stats') && waterCard,
       (!isMobile || mobileSubTab === 'stats') && compactActivity,
       (!isMobile || mobileSubTab === 'stats') && sideBlock,
+      (!isMobile || mobileSubTab === 'stats') && cycleCard,
       
       // === FAB группа: приём пищи + вода (на обеих вкладках) ===
       isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && React.createElement('div', {

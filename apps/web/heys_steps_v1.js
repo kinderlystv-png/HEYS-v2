@@ -1128,6 +1128,231 @@
   });
 
   // ============================================================
+  // CYCLE STEP — Особый период (менструальный цикл)
+  // ============================================================
+
+  /**
+   * Проверка: нужно ли показывать шаг cycle?
+   * Показываем если:
+   * 1. В профиле cycleTrackingEnabled = true
+   */
+  function shouldShowCycleStep() {
+    try {
+      const profile = lsGet('heys_profile', {});
+      return profile.cycleTrackingEnabled === true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Компонент шага "Особый период" (v2 — с автоматическим проставлением)
+   */
+  function CycleStepComponent({ data, onChange }) {
+    const { useState, useCallback } = React;
+    
+    // cycleDay: null = нет периода, 1-7 = день периода
+    const [cycleDay, setCycleDay] = useState(data?.cycleDay || null);
+    const [isEnabled, setIsEnabled] = useState(cycleDay !== null);
+    const [showDayPicker, setShowDayPicker] = useState(false);
+    
+    // Получаем текущую дату
+    const dateKey = data?._dateKey || new Date().toISOString().slice(0, 10);
+
+    // Обработчик toggle "Да/Нет"
+    const handleToggle = useCallback(() => {
+      const newEnabled = !isEnabled;
+      setIsEnabled(newEnabled);
+      if (newEnabled) {
+        // Включаем — показываем выбор дня
+        setShowDayPicker(true);
+      } else {
+        // Выключаем — сбрасываем и очищаем все связанные дни
+        setCycleDay(null);
+        onChange({ cycleDay: null });
+        setShowDayPicker(false);
+        
+        // Очищаем связанные дни
+        if (HEYS.Cycle?.clearCycleDays) {
+          HEYS.Cycle.clearCycleDays(dateKey, lsGet, lsSet);
+        }
+      }
+    }, [isEnabled, onChange, dateKey]);
+
+    // Выбор дня с автоматическим проставлением всех 7 дней
+    const selectDay = useCallback((day) => {
+      setCycleDay(day);
+      onChange({ cycleDay: day });
+      setShowDayPicker(false);
+      
+      // Автоматически проставляем все 7 дней
+      if (HEYS.Cycle?.setCycleDaysAuto) {
+        const result = HEYS.Cycle.setCycleDaysAuto(dateKey, day, lsGet, lsSet);
+        console.log('[Cycle Step] Auto-filled', result.updated, 'days');
+      }
+    }, [onChange, dateKey]);
+
+    // Быстрые опции
+    const quickOptions = [
+      { day: 1, label: 'Первый день', hint: 'Только начался' },
+      { day: 2, label: 'Второй день', hint: '' },
+      { day: 3, label: 'Третий день', hint: '' },
+      { day: 4, label: 'Середина', hint: '4-5 день' },
+      { day: 6, label: 'Почти конец', hint: '6-7 день' }
+    ];
+
+    return React.createElement('div', { className: 'mc-cycle-step' },
+      // Заголовок с иконкой
+      React.createElement('div', { className: 'mc-cycle-header' },
+        React.createElement('div', { className: 'mc-cycle-header-left' },
+          React.createElement('span', { className: 'mc-cycle-icon' }, '🌸'),
+          React.createElement('span', { className: 'mc-cycle-title' }, 'Особый период')
+        ),
+        // Toggle кнопка
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-cycle-toggle ' + (isEnabled ? 'active' : ''),
+          onClick: handleToggle,
+          'aria-pressed': isEnabled
+        }, isEnabled ? 'Да' : 'Нет')
+      ),
+
+      // Если включено и есть день — показываем текущий статус
+      isEnabled && cycleDay && !showDayPicker && React.createElement('div', { className: 'mc-cycle-status' },
+        React.createElement('div', { className: 'mc-cycle-status-main' },
+          React.createElement('span', { className: 'mc-cycle-status-day' }, 'День ' + cycleDay),
+          React.createElement('span', { className: 'mc-cycle-status-info' }, 
+            cycleDay <= 3 ? 'Начало периода' : 
+            cycleDay <= 5 ? 'Середина периода' : 
+            'Конец периода'
+          )
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-cycle-change-btn',
+          onClick: () => setShowDayPicker(true)
+        }, 'Изменить')
+      ),
+
+      // Выпадашка выбора дня
+      isEnabled && showDayPicker && React.createElement('div', { className: 'mc-cycle-picker' },
+        React.createElement('div', { className: 'mc-cycle-picker-title' }, 
+          'Какой сегодня день?'
+        ),
+        
+        // Быстрые опции
+        React.createElement('div', { className: 'mc-cycle-options' },
+          quickOptions.map(opt => 
+            React.createElement('button', {
+              key: opt.day,
+              type: 'button',
+              className: 'mc-cycle-option ' + (cycleDay === opt.day ? 'active' : ''),
+              onClick: () => selectDay(opt.day)
+            },
+              React.createElement('span', { className: 'mc-cycle-option-day' }, opt.day),
+              React.createElement('span', { className: 'mc-cycle-option-label' }, opt.label),
+              opt.hint && React.createElement('span', { className: 'mc-cycle-option-hint' }, opt.hint)
+            )
+          )
+        ),
+
+        // Точный выбор дня (1-7)
+        React.createElement('div', { className: 'mc-cycle-exact' },
+          React.createElement('span', { className: 'mc-cycle-exact-label' }, 'Точный день:'),
+          React.createElement('div', { className: 'mc-cycle-exact-days' },
+            [1,2,3,4,5,6,7].map(d => 
+              React.createElement('button', {
+                key: d,
+                type: 'button',
+                className: 'mc-cycle-exact-btn ' + (cycleDay === d ? 'active' : ''),
+                onClick: () => selectDay(d)
+              }, d)
+            )
+          )
+        ),
+
+        // Подсказка об автозаполнении
+        React.createElement('div', { className: 'mc-cycle-auto-hint' },
+          React.createElement('span', { className: 'mc-cycle-hint-icon' }, '✨'),
+          React.createElement('span', { className: 'mc-cycle-hint-text' }, 
+            'Дни 1-7 проставятся автоматически'
+          )
+        )
+      ),
+
+      // Если выключено — подсказка
+      !isEnabled && React.createElement('div', { className: 'mc-cycle-disabled-hint' },
+        'Отмечайте для адаптированных рекомендаций'
+      )
+    );
+  }
+
+  // Регистрация шага особого периода
+  registerStep('cycle', {
+    title: 'Особый период',
+    hint: 'Адаптация норм',
+    icon: '🌸',
+    component: CycleStepComponent,
+    canSkip: true,
+    // shouldShow — проверяем, включён ли tracking в профиле
+    shouldShow: shouldShowCycleStep,
+    getInitialData: (ctx) => {
+      const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
+      const day = lsGet(`heys_dayv2_${dateKey}`, {});
+      return { 
+        cycleDay: day.cycleDay || null,
+        _dateKey: dateKey 
+      };
+    },
+    save: (data) => {
+      const dateKey = data._dateKey || new Date().toISOString().slice(0, 10);
+      const cycleDay = data.cycleDay;
+      
+      // Используем автоматическое проставление 7 дней
+      if (cycleDay != null && cycleDay >= 1 && cycleDay <= 7) {
+        // setCycleDaysAuto проставит дни 1-7 автоматически
+        if (HEYS.Cycle && HEYS.Cycle.setCycleDaysAuto) {
+          HEYS.Cycle.setCycleDaysAuto(dateKey, cycleDay, lsGet, lsSet);
+        } else {
+          // Fallback: просто сохраняем один день
+          const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+          day.cycleDay = cycleDay;
+          day.updatedAt = Date.now();
+          lsSet(`heys_dayv2_${dateKey}`, day);
+        }
+      } else if (cycleDay === null) {
+        // Очищаем все связанные дни цикла
+        if (HEYS.Cycle && HEYS.Cycle.clearCycleDays) {
+          HEYS.Cycle.clearCycleDays(dateKey, lsGet, lsSet);
+        } else {
+          // Fallback: очищаем только текущий день
+          const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+          day.cycleDay = null;
+          day.updatedAt = Date.now();
+          lsSet(`heys_dayv2_${dateKey}`, day);
+        }
+      }
+      
+      // Триггер облачной синхронизации
+      window.dispatchEvent(new CustomEvent('heys:data-saved', { 
+        detail: { key: `day:${dateKey}`, type: 'cycle' }
+      }));
+      
+      // Уведомляем DayTab о изменении
+      window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+        detail: { 
+          date: dateKey, 
+          field: 'cycleDay', 
+          value: data.cycleDay, 
+          source: 'cycle-step',
+          updatedAt: Date.now()
+        }
+      }));
+    },
+    xpAction: 'cycle_logged'
+  });
+
+  // ============================================================
   // MEASUREMENTS STEP — Замеры тела (талия, бёдра, бедро, бицепс)
   // ============================================================
 
@@ -1449,6 +1674,7 @@
     StepsGoal: StepsGoalStepComponent,
     Deficit: DeficitStepComponent,
     Household: HouseholdStepComponent,
+    Cycle: CycleStepComponent,
     Measurements: MeasurementsStepComponent,
     getLastMeasurementByField,
     getMeasurementsHistory,
@@ -1463,9 +1689,10 @@
     calcHouseholdKcal,
     getWeeklyHouseholdStats,
     getLastMeasurements,
-    shouldShowMeasurements
+    shouldShowMeasurements,
+    shouldShowCycleStep
   };
 
-  console.log('[HEYS] Steps registered: weight, sleepTime, sleepQuality, stepsGoal, deficit, household, measurements');
+  console.log('[HEYS] Steps registered: weight, sleepTime, sleepQuality, stepsGoal, deficit, household, cycle, measurements');
 
 })(typeof window !== 'undefined' ? window : global);

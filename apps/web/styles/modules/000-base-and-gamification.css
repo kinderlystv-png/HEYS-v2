@@ -3444,6 +3444,22 @@ body:has(.offline-banner) .wrap {
   opacity: 0.8;
 }
 
+/* Cycle dot indicator (особый период) */
+.day-cycle-dot {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  line-height: 1;
+  color: #ec4899;
+  opacity: 0.9;
+}
+
+.date-picker-day.has-cycle {
+  position: relative;
+}
+
 /* Streak индикатор */
 .date-picker-streak {
   padding: 8px 12px;
@@ -4183,6 +4199,91 @@ body:has(.offline-banner) .wrap {
     width: 100%;
   }
 }
+
+/* Toggle switch для профиля */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #d1d5db;
+  transition: 0.2s;
+  border-radius: 26px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(22px);
+}
+
+.cycle-tracking-toggle {
+  background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #f9a8d4;
+  margin: 4px 0;
+}
+
+.cycle-toggle-hint {
+  margin-left: 8px;
+  font-size: 13px;
+  color: #be185d;
+  opacity: 0.8;
+}
+
+/* Dark theme toggle */
+[data-theme="dark"] .toggle-slider {
+  background-color: #4b5563;
+}
+
+[data-theme="dark"] .cycle-tracking-toggle {
+  background: linear-gradient(135deg, #500724 0%, #831843 100%);
+  border-color: #be185d;
+}
+
+[data-theme="dark"] .cycle-toggle-hint {
+  color: #f9a8d4;
+}
+
+@media (max-width: 780px) {
+  .cycle-tracking-toggle {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+}
+
 @media (max-width: 1400px) {
   .user-cards-grid {
     grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));

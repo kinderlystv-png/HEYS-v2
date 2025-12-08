@@ -504,7 +504,6 @@
       avoidCategories: [],
       bonusAdvices: [
         { id: 'deficit_protein_priority', text: 'При дефиците белок — приоритет №1', priority: 25 },
-        { id: 'deficit_fiber_satiety', text: 'Клетчатка даёт сытость без калорий', priority: 26 },
         { id: 'deficit_water_hunger', text: 'Часто жажду путают с голодом — выпей воды', priority: 27 }
       ]
     },
@@ -1279,31 +1278,7 @@
       const nextId = checkChainContinuation(chainId);
       if (nextId) {
         // Генерируем follow-up совет
-        if (nextId === 'protein_sources') {
-          advices.push({
-            id: 'protein_sources',
-            icon: '🍗',
-            text: 'Идеи для белка: курица, яйца, творог, рыба, греческий йогурт',
-            details: 'Курица — 27г/100г, Творог — 18г/100г, Яйца — 13г/100г, Тунец — 24г/100г',
-            type: 'tip',
-            priority: 28,
-            category: 'nutrition',
-            triggers: ['tab_open'],
-            ttl: 7000
-          });
-        } else if (nextId === 'fiber_sources') {
-          advices.push({
-            id: 'fiber_sources',
-            icon: '🥦',
-            text: 'Лучшие источники клетчатки: брокколи, овсянка, чечевица, авокадо',
-            details: 'Чечевица — 8г/100г, Авокадо — 7г/100г, Брокколи — 3г/100г, Овсянка — 10г/100г',
-            type: 'tip',
-            priority: 28,
-            category: 'nutrition',
-            triggers: ['tab_open'],
-            ttl: 7000
-          });
-        } else if (nextId === 'water_benefits') {
+        if (nextId === 'water_benefits') {
           advices.push({
             id: 'water_benefits',
             icon: '💧',
@@ -4912,6 +4887,131 @@
           onShow: () => { try { sessionStorage.setItem('heys_iron_tip_today', '1'); } catch(e) {} }
         });
       }
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // 🌸 CYCLE TIPS — Советы для особого периода (priority: 56-58)
+    // ─────────────────────────────────────────────────────────
+    
+    const cycleDay = day?.cycleDay || null;
+    const cyclePhase = HEYS.Cycle?.getCyclePhase?.(cycleDay);
+    const allItemsCycle = (day?.meals || []).flatMap(m => m.items || []);
+    
+    // cycle_sweet_craving — Тяга к сладкому норма в особый период
+    if (cyclePhase?.id === 'menstrual' && simplePct > 1.0) {
+      advices.push({
+        id: 'cycle_sweet_craving',
+        icon: '🌸',
+        text: 'Тяга к сладкому — норма в этот период',
+        details: '🧬 Гормональные изменения вызывают тягу к углеводам. Лучше выбери тёмный шоколад или фрукты.',
+        type: 'tip',
+        priority: 58,
+        category: 'personalized',
+        triggers: ['product_added', 'tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // cycle_iron_important — Железо особенно важно
+    if (cyclePhase?.id === 'menstrual') {
+      const ironKeywords = ['печень', 'говядин', 'гранат', 'гречк', 'чечевиц', 'шпинат', 'индейк'];
+      const hasIron = allItemsCycle.some(item => {
+        const product = getProductForItem(item, pIndex);
+        const name = (product?.name || item.name || '').toLowerCase();
+        return ironKeywords.some(kw => name.includes(kw));
+      });
+      
+      if (!hasIron && mealCount >= 2) {
+        advices.push({
+          id: 'cycle_iron_important',
+          icon: '🩸',
+          text: 'Сейчас железо особенно важно',
+          details: '💪 В период менструации потери железа увеличиваются. Добавь печень, гречку или гранат.',
+          type: 'tip',
+          priority: 57,
+          category: 'personalized',
+          triggers: ['tab_open'],
+          ttl: 5000
+        });
+      }
+    }
+    
+    // cycle_rest_ok — Легче с нагрузками
+    if (cyclePhase?.id === 'menstrual' && cycleDay <= 2 && !day.trainings?.length) {
+      advices.push({
+        id: 'cycle_rest_ok',
+        icon: '🧘',
+        text: 'Отдых сегодня — правильный выбор',
+        details: '✨ В первые дни цикла энергия снижена. Лёгкая йога или прогулка лучше интенсивной тренировки.',
+        type: 'support',
+        priority: 56,
+        category: 'personalized',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // cycle_hydration — Больше воды
+    if (cyclePhase?.id === 'menstrual' && waterPct < 0.7) {
+      advices.push({
+        id: 'cycle_hydration',
+        icon: '💧',
+        text: 'Сейчас вода особенно нужна',
+        details: '🌊 Организм теряет жидкость. Вода помогает с самочувствием и уменьшает отёки.',
+        type: 'tip',
+        priority: 56,
+        category: 'hydration',
+        triggers: ['tab_open'],
+        ttl: 5000
+      });
+    }
+    
+    // cycle_energy_up — Энергия растёт (фолликулярная фаза)
+    if (cyclePhase?.id === 'follicular' && !sessionStorage.getItem('heys_cycle_energy_today')) {
+      advices.push({
+        id: 'cycle_energy_up',
+        icon: '🌱',
+        text: 'Энергия восстанавливается — хорошее время для тренировок',
+        details: '🎯 Фолликулярная фаза — отличное время для интенсивных нагрузок и новых целей.',
+        type: 'motivation',
+        priority: 55,
+        category: 'personalized',
+        triggers: ['tab_open'],
+        ttl: 5000,
+        onShow: () => { try { sessionStorage.setItem('heys_cycle_energy_today', '1'); } catch(e) {} }
+      });
+    }
+    
+    // cycle_peak_performance — Пик энергии (овуляция)
+    if (cyclePhase?.id === 'ovulation' && !sessionStorage.getItem('heys_cycle_peak_today')) {
+      advices.push({
+        id: 'cycle_peak_performance',
+        icon: '⭐',
+        text: 'Пик энергии! Идеальное время для рекордов',
+        details: '🏆 Дни овуляции — максимальная сила и выносливость. Используй это!',
+        type: 'motivation',
+        priority: 58,
+        category: 'personalized',
+        triggers: ['tab_open'],
+        ttl: 5000,
+        onShow: () => { try { sessionStorage.setItem('heys_cycle_peak_today', '1'); } catch(e) {} }
+      });
+    }
+    
+    // cycle_tracking_enabled — Благодарность за использование
+    if (cyclePhase && !sessionStorage.getItem('heys_cycle_thanks_shown')) {
+      advices.push({
+        id: 'cycle_tracking_thanks',
+        icon: '🌸',
+        text: 'Учитываем особый период в расчётах',
+        details: '💜 Нормы воды и инсулиновая волна адаптированы под твой цикл.',
+        type: 'info',
+        priority: 50,
+        category: 'personalized',
+        triggers: ['tab_open'],
+        ttl: 4000,
+        onShow: () => { try { sessionStorage.setItem('heys_cycle_thanks_shown', '1'); } catch(e) {} }
+      });
     }
     
     // Задача 27: Рекомендации по возрасту

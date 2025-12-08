@@ -445,7 +445,8 @@
       sleepHours:+p.sleepHours||8, 
       weight:+p.weight||70, 
       deficitPctTarget:+p.deficitPctTarget||0, 
-      stepsGoal:+p.stepsGoal||7000
+      stepsGoal:+p.stepsGoal||7000,
+      cycleTrackingEnabled: !!p.cycleTrackingEnabled
     }; 
   }
   
@@ -986,7 +987,8 @@
         deficitPct: dayData.deficitPct, // может быть undefined — тогда из профиля
         sleepHours,
         moodAvg: +dayData.moodAvg || 0,
-        dayScore: +dayData.dayScore || 0
+        dayScore: +dayData.dayScore || 0,
+        cycleDay: dayData.cycleDay || null // День менструального цикла (1-N или null)
       };
     } catch (e) {
       return null;
@@ -1154,12 +1156,14 @@
         const fat = dayInfo.fat || 0;
         const carbs = dayInfo.carbs || 0;
         const dayScore = dayInfo.dayScore || 0;
+        const cycleDay = dayInfo.cycleDay || null; // День менструального цикла
         
         daysData.set(dateStr, { 
           kcal: dayInfo.kcal, target, ratio, 
           hasTraining, trainingTypes, trainingMinutes,
           moodAvg, sleepHours, dayScore,
-          prot, fat, carbs
+          prot, fat, carbs,
+          cycleDay
         });
       }
     } catch (e) {

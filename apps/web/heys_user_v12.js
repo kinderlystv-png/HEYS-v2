@@ -22,7 +22,10 @@
     birthDate: '', // YYYY-MM-DD, если заполнено — возраст считается авто
     weightGoal: 0, // целевой вес (кг)
     sleepHours:8, insulinWaveHours:3,
-    deficitPctTarget: 0
+    deficitPctTarget: 0,
+    stepsGoal: 10000, // целевая дневная активность по шагам
+    cycleTrackingEnabled: false, // ручное включение трекинга цикла (для любого пола)
+    profileCompleted: false // флаг заполненности профиля (для wizard первого входа)
   };
 
   // Валидация полей профиля — мягкая (разрешаем ввод, не форсируем fallback)
@@ -62,6 +65,11 @@
       if (v === '' || v === null || v === undefined) return 0;
       const n = Number(v);
       return isNaN(n) ? 0 : Math.max(-50, Math.min(50, n));
+    },
+    stepsGoal: v => {
+      if (v === '' || v === null || v === undefined) return 10000;
+      const n = Number(v);
+      return isNaN(n) ? 10000 : Math.max(0, Math.min(50000, n));
     }
   };
 
@@ -433,6 +441,22 @@
               React.createElement('option', {value:'Другое'}, 'Другое')
             ),
             React.createElement(FieldStatus, {fieldKey:'gender'})
+          ),
+          // Трекинг особого периода (только для женщин)
+          profile.gender === 'Женский' && React.createElement('div', {className:'inline-field cycle-tracking-toggle'}, 
+            React.createElement('label', null, '🌸 Особый период'),
+            React.createElement('span', {className:'sep'}, '-'),
+            React.createElement('label', {className:'toggle-switch'},
+              React.createElement('input', {
+                type:'checkbox', 
+                checked:!!profile.cycleTrackingEnabled, 
+                onChange:e=>updateProfileField('cycleTrackingEnabled', e.target.checked)
+              }),
+              React.createElement('span', {className:'toggle-slider'})
+            ),
+            React.createElement('span', {className:'cycle-toggle-hint'}, 
+              profile.cycleTrackingEnabled ? 'Включён' : 'Выключен'
+            )
           ),
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Базовый вес тела (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weight, onChange:e=>updateProfileField('weight', Number(e.target.value)||0), onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'weight'})),
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Целевой вес (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weightGoal||0, onChange:e=>updateProfileField('weightGoal', Number(e.target.value)||0), placeholder:'0 = не задан', onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'weightGoal'})),
@@ -1165,7 +1189,7 @@
         React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Сложные углеводы (%) — авто = 100 − простые'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {className:'readOnly', readOnly:true, value:complexCAuto})),
         React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'ГИ (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:clamp(norms.giPct), onChange:e=>update('giPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'giPct'})),
         React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Вредность (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:clamp(norms.harmPct), onChange:e=>update('harmPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'harmPct'})),
-        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Клетчатка (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:clamp(norms.fiberPct), onChange:e=>update('fiberPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'fiberPct'}))
+        React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Клетчатка (г/1000 ккал) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:clamp(norms.fiberPct), onChange:e=>update('fiberPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'fiberPct'}))
       ),
       (overMacro || overFatSplit || overCarbSplit) ?
         React.createElement('div', {className:'muted', style:{marginTop:'6px', color:'#dc2626'}}, 
@@ -1175,7 +1199,7 @@
         )
       : null,
       React.createElement('div', {className:'muted', style:{marginTop:'6px'}}, 
-        'Все значения — в процентах, сохраняются автоматически.'
+        'Все значения сохраняются автоматически. Жиры считаются из 9 ккал/г, клетчатка — в граммах на 1000 ккал.'
       )
     );
   }

@@ -3326,3 +3326,704 @@
   color: white;
 }
 
+/* ============================================================
+   CYCLE STEP — Особый период (менструальный цикл)
+   ============================================================ */
+
+.mc-cycle-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 0;
+}
+
+.mc-cycle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+  border-radius: 12px;
+}
+
+.mc-cycle-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mc-cycle-icon {
+  font-size: 24px;
+}
+
+.mc-cycle-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #831843;
+}
+
+.mc-cycle-toggle {
+  padding: 8px 20px;
+  border-radius: 20px;
+  border: 2px solid #f9a8d4;
+  background: white;
+  color: #9d174d;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.mc-cycle-toggle:hover {
+  background: #fdf2f8;
+}
+
+.mc-cycle-toggle.active {
+  background: #ec4899;
+  border-color: #ec4899;
+  color: white;
+}
+
+.mc-cycle-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: #fdf2f8;
+  border-radius: 12px;
+}
+
+.mc-cycle-day-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #9d174d;
+}
+
+.mc-cycle-quick-days {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mc-cycle-day-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #f9a8d4;
+  background: white;
+  color: #9d174d;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mc-cycle-day-btn:hover {
+  background: #fce7f3;
+  transform: scale(1.05);
+}
+
+.mc-cycle-day-btn.active {
+  background: #ec4899;
+  border-color: #ec4899;
+  color: white;
+  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.3);
+}
+
+.mc-cycle-custom-day {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mc-cycle-custom-label {
+  font-size: 13px;
+  color: #9d174d;
+}
+
+.mc-cycle-input {
+  width: 60px;
+  padding: 8px 12px;
+  border: 2px solid #f9a8d4;
+  border-radius: 8px;
+  font-size: 16px;
+  text-align: center;
+  color: #831843;
+  background: white;
+}
+
+.mc-cycle-input:focus {
+  outline: none;
+  border-color: #ec4899;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2);
+}
+
+.mc-cycle-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: rgba(236, 72, 153, 0.1);
+  border-radius: 8px;
+  margin-top: 4px;
+}
+
+.mc-cycle-hint-icon {
+  font-size: 14px;
+}
+
+.mc-cycle-hint-text {
+  font-size: 13px;
+  color: #9d174d;
+}
+
+.mc-cycle-disabled-hint {
+  font-size: 13px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 8px;
+}
+
+/* Dark theme */
+[data-theme="dark"] .mc-cycle-header {
+  background: linear-gradient(135deg, #500724 0%, #831843 100%);
+}
+
+[data-theme="dark"] .mc-cycle-title {
+  color: #fce7f3;
+}
+
+[data-theme="dark"] .mc-cycle-toggle {
+  background: #1f2937;
+  border-color: #9d174d;
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .mc-cycle-toggle:hover {
+  background: #374151;
+}
+
+[data-theme="dark"] .mc-cycle-toggle.active {
+  background: #ec4899;
+  border-color: #ec4899;
+  color: white;
+}
+
+[data-theme="dark"] .mc-cycle-content {
+  background: #1f2937;
+}
+
+[data-theme="dark"] .mc-cycle-day-label {
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .mc-cycle-day-btn {
+  background: #374151;
+  border-color: #9d174d;
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .mc-cycle-day-btn:hover {
+  background: #4b5563;
+}
+
+[data-theme="dark"] .mc-cycle-day-btn.active {
+  background: #ec4899;
+  border-color: #ec4899;
+  color: white;
+}
+
+[data-theme="dark"] .mc-cycle-input {
+  background: #374151;
+  border-color: #9d174d;
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .mc-cycle-input:focus {
+  border-color: #ec4899;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.3);
+}
+
+[data-theme="dark"] .mc-cycle-hint {
+  background: rgba(236, 72, 153, 0.15);
+}
+
+[data-theme="dark"] .mc-cycle-hint-text {
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .mc-cycle-disabled-hint {
+  color: #6b7280;
+}
+
+/* ============================================================
+   CYCLE STEP v2 — Улучшенный UI для выбора дня
+   ============================================================ */
+
+/* Статус выбранного дня */
+.mc-cycle-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+  border-radius: 12px;
+}
+
+.mc-cycle-status-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mc-cycle-status-day {
+  font-size: 20px;
+  font-weight: 700;
+  color: #9d174d;
+}
+
+.mc-cycle-status-info {
+  font-size: 13px;
+  color: #be185d;
+}
+
+.mc-cycle-change-btn {
+  padding: 8px 16px;
+  background: white;
+  border: 2px solid #f9a8d4;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #9d174d;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mc-cycle-change-btn:hover {
+  background: #fce7f3;
+}
+
+/* Выпадашка выбора дня */
+.mc-cycle-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: #fdf2f8;
+  border-radius: 12px;
+  border: 1px solid #f9a8d4;
+}
+
+.mc-cycle-picker-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #831843;
+  text-align: center;
+}
+
+/* Быстрые опции */
+.mc-cycle-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mc-cycle-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border: 2px solid #f9a8d4;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.mc-cycle-option:hover {
+  background: #fce7f3;
+  border-color: #ec4899;
+}
+
+.mc-cycle-option.active {
+  background: #ec4899;
+  border-color: #ec4899;
+}
+
+.mc-cycle-option.active .mc-cycle-option-label,
+.mc-cycle-option.active .mc-cycle-option-hint {
+  color: white;
+}
+
+.mc-cycle-option-day {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f9a8d4;
+  border-radius: 50%;
+  font-size: 16px;
+  font-weight: 700;
+  color: #831843;
+}
+
+.mc-cycle-option.active .mc-cycle-option-day {
+  background: rgba(255,255,255,0.3);
+  color: white;
+}
+
+.mc-cycle-option-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: #831843;
+  flex: 1;
+}
+
+.mc-cycle-option-hint {
+  font-size: 12px;
+  color: #9d174d;
+  opacity: 0.7;
+}
+
+/* Точный выбор дня */
+.mc-cycle-exact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(249, 168, 212, 0.3);
+}
+
+.mc-cycle-exact-label {
+  font-size: 13px;
+  color: #9d174d;
+}
+
+.mc-cycle-exact-days {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mc-cycle-exact-btn {
+  width: 36px;
+  height: 36px;
+  border: 2px solid #f9a8d4;
+  background: white;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #9d174d;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mc-cycle-exact-btn:hover {
+  background: #fce7f3;
+  transform: scale(1.05);
+}
+
+.mc-cycle-exact-btn.active {
+  background: #ec4899;
+  border-color: #ec4899;
+  color: white;
+}
+
+/* Подсказка об автозаполнении */
+.mc-cycle-auto-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  background: rgba(236, 72, 153, 0.1);
+  border-radius: 8px;
+}
+
+.mc-cycle-auto-hint .mc-cycle-hint-text {
+  font-size: 12px;
+  color: #be185d;
+}
+
+/* Dark theme v2 */
+[data-theme="dark"] .mc-cycle-status {
+  background: linear-gradient(135deg, #500724 0%, #831843 100%);
+}
+
+[data-theme="dark"] .mc-cycle-status-day {
+  color: #fce7f3;
+}
+
+[data-theme="dark"] .mc-cycle-status-info {
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .mc-cycle-change-btn {
+  background: #374151;
+  border-color: #9d174d;
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .mc-cycle-picker {
+  background: #1f2937;
+  border-color: #9d174d;
+}
+
+[data-theme="dark"] .mc-cycle-picker-title {
+  color: #fce7f3;
+}
+
+[data-theme="dark"] .mc-cycle-option {
+  background: #374151;
+  border-color: #9d174d;
+}
+
+[data-theme="dark"] .mc-cycle-option:hover {
+  background: #4b5563;
+}
+
+[data-theme="dark"] .mc-cycle-option-day {
+  background: #9d174d;
+  color: white;
+}
+
+[data-theme="dark"] .mc-cycle-option-label {
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .mc-cycle-option-hint {
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .mc-cycle-exact {
+  border-top-color: rgba(157, 23, 77, 0.3);
+}
+
+[data-theme="dark"] .mc-cycle-exact-label {
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .mc-cycle-exact-btn {
+  background: #374151;
+  border-color: #9d174d;
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .mc-cycle-exact-btn:hover {
+  background: #4b5563;
+}
+
+[data-theme="dark"] .mc-cycle-auto-hint {
+  background: rgba(236, 72, 153, 0.15);
+}
+
+[data-theme="dark"] .mc-cycle-auto-hint .mc-cycle-hint-text {
+  color: #f9a8d4;
+}
+
+/* ============================================================
+   CYCLE CARD — Карточка особого периода в статистике
+   ============================================================ */
+
+.cycle-card {
+  margin: 12px 0;
+  padding: 16px;
+  background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+  border-radius: 16px;
+  border: 1px solid #f9a8d4;
+}
+
+.cycle-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cycle-card__icon {
+  font-size: 20px;
+}
+
+.cycle-card__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #831843;
+}
+
+.cycle-card__day {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 500;
+  color: #be185d;
+  background: rgba(236, 72, 153, 0.15);
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.cycle-card__info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cycle-card__badge {
+  font-size: 12px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  color: #9d174d;
+}
+
+/* Dark theme */
+[data-theme="dark"] .cycle-card {
+  background: linear-gradient(135deg, #500724 0%, #831843 100%);
+  border-color: #be185d;
+}
+
+[data-theme="dark"] .cycle-card__title {
+  color: #fce7f3;
+}
+
+[data-theme="dark"] .cycle-card__day {
+  background: rgba(236, 72, 153, 0.3);
+  color: #fbcfe8;
+}
+
+[data-theme="dark"] .cycle-card__badge {
+  background: rgba(0, 0, 0, 0.3);
+  color: #f9a8d4;
+}
+
+/* Режим редактирования и пустое состояние */
+.cycle-card__header {
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.cycle-card__header:hover {
+  opacity: 0.85;
+}
+
+.cycle-card__edit-hint {
+  margin-left: 4px;
+  opacity: 0.5;
+  font-size: 12px;
+}
+
+.cycle-card__header--empty {
+  justify-content: flex-start;
+}
+
+.cycle-card__empty-hint {
+  margin-left: auto;
+  font-size: 13px;
+  color: #be185d;
+  opacity: 0.7;
+}
+
+.cycle-card__edit {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(249, 168, 212, 0.3);
+}
+
+.cycle-card__days {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.cycle-card__day-btn {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #f9a8d4;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #be185d;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cycle-card__day-btn:hover {
+  background: rgba(249, 168, 212, 0.3);
+  transform: scale(1.05);
+}
+
+.cycle-card__day-btn--active {
+  background: #ec4899;
+  color: white;
+  border-color: #ec4899;
+}
+
+.cycle-card__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.cycle-card__clear-btn,
+.cycle-card__cancel-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.cycle-card__clear-btn {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+.cycle-card__cancel-btn {
+  background: rgba(0, 0, 0, 0.05);
+  color: #6b7280;
+}
+
+.cycle-card__clear-btn:hover,
+.cycle-card__cancel-btn:hover {
+  opacity: 0.8;
+}
+
+/* Dark theme editing */
+[data-theme="dark"] .cycle-card__edit {
+  border-top-color: rgba(249, 168, 212, 0.2);
+}
+
+[data-theme="dark"] .cycle-card__day-btn {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: #be185d;
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .cycle-card__day-btn:hover {
+  background: rgba(190, 24, 93, 0.4);
+}
+
+[data-theme="dark"] .cycle-card__day-btn--active {
+  background: #be185d;
+  color: white;
+}
+
+[data-theme="dark"] .cycle-card__empty-hint {
+  color: #f9a8d4;
+}
+
+[data-theme="dark"] .cycle-card__clear-btn {
+  background: rgba(239, 68, 68, 0.25);
+  color: #f87171;
+}
+
+[data-theme="dark"] .cycle-card__cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #9ca3af;
+}
+

@@ -122,9 +122,7 @@
       const steps = ['weight', 'sleepTime', 'sleepQuality'];
       
       // Условно добавляем особый период (если включён в профиле)
-      const shouldShowCycle = HEYS.Steps && HEYS.Steps.shouldShowCycleStep && HEYS.Steps.shouldShowCycleStep();
-      console.log('[MorningCheckin] shouldShowCycle:', shouldShowCycle, 'profile:', HEYS.utils?.lsGet?.('heys_profile', {}));
-      if (shouldShowCycle) {
+      if (HEYS.Steps && HEYS.Steps.shouldShowCycleStep && HEYS.Steps.shouldShowCycleStep()) {
         steps.push('cycle');
       }
       
@@ -135,8 +133,6 @@
       
       // Завершающий шаг
       steps.push('stepsGoal');
-      
-      console.log('[MorningCheckin] Final steps:', steps);
       
       return React.createElement(HEYS.StepModal.Component, {
         steps: steps,
@@ -179,11 +175,6 @@
       if (HEYS.StepModal) {
         // Базовые шаги
         const steps = ['weight', 'sleepTime', 'sleepQuality'];
-        
-        // Условно добавляем особый период (если включён в профиле)
-        if (HEYS.Steps && HEYS.Steps.shouldShowCycleStep && HEYS.Steps.shouldShowCycleStep()) {
-          steps.push('cycle');
-        }
         
         // Условно добавляем замеры
         if (HEYS.Steps && HEYS.Steps.shouldShowMeasurements && HEYS.Steps.shouldShowMeasurements()) {

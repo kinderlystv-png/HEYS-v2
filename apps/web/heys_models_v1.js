@@ -308,7 +308,9 @@
       waterMl: +d.waterMl || 0,
       meals:Array.isArray(d.meals)?d.meals:[{id:uuid(),name:'Приём пищи',time:'',mood:'',wellbeing:'',stress:'',items:[]}],
       // Замеры тела (сохраняем как есть если есть)
-      measurements: d.measurements || undefined
+      measurements: d.measurements || undefined,
+      // День менструального цикла (null = не указан, 1-7 = день цикла)
+      cycleDay: d.cycleDay != null ? d.cycleDay : null
     };
     if(!Array.isArray(base.trainings)) base.trainings=[{z:[0,0,0,0],time:'',type:'',mood:5,wellbeing:5,stress:5,comment:''},{z:[0,0,0,0],time:'',type:'',mood:5,wellbeing:5,stress:5,comment:''}];
     if(base.trainings.length<2) while(base.trainings.length<2) base.trainings.push({z:[0,0,0,0],time:'',type:'',mood:5,wellbeing:5,stress:5,comment:''});

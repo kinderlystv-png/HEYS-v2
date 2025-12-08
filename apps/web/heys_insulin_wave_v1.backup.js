@@ -383,16 +383,6 @@
       if (hour < 17) return { type: 'snack', icon: '🥜', name: 'Перекус' };
       if (hour < 20) return { type: 'dinner', icon: '🍽️', name: 'Ужин' };
       return { type: 'light', icon: '🥛', name: 'Лёгкий перекус' };
-    },
-    
-    // Нормализация времени к суткам HEYS (день = 03:00 → 03:00)
-    normalizeToHeysDay: (timeMin) => {
-      const HEYS_DAY_START = 3 * 60; // 03:00 = 180 минут
-      const totalMinutes = timeMin % (24 * 60);
-      if (totalMinutes >= HEYS_DAY_START) {
-        return totalMinutes - HEYS_DAY_START; // 03:00 → 0, 04:00 → 60
-      }
-      return totalMinutes + (24 * 60 - HEYS_DAY_START); // 00:00 → 1260, 02:59 → 1439
     }
   };
   
@@ -1375,22 +1365,15 @@
     const transFat = nutrients.totalTrans || 0;
     const transFatBonus = calculateTransFatBonus(transFat);
     
-    // 🌸 Менструальный цикл (Davidsen 2007)
-    // Инсулиновая чувствительность снижается в лютеиновую фазу и менструацию
-    const cycleDay = dayData.cycleDay || null;
-    const cycleBonus = HEYS.Cycle?.getInsulinWaveMultiplier?.(cycleDay) || 1;
-    // Преобразуем множитель в бонус (1.12 → +0.12)
-    const cycleBonusValue = cycleBonus > 1 ? (cycleBonus - 1) : 0;
-    
     // Финальный множитель: все факторы
     // multipliers.total уже включает GI + protein + fiber + fat + liquid + insulinogenic
     // Добавляем все бонусы (отрицательные = укорачивают волну):
     // - workout (общий), postprandial (после еды), NEAT, steps — физическая активность
     // - fasting, alcohol, caffeine, stress, sleep — другие факторы
-    // - 🆕 v2.0: sleepQuality, hydration, age, bmi, gender, transFat, cycle
+    // - 🆕 v2.0: sleepQuality, hydration, age, bmi, gender, transFat
     const activityBonuses = workoutBonus.bonus + postprandialBonus.bonus + neatBonus.bonus + stepsBonus.bonus;
     const metabolicBonuses = fastingBonus + alcoholBonus + caffeineBonus + stressBonus + sleepBonus;
-    const personalBonuses = sleepQualityBonus + hydrationBonus + ageBonus + bmiBonus + genderBonus + transFatBonus + cycleBonusValue;
+    const personalBonuses = sleepQualityBonus + hydrationBonus + ageBonus + bmiBonus + genderBonus + transFatBonus;
     const allBonuses = activityBonuses + metabolicBonuses + personalBonuses;
     const finalMultiplier = (multipliers.total + allBonuses) * circadian.multiplier * spicyMultiplier;
     
@@ -1427,25 +1410,6 @@
     const endTime = utils.minutesToTime(endMinutes);
     
     // === История волн за день ===
-    // Получаем MEAL_TYPES для названий приёмов
-    const MEAL_TYPES = (HEYS.dayUtils && HEYS.dayUtils.MEAL_TYPES) || {};
-    const getMealTypeName = (meal) => {
-      const type = meal.mealType || meal.name;
-      if (type && MEAL_TYPES[type]) {
-        return MEAL_TYPES[type].icon + ' ' + MEAL_TYPES[type].name;
-      }
-      // Fallback по имени
-      if (meal.name) return meal.name;
-      // По времени
-      const h = parseInt((meal.time || '').split(':')[0]) || 12;
-      if (h < 10) return '🍳 Завтрак';
-      if (h < 12) return '🍎 Перекус';
-      if (h < 15) return '🍲 Обед';
-      if (h < 17) return '🥜 Перекус';
-      if (h < 20) return '🍽️ Ужин';
-      return '🌙 Ночной';
-    };
-    
     const waveHistory = sorted.map((meal, idx) => {
       const t = meal.time;
       if (!t) return null;
@@ -1473,8 +1437,6 @@
         endMin,
         endTimeDisplay: utils.minutesToTime(endMin),
         duration,
-        mealName: getMealTypeName(meal),
-        mealType: meal.mealType || null,
         gi: mealNutrients.avgGI,
         gl: mealNutrients.glycemicLoad,
         protein: mealNutrients.totalProtein,
@@ -1950,411 +1912,6 @@
           x: currentPoint.x, y: padding.top - 2,
           fontSize: 9, fill: '#fff', textAnchor: 'middle', fontWeight: 600
         }, 'сейчас')
-      )
-    );
-  };
-
-  // === Meal Wave Expand (для карточки приёма) ===
-  function cardChipStyle(color) {
-    return {
-      background: color + '1A',
-      color: '#0f172a',
-      padding: '6px 8px',
-      borderRadius: '8px',
-      fontWeight: 600
-    };
-  }
-
-  const MealWaveExpandSection = ({ waveData, prevWave, nextWave }) => {
-    if (!waveData) return null;
-    const normalize = utils.normalizeToHeysDay;
-    
-    // === Данные для волн ===
-    const waves = [];
-    
-    // Текущий приём
-    const currentStart = normalize(waveData.startMin);
-    let currentEnd = normalize(waveData.endMin);
-    if (currentEnd <= currentStart) currentEnd += 24 * 60;
-    const currentGI = waveData.gi || 50;
-    const currentDuration = waveData.duration || 180;
-    
-    waves.push({
-      id: 'current',
-      label: waveData.mealName || 'Текущий приём',
-      color: '#3b82f6',
-      start: currentStart,
-      end: currentEnd,
-      gi: currentGI,
-      duration: currentDuration,
-      timeLabel: waveData.timeDisplay || waveData.time,
-      endLabel: waveData.endTimeDisplay
-    });
-    
-    // Предыдущий
-    if (prevWave) {
-      const s = normalize(prevWave.startMin);
-      let e = normalize(prevWave.endMin);
-      if (e <= s) e += 24 * 60;
-      waves.push({
-        id: 'prev',
-        label: prevWave.mealName || 'Предыдущий',
-        color: '#8b5cf6',
-        start: s,
-        end: e,
-        gi: prevWave.gi || 50,
-        duration: prevWave.duration || 180,
-        timeLabel: prevWave.timeDisplay || prevWave.time,
-        endLabel: prevWave.endTimeDisplay
-      });
-    }
-    
-    // Следующий
-    if (nextWave) {
-      const s = normalize(nextWave.startMin);
-      let e = normalize(nextWave.endMin);
-      if (e <= s) e += 24 * 60;
-      waves.push({
-        id: 'next',
-        label: nextWave.mealName || 'Следующий',
-        color: '#f97316',
-        start: s,
-        end: e,
-        gi: nextWave.gi || 50,
-        duration: nextWave.duration || 180,
-        timeLabel: nextWave.timeDisplay || nextWave.time,
-        endLabel: nextWave.endTimeDisplay
-      });
-    }
-    
-    // Сортируем по времени начала
-    waves.sort((a, b) => a.start - b.start);
-    
-    // === Overlaps ===
-    const nextOverlap = nextWave && waveData.endMin > nextWave.startMin
-      ? waveData.endMin - nextWave.startMin : 0;
-    const prevOverlap = prevWave && prevWave.endMin > waveData.startMin
-      ? prevWave.endMin - waveData.startMin : 0;
-    const hasOverlap = (nextOverlap > 0) || (prevOverlap > 0);
-    const lipolysisGap = nextWave ? Math.max(0, nextWave.startMin - waveData.endMin) : 0;
-    
-    // === SVG размеры ===
-    const width = 320;
-    const height = 120;
-    const padding = { left: 20, right: 20, top: 18, bottom: 28 };
-    const chartW = width - padding.left - padding.right;
-    const chartH = height - padding.top - padding.bottom;
-    
-    // Масштаб по времени
-    const startMin = Math.min(...waves.map(w => w.start));
-    const endMax = Math.max(...waves.map(w => w.end));
-    const range = Math.max(1, endMax - startMin);
-    const scaleX = (v) => padding.left + (v - startMin) / range * chartW;
-    
-    // === Генератор формы волны (как в главной карточке) ===
-    const generateWavePath = (wave, baseY) => {
-      const waveWidth = (wave.end - wave.start) / range * chartW;
-      const waveStartX = scaleX(wave.start);
-      
-      // Высота волны зависит от ГИ
-      const gi = wave.gi;
-      const peakPos = gi >= 70 ? 0.15 : gi <= 40 ? 0.35 : 0.25;
-      const peakHeight = Math.min(1, 0.5 + (wave.duration / 300) * 0.4); // 0.5-0.9 в зависимости от длины
-      
-      const points = [];
-      const steps = 40;
-      
-      for (let i = 0; i <= steps; i++) {
-        const t = i / steps;
-        let y;
-        if (t <= peakPos) {
-          const tNorm = t / peakPos;
-          y = peakHeight * Math.pow(tNorm, 1.5);
-        } else {
-          const tNorm = (t - peakPos) / (1 - peakPos);
-          y = peakHeight * Math.exp(-2.5 * tNorm);
-        }
-        const x = waveStartX + t * waveWidth;
-        const yPx = baseY - y * (chartH * 0.8);
-        points.push({ x, y: yPx, t, value: y });
-      }
-      return points;
-    };
-    
-    // Базовая линия (нижняя часть графика)
-    const baseY = padding.top + chartH;
-    
-    // Генерируем пути для всех волн
-    const wavePaths = waves.map(wave => {
-      const points = generateWavePath(wave, baseY);
-      const pathD = points.map((p, i) => 
-        `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`
-      ).join(' ');
-      const fillPathD = `${pathD} L ${scaleX(wave.end)} ${baseY} L ${scaleX(wave.start)} ${baseY} Z`;
-      return { wave, points, pathD, fillPathD };
-    });
-    
-    // === Зоны перехлёста (overlap) — красная заливка ===
-    const overlapZones = [];
-    for (let i = 0; i < waves.length - 1; i++) {
-      const w1 = waves[i];
-      const w2 = waves[i + 1];
-      if (w1.end > w2.start) {
-        // Есть перехлёст
-        overlapZones.push({
-          start: w2.start,
-          end: Math.min(w1.end, w2.end),
-          minutes: Math.round(w1.end - w2.start)
-        });
-      }
-    }
-    
-    // === Зона липолиза (зелёная) ===
-    const lipolysisZones = [];
-    for (let i = 0; i < waves.length - 1; i++) {
-      const w1 = waves[i];
-      const w2 = waves[i + 1];
-      if (w1.end < w2.start) {
-        lipolysisZones.push({
-          start: w1.end,
-          end: w2.start,
-          minutes: Math.round(w2.start - w1.end)
-        });
-      }
-    }
-    
-    // Градиент для фона
-    const bgGradient = hasOverlap
-      ? 'linear-gradient(135deg, rgba(254,226,226,0.5) 0%, rgba(254,202,202,0.3) 100%)'
-      : 'linear-gradient(135deg, rgba(236,253,245,0.5) 0%, rgba(209,250,229,0.3) 100%)';
-    
-    return React.createElement('div', { 
-      className: 'meal-wave-content', 
-      style: { 
-        padding: '0 12px 12px 12px'
-      } 
-    },
-      // === SVG ГРАФИК ===
-      React.createElement('svg', { 
-        width: '100%', 
-        height, 
-        viewBox: `0 0 ${width} ${height}`,
-        style: { display: 'block' }
-      },
-        // Градиенты
-        React.createElement('defs', null,
-          // Градиент для текущей волны
-          React.createElement('linearGradient', { id: 'waveGradCurrent', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
-            React.createElement('stop', { offset: '0%', stopColor: '#3b82f6', stopOpacity: 0.7 }),
-            React.createElement('stop', { offset: '100%', stopColor: '#3b82f6', stopOpacity: 0.1 })
-          ),
-          // Градиент для предыдущей волны
-          React.createElement('linearGradient', { id: 'waveGradPrev', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
-            React.createElement('stop', { offset: '0%', stopColor: '#8b5cf6', stopOpacity: 0.5 }),
-            React.createElement('stop', { offset: '100%', stopColor: '#8b5cf6', stopOpacity: 0.05 })
-          ),
-          // Градиент для следующей волны
-          React.createElement('linearGradient', { id: 'waveGradNext', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
-            React.createElement('stop', { offset: '0%', stopColor: '#f97316', stopOpacity: 0.6 }),
-            React.createElement('stop', { offset: '100%', stopColor: '#f97316', stopOpacity: 0.1 })
-          ),
-          // Градиент для overlap
-          React.createElement('linearGradient', { id: 'overlapGrad', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
-            React.createElement('stop', { offset: '0%', stopColor: '#ef4444', stopOpacity: 0.5 }),
-            React.createElement('stop', { offset: '100%', stopColor: '#ef4444', stopOpacity: 0.2 })
-          ),
-          // Градиент для липолиза
-          React.createElement('linearGradient', { id: 'lipolysisGrad', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
-            React.createElement('stop', { offset: '0%', stopColor: '#22c55e', stopOpacity: 0.4 }),
-            React.createElement('stop', { offset: '100%', stopColor: '#22c55e', stopOpacity: 0.1 })
-          )
-        ),
-        
-        // Базовая линия
-        React.createElement('line', { 
-          x1: padding.left, 
-          y1: baseY, 
-          x2: padding.left + chartW, 
-          y2: baseY, 
-          stroke: '#cbd5e1', 
-          strokeWidth: 1.5 
-        }),
-        
-        // === Зоны липолиза (зелёные) ===
-        lipolysisZones.map((zone, i) => React.createElement('g', { key: 'lipo-' + i },
-          React.createElement('rect', {
-            x: scaleX(zone.start),
-            y: padding.top,
-            width: Math.max(4, (zone.end - zone.start) / range * chartW),
-            height: chartH,
-            fill: 'url(#lipolysisGrad)'
-          }),
-          // Иконка огня в центре
-          React.createElement('text', {
-            x: scaleX(zone.start) + (zone.end - zone.start) / range * chartW / 2,
-            y: padding.top + chartH / 2 + 4,
-            fontSize: 14,
-            textAnchor: 'middle',
-            fill: '#22c55e'
-          }, '🔥')
-        )),
-        
-        // === Зоны перехлёста (красные) ===
-        overlapZones.map((zone, i) => React.createElement('g', { key: 'ovl-' + i },
-          React.createElement('rect', {
-            x: scaleX(zone.start),
-            y: padding.top,
-            width: Math.max(4, (zone.end - zone.start) / range * chartW),
-            height: chartH,
-            fill: 'url(#overlapGrad)'
-          }),
-          // Штриховка
-          React.createElement('pattern', { 
-            id: 'hatch-' + i, 
-            patternUnits: 'userSpaceOnUse', 
-            width: 6, 
-            height: 6,
-            patternTransform: 'rotate(45)'
-          },
-            React.createElement('line', { x1: 0, y1: 0, x2: 0, y2: 6, stroke: '#ef4444', strokeWidth: 1.5, strokeOpacity: 0.3 })
-          ),
-          React.createElement('rect', {
-            x: scaleX(zone.start),
-            y: padding.top,
-            width: Math.max(4, (zone.end - zone.start) / range * chartW),
-            height: chartH,
-            fill: 'url(#hatch-' + i + ')'
-          }),
-          // Иконка предупреждения
-          React.createElement('text', {
-            x: scaleX(zone.start) + (zone.end - zone.start) / range * chartW / 2,
-            y: padding.top + chartH / 2 + 4,
-            fontSize: 14,
-            textAnchor: 'middle',
-            fill: '#ef4444'
-          }, '⚠️')
-        )),
-        
-        // === Волны (кривые) ===
-        wavePaths.map(({ wave, pathD, fillPathD }, idx) => {
-          const gradId = wave.id === 'current' ? 'waveGradCurrent' : 
-                         wave.id === 'prev' ? 'waveGradPrev' : 'waveGradNext';
-          const zIndex = wave.id === 'current' ? 3 : wave.id === 'next' ? 2 : 1;
-          return React.createElement('g', { key: 'wave-' + wave.id, style: { zIndex } },
-            // Заливка
-            React.createElement('path', { 
-              d: fillPathD, 
-              fill: 'url(#' + gradId + ')'
-            }),
-            // Линия кривой
-            React.createElement('path', {
-              d: pathD,
-              fill: 'none',
-              stroke: wave.color,
-              strokeWidth: wave.id === 'current' ? 2.5 : 1.5,
-              strokeLinecap: 'round',
-              strokeLinejoin: 'round',
-              opacity: wave.id === 'current' ? 1 : 0.7
-            })
-          );
-        }),
-        
-        // === Вертикальные пунктирные линии времён приёмов ===
-        waves.map(wave => React.createElement('line', {
-          key: 'vline-' + wave.id,
-          x1: scaleX(wave.start),
-          y1: padding.top - 4,
-          x2: scaleX(wave.start),
-          y2: baseY + 4,
-          stroke: wave.color,
-          strokeWidth: 1,
-          strokeDasharray: '3,2',
-          opacity: 0.6
-        })),
-        
-        // === Метки времени снизу (с детекцией коллизий) ===
-        (() => {
-          // Собираем все метки: начала волн + конец текущей
-          const currentWave = waves.find(w => w.id === 'current');
-          const allLabels = [];
-          
-          // Метки начала волн
-          waves.forEach((wave) => {
-            allLabels.push({
-              id: 'start-' + wave.id,
-              x: scaleX(wave.start),
-              time: wave.start,
-              text: (wave.id === 'current' ? '🍽️' : '🍽️') + wave.timeLabel,
-              color: wave.color,
-              weight: wave.id === 'current' ? 600 : 500
-            });
-          });
-          
-          // Метка конца текущей волны
-          allLabels.push({
-            id: 'end-current',
-            x: scaleX(currentWave.end),
-            time: currentWave.end,
-            text: (lipolysisGap > 0 ? '🔥' : '⚠️') + (waveData.endTimeDisplay || ''),
-            color: lipolysisGap > 0 ? '#22c55e' : '#ef4444',
-            weight: 600
-          });
-          
-          // Сортируем по времени
-          allLabels.sort((a, b) => a.time - b.time);
-          
-          // Вычисляем ширину каждой метки (примерно 7px на символ)
-          const charWidth = 6;
-          allLabels.forEach(label => {
-            label.width = label.text.length * charWidth;
-          });
-          
-          // Разрешаем коллизии — сдвигаем метки горизонтально
-          const minGap = 4; // минимальный зазор между метками
-          const adjustedX = allLabels.map(l => l.x);
-          
-          for (let i = 1; i < allLabels.length; i++) {
-            const prevRight = adjustedX[i - 1] + allLabels[i - 1].width / 2;
-            const currLeft = adjustedX[i] - allLabels[i].width / 2;
-            const overlap = prevRight + minGap - currLeft;
-            
-            if (overlap > 0) {
-              // Сдвигаем обе метки в разные стороны
-              adjustedX[i - 1] -= overlap / 2;
-              adjustedX[i] += overlap / 2;
-            }
-          }
-          
-          // Рендерим метки
-          return allLabels.map((label, i) => 
-            React.createElement('text', {
-              key: label.id,
-              x: adjustedX[i],
-              y: height - 6,
-              fontSize: 10,
-              fill: label.color,
-              textAnchor: 'middle',
-              fontWeight: label.weight
-            }, label.text)
-          );
-        })(),
-        
-        // === Легенда (если несколько волн) ===
-        waves.length > 1 && React.createElement('g', null,
-          waves.map((wave, idx) => {
-            const legendX = padding.left + idx * 90;
-            const legendY = padding.top - 8;
-            return React.createElement('g', { key: 'leg-' + wave.id },
-              React.createElement('circle', { cx: legendX, cy: legendY, r: 4, fill: wave.color }),
-              React.createElement('text', { 
-                x: legendX + 8, 
-                y: legendY + 3, 
-                fontSize: 9, 
-                fill: '#64748b'
-              }, wave.label)
-            );
-          })
-        )
       )
     );
   };
@@ -3086,7 +2643,6 @@
     renderProgressBar,
     renderWaveHistory,
     renderExpandedSection,
-    MealWaveExpandSection,
     
     // Утилиты
     utils,
@@ -3161,6 +2717,6 @@
   // Алиас
   HEYS.IW = HEYS.InsulinWave;
   
-  console.log('[HEYS] InsulinWave v2.1.0 loaded (26 factors: +cycle menstrual support)');
+  console.log('[HEYS] InsulinWave v2.0.0 loaded (25 factors: scientific audit + sleepQuality, hydration, age, BMI, gender, transFat)');
   
 })(typeof window !== 'undefined' ? window : global);

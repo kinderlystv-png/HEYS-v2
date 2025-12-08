@@ -209,6 +209,7 @@
             // Не показываем градиентный фон для сегодня и выбранного дня
             const cellStyle = bgColor && !isSel && !isToday ? { background: bgColor } : undefined;
             const statusEmoji = dayData ? getStatusEmoji(dayData.ratio) : '';
+            const hasCycle = dayData?.cycleDay != null;
             
             return React.createElement('div', {
               key: dt.toISOString(),
@@ -216,7 +217,8 @@
                 'date-picker-day',
                 isSel ? 'selected' : '',
                 isToday ? 'today' : '',
-                dayData ? 'has-data' : ''
+                dayData ? 'has-data' : '',
+                hasCycle ? 'has-cycle' : ''
               ].join(' ').trim(),
               style: cellStyle,
               onClick: () => { onSelect(dateStr); setIsOpen(false); setTooltip(null); },
@@ -224,7 +226,8 @@
               onMouseLeave: () => setTooltip(null)
             }, 
               React.createElement('span', { className: 'day-number' }, dt.getDate()),
-              statusEmoji && React.createElement('span', { className: 'day-status' }, statusEmoji)
+              statusEmoji && React.createElement('span', { className: 'day-status' }, statusEmoji),
+              hasCycle && React.createElement('span', { className: 'day-cycle-dot' }, '•')
             );
           })
         ),
