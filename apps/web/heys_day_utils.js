@@ -897,11 +897,18 @@
           const src = product || item; // item может иметь inline kcal100, protein100 и т.д.
           
           // Трекаем orphan-продукты (когда используется штамп вместо базы)
-          // НЕ трекаем если база продуктов пуста — это значит она ещё не загружена
+          // НЕ трекаем если база продуктов пуста или синхронизация не завершена
           if (!product && itemName) {
-            const hasProductsLoaded = productsMap.size > 0 || 
-              (global.HEYS?.products?.getAll?.()?.length > 0);
-            if (hasProductsLoaded) {
+            const freshProducts = global.HEYS?.products?.getAll?.() || [];
+            const hasProductsLoaded = productsMap.size > 0 || freshProducts.length > 0;
+            
+            // Дополнительная проверка: ищем продукт напрямую в свежей базе
+            const foundInFresh = freshProducts.find(p => 
+              String(p.name || '').trim().toLowerCase() === itemNameLower
+            );
+            
+            // Трекаем только если база загружена И продукт реально не найден
+            if (hasProductsLoaded && !foundInFresh) {
               trackOrphanProduct(item, dateStr);
             }
           }
