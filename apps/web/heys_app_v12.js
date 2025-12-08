@@ -256,11 +256,24 @@
           }
         }
 
-        // === Service Worker Registration (Production) ===
+        // === Service Worker Registration (Production only) ===
         function registerServiceWorker() {
           if (!('serviceWorker' in navigator)) return;
           
-          // Всегда регистрируем SW (и для dev, и для prod)
+          // ❌ НЕ регистрируем SW на localhost — мешает разработке (HMR, updatefound и т.д.)
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('[SW] ⏭️ Skipped on localhost (dev mode)');
+            // Удаляем существующий SW если есть (чтобы не мешал разработке)
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+              registrations.forEach(reg => {
+                reg.unregister().then(() => {
+                  console.log('[SW] 🗑️ Unregistered SW on localhost');
+                });
+              });
+            });
+            return;
+          }
+          
           navigator.serviceWorker.register('/sw.js')
             .then((registration) => {
               console.log('[SW] ✅ Registered successfully');
@@ -527,11 +540,14 @@
           
           localStorage.setItem(VERSION_KEY, APP_VERSION);
           
-          // Регистрируем SW
+          // Регистрируем SW (только на production)
           registerServiceWorker();
           
-          // Проверяем версию с сервера (с небольшой задержкой, чтобы не блокировать загрузку)
-          setTimeout(checkServerVersion, 3000);
+          // Проверяем версию с сервера (только на production)
+          // На localhost это не нужно — мешает разработке
+          if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            setTimeout(checkServerVersion, 3000);
+          }
         }
         
         // Экспорт для ручного вызова
@@ -1592,6 +1608,11 @@
                     }
                     return latest;
                   });
+                  
+                  // 🔄 Пересчитываем orphan-продукты — теперь база загружена
+                  if (window.HEYS?.orphanProducts?.recalculate) {
+                    window.HEYS.orphanProducts.recalculate();
+                  }
                 }
               };
               

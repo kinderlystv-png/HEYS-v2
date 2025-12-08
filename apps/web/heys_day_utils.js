@@ -880,14 +880,30 @@
               if (orphanProductsMap.has(itemNameLower)) {
                 orphanProductsMap.delete(itemNameLower);
               }
+            } else if (freshProducts.length > 0) {
+              // DEBUG: Продукт не найден, но база загружена
+              // Проверяем возможные причины
+              const similar = freshProducts.filter(p => {
+                const pName = String(p.name || '').trim().toLowerCase();
+                return pName.includes(itemNameLower.slice(0, 10)) || 
+                       itemNameLower.includes(pName.slice(0, 10));
+              });
+              if (similar.length > 0) {
+                console.warn(`[HEYS] Orphan mismatch: "${itemName}" not found, similar: "${similar[0].name}"`);
+              }
             }
           }
           
           const src = product || item; // item может иметь inline kcal100, protein100 и т.д.
           
           // Трекаем orphan-продукты (когда используется штамп вместо базы)
+          // НЕ трекаем если база продуктов пуста — это значит она ещё не загружена
           if (!product && itemName) {
-            trackOrphanProduct(item, dateStr);
+            const hasProductsLoaded = productsMap.size > 0 || 
+              (global.HEYS?.products?.getAll?.()?.length > 0);
+            if (hasProductsLoaded) {
+              trackOrphanProduct(item, dateStr);
+            }
           }
           
           if (src.kcal100 != null || src.protein100 != null) {
