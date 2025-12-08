@@ -843,15 +843,19 @@
 
   // Проверка: нужно ли показывать profile-шаги
   function isProfileIncomplete(profile) {
+    // Если есть флаг profileCompleted — используем его (надёжный способ)
     if (profile.profileCompleted === true) return false;
     
-    const noGender = !profile.gender || profile.gender === 'Мужской';
-    const isDefaultWeight = profile.weight === 70;
-    const isDefaultHeight = profile.height === 175;
+    // Fallback: проверяем обязательные поля
+    // Профиль считается неполным, если ВСЕ поля имеют дефолтные значения
+    const isDefaultGender = !profile.gender || profile.gender === 'Мужской';
+    const isDefaultWeight = !profile.weight || profile.weight === 70;
+    const isDefaultHeight = !profile.height || profile.height === 175;
     const noBirthDate = !profile.birthDate;
-    const isDefaultAge = profile.age === 30;
+    const isDefaultAge = !profile.age || profile.age === 30;
     
-    return noGender && isDefaultWeight && isDefaultHeight && (noBirthDate && isDefaultAge);
+    // Профиль неполный, только если ВСЕ поля дефолтные И нет даты рождения
+    return isDefaultGender && isDefaultWeight && isDefaultHeight && noBirthDate && isDefaultAge;
   }
 
   HEYS.ProfileSteps = {
