@@ -4443,14 +4443,14 @@
       setEditMode('new');
     }
     
-    // Вспомогательная функция: плавная прокрутка к заголовку дневника
+    // Вспомогательная функция: моментальная прокрутка к заголовку дневника
     const scrollToDiaryHeading = React.useCallback(() => {
       setTimeout(() => {
         const heading = document.getElementById('diary-heading');
         if (heading) {
-          heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          heading.scrollIntoView({ behavior: 'auto', block: 'start' });
         }
-      }, 100);
+      }, 50);
     }, []);
 
     // addMeal теперь открывает новую модульную модалку
@@ -12701,7 +12701,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           textTransform: 'uppercase',
           letterSpacing: '1px',
           textAlign: 'center',
-          scrollMarginTop: '80px' // Учитываем высоту шапки при прокрутке
+          scrollMarginTop: '150px' // Учитываем высоту шапки + плашки при прокрутке
         }
       }, 'ДНЕВНИК ПИТАНИЯ'),
       
