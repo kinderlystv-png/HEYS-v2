@@ -201,14 +201,27 @@
       merged.cycleDay = local.cycleDay || remote.cycleDay || null;
     }
     
-    // 🍽️ Meals: merge по ID, сохраняем уникальные
+    // 🍽️ Meals: merge по ID с учётом УДАЛЕНИЙ
+    // Если local свежее и meal отсутствует в local — значит удалён!
     const localMeals = local.meals || [];
     const remoteMeals = remote.meals || [];
     const mealsMap = new Map();
+    const localMealIds = new Set(localMeals.filter(m => m?.id).map(m => m.id));
+    const localIsNewer = (local.updatedAt || 0) >= (remote.updatedAt || 0);
     
-    // Сначала добавляем remote meals
+    // Добавляем remote meals, но ТОЛЬКО если:
+    // 1. Local НЕ свежее (remote приоритетнее), ИЛИ
+    // 2. Meal присутствует в local (не был удалён)
     remoteMeals.forEach(meal => {
-      if (meal && meal.id) mealsMap.set(meal.id, meal);
+      if (!meal || !meal.id) return;
+      
+      if (localIsNewer && !localMealIds.has(meal.id)) {
+        // Local свежее и этого meal нет в local = УДАЛЁН пользователем
+        log(`🗑️ [MERGE] Meal ${meal.id} deleted locally, skipping from remote`);
+        return;
+      }
+      
+      mealsMap.set(meal.id, meal);
     });
     
     // Потом local meals — если ID совпадает, берём ЛОКАЛЬНУЮ версию (она более свежая)

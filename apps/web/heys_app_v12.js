@@ -2446,6 +2446,7 @@
             );
             const [syncVer, setSyncVer] = useState(0);
             const [clients, setClients] = useState([]);
+            const [clientsSource, setClientsSource] = useState(''); // 'cloud' | 'cache' | 'loading'
             const [clientId, setClientId] = useState('');
             const [newName, setNewName] = useState('');
             const [cloudUser, setCloudUser] = useState(null);
@@ -2465,6 +2466,7 @@
               status, setStatus,
               syncVer, setSyncVer,
               clients, setClients,
+              clientsSource, setClientsSource,
               clientId, setClientId,
               newName, setNewName,
               cloudUser, setCloudUser,
@@ -2477,6 +2479,7 @@
 
           function useCloudClients(cloud, U, {
             clients, setClients,
+            clientsSource, setClientsSource,
             clientId, setClientId,
             cloudUser, setCloudUser,
             setProducts,
@@ -2489,14 +2492,17 @@
             
             const fetchClientsFromCloud = useCallback(async (curatorId) => {
               if (!cloud.client || !curatorId) {
-                return [];
+                return { data: [], source: 'error' };
               }
+              
+              setClientsSource('loading');
               
               const timeoutPromise = new Promise((_, reject) => 
                 setTimeout(() => reject(new Error('Timeout: Supabase request took too long')), 5000)
               );
               
               try {
+                console.log('[HEYS] 🔄 Загружаю клиентов для curator:', curatorId);
                 const fetchPromise = cloud.client
                   .from('clients')
                   .select('id, name')
@@ -2506,12 +2512,20 @@
                 const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
                 if (error) {
                   console.error('Ошибка загрузки клиентов:', error);
-                  return [];
+                  setClientsSource('error');
+                  return { data: [], source: 'error' };
                 }
-                return data || [];
+                console.log('[HEYS] ✅ Загружено клиентов:', data?.length || 0, data);
+                // Сохраняем в localStorage для кэширования
+                if (data && data.length > 0) {
+                  localStorage.setItem('heys_clients', JSON.stringify(data));
+                }
+                setClientsSource('cloud');
+                return { data: data || [], source: 'cloud' };
               } catch (e) {
                 console.error('[HEYS] ❌ fetchClientsFromCloud failed:', e.message);
-                return [];
+                setClientsSource('error');
+                return { data: [], source: 'error' };
               }
             }, [cloud]);
             
@@ -2542,8 +2556,8 @@
                 alert('Ошибка создания клиента: ' + error.message);
                 return;
               }
-              const updated = await fetchClientsFromCloud(userId);
-              setClients(updated);
+              const result = await fetchClientsFromCloud(userId);
+              setClients(result.data);
               setClientId(data.id);
               U.lsSet('heys_client_current', data.id);
             }, [clients, cloud, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
@@ -2558,8 +2572,8 @@
 
               const userId = cloudUser.id;
               await cloud.client.from('clients').update({ name }).eq('id', id);
-              const updated = await fetchClientsFromCloud(userId);
-              setClients(updated);
+              const result = await fetchClientsFromCloud(userId);
+              setClients(result.data);
             }, [clients, cloud, cloudUser, fetchClientsFromCloud, setClients, U]);
             
             const removeClient = useCallback(async (id) => {
@@ -2576,8 +2590,8 @@
 
               const userId = cloudUser.id;
               await cloud.client.from('clients').delete().eq('id', id);
-              const updated = await fetchClientsFromCloud(userId);
-              setClients(updated);
+              const result = await fetchClientsFromCloud(userId);
+              setClients(result.data);
               if (clientId === id) {
                 setClientId('');
                 U.lsSet('heys_client_current', '');
@@ -2631,8 +2645,8 @@
                 
                 setCloudUser(res.user);
                 setStatus(typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'online');
-                const loadedClients = await fetchClientsFromCloud(res.user.id);
-                setClients(loadedClients);
+                const loadedResult = await fetchClientsFromCloud(res.user.id);
+                setClients(loadedResult.data);
                 
                 // Не автовыбираем клиента — куратор должен выбрать сам через модалку
                 // clientId остаётся null → показывается модалка выбора клиента
@@ -2730,6 +2744,7 @@
               status, setStatus,
               syncVer, setSyncVer,
               clients, setClients,
+              clientsSource, setClientsSource,
               clientId, setClientId,
               newName, setNewName,
               cloudUser, setCloudUser,
@@ -2749,6 +2764,7 @@
               cloudSignOut,
             } = useCloudClients(cloud, U, {
               clients, setClients,
+              clientsSource, setClientsSource,
               clientId, setClientId,
               cloudUser, setCloudUser,
               setProducts,
@@ -3365,8 +3381,10 @@
             useEffect(() => {
               if (cloudUser && cloudUser.id) {
                 fetchClientsFromCloud(cloudUser.id)
-                  .then((loadedClients) => {
-                    setClients(loadedClients);
+                  .then((result) => {
+                    if (result.data && result.data.length > 0) {
+                      setClients(result.data);
+                    }
                     // Не автовыбираем клиента — куратор должен выбрать сам через модалку
                   })
                   .catch((err) => {
@@ -3409,8 +3427,8 @@
               }
 
               // Обновить список клиентов
-              const updated = await fetchClientsFromCloud(userId);
-              setClients(updated);
+              const result = await fetchClientsFromCloud(userId);
+              setClients(result.data);
             }
 
             function formatBackupTime(meta) {
@@ -3844,7 +3862,44 @@
                             React.createElement(
                               'div',
                               { style: { fontSize: 14, color: 'var(--muted)', marginTop: 4 } },
-                              clients.length ? `${clients.length} клиентов` : 'Пока нет клиентов'
+                              clientsSource === 'loading' 
+                                ? '⏳ Загрузка...'
+                                : clientsSource === 'error'
+                                  ? '⚠️ Ошибка загрузки'
+                                  : clientsSource === 'cache'
+                                    ? `${clients.length} клиентов (из кэша)`
+                                    : clients.length 
+                                      ? `${clients.length} клиентов` 
+                                      : 'Пока нет клиентов'
+                            ),
+                            // Предупреждение если из кэша
+                            clientsSource === 'cache' && React.createElement(
+                              'div',
+                              { 
+                                style: { 
+                                  fontSize: 12, 
+                                  color: '#f59e0b', 
+                                  marginTop: 8,
+                                  padding: '6px 12px',
+                                  background: 'rgba(245, 158, 11, 0.1)',
+                                  borderRadius: 8
+                                } 
+                              },
+                              '☁️ Синхронизация с облаком...'
+                            ),
+                            clientsSource === 'error' && React.createElement(
+                              'div',
+                              { 
+                                style: { 
+                                  fontSize: 12, 
+                                  color: '#ef4444', 
+                                  marginTop: 8,
+                                  padding: '6px 12px',
+                                  background: 'rgba(239, 68, 68, 0.1)',
+                                  borderRadius: 8
+                                } 
+                              },
+                              '❌ Не удалось загрузить клиентов из облака'
                             )
                           ),
                           // Поиск клиентов (если > 3)
@@ -4131,6 +4186,7 @@
                   const realClients = storedClients.filter(c => !c.id?.startsWith('local-user'));
                   if (realClients.length > 0) {
                     setClients(realClients);
+                    setClientsSource('cache'); // Помечаем что это из кэша
                   }
                 }
 
@@ -4176,6 +4232,7 @@
                     if (data && data.session && data.session.user) {
                       setCloudUser(data.session.user);
                       setStatus('online');
+                      // Клиенты будут загружены в отдельном useEffect при изменении cloudUser
                     }
                     setIsInitializing(false);
                   }).catch(() => {
@@ -4204,6 +4261,20 @@
                 setSyncVer((v) => v + 1);
               }
             }, [clientId]);
+
+            // Загрузка клиентов из облака при получении cloudUser
+            useEffect(() => {
+              if (cloudUser && cloudUser.id && clientsSource === 'cache') {
+                // Есть юзер и клиенты из кэша — обновляем из облака
+                fetchClientsFromCloud(cloudUser.id).then(result => {
+                  if (result.data && result.data.length > 0) {
+                    setClients(result.data);
+                  }
+                }).catch(e => {
+                  console.error('[HEYS] Ошибка обновления клиентов из облака:', e);
+                });
+              }
+            }, [cloudUser, clientsSource, fetchClientsFromCloud, setClients]);
 
             // debounced save products
             const saveTimerRef = React.useRef(null);
@@ -4270,7 +4341,9 @@
               return parts.length > 0 ? parts.join(', ') : '';
             };
 
-            const currentClientName = clients.find((c) => c.id === clientId)?.name || 'Выберите клиента';
+            const currentClientName = Array.isArray(clients) 
+              ? (clients.find((c) => c.id === clientId)?.name || 'Выберите клиента')
+              : 'Выберите клиента';
             
             // Morning Check-in блокирует основной контент (показывается ДО загрузки)
             const isMorningCheckinBlocking = showMorningCheckin === true && HEYS.MorningCheckin;
