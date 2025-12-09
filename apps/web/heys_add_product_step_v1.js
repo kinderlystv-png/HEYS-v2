@@ -1099,22 +1099,32 @@
         )
       ),
       
-      // === БОЛЬШАЯ КНОПКА ДОБАВИТЬ (дублирует финальную) ===
+      // === БОЛЬШАЯ КНОПКА ДОБАВИТЬ/ИЗМЕНИТЬ ===
       React.createElement('button', {
         className: 'aps-add-hero-btn',
         onClick: () => {
-          if (product && grams > 0 && context?.onAdd) {
-            // Передаём mealIndex из контекста (как ожидает onAdd callback)
-            context.onAdd({
-              product,
-              grams,
-              mealIndex: context.mealIndex
-            });
-            
-            // 🔔 Dispatch event для advice module
-            window.dispatchEvent(new CustomEvent('heysProductAdded', { 
-              detail: { product, grams } 
-            }));
+          if (product && grams > 0) {
+            // Режим редактирования — вызываем onSave
+            if (context?.isEditMode && context?.onSave) {
+              context.onSave({
+                mealIndex: context.mealIndex,
+                itemId: context.itemId,
+                grams
+              });
+            } 
+            // Режим добавления — вызываем onAdd
+            else if (context?.onAdd) {
+              context.onAdd({
+                product,
+                grams,
+                mealIndex: context.mealIndex
+              });
+              
+              // 🔔 Dispatch event для advice module
+              window.dispatchEvent(new CustomEvent('heysProductAdded', { 
+                detail: { product, grams } 
+              }));
+            }
             
             // Закрыть модалку
             if (HEYS.StepModal?.hide) {
@@ -1137,7 +1147,7 @@
           boxShadow: '0 4px 14px rgba(34, 197, 94, 0.4)',
           cursor: 'pointer'
         }
-      }, '✓ Добавить'),
+      }, context?.isEditMode ? '✓ Изменить' : '✓ Добавить'),
       
       // Переключатель режима: граммы / ккал
       React.createElement('div', { className: 'aps-input-mode-toggle' },
@@ -1341,6 +1351,7 @@
           icon: '⚖️',
           component: GramsStep,
           validate: (data) => (data?.grams || 0) > 0,
+          hideHeaderNext: true, // Скрываем кнопку в хедере — используем большую кнопку внизу
           getInitialData: (ctx) => ({
             grams: ctx?.editGrams || currentGrams || 100,
             selectedProduct: ctx?.editProduct || product
@@ -1354,7 +1365,8 @@
         itemId,
         isEditMode: true,
         editProduct: product,   // Продукт через context — доступен сразу
-        editGrams: currentGrams // Граммы через context
+        editGrams: currentGrams, // Граммы через context
+        onSave  // Callback для сохранения — используется большой кнопкой
       },
       showGreeting: false,
       showStreak: false,

@@ -1600,6 +1600,32 @@
   transform: scale(0.97);
 }
 
+/* Зелёная кнопка для актуального приёма пищи — стиль как у кнопки "Добавить" в шаге граммов */
+.aps-open-btn--current {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: 1px solid #15803d;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+}
+
+.aps-open-btn--current:hover {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  border-color: #166534;
+  box-shadow: 0 6px 18px rgba(34, 197, 94, 0.5);
+}
+
+[data-theme="dark"] .aps-open-btn--current {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: 1px solid #4ade80;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3);
+}
+
+[data-theme="dark"] .aps-open-btn--current:hover {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  border-color: #86efac;
+}
+
 .aps-open-icon {
   font-size: 16px;
 }

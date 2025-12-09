@@ -1310,7 +1310,8 @@
     products,
     date,
     day,
-    setDay
+    setDay,
+    isCurrentMeal = false
   }) {
     const handleOpenModal = React.useCallback(() => {
       try { navigator.vibrate?.(10); } catch(e) {}
@@ -1483,7 +1484,7 @@
     }, [mi, products, date, day, setDay]);
 
     return React.createElement('button', {
-      className: 'aps-open-btn',
+      className: 'aps-open-btn' + (isCurrentMeal ? ' aps-open-btn--current' : ''),
       onClick: handleOpenModal,
       'aria-label': 'Добавить продукт'
     },
@@ -1796,7 +1797,7 @@
       ),
       React.createElement('div',{className:'row desktop-add-product',style:{justifyContent:'space-between',alignItems:'center'}},
         React.createElement('div',{className:'section-title'},'Добавить продукт'),
-        React.createElement(MealAddProduct, { mi: mealIndex, products, date, setDay })
+        React.createElement(MealAddProduct, { mi: mealIndex, products, date, setDay, isCurrentMeal })
       ),
       React.createElement('div',{style:{overflowX:'auto',marginTop:'8px'}}, React.createElement('table',{className:'tbl meals-table'},
         React.createElement('thead',null,React.createElement('tr',null, headerMeta.map((h,i)=>React.createElement('th',{
@@ -1848,7 +1849,7 @@
               React.createElement('span', null, (meal.items || []).length + ' продукт' + ((meal.items || []).length === 1 ? '' : (meal.items || []).length < 5 ? 'а' : 'ов'))
             ),
           // Кнопка добавить
-          React.createElement(MealAddProduct, { mi: mealIndex, products, date, setDay })
+          React.createElement(MealAddProduct, { mi: mealIndex, products, date, setDay, isCurrentMeal })
         ),
         // Products list (shown when expanded)
         isExpanded && (meal.items || []).map(it => {
