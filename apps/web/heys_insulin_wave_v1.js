@@ -16,11 +16,18 @@
   const React = global.React;
   
   // === КОНСТАНТЫ ===
+  // 🔬 НАУЧНЫЙ АУДИТ v3.0.1 (2025-12-09): Инвертирована логика GI
+  // БЫЛО: низкий ГИ → ×1.2 (длиннее) — НЕПРАВИЛЬНО
+  // СТАЛО: высокий ГИ → ×1.2 (длиннее) — ПРАВИЛЬНО
+  // 
+  // Научное обоснование (Wolever 1994, Brand-Miller 2003):
+  // - Высокий ГИ → резкий всплеск инсулина → дольше возврат к базовому уровню
+  // - Низкий ГИ → плавный, низкий инсулиновый ответ → короче волна
   const GI_CATEGORIES = {
-    low: { min: 0, max: 35, multiplier: 1.2, color: '#22c55e', text: 'Низкий ГИ', desc: 'медленное усвоение' },
-    medium: { min: 36, max: 55, multiplier: 1.0, color: '#eab308', text: 'Средний ГИ', desc: 'нормальное' },
-    high: { min: 56, max: 70, multiplier: 0.85, color: '#f97316', text: 'Высокий ГИ', desc: 'быстрее' },
-    veryHigh: { min: 71, max: 999, multiplier: 0.7, color: '#ef4444', text: 'Очень высокий', desc: 'очень быстро' }
+    low: { min: 0, max: 35, multiplier: 0.85, color: '#22c55e', text: 'Низкий ГИ', desc: 'короткая волна' },
+    medium: { min: 36, max: 55, multiplier: 1.0, color: '#eab308', text: 'Средний ГИ', desc: 'нормальная' },
+    high: { min: 56, max: 70, multiplier: 1.1, color: '#f97316', text: 'Высокий ГИ', desc: 'длиннее' },
+    veryHigh: { min: 71, max: 999, multiplier: 1.2, color: '#ef4444', text: 'Очень высокий', desc: 'долгая волна' }
   };
   
   const STATUS_CONFIG = {
@@ -152,22 +159,23 @@
   // - DeFronzo 1979: возраст снижает инсулиновую чувствительность
   // - Kahn & Flier 2000: BMI влияет на инсулинорезистентность
   // - Nuutila 1995: женщины имеют лучшую чувствительность к инсулину
+  // 🆕 v3.0.1: Уменьшены коэффициенты — при низкой GL эффект всё равно скалируется
   const PERSONAL_BASELINE = {
     defaultWaveHours: 3.0,  // Стандартный базовый период
     minWaveHours: 1.5,      // Минимум (очень чувствительные к инсулину)
-    maxWaveHours: 5.0,      // Максимум (высокая инсулинорезистентность)
-    // Коэффициенты влияния
+    maxWaveHours: 4.5,      // 🆕 Уменьшено с 5.0 (слишком долгие волны нереалистичны)
+    // Коэффициенты влияния — 🆕 УМЕНЬШЕНЫ вдвое (были слишком агрессивны)
     ageEffect: {
       startAge: 30,         // Возраст начала влияния
-      bonusPerYear: 0.008   // +0.8% за каждый год после 30
+      bonusPerYear: 0.004   // 🆕 +0.4% за год (было +0.8%) — более реалистично
     },
     bmiEffect: {
-      startBMI: 23,         // BMI начала влияния (ниже нормы = бонус)
-      bonusPerUnit: 0.025   // +2.5% за каждую единицу выше 23
+      startBMI: 25,         // 🆕 BMI 25+ (было 23) — начало избыточного веса
+      bonusPerUnit: 0.015   // 🆕 +1.5% за единицу (было +2.5%)
     },
     genderEffect: {
-      female: -0.08,        // Женщины -8% (лучше чувствительность)
-      male: 0.05,           // Мужчины +5%
+      female: -0.05,        // 🆕 Женщины -5% (было -8%)
+      male: 0.03,           // 🆕 Мужчины +3% (было +5%)
       other: 0              // Нейтрально
     }
   };
@@ -616,8 +624,15 @@
     baseHours = Math.max(PERSONAL_BASELINE.minWaveHours, 
                          Math.min(PERSONAL_BASELINE.maxWaveHours, baseHours));
     
+    // 🆕 v3.0.1: Разделяем стандартную базу и персональную надбавку
+    // Это нужно для GL-скалирования: при низкой GL надбавка применяется частично
+    const standardBase = PERSONAL_BASELINE.defaultWaveHours;
+    const personalDelta = baseHours - standardBase; // Может быть + или -
+    
     return {
       baseHours: Math.round(baseHours * 100) / 100,
+      standardBase,  // 🆕 Стандартные 3ч
+      personalDelta: Math.round(personalDelta * 100) / 100, // 🆕 Надбавка (+0.29ч или -0.24ч)
       factors,
       totalFactor: Math.round(totalFactor * 100) / 100,
       formula: `${PERSONAL_BASELINE.defaultWaveHours}ч × ${totalFactor.toFixed(2)} = ${baseHours.toFixed(1)}ч`
@@ -1243,7 +1258,8 @@
    */
   const calculateMealNutrients = (meal, pIndex, getProductFromItem) => {
     let totalGrams = 0;
-    let weightedGI = 0;
+    let weightedGI = 0;  // 🔬 v3.0.1: Теперь взвешиваем по углеводам, не по граммам!
+    let totalCarbsForGI = 0;  // 🆕 Сумма углеводов для расчёта средневзвешенного ГИ
     let totalProtein = 0;
     let totalFiber = 0;
     let totalCarbs = 0;
@@ -1269,7 +1285,6 @@
       const prod = getProductFromItem(item, pIndex);
       
       const gi = prod?.gi || prod?.gi100 || prod?.GI || 50;
-      weightedGI += gi * grams;
       totalGrams += grams;
       
       totalProtein += (prod?.protein100 || 0) * grams / 100;
@@ -1278,8 +1293,15 @@
       // Углеводы для расчёта силы инсулиновой реакции
       const simple = prod?.simple100 || 0;
       const complex = prod?.complex100 || 0;
+      const itemCarbs = (simple + complex) * grams / 100;
       totalSimple += simple * grams / 100;
-      totalCarbs += (simple + complex) * grams / 100;
+      totalCarbs += itemCarbs;
+      
+      // 🔬 v3.0.1: Взвешиваем ГИ по УГЛЕВОДАМ, не по граммам!
+      // Сыр без углеводов не должен влиять на средний ГИ
+      // Научное обоснование: ГИ применим только к углеводам (Brand-Miller 2003)
+      weightedGI += gi * itemCarbs;
+      totalCarbsForGI += itemCarbs;
       
       // Жиры — замедляют переваривание (gastric emptying)
       const badFat = prod?.badFat100 || 0;
@@ -1318,7 +1340,9 @@
       }
     }
     
-    const avgGI = totalGrams > 0 ? Math.round(weightedGI / totalGrams) : 50;
+    // 🔬 v3.0.1: Средневзвешенный ГИ по УГЛЕВОДАМ (правильно), не по граммам!
+    // Если нет углеводов — используем нейтральный ГИ=50
+    const avgGI = totalCarbsForGI > 0 ? Math.round(weightedGI / totalCarbsForGI) : 50;
     
     // Гликемическая нагрузка (GL) = GI × углеводы / 100
     // GL более точно предсказывает инсулиновую реакцию чем просто GI
@@ -1763,8 +1787,9 @@
     const cycleMultiplier = HEYS.Cycle?.getInsulinWaveMultiplier?.(cycleDay) || 1;
     const cycleBonusValue = cycleMultiplier > 1 ? (cycleMultiplier - 1) : 0;
     
-    // Суммируем все персональные бонусы
-    const personalBonuses = sleepBonus + sleepQualityBonus + hydrationBonus + ageBonus + bmiBonus + genderBonus + stressBonus + cycleBonusValue;
+    // Суммируем бонусы
+    // ⚠️ v3.0.0: age, bmi, gender ИСКЛЮЧЕНЫ — они уже в effectiveBaseWaveHours (Personal Baseline)
+    const personalBonuses = sleepBonus + sleepQualityBonus + hydrationBonus + stressBonus + cycleBonusValue;
     
     return {
       totalBonus: personalBonuses,
@@ -1992,14 +2017,27 @@
     const gl = nutrients.glycemicLoad;
     let dayFactorsScale = 1.0;
     let circadianScale = 1.0;
+    
     if (gl !== null && gl < 20) {
       // Формула: 0.3 + (GL/20) * 0.7 
       // GL=0 → 0.3, GL=10 → 0.65, GL=20 → 1.0
       dayFactorsScale = Math.max(0.3, 0.3 + (gl / 20) * 0.7);
+      
       // Циркадные ритмы — БОЛЕЕ АГРЕССИВНОЕ ослабление при низкой GL
       // При GL=7 ночной множитель ×1.2 не должен сильно влиять
       // Формула: 0.2 + (GL/20) * 0.8 → GL=7: 0.48, GL=10: 0.6, GL=20: 1.0
       circadianScale = Math.max(0.2, 0.2 + (gl / 20) * 0.8);
+      
+      // 🆕 v3.0.1: Скалирование персональной базы по GL
+      // Персональные факторы (возраст, BMI) влияют на инсулинорезистентность,
+      // но при низкой GL инсулина мало — эффект минимален
+      // GL=7 → базу приближаем к стандартным 3ч
+      // Формула: 0.4 + (GL/20) * 0.6 → GL=7: 0.61, GL=15: 0.85, GL=20: 1.0
+      const baseScaleFactor = Math.max(0.4, 0.4 + (gl / 20) * 0.6);
+      // Скалируем только "надбавку" от персональных факторов
+      const standardBase = PERSONAL_BASELINE.defaultWaveHours;
+      const personalDiff = effectiveBaseWaveHours - standardBase;
+      effectiveBaseWaveHours = standardBase + personalDiff * baseScaleFactor;
     }
     
     // Финальный множитель: все факторы
@@ -2009,15 +2047,64 @@
     // - fasting, alcohol, caffeine, stress, sleep — другие факторы
     // - 🆕 v2.0: sleepQuality, hydration, age, bmi, gender, transFat, cycle
     // - 🆕 v3.0.0: meal stacking bonus
+    // ⚠️ ВАЖНО: age, bmi, gender уже учтены в effectiveBaseWaveHours (v3.0.0 Personal Baseline)
+    // Поэтому НЕ добавляем их повторно в personalBonuses!
     const activityBonuses = (workoutBonus.bonus + postprandialBonus.bonus + neatBonus.bonus + stepsBonus.bonus) * dayFactorsScale;
     const metabolicBonuses = (fastingBonus + alcoholBonus + caffeineBonus + stressBonus + sleepBonus) * dayFactorsScale;
-    const personalBonuses = (sleepQualityBonus + hydrationBonus + ageBonus + bmiBonus + genderBonus + transFatBonus + cycleBonusValue) * dayFactorsScale;
+    // 🆕 v3.0.0: Убраны ageBonus, bmiBonus, genderBonus — они уже в персональной базе
+    const personalBonuses = (sleepQualityBonus + hydrationBonus + transFatBonus + cycleBonusValue) * dayFactorsScale;
     // 🆕 v3.0.0: Meal Stacking — если приём был слишком близко к предыдущему, волны "накладываются"
-    const mealStackingBonus = mealStackingResult.bonus * dayFactorsScale;
+    const mealStackingBonus = (mealStackingResult.stackBonus || 0) * dayFactorsScale;
     const allBonuses = activityBonuses + metabolicBonuses + personalBonuses + mealStackingBonus;
     // Циркадный множитель: приближаем к 1.0 при низкой GL
     const scaledCircadian = 1.0 + (circadian.multiplier - 1.0) * circadianScale;
     const finalMultiplier = (multipliers.total + allBonuses) * scaledCircadian * spicyMultiplier;
+    
+    // 🔬 DEBUG: Проверка v3.0.0 расчётов
+    console.log('[InsulinWave v3.0.0 DEBUG]', {
+      GL: gl,
+      'multipliers.total': multipliers.total,
+      'multipliers.carbs (GL mult)': multipliers.carbs,
+      'multipliers.gi': multipliers.gi,
+      // Бонусы по группам
+      activityBonuses,
+      metabolicBonuses,
+      personalBonuses,
+      mealStackingBonus,
+      allBonuses,
+      // Отдельные бонусы для поиска NaN
+      'workout': workoutBonus.bonus,
+      'postprandial': postprandialBonus.bonus,
+      'neat': neatBonus.bonus,
+      'steps': stepsBonus.bonus,
+      'fasting': fastingBonus,
+      'alcohol': alcoholBonus,
+      'caffeine': caffeineBonus,
+      'stress': stressBonus,
+      'sleep': sleepBonus,
+      'sleepQuality': sleepQualityBonus,
+      'hydration': hydrationBonus,
+      'age': ageBonus,
+      'bmi': bmiBonus,
+      'gender': genderBonus,
+      'transFat': transFatBonus,
+      'cycle': cycleBonusValue,
+      dayFactorsScale,
+      scaledCircadian,
+      finalMultiplier,
+      effectiveBaseWaveHours,
+      'result hours': effectiveBaseWaveHours * finalMultiplier
+    });
+    
+    // 🔬 DEBUG 2: Финальный расчёт
+    console.log('[InsulinWave FINAL]', 
+      'base:', effectiveBaseWaveHours.toFixed(2), 
+      '× final:', finalMultiplier.toFixed(3), 
+      '=', (effectiveBaseWaveHours * finalMultiplier).toFixed(2), 'ч',
+      '| mult.total:', multipliers.total.toFixed(3),
+      '| allBonuses:', allBonuses.toFixed(3),
+      '| circadian:', scaledCircadian.toFixed(3)
+    );
     
     // 🆕 v3.0.0: Используем персональную базу вместо фиксированных 3 часов
     // Скорректированная длина волны
@@ -2026,7 +2113,7 @@
     if (isNaN(adjustedWaveHours) || adjustedWaveHours <= 0) {
       adjustedWaveHours = effectiveBaseWaveHours || 3;
     }
-    const waveMinutes = adjustedWaveHours * 60;
+    let waveMinutes = adjustedWaveHours * 60;
     
     // 🆕 v3.0.0: Фазы волны (подъём, плато, спад)
     const hasRecentActivity = activityBonuses < -0.05; // Была какая-то активность
@@ -2053,7 +2140,7 @@
     let diffMinutes = nowMinutes - mealMinutes;
     if (diffMinutes < 0) diffMinutes = 0;
     
-    const remainingMinutes = Math.max(0, waveMinutes - diffMinutes);
+    let remainingMinutes = Math.max(0, waveMinutes - diffMinutes);
     const progressPct = Math.min(100, (diffMinutes / waveMinutes) * 100);
     
     // Время окончания
@@ -2124,6 +2211,15 @@
         circadianScale = Math.max(0.2, 0.2 + (gl / 20) * 0.8);
       }
       
+      // 🆕 v3.0.1: Скалирование персональной базы по GL для waveHistory
+      let scaledBaseWaveHours = effectiveBaseWaveHours;
+      if (gl !== null && gl < 20) {
+        const baseScaleFactor = Math.max(0.4, 0.4 + (gl / 20) * 0.6);
+        const standardBase = PERSONAL_BASELINE.defaultWaveHours;
+        const personalDiff = effectiveBaseWaveHours - standardBase;
+        scaledBaseWaveHours = standardBase + personalDiff * baseScaleFactor;
+      }
+      
       // Применяем скалированные факторы
       const scaledDayBonus = dayFactors.totalBonus * dayFactorsScale;
       const scaledActivityBonus = activityFactors.totalBonus * dayFactorsScale;
@@ -2144,7 +2240,8 @@
       const allBonuses = scaledDayBonus + scaledActivityBonus + mealSpecificBonuses;
       const finalMultiplier = (mealMult.total + allBonuses) * scaledCircadian * spicyMultiplier;
       
-      const duration = Math.round(baseWaveHours * finalMultiplier * 60);
+      // 🆕 v3.0.1: Используем scaledBaseWaveHours (персональная база, скалированная по GL)
+      const duration = Math.round(scaledBaseWaveHours * finalMultiplier * 60);
       const endMin = startMin + duration;
       
       return {
@@ -2155,6 +2252,7 @@
         endTimeDisplay: utils.minutesToTime(endMin),
         duration,
         waveHours: duration / 60, // 🆕 Для отображения в часах
+        baseWaveHours: scaledBaseWaveHours, // 🆕 v3.0.1: персональная база, скалированная по GL
         finalMultiplier, // 🆕 Для отладки
         mealName: getMealTypeName(meal),
         mealType: meal.mealType || null,
@@ -2179,6 +2277,18 @@
         isActive: idx === 0 && remainingMinutes > 0
       };
     }).filter(Boolean).reverse();
+    
+    // 🆕 v3.0.0: КРИТИЧНО — синхронизируем данные последнего приёма
+    // Карточка текущей волны должна показывать те же данные, что и карточка приёма
+    const lastMealWave = waveHistory.length > 0 ? waveHistory[waveHistory.length - 1] : null;
+    if (lastMealWave) {
+      // Перезаписываем переменные, чтобы использовать данные из waveHistory
+      adjustedWaveHours = lastMealWave.waveHours || adjustedWaveHours;
+      // Пересчитываем зависимые переменные
+      waveMinutes = adjustedWaveHours * 60;
+      // Обновляем remainingMinutes
+      remainingMinutes = Math.max(0, waveMinutes - diffMinutes);
+    }
     
     // === Анализ перекрытия волн ===
     const overlaps = [];
@@ -2282,9 +2392,12 @@
     
     // 🔥 Время липолиза (сколько прошло с конца волны)
     // diffMinutes - время с последнего приёма
-    // waveMinutes - длина волны
+    // waveMinutes - длина волны (уже синхронизирована с waveHistory)
     // lipolysisMinutes = diffMinutes - waveMinutes (время ПОСЛЕ окончания волны)
     const lipolysisMinutes = diffMinutes > waveMinutes ? Math.round(diffMinutes - waveMinutes) : 0;
+    
+    // 🆕 v3.0.0: Отладка — убедимся что данные корректны
+    // console.log('[InsulinWave] diffMinutes:', diffMinutes, 'waveMinutes:', waveMinutes, 'lipolysisMinutes:', lipolysisMinutes);
     
     return {
       // Статус
@@ -3379,7 +3492,16 @@
       if (data.fatBonus > 0) mods.push({ icon: '🧈', name: 'Жиры', value: `+${Math.round(data.fatBonus * 100)}%`, desc: `${data.totalFat}г замедляют усвоение` });
       if (data.proteinBonus > 0) mods.push({ icon: '🥩', name: 'Белок', value: `+${Math.round(data.proteinBonus * 100)}%`, desc: `${data.totalProtein}г продлевают волну` });
       if (data.fiberBonus > 0) mods.push({ icon: '🌾', name: 'Клетчатка', value: `+${Math.round(data.fiberBonus * 100)}%`, desc: `${data.totalFiber}г замедляют` });
-      if (data.insulinogenicBonus > 0) mods.push({ icon: '🥛', name: 'Молочка', value: `+${Math.round(data.insulinogenicBonus * 100)}%`, desc: 'повышает инсулин' });
+      // 🔬 v3.0.1: Показываем правильный label и иконку для insulinogenic
+      if (data.insulinogenicBonus > 0) {
+        const isProtein = data.insulinogenicType === 'protein';
+        mods.push({ 
+          icon: isProtein ? '🍖' : '🥛', 
+          name: isProtein ? 'Мясо/белок' : 'Молочка', 
+          value: `+${Math.round(data.insulinogenicBonus * 100)}%`, 
+          desc: 'повышает инсулин' 
+        });
+      }
       if (data.hasLiquid) mods.push({ icon: '🥤', name: 'Жидкое', value: `×${data.liquidMultiplier}`, desc: 'быстрее усваивается' });
       if (data.hasWorkoutBonus) mods.push({ icon: '🏃', name: 'Тренировка', value: `-${Math.abs(Math.round(data.workoutBonus * 100))}%`, desc: `${data.workoutMinutes} мин ускоряют` });
       // 🆕 v1.5: Постпрандиальная активность
@@ -3437,7 +3559,11 @@
           if (data.fatBonus > 0) parts.push(`+${Math.round(data.fatBonus * 100)}% жиры`);
           if (data.proteinBonus > 0) parts.push(`+${Math.round(data.proteinBonus * 100)}% белок`);
           if (data.fiberBonus > 0) parts.push(`+${Math.round(data.fiberBonus * 100)}% клетчатка`);
-          if (data.insulinogenicBonus > 0) parts.push(`+${Math.round(data.insulinogenicBonus * 100)}% молочка`);
+          // 🔬 v3.0.1: Показываем правильный label (молочка/мясо) в зависимости от типа
+          if (data.insulinogenicBonus > 0) {
+            const insLabel = data.insulinogenicType === 'protein' ? 'мясо' : 'молочка';
+            parts.push(`+${Math.round(data.insulinogenicBonus * 100)}% ${insLabel}`);
+          }
           if (data.hasLiquid) parts.push(`×${data.liquidMultiplier} жидкое`);
           if (data.hasWorkoutBonus) parts.push(`-${Math.abs(Math.round(data.workoutBonus * 100))}% тренировка`);
           // 🆕 v1.5: Новые бонусы активности

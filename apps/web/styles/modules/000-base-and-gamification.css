@@ -7165,6 +7165,515 @@ body:has(.offline-banner) .wrap {
   color: var(--color-gray-500);
 }
 
+/* === Profile Accordion (FAQ-style collapsible sections) === */
+.profile-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-section {
+  border-radius: 14px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.profile-section--collapsed {
+  cursor: pointer;
+}
+
+.profile-section--collapsed:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.profile-section--collapsed:active {
+  transform: scale(0.995);
+}
+
+.profile-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.profile-section__header:hover {
+  filter: brightness(0.97);
+}
+
+.profile-section__header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-section__icon {
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.profile-section__title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--color-slate-800);
+}
+
+.profile-section__subtitle {
+  font-size: 12px;
+  color: var(--color-slate-500);
+  margin-top: 2px;
+}
+
+.profile-section__header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-section__badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--color-slate-600);
+}
+
+.profile-section__chevron {
+  font-size: 12px;
+  color: var(--color-slate-400);
+  transition: transform 0.2s ease;
+  width: 20px;
+  text-align: center;
+}
+
+.profile-section--expanded .profile-section__chevron {
+  transform: rotate(180deg);
+}
+
+.profile-section__content {
+  padding: 0 16px 16px;
+  animation: profileSectionExpand 0.2s ease-out;
+}
+
+.profile-section__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Переопределяем стили вложенных карточек внутри секций */
+.profile-section__fields > .card {
+  margin: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: none;
+}
+
+.profile-section__fields > .card + .card {
+  margin-top: 12px;
+}
+
+/* Стили для field-list внутри секций */
+.profile-section__fields .field-list {
+  background: transparent;
+}
+
+.profile-section__fields .inline-field {
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+}
+
+.profile-section__fields .muted {
+  font-size: 13px;
+  color: var(--gray-500);
+  padding: 8px 0 0;
+}
+
+@keyframes profileSectionExpand {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tone colors for profile sections */
+.profile-section.tone-blue {
+  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+  border: 1px solid #93c5fd;
+}
+
+.profile-section.tone-blue .profile-section__icon {
+  background: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+}
+
+.profile-section.tone-rose {
+  background: linear-gradient(135deg, #ffe4e6 0%, #fff1f2 100%);
+  border: 1px solid #fda4af;
+}
+
+.profile-section.tone-rose .profile-section__icon {
+  background: rgba(244, 63, 94, 0.15);
+  color: #e11d48;
+}
+
+.profile-section.tone-violet {
+  background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
+  border: 1px solid #c4b5fd;
+}
+
+.profile-section.tone-violet .profile-section__icon {
+  background: rgba(139, 92, 246, 0.15);
+  color: #7c3aed;
+}
+
+.profile-section.tone-slate {
+  background: linear-gradient(135deg, #f1f5f9 0%, #f8fafc 100%);
+  border: 1px solid #cbd5e1;
+}
+
+.profile-section.tone-slate .profile-section__icon {
+  background: rgba(100, 116, 139, 0.15);
+  color: #475569;
+}
+
+/* Content styling inside sections */
+.profile-section .field-list {
+  background: rgba(255, 255, 255, 0.5);
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+.profile-section .inline-field {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.profile-section .inline-field:last-child {
+  border-bottom: none;
+}
+
+/* Stats pills row inside section */
+.profile-section__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.profile-section__pill {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Table inside section */
+.profile-section table {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.profile-section th {
+  background: rgba(0, 0, 0, 0.03);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+  .profile-section__header {
+    padding: 12px 14px;
+  }
+  
+  .profile-section__title {
+    font-size: 14px;
+  }
+  
+  .profile-section__content {
+    padding: 0 14px 14px;
+  }
+}
+
+/* === Profile Field Groups (плашки внутри секций) === */
+.profile-field-group {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.profile-section.tone-blue .profile-field-group {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(59, 130, 246, 0.15);
+}
+
+.profile-section.tone-rose .profile-field-group {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(244, 63, 94, 0.15);
+}
+
+.profile-section.tone-violet .profile-field-group {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(139, 92, 246, 0.15);
+}
+
+.profile-section.tone-slate .profile-field-group {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(100, 116, 139, 0.15);
+}
+
+.profile-field-group:last-child {
+  margin-bottom: 0;
+}
+
+.profile-field-group__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.profile-field-group__icon {
+  font-size: 16px;
+}
+
+.profile-field-group__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.profile-field-group .inline-field {
+  background: transparent !important;
+  padding: 6px 0 !important;
+  margin-bottom: 0 !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.profile-field-group .inline-field:last-child {
+  border-bottom: none;
+}
+
+/* Metrics pills row */
+.profile-metrics-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.profile-metric-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 13px;
+}
+
+.profile-metric-pill__icon {
+  font-size: 14px;
+}
+
+.profile-metric-pill__label {
+  color: var(--gray-500);
+}
+
+.profile-metric-pill__value {
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+/* === Dark Mode for Profile Sections === */
+/* Via data-theme attribute */
+[data-theme="dark"] .profile-section.tone-blue {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.08) 100%);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .profile-section.tone-rose {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.15) 0%, rgba(244, 63, 94, 0.08) 100%);
+  border-color: rgba(244, 63, 94, 0.3);
+}
+
+[data-theme="dark"] .profile-section.tone-violet {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+[data-theme="dark"] .profile-section.tone-slate {
+  background: linear-gradient(135deg, rgba(100, 116, 139, 0.15) 0%, rgba(100, 116, 139, 0.08) 100%);
+  border-color: rgba(100, 116, 139, 0.3);
+}
+
+[data-theme="dark"] .profile-section__title {
+  color: var(--gray-200);
+}
+
+[data-theme="dark"] .profile-section__subtitle {
+  color: var(--gray-400);
+}
+
+[data-theme="dark"] .profile-section__badge {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--gray-300);
+}
+
+[data-theme="dark"] .profile-field-group {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .profile-field-group__title {
+  color: var(--gray-300);
+}
+
+[data-theme="dark"] .profile-field-group .inline-field {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .profile-section__fields > .card {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .profile-metric-pill {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .profile-metric-pill__value {
+  color: var(--gray-200);
+}
+
+[data-theme="dark"] .profile-section table {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .profile-section th {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gray-400);
+}
+
+[data-theme="dark"] .profile-section__pill {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--gray-300);
+}
+
+/* Also support prefers-color-scheme for system preference */
+@media (prefers-color-scheme: dark) {
+  .profile-accordion {
+    background: transparent;
+  }
+  
+  .profile-section.tone-blue {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.08) 100%);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+  
+  .profile-section.tone-rose {
+    background: linear-gradient(135deg, rgba(244, 63, 94, 0.15) 0%, rgba(244, 63, 94, 0.08) 100%);
+    border-color: rgba(244, 63, 94, 0.3);
+  }
+  
+  .profile-section.tone-violet {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.08) 100%);
+    border-color: rgba(139, 92, 246, 0.3);
+  }
+  
+  .profile-section.tone-slate {
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.15) 0%, rgba(100, 116, 139, 0.08) 100%);
+    border-color: rgba(100, 116, 139, 0.3);
+  }
+  
+  .profile-section__title,
+  .profile-section__subtitle {
+    color: var(--gray-200);
+  }
+  
+  .profile-section__badge {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--gray-300);
+  }
+  
+  .profile-section__fields > .card {
+    background: rgba(30, 30, 30, 0.6);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  
+  .profile-field-group {
+    background: rgba(30, 30, 30, 0.5);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  
+  .profile-field-group__title {
+    color: var(--gray-300);
+  }
+  
+  .profile-field-group .inline-field {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+  
+  .profile-metric-pill {
+    background: rgba(30, 30, 30, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .profile-metric-pill__value {
+    color: var(--gray-200);
+  }
+  
+  .profile-section table {
+    background: rgba(30, 30, 30, 0.5);
+  }
+  
+  .profile-section th {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--gray-400);
+  }
+  
+  .profile-section__pill {
+    background: rgba(30, 30, 30, 0.5);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--gray-300);
+  }
+}
+
 /* MODULE 01 — Base & Gamification
  * Scope: base/modern polish, cards, tabs, compact layouts, gamification badges/animations.
  */

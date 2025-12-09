@@ -7753,9 +7753,22 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           baseWaveHours,
           trainings: day.trainings || [], // 🏃 Передаём тренировки для workout acceleration
           // 🆕 v1.4: Данные дня для stress и sleep факторов
+          // 🆕 v3.0.0: Добавлен profile для персональной базы волны
           dayData: {
             sleepHours: day.sleepHours || null,  // часы сна предыдущей ночи
-            stressAvg: day.stressAvg || 0        // средний стресс за день (1-5)
+            sleepQuality: day.sleepQuality || null, // качество сна (1-10)
+            stressAvg: day.stressAvg || 0,        // средний стресс за день (1-5)
+            waterMl: day.waterMl || 0,            // выпито воды (мл)
+            householdMin: day.householdMin || 0,  // бытовая активность
+            steps: day.steps || 0,                // шаги
+            cycleDay: day.cycleDay || null,       // день цикла
+            // 🆕 v3.0.0: Профиль для персональной базы
+            profile: {
+              age: prof?.age || 0,
+              weight: prof?.weight || 0,
+              height: prof?.height || 0,
+              gender: prof?.gender || ''
+            }
           }
         });
       }

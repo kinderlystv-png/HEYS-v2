@@ -177,6 +177,62 @@
     );
   }
 
+  // === ProfileSection — FAQ-style collapsible section ===
+  function ProfileSection({ 
+    id, 
+    icon, 
+    title, 
+    subtitle, 
+    badge, 
+    tone = 'blue', 
+    expanded, 
+    onToggle, 
+    children 
+  }) {
+    const handleClick = () => {
+      if (onToggle) onToggle(id);
+    };
+    
+    const sectionClass = [
+      'profile-section',
+      `tone-${tone}`,
+      expanded ? 'profile-section--expanded' : 'profile-section--collapsed'
+    ].join(' ');
+    
+    return React.createElement('div', { className: sectionClass },
+      // Header (always visible)
+      React.createElement('div', { 
+        className: 'profile-section__header',
+        onClick: handleClick
+      },
+        React.createElement('div', { className: 'profile-section__header-left' },
+          React.createElement('div', { className: 'profile-section__icon' }, icon),
+          React.createElement('div', null,
+            React.createElement('div', { className: 'profile-section__title' }, title),
+            subtitle && React.createElement('div', { className: 'profile-section__subtitle' }, subtitle)
+          )
+        ),
+        React.createElement('div', { className: 'profile-section__header-right' },
+          badge && React.createElement('span', { className: 'profile-section__badge' }, badge),
+          React.createElement('span', { className: 'profile-section__chevron' }, '▼')
+        )
+      ),
+      // Content (only when expanded)
+      expanded && React.createElement('div', { className: 'profile-section__content' }, children)
+    );
+  }
+
+  // === Компонент группы полей (плашка внутри секции) ===
+  function ProfileFieldGroup({ icon, title, children }) {
+    return React.createElement('div', { className: 'profile-field-group' },
+      React.createElement('div', { className: 'profile-field-group__header' },
+        React.createElement('span', { className: 'profile-field-group__icon' }, icon),
+        React.createElement('span', { className: 'profile-field-group__title' }, title)
+      ),
+      children
+    );
+  }
+
   function UserTabBase(){
     // Twemoji: reparse emoji after render
     React.useEffect(() => {
@@ -187,6 +243,22 @@
       return lsGet('heys_profile', DEFAULT_PROFILE);
     });
     const [profileSaved, setProfileSaved] = React.useState(false);
+    
+    // === Accordion state (с сохранением в localStorage) ===
+    const SECTIONS_KEY = 'heys_profile_sections';
+    const [expandedSections, setExpandedSections] = React.useState(() => {
+      try {
+        const saved = localStorage.getItem(SECTIONS_KEY);
+        return saved ? JSON.parse(saved) : { basic: true };
+      } catch { return { basic: true }; }
+    });
+    const toggleSection = (id) => {
+      setExpandedSections(prev => {
+        const next = { ...prev, [id]: !prev[id] };
+        try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(next)); } catch {}
+        return next;
+      });
+    };
 
     // Дефолтные пульсовые зоны (фиксированные диапазоны, MET рассчитывается)
     const defaultZones = React.useMemo(()=>{
@@ -436,18 +508,447 @@
     };
 
     return React.createElement('div', {className:'page page-user'},
-      React.createElement('div', {className:'user-cards-grid'},
-      React.createElement('div', {className:'card tone-blue'},
-        React.createElement('div', {style:{fontWeight:'600', marginBottom:'6px'}}, 'Данные пользователя'),
-        React.createElement('div', {className:'field-list'},
+      React.createElement('div', {className:'profile-accordion'},
+      
+      // === СЕКЦИЯ 1: Базовые параметры ===
+      React.createElement(ProfileSection, {
+        id: 'basic',
+        icon: '👤',
+        title: 'Базовые параметры',
+        subtitle: 'Рост, вес, возраст, цели',
+        tone: 'blue',
+        expanded: expandedSections.basic,
+        onToggle: () => toggleSection('basic')
+      },
+        React.createElement('div', {className:'profile-section__fields'},
+        
+        // === ГРУППА 1: Личные данные ===
+        React.createElement(ProfileFieldGroup, {icon: '👤', title: 'Личные данные'},
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Имя'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {value:profile.firstName, onChange:e=>updateProfileField('firstName', e.target.value)}), React.createElement(FieldStatus, {fieldKey:'firstName'})),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Фамилия'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {value:profile.lastName, onChange:e=>updateProfileField('lastName', e.target.value)}), React.createElement(FieldStatus, {fieldKey:'lastName'})),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Пол'), React.createElement('span', {className:'sep'}, '-'),
+            React.createElement('select', {value:profile.gender, onChange:e=>updateProfileField('gender', e.target.value)},
+              React.createElement('option', {value:'Мужской'}, 'Мужской'),
+              React.createElement('option', {value:'Женский'}, 'Женский'),
+              React.createElement('option', {value:'Другое'}, 'Другое')
+            ),
+            React.createElement(FieldStatus, {fieldKey:'gender'})
+          ),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Дата рождения'), React.createElement('span', {className:'sep'}, '-'), 
+            React.createElement('input', {type:'date', value:profile.birthDate||'', onChange:e=>updateProfileField('birthDate', e.target.value), style:{width:'140px'}}),
+            React.createElement(FieldStatus, {fieldKey:'birthDate'}),
+            profile.birthDate && React.createElement('span', {style:{marginLeft:'8px', color:'var(--gray-600)'}}, `(${calcAgeFromBirthDate(profile.birthDate)} лет)`)
+          ),
+          !profile.birthDate && React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Возраст (лет)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.age, onChange:e=>updateProfileField('age', Number(e.target.value)||0), onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'age'})),
+          // Трекинг особого периода (только для женщин)
+          profile.gender === 'Женский' && React.createElement('div', {className:'inline-field cycle-tracking-toggle'}, 
+            React.createElement('label', null, '🌸 Особый период'),
+            React.createElement('span', {className:'sep'}, '-'),
+            React.createElement('label', {className:'toggle-switch'},
+              React.createElement('input', {
+                type:'checkbox', 
+                checked:!!profile.cycleTrackingEnabled, 
+                onChange:e=>updateProfileField('cycleTrackingEnabled', e.target.checked)
+              }),
+              React.createElement('span', {className:'toggle-slider'})
+            ),
+            React.createElement('span', {className:'cycle-toggle-hint'}, 
+              profile.cycleTrackingEnabled ? 'Включён' : 'Выключен'
+            )
+          )
+        ),
+
+        // === ГРУППА 2: Параметры тела ===
+        React.createElement(ProfileFieldGroup, {icon: '📏', title: 'Параметры тела'},
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Рост (см)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.height, onChange:e=>updateProfileField('height', Number(e.target.value)||0), onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'height'})),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Базовый вес (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weight, onChange:e=>updateProfileField('weight', Number(e.target.value)||0), onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'weight'})),
+          // Текущий вес (из последнего чек-ина)
+          (() => {
+            // Ищем последний день с весом за последние 30 дней
+            let currentWeight = null;
+            let weightDate = null;
+            const today = new Date();
+            for (let i = 0; i < 30; i++) {
+              const d = new Date(today);
+              d.setDate(d.getDate() - i);
+              const key = 'heys_dayv2_' + d.toISOString().slice(0, 10);
+              const dayData = lsGet(key, null);
+              if (dayData && dayData.weightMorning > 0) {
+                currentWeight = dayData.weightMorning;
+                weightDate = d.toISOString().slice(0, 10);
+                break;
+              }
+            }
+            const diff = currentWeight && profile.weight ? round1(currentWeight - profile.weight) : null;
+            return React.createElement('div', {className:'inline-field'},
+              React.createElement('label', null, '⚖️ Текущий вес'),
+              React.createElement('span', {className:'sep'}, '-'),
+              currentWeight 
+                ? React.createElement('span', {style:{fontWeight:600}}, 
+                    `${currentWeight} кг`,
+                    diff !== null && diff !== 0 && React.createElement('span', {style:{marginLeft:'8px', fontSize:'13px', color: diff < 0 ? '#22c55e' : diff > 0 ? '#f97316' : 'var(--gray-500)'}},
+                      diff > 0 ? `+${diff}` : diff, ' от базы'
+                    )
+                  )
+                : React.createElement('span', {style:{color:'var(--gray-400)', fontStyle:'italic'}}, 'нет данных'),
+              weightDate && React.createElement('span', {style:{marginLeft:'8px', fontSize:'12px', color:'var(--gray-400)'}}, 
+                `(${new Date(weightDate).toLocaleDateString('ru-RU', {day:'numeric', month:'short'})})`
+              )
+            );
+          })(),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Целевой вес (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weightGoal||0, onChange:e=>updateProfileField('weightGoal', Number(e.target.value)||0), placeholder:'0 = не задан', onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'weightGoal'})),
+          
+          // === ПРОДВИНУТЫЙ РАСЧЁТ ДОСТИЖЕНИЯ ЦЕЛИ ===
+          (() => {
+            const baseWeight = toNum(profile.weight || 70);
+            const goalWeight = toNum(profile.weightGoal);
+            const deficitPct = toNum(profile.deficitPctTarget) || 0;
+            const height = toNum(profile.height || 175) / 100;
+            const age = profile.birthDate ? calcAgeFromBirthDate(profile.birthDate) : toNum(profile.age || 30);
+            const gender = profile.gender;
+            
+            // Если нет цели или уже достигнута — не показываем
+            if (!goalWeight || goalWeight <= 0) return null;
+            
+            // Получаем текущий вес из последнего чек-ина
+            let currentWeight = baseWeight;
+            for (let i = 0; i < 30; i++) {
+              const d = new Date();
+              d.setDate(d.getDate() - i);
+              const key = 'heys_dayv2_' + d.toISOString().slice(0, 10);
+              const dayData = lsGet(key, null);
+              if (dayData && dayData.weightMorning > 0) {
+                currentWeight = dayData.weightMorning;
+                break;
+              }
+            }
+            
+            const weightToLose = round1(currentWeight - goalWeight);
+            if (weightToLose <= 0) {
+              return React.createElement('div', {className:'goal-calculator', style:{
+                marginTop:'12px', padding:'12px 14px', background:'linear-gradient(135deg, #dcfce7 0%, #f0fdf4 100%)',
+                borderRadius:'10px', border:'1px solid #86efac'
+              }},
+                React.createElement('div', {style:{fontWeight:600, color:'#15803d', display:'flex', alignItems:'center', gap:'6px'}},
+                  '🎉 Цель достигнута!',
+                  React.createElement('span', {style:{fontWeight:400, fontSize:'13px', color:'#166534'}},
+                    weightToLose < 0 ? `Вы на ${Math.abs(weightToLose)} кг ниже цели` : 'Поздравляем!'
+                  )
+                )
+              );
+            }
+            
+            // === НАУЧНЫЙ РАСЧЁТ ===
+            // BMR по Mifflin-St Jeor (Mifflin MD et al., Am J Clin Nutr 1990)
+            // Рекомендован ADA как наиболее точный для здоровых людей
+            const bmr = gender === 'Женский'
+              ? round1(447.593 + 9.247 * currentWeight + 3.098 * (height * 100) - 4.330 * age)
+              : round1(88.362 + 13.397 * currentWeight + 4.799 * (height * 100) - 5.677 * age);
+            
+            // === АДАПТИВНЫЙ TDEE ===
+            // Сначала ищем реальные данные активности за последние 7 дней
+            // Если достаточно данных (≥3 дней) — используем реальный TDEE
+            // Иначе — теоретический по множителю активности
+            
+            // Собираем данные активности за 7 дней
+            const activityDays = [];
+            for (let i = 0; i < 7; i++) {
+              const d = new Date();
+              d.setDate(d.getDate() - i);
+              const dateKey = d.toISOString().split('T')[0];
+              const dayData = lsGet(`heys_dayv2_${dateKey}`, null);
+              if (dayData) {
+                // Калории от тренировок (упрощённый расчёт без MET)
+                const trainings = dayData.trainings || [];
+                let trainKcal = 0;
+                trainings.forEach(t => {
+                  const zones = t.z || [0, 0, 0, 0];
+                  const mets = [2.5, 6, 8, 10]; // Дефолтные MET по зонам
+                  zones.forEach((min, zi) => {
+                    trainKcal += (min || 0) * ((mets[zi] * currentWeight * 0.0175) - 1);
+                  });
+                });
+                
+                // Калории от шагов
+                const stepsKcal = (dayData.steps || 0) * 0.7 / 1000 * currentWeight * (gender === 'Женский' ? 0.5 : 0.57);
+                
+                // Калории от бытовой активности
+                const householdMin = (dayData.householdActivities || []).reduce((s, h) => s + (+h.minutes || 0), dayData.householdMin || 0);
+                const householdKcal = householdMin * ((2.5 * currentWeight * 0.0175) - 1);
+                
+                const totalActivityKcal = Math.round(trainKcal + stepsKcal + householdKcal);
+                
+                // Считаем только дни с хоть какой-то активностью или данными
+                if (dayData.steps > 0 || trainings.length > 0 || householdMin > 0) {
+                  activityDays.push({
+                    date: dateKey,
+                    activityKcal: totalActivityKcal,
+                    tdee: bmr + totalActivityKcal
+                  });
+                }
+              }
+            }
+            
+            // Определяем TDEE
+            let tdee, tdeeSource;
+            const MIN_DAYS_FOR_REAL_TDEE = 3;
+            
+            if (activityDays.length >= MIN_DAYS_FOR_REAL_TDEE) {
+              // Используем реальные данные — средний TDEE за доступные дни
+              const avgTdee = activityDays.reduce((s, d) => s + d.tdee, 0) / activityDays.length;
+              tdee = round1(avgTdee);
+              tdeeSource = 'real';
+            } else {
+              // Теоретический TDEE по множителю активности (FAO/WHO/UNU 2001)
+              const activityMultipliers = {
+                'sedentary': 1.2,       // Сидячий (офис, нет тренировок)
+                'light': 1.375,         // Лёгкая (1-3 трен/нед)
+                'moderate': 1.55,       // Умеренная (3-5 трен/нед)
+                'active': 1.725,        // Высокая (6-7 трен/нед)
+                'very_active': 1.9      // Очень высокая (атлеты)
+              };
+              const profileActivity = profile?.activityLevel || 'moderate';
+              const activityMultiplier = activityMultipliers[profileActivity] || 1.55;
+              tdee = round1(bmr * activityMultiplier);
+              tdeeSource = 'theoretical';
+            }
+            
+            // Дневной дефицит калорий
+            const dailyDeficit = Math.abs(deficitPct) > 0 ? round1(tdee * Math.abs(deficitPct) / 100) : 0;
+            
+            // === СОСТАВ ПОТЕРИ ВЕСА ===
+            // Forbes GB (1987, 2000): состав потери зависит от дефицита и тренировок
+            // Lean mass = мышцы + гликоген + связанная вода
+            // При умеренном дефиците + силовые: до 90% жира возможно
+            // Без силовых: 75-80% жир, 20-25% lean mass (из которых ~50% вода гликогена)
+            const isAggressive = Math.abs(deficitPct) > 20; // Порог снижен до 20% (научно обоснован)
+            const isVeryAggressive = Math.abs(deficitPct) > 30;
+            
+            // Корректировка: разделяем на жир, гликоген+воду, и чистые мышцы
+            // При потере веса сначала уходит гликоген (с 3-4г воды на 1г гликогена)
+            let fatPercent, glycogenWaterPercent, leanMusclePercent;
+            if (isVeryAggressive) {
+              fatPercent = 0.55;           // Сильный дефицит: больше мышц теряется
+              glycogenWaterPercent = 0.25; // Гликоген + связанная вода
+              leanMusclePercent = 0.20;    // Чистая мышечная ткань
+            } else if (isAggressive) {
+              fatPercent = 0.65;
+              glycogenWaterPercent = 0.22;
+              leanMusclePercent = 0.13;
+            } else {
+              fatPercent = 0.77;           // Hall KD (2008): ~77% при умеренном дефиците
+              glycogenWaterPercent = 0.18; // ~400г гликогена + 1.2-1.6кг воды
+              leanMusclePercent = 0.05;    // Минимум при правильном питании + тренировках
+            }
+            
+            // Калорийность компонентов (ккал/кг) — научные данные
+            const KCAL_PER_KG_FAT = 7700;           // Hall KD (2008): жировая ткань ~7700 ккал/кг
+            const KCAL_PER_KG_LEAN_MUSCLE = 1100;   // Forbes GB (2000): ~20% белок, ~75% вода
+            const KCAL_PER_KG_GLYCOGEN_WATER = 700; // Гликоген 4ккал/г, но 1г гликогена связывает 3-4г воды
+            
+            // Сколько каждого компонента нужно потерять
+            const fatToLose = round1(weightToLose * fatPercent);
+            const glycogenWaterToLose = round1(weightToLose * glycogenWaterPercent);
+            const leanMuscleToLose = round1(weightToLose * leanMusclePercent);
+            
+            // Общий дефицит калорий нужный (Hall KD, 2011)
+            // Жир: 7700 ккал/кг, мышцы: 1100 ккал/кг, гликоген+вода: ~700 ккал/кг
+            const totalKcalDeficit = Math.round(
+              fatToLose * KCAL_PER_KG_FAT + 
+              leanMuscleToLose * KCAL_PER_KG_LEAN_MUSCLE +
+              glycogenWaterToLose * KCAL_PER_KG_GLYCOGEN_WATER
+            );
+            
+            // Дней до цели
+            const daysToGoal = dailyDeficit > 0 ? Math.ceil(totalKcalDeficit / dailyDeficit) : null;
+            const weeksToGoal = daysToGoal ? Math.ceil(daysToGoal / 7) : null;
+            const monthsToGoal = daysToGoal ? round1(daysToGoal / 30) : null;
+            
+            // Скорость потери веса (комбинированная формула)
+            // Учитываем, что не вся потеря = жир
+            const effectiveKcalPerKg = fatPercent * KCAL_PER_KG_FAT + 
+                                        glycogenWaterPercent * KCAL_PER_KG_GLYCOGEN_WATER + 
+                                        leanMusclePercent * KCAL_PER_KG_LEAN_MUSCLE;
+            const kgPerWeek = dailyDeficit > 0 ? round1((dailyDeficit * 7) / effectiveKcalPerKg) : 0;
+            
+            // Предупреждения (ACSM Position Stand 2009)
+            const warnings = [];
+            if (isVeryAggressive) {
+              warnings.push({ icon: '⚠️', text: 'Дефицит >30% — высокий риск потери мышц и метаболической адаптации', color: '#dc2626' });
+            } else if (isAggressive) {
+              warnings.push({ icon: '⚡', text: 'Дефицит >20% — добавьте силовые тренировки для сохранения мышц', color: '#f97316' });
+            }
+            if (kgPerWeek > 1) {
+              warnings.push({ icon: '🏃', text: `${kgPerWeek} кг/нед — рекомендация ACSM: 0.5-0.9 кг/нед`, color: '#eab308' });
+            }
+            if (kgPerWeek > 1.5) {
+              warnings.push({ icon: '🚨', text: 'Потеря >1.5 кг/нед увеличивает потерю мышц на 20-30%', color: '#dc2626' });
+            }
+            if (deficitPct === 0) {
+              warnings.push({ icon: '📊', text: 'Установите дефицит в "Цели и метаболизм" для расчёта', color: '#6b7280' });
+            }
+            
+            // Дата достижения цели
+            const targetDate = daysToGoal ? new Date(Date.now() + daysToGoal * 24 * 60 * 60 * 1000) : null;
+            
+            // Состояние попапа источников
+            const [showSources, setShowSources] = React.useState(false);
+            
+            return React.createElement('div', {className:'goal-calculator', style:{
+              marginTop:'12px', padding:'14px 16px', 
+              background:'linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%)',
+              borderRadius:'12px', border:'1px solid #bfdbfe',
+              position:'relative'
+            }},
+              // Заголовок с иконкой источников
+              React.createElement('div', {style:{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px'}},
+                React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'6px'}},
+                  React.createElement('span', {style:{fontWeight:600, color:'#1e40af', fontSize:'14px'}}, '📐 Расчёт достижения цели'),
+                  // Иконка источников
+                  React.createElement('button', {
+                    onClick: () => setShowSources(!showSources),
+                    style:{
+                      background:'none', border:'none', cursor:'pointer', padding:'2px 4px',
+                      fontSize:'12px', color:'#64748b', display:'flex', alignItems:'center',
+                      borderRadius:'4px', transition:'background 0.15s'
+                    },
+                    onMouseOver: (e) => e.target.style.background = 'rgba(100,116,139,0.1)',
+                    onMouseOut: (e) => e.target.style.background = 'none',
+                    title: 'Научные источники'
+                  }, 'ℹ️')
+                ),
+                daysToGoal && React.createElement('span', {style:{
+                  padding:'4px 10px', background:'#3b82f6', color:'#fff', borderRadius:'12px', fontSize:'12px', fontWeight:600
+                }}, 
+                  weeksToGoal <= 4 ? `~${weeksToGoal} нед.` : 
+                  monthsToGoal <= 12 ? `~${monthsToGoal} мес.` : 
+                  `~${round1(monthsToGoal / 12)} г.`
+                )
+              ),
+              
+              // Попап с источниками
+              showSources && React.createElement('div', {style:{
+                position:'absolute', top:'40px', left:'10px', right:'10px', zIndex:100,
+                background:'#fff', borderRadius:'10px', padding:'12px 14px',
+                boxShadow:'0 4px 20px rgba(0,0,0,0.15)', border:'1px solid #e2e8f0',
+                fontSize:'12px', lineHeight:'1.5'
+              }},
+                React.createElement('div', {style:{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'8px'}},
+                  React.createElement('span', {style:{fontWeight:600, color:'#1e40af'}}, '📚 Научные источники'),
+                  React.createElement('button', {
+                    onClick: () => setShowSources(false),
+                    style:{background:'none', border:'none', cursor:'pointer', fontSize:'16px', color:'#94a3b8', padding:'0'}
+                  }, '✕')
+                ),
+                React.createElement('div', {style:{color:'#475569'}},
+                  React.createElement('div', {style:{marginBottom:'6px'}},
+                    React.createElement('b', null, 'BMR: '),
+                    'Mifflin MD et al. (1990) ',
+                    React.createElement('i', null, 'Am J Clin Nutr')
+                  ),
+                  React.createElement('div', {style:{marginBottom:'6px'}},
+                    React.createElement('b', null, 'TDEE: '),
+                    tdeeSource === 'real' 
+                      ? `Ваши данные за ${activityDays.length} дней`
+                      : 'FAO/WHO/UNU (2001) — теория'
+                  ),
+                  React.createElement('div', {style:{marginBottom:'6px'}},
+                    React.createElement('b', null, '7700 ккал/кг жира: '),
+                    'Hall KD (2008) ',
+                    React.createElement('i', null, 'Int J Obes')
+                  ),
+                  React.createElement('div', {style:{marginBottom:'6px'}},
+                    React.createElement('b', null, 'Состав потери: '),
+                    'Forbes GB (1987, 2000) ',
+                    React.createElement('i', null, 'Nutr Rev')
+                  ),
+                  React.createElement('div', {style:{marginBottom:'0'}},
+                    React.createElement('b', null, '0.5-0.9 кг/нед: '),
+                    'ACSM Position Stand (2009)'
+                  )
+                )
+              ),
+              
+              // Индикатор источника TDEE
+              React.createElement('div', {style:{
+                display:'flex', alignItems:'center', gap:'6px', marginBottom:'10px',
+                padding:'6px 10px', borderRadius:'8px',
+                background: tdeeSource === 'real' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                border: `1px solid ${tdeeSource === 'real' ? '#10b981' : '#eab308'}`
+              }},
+                React.createElement('span', {style:{fontSize:'12px'}}, 
+                  tdeeSource === 'real' ? '📊' : '📐'
+                ),
+                React.createElement('span', {style:{
+                  fontSize:'12px', 
+                  color: tdeeSource === 'real' ? '#059669' : '#b45309'
+                }},
+                  tdeeSource === 'real' 
+                    ? `TDEE ${tdee} ккал — по вашим данным (${activityDays.length} дней)`
+                    : `TDEE ${tdee} ккал — теория (нужно ≥3 дня активности)`
+                )
+              ),
+              
+              // Разбивка потери веса (научная модель: жир + гликоген/вода + мышцы)
+              React.createElement('div', {style:{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'8px', marginBottom:'10px'}},
+                React.createElement('div', {style:{textAlign:'center', padding:'8px', background:'rgba(251, 191, 36, 0.15)', borderRadius:'8px'}},
+                  React.createElement('div', {style:{fontSize:'18px', fontWeight:700, color:'#b45309'}}, `${fatToLose} кг`),
+                  React.createElement('div', {style:{fontSize:'11px', color:'#92400e'}}, `🔥 Жир (${Math.round(fatPercent*100)}%)`)
+                ),
+                React.createElement('div', {style:{textAlign:'center', padding:'8px', background:'rgba(59, 130, 246, 0.15)', borderRadius:'8px'}},
+                  React.createElement('div', {style:{fontSize:'18px', fontWeight:700, color:'#1d4ed8'}}, `${glycogenWaterToLose} кг`),
+                  React.createElement('div', {style:{fontSize:'11px', color:'#1e40af'}}, `💧 Гликоген+вода`)
+                ),
+                React.createElement('div', {style:{textAlign:'center', padding:'8px', background:'rgba(239, 68, 68, 0.15)', borderRadius:'8px'}},
+                  React.createElement('div', {style:{fontSize:'18px', fontWeight:700, color:'#dc2626'}}, `${leanMuscleToLose} кг`),
+                  React.createElement('div', {style:{fontSize:'11px', color:'#b91c1c'}}, `💪 Мышцы (${Math.round(leanMusclePercent*100)}%)`)
+                )
+              ),
+              
+              // Калории и сроки
+              React.createElement('div', {style:{display:'flex', flexWrap:'wrap', gap:'6px', marginBottom:'10px'}},
+                React.createElement('span', {className:'pill', style:{fontSize:'12px'}}, 
+                  `🔋 Нужно сжечь: ${(totalKcalDeficit/1000).toFixed(0)}к ккал`
+                ),
+                dailyDeficit > 0 && React.createElement('span', {className:'pill', style:{fontSize:'12px'}}, 
+                  `📉 Дефицит: ${dailyDeficit} ккал/день`
+                ),
+                kgPerWeek > 0 && React.createElement('span', {className:'pill', style:{fontSize:'12px', background: kgPerWeek > 1 ? '#fef3c7' : '#dcfce7'}}, 
+                  `⚖️ ~${kgPerWeek} кг/нед`
+                ),
+                targetDate && React.createElement('span', {className:'pill', style:{fontSize:'12px'}}, 
+                  `📅 ${targetDate.toLocaleDateString('ru-RU', {day:'numeric', month:'short', year:'numeric'})}`
+                )
+              ),
+              
+              // Предупреждения
+              warnings.length > 0 && React.createElement('div', {style:{marginTop:'8px'}},
+                warnings.map((w, i) => 
+                  React.createElement('div', {key:i, style:{fontSize:'12px', color:w.color, display:'flex', alignItems:'center', gap:'4px', marginTop:'4px'}},
+                    w.icon, w.text
+                  )
+                )
+              ),
+              
+              // Формула
+              React.createElement('div', {style:{marginTop:'10px', paddingTop:'8px', borderTop:'1px solid rgba(0,0,0,0.06)', fontSize:'11px', color:'var(--gray-500)'}},
+                `Формула: TDEE ${tdee} ккал × ${Math.abs(deficitPct)}% дефицит = ${dailyDeficit} ккал/день. `,
+                `Жир 7700 ккал/кг, мышцы 1100 ккал/кг.`
+              )
+            );
+          })()
+        ),
+
+        // === ГРУППА 3: Цели и метаболизм ===
+        React.createElement(ProfileFieldGroup, {icon: '🎯', title: 'Цели и метаболизм'},
           // Целевой дефицит: пресеты + своё значение
           (() => {
             const currentVal = toNum(profile.deficitPctTarget || 0);
             const isCustom = !DEFICIT_PRESETS.some(p => p.value === currentVal);
             const info = getDeficitInfo(currentVal);
             
-            return React.createElement('div', {className:'inline-field', style:{fontWeight:700, fontSize:'16px', background:'#f1f5f9', padding:'8px 12px', borderRadius:'8px', flexWrap:'wrap', gap:'8px'}},
-              React.createElement('label', {style:{fontWeight:700, minWidth:'140px'}}, 'Цель по калориям'),
+            return React.createElement('div', {className:'inline-field', style:{flexWrap:'wrap', gap:'8px'}},
+              React.createElement('label', {style:{fontWeight:600}}, 'Цель по калориям'),
               React.createElement('span', {className:'sep'}, '-'),
               React.createElement('select', {
                 value: isCustom ? 'custom' : String(currentVal),
@@ -478,54 +979,6 @@
                 isCustom ? `${info.emoji} ${currentVal > 0 ? '+' : ''}${currentVal}%` : ''
               ),
               React.createElement(FieldStatus, {fieldKey:'deficitPctTarget'})
-            );
-          })(),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Имя'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {value:profile.firstName, onChange:e=>updateProfileField('firstName', e.target.value)}), React.createElement(FieldStatus, {fieldKey:'firstName'})),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Фамилия'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {value:profile.lastName, onChange:e=>updateProfileField('lastName', e.target.value)}), React.createElement(FieldStatus, {fieldKey:'lastName'})),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Пол'), React.createElement('span', {className:'sep'}, '-'),
-            React.createElement('select', {value:profile.gender, onChange:e=>updateProfileField('gender', e.target.value)},
-              React.createElement('option', {value:'Мужской'}, 'Мужской'),
-              React.createElement('option', {value:'Женский'}, 'Женский'),
-              React.createElement('option', {value:'Другое'}, 'Другое')
-            ),
-            React.createElement(FieldStatus, {fieldKey:'gender'})
-          ),
-          // Трекинг особого периода (только для женщин)
-          profile.gender === 'Женский' && React.createElement('div', {className:'inline-field cycle-tracking-toggle'}, 
-            React.createElement('label', null, '🌸 Особый период'),
-            React.createElement('span', {className:'sep'}, '-'),
-            React.createElement('label', {className:'toggle-switch'},
-              React.createElement('input', {
-                type:'checkbox', 
-                checked:!!profile.cycleTrackingEnabled, 
-                onChange:e=>updateProfileField('cycleTrackingEnabled', e.target.checked)
-              }),
-              React.createElement('span', {className:'toggle-slider'})
-            ),
-            React.createElement('span', {className:'cycle-toggle-hint'}, 
-              profile.cycleTrackingEnabled ? 'Включён' : 'Выключен'
-            )
-          ),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Базовый вес тела (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weight, onChange:e=>updateProfileField('weight', Number(e.target.value)||0), onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'weight'})),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Целевой вес (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weightGoal||0, onChange:e=>updateProfileField('weightGoal', Number(e.target.value)||0), placeholder:'0 = не задан', onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'weightGoal'})),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Рост (см)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.height, onChange:e=>updateProfileField('height', Number(e.target.value)||0), onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'height'})),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Дата рождения'), React.createElement('span', {className:'sep'}, '-'), 
-            React.createElement('input', {type:'date', value:profile.birthDate||'', onChange:e=>updateProfileField('birthDate', e.target.value), style:{width:'140px'}}),
-            React.createElement(FieldStatus, {fieldKey:'birthDate'}),
-            profile.birthDate && React.createElement('span', {style:{marginLeft:'8px', color:'var(--gray-600)'}}, `(${calcAgeFromBirthDate(profile.birthDate)} лет)`)
-          ),
-          !profile.birthDate && React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Возраст (лет)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.age, onChange:e=>updateProfileField('age', Number(e.target.value)||0), onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'age'})),
-          // Норма сна: авторасчёт с расшифровкой
-          (() => {
-            const age = profile.birthDate ? calcAgeFromBirthDate(profile.birthDate) : toNum(profile.age || 30);
-            const sleepNorm = calcSleepNorm(age, profile.gender);
-            return React.createElement('div', {className:'inline-field'},
-              React.createElement('label', null, 'Норма сна'),
-              React.createElement('span', {className:'sep'}, '-'),
-              React.createElement('span', {style:{fontWeight:600, minWidth:'50px'}}, `${sleepNorm.hours} ч`),
-              React.createElement('span', {style:{marginLeft:'8px', color:'var(--gray-500)', fontSize:'13px'}}, 
-                `(${sleepNorm.explanation})`
-              )
             );
           })(),
           // Инсулиновая волна: предустановки + своё значение
@@ -572,6 +1025,19 @@
                 currentPreset ? `(${currentPreset.desc})` : `(${currentVal} ч — своё)`
               ),
               React.createElement(FieldStatus, {fieldKey:'insulinWaveHours'})
+            );
+          })(),
+          // Норма сна: авторасчёт с расшифровкой
+          (() => {
+            const age = profile.birthDate ? calcAgeFromBirthDate(profile.birthDate) : toNum(profile.age || 30);
+            const sleepNorm = calcSleepNorm(age, profile.gender);
+            return React.createElement('div', {className:'inline-field'},
+              React.createElement('label', null, 'Норма сна'),
+              React.createElement('span', {className:'sep'}, '-'),
+              React.createElement('span', {style:{fontWeight:600, minWidth:'50px'}}, `${sleepNorm.hours} ч`),
+              React.createElement('span', {style:{marginLeft:'8px', color:'var(--gray-500)', fontSize:'13px'}}, 
+                `(${sleepNorm.explanation})`
+              )
             );
           })(),
           React.createElement(EmojiStyleSelector, null)
@@ -653,13 +1119,24 @@
         React.createElement('div', {className:'muted', style:{marginTop:'6px'}}, 
           'Все значения сохраняются автоматически.'
         )
-      ),
+        ) // end profile-section__fields
+      ), // end ProfileSection basic
 
-      React.createElement('div', {className:'card'},
-        React.createElement('div', {className:'row', style:{justifyContent:'space-between'}},
-          React.createElement('div', {className:'section-title'}, 'Пульсовые зоны'),
-          React.createElement('div', {className:'row'}, React.createElement('button', {className:'btn', onClick:resetZones}, 'Сбросить к шаблону'))
-        ),
+      // === СЕКЦИЯ 2: Пульсовые зоны ===
+      React.createElement(ProfileSection, {
+        id: 'hrZones',
+        icon: '💓',
+        title: 'Пульсовые зоны',
+        subtitle: 'Настройка зон для тренировок',
+        badge: `${zones.length} зон`,
+        tone: 'rose',
+        expanded: expandedSections.hrZones,
+        onToggle: () => toggleSection('hrZones')
+      },
+        React.createElement('div', {className:'profile-section__fields'},
+          React.createElement('div', {className:'row', style:{justifyContent:'flex-end', marginBottom:'8px'}},
+            React.createElement('button', {className:'btn btn-sm', onClick:resetZones}, 'Сбросить к шаблону')
+          ),
         React.createElement('div', {style:{overflowX:'auto'}},
           React.createElement('table', null,
             React.createElement('thead', null, React.createElement('tr', null,
@@ -688,30 +1165,54 @@
           zonesPending && React.createElement('span', {style:{color:'#f59e0b', fontSize:'13px', fontWeight:500}}, '⏳ Сохраняется...'),
           zonesSaved && React.createElement('span', {style:{color:'#22c55e', fontSize:'13px', fontWeight:500}}, '✓ Сохранено')
         )
-      ),
+        ) // end profile-section__fields
+      ), // end ProfileSection hrZones
 
-      // Зоны калорийности (ratio zones)
-      React.createElement(HEYS_RatioZonesCard, null),
+      // === СЕКЦИЯ 3: Нормы и зоны ===
+      React.createElement(ProfileSection, {
+        id: 'norms',
+        icon: '📊',
+        title: 'Нормы питания',
+        subtitle: 'Зоны калорийности и распределение БЖУ',
+        tone: 'violet',
+        expanded: expandedSections.norms,
+        onToggle: () => toggleSection('norms')
+      },
+        React.createElement('div', {className:'profile-section__fields'},
+          // Зоны калорийности (ratio zones)
+          React.createElement(HEYS_RatioZonesCard, null),
+          React.createElement(HEYS_NormsCard, null)
+        )
+      ), // end ProfileSection norms
 
-      React.createElement(HEYS_NormsCard, null),
-
-      // Статистика советов
-      React.createElement(HEYS_AdviceStatsCard, null),
+      // === СЕКЦИЯ 4: Система и аналитика ===
+      React.createElement(ProfileSection, {
+        id: 'system',
+        icon: '⚙️',
+        title: 'Система',
+        subtitle: 'Советы, достижения и аналитика',
+        tone: 'slate',
+        expanded: expandedSections.system,
+        onToggle: () => toggleSection('system')
+      },
+        React.createElement('div', {className:'profile-section__fields'},
+          // Статистика советов
+          React.createElement(HEYS_AdviceStatsCard, null),
+          // Настройки советов
+          React.createElement(HEYS_AdviceSettingsCard, null),
+          // Аналитика (перенесено из hdr-top)
+          window.HEYS.analyticsUI
+            ? React.createElement('div', {className:'card', style:{marginTop:'10px'}},
+                React.createElement('div', {className:'section-title'}, '📊 Аналитика'),
+                React.createElement('div', {style:{marginTop:'8px'}},
+                  React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
+                )
+              )
+            : null
+        ) // end profile-section__fields
+      ) // end ProfileSection system
       
-      // Настройки советов
-      React.createElement(HEYS_AdviceSettingsCard, null),
-
-      // Аналитика (перенесено из hdr-top)
-      window.HEYS.analyticsUI
-        ? React.createElement('div', {className:'card', style:{marginTop:'10px'}},
-            React.createElement('div', {className:'section-title'}, '📊 Аналитика'),
-            React.createElement('div', {style:{marginTop:'8px'}},
-              React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
-            )
-          )
-        : null,
-      
-    )
+    ) // end profile-accordion
     );
   }
 
