@@ -27,11 +27,12 @@
     }
   };
 
-  // === Поиск популярных продуктов ===
-  function computePopularProducts(products, dateKey) {
+  // === Умный список продуктов: частота + свежесть ===
+  function computeSmartProducts(products, dateKey) {
     if (!products || !products.length) return [];
     
-    const usageCount = new Map();
+    const usageCount = new Map();   // Частота использования
+    const lastUsedDay = new Map();  // Последний день использования (0 = сегодня)
     const today = new Date(dateKey || new Date().toISOString().slice(0, 10));
     
     // Анализируем последние 30 дней
@@ -48,6 +49,10 @@
               const pid = item.product_id || item.productId || item.name;
               if (pid) {
                 usageCount.set(pid, (usageCount.get(pid) || 0) + 1);
+                // Запоминаем первое (самое свежее) использование
+                if (!lastUsedDay.has(pid)) {
+                  lastUsedDay.set(pid, i);
+                }
               }
             });
           }
@@ -55,14 +60,29 @@
       }
     }
     
-    // Сортируем по использованию
-    const sorted = [...products].sort((a, b) => {
-      const aId = a.id || a.product_id || a.name;
-      const bId = b.id || b.product_id || b.name;
-      const aCount = usageCount.get(aId) || 0;
-      const bCount = usageCount.get(bId) || 0;
-      return bCount - aCount;
-    });
+    // Комбинированный скор: частота × свежесть
+    // Свежесть: 1.0 для сегодня, убывает экспоненциально
+    // Формула: score = frequency * recencyWeight
+    // recencyWeight = 1 / (1 + daysAgo * 0.15)
+    const getScore = (pid) => {
+      const freq = usageCount.get(pid) || 0;
+      if (freq === 0) return 0;
+      const daysAgo = lastUsedDay.get(pid) ?? 30;
+      const recencyWeight = 1 / (1 + daysAgo * 0.15);
+      return freq * recencyWeight;
+    };
+    
+    // Сортируем по комбинированному скору
+    const sorted = [...products]
+      .filter(p => {
+        const pid = p.id || p.product_id || p.name;
+        return usageCount.get(pid) > 0; // Только использованные
+      })
+      .sort((a, b) => {
+        const aId = a.id || a.product_id || a.name;
+        const bId = b.id || b.product_id || b.name;
+        return getScore(bId) - getScore(aId);
+      });
     
     return sorted.slice(0, 20);
   }
@@ -87,70 +107,6 @@
     const name = (product.name || '').toLowerCase();
     const pCat = (product.category || '').toLowerCase();
     return cat.match.some(m => name.includes(m) || pCat.includes(m));
-  }
-
-  // Умные рекомендации на основе контекста
-  function getSmartRecommendations(products, dateKey) {
-    const hour = new Date().getHours();
-    const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
-    const hasTraining = dayData.trainings && dayData.trainings.length > 0;
-    const meals = dayData.meals || [];
-    
-    // Считаем сумму белка за день
-    let totalProtein = 0;
-    meals.forEach(m => {
-      (m.items || []).forEach(it => {
-        const g = it.grams || 100;
-        const p = products.find(pr => (pr.id || pr.name) === (it.product_id || it.name));
-        if (p) totalProtein += (p.protein100 || 0) * g / 100;
-      });
-    });
-    
-    const recommendations = [];
-    
-    // После тренировки — белок
-    if (hasTraining && totalProtein < 80) {
-      const proteinRich = products
-        .filter(p => (p.protein100 || 0) >= 15)
-        .slice(0, 5);
-      if (proteinRich.length) {
-        recommendations.push({
-          title: '💪 После тренировки',
-          hint: 'Белок для восстановления',
-          products: proteinRich
-        });
-      }
-    }
-    
-    // Вечером — лёгкое
-    if (hour >= 20) {
-      const light = products
-        .filter(p => (p.kcal100 || 0) < 100 && (p.harm || 0) <= 2)
-        .slice(0, 5);
-      if (light.length) {
-        recommendations.push({
-          title: '🌙 Вечерний перекус',
-          hint: 'Лёгкие продукты',
-          products: light
-        });
-      }
-    }
-    
-    // Мало клетчатки — овощи
-    if (hour >= 14) {
-      const veggies = products
-        .filter(p => (p.fiber100 || 0) >= 2 || (p.category || '').toLowerCase().includes('овощ'))
-        .slice(0, 5);
-      if (veggies.length) {
-        recommendations.push({
-          title: '🥗 Добавьте овощей',
-          hint: 'Клетчатка важна',
-          products: veggies
-        });
-      }
-    }
-    
-    return recommendations.slice(0, 2); // Максимум 2 рекомендации
   }
 
   // === Компонент поиска продукта (Шаг 1) ===
@@ -207,24 +163,9 @@
       setTimeout(() => inputRef.current?.focus(), 100);
     }, []);
     
-    // Популярные продукты
-    const popularProducts = useMemo(() => 
-      computePopularProducts(latestProducts, dateKey), 
-      [latestProducts, dateKey]
-    );
-    
-    // Избранные продукты
-    const favoriteProducts = useMemo(() => {
-      if (!favorites.size) return [];
-      return latestProducts.filter(p => {
-        const pid = String(p.id ?? p.product_id ?? p.name);
-        return favorites.has(pid);
-      }).slice(0, 10);
-    }, [latestProducts, favorites]);
-    
-    // Умные рекомендации
-    const smartRecs = useMemo(() => 
-      getSmartRecommendations(latestProducts, dateKey),
+    // Умный список: частота + свежесть (объединяет "часто" и "последние")
+    const smartProducts = useMemo(() => 
+      computeSmartProducts(latestProducts, dateKey), 
       [latestProducts, dateKey]
     );
     
@@ -527,10 +468,8 @@
       );
     };
     
-    // Что показывать: результаты поиска или рекомендации
+    // Что показывать: результаты поиска или умный список
     const showSearch = lc.length > 0;
-    const showFavorites = !showSearch && favoriteProducts.length > 0;
-    const showPopular = !showSearch;
     
     // Счётчик фото в текущем приёме
     const currentPhotoCount = context?.mealPhotos?.length || 0;
@@ -631,19 +570,6 @@
       
       // === Скроллируемый список продуктов ===
       React.createElement('div', { className: 'aps-products-scroll' },
-        // Умные рекомендации (если нет поиска и есть рекомендации)
-        !showSearch && smartRecs.length > 0 && smartRecs.map((rec, ri) =>
-          React.createElement('div', { key: ri, className: 'aps-section aps-smart-rec' },
-            React.createElement('div', { className: 'aps-section-title' }, 
-              rec.title,
-              React.createElement('span', { className: 'aps-rec-hint' }, rec.hint)
-            ),
-            React.createElement('div', { className: 'aps-products-list' },
-              rec.products.map(p => renderProductCard(p, false))
-            )
-          )
-        ),
-        
         // Результаты поиска
         showSearch && React.createElement('div', { className: 'aps-section' },
           React.createElement('div', { className: 'aps-section-title' }, 
@@ -664,19 +590,11 @@
           )
         ),
         
-        // Избранные
-        showFavorites && React.createElement('div', { className: 'aps-section' },
-          React.createElement('div', { className: 'aps-section-title' }, '⭐ Избранные'),
+        // Умный список: часто + недавно используемые (объединённый)
+        !showSearch && smartProducts.length > 0 && React.createElement('div', { className: 'aps-section' },
+          React.createElement('div', { className: 'aps-section-title' }, '⚡ Ваши продукты'),
           React.createElement('div', { className: 'aps-products-list' },
-            favoriteProducts.map(p => renderProductCard(p))
-          )
-        ),
-        
-        // Популярные / Часто используемые
-        showPopular && React.createElement('div', { className: 'aps-section' },
-          React.createElement('div', { className: 'aps-section-title' }, '🔥 Часто используемые'),
-          React.createElement('div', { className: 'aps-products-list' },
-            popularProducts.slice(0, showFavorites ? 10 : 15).map(p => renderProductCard(p, !showFavorites))
+            smartProducts.map(p => renderProductCard(p))
           )
         )
       )
