@@ -1009,6 +1009,16 @@
   color: #fb923c;
 }
 
+[data-theme="dark"] .compact-train {
+  background: rgba(249, 115, 22, 0.15) !important;
+  border-color: rgba(249, 115, 22, 0.3) !important;
+}
+
+[data-theme="dark"] .compact-train:hover {
+  background: rgba(249, 115, 22, 0.2) !important;
+  border-color: rgba(249, 115, 22, 0.4) !important;
+}
+
 [data-theme="dark"] .compact-train-time {
   background: #2c2c2e;
   color: #8e8e93;

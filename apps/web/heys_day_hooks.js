@@ -114,6 +114,43 @@
       if(current && current.updatedAt > incomingUpdatedAt) return;
       if(current && current.updatedAt===incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) return;
 
+      // 🔍 DEBUG: Проверка на продукты без нутриентов в meals
+      const emptyItems = [];
+      (payload.meals || []).forEach((meal, mi) => {
+        (meal.items || []).forEach((item, ii) => {
+          if (!item.kcal100 && !item.protein100 && !item.carbs100) {
+            emptyItems.push({ 
+              mealIndex: mi, 
+              itemIndex: ii, 
+              name: item.name,
+              id: item.id,
+              product_id: item.product_id,
+              grams: item.grams
+            });
+          }
+        });
+      });
+      if (emptyItems.length > 0) {
+        console.warn('⚠️ [AUTOSAVE] Items WITHOUT nutrients being saved:', emptyItems);
+        // Попробуем найти продукт в базе для этого item
+        emptyItems.forEach(item => {
+          const products = HEYS?.products?.getAll?.() || [];
+          const found = products.find(p => 
+            p.name?.toLowerCase() === item.name?.toLowerCase() ||
+            String(p.id) === String(item.product_id)
+          );
+          if (found) {
+            console.log('🔍 [AUTOSAVE] Found product in DB for empty item:', item.name, {
+              dbHasNutrients: !!(found.kcal100 || found.protein100),
+              dbKcal100: found.kcal100,
+              dbProtein100: found.protein100
+            });
+          } else {
+            console.error('🚨 [AUTOSAVE] Product NOT FOUND in DB for:', item.name);
+          }
+        });
+      }
+
       // Очищаем фото от base64 перед сохранением
       const cleanedPayload = stripPhotoData(payload);
 

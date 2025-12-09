@@ -149,6 +149,14 @@
       };
       primary.forEach(pushUnique);
       secondary.forEach(pushUnique);
+      
+      // 🔍 DEBUG: Проверка на продукты без нутриентов
+      const emptyProducts = merged.filter(p => !p.kcal100 && !p.protein100 && !p.carbs100);
+      if (emptyProducts.length > 0) {
+        console.warn('⚠️ [AddProductStep] Products WITHOUT nutrients:', emptyProducts.length, 
+          emptyProducts.slice(0, 5).map(p => p.name));
+      }
+      
       return merged;
     }, [context]);
     
@@ -238,7 +246,21 @@
       const lastGrams = lsGet(`heys_last_grams_${productId}`, null);
       const defaultGrams = lastGrams || 100;
       
-      console.log('[ProductSearchStep] selectProduct:', product.name, 'grams:', defaultGrams);
+      // 🔍 DEBUG: Подробный лог выбранного продукта
+      const hasNutrients = !!(product.kcal100 || product.protein100 || product.carbs100);
+      console.log('[ProductSearchStep] selectProduct:', product.name, 'grams:', defaultGrams, {
+        id: product.id,
+        hasNutrients,
+        kcal100: product.kcal100,
+        protein100: product.protein100,
+        carbs100: product.carbs100,
+        fat100: product.fat100,
+        simple100: product.simple100,
+        complex100: product.complex100
+      });
+      if (!hasNutrients) {
+        console.error('🚨 [ProductSearchStep] CRITICAL: Product has NO nutrients!', product);
+      }
       
       onChange({ 
         ...data, 
@@ -1114,6 +1136,24 @@
             } 
             // Режим добавления — вызываем onAdd
             else if (context?.onAdd) {
+              // 🔍 DEBUG: Проверяем что отправляем в onAdd
+              const hasNutrients = !!(product?.kcal100 || product?.protein100 || product?.carbs100);
+              console.log('[GramsStep] onAdd called:', product?.name, 'grams:', grams, {
+                id: product?.id,
+                hasNutrients,
+                kcal100: product?.kcal100,
+                protein100: product?.protein100,
+                mealIndex: context.mealIndex
+              });
+              if (!hasNutrients) {
+                console.error('🚨 [GramsStep] CRITICAL: Sending product with NO nutrients!', {
+                  product,
+                  stepData,
+                  contextEditProduct: context?.editProduct,
+                  dataSelectedProduct: data?.selectedProduct
+                });
+              }
+              
               context.onAdd({
                 product,
                 grams,

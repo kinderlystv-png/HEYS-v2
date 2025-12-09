@@ -1173,15 +1173,25 @@
     icon: '🏠',
     component: HouseholdMinutesComponent,
     getInitialData: (ctx) => {
+      console.log('[Household getInitialData] ctx:', ctx);
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-      const editIndex = ctx?.editIndex ?? null; // индекс для редактирования (null = добавление)
+      const editIndex = ctx?.editIndex ?? null;
+      console.log('[Household getInitialData] dateKey:', dateKey, 'editIndex:', editIndex);
       const day = lsGet(`heys_dayv2_${dateKey}`, {});
+      console.log('[Household getInitialData] day:', day);
+      console.log('[Household getInitialData] day.householdActivities:', day.householdActivities);
+      console.log('[Household getInitialData] day.householdMin:', day.householdMin);
       const weekly = getWeeklyHouseholdStats();
       
+      // Backward compatible: householdActivities массив или legacy householdMin
+      const activities = day.householdActivities || 
+        (day.householdMin > 0 ? [{ minutes: day.householdMin, time: day.householdTime || '' }] : []);
+      console.log('[Household getInitialData] activities:', activities);
+      
       // Если редактируем существующую — берём её данные
-      const activities = day.householdActivities || [];
-      if (editIndex !== null && activities[editIndex]) {
+      if (editIndex !== null && editIndex >= 0 && activities[editIndex]) {
         const activity = activities[editIndex];
+        console.log('[Household getInitialData] EDIT MODE - activity:', activity);
         return { 
           minutes: activity.minutes || 0, 
           householdTime: activity.time || '', 
@@ -1190,13 +1200,17 @@
         };
       }
       
+      console.log('[Household getInitialData] ADD MODE - using defaults');
       // Добавление новой — дефолтные значения
       return { minutes: weekly.avg || 30, householdTime: '', dateKey, editIndex: null };
     },
     save: (data) => {
+      console.log('[Household save] data:', data);
       const dateKey = data.dateKey || new Date().toISOString().slice(0, 10);
-      const editIndex = data.editIndex ?? null;
+      const editIndex = data.editIndex;
+      console.log('[Household save] editIndex:', editIndex, 'typeof:', typeof editIndex);
       const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      console.log('[Household save] day.householdActivities:', day.householdActivities);
       
       // Инициализируем массив если его нет
       if (!day.householdActivities) {
@@ -1210,7 +1224,7 @@
       
       const newActivity = { minutes: data.minutes, time: data.householdTime || '' };
       
-      if (editIndex !== null && editIndex >= 0 && editIndex < day.householdActivities.length) {
+      if (typeof editIndex === 'number' && editIndex >= 0 && editIndex < day.householdActivities.length) {
         // Редактирование существующей
         day.householdActivities[editIndex] = newActivity;
       } else {

@@ -152,11 +152,23 @@
       _mergedAt: Date.now(),
     };
     
-    // 📊 Числовые поля: берём максимум (шаги, вода, бытовуха)
-    // Логика: если на одном устройстве ввели 5000 шагов, а на другом 8000 — значит 8000 актуальнее
+    // 📊 Числовые поля: для шагов/воды берём максимум, для householdMin — свежее
+    // Логика шаги/вода: если на одном устройстве ввели 5000 шагов, а на другом 8000 — значит 8000 актуальнее
+    // Логика householdMin: это редактируемое значение, берём свежее
     merged.steps = Math.max(local.steps || 0, remote.steps || 0);
     merged.waterMl = Math.max(local.waterMl || 0, remote.waterMl || 0);
-    merged.householdMin = Math.max(local.householdMin || 0, remote.householdMin || 0);
+    
+    // householdMin — берём свежее значение (редактируемое поле)
+    // householdActivities — массив активностей
+    if ((local.updatedAt || 0) >= (remote.updatedAt || 0)) {
+      merged.householdMin = local.householdMin ?? remote.householdMin ?? 0;
+      merged.householdTime = local.householdTime ?? remote.householdTime ?? '';
+      merged.householdActivities = local.householdActivities || remote.householdActivities || undefined;
+    } else {
+      merged.householdMin = remote.householdMin ?? local.householdMin ?? 0;
+      merged.householdTime = remote.householdTime ?? local.householdTime ?? '';
+      merged.householdActivities = remote.householdActivities || local.householdActivities || undefined;
+    }
     
     // 📊 Вес: берём ЛЮБОЕ ненулевое значение (приоритет — свежему)
     // ВАЖНО: вес может быть 0 у нового пустого дня, поэтому приоритет ненулевому
@@ -242,23 +254,40 @@
     merged.meals = Array.from(mealsMap.values())
       .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
     
-    // 🏋️ Trainings: merge по индексу, берём непустые
+    // 🏋️ Trainings: merge по индексу, берём свежую версию
     const localTrainings = local.trainings || [];
     const remoteTrainings = remote.trainings || [];
     merged.trainings = [];
+    
+    // Local свежее — берём local тренировки как базу
+    const localIsNewerForTrainings = (local.updatedAt || 0) >= (remote.updatedAt || 0);
     
     const maxTrainings = Math.max(localTrainings.length, remoteTrainings.length, 3);
     for (let i = 0; i < maxTrainings; i++) {
       const lt = localTrainings[i] || { z: [0,0,0,0] };
       const rt = remoteTrainings[i] || { z: [0,0,0,0] };
       
-      // Берём тренировку с большим суммарным временем
+      // Берём тренировку из более свежего источника
       const ltSum = (lt.z || []).reduce((a, b) => a + (b || 0), 0);
       const rtSum = (rt.z || []).reduce((a, b) => a + (b || 0), 0);
       
-      // Выбираем базовую версию по зонам
-      let winner = ltSum >= rtSum ? lt : rt;
-      const loser = ltSum >= rtSum ? rt : lt;
+      // Выбираем базовую версию по updatedAt
+      // ВАЖНО: если local свежее и пустая — это НАМЕРЕННОЕ удаление!
+      let winner;
+      if (localIsNewerForTrainings) {
+        // Local свежее — всегда берём local (даже если пустая = удалена)
+        winner = lt;
+      } else if (ltSum === 0 && rtSum > 0) {
+        // Local не свежее и пустая — берём remote
+        winner = rt;
+      } else if (rtSum === 0 && ltSum > 0) {
+        // Remote пустая, local непустая — берём local
+        winner = lt;
+      } else {
+        // Обе непустые, remote свежее — берём remote
+        winner = rt;
+      }
+      const loser = winner === lt ? rt : lt;
       
       // ВСЕГДА объединяем оценки (mood/wellbeing/stress) из обеих версий
       // Берём значение которое ЗАДАНО (не undefined), предпочитаем winner
@@ -297,7 +326,12 @@
 
   /**
    * Умный merge продуктов при конфликте local vs remote
-   * Стратегия: объединить по id/name, сохранить уникальные из обеих версий
+   * 
+   * АРХИТЕКТУРА: Name — единственный уникальный ключ продукта!
+   * - UI запрещает создавать продукты с одинаковым именем
+   * - ID (UUID) генерируется, но НЕ используется для идентификации
+   * - При merge дубли по имени схлопываются (выбирается "лучшая" версия)
+   * 
    * @param {Array} localProducts - локальные продукты
    * @param {Array} remoteProducts - продукты из облака
    * @returns {Array} объединённый массив продуктов
@@ -306,7 +340,7 @@
     const local = Array.isArray(localProducts) ? localProducts : [];
     const remote = Array.isArray(remoteProducts) ? remoteProducts : [];
     
-    // Функция нормализации имени для сравнения
+    // Функция нормализации имени для сравнения (единый ключ)
     const normalizeName = (name) => String(name || '').trim().toLowerCase();
     
     // Функция проверки валидности продукта
@@ -316,48 +350,23 @@
       return name.length > 0;
     };
     
-    // КРИТИЧНО: Фильтруем невалидные продукты СРАЗУ
-    const localValid = local.filter(isValidProduct);
-    const remoteValid = remote.filter(isValidProduct);
-    
-    // Если одна из сторон пуста — возвращаем другую (уже отфильтрованную)
-    if (localValid.length === 0) return remoteValid;
-    if (remoteValid.length === 0) return localValid;
-    
-    // Создаём индексы для быстрого поиска
-    const resultMap = new Map(); // key → product (итоговый результат)
-    const localById = new Map();
-    const localByName = new Map();
-    
-    // Функция получения уникального ключа продукта
-    // Возвращает null для невалидных продуктов (без name)
-    const getProductKey = (p) => {
-      if (!p) return null;
-      const name = normalizeName(p.name);
-      // Продукт без названия — невалидный, пропускаем
-      if (!name) return null;
-      // Ключ по названию (приоритет) — это единый источник уникальности
-      return `name:${name}`;
-    };
-    
     // Функция подсчёта "полноты" продукта (сколько полей заполнено)
     const getProductScore = (p) => {
       let score = 0;
       if (p.id) score += 1;
-      if (p.name) score += 1;
+      if (p.name) score += 2; // Имя важнее
       if (p.kcal100 > 0) score += 1;
       if (p.protein100 > 0) score += 1;
       if (p.carbs100 > 0 || p.simple100 > 0 || p.complex100 > 0) score += 1;
       if (p.fat100 > 0 || p.badFat100 > 0 || p.goodFat100 > 0) score += 1;
       if (p.fiber100 > 0) score += 1;
       if (p.gi > 0) score += 1;
-      if (p.portions && p.portions.length > 0) score += 1;
-      if (p.createdAt) score += 1; // Бонус за наличие timestamp
+      if (p.portions && p.portions.length > 0) score += 2; // Порции важны
+      if (p.createdAt) score += 1;
       return score;
     };
     
     // Функция сравнения двух продуктов: какой "лучше"
-    // Возвращает true если p1 лучше p2
     const isBetterProduct = (p1, p2) => {
       const score1 = getProductScore(p1);
       const score2 = getProductScore(p2);
@@ -368,61 +377,109 @@
       // 2. При равном score — предпочитаем более новый (по createdAt)
       const time1 = p1.createdAt || 0;
       const time2 = p2.createdAt || 0;
-      if (time1 !== time2) return time1 > time2;
-      
-      // 3. Fallback: предпочитаем первый (оставляем как есть)
-      return false;
+      return time1 > time2;
     };
     
-    // 1. Индексируем локальные продукты (уже отфильтрованные)
-    localValid.forEach(p => {
-      if (p.id) localById.set(String(p.id), p);
-      const name = normalizeName(p.name);
-      if (name) localByName.set(name, p);
-    });
+    // ═══════════════════════════════════════════════════════════════
+    // ЭТАП 1: Дедупликация ВНУТРИ каждого массива (детектим legacy дубли)
+    // ═══════════════════════════════════════════════════════════════
     
-    // 2. Сначала добавляем все remote продукты (база, уже отфильтрованные)
-    remoteValid.forEach(p => {
-      const key = getProductKey(p);
-      if (!key) return; // Пропускаем невалидные (дополнительная защита)
+    const dedupeArray = (arr, source) => {
+      const seen = new Map(); // normalizedName → bestProduct
+      const duplicates = [];
+      
+      arr.forEach(p => {
+        if (!isValidProduct(p)) return;
+        const key = normalizeName(p.name);
+        const existing = seen.get(key);
+        
+        if (!existing) {
+          seen.set(key, p);
+        } else {
+          // Дубль внутри массива! Выбираем лучший
+          duplicates.push({ name: p.name, source });
+          if (isBetterProduct(p, existing)) {
+            seen.set(key, p);
+          }
+        }
+      });
+      
+      if (duplicates.length > 0) {
+        logCritical(`⚠️ [MERGE] Found ${duplicates.length} duplicate(s) in ${source}: ${duplicates.map(d => `"${d.name}"`).join(', ')}`);
+      }
+      
+      return Array.from(seen.values());
+    };
+    
+    const localDeduped = dedupeArray(local, 'local');
+    const remoteDeduped = dedupeArray(remote, 'remote');
+    
+    // Если одна из сторон пуста — возвращаем другую
+    if (localDeduped.length === 0) return remoteDeduped;
+    if (remoteDeduped.length === 0) return localDeduped;
+    
+    // ═══════════════════════════════════════════════════════════════
+    // ЭТАП 2: Merge local + remote (name = единственный ключ)
+    // ═══════════════════════════════════════════════════════════════
+    
+    const resultMap = new Map(); // normalizedName → product
+    
+    // Сначала добавляем все remote (база)
+    remoteDeduped.forEach(p => {
+      const key = normalizeName(p.name);
       resultMap.set(key, p);
     });
     
-    // 3. Затем мержим/добавляем локальные продукты (уже отфильтрованные)
-    localValid.forEach(p => {
-      const key = getProductKey(p);
-      if (!key) return; // Пропускаем невалидные
-      
-      // Проверяем: есть ли уже такой продукт в результате?
+    // Затем мержим локальные
+    let addedFromLocal = 0;
+    let updatedFromLocal = 0;
+    
+    localDeduped.forEach(p => {
+      const key = normalizeName(p.name);
       const existing = resultMap.get(key);
       
       if (!existing) {
-        // Нет в remote — добавляем локальный (это НОВЫЙ продукт!)
+        // Новый продукт (есть только локально)
         resultMap.set(key, p);
-        log(`📦 [MERGE PRODUCTS] Added new local product: "${p.name}"`);
-      } else {
-        // Конфликт: выбираем лучшую версию
-        if (isBetterProduct(p, existing)) {
-          resultMap.set(key, p);
-          log(`📦 [MERGE PRODUCTS] Kept local version: "${p.name}"`);
-        }
-        // Иначе оставляем remote (уже в map)
+        addedFromLocal++;
+      } else if (isBetterProduct(p, existing)) {
+        // Локальная версия лучше — заменяем
+        resultMap.set(key, p);
+        updatedFromLocal++;
       }
+      // Иначе оставляем remote (уже в map)
     });
     
-    // 4. Берём все продукты из resultMap (уже валидные, ключ по названию)
-    const deduplicated = Array.from(resultMap.values()).filter(isValidProduct);
+    const merged = Array.from(resultMap.values());
+    
+    // ═══════════════════════════════════════════════════════════════
+    // ЭТАП 3: Статистика и логирование
+    // ═══════════════════════════════════════════════════════════════
+    
+    const localDupes = local.length - localDeduped.length;
+    const remoteDupes = remote.length - remoteDeduped.length;
+    const totalDupes = localDupes + remoteDupes;
     
     const stats = {
       local: local.length,
+      localDeduped: localDeduped.length,
       remote: remote.length,
-      merged: deduplicated.length,
-      added: deduplicated.length - remote.length
+      remoteDeduped: remoteDeduped.length,
+      merged: merged.length,
+      addedFromLocal,
+      updatedFromLocal,
+      duplicatesRemoved: totalDupes
     };
     
-    logCritical(`🔀 [MERGE PRODUCTS] local: ${stats.local}, remote: ${stats.remote} → merged: ${stats.merged} (added: ${stats.added > 0 ? '+' : ''}${stats.added})`);
+    // Краткий лог
+    const delta = merged.length - remoteDeduped.length;
+    logCritical(`🔀 [MERGE PRODUCTS] local: ${stats.local}${localDupes ? ` (−${localDupes} dupes)` : ''}, remote: ${stats.remote}${remoteDupes ? ` (−${remoteDupes} dupes)` : ''} → merged: ${merged.length} (${delta >= 0 ? '+' : ''}${delta})`);
     
-    return deduplicated;
+    if (addedFromLocal > 0 || updatedFromLocal > 0) {
+      log(`📦 [MERGE] Added ${addedFromLocal} new, updated ${updatedFromLocal} existing`);
+    }
+    
+    return merged;
   }
   
   const PENDING_QUEUE_KEY = 'heys_pending_sync_queue';

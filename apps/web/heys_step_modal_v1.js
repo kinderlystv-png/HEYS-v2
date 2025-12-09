@@ -347,11 +347,14 @@
     const dailyTip = useMemo(() => getDailyTip(), []);
     const currentStreak = useMemo(() => getCurrentStreak(), []);
 
-    // Инициализация данных шагов (только при первом рендере)
-    const initializedRef = useRef(false);
+    // Инициализация данных шагов (при изменении context)
+    const contextKey = useMemo(() => JSON.stringify(context), [context]);
+    const lastContextKeyRef = useRef(null);
+    
     useEffect(() => {
-      if (initializedRef.current) return; // Уже инициализировано
-      initializedRef.current = true;
+      // Пропускаем если context не изменился
+      if (lastContextKeyRef.current === contextKey) return;
+      lastContextKeyRef.current = contextKey;
       
       const initialData = {};
       stepConfigs.forEach(config => {
@@ -361,7 +364,7 @@
         }
       });
       setStepData(initialData);
-    }, []);
+    }, [contextKey, stepConfigs]);
 
     // Обновление данных шага
     const updateStepData = useCallback((stepId, data) => {
