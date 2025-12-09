@@ -286,6 +286,42 @@
       const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
       console.log('[Profile Save] clientId:', clientId?.substring(0,8), '| weight:', profile.weight, '| height:', profile.height, '| age:', profile.age, '| updatedAt:', profile.updatedAt);
       lsSet('heys_profile', profile);
+      
+      // Синхронизация имени с списком клиентов
+      let currentClientId = localStorage.getItem('heys_client_current');
+      // Убираем кавычки если значение было сохранено как JSON string
+      if (currentClientId && currentClientId.startsWith('"')) {
+        try { currentClientId = JSON.parse(currentClientId); } catch(e) {}
+      }
+      if (currentClientId && profile.firstName) {
+        try {
+          const clientsRaw = localStorage.getItem('heys_clients');
+          const clients = clientsRaw ? JSON.parse(clientsRaw) : [];
+          const updatedClients = clients.map(c => 
+            c.id === currentClientId ? { ...c, name: profile.firstName } : c
+          );
+          localStorage.setItem('heys_clients', JSON.stringify(updatedClients));
+          
+          // Событие для обновления UI
+          window.dispatchEvent(new CustomEvent('heys:clients-updated', { 
+            detail: { clients: updatedClients, source: 'profile-settings' } 
+          }));
+          
+          // Обновляем в Supabase
+          if (window.HEYS && window.HEYS.cloud && window.HEYS.cloud.client) {
+            window.HEYS.cloud.client
+              .from('clients')
+              .update({ name: profile.firstName })
+              .eq('id', currentClientId)
+              .then(({ error }) => {
+                if (error) console.warn('[Profile] Cloud sync failed:', error.message);
+              });
+          }
+        } catch (e) {
+          console.warn('[Profile] Failed to sync client name:', e);
+        }
+      }
+      
       setProfilePending(false);
       setProfileSaved(true);
       setFieldStatus('saved');

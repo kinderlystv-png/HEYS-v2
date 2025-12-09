@@ -478,53 +478,72 @@
     const weightValues = useMemo(() => Array.from({ length: 171 }, (_, i) => 30 + i), []);
     const heightValues = useMemo(() => Array.from({ length: 111 }, (_, i) => 120 + i), []);
 
-    return React.createElement('div', { className: 'flex flex-col gap-4 p-4' },
-      // === Ряд 1: Вес и Рост в 2 колонки ===
-      React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
-        // Текущий вес
-        React.createElement('div', { className: 'flex flex-col gap-1' },
-          React.createElement('label', { className: 'text-xs font-medium text-gray-600' }, '⚖️ Вес *'),
+    return React.createElement('div', { className: 'flex flex-col gap-3 p-3' },
+      // === Ряд 1: Вес и Рост в 2 карточки ===
+      React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
+        // Карточка веса
+        React.createElement('div', { 
+          className: 'bg-white rounded-xl border border-gray-200 p-3 shadow-sm'
+        },
+          React.createElement('div', { 
+            className: 'bg-gray-100 rounded-lg px-3 py-1.5 mb-2 text-center'
+          },
+            React.createElement('span', { className: 'text-xs font-semibold text-gray-700' }, '⚖️ Вес')
+          ),
           React.createElement(WheelPicker, {
             values: weightValues,
             value: weight,
             onChange: (v) => onChange({ ...data, weight: v }),
             label: 'кг',
-            height: 120
+            height: 100
           })
         ),
-        // Рост
-        React.createElement('div', { className: 'flex flex-col gap-1' },
-          React.createElement('label', { className: 'text-xs font-medium text-gray-600' }, '📏 Рост *'),
+        // Карточка роста
+        React.createElement('div', { 
+          className: 'bg-white rounded-xl border border-gray-200 p-3 shadow-sm'
+        },
+          React.createElement('div', { 
+            className: 'bg-gray-100 rounded-lg px-3 py-1.5 mb-2 text-center'
+          },
+            React.createElement('span', { className: 'text-xs font-semibold text-gray-700' }, '📏 Рост')
+          ),
           React.createElement(WheelPicker, {
             values: heightValues,
             value: height,
             onChange: (v) => onChange({ ...data, height: v }),
             label: 'см',
-            height: 120
+            height: 100
           })
         )
       ),
 
-      // === BMI — компактный бейдж ===
+      // === BMI — бейдж ===
       bmi > 0 && React.createElement('div', {
-        className: 'flex items-center justify-center gap-2 py-2 px-4 rounded-lg',
-        style: { backgroundColor: bmiCat.color + '15' }
+        className: 'flex items-center justify-center gap-2 py-2 px-4 rounded-xl border',
+        style: { 
+          backgroundColor: bmiCat.color + '10',
+          borderColor: bmiCat.color + '30'
+        }
       },
         React.createElement('span', { className: 'text-xs text-gray-600' }, '📊 ИМТ:'),
         React.createElement('span', {
-          className: 'text-sm font-semibold',
+          className: 'text-sm font-bold',
           style: { color: bmiCat.color }
         }, `${bmi.toFixed(1)} — ${bmiCat.label}`)
       ),
 
-      // === Ряд 2: Целевой вес ===
-      React.createElement('div', { className: 'flex flex-col gap-1' },
-        React.createElement('div', { className: 'flex items-center justify-center gap-2 relative' },
-          React.createElement('label', { className: 'text-xs font-medium text-gray-600' }, '🎯 Целевой вес *'),
+      // === Карточка целевого веса ===
+      React.createElement('div', { 
+        className: 'bg-white rounded-xl border border-gray-200 p-3 shadow-sm'
+      },
+        React.createElement('div', { 
+          className: 'bg-emerald-100 rounded-lg px-3 py-1.5 mb-2 flex items-center justify-center gap-2 relative'
+        },
+          React.createElement('span', { className: 'text-xs font-semibold text-emerald-700' }, '🎯 Целевой вес'),
           React.createElement('button', {
             type: 'button',
             onClick: () => setShowGoalHint(!showGoalHint),
-            className: 'w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-[10px] font-medium hover:bg-emerald-100 hover:text-emerald-600 transition-colors flex items-center justify-center'
+            className: 'w-4 h-4 rounded-full bg-emerald-200 text-emerald-600 text-[10px] font-bold hover:bg-emerald-300 transition-colors flex items-center justify-center'
           }, '?'),
           React.createElement(HintTooltip, {
             show: showGoalHint,
@@ -540,17 +559,19 @@
           value: weightGoal,
           onChange: (v) => onChange({ ...data, weightGoal: v }),
           label: 'кг',
-          height: 120
-        })
-      ),
-
-      // === Прогноз — компактный ===
-      Math.abs(weightDiff) >= 0.5 && React.createElement('div', {
-        className: 'flex items-center justify-center gap-2 py-2 px-4 bg-emerald-50 rounded-lg border border-emerald-200'
-      },
-        React.createElement('span', { className: 'text-xs text-gray-600' }, '⏱ Осталось:'),
-        React.createElement('span', { className: 'text-sm font-semibold text-emerald-700' },
-          `${Math.abs(weightDiff).toFixed(1)} кг`
+          height: 100
+        }),
+        // Прогноз внутри карточки
+        Math.abs(weightDiff) >= 0.5 && React.createElement('div', {
+          className: 'mt-2 pt-2 border-t border-gray-100 text-center'
+        },
+          React.createElement('span', { className: 'text-xs text-gray-500' }, '⏱ До цели: '),
+          React.createElement('span', { 
+            className: 'text-sm font-bold',
+            style: { color: weightDiff < 0 ? '#22c55e' : '#3b82f6' }
+          },
+            `${weightDiff > 0 ? '+' : ''}${weightDiff.toFixed(1)} кг`
+          )
         )
       )
     );
@@ -913,6 +934,44 @@
         updatedProfile.age
       );
       lsSet('heys_norms', norms);
+
+      // Синхронизация имени с списком клиентов (глобальный ключ, без namespace!)
+      let currentClientId = localStorage.getItem('heys_client_current');
+      // Убираем кавычки если значение было сохранено как JSON string
+      if (currentClientId && currentClientId.startsWith('"')) {
+        try { currentClientId = JSON.parse(currentClientId); } catch(e) {}
+      }
+      if (currentClientId && updatedProfile.firstName) {
+        try {
+          // heys_clients — глобальный ключ, читаем/пишем напрямую
+          const clientsRaw = localStorage.getItem('heys_clients');
+          const clients = clientsRaw ? JSON.parse(clientsRaw) : [];
+          const updatedClients = clients.map(c => 
+            c.id === currentClientId ? { ...c, name: updatedProfile.firstName } : c
+          );
+          localStorage.setItem('heys_clients', JSON.stringify(updatedClients));
+          console.log('[ProfileSteps] Client name synced:', updatedProfile.firstName, 'for clientId:', currentClientId);
+          
+          // Диспатчим событие для обновления UI списка клиентов
+          window.dispatchEvent(new CustomEvent('heys:clients-updated', { 
+            detail: { clients: updatedClients, source: 'profile-wizard' } 
+          }));
+          
+          // Обновляем в Supabase если есть облако
+          if (HEYS.cloud && HEYS.cloud.client) {
+            HEYS.cloud.client
+              .from('clients')
+              .update({ name: updatedProfile.firstName })
+              .eq('id', currentClientId)
+              .then(({ error }) => {
+                if (error) console.warn('[ProfileSteps] Cloud sync failed:', error.message);
+                else console.log('[ProfileSteps] Client name synced to cloud');
+              });
+          }
+        } catch (e) {
+          console.warn('[ProfileSteps] Failed to sync client name:', e);
+        }
+      }
 
       console.log('[ProfileSteps] Profile saved:', updatedProfile);
       console.log('[ProfileSteps] Norms calculated:', norms);

@@ -3380,6 +3380,18 @@
               }
             }, [cloudUser]);
 
+            // Подписка на событие обновления списка клиентов (из profile wizard)
+            useEffect(() => {
+              const handleClientsUpdated = (e) => {
+                if (e.detail && e.detail.clients) {
+                  console.log('[HEYS] Clients updated from:', e.detail.source);
+                  setClients(e.detail.clients);
+                }
+              };
+              window.addEventListener('heys:clients-updated', handleClientsUpdated);
+              return () => window.removeEventListener('heys:clients-updated', handleClientsUpdated);
+            }, [setClients]);
+
             // Создать тестовых клиентов
             async function createTestClients() {
               if (!cloud.client || !cloudUser || !cloudUser.id) return;
