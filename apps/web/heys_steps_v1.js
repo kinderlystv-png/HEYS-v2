@@ -898,12 +898,17 @@
 
   /**
    * HouseholdStep — Шаг учёта бытовой активности
+   * v2: с указанием примерного времени для учёта в инсулиновых волнах
    */
   function HouseholdStepComponent({ data, onChange, context }) {
-    const { useRef, useCallback, useMemo } = React;
+    const { useRef, useCallback, useMemo, useState } = React;
     
     const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
     const minutes = data.minutes ?? 0;
+    const householdTime = data.householdTime ?? ''; // HH:MM формат
+    
+    // Состояние для показа time picker
+    const [showTimePicker, setShowTimePicker] = useState(false);
     
     // Получаем вес для расчёта калорий
     const profile = useMemo(() => lsGet('heys_profile', {}), []);

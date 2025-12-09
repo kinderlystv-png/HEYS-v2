@@ -1630,7 +1630,8 @@
     removeItem,
     isMealStale,
     allMeals,
-    isNewItem
+    isNewItem,
+    optimum
   }) {
     const headerMeta = MEAL_HEADER_META;
     function mTotals(m){
@@ -1650,7 +1651,29 @@
     const mealKcal = Math.round(totals.kcal || 0);
     const isStale = isMealStale(meal);
     const isCurrentMeal = displayIndex === 0 && !isStale;
-    const mealCardClass = isCurrentMeal ? 'card tone-blue meal-card' : 'card tone-slate meal-card';
+    
+    // Вычисляем качество приёма для цветной линии слева
+    const mealQuality = React.useMemo(() => {
+      if (!meal?.items || meal.items.length === 0) return null;
+      return getMealQualityScore(meal, mealTypeInfo.type, optimum || 2000, pIndex);
+    }, [meal?.items, mealTypeInfo.type, optimum, pIndex]);
+    
+    // Цвет линии качества
+    const qualityLineColor = mealQuality 
+      ? mealQuality.color 
+      : (meal?.items?.length > 0 ? '#9ca3af' : 'transparent');
+    
+    const mealCardClass = isCurrentMeal ? 'card tone-green meal-card meal-card--current' : 'card tone-slate meal-card';
+    const mealCardStyle = {
+      marginTop: '8px', 
+      width: '100%',
+      position: 'relative',
+      paddingLeft: '12px',
+      ...(isCurrentMeal ? { 
+        border: '2px solid #22c55e', 
+        boxShadow: '0 4px 12px rgba(34,197,94,0.25)' 
+      } : {})
+    };
     const computeDerivedProductFn = M.computeDerivedProduct || ((prod) => prod || {});
 
     // === Инсулиновая волна в карточке приёма ===
@@ -1716,9 +1739,35 @@
     const stressEmoji = getStressEmoji(stressVal);
     const hasRatings = moodVal > 0 || wellbeingVal > 0 || stressVal > 0;
 
-    return React.createElement('div',{className: mealCardClass, 'data-meal-index': mealIndex, style:{marginTop:'8px', width: '100%'}},
+    return React.createElement('div',{className: mealCardClass, 'data-meal-index': mealIndex, style: mealCardStyle},
+      // Вертикальная линия качества слева
+      qualityLineColor !== 'transparent' && React.createElement('div', {
+        className: 'meal-quality-line',
+        style: {
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: '5px',
+          borderRadius: '12px 0 0 12px',
+          background: qualityLineColor,
+          transition: 'background 0.3s ease'
+        }
+      }),
       // Заголовок приёма ВНУТРИ карточки: время слева, тип по центру, калории справа (ОДНА СТРОКА)
-      React.createElement('div',{className:'meal-header-inside meal-type-' + mealTypeInfo.type, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }},
+      // Фон шапки — цвет качества с 12% прозрачностью
+      React.createElement('div',{className:'meal-header-inside meal-type-' + mealTypeInfo.type, style: { 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        gap: '8px',
+        background: qualityLineColor !== 'transparent' 
+          ? qualityLineColor + '1F' // 12% opacity (1F = 31/255)
+          : undefined,
+        borderRadius: '10px 10px 0 0',
+        margin: '-12px -12px 8px -4px',
+        padding: '12px 16px 12px 8px'
+      }},
         // Время слева (крупное)
         timeDisplay && React.createElement('span', { 
           className: 'meal-time-badge-inside',
@@ -2494,7 +2543,7 @@
     } catch (e) {}
   }, [expandedMeals, expandedMealsKey]);
   
-  // Проверка: устарел ли приём (прошло больше 1 часа с времени приёма)
+  // Проверка: устарел ли приём (прошло больше 30 минут с времени приёма)
   const isMealStale = React.useCallback((meal) => {
     if (!meal || !meal.time) return false;
     const [hours, minutes] = meal.time.split(':').map(Number);
@@ -2503,7 +2552,7 @@
     const mealDate = new Date();
     mealDate.setHours(hours, minutes, 0, 0);
     const diffMinutes = (now - mealDate) / (1000 * 60);
-    return diffMinutes > 60;
+    return diffMinutes > 30;
   }, []);
   
   const toggleMealExpand = React.useCallback((mealIndex, meals) => {
@@ -5141,12 +5190,23 @@
       });
     }, [setDay, sortMealsByTime]);
     
-    const removeMeal = React.useCallback((i) => { 
+    // Удаление приёма пищи с подтверждением через модуль
+    const removeMeal = React.useCallback(async (i) => { 
+      const confirmed = await HEYS.ConfirmModal?.confirmDelete({
+        icon: '🗑️',
+        title: 'Удалить приём пищи?',
+        text: 'Все продукты в этом приёме будут удалены. Это действие нельзя отменить.'
+      });
+      
+      if (!confirmed) return;
+      
+      haptic('medium');
       setDay(prevDay => {
         const meals = (prevDay.meals || []).filter((_, idx) => idx !== i);
         return { ...prevDay, meals };
-      }); 
+      });
     }, [haptic, setDay]);
+    
     // Track newly added items for fly-in animation
     const [newItemIds, setNewItemIds] = useState(new Set());
     
@@ -5543,8 +5603,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     // Иконки для тренировок
     const trainIcons = ['🏃', '🚴', '🏊'];
     
-    // Удаление тренировки (сдвигаем остальные вверх)
-    const removeTraining = (ti) => {
+    // Удаление тренировки с подтверждением через модуль
+    const removeTraining = async (ti) => {
+      const confirmed = await HEYS.ConfirmModal?.confirmDelete({
+        icon: '🏋️',
+        title: 'Удалить тренировку?',
+        text: 'Данные о тренировке будут удалены. Это действие нельзя отменить.'
+      });
+      
+      if (!confirmed) return;
+      
+      haptic('medium');
       const emptyTraining = {z:[0,0,0,0], time:'', type:''};
       setDay(prevDay => {
         const oldTrainings = prevDay.trainings || [emptyTraining, emptyTraining, emptyTraining];
@@ -5552,7 +5621,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           ...oldTrainings.slice(0, ti),
           ...oldTrainings.slice(ti + 1),
           emptyTraining
-        ].slice(0, 3); // гарантируем ровно 3 элемента
+        ].slice(0, 3);
         return { ...prevDay, trainings: newTrainings };
       });
       setVisibleTrainings(Math.max(0, visibleTrainings - 1));
@@ -6211,6 +6280,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const isFirst = displayIndex === 0;
       
       // Key включает mealType чтобы форсировать перерендер при смене типа
+      const isCurrentMeal = isFirst && !isMealStale(meal);
+      
       return React.createElement('div', {
         key: meal.id + '_' + (meal.mealType || 'auto'),
         className: 'meal-with-number',
@@ -6218,32 +6289,50 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           marginTop: isFirst ? '0' : '24px'
         }
       },
-        // Номер приёма над карточкой
+        // Номер приёма над карточкой + "ТЕКУЩИЙ" для активного
         React.createElement('div', {
           className: 'meal-number-header',
           style: {
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: '6px'
+            marginBottom: '6px',
+            gap: '4px'
           }
         },
           React.createElement('div', {
-            className: 'meal-number-badge',
+            className: 'meal-number-badge' + (isCurrentMeal ? ' meal-number-badge--current' : ''),
             style: {
               width: '32px',
               height: '32px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+              background: isCurrentMeal 
+                ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' 
+                : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
               color: '#fff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '16px',
               fontWeight: '700',
-              boxShadow: '0 2px 8px rgba(59,130,246,0.35)'
+              boxShadow: isCurrentMeal 
+                ? '0 2px 8px rgba(34,197,94,0.35)' 
+                : '0 2px 8px rgba(59,130,246,0.35)'
             }
-          }, mealNumber)
+          }, mealNumber),
+          // Надпись "ТЕКУЩИЙ ПРИЁМ" для активного приёма
+          isCurrentMeal && React.createElement('span', {
+            className: 'meal-current-label',
+            style: {
+              fontSize: '14px',
+              fontWeight: '800',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              color: '#22c55e',
+              marginTop: '4px'
+            }
+          }, 'ТЕКУЩИЙ ПРИЁМ')
         ),
         // Карточка приёма
         React.createElement(MealCard, {
@@ -6270,7 +6359,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           removeItem,
           isMealStale,
           allMeals: day.meals,
-          isNewItem
+          isNewItem,
+          optimum
         })
       );
     });
@@ -14767,6 +14857,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         ),
         document.body
       ),
+      
+      // Модалки подтверждения удаления теперь через HEYS.ConfirmModal
       
       // Edit Grams Modal (slider-based, like MealAddProduct)
       editGramsTarget && ReactDOM.createPortal(

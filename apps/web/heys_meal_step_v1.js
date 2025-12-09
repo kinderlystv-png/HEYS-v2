@@ -1100,6 +1100,7 @@
         const dayData = safeLsGet(`heys_dayv2_${dateKey}`, {});
         const meals = dayData.meals || [];
         
+        // 1. Если есть приёмы сегодня — берём последний
         if (meals.length > 0) {
           const lastMeal = meals[meals.length - 1];
           return {
@@ -1110,6 +1111,38 @@
           };
         }
         
+        // 2. Если первый приём — берём средние за вчера
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayKey = yesterday.toISOString().slice(0, 10);
+        const yesterdayData = safeLsGet(`heys_dayv2_${yesterdayKey}`, {});
+        const yesterdayMeals = yesterdayData.meals || [];
+        
+        if (yesterdayMeals.length > 0) {
+          // Вычисляем средние оценки за вчера
+          let totalMood = 0, totalWellbeing = 0, totalStress = 0;
+          let count = 0;
+          
+          for (const meal of yesterdayMeals) {
+            if (meal.mood || meal.wellbeing || meal.stress) {
+              totalMood += meal.mood || 5;
+              totalWellbeing += meal.wellbeing || 5;
+              totalStress += meal.stress || 5;
+              count++;
+            }
+          }
+          
+          if (count > 0) {
+            return {
+              mood: Math.round(totalMood / count),
+              wellbeing: Math.round(totalWellbeing / count),
+              stress: Math.round(totalStress / count),
+              comment: ''
+            };
+          }
+        }
+        
+        // 3. Если нет данных — по умолчанию 5
         return { mood: 5, wellbeing: 5, stress: 5, comment: '' };
       },
       validate: () => true

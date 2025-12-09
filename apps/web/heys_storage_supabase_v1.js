@@ -188,6 +188,19 @@
     }
     merged.dayComment = local.dayComment || remote.dayComment || '';
     
+    // 🌸 Cycle: намеренный сброс (null) имеет приоритет если local свежее
+    // cycleDay: 1-7 = день цикла, null = сброшено, undefined = не было данных
+    if (local.cycleDay === null && (local.updatedAt || 0) >= (remote.updatedAt || 0)) {
+      // Намеренный сброс — local свежее и явно установил null
+      merged.cycleDay = null;
+    } else if (remote.cycleDay === null && (remote.updatedAt || 0) > (local.updatedAt || 0)) {
+      // Remote свежее и сбросил
+      merged.cycleDay = null;
+    } else {
+      // Берём непустое значение
+      merged.cycleDay = local.cycleDay || remote.cycleDay || null;
+    }
+    
     // 🍽️ Meals: merge по ID, сохраняем уникальные
     const localMeals = local.meals || [];
     const remoteMeals = remote.meals || [];

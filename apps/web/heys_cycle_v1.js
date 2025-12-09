@@ -201,6 +201,19 @@
   }
 
   /**
+   * Получить правильный ключ localStorage с учётом clientId
+   * @param {string} dateStr - YYYY-MM-DD
+   * @returns {string} Полный ключ
+   */
+  function getDayKey(dateStr) {
+    const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
+    if (clientId) {
+      return 'heys_' + clientId + '_dayv2_' + dateStr;
+    }
+    return 'heys_dayv2_' + dateStr;
+  }
+
+  /**
    * Проставить дни цикла автоматически
    * При указании дня X на дате D:
    * - Дни 1 до X-1 проставляются в прошлое
@@ -208,8 +221,8 @@
    * 
    * @param {string} startDate - YYYY-MM-DD (дата где указан день)
    * @param {number} dayNumber - Какой день указан (1-7)
-   * @param {function} lsGet - Функция чтения из localStorage
-   * @param {function} lsSet - Функция записи в localStorage
+   * @param {function} lsGet - Функция чтения из localStorage (IGNORED, используется getDayKey)
+   * @param {function} lsSet - Функция записи в localStorage (IGNORED, используется getDayKey)
    * @returns {Object} { updated: number, dates: string[] }
    */
   function setCycleDaysAuto(startDate, dayNumber, lsGet, lsSet) {
@@ -218,16 +231,22 @@
     }
 
     const updatedDates = [];
-    const keyPrefix = 'heys_dayv2_';
 
     // Проставляем 7 дней
     for (let d = 1; d <= 7; d++) {
       const offset = d - dayNumber; // Смещение от startDate
       const targetDate = addDays(startDate, offset);
-      const key = keyPrefix + targetDate;
+      const key = getDayKey(targetDate);
       
       try {
-        const dayData = lsGet(key, null) || {};
+        // Читаем напрямую из localStorage с правильным ключом
+        let dayData = {};
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+          }
+        } catch(e) {}
         
         // Обновляем cycleDay
         const updated = {
@@ -237,8 +256,11 @@
           updatedAt: Date.now()
         };
         
-        lsSet(key, updated);
+        // Пишем напрямую в localStorage с правильным ключом
+        localStorage.setItem(key, JSON.stringify(updated));
         updatedDates.push(targetDate);
+        
+        console.log('[Cycle] Set cycleDay=' + d + ' for ' + targetDate + ' (key: ' + key + ')');
       } catch (e) {
         console.warn('[Cycle] Failed to set day', targetDate, e);
       }
@@ -270,16 +292,23 @@
    * Убирает cycleDay у всех связанных дней
    * 
    * @param {string} anyDateInCycle - Любая дата в цикле
-   * @param {function} lsGet - Функция чтения из localStorage
-   * @param {function} lsSet - Функция записи в localStorage
+   * @param {function} lsGet - Функция чтения из localStorage (IGNORED, используется getDayKey)
+   * @param {function} lsSet - Функция записи в localStorage (IGNORED, используется getDayKey)
    * @returns {Object} { cleared: number, dates: string[] }
    */
   function clearCycleDays(anyDateInCycle, lsGet, lsSet) {
-    const keyPrefix = 'heys_dayv2_';
-    const key = keyPrefix + anyDateInCycle;
+    const key = getDayKey(anyDateInCycle);
     
     try {
-      const dayData = lsGet(key, null);
+      // Читаем напрямую из localStorage
+      let dayData = null;
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+        }
+      } catch(e) {}
+      
       if (!dayData || !dayData.cycleDay) {
         return { cleared: 0, dates: [] };
       }
@@ -291,13 +320,21 @@
       for (let d = 1; d <= 7; d++) {
         const offset = d - currentDay;
         const targetDate = addDays(anyDateInCycle, offset);
-        const targetKey = keyPrefix + targetDate;
+        const targetKey = getDayKey(targetDate);
         
-        const targetData = lsGet(targetKey, null);
+        let targetData = null;
+        try {
+          const raw = localStorage.getItem(targetKey);
+          if (raw) {
+            targetData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+          }
+        } catch(e) {}
+        
         if (targetData && targetData.cycleDay) {
           const updated = { ...targetData, cycleDay: null, updatedAt: Date.now() };
-          lsSet(targetKey, updated);
+          localStorage.setItem(targetKey, JSON.stringify(updated));
           clearedDates.push(targetDate);
+          console.log('[Cycle] Cleared cycleDay for ' + targetDate);
         }
       }
 
@@ -401,15 +438,21 @@
   /**
    * Найти дату "День 1" цикла по любой дате в цикле
    * @param {string} dateStr - YYYY-MM-DD
-   * @param {function} lsGet - Функция чтения
+   * @param {function} lsGet - Функция чтения (IGNORED, используется getDayKey)
    * @returns {string|null} Дата дня 1 или null
    */
   function findCycleStartDate(dateStr, lsGet) {
-    const keyPrefix = 'heys_dayv2_';
-    const key = keyPrefix + dateStr;
+    const key = getDayKey(dateStr);
     
     try {
-      const dayData = lsGet(key, null);
+      let dayData = null;
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+        }
+      } catch(e) {}
+      
       if (!dayData || !dayData.cycleDay) return null;
       
       const offset = 1 - dayData.cycleDay;
@@ -664,6 +707,67 @@
   }
 
   // ============================================================
+  // DEBUG: Показать дни с cycleDay за последние N дней
+  // ============================================================
+  
+  /**
+   * Вывести в консоль все дни с cycleDay за последние N дней
+   * Вызов: HEYS.Cycle.debugCycleDays(14)
+   * @param {number} daysBack - Сколько дней назад проверять (по умолчанию 14)
+   */
+  function debugCycleDays(daysBack = 14) {
+    const today = new Date();
+    const results = [];
+    
+    console.group('🌸 Cycle Days Debug (последние ' + daysBack + ' дней)');
+    console.log('ClientId:', (window.HEYS && window.HEYS.currentClientId) || '(none)');
+    
+    for (let i = daysBack - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      const dayNum = d.getDate();
+      
+      const key = getDayKey(dateStr);
+      
+      let dayData = null;
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+        }
+      } catch(e) {}
+      
+      const cycleDay = dayData?.cycleDay || null;
+      const weight = dayData?.weightMorning || null;
+      const retentionInfo = getWaterRetentionInfo(cycleDay);
+      
+      results.push({
+        date: dateStr,
+        dayNum,
+        cycleDay,
+        hasRetention: retentionInfo.hasRetention,
+        severity: retentionInfo.severity,
+        weight,
+        key // для дебага показываем ключ
+      });
+      
+      // Логируем только дни с cycleDay или весом
+      if (cycleDay || weight) {
+        const icon = retentionInfo.hasRetention ? '🔴' : '⚪';
+        console.log(
+          `${icon} ${dateStr} (${dayNum}): cycleDay=${cycleDay || 'null'}, weight=${weight || '-'}, retention=${retentionInfo.hasRetention ? retentionInfo.severity : 'none'}`
+        );
+      }
+    }
+    
+    console.groupEnd();
+    console.table(results.filter(r => r.cycleDay || r.weight));
+    
+    return results;
+  }
+
+  // ============================================================
   // ЭКСПОРТ
   // ============================================================
 
@@ -698,9 +802,13 @@
     setCycleDaysAuto,
     clearCycleDays,
     findCycleStartDate,
-    addDays
+    addDays,
+    getDayKey, // для дебага и внешнего использования
+    
+    // Debug
+    debugCycleDays
   };
 
-  console.log('[HEYS] Cycle module loaded v1.3.0 (+history analysis)');
+  console.log('[HEYS] Cycle module loaded v1.4.0 (fixed clientId in keys)');
 
 })(typeof window !== 'undefined' ? window : global);

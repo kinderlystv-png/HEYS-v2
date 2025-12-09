@@ -2623,6 +2623,7 @@
   border: none;
   border-radius: 0;
   flex: 1;
+  min-width: 0;
 }
 
 .macro-ring-item {
@@ -3337,8 +3338,8 @@
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 58px;
-  max-width: 58px;
+  min-width: 70px;
+  flex-shrink: 0;
 }
 
 .weight-card-modern:hover {
@@ -3503,8 +3504,8 @@
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 58px;
-  max-width: 58px;
+  min-width: 70px;
+  flex-shrink: 0;
 }
 
 .deficit-card-modern:hover {
