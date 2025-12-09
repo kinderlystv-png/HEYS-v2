@@ -128,13 +128,14 @@
   // 🔬 НАУЧНЫЙ АУДИТ 2025-12-09:
   // При GL < 5 инсулиновый ответ МИНИМАЛЕН — волна не может быть долгой
   // Mayer (1995): при <10г доступных углеводов инсулин возвращается к базовому за 1-2ч
-  // Поэтому multiplier для veryLow более агрессивный (0.5 вместо 0.7)
+  // При GL < 2 (напр. кофе с молоком) — практически нет инсулиновой волны
   const GL_CATEGORIES = {
+    micro: { max: 2, multiplier: 0.35, desc: 'микро-инсулин' },             // GL<2 = ~35% волны (кофе+молоко)
     veryLow: { max: 5, multiplier: 0.5, desc: 'минимальный инсулин' },      // ~50% волны (GL<5 = почти кето-еда)
     low: { max: 10, multiplier: 0.7, desc: 'слабый инсулиновый ответ' },    // 70% волны
     medium: { max: 20, multiplier: 1.0, desc: 'нормальный инсулин' },       // стандартная волна
     high: { max: 30, multiplier: 1.15, desc: 'сильный инсулиновый ответ' }, // +15% волны
-    veryHigh: { max: Infinity, multiplier: 1.25, desc: 'максимальный инсулин' } // +25% (снижено с 1.35)
+    veryHigh: { max: Infinity, multiplier: 1.25, desc: 'максимальный инсулин' } // +25%
   };
   
   // 🏃 WORKOUT ACCELERATION — тренировка ускоряет метаболизм
@@ -961,6 +962,7 @@
    * @returns {Object} { multiplier, desc, category }
    */
   const getGLCategory = (gl) => {
+    if (gl < GL_CATEGORIES.micro.max) return { ...GL_CATEGORIES.micro, id: 'micro' };
     if (gl < GL_CATEGORIES.veryLow.max) return { ...GL_CATEGORIES.veryLow, id: 'veryLow' };
     if (gl < GL_CATEGORIES.low.max) return { ...GL_CATEGORIES.low, id: 'low' };
     if (gl < GL_CATEGORIES.medium.max) return { ...GL_CATEGORIES.medium, id: 'medium' };
@@ -1052,10 +1054,12 @@
     const fatBonus = rawFatBonus * glScaleFactor;
     
     // 🥛 Инсулиногенность — молочка и белок стимулируют инсулин независимо от углеводов
-    // НО: эффект всё равно меньше чем от углеводов, поэтому частично скалируем
+    // НО: эффект всё равно меньше чем от углеводов, поэтому скалируем
+    // 🔬 НАУЧНЫЙ АУДИТ 2025-12-09: При очень низкой GL (< 5) эффект минимален
+    // При 100мл молока + минимальные углеводы — инсулиновый ответ слабый
     const rawInsBonus = insulinogenicBonus || 0;
-    // Инсулиногенность скалируется мягче (коэффициент 0.5-1.0 вместо 0.25-1.0)
-    const insScaleFactor = gl !== null && gl < 20 ? Math.max(0.5, 0.5 + (gl / 20) * 0.5) : 1.0;
+    // Формула: GL=0 → 0.3, GL=5 → 0.5, GL=10 → 0.7, GL=20 → 1.0
+    const insScaleFactor = gl !== null && gl < 20 ? Math.max(0.3, 0.3 + (gl / 20) * 0.7) : 1.0;
     const insBonus = rawInsBonus * insScaleFactor;
     
     // 🥤 Жидкая пища — усваивается быстрее
@@ -1664,8 +1668,10 @@
       const caffeineBonus = mealNutrients.hasCaffeine ? CAFFEINE_BONUS.bonus : 0;
       const transFatBonus = calculateTransFatBonus(mealNutrients.totalTrans || 0);
       
-      // Финальный множитель
-      const mealSpecificBonuses = alcoholBonus + caffeineBonus + transFatBonus;
+      // 🔬 НАУЧНЫЙ АУДИТ 2025-12-09: Еда-специфичные бонусы тоже скалируются по GL
+      // При GL < 5 кофеин/алкоголь/транс-жиры имеют минимальный эффект
+      // (без значительного инсулинового всплеска их влияние на волну минимально)
+      const mealSpecificBonuses = (alcoholBonus + caffeineBonus + transFatBonus) * dayFactorsScale;
       const allBonuses = scaledDayBonus + scaledActivityBonus + mealSpecificBonuses;
       const finalMultiplier = (mealMult.total + allBonuses) * scaledCircadian * spicyMultiplier;
       

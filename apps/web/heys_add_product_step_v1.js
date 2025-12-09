@@ -1336,11 +1336,15 @@
       steps: [
         {
           id: 'grams',
-          title: '',
+          title: product?.name || 'Граммы',
           hint: '',
           icon: '⚖️',
           component: GramsStep,
-          validate: (data) => (data?.grams || 0) > 0
+          validate: (data) => (data?.grams || 0) > 0,
+          getInitialData: (ctx) => ({
+            grams: ctx?.editGrams || currentGrams || 100,
+            selectedProduct: ctx?.editProduct || product
+          })
         }
       ],
       context: { 
