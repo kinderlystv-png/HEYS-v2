@@ -899,12 +899,15 @@
       if (!data.insulinWaveHours) return 'Выберите тип метаболизма';
       return null;
     },
-    save: (data, allStepsData) => {
+    save: (data, context, allStepsData) => {
       // Собираем все данные из 4 шагов
       const step1 = allStepsData['profile-personal'] || {};
       const step2 = allStepsData['profile-body'] || {};
       const step3 = allStepsData['profile-goals'] || {};
       const step4 = allStepsData['profile-metabolism'] || {};
+      
+      console.log('[ProfileSteps] Saving with allStepsData:', JSON.stringify(allStepsData, null, 2));
+      console.log('[ProfileSteps] step2 (body):', step2);
 
       const profile = lsGet('heys_profile', {});
       
@@ -926,6 +929,11 @@
       };
 
       lsSet('heys_profile', updatedProfile);
+      
+      // Диспатчим событие для обновления UI профиля (настройки)
+      window.dispatchEvent(new CustomEvent('heys:profile-updated', { 
+        detail: { profile: updatedProfile, source: 'wizard' } 
+      }));
 
       // Авторасчёт норм БЖУ
       const norms = calcNormsFromGoal(
@@ -934,6 +942,16 @@
         updatedProfile.age
       );
       lsSet('heys_norms', norms);
+
+      // Записываем вес в данные дня (weightMorning), чтобы check-in не спрашивал повторно
+      const todayKey = new Date().toISOString().slice(0, 10);
+      const dayData = lsGet(`heys_dayv2_${todayKey}`, {});
+      if (!dayData.weightMorning && updatedProfile.weight) {
+        dayData.weightMorning = updatedProfile.weight;
+        dayData.updatedAt = Date.now();
+        lsSet(`heys_dayv2_${todayKey}`, dayData);
+        console.log('[ProfileSteps] Weight synced to day data:', updatedProfile.weight, 'kg for', todayKey);
+      }
 
       // Синхронизация имени с списком клиентов (глобальный ключ, без namespace!)
       let currentClientId = localStorage.getItem('heys_client_current');

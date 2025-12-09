@@ -265,6 +265,18 @@
       return () => { cancelled = true; };
     }, [window.HEYS && window.HEYS.currentClientId]);
 
+    // Подписка на обновления профиля из wizard'а
+    React.useEffect(() => {
+      const handleProfileUpdate = (e) => {
+        console.log('[Profile] Received profile-updated event from:', e?.detail?.source);
+        const newProfile = lsGet('heys_profile', DEFAULT_PROFILE);
+        setProfile(newProfile);
+      };
+      
+      window.addEventListener('heys:profile-updated', handleProfileUpdate);
+      return () => window.removeEventListener('heys:profile-updated', handleProfileUpdate);
+    }, []);
+
   // Состояние "идёт ввод" для индикации
   const [profilePending, setProfilePending] = React.useState(false);
   const [zonesPending, setZonesPending] = React.useState(false);

@@ -2873,7 +2873,10 @@
     const TR=(day.trainings&&Array.isArray(day.trainings)&&day.trainings.length>=1)?day.trainings:[{z:[0,0,0,0]},{z:[0,0,0,0]},{z:[0,0,0,0]}];
   const train1k=trainK(TR[0]||{z:[0,0,0,0]}), train2k=trainK(TR[1]||{z:[0,0,0,0]}), train3k=trainK(TR[2]||{z:[0,0,0,0]});
   const stepsK=r0(stepsKcal(day.steps||0,weight,prof.sex,0.7));
-  const householdK=r0((+day.householdMin||0)*kcalPerMin(2.5,weight));
+  // Backward compatible: householdActivities массив или legacy householdMin
+  const householdActivities = day.householdActivities || (day.householdMin > 0 ? [{ minutes: day.householdMin, time: day.householdTime || '' }] : []);
+  const totalHouseholdMin = householdActivities.reduce((sum, h) => sum + (+h.minutes || 0), 0);
+  const householdK=r0(totalHouseholdMin*kcalPerMin(2.5,weight));
   const actTotal=r0(train1k+train2k+train3k+stepsK+householdK);
   const bmr=calcBMR(weight,prof), tdee=r0(bmr+actTotal);
   const profileTargetDef=+(lsGet('heys_profile',{}).deficitPctTarget)||0; // отрицательное число для дефицита
@@ -4352,22 +4355,29 @@
     }
 
     // === Household (Бытовая активность) — через модульную модалку ===
-    function openHouseholdPicker() {
+    // editIndex: null/undefined = добавление новой, число = редактирование существующей
+    function openHouseholdPicker(editIndex = null) {
       const dateKey = date; // ключ дня (YYYY-MM-DD)
       if (HEYS.StepModal) {
         HEYS.StepModal.show({
-          steps: ['household'],
-          title: '🏠 Бытовая активность',
-          showProgress: false,
+          steps: ['household_minutes', 'household_stats'],
+          title: editIndex !== null ? '🏠 Редактирование' : '🏠 Бытовая активность',
+          showProgress: true,
           showStreak: false,
           showGreeting: false,
           showTip: false,
           finishLabel: 'Готово',
-          context: { dateKey },
+          context: { dateKey, editIndex },
           onComplete: (stepData) => {
             // Обновляем локальное состояние из сохранённых данных
             const savedDay = lsGet(`heys_dayv2_${dateKey}`, {});
-            setDay(prev => ({ ...prev, householdMin: savedDay.householdMin || 0 }));
+            setDay(prev => ({ 
+              ...prev, 
+              householdActivities: savedDay.householdActivities || [],
+              // Legacy fields для backward compatibility
+              householdMin: savedDay.householdMin || 0,
+              householdTime: savedDay.householdTime || ''
+            }));
           }
         });
       }
@@ -5627,10 +5637,35 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       setVisibleTrainings(Math.max(0, visibleTrainings - 1));
     };
 
+    // Удаление бытовой активности с подтверждением
+    const removeHousehold = async (idx) => {
+      const confirmed = await HEYS.ConfirmModal?.confirmDelete({
+        icon: '🏠',
+        title: 'Удалить активность?',
+        text: 'Данные о бытовой активности будут удалены.'
+      });
+      
+      if (!confirmed) return;
+      
+      haptic('medium');
+      setDay(prevDay => {
+        const oldActivities = prevDay.householdActivities || [];
+        const newActivities = oldActivities.filter((_, i) => i !== idx);
+        // Обновляем legacy поля для совместимости
+        const totalMin = newActivities.reduce((sum, h) => sum + (+h.minutes || 0), 0);
+        return { 
+          ...prevDay, 
+          householdActivities: newActivities,
+          householdMin: totalMin,
+          householdTime: newActivities[0]?.time || ''
+        };
+      });
+    };
+
     // Компактные тренировки в SaaS стиле
     const trainingsBlock = React.createElement('div', { className: 'compact-trainings' },
-      // Пустое состояние когда нет видимых тренировок
-      visibleTrainings === 0 && React.createElement('div', { className: 'empty-trainings' },
+      // Пустое состояние когда нет видимых тренировок и активностей
+      visibleTrainings === 0 && householdActivities.length === 0 && React.createElement('div', { className: 'empty-trainings' },
         React.createElement('span', { className: 'empty-trainings-icon' }, '🏃‍♂️'),
         React.createElement('span', { className: 'empty-trainings-text' }, 'Нет тренировок')
       ),
@@ -5715,6 +5750,33 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           // Комментарий (если есть)
           T.comment && React.createElement('div', { className: 'training-card-comment' },
             '💬 ', T.comment
+          )
+        );
+      }),
+      // Бытовые активности — по карточке на каждую (как тренировки)
+      householdActivities.map((h, hi) => {
+        const hKcal = r0((+h.minutes || 0) * kcalPerMin(2.5, weight));
+        return React.createElement('div', { 
+          key: 'household-' + hi, 
+          className: 'compact-card compact-household'
+        },
+          React.createElement('div', { 
+            className: 'compact-train-header',
+            onClick: () => openHouseholdPicker(hi)
+          },
+            React.createElement('span', { className: 'compact-train-icon' }, '🏠'),
+            React.createElement('span', { className: 'compact-train-title' }, 'Бытовая активность'),
+            h.time && React.createElement('span', { className: 'compact-train-time' }, h.time),
+            React.createElement('span', { className: 'compact-badge household' }, hKcal + ' ккал'),
+            React.createElement('button', {
+              className: 'compact-train-remove',
+              onClick: (e) => { e.stopPropagation(); removeHousehold(hi); },
+              title: 'Убрать активность'
+            }, '×')
+          ),
+          React.createElement('div', { className: 'compact-household-details' },
+            React.createElement('span', { className: 'household-detail' }, '⏱ ' + h.minutes + ' мин'),
+            h.time && React.createElement('span', { className: 'household-detail muted' }, '⚡ Учтено в волнах')
           )
         );
       })
@@ -12588,36 +12650,45 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             )
           )
         ),
-        // Правая колонка: бытовая активность + кнопка добавить тренировку
+        // Правая колонка: бытовая активность + кнопки добавления
         React.createElement('div', { className: 'activity-right-col' },
-          // Бытовая активность - кликабельная карточка
+          // Бытовая активность - итоговая карточка
           React.createElement('div', { 
-            className: 'household-activity-card',
-            onClick: openHouseholdPicker
+            className: 'household-activity-card'
           },
             React.createElement('div', { className: 'household-activity-header' },
               React.createElement('span', { className: 'household-activity-icon' }, '🏠'),
-              React.createElement('span', { className: 'household-activity-title' }, 'Бытовая активность')
+              React.createElement('span', { className: 'household-activity-title' }, 'Бытовая активность'),
+              householdActivities.length > 0 && React.createElement('span', { className: 'household-count-badge' }, householdActivities.length)
             ),
             React.createElement('div', { className: 'household-activity-value' },
-              React.createElement('span', { className: 'household-value-number' }, day.householdMin || 0),
-              React.createElement('span', { className: 'household-value-unit' }, 'мин')
+              React.createElement('span', { className: 'household-value-number' }, totalHouseholdMin),
+              React.createElement('span', { className: 'household-value-unit' }, 'мин'),
+              householdActivities.length > 1 && React.createElement('span', { className: 'household-value-info' }, ' (' + householdActivities.length + ' записи)')
             ),
             householdK > 0 && React.createElement('div', { className: 'household-value-kcal' }, '→ ' + householdK + ' ккал'),
             React.createElement('div', { className: 'household-activity-hint' }, 
-              'Время на ногах помимо тренировок'
+              householdActivities.some(h => h.time) ? '⚡ Учтено в расчёте волн' : 'Время на ногах помимо тренировок'
             )
           ),
-          // Кнопка добавления тренировки
-          visibleTrainings < 3 && React.createElement('button', {
-            className: 'add-training-btn',
-            onClick: () => {
-              const newIndex = visibleTrainings;
-              setVisibleTrainings(visibleTrainings + 1);
-              // Сразу открываем picker для новой тренировки
-              setTimeout(() => openTrainingPicker(newIndex), 50);
-            }
-          }, '+ Тренировка')
+          // Кнопки добавления
+          React.createElement('div', { className: 'activity-add-buttons' },
+            // Кнопка добавления бытовой активности
+            React.createElement('button', {
+              className: 'add-training-btn add-household-btn',
+              onClick: () => openHouseholdPicker(null) // null = добавление новой
+            }, '+ Активность'),
+            // Кнопка добавления тренировки
+            visibleTrainings < 3 && React.createElement('button', {
+              className: 'add-training-btn',
+              onClick: () => {
+                const newIndex = visibleTrainings;
+                setVisibleTrainings(visibleTrainings + 1);
+                // Сразу открываем picker для новой тренировки
+                setTimeout(() => openTrainingPicker(newIndex), 50);
+              }
+            }, '+ Тренировка')
+          )
         )
       ),
       

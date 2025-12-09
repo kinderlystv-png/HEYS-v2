@@ -897,29 +897,19 @@
   }
 
   /**
-   * HouseholdStep — Шаг учёта бытовой активности
-   * v2: с указанием примерного времени для учёта в инсулиновых волнах
+   * HouseholdStep — Шаг 1: Минуты + время (ввод данных)
    */
-  function HouseholdStepComponent({ data, onChange, context }) {
-    const { useRef, useCallback, useMemo, useState } = React;
+  function HouseholdMinutesComponent({ data, onChange, context }) {
+    const { useCallback, useMemo } = React;
     
     const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
     const minutes = data.minutes ?? 0;
-    const householdTime = data.householdTime ?? ''; // HH:MM формат
-    
-    // Состояние для показа time picker
-    const [showTimePicker, setShowTimePicker] = useState(false);
+    const householdTime = data.householdTime ?? '';
     
     // Получаем вес для расчёта калорий
     const profile = useMemo(() => lsGet('heys_profile', {}), []);
     const weight = profile.weight || 70;
     const kcalBurned = calcHouseholdKcal(minutes, weight);
-    
-    // Статистика за неделю и месяц
-    const weeklyStats = useMemo(() => getWeeklyHouseholdStats(), []);
-    const monthlyStats = useMemo(() => getHouseholdMonthlyStats(), []);
-    const history7 = weeklyStats.history || getHouseholdHistory(7);
-    const todayKey = new Date().toISOString().slice(0, 10);
     
     // Цвет в зависимости от количества минут
     const getColor = useCallback((min) => {
@@ -940,13 +930,6 @@
     const triggerHaptic = (intensity = 10) => {
       if (navigator.vibrate) navigator.vibrate(intensity);
     };
-
-    // Инкременты
-    const incrementMinutes = (delta) => {
-      const next = Math.max(0, Math.min(sliderMax, minutes + delta));
-      triggerHaptic(8);
-      onChange({ ...data, minutes: next });
-    };
     
     // Quick preset buttons
     const handlePreset = (value) => {
@@ -962,25 +945,25 @@
       if (min < 120) return 'Отличная активность!';
       return 'Супер активный день! 🔥';
     };
-
-    // Целевой диапазон 30-90 мин (для окраски, без текста)
-    const targetMin = 30;
-
-    // Советы по шагам (если мало шагов)
-    const dayData = useMemo(() => lsGet(`heys_dayv2_${dateKey}`, {}), [dateKey]);
-    const steps = Number(dayData.steps) || 0;
-    const stepsGoal = Number(profile.stepsGoal) || 8000;
-    const lowSteps = stepsGoal > 0 && steps < stepsGoal * 0.6;
-
-    // Бэйджи достижений
-    const showStreakBadge = monthlyStats.streak >= 3;
-    const showMonthlyBadge = monthlyStats.total30 >= 1000;
-
-    // Спарклайн 7 дней
-    const maxSpark = Math.max(...history7.map(h => h.minutes), 90);
-    const sparkBars = history7.slice().reverse();
     
-    return React.createElement('div', { className: 'step-household' },
+    // Парсим время для WheelPicker
+    const [hh, mm] = useMemo(() => (householdTime || '12:00').split(':').map(Number), [householdTime]);
+    const hoursValues = useMemo(() => Array.from({ length: 16 }, (_, i) => String(i + 7).padStart(2, '0')), []); // 07-22
+    const minutesValues = ['00', '15', '30', '45'];
+    
+    const updateHours = (newHour) => {
+      const newTime = `${newHour}:${String(mm || 0).padStart(2, '0')}`;
+      triggerHaptic(5);
+      onChange({ ...data, householdTime: newTime });
+    };
+    
+    const updateMinutes = (newMin) => {
+      const newTime = `${String(hh || 12).padStart(2, '0')}:${newMin}`;
+      triggerHaptic(5);
+      onChange({ ...data, householdTime: newTime });
+    };
+    
+    return React.createElement('div', { className: 'step-household step-household-minutes' },
       // Основной дисплей
       React.createElement('div', { className: 'household-display' },
         React.createElement('div', { className: 'household-value', style: { color } },
@@ -995,12 +978,6 @@
       
       // Слайдер
       React.createElement('div', { className: 'household-slider-container' },
-        React.createElement('div', { className: 'household-inc-row' },
-          React.createElement('button', { className: 'household-inc-btn', type: 'button', onClick: () => incrementMinutes(-10) }, '-10'),
-          React.createElement('button', { className: 'household-inc-btn', type: 'button', onClick: () => incrementMinutes(-5) }, '-5'),
-          React.createElement('button', { className: 'household-inc-btn primary', type: 'button', onClick: () => incrementMinutes(10) }, '+10'),
-          React.createElement('button', { className: 'household-inc-btn primary', type: 'button', onClick: () => incrementMinutes(20) }, '+20')
-        ),
         React.createElement('input', {
           type: 'range',
           className: 'household-slider',
@@ -1042,20 +1019,89 @@
         )
       ),
       
-      // Примеры активности
-      React.createElement('div', { className: 'household-examples' },
-        React.createElement('div', { className: 'household-examples-grid' },
-          HOUSEHOLD_EXAMPLES.map((ex, i) => 
-            React.createElement('span', { 
-              key: i, 
-              className: 'household-example',
-              title: `MET: ${ex.met}`,
-              onClick: () => {
-                triggerHaptic(10);
-                onChange({ ...data, minutes: ex.minutes || 20 });
-              }
-            }, ex.icon + ' ' + ex.name)
-          )
+      // Секция времени (компактная)
+      React.createElement('div', { className: 'household-time-section' },
+        React.createElement('div', { className: 'household-time-header' },
+          React.createElement('span', { className: 'household-time-label' }, '⏰ Когда была активность?'),
+          householdTime && React.createElement('span', { className: 'household-time-value-small' }, householdTime)
+        ),
+        React.createElement('div', { className: 'household-time-pickers compact' },
+          React.createElement(WheelPicker, {
+            values: hoursValues,
+            value: String(Math.max(7, Math.min(22, hh || 12))).padStart(2, '0'),
+            onChange: updateHours,
+            label: 'Часы'
+          }),
+          React.createElement('span', { className: 'household-time-separator' }, ':'),
+          React.createElement(WheelPicker, {
+            values: minutesValues,
+            value: minutesValues.includes(String(mm).padStart(2, '0')) 
+              ? String(mm).padStart(2, '0') 
+              : '00',
+            onChange: updateMinutes,
+            label: 'Минуты'
+          })
+        ),
+        householdTime && React.createElement('button', {
+          type: 'button',
+          className: 'household-time-clear',
+          onClick: () => {
+            triggerHaptic(5);
+            onChange({ ...data, householdTime: '' });
+          }
+        }, '✕ Сбросить')
+      )
+    );
+  }
+
+  /**
+   * HouseholdStatsStep — Шаг 2: Статистика + график + бейджи (обратная связь)
+   * Получает данные от первого шага через stepData.household_minutes
+   */
+  function HouseholdStatsComponent({ data, onChange, context, stepData }) {
+    const { useMemo } = React;
+    
+    // Берём данные от первого шага (household_minutes) — они актуальные
+    const minutesData = stepData?.household_minutes || data || {};
+    const minutes = minutesData.minutes ?? 0;
+    const householdTime = minutesData.householdTime ?? '';
+    const todayKey = new Date().toISOString().slice(0, 10);
+    
+    // Получаем вес для расчёта калорий
+    const profile = useMemo(() => lsGet('heys_profile', {}), []);
+    const weight = profile.weight || 70;
+    const kcalBurned = calcHouseholdKcal(minutes, weight);
+    
+    // Статистика за неделю и месяц
+    const weeklyStats = useMemo(() => getWeeklyHouseholdStats(), []);
+    const monthlyStats = useMemo(() => getHouseholdMonthlyStats(), []);
+    const history7 = weeklyStats.history || getHouseholdHistory(7);
+    
+    // Для спарклайна
+    const targetMin = 30;
+    const maxSpark = Math.max(...history7.map(h => h.minutes), 90);
+    const sparkBars = history7.slice().reverse();
+    
+    // Бэйджи достижений
+    const showStreakBadge = monthlyStats.streak >= 3;
+    const showMonthlyBadge = monthlyStats.total30 >= 500;
+    
+    // Цвет
+    const getColor = (min) => {
+      if (min === 0) return '#94a3b8';
+      if (min < 30) return '#eab308';
+      if (min < 60) return '#22c55e';
+      return '#10b981';
+    };
+    const color = getColor(minutes);
+    
+    return React.createElement('div', { className: 'step-household step-household-stats' },
+      // Сводка: что введено
+      React.createElement('div', { className: 'household-summary' },
+        React.createElement('div', { className: 'household-summary-main' },
+          React.createElement('span', { className: 'household-summary-value', style: { color } }, minutes + ' мин'),
+          householdTime && React.createElement('span', { className: 'household-summary-time' }, ' в ' + householdTime),
+          kcalBurned > 0 && React.createElement('span', { className: 'household-summary-kcal' }, ' • 🔥 ' + kcalBurned + ' ккал')
         )
       ),
       
@@ -1075,7 +1121,7 @@
           sparkBars.map((h) => {
             const isToday = h.date === todayKey;
             return React.createElement('span', { key: h.date, className: isToday ? 'today' : '' },
-              h.minutes > 0 ? `${h.minutes} мин` : '—'
+              h.minutes > 0 ? `${h.minutes}` : '—'
             );
           })
         ),
@@ -1099,43 +1145,146 @@
       ),
 
       // Бэйджи достижений
-      React.createElement('div', { className: 'household-badges' },
-        showStreakBadge && React.createElement('span', { className: 'household-badge success' }, '🏅 3+ дней подряд ≥30 мин'),
-        showMonthlyBadge && React.createElement('span', { className: 'household-badge info' }, `📆 ${monthlyStats.total30} мин за 30 дней`)
-      ),
-
-      // Совет по шагам
-      lowSteps && React.createElement('div', { className: 'household-steps-hint' },
-        `Шагов мало (${steps}/${stepsGoal}). Добавь 20–30 мин быта — засчитаем!`
+      (showStreakBadge || showMonthlyBadge) && React.createElement('div', { className: 'household-badges' },
+        showStreakBadge && React.createElement('span', { className: 'household-badge success' }, '🏅 ' + monthlyStats.streak + ' дней подряд ≥30 мин'),
+        showMonthlyBadge && React.createElement('span', { className: 'household-badge info' }, '📆 ' + monthlyStats.total30 + ' мин за месяц')
       ),
       
-      // Подсказка убрана по запросу
+      // Примеры активности (для справки)
+      React.createElement('div', { className: 'household-examples' },
+        React.createElement('div', { className: 'household-examples-title' }, '💡 Примеры бытовой активности:'),
+        React.createElement('div', { className: 'household-examples-grid' },
+          HOUSEHOLD_EXAMPLES.slice(0, 6).map((ex, i) => 
+            React.createElement('span', { 
+              key: i, 
+              className: 'household-example readonly',
+              title: `MET: ${ex.met}`
+            }, ex.icon + ' ' + ex.name)
+          )
+        )
+      )
     );
   }
 
-  // Регистрация шага бытовой активности
-  registerStep('household', {
+  // Регистрация шага 1: Минуты бытовой активности
+  registerStep('household_minutes', {
     title: 'Бытовая активность',
-    hint: 'Время на ногах помимо тренировок',
+    hint: 'Сколько минут?',
     icon: '🏠',
-    component: HouseholdStepComponent,
+    component: HouseholdMinutesComponent,
     getInitialData: (ctx) => {
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
+      const editIndex = ctx?.editIndex ?? null; // индекс для редактирования (null = добавление)
       const day = lsGet(`heys_dayv2_${dateKey}`, {});
       const weekly = getWeeklyHouseholdStats();
-      const minutes = day.householdMin || weekly.avg || 0;
-      return { minutes, dateKey };
+      
+      // Если редактируем существующую — берём её данные
+      const activities = day.householdActivities || [];
+      if (editIndex !== null && activities[editIndex]) {
+        const activity = activities[editIndex];
+        return { 
+          minutes: activity.minutes || 0, 
+          householdTime: activity.time || '', 
+          dateKey, 
+          editIndex 
+        };
+      }
+      
+      // Добавление новой — дефолтные значения
+      return { minutes: weekly.avg || 30, householdTime: '', dateKey, editIndex: null };
     },
     save: (data) => {
       const dateKey = data.dateKey || new Date().toISOString().slice(0, 10);
+      const editIndex = data.editIndex ?? null;
       const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
-      day.householdMin = data.minutes;
+      
+      // Инициализируем массив если его нет
+      if (!day.householdActivities) {
+        // Миграция старых данных
+        if (day.householdMin > 0) {
+          day.householdActivities = [{ minutes: day.householdMin, time: day.householdTime || '' }];
+        } else {
+          day.householdActivities = [];
+        }
+      }
+      
+      const newActivity = { minutes: data.minutes, time: data.householdTime || '' };
+      
+      if (editIndex !== null && editIndex >= 0 && editIndex < day.householdActivities.length) {
+        // Редактирование существующей
+        day.householdActivities[editIndex] = newActivity;
+      } else {
+        // Добавление новой
+        day.householdActivities.push(newActivity);
+      }
+      
+      // Обновляем legacy поля для совместимости
+      day.householdMin = day.householdActivities.reduce((sum, h) => sum + (+h.minutes || 0), 0);
+      day.householdTime = day.householdActivities[0]?.time || '';
       day.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, day);
       
       // Уведомляем о изменении дня
       window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-        detail: { date: dateKey, field: 'householdMin', value: data.minutes, source: 'household-step' }
+        detail: { 
+          date: dateKey, 
+          field: 'householdActivities', 
+          value: day.householdActivities, 
+          householdMin: day.householdMin,
+          householdTime: day.householdTime,
+          source: 'household-step', 
+          forceReload: true 
+        }
+      }));
+    },
+    xpAction: 'household_logged'
+  });
+
+  // Регистрация шага 2: Статистика бытовой активности (read-only)
+  registerStep('household_stats', {
+    title: 'Статистика',
+    hint: 'Ваш прогресс',
+    icon: '📊',
+    component: HouseholdStatsComponent,
+    canSkip: true,
+    skipLabel: 'Готово',
+    getInitialData: (ctx, prevData) => {
+      // Получаем данные от предыдущего шага (household_minutes)
+      const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
+      const day = lsGet(`heys_dayv2_${dateKey}`, {});
+      // Приоритет: данные от предыдущего шага > данные из storage
+      const minutes = prevData?.minutes ?? day.householdMin ?? 0;
+      const householdTime = prevData?.householdTime ?? day.householdTime ?? '';
+      return { minutes, householdTime, dateKey };
+    }
+    // НЕТ save — это read-only шаг для показа статистики
+  });
+
+  // Регистрация комбинированного шага (для обратной совместимости)
+  registerStep('household', {
+    title: 'Бытовая активность',
+    hint: 'Время на ногах помимо тренировок',
+    icon: '🏠',
+    component: HouseholdMinutesComponent,  // Показываем только минуты в старом режиме
+    getInitialData: (ctx) => {
+      const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
+      const day = lsGet(`heys_dayv2_${dateKey}`, {});
+      const weekly = getWeeklyHouseholdStats();
+      const minutes = day.householdMin || weekly.avg || 0;
+      const householdTime = day.householdTime || '';
+      return { minutes, householdTime, dateKey };
+    },
+    save: (data) => {
+      const dateKey = data.dateKey || new Date().toISOString().slice(0, 10);
+      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      day.householdMin = data.minutes;
+      day.householdTime = data.householdTime || '';
+      day.updatedAt = Date.now();
+      lsSet(`heys_dayv2_${dateKey}`, day);
+      
+      // Уведомляем о изменении дня
+      window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+        detail: { date: dateKey, field: 'householdMin', value: data.minutes, householdTime: data.householdTime, source: 'household-step' }
       }));
     },
     xpAction: 'household_logged'
@@ -1687,7 +1836,8 @@
     SleepQuality: SleepQualityStepComponent,
     StepsGoal: StepsGoalStepComponent,
     Deficit: DeficitStepComponent,
-    Household: HouseholdStepComponent,
+    HouseholdMinutes: HouseholdMinutesComponent,
+    HouseholdStats: HouseholdStatsComponent,
     Cycle: CycleStepComponent,
     Measurements: MeasurementsStepComponent,
     getLastMeasurementByField,
@@ -1707,6 +1857,6 @@
     shouldShowCycleStep
   };
 
-  console.log('[HEYS] Steps registered: weight, sleepTime, sleepQuality, stepsGoal, deficit, household, cycle, measurements');
+  console.log('[HEYS] Steps registered: weight, sleepTime, sleepQuality, stepsGoal, deficit, household_minutes, household_stats, cycle, measurements');
 
 })(typeof window !== 'undefined' ? window : global);

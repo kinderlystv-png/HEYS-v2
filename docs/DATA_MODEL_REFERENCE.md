@@ -50,6 +50,7 @@
 | `deficitPct` | number | Процент дефицита/профицита (дефицит = отрицательное число) | `-15` |
 | `steps` | number | Количество шагов | `8500` |
 | `householdMin` | number | Домашняя активность (минуты) | `30` |
+| `householdTime` | string | Время бытовой активности (HH:MM), для расчёта инсулиновых волн | `"14:00"` |
 | `dayScore` | number | Оценка дня (1-10) | `8` |
 | `moodAvg` | number | Среднее настроение за день (1-10) | `7.5` |
 | `wellbeingAvg` | number | Среднее самочувствие за день (1-10) | `7.2` |
@@ -567,6 +568,7 @@ HEYS.Cycle.getWeightNormalizationForecast(cycleDay) // {daysUntilNormal, message
 | `waterGoal` | waterGoalBreakdown | Динамическая норма воды |
 | `pIndex.byId.get()` | buildProductIndex | Индекс продуктов |
 | `day.householdMin` | DayRecord | Минуты домашней активности |
+| `day.householdTime` | DayRecord | Время бытовой активности (HH:MM) |
 | `day.steps` | DayRecord | Шаги за день |
 | `day.sleepQuality` | DayRecord | Качество сна (1-5) |
 | `day.trainings[].type` | Training | Тип тренировки |

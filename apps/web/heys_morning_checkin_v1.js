@@ -116,16 +116,22 @@
    */
   function getCheckinSteps(profile) {
     const steps = [];
+    let hasProfileSteps = false;
     
     // 1. Проверяем профиль для новых пользователей
     if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
       if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
         steps.push('profile-personal', 'profile-body', 'profile-goals', 'profile-metabolism');
+        hasProfileSteps = true;
       }
     }
     
     // 2. Стандартные шаги чек-ина
-    steps.push('weight', 'sleepTime', 'sleepQuality');
+    // Пропускаем weight если есть profile-шаги (вес уже указан в wizard)
+    if (!hasProfileSteps) {
+      steps.push('weight');
+    }
+    steps.push('sleepTime', 'sleepQuality');
     
     // 3. Условные шаги
     if (HEYS.Steps && HEYS.Steps.shouldShowCycleStep && HEYS.Steps.shouldShowCycleStep()) {
