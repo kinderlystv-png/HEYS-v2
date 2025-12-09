@@ -755,21 +755,59 @@
       const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
       const newProducts = [...products, parsedPreview];
       
+      // 🔍 DEBUG: Логируем состояние перед сохранением
+      console.log('[CreateProductStep] 🔍 DEBUG: HEYS.products =', !!HEYS.products, 
+        '| setAll =', typeof HEYS.products?.setAll,
+        '| HEYS.store =', !!HEYS.store,
+        '| store.set =', typeof HEYS.store?.set,
+        '| currentClientId =', HEYS.currentClientId?.substring?.(0, 8) || 'undefined');
+      
       // Сохраняем через HEYS.products (React state + localStorage + cloud sync)
       // или через HEYS.store.set (localStorage + cloud sync)
       // ⚠️ ВАЖНО: Не использовать U.lsSet — он не синхронизирует с облаком!
+      let savedMethod = 'none';
       if (HEYS.products?.setAll) {
         HEYS.products.setAll(newProducts);
+        savedMethod = 'HEYS.products.setAll';
       } else if (HEYS.store?.set) {
         // Используем store.set для синхронизации с облаком
-        HEYS.store.set('products', newProducts);
+        // ИСПРАВЛЕНО: 'heys_products' вместо 'products'
+        HEYS.store.set('heys_products', newProducts);
+        savedMethod = 'HEYS.store.set';
       } else if (U.lsSet) {
         // Fallback: только localStorage (без облака)
         U.lsSet('heys_products', newProducts);
+        savedMethod = 'U.lsSet (LOCAL ONLY!)';
         console.warn('[CreateProductStep] ⚠️ Продукт сохранён только локально (нет HEYS.store)');
       }
       
-      console.log('[CreateProductStep] Продукт сохранён:', parsedPreview.name, 'Всего продуктов:', newProducts.length);
+      console.log('[CreateProductStep] ✅ Продукт сохранён:', parsedPreview.name, 
+        '| Метод:', savedMethod,
+        '| Всего продуктов:', newProducts.length,
+        '| clientId:', HEYS.currentClientId?.substring?.(0, 8) || 'undefined');
+      
+      // 🔍 ВЕРИФИКАЦИЯ: Проверяем что продукт действительно сохранился
+      setTimeout(() => {
+        const verifyProducts = HEYS.products?.getAll?.() || [];
+        const found = verifyProducts.find(p => 
+          p.name?.toLowerCase() === parsedPreview.name?.toLowerCase() ||
+          p.id === parsedPreview.id
+        );
+        if (found) {
+          console.log('[CreateProductStep] ✅ VERIFIED: Продукт найден в базе после сохранения');
+        } else {
+          console.error('🚨 [CreateProductStep] CRITICAL: Продукт НЕ найден в базе после сохранения!', {
+            productName: parsedPreview.name,
+            productsCount: verifyProducts.length,
+            savedMethod
+          });
+          // Попытка повторного сохранения
+          if (HEYS.products?.setAll && newProducts.length > 0) {
+            console.log('[CreateProductStep] 🔄 Retry save...');
+            HEYS.products.setAll(newProducts);
+          }
+        }
+      }, 500);
       
       // 🔄 Пересчитываем orphan-продукты (новый продукт мог быть orphan)
       if (HEYS.orphanProducts?.recalculate) {

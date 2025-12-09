@@ -117,19 +117,35 @@
       });
       const lsSet = U.lsSet || ((k, v) => localStorage.setItem(k, JSON.stringify(v)));
       
-      // Получаем текущие продукты (ключ = name)
+      // Получаем текущие продукты (ключ = name LOWERCASE для консистентности с getDayData)
       const products = lsGet('heys_products', []);
       const productsMap = new Map();
+      const productsById = new Map(); // Для восстановления по id
       products.forEach(p => {
         if (p && p.name) {
-          const name = String(p.name).trim();
+          const name = String(p.name).trim().toLowerCase();
           if (name) productsMap.set(name, p);
+          if (p.id) productsById.set(String(p.id), p);
         }
       });
       
       // Собираем orphan-продукты из всех дней
+      // Ключи могут быть: heys_dayv2_YYYY-MM-DD (legacy) или heys_<clientId>_dayv2_YYYY-MM-DD
       const restored = [];
-      const keys = Object.keys(localStorage).filter(k => k.includes('heys_dayv2_'));
+      const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
+      
+      console.log(`[HEYS] Searching for orphan products in ${keys.length} day records...`);
+      console.log(`[HEYS] Products in local DB: ${products.length}, productsMap size: ${productsMap.size}`);
+      
+      // Debug: показать какие orphan продукты мы ищем
+      const orphanNames = Array.from(orphanProductsMap.keys());
+      if (orphanNames.length > 0) {
+        console.log(`[HEYS] Known orphan products: ${orphanNames.join(', ')}`);
+      }
+      
+      let checkedItems = 0;
+      let foundWithData = 0;
+      let alreadyInBase = 0;
       
       for (const key of keys) {
         try {
@@ -138,12 +154,27 @@
           
           for (const meal of day.meals) {
             for (const item of (meal.items || [])) {
+              checkedItems++;
               const itemName = String(item.name || '').trim();
+              const itemNameLower = itemName.toLowerCase();
+              if (!itemName) continue;
+              
+              const hasData = item.kcal100 != null;
+              const inBase = productsMap.has(itemNameLower) || (item.product_id && productsById.has(String(item.product_id)));
+              
+              if (hasData) foundWithData++;
+              if (inBase) alreadyInBase++;
+              
+              // Debug: показать orphan-продукты с данными
+              if (orphanNames.includes(itemName) || orphanNames.some(n => n.toLowerCase() === itemNameLower)) {
+                console.log(`[HEYS] Orphan "${itemName}" in ${key}: hasData=${hasData}, inBase=${inBase}, kcal100=${item.kcal100}`);
+              }
+              
               // Если продукта нет в базе по имени И есть inline данные
-              if (itemName && !productsMap.has(itemName) && item.kcal100 != null) {
+              if (itemName && !inBase && hasData) {
                 const restoredProduct = {
                   id: item.product_id || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
-                  name: itemName,
+                  name: itemName, // Сохраняем оригинальное имя
                   kcal100: item.kcal100,
                   protein100: item.protein100 || 0,
                   fat100: item.fat100 || 0,
@@ -159,7 +190,7 @@
                   restoredAt: Date.now(),
                   restoredFrom: 'orphan_stamp'
                 };
-                productsMap.set(itemName, restoredProduct);
+                productsMap.set(itemNameLower, restoredProduct);
                 restored.push(restoredProduct);
                 console.log(`[HEYS] Восстановлен: "${itemName}"`);
               }
@@ -170,10 +201,20 @@
         }
       }
       
+      console.log(`[HEYS] Restore stats: checked=${checkedItems}, withData=${foundWithData}, alreadyInBase=${alreadyInBase}, restored=${restored.length}`);
+      
       if (restored.length > 0) {
         // Сохраняем обновлённую базу
         const newProducts = Array.from(productsMap.values());
-        lsSet('heys_products', newProducts);
+        
+        // Используем HEYS.products.setAll для синхронизации с облаком и React state
+        if (HEYS.products?.setAll) {
+          HEYS.products.setAll(newProducts);
+          console.log('[HEYS] Products saved via HEYS.products.setAll (cloud sync enabled)');
+        } else {
+          lsSet('heys_products', newProducts);
+          console.warn('[HEYS] ⚠️ Products saved via lsSet only (no cloud sync)');
+        }
         
         // Очищаем orphan-трекинг
         this.clear();
@@ -181,6 +222,13 @@
         // Обновляем индекс продуктов если есть
         if (HEYS.products?.buildSearchIndex) {
           HEYS.products.buildSearchIndex();
+        }
+        
+        // Уведомляем UI об обновлении продуктов
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('heysProductsUpdated', { 
+            detail: { products: newProducts, restored: restored.length } 
+          }));
         }
         
         console.log(`✅ Восстановлено ${restored.length} продуктов в базу`);

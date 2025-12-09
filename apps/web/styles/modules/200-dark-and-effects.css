@@ -891,6 +891,52 @@
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
 }
 
+/* Zone Formula Popup - Dark Mode */
+[data-theme="dark"] .zone-formula-backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .zone-formula-popup {
+  background: rgba(28, 28, 30, 0.98);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .zone-formula-header {
+  border-bottom-color: #38383a;
+}
+
+[data-theme="dark"] .zone-formula-name {
+  color: #f2f2f7;
+}
+
+[data-theme="dark"] .zone-formula-label {
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .zone-formula-value {
+  color: #f2f2f7;
+}
+
+[data-theme="dark"] .zone-formula-calc {
+  background: #2c2c2e;
+}
+
+[data-theme="dark"] .zone-formula-expression {
+  color: #8e8e93;
+}
+
+[data-theme="dark"] .zone-formula-hint {
+  color: #636366;
+}
+
+[data-theme="dark"] .zone-formula-edit-btn {
+  background: linear-gradient(135deg, #0a84ff, #0066cc);
+}
+
+[data-theme="dark"] .tap-hint {
+  color: #636366;
+}
+
 [data-theme="dark"] .time-picker-header {
   border-bottom-color: #38383a;
 }

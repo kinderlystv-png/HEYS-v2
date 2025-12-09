@@ -4121,6 +4121,12 @@
     // Значения минут: 0-120
     const zoneMinutesValues = useMemo(() => Array.from({length: 121}, (_, i) => String(i)), []);
     
+    // === Zone Formula Popup ===
+    const [zoneFormulaPopup, setZoneFormulaPopup] = useState(null); // {ti, zi, x, y}
+    
+    // === Household Formula Popup ===
+    const [householdFormulaPopup, setHouseholdFormulaPopup] = useState(null); // {hi, x, y}
+    
     // === Sleep Quality Picker Modal ===
     const [showSleepQualityPicker, setShowSleepQualityPicker] = useState(false);
     const [pendingSleepQuality, setPendingSleepQuality] = useState(0);
@@ -4519,6 +4525,59 @@
       setZonePickerTarget(null);
     }
     
+    // === Zone Formula Popup ===
+    const zoneNames = ['Восстановление', 'Жиросжигание', 'Аэробная', 'Анаэробная'];
+    const POPUP_WIDTH = 240;
+    const POPUP_HEIGHT = 220;
+    
+    function showZoneFormula(trainingIndex, zoneIndex, event) {
+      event.stopPropagation();
+      const rect = event.currentTarget.getBoundingClientRect();
+      // Используем getSmartPopupPosition для умного позиционирования
+      const pos = getSmartPopupPosition(
+        rect.left + rect.width / 2,
+        rect.bottom,
+        POPUP_WIDTH,
+        POPUP_HEIGHT,
+        { offset: 8 }
+      );
+      setZoneFormulaPopup({
+        ti: trainingIndex,
+        zi: zoneIndex,
+        left: pos.left,
+        top: pos.top,
+        showAbove: pos.showAbove
+      });
+    }
+    
+    function closeZoneFormula() {
+      setZoneFormulaPopup(null);
+    }
+    
+    // === Household Formula Popup functions ===
+    function showHouseholdFormula(householdIndex, event) {
+      event.stopPropagation();
+      const rect = event.currentTarget.getBoundingClientRect();
+      // Используем getSmartPopupPosition для умного позиционирования
+      const pos = getSmartPopupPosition(
+        rect.left + rect.width / 2,
+        rect.bottom,
+        POPUP_WIDTH,
+        POPUP_HEIGHT,
+        { offset: 8 }
+      );
+      setHouseholdFormulaPopup({
+        hi: householdIndex,
+        left: pos.left,
+        top: pos.top,
+        showAbove: pos.showAbove
+      });
+    }
+    
+    function closeHouseholdFormula() {
+      setHouseholdFormulaPopup(null);
+    }
+
     // === Training Picker functions ===
     function openTrainingPicker(trainingIndex) {
       // Используем новую модалку TrainingStep (StepModal)
@@ -5806,7 +5865,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               return React.createElement('span', { 
                 key: 'z' + zi, 
                 className: 'compact-zone-inline' + (hasValue ? ' has-value' : ''),
-                onClick: () => openZonePicker(ti, zi)
+                onClick: (e) => showZoneFormula(ti, zi, e)
               },
                 React.createElement('span', { className: 'zone-label' }, 'Z' + (zi + 1)),
                 React.createElement('span', { className: 'zone-value' }, hasValue ? T.z[zi] : '—'),
@@ -5814,14 +5873,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               );
             })
           ),
-          // Нижняя строка: длительность + компактные оценки
-          (hasDuration || hasRatings) && React.createElement('div', { className: 'compact-train-footer' },
+          // Нижняя строка: длительность + компактные оценки + подсказка
+          React.createElement('div', { className: 'compact-train-footer' },
             hasDuration && React.createElement('span', { className: 'train-duration-badge' }, '⏱ ' + totalMinutes + ' мин'),
             hasRatings && React.createElement('div', { className: 'train-ratings-inline' },
               moodEmoji && React.createElement('span', { className: 'train-rating-mini mood', title: 'Настроение' }, moodEmoji + ' ' + T.mood),
               wellbeingEmoji && React.createElement('span', { className: 'train-rating-mini wellbeing', title: 'Самочувствие' }, wellbeingEmoji + ' ' + T.wellbeing),
               stressEmoji && React.createElement('span', { className: 'train-rating-mini stress', title: 'Усталость' }, stressEmoji + ' ' + T.stress)
-            )
+            ),
+            React.createElement('span', { className: 'tap-hint' }, '✏️ Нажми для изменения')
           ),
           // Комментарий (если есть)
           T.comment && React.createElement('div', { className: 'training-card-comment' },
@@ -5845,7 +5905,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             h.time && React.createElement('span', { className: 'compact-train-time' }, h.time),
             // Группа badge + remove справа
             React.createElement('div', { className: 'compact-right-group' },
-              React.createElement('span', { className: 'compact-badge household' }, hKcal + ' ккал'),
+              React.createElement('span', { 
+                className: 'compact-badge household clickable',
+                onClick: (e) => showHouseholdFormula(hi, e)
+              }, hKcal + ' ккал'),
               React.createElement('button', {
                 className: 'compact-train-remove',
                 onClick: (e) => { e.stopPropagation(); removeHousehold(hi); },
@@ -5855,7 +5918,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           ),
           React.createElement('div', { className: 'compact-household-details' },
             React.createElement('span', { className: 'household-detail' }, '⏱ ' + h.minutes + ' мин'),
-            h.time && React.createElement('span', { className: 'household-detail muted' }, '⚡ Учтено в волнах')
+            React.createElement('span', { className: 'household-detail tap-hint' }, '✏️ Нажми для изменения')
           )
         );
       })
@@ -15147,6 +15210,133 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 }, preset + 'г')
               )
             )
+          )
+        ),
+        document.body
+      ),
+      
+      // Zone Formula Popup (показывает формулу расчёта калорий зоны)
+      zoneFormulaPopup && ReactDOM.createPortal(
+        React.createElement('div', { 
+          className: 'zone-formula-backdrop',
+          onClick: closeZoneFormula
+        },
+          React.createElement('div', { 
+            className: 'zone-formula-popup' + (zoneFormulaPopup.showAbove ? ' show-above' : ''),
+            style: {
+              position: 'fixed',
+              left: zoneFormulaPopup.left + 'px',
+              top: zoneFormulaPopup.top + 'px'
+            },
+            onClick: e => e.stopPropagation()
+          },
+            (() => {
+              const zi = zoneFormulaPopup.zi;
+              const ti = zoneFormulaPopup.ti;
+              const T = TR[ti] || { z: [0, 0, 0, 0] };
+              const minutes = +T.z[zi] || 0;
+              const met = mets[zi] || [2.5, 6, 8, 10][zi];
+              const kcal = r0(minutes * kcalPerMin(met, weight));
+              
+              return React.createElement(React.Fragment, null,
+                React.createElement('div', { className: 'zone-formula-header' },
+                  React.createElement('span', { className: 'zone-formula-badge' }, 'Z' + (zi + 1)),
+                  React.createElement('span', { className: 'zone-formula-name' }, zoneNames[zi])
+                ),
+                React.createElement('div', { className: 'zone-formula-values' },
+                  React.createElement('div', { className: 'zone-formula-row' },
+                    React.createElement('span', { className: 'zone-formula-label' }, 'MET'),
+                    React.createElement('span', { className: 'zone-formula-value' }, met)
+                  ),
+                  React.createElement('div', { className: 'zone-formula-row' },
+                    React.createElement('span', { className: 'zone-formula-label' }, 'Вес'),
+                    React.createElement('span', { className: 'zone-formula-value' }, weight + ' кг')
+                  ),
+                  React.createElement('div', { className: 'zone-formula-row' },
+                    React.createElement('span', { className: 'zone-formula-label' }, 'Минуты'),
+                    React.createElement('span', { className: 'zone-formula-value' }, minutes + ' мин')
+                  )
+                ),
+                React.createElement('div', { className: 'zone-formula-calc' },
+                  React.createElement('div', { className: 'zone-formula-expression' },
+                    minutes + ' × ' + met + ' × ' + weight + ' × 0.0175 − 1'
+                  ),
+                  React.createElement('div', { className: 'zone-formula-result' },
+                    '= ' + kcal + ' ккал'
+                  )
+                ),
+                React.createElement('button', { 
+                  className: 'zone-formula-edit-btn',
+                  onClick: () => {
+                    closeZoneFormula();
+                    openTrainingPicker(ti);
+                  }
+                }, '✏️ Изменить')
+              );
+            })()
+          )
+        ),
+        document.body
+      ),
+      
+      // Household Formula Popup (показывает формулу расчёта калорий бытовой активности)
+      householdFormulaPopup && ReactDOM.createPortal(
+        React.createElement('div', { 
+          className: 'zone-formula-backdrop',
+          onClick: closeHouseholdFormula
+        },
+          React.createElement('div', { 
+            className: 'zone-formula-popup' + (householdFormulaPopup.showAbove ? ' show-above' : ''),
+            style: {
+              position: 'fixed',
+              left: householdFormulaPopup.left + 'px',
+              top: householdFormulaPopup.top + 'px'
+            },
+            onClick: e => e.stopPropagation()
+          },
+            (() => {
+              const hi = householdFormulaPopup.hi;
+              const h = householdActivities[hi] || { minutes: 0 };
+              const minutes = +h.minutes || 0;
+              const met = 2.5;
+              const kcal = r0(minutes * kcalPerMin(met, weight));
+              
+              return React.createElement(React.Fragment, null,
+                React.createElement('div', { className: 'zone-formula-header' },
+                  React.createElement('span', { className: 'zone-formula-badge household' }, '🏠'),
+                  React.createElement('span', { className: 'zone-formula-name' }, 'Бытовая активность')
+                ),
+                React.createElement('div', { className: 'zone-formula-values' },
+                  React.createElement('div', { className: 'zone-formula-row' },
+                    React.createElement('span', { className: 'zone-formula-label' }, 'MET'),
+                    React.createElement('span', { className: 'zone-formula-value' }, met + ' (лёгкая)')
+                  ),
+                  React.createElement('div', { className: 'zone-formula-row' },
+                    React.createElement('span', { className: 'zone-formula-label' }, 'Вес'),
+                    React.createElement('span', { className: 'zone-formula-value' }, weight + ' кг')
+                  ),
+                  React.createElement('div', { className: 'zone-formula-row' },
+                    React.createElement('span', { className: 'zone-formula-label' }, 'Минуты'),
+                    React.createElement('span', { className: 'zone-formula-value' }, minutes + ' мин')
+                  )
+                ),
+                React.createElement('div', { className: 'zone-formula-calc' },
+                  React.createElement('div', { className: 'zone-formula-expression' },
+                    minutes + ' × ' + met + ' × ' + weight + ' × 0.0175 − 1'
+                  ),
+                  React.createElement('div', { className: 'zone-formula-result' },
+                    '= ' + kcal + ' ккал'
+                  )
+                ),
+                React.createElement('button', { 
+                  className: 'zone-formula-edit-btn',
+                  onClick: () => {
+                    closeHouseholdFormula();
+                    openHouseholdPicker('edit', hi);
+                  }
+                }, '✏️ Изменить')
+              );
+            })()
           )
         ),
         document.body

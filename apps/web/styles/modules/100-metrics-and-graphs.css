@@ -3930,6 +3930,147 @@
   padding-bottom: 16px;
 }
 
+/* Zone Formula Popup */
+.zone-formula-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.15s ease;
+}
+
+.zone-formula-popup {
+  background: var(--color-white);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  padding: 16px;
+  min-width: 200px;
+  max-width: 280px;
+  animation: zoneFormulaFadeIn 0.15s ease-out;
+}
+
+@keyframes zoneFormulaFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.zone-formula-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-slate-100);
+}
+
+.zone-formula-badge {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.zone-formula-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--color-slate-700);
+}
+
+.zone-formula-values {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.zone-formula-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.zone-formula-label {
+  color: var(--color-slate-500);
+}
+
+.zone-formula-value {
+  font-weight: 600;
+  color: var(--color-slate-700);
+}
+
+.zone-formula-calc {
+  background: var(--color-slate-50);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.zone-formula-expression {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 12px;
+  color: var(--color-slate-500);
+  margin-bottom: 4px;
+}
+
+.zone-formula-result {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f97316;
+}
+
+.zone-formula-hint {
+  font-size: 12px;
+  color: var(--color-slate-400);
+  text-align: center;
+}
+
+.zone-formula-edit-btn {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.zone-formula-edit-btn:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.zone-formula-badge.household {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+/* Кликабельный badge калорий */
+.compact-badge.clickable {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.compact-badge.clickable:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+/* Подсказка "нажми для изменения" */
+.tap-hint {
+  font-size: 11px;
+  color: var(--color-slate-400);
+  font-style: italic;
+  margin-left: auto;
+}
+
+.household-detail.tap-hint {
+  margin-left: auto;
+}
+
 /* Training Picker Modal */
 .training-picker-modal {
   max-width: 340px;

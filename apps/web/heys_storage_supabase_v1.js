@@ -1915,21 +1915,43 @@
             if (Array.isArray(currentLocal) && currentLocal.length > 0 && Array.isArray(remoteProducts) && remoteProducts.length > 0) {
               const merged = mergeProductsData(currentLocal, remoteProducts);
               
-              // 🛡️ ЗАЩИТА: Никогда не уменьшаем количество продуктов!
-              // Если локальных больше чем merged — значит sync "опоздал" и пытается удалить новые продукты
-              if (currentLocal.length > merged.length) {
-                logCritical(`⚠️ [PRODUCTS SYNC] BLOCKED: local (${currentLocal.length}) > merged (${merged.length}). Keeping local.`);
-                // Отправляем локальные в облако чтобы синхронизировать
+              // 🔧 ИСПРАВЛЕНИЕ: Подсчитываем уникальные локальные продукты для корректного сравнения
+              // (т.к. mergeProductsData делает дедупликацию внутри, сравнение с raw currentLocal некорректно)
+              const localUniqueCount = new Set(currentLocal.filter(p => p && p.name).map(p => String(p.name).trim().toLowerCase())).size;
+              
+              // 🛡️ ЗАЩИТА: Проверяем потерю УНИКАЛЬНЫХ продуктов (не дублей)
+              // Если уникальных локальных больше чем merged — значит sync "опоздал" и пытается удалить новые продукты
+              if (localUniqueCount > merged.length) {
+                logCritical(`⚠️ [PRODUCTS SYNC] BLOCKED: localUnique (${localUniqueCount}) > merged (${merged.length}). Keeping local.`);
+                // Отправляем локальные в облако чтобы синхронизировать (после дедупликации)
+                // Используем merged как источник — он содержит все уникальные продукты
+                const localDeduped = [];
+                const seenNames = new Set();
+                for (const p of currentLocal) {
+                  if (!p || !p.name) continue;
+                  const key = String(p.name).trim().toLowerCase();
+                  if (!seenNames.has(key)) {
+                    seenNames.add(key);
+                    localDeduped.push(p);
+                  }
+                }
                 const localUpsertObj = {
                   user_id: user.id,
                   client_id: client_id,
                   k: row.k,
-                  v: currentLocal,
+                  v: localDeduped, // Отправляем дедуплицированные!
                   updated_at: (new Date()).toISOString(),
                 };
                 clientUpsertQueue.push(localUpsertObj);
                 scheduleClientPush();
-                return; // Не перезаписываем localStorage
+                // Сохраняем дедуплицированные локально
+                ls.setItem(key, JSON.stringify(localDeduped));
+                return;
+              }
+              
+              // Если дедупликация убрала дубли — это OK, сохраняем merged
+              if (currentLocal.length > merged.length && localUniqueCount === merged.length) {
+                log(`🧹 [PRODUCTS] Deduplication cleaned ${currentLocal.length - merged.length} duplicates`);
               }
               
               // Если merge добавил новые продукты — сохраняем и синхронизируем обратно в облако

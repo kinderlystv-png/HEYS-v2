@@ -25,11 +25,13 @@ vite v4.5.14 building for production...
 <script src="heys_cycle_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_step_modal_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_steps_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_profile_step_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_meal_step_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_add_product_step_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_training_step_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_morning_checkin_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_day_v12.js?v=11"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_confirm_modal_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_day_v12.js?v=12"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_user_v12.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_reports_v12.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_data_overview_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
@@ -39,10 +41,10 @@ transforming...
 rendering chunks...
 computing gzip size...
 dist/assets/heys_simple_analytics-b3f08726.js      10.31 kB
-dist/index.html                                    11.04 kB │ gzip:  3.13 kB
-dist/assets/heys_models_v1-4127bfbf.js             23.53 kB
+dist/index.html                                    11.33 kB │ gzip:  3.22 kB
+dist/assets/heys_models_v1-7ee33a9e.js             24.09 kB
 dist/assets/heys_core_v12-e592678c.js              55.89 kB
-dist/assets/heys_storage_supabase_v1-74866c4f.js  139.55 kB
-dist/assets/index-0589edeb.css                    390.81 kB │ gzip: 66.50 kB
+dist/assets/heys_storage_supabase_v1-e8ea745e.js  145.65 kB
+dist/assets/index-d1a4767a.css                    406.13 kB │ gzip: 68.95 kB
 [vite-plugin-static-copy] Copied 1 items.
-✓ built in 891ms
+✓ built in 1.83s
