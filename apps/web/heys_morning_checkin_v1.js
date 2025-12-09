@@ -111,36 +111,62 @@
   }
 
   /**
+   * Централизованная функция для получения списка шагов чек-ина
+   * Используется и в MorningCheckin, и в showCheckin.morning()
+   */
+  function getCheckinSteps(profile) {
+    const steps = [];
+    
+    // 1. Проверяем профиль для новых пользователей
+    if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
+      if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
+        steps.push('profile-personal', 'profile-body', 'profile-goals', 'profile-metabolism');
+        console.log('[MorningCheckin] Profile incomplete, adding profile steps');
+      }
+    }
+    
+    // 2. Стандартные шаги чек-ина
+    steps.push('weight', 'sleepTime', 'sleepQuality');
+    
+    // 3. Условные шаги
+    if (HEYS.Steps && HEYS.Steps.shouldShowCycleStep && HEYS.Steps.shouldShowCycleStep()) {
+      steps.push('cycle');
+    }
+    if (HEYS.Steps && HEYS.Steps.shouldShowMeasurements && HEYS.Steps.shouldShowMeasurements()) {
+      steps.push('measurements');
+    }
+    
+    // 4. Завершающий шаг
+    steps.push('stepsGoal');
+    
+    return steps;
+  }
+
+  /**
    * MorningCheckin — обёртка над новым StepModal
-   * Использует шаги: weight, sleepTime, sleepQuality, [measurements], stepsGoal
-   * Шаг measurements показывается условно — если прошло ≥7 дней
+   * Использует шаги: [profile-steps], weight, sleepTime, sleepQuality, [measurements], stepsGoal
    */
   function MorningCheckin({ onComplete }) {
     // Если StepModal доступен — используем его
     if (HEYS.StepModal && HEYS.StepModal.Component) {
-      // Базовые шаги
-      const steps = ['weight', 'sleepTime', 'sleepQuality'];
+      const U = HEYS.utils || {};
+      const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+      const hadProfileSteps = HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete && HEYS.ProfileSteps.isProfileIncomplete(profile);
+      const steps = getCheckinSteps(profile);
       
-      // Условно добавляем особый период (если включён в профиле)
-      const shouldShowCycle = HEYS.Steps && HEYS.Steps.shouldShowCycleStep && HEYS.Steps.shouldShowCycleStep();
-      console.log('[MorningCheckin] shouldShowCycle:', shouldShowCycle, 'profile:', HEYS.utils?.lsGet?.('heys_profile', {}));
-      if (shouldShowCycle) {
-        steps.push('cycle');
-      }
+      console.log('[MorningCheckin] Final steps:', steps, 'profileCompleted:', profile.profileCompleted, 'hadProfileSteps:', hadProfileSteps);
       
-      // Условно добавляем замеры (если прошло ≥7 дней)
-      if (HEYS.Steps && HEYS.Steps.shouldShowMeasurements && HEYS.Steps.shouldShowMeasurements()) {
-        steps.push('measurements');
-      }
-      
-      // Завершающий шаг
-      steps.push('stepsGoal');
-      
-      console.log('[MorningCheckin] Final steps:', steps);
+      // Обёртка для onComplete: показать поздравления если были profile-шаги
+      const wrappedOnComplete = () => {
+        if (hadProfileSteps && HEYS.ProfileSteps && HEYS.ProfileSteps.showCongratulationsModal) {
+          HEYS.ProfileSteps.showCongratulationsModal();
+        }
+        if (onComplete) onComplete();
+      };
       
       return React.createElement(HEYS.StepModal.Component, {
         steps: steps,
-        onComplete: onComplete,
+        onComplete: wrappedOnComplete,
         showProgress: true,
         showStreak: true,
         showGreeting: true,
@@ -177,24 +203,22 @@
     // Полный утренний чек-ин
     morning: (onComplete) => {
       if (HEYS.StepModal) {
-        // Базовые шаги
-        const steps = ['weight', 'sleepTime', 'sleepQuality'];
+        const U = HEYS.utils || {};
+        const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+        const hadProfileSteps = HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete && HEYS.ProfileSteps.isProfileIncomplete(profile);
+        const steps = getCheckinSteps(profile);
         
-        // Условно добавляем особый период (если включён в профиле)
-        if (HEYS.Steps && HEYS.Steps.shouldShowCycleStep && HEYS.Steps.shouldShowCycleStep()) {
-          steps.push('cycle');
-        }
-        
-        // Условно добавляем замеры
-        if (HEYS.Steps && HEYS.Steps.shouldShowMeasurements && HEYS.Steps.shouldShowMeasurements()) {
-          steps.push('measurements');
-        }
-        
-        steps.push('stepsGoal');
+        // Обёртка для onComplete: показать поздравления если были profile-шаги
+        const wrappedOnComplete = () => {
+          if (hadProfileSteps && HEYS.ProfileSteps && HEYS.ProfileSteps.showCongratulationsModal) {
+            HEYS.ProfileSteps.showCongratulationsModal();
+          }
+          if (onComplete) onComplete();
+        };
         
         HEYS.StepModal.show({
           steps,
-          onComplete
+          onComplete: wrappedOnComplete
         });
       }
     },
