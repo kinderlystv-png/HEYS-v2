@@ -1383,7 +1383,7 @@
     GramsStep,
     CreateProductStep,
     getCategoryIcon,
-    computePopularProducts
+    computeSmartProducts
   };
 
   console.log('[HEYS] AddProductStep v1 loaded');
