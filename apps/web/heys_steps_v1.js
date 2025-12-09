@@ -204,6 +204,7 @@
 
     const hoursValues = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
     const minutesValues = useMemo(() => [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55], []);
+    const pad2 = (v) => String(v).padStart(2, '0');
 
     const update = (field, value) => {
       onChange({ 
@@ -229,14 +230,18 @@
               values: hoursValues,
               value: sleepStartH,
               onChange: (v) => update('sleepStartH', v),
-              label: 'ч'
+              label: 'ч',
+              formatValue: pad2,
+              wrap: true
             }),
             React.createElement('span', { className: 'mc-time-sep' }, ':'),
             React.createElement(WheelPicker, {
               values: minutesValues,
               value: sleepStartM,
               onChange: (v) => update('sleepStartM', v),
-              label: 'мин'
+              label: 'мин',
+              formatValue: pad2,
+              wrap: true
             })
           )
         ),
@@ -247,14 +252,18 @@
               values: hoursValues,
               value: sleepEndH,
               onChange: (v) => update('sleepEndH', v),
-              label: 'ч'
+              label: 'ч',
+              formatValue: pad2,
+              wrap: true
             }),
             React.createElement('span', { className: 'mc-time-sep' }, ':'),
             React.createElement(WheelPicker, {
               values: minutesValues,
               value: sleepEndM,
               onChange: (v) => update('sleepEndM', v),
-              label: 'мин'
+              label: 'мин',
+              formatValue: pad2,
+              wrap: true
             })
           )
         )

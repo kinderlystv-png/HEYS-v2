@@ -184,39 +184,104 @@
   }
 
   // ============================================================
+  // HintTooltip — попап-подсказка (не сдвигает контент)
+  // ============================================================
+  
+  function HintTooltip({ show, onClose, children, position = 'bottom' }) {
+    if (!show) return null;
+    
+    const positionStyles = {
+      bottom: { top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: '8px' },
+      top: { bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '8px' },
+      left: { right: '100%', top: '50%', transform: 'translateY(-50%)', marginRight: '8px' },
+      right: { left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: '8px' }
+    };
+    
+    return React.createElement('div', {
+      className: 'absolute z-50',
+      style: { ...positionStyles[position], minWidth: '200px', maxWidth: '280px' }
+    },
+      React.createElement('div', {
+        className: 'bg-white rounded-xl shadow-lg border border-gray-200 p-3 text-xs text-gray-600',
+        style: { animation: 'fadeIn 0.15s ease-out' },
+        onClick: (e) => e.stopPropagation()
+      },
+        children,
+        React.createElement('button', {
+          type: 'button',
+          onClick: onClose,
+          className: 'absolute -top-2 -right-2 w-5 h-5 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 text-xs flex items-center justify-center transition-colors'
+        }, '×')
+      ),
+      // Backdrop для закрытия
+      React.createElement('div', {
+        className: 'fixed inset-0 z-[-1]',
+        onClick: onClose
+      })
+    );
+  }
+
+  // ============================================================
   // ШАГ 1: PERSONAL (имя, пол, дата рождения, цикл)
   // ============================================================
 
   function ProfilePersonalComponent({ data, onChange }) {
     const [showCycleHint, setShowCycleHint] = useState(false);
     const [showBirthDateHint, setShowBirthDateHint] = useState(false);
+    
+    // Получаем WheelPicker из StepModal
+    const WheelPicker = HEYS.StepModal?.WheelPicker;
 
     const firstName = data.firstName || '';
     const gender = data.gender || 'Мужской';
-    const birthDate = data.birthDate || '';
     const cycleTrackingEnabled = data.cycleTrackingEnabled || false;
-
-    const age = birthDate ? calcAgeFromBirthDate(birthDate) : 0;
+    
+    // Разбираем дату на компоненты
+    const currentYear = new Date().getFullYear();
+    const birthDay = data.birthDay || 1;
+    const birthMonth = data.birthMonth || 1;
+    const birthYear = data.birthYear || (currentYear - 25); // дефолт 25 лет
+    
+    // Собираем дату в ISO формат для совместимости
+    const birthDate = `${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`;
+    
+    const age = calcAgeFromBirthDate(birthDate);
     const isFemale = gender === 'Женский';
+    
+    // Значения для пикеров
+    const daysInMonth = new Date(birthYear, birthMonth, 0).getDate();
+    const dayValues = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [daysInMonth]);
+    const monthValues = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], []);
+    const yearValues = useMemo(() => {
+      const years = [];
+      for (let y = currentYear - 10; y >= 1940; y--) years.push(y);
+      return years;
+    }, [currentYear]);
+    
+    const monthNames = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+    const formatMonth = (m) => monthNames[m - 1];
+    const pad2 = (v) => String(v).padStart(2, '0');
 
     return React.createElement('div', { className: 'flex flex-col gap-6 p-4' },
-      // Имя (optional)
+      // Имя (обязательно)
       React.createElement('div', { className: 'flex flex-col gap-2' },
-        React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '👤 Как вас зовут? (необязательно)'),
+        React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '👤 Как вас зовут? *'),
         React.createElement('input', {
           type: 'text',
           value: firstName,
           onChange: (e) => onChange({ ...data, firstName: e.target.value }),
           placeholder: 'Ваше имя',
-          className: 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent'
+          className: `w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+            !firstName.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+          }`
         })
       ),
 
-      // Пол (обязательно)
+      // Пол (обязательно) - только Мужской/Женский
       React.createElement('div', { className: 'flex flex-col gap-2' },
         React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '👤 Пол *'),
-        React.createElement('div', { className: 'grid grid-cols-3 gap-3' },
-          ['Мужской', 'Женский', 'Другое'].map(g =>
+        React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
+          ['Мужской', 'Женский'].map(g =>
             React.createElement('button', {
               key: g,
               type: 'button',
@@ -237,66 +302,104 @@
         )
       ),
 
-      // Дата рождения (обязательно)
-      React.createElement('div', { className: 'flex flex-col gap-2' },
-        React.createElement('div', { className: 'flex items-center gap-2' },
-          React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '🎂 Дата рождения *'),
-          React.createElement('button', {
-            type: 'button',
-            onClick: () => setShowBirthDateHint(!showBirthDateHint),
-            className: 'text-xs text-gray-500 hover:text-emerald-600 transition-colors'
-          }, '?')
+      // Дата рождения (WheelPickers v2)
+      React.createElement('div', { className: 'flex flex-col gap-3' },
+        React.createElement('div', { className: 'flex items-center justify-between' },
+          React.createElement('div', { className: 'flex items-center gap-2 relative' },
+            React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '🎂 Дата рождения *'),
+            React.createElement('button', {
+              type: 'button',
+              onClick: () => setShowBirthDateHint(!showBirthDateHint),
+              className: 'w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs font-medium hover:bg-emerald-100 hover:text-emerald-600 transition-colors flex items-center justify-center'
+            }, '?'),
+            React.createElement(HintTooltip, {
+              show: showBirthDateHint,
+              onClose: () => setShowBirthDateHint(false)
+            },
+              'Возраст влияет на норму сна и потребность в белке.',
+              React.createElement('br'),
+              React.createElement('span', { className: 'text-[10px] text-gray-400 mt-1 block' }, 'Источник: National Sleep Foundation, 2015')
+            )
+          ),
+          age > 0 && React.createElement('span', { 
+            className: 'text-lg font-bold text-emerald-600'
+          }, `${age} лет`)
         ),
-        showBirthDateHint && React.createElement('div', {
-          className: 'text-xs text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200',
-          style: { animation: 'fadeIn 0.2s ease-out' }
-        },
-          'Возраст влияет на норму сна и потребность в белке.',
-          React.createElement('br'),
-          React.createElement('span', { className: 'text-[10px] text-gray-500' }, 'Источник: National Sleep Foundation, 2015; Examine.com')
-        ),
-        React.createElement('input', {
+        // WheelPickers: День / Месяц / Год
+        WheelPicker ? React.createElement('div', { className: 'flex justify-center gap-2 bg-gray-50 rounded-xl p-4' },
+          // День
+          React.createElement(WheelPicker, {
+            values: dayValues,
+            value: birthDay,
+            onChange: (v) => onChange({ ...data, birthDay: v }),
+            label: 'день',
+            formatValue: pad2,
+            wrap: true
+          }),
+          // Месяц
+          React.createElement(WheelPicker, {
+            values: monthValues,
+            value: birthMonth,
+            onChange: (v) => onChange({ ...data, birthMonth: v }),
+            label: 'месяц',
+            formatValue: formatMonth,
+            wrap: true
+          }),
+          // Год
+          React.createElement(WheelPicker, {
+            values: yearValues,
+            value: birthYear,
+            onChange: (v) => onChange({ ...data, birthYear: v }),
+            label: 'год',
+            wrap: false
+          })
+        ) : React.createElement('input', {
           type: 'date',
           value: birthDate,
-          onChange: (e) => onChange({ ...data, birthDate: e.target.value }),
+          onChange: (e) => {
+            const [y, m, d] = e.target.value.split('-').map(Number);
+            onChange({ ...data, birthYear: y, birthMonth: m, birthDay: d });
+          },
           max: new Date().toISOString().split('T')[0],
-          className: 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent'
-        }),
-        age > 0 && React.createElement('p', { className: 'text-sm text-gray-600' }, `(${age} лет)`)
+          className: 'w-full px-4 py-3 border border-gray-300 rounded-xl'
+        })
       ),
 
-      // Трекинг цикла (только для женщин)
-      isFemale && React.createElement('div', { className: 'flex flex-col gap-2' },
-        React.createElement('div', { className: 'flex items-center gap-2' },
-          React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '🌸 Отслеживать менструальный цикл?'),
-          React.createElement('button', {
-            type: 'button',
-            onClick: () => setShowCycleHint(!showCycleHint),
-            className: 'text-xs text-gray-500 hover:text-emerald-600 transition-colors'
-          }, '?')
+      // Активация трекинга особого периода (только для женщин)
+      isFemale && React.createElement('div', { 
+        className: 'flex items-center justify-between p-3 bg-pink-50 rounded-xl border border-pink-200',
+        style: { animation: 'fadeIn 0.3s ease-out' }
+      },
+        React.createElement('div', { className: 'flex flex-col gap-0.5' },
+          React.createElement('div', { className: 'flex items-center gap-2 relative' },
+            React.createElement('span', { className: 'text-xs font-medium text-gray-700' }, '🌸 Учитывать особый период?'),
+            React.createElement('button', {
+              type: 'button',
+              onClick: () => setShowCycleHint(!showCycleHint),
+              className: 'w-4 h-4 rounded-full bg-pink-200 text-pink-600 text-[10px] font-medium hover:bg-pink-300 transition-colors flex items-center justify-center'
+            }, '?'),
+            React.createElement(HintTooltip, {
+              show: showCycleHint,
+              onClose: () => setShowCycleHint(false)
+            }, 'HEYS адаптирует калории и воду под фазы цикла. Можно изменить позже в настройках.')
+          ),
+          React.createElement('span', { className: 'text-[11px] text-gray-500' }, 
+            cycleTrackingEnabled ? '✓ Нормы будут адаптироваться' : 'Включите, чтобы учесть в расчётах'
+          )
         ),
-        showCycleHint && React.createElement('div', {
-          className: 'text-xs text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200',
-          style: { animation: 'fadeIn 0.2s ease-out' }
-        },
-          'HEYS адаптирует нормы калорий и воды под фазы цикла.',
-          React.createElement('br'),
-          'Можно включить позже в профиле.'
-        ),
-        React.createElement('button', {
-          type: 'button',
-          onClick: () => {
-            onChange({ ...data, cycleTrackingEnabled: !cycleTrackingEnabled });
-            if (typeof navigator !== 'undefined' && navigator.vibrate) {
-              navigator.vibrate(10);
+        React.createElement('label', { className: 'toggle-switch', style: { transform: 'scale(0.85)' } },
+          React.createElement('input', {
+            type: 'checkbox',
+            checked: cycleTrackingEnabled,
+            onChange: (e) => {
+              onChange({ ...data, cycleTrackingEnabled: e.target.checked });
+              if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                navigator.vibrate(10);
+              }
             }
-          },
-          className: `px-6 py-3 rounded-xl border-2 font-medium transition-all ${
-            cycleTrackingEnabled
-              ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-              : 'border-gray-300 bg-white text-gray-700'
-          }`
-        }, cycleTrackingEnabled ? '✓ Включено' : 'Выключено')
+          }),
+          React.createElement('span', { className: 'toggle-slider' })
+        )
       )
     );
   }
@@ -308,22 +411,57 @@
     component: ProfilePersonalComponent,
     getInitialData: () => {
       const profile = lsGet('heys_profile', {});
+      const currentYear = new Date().getFullYear();
+      
+      // Парсим существующую дату если есть
+      let birthDay = 1, birthMonth = 1, birthYear = currentYear - 25;
+      if (profile.birthDate) {
+        const [y, m, d] = profile.birthDate.split('-').map(Number);
+        if (y && m && d) {
+          birthYear = y;
+          birthMonth = m;
+          birthDay = d;
+        }
+      }
+      
       return {
         firstName: profile.firstName || '',
         gender: profile.gender || 'Мужской',
-        birthDate: profile.birthDate || '',
-        cycleTrackingEnabled: profile.cycleTrackingEnabled || false
+        birthDay,
+        birthMonth,
+        birthYear,
+        // По умолчанию включён для женщин (можно выключить)
+        cycleTrackingEnabled: profile.cycleTrackingEnabled !== undefined ? profile.cycleTrackingEnabled : true
       };
     },
     validate: (data) => {
+      if (!data.firstName || !data.firstName.trim()) return 'Пожалуйста, укажите имя';
       if (!data.gender) return 'Пожалуйста, укажите пол';
-      if (!data.birthDate) return 'Пожалуйста, укажите дату рождения';
+      if (!data.birthYear || !data.birthMonth || !data.birthDay) return 'Пожалуйста, укажите дату рождения';
+      return true;
+    },
+    getValidationMessage: (data) => {
+      if (!data.firstName || !data.firstName.trim()) return 'Укажите ваше имя';
+      if (!data.gender) return 'Выберите пол';
+      if (!data.birthYear || !data.birthMonth || !data.birthDay) return 'Укажите дату рождения';
       return null;
+    },
+    save: (data) => {
+      // Собираем дату в ISO формат перед сохранением
+      const birthDate = `${data.birthYear}-${String(data.birthMonth).padStart(2, '0')}-${String(data.birthDay).padStart(2, '0')}`;
+      const profile = lsGet('heys_profile', {});
+      profile.firstName = data.firstName;
+      profile.gender = data.gender;
+      profile.birthDate = birthDate;
+      profile.cycleTrackingEnabled = data.cycleTrackingEnabled;
+      // Вычисляем возраст
+      profile.age = calcAgeFromBirthDate(birthDate);
+      lsSet('heys_profile', profile);
     }
   });
 
   // ============================================================
-  // ШАГ 2: BODY (вес, рост, целевой вес)
+  // ШАГ 2: BODY (вес, рост, целевой вес) — компактная раскладка
   // ============================================================
 
   function ProfileBodyComponent({ data, onChange }) {
@@ -340,77 +478,79 @@
     const weightValues = useMemo(() => Array.from({ length: 171 }, (_, i) => 30 + i), []);
     const heightValues = useMemo(() => Array.from({ length: 111 }, (_, i) => 120 + i), []);
 
-    return React.createElement('div', { className: 'flex flex-col gap-6 p-4' },
-      // Текущий вес
-      React.createElement('div', { className: 'flex flex-col gap-2' },
-        React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '⚖️ Текущий вес (кг) *'),
-        React.createElement(WheelPicker, {
-          values: weightValues,
-          value: weight,
-          onChange: (v) => onChange({ ...data, weight: v }),
-          label: 'кг'
-        })
-      ),
-
-      // Рост
-      React.createElement('div', { className: 'flex flex-col gap-2' },
-        React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '📏 Рост (см) *'),
-        React.createElement(WheelPicker, {
-          values: heightValues,
-          value: height,
-          onChange: (v) => onChange({ ...data, height: v }),
-          label: 'см'
-        })
-      ),
-
-      // BMI (показывается автоматически)
-      bmi > 0 && React.createElement('div', {
-        className: 'bg-gray-50 rounded-xl p-4 border border-gray-200'
-      },
-        React.createElement('div', { className: 'flex justify-between items-center' },
-          React.createElement('span', { className: 'text-sm text-gray-600' }, '📊 ИМТ:'),
-          React.createElement('span', {
-            className: 'font-medium',
-            style: { color: bmiCat.color }
-          }, `${bmi.toFixed(1)} — ${bmiCat.label}`)
+    return React.createElement('div', { className: 'flex flex-col gap-4 p-4' },
+      // === Ряд 1: Вес и Рост в 2 колонки ===
+      React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+        // Текущий вес
+        React.createElement('div', { className: 'flex flex-col gap-1' },
+          React.createElement('label', { className: 'text-xs font-medium text-gray-600' }, '⚖️ Вес *'),
+          React.createElement(WheelPicker, {
+            values: weightValues,
+            value: weight,
+            onChange: (v) => onChange({ ...data, weight: v }),
+            label: 'кг',
+            height: 120
+          })
+        ),
+        // Рост
+        React.createElement('div', { className: 'flex flex-col gap-1' },
+          React.createElement('label', { className: 'text-xs font-medium text-gray-600' }, '📏 Рост *'),
+          React.createElement(WheelPicker, {
+            values: heightValues,
+            value: height,
+            onChange: (v) => onChange({ ...data, height: v }),
+            label: 'см',
+            height: 120
+          })
         )
       ),
 
-      // Целевой вес
-      React.createElement('div', { className: 'flex flex-col gap-2' },
-        React.createElement('div', { className: 'flex items-center gap-2' },
-          React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '🎯 Целевой вес (кг) *'),
+      // === BMI — компактный бейдж ===
+      bmi > 0 && React.createElement('div', {
+        className: 'flex items-center justify-center gap-2 py-2 px-4 rounded-lg',
+        style: { backgroundColor: bmiCat.color + '15' }
+      },
+        React.createElement('span', { className: 'text-xs text-gray-600' }, '📊 ИМТ:'),
+        React.createElement('span', {
+          className: 'text-sm font-semibold',
+          style: { color: bmiCat.color }
+        }, `${bmi.toFixed(1)} — ${bmiCat.label}`)
+      ),
+
+      // === Ряд 2: Целевой вес ===
+      React.createElement('div', { className: 'flex flex-col gap-1' },
+        React.createElement('div', { className: 'flex items-center justify-center gap-2 relative' },
+          React.createElement('label', { className: 'text-xs font-medium text-gray-600' }, '🎯 Целевой вес *'),
           React.createElement('button', {
             type: 'button',
             onClick: () => setShowGoalHint(!showGoalHint),
-            className: 'text-xs text-gray-500 hover:text-emerald-600 transition-colors'
-          }, '?')
-        ),
-        showGoalHint && React.createElement('div', {
-          className: 'text-xs text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200',
-          style: { animation: 'fadeIn 0.2s ease-out' }
-        },
-          'Безопасная скорость: 0.5-1 кг/неделю.',
-          React.createElement('br'),
-          React.createElement('span', { className: 'text-[10px] text-gray-500' }, 'Источник: CDC, NHS guidelines')
+            className: 'w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-[10px] font-medium hover:bg-emerald-100 hover:text-emerald-600 transition-colors flex items-center justify-center'
+          }, '?'),
+          React.createElement(HintTooltip, {
+            show: showGoalHint,
+            onClose: () => setShowGoalHint(false)
+          },
+            'Безопасная скорость: 0.5-1 кг/неделю.',
+            React.createElement('br'),
+            React.createElement('span', { className: 'text-[10px] text-gray-400 mt-1 block' }, 'Источник: CDC, NHS guidelines')
+          )
         ),
         React.createElement(WheelPicker, {
           values: weightValues,
           value: weightGoal,
           onChange: (v) => onChange({ ...data, weightGoal: v }),
-          label: 'кг'
+          label: 'кг',
+          height: 120
         })
       ),
 
-      // Прогноз (показывается автоматически)
+      // === Прогноз — компактный ===
       Math.abs(weightDiff) >= 0.5 && React.createElement('div', {
-        className: 'bg-emerald-50 rounded-xl p-4 border border-emerald-200'
+        className: 'flex items-center justify-center gap-2 py-2 px-4 bg-emerald-50 rounded-lg border border-emerald-200'
       },
-        React.createElement('div', { className: 'text-sm' },
-          React.createElement('span', { className: 'text-gray-600' }, '⏱ Осталось: '),
-          React.createElement('span', { className: 'font-medium text-emerald-700' },
-            `${Math.abs(weightDiff).toFixed(1)} кг`
-          )
+        React.createElement('span', { className: 'text-xs text-gray-600' }, '⏱ Осталось:'),
+        React.createElement('span', { className: 'text-sm font-semibold text-emerald-700' },
+          `${Math.abs(weightDiff).toFixed(1)} кг`
         )
       )
     );
@@ -432,6 +572,12 @@
     validate: (data) => {
       if (!data.weight || data.weight < 30) return 'Укажите корректный вес';
       if (!data.height || data.height < 120) return 'Укажите корректный рост';
+      if (!data.weightGoal || data.weightGoal < 30) return 'Укажите целевой вес';
+      return true;
+    },
+    getValidationMessage: (data) => {
+      if (!data.weight || data.weight < 30) return 'Укажите вес (мин. 30 кг)';
+      if (!data.height || data.height < 120) return 'Укажите рост (мин. 120 см)';
       if (!data.weightGoal || data.weightGoal < 30) return 'Укажите целевой вес';
       return null;
     }
@@ -502,23 +648,27 @@
                     )
                   )
                 ),
-                (preset.value === -20 || preset.value === 15) && React.createElement('button', {
-                  type: 'button',
-                  onClick: (e) => {
-                    e.stopPropagation();
-                    toggleHint(`goal_${preset.value}`);
+                (preset.value === -20 || preset.value === 15) && React.createElement('div', { className: 'relative' },
+                  React.createElement('button', {
+                    type: 'button',
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      toggleHint(`goal_${preset.value}`);
+                    },
+                    className: 'w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs font-medium hover:bg-emerald-100 hover:text-emerald-600 transition-colors flex items-center justify-center'
+                  }, '?'),
+                  React.createElement(HintTooltip, {
+                    show: showHints[`goal_${preset.value}`],
+                    onClose: () => toggleHint(`goal_${preset.value}`),
+                    position: 'left'
                   },
-                  className: 'text-gray-500 hover:text-emerald-600 text-sm'
-                }, '?')
+                    preset.value === -20 
+                      ? 'Быстрый результат, сложнее удержать. Белок 1.6-2.4 г/кг.'
+                      : 'Профицит для роста мышц. Белок 1.6-2.2 г/кг + тренировки.',
+                    React.createElement('span', { className: 'text-[10px] text-gray-400 block mt-1' }, 'Источник: ISSN Position Stand, 2017')
+                  )
+                )
               )
-            ),
-            showHints[`goal_${preset.value}`] && React.createElement('div', {
-              className: 'mt-2 text-xs text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200',
-              style: { animation: 'fadeIn 0.2s ease-out' }
-            },
-              preset.value === -20 
-                ? 'Быстрый результат, сложнее удержать. Белок 1.6-2.4 г/кг. Источник: ISSN Position Stand, 2017'
-                : 'Профицит для роста мышц. Белок 1.6-2.2 г/кг + тренировки. Источник: ISSN Position Stand, 2017'
             )
           )
         )
@@ -557,6 +707,12 @@
       if (data.deficitPctTarget === undefined || data.deficitPctTarget === null) {
         return 'Пожалуйста, выберите цель';
       }
+      return true;
+    },
+    getValidationMessage: (data) => {
+      if (data.deficitPctTarget === undefined || data.deficitPctTarget === null) {
+        return 'Выберите вашу цель';
+      }
       return null;
     }
   });
@@ -594,21 +750,20 @@
     return React.createElement('div', { className: 'flex flex-col gap-6 p-4' },
       // Норма сна
       React.createElement('div', { className: 'flex flex-col gap-2' },
-        React.createElement('div', { className: 'flex items-center gap-2' },
+        React.createElement('div', { className: 'flex items-center gap-2 relative' },
           React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '💤 Норма сна (часов)'),
           React.createElement('button', {
             type: 'button',
             onClick: () => setShowSleepHint(!showSleepHint),
-            className: 'text-xs text-gray-500 hover:text-emerald-600 transition-colors'
-          }, '?')
-        ),
-        showSleepHint && React.createElement('div', {
-          className: 'text-xs text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200',
-          style: { animation: 'fadeIn 0.2s ease-out' }
-        },
-          `Рассчитано по возрасту: ${sleepNorm.explanation}.`,
-          React.createElement('br'),
-          React.createElement('span', { className: 'text-[10px] text-gray-500' }, 'Источник: National Sleep Foundation, 2015')
+            className: 'w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs font-medium hover:bg-emerald-100 hover:text-emerald-600 transition-colors flex items-center justify-center'
+          }, '?'),
+          React.createElement(HintTooltip, {
+            show: showSleepHint,
+            onClose: () => setShowSleepHint(false)
+          },
+            `Рассчитано по возрасту: ${sleepNorm.explanation}.`,
+            React.createElement('span', { className: 'text-[10px] text-gray-400 block mt-1' }, 'Источник: National Sleep Foundation, 2015')
+          )
         ),
         React.createElement('div', { className: 'bg-emerald-50 rounded-xl p-3 border border-emerald-200 mb-2' },
           React.createElement('div', { className: 'text-sm text-gray-700' },
@@ -625,21 +780,20 @@
 
       // Инсулиновая волна
       React.createElement('div', { className: 'flex flex-col gap-2' },
-        React.createElement('div', { className: 'flex items-center gap-2' },
+        React.createElement('div', { className: 'flex items-center gap-2 relative' },
           React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '⏱ Инсулиновая волна'),
           React.createElement('button', {
             type: 'button',
             onClick: () => setShowInsulinHint(!showInsulinHint),
-            className: 'text-xs text-gray-500 hover:text-emerald-600 transition-colors'
-          }, '?')
-        ),
-        showInsulinHint && React.createElement('div', {
-          className: 'text-xs text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200',
-          style: { animation: 'fadeIn 0.2s ease-out' }
-        },
-          'Период после еды, когда организм накапливает энергию. Жиросжигание начинается после его окончания.',
-          React.createElement('br'),
-          React.createElement('span', { className: 'text-[10px] text-gray-500' }, 'Источник: Ludwig et al., JAMA 2018')
+            className: 'w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs font-medium hover:bg-emerald-100 hover:text-emerald-600 transition-colors flex items-center justify-center'
+          }, '?'),
+          React.createElement(HintTooltip, {
+            show: showInsulinHint,
+            onClose: () => setShowInsulinHint(false)
+          },
+            'Период после еды, когда организм накапливает энергию. Жиросжигание начинается после его окончания.',
+            React.createElement('span', { className: 'text-[10px] text-gray-400 block mt-1' }, 'Источник: Ludwig et al., JAMA 2018')
+          )
         ),
         
         // Карточки пресетов
@@ -674,23 +828,25 @@
                     ),
                     React.createElement('div', { className: 'text-xs text-gray-500 mt-1' }, preset.desc)
                   ),
-                  preset.value === 4.5 && React.createElement('button', {
-                    type: 'button',
-                    onClick: (e) => {
-                      e.stopPropagation();
-                      toggleInsulinPresetHint(preset.value);
+                  preset.value === 4.5 && React.createElement('div', { className: 'relative' },
+                    React.createElement('button', {
+                      type: 'button',
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        toggleInsulinPresetHint(preset.value);
+                      },
+                      className: 'w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs font-medium hover:bg-emerald-100 hover:text-emerald-600 transition-colors flex items-center justify-center'
+                    }, '?'),
+                    React.createElement(HintTooltip, {
+                      show: showInsulinPresetHints[preset.value],
+                      onClose: () => toggleInsulinPresetHint(preset.value),
+                      position: 'left'
                     },
-                    className: 'text-gray-500 hover:text-emerald-600 text-sm'
-                  }, '?')
+                      'При инсулинорезистентности волна длиннее. Рекомендуется консультация врача.',
+                      React.createElement('span', { className: 'text-[10px] text-gray-400 block mt-1' }, 'Источник: DeFronzo, 1979')
+                    )
+                  )
                 )
-              ),
-              showInsulinPresetHints[preset.value] && React.createElement('div', {
-                className: 'mt-2 text-xs text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200',
-                style: { animation: 'fadeIn 0.2s ease-out' }
-              },
-                'При инсулинорезистентности волна длиннее. Рекомендуется консультация врача.',
-                React.createElement('br'),
-                React.createElement('span', { className: 'text-[10px] text-gray-500' }, 'Источник: DeFronzo, 1979')
               )
             );
           })
@@ -716,6 +872,10 @@
     },
     validate: (data) => {
       if (!data.insulinWaveHours) return 'Пожалуйста, выберите тип метаболизма';
+      return true;
+    },
+    getValidationMessage: (data) => {
+      if (!data.insulinWaveHours) return 'Выберите тип метаболизма';
       return null;
     },
     save: (data, allStepsData) => {

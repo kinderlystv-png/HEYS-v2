@@ -2121,6 +2121,25 @@
   color: var(--color-slate-500);
 }
 
+/* Compact mode — 3 значения вместо 5, меньше высота */
+.mc-wheel-picker--compact .mc-wheel-values {
+  height: 100px;
+}
+
+.mc-wheel-picker--compact .mc-wheel-value--current {
+  font-size: 26px;
+}
+
+.mc-wheel-picker--compact .mc-wheel-value--prev,
+.mc-wheel-picker--compact .mc-wheel-value--next {
+  font-size: 14px;
+  height: 24px;
+}
+
+.mc-wheel-picker--compact .mc-wheel-suffix {
+  font-size: 12px;
+}
+
 /* Sleep display v2 */
 .mc-sleep-display {
   text-align: center;

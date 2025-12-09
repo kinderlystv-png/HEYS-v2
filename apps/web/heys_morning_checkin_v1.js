@@ -121,7 +121,6 @@
     if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
       if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
         steps.push('profile-personal', 'profile-body', 'profile-goals', 'profile-metabolism');
-        console.log('[MorningCheckin] Profile incomplete, adding profile steps');
       }
     }
     
@@ -153,8 +152,6 @@
       const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
       const hadProfileSteps = HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete && HEYS.ProfileSteps.isProfileIncomplete(profile);
       const steps = getCheckinSteps(profile);
-      
-      console.log('[MorningCheckin] Final steps:', steps, 'profileCompleted:', profile.profileCompleted, 'hadProfileSteps:', hadProfileSteps);
       
       // Обёртка для onComplete: показать поздравления если были profile-шаги
       const wrappedOnComplete = () => {

@@ -141,22 +141,35 @@
   }
 
   // === WheelPicker (переиспользуемый) ===
-  function WheelPicker({ values, value, onChange, label, suffix = '', currentSuffix = null }) {
+  function WheelPicker({ values, value, onChange, label, suffix = '', currentSuffix = null, formatValue = null, wrap = false, height = null, compact = false }) {
     const containerRef = useRef(null);
     const currentIndex = values.indexOf(value);
+    const len = values.length;
     // currentSuffix — единицы для центрального значения (кг, ч), suffix — для остальных
     const displaySuffix = currentSuffix !== null ? currentSuffix : suffix;
+    // formatValue — функция форматирования (например, для ведущего нуля)
+    const fmt = formatValue || ((v) => v);
+    
+    // Компактный режим (3 значения вместо 5)
+    const showFar = !compact && !height;
+    
+    // Циклический индекс
+    const wrapIndex = (i) => ((i % len) + len) % len;
 
     // Wheel scroll event (самый простой способ на десктопе)
+    // Примечание: не используем preventDefault — React использует passive listeners
     const handleWheel = useCallback((e) => {
-      e.preventDefault();
-      e.stopPropagation();
       const direction = e.deltaY > 0 ? 1 : -1;
-      const newIndex = Math.max(0, Math.min(values.length - 1, currentIndex + direction));
+      let newIndex;
+      if (wrap) {
+        newIndex = wrapIndex(currentIndex + direction);
+      } else {
+        newIndex = Math.max(0, Math.min(len - 1, currentIndex + direction));
+      }
       if (newIndex !== currentIndex) {
         onChange(values[newIndex]);
       }
-    }, [values, currentIndex, onChange]);
+    }, [values, currentIndex, onChange, wrap, len]);
 
     // Touch drag
     const touchState = useRef({ active: false, startY: 0, startIndex: 0 });
@@ -174,41 +187,62 @@
       // Не вызываем preventDefault - это вызывает ошибку passive listener
       const deltaY = touchState.current.startY - e.touches[0].clientY;
       const steps = Math.round(deltaY / 30);
-      const newIndex = Math.max(0, Math.min(values.length - 1, touchState.current.startIndex + steps));
+      let newIndex;
+      if (wrap) {
+        newIndex = wrapIndex(touchState.current.startIndex + steps);
+      } else {
+        newIndex = Math.max(0, Math.min(len - 1, touchState.current.startIndex + steps));
+      }
       if (newIndex !== currentIndex) {
         onChange(values[newIndex]);
       }
-    }, [values, currentIndex, onChange]);
+    }, [values, currentIndex, onChange, wrap, len]);
 
     const handleTouchEnd = useCallback(() => {
       touchState.current.active = false;
     }, []);
 
-    // Click на соседние значения
+    // Click на соседние значения (с циклом)
     const handleClickPrev = useCallback(() => {
-      if (currentIndex > 0) onChange(values[currentIndex - 1]);
-    }, [values, currentIndex, onChange]);
+      const newIndex = wrap ? wrapIndex(currentIndex - 1) : Math.max(0, currentIndex - 1);
+      if (newIndex !== currentIndex) onChange(values[newIndex]);
+    }, [values, currentIndex, onChange, wrap]);
 
     const handleClickNext = useCallback(() => {
-      if (currentIndex < values.length - 1) onChange(values[currentIndex + 1]);
-    }, [values, currentIndex, onChange]);
+      const newIndex = wrap ? wrapIndex(currentIndex + 1) : Math.min(len - 1, currentIndex + 1);
+      if (newIndex !== currentIndex) onChange(values[newIndex]);
+    }, [values, currentIndex, onChange, wrap, len]);
 
     const handleClickPrev2 = useCallback(() => {
-      if (currentIndex > 1) onChange(values[currentIndex - 2]);
-    }, [values, currentIndex, onChange]);
+      const newIndex = wrap ? wrapIndex(currentIndex - 2) : Math.max(0, currentIndex - 2);
+      if (newIndex !== currentIndex) onChange(values[newIndex]);
+    }, [values, currentIndex, onChange, wrap]);
 
     const handleClickNext2 = useCallback(() => {
-      if (currentIndex < values.length - 2) onChange(values[currentIndex + 2]);
-    }, [values, currentIndex, onChange]);
+      const newIndex = wrap ? wrapIndex(currentIndex + 2) : Math.min(len - 1, currentIndex + 2);
+      if (newIndex !== currentIndex) onChange(values[newIndex]);
+    }, [values, currentIndex, onChange, wrap, len]);
 
-    const prev2Index = Math.max(0, currentIndex - 2);
-    const prevIndex = Math.max(0, currentIndex - 1);
-    const nextIndex = Math.min(values.length - 1, currentIndex + 1);
-    const next2Index = Math.min(values.length - 1, currentIndex + 2);
+    // Индексы для отображения (с циклом)
+    const prev2Index = wrap ? wrapIndex(currentIndex - 2) : Math.max(0, currentIndex - 2);
+    const prevIndex = wrap ? wrapIndex(currentIndex - 1) : Math.max(0, currentIndex - 1);
+    const nextIndex = wrap ? wrapIndex(currentIndex + 1) : Math.min(len - 1, currentIndex + 1);
+    const next2Index = wrap ? wrapIndex(currentIndex + 2) : Math.min(len - 1, currentIndex + 2);
+    
+    // Показывать ли соседние значения (для не-циклического режима скрываем края)
+    const showPrev2 = (wrap || currentIndex > 1) && showFar;
+    const showPrev = wrap || currentIndex > 0;
+    const showNext = wrap || currentIndex < len - 1;
+    const showNext2 = (wrap || currentIndex < len - 2) && showFar;
+
+    // Стиль для компактного режима
+    const containerStyle = height ? { height: `${height}px` } : {};
+    const compactClass = (compact || height) ? 'mc-wheel-picker--compact' : '';
 
     return React.createElement('div', {
-      className: 'mc-wheel-picker',
+      className: `mc-wheel-picker ${compactClass}`.trim(),
       ref: containerRef,
+      style: containerStyle,
       onTouchStart: handleTouchStart,
       onTouchMove: handleTouchMove,
       onTouchEnd: handleTouchEnd,
@@ -216,26 +250,31 @@
     },
       React.createElement('div', { className: 'mc-wheel-label' }, label),
       React.createElement('div', { className: 'mc-wheel-values' },
-        React.createElement('div', {
+        // Far prev (только если не compact)
+        showFar && React.createElement('div', {
           className: 'mc-wheel-value mc-wheel-value--far',
           onClick: handleClickPrev2
-        }, currentIndex > 1 ? values[prev2Index] + suffix : ''),
+        }, showPrev2 ? fmt(values[prev2Index]) + suffix : ''),
+        // Prev
         React.createElement('div', {
           className: 'mc-wheel-value mc-wheel-value--prev',
           onClick: handleClickPrev
-        }, currentIndex > 0 ? values[prevIndex] + suffix : ''),
+        }, showPrev ? fmt(values[prevIndex]) + suffix : ''),
+        // Current
         React.createElement('div', { className: 'mc-wheel-value mc-wheel-value--current' },
-          value,
+          fmt(value),
           displaySuffix && React.createElement('span', { className: 'mc-wheel-suffix' }, displaySuffix)
         ),
+        // Next
         React.createElement('div', {
           className: 'mc-wheel-value mc-wheel-value--next',
           onClick: handleClickNext
-        }, currentIndex < values.length - 1 ? values[nextIndex] + suffix : ''),
-        React.createElement('div', {
+        }, showNext ? fmt(values[nextIndex]) + suffix : ''),
+        // Far next (только если не compact)
+        showFar && React.createElement('div', {
           className: 'mc-wheel-value mc-wheel-value--far',
           onClick: handleClickNext2
-        }, currentIndex < values.length - 2 ? values[next2Index] + suffix : '')
+        }, showNext2 ? fmt(values[next2Index]) + suffix : '')
       )
     );
   }
