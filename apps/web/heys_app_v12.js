@@ -3058,7 +3058,8 @@
             }, []);
             
             // Вычисляем activeDays для DatePicker (после объявления clientId и products)
-            // Пересчитывается когда: меняется дата, clientId, products, syncVer (данные дня) или ЗАВЕРШАЕТСЯ синхронизация
+            // 🔒 ОПТИМИЗАЦИЯ: Убрали syncVer из зависимостей — он менялся слишком часто и вызывал мерцание
+            // Пересчитывается только когда: меняется месяц (selectedDate), клиент, продукты или завершается инициализация
             const datePickerActiveDays = React.useMemo(() => {
               // Fallback chain для products: props → HEYS.products.getAll() → localStorage
               const effectiveProducts = (products && products.length > 0) ? products
@@ -3091,7 +3092,7 @@
                 // Тихий fallback — activeDays для календаря не критичны
                 return new Map();
               }
-            }, [selectedDate, clientId, products, isInitializing, syncVer]);
+            }, [selectedDate, clientId, products, isInitializing]);
 
             const downloadBackupFile = React.useCallback((payload, activeClientId, timestamp) => {
               try {

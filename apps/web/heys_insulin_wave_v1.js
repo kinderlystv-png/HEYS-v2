@@ -704,6 +704,247 @@
     }
   };
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🏋️ calculateActivityContext — определение контекста активности для приёма
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * 🏋️ Определить контекст активности для приёма пищи (v3.4.0)
+   * 
+   * Анализирует время приёма относительно тренировок и возвращает лучший контекст.
+   * Контексты проверяются по приоритету (peri > post > pre > steps > morning/double).
+   * 
+   * @param {Object} params - параметры
+   * @param {number} params.mealTimeMin - время приёма в минутах от полуночи
+   * @param {Array} params.trainings - массив тренировок дня [{z:[...], time:'HH:MM', type}]
+   * @param {number} params.steps - шаги за день
+   * @param {number} params.weight - вес пользователя (кг)
+   * @param {Array} [params.allMeals] - все приёмы дня (для проверки fasted)
+   * @param {Object} [params.mealNutrients] - нутриенты текущего приёма {prot, carbs, simple}
+   * @param {number} [params.mealKcal] - калории приёма
+   * @returns {Object|null} - контекст активности или null
+   */
+  const calculateActivityContext = (params) => {
+    const { mealTimeMin, trainings = [], steps = 0, weight = 70, allMeals = [], mealNutrients = {}, mealKcal = 0 } = params;
+    
+    if (!mealTimeMin && mealTimeMin !== 0) return null;
+    
+    // Используем helpers из HEYS.models если доступны
+    const M = (typeof HEYS !== 'undefined' && HEYS.models) ? HEYS.models : {};
+    const getTrainingInterval = M.getTrainingInterval || ((t) => {
+      // Fallback если модуль не загружен
+      const [h, m] = (t.time || '12:00').split(':').map(Number);
+      const startMin = h * 60 + m;
+      const dur = (t.z || []).reduce((a, b) => a + b, 0) || 30;
+      return { startMin, endMin: startMin + dur, durationMin: dur };
+    });
+    const getTrainingIntensityType = M.getTrainingIntensityType || ((t) => {
+      const z = t.z || [];
+      const highZones = (z[2] || 0) + (z[3] || 0);
+      const total = z.reduce((a, b) => a + b, 0) || 1;
+      if (highZones / total >= 0.5) return 'HIIT';
+      if (highZones / total >= 0.2) return 'MODERATE';
+      return 'LISS';
+    });
+    
+    // Собираем все найденные контексты
+    const foundContexts = [];
+    
+    // === Проверяем каждую тренировку ===
+    for (const training of trainings) {
+      if (!training || !training.time) continue;
+      
+      const interval = getTrainingInterval(training);
+      const intensity = getTrainingIntensityType(training);
+      const intensityMult = TRAINING_CONTEXT.intensityMultiplier[intensity] || 1.0;
+      const { startMin, endMin, durationMin } = interval;
+      
+      // --- PERI-WORKOUT: еда ВО ВРЕМЯ тренировки ---
+      if (mealTimeMin >= startMin && mealTimeMin <= endMin) {
+        const cfg = TRAINING_CONTEXT.periWorkout;
+        const progressPct = durationMin > 0 ? (mealTimeMin - startMin) / durationMin : 0.5;
+        
+        foundContexts.push({
+          type: 'peri',
+          priority: TRAINING_CONTEXT.priority.peri,
+          waveBonus: cfg.maxBonus,
+          harmMultiplier: cfg.harmMultiplier,
+          badge: cfg.badge,
+          desc: `${cfg.badge} Еда во время тренировки → топливо!`,
+          trainingRef: { time: training.time, type: training.type, intensity },
+          details: { progressPct, intensityMult }
+        });
+        continue; // peri — наивысший приоритет, не проверяем другие для этой тренировки
+      }
+      
+      // --- POST-WORKOUT: еда ПОСЛЕ тренировки ---
+      if (mealTimeMin > endMin) {
+        const gapMin = mealTimeMin - endMin;
+        const cfg = TRAINING_CONTEXT.postWorkout;
+        
+        // Прогрессивное окно: base + kcal/60
+        const trainingKcal = durationMin * intensityMult * 5 * (weight / 70); // грубая оценка
+        const windowMin = Math.min(cfg.baseGap + trainingKcal / cfg.kcalScaling, cfg.maxGap * intensityMult);
+        
+        if (gapMin <= windowMin) {
+          // Находим tier
+          let tier = cfg.tiers[cfg.tiers.length - 1];
+          for (const t of cfg.tiers) {
+            if (gapMin <= t.maxGap) {
+              tier = t;
+              break;
+            }
+          }
+          
+          foundContexts.push({
+            type: 'post',
+            priority: TRAINING_CONTEXT.priority.post,
+            waveBonus: tier.waveBonus,
+            harmMultiplier: tier.harmMultiplier,
+            badge: tier.badge,
+            desc: `${tier.badge} ${gapMin} мин после тренировки → анаболическое окно`,
+            nightPenaltyOverride: cfg.nightPenaltyOverride,
+            trainingRef: { time: training.time, type: training.type, intensity },
+            details: { gapMin, windowMin, tier: tier.label, trainingKcal: Math.round(trainingKcal) }
+          });
+        }
+      }
+      
+      // --- PRE-WORKOUT: еда ДО тренировки ---
+      if (mealTimeMin < startMin) {
+        const gapMin = startMin - mealTimeMin;
+        
+        for (const tier of TRAINING_CONTEXT.preWorkout) {
+          if (gapMin <= tier.maxGap) {
+            foundContexts.push({
+              type: 'pre',
+              priority: TRAINING_CONTEXT.priority.pre,
+              waveBonus: tier.waveBonus,
+              harmMultiplier: 1.0, // pre не влияет на harm
+              badge: tier.badge,
+              desc: `${tier.badge} Еда за ${gapMin} мин до тренировки → быстрое сжигание`,
+              trainingRef: { time: training.time, type: training.type, intensity },
+              details: { gapMin }
+            });
+            break;
+          }
+        }
+      }
+    }
+    
+    // === STEPS: >10k шагов и вечерний ужин ===
+    const cfg_steps = TRAINING_CONTEXT.stepsBonus;
+    if (steps >= cfg_steps.threshold && mealTimeMin >= cfg_steps.afterHour * 60) {
+      foundContexts.push({
+        type: 'steps',
+        priority: TRAINING_CONTEXT.priority.steps,
+        waveBonus: cfg_steps.waveBonus,
+        harmMultiplier: 1.0,
+        badge: '🚶 Активный',
+        desc: `🚶 ${steps} шагов → вечерний ужин с бонусом`,
+        trainingRef: null,
+        details: { steps }
+      });
+    }
+    
+    // === MORNING: утренняя тренировка (до 12:00) ===
+    const cfg_morning = TRAINING_CONTEXT.morningTraining;
+    const hasMorningTraining = trainings.some(t => {
+      const [h] = (t.time || '12:00').split(':').map(Number);
+      return h < cfg_morning.beforeHour;
+    });
+    if (hasMorningTraining) {
+      foundContexts.push({
+        type: 'morning',
+        priority: TRAINING_CONTEXT.priority.morning,
+        waveBonus: cfg_morning.dayWaveBonus,
+        harmMultiplier: 1.0,
+        badge: '🌅 Утренний',
+        desc: '🌅 Утренняя тренировка → весь день бонус',
+        trainingRef: null,
+        details: {}
+      });
+    }
+    
+    // === DOUBLE: 2+ тренировки за день ===
+    const cfg_double = TRAINING_CONTEXT.doubleTraining;
+    if (trainings.length >= cfg_double.minTrainings) {
+      foundContexts.push({
+        type: 'double',
+        priority: TRAINING_CONTEXT.priority.double,
+        waveBonus: cfg_double.dayWaveBonus,
+        harmMultiplier: 1.0,
+        badge: '💪 Двойная',
+        desc: `💪 ${trainings.length} тренировки → усиленный метаболизм`,
+        trainingRef: null,
+        details: { count: trainings.length }
+      });
+    }
+    
+    // === STRENGTH+PROTEIN: силовая + белок ≥30г ===
+    const prot = mealNutrients.prot || 0;
+    if (prot >= TRAINING_CONTEXT.strengthProtein.minProtein) {
+      const hasStrength = trainings.some(t => t.type === 'strength');
+      if (hasStrength) {
+        // Проверяем POST контекст для силовой
+        const strengthPost = foundContexts.find(c => c.type === 'post' && c.trainingRef?.type === 'strength');
+        if (strengthPost) {
+          // Улучшаем существующий post контекст
+          strengthPost.harmMultiplier = Math.min(strengthPost.harmMultiplier, TRAINING_CONTEXT.strengthProtein.harmMultiplier);
+          strengthPost.badge = '💪🥛 Восстановление';
+          strengthPost.desc += ` | +${Math.round(prot)}г белка → harm ×${TRAINING_CONTEXT.strengthProtein.harmMultiplier}`;
+          strengthPost.details.protein = prot;
+        }
+      }
+    }
+    
+    // === CARDIO+SIMPLE: кардио + простые углеводы ===
+    const simple = mealNutrients.simple || 0;
+    if (simple > 0) {
+      const hasCardio = trainings.some(t => t.type === 'cardio');
+      if (hasCardio) {
+        const cardioPeri = foundContexts.find(c => c.type === 'peri' && c.trainingRef?.type === 'cardio');
+        const cardioPost = foundContexts.find(c => c.type === 'post' && c.trainingRef?.type === 'cardio');
+        const target = cardioPeri || cardioPost;
+        if (target) {
+          // Уменьшаем штраф за простые углеводы
+          target.simpleMultiplier = TRAINING_CONTEXT.cardioSimple.glMultiplier;
+          target.desc += ` | Простые углеводы → GL ×${TRAINING_CONTEXT.cardioSimple.glMultiplier}`;
+          target.details.simple = simple;
+        }
+      }
+    }
+    
+    // === NIGHT OVERRIDE: ночная еда после тренировки ===
+    const cfg_night = TRAINING_CONTEXT.nightOverride;
+    if (cfg_night.enabled && mealTimeMin >= 22 * 60) {
+      // Проверяем есть ли тренировка за последние N часов
+      const recentTraining = trainings.find(t => {
+        const interval = getTrainingInterval(t);
+        const hoursAgo = (mealTimeMin - interval.endMin) / 60;
+        return hoursAgo >= 0 && hoursAgo <= cfg_night.maxHoursAfterTraining;
+      });
+      if (recentTraining) {
+        const postContext = foundContexts.find(c => c.type === 'post' && c.trainingRef?.time === recentTraining.time);
+        if (postContext) {
+          postContext.nightPenaltyOverride = true;
+          postContext.desc += ' | 🌙 Ночной штраф отменён';
+        }
+      }
+    }
+    
+    // === Выбираем лучший контекст по приоритету ===
+    if (foundContexts.length === 0) return null;
+    
+    foundContexts.sort((a, b) => b.priority - a.priority);
+    const best = foundContexts[0];
+    
+    // Добавляем все найденные контексты для отладки
+    best.allContexts = foundContexts.map(c => ({ type: c.type, priority: c.priority }));
+    
+    return best;
+  };
+
   /**
    * 🧪 Оценить уровень инсулина по прогрессу волны (v3.2.0)
    * Научное обоснование: Campbell 1992, Jensen 1989
@@ -2501,6 +2742,22 @@
     const mealMinutesForPostprandial = utils.timeToMinutes(lastMealTime);
     const postprandialBonus = calculatePostprandialExerciseBonus(trainings, mealMinutesForPostprandial);
     
+    // 🆕 v3.4.0: Activity Context — ЗАМЕНЯЕТ старые workout/postprandial бонусы
+    // Определяем контекст тренировки для текущего приёма
+    const activityContext = calculateActivityContext({
+      mealTimeMin: mealMinutesForPostprandial,
+      trainings,
+      steps: dayData.steps || 0,
+      weight: dayData.profile?.weight || 70,
+      allMeals: sorted,
+      mealNutrients: {
+        prot: nutrients.totalProtein,
+        carbs: nutrients.totalCarbs,
+        simple: nutrients.totalSimple || 0
+      },
+      mealKcal: nutrients.totalKcal || 0
+    });
+    
     // 🆕 v1.5: NEAT — бытовая активность
     const householdMin = dayData.householdMin || 0;
     const neatBonus = calculateNEATBonus(householdMin);
@@ -2616,13 +2873,25 @@
     // Финальный множитель: все факторы
     // multipliers.total уже включает GI + protein + fiber + fat + liquid + insulinogenic (со скалированием внутри)
     // Добавляем все бонусы (отрицательные = укорачивают волну):
-    // - workout (общий), postprandial (после еды), NEAT, steps — физическая активность
+    // - 🆕 v3.4.0: activityContext заменяет workout + postprandial (когда есть)
     // - fasting, alcohol, caffeine, stress, sleep — другие факторы
     // - 🆕 v2.0: sleepQuality, hydration, age, bmi, gender, transFat, cycle
     // - 🆕 v3.0.0: meal stacking bonus
     // ⚠️ ВАЖНО: age, bmi, gender уже учтены в effectiveBaseWaveHours (v3.0.0 Personal Baseline)
     // Поэтому НЕ добавляем их повторно в personalBonuses!
-    const activityBonuses = (workoutBonus.bonus + postprandialBonus.bonus + neatBonus.bonus + stepsBonus.bonus) * dayFactorsScale;
+    
+    // 🆕 v3.4.0: Если есть activityContext — используем его вместо старых бонусов
+    // ActivityContext объединяет: peri-workout, post-workout, pre-workout, steps, morning, double
+    let activityBonuses;
+    if (activityContext && activityContext.waveBonus) {
+      // Используем новый контекст (приоритизированный, с учётом типа тренировки)
+      // NEAT и steps оставляем как фоновые бонусы (они stackаются)
+      activityBonuses = (activityContext.waveBonus + neatBonus.bonus) * dayFactorsScale;
+    } else {
+      // Fallback на старую логику (если нет контекста)
+      activityBonuses = (workoutBonus.bonus + postprandialBonus.bonus + neatBonus.bonus + stepsBonus.bonus) * dayFactorsScale;
+    }
+    
     const metabolicBonuses = (fastingBonus + alcoholBonus + caffeineBonus + stressBonus + sleepBonus) * dayFactorsScale;
     // 🆕 v3.0.0: Убраны ageBonus, bmiBonus, genderBonus — они уже в персональной базе
     const personalBonuses = (sleepQualityBonus + hydrationBonus + transFatBonus + cycleBonusValue) * dayFactorsScale;
@@ -2644,9 +2913,17 @@
     const autophagyResult = getAutophagyPhase(fastingHours);
     const autophagyBonus = -(autophagyResult.bonus || 0); // Отрицательный = короче волна
     
+    // 🆕 v3.4.0: Harm multiplier от activityContext (для уменьшения вредности при тренировке)
+    const activityHarmMultiplier = activityContext?.harmMultiplier || 1.0;
+    
     const allBonuses = activityBonuses + metabolicBonuses + personalBonuses + mealStackingBonus + resistantStarchBonus + coldExposureBonus + supplementsBonusValue + autophagyBonus;
     // Циркадный множитель: приближаем к 1.0 при низкой GL
-    const scaledCircadian = 1.0 + (circadian.multiplier - 1.0) * circadianScale;
+    // 🆕 v3.4.0: Если activityContext с nightPenaltyOverride — не применяем ночной штраф
+    let scaledCircadian = 1.0 + (circadian.multiplier - 1.0) * circadianScale;
+    if (activityContext?.nightPenaltyOverride && circadian.multiplier > 1.0) {
+      // Ночная тренировка → ночной штраф отменён
+      scaledCircadian = 1.0;
+    }
     const finalMultiplier = (multipliers.total + allBonuses) * scaledCircadian * spicyMultiplier;
     
     // 🔬 DEBUG: Проверка v3.2.2 расчётов с Insulin Index (отключено для production)
@@ -2852,6 +3129,21 @@
       //   console.log('[waveHistory DEBUG]', { mealTime: t, GL: mealNutrients.glycemicLoad, finalMultiplier, duration });
       // }
       
+      // 🆕 v3.4.0: Activity Context для каждого приёма в истории
+      const mealActivityContext = calculateActivityContext({
+        mealTimeMin: startMin,
+        trainings,
+        steps: dayData.steps || 0,
+        weight: dayData.profile?.weight || 70,
+        allMeals: sorted,
+        mealNutrients: {
+          prot: mealNutrients.totalProtein,
+          carbs: mealNutrients.totalCarbs,
+          simple: mealNutrients.totalSimple || 0
+        },
+        mealKcal: mealNutrients.totalKcal || 0
+      });
+      
       return {
         time: t,
         timeDisplay: utils.normalizeTimeForDisplay(t),
@@ -2882,6 +3174,15 @@
         activityBonus: scaledActivityBonus,
         circadianMultiplier: scaledCircadian,
         dayFactorsScale, // 🆕 Для отладки
+        // 🆕 v3.4.0: Activity Context
+        activityContext: mealActivityContext ? {
+          type: mealActivityContext.type,
+          badge: mealActivityContext.badge,
+          desc: mealActivityContext.desc,
+          waveBonus: mealActivityContext.waveBonus,
+          harmMultiplier: mealActivityContext.harmMultiplier || 1.0,
+          nightPenaltyOverride: mealActivityContext.nightPenaltyOverride || false
+        } : null,
         isActive: idx === 0 && remainingMinutes > 0
       };
     }).filter(Boolean).reverse();
@@ -3145,10 +3446,28 @@
       stepsDesc: stepsBonus.desc,
       hasStepsBonus: stepsBonus.bonus < 0,
       
+      // 🆕 v3.4.0: Activity Context — объединённый контекст тренировки
+      activityContext: activityContext ? {
+        type: activityContext.type,
+        badge: activityContext.badge,
+        desc: activityContext.desc,
+        waveBonus: activityContext.waveBonus,
+        harmMultiplier: activityContext.harmMultiplier || 1.0,
+        nightPenaltyOverride: activityContext.nightPenaltyOverride || false,
+        trainingRef: activityContext.trainingRef,
+        details: activityContext.details,
+        allContexts: activityContext.allContexts
+      } : null,
+      hasActivityContext: !!activityContext,
+      activityContextType: activityContext?.type || null,
+      activityContextBadge: activityContext?.badge || null,
+      
       // 📊 Суммарный бонус активности (для UI)
       activityBonusTotal: activityBonuses,
       hasAnyActivityBonus: activityBonuses < 0,
       activityBonusPct: Math.abs(Math.round(activityBonuses * 100)),
+      // 🆕 v3.4.0: Harm multiplier для уменьшения вредности при тренировке
+      activityHarmMultiplier,
       
       // История
       waveHistory,
@@ -3424,6 +3743,9 @@
     if (!waveData) return null;
     const normalize = utils.normalizeToHeysDay;
     
+    // 🆕 v3.4.0: Activity Context badge
+    const activityContext = waveData.activityContext;
+    
     // === Данные для волн ===
     const waves = [];
     
@@ -3589,6 +3911,64 @@
         padding: '0 12px 12px 12px'
       } 
     },
+      // 🆕 v3.4.0: Activity Context badge (если есть)
+      activityContext && React.createElement('div', {
+        className: 'activity-context-info',
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '8px 12px',
+          marginBottom: '8px',
+          borderRadius: '10px',
+          background: activityContext.type === 'peri' ? '#22c55e22' :
+                      activityContext.type === 'post' ? '#3b82f622' :
+                      activityContext.type === 'pre' ? '#eab30822' :
+                      '#6b728022',
+          border: activityContext.type === 'peri' ? '1px solid #22c55e44' :
+                  activityContext.type === 'post' ? '1px solid #3b82f644' :
+                  activityContext.type === 'pre' ? '1px solid #eab30844' :
+                  '1px solid #6b728044'
+        }
+      },
+        React.createElement('span', { style: { fontSize: '18px' } }, 
+          activityContext.badge?.split(' ')[0] || '🏋️'
+        ),
+        React.createElement('div', { style: { flex: 1 } },
+          React.createElement('div', { 
+            style: { 
+              fontSize: '13px', 
+              fontWeight: '600',
+              color: activityContext.type === 'peri' ? '#16a34a' :
+                     activityContext.type === 'post' ? '#2563eb' :
+                     activityContext.type === 'pre' ? '#ca8a04' :
+                     '#374151'
+            } 
+          }, activityContext.badge),
+          React.createElement('div', { 
+            style: { fontSize: '11px', color: '#64748b', marginTop: '2px' } 
+          }, activityContext.desc)
+        ),
+        // Показать бонус волны
+        activityContext.waveBonus && React.createElement('div', {
+          style: {
+            fontSize: '12px',
+            fontWeight: '700',
+            color: '#22c55e',
+            background: '#22c55e22',
+            padding: '4px 8px',
+            borderRadius: '6px'
+          }
+        }, (activityContext.waveBonus * 100).toFixed(0) + '%'),
+        // Показать harm multiplier если есть
+        activityContext.harmMultiplier && activityContext.harmMultiplier < 1 && React.createElement('div', {
+          style: {
+            fontSize: '11px',
+            color: '#3b82f6',
+            marginLeft: '4px'
+          }
+        }, '🛡️ Вред ×' + activityContext.harmMultiplier.toFixed(1))
+      ),
       // === SVG ГРАФИК ===
       React.createElement('svg', { 
         width: '100%', 
@@ -4660,13 +5040,17 @@
     getColdExposureBonus,
     getSupplementsBonus,
     
+    // 🆕 v3.4.0: Контекст тренировки
+    TRAINING_CONTEXT,
+    calculateActivityContext,
+    
     // Версия
-    VERSION: '3.2.2'
+    VERSION: '3.4.0'
   };
   
   // Алиас
   HEYS.IW = HEYS.InsulinWave;
   
-  console.log('[HEYS] InsulinWave v3.2.2 loaded (Insulin Index applied to GL)');
+  console.log('[HEYS] InsulinWave v3.4.0 loaded (Training Context)');
   
 })(typeof window !== 'undefined' ? window : global);

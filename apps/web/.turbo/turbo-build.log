@@ -3,7 +3,7 @@
 > vite build && cp heys_*.js dist/ && cp styles/*.css dist/styles/ 2>/dev/null || mkdir -p dist/styles && cp styles/*.css dist/styles/
 
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
-[36mvite v4.5.14 [32mbuilding for production...[36m[39m
+vite v4.5.14 building for production...
 <script src="heys_dev_utils.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_simple_analytics.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_core_v12.js"> in "/index.html" can't be bundled without type="module" attribute
@@ -38,12 +38,15 @@ polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 <script src="heys_reports_v12.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_data_overview_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_app_v12.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
-[2K[1Gtransforming (1) [2mindex.html[22m[2K[1G[32m✓[39m 3 modules transformed.
-[2K[1Grendering chunks (1)...[2K[1G[2K[1Gcomputing gzip size (0)...[2K[1Gcomputing gzip size (1)...[2K[1Gcomputing gzip size (2)...[2K[1G[2mdist/[22m[2massets/[22m[32mheys_simple_analytics-b3f08726.js     [39m[1m[2m 10.31 kB[22m[1m[22m
-[2mdist/[22m[32mindex.html                                   [39m[1m[2m 11.59 kB[22m[1m[22m[2m │ gzip:  3.24 kB[22m
-[2mdist/[22m[2massets/[22m[32mheys_models_v1-623216dd.js            [39m[1m[2m 30.57 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[32mheys_core_v12-17c7988f.js             [39m[1m[2m 60.00 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[32mheys_storage_supabase_v1-50d607a6.js  [39m[1m[2m164.22 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[35mindex-58228bd6.css                    [39m[1m[2m432.31 kB[22m[1m[22m[2m │ gzip: 73.42 kB[22m
-[36m[vite-plugin-static-copy][39m [32mCopied 1 items.[39m
-[32m✓ built in 1.24s[39m
+transforming...
+✓ 3 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/assets/heys_simple_analytics-b3f08726.js      10.31 kB
+dist/index.html                                    11.59 kB │ gzip:  3.24 kB
+dist/assets/heys_models_v1-623216dd.js             30.57 kB
+dist/assets/heys_core_v12-17c7988f.js              60.00 kB
+dist/assets/heys_storage_supabase_v1-50d607a6.js  164.22 kB
+dist/assets/index-58228bd6.css                    432.31 kB │ gzip: 73.42 kB
+[vite-plugin-static-copy] Copied 1 items.
+✓ built in 1.18s

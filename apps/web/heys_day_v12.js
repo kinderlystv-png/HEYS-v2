@@ -2183,7 +2183,29 @@
         // Калории справа (крупное)
         React.createElement('span', { className: 'meal-kcal-badge-inside', style: { fontSize: '15px', padding: '6px 14px', flexShrink: 0 } }, 
           mealKcal > 0 ? (mealKcal + ' ккал') : '0 ккал'
-        )
+        ),
+        // 🆕 v3.4.0: Activity Context badge (если есть)
+        currentWave && currentWave.activityContext && React.createElement('span', {
+          className: 'activity-context-badge',
+          title: currentWave.activityContext.desc,
+          style: {
+            fontSize: '12px',
+            padding: '4px 8px',
+            borderRadius: '8px',
+            background: currentWave.activityContext.type === 'peri' ? '#22c55e33' :
+                        currentWave.activityContext.type === 'post' ? '#3b82f633' :
+                        currentWave.activityContext.type === 'pre' ? '#eab30833' :
+                        '#6b728033',
+            color: currentWave.activityContext.type === 'peri' ? '#16a34a' :
+                   currentWave.activityContext.type === 'post' ? '#2563eb' :
+                   currentWave.activityContext.type === 'pre' ? '#ca8a04' :
+                   '#374151',
+            fontWeight: '600',
+            flexShrink: 0,
+            marginLeft: '4px',
+            whiteSpace: 'nowrap'
+          }
+        }, currentWave.activityContext.badge || '')
       ),
       // MOBILE: Meal totals at top (before search)
       (meal.items || []).length > 0 && React.createElement('div', { className: 'mpc-totals-wrap mobile-only' },
