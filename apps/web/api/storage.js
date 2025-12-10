@@ -62,7 +62,8 @@ export default async function handler(req, res) {
     res.status(204)
     res.setHeader('Access-Control-Allow-Origin', corsOrigin)
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, apikey, x-client-info, Accept')
+    // Добавлены accept-profile и content-profile для совместимости с PostgREST
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, apikey, x-client-info, Accept, Prefer, Range, accept-profile, content-profile')
     res.setHeader('Access-Control-Allow-Credentials', 'true')
     res.setHeader('Access-Control-Max-Age', '86400')
     return res.end()

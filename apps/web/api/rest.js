@@ -48,7 +48,8 @@ export default async function handler(req, res) {
     res.status(204)
     res.setHeader('Access-Control-Allow-Origin', corsOrigin)
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, apikey, x-client-info, Accept, Prefer, Range')
+    // Добавлены accept-profile и content-profile для PostgREST
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, apikey, x-client-info, Accept, Prefer, Range, accept-profile, content-profile')
     res.setHeader('Access-Control-Allow-Credentials', 'true')
     res.setHeader('Access-Control-Max-Age', '86400')
     return res.end()
@@ -62,6 +63,13 @@ export default async function handler(req, res) {
     'x-client-info': req.headers['x-client-info'] || 'heys-proxy',
   }
 
+  // PostgREST profile headers
+  if (req.headers['accept-profile']) {
+    headers['accept-profile'] = req.headers['accept-profile']
+  }
+  if (req.headers['content-profile']) {
+    headers['content-profile'] = req.headers['content-profile']
+  }
   if (req.headers['prefer']) {
     headers['Prefer'] = req.headers['prefer']
   }
