@@ -126,6 +126,48 @@ onAddProduct: (product, grams) => handleAddProduct(product, grams)
 }
 ```
 
+#### B9. Экспорт `getMealQualityScore` для Score Prediction
+
+**Проблема**: Функция `getMealQualityScore` определена внутри `heys_day_v12.js` но НЕ экспортирована. Нужна для показа прогноза "Score: 85 → 92".
+
+**Решение**: Добавить экспорт в конец `heys_day_v12.js`:
+
+```javascript
+// В конце файла, где HEYS.Day = { ... }
+HEYS.Day.getMealQualityScore = getMealQualityScore;
+```
+
+#### B10. Performance: memo + debounce
+
+**Проблема**: `getMealOptimization` может вызываться часто при быстром вводе.
+
+**Решение**:
+1. `MealOptimizerCard` обернуть в `React.memo`
+2. Debounce расчёта на 300мс:
+
+```javascript
+const debouncedOptimization = useMemo(
+  () => debounce((items) => {
+    setOptimization(getMealOptimization(items, pIndex, context));
+  }, 300),
+  [pIndex, context]
+);
+```
+
+#### B11. A11y: aria-live для скринридеров
+
+**Проблема**: Скринридеры не озвучат появление рекомендации.
+
+**Решение**:
+
+```javascript
+React.createElement('div', {
+  className: 'optimizer-card',
+  'aria-live': 'polite',
+  'aria-atomic': 'true'
+}, ...)
+```
+
 ### ✅ Чеклист Phase 0 (расширенный)
 
 **Код и зависимости:**
@@ -136,6 +178,7 @@ onAddProduct: (product, grams) => handleAddProduct(product, grams)
 - [ ] Найти точную строку вставки в MealCard (grep `meal-meta-row`)
 - [ ] Найти существующий `handleAddProduct` в MealCard — реиспользовать
 - [ ] Проверить как передаётся `pIndex` в MealCard
+- [ ] **Экспортировать `getMealQualityScore`** в `heys_day_v12.js` → `HEYS.Day.getMealQualityScore`
 
 **Стили:**
 - [ ] Проверить что slot 800 свободен: `ls styles/modules/8*`
@@ -923,10 +966,13 @@ if (optimizerStreak >= 3 && HEYS.confetti) {
 - [ ] Добавить `trackUserAction()` с localStorage
 
 ### Phase 2: UI
-- [ ] Реализовать `MealOptimizerCard` (React.createElement!)
+- [ ] Реализовать `MealOptimizerCard` (React.createElement!) с `React.memo`
 - [ ] Реализовать `SynergyVisualization` компонент
+- [ ] Реализовать `ScorePrediction` — прогноз "Score: 85 → 92 (+7)"
+- [ ] Реализовать `Smart Undo` — Toast с кнопкой "Отменить" на 5 сек
 - [ ] Состояния: свёрнутое / развёрнутое / после добавления
 - [ ] Анимации появления и успеха
+- [ ] A11y: `aria-live="polite"`, `aria-label` на кнопках
 
 ### Phase 3: Стили
 - [ ] Создать `800-meal-optimizer.css`
@@ -979,6 +1025,7 @@ if (optimizerStreak >= 3 && HEYS.confetti) {
 
 | Версия | Дата | Изменения |
 |--------|------|----------|
+| 1.3.0 | 2025-12-10 | **Technical Excellence**: +3 блокера (B9-B11): экспорт getMealQualityScore, Performance (memo+debounce), A11y (aria-live). Новые фичи: Score Prediction "85→92", Smart Undo (Toast 5 сек) |
 | 1.2.0 | 2025-12-10 | **Глубокий аудит v2**: +5 новых блокеров (B4-B8), ответы на 3 уточняющих вопроса, localStorage→U.lsSet, безопасный haptic, лимит истории 50 записей, интеграция с реальным InsulinWave.calculate(), Edge Cases секция, +4 WOW-фишки (typing effect, confetti streak, micro-animations, empty state), prefers-reduced-motion support |
 | 1.1.0 | 2025-12-10 | **Аудит**: Phase 0 с блокерами, keyword-детекция вместо микронутриентов, CSS slot 800, точное место в MealCard, переиспользование утилит из advice, визуализация синергии, haptic feedback, 50+ правил |
 | 1.0.0 | 2025-12-10 | Первоначальная версия промпта |

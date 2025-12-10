@@ -5636,8 +5636,36 @@
       // Dispatch event для advice системы
       window.dispatchEvent(new CustomEvent('heysProductAdded'));
       
+      // 🔍 TEMP DEBUG: Диагностика синхронизации meals (убрать после отладки)
+      setTimeout(() => {
+        try {
+          const clientId = window.HEYS?.currentClientId;
+          const key = clientId ? `heys_${clientId}_dayv2_${date}` : `heys_dayv2_${date}`;
+          const raw = localStorage.getItem(key);
+          const data = raw ? JSON.parse(raw) : null;
+          const pendingRaw = localStorage.getItem('heys_pending_client_queue');
+          const pending = pendingRaw ? JSON.parse(pendingRaw) : [];
+          const dayPending = pending.filter(p => p.k?.includes('dayv2'));
+          
+          const info = [
+            `📅 Date: ${date}`,
+            `🔑 Key: ${key.slice(-30)}...`,
+            `🍽️ Meals: ${data?.meals?.length || 0}`,
+            `📦 Items: ${data?.meals?.map(m => m.items?.length || 0).join(',')}`,
+            `💧 Water: ${data?.waterMl || 0}`,
+            `⏱️ UpdatedAt: ${data?.updatedAt ? new Date(data.updatedAt).toLocaleTimeString() : 'none'}`,
+            `📤 Pending: ${pending.length} (days: ${dayPending.length})`,
+            dayPending.length > 0 ? `📤 Pending items: ${dayPending.map(p => p.v?.meals?.map(m => m.items?.length).join(',')).join(' | ')}` : ''
+          ].filter(Boolean).join('\n');
+          
+          alert('SYNC DEBUG:\n' + info);
+        } catch(e) {
+          alert('DEBUG ERROR: ' + e.message);
+        }
+      }, 1000);
+      
       // Автофокус убран — клавиатура закрывает информацию о продукте на мобильных
-    }, [haptic, setDay, setNewItemIds]);
+    }, [haptic, setDay, setNewItemIds, date]);
     const setGrams = React.useCallback((mi, itId, g) => { 
       const grams = +g || 0; 
       setDay(prevDay => {
