@@ -2332,6 +2332,35 @@
 .meal-quality-popup {
   animation: mealPopupSlideIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   transform-origin: top center;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+/* Стили для строк расчёта в попапе */
+.meal-quality-popup .quality-calc-row {
+  transition: background 0.2s ease;
+}
+
+.meal-quality-popup .quality-calc-row:hover {
+  filter: brightness(0.97);
+}
+
+.meal-quality-popup .quality-calc-row.bonus {
+  border-left: 3px solid #eab308;
+}
+
+/* Скроллбар в попапе */
+.meal-quality-popup::-webkit-scrollbar {
+  width: 4px;
+}
+
+.meal-quality-popup::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.meal-quality-popup::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
 }
 
 @keyframes mealPopupSlideIn {

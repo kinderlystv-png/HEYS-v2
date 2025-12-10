@@ -1,12 +1,6 @@
 // heys_insulin_wave_v1.js — Модуль инсулиновой волны
-// Версия: 3.2.2 | Дата: 2025-12-10
+// Версия: 3.1.0 | Дата: 2025-12-10
 // 
-// ОБНОВЛЕНИЯ v3.2.2 (КРИТИЧЕСКИЙ ФИКС):
-// - Insulin Index теперь применяется к GL per-product (×3.0 для молока), а не как +15% бонус
-// - maxBoost увеличен до 2.5 (было 1.5) — молоко GL=1.4 → effectiveGL=4.2
-// - Убрано двойное счётчтение insulinogenicBonus в calculateMultiplier()
-// - waveHistory синхронизируется ОТ main calculation (единый источник правды)
-//
 // ОБНОВЛЕНИЯ v3.1.0 (научный аудит ChatGPT):
 // - Клетчатка теперь УМЕНЬШАЕТ волну (-8% до -20%), не увеличивает
 // - Белок: усилено влияние (+8% до +25%), добавлен порог >50г
@@ -266,9 +260,7 @@
     highFiber: 0.7,       // Высокая клетчатка снижает II
     // Как применять: effectiveGL = GL × insulinIndexFactor
     // Это увеличивает волну для молочных продуктов даже при низкой GL
-    // 🆕 v3.2.2: Увеличено с 1.5 до 2.5 — молоко может увеличить GL до ×2.5
-    // Научное обоснование: Holt 1997 — молоко II/GI = 3.0, нужен запас
-    maxBoost: 2.5
+    maxBoost: 1.5         // Максимальное увеличение GL от II-фактора
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -542,213 +534,6 @@
     },
     // Если сумма weights > 0.6 → показать предупреждение
     warningThreshold: 0.6
-  };
-
-  /**
-   * 🧪 Оценить уровень инсулина по прогрессу волны (v3.2.0)
-   * Научное обоснование: Campbell 1992, Jensen 1989
-   * @param {number} progress - 0-100 (процент прохождения волны)
-   * @returns {{ level: number, zone: string, lipolysisPct: number, desc: string, color: string }}
-   */
-  const estimateInsulinLevel = (progress) => {
-    // Базовая модель: экспоненциальное снижение от пика (~80) до базового (~5)
-    // Формула: level = 5 + 75 × e^(-progress/25)
-    const level = Math.round(5 + 75 * Math.exp(-progress / 25));
-    
-    // Определяем зону по порогам
-    if (level <= LIPOLYSIS_THRESHOLDS.full.insulinUIml) {
-      return { level, zone: 'full', lipolysisPct: 100, desc: LIPOLYSIS_THRESHOLDS.full.desc, color: '#22c55e' };
-    }
-    if (level <= LIPOLYSIS_THRESHOLDS.partial.insulinUIml) {
-      return { level, zone: 'partial', lipolysisPct: 50, desc: LIPOLYSIS_THRESHOLDS.partial.desc, color: '#eab308' };
-    }
-    if (level <= LIPOLYSIS_THRESHOLDS.suppressed.insulinUIml) {
-      return { level, zone: 'suppressed', lipolysisPct: 10, desc: LIPOLYSIS_THRESHOLDS.suppressed.desc, color: '#f97316' };
-    }
-    return { level, zone: 'blocked', lipolysisPct: 0, desc: LIPOLYSIS_THRESHOLDS.blocked.desc, color: '#ef4444' };
-  };
-
-  /**
-   * ⚡ Рассчитать риск реактивной гипогликемии для приёма пищи (v3.2.0)
-   * Научное обоснование: Brun et al. 1995
-   * @param {Object} meal - приём пищи
-   * @param {Object} pIndex - индекс продуктов
-   * @param {Function} getProductFromItem - функция получения продукта
-   * @returns {{ score: number, hasRisk: boolean, riskWindow: Object, details: Object }}
-   */
-  const calculateHypoglycemiaRisk = (meal, pIndex, getProductFromItem) => {
-    let riskScore = 0;
-    const { riskFactors, riskWindow, warningThreshold } = REACTIVE_HYPOGLYCEMIA;
-    
-    // Вычисляем средний GI и макросы
-    let totalGrams = 0, weightedGI = 0, totalProtein = 0, totalFat = 0;
-    for (const item of (meal.items || [])) {
-      const prod = getProductFromItem(item, pIndex);
-      const g = item.grams || 100;
-      totalGrams += g;
-      weightedGI += (prod?.gi || 50) * g;
-      totalProtein += (prod?.protein100 || 0) * g / 100;
-      totalFat += ((prod?.fat100 || 0) + (prod?.badFat100 || 0) + (prod?.goodFat100 || 0)) * g / 100;
-    }
-    const avgGI = totalGrams > 0 ? weightedGI / totalGrams : 50;
-    
-    // Факторы риска
-    if (avgGI >= riskFactors.highGI.threshold) riskScore += riskFactors.highGI.weight;
-    if (totalProtein < riskFactors.lowProtein.threshold) riskScore += riskFactors.lowProtein.weight;
-    if (totalFat < riskFactors.lowFat.threshold) riskScore += riskFactors.lowFat.weight;
-    
-    return {
-      score: riskScore,
-      hasRisk: riskScore >= warningThreshold,
-      riskWindow,
-      details: { avgGI, totalProtein, totalFat }
-    };
-  };
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 🆕 НОВЫЕ ФАКТОРЫ v3.2.0 (2025-12-10) — дополнительные улучшения
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  // 🧪 SUPPLEMENTS — добавки снижающие инсулиновый ответ
-  // 🔬 НАУЧНЫЙ АУДИТ 2025-12-10:
-  // Vinegar: Liljeberg & Björck 1998, Johnston et al. 2004 — -20-35% гликемия
-  // Cinnamon: Khan et al. 2003 — -10-15% инсулин у диабетиков
-  // Berberine: Yin et al. 2008 — сравним с метформином, ингибирует DPP-4
-  const SUPPLEMENTS_BONUS = {
-    vinegar: { bonus: -0.20, desc: 'Уксус → -20% волна' },     // Яблочный/винный уксус
-    cinnamon: { bonus: -0.10, desc: 'Корица → -10% волна' },   // 1-6г корицы
-    berberine: { bonus: -0.15, desc: 'Берберин → -15% волна' } // 500-1500мг берберина
-  };
-
-  // 🧊 COLD EXPOSURE — холодовое воздействие активирует бурый жир
-  // 🔬 НАУЧНЫЙ АУДИТ 2025-12-10:
-  // Van Marken Lichtenbelt 2009: холод +43% чувствительность к инсулину
-  // Hanssen 2015: 10 дней холода (15°C) улучшает GLUT4
-  // Механизм: активация BAT → повышенный клиренс глюкозы
-  const COLD_EXPOSURE_BONUS = {
-    coldShower: { bonus: -0.05, minutes: 3, desc: '🧊 Холодный душ → -5%' },
-    coldBath: { bonus: -0.10, minutes: 10, desc: '🧊 Ледяная ванна → -10%' },
-    coldSwim: { bonus: -0.12, minutes: 5, desc: '🧊 Моржевание → -12%' },
-    // Длительность эффекта: ~4-6 часов после экспозиции
-    effectDurationHours: 5
-  };
-
-  // 🔄 AUTOPHAGY — аутофагия активируется после длительного голодания
-  // 🔬 НАУЧНЫЙ АУДИТ 2025-12-10:
-  // Alirezaei et al. 2010: аутофагия в мозге мышей через 24-48ч
-  // У людей: Jamshed et al. 2019 — маркеры через 16-18ч
-  // mTOR отключается → AMPK активируется → ULK1 → аутофагия
-  const AUTOPHAGY_TIMER = {
-    // Фазы аутофагии
-    phases: {
-      none: { minHours: 0, maxHours: 12, label: 'Пищеварение', color: '#94a3b8', icon: '🍽️' },
-      early: { minHours: 12, maxHours: 16, label: 'Переход к голоданию', color: '#eab308', icon: '⏳' },
-      active: { minHours: 16, maxHours: 24, label: 'Аутофагия активна', color: '#22c55e', icon: '🔄' },
-      deep: { minHours: 24, maxHours: 48, label: 'Глубокая аутофагия', color: '#10b981', icon: '✨' },
-      extended: { minHours: 48, maxHours: Infinity, label: 'Продлённый пост', color: '#8b5cf6', icon: '🌟' }
-    },
-    // Минимум для показа таймера
-    minHoursToShow: 12,
-    // Бонусы к инсулиновой чувствительности от аутофагии
-    sensitivityBonus: {
-      early: 0.05,    // +5% чувствительность
-      active: 0.10,   // +10%
-      deep: 0.15,     // +15%
-      extended: 0.18  // +18%
-    }
-  };
-
-  /**
-   * 🔄 Получить фазу аутофагии по часам голодания
-   * @param {number} fastingHours - часы с последней еды
-   * @returns {{ phase: string, label: string, color: string, icon: string, progress: number, bonus: number }}
-   */
-  const getAutophagyPhase = (fastingHours) => {
-    const { phases, sensitivityBonus } = AUTOPHAGY_TIMER;
-    
-    for (const [key, phase] of Object.entries(phases)) {
-      if (fastingHours >= phase.minHours && fastingHours < phase.maxHours) {
-        // Прогресс внутри фазы (0-100%)
-        const phaseLength = phase.maxHours - phase.minHours;
-        const progress = phaseLength < Infinity 
-          ? Math.min(100, ((fastingHours - phase.minHours) / phaseLength) * 100)
-          : Math.min(100, (fastingHours - phase.minHours) / 24 * 100); // Для extended
-        
-        return {
-          phase: key,
-          label: phase.label,
-          color: phase.color,
-          icon: phase.icon,
-          progress: Math.round(progress),
-          bonus: sensitivityBonus[key] || 0,
-          hoursInPhase: fastingHours - phase.minHours,
-          nextPhaseIn: phase.maxHours < Infinity ? phase.maxHours - fastingHours : null
-        };
-      }
-    }
-    
-    return { phase: 'none', label: 'Пищеварение', color: '#94a3b8', icon: '🍽️', progress: 0, bonus: 0 };
-  };
-
-  /**
-   * 🧊 Проверить наличие холодового воздействия сегодня
-   * @param {Object} day - данные дня
-   * @returns {{ hasCold: boolean, type: string, bonus: number, desc: string }}
-   */
-  const getColdExposureBonus = (day) => {
-    if (!day?.coldExposure) return { hasCold: false, type: null, bonus: 0, desc: null };
-    
-    const { coldExposure } = day;
-    const exposureType = coldExposure.type || 'coldShower';
-    const config = COLD_EXPOSURE_BONUS[exposureType] || COLD_EXPOSURE_BONUS.coldShower;
-    
-    // Проверяем время — эффект длится ~5 часов
-    if (coldExposure.time) {
-      const now = new Date();
-      const [h, m] = coldExposure.time.split(':').map(Number);
-      const exposureTime = new Date(now);
-      exposureTime.setHours(h, m, 0, 0);
-      
-      const hoursSince = (now - exposureTime) / (1000 * 60 * 60);
-      if (hoursSince > COLD_EXPOSURE_BONUS.effectDurationHours) {
-        return { hasCold: false, type: exposureType, bonus: 0, desc: 'Эффект закончился' };
-      }
-    }
-    
-    return {
-      hasCold: true,
-      type: exposureType,
-      bonus: config.bonus,
-      desc: config.desc
-    };
-  };
-
-  /**
-   * 🧪 Получить бонус от добавок
-   * @param {Object} meal - приём пищи (если есть supplements)
-   * @returns {{ hasSupplements: boolean, bonus: number, supplements: string[] }}
-   */
-  const getSupplementsBonus = (meal) => {
-    if (!meal?.supplements || !Array.isArray(meal.supplements)) {
-      return { hasSupplements: false, bonus: 0, supplements: [] };
-    }
-    
-    let totalBonus = 0;
-    const activeSupplements = [];
-    
-    for (const supp of meal.supplements) {
-      const config = SUPPLEMENTS_BONUS[supp];
-      if (config) {
-        totalBonus += config.bonus;
-        activeSupplements.push(supp);
-      }
-    }
-    
-    return {
-      hasSupplements: activeSupplements.length > 0,
-      bonus: totalBonus,
-      supplements: activeSupplements
-    };
   };
 
   const GAP_HISTORY_KEY = 'heys_meal_gaps_history';
@@ -1400,49 +1185,6 @@
   };
 
   /**
-   * 🍎 Определить физическую форму пищи (v3.2.0)
-   * @param {Object} prod - продукт
-   * @returns {'liquid'|'processed'|'whole'|null}
-   */
-  const getFoodForm = (prod) => {
-    if (!prod) return null;
-    const name = (prod.name || '').toLowerCase();
-    
-    // Жидкое — приоритет
-    for (const pattern of FOOD_FORM_BONUS.liquidPatterns) {
-      if (pattern.test(name)) return 'liquid';
-    }
-    
-    // Обработанное
-    for (const pattern of FOOD_FORM_BONUS.processedPatterns) {
-      if (pattern.test(name)) return 'processed';
-    }
-    
-    // Цельное
-    for (const pattern of FOOD_FORM_BONUS.wholePatterns) {
-      if (pattern.test(name)) return 'whole';
-    }
-    
-    return null;
-  };
-
-  /**
-   * 🥔 Проверить наличие resistant starch (охлаждённые крахмалы) (v3.2.0)
-   * Научное обоснование: Robertson et al. 2005
-   * @param {Object} prod - продукт
-   * @returns {boolean}
-   */
-  const hasResistantStarch = (prod) => {
-    if (!prod) return false;
-    const name = (prod.name || '').toLowerCase();
-    
-    for (const pattern of RESISTANT_STARCH_BONUS.patterns) {
-      if (pattern.test(name)) return true;
-    }
-    return false;
-  };
-
-  /**
    * 🍷 Получить алкогольный бонус продукта
    * @param {Object} prod - продукт
    * @returns {{ type: string|null, bonus: number }}
@@ -1634,11 +1376,6 @@
     let maxInsulinogenicBonus = 0;
     let insulinogenicType = null;
     
-    // 🆕 v3.2.2: Суммарный вклад от Insulin Index
-    // Научное обоснование: Holt 1997 — молочка имеет II >> GI
-    // Вместо бонуса +15% — правильно увеличиваем эффективную GL
-    let insulinIndexAdjustedGL = 0;  // Сумма GL с учётом II
-    
     // 🆕 v1.4: Острая пища, алкоголь, кофеин
     let hasSpicy = false;
     let maxAlcoholBonus = 0;
@@ -1670,10 +1407,6 @@
       weightedGI += gi * itemCarbs;
       totalCarbsForGI += itemCarbs;
       
-      // 🆕 v3.2.2: GL каждого продукта + применение Insulin Index
-      // GL продукта = GI × углеводы / 100
-      const itemGL = gi * itemCarbs / 100;
-      
       // Жиры — замедляют переваривание (gastric emptying)
       const badFat = prod?.badFat100 || 0;
       const goodFat = prod?.goodFat100 || 0;
@@ -1692,21 +1425,6 @@
         maxInsulinogenicBonus = insBonus.bonus;
         insulinogenicType = insBonus.type;
       }
-      
-      // 🆕 v3.2.2: Применяем Insulin Index к GL продукта
-      // Научное обоснование: Holt 1997 — молочка вызывает инсулиновый ответ
-      // в 2-3 раза выше чем предсказывает её GI
-      let iiFactor = 1.0;
-      if (insBonus.type === 'liquidDairy') iiFactor = INSULIN_INDEX_FACTORS.liquidDairy; // ×3
-      else if (insBonus.type === 'softDairy') iiFactor = INSULIN_INDEX_FACTORS.softDairy; // ×2.5
-      else if (insBonus.type === 'hardDairy') iiFactor = INSULIN_INDEX_FACTORS.hardDairy; // ×1.5
-      else if (insBonus.type === 'protein') iiFactor = INSULIN_INDEX_FACTORS.pureProtein; // ×1.8
-      
-      // Ограничиваем максимальное увеличение (не более ×1.5 от базовой GL)
-      const maxBoost = itemGL * INSULIN_INDEX_FACTORS.maxBoost;
-      const boostedItemGL = Math.min(itemGL * iiFactor, itemGL + maxBoost);
-      
-      insulinIndexAdjustedGL += boostedItemGL;
       
       // 🌶️ Острая пища — ускоряет метаболизм
       if (isSpicyFood(prod)) {
@@ -1730,12 +1448,10 @@
     // Если нет углеводов — используем нейтральный ГИ=50
     const avgGI = totalCarbsForGI > 0 ? Math.round(weightedGI / totalCarbsForGI) : 50;
     
-    // 🆕 v3.2.2: Используем insulinIndexAdjustedGL вместо простого расчёта
-    // Старая формула: GL = GI × углеводы / 100 (не учитывает Insulin Index!)
-    // Новая: сумма GL каждого продукта с учётом II (молочка ×3, белок ×1.8, и т.д.)
-    // Это БОЛЕЕ ТОЧНО предсказывает реальный инсулиновый ответ (Holt 1997)
-    const baseGlycemicLoad = Math.round(avgGI * totalCarbs / 100 * 10) / 10;
-    const glycemicLoad = Math.round(insulinIndexAdjustedGL * 10) / 10;
+    // Гликемическая нагрузка (GL) = GI × углеводы / 100
+    // GL более точно предсказывает инсулиновую реакцию чем просто GI
+    // GL < 10 = низкая, 10-20 = средняя, > 20 = высокая
+    const glycemicLoad = Math.round(avgGI * totalCarbs / 100 * 10) / 10;
     
     // Доля жидкой пищи (если >50% — приём считается жидким)
     const liquidRatio = totalGrams > 0 ? liquidGrams / totalGrams : 0;
@@ -1751,7 +1467,6 @@
       totalFat: Math.round(totalFat * 10) / 10,
       totalTrans: Math.round(totalTrans * 10) / 10,  // 🆕 v2.0: Транс-жиры
       glycemicLoad,
-      baseGlycemicLoad,  // 🆕 v3.2.2: Для отладки — GL без II
       // Факторы v1.3
       hasLiquid,
       liquidRatio: Math.round(liquidRatio * 100),
@@ -1842,10 +1557,9 @@
    * @param {number} gl - гликемическая нагрузка (опционально)
    * @param {boolean} hasLiquid - содержит жидкую пищу (опционально)
    * @param {number} insulinogenicBonus - бонус от инсулиногенных продуктов (опционально)
-   * @param {string} foodForm - форма пищи: 'liquid'|'processed'|'whole'|null (v3.2.0)
-   * @returns {Object} { total, gi, protein, fiber, carbs, fat, gl, glCategory, liquid, insulinogenic, foodForm }
+   * @returns {Object} { total, gi, protein, fiber, carbs, fat, gl, glCategory, liquid, insulinogenic }
    */
-  const calculateMultiplier = (gi, protein, fiber, carbs = null, fat = null, gl = null, hasLiquid = false, insulinogenicBonus = 0, foodForm = null) => {
+  const calculateMultiplier = (gi, protein, fiber, carbs = null, fat = null, gl = null, hasLiquid = false, insulinogenicBonus = 0) => {
     const giCat = utils.getGICategory(gi);
     
     // 📊 Гликемическая нагрузка — v3.0.0: используем плавную формулу
@@ -1896,21 +1610,17 @@
     const rawFatBonus = fat !== null ? calculateFatBonus(fat) : 0;
     const fatBonus = rawFatBonus * glScaleFactor;
     
-    // 🥛 Инсулиногенность — v3.2.2: ТЕПЕРЬ УЧТЕНА В GL!
-    // Раньше: добавляли +15% бонус к множителю (некорректно)
-    // Теперь: увеличиваем GL продукта через Insulin Index (молоко ×3, белок ×1.8)
-    // Это уже сделано в calculateMealNutrients() → insulinIndexAdjustedGL
-    // ПОЭТОМУ insBonus = 0 (иначе двойной учёт!)
-    const insBonus = 0;
+    // 🥛 Инсулиногенность — молочка и белок стимулируют инсулин независимо от углеводов
+    // НО: эффект всё равно меньше чем от углеводов, поэтому скалируем
+    // 🔬 НАУЧНЫЙ АУДИТ 2025-12-09: При очень низкой GL (< 5) эффект минимален
+    // При 100мл молока + минимальные углеводы — инсулиновый ответ слабый
+    const rawInsBonus = insulinogenicBonus || 0;
+    // Формула: GL=0 → 0.3, GL=5 → 0.5, GL=10 → 0.7, GL=20 → 1.0
+    const insScaleFactor = gl !== null && gl < 20 ? Math.max(0.3, 0.3 + (gl / 20) * 0.7) : 1.0;
+    const insBonus = rawInsBonus * insScaleFactor;
     
     // 🥤 Жидкая пища — усваивается быстрее (волна короче, но пик выше)
     const liquidMult = hasLiquid ? LIQUID_FOOD.waveMultiplier : 1.0;
-    
-    // 🍎 Форма пищи (v3.2.0) — жидкое/обработанное/цельное
-    // Научное обоснование: Flood-Obbagy & Rolls 2009
-    const foodFormMult = foodForm && FOOD_FORM_BONUS[foodForm] 
-      ? FOOD_FORM_BONUS[foodForm].multiplier 
-      : 1.0;
     
     // Базовый множитель: GI + все бонусы (уже скалированные)
     const baseMult = giMult + proteinBonus + fiberBonus + fatBonus + insBonus;
@@ -1920,14 +1630,13 @@
     const carbsMult = glMultiplier;
     
     return {
-      total: baseMult * carbsMult * liquidMult * foodFormMult,
+      total: baseMult * carbsMult * liquidMult,
       gi: giMult,
       protein: proteinBonus,
       fiber: fiberBonus,
       fat: fatBonus,
       carbs: carbsMult,
       liquid: liquidMult,
-      foodForm: foodFormMult,  // 🆕 v3.2.0
       insulinogenic: insBonus,
       glCategory,
       glScaleFactor, // 🆕 Для отладки
@@ -2301,23 +2010,6 @@
     
     // Расчёт нутриентов последнего приёма
     const nutrients = calculateMealNutrients(lastMeal, pIndex, getProductFromItem);
-    
-    // 🍎 v3.2.0: Определяем форму пищи (liquid/processed/whole)
-    // Приоритет: liquid > processed > whole (берём "худшее" для волны)
-    let mealFoodForm = null;
-    let hasResistantStarchInMeal = false;
-    for (const item of (lastMeal.items || [])) {
-      const prod = getProductFromItem(item, pIndex);
-      const itemForm = getFoodForm(prod);
-      // Приоритет: liquid (1.30) > processed (1.15) > whole (0.85)
-      if (itemForm === 'liquid') mealFoodForm = 'liquid';
-      else if (itemForm === 'processed' && mealFoodForm !== 'liquid') mealFoodForm = 'processed';
-      else if (itemForm === 'whole' && !mealFoodForm) mealFoodForm = 'whole';
-      
-      // 🥔 Resistant starch
-      if (hasResistantStarch(prod)) hasResistantStarchInMeal = true;
-    }
-    
     const multipliers = calculateMultiplier(
       nutrients.avgGI, 
       nutrients.totalProtein, 
@@ -2326,8 +2018,7 @@
       nutrients.totalFat,
       nutrients.glycemicLoad,
       nutrients.hasLiquid,
-      nutrients.insulinogenicBonus,
-      mealFoodForm  // 🆕 v3.2.0
+      nutrients.insulinogenicBonus
     );
     
     // 🏃 Workout бонус (общий за день)
@@ -2468,34 +2159,14 @@
     const personalBonuses = (sleepQualityBonus + hydrationBonus + transFatBonus + cycleBonusValue) * dayFactorsScale;
     // 🆕 v3.0.0: Meal Stacking — если приём был слишком близко к предыдущему, волны "накладываются"
     const mealStackingBonus = (mealStackingResult.stackBonus || 0) * dayFactorsScale;
-    
-    // 🥔 v3.2.0: Resistant starch — охлаждённые крахмалы укорачивают волну
-    const resistantStarchBonus = hasResistantStarchInMeal ? RESISTANT_STARCH_BONUS.cooled : 0;
-    
-    // 🧊 v3.2.0: Холодовое воздействие — улучшает инсулиновую чувствительность
-    const coldExposureResult = getColdExposureBonus(dayData);
-    const coldExposureBonus = coldExposureResult.bonus || 0;
-    
-    // 🧪 v3.2.0: Добавки (уксус, корица, берберин) — снижают инсулиновый ответ
-    const supplementsResult = getSupplementsBonus(lastMeal);
-    const supplementsBonusValue = supplementsResult.bonus || 0;
-    
-    // 🔄 v3.2.0: Аутофагия — длительное голодание улучшает чувствительность
-    const autophagyResult = getAutophagyPhase(fastingHours);
-    const autophagyBonus = -(autophagyResult.bonus || 0); // Отрицательный = короче волна
-    
-    const allBonuses = activityBonuses + metabolicBonuses + personalBonuses + mealStackingBonus + resistantStarchBonus + coldExposureBonus + supplementsBonusValue + autophagyBonus;
+    const allBonuses = activityBonuses + metabolicBonuses + personalBonuses + mealStackingBonus;
     // Циркадный множитель: приближаем к 1.0 при низкой GL
     const scaledCircadian = 1.0 + (circadian.multiplier - 1.0) * circadianScale;
     const finalMultiplier = (multipliers.total + allBonuses) * scaledCircadian * spicyMultiplier;
     
-    // 🔬 DEBUG: Проверка v3.2.2 расчётов с Insulin Index
-    console.log('[InsulinWave v3.2.2 DEBUG]', {
-      // 🆕 v3.2.2: GL с учётом Insulin Index
-      'GL (with II)': gl,
-      'baseGL (without II)': nutrients.baseGlycemicLoad,
-      'II adjustment': gl - (nutrients.baseGlycemicLoad || 0),
-      insulinogenicType: nutrients.insulinogenicType,
+    // 🔬 DEBUG: Проверка v3.0.0 расчётов
+    console.log('[InsulinWave v3.0.0 DEBUG]', {
+      GL: gl,
       'multipliers.total': multipliers.total,
       'multipliers.carbs (GL mult)': multipliers.carbs,
       'multipliers.gi': multipliers.gi,
@@ -2505,6 +2176,23 @@
       personalBonuses,
       mealStackingBonus,
       allBonuses,
+      // Отдельные бонусы для поиска NaN
+      'workout': workoutBonus.bonus,
+      'postprandial': postprandialBonus.bonus,
+      'neat': neatBonus.bonus,
+      'steps': stepsBonus.bonus,
+      'fasting': fastingBonus,
+      'alcohol': alcoholBonus,
+      'caffeine': caffeineBonus,
+      'stress': stressBonus,
+      'sleep': sleepBonus,
+      'sleepQuality': sleepQualityBonus,
+      'hydration': hydrationBonus,
+      'age': ageBonus,
+      'bmi': bmiBonus,
+      'gender': genderBonus,
+      'transFat': transFatBonus,
+      'cycle': cycleBonusValue,
       dayFactorsScale,
       scaledCircadian,
       finalMultiplier,
@@ -2590,17 +2278,6 @@
       const startMin = utils.timeToMinutes(t);
       const mealHour = parseInt(t.split(':')[0]) || 12;
       const mealNutrients = calculateMealNutrients(meal, pIndex, getProductFromItem);
-      
-      // 🍎 v3.2.0: Форма пищи для каждого приёма
-      let historyFoodForm = null;
-      for (const item of (meal.items || [])) {
-        const prod = getProductFromItem(item, pIndex);
-        const itemForm = getFoodForm(prod);
-        if (itemForm === 'liquid') historyFoodForm = 'liquid';
-        else if (itemForm === 'processed' && historyFoodForm !== 'liquid') historyFoodForm = 'processed';
-        else if (itemForm === 'whole' && !historyFoodForm) historyFoodForm = 'whole';
-      }
-      
       const mealMult = calculateMultiplier(
         mealNutrients.avgGI, 
         mealNutrients.totalProtein, 
@@ -2609,8 +2286,7 @@
         mealNutrients.totalFat,
         mealNutrients.glycemicLoad,
         mealNutrients.hasLiquid,
-        mealNutrients.insulinogenicBonus,
-        historyFoodForm  // 🆕 v3.2.0
+        mealNutrients.insulinogenicBonus
       );
       
       // 🆕 Применяем ВСЕ дневные факторы (не только еда)
@@ -2661,80 +2337,16 @@
       const caffeineBonus = mealNutrients.hasCaffeine ? CAFFEINE_BONUS.bonus : 0;
       const transFatBonus = calculateTransFatBonus(mealNutrients.totalTrans || 0);
       
-      // 🆕 v3.2.2: Добавляем бонусы, которые были только в основном расчёте
-      // - resistant starch (определяем по meal items)
-      let hasResistantStarchInMeal = false;
-      for (const item of (meal.items || [])) {
-        const prod = getProductFromItem(item, pIndex);
-        if (hasResistantStarch(prod)) {
-          hasResistantStarchInMeal = true;
-          break;
-        }
-      }
-      const resistantStarchBonus = hasResistantStarchInMeal ? RESISTANT_STARCH_BONUS.cooled : 0;
-      
-      // - cold exposure, supplements, autophagy (из dayData)
-      const coldExposureResult = getColdExposureBonus(dayData);
-      const coldExposureBonus = coldExposureResult.bonus || 0;
-      
-      const supplementsResult = getSupplementsBonus(meal);
-      const supplementsBonusValue = supplementsResult.bonus || 0;
-      
-      // Fasting hours для этого приёма
-      const mealsBeforeThis = sorted.slice(idx + 1); // sorted отсортирован DESC, поэтому idx+1 = более ранние
-      let fastingHoursForMeal = 0;
-      if (mealsBeforeThis.length > 0) {
-        const prevMealTime = mealsBeforeThis[0].time;
-        if (prevMealTime) {
-          const prevMin = utils.timeToMinutes(prevMealTime);
-          fastingHoursForMeal = (startMin - prevMin) / 60;
-        }
-      } else {
-        // Первый приём дня — считаем от полуночи или от сна
-        fastingHoursForMeal = startMin / 60;
-      }
-      const autophagyResult = getAutophagyPhase(fastingHoursForMeal);
-      const autophagyBonus = -(autophagyResult.bonus || 0);
-      
       // 🔬 НАУЧНЫЙ АУДИТ 2025-12-09: Еда-специфичные бонусы тоже скалируются по GL
       // При GL < 5 кофеин/алкоголь/транс-жиры имеют минимальный эффект
       // (без значительного инсулинового всплеска их влияние на волну минимально)
       const mealSpecificBonuses = (alcoholBonus + caffeineBonus + transFatBonus) * dayFactorsScale;
-      // 🆕 v3.2.2: Теперь включаем ВСЕ бонусы как в основном расчёте
-      const allBonuses = scaledDayBonus + scaledActivityBonus + mealSpecificBonuses + 
-                         resistantStarchBonus + coldExposureBonus + supplementsBonusValue + autophagyBonus;
+      const allBonuses = scaledDayBonus + scaledActivityBonus + mealSpecificBonuses;
       const finalMultiplier = (mealMult.total + allBonuses) * scaledCircadian * spicyMultiplier;
-      
-      // 🔬 DEBUG v3.2.2: детальный расчёт для последнего приёма
-      if (idx === sorted.length - 1) {
-        console.log('[waveHistory v3.2.2 DETAILS]', {
-          'mealMult.total': mealMult.total,
-          allBonuses,
-          scaledCircadian,
-          spicyMultiplier,
-          finalMultiplier,
-          'result = (mult+bonus) × circ × spicy': (mealMult.total + allBonuses) * scaledCircadian * spicyMultiplier
-        });
-      }
       
       // 🆕 v3.0.1: Используем scaledBaseWaveHours (персональная база, скалированная по GL)
       const duration = Math.round(scaledBaseWaveHours * finalMultiplier * 60);
       const endMin = startMin + duration;
-      
-      // 🔬 DEBUG waveHistory — почему отличается от основного расчёта?
-      if (idx === sorted.length - 1) { // Последний приём (текущий)
-        console.log('[waveHistory DEBUG]', {
-          mealTime: t,
-          'GL (from nutrients)': mealNutrients.glycemicLoad,
-          'baseGL': mealNutrients.baseGlycemicLoad,
-          scaledBaseWaveHours,
-          effectiveBaseWaveHours,
-          finalMultiplier,
-          'mealMult.total': mealMult.total,
-          'duration (min)': duration,
-          'waveHours': duration / 60
-        });
-      }
       
       return {
         time: t,
@@ -2770,21 +2382,17 @@
       };
     }).filter(Boolean).reverse();
     
-    // 🆕 v3.2.2: НЕ перезаписываем adjustedWaveHours из waveHistory!
-    // Основной расчёт (adjustedWaveHours) теперь использует полный набор факторов (v3.2.x).
-    // waveHistory использует упрощённый расчёт для карточек истории.
-    // UI волны должен показывать результат основного расчёта.
+    // 🆕 v3.0.0: КРИТИЧНО — синхронизируем данные последнего приёма
+    // Карточка текущей волны должна показывать те же данные, что и карточка приёма
     const lastMealWave = waveHistory.length > 0 ? waveHistory[waveHistory.length - 1] : null;
-    // 🔬 v3.2.2: Для совместимости обновляем waveHistory данные, а не наоборот
     if (lastMealWave) {
-      // Синхронизируем waveHistory с основным расчётом (а не наоборот!)
-      lastMealWave.waveHours = adjustedWaveHours;
-      lastMealWave.duration = Math.round(adjustedWaveHours * 60);
-      lastMealWave.endMin = lastMealWave.startMin + lastMealWave.duration;
-      lastMealWave.endTimeDisplay = utils.minutesToTime(lastMealWave.endMin);
+      // Перезаписываем переменные, чтобы использовать данные из waveHistory
+      adjustedWaveHours = lastMealWave.waveHours || adjustedWaveHours;
+      // Пересчитываем зависимые переменные
+      waveMinutes = adjustedWaveHours * 60;
+      // Обновляем remainingMinutes
+      remainingMinutes = Math.max(0, waveMinutes - diffMinutes);
     }
-    // waveMinutes уже корректно рассчитан в основном блоке
-    // remainingMinutes тоже
     
     // === Анализ перекрытия волн ===
     const overlaps = [];
@@ -3103,21 +2711,6 @@
         if (remainingMinutes > 60) return '🍵 Выпей воды или чая';
         return '⏳ Дай организму переварить';
       })(),
-      
-      // 🆕 v3.2.0: Холодовое воздействие
-      coldExposure: coldExposureResult,
-      hasColdExposure: coldExposureResult.hasCold,
-      coldExposureBonus,
-      
-      // 🆕 v3.2.0: Добавки (уксус, корица, берберин)
-      supplements: supplementsResult,
-      hasSupplements: supplementsResult.hasSupplements,
-      supplementsBonus: supplementsBonusValue,
-      
-      // 🆕 v3.2.0: Аутофагия
-      autophagy: autophagyResult,
-      autophagyBonus,
-      isAutophagyActive: autophagyResult.phase === 'active' || autophagyResult.phase === 'deep' || autophagyResult.phase === 'extended',
       
       // 🏆 Рекорд липолиза
       lipolysisRecord: getLipolysisRecord(),
@@ -4526,31 +4119,13 @@
     WAVE_PHASES,
     INSULIN_INDEX_FACTORS,
     
-    // 🆕 v3.2.0: Food form и resistant starch
-    FOOD_FORM_BONUS,
-    RESISTANT_STARCH_BONUS,
-    LIPOLYSIS_THRESHOLDS,
-    REACTIVE_HYPOGLYCEMIA,
-    getFoodForm,
-    hasResistantStarch,
-    estimateInsulinLevel,
-    calculateHypoglycemiaRisk,
-    
-    // 🆕 v3.2.1: Добавки, холод, аутофагия
-    SUPPLEMENTS_BONUS,
-    COLD_EXPOSURE_BONUS,
-    AUTOPHAGY_TIMER,
-    getAutophagyPhase,
-    getColdExposureBonus,
-    getSupplementsBonus,
-    
     // Версия
-    VERSION: '3.2.2'
+    VERSION: '3.0.0'
   };
   
   // Алиас
   HEYS.IW = HEYS.InsulinWave;
   
-  console.log('[HEYS] InsulinWave v3.2.2 loaded (Insulin Index applied to GL)');
+  console.log('[HEYS] InsulinWave v3.0.0 loaded (continuous GL, personal baseline, wave phases, meal stacking)');
   
 })(typeof window !== 'undefined' ? window : global);

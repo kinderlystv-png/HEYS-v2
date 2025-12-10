@@ -536,36 +536,135 @@
   };
 
   // === Meal quality scoring helpers ===
+  // Унифицированные лимиты — оценка НЕ зависит от типа приёма (перекус/основной)
+  // Тип приёма — для удобства пользователя, а не для штрафов!
+  
+  // Единые абсолютные лимиты калорий (независимо от типа)
+  const MEAL_KCAL_LIMITS = {
+    light:  { max: 200 },   // Лёгкий приём
+    normal: { max: 600 },   // Нормальный
+    heavy:  { max: 800 },   // Тяжёлый (но ещё ок)
+    excess: { max: 1000 }   // Переедание
+  };
+
+  // Унифицированные идеальные макросы — одинаковые для всех типов
+  const IDEAL_MACROS_UNIFIED = {
+    protPct: 0.25,   // 25% калорий из белка
+    carbPct: 0.45,   // 45% из углеводов
+    fatPct: 0.30,    // 30% из жиров
+    minProtLight: 10,  // Минимум белка для лёгкого приёма (<200 ккал)
+    minProtNormal: 15  // Минимум белка для нормального приёма (>200 ккал)
+  };
+  
+  // === НАУЧНЫЕ КОЭФФИЦИЕНТЫ ИЗ ИНСУЛИНОВОЙ ВОЛНЫ ===
+  // Источники: Brand-Miller 2003, Van Cauter 1997, Flood-Obbagy 2009
+  
+  // 🌅 Циркадные множители — метаболизм меняется в течение дня
+  // Утром еда усваивается лучше (×0.9), ночью хуже (×1.2)
+  const CIRCADIAN_MEAL_BONUS = {
+    morning:   { from: 6, to: 10, bonus: 3, desc: '🌅 Утро — лучшее время' },
+    midday:    { from: 10, to: 14, bonus: 2, desc: '🌞 Обеденное время' },
+    afternoon: { from: 14, to: 18, bonus: 0, desc: 'Дневное время' },
+    evening:   { from: 18, to: 21, bonus: 0, desc: 'Вечер' },
+    lateEvening: { from: 21, to: 23, bonus: -2, desc: '⏰ Поздний вечер' },
+    night:     { from: 23, to: 6, bonus: -5, desc: '🌙 Ночь' }
+  };
+  
+  // 🥤 Жидкая пища — быстрый всплеск инсулина (Flood-Obbagy 2009)
+  // Пик на 35% выше, но волна короче. Для качества еды — это минус.
+  const LIQUID_FOOD_PATTERNS = [
+    /сок\b/i, /\bсока\b/i, /\bсоки\b/i,
+    /смузи/i, /коктейль/i, /shake/i,
+    /кефир/i, /ряженка/i, /айран/i, /тан\b/i,
+    /йогурт.*питьевой/i, /питьевой.*йогурт/i,
+    /бульон/i, /суп.*пюре/i, /крем.*суп/i,
+    /кола/i, /пепси/i, /фанта/i, /спрайт/i, /лимонад/i, /газировка/i,
+    /энергетик/i, /energy/i,
+    /протеин.*коктейль/i, /protein.*shake/i
+  ];
+  const LIQUID_FOOD_PENALTY = 5; // -5 баллов за преобладание жидких калорий
+  
+  // 🧬 GL-based качество углеводов (Brand-Miller 2003)
+  // GL = GI × углеводы / 100 — лучший предиктор инсулинового ответа
+  const GL_QUALITY_THRESHOLDS = {
+    veryLow: { max: 5, bonus: 3, desc: 'Минимальный инсулиновый ответ' },
+    low: { max: 10, bonus: 2, desc: 'Низкий инсулиновый ответ' },
+    medium: { max: 20, bonus: 0, desc: 'Умеренный ответ' },
+    high: { max: 30, bonus: -2, desc: 'Высокий ответ' },
+    veryHigh: { max: Infinity, bonus: -4, desc: 'Очень высокий ответ' }
+  };
+  
+  // Хелпер: проверка является ли продукт жидким
+  function isLiquidFood(productName, category) {
+    if (!productName) return false;
+    const name = String(productName);
+    const cat = String(category || '');
+    
+    // Проверяем категорию
+    if (['Напитки', 'Соки', 'Молочные напитки'].includes(cat)) {
+      return true;
+    }
+    
+    // Проверяем паттерны в названии
+    for (const pattern of LIQUID_FOOD_PATTERNS) {
+      if (pattern.test(name)) return true;
+    }
+    
+    return false;
+  }
+  
+  // Хелпер: расчёт GL для приёма
+  function calculateMealGL(avgGI, totalCarbs) {
+    if (!avgGI || !totalCarbs) return 0;
+    return (avgGI * totalCarbs) / 100;
+  }
+  
+  // Хелпер: получить циркадный бонус по времени
+  function getCircadianBonus(hour) {
+    for (const [period, config] of Object.entries(CIRCADIAN_MEAL_BONUS)) {
+      if (config.from <= config.to) {
+        // Обычный интервал (не пересекает полночь)
+        if (hour >= config.from && hour < config.to) {
+          return { bonus: config.bonus, period, desc: config.desc };
+        }
+      } else {
+        // Интервал пересекает полночь (night: 23 → 6)
+        if (hour >= config.from || hour < config.to) {
+          return { bonus: config.bonus, period, desc: config.desc };
+        }
+      }
+    }
+    return { bonus: 0, period: 'afternoon', desc: 'Дневное время' };
+  }
+  
+  // Хелпер: получить GL бонус
+  function getGLQualityBonus(gl) {
+    for (const [level, config] of Object.entries(GL_QUALITY_THRESHOLDS)) {
+      if (gl <= config.max) {
+        return { bonus: config.bonus, level, desc: config.desc };
+      }
+    }
+    return { bonus: -4, level: 'veryHigh', desc: 'Очень высокий ответ' };
+  }
+  
+  // Legacy константы для совместимости (не используются в оценке!)
   const MEAL_KCAL_DISTRIBUTION = {
-    breakfast: { minPct: 0.20, maxPct: 0.30 },
-    snack1:    { minPct: 0.05, maxPct: 0.12 },
-    lunch:     { minPct: 0.30, maxPct: 0.40 },
-    snack2:    { minPct: 0.05, maxPct: 0.12 },
-    dinner:    { minPct: 0.20, maxPct: 0.30 },
-    snack3:    { minPct: 0.02, maxPct: 0.08 },
-    night:     { minPct: 0.00, maxPct: 0.05 }  // Ночью не более 5% = ~100 ккал
+    breakfast: { minPct: 0.15, maxPct: 0.35 },
+    snack1:    { minPct: 0.05, maxPct: 0.25 },
+    lunch:     { minPct: 0.25, maxPct: 0.40 },
+    snack2:    { minPct: 0.05, maxPct: 0.25 },
+    dinner:    { minPct: 0.15, maxPct: 0.35 },
+    snack3:    { minPct: 0.02, maxPct: 0.15 },
+    night:     { minPct: 0.00, maxPct: 0.15 }
   };
-
-  // Абсолютные лимиты калорий по типам (независимо от нормы)
-  const MEAL_KCAL_ABSOLUTE = {
-    breakfast: { min: 300, max: 700, ideal: 500 },
-    snack1:    { min: 50,  max: 200, ideal: 150 },
-    lunch:     { min: 400, max: 800, ideal: 600 },
-    snack2:    { min: 50,  max: 200, ideal: 150 },
-    dinner:    { min: 300, max: 600, ideal: 450 },
-    snack3:    { min: 50,  max: 150, ideal: 100 },
-    night:     { min: 0,   max: 150, ideal: 0 }  // Ночью лучше не есть!
+  const MEAL_KCAL_ABSOLUTE = MEAL_KCAL_LIMITS; // Алиас
+  const IDEAL_MACROS = { // Legacy алиас
+    breakfast: IDEAL_MACROS_UNIFIED,
+    lunch: IDEAL_MACROS_UNIFIED,
+    dinner: IDEAL_MACROS_UNIFIED,
+    snack: IDEAL_MACROS_UNIFIED,
+    night: IDEAL_MACROS_UNIFIED
   };
-
-  const IDEAL_MACROS = {
-    breakfast: { protPct: 0.20, carbPct: 0.50, fatPct: 0.30, minProt: 15 },  // Завтрак — больше углеводов
-    lunch:     { protPct: 0.30, carbPct: 0.40, fatPct: 0.30, minProt: 25 },  // Обед — баланс
-    dinner:    { protPct: 0.35, carbPct: 0.30, fatPct: 0.35, minProt: 25 },  // Ужин — больше белка, меньше углеводов
-    snack:     { protPct: 0.15, carbPct: 0.55, fatPct: 0.30, minProt: 5 },   // Перекус — лёгкий
-    night:     { protPct: 0.40, carbPct: 0.20, fatPct: 0.40, minProt: 10 }   // Ночь — минимум углеводов!
-  };
-
-  const isMainMealType = (type) => ['breakfast', 'lunch', 'dinner'].includes(type);
 
   const safeRatio = (num, denom, fallback = 0.5) => {
     const n = +num || 0;
@@ -961,63 +1060,52 @@
   }
 
   function calcKcalScore(kcal, mealType, optimum, timeStr) {
-    const dist = MEAL_KCAL_DISTRIBUTION[mealType] || MEAL_KCAL_DISTRIBUTION.snack1;
-    const absLimits = MEAL_KCAL_ABSOLUTE[mealType] || MEAL_KCAL_ABSOLUTE.snack1;
-    const opt = optimum > 0 ? optimum : 2000;
-    const kcalPct = opt > 0 ? kcal / opt : 0;
-    
+    // === ОЦЕНКА НЕ ЗАВИСИТ ОТ ТИПА ПРИЁМА! ===
+    // Только абсолютные значения и время
     let points = 30;
     let ok = true;
     const issues = [];
     
-    // === 1. Проверка по % от нормы ===
-    if (kcalPct > dist.maxPct) {
-      const excess = (kcalPct - dist.maxPct) / dist.maxPct;
-      // Более жёсткий штраф: каждые 50% превышения = -10 баллов
-      const penalty = Math.min(25, Math.round(excess * 50));
+    // === 1. Проверка абсолютных лимитов ===
+    // Любой приём > 800 ккал — это много
+    if (kcal > 800) {
+      const excess = (kcal - 800) / 200; // Каждые 200 ккал сверх = -5
+      const penalty = Math.min(15, Math.round(excess * 5));
       points -= penalty;
-      ok = false;
-      issues.push('превышение');
-    } else if (isMainMealType(mealType) && kcalPct < dist.minPct * 0.5) {
-      points -= 10;
-      issues.push('слишком мало');
-    }
-    
-    // === 2. Проверка абсолютных лимитов ===
-    if (kcal > absLimits.max) {
-      const absExcess = (kcal - absLimits.max) / absLimits.max;
-      // За каждые 100 ккал сверх лимита = -5 баллов
-      const absPenalty = Math.min(15, Math.round((kcal - absLimits.max) / 100) * 5);
-      points -= absPenalty;
       ok = false;
       issues.push('много ккал');
     }
+    // Приём > 1000 ккал — переедание
+    if (kcal > 1000) {
+      points -= 10; // Дополнительный штраф
+      issues.push('переедание');
+    }
     
-    // === 3. Жёсткий штраф за ночные приёмы ===
+    // === 2. Штраф за ночные приёмы ===
     const parsed = parseTime(timeStr || '');
     if (parsed) {
       const hour = parsed.hh;
       
-      // 22:00-05:00 — ночное время
-      if (hour >= 22 || hour < 5) {
-        // Ночью любой приём > 150 ккал — плохо
-        if (kcal > 150) {
-          const nightPenalty = Math.min(20, Math.round(kcal / 50));
+      // 23:00-05:00 — ночное время (сдвинули с 22:00)
+      if (hour >= 23 || hour < 5) {
+        // Ночью приём > 300 ккал — небольшой штраф
+        if (kcal > 300) {
+          const nightPenalty = Math.min(10, Math.round((kcal - 300) / 100));
           points -= nightPenalty;
           ok = false;
           issues.push('ночь');
         }
-        // Тяжёлый приём ночью (>400 ккал) — критично
-        if (kcal > 400) {
-          points -= 10; // дополнительно
+        // Тяжёлый приём ночью (>700 ккал)
+        if (kcal > 700) {
+          points -= 5;
           issues.push('тяжёлая еда ночью');
         }
       }
-      // 21:00-22:00 — поздний вечер
-      else if (hour >= 21 && kcal > 300) {
-        const latePenalty = Math.min(10, Math.round(kcal / 100));
+      // 21:00-23:00 — поздний вечер (минимальный штраф)
+      else if (hour >= 21 && kcal > 500) {
+        const latePenalty = Math.min(5, Math.round((kcal - 500) / 150));
         points -= latePenalty;
-        ok = false;
+        // ok остаётся true — это не критично
         issues.push('поздно');
       }
     }
@@ -1026,17 +1114,19 @@
   }
 
   function calcMacroScore(prot, carbs, fat, kcal, mealType, timeStr) {
-    const ideal = IDEAL_MACROS[mealType] || IDEAL_MACROS.snack;
+    // === ОЦЕНКА НЕ ЗАВИСИТ ОТ ТИПА ПРИЁМА! ===
+    const ideal = IDEAL_MACROS_UNIFIED;
     let points = 20; // Базовые баллы (из 25)
     let proteinOk = true;
     const issues = [];
     
-    // Минимум белка зависит от типа приёма
-    const minProt = ideal.minProt || 10;
+    // Минимум белка зависит от калорийности приёма, НЕ от типа!
+    const minProt = kcal > 200 ? ideal.minProtNormal : ideal.minProtLight;
     if (prot >= minProt) {
       points += 5; // ✅ Бонус за достаточный белок
-    } else if (isMainMealType(mealType)) {
-      points -= 10; // Штраф за недостаток белка в основных приёмах
+    } else if (kcal > 300) {
+      // Штраф за недостаток белка только если приём существенный (>300 ккал)
+      points -= 5; // Смягчённый штраф (было -10)
       proteinOk = false;
       issues.push('мало белка');
     }
@@ -1202,7 +1292,7 @@
     if (avgGI > 70) badges.push({ type: 'ГИ', ok: false });
     if (avgHarm > 10) badges.push({ type: 'Вр', ok: false });
     
-    // === БОНУСЫ (до +10 сверх 100) ===
+    // === БОНУСЫ (до +15 сверх 100) ===
     let bonusPoints = 0;
     const positiveBadges = [];
     
@@ -1210,21 +1300,68 @@
     const timeParsed = parseTime(meal.time || '');
     const hour = timeParsed?.hh || 12;
     
-    // Бонус за ранний завтрак (7:00-9:00 для breakfast)
-    if (mealType === 'breakfast' && hour >= 7 && hour <= 9) {
-      bonusPoints += 2;
-      positiveBadges.push({ type: '🌅', ok: true, label: 'Ранний завтрак' });
+    // === НАУЧНЫЕ БОНУСЫ (из инсулиновой волны) ===
+    
+    // 🔬 GL-based качество (Brand-Miller 2003)
+    // GL = GI × углеводы / 100 — лучший предиктор инсулинового ответа
+    const mealGL = calculateMealGL(avgGI, totals.carbs || 0);
+    const glBonus = getGLQualityBonus(mealGL);
+    if (glBonus.bonus !== 0) {
+      bonusPoints += glBonus.bonus;
+      if (glBonus.bonus > 0) {
+        positiveBadges.push({ type: '📉', ok: true, label: 'Низкая GL' });
+      }
     }
     
-    // Бонус за оптимальное время обеда (12:00-14:00)
-    if (mealType === 'lunch' && hour >= 12 && hour <= 14) {
-      bonusPoints += 1;
+    // 🌅 Циркадный бонус (Van Cauter 1997)
+    // Утром метаболизм лучше — еда усваивается эффективнее
+    const circadian = getCircadianBonus(hour);
+    if (circadian.bonus > 0 && kcal >= 200) {
+      bonusPoints += circadian.bonus;
+      if (circadian.period === 'morning') {
+        positiveBadges.push({ type: '🌅', ok: true, label: 'Утренний приём' });
+      } else if (circadian.period === 'midday') {
+        positiveBadges.push({ type: '🌞', ok: true, label: 'Обеденное время' });
+      }
+    }
+    // Циркадный штраф уже применяется через calcKcalScore → не дублируем
+    
+    // 🥤 Детекция жидкой пищи (Flood-Obbagy 2009)
+    // Жидкие калории → быстрый пик инсулина, меньше насыщение
+    let liquidKcal = 0;
+    (meal.items || []).forEach(it => {
+      const p = getProductFromItem(it, pIndex) || {};
+      const g = +it.grams || 0;
+      if (!g) return;
+      
+      if (isLiquidFood(p.name, p.category)) {
+        const itemKcal = (p.kcal100 || 0) * g / 100;
+        liquidKcal += itemKcal;
+      }
+    });
+    // Если >50% калорий из жидких продуктов — штраф
+    const liquidRatio = kcal > 0 ? liquidKcal / kcal : 0;
+    if (liquidRatio > 0.5 && kcal >= 100) {
+      bonusPoints -= LIQUID_FOOD_PENALTY;
+      badges.push({ type: '🥤', ok: false, label: 'Жидкие калории' });
     }
     
-    // Бонус за ранний ужин (18:00-19:30)
-    if (mealType === 'dinner' && hour >= 18 && hour < 20) {
+    // === ОРИГИНАЛЬНЫЕ БОНУСЫ (улучшены) ===
+    
+    // Бонус за ранний вечерний приём (18:00-19:30)
+    if (hour >= 18 && hour < 20 && kcal >= 200) {
       bonusPoints += 2;
-      positiveBadges.push({ type: '🌇', ok: true, label: 'Ранний ужин' });
+      positiveBadges.push({ type: '🌇', ok: true, label: 'Ранний вечер' });
+    }
+    
+    // === БОНУС за высокобелковый приём ===
+    // Творог, мясо, рыба — отличная еда независимо от "типа"!
+    if (prot >= 20) {
+      bonusPoints += 3;
+      positiveBadges.push({ type: '🥛', ok: true, label: 'Белковый' });
+    } else if (prot >= 15 && kcal <= 400) {
+      // Лёгкий, но белковый приём
+      bonusPoints += 2;
     }
     
     // Бонус за клетчатку (2г+ в приёме = хорошо)
@@ -1243,11 +1380,9 @@
       positiveBadges.push({ type: '🌈', ok: true, label: 'Разнообразие' });
     }
     
-    // Бонус за идеальный белок (зависит от типа приёма)
-    const ideal = IDEAL_MACROS[mealType] || IDEAL_MACROS.snack;
-    const idealProtMin = ideal.minProt || 10;
-    const idealProtMax = idealProtMin * 2.5; // Например, для обеда 25-62г
-    if (prot >= idealProtMin && prot <= idealProtMax && macroScore.proteinOk) {
+    // Бонус за хороший белок относительно калорий (независимо от типа)
+    const protCalRatio = kcal > 0 ? (prot * 4) / kcal : 0;
+    if (protCalRatio >= 0.20 && protCalRatio <= 0.40 && prot >= 10) {
       bonusPoints += 2;
       positiveBadges.push({ type: '💪', ok: true, label: 'Белок' });
     }
@@ -1258,15 +1393,36 @@
       positiveBadges.push({ type: '🎯', ok: true, label: 'Низкий ГИ' });
     }
     
+    // === БОНУС за качественный ночной/поздний приём ===
+    // Если приём ночью, но состав хороший — компенсируем штраф!
+    const hasNightIssue = kcalScore.issues?.includes('ночь') || kcalScore.issues?.includes('поздно');
+    if (hasNightIssue) {
+      // Бонус за высокий белок ночью (> 25г) — белок ночью это хорошо для восстановления
+      if (prot >= 25) {
+        bonusPoints += 4;
+        positiveBadges.push({ type: '🌙💪', ok: true, label: 'Белок ночью' });
+      }
+      // Бонус за низкий ГИ ночью — не вызывает скачок инсулина
+      if (avgGI <= 40) {
+        bonusPoints += 3;
+        positiveBadges.push({ type: '🌙🎯', ok: true, label: 'Низкий ГИ' });
+      }
+      // Бонус за минимум простых углеводов (<15г)
+      if (simple < 15) {
+        bonusPoints += 2;
+      }
+    }
+    
     // Бонус за сбалансированный приём (все показатели в норме)
     if (kcalScore.ok && macroScore.proteinOk && carbScore.ok && fatScore.ok && giHarmScore.ok) {
       bonusPoints += 3;
       positiveBadges.push({ type: '⭐', ok: true, label: 'Баланс' });
     }
     
-    score += Math.min(10, bonusPoints); // Max +10 бонус
+    // Увеличен лимит бонусов: качественный ночной приём может компенсировать штраф за время
+    score += Math.min(15, bonusPoints); // Max +15 бонус (было 10)
     
-    // Финальный score: 0-110 (100 base + 10 bonus) → нормализуем до 0-100
+    // Финальный score: 0-115 (100 base + 15 bonus) → нормализуем до 0-100
     const finalScore = Math.min(100, Math.round(score));
     
     const color = finalScore >= 80 ? '#22c55e' : finalScore >= 50 ? '#eab308' : '#ef4444';
@@ -1284,6 +1440,7 @@
       { label: 'Углеводы', value: carbScore.simpleRatio <= 0.3 ? 'сложные ✓' : Math.round(carbScore.simpleRatio * 100) + '% простых', ok: carbScore.ok },
       { label: 'Жиры', value: fatScore.goodRatio >= 0.6 ? 'полезные ✓' : Math.round(fatScore.goodRatio * 100) + '% полезных', ok: fatScore.ok },
       { label: 'ГИ', value: Math.round(avgGI), ok: avgGI <= 70 },
+      { label: 'GL', value: Math.round(mealGL), ok: mealGL <= 20 },
       { label: 'Клетчатка', value: Math.round(fiber) + 'г', ok: fiber >= 2 }
     ];
     
@@ -1298,7 +1455,13 @@
       avgGI,
       avgHarm,
       fiber,
-      bonusPoints
+      bonusPoints,
+      // Научные данные
+      mealGL: Math.round(mealGL * 10) / 10,
+      glLevel: glBonus.level,
+      circadianPeriod: circadian.period,
+      circadianBonus: circadian.bonus,
+      liquidRatio: Math.round(liquidRatio * 100)
     };
   }
 
@@ -2284,7 +2447,48 @@
             waveData: currentWave,
             prevWave,
             nextWave
-          })
+          }),
+          
+          // ⚡ v3.2.0: Предупреждение о реактивной гипогликемии
+          (() => {
+            const IW = HEYS.InsulinWave;
+            if (!IW || !IW.calculateHypoglycemiaRisk) return null;
+            
+            const hypoRisk = IW.calculateHypoglycemiaRisk(meal, pIndex, getProductFromItem);
+            if (!hypoRisk.hasRisk) return null;
+            
+            // Проверяем: мы в окне риска (2-4 часа после еды)?
+            const mealMinutes = IW.utils?.timeToMinutes?.(meal.time) || 0;
+            const now = new Date();
+            const nowMinutes = now.getHours() * 60 + now.getMinutes();
+            let minutesSinceMeal = nowMinutes - mealMinutes;
+            if (minutesSinceMeal < 0) minutesSinceMeal += 24 * 60;
+            
+            const inRiskWindow = minutesSinceMeal >= hypoRisk.riskWindow.start && minutesSinceMeal <= hypoRisk.riskWindow.end;
+            
+            return React.createElement('div', {
+              className: 'hypoglycemia-warning',
+              style: {
+                margin: '8px 12px 10px 12px',
+                padding: '8px 10px',
+                background: inRiskWindow ? 'rgba(249,115,22,0.12)' : 'rgba(234,179,8,0.1)',
+                borderRadius: '8px',
+                fontSize: '12px',
+                color: inRiskWindow ? '#ea580c' : '#ca8a04'
+              }
+            },
+              React.createElement('div', { style: { fontWeight: '600', marginBottom: '2px' } },
+                inRiskWindow 
+                  ? '⚡ Сейчас возможен спад энергии'
+                  : '⚡ Высокий GI — риск "сахарных качелей"'
+              ),
+              React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } },
+                inRiskWindow
+                  ? 'Это нормально! Съешь орехи или белок если устал'
+                  : `GI ~${Math.round(hypoRisk.details.avgGI)}, белок ${Math.round(hypoRisk.details.totalProtein)}г — через 2-3ч может "накрыть"`
+              )
+            );
+          })()
         )
       )
     );
@@ -7746,7 +7950,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // Используем модуль HEYS.InsulinWave если доступен
       if (typeof HEYS !== 'undefined' && HEYS.InsulinWave && HEYS.InsulinWave.calculate) {
-        return HEYS.InsulinWave.calculate({
+        const result = HEYS.InsulinWave.calculate({
           meals: day.meals,
           pIndex,
           getProductFromItem,
@@ -7771,6 +7975,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             }
           }
         });
+        // 🔬 DEBUG UI: что показывается в интерфейсе
+        console.log('[UI InsulinWave]', {
+          insulinWaveHours: result?.insulinWaveHours,
+          baseWaveHours: result?.baseWaveHours,
+          glycemicLoad: result?.glycemicLoad,
+          insulinogenicType: result?.insulinogenicType,
+          status: result?.status
+        });
+        return result;
       }
       
       // Fallback если модуль не загружен
@@ -13755,6 +13968,86 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 )
             ),
             
+            // 🧪 v3.2.0: Шкала липолиза — уровень инсулина
+            (() => {
+              const IW = HEYS.InsulinWave;
+              if (!IW || !IW.estimateInsulinLevel) return null;
+              const insulinLevel = IW.estimateInsulinLevel(insulinWaveData.progress || 0);
+              
+              return React.createElement('div', { 
+                className: 'insulin-lipolysis-scale',
+                style: { marginTop: '12px', padding: '10px', background: 'rgba(0,0,0,0.03)', borderRadius: '8px' }
+              },
+                // Заголовок
+                React.createElement('div', { 
+                  style: { fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }
+                }, '🧪 Уровень инсулина (оценка)'),
+                
+                // Шкала — градиент
+                React.createElement('div', { 
+                  style: {
+                    height: '8px',
+                    borderRadius: '4px',
+                    background: 'linear-gradient(to right, #22c55e 0%, #22c55e 5%, #eab308 15%, #f97316 50%, #ef4444 100%)',
+                    position: 'relative'
+                  }
+                },
+                  // Маркер текущего уровня
+                  React.createElement('div', {
+                    style: {
+                      position: 'absolute',
+                      left: `${Math.min(100, Math.max(0, insulinLevel.level))}%`,
+                      top: '-4px',
+                      width: '4px',
+                      height: '16px',
+                      background: '#fff',
+                      borderRadius: '2px',
+                      boxShadow: '0 0 4px rgba(0,0,0,0.4)',
+                      transform: 'translateX(-50%)',
+                      transition: 'left 0.3s ease'
+                    }
+                  })
+                ),
+                
+                // Метки под шкалой
+                React.createElement('div', { 
+                  style: { 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    fontSize: '10px', 
+                    color: '#94a3b8',
+                    marginTop: '4px'
+                  }
+                },
+                  React.createElement('span', null, '🟢 <5'),
+                  React.createElement('span', null, '🟡 15'),
+                  React.createElement('span', null, '🟠 50'),
+                  React.createElement('span', null, '🔴 100+')
+                ),
+                
+                // Текущий уровень и описание
+                React.createElement('div', {
+                  style: { 
+                    textAlign: 'center', 
+                    fontSize: '13px',
+                    color: insulinLevel.color,
+                    marginTop: '8px',
+                    fontWeight: '600'
+                  }
+                }, `~${insulinLevel.level} µЕд/мл • ${insulinLevel.desc}`),
+                
+                // Подсказка о жиросжигании
+                insulinLevel.lipolysisPct < 100 && React.createElement('div', {
+                  style: { 
+                    fontSize: '11px', 
+                    color: '#64748b', 
+                    textAlign: 'center',
+                    marginTop: '4px'
+                  }
+                }, `Жиросжигание: ~${insulinLevel.lipolysisPct}%`)
+              );
+            })(),
+            
             // Предупреждение о перекрытии волн
             insulinWaveData.hasOverlaps && React.createElement('div', { 
               className: 'insulin-overlap-warning',
@@ -13910,6 +14203,97 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('span', { style: { fontWeight: '600' } }, 
                   '~' + insulinWaveData.lipolysisKcal + ' ккал'
                 )
+              )
+            ),
+            
+            // 🆕 v3.2.1: Аутофагия — показываем при активной фазе
+            insulinWaveData.autophagy && insulinWaveData.isAutophagyActive && React.createElement('div', {
+              className: 'autophagy-status',
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginTop: '8px',
+                padding: '8px 12px',
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.15))',
+                borderRadius: '8px',
+                border: '1px solid rgba(34, 197, 94, 0.3)'
+              }
+            },
+              React.createElement('span', { style: { fontSize: '18px' } }, insulinWaveData.autophagy.icon),
+              React.createElement('div', { style: { flex: 1 } },
+                React.createElement('div', { 
+                  style: { fontWeight: '600', fontSize: '13px', color: insulinWaveData.autophagy.color }
+                }, insulinWaveData.autophagy.label),
+                React.createElement('div', { 
+                  style: { fontSize: '11px', color: '#64748b' }
+                }, 'Клеточное очищение • ' + Math.round(insulinWaveData.fastingHours) + 'ч голода')
+              ),
+              // Прогресс-бар внутри фазы
+              React.createElement('div', { 
+                style: { 
+                  width: '40px', 
+                  height: '4px', 
+                  background: 'rgba(0,0,0,0.1)', 
+                  borderRadius: '2px', 
+                  overflow: 'hidden' 
+                }
+              },
+                React.createElement('div', {
+                  style: {
+                    width: insulinWaveData.autophagy.progress + '%',
+                    height: '100%',
+                    background: insulinWaveData.autophagy.color,
+                    transition: 'width 0.3s'
+                  }
+                })
+              )
+            ),
+            
+            // 🆕 v3.2.1: Холодовое воздействие — если активно
+            insulinWaveData.hasColdExposure && React.createElement('div', {
+              className: 'cold-exposure-badge',
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginTop: '8px',
+                padding: '6px 10px',
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 197, 253, 0.15))',
+                borderRadius: '6px',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                fontSize: '12px'
+              }
+            },
+              React.createElement('span', null, '🧊'),
+              React.createElement('span', { style: { color: '#3b82f6', fontWeight: '500' } }, 
+                insulinWaveData.coldExposure.desc
+              )
+            ),
+            
+            // 🆕 v3.2.1: Добавки — если есть
+            insulinWaveData.hasSupplements && React.createElement('div', {
+              className: 'supplements-badge',
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginTop: '8px',
+                padding: '6px 10px',
+                background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(192, 132, 252, 0.15))',
+                borderRadius: '6px',
+                border: '1px solid rgba(168, 85, 247, 0.3)',
+                fontSize: '12px'
+              }
+            },
+              React.createElement('span', null, '🧪'),
+              React.createElement('span', { style: { color: '#a855f7', fontWeight: '500' } }, 
+                insulinWaveData.supplements.supplements.map(function(s) {
+                  if (s === 'vinegar') return 'Уксус';
+                  if (s === 'cinnamon') return 'Корица';
+                  if (s === 'berberine') return 'Берберин';
+                  return s;
+                }).join(', ') + ' → ' + Math.abs(Math.round(insulinWaveData.supplementsBonus * 100)) + '% короче'
               )
             ),
             
@@ -15967,8 +16351,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     mealQualityPopup && ReactDOM.createPortal(
       (() => {
         const { meal, quality, mealTypeInfo, x, y } = mealQualityPopup;
-        const popupW = 280;
-        const popupH = 320; // Уменьшили высоту
+        const popupW = 320;
+        const popupH = 480; // Увеличили высоту для расчётов
         
         // Предпочитаем показ сверху для спарклайна
         const pos = getSmartPopupPosition(x, y, popupW, popupH, { preferAbove: true, offset: 12, margin: 16 });
@@ -15989,26 +16373,245 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           if (diffY > 50) setMealQualityPopup(null);
         };
         
-        const detailsRows = (quality.details || []).map((d, idx) => {
-          const icons = ['📊', '🥩', '🍞', '🥑', '📈'];
-          return { icon: icons[idx] || '📌', label: d.label, value: d.value, good: d.ok };
-        });
-        if (quality.avgHarm !== undefined) {
-          detailsRows.push({ icon: '⚠️', label: 'Вред', value: Math.round(quality.avgHarm || 0), good: (quality.avgHarm || 0) <= 10 });
-        }
-        
-        const getTip = () => {
-          const badges = quality.badges || [];
-          if (!badges.length) return '✨ Отличный сбалансированный приём!';
-          const firstBadge = badges[0];
-          const b = typeof firstBadge === 'object' ? (firstBadge.type || '') : String(firstBadge);
-          if (b.includes('Б') || b.includes('Белок')) return '💡 Добавь яйца, курицу или творог';
-          if (b.includes('Сахар') || b.includes('ГИ')) return '💡 Замени сладкое на сложные углеводы';
-          if (b.includes('Ж') || b.includes('жир') || b.includes('ТЖ')) return '💡 Добавь орехи, авокадо или рыбу';
-          if (b.includes('К') || b.includes('калор')) return '💡 Следи за размером порций';
-          if (b.includes('Вр')) return '💡 Выбирай менее вредные продукты';
-          return '💡 Следующий раз будет лучше!';
+        // Подготовка данных для расчёта
+        const getTotals = () => {
+          if (!meal?.items || meal.items.length === 0) return { kcal: 0, prot: 0, carbs: 0, simple: 0, complex: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0 };
+          const totals = M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal:0, carbs:0, simple:0, complex:0, prot:0, fat:0, bad:0, good:0, trans:0, fiber:0 };
+          return totals;
         };
+        const totals = getTotals();
+        
+        // Парсим время
+        const parseTimeH = (t) => {
+          if (!t) return 12;
+          const [h] = t.split(':').map(Number);
+          return h || 12;
+        };
+        const hour = parseTimeH(meal.time);
+        
+        // Расчёт компонентов оценки (пересоздаём логику для отображения)
+        const calcKcalDisplay = () => {
+          let points = 30;
+          const issues = [];
+          if (totals.kcal > 800) {
+            const penalty = Math.min(15, Math.round((totals.kcal - 800) / 200 * 5));
+            points -= penalty;
+            issues.push('>' + 800 + ' ккал: -' + penalty);
+          }
+          if (totals.kcal > 1000) {
+            points -= 10;
+            issues.push('переедание: -10');
+          }
+          if ((hour >= 23 || hour < 5) && totals.kcal > 300) {
+            const nightPenalty = Math.min(10, Math.round((totals.kcal - 300) / 100));
+            points -= nightPenalty;
+            issues.push('ночь: -' + nightPenalty);
+          } else if (hour >= 21 && totals.kcal > 500) {
+            const latePenalty = Math.min(5, Math.round((totals.kcal - 500) / 150));
+            points -= latePenalty;
+            issues.push('поздно: -' + latePenalty);
+          }
+          return { points: Math.max(0, points), max: 30, issues };
+        };
+        
+        const calcMacroDisplay = () => {
+          let points = 20;
+          const issues = [];
+          const minProt = totals.kcal > 200 ? 15 : 10;
+          if (totals.prot >= minProt) {
+            points += 5;
+            issues.push('белок ≥' + minProt + 'г: +5');
+          } else if (totals.kcal > 300) {
+            points -= 5;
+            issues.push('белок <' + minProt + 'г: -5');
+          }
+          if (totals.prot > 50) {
+            points -= 3;
+            issues.push('белок >' + 50 + 'г: -3');
+          }
+          if (totals.kcal > 0) {
+            const protPct = (totals.prot * 4) / totals.kcal;
+            const carbPct = (totals.carbs * 4) / totals.kcal;
+            const fatPct = (totals.fat * 9) / totals.kcal;
+            const deviation = Math.abs(protPct - 0.25) + Math.abs(carbPct - 0.45) + Math.abs(fatPct - 0.30);
+            const devPenalty = Math.min(10, Math.round(deviation * 15));
+            if (devPenalty > 0) {
+              points -= devPenalty;
+              issues.push('отклонение БЖУ: -' + devPenalty);
+            }
+          }
+          return { points: Math.max(0, Math.min(25, points)), max: 25, issues };
+        };
+        
+        const calcCarbDisplay = () => {
+          const total = totals.simple + totals.complex;
+          const simpleRatio = total > 0 ? totals.simple / total : 0.5;
+          let points = 15;
+          const issues = [];
+          if (simpleRatio <= 0.30) {
+            points = 15;
+            issues.push('простые ≤30%: ' + points);
+          } else if (simpleRatio <= 0.50) {
+            points = 10;
+            issues.push('простые 30-50%: ' + points);
+          } else if (simpleRatio <= 0.70) {
+            points = 5;
+            issues.push('простые 50-70%: ' + points);
+          } else {
+            points = 0;
+            issues.push('простые >70%: 0');
+          }
+          return { points, max: 15, issues, simpleRatio: Math.round(simpleRatio * 100) };
+        };
+        
+        const calcFatDisplay = () => {
+          const total = totals.bad + totals.good + totals.trans;
+          const goodRatio = total > 0 ? totals.good / total : 0.5;
+          let points = 15;
+          const issues = [];
+          if (goodRatio >= 0.60) {
+            points = 15;
+            issues.push('полезные ≥60%: 15');
+          } else if (goodRatio >= 0.40) {
+            points = 10;
+            issues.push('полезные 40-60%: 10');
+          } else {
+            points = 5;
+            issues.push('полезные <40%: 5');
+          }
+          if (totals.trans > 0.5) {
+            points -= 5;
+            issues.push('транс >' + 0.5 + 'г: -5');
+          }
+          return { points: Math.max(0, points), max: 15, issues, goodRatio: Math.round(goodRatio * 100) };
+        };
+        
+        const calcGiDisplay = () => {
+          const avgGI = quality.avgGI || 50;
+          let points = 15;
+          const issues = [];
+          if (avgGI <= 55) {
+            points = 15;
+            issues.push('ГИ ≤55: 15');
+          } else if (avgGI <= 70) {
+            points = 10;
+            issues.push('ГИ 55-70: 10');
+          } else {
+            points = 5;
+            issues.push('ГИ >70: 5');
+          }
+          const avgHarm = quality.avgHarm || 0;
+          if (avgHarm > 5) {
+            const harmPenalty = Math.min(5, Math.round(avgHarm / 5));
+            points -= harmPenalty;
+            issues.push('вред: -' + harmPenalty);
+          }
+          return { points: Math.max(0, points), max: 15, issues };
+        };
+        
+        const kcalCalc = calcKcalDisplay();
+        const macroCalc = calcMacroDisplay();
+        const carbCalc = calcCarbDisplay();
+        const fatCalc = calcFatDisplay();
+        const giCalc = calcGiDisplay();
+        
+        const baseScore = kcalCalc.points + macroCalc.points + carbCalc.points + fatCalc.points + giCalc.points;
+        const bonusPoints = quality.bonusPoints || 0;
+        
+        // Научные данные
+        const mealGL = quality.mealGL || 0;
+        const glLevel = quality.glLevel || 'medium';
+        const circadianPeriod = quality.circadianPeriod || 'afternoon';
+        const liquidRatio = quality.liquidRatio || 0;
+        
+        // Перевод GL уровня
+        const glLevelRu = {
+          'very-low': 'очень низкая',
+          'low': 'низкая',
+          'medium': 'средняя',
+          'high': 'высокая',
+          'very-high': 'очень высокая'
+        }[glLevel] || glLevel;
+        
+        // Перевод циркадного периода
+        const circadianPeriodRu = {
+          'morning': '🌅 утро (метаболизм ↑)',
+          'midday': '🌞 день (оптимально)',
+          'afternoon': '☀️ день',
+          'evening': '🌇 вечер',
+          'night': '🌙 ночь (метаболизм ↓)'
+        }[circadianPeriod] || circadianPeriod;
+        
+        // Список продуктов приёма
+        const getProductsList = () => {
+          if (!meal?.items || meal.items.length === 0) return [];
+          return meal.items.slice(0, 5).map(item => {
+            const p = getProductFromItem(item, pIndex) || {};
+            const name = item.name || p.name || 'Продукт';
+            const grams = +item.grams || 0;
+            const kcal = Math.round((p.kcal100 || 0) * grams / 100);
+            return { name: name.length > 20 ? name.slice(0, 18) + '...' : name, grams, kcal };
+          });
+        };
+        const productsList = getProductsList();
+        
+        // Умный совет на основе худшей категории
+        const getTip = () => {
+          // Находим худшую категорию (наименьший % от максимума)
+          const categories = [
+            { name: 'kcal', pct: kcalCalc.points / kcalCalc.max, issues: kcalCalc.issues },
+            { name: 'macro', pct: macroCalc.points / macroCalc.max, issues: macroCalc.issues },
+            { name: 'carb', pct: carbCalc.points / carbCalc.max, issues: carbCalc.issues },
+            { name: 'fat', pct: fatCalc.points / fatCalc.max, issues: fatCalc.issues },
+            { name: 'gi', pct: giCalc.points / giCalc.max, issues: giCalc.issues }
+          ];
+          
+          const worst = categories.reduce((w, c) => c.pct < w.pct ? c : w, categories[0]);
+          
+          // Если всё хорошо (≥80% по всем категориям)
+          if (worst.pct >= 0.8) return { text: '✨ Отличный сбалансированный приём!', type: 'success' };
+          
+          // Советы по категориям
+          const tips = {
+            kcal: { text: '💡 Следи за размером порций', type: 'warning' },
+            macro: { text: '💡 Добавь белок: яйца, курицу или творог', type: 'info' },
+            carb: { text: '💡 Замени сладкое на сложные углеводы (каши, овощи)', type: 'info' },
+            fat: { text: '💡 Добавь полезные жиры: орехи, авокадо, рыба', type: 'info' },
+            gi: { text: '💡 Выбирай продукты с низким ГИ (<55)', type: 'info' }
+          };
+          
+          return tips[worst.name] || { text: '💡 Следующий раз будет лучше!', type: 'neutral' };
+        };
+        
+        const tip = getTip();
+        
+        // Компонент строки расчёта
+        const CalcRow = ({ icon, label, points, max, issues, isBonus }) => 
+          React.createElement('div', { 
+            className: 'quality-calc-row' + (isBonus ? ' bonus' : ''),
+            style: {
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '8px 10px',
+              background: isBonus ? 'rgba(234, 179, 8, 0.1)' : (points === max ? 'rgba(16, 185, 129, 0.08)' : points < max * 0.5 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(234, 179, 8, 0.08)'),
+              borderRadius: '8px',
+              marginBottom: '6px'
+            }
+          },
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+              React.createElement('span', { style: { fontWeight: 600, fontSize: '13px' } }, icon + ' ' + label),
+              React.createElement('span', { 
+                style: { 
+                  fontWeight: 700, 
+                  fontSize: '14px',
+                  color: isBonus ? '#b45309' : (points === max ? '#10b981' : points < max * 0.5 ? '#ef4444' : '#eab308')
+                }
+              }, (isBonus && points > 0 ? '+' : '') + points + '/' + max)
+            ),
+            issues && issues.length > 0 && React.createElement('div', { 
+              style: { fontSize: '11px', color: 'var(--text-muted, #6b7280)', marginTop: '4px' }
+            }, issues.join(' • '))
+          );
         
         return React.createElement('div', {
           className: 'metric-popup meal-quality-popup' + (showAbove ? ' above' : ''),
@@ -16019,6 +16622,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             left: left + 'px',
             top: top + 'px',
             width: popupW + 'px',
+            maxHeight: 'calc(100vh - 32px)',
+            overflowY: 'auto',
             zIndex: 10000
           },
           onClick: (e) => e.stopPropagation(),
@@ -16028,42 +16633,123 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('div', { className: 'metric-popup-stripe', style: { background: color } }),
           React.createElement('div', { className: 'metric-popup-content' },
             React.createElement('div', { className: 'metric-popup-swipe' }),
+            
+            // Заголовок с иконкой и скором
             React.createElement('div', { className: 'metric-popup-header' },
               React.createElement('span', { className: 'metric-popup-title' }, 
                 (mealTypeInfo?.icon || '🍽️') + ' ' + (mealTypeInfo?.label || meal.name || 'Приём пищи')
               ),
-              React.createElement('span', { className: 'metric-popup-pct', style: { color: color, fontSize: '1.5rem', fontWeight: 700 } }, 
-                quality.score + '%'
+              React.createElement('span', { className: 'metric-popup-pct', style: { color: color, fontSize: '1.6rem', fontWeight: 700 } }, 
+                quality.score
               )
             ),
-            React.createElement('div', { className: 'metric-popup-progress', style: { margin: '12px 0' } },
+            
+            // Прогресс-бар
+            React.createElement('div', { className: 'metric-popup-progress', style: { margin: '8px 0 12px 0' } },
               React.createElement('div', { 
                 className: 'metric-popup-progress-fill',
                 style: { width: quality.score + '%', background: `linear-gradient(90deg, ${color} 0%, ${color}dd 100%)`, transition: 'width 0.4s ease-out' }
               })
             ),
+            
+            // Подсказка
             React.createElement('div', { 
               className: 'meal-quality-tip',
-              style: { padding: '8px 12px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', marginBottom: '12px', fontSize: '0.85rem' }
-            }, getTip()),
+              style: { 
+                padding: '8px 12px', 
+                background: tip.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : tip.type === 'warning' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)', 
+                borderRadius: '8px', 
+                marginBottom: '12px', 
+                fontSize: '0.85rem' 
+              }
+            }, tip.text),
+            
+            // === ПОДРОБНЫЙ РАСЧЁТ ===
             React.createElement('div', { 
-              className: 'meal-quality-details-grid',
-              style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginBottom: '12px' }
+              style: { 
+                fontSize: '12px', 
+                fontWeight: 700, 
+                color: 'var(--text-secondary, #4b5563)', 
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }
+            }, '📊 Расчёт оценки'),
+            
+            // Категории
+            CalcRow({ icon: '📊', label: 'Калории (' + Math.round(totals.kcal) + ' ккал)', points: kcalCalc.points, max: kcalCalc.max, issues: kcalCalc.issues }),
+            CalcRow({ icon: '🥩', label: 'Макросы (Б:' + Math.round(totals.prot) + ' У:' + Math.round(totals.carbs) + ' Ж:' + Math.round(totals.fat) + ')', points: macroCalc.points, max: macroCalc.max, issues: macroCalc.issues }),
+            CalcRow({ icon: '🍬', label: 'Углеводы (' + carbCalc.simpleRatio + '% простых)', points: carbCalc.points, max: carbCalc.max, issues: carbCalc.issues }),
+            CalcRow({ icon: '🥑', label: 'Жиры (' + fatCalc.goodRatio + '% полезных)', points: fatCalc.points, max: fatCalc.max, issues: fatCalc.issues }),
+            CalcRow({ icon: '📈', label: 'ГИ ' + Math.round(quality.avgGI || 50) + ' / Вред ' + Math.round(quality.avgHarm || 0), points: giCalc.points, max: giCalc.max, issues: giCalc.issues }),
+            
+            // Бонусы
+            bonusPoints !== 0 && CalcRow({ icon: '⭐', label: 'Бонусы', points: bonusPoints, max: 15, issues: quality.badges?.filter(b => b.ok).map(b => b.label || b.type), isBonus: true }),
+            
+            // Итого
+            React.createElement('div', { 
+              style: { 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                padding: '10px 12px',
+                background: color + '20',
+                borderRadius: '8px',
+                marginTop: '8px',
+                marginBottom: '12px'
+              }
             },
-              detailsRows.map((row, i) => 
-                React.createElement('div', { 
-                  key: i,
-                  style: { display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: row.good ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)', borderRadius: '6px', fontSize: '0.8rem' }
-                },
-                  React.createElement('span', null, row.icon + ' ' + row.label),
-                  React.createElement('span', { style: { fontWeight: 600, color: row.good ? '#10b981' : '#ef4444' } }, row.value)
-                )
+              React.createElement('span', { style: { fontWeight: 700, fontSize: '14px' } }, '∑ ИТОГО'),
+              React.createElement('span', { style: { fontWeight: 800, fontSize: '18px', color: color } }, 
+                baseScore + '+' + bonusPoints + ' = ' + quality.score
               )
             ),
-            (quality.badges && quality.badges.length > 0) && React.createElement('div', { 
-              style: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }
+            
+            // Научные данные (если есть)
+            (mealGL > 0 || liquidRatio > 0) && React.createElement('div', {
+              style: { 
+                fontSize: '11px', 
+                color: 'var(--text-muted, #6b7280)',
+                padding: '8px',
+                background: 'var(--bg-tertiary, #f3f4f6)',
+                borderRadius: '6px',
+                marginBottom: '10px'
+              }
             },
-              quality.badges.slice(0, 3).map((badge, i) => {
+              React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px' } }, '🔬 Научные данные'),
+              mealGL > 0 && React.createElement('div', null, 'GL: ' + mealGL + ' (' + glLevel + ')'),
+              liquidRatio > 0 && React.createElement('div', null, 'Жидкие калории: ' + liquidRatio + '%'),
+              React.createElement('div', null, 'Период: ' + circadianPeriodRu),
+              React.createElement('div', null, 'GL нагрузка: ' + glLevelRu + ' (' + mealGL.toFixed(1) + ')'),
+              liquidRatio > 0.3 && React.createElement('div', { style: { color: '#f59e0b' } }, '💧 Жидкая пища: ' + Math.round(liquidRatio * 100) + '%')
+            ),
+            
+            // Список продуктов
+            productsList.length > 0 && React.createElement('div', {
+              style: {
+                background: 'var(--bg-secondary, #f9fafb)',
+                borderRadius: '8px',
+                padding: '8px',
+                marginBottom: '10px',
+                fontSize: '0.75rem'
+              }
+            },
+              React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px', color: 'var(--text-muted)' } }, '📋 Состав приёма:'),
+              productsList.map((p, i) => React.createElement('div', {
+                key: i,
+                style: { display: 'flex', justifyContent: 'space-between', padding: '2px 0', borderBottom: i < productsList.length - 1 ? '1px solid var(--border-color, #e5e7eb)' : 'none' }
+              },
+                React.createElement('span', { style: { color: 'var(--text-primary)' } }, p.name),
+                React.createElement('span', { style: { color: 'var(--text-muted)' } }, p.grams + 'г · ' + p.kcal + ' ккал')
+              )),
+              meal.items && meal.items.length > 5 && React.createElement('div', { style: { textAlign: 'center', color: 'var(--text-muted)', marginTop: '4px' } }, '...и ещё ' + (meal.items.length - 5))
+            ),
+            
+            // Бейджи
+            (quality.badges && quality.badges.length > 0) && React.createElement('div', { 
+              style: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }
+            },
+              quality.badges.slice(0, 5).map((badge, i) => {
                 const isPositive = badge.ok === true;
                 const badgeType = typeof badge === 'object' ? badge.type : String(badge);
                 const badgeLabel = typeof badge === 'object' && badge.label ? badge.label : '';
@@ -16078,9 +16764,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     fontSize: '0.75rem', 
                     fontWeight: 500 
                   } 
-                }, badgeType);
+                }, badgeType + (badgeLabel ? ' ' + badgeLabel : ''));
               })
             ),
+            
+            // Время и кнопка закрытия
             meal.time && React.createElement('div', { style: { fontSize: '0.75rem', color: 'var(--text-muted, #9ca3af)', textAlign: 'center' } }, '🕐 ' + meal.time),
             React.createElement('button', { className: 'metric-popup-close', 'aria-label': 'Закрыть', onClick: () => setMealQualityPopup(null) }, '✕')
           ),

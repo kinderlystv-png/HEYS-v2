@@ -1841,6 +1841,137 @@
     xpAction: 'measurements_logged'
   });
 
+  // ============================================================
+  // COLD EXPOSURE STEP — 🧊 Холодовое воздействие
+  // v3.2.1: Улучшает инсулиновую чувствительность на ~5-12%
+  // ============================================================
+
+  const COLD_TYPES = [
+    { id: 'none', icon: '🚿', label: 'Нет', desc: 'Обычный душ' },
+    { id: 'coldShower', icon: '🧊', label: 'Холодный душ', desc: '2-3 мин, -5% волна' },
+    { id: 'coldBath', icon: '🛁', label: 'Холодная ванна', desc: '10+ мин, -10% волна' },
+    { id: 'coldSwim', icon: '🏊', label: 'Моржевание', desc: '5+ мин, -12% волна' }
+  ];
+
+  function ColdExposureStepComponent({ data, onChange }) {
+    const selectedType = data.coldType || 'none';
+    const time = data.coldTime || new Date().toTimeString().slice(0, 5);
+
+    return React.createElement('div', { className: 'mc-cold-step' },
+      // Кнопки выбора типа
+      React.createElement('div', { 
+        style: { 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(2, 1fr)', 
+          gap: '12px',
+          marginBottom: '16px'
+        }
+      },
+        COLD_TYPES.map(t => React.createElement('button', {
+          key: t.id,
+          onClick: () => onChange({ ...data, coldType: t.id, coldTime: t.id !== 'none' ? time : null }),
+          style: {
+            padding: '12px',
+            borderRadius: '12px',
+            border: selectedType === t.id ? '2px solid #3b82f6' : '2px solid #e2e8f0',
+            background: selectedType === t.id ? 'rgba(59, 130, 246, 0.1)' : '#fff',
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'all 0.2s'
+          }
+        },
+          React.createElement('div', { style: { fontSize: '24px', marginBottom: '4px' } }, t.icon),
+          React.createElement('div', { style: { fontWeight: '600', fontSize: '13px' } }, t.label),
+          React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } }, t.desc)
+        ))
+      ),
+      // Время (если выбрано что-то кроме "нет")
+      selectedType !== 'none' && React.createElement('div', {
+        style: { 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '12px',
+          padding: '12px',
+          background: 'rgba(59, 130, 246, 0.05)',
+          borderRadius: '8px'
+        }
+      },
+        React.createElement('span', { style: { fontSize: '14px', color: '#64748b' } }, '⏰ Время:'),
+        React.createElement('input', {
+          type: 'time',
+          value: time,
+          onChange: (e) => onChange({ ...data, coldTime: e.target.value }),
+          style: {
+            padding: '8px 12px',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+            fontSize: '16px',
+            fontWeight: '600'
+          }
+        })
+      ),
+      // Подсказка о пользе
+      selectedType !== 'none' && React.createElement('div', {
+        style: {
+          marginTop: '12px',
+          padding: '10px',
+          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 197, 253, 0.15))',
+          borderRadius: '8px',
+          fontSize: '12px',
+          color: '#3b82f6'
+        }
+      },
+        '💡 Холод активирует бурый жир и улучшает чувствительность к инсулину на 4-5 часов'
+      )
+    );
+  }
+
+  registerStep('cold_exposure', {
+    title: 'Холодовое воздействие',
+    hint: 'Был ли холодный душ?',
+    icon: '🧊',
+    canSkip: true,
+    component: ColdExposureStepComponent,
+    getInitialData: () => {
+      const dateKey = getTodayKey();
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+      const cold = dayData.coldExposure || {};
+      return {
+        coldType: cold.type || 'none',
+        coldTime: cold.time || new Date().toTimeString().slice(0, 5),
+        _dateKey: dateKey
+      };
+    },
+    save: (data) => {
+      const dateKey = data._dateKey || getTodayKey();
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      
+      if (data.coldType && data.coldType !== 'none') {
+        dayData.coldExposure = {
+          type: data.coldType,
+          time: data.coldTime
+        };
+        dayData.updatedAt = Date.now();
+        lsSet(`heys_dayv2_${dateKey}`, dayData);
+        
+        window.dispatchEvent(new CustomEvent('heys:data-saved', { 
+          detail: { key: `day:${dateKey}`, type: 'coldExposure' }
+        }));
+        window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+          detail: { date: dateKey, field: 'coldExposure', value: dayData.coldExposure }
+        }));
+      } else {
+        // Если выбрано "нет" — удаляем
+        if (dayData.coldExposure) {
+          delete dayData.coldExposure;
+          dayData.updatedAt = Date.now();
+          lsSet(`heys_dayv2_${dateKey}`, dayData);
+        }
+      }
+    },
+    xpAction: 'cold_exposure_logged'
+  });
+
   // =============================================
 
   // === Экспорт шагов ===
@@ -1854,6 +1985,7 @@
     HouseholdStats: HouseholdStatsComponent,
     Cycle: CycleStepComponent,
     Measurements: MeasurementsStepComponent,
+    ColdExposure: ColdExposureStepComponent,  // 🆕 v3.2.1
     getLastMeasurementByField,
     getMeasurementsHistory,
     // Утилиты
@@ -1871,6 +2003,6 @@
     shouldShowCycleStep
   };
 
-  console.log('[HEYS] Steps registered: weight, sleepTime, sleepQuality, stepsGoal, deficit, household_minutes, household_stats, cycle, measurements');
+  console.log('[HEYS] Steps registered: weight, sleepTime, sleepQuality, stepsGoal, deficit, household_minutes, household_stats, cycle, measurements, cold_exposure');
 
 })(typeof window !== 'undefined' ? window : global);

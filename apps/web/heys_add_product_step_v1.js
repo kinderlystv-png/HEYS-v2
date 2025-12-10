@@ -129,11 +129,68 @@
     
     const { dateKey = '' } = context || {};
     
+    // 🔧 FIX: Реактивное состояние для продуктов с подпиской на синхронизацию
+    // Это решает проблему: при открытии модалки сразу после создания приёма
+    // продукты ещё не загружены из облака, но после heysSyncCompleted они появятся
+    const [productsVersion, setProductsVersion] = useState(0);
+    
+    // Подписка на обновление продуктов (heysSyncCompleted или watch)
+    useEffect(() => {
+      const handleSyncComplete = () => {
+        console.log('[AddProductStep] 🔄 heysSyncCompleted → refreshing products');
+        setProductsVersion(v => v + 1);
+      };
+      
+      window.addEventListener('heysSyncCompleted', handleSyncComplete);
+      
+      // Также подписываемся через HEYS.products.watch если доступен
+      let unwatchProducts = () => {};
+      if (HEYS.products?.watch) {
+        unwatchProducts = HEYS.products.watch(() => {
+          console.log('[AddProductStep] 🔄 products.watch → refreshing products');
+          setProductsVersion(v => v + 1);
+        });
+      }
+      
+      return () => {
+        window.removeEventListener('heysSyncCompleted', handleSyncComplete);
+        unwatchProducts();
+      };
+    }, []);
+    
     // Всегда берём актуальные продукты из глобального стора (если появились новые)
+    // productsVersion в зависимостях заставляет пересчитать при синхронизации
     const latestProducts = useMemo(() => {
       const base = Array.isArray(context?.products) ? context.products : [];
-      const storeRaw = HEYS.products?.getAll?.() || U().lsGet?.('heys_products', []);
-      const storeProducts = Array.isArray(storeRaw) ? storeRaw : [];
+      
+      // Пробуем получить из HEYS.products.getAll()
+      let storeProducts = [];
+      if (HEYS.products?.getAll) {
+        storeProducts = HEYS.products.getAll() || [];
+      }
+      
+      // Fallback: напрямую из HEYS.store
+      if (storeProducts.length === 0 && HEYS.store?.get) {
+        storeProducts = HEYS.store.get('heys_products', []) || [];
+      }
+      
+      // Fallback: из localStorage через U()
+      if (storeProducts.length === 0) {
+        const utils = U();
+        if (utils.lsGet) {
+          storeProducts = utils.lsGet('heys_products', []) || [];
+        }
+      }
+      
+      // Fallback: напрямую из localStorage
+      if (storeProducts.length === 0) {
+        try {
+          const raw = localStorage.getItem('heys_products');
+          if (raw) storeProducts = JSON.parse(raw) || [];
+        } catch (e) {}
+      }
+      
+      storeProducts = Array.isArray(storeProducts) ? storeProducts : [];
       // Если store длиннее — используем его как основу
       const primary = storeProducts.length >= base.length ? storeProducts : base;
       const secondary = primary === storeProducts ? base : storeProducts;
@@ -150,21 +207,13 @@
       primary.forEach(pushUnique);
       secondary.forEach(pushUnique);
       
-      // 🔍 DEBUG: Проверка на продукты без нутриентов
-      const emptyProducts = merged.filter(p => !p.kcal100 && !p.protein100 && !p.carbs100);
-      if (emptyProducts.length > 0) {
-        console.warn('⚠️ [AddProductStep] Products WITHOUT nutrients:', emptyProducts.length, 
-          emptyProducts.slice(0, 5).map(p => p.name));
-      }
-      
       return merged;
-    }, [context]);
+    }, [context, productsVersion]);
     
     // Debug: проверяем что products пришли
     useEffect(() => {
-      console.log('[AddProductStep] context:', context);
       console.log('[AddProductStep] products count:', latestProducts?.length);
-    }, [context, latestProducts]);
+    }, [latestProducts]);
     
     // Фокус на input при монтировании
     useEffect(() => {
@@ -1306,7 +1355,20 @@
     
     // Всегда берём актуальные продукты из хранилища (providedProducts может быть устаревшим)
     const U = HEYS.utils || {};
-    const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
+    
+    // Берём из первого непустого источника с fallback chain
+    const fromHeysProducts = HEYS.products?.getAll?.() || [];
+    const fromStore = HEYS.store?.get?.('heys_products', []) || [];
+    const fromLsGet = U.lsGet?.('heys_products', []) || [];
+    
+    let products = [];
+    if (fromHeysProducts.length > 0) {
+      products = fromHeysProducts;
+    } else if (fromStore.length > 0) {
+      products = fromStore;
+    } else if (fromLsGet.length > 0) {
+      products = fromLsGet;
+    }
     
     // Mutable ref для обновления продуктов после создания
     let currentProducts = [...products];
