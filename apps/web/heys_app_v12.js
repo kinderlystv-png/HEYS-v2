@@ -1702,6 +1702,10 @@
                     console.log(`[HEYS] ⚠️ RationTab BLOCKED: ${prev.length} > ${newProducts.length}`);
                     return prev;
                   }
+                  // 🔒 Не ре-рендерим если количество одинаковое
+                  if (Array.isArray(prev) && prev.length === newProducts.length) {
+                    return prev;
+                  }
                   return newProducts;
                 });
               };
@@ -2276,6 +2280,9 @@
             const syncingDelayTimeoutRef = useRef(null);
             const initialCheckDoneRef = useRef(false);
             const retryIntervalRef = useRef(null);
+            // 🔒 Cooldown после первого sync — не показываем "syncing" сразу после загрузки
+            const initialSyncCompletedAtRef = useRef(0);
+            const INITIAL_SYNC_COOLDOWN_MS = 3000; // 3 секунды после первого sync не показываем syncing
             
             const MIN_SYNCING_DURATION = 1500;
             const SYNCING_DELAY = 400;
@@ -2309,6 +2316,10 @@
                   (syncProgress.total > 0) ||
                   (pendingCount > 0);
                 if (!hadPendingWork) {
+                  // 🔒 Запоминаем время первого sync для cooldown
+                  if (!initialSyncCompletedAtRef.current) {
+                    initialSyncCompletedAtRef.current = Date.now();
+                  }
                   return;
                 }
 
@@ -2335,6 +2346,16 @@
                 }
                 
                 if (syncedTimeoutRef.current) {
+                  return;
+                }
+                
+                // 🔒 Cooldown: не показываем "syncing" сразу после первого sync
+                // Это предотвращает мерцание когда merged данные сохраняются обратно в облако
+                const timeSinceInitialSync = initialSyncCompletedAtRef.current 
+                  ? Date.now() - initialSyncCompletedAtRef.current 
+                  : Infinity;
+                if (timeSinceInitialSync < INITIAL_SYNC_COOLDOWN_MS) {
+                  // Тихо сохраняем без UI-индикации
                   return;
                 }
                 

@@ -238,16 +238,23 @@
     
     // Потом local meals — если ID совпадает, берём ЛОКАЛЬНУЮ версию (она более свежая)
     // ВАЖНО: При удалении item из приёма — locаl имеет меньше items, но это правильно!
-    // Раньше брали версию с бОльшим количеством items — это НЕПРАВИЛЬНО при удалении
+    // При ДОБАВЛЕНИИ item — нужен merge items по ID чтобы не терять данные с других устройств
     localMeals.forEach(meal => {
       if (!meal || !meal.id) return;
       const existing = mealsMap.get(meal.id);
       if (!existing) {
         mealsMap.set(meal.id, meal);
       } else {
-        // Конфликт по ID — берём локальную версию (пользователь только что её изменил)
-        // Local всегда свежее чем remote при активной сессии
-        mealsMap.set(meal.id, meal);
+        // Конфликт по ID — MERGE items внутри meal!
+        // Объединяем items из local и remote по item.id
+        const mergedItems = mergeItemsById(existing.items || [], meal.items || [], localIsNewer);
+        
+        // Берём остальные поля из более свежей версии
+        const mergedMeal = localIsNewer 
+          ? { ...existing, ...meal, items: mergedItems }
+          : { ...meal, ...existing, items: mergedItems };
+        
+        mealsMap.set(meal.id, mergedMeal);
       }
     });
     

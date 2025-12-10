@@ -1547,7 +1547,7 @@
                   ? { ...m, items: [...(m.items || []), newItem] }
                   : m
               );
-              return { ...prevDay, meals };
+              return { ...prevDay, meals, updatedAt: Date.now() };
             });
 
             try { navigator.vibrate?.(10); } catch(e) {}
@@ -5891,7 +5891,7 @@
       }; 
       setDay(prevDay => {
         const meals=(prevDay.meals||[]).map((m,i)=> i===mi? {...m, items:[...(m.items||[]), item]}:m); 
-        return {...prevDay, meals}; 
+        return {...prevDay, meals, updatedAt: Date.now()}; 
       }); 
       
       // Track new item for animation
@@ -5914,14 +5914,14 @@
       const grams = +g || 0; 
       setDay(prevDay => {
         const meals = (prevDay.meals || []).map((m,i)=> i===mi? {...m, items:(m.items||[]).map(it=> it.id===itId?{...it, grams:grams}:it)}:m); 
-        return {...prevDay, meals}; 
+        return {...prevDay, meals, updatedAt: Date.now()}; 
       }); 
     }, [setDay]);
     const removeItem = React.useCallback((mi, itId) => { 
       haptic('medium'); 
       setDay(prevDay => {
         const meals=(prevDay.meals||[]).map((m,i)=> i===mi? {...m, items:(m.items||[]).filter(it=>it.id!==itId)}:m); 
-        return {...prevDay, meals}; 
+        return {...prevDay, meals, updatedAt: Date.now()}; 
       });
       // 🔄 Пересчитываем orphan-продукты после удаления item
       // (возможно этот item был единственным использованием orphan продукта)
@@ -5934,7 +5934,7 @@
     const updateMealField = React.useCallback((mealIndex, field, value) => {
       setDay(prevDay => {
         const meals = (prevDay.meals || []).map((m, i) => i === mealIndex ? { ...m, [field]: value } : m);
-        return { ...prevDay, meals };
+        return { ...prevDay, meals, updatedAt: Date.now() };
       });
     }, [setDay]);
     const changeMealMood = React.useCallback((mealIndex, value) => updateMealField(mealIndex, 'mood', value), [updateMealField]);
