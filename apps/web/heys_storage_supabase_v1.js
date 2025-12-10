@@ -2341,9 +2341,9 @@
           // Добавляем user_id если его нет (таблица требует NOT NULL)
           const itemWithUser = item.user_id ? item : { ...item, user_id: user.id };
           // DEBUG: логируем первый item для диагностики
-          if (uniqueBatch.indexOf(item) === 0) {
-            console.log('[DEBUG] client_kv_store upsert payload:', JSON.stringify(itemWithUser, null, 2).substring(0, 500));
-          }
+          // if (uniqueBatch.indexOf(item) === 0) {
+          //   console.log('[DEBUG] client_kv_store upsert payload:', JSON.stringify(itemWithUser, null, 2).substring(0, 500));
+          // }
           // Primary key = (user_id, client_id, k), используем его для onConflict
           return cloud.upsert('client_kv_store', itemWithUser, 'user_id,client_id,k')
             .catch(err => {

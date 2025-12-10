@@ -26,6 +26,9 @@
   }
 
   function debugDayStorage(todayKey, currentClientId, altKey) {
+    // DEBUG функция закомментирована для чистоты консоли
+    return;
+    /* Original debug code:
     try {
       const ls = global.localStorage;
       if (!ls) return;
@@ -77,6 +80,7 @@
     } catch (e) {
       // не ломаем основной поток из-за debug
     }
+    */
   }
   
   /**
@@ -90,7 +94,7 @@
     // Если клиент не выбран — НЕ показываем чек-ин (чтобы не показывать до авторизации)
     const currentClientId = U.getCurrentClientId ? U.getCurrentClientId() : '';
     if (!currentClientId) {
-      console.log('[MorningCheckin] No clientId, skip check');
+      // console.log('[MorningCheckin] No clientId, skip check');
       return false;
     }
     
@@ -103,7 +107,7 @@
     const hasWeightAlt = altDayData && altDayData.weightMorning != null && altDayData.weightMorning !== '' && altDayData.weightMorning !== 0;
     const hasWeight = hasWeightPrimary || hasWeightAlt;
 
-    console.log('[MorningCheckin] Checking for clientId:', currentClientId.substring(0,8), '| weightMorning:', dayData.weightMorning, '| dayKey:', todayKey, '| altKey:', calendarKey, '| altWeight:', altDayData.weightMorning);
+    // console.log('[MorningCheckin] Checking for clientId:', currentClientId.substring(0,8), '| ...');
     debugDayStorage(todayKey, currentClientId, calendarKey);
 
     // Показываем, если ни в эффективном дне (до 3:00 = вчера), ни в календарном ключе нет веса
@@ -317,6 +321,6 @@
     }
   };
 
-  console.log('[HEYS] MorningCheckin v2 loaded (using StepModal)');
+  // console.log('[HEYS] MorningCheckin v2 loaded (using StepModal)');
 
 })(typeof window !== 'undefined' ? window : global);

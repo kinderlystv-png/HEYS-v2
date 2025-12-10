@@ -137,7 +137,7 @@
     // Подписка на обновление продуктов (heysSyncCompleted или watch)
     useEffect(() => {
       const handleSyncComplete = () => {
-        console.log('[AddProductStep] 🔄 heysSyncCompleted → refreshing products');
+        // console.log('[AddProductStep] 🔄 heysSyncCompleted → refreshing products');
         setProductsVersion(v => v + 1);
       };
       
@@ -147,7 +147,7 @@
       let unwatchProducts = () => {};
       if (HEYS.products?.watch) {
         unwatchProducts = HEYS.products.watch(() => {
-          console.log('[AddProductStep] 🔄 products.watch → refreshing products');
+          // console.log('[AddProductStep] 🔄 products.watch → refreshing products');
           setProductsVersion(v => v + 1);
         });
       }
@@ -211,9 +211,9 @@
     }, [context, productsVersion]);
     
     // Debug: проверяем что products пришли
-    useEffect(() => {
-      console.log('[AddProductStep] products count:', latestProducts?.length);
-    }, [latestProducts]);
+    // useEffect(() => {
+    //   console.log('[AddProductStep] products count:', latestProducts?.length);
+    // }, [latestProducts]);
     
     // Фокус на input при монтировании
     useEffect(() => {
@@ -297,16 +297,7 @@
       
       // 🔍 DEBUG: Подробный лог выбранного продукта
       const hasNutrients = !!(product.kcal100 || product.protein100 || product.carbs100);
-      console.log('[ProductSearchStep] selectProduct:', product.name, 'grams:', defaultGrams, {
-        id: product.id,
-        hasNutrients,
-        kcal100: product.kcal100,
-        protein100: product.protein100,
-        carbs100: product.carbs100,
-        fat100: product.fat100,
-        simple100: product.simple100,
-        complex100: product.complex100
-      });
+      // console.log('[ProductSearchStep] selectProduct:', product.name, 'grams:', defaultGrams, {...});
       if (!hasNutrients) {
         console.error('🚨 [ProductSearchStep] CRITICAL: Product has NO nutrients!', product);
       }
@@ -351,7 +342,7 @@
       
       haptic('medium');
       setSelectedPhoto(file);
-      console.log('[AddProductStep] Photo selected:', file.name, file.size, 'bytes');
+      // console.log('[AddProductStep] Photo selected:', file.name, file.size, 'bytes');
       
       // Сжимаем фото перед сохранением (localStorage лимит ~5МБ)
       const MAX_SIZE = 800; // Максимальный размер по большей стороне
@@ -380,9 +371,7 @@
         
         // Конвертируем в JPEG (меньше размер чем PNG)
         const compressedData = canvas.toDataURL('image/jpeg', QUALITY);
-        console.log('[AddProductStep] Photo compressed:', 
-          Math.round(compressedData.length / 1024), 'KB (was', 
-          Math.round(file.size / 1024), 'KB)');
+        // console.log('[AddProductStep] Photo compressed:', ...);
         
         setPhotoPreview(compressedData);
         
@@ -425,7 +414,7 @@
         filename: pendingPhotoData.filename,
         timestamp: Date.now()
       });
-      console.log('[AddProductStep] Photo confirmed and added to meal:', context.mealIndex);
+      // console.log('[AddProductStep] Photo confirmed and added to meal:', context.mealIndex);
       
       setShowPhotoConfirm(false);
       setPendingPhotoData(null);
@@ -437,7 +426,7 @@
       setShowPhotoConfirm(false);
       setPendingPhotoData(null);
       setPhotoPreview(null);
-      console.log('[AddProductStep] Photo cancelled');
+      // console.log('[AddProductStep] Photo cancelled');
     }, []);
     
     // Открыть выбор фото
@@ -480,7 +469,7 @@
         // Костыль: триггерим обновление
       }
       
-      console.log('[AddProductStep] Продукт удалён:', name);
+      // console.log('[AddProductStep] Продукт удалён:', name);
       
       // Перезапускаем поиск чтобы обновить список
       setSearch(s => s + ' ');
@@ -805,11 +794,7 @@
       const newProducts = [...products, parsedPreview];
       
       // 🔍 DEBUG: Логируем состояние перед сохранением
-      console.log('[CreateProductStep] 🔍 DEBUG: HEYS.products =', !!HEYS.products, 
-        '| setAll =', typeof HEYS.products?.setAll,
-        '| HEYS.store =', !!HEYS.store,
-        '| store.set =', typeof HEYS.store?.set,
-        '| currentClientId =', HEYS.currentClientId?.substring?.(0, 8) || 'undefined');
+      // console.log('[CreateProductStep] 🔍 DEBUG: HEYS.products =', ...);
       
       // Сохраняем через HEYS.products (React state + localStorage + cloud sync)
       // или через HEYS.store.set (localStorage + cloud sync)
@@ -830,10 +815,7 @@
         console.warn('[CreateProductStep] ⚠️ Продукт сохранён только локально (нет HEYS.store)');
       }
       
-      console.log('[CreateProductStep] ✅ Продукт сохранён:', parsedPreview.name, 
-        '| Метод:', savedMethod,
-        '| Всего продуктов:', newProducts.length,
-        '| clientId:', HEYS.currentClientId?.substring?.(0, 8) || 'undefined');
+      // console.log('[CreateProductStep] ✅ Продукт сохранён:', parsedPreview.name, ...);
       
       // 🔍 ВЕРИФИКАЦИЯ: Проверяем что продукт действительно сохранился
       setTimeout(() => {
@@ -843,7 +825,7 @@
           p.id === parsedPreview.id
         );
         if (found) {
-          console.log('[CreateProductStep] ✅ VERIFIED: Продукт найден в базе после сохранения');
+          // console.log('[CreateProductStep] ✅ VERIFIED: Продукт найден в базе после сохранения');
         } else {
           console.error('🚨 [CreateProductStep] CRITICAL: Продукт НЕ найден в базе после сохранения!', {
             productName: parsedPreview.name,
@@ -852,7 +834,7 @@
           });
           // Попытка повторного сохранения
           if (HEYS.products?.setAll && newProducts.length > 0) {
-            console.log('[CreateProductStep] 🔄 Retry save...');
+            // console.log('[CreateProductStep] 🔄 Retry save...');
             HEYS.products.setAll(newProducts);
           }
         }
@@ -1225,13 +1207,7 @@
             else if (context?.onAdd) {
               // 🔍 DEBUG: Проверяем что отправляем в onAdd
               const hasNutrients = !!(product?.kcal100 || product?.protein100 || product?.carbs100);
-              console.log('[GramsStep] onAdd called:', product?.name, 'grams:', grams, {
-                id: product?.id,
-                hasNutrients,
-                kcal100: product?.kcal100,
-                protein100: product?.protein100,
-                mealIndex: context.mealIndex
-              });
+              // console.log('[GramsStep] onAdd called:', product?.name, 'grams:', grams, {...});
               if (!hasNutrients) {
                 console.error('🚨 [GramsStep] CRITICAL: Sending product with NO nutrients!', {
                   product,
@@ -1431,7 +1407,7 @@
       finishLabel: 'Добавить', // Кнопка на последнем шаге
       title: '', // Убрали — и так очевидно
       onComplete: (stepData) => {
-        console.log('[AddProductStep] onComplete stepData:', stepData);
+        // console.log('[AddProductStep] onComplete stepData:', stepData);
         
         // Данные шагов
         const searchData = stepData.search || {};
@@ -1441,7 +1417,7 @@
         const selectedProduct = gramsData.selectedProduct || searchData.selectedProduct;
         const grams = gramsData.grams || searchData.grams || 100;
         
-        console.log('[AddProductStep] selectedProduct:', selectedProduct?.name, 'grams:', grams);
+        // console.log('[AddProductStep] selectedProduct:', selectedProduct?.name, 'grams:', grams);
         
         if (selectedProduct && grams) {
           onAdd?.({
@@ -1542,6 +1518,6 @@
     computeSmartProducts
   };
 
-  console.log('[HEYS] AddProductStep v1 loaded');
+  // console.log('[HEYS] AddProductStep v1 loaded');
 
 })(typeof window !== 'undefined' ? window : global);

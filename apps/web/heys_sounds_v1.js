@@ -13,7 +13,35 @@
   // Lazy AudioContext (создаётся при первом звуке)
   let audioCtx = null;
   
+  // Флаг: был ли user gesture
+  let userGestureReceived = false;
+  
+  // Слушаем первый user gesture для AudioContext
+  function initOnUserGesture() {
+    if (userGestureReceived) return;
+    userGestureReceived = true;
+    // Создаём AudioContext только после user gesture
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) {
+        audioCtx = new AudioContext();
+      }
+    }
+    // Удаляем listeners после первого gesture
+    document.removeEventListener('click', initOnUserGesture);
+    document.removeEventListener('touchstart', initOnUserGesture);
+    document.removeEventListener('keydown', initOnUserGesture);
+  }
+  
+  // Регистрируем listeners для user gesture
+  document.addEventListener('click', initOnUserGesture, { once: true, passive: true });
+  document.addEventListener('touchstart', initOnUserGesture, { once: true, passive: true });
+  document.addEventListener('keydown', initOnUserGesture, { once: true, passive: true });
+  
   function getAudioContext() {
+    // Если user gesture не было — не создаём AudioContext
+    if (!userGestureReceived) return null;
+    
     if (!audioCtx) {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return null;
@@ -21,7 +49,7 @@
     }
     // Resume если suspended (iOS requirement)
     if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
+      audioCtx.resume().catch(() => {});
     }
     return audioCtx;
   }

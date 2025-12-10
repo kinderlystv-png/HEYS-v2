@@ -1825,7 +1825,8 @@
     isMealStale,
     allMeals,
     isNewItem,
-    optimum
+    optimum,
+    setMealQualityPopup
   }) {
     const headerMeta = MEAL_HEADER_META;
     function mTotals(m){
@@ -2329,8 +2330,43 @@
             })()
           );
         }),
-        // Компактный блок: оценки (время уже в заголовке)
+        // Компактный блок: бейдж качества + оценки (время уже в заголовке)
         React.createElement('div', { className: 'meal-meta-row' },
+          // Бейдж качества приёма (кликабельный для попапа)
+          mealQuality && React.createElement('button', {
+            className: 'meal-quality-badge',
+            onClick: (e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setMealQualityPopup({
+                meal,
+                quality: mealQuality,
+                mealTypeInfo,
+                x: rect.left + rect.width / 2,
+                y: rect.bottom + 8
+              });
+            },
+            title: 'Качество приёма — нажми для деталей',
+            style: {
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 10px',
+              borderRadius: '12px',
+              border: 'none',
+              background: mealQuality.color + '20',
+              color: mealQuality.color,
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              marginRight: '8px',
+              transition: 'transform 0.15s, box-shadow 0.15s'
+            }
+          },
+            React.createElement('span', { style: { fontSize: '14px' } }, 
+              mealQuality.score >= 80 ? '⭐' : mealQuality.score >= 50 ? '📊' : '⚠️'
+            ),
+            mealQuality.score
+          ),
           // На мобильных — только кнопка редактирования оценок (время в заголовке)
           isMobile
             ? React.createElement('button', {
@@ -2976,7 +3012,7 @@
         const profNow = getProfile();
         const key = 'heys_dayv2_' + date;
         const v = lsGet(key, null);
-        console.log('[HEYS] 📅 doLocal() loading day | key:', key, '| found:', !!v, '| meals in storage:', v?.meals?.length, '| steps:', v?.steps);
+        // DEBUG (отключено): console.log('[HEYS] 📅 doLocal() loading day | key:', key);
         if (v && v.date) {
           // ЗАЩИТА: не перезаписываем более свежие данные
           // handleDayUpdated может уже загрузить sync данные
@@ -2996,7 +3032,7 @@
           // Сохраняем миграцию обратно
           lsSet(key, cleanedDay);
           setDay(ensureDay(cleanedDay, profNow));
-          console.log('[HEYS] 📅 doLocal() loaded existing day | meals:', cleanedDay.meals?.length, '| steps:', cleanedDay.steps);
+          // DEBUG (отключено): console.log('[HEYS] 📅 doLocal() loaded existing day');
         } else {
           // create a clean default day for the selected date (don't inherit previous trainings)
           const defaultDay = ensureDay({ 
@@ -3974,21 +4010,25 @@
       
       if (swipeX < -100) {
         // Свайп влево = прочитано (сохраняется на день)
+        // Свайп влево = прочитано
         setDismissedAdvices(prev => {
           const newSet = new Set([...prev, adviceId]);
+          const saveData = {
+            date: new Date().toISOString().slice(0, 10),
+            ids: [...newSet]
+          };
           try {
-            localStorage.setItem('heys_advice_read_today', JSON.stringify({
-              date: new Date().toISOString().slice(0, 10),
-              ids: [...newSet]
-            }));
-          } catch(e) {}
+            localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+          } catch(e) {
+            // Тихо игнорируем ошибки localStorage
+          }
           return newSet;
         });
         
         // +XP за прочтение совета с floating animation
         if (window.HEYS?.game?.addXP) {
           const cardEl = adviceCardRefs.current[adviceId];
-          window.HEYS.game.addXP('advice_read', cardEl);
+          window.HEYS.game.addXP(0, 'advice_read', cardEl);
         }
         
         // Звук
@@ -4690,7 +4730,7 @@
       updateFromPosition(e.touches ? e.touches[0].clientX : e.clientX);
       
       const handleMove = (moveEvent) => {
-        moveEvent.preventDefault();
+        if (moveEvent.cancelable) moveEvent.preventDefault();
         updateFromPosition(moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX);
       };
       
@@ -6768,7 +6808,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           isMealStale,
           allMeals: day.meals,
           isNewItem,
-          optimum
+          optimum,
+          setMealQualityPopup
         })
       );
     });
@@ -6958,12 +6999,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     React.useEffect(() => {
       if (!advicePrimary) return;
       
-      console.log('[Advice] advicePrimary:', advicePrimary.id, 'trigger:', adviceTrigger, 'toastsEnabled:', toastsEnabled);
+      // 🔧 FIX: Пропускаем уже прочитанные советы (кроме manual триггера)
+      const isManualTrigger = adviceTrigger === 'manual' || adviceTrigger === 'manual_empty';
+      if (!isManualTrigger && dismissedAdvices.has(advicePrimary.id)) {
+        return;
+      }
       
       // Проверяем: автопоказ тостов (FAB = manual всегда работает)
-      const isManualTrigger = adviceTrigger === 'manual' || adviceTrigger === 'manual_empty';
       if (!isManualTrigger && !toastsEnabled) {
-        console.log('[Advice] Toasts disabled, skipping auto-show');
         // Тосты отключены — НЕ показываем автоматический тост, но сохраняем данные для FAB
         setDisplayedAdvice(advicePrimary);
         setDisplayedAdviceList(adviceRelevant || []);
@@ -6971,7 +7014,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         return;
       }
       
-      console.log('[Advice] Setting toast visible!');
       // Сохраняем совет и список для отображения
       setDisplayedAdvice(advicePrimary);
       setDisplayedAdviceList(adviceRelevant || []);
@@ -7016,7 +7058,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       //   setToastDetailsOpen(false);
       // }, advicePrimary.ttl || 5000);
       // return () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); };
-    }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled]);
+    }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices]);
     
     // Сброс advice при смене даты
     React.useEffect(() => {
@@ -7843,6 +7885,26 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     
     // Закрытие toast
     const dismissToast = () => {
+      // Отмечаем текущий совет как прочитанный (если есть)
+      if (displayedAdvice?.id) {
+        setDismissedAdvices(prev => {
+          const newSet = new Set([...prev, displayedAdvice.id]);
+          const saveData = {
+            date: new Date().toISOString().slice(0, 10),
+            ids: [...newSet]
+          };
+          try {
+            localStorage.setItem('heys_advice_read_today', JSON.stringify(saveData));
+          } catch(e) {}
+          return newSet;
+        });
+        
+        // +XP за прочтение совета
+        if (window.HEYS?.game?.addXP) {
+          window.HEYS.game.addXP(0, 'advice_read', null);
+        }
+      }
+      
       setToastVisible(false);
       setToastDismissed(true);
       setToastSwiped(false);
@@ -7975,14 +8037,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             }
           }
         });
-        // 🔬 DEBUG UI: что показывается в интерфейсе
-        console.log('[UI InsulinWave]', {
-          insulinWaveHours: result?.insulinWaveHours,
-          baseWaveHours: result?.baseWaveHours,
-          glycemicLoad: result?.glycemicLoad,
-          insulinogenicType: result?.insulinogenicType,
-          status: result?.status
-        });
+        // 🔬 DEBUG UI (отключено для production)
+        // console.log('[UI InsulinWave]', { insulinWaveHours: result?.insulinWaveHours, status: result?.status });
         return result;
       }
       
@@ -8259,7 +8315,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             setRefreshStatus('pulling');
           }
           
-          if (diff > 10) {
+          if (diff > 10 && e.cancelable) {
             e.preventDefault(); // Предотвращаем обычный скролл
           }
         }
@@ -8292,7 +8348,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     // === Анимация прогресса калорий при загрузке и при переключении на вкладку ===
     const animationRef = React.useRef(null);
     React.useEffect(() => {
-      console.log('[ProgressBar] Effect triggered, mobileSubTab:', mobileSubTab, 'eatenKcal:', eatenKcal);
+      // DEBUG (отключено): console.log('[ProgressBar] Effect triggered');
       
       // Отменяем предыдущую анимацию
       if (animationRef.current) {
@@ -8305,7 +8361,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       setAnimatedKcal(0);
       setAnimatedRatioPct(0);
       setAnimatedMarkerPos(0);
-      console.log('[ProgressBar] Reset to 0, isAnimating: true');
       
       // При переборе: зелёная часть = доля нормы от съеденного (optimum/eaten)
       // При норме: зелёная часть = доля съеденного от нормы (eaten/optimum)
@@ -8314,11 +8369,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         ? (optimum / eatenKcal) * 100  // При переборе: показываем долю нормы
         : (eatenKcal / optimum) * 100; // При норме: показываем прогресс к цели
       
-      console.log('[ProgressBar] Target:', target.toFixed(1) + '%');
-      
       // Шаг 2: Ждём чтобы React применил width: 0, затем запускаем анимацию
       const timeoutId = setTimeout(() => {
-        console.log('[ProgressBar] Timeout fired, starting animation');
         setIsAnimating(false); // Включаем transition обратно
         
         const duration = 800;
@@ -8345,7 +8397,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           if (progress < 1) {
             animationRef.current = requestAnimationFrame(animate);
           } else {
-            console.log('[ProgressBar] Animation complete at:', current.toFixed(1) + '%');
+            // DEBUG (отключено): console.log('[ProgressBar] Animation complete');
             setAnimatedKcal(targetKcal); // Финальное точное значение
             setAnimatedRatioPct(targetRatioPct);
             setAnimatedMarkerPos(targetMarkerPos); // Бейдж остаётся на конце линии
@@ -12907,6 +12959,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             )
           )
         )
+      ),
+      
+      // Лайфхак внизу карточки — на всю ширину
+      React.createElement('div', { className: 'water-tip' },
+        React.createElement('span', { className: 'water-tip-icon' }, '💡'),
+        React.createElement('span', { className: 'water-tip-text' }, 
+          'Утром поставь 4-5 бутылок 0,5л на кухне — вечером точно знаешь сколько выпил'
+        )
       )
     );
 
@@ -16518,6 +16578,36 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const baseScore = kcalCalc.points + macroCalc.points + carbCalc.points + fatCalc.points + giCalc.points;
         const bonusPoints = quality.bonusPoints || 0;
         
+        // === УЛУЧШЕНИЕ 1: Найти худшую категорию ===
+        const allCalcs = [
+          { id: 'kcal', ...kcalCalc, icon: '🔥', label: Math.round(totals.kcal) + ' ккал' },
+          { id: 'macro', ...macroCalc, icon: '🥩', label: 'Б' + Math.round(totals.prot) + ' У' + Math.round(totals.carbs) + ' Ж' + Math.round(totals.fat) },
+          { id: 'carb', ...carbCalc, icon: '🍬', label: carbCalc.simpleRatio + '% простых' },
+          { id: 'fat', ...fatCalc, icon: '🥑', label: fatCalc.goodRatio + '% полезных' },
+          { id: 'gi', ...giCalc, icon: '📈', label: 'ГИ ' + Math.round(quality.avgGI || 50) }
+        ];
+        const worstCalc = allCalcs.reduce((w, c) => (c.points / c.max) < (w.points / w.max) ? c : w, allCalcs[0]);
+        const worstId = (worstCalc.points / worstCalc.max) < 0.8 ? worstCalc.id : null;
+        
+        // === УЛУЧШЕНИЕ 5: Циркадный бонус ===
+        const circadianBonus = quality.circadianBonus || 0;
+        const circadianBonusPct = Math.round(circadianBonus * 100);
+        
+        // === УЛУЧШЕНИЕ 6: Проверка на молочные с высоким II ===
+        const getDairyWarning = () => {
+          if (!meal?.items || !pIndex) return null;
+          const dairyPatterns = /молок|кефир|йогурт|творог|сыр|сливк|ряженк/i;
+          const dairyItems = meal.items.filter(item => {
+            const p = getProductFromItem(item, pIndex);
+            return p && dairyPatterns.test(p.name || item.name || '');
+          });
+          if (dairyItems.length === 0) return null;
+          const totalDairyGrams = dairyItems.reduce((sum, it) => sum + (+it.grams || 0), 0);
+          if (totalDairyGrams < 100) return null;
+          return { count: dairyItems.length, grams: totalDairyGrams };
+        };
+        const dairyWarning = getDairyWarning();
+        
         // Научные данные
         const mealGL = quality.mealGL || 0;
         const glLevel = quality.glLevel || 'medium';
@@ -16557,19 +16647,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         
         // Умный совет на основе худшей категории
         const getTip = () => {
-          // Находим худшую категорию (наименьший % от максимума)
-          const categories = [
-            { name: 'kcal', pct: kcalCalc.points / kcalCalc.max, issues: kcalCalc.issues },
-            { name: 'macro', pct: macroCalc.points / macroCalc.max, issues: macroCalc.issues },
-            { name: 'carb', pct: carbCalc.points / carbCalc.max, issues: carbCalc.issues },
-            { name: 'fat', pct: fatCalc.points / fatCalc.max, issues: fatCalc.issues },
-            { name: 'gi', pct: giCalc.points / giCalc.max, issues: giCalc.issues }
-          ];
-          
-          const worst = categories.reduce((w, c) => c.pct < w.pct ? c : w, categories[0]);
-          
           // Если всё хорошо (≥80% по всем категориям)
-          if (worst.pct >= 0.8) return { text: '✨ Отличный сбалансированный приём!', type: 'success' };
+          if (!worstId) return { text: '✨ Отличный сбалансированный приём!', type: 'success', worstId: null };
           
           // Советы по категориям
           const tips = {
@@ -16580,37 +16659,72 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             gi: { text: '💡 Выбирай продукты с низким ГИ (<55)', type: 'info' }
           };
           
-          return tips[worst.name] || { text: '💡 Следующий раз будет лучше!', type: 'neutral' };
+          return { ...tips[worstId], worstId } || { text: '💡 Следующий раз будет лучше!', type: 'neutral', worstId: null };
         };
         
         const tip = getTip();
         
-        // Компонент строки расчёта
-        const CalcRow = ({ icon, label, points, max, issues, isBonus }) => 
+        // === УЛУЧШЕНИЕ 2: Сравнение с вчерашним аналогичным приёмом ===
+        const getYesterdayComparison = () => {
+          try {
+            const mealType = mealTypeInfo?.type || 'meal';
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayKey = yesterday.toISOString().split('T')[0];
+            const U = HEYS.utils || {};
+            const yesterdayDay = U.lsGet ? U.lsGet('heys_dayv2_' + yesterdayKey, null) : null;
+            if (!yesterdayDay?.meals?.length) return null;
+            
+            // Ищем приём того же типа вчера
+            const yesterdayMeal = yesterdayDay.meals.find((m, i) => {
+              const yType = getMealType(i, m, yesterdayDay.meals, pIndex);
+              return yType?.type === mealType;
+            });
+            if (!yesterdayMeal?.items?.length) return null;
+            
+            const yQuality = getMealQualityScore(yesterdayMeal, mealType, optimum || 2000, pIndex);
+            if (!yQuality) return null;
+            
+            const diff = quality.score - yQuality.score;
+            if (Math.abs(diff) < 3) return { diff: 0, text: '≈ как вчера' };
+            if (diff > 0) return { diff, text: '+' + diff + ' vs вчера 📈' };
+            return { diff, text: diff + ' vs вчера 📉' };
+          } catch (e) {
+            return null;
+          }
+        };
+        const yesterdayComp = getYesterdayComparison();
+        
+        // Компактный компонент строки расчёта (УЛУЧШЕНИЕ 1: подсветка худшей)
+        const CalcRow = ({ id, icon, label, points, max, isBonus, isWorst }) => 
           React.createElement('div', { 
-            className: 'quality-calc-row' + (isBonus ? ' bonus' : ''),
             style: {
               display: 'flex',
-              flexDirection: 'column',
-              padding: '8px 10px',
-              background: isBonus ? 'rgba(234, 179, 8, 0.1)' : (points === max ? 'rgba(16, 185, 129, 0.08)' : points < max * 0.5 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(234, 179, 8, 0.08)'),
-              borderRadius: '8px',
-              marginBottom: '6px'
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '6px 8px',
+              background: isBonus ? 'rgba(234, 179, 8, 0.1)' : (points === max ? 'rgba(16, 185, 129, 0.06)' : points < max * 0.5 ? 'rgba(239, 68, 68, 0.06)' : 'rgba(234, 179, 8, 0.06)'),
+              borderRadius: '6px',
+              marginBottom: '4px',
+              borderLeft: '3px solid ' + (isBonus ? '#b45309' : (points === max ? '#10b981' : points < max * 0.5 ? '#ef4444' : '#eab308')),
+              // Пульсация для худшей категории
+              animation: isWorst ? 'pulse-worst 1.5s ease-in-out infinite' : 'none',
+              boxShadow: isWorst ? '0 0 0 2px rgba(239, 68, 68, 0.3)' : 'none'
             }
           },
-            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
-              React.createElement('span', { style: { fontWeight: 600, fontSize: '13px' } }, icon + ' ' + label),
-              React.createElement('span', { 
-                style: { 
-                  fontWeight: 700, 
-                  fontSize: '14px',
-                  color: isBonus ? '#b45309' : (points === max ? '#10b981' : points < max * 0.5 ? '#ef4444' : '#eab308')
-                }
-              }, (isBonus && points > 0 ? '+' : '') + points + '/' + max)
+            React.createElement('span', { style: { fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' } }, 
+              icon,
+              React.createElement('span', { style: { color: 'var(--text-secondary)' } }, label),
+              isWorst && React.createElement('span', { style: { fontSize: '10px', color: '#ef4444', marginLeft: '4px' } }, '← исправить')
             ),
-            issues && issues.length > 0 && React.createElement('div', { 
-              style: { fontSize: '11px', color: 'var(--text-muted, #6b7280)', marginTop: '4px' }
-            }, issues.join(' • '))
+            React.createElement('span', { 
+              style: { 
+                fontWeight: 700, 
+                fontSize: '12px',
+                color: isBonus ? '#b45309' : (points === max ? '#10b981' : points < max * 0.5 ? '#ef4444' : '#eab308')
+              }
+            }, (isBonus && points > 0 ? '+' : '') + points + '/' + max)
           );
         
         return React.createElement('div', {
@@ -16631,145 +16745,144 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           onTouchEnd: onTouchEnd
         },
           React.createElement('div', { className: 'metric-popup-stripe', style: { background: color } }),
-          React.createElement('div', { className: 'metric-popup-content' },
+          React.createElement('div', { className: 'metric-popup-content', style: { padding: '12px' } },
             React.createElement('div', { className: 'metric-popup-swipe' }),
             
-            // Заголовок с иконкой и скором
-            React.createElement('div', { className: 'metric-popup-header' },
-              React.createElement('span', { className: 'metric-popup-title' }, 
-                (mealTypeInfo?.icon || '🍽️') + ' ' + (mealTypeInfo?.label || meal.name || 'Приём пищи')
+            // Заголовок: тип + скор + прогресс-бар в одной строке
+            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' } },
+              React.createElement('span', { style: { fontSize: '14px', fontWeight: 600 } }, 
+                (mealTypeInfo?.icon || '🍽️') + ' ' + (mealTypeInfo?.label || meal.name || 'Приём')
               ),
-              React.createElement('span', { className: 'metric-popup-pct', style: { color: color, fontSize: '1.6rem', fontWeight: 700 } }, 
-                quality.score
-              )
+              React.createElement('div', { style: { flex: 1, height: '6px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' } },
+                React.createElement('div', { style: { width: quality.score + '%', height: '100%', background: color, transition: 'width 0.3s' } })
+              ),
+              React.createElement('span', { style: { fontSize: '18px', fontWeight: 800, color: color } }, quality.score),
+              // УЛУЧШЕНИЕ 2: сравнение с вчера
+              yesterdayComp && React.createElement('span', { 
+                style: { 
+                  fontSize: '10px', 
+                  color: yesterdayComp.diff > 0 ? '#10b981' : yesterdayComp.diff < 0 ? '#ef4444' : 'var(--text-muted)',
+                  fontWeight: 600
+                }
+              }, yesterdayComp.text)
             ),
             
-            // Прогресс-бар
-            React.createElement('div', { className: 'metric-popup-progress', style: { margin: '8px 0 12px 0' } },
-              React.createElement('div', { 
-                className: 'metric-popup-progress-fill',
-                style: { width: quality.score + '%', background: `linear-gradient(90deg, ${color} 0%, ${color}dd 100%)`, transition: 'width 0.4s ease-out' }
-              })
-            ),
-            
-            // Подсказка
+            // Совет (компактный)
             React.createElement('div', { 
-              className: 'meal-quality-tip',
               style: { 
-                padding: '8px 12px', 
+                padding: '6px 10px', 
                 background: tip.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : tip.type === 'warning' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)', 
-                borderRadius: '8px', 
-                marginBottom: '12px', 
-                fontSize: '0.85rem' 
+                borderRadius: '6px', 
+                marginBottom: '10px', 
+                fontSize: '12px' 
               }
             }, tip.text),
             
-            // === ПОДРОБНЫЙ РАСЧЁТ ===
-            React.createElement('div', { 
-              style: { 
-                fontSize: '12px', 
-                fontWeight: 700, 
-                color: 'var(--text-secondary, #4b5563)', 
-                marginBottom: '8px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }
-            }, '📊 Расчёт оценки'),
+            // Расчёт (компактные строки) — УЛУЧШЕНИЕ 1: подсветка худшей
+            allCalcs.map(calc => CalcRow({ 
+              key: calc.id, 
+              id: calc.id, 
+              icon: calc.icon, 
+              label: calc.label, 
+              points: calc.points, 
+              max: calc.max, 
+              isWorst: calc.id === worstId 
+            })),
+            bonusPoints !== 0 && CalcRow({ id: 'bonus', icon: '⭐', label: 'Бонусы', points: bonusPoints, max: 15, isBonus: true }),
             
-            // Категории
-            CalcRow({ icon: '📊', label: 'Калории (' + Math.round(totals.kcal) + ' ккал)', points: kcalCalc.points, max: kcalCalc.max, issues: kcalCalc.issues }),
-            CalcRow({ icon: '🥩', label: 'Макросы (Б:' + Math.round(totals.prot) + ' У:' + Math.round(totals.carbs) + ' Ж:' + Math.round(totals.fat) + ')', points: macroCalc.points, max: macroCalc.max, issues: macroCalc.issues }),
-            CalcRow({ icon: '🍬', label: 'Углеводы (' + carbCalc.simpleRatio + '% простых)', points: carbCalc.points, max: carbCalc.max, issues: carbCalc.issues }),
-            CalcRow({ icon: '🥑', label: 'Жиры (' + fatCalc.goodRatio + '% полезных)', points: fatCalc.points, max: fatCalc.max, issues: fatCalc.issues }),
-            CalcRow({ icon: '📈', label: 'ГИ ' + Math.round(quality.avgGI || 50) + ' / Вред ' + Math.round(quality.avgHarm || 0), points: giCalc.points, max: giCalc.max, issues: giCalc.issues }),
-            
-            // Бонусы
-            bonusPoints !== 0 && CalcRow({ icon: '⭐', label: 'Бонусы', points: bonusPoints, max: 15, issues: quality.badges?.filter(b => b.ok).map(b => b.label || b.type), isBonus: true }),
-            
-            // Итого
+            // Итого (компактный)
             React.createElement('div', { 
               style: { 
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 alignItems: 'center',
-                padding: '10px 12px',
-                background: color + '20',
-                borderRadius: '8px',
-                marginTop: '8px',
-                marginBottom: '12px'
+                padding: '8px 10px',
+                background: color + '15',
+                borderRadius: '6px',
+                marginTop: '6px',
+                marginBottom: '8px'
               }
             },
-              React.createElement('span', { style: { fontWeight: 700, fontSize: '14px' } }, '∑ ИТОГО'),
-              React.createElement('span', { style: { fontWeight: 800, fontSize: '18px', color: color } }, 
+              React.createElement('span', { style: { fontWeight: 600, fontSize: '12px' } }, '∑ ИТОГО'),
+              React.createElement('span', { style: { fontWeight: 700, fontSize: '14px', color: color } }, 
                 baseScore + '+' + bonusPoints + ' = ' + quality.score
               )
             ),
             
-            // Научные данные (если есть)
-            (mealGL > 0 || liquidRatio > 0) && React.createElement('div', {
+            // УЛУЧШЕНИЕ 5 & 6: Циркадный бонус и предупреждение о молочке
+            (circadianBonusPct !== 0 || dairyWarning) && React.createElement('div', { 
               style: { 
-                fontSize: '11px', 
-                color: 'var(--text-muted, #6b7280)',
-                padding: '8px',
-                background: 'var(--bg-tertiary, #f3f4f6)',
-                borderRadius: '6px',
-                marginBottom: '10px'
+                display: 'flex', 
+                gap: '6px', 
+                flexWrap: 'wrap',
+                marginBottom: '8px',
+                fontSize: '10px'
               }
             },
-              React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px' } }, '🔬 Научные данные'),
-              mealGL > 0 && React.createElement('div', null, 'GL: ' + mealGL + ' (' + glLevel + ')'),
-              liquidRatio > 0 && React.createElement('div', null, 'Жидкие калории: ' + liquidRatio + '%'),
-              React.createElement('div', null, 'Период: ' + circadianPeriodRu),
-              React.createElement('div', null, 'GL нагрузка: ' + glLevelRu + ' (' + mealGL.toFixed(1) + ')'),
-              liquidRatio > 0.3 && React.createElement('div', { style: { color: '#f59e0b' } }, '💧 Жидкая пища: ' + Math.round(liquidRatio * 100) + '%')
+              // Циркадный бонус
+              circadianBonusPct !== 0 && React.createElement('span', {
+                style: {
+                  padding: '3px 6px',
+                  borderRadius: '6px',
+                  background: circadianBonusPct > 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                  color: circadianBonusPct > 0 ? '#10b981' : '#ef4444',
+                  fontWeight: 600
+                }
+              }, '🕐 ' + (circadianBonusPct > 0 ? '+' : '') + circadianBonusPct + '% (время суток)'),
+              // Предупреждение о молочке
+              dairyWarning && React.createElement('span', {
+                style: {
+                  padding: '3px 6px',
+                  borderRadius: '6px',
+                  background: 'rgba(234, 179, 8, 0.1)',
+                  color: '#b45309',
+                  fontWeight: 600
+                },
+                title: 'Молочные продукты вызывают повышенный инсулиновый ответ (II ×2-3)'
+              }, '🥛 ' + dairyWarning.grams + 'г молочки → II↑')
             ),
             
-            // Список продуктов
-            productsList.length > 0 && React.createElement('div', {
-              style: {
-                background: 'var(--bg-secondary, #f9fafb)',
-                borderRadius: '8px',
-                padding: '8px',
-                marginBottom: '10px',
-                fontSize: '0.75rem'
-              }
-            },
-              React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px', color: 'var(--text-muted)' } }, '📋 Состав приёма:'),
-              productsList.map((p, i) => React.createElement('div', {
-                key: i,
-                style: { display: 'flex', justifyContent: 'space-between', padding: '2px 0', borderBottom: i < productsList.length - 1 ? '1px solid var(--border-color, #e5e7eb)' : 'none' }
-              },
-                React.createElement('span', { style: { color: 'var(--text-primary)' } }, p.name),
-                React.createElement('span', { style: { color: 'var(--text-muted)' } }, p.grams + 'г · ' + p.kcal + ' ккал')
-              )),
-              meal.items && meal.items.length > 5 && React.createElement('div', { style: { textAlign: 'center', color: 'var(--text-muted)', marginTop: '4px' } }, '...и ещё ' + (meal.items.length - 5))
+            // Научные данные + состав (в 2 колонки)
+            React.createElement('div', { style: { display: 'flex', gap: '8px', fontSize: '11px', marginBottom: '8px' } },
+              // Левая колонка: научные данные
+              React.createElement('div', { style: { flex: 1, padding: '6px', background: 'var(--bg-tertiary, #f3f4f6)', borderRadius: '6px' } },
+                React.createElement('div', { style: { fontWeight: 600, marginBottom: '2px', fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' } }, '🔬 Данные'),
+                React.createElement('div', null, 'GL: ' + glLevelRu),
+                React.createElement('div', null, circadianPeriodRu),
+                liquidRatio > 0.3 && React.createElement('div', { style: { color: '#f59e0b' } }, '💧 ' + Math.round(liquidRatio * 100) + '% жидкое')
+              ),
+              // Правая колонка: состав
+              productsList.length > 0 && React.createElement('div', { style: { flex: 1, padding: '6px', background: 'var(--bg-secondary, #f9fafb)', borderRadius: '6px' } },
+                React.createElement('div', { style: { fontWeight: 600, marginBottom: '2px', fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' } }, '📋 Состав'),
+                productsList.slice(0, 3).map((p, i) => React.createElement('div', { key: i, style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, 
+                  p.name + ' ' + p.grams + 'г'
+                )),
+                meal.items && meal.items.length > 3 && React.createElement('div', { style: { color: 'var(--text-muted)' } }, '+' + (meal.items.length - 3) + ' ещё')
+              )
             ),
             
-            // Бейджи
+            // Бейджи (inline)
             (quality.badges && quality.badges.length > 0) && React.createElement('div', { 
-              style: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }
+              style: { display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }
             },
-              quality.badges.slice(0, 5).map((badge, i) => {
+              quality.badges.slice(0, 4).map((badge, i) => {
                 const isPositive = badge.ok === true;
                 const badgeType = typeof badge === 'object' ? badge.type : String(badge);
-                const badgeLabel = typeof badge === 'object' && badge.label ? badge.label : '';
                 return React.createElement('span', { 
                   key: i, 
-                  title: badgeLabel,
                   style: { 
                     background: isPositive ? '#dcfce7' : '#fee2e2', 
                     color: isPositive ? '#166534' : '#dc2626', 
-                    padding: '4px 8px', 
-                    borderRadius: '12px', 
-                    fontSize: '0.75rem', 
+                    padding: '2px 6px', 
+                    borderRadius: '8px', 
+                    fontSize: '10px', 
                     fontWeight: 500 
                   } 
-                }, badgeType + (badgeLabel ? ' ' + badgeLabel : ''));
+                }, badgeType);
               })
             ),
             
-            // Время и кнопка закрытия
-            meal.time && React.createElement('div', { style: { fontSize: '0.75rem', color: 'var(--text-muted, #9ca3af)', textAlign: 'center' } }, '🕐 ' + meal.time),
+            // Кнопка закрытия
             React.createElement('button', { className: 'metric-popup-close', 'aria-label': 'Закрыть', onClick: () => setMealQualityPopup(null) }, '✕')
           ),
           React.createElement('div', { className: 'metric-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '') })

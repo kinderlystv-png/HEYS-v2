@@ -260,7 +260,7 @@
         localStorage.setItem(key, JSON.stringify(updated));
         updatedDates.push(targetDate);
         
-        console.log('[Cycle] Set cycleDay=' + d + ' for ' + targetDate + ' (key: ' + key + ')');
+        // console.log('[Cycle] Set cycleDay=' + d + ' for ' + targetDate + ' (key: ' + key + ')');
       } catch (e) {
         console.warn('[Cycle] Failed to set day', targetDate, e);
       }
@@ -334,7 +334,7 @@
           const updated = { ...targetData, cycleDay: null, updatedAt: Date.now() };
           localStorage.setItem(targetKey, JSON.stringify(updated));
           clearedDates.push(targetDate);
-          console.log('[Cycle] Cleared cycleDay for ' + targetDate);
+          // console.log('[Cycle] Cleared cycleDay for ' + targetDate);
         }
       }
 
@@ -809,6 +809,6 @@
     debugCycleDays
   };
 
-  console.log('[HEYS] Cycle module loaded v1.4.0 (fixed clientId in keys)');
+  // console.log('[HEYS] Cycle module loaded v1.4.0 (fixed clientId in keys)');
 
 })(typeof window !== 'undefined' ? window : global);

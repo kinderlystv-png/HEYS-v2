@@ -7392,7 +7392,10 @@ body:has(.offline-banner) .wrap {
 /* Table inside section */
 .profile-section table {
   width: 100%;
-  background: rgba(255, 255, 255, 0.6);
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.7);
   border-radius: 10px;
   overflow: hidden;
   margin-top: 8px;
@@ -7401,8 +7404,59 @@ body:has(.offline-banner) .wrap {
 .profile-section th {
   background: rgba(0, 0, 0, 0.03);
   font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  color: var(--gray-500);
+  padding: 10px 12px;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.profile-section td {
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  vertical-align: middle;
+  background: transparent;
+}
+
+.profile-section tr:last-child td {
+  border-bottom: none;
+}
+
+.profile-section tr:hover td {
+  background: rgba(244, 63, 94, 0.04);
+}
+
+.profile-section td input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  transition: all 0.15s ease;
+}
+
+.profile-section td input:focus {
+  outline: none;
+  border-color: var(--rose-400, #fb7185);
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.1);
+  background: #fff;
+}
+
+.profile-section td input[type="number"] {
+  text-align: center;
+  min-width: 60px;
+  width: 70px;
+}
+
+.profile-section td:first-child input {
+  min-width: 140px;
+  text-align: left;
+  font-weight: 500;
 }
 
 /* Mobile responsive */
@@ -7484,6 +7538,158 @@ body:has(.offline-banner) .wrap {
 
 .profile-field-group .inline-field:last-child {
   border-bottom: none;
+}
+
+/* === Modern Tables inside Profile Field Groups === */
+.profile-field-group table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  margin-top: 8px;
+  background: transparent;
+}
+
+.profile-field-group thead {
+  position: sticky;
+  top: 0;
+}
+
+.profile-field-group th {
+  background: rgba(0, 0, 0, 0.03);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--gray-500);
+  padding: 10px 12px;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.profile-field-group th:first-child {
+  border-radius: 8px 0 0 0;
+}
+
+.profile-field-group th:last-child {
+  border-radius: 0 8px 0 0;
+}
+
+.profile-field-group td {
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  vertical-align: middle;
+  background: transparent;
+  white-space: normal;
+}
+
+.profile-field-group tr:last-child td {
+  border-bottom: none;
+}
+
+.profile-field-group tr:hover td {
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.profile-field-group td input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.profile-field-group td input:focus {
+  outline: none;
+  border-color: var(--blue-400);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background: #fff;
+}
+
+.profile-field-group td input[type="number"] {
+  text-align: center;
+  min-width: 60px;
+  width: auto;
+}
+
+.profile-field-group td:first-child input {
+  min-width: 140px;
+  font-weight: 500;
+}
+
+/* Color preview cells */
+.profile-field-group td .color-preview {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  margin: 0 auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Ratio preview badge */
+.profile-field-group td .ratio-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  display: inline-block;
+}
+
+/* Mobile responsive for profile tables */
+@media (max-width: 600px) {
+  .profile-field-group table {
+    font-size: 12px;
+  }
+  
+  .profile-field-group th,
+  .profile-field-group td {
+    padding: 8px 8px;
+  }
+  
+  .profile-field-group td input {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  
+  .profile-field-group td:first-child input {
+    min-width: 100px;
+  }
+  
+  .profile-field-group td input[type="number"] {
+    min-width: 50px;
+  }
+}
+
+/* Dark mode for profile tables */
+[data-theme="dark"] .profile-field-group th {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gray-400);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .profile-field-group td {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .profile-field-group tr:hover td {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+[data-theme="dark"] .profile-field-group td input {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--gray-200);
+}
+
+[data-theme="dark"] .profile-field-group td input:focus {
+  border-color: var(--blue-500);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* Metrics pills row */
@@ -7587,12 +7793,58 @@ body:has(.offline-banner) .wrap {
 [data-theme="dark"] .profile-section th {
   background: rgba(255, 255, 255, 0.05);
   color: var(--gray-400);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .profile-section td {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .profile-section tr:hover td {
+  background: rgba(244, 63, 94, 0.08);
+}
+
+[data-theme="dark"] .profile-section td input {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--gray-200);
+}
+
+[data-theme="dark"] .profile-section td input:focus {
+  border-color: var(--rose-400, #fb7185);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 [data-theme="dark"] .profile-section__pill {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.1);
   color: var(--gray-300);
+}
+
+/* Mobile responsive for profile section tables */
+@media (max-width: 600px) {
+  .profile-section table {
+    font-size: 12px;
+  }
+  
+  .profile-section th,
+  .profile-section td {
+    padding: 8px 8px;
+  }
+  
+  .profile-section td input {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  
+  .profile-section td:first-child input {
+    min-width: 100px;
+  }
+  
+  .profile-section td input[type="number"] {
+    min-width: 50px;
+    width: 60px;
+  }
 }
 
 /* Also support prefers-color-scheme for system preference */

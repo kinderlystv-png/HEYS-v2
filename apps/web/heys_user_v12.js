@@ -6,9 +6,8 @@
   // 🔍 DEBUG: Проверяем что HEYS.utils загружен
   if (!HEYS.utils || !HEYS.utils.lsGet) {
     console.error('[heys_user_v12] ❌ HEYS.utils.lsGet не определён! Это приведёт к сбросу профиля');
-  } else {
-    console.log('[heys_user_v12] ✅ HEYS.utils.lsGet определён, __clientScoped:', HEYS.utils.__clientScoped);
   }
+  // else { console.log('[heys_user_v12] ✅ HEYS.utils.lsGet определён, __clientScoped:', HEYS.utils.__clientScoped); }
   
   const { lsGet, lsSet, toNum, round1, getEmojiStyle, setEmojiStyle } = HEYS.utils || {
     lsGet:(k,d)=>d, lsSet:()=>{}, toNum:(x)=>Number(x)||0, round1:(v)=>Math.round(v*10)/10,
@@ -1135,33 +1134,61 @@
       },
         React.createElement('div', {className:'profile-section__fields'},
           React.createElement('div', {className:'row', style:{justifyContent:'flex-end', marginBottom:'8px'}},
-            React.createElement('button', {className:'btn btn-sm', onClick:resetZones}, 'Сбросить к шаблону')
+            React.createElement('button', {className:'btn btn-sm', onClick:resetZones}, 'Сбросить')
           ),
-        React.createElement('div', {style:{overflowX:'auto'}},
-          React.createElement('table', null,
-            React.createElement('thead', null, React.createElement('tr', null,
-              React.createElement('th', null, 'Пульсовые зоны'),
-              React.createElement('th', null, 'пульс от'),
-              React.createElement('th', null, 'пульс до'),
-              React.createElement('th', null, 'MET'),
-              React.createElement('th', null, 'кал/мин для нашего веса')
-            )),
-            React.createElement('tbody', null,
-              zones.map((z, i)=>{
-                const calPerMin = round1((toNum(z.MET||0) * calPerMinPerMET) - 1); // поправка -1
-                return React.createElement('tr', {key:i},
-                  React.createElement('td', null, React.createElement('input', {value:z.name, onChange:e=>updateZone(i, {name:e.target.value}), onFocus:e=>e.target.select()})),
-                  React.createElement('td', null, React.createElement('input', {type:'number', value:z.hrFrom, onChange:e=>updateZone(i, {hrFrom:Number(e.target.value)||0}), onFocus:e=>e.target.select()})),
-                  React.createElement('td', null, React.createElement('input', {type:'number', value:z.hrTo, onChange:e=>updateZone(i, {hrTo:Number(e.target.value)||0}), onFocus:e=>e.target.select()})),
-                  React.createElement('td', null, React.createElement('input', {type:'number', step:'0.1', value:z.MET, onChange:e=>updateZone(i, {MET:Number(e.target.value)||0}), onFocus:e=>e.target.select()})),
-                  React.createElement('td', null, calPerMin)
-                );
-              })
-            )
-          )
-        ),
+          // Карточки пульсовых зон
+          React.createElement('div', {className:'hr-zones-list'},
+            zones.map((z, i) => {
+              const calPerMin = round1((toNum(z.MET||0) * calPerMinPerMET) - 1);
+              return React.createElement('div', {key:i, className:'hr-zone-row', style:{
+                display:'flex', flexDirection:'column', gap:'8px',
+                padding:'12px 14px', marginBottom:'8px',
+                background:'rgba(255,255,255,0.7)', borderRadius:'12px',
+                border:'1px solid rgba(244,63,94,0.15)'
+              }},
+                // Название зоны
+                React.createElement('input', {
+                  value:z.name, 
+                  onChange:e=>updateZone(i, {name:e.target.value}),
+                  onFocus:e=>e.target.select(),
+                  style:{
+                    width:'100%', padding:'8px 12px', fontSize:'14px', fontWeight:600,
+                    border:'1px solid rgba(0,0,0,0.08)', borderRadius:'8px',
+                    background:'rgba(255,255,255,0.9)'
+                  }
+                }),
+                // Параметры в ряд
+                React.createElement('div', {style:{display:'flex', flexWrap:'wrap', gap:'8px', alignItems:'center'}},
+                  // Пульс от-до
+                  React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'6px', padding:'6px 10px', background:'rgba(244,63,94,0.08)', borderRadius:'8px'}},
+                    React.createElement('span', {style:{fontSize:'12px', color:'var(--gray-500)'}}, '💓'),
+                    React.createElement('input', {type:'number', value:z.hrFrom, onChange:e=>updateZone(i, {hrFrom:Number(e.target.value)||0}), onFocus:e=>e.target.select(),
+                      style:{width:'50px', padding:'4px 6px', fontSize:'13px', textAlign:'center', border:'1px solid rgba(0,0,0,0.08)', borderRadius:'6px'}
+                    }),
+                    React.createElement('span', {style:{color:'var(--gray-400)'}}, '—'),
+                    React.createElement('input', {type:'number', value:z.hrTo, onChange:e=>updateZone(i, {hrTo:Number(e.target.value)||0}), onFocus:e=>e.target.select(),
+                      style:{width:'50px', padding:'4px 6px', fontSize:'13px', textAlign:'center', border:'1px solid rgba(0,0,0,0.08)', borderRadius:'6px'}
+                    }),
+                    React.createElement('span', {style:{fontSize:'11px', color:'var(--gray-400)'}}, 'уд/мин')
+                  ),
+                  // MET
+                  React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'6px', padding:'6px 10px', background:'rgba(59,130,246,0.08)', borderRadius:'8px'}},
+                    React.createElement('span', {style:{fontSize:'12px', color:'var(--gray-500)'}}, '⚡'),
+                    React.createElement('span', {style:{fontSize:'12px', color:'var(--gray-500)'}}, 'MET'),
+                    React.createElement('input', {type:'number', step:'0.1', value:z.MET, onChange:e=>updateZone(i, {MET:Number(e.target.value)||0}), onFocus:e=>e.target.select(),
+                      style:{width:'45px', padding:'4px 6px', fontSize:'13px', textAlign:'center', border:'1px solid rgba(0,0,0,0.08)', borderRadius:'6px'}
+                    })
+                  ),
+                  // Калории в минуту (computed)
+                  React.createElement('div', {style:{padding:'6px 12px', background:'rgba(34,197,94,0.1)', borderRadius:'8px', marginLeft:'auto'}},
+                    React.createElement('span', {style:{fontSize:'13px', fontWeight:600, color:'#15803d'}}, `${calPerMin} кал/мин`)
+                  )
+                )
+              );
+            })
+          ),
         React.createElement('div', {className:'muted', style:{marginTop:'8px', display:'flex', alignItems:'center', gap:'8px'}}, 
-          'Формулы: Макс пульс = 220 − возраст. Кал/мин = MET × (вес × 0.0175) − 1.',
+          'Макс пульс = 220 − возраст. Кал/мин = MET × (вес × 0.0175) − 1.',
           zonesPending && React.createElement('span', {style:{color:'#f59e0b', fontSize:'13px', fontWeight:500}}, '⏳ Сохраняется...'),
           zonesSaved && React.createElement('span', {style:{color:'#22c55e', fontSize:'13px', fontWeight:500}}, '✓ Сохранено')
         )
@@ -1202,8 +1229,11 @@
           React.createElement(HEYS_AdviceSettingsCard, null),
           // Аналитика (перенесено из hdr-top)
           window.HEYS.analyticsUI
-            ? React.createElement('div', {className:'card', style:{marginTop:'10px'}},
-                React.createElement('div', {className:'section-title'}, '📊 Аналитика'),
+            ? React.createElement('div', {className:'profile-field-group'},
+                React.createElement('div', {className:'profile-field-group__header'},
+                  React.createElement('span', {className:'profile-field-group__icon'}, '📊'),
+                  React.createElement('span', {className:'profile-field-group__title'}, 'Аналитика')
+                ),
                 React.createElement('div', {style:{marginTop:'8px'}},
                   React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
                 )
@@ -1256,8 +1286,11 @@
       remaining = 0;
     }
     
-    return React.createElement('div', { className: 'card', style: { marginTop: '10px' } },
-      React.createElement('div', { className: 'section-title' }, '💡 Советы'),
+    return React.createElement('div', { className: 'profile-field-group' },
+      React.createElement('div', { className: 'profile-field-group__header' },
+        React.createElement('span', { className: 'profile-field-group__icon' }, '💡'),
+        React.createElement('span', { className: 'profile-field-group__title' }, 'Советы')
+      ),
       React.createElement('div', { style: { marginTop: '8px' } },
         React.createElement('div', { 
           style: { 
@@ -1320,138 +1353,177 @@
     const advice = window.HEYS?.advice;
     if (!advice?.getAdviceSettings) return null;
     
-    const [settings, setSettings] = React.useState(() => advice.getAdviceSettings());
+    const [settings, setSettings] = React.useState(function() { return advice.getAdviceSettings(); });
     const [saved, setSaved] = React.useState(false);
     
     const categories = advice.CATEGORY_LABELS || {};
     
-    const toggleCategory = (cat, enabled) => {
-      const newSettings = {
+    var toggleCategory = function(cat, enabled) {
+      var newSettings = {
         ...settings,
         categories: { ...settings.categories, [cat]: enabled }
       };
       setSettings(newSettings);
       advice.setAdviceSettings(newSettings);
       setSaved(true);
-      setTimeout(() => setSaved(false), 1500);
+      setTimeout(function() { setSaved(false); }, 1500);
     };
     
-    const updateSetting = (key, value) => {
-      const newSettings = { ...settings, [key]: value };
+    var updateSetting = function(key, value) {
+      var newSettings = { ...settings, [key]: value };
       setSettings(newSettings);
       advice.setAdviceSettings(newSettings);
       setSaved(true);
-      setTimeout(() => setSaved(false), 1500);
+      setTimeout(function() { setSaved(false); }, 1500);
     };
     
-    return React.createElement('div', { className: 'card', style: { marginTop: '10px' } },
-      React.createElement('div', { className: 'section-title' }, '⚙️ Настройки советов'),
-      
-      // Категории
-      React.createElement('div', { style: { marginTop: '12px' } },
-        React.createElement('div', { 
-          style: { fontSize: '14px', fontWeight: 600, marginBottom: '8px', color: 'var(--gray-700)' } 
-        }, 'Категории советов'),
-        React.createElement('div', { 
-          style: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' } 
-        },
-          Object.entries(categories).map(([cat, info]) => 
-            React.createElement('label', { 
-              key: cat,
-              style: { 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px',
-                padding: '8px 10px',
-                background: settings.categories?.[cat] !== false ? 'var(--blue-50)' : 'var(--gray-100)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'background 0.2s'
-              }
-            },
-              React.createElement('input', {
-                type: 'checkbox',
-                checked: settings.categories?.[cat] !== false,
-                onChange: (e) => toggleCategory(cat, e.target.checked),
-                style: { width: '16px', height: '16px' }
-              }),
-              React.createElement('span', { style: { fontSize: '16px' } }, info.icon),
-              React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-                React.createElement('div', { style: { fontSize: '13px', fontWeight: 500 } }, info.name),
-                React.createElement('div', { 
-                  style: { fontSize: '11px', color: 'var(--gray-500)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } 
-                }, info.desc)
-              )
-            )
-          )
-        )
+    var catEntries = Object.entries(categories);
+    
+    return React.createElement('div', { className: 'profile-field-group' },
+      React.createElement('div', { className: 'profile-field-group__header' },
+        React.createElement('span', { className: 'profile-field-group__icon' }, '⚙️'),
+        React.createElement('span', { className: 'profile-field-group__title' }, 'Настройки советов')
       ),
       
-      // Общие настройки
-      React.createElement('div', { style: { marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--gray-200)' } },
-        React.createElement('div', { 
-          style: { fontSize: '14px', fontWeight: 600, marginBottom: '8px', color: 'var(--gray-700)' } 
-        }, 'Общие'),
+      // Категории — компактный grid 3 колонки
+      React.createElement('div', { 
+        style: { 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: '8px', 
+          marginTop: '12px' 
+        } 
+      },
+        catEntries.map(function(entry) {
+          var cat = entry[0];
+          var info = entry[1];
+          var isEnabled = settings.categories?.[cat] !== false;
+          
+          return React.createElement('div', { 
+            key: cat,
+            title: info.desc,
+            onClick: function() { toggleCategory(cat, !isEnabled); },
+            style: { 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px',
+              padding: '8px 14px',
+              background: isEnabled ? 'rgba(59, 130, 246, 0.08)' : 'var(--gray-50)',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: isEnabled ? 'var(--blue-600)' : 'var(--gray-500)',
+              border: isEnabled ? '2px solid var(--blue-400)' : '2px solid var(--gray-200)',
+              userSelect: 'none'
+            }
+          },
+            React.createElement('span', { style: { fontSize: '16px' } }, info.icon),
+            React.createElement('span', null, info.name)
+          );
+        })
+      ),
+      
+      // Общие настройки — горизонтальная строка
+      React.createElement('div', { 
+        style: { 
+          display: 'flex', 
+          flexWrap: 'wrap',
+          alignItems: 'center', 
+          gap: '16px', 
+          marginTop: '16px', 
+          paddingTop: '12px', 
+          borderTop: '1px solid var(--gray-200)' 
+        } 
+      },
+        // Haptic
+        React.createElement('label', { 
+          style: { 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px',
+            cursor: 'pointer',
+            fontSize: '13px'
+          } 
+        },
+          React.createElement('input', {
+            type: 'checkbox',
+            checked: settings.hapticEnabled !== false,
+            onChange: function(e) { updateSetting('hapticEnabled', e.target.checked); },
+            style: { width: '16px', height: '16px' }
+          }),
+          React.createElement('span', null, '📳 Вибрация')
+        ),
         
-        React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
-          // Haptic
-          React.createElement('label', { 
-            style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' } 
-          },
-            React.createElement('span', { style: { fontSize: '14px' } }, '📳 Вибрация'),
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: settings.hapticEnabled !== false,
-              onChange: (e) => updateSetting('hapticEnabled', e.target.checked),
-              style: { width: '18px', height: '18px' }
-            })
-          ),
-          
-          // Sound
-          React.createElement('label', { 
-            style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' } 
-          },
-            React.createElement('span', { style: { fontSize: '14px' } }, '🔔 Звук'),
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: settings.soundEnabled !== false,
-              onChange: (e) => updateSetting('soundEnabled', e.target.checked),
-              style: { width: '18px', height: '18px' }
-            })
-          ),
-          
-          // Show details
-          React.createElement('label', { 
-            style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' } 
-          },
-            React.createElement('span', { style: { fontSize: '14px' } }, '📖 Показывать детали'),
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: settings.showDetails !== false,
-              onChange: (e) => updateSetting('showDetails', e.target.checked),
-              style: { width: '18px', height: '18px' }
-            })
-          ),
-          
-          // Max per day
-          React.createElement('div', { 
-            style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' } 
-          },
-            React.createElement('span', { style: { fontSize: '14px' } }, '📊 Макс. советов в день'),
-            React.createElement('input', {
-              type: 'number',
-              min: 5,
-              max: 50,
-              value: settings.maxPerDay || 20,
-              onChange: (e) => updateSetting('maxPerDay', parseInt(e.target.value) || 20),
-              style: { width: '60px', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--gray-300)', textAlign: 'center' }
-            })
-          )
+        // Sound
+        React.createElement('label', { 
+          style: { 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px',
+            cursor: 'pointer',
+            fontSize: '13px'
+          } 
+        },
+          React.createElement('input', {
+            type: 'checkbox',
+            checked: settings.soundEnabled !== false,
+            onChange: function(e) { updateSetting('soundEnabled', e.target.checked); },
+            style: { width: '16px', height: '16px' }
+          }),
+          React.createElement('span', null, '🔔 Звук')
+        ),
+        
+        // Show details
+        React.createElement('label', { 
+          style: { 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px',
+            cursor: 'pointer',
+            fontSize: '13px'
+          } 
+        },
+          React.createElement('input', {
+            type: 'checkbox',
+            checked: settings.showDetails !== false,
+            onChange: function(e) { updateSetting('showDetails', e.target.checked); },
+            style: { width: '16px', height: '16px' }
+          }),
+          React.createElement('span', null, '📖 Детали')
+        ),
+        
+        // Max per day
+        React.createElement('label', { 
+          style: { 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px',
+            fontSize: '13px'
+          } 
+        },
+          React.createElement('span', null, '📊 Макс:'),
+          React.createElement('input', {
+            type: 'number',
+            min: 5,
+            max: 50,
+            value: settings.maxPerDay || 20,
+            onChange: function(e) { updateSetting('maxPerDay', parseInt(e.target.value) || 20); },
+            style: { 
+              width: '50px', 
+              padding: '4px 6px', 
+              borderRadius: '6px', 
+              border: '1px solid var(--gray-300)', 
+              textAlign: 'center',
+              fontSize: '13px'
+            }
+          })
         )
       ),
       
       saved && React.createElement('div', { 
-        style: { marginTop: '8px', color: 'var(--green-600)', fontSize: '13px', textAlign: 'center' } 
+        style: { marginTop: '8px', color: 'var(--green-600)', fontSize: '12px', textAlign: 'center' } 
       }, '✓ Сохранено')
     );
   }
@@ -1507,89 +1579,112 @@
     };
     
     if (!rz) {
-      return React.createElement('div', {className:'card', style:{marginTop:'10px'}},
+      return React.createElement('div', {className:'profile-field-group'},
         React.createElement('div', {className:'muted'}, 'Модуль ratioZones не загружен')
       );
     }
     
-    return React.createElement('div', {className:'card', style:{marginTop:'10px'}},
-      React.createElement('div', {className:'row', style:{justifyContent:'space-between'}},
-        React.createElement('div', {className:'section-title'}, 'Зоны калорийности'),
-        React.createElement('div', {className:'row'}, 
-          React.createElement('button', {className:'btn', onClick:resetZones}, 'Сбросить к шаблону')
-        )
+    return React.createElement('div', {className:'profile-field-group'},
+      React.createElement('div', {className:'profile-field-group__header', style:{justifyContent:'space-between'}},
+        React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'8px'}},
+          React.createElement('span', {className:'profile-field-group__icon'}, '🎨'),
+          React.createElement('span', {className:'profile-field-group__title'}, 'Зоны калорийности')
+        ),
+        React.createElement('button', {className:'btn btn-sm', onClick:resetZones, style:{marginLeft:'auto'}}, 'Сбросить')
       ),
-      React.createElement('div', {className:'muted', style:{marginBottom:'10px'}}, 
+      React.createElement('div', {className:'muted', style:{marginBottom:'12px'}}, 
         'Определяют цвета в календаре, графиках и советах. Ratio = съедено / норма.'
       ),
-      React.createElement('div', {style:{overflowX:'auto'}},
-        React.createElement('table', null,
-          React.createElement('thead', null, React.createElement('tr', null,
-            React.createElement('th', {style:{width:'40px'}}, 'Цвет'),
-            React.createElement('th', null, 'Название'),
-            React.createElement('th', {style:{width:'80px'}}, 'От'),
-            React.createElement('th', {style:{width:'80px'}}, 'До'),
-            React.createElement('th', {style:{width:'60px'}}, 'Превью')
-          )),
-          React.createElement('tbody', null,
-            zones.map((z, i) => {
-              // Демо ratio для превью (середина зоны)
-              const demoRatio = z.to === Infinity ? z.from + 0.2 : (z.from + z.to) / 2;
-              const bgColor = rz.getGradientColor(demoRatio, 0.5);
-              
-              return React.createElement('tr', {key:z.id},
-                React.createElement('td', null, 
-                  React.createElement('div', {
-                    style:{
-                      width:'24px', height:'24px', borderRadius:'4px',
-                      background: z.color, margin:'0 auto'
-                    }
+      React.createElement('div', {className:'ratio-zones-list'},
+        zones.map((z, i) => {
+          const demoRatio = z.to === Infinity ? z.from + 0.2 : (z.from + z.to) / 2;
+          const bgColor = rz.getGradientColor(demoRatio, 0.5);
+          const fromVal = i === 0 ? null : z.from;
+          const toVal = i === zones.length - 1 ? null : z.to;
+          
+          return React.createElement('div', {
+            key: z.id,
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '10px 12px',
+              marginBottom: '6px',
+              background: 'rgba(255,255,255,0.6)',
+              borderRadius: '10px',
+              border: '1px solid rgba(0,0,0,0.05)'
+            }
+          },
+            React.createElement('div', {
+              style: {
+                width: '28px',
+                height: '28px',
+                borderRadius: '6px',
+                background: z.color,
+                flexShrink: 0,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              }
+            }),
+            React.createElement('input', {
+              value: z.name,
+              onChange: function(e) { updateZone(i, 'name', e.target.value); },
+              style: {
+                flex: 1,
+                minWidth: 0,
+                padding: '6px 10px',
+                fontSize: '13px',
+                border: '1px solid rgba(0,0,0,0.08)',
+                borderRadius: '6px',
+                background: 'rgba(255,255,255,0.8)',
+                fontWeight: 500
+              }
+            }),
+            React.createElement('div', {
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                flexShrink: 0
+              }
+            },
+              fromVal === null
+                ? React.createElement('span', {style:{width:'45px', textAlign:'center', fontSize:'12px', color:'var(--gray-400)'}}, '0%')
+                : React.createElement('input', {
+                    type: 'number',
+                    step: '0.05',
+                    min: '0',
+                    max: '2',
+                    value: fromVal,
+                    onChange: function(e) { updateZone(i, 'from', parseFloat(e.target.value) || 0); },
+                    style: {width:'45px', padding:'5px', fontSize:'12px', textAlign:'center', border:'1px solid rgba(0,0,0,0.08)', borderRadius:'5px'}
+                  }),
+              React.createElement('span', {style:{color:'var(--gray-400)', fontSize:'11px'}}, '→'),
+              toVal === null
+                ? React.createElement('span', {style:{width:'45px', textAlign:'center', fontSize:'12px', color:'var(--gray-400)'}}, '∞')
+                : React.createElement('input', {
+                    type: 'number',
+                    step: '0.05',
+                    min: '0',
+                    max: '2',
+                    value: toVal,
+                    onChange: function(e) { updateZone(i, 'to', parseFloat(e.target.value) || 0); },
+                    style: {width:'45px', padding:'5px', fontSize:'12px', textAlign:'center', border:'1px solid rgba(0,0,0,0.08)', borderRadius:'5px'}
                   })
-                ),
-                React.createElement('td', null, 
-                  React.createElement('input', {
-                    value:z.name, 
-                    onChange:e=>updateZone(i, 'name', e.target.value),
-                    style:{width:'100%'}
-                  })
-                ),
-                React.createElement('td', null, 
-                  i === 0 ? React.createElement('span', {className:'muted'}, '0%') :
-                  React.createElement('input', {
-                    type:'number', 
-                    step:'0.05',
-                    min:'0',
-                    max:'2',
-                    value:z.from, 
-                    onChange:e=>updateZone(i, 'from', parseFloat(e.target.value)||0),
-                    style:{width:'70px'}
-                  })
-                ),
-                React.createElement('td', null, 
-                  i === zones.length - 1 ? React.createElement('span', {className:'muted'}, '∞') :
-                  React.createElement('input', {
-                    type:'number', 
-                    step:'0.05',
-                    min:'0',
-                    max:'2',
-                    value:z.to, 
-                    onChange:e=>updateZone(i, 'to', parseFloat(e.target.value)||0),
-                    style:{width:'70px'}
-                  })
-                ),
-                React.createElement('td', null, 
-                  React.createElement('div', {
-                    style:{
-                      padding:'4px 8px', borderRadius:'4px',
-                      background: bgColor, textAlign:'center',
-                      fontSize:'11px', fontWeight:'600'
-                    }
-                  }, fmtPct(demoRatio))
-                )
-              );
-            })
-          )
-        )
+            ),
+            React.createElement('div', {
+              style: {
+                padding: '4px 10px',
+                borderRadius: '6px',
+                background: bgColor,
+                textAlign: 'center',
+                fontSize: '11px',
+                fontWeight: 600,
+                flexShrink: 0,
+                minWidth: '45px'
+              }
+            }, fmtPct(demoRatio))
+          );
+        })
       ),
       React.createElement('div', {className:'muted', style:{marginTop:'8px', display:'flex', alignItems:'center', gap:'8px'}}, 
         'Зоны применяются везде: календарь, sparkline, heatmap, советы.',
@@ -1598,7 +1693,7 @@
     );
   }
 
-  
+
   // === Нормы (встроенный блок) ===
   function HEYS_NormsCard(){
     const U = HEYS.utils || {};
@@ -1725,8 +1820,11 @@
     const overFatSplit = (badF + superBadF) > 100;
     const overCarbSplit = simpleC > 100;
 
-    return React.createElement('div', {className:'card', style:{marginTop:'10px'}},
-      React.createElement('div', {className:'section-title'}, 'Нормы'),
+    return React.createElement('div', {className:'profile-field-group'},
+      React.createElement('div', {className:'profile-field-group__header'},
+        React.createElement('span', {className:'profile-field-group__icon'}, '📊'),
+        React.createElement('span', {className:'profile-field-group__title'}, 'Нормы')
+      ),
       React.createElement('div', {className:'field-list'},
         React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Углеводы (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:carb, onChange:e=>update('carbsPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'carbsPct'})),
         React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Белки (%) — вручную'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', min:0, max:100, step:'1', value:prot, onChange:e=>update('proteinPct', e.target.value), onFocus:e=>e.target.select()}), React.createElement(NormFieldStatus, {fieldKey:'proteinPct'})),

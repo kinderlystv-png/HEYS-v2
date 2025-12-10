@@ -577,6 +577,34 @@
   gap: 6px;
 }
 
+/* Лайфхак внизу карточки воды */
+.water-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 4px 8px;
+  grid-column: 1 / -1;
+}
+
+.water-tip-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.water-tip-text {
+  font-size: 11px;
+  line-height: 1.35;
+  color: #64748b;
+  font-weight: 400;
+}
+
+/* Dark mode */
+html.dark .water-tip-text {
+  color: #94a3b8;
+}
+
 .water-preset-compact {
   flex: 1;
   display: flex;

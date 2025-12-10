@@ -2489,38 +2489,9 @@
     const scaledCircadian = 1.0 + (circadian.multiplier - 1.0) * circadianScale;
     const finalMultiplier = (multipliers.total + allBonuses) * scaledCircadian * spicyMultiplier;
     
-    // 🔬 DEBUG: Проверка v3.2.2 расчётов с Insulin Index
-    console.log('[InsulinWave v3.2.2 DEBUG]', {
-      // 🆕 v3.2.2: GL с учётом Insulin Index
-      'GL (with II)': gl,
-      'baseGL (without II)': nutrients.baseGlycemicLoad,
-      'II adjustment': gl - (nutrients.baseGlycemicLoad || 0),
-      insulinogenicType: nutrients.insulinogenicType,
-      'multipliers.total': multipliers.total,
-      'multipliers.carbs (GL mult)': multipliers.carbs,
-      'multipliers.gi': multipliers.gi,
-      // Бонусы по группам
-      activityBonuses,
-      metabolicBonuses,
-      personalBonuses,
-      mealStackingBonus,
-      allBonuses,
-      dayFactorsScale,
-      scaledCircadian,
-      finalMultiplier,
-      effectiveBaseWaveHours,
-      'result hours': effectiveBaseWaveHours * finalMultiplier
-    });
-    
-    // 🔬 DEBUG 2: Финальный расчёт
-    console.log('[InsulinWave FINAL]', 
-      'base:', effectiveBaseWaveHours.toFixed(2), 
-      '× final:', finalMultiplier.toFixed(3), 
-      '=', (effectiveBaseWaveHours * finalMultiplier).toFixed(2), 'ч',
-      '| mult.total:', multipliers.total.toFixed(3),
-      '| allBonuses:', allBonuses.toFixed(3),
-      '| circadian:', scaledCircadian.toFixed(3)
-    );
+    // 🔬 DEBUG: Проверка v3.2.2 расчётов с Insulin Index (отключено для production)
+    // Раскомментировать для отладки:
+    // console.log('[InsulinWave v3.2.2 DEBUG]', { gl, baseGL: nutrients.baseGlycemicLoad, insulinogenicType: nutrients.insulinogenicType, finalMultiplier });
     
     // 🆕 v3.0.0: Используем персональную базу вместо фиксированных 3 часов
     // Скорректированная длина волны
@@ -2705,36 +2676,21 @@
                          resistantStarchBonus + coldExposureBonus + supplementsBonusValue + autophagyBonus;
       const finalMultiplier = (mealMult.total + allBonuses) * scaledCircadian * spicyMultiplier;
       
-      // 🔬 DEBUG v3.2.2: детальный расчёт для последнего приёма
-      if (idx === sorted.length - 1) {
-        console.log('[waveHistory v3.2.2 DETAILS]', {
-          'mealMult.total': mealMult.total,
-          allBonuses,
-          scaledCircadian,
-          spicyMultiplier,
-          finalMultiplier,
-          'result = (mult+bonus) × circ × spicy': (mealMult.total + allBonuses) * scaledCircadian * spicyMultiplier
-        });
-      }
+      // 🔬 DEBUG v3.2.2: детальный расчёт для последнего приёма (отключено для production)
+      // Раскомментировать для отладки:
+      // if (idx === sorted.length - 1) {
+      //   console.log('[waveHistory v3.2.2 DETAILS]', { mealMult: mealMult.total, allBonuses, scaledCircadian, finalMultiplier });
+      // }
       
       // 🆕 v3.0.1: Используем scaledBaseWaveHours (персональная база, скалированная по GL)
       const duration = Math.round(scaledBaseWaveHours * finalMultiplier * 60);
       const endMin = startMin + duration;
       
-      // 🔬 DEBUG waveHistory — почему отличается от основного расчёта?
-      if (idx === sorted.length - 1) { // Последний приём (текущий)
-        console.log('[waveHistory DEBUG]', {
-          mealTime: t,
-          'GL (from nutrients)': mealNutrients.glycemicLoad,
-          'baseGL': mealNutrients.baseGlycemicLoad,
-          scaledBaseWaveHours,
-          effectiveBaseWaveHours,
-          finalMultiplier,
-          'mealMult.total': mealMult.total,
-          'duration (min)': duration,
-          'waveHours': duration / 60
-        });
-      }
+      // 🔬 DEBUG waveHistory (отключено для production)
+      // Раскомментировать для отладки:
+      // if (idx === sorted.length - 1) {
+      //   console.log('[waveHistory DEBUG]', { mealTime: t, GL: mealNutrients.glycemicLoad, finalMultiplier, duration });
+      // }
       
       return {
         time: t,

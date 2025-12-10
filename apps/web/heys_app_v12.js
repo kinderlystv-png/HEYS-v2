@@ -2489,11 +2489,18 @@
           }) {
             const ONE_CURATOR_MODE = true;
             const signInCooldownUntilRef = useRef(0);
+            const fetchingClientsRef = useRef(false); // 🔧 FIX: Защита от дублирования запросов
             
             const fetchClientsFromCloud = useCallback(async (curatorId) => {
               if (!cloud.client || !curatorId) {
                 return { data: [], source: 'error' };
               }
+              
+              // 🔧 FIX: Пропускаем если уже загружаем
+              if (fetchingClientsRef.current) {
+                return { data: [], source: 'skip' };
+              }
+              fetchingClientsRef.current = true;
               
               setClientsSource('loading');
               
@@ -2502,7 +2509,7 @@
               );
               
               try {
-                console.log('[HEYS] 🔄 Загружаю клиентов для curator:', curatorId);
+                // DEBUG (отключено): console.log('[HEYS] 🔄 Загружаю клиентов для curator:', curatorId);
                 const fetchPromise = cloud.client
                   .from('clients')
                   .select('id, name')
@@ -2510,12 +2517,13 @@
                   .order('updated_at', { ascending: true });
                 
                 const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+                fetchingClientsRef.current = false; // 🔧 FIX: Сбрасываем флаг
                 if (error) {
                   console.error('Ошибка загрузки клиентов:', error);
                   setClientsSource('error');
                   return { data: [], source: 'error' };
                 }
-                console.log('[HEYS] ✅ Загружено клиентов:', data?.length || 0, data);
+                // DEBUG (отключено): console.log('[HEYS] ✅ Загружено клиентов:', data?.length || 0);
                 // Сохраняем в localStorage для кэширования
                 if (data && data.length > 0) {
                   localStorage.setItem('heys_clients', JSON.stringify(data));
@@ -2523,6 +2531,7 @@
                 setClientsSource('cloud');
                 return { data: data || [], source: 'cloud' };
               } catch (e) {
+                fetchingClientsRef.current = false; // 🔧 FIX: Сбрасываем флаг при ошибке
                 console.error('[HEYS] ❌ fetchClientsFromCloud failed:', e.message);
                 setClientsSource('error');
                 return { data: [], source: 'error' };
@@ -2715,22 +2724,16 @@
             
             // Twemoji: reparse emoji on mount and tab change
             useEffect(() => {
-              console.log('[App] 🎨 Twemoji effect triggered', {
-                tab,
-                applyTwemoji: !!window.applyTwemoji,
-                twemojiReady: window.twemojiReady,
-                twemoji: !!window.twemoji,
-                heysEmojiStyle: window.heysEmojiStyle
-              });
+              // console.log('[App] 🎨 Twemoji effect triggered', {...});
               if (window.applyTwemoji) {
                 // Immediate + delayed to catch React render
                 window.applyTwemoji();
                 setTimeout(() => {
-                  console.log('[App] 🎨 Twemoji delayed parse (50ms)');
+                  // console.log('[App] 🎨 Twemoji delayed parse (50ms)');
                   window.applyTwemoji();
                 }, 50);
                 setTimeout(() => {
-                  console.log('[App] 🎨 Twemoji delayed parse (150ms)');
+                  // console.log('[App] 🎨 Twemoji delayed parse (150ms)');
                   window.applyTwemoji();
                 }, 150);
               } else {
@@ -3533,11 +3536,11 @@
                 const eventClientId = e?.detail?.clientId;
                 const currentClientId = clientIdRef.current;
                 
-                console.log('[App] 🌅 heysSyncCompleted', { eventClientId, currentClientId, isInitializing });
+                // console.log('[App] 🌅 heysSyncCompleted', { eventClientId, currentClientId, isInitializing });
                 
                 // Пропускаем если нет clientId в событии
                 if (!eventClientId) {
-                  console.log('[App] 🌅 MorningCheckin skip: no eventClientId');
+                  // console.log('[App] 🌅 MorningCheckin skip: no eventClientId');
                   return;
                 }
                 
@@ -3551,13 +3554,13 @@
                   // (React state может ещё не обновиться, но localStorage уже правильный)
                   const lsClientId = HEYS.utils?.getCurrentClientId?.() || '';
                   if (eventClientId !== lsClientId) {
-                    console.log('[App] 🌅 MorningCheckin skip: eventClientId !== localStorage clientId', { eventClientId, lsClientId });
+                    // console.log('[App] 🌅 MorningCheckin skip: eventClientId !== localStorage clientId', { eventClientId, lsClientId });
                     return;
                   }
                   
                   if (HEYS.shouldShowMorningCheckin) {
                     const shouldShow = HEYS.shouldShowMorningCheckin();
-                    console.log('[App] 🌅 MorningCheckin check | shouldShow:', shouldShow);
+                    // console.log('[App] 🌅 MorningCheckin check | shouldShow:', shouldShow);
                     setShowMorningCheckin(shouldShow);
                   }
                 }, 200);
@@ -4311,7 +4314,7 @@
                   cloud.client.auth.getSession().then(({ data }) => {
                     if (data?.session?.user) {
                       // Сессия уже есть — не делаем signIn
-                      console.log('[App] Session already exists, skipping auto signIn');
+                      // console.log('[App] Session already exists, skipping auto signIn');
                     } else {
                       // Сессии нет — делаем signIn
                       handleSignIn();
@@ -4355,10 +4358,10 @@
               // === MORNING CHECK-IN (вес, сон, шаги — показывается ВМЕСТО контента) ===
               isMorningCheckinBlocking && React.createElement(HEYS.MorningCheckin, {
                 onComplete: (data) => {
-                  console.log('[App] 🎉 MorningCheckin onComplete вызван');
+                  // console.log('[App] 🎉 MorningCheckin onComplete вызван');
                   // НЕ инкрементим syncVer — данные обновляются через событие 'heys:day-updated'
                   // Это предотвращает пересоздание DayTab и показ скелетонов
-                  console.log('[App] 👁️ Скрываю MorningCheckin');
+                  // console.log('[App] 👁️ Скрываю MorningCheckin');
                   setShowMorningCheckin(false);
                 }
               }),

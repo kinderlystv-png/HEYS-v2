@@ -379,7 +379,7 @@
   // Функция очистки кэша — вызывать при обновлении продуктов
   function clearMealTotalsCache() {
     _mealTotalsCache.clear();
-    console.log('[HEYS] mealTotals cache cleared');
+    // DEBUG (отключено): console.log('[HEYS] mealTotals cache cleared');
   }
   
   // Автоочистка при обновлении продуктов (fix: нули при синхронизации)
