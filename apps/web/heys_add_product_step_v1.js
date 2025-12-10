@@ -637,7 +637,7 @@
               ? `Найдено: ${searchResults.length}` 
               : 'Ничего не найдено'
           ),
-          searchResults.length > 0 && React.createElement('div', { className: 'aps-products-list' },
+          searchResults?.length > 0 && React.createElement('div', { className: 'aps-products-list' },
             searchResults.map(p => renderProductCard(p))
           ),
           searchResults.length === 0 && React.createElement('div', { className: 'aps-empty' },
@@ -651,7 +651,7 @@
         ),
         
         // Умный список: часто + недавно используемые (объединённый)
-        !showSearch && smartProducts.length > 0 && React.createElement('div', { className: 'aps-section' },
+        !showSearch && smartProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
           React.createElement('div', { className: 'aps-section-title' }, '⚡ Ваши продукты'),
           React.createElement('div', { className: 'aps-products-list' },
             smartProducts.map(p => renderProductCard(p))
@@ -1290,7 +1290,7 @@
       ),
       
       // Порции продукта
-      portions.length > 0 && React.createElement('div', { className: 'aps-portions' },
+      portions?.length > 0 && React.createElement('div', { className: 'aps-portions' },
         React.createElement('div', { className: 'aps-portions-title' }, 'Порции:'),
         React.createElement('div', { className: 'aps-portions-list' },
           portions.map((p, i) => 

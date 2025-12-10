@@ -1800,6 +1800,184 @@
     );
   });
 
+  // === MealOptimizerSection — отдельный компонент для правильной работы хуков ===
+  const MealOptimizerSection = React.memo(function MealOptimizerSection({ meal, totals, dayData, profile, products, pIndex, mealIndex, addProductToMeal }) {
+    const MO = HEYS.MealOptimizer;
+    const [optExpanded, setOptExpanded] = React.useState(false);
+    // Debounce state для отложенного рендера рекомендаций
+    const [debouncedMeal, setDebouncedMeal] = React.useState(meal);
+    
+    // Guard: пустой приём — не показывать
+    if (!meal?.items?.length) return null;
+    
+    // Debounce: обновляем meal с задержкой 300ms
+    React.useEffect(() => {
+      const timer = setTimeout(() => setDebouncedMeal(meal), 300);
+      return () => clearTimeout(timer);
+    }, [meal]);
+    
+    // Получаем рекомендации с debounced meal
+    const recommendations = React.useMemo(() => {
+      if (!MO) return [];
+      return MO.getMealOptimization({
+        meal: debouncedMeal,
+        mealTotals: totals,
+        dayData,
+        profile,
+        products,
+        pIndex,
+        avgGI: totals?.gi || 50
+      });
+    }, [debouncedMeal, totals, dayData, profile, products, pIndex]);
+    
+    // Фильтруем скрытые, дедуплицируем и сортируем по приоритету
+    const visibleRecs = React.useMemo(() => {
+      if (!MO) return [];
+      const filtered = recommendations.filter(r => !MO.shouldHideRecommendation(r.id));
+      
+      // Дедупликация: убираем дубли по title (оставляем с большим priority)
+      const seen = new Map();
+      filtered.forEach(r => {
+        const key = r.title.toLowerCase().trim();
+        if (!seen.has(key) || (seen.get(key).priority || 0) < (r.priority || 0)) {
+          seen.set(key, r);
+        }
+      });
+      const deduped = Array.from(seen.values());
+      
+      // Сортируем: сначала warnings, потом по наличию продуктов, потом по priority
+      return deduped.sort((a, b) => {
+        if (a.isWarning && !b.isWarning) return -1;
+        if (!a.isWarning && b.isWarning) return 1;
+        const aHasProds = (a.products?.length || 0) > 0 ? 1 : 0;
+        const bHasProds = (b.products?.length || 0) > 0 ? 1 : 0;
+        if (aHasProds !== bHasProds) return bHasProds - aHasProds;
+        return (b.priority || 50) - (a.priority || 50);
+      });
+    }, [recommendations]);
+    
+    const handleAddProduct = React.useCallback((product, ruleId) => {
+      if (!addProductToMeal || !product || !MO) return;
+      
+      const portion = MO.getSmartPortion(product);
+      const productWithGrams = { ...product, grams: portion.grams };
+      
+      addProductToMeal(mealIndex, productWithGrams);
+      
+      MO.trackUserAction({
+        type: 'accept',
+        ruleId,
+        productId: product.id,
+        productName: product.name
+      });
+    }, [addProductToMeal, mealIndex]);
+    
+    const handleDismiss = React.useCallback((ruleId) => {
+      if (!MO) return;
+      MO.trackUserAction({
+        type: 'dismiss',
+        ruleId
+      });
+    }, []);
+    
+    if (visibleRecs.length === 0) return null;
+    
+    // Лучшая рекомендация для превью
+    const bestRec = visibleRecs[0];
+    // Остальные для раскрытия (без дублирования первой)
+    const restRecs = visibleRecs.slice(1);
+    
+    return React.createElement('div', {
+      className: 'meal-optimizer' + (optExpanded ? ' meal-optimizer--expanded' : '')
+    },
+      // Header — содержит главный совет
+      React.createElement('div', {
+        className: 'meal-optimizer__header',
+        onClick: () => restRecs.length > 0 && setOptExpanded(!optExpanded)
+      },
+        // Иконка совета
+        React.createElement('span', { className: 'meal-optimizer__header-icon' }, bestRec.icon),
+        // Текст совета
+        React.createElement('div', { className: 'meal-optimizer__header-text' },
+          React.createElement('div', { className: 'meal-optimizer__header-title' }, bestRec.title),
+          React.createElement('div', { className: 'meal-optimizer__header-reason' }, bestRec.reason)
+        ),
+        // Правая часть: бейдж + стрелка
+        React.createElement('div', { className: 'meal-optimizer__header-right' },
+          restRecs.length > 0 && React.createElement('span', { className: 'meal-optimizer__badge' }, 
+            '+' + restRecs.length
+          ),
+          restRecs.length > 0 && React.createElement('span', { 
+            className: 'meal-optimizer__toggle' + (optExpanded ? ' meal-optimizer__toggle--expanded' : '') 
+          }, '▼'),
+          React.createElement('button', { 
+            className: 'meal-optimizer__dismiss',
+            onClick: (e) => { e.stopPropagation(); handleDismiss(bestRec.id); },
+            title: 'Скрыть'
+          }, '×')
+        )
+      ),
+      
+      // Продукты главного совета — под хедером
+      bestRec.products && bestRec.products.length > 0 && React.createElement('div', { className: 'meal-optimizer__products' },
+        bestRec.products.map((prod, pIdx) => 
+          React.createElement('button', {
+            key: prod.id || pIdx,
+            className: 'meal-optimizer__product',
+            onClick: (e) => { e.stopPropagation(); handleAddProduct(prod, bestRec.id); },
+            title: `Добавить ${prod.name}`
+          },
+            React.createElement('span', { className: 'meal-optimizer__product-name' }, prod.name),
+            prod.smartPortion && React.createElement('span', { className: 'meal-optimizer__product-portion' }, prod.smartPortion.label),
+            React.createElement('span', { className: 'meal-optimizer__product-add' }, '+')
+          )
+        )
+      ),
+      
+      // Остальные советы — по раскрытию (БЕЗ первого)
+      optExpanded && restRecs.length > 0 && React.createElement('div', { className: 'meal-optimizer__content' },
+        restRecs.map((rec) => 
+          React.createElement('div', { 
+            key: rec.id,
+            className: 'meal-optimizer__item' + 
+              (rec.isWarning ? ' meal-optimizer__item--warning' : '') +
+              (rec.isInfo ? ' meal-optimizer__item--info' : '')
+          },
+            React.createElement('div', { className: 'meal-optimizer__item-header' },
+              React.createElement('span', { className: 'meal-optimizer__item-icon' }, rec.icon),
+              React.createElement('div', { className: 'meal-optimizer__item-content' },
+                React.createElement('div', { className: 'meal-optimizer__item-title' }, rec.title),
+                React.createElement('div', { className: 'meal-optimizer__item-reason' }, rec.reason),
+                rec.science && React.createElement('div', { className: 'meal-optimizer__item-science' }, rec.science)
+              ),
+              React.createElement('button', { 
+                className: 'meal-optimizer__item-dismiss',
+                onClick: (e) => { e.stopPropagation(); handleDismiss(rec.id); },
+                title: 'Больше не показывать'
+              }, '×')
+            ),
+            
+            // Продукты для добавления
+            rec.products && rec.products.length > 0 && React.createElement('div', { className: 'meal-optimizer__products' },
+              rec.products.map((prod, pIdx) => 
+                React.createElement('button', {
+                  key: prod.id || pIdx,
+                  className: 'meal-optimizer__product',
+                  onClick: (e) => { e.stopPropagation(); handleAddProduct(prod, rec.id); },
+                  title: `Добавить ${prod.name}`
+                },
+                  React.createElement('span', { className: 'meal-optimizer__product-name' }, prod.name),
+                  prod.smartPortion && React.createElement('span', { className: 'meal-optimizer__product-portion' }, prod.smartPortion.label),
+                  React.createElement('span', { className: 'meal-optimizer__product-add' }, '+')
+                )
+              )
+            )
+          )
+        )
+      )
+    );
+  });
+
   const MealCard = React.memo(function MealCard({
     meal,
     mealIndex,
@@ -1826,7 +2004,10 @@
     allMeals,
     isNewItem,
     optimum,
-    setMealQualityPopup
+    setMealQualityPopup,
+    addProductToMeal,
+    dayData,
+    profile
   }) {
     const headerMeta = MEAL_HEADER_META;
     function mTotals(m){
@@ -2444,6 +2625,18 @@
             });
           })
         ),
+
+        // === MealOptimizer: Умные рекомендации ===
+        HEYS.MealOptimizer && meal?.items && meal.items.length > 0 && React.createElement(MealOptimizerSection, {
+          meal,
+          totals,
+          dayData: dayData || {},
+          profile: profile || {},
+          products: products || [],
+          pIndex,
+          mealIndex,
+          addProductToMeal
+        }),
 
         // Инсулиновая волна в карточке приёма — единый блок
         showWaveButton && React.createElement('div', {
@@ -5603,7 +5796,7 @@
         id: uid('it_'), 
         product_id: p.id ?? p.product_id, 
         name: p.name, 
-        grams: 100,
+        grams: p.grams || 100, // Поддержка кастомного веса из MealOptimizer
         // Inline данные — гарантируют корректный расчёт даже если продукт удалён из базы
         kcal100: p.kcal100,
         protein100: p.protein100,
@@ -5635,34 +5828,6 @@
       
       // Dispatch event для advice системы
       window.dispatchEvent(new CustomEvent('heysProductAdded'));
-      
-      // 🔍 TEMP DEBUG: Диагностика синхронизации meals (убрать после отладки)
-      setTimeout(() => {
-        try {
-          const clientId = window.HEYS?.currentClientId;
-          const key = clientId ? `heys_${clientId}_dayv2_${date}` : `heys_dayv2_${date}`;
-          const raw = localStorage.getItem(key);
-          const data = raw ? JSON.parse(raw) : null;
-          const pendingRaw = localStorage.getItem('heys_pending_client_queue');
-          const pending = pendingRaw ? JSON.parse(pendingRaw) : [];
-          const dayPending = pending.filter(p => p.k?.includes('dayv2'));
-          
-          const info = [
-            `📅 Date: ${date}`,
-            `🔑 Key: ${key.slice(-30)}...`,
-            `🍽️ Meals: ${data?.meals?.length || 0}`,
-            `📦 Items: ${data?.meals?.map(m => m.items?.length || 0).join(',')}`,
-            `💧 Water: ${data?.waterMl || 0}`,
-            `⏱️ UpdatedAt: ${data?.updatedAt ? new Date(data.updatedAt).toLocaleTimeString() : 'none'}`,
-            `📤 Pending: ${pending.length} (days: ${dayPending.length})`,
-            dayPending.length > 0 ? `📤 Pending items: ${dayPending.map(p => p.v?.meals?.map(m => m.items?.length).join(',')).join(' | ')}` : ''
-          ].filter(Boolean).join('\n');
-          
-          alert('SYNC DEBUG:\n' + info);
-        } catch(e) {
-          alert('DEBUG ERROR: ' + e.message);
-        }
-      }, 1000);
       
       // Автофокус убран — клавиатура закрывает информацию о продукте на мобильных
     }, [haptic, setDay, setNewItemIds, date]);
@@ -5811,6 +5976,30 @@
         }
       };
     }, [addMeal]);
+
+    // Экспорт addProductToMeal как публичный API
+    // Позволяет добавлять продукт в приём извне: HEYS.Day.addProductToMeal(mealIndex, product, grams?)
+    React.useEffect(() => {
+      HEYS.Day = HEYS.Day || {};
+      HEYS.Day.addProductToMeal = (mi, product, grams) => {
+        // Валидация
+        if (typeof mi !== 'number' || mi < 0) {
+          console.warn('[HEYS.Day.addProductToMeal] Invalid meal index:', mi);
+          return false;
+        }
+        if (!product || !product.name) {
+          console.warn('[HEYS.Day.addProductToMeal] Invalid product:', product);
+          return false;
+        }
+        // Добавляем продукт
+        const productWithGrams = grams ? { ...product, grams } : product;
+        addProductToMeal(mi, productWithGrams);
+        return true;
+      };
+      return () => {
+        if (HEYS.Day) delete HEYS.Day.addProductToMeal;
+      };
+    }, [addProductToMeal]);
 
     // === Advice Module Integration ===
     // Собираем uiState для проверки занятости пользователя
@@ -6837,7 +7026,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           allMeals: day.meals,
           isNewItem,
           optimum,
-          setMealQualityPopup
+          setMealQualityPopup,
+          addProductToMeal,
+          dayData: day,
+          profile: prof
         })
       );
     });
@@ -7483,25 +7675,98 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     // Данные для sparkline веса за N дней
     const weightSparklineData = React.useMemo(() => {
       try {
-        const viewDate = new Date(date); // Просматриваемый день
-        const realTodayStr = fmtDate(new Date()); // Реальный сегодняшний день
+        const realToday = new Date();
+        const realTodayStr = fmtDate(realToday);
         const days = [];
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
         
         // Получаем cycleDay для сегодняшнего дня из state
         const todayCycleDay = day.cycleDay || null;
         
-        for (let i = chartPeriod - 1; i >= 0; i--) {
-          const d = new Date(viewDate);
+        // Функция получения данных дня из localStorage
+        const getDayWeight = (dateStr) => {
+          const scopedKey = clientId 
+            ? 'heys_' + clientId + '_dayv2_' + dateStr 
+            : 'heys_dayv2_' + dateStr;
+          
+          try {
+            const raw = localStorage.getItem(scopedKey);
+            if (!raw) return null;
+            const dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
+            if (dayData?.weightMorning > 0) {
+              const cycleDayValue = dayData.cycleDay || null;
+              const retentionInfo = HEYS.Cycle?.getWaterRetentionInfo?.(cycleDayValue) || { hasRetention: false };
+              return {
+                weight: +dayData.weightMorning,
+                cycleDay: cycleDayValue,
+                hasWaterRetention: retentionInfo.hasRetention,
+                retentionSeverity: retentionInfo.severity,
+                retentionAdvice: retentionInfo.advice
+              };
+            }
+          } catch(e) {}
+          return null;
+        };
+        
+        // === НОВОЕ: Находим первый день с весом за последние 60 дней ===
+        let firstDataDay = null;
+        const maxLookback = 60;
+        for (let i = maxLookback; i >= 0; i--) {
+          const d = new Date(realToday);
           d.setDate(d.getDate() - i);
           const dateStr = fmtDate(d);
-          const isRealToday = dateStr === realTodayStr; // Это реальный сегодняшний день?
+          
+          // Для сегодня — из state
+          if (dateStr === realTodayStr) {
+            if (+day.weightMorning > 0) {
+              firstDataDay = dateStr;
+              break;
+            }
+          } else {
+            const data = getDayWeight(dateStr);
+            if (data) {
+              firstDataDay = dateStr;
+              break;
+            }
+          }
+        }
+        
+        // Если нет данных — возвращаем пустой массив
+        if (!firstDataDay) return [];
+        
+        // === Считаем сколько дней с первого дня данных до сегодня ===
+        const firstDataDate = new Date(firstDataDay);
+        const daysSinceFirstData = Math.floor((realToday - firstDataDate) / (24 * 60 * 60 * 1000)) + 1;
+        
+        // === КЛЮЧЕВАЯ ЛОГИКА: Определяем диапазон дат для графика ===
+        let startDate;
+        let daysToShow;
+        let futureDaysCount = 0;
+        
+        if (daysSinceFirstData >= chartPeriod) {
+          // Данных достаточно — показываем последние chartPeriod дней
+          startDate = new Date(realToday);
+          startDate.setDate(startDate.getDate() - (chartPeriod - 1));
+          daysToShow = chartPeriod;
+        } else {
+          // Данных мало — показываем от первого дня с данными
+          // Остальные слоты справа заполним прогнозом
+          startDate = firstDataDate;
+          daysToShow = daysSinceFirstData;
+          futureDaysCount = chartPeriod - daysSinceFirstData;
+        }
+        
+        // Собираем данные за период (от startDate до сегодня)
+        for (let i = 0; i < daysToShow; i++) {
+          const d = new Date(startDate);
+          d.setDate(d.getDate() + i);
+          const dateStr = fmtDate(d);
+          const isRealToday = dateStr === realTodayStr;
           
           // Для реального сегодняшнего дня берём вес из state (реактивный)
           if (isRealToday) {
             const todayWeight = +day.weightMorning || 0;
             if (todayWeight > 0) {
-              // Получаем информацию о задержке воды
               const retentionInfo = HEYS.Cycle?.getWaterRetentionInfo?.(todayCycleDay) || { hasRetention: false };
               days.push({ 
                 date: dateStr, 
@@ -7518,38 +7783,101 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }
           
           // Для остальных дней — из localStorage
-          const scopedKey = clientId 
-            ? 'heys_' + clientId + '_dayv2_' + dateStr 
-            : 'heys_dayv2_' + dateStr;
-          
-          let dayData = null;
-          try {
-            const raw = localStorage.getItem(scopedKey);
-            if (raw) {
-              dayData = raw.startsWith('¤Z¤') ? JSON.parse(raw.substring(3)) : JSON.parse(raw);
-            }
-          } catch(e) {}
-          
-          if (dayData?.weightMorning > 0) {
-            const cycleDayValue = dayData.cycleDay || null;
-            const retentionInfo = HEYS.Cycle?.getWaterRetentionInfo?.(cycleDayValue) || { hasRetention: false };
+          const data = getDayWeight(dateStr);
+          if (data) {
             days.push({ 
               date: dateStr, 
-              weight: +dayData.weightMorning,
+              weight: data.weight,
               isToday: false,
               dayNum: dateStr.slice(-2).replace(/^0/, ''),
-              cycleDay: cycleDayValue,
-              hasWaterRetention: retentionInfo.hasRetention,
-              retentionSeverity: retentionInfo.severity,
-              retentionAdvice: retentionInfo.advice
+              cycleDay: data.cycleDay,
+              hasWaterRetention: data.hasWaterRetention,
+              retentionSeverity: data.retentionSeverity,
+              retentionAdvice: data.retentionAdvice
             });
           }
         }
+        
+        // === НОВОЕ: Добавляем будущие дни как прогноз ===
+        if (futureDaysCount > 0 && days.length >= 2) {
+          // Рассчитываем тренд веса по имеющимся данным
+          const weights = days.map(d => d.weight);
+          const n = weights.length;
+          
+          // Линейная регрессия для тренда
+          let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+          for (let i = 0; i < n; i++) {
+            sumX += i;
+            sumY += weights[i];
+            sumXY += i * weights[i];
+            sumX2 += i * i;
+          }
+          const denominator = n * sumX2 - sumX * sumX;
+          const slope = denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0;
+          
+          // Ограничиваем slope: max ±0.3 кг/день (реалистично)
+          const clampedSlope = Math.max(-0.3, Math.min(0.3, slope));
+          
+          const lastWeight = weights[n - 1];
+          // Целевой вес из профиля (приводим к числу!) или текущий вес для стабилизации
+          const targetWeight = +prof?.weightGoal > 0 ? +prof.weightGoal : lastWeight;
+          
+          // Реалистичная скорость изменения веса на основе дефицита
+          // 0.4-0.8 кг/неделю = 0.06-0.11 кг/день (безопасный темп)
+          const deficitPct = Math.abs(+prof?.deficitPctTarget || 0);
+          let weeklyRate; // кг в неделю
+          if (deficitPct >= 15) weeklyRate = 0.8;
+          else if (deficitPct >= 10) weeklyRate = 0.6;
+          else if (deficitPct >= 5) weeklyRate = 0.4;
+          else weeklyRate = 0.2; // Поддержание или лёгкий набор
+          
+          const dailyRate = weeklyRate / 7; // ~0.06-0.11 кг/день
+          const direction = targetWeight < lastWeight ? -1 : (targetWeight > lastWeight ? 1 : 0);
+          
+          let prevWeight = lastWeight;
+          for (let i = 1; i <= futureDaysCount; i++) {
+            const d = new Date(realToday);
+            d.setDate(d.getDate() + i);
+            const dateStr = fmtDate(d);
+            
+            let forecastWeight;
+            if (i <= 2) {
+              // Первые 2 дня — продолжаем текущий тренд
+              forecastWeight = lastWeight + clampedSlope * i;
+            } else {
+              // Дни 3+ — реалистичное изменение к цели с dailyRate
+              // Не превышаем цель
+              const idealChange = direction * dailyRate;
+              const newWeight = prevWeight + idealChange;
+              
+              // Ограничиваем: не перескакиваем через цель
+              if (direction < 0) {
+                forecastWeight = Math.max(targetWeight, newWeight);
+              } else if (direction > 0) {
+                forecastWeight = Math.min(targetWeight, newWeight);
+              } else {
+                forecastWeight = prevWeight; // Стабилизация
+              }
+            }
+            prevWeight = forecastWeight;
+            
+            days.push({ 
+              date: dateStr, 
+              weight: Math.round(forecastWeight * 10) / 10, // Округление до 0.1 кг
+              isToday: false,
+              isFuture: true,  // Маркер будущего дня
+              dayNum: dateStr.slice(-2).replace(/^0/, ''),
+              cycleDay: null,
+              hasWaterRetention: false
+            });
+          }
+        }
+        
         return days;
       } catch (e) {
         return [];
       }
-    }, [date, day.weightMorning, day.cycleDay, chartPeriod]);
+    }, [date, day.weightMorning, day.cycleDay, chartPeriod, prof?.weightGoal]);
     
     // Анализ исторических паттернов цикла (для блока задержки воды)
     const cycleHistoryAnalysis = React.useMemo(() => {
@@ -7581,11 +7909,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     }, [day.cycleDay]);
     
     // Данные для sparkline калорий за chartPeriod дней
-    // Используем products из state (реактивные данные после sync)
+    // НОВАЯ ЛОГИКА: Если данных меньше chartPeriod — показываем данные слева, прогноз справа
+    // Это даёт "тренд на будущее" вместо пустых дней в прошлом
     const sparklineData = React.useMemo(() => {
       try {
-        const viewDate = new Date(date); // Просматриваемый день
-        const realTodayStr = fmtDate(new Date()); // Реальный сегодняшний день
+        const realToday = new Date();
+        const realTodayStr = fmtDate(realToday);
         const days = [];
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
         
@@ -7598,40 +7927,80 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }
         });
         
-        // Получаем данные activeDays для нескольких месяцев (chartPeriod может охватывать 2 месяца)
+        // Получаем данные activeDays для нескольких месяцев
         const getActiveDaysForMonth = (HEYS.dayUtils && HEYS.dayUtils.getActiveDaysForMonth) || (() => new Map());
         const allActiveDays = new Map();
         
-        // Собираем данные за текущий и предыдущий месяц
-        // Важно: передаём products из state как 4-й аргумент!
-        for (let monthOffset = 0; monthOffset >= -1; monthOffset--) {
-          const checkDate = new Date(viewDate);
+        // Собираем данные за 3 месяца назад (для поиска первого дня с данными)
+        for (let monthOffset = 0; monthOffset >= -3; monthOffset--) {
+          const checkDate = new Date(realToday);
           checkDate.setMonth(checkDate.getMonth() + monthOffset);
           const monthData = getActiveDaysForMonth(checkDate.getFullYear(), checkDate.getMonth(), prof, products);
           monthData.forEach((v, k) => allActiveDays.set(k, v));
         }
         
-        for (let i = chartPeriod - 1; i >= 0; i--) {
-          const d = new Date(viewDate);
+        // === НОВОЕ: Находим первый день с данными за последние 60 дней ===
+        let firstDataDay = null;
+        const maxLookback = 60;
+        for (let i = maxLookback; i >= 0; i--) {
+          const d = new Date(realToday);
           d.setDate(d.getDate() - i);
           const dateStr = fmtDate(d);
-          const isRealToday = dateStr === realTodayStr; // Это реальный сегодняшний день?
-          
-          // Берём данные из activeDays (там уже вычислены kcal и target)
+          const dayInfo = allActiveDays.get(dateStr);
+          if (dayInfo && dayInfo.kcal > 0) {
+            firstDataDay = dateStr;
+            break;
+          }
+        }
+        
+        // Если нет данных — возвращаем пустой массив (покажем empty state)
+        if (!firstDataDay) {
+          // Возвращаем chartPeriod пустых дней чтобы empty state отобразился
+          for (let i = chartPeriod - 1; i >= 0; i--) {
+            const d = new Date(realToday);
+            d.setDate(d.getDate() - i);
+            days.push({ date: fmtDate(d), kcal: 0, target: optimum, isToday: i === 0, hasTraining: false, trainingTypes: [], sleepHours: 0, sleepQuality: 0, dayScore: 0, steps: 0 });
+          }
+          return days;
+        }
+        
+        // === Считаем сколько дней с данными от firstDataDay до сегодня ===
+        const firstDataDate = new Date(firstDataDay);
+        const daysSinceFirstData = Math.floor((realToday - firstDataDate) / (24 * 60 * 60 * 1000)) + 1;
+        
+        // === КЛЮЧЕВАЯ ЛОГИКА: Определяем диапазон дат для графика ===
+        // Если данных >= chartPeriod — показываем последние chartPeriod дней (как раньше)
+        // Если данных < chartPeriod — показываем от firstDataDay, остальное справа будет прогнозом
+        let startDate;
+        let daysToShow;
+        let futureDaysCount = 0;
+        
+        if (daysSinceFirstData >= chartPeriod) {
+          // Данных достаточно — показываем последние chartPeriod дней
+          startDate = new Date(realToday);
+          startDate.setDate(startDate.getDate() - (chartPeriod - 1));
+          daysToShow = chartPeriod;
+        } else {
+          // Данных мало — показываем от первого дня с данными до сегодня
+          // Остальные слоты справа заполним прогнозом
+          startDate = firstDataDate;
+          daysToShow = daysSinceFirstData;
+          futureDaysCount = chartPeriod - daysSinceFirstData;
+        }
+        
+        // Функция для получения данных одного дня
+        const getDayData = (dateStr, isRealToday) => {
           const dayInfo = allActiveDays.get(dateStr);
           
           // Для реального сегодняшнего дня используем eatenKcal и текущий optimum
           if (isRealToday) {
-            // Тренировки сегодня берём из day state
             const todayTrainings = (day.trainings || []).filter(t => t && t.z && t.z.some(z => z > 0));
             const hasTraining = todayTrainings.length > 0;
             const trainingTypes = todayTrainings.map(t => t.type || 'cardio');
-            // Считаем минуты тренировок сегодня
             let trainingMinutes = 0;
             todayTrainings.forEach(t => {
               if (t.z && Array.isArray(t.z)) trainingMinutes += t.z.reduce((s, m) => s + (+m || 0), 0);
             });
-            // Сон сегодня
             let sleepHours = 0;
             if (day.sleepStart && day.sleepEnd) {
               const [sh, sm] = day.sleepStart.split(':').map(Number);
@@ -7640,7 +8009,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               if (endMin < startMin) endMin += 24 * 60;
               sleepHours = (endMin - startMin) / 60;
             }
-            days.push({ 
+            return { 
               date: dateStr, 
               kcal: Math.round(eatenKcal || 0), 
               target: optimum,
@@ -7654,22 +8023,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               prot: Math.round(dayTot.prot || 0),
               fat: Math.round(dayTot.fat || 0),
               carbs: Math.round(dayTot.carbs || 0)
-            });
-            continue;
+            };
           }
           
           // Для прошлых дней используем данные из activeDays
           if (dayInfo && dayInfo.kcal > 0) {
-            // Проверяем тренировки
-            const hasTraining = dayInfo.hasTraining || false;
-            const trainingTypes = dayInfo.trainingTypes || [];
-            days.push({ 
+            return { 
               date: dateStr, 
               kcal: dayInfo.kcal, 
               target: dayInfo.target,
               isToday: false,
-              hasTraining,
-              trainingTypes,
+              hasTraining: dayInfo.hasTraining || false,
+              trainingTypes: dayInfo.trainingTypes || [],
               trainingMinutes: dayInfo.trainingMinutes || 0,
               sleepHours: dayInfo.sleepHours || 0,
               sleepQuality: dayInfo.sleepQuality || 0,
@@ -7678,73 +8043,96 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               prot: dayInfo.prot || 0,
               fat: dayInfo.fat || 0,
               carbs: dayInfo.carbs || 0
-            });
-          } else {
-            // Fallback: читаем напрямую из localStorage
-            let dayData = null;
-            try {
-              const scopedKey = clientId 
-                ? 'heys_' + clientId + '_dayv2_' + dateStr 
-                : 'heys_dayv2_' + dateStr;
-              const raw = localStorage.getItem(scopedKey);
-              if (raw) {
-                if (raw.startsWith('¤Z¤')) {
-                  let str = raw.substring(3);
-                  const patterns = { '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"', '¤c¤': '"carbs100"', '¤f¤': '"fat100"' };
-                  for (const [code, pattern] of Object.entries(patterns)) str = str.split(code).join(pattern);
-                  dayData = JSON.parse(str);
-                } else {
-                  dayData = JSON.parse(raw);
-                }
-              }
-            } catch(e) {}
-            
-            if (dayData && dayData.meals) {
-              // Вычисляем калории через продукты (fallback на inline данные item)
-              let totalKcal = 0;
-              (dayData.meals || []).forEach(meal => {
-                (meal.items || []).forEach(item => {
-                  const grams = +item.grams || 0;
-                  if (grams <= 0) return;
-                  // Fallback: сначала productsMap (ключ = name), потом inline данные item
-                  const nameKey = (item.name || '').trim();
-                  const product = nameKey ? productsMap.get(nameKey) : null;
-                  const src = product || item;
-                  if (src.kcal100 != null) {
-                    totalKcal += ((+src.kcal100 || 0) * grams / 100);
-                  }
-                });
-              });
-              // Проверяем тренировки и их типы
-              const dayTrainings = (dayData.trainings || []).filter(t => t && t.z && t.z.some(z => z > 0));
-              const hasTraining = dayTrainings.length > 0;
-              const trainingTypes = dayTrainings.map(t => t.type || 'cardio');
-              // Вычисляем sleepHours из sleepStart/sleepEnd
-              let fallbackSleepHours = 0;
-              if (dayData.sleepStart && dayData.sleepEnd) {
-                const [sh, sm] = dayData.sleepStart.split(':').map(Number);
-                const [eh, em] = dayData.sleepEnd.split(':').map(Number);
-                let startMin = sh * 60 + sm, endMin = eh * 60 + em;
-                if (endMin < startMin) endMin += 24 * 60;
-                fallbackSleepHours = (endMin - startMin) / 60;
-              }
-              // Без target если нет в activeDays, используем текущий optimum
-              days.push({ 
-                date: dateStr, 
-                kcal: Math.round(totalKcal), 
-                target: optimum, 
-                isToday: false, 
-                hasTraining, 
-                trainingTypes,
-                sleepHours: fallbackSleepHours,
-                sleepQuality: +dayData.sleepQuality || 0,
-                dayScore: +dayData.dayScore || 0,
-                steps: +dayData.steps || 0
-              });
-            } else {
-              days.push({ date: dateStr, kcal: 0, target: optimum, isToday: false, hasTraining: false, trainingTypes: [], sleepHours: 0, sleepQuality: 0, dayScore: 0, steps: 0 });
-            }
+            };
           }
+          
+          // Fallback: читаем напрямую из localStorage
+          let dayData = null;
+          try {
+            const scopedKey = clientId 
+              ? 'heys_' + clientId + '_dayv2_' + dateStr 
+              : 'heys_dayv2_' + dateStr;
+            const raw = localStorage.getItem(scopedKey);
+            if (raw) {
+              if (raw.startsWith('¤Z¤')) {
+                let str = raw.substring(3);
+                const patterns = { '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"', '¤c¤': '"carbs100"', '¤f¤': '"fat100"' };
+                for (const [code, pattern] of Object.entries(patterns)) str = str.split(code).join(pattern);
+                dayData = JSON.parse(str);
+              } else {
+                dayData = JSON.parse(raw);
+              }
+            }
+          } catch(e) {}
+          
+          if (dayData && dayData.meals) {
+            let totalKcal = 0;
+            (dayData.meals || []).forEach(meal => {
+              (meal.items || []).forEach(item => {
+                const grams = +item.grams || 0;
+                if (grams <= 0) return;
+                const nameKey = (item.name || '').trim();
+                const product = nameKey ? productsMap.get(nameKey) : null;
+                const src = product || item;
+                if (src.kcal100 != null) {
+                  totalKcal += ((+src.kcal100 || 0) * grams / 100);
+                }
+              });
+            });
+            const dayTrainings = (dayData.trainings || []).filter(t => t && t.z && t.z.some(z => z > 0));
+            let fallbackSleepHours = 0;
+            if (dayData.sleepStart && dayData.sleepEnd) {
+              const [sh, sm] = dayData.sleepStart.split(':').map(Number);
+              const [eh, em] = dayData.sleepEnd.split(':').map(Number);
+              let startMin = sh * 60 + sm, endMin = eh * 60 + em;
+              if (endMin < startMin) endMin += 24 * 60;
+              fallbackSleepHours = (endMin - startMin) / 60;
+            }
+            return { 
+              date: dateStr, 
+              kcal: Math.round(totalKcal), 
+              target: optimum, 
+              isToday: false, 
+              hasTraining: dayTrainings.length > 0, 
+              trainingTypes: dayTrainings.map(t => t.type || 'cardio'),
+              sleepHours: fallbackSleepHours,
+              sleepQuality: +dayData.sleepQuality || 0,
+              dayScore: +dayData.dayScore || 0,
+              steps: +dayData.steps || 0
+            };
+          }
+          
+          return { date: dateStr, kcal: 0, target: optimum, isToday: false, hasTraining: false, trainingTypes: [], sleepHours: 0, sleepQuality: 0, dayScore: 0, steps: 0 };
+        };
+        
+        // Собираем данные за период (от startDate до сегодня)
+        for (let i = 0; i < daysToShow; i++) {
+          const d = new Date(startDate);
+          d.setDate(d.getDate() + i);
+          const dateStr = fmtDate(d);
+          const isRealToday = dateStr === realTodayStr;
+          days.push(getDayData(dateStr, isRealToday));
+        }
+        
+        // === НОВОЕ: Добавляем будущие дни как прогноз ===
+        // Эти дни будут помечены как isFuture и показаны как "?" с прогнозной линией
+        for (let i = 1; i <= futureDaysCount; i++) {
+          const d = new Date(realToday);
+          d.setDate(d.getDate() + i);
+          const dateStr = fmtDate(d);
+          days.push({ 
+            date: dateStr, 
+            kcal: 0, 
+            target: optimum, 
+            isToday: false, 
+            isFuture: true,  // Маркер будущего дня
+            hasTraining: false, 
+            trainingTypes: [], 
+            sleepHours: 0, 
+            sleepQuality: 0, 
+            dayScore: 0, 
+            steps: 0 
+          });
         }
         
         return days;
@@ -8585,7 +8973,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Обрабатываем данные:
       // 1. Помечаем пустые/неполные дни как "unknown" (будут показаны как "?")
       // 2. Интерполируем их kcal между соседними известными днями
+      // 3. isFuture дни исключаются из основного графика — они станут прогнозом
       const processedData = data.map((d, idx) => {
+        // Будущие дни (isFuture) — исключаем из основного графика, покажем как прогноз
+        if (d.isFuture) {
+          return { ...d, isUnknown: false, excludeFromChart: true, isFutureDay: true };
+        }
+        
         // Сегодня неполный — отдельная логика (показываем как прогноз)
         if (d.isToday && isTodayIncomplete) {
           return { ...d, isUnknown: false, excludeFromChart: true };
@@ -8597,6 +8991,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         
         return { ...d, isUnknown, excludeFromChart: false };
       });
+      
+      // Извлекаем будущие дни для прогноза
+      const futureDays = processedData.filter(d => d.isFutureDay);
       
       // Интерполируем kcal для unknown дней
       const chartData = processedData.filter(d => !d.excludeFromChart).map((d, idx, arr) => {
@@ -8676,37 +9073,71 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const simpleNext = lastKcal + clampedSlope;
         const blendedNext = regressionNext * 0.6 + simpleNext * 0.4;
         
-        // Вычисляем тренд НОРМЫ за последние 7 дней (учитывает изменения веса, активности)
-        const last7Days = chartData.slice(-7);
-        let targetTrend = 0;
-        if (last7Days.length >= 2) {
-          const firstTarget = last7Days[0].target || goal;
-          const lastTargetVal = last7Days[last7Days.length - 1].target || goal;
-          targetTrend = (lastTargetVal - firstTarget) / (last7Days.length - 1);
-        }
+        // Норма для прогнозных дней = текущий optimum (goal)
+        // Норма зависит от BMR + активность, а не от тренда прошлых дней
+        const forecastTarget = goal;
         
-        // Если сегодня неполный — добавляем прогноз на сегодня и завтра
-        const daysToForecast = isTodayIncomplete ? 2 : forecastDays;
+        // === Regression to Mean для прогноза калорий ===
+        // Дни 1-2: тренд по данным (slope) — краткосрочный паттерн
+        // Дни 3+: плавное возвращение к норме (гомеостаз)
+        // Формула: kcal = prevKcal + (target - prevKcal) * decayRate
+        const calculateForecastKcal = (dayIndex, prevKcal) => {
+          if (dayIndex <= 2) {
+            // Первые 2 дня — продолжаем тренд
+            return dayIndex === 1 
+              ? Math.round(blendedNext)
+              : Math.round(blendedNext + clampedSlope * (dayIndex - 1));
+          } else {
+            // Дни 3+ — regression to mean (возврат к норме на 30% за день)
+            const decayRate = 0.3;
+            return Math.round(prevKcal + (goal - prevKcal) * decayRate);
+          }
+        };
         
-        for (let i = 1; i <= daysToForecast; i++) {
-          const forecastDate = addDays(lastChartDate, i);
-          const forecastDayNum = forecastDate ? new Date(forecastDate).getDate() : '';
-          const isTodayForecast = isTodayIncomplete && i === 1;
-          // Прогноз нормы по тренду
-          const forecastTarget = Math.round(lastTarget + targetTrend * i);
-          // Прогноз ккал: blendedNext для первого дня, далее +clampedSlope
-          const forecastKcal = i === 1 
-            ? Math.round(blendedNext) 
-            : Math.round(blendedNext + clampedSlope * (i - 1));
-          forecastPoints.push({
-            kcal: Math.max(0, forecastKcal),
-            target: forecastTarget,
-            isForecast: true,
-            isTodayForecast, // маркер что это прогноз на сегодня
-            date: forecastDate,
-            dayNum: forecastDayNum,
-            isWeekend: isWeekend(forecastDate) || isHoliday(forecastDate)
+        // === НОВАЯ ЛОГИКА: Если есть будущие дни (futureDays), используем их вместо расчёта ===
+        if (futureDays.length > 0) {
+          // Используем futureDays как основу для прогноза
+          let prevKcal = lastKcal;
+          futureDays.forEach((fd, i) => {
+            const dayIndex = i + 1; // 1-based
+            const forecastDayNum = fd.date ? new Date(fd.date).getDate() : '';
+            const forecastKcal = calculateForecastKcal(dayIndex, prevKcal);
+            prevKcal = forecastKcal; // для следующей итерации
+            
+            forecastPoints.push({
+              kcal: Math.max(0, forecastKcal),
+              target: forecastTarget,  // Стабильная норма = текущий optimum
+              isForecast: true,
+              isFutureDay: true,  // Маркер что это будущий день (не динамический прогноз)
+              isTodayForecast: false,
+              date: fd.date,
+              dayNum: forecastDayNum,
+              isWeekend: isWeekend(fd.date) || isHoliday(fd.date)
+            });
           });
+        } else {
+          // Стандартная логика: прогноз на 1-2 дня вперёд
+          // Если сегодня неполный — добавляем прогноз на сегодня и завтра
+          const daysToForecast = isTodayIncomplete ? 2 : forecastDays;
+          
+          let prevKcal = lastKcal;
+          for (let i = 1; i <= daysToForecast; i++) {
+            const forecastDate = addDays(lastChartDate, i);
+            const forecastDayNum = forecastDate ? new Date(forecastDate).getDate() : '';
+            const isTodayForecast = isTodayIncomplete && i === 1;
+            const forecastKcal = calculateForecastKcal(i, prevKcal);
+            prevKcal = forecastKcal;
+            
+            forecastPoints.push({
+              kcal: Math.max(0, forecastKcal),
+              target: forecastTarget,  // Стабильная норма = текущий optimum
+              isForecast: true,
+              isTodayForecast, // маркер что это прогноз на сегодня
+              date: forecastDate,
+              dayNum: forecastDayNum,
+              isWeekend: isWeekend(forecastDate) || isHoliday(forecastDate)
+            });
+          }
         }
       }
       
@@ -8777,6 +9208,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         return { 
           x, y, kcal: d.kcal, target: d.target, targetY, isForecast: true, 
           isTodayForecast: d.isTodayForecast || false,
+          isFutureDay: d.isFutureDay || false,  // Маркер будущего дня для UI
           dayNum: d.dayNum || '', date: d.date, isWeekend: d.isWeekend 
         };
       });
@@ -9527,47 +9959,59 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           });
         })(),
         // Точки прогноза (с цветом по тренду) — появляются после прогнозной линии
+        // Для isFutureDay используем серый цвет с пунктиром
         forecastPts.map((p, i) => {
           // Задержка = 3с (основная линия) + время до этой точки в прогнозе
           const forecastDelay = 3 + (i + 1) / forecastPts.length * Math.max(0.5, (forecastPathLength / totalPathLength) * 3);
+          const isFutureDay = p.isFutureDay;
+          const dotColor = isFutureDay ? 'rgba(156, 163, 175, 0.6)' : forecastColor;
           return React.createElement('circle', {
             key: 'forecast-dot-' + i,
             cx: p.x, 
             cy: p.y, 
-            r: p.isTodayForecast ? 4 : 3, // сегодня крупнее
-            className: 'sparkline-dot sparkline-forecast-dot',
+            r: isFutureDay ? 6 : (p.isTodayForecast ? 4 : 3), // будущие дни крупнее для "?"
+            className: 'sparkline-dot sparkline-forecast-dot' + (isFutureDay ? ' sparkline-future-dot' : ''),
             style: {
-              fill: forecastColor,
+              fill: isFutureDay ? 'rgba(156, 163, 175, 0.3)' : forecastColor,
               opacity: 0, // начинаем скрытым
               '--delay': forecastDelay + 's',
-              strokeDasharray: '2 2',
-              stroke: forecastColor,
-              strokeWidth: p.isTodayForecast ? 2 : 1
+              strokeDasharray: isFutureDay ? '3 2' : '2 2',
+              stroke: dotColor,
+              strokeWidth: isFutureDay ? 1.5 : (p.isTodayForecast ? 2 : 1)
             }
           });
         }),
         // Метки прогнозных ккал над точками (бледные)
+        // Для isFutureDay показываем "?" вместо прогнозных ккал
         forecastPts.map((p, i) => {
           const isLast = i === forecastPts.length - 1;
+          const isFutureDay = p.isFutureDay;
           return React.createElement('text', {
             key: 'forecast-kcal-' + i,
             x: p.x,
             y: p.y - 8,
             className: 'sparkline-day-label' + (p.isTodayForecast ? ' sparkline-day-today' : ' sparkline-day-forecast'),
             textAnchor: isLast ? 'end' : 'middle',
-            style: { opacity: p.isTodayForecast ? 0.7 : 0.5, fill: forecastColor }
-          }, p.kcal);
+            style: { 
+              opacity: isFutureDay ? 0.6 : (p.isTodayForecast ? 0.7 : 0.5), 
+              fill: isFutureDay ? 'rgba(156, 163, 175, 0.9)' : forecastColor,
+              fontSize: isFutureDay ? '11px' : undefined,
+              fontWeight: isFutureDay ? '600' : undefined
+            }
+          }, isFutureDay ? '?' : p.kcal);
         }),
         // Метки прогнозных дней (дата + "прогноз" выше в 2 строки)
+        // Для isFutureDay показываем просто дату без "прогноз на завтра"
         forecastPts.map((p, i) => {
           const isLast = i === forecastPts.length - 1;
-          const isTomorrow = !p.isTodayForecast && i === 0;
-          const isLabelMultiline = p.isTodayForecast || isTomorrow;
+          const isFutureDay = p.isFutureDay;
+          const isTomorrow = !p.isTodayForecast && !isFutureDay && i === 0;
+          const isLabelMultiline = (p.isTodayForecast || isTomorrow) && !isFutureDay;
           const line1 = 'прогноз';
           const line2 = p.isTodayForecast ? 'на сегодня' : 'на завтра';
           
           return React.createElement('g', { key: 'forecast-day-' + i },
-            // "прогноз" + "на сегодня/завтра" выше даты
+            // "прогноз" + "на сегодня/завтра" выше даты — только для динамического прогноза
             isLabelMultiline && React.createElement('text', {
               x: p.x,
               y: height - 18,
@@ -9586,10 +10030,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             React.createElement('text', {
               x: p.x,
               y: height - 2,
-              className: 'sparkline-day-label sparkline-day-forecast' + 
+              className: 'sparkline-day-label' + 
+                (isFutureDay ? ' sparkline-day-future' : ' sparkline-day-forecast') + 
                 (p.isWeekend ? ' sparkline-day-weekend' : ''),
               textAnchor: isLast ? 'end' : 'middle',
-              style: { opacity: 0.8 }
+              style: { opacity: isFutureDay ? 0.5 : 0.8 }
             }, p.dayNum)
           );
         }),
@@ -10013,7 +10458,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     };
     
     // SVG Sparkline для веса
-    const renderWeightSparkline = (data, trend) => {
+    // Примечание: параметр trend был удалён — тренд рассчитывается внутри
+    const renderWeightSparkline = (data) => {
       // Skeleton loader пока данные загружаются
       if (!data) {
         return React.createElement('div', { className: 'sparkline-skeleton' },
@@ -10028,9 +10474,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       if (data.length === 0) return null;
       
-      // Если только 1 точка — показываем её с подсказкой
-      if (data.length === 1) {
-        const point = data[0];
+      // Разделяем данные на реальные и прогнозные (isFuture)
+      const realData = data.filter(d => !d.isFuture);
+      const futureData = data.filter(d => d.isFuture);
+      
+      // Если только 1 реальная точка — показываем её с подсказкой
+      if (realData.length === 1 && futureData.length === 0) {
+        const point = realData[0];
         return React.createElement('div', { className: 'weight-single-point' },
           React.createElement('div', { className: 'weight-single-value' },
             React.createElement('span', { className: 'weight-single-number' }, point.weight),
@@ -10042,25 +10492,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         );
       }
       
-      // Прогноз на +1 день (завтра) по тренду последних 3 точек
-      const forecastDays = 1;
-      let forecastPoint = null;
-      if (data.length >= 3) {
-        const lastDays = data.slice(-3);
-        const avgChange = (lastDays[2].weight - lastDays[0].weight) / 2;
-        const lastWeight = data[data.length - 1].weight;
-        const lastDate = data[data.length - 1].date;
-        if (lastDate) {
-          const forecastDate = new Date(lastDate);
-          forecastDate.setDate(forecastDate.getDate() + 1);
-          forecastPoint = {
-            weight: +(lastWeight + avgChange).toFixed(1),
-            date: forecastDate.toISOString().slice(0, 10),
-            dayNum: forecastDate.getDate(),
-            isForecast: true
-          };
-        }
-      }
+      // Прогноз теперь приходит из данных с isFuture: true
+      // Используем последнюю точку прогноза если есть
+      const forecastPoint = futureData.length > 0 ? futureData[futureData.length - 1] : null;
       
       const width = 360;
       const height = 120; // оптимальный размер графика
@@ -10069,18 +10503,18 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const paddingX = 8; // минимальные отступы — точки почти у края
       const chartHeight = height - paddingTop - paddingBottom;
       
-      // Масштаб с минимумом 1 кг range (включая прогноз)
-      const allWeights = [...data.map(d => d.weight), ...(forecastPoint ? [forecastPoint.weight] : [])];
+      // Масштаб с минимумом 1 кг range (все данные уже включают прогноз)
+      const allWeights = data.map(d => d.weight);
       const minWeight = Math.min(...allWeights);
       const maxWeight = Math.max(...allWeights);
       const rawRange = maxWeight - minWeight;
       const range = Math.max(1, rawRange + 0.5);
       const adjustedMin = minWeight - 0.25;
       
-      const totalPoints = data.length + (forecastPoint ? 1 : 0);
+      const totalPoints = data.length;
       
-      // Проверяем есть ли дни с задержкой воды
-      const hasAnyRetentionDays = data.some(d => d.hasWaterRetention);
+      // Проверяем есть ли дни с задержкой воды (только в реальных данных)
+      const hasAnyRetentionDays = realData.some(d => d.hasWaterRetention);
       
       const points = data.map((d, i) => {
         const x = paddingX + (i / (totalPoints - 1)) * (width - paddingX * 2);
@@ -10090,6 +10524,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           y, 
           weight: d.weight, 
           isToday: d.isToday, 
+          isFuture: d.isFuture || false, // Маркер прогнозного дня
           dayNum: d.dayNum, 
           date: d.date,
           // Данные о цикле
@@ -10100,14 +10535,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
       });
       
-      // Точка прогноза
-      let forecastPt = null;
-      if (forecastPoint) {
-        const idx = data.length;
-        const x = paddingX + (idx / (totalPoints - 1)) * (width - paddingX * 2);
-        const y = paddingTop + chartHeight - ((forecastPoint.weight - adjustedMin) / range) * chartHeight;
-        forecastPt = { x, y, ...forecastPoint };
-      }
+      // Точка последнего прогноза (для отдельного рендеринга confidence interval)
+      // Теперь прогнозные точки уже в points с isFuture: true
+      const forecastPt = futureData.length > 0 ? points.find(p => p.date === forecastPoint.date) : null;
       
       // Плавная кривая (как у калорий) с monotonic constraint
       const smoothPath = (pts) => {
@@ -10139,57 +10569,47 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         return d;
       };
       
-      const pathD = smoothPath(points);
+      // Разделяем точки на реальные и прогнозные для рендеринга
+      const realPoints = points.filter(p => !p.isFuture);
+      const futurePoints = points.filter(p => p.isFuture);
       
-      // Определяем тренд: сравниваем первую и последнюю половину
-      const firstHalf = points.slice(0, Math.ceil(points.length / 2));
-      const secondHalf = points.slice(Math.floor(points.length / 2));
-      const avgFirst = firstHalf.reduce((s, p) => s + p.weight, 0) / firstHalf.length;
-      const avgSecond = secondHalf.reduce((s, p) => s + p.weight, 0) / secondHalf.length;
+      // Линия рисуется только для реальных точек
+      const pathD = smoothPath(realPoints);
+      
+      // Определяем тренд: сравниваем первую и последнюю половину (только реальные данные)
+      const firstHalf = realPoints.slice(0, Math.ceil(realPoints.length / 2));
+      const secondHalf = realPoints.slice(Math.floor(realPoints.length / 2));
+      const avgFirst = firstHalf.length > 0 ? firstHalf.reduce((s, p) => s + p.weight, 0) / firstHalf.length : 0;
+      const avgSecond = secondHalf.length > 0 ? secondHalf.reduce((s, p) => s + p.weight, 0) / secondHalf.length : 0;
       const weightTrend = avgSecond - avgFirst; // положительный = вес растёт
       
       // Цвет градиента по тренду
       const trendColor = weightTrend <= -0.1 ? '#22c55e' : (weightTrend >= 0.1 ? '#ef4444' : '#8b5cf6');
       
-      // Цвет прогноза (по направлению тренда)
-      const forecastColor = forecastPt 
-        ? (forecastPt.weight < points[points.length - 1].weight ? '#22c55e' : 
-           forecastPt.weight > points[points.length - 1].weight ? '#ef4444' : '#8b5cf6')
-        : trendColor;
+      // Цвет прогноза — серый для нейтральности (прогноз — это неизвестность)
+      const forecastColor = '#9ca3af'; // gray-400
       
-      // Область под графиком (с плавными границами)
-      const areaPath = pathD + ` L${points[points.length-1].x},${paddingTop + chartHeight} L${points[0].x},${paddingTop + chartHeight} Z`;
+      // Область под графиком (только реальные точки)
+      const areaPath = realPoints.length >= 2 
+        ? pathD + ` L${realPoints[realPoints.length-1].x},${paddingTop + chartHeight} L${realPoints[0].x},${paddingTop + chartHeight} Z`
+        : '';
       
-      // Gradient stops для линии веса — по локальному тренду каждой точки
+      // Gradient stops для линии веса — по локальному тренду каждой точки (только реальные)
       // Зелёный = вес снижается, красный = вес растёт, фиолетовый = стабильно
-      const weightLineGradientStops = points.map((p, i) => {
-        const prevWeight = i > 0 ? points[i-1].weight : p.weight;
+      const weightLineGradientStops = realPoints.map((p, i) => {
+        const prevWeight = i > 0 ? realPoints[i-1].weight : p.weight;
         const localTrend = p.weight - prevWeight;
         const dotColor = localTrend < -0.05 ? '#22c55e' : (localTrend > 0.05 ? '#ef4444' : '#8b5cf6');
-        const offset = points.length > 1 ? (i / (points.length - 1)) * 100 : 50;
+        const offset = realPoints.length > 1 ? (i / (realPoints.length - 1)) * 100 : 50;
         return { offset, color: dotColor };
       });
       
-      // Прогнозная линия (от последней точки к прогнозу) — плавная Bezier
+      // Прогнозная линия (от последней реальной точки ко всем прогнозным) — пунктирная
       let forecastLineD = '';
-      if (forecastPt && points.length >= 2) {
-        // Берём 2 последние точки для плавного продолжения
-        const prev2Point = points[points.length - 2];
-        const lastPoint = points[points.length - 1];
-        
-        // Массив для расчёта касательных
-        const allForBezier = [prev2Point, lastPoint, forecastPt];
-        
-        // Строим Bezier от lastPoint к forecastPt
-        const p0 = allForBezier[0];
-        const p1 = allForBezier[1];
-        const p2 = allForBezier[2];
-        const tension = 0.25;
-        const cp1x = p1.x + (p2.x - p0.x) * tension;
-        const cp1y = p1.y + (p2.y - p0.y) * tension;
-        const cp2x = p2.x - (p2.x - p1.x) * tension;
-        const cp2y = p2.y - (p2.y - p1.y) * tension;
-        forecastLineD = `M${p1.x},${p1.y} C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+      if (futurePoints.length > 0 && realPoints.length >= 1) {
+        const lastRealPoint = realPoints[realPoints.length - 1];
+        const allForecastPts = [lastRealPoint, ...futurePoints];
+        forecastLineD = smoothPath(allForecastPts);
       }
       
       return React.createElement('svg', { 
@@ -10223,13 +10643,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           )
         ),
         // === Розовые зоны для дней с задержкой воды (рисуем ДО основного графика) ===
+        // Используем только реальные точки — прогнозные не имеют данных о цикле
         hasAnyRetentionDays && (() => {
-          // Находим группы последовательных дней с задержкой
+          // Находим группы последовательных дней с задержкой (в реальных данных)
           const retentionRanges = [];
           let rangeStart = null;
           
-          for (let i = 0; i < points.length; i++) {
-            if (points[i].hasWaterRetention) {
+          for (let i = 0; i < realPoints.length; i++) {
+            if (realPoints[i].hasWaterRetention) {
               if (rangeStart === null) rangeStart = i;
             } else {
               if (rangeStart !== null) {
@@ -10239,15 +10660,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             }
           }
           if (rangeStart !== null) {
-            retentionRanges.push({ start: rangeStart, end: points.length - 1 });
+            retentionRanges.push({ start: rangeStart, end: realPoints.length - 1 });
           }
           
           // Ширина одной "колонки" для точки
           const colWidth = (width - paddingX * 2) / (totalPoints - 1);
           
           return retentionRanges.map((range, idx) => {
-            const startX = points[range.start].x - colWidth * 0.4;
-            const endX = points[range.end].x + colWidth * 0.4;
+            const startX = realPoints[range.start].x - colWidth * 0.4;
+            const endX = realPoints[range.end].x + colWidth * 0.4;
             const rectWidth = Math.max(endX - startX, colWidth * 0.8);
             
             return React.createElement('rect', {
@@ -10274,8 +10695,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           className: 'weight-sparkline-line weight-sparkline-line-animated',
           style: { stroke: 'url(#weightLineGrad)' }
         }),
-        // Прогнозная линия (пунктирная) — с маской для анимации
-        forecastPt && forecastLineD && React.createElement('g', { key: 'weight-forecast-group' },
+        // Прогнозная линия (пунктирная) — все будущие дни
+        futurePoints.length > 0 && forecastLineD && React.createElement('g', { key: 'weight-forecast-group' },
           // Маска: сплошная линия которая рисуется после основной
           React.createElement('defs', null,
             React.createElement('mask', { id: 'weightForecastMask' },
@@ -10304,21 +10725,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           })
         ),
         // === Confidence interval для прогноза веса (±0.3 кг) ===
-        forecastPt && (() => {
+        // Рисуем только для последней прогнозной точки
+        futurePoints.length > 0 && realPoints.length > 0 && (() => {
           const confidenceKg = 0.3; // ±300г погрешность
           const marginPx = (confidenceKg / range) * chartHeight;
-          const lastPt = points[points.length - 1];
-          if (!lastPt) return null;
+          const lastRealPt = realPoints[realPoints.length - 1];
+          const lastFuturePt = futurePoints[futurePoints.length - 1];
+          if (!lastRealPt || !lastFuturePt) return null;
           
-          const upperY = Math.max(paddingTop, forecastPt.y - marginPx);
-          const lowerY = Math.min(paddingTop + chartHeight, forecastPt.y + marginPx);
+          const upperY = Math.max(paddingTop, lastFuturePt.y - marginPx);
+          const lowerY = Math.min(paddingTop + chartHeight, lastFuturePt.y + marginPx);
           
-          // Треугольная область от последней точки к прогнозу
-          const areaPath = `M ${lastPt.x} ${lastPt.y} L ${forecastPt.x} ${upperY} L ${forecastPt.x} ${lowerY} Z`;
+          // Треугольная область от последней реальной точки к последней прогнозной
+          const confAreaPath = `M ${lastRealPt.x} ${lastRealPt.y} L ${lastFuturePt.x} ${upperY} L ${lastFuturePt.x} ${lowerY} Z`;
           
           return React.createElement('path', {
             key: 'weight-confidence-area',
-            d: areaPath,
+            d: confAreaPath,
             fill: forecastColor,
             fillOpacity: 0.1,
             stroke: 'none'
@@ -10326,11 +10749,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         })(),
         // === TODAY LINE для веса ===
         (() => {
-          const todayPt = points.find(p => p.isToday);
+          const todayPt = realPoints.find(p => p.isToday);
           if (!todayPt) return null;
           
-          // Изменение веса с первой точки периода
-          const firstWeight = points[0]?.weight || todayPt.weight;
+          // Изменение веса с первой реальной точки периода
+          const firstWeight = realPoints[0]?.weight || todayPt.weight;
           const weightChange = todayPt.weight - firstWeight;
           const changeText = weightChange >= 0 ? '+' + weightChange.toFixed(1) : weightChange.toFixed(1);
           const changeColor = weightChange < -0.05 ? '#22c55e' : (weightChange > 0.05 ? '#ef4444' : '#8b5cf6');
@@ -10356,7 +10779,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             }, '▼')
           );
         })(),
-        // Пунктирные линии от точек к меткам дней
+        // Пунктирные линии от точек к меткам дней (все точки, включая прогноз)
         points.map((p, i) => {
           const animDelay = 3 + i * 0.15;
           return React.createElement('line', {
@@ -10365,69 +10788,86 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             y1: p.y + 6, // от точки
             x2: p.x,
             y2: height - paddingBottom + 4, // до меток дней
-            className: 'sparkline-point-line weight-sparkline-point-line',
-            style: { '--delay': animDelay + 's' }
+            className: 'sparkline-point-line weight-sparkline-point-line' + (p.isFuture ? ' weight-sparkline-point-line-future' : ''),
+            style: { '--delay': animDelay + 's', opacity: p.isFuture ? 0.4 : 1 }
           });
         }),
-        // Метки дней внизу
+        // Метки дней внизу (только ключевые точки на длинных периодах)
         points.map((p, i) => {
           const isFirst = i === 0;
-          const isLast = i === points.length - 1 && !forecastPt;
+          const isLast = i === points.length - 1;
           const anchor = isFirst ? 'start' : (isLast ? 'end' : 'middle');
+          
+          // На длинных графиках (>10 точек) показываем только ключевые метки дней
+          const totalPoints = points.length;
+          const showDayLabel = totalPoints <= 10 || 
+            isFirst || isLast || p.isToday || 
+            (!p.isFuture && i % 3 === 0) ||  // Каждая 3-я реальная
+            (p.isFuture && i % 5 === 0);      // Каждая 5-я прогнозная
+          
+          if (!showDayLabel) return null;
+          
           return React.createElement('text', {
             key: 'wday-' + i,
             x: p.x,
             y: height - 2,
-            className: 'weight-sparkline-day-label' + (p.isToday ? ' weight-sparkline-day-today' : ''),
+            className: 'weight-sparkline-day-label' + 
+              (p.isToday ? ' weight-sparkline-day-today' : '') +
+              (p.isFuture ? ' weight-sparkline-day-forecast weight-sparkline-label-forecast' : ''),
             textAnchor: anchor
-          }, p.dayNum);
-        }),
-        // Метки веса над точками
+          }, p.dayNum);  // Всегда показываем реальную дату
+        }).filter(Boolean),
+        // Метки веса над точками (только ключевые точки на длинных периодах)
         points.map((p, i) => {
           const isFirst = i === 0;
-          const isLast = i === points.length - 1 && !forecastPt;
+          const isLast = i === points.length - 1;
           const anchor = isFirst ? 'start' : (isLast ? 'end' : 'middle');
+          
+          // Находим индекс последней реальной точки и первой прогнозной
+          const lastRealIndex = points.findIndex(pt => pt.isFuture) - 1;
+          const firstFutureIndex = points.findIndex(pt => pt.isFuture);
+          const isLastReal = i === lastRealIndex || (lastRealIndex < 0 && isLast);
+          const isFirstFuture = i === firstFutureIndex;
+          
+          // На длинных графиках (>10 точек) показываем только ключевые метки веса
+          const totalPoints = points.length;
+          const showWeightLabel = totalPoints <= 10 || 
+            isFirst || isLast || p.isToday || isLastReal || isFirstFuture ||
+            (!p.isFuture && i % 3 === 0) ||  // Каждая 3-я реальная
+            (p.isFuture && i % 7 === 0);      // Каждая 7-я прогнозная
+          
+          if (!showWeightLabel) return null;
+          
           return React.createElement('text', {
             key: 'wlabel-' + i,
             x: p.x,
             y: p.y - 8,
-            className: 'weight-sparkline-weight-label' + (p.isToday ? ' weight-sparkline-day-today' : ''),
+            className: 'weight-sparkline-weight-label' + 
+              (p.isToday ? ' weight-sparkline-day-today' : '') +
+              (p.isFuture ? ' weight-sparkline-day-forecast weight-sparkline-label-forecast' : ''),
             textAnchor: anchor
           }, p.weight.toFixed(1));
-        }),
-        // Метка веса прогноза (бледная)
-        forecastPt && React.createElement('text', {
-          key: 'wlabel-forecast',
-          x: forecastPt.x,
-          y: forecastPt.y - 8,
-          className: 'weight-sparkline-weight-label weight-sparkline-day-forecast',
-          textAnchor: 'end',
-          style: { opacity: 0.5 }
-        }, forecastPt.weight.toFixed(1)),
-        // Метка прогнозного дня (бледная)
-        forecastPt && React.createElement('text', {
-          key: 'wday-forecast',
-          x: forecastPt.x,
-          y: height - 2,
-          className: 'weight-sparkline-day-label weight-sparkline-day-forecast',
-          textAnchor: 'end',
-          style: { opacity: 0.5 }
-        }, forecastPt.dayNum),
+        }).filter(Boolean),
         // Точки с цветом по локальному тренду (анимация с задержкой)
         points.map((p, i) => {
           // Локальный тренд: сравниваем с предыдущей точкой
           const prevWeight = i > 0 ? points[i-1].weight : p.weight;
           const localTrend = p.weight - prevWeight;
-          const dotColor = localTrend < -0.05 ? '#22c55e' : (localTrend > 0.05 ? '#ef4444' : '#8b5cf6');
+          
+          // Для прогнозных точек — серый цвет
+          const dotColor = p.isFuture 
+            ? forecastColor  // серый для прогноза
+            : (localTrend < -0.05 ? '#22c55e' : (localTrend > 0.05 ? '#ef4444' : '#8b5cf6'));
           
           let dotClass = 'weight-sparkline-dot sparkline-dot';
           if (p.isToday) dotClass += ' weight-sparkline-dot-today sparkline-dot-pulse';
           if (p.hasWaterRetention) dotClass += ' weight-sparkline-dot-retention';
+          if (p.isFuture) dotClass += ' weight-sparkline-dot-forecast';
           
           // Задержка анимации через CSS переменную
           const animDelay = 3 + i * 0.15;
           
-          // Стили для точки с задержкой воды
+          // Стили для точки
           const dotStyle = { 
             cursor: 'pointer', 
             fill: dotColor, 
@@ -10440,9 +10880,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             dotStyle.strokeWidth = 2;
           }
           
-          // Tooltip с учётом задержки воды
-          let tooltipText = p.dayNum + ': ' + p.weight + ' кг';
-          if (localTrend !== 0) {
+          // Пунктирная обводка для прогнозных дней
+          if (p.isFuture) {
+            dotStyle.opacity = 0.6;
+            dotStyle.strokeDasharray = '2 2';
+            dotStyle.stroke = forecastColor;
+            dotStyle.strokeWidth = 1.5;
+          }
+          
+          // Tooltip с учётом прогноза и задержки воды
+          let tooltipText = p.isFuture 
+            ? '(прогноз): ~' + p.weight.toFixed(1) + ' кг'
+            : p.dayNum + ': ' + p.weight + ' кг';
+          if (!p.isFuture && localTrend !== 0) {
             tooltipText += ' (' + (localTrend > 0 ? '+' : '') + localTrend.toFixed(1) + ')';
           }
           if (p.hasWaterRetention) {
@@ -10453,57 +10903,41 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             key: 'wdot-' + i,
             cx: p.x, 
             cy: p.y, 
-            r: p.isToday ? 5 : 4,
+            r: p.isFuture ? 3.5 : (p.isToday ? 5 : 4),
             className: dotClass,
             style: dotStyle,
             onClick: (e) => {
               e.stopPropagation();
               haptic('light');
-              openExclusivePopup('sparkline', { 
-                type: 'weight', 
-                point: { ...p, localTrend },
-                x: e.clientX, 
-                y: e.clientY 
-              });
+              
+              if (p.isFuture) {
+                // Клик на прогнозную точку
+                const lastRealWeight = realPoints.length > 0 ? realPoints[realPoints.length - 1].weight : p.weight;
+                const forecastChange = p.weight - lastRealWeight;
+                openExclusivePopup('sparkline', { 
+                  type: 'weight-forecast', 
+                  point: { 
+                    ...p, 
+                    forecastChange,
+                    lastWeight: lastRealWeight
+                  },
+                  x: e.clientX, 
+                  y: e.clientY 
+                });
+              } else {
+                // Клик на реальную точку
+                openExclusivePopup('sparkline', { 
+                  type: 'weight', 
+                  point: { ...p, localTrend },
+                  x: e.clientX, 
+                  y: e.clientY 
+                });
+              }
             }
           },
             React.createElement('title', null, tooltipText)
           );
-        }),
-        // Точка прогноза (полупрозрачная, пунктирная обводка)
-        forecastPt && React.createElement('circle', {
-          key: 'wdot-forecast',
-          cx: forecastPt.x,
-          cy: forecastPt.y,
-          r: 3.5,
-          className: 'weight-sparkline-dot weight-sparkline-dot-forecast',
-          style: { 
-            fill: forecastColor, 
-            opacity: 0.6,
-            strokeDasharray: '2 2',
-            stroke: forecastColor,
-            strokeWidth: 1.5,
-            cursor: 'pointer'
-          },
-          onClick: (e) => {
-            e.stopPropagation();
-            haptic('light');
-            const lastWeight = points[points.length - 1]?.weight || forecastPt.weight;
-            const forecastChange = forecastPt.weight - lastWeight;
-            openExclusivePopup('sparkline', { 
-              type: 'weight-forecast', 
-              point: { 
-                ...forecastPt, 
-                forecastChange,
-                lastWeight
-              },
-              x: e.clientX, 
-              y: e.clientY 
-            });
-          }
-        },
-          React.createElement('title', null, forecastPt.dayNum + ' (прогноз): ~' + forecastPt.weight + ' кг')
-        )
+        })
       );
     };
     
@@ -12189,10 +12623,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             weightTrend.isCleanTrend && React.createElement('span', { 
               className: 'weight-clean-trend-badge',
               title: 'Дни с задержкой воды исключены из тренда'
-            }, '🌸 чистый')
+            }, '🌸 чистый'),
+            // Кнопки выбора периода (как у калорий)
+            React.createElement('div', { className: 'kcal-period-pills weight-period-pills' },
+              [7, 14, 30].map(period => 
+                React.createElement('button', {
+                  key: 'weight-period-' + period,
+                  className: 'kcal-period-pill' + (chartPeriod === period ? ' active' : ''),
+                  onClick: () => handlePeriodChange(period)
+                }, period + 'д')
+              )
+            )
           ) // закрываем badges div
         ), // закрываем условие weightSparklineData.length >= 2
-        renderWeightSparkline(weightSparklineData, weightTrend),
+        renderWeightSparkline(weightSparklineData),
         // Сноска о задержке воды если есть такие дни
         weightSparklineData.some(d => d.hasWaterRetention) && React.createElement('div', { 
           className: 'weight-retention-note' 
@@ -12227,6 +12671,27 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             )
           )
         )
+      ),
+      // Подсказка если целевой вес не задан — прогноз идёт к стабилизации
+      !prof?.weightGoal && weightSparklineData.some(d => d.isFuture) && React.createElement('div', { 
+        className: 'weight-goal-hint' 
+      },
+        '💡 Укажи ',
+        React.createElement('button', {
+          className: 'weight-goal-hint-link',
+          onClick: (e) => {
+            e.preventDefault();
+            // Открываем профиль (как ссылка на настройки)
+            if (window.HEYS && window.HEYS.openProfileModal) {
+              window.HEYS.openProfileModal();
+            } else {
+              // Fallback: переключаем на вкладку профиля
+              const profileTab = document.querySelector('[data-tab="profile"]');
+              if (profileTab) profileTab.click();
+            }
+          }
+        }, 'целевой вес'),
+        ' в профиле — прогноз будет точнее!'
       ),
       // Popup с деталями веса при клике на точку — V2 STYLE
       sparklinePopup && sparklinePopup.type === 'weight' && (() => {

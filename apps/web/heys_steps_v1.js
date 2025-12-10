@@ -1972,6 +1972,289 @@
     xpAction: 'cold_exposure_logged'
   });
 
+  // ============================================================
+  // MORNING ROUTINE STEP — Завершающий мотивирующий шаг
+  // ============================================================
+  
+  function MorningRoutineStepComponent({ data, onChange, context }) {
+    const [checkedItems, setCheckedItems] = useState(data.checkedItems || []);
+    const [showConfetti, setShowConfetti] = useState(false);
+    
+    // Рандомные мотивирующие фразы для кнопки
+    const motivationalPhrases = useMemo(() => [
+      '🚀 ВПЕРЁД!',
+      '☀️ НАЧАТЬ ДЕНЬ!',
+      '💪 СТАРТУЕМ!',
+      '🔥 ПОЕХАЛИ!',
+      '⚡ НАЧИНАЕМ!',
+      '🎯 ВПЕРЁД К ЦЕЛИ!',
+      '✨ ОТЛИЧНОГО ДНЯ!'
+    ], []);
+    
+    // Выбираем случайную фразу один раз при монтировании
+    const randomPhrase = useMemo(() => {
+      return motivationalPhrases[Math.floor(Math.random() * motivationalPhrases.length)];
+    }, []);
+    
+    const routineItems = [
+      { 
+        id: 'water', 
+        emoji: '💧', 
+        title: 'Выпей тёплой воды', 
+        desc: 'Стакан тёплой воды натощак запускает метаболизм',
+        color: '#3b82f6'
+      },
+      { 
+        id: 'tracker', 
+        emoji: '⌚', 
+        title: 'Надень трекер', 
+        desc: 'Часы или браслет — следи за шагами и пульсом',
+        color: '#8b5cf6'
+      },
+      { 
+        id: 'shower', 
+        emoji: '🚿', 
+        title: 'Контрастный душ', 
+        desc: 'Бодрит и укрепляет иммунитет',
+        color: '#06b6d4'
+      }
+    ];
+    
+    const toggleItem = (id) => {
+      setCheckedItems(prev => {
+        const newItems = prev.includes(id) 
+          ? prev.filter(i => i !== id)
+          : [...prev, id];
+        onChange({ ...data, checkedItems: newItems });
+        
+        // Конфетти при выполнении всех 3
+        if (newItems.length === 3 && !showConfetti) {
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 2000);
+        }
+        
+        return newItems;
+      });
+    };
+    
+    // Функция завершения (вызывает onNext из контекста)
+    const handleFinish = () => {
+      if (context && context.onNext) {
+        context.onNext();
+      }
+    };
+    
+    const allChecked = checkedItems.length === 3;
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'Отличное утро!' : hour < 17 ? 'Отличный день!' : 'Отличный вечер!';
+    
+    return React.createElement('div', {
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        padding: '8px 0'
+      }
+    },
+      // Заголовок с эмодзи
+      React.createElement('div', {
+        style: {
+          textAlign: 'center',
+          marginBottom: '8px'
+        }
+      },
+        React.createElement('div', {
+          style: {
+            fontSize: '48px',
+            marginBottom: '8px',
+            animation: 'bounce 1s ease infinite'
+          }
+        }, '🌟'),
+        React.createElement('div', {
+          style: {
+            fontSize: '20px',
+            fontWeight: '700',
+            color: '#1e293b',
+            marginBottom: '4px'
+          }
+        }, greeting),
+        React.createElement('div', {
+          style: {
+            fontSize: '14px',
+            color: '#64748b'
+          }
+        }, '3 шага правильной рутины:')
+      ),
+      
+      // Список рутин
+      React.createElement('div', {
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px'
+        }
+      },
+        routineItems.map((item, index) =>
+          React.createElement('div', {
+            key: item.id,
+            onClick: () => toggleItem(item.id),
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '14px',
+              padding: '14px 16px',
+              background: checkedItems.includes(item.id) 
+                ? `linear-gradient(135deg, ${item.color}15, ${item.color}08)`
+                : '#f8fafc',
+              borderRadius: '14px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              border: checkedItems.includes(item.id)
+                ? `2px solid ${item.color}40`
+                : '2px solid transparent',
+              transform: checkedItems.includes(item.id) ? 'scale(1.02)' : 'scale(1)'
+            }
+          },
+            // Номер / галочка
+            React.createElement('div', {
+              style: {
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: checkedItems.includes(item.id)
+                  ? `linear-gradient(135deg, ${item.color}, ${item.color}cc)`
+                  : '#e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: checkedItems.includes(item.id) ? '18px' : '14px',
+                fontWeight: '700',
+                color: checkedItems.includes(item.id) ? '#fff' : '#64748b',
+                transition: 'all 0.2s ease',
+                flexShrink: 0
+              }
+            }, checkedItems.includes(item.id) ? '✓' : (index + 1)),
+            
+            // Эмодзи
+            React.createElement('div', {
+              style: {
+                fontSize: '28px',
+                flexShrink: 0
+              }
+            }, item.emoji),
+            
+            // Текст
+            React.createElement('div', {
+              style: {
+                flex: 1,
+                minWidth: 0
+              }
+            },
+              React.createElement('div', {
+                style: {
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  color: '#1e293b',
+                  marginBottom: '2px'
+                }
+              }, item.title),
+              React.createElement('div', {
+                style: {
+                  fontSize: '12px',
+                  color: '#64748b',
+                  lineHeight: '1.3'
+                }
+              }, item.desc)
+            )
+          )
+        )
+      ),
+      
+      // Мотивационная кнопка-плашка внизу (вместо кнопки в хедере)
+      React.createElement('button', {
+        onClick: handleFinish,
+        style: {
+          width: '100%',
+          textAlign: 'center',
+          padding: '18px 24px',
+          background: allChecked 
+            ? 'linear-gradient(135deg, #fef3c7, #fde68a)'
+            : 'linear-gradient(135deg, #10b981, #059669)',
+          borderRadius: '16px',
+          marginTop: '16px',
+          border: 'none',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          transform: 'scale(1)',
+          boxShadow: allChecked 
+            ? '0 4px 14px rgba(251, 191, 36, 0.4)'
+            : '0 4px 14px rgba(16, 185, 129, 0.4)'
+        },
+        onMouseDown: (e) => e.currentTarget.style.transform = 'scale(0.98)',
+        onMouseUp: (e) => e.currentTarget.style.transform = 'scale(1)',
+        onMouseLeave: (e) => e.currentTarget.style.transform = 'scale(1)'
+      },
+        allChecked && React.createElement('div', { 
+          style: { fontSize: '28px', marginBottom: '6px' } 
+        }, '🏆'),
+        React.createElement('div', { 
+          style: { 
+            fontSize: allChecked ? '14px' : '13px', 
+            fontWeight: '600', 
+            color: allChecked ? '#92400e' : '#fff',
+            marginBottom: allChecked ? '8px' : '0'
+          } 
+        }, allChecked ? 'Ты уже на пути к успеху!' : 'Можно пропустить'),
+        React.createElement('div', { 
+          style: { 
+            fontSize: '18px', 
+            fontWeight: '800', 
+            color: allChecked ? '#b45309' : '#fff',
+            letterSpacing: '0.5px'
+          } 
+        }, randomPhrase)
+      ),
+      
+      // Подсказка если не все отмечены
+      !allChecked && React.createElement('div', {
+        style: {
+          textAlign: 'center',
+          fontSize: '12px',
+          color: '#94a3b8',
+          marginTop: '8px'
+        }
+      }, '↑ Отметь выполненные пункты или продолжай'),
+      
+      // CSS анимация
+      React.createElement('style', null, `
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+      `)
+    );
+  }
+
+  registerStep('morningRoutine', {
+    title: 'Утренняя рутина',
+    hint: 'Начни день правильно!',
+    icon: '🌟',
+    canSkip: true,
+    hideHeaderNext: true,  // Скрываем кнопку в хедере — используем плашку внизу
+    component: MorningRoutineStepComponent,
+    getInitialData: () => ({
+      checkedItems: []
+    }),
+    save: (data) => {
+      // Опционально: можно сохранять что пользователь отметил
+      // Пока просто логируем для аналитики
+      if (data.checkedItems && data.checkedItems.length > 0) {
+        console.log('[MorningRoutine] Completed items:', data.checkedItems);
+      }
+    },
+    xpAction: 'morning_routine_completed'
+  });
+
   // =============================================
 
   // === Экспорт шагов ===
@@ -1985,7 +2268,8 @@
     HouseholdStats: HouseholdStatsComponent,
     Cycle: CycleStepComponent,
     Measurements: MeasurementsStepComponent,
-    ColdExposure: ColdExposureStepComponent,  // 🆕 v3.2.1
+    ColdExposure: ColdExposureStepComponent,
+    MorningRoutine: MorningRoutineStepComponent,  // 🌟 Мотивирующий финал
     getLastMeasurementByField,
     getMeasurementsHistory,
     // Утилиты
@@ -2003,6 +2287,6 @@
     shouldShowCycleStep
   };
 
-  console.log('[HEYS] Steps registered: weight, sleepTime, sleepQuality, stepsGoal, deficit, household_minutes, household_stats, cycle, measurements, cold_exposure');
+  console.log('[HEYS] Steps registered: weight, sleepTime, sleepQuality, stepsGoal, deficit, household_minutes, household_stats, cycle, measurements, cold_exposure, morningRoutine');
 
 })(typeof window !== 'undefined' ? window : global);

@@ -1376,7 +1376,7 @@
                   ),
                   
                   // XP History — мини-график за 7 дней
-                  xpHistory.length > 0 && React.createElement('div', { className: 'xp-history-section' },
+                  xpHistory?.length > 0 && React.createElement('div', { className: 'xp-history-section' },
                     React.createElement('div', { className: 'xp-history-title' }, '📊 XP за неделю'),
                     React.createElement('div', { className: 'xp-history-chart' },
                       (() => {
@@ -1467,16 +1467,34 @@
           // init cloud (safe if no cloud module)
           // 🌐 Используем proxy через Vercel для обхода блокировок Supabase в РФ
           // В production: /api/supabase → ukqolcziqcuplqfgrmsh.supabase.co (через Vercel Edge Function)
-          // В dev: напрямую к Supabase (localhost не блокируется)
+          // 🔄 Выбор URL для Supabase
+          // На production: всегда через proxy (обход блокировки РФ)
+          // На localhost: пробуем direct, но если заблокировано — proxy через production
           if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
             const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
+            
+            // На localhost: direct к Supabase (если работает), fallback на production proxy
+            // На production: через наш proxy
             const supabaseUrl = isProduction 
-              ? `${window.location.origin}/api/supabase`  // Полный URL для Supabase SDK
-              : 'https://ukqolcziqcuplqfgrmsh.supabase.co';  // Dev — напрямую
+              ? `${window.location.origin}/api/supabase`  // Production — через proxy
+              : 'https://ukqolcziqcuplqfgrmsh.supabase.co';  // Dev — пробуем direct
+            
+            // Для localhost: сохраняем production proxy URL для fallback
+            const localhostProxyUrl = 'https://heys-v2-web.vercel.app/api/supabase';
+            
+            // 🔥 Warm-up ping — прогреваем Vercel serverless до первого реального запроса
+            if (isProduction) {
+              fetch(`${window.location.origin}/api/health`, { method: 'GET' })
+                .then(() => console.log('[HEYS] 🔥 Proxy warm-up OK'))
+                .catch(() => {}); // Игнорируем ошибки warm-up
+            }
+            
             HEYS.cloud.init({
               url: supabaseUrl,
               anonKey:
                 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTE1NDUsImV4cCI6MjA3MDgyNzU0NX0.Nzd8--PyGMJvIHqFoCQKNUOwpxnrAZuslQHtAjcE1Ds',
+              // Для localhost: передаём production proxy как fallback
+              localhostProxyUrl: !isProduction ? localhostProxyUrl : undefined
             });
           }
 
@@ -2491,6 +2509,18 @@
             const signInCooldownUntilRef = useRef(0);
             const fetchingClientsRef = useRef(false); // 🔧 FIX: Защита от дублирования запросов
             
+            // Fallback если cloud.fetchWithRetry не доступен
+            const defaultFetchWithRetry = async (fn, opts) => {
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), opts.timeoutMs || 8000)
+              );
+              try {
+                return await Promise.race([fn(), timeoutPromise]);
+              } catch (e) {
+                return { data: null, error: { message: e.message } };
+              }
+            };
+            
             const fetchClientsFromCloud = useCallback(async (curatorId) => {
               if (!cloud.client || !curatorId) {
                 return { data: [], source: 'error' };
@@ -2504,26 +2534,26 @@
               
               setClientsSource('loading');
               
-              const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout: Supabase request took too long')), 5000)
-              );
-              
               try {
-                // DEBUG (отключено): console.log('[HEYS] 🔄 Загружаю клиентов для curator:', curatorId);
-                const fetchPromise = cloud.client
-                  .from('clients')
-                  .select('id, name')
-                  .eq('curator_id', curatorId)
-                  .order('updated_at', { ascending: true });
+                // 🔄 Используем fetchWithRetry с retry + fallback routing
+                const result = await (cloud.fetchWithRetry || defaultFetchWithRetry)(
+                  () => cloud.client
+                    .from('clients')
+                    .select('id, name')
+                    .eq('curator_id', curatorId)
+                    .order('updated_at', { ascending: true }),
+                  { label: 'fetchClients', maxRetries: 2, timeoutMs: 8000 }
+                );
                 
-                const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
-                fetchingClientsRef.current = false; // 🔧 FIX: Сбрасываем флаг
-                if (error) {
-                  console.error('Ошибка загрузки клиентов:', error);
+                fetchingClientsRef.current = false;
+                
+                if (result.error) {
+                  console.error('Ошибка загрузки клиентов:', result.error.message);
                   setClientsSource('error');
                   return { data: [], source: 'error' };
                 }
-                // DEBUG (отключено): console.log('[HEYS] ✅ Загружено клиентов:', data?.length || 0);
+                
+                const data = result.data;
                 // Сохраняем в localStorage для кэширования
                 if (data && data.length > 0) {
                   localStorage.setItem('heys_clients', JSON.stringify(data));
@@ -2531,7 +2561,7 @@
                 setClientsSource('cloud');
                 return { data: data || [], source: 'cloud' };
               } catch (e) {
-                fetchingClientsRef.current = false; // 🔧 FIX: Сбрасываем флаг при ошибке
+                fetchingClientsRef.current = false;
                 console.error('[HEYS] ❌ fetchClientsFromCloud failed:', e.message);
                 setClientsSource('error');
                 return { data: [], source: 'error' };
@@ -4632,18 +4662,23 @@
                           React.createElement('div', {
                             key: 'cloud-' + cloudStatus, // Force re-render on status change
                             className: 'cloud-sync-indicator ' + cloudStatus,
-                            title: cloudStatus === 'syncing' 
-                              ? (syncProgress.total > 1 
-                                  ? `Синхронизация... ${syncProgress.synced}/${syncProgress.total}`
-                                  : 'Синхронизация...') 
-                              : cloudStatus === 'synced' ? 'Сохранено в облако'
-                              : cloudStatus === 'offline' 
-                                ? (pendingCount > 0 
-                                    ? `Офлайн — ${pendingCount} изменений ожидают синхронизации`
-                                    : 'Офлайн — данные сохраняются локально')
-                              : cloudStatus === 'error' 
-                                ? (retryCountdown > 0 ? `Ошибка. Повтор через ${retryCountdown}с` : 'Ошибка синхронизации')
-                              : 'Подключено к облаку',
+                            title: (() => {
+                              const routingMode = HEYS?.cloud?.getRoutingStatus?.()?.mode || 'unknown';
+                              const modeLabel = routingMode === 'direct' ? '🔗 Direct' : routingMode === 'proxy' ? '🔀 Proxy' : '';
+                              const baseTitle = cloudStatus === 'syncing' 
+                                ? (syncProgress.total > 1 
+                                    ? `Синхронизация... ${syncProgress.synced}/${syncProgress.total}`
+                                    : 'Синхронизация...') 
+                                : cloudStatus === 'synced' ? 'Сохранено в облако'
+                                : cloudStatus === 'offline' 
+                                  ? (pendingCount > 0 
+                                      ? `Офлайн — ${pendingCount} изменений ожидают синхронизации`
+                                      : 'Офлайн — данные сохраняются локально')
+                                : cloudStatus === 'error' 
+                                  ? (retryCountdown > 0 ? `Ошибка. Повтор через ${retryCountdown}с` : 'Ошибка синхронизации')
+                                : 'Подключено к облаку';
+                              return modeLabel ? `${baseTitle} (${modeLabel})` : baseTitle;
+                            })(),
                             // Синее облако — сеть есть, зелёная галочка — синхронизировано
                             dangerouslySetInnerHTML: {
                               __html: cloudStatus === 'syncing' 

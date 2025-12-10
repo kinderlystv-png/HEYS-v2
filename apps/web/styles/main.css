@@ -4,6 +4,7 @@
  *   safe-area rules, .mpc-* (MealProductCard)
  *
  * TABLE OF CONTENTS
+ * 00. Design Tokens .............. modules/001-design-tokens.css
  * 01. Base & Gamification ........ modules/000-base-and-gamification.css
  * 02. Metrics & Graphs ........... modules/100-metrics-and-graphs.css
  * 03. Dark Theme & Effects ....... modules/200-dark-and-effects.css
@@ -11,7 +12,10 @@
  * 05. Water & Hydration .......... modules/400-water-and-hydration.css
  * 06. PWA & Offline UI ........... modules/500-pwa-and-offline.css
  * 07. Steps & APS Flow ........... modules/600-steps-and-aps.css
+ * 08. Profile Wizard ............. modules/700-profile-wizard.css
+ * 09. Meal Optimizer ............. modules/800-meal-optimizer.css
  */
+@import url("./modules/001-design-tokens.css");
 @import url("./modules/000-base-and-gamification.css");
 @import url("./modules/100-metrics-and-graphs.css");
 @import url("./modules/200-dark-and-effects.css");
@@ -20,3 +24,4 @@
 @import url("./modules/500-pwa-and-offline.css");
 @import url("./modules/600-steps-and-aps.css");
 @import url("./modules/700-profile-wizard.css");
+@import url("./modules/800-meal-optimizer.css");

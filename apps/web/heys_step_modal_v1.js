@@ -297,6 +297,9 @@
       getInitialData: config.getInitialData || (() => ({})),
       validate: config.validate || (() => true),
       save: config.save || (() => {}),
+      canSkip: config.canSkip || false,
+      nextLabel: config.nextLabel || null,  // Кастомный текст кнопки "Далее"/"Готово"
+      hideHeaderNext: config.hideHeaderNext || false,  // Скрыть кнопку в хедере
     };
   }
 
@@ -634,7 +637,7 @@
               data: stepData[currentConfig.id] || {},
               onChange: (data) => updateStepData(currentConfig.id, data),
               stepData: stepData,
-              context: context
+              context: { ...context, onNext: handleNext }  // Передаём onNext для кастомных кнопок
             })
           ),
 

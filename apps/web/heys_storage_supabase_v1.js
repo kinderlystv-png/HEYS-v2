@@ -891,6 +891,8 @@
           throw new Error(result.error.message || 'Network error');
         }
         
+        // Успешный запрос — регистрируем
+        registerSuccess();
         return result;
       } catch (e) {
         lastError = e;
@@ -900,24 +902,53 @@
           return { data: null, error: { message: e.message } };
         }
         
+        // Регистрируем ошибку
+        registerError();
+        
         if (attempt < maxRetries) {
-          // Exponential backoff: 1s, 2s, 4s
-          const delay = baseDelayMs * Math.pow(2, attempt);
+          // Exponential backoff: 1s, 2s, 4s с jitter ±20%
+          const baseDelay = baseDelayMs * Math.pow(2, attempt);
+          const jitter = baseDelay * (0.8 + Math.random() * 0.4); // ±20%
+          const delay = Math.round(jitter);
           console.warn(`[HEYS.cloud] ⚡ ${label}: сетевая ошибка, retry ${attempt + 1}/${maxRetries} через ${delay}ms...`);
           await new Promise(r => setTimeout(r, delay));
         }
       }
     }
     
-    // Все ретраи исчерпаны — попробуем fallback на прямое подключение
+    // Все ретраи исчерпаны — попробуем fallback
+    if (options._afterFallback) {
+      // Уже пробовали fallback — сдаёмся
+      console.warn(`[HEYS.cloud] ❌ ${label}: fallback тоже не помог, переход в offline режим`);
+      return { data: null, error: { message: lastError?.message || 'Network error after retries', isNetworkFailure: true } };
+    }
+    
+    // Проверяем можно ли переключаться
+    if (!canSwitch()) {
+      console.warn(`[HEYS.cloud] ❌ ${label}: все ${maxRetries} попытки не удались, переключение заблокировано (debounce)`);
+      return { data: null, error: { message: lastError?.message || 'Network error after retries', isNetworkFailure: true } };
+    }
+    
+    // Попробуем переключиться на другой режим
     if (!_usingDirectConnection && cloud._directUrl && cloud._proxyUrl !== cloud._directUrl) {
+      // Сейчас на proxy — переключаемся на direct
       console.warn(`[HEYS.cloud] 🔄 ${label}: переключаемся на прямое подключение к Supabase...`);
       try {
+        _lastSwitchTime = Date.now();
+        _consecutiveErrors = 0;
         await switchToDirectConnection();
-        // После переключения пробуем ещё раз
         return await fetchWithRetry(requestFn, { ...options, _afterFallback: true });
       } catch (fallbackErr) {
-        console.warn(`[HEYS.cloud] ❌ Fallback тоже не сработал:`, fallbackErr?.message);
+        console.warn(`[HEYS.cloud] ❌ Direct fallback не сработал:`, fallbackErr?.message);
+      }
+    } else if (_usingDirectConnection && cloud._proxyUrl) {
+      // Сейчас на direct — переключаемся на proxy
+      console.warn(`[HEYS.cloud] 🔄 ${label}: переключаемся обратно на proxy...`);
+      try {
+        await switchToProxyConnection();
+        return await fetchWithRetry(requestFn, { ...options, _afterFallback: true });
+      } catch (fallbackErr) {
+        console.warn(`[HEYS.cloud] ❌ Proxy fallback не сработал:`, fallbackErr?.message);
       }
     }
     
@@ -927,6 +958,8 @@
   
   /**
    * Переключение на прямое подключение к Supabase (fallback при недоступности proxy)
+   * ⚠️ Не пересоздаём client чтобы избежать "Multiple GoTrueClient" warning
+   * Просто сохраняем режим — при следующей перезагрузке применится
    */
   async function switchToDirectConnection() {
     if (_usingDirectConnection) return; // Уже переключились
@@ -935,32 +968,115 @@
     }
     
     _usingDirectConnection = true;
-    logCritical('🔄 [FALLBACK] Переключение на прямое подключение к Supabase');
+    _lastSwitchTime = Date.now();
+    _consecutiveErrors = 0;
+    _successCount = 0;
     
-    // Пересоздаём клиент с прямым URL
+    // Сохраняем режим для следующей загрузки
     try {
-      client = global.supabase.createClient(cloud._directUrl, cloud._anonKey);
-      cloud.client = client;
-      
-      // Восстанавливаем сессию если была
-      if (user && client.auth) {
-        const { data } = await client.auth.getSession();
-        if (data?.session) {
-          user = data.session.user;
-          status = CONNECTION_STATUS.ONLINE;
-          logCritical('✅ [FALLBACK] Сессия восстановлена через прямое подключение');
-        }
-      }
-      
-      addSyncLogEntry('online', { fallback: true });
+      localStorage.setItem('heys_connection_mode', 'direct');
+      logCritical('🔄 [ROUTING] Режим "direct" сохранён — применится после перезагрузки');
     } catch (e) {
-      _usingDirectConnection = false;
-      throw e;
+      console.warn('[ROUTING] Не удалось сохранить режим:', e.message);
+    }
+    
+    // НЕ пересоздаём client — текущая сессия продолжит работать на proxy
+    // При следующей загрузке приложение стартует с direct
+    addSyncLogEntry('mode_change', { newMode: 'direct', appliedAt: 'next_reload' });
+  }
+  
+  /**
+   * Переключение обратно на proxy подключение (fallback при недоступности direct)
+   * ⚠️ Не пересоздаём client чтобы избежать "Multiple GoTrueClient" warning
+   * Просто сохраняем режим — при следующей перезагрузке применится
+   */
+  async function switchToProxyConnection() {
+    if (!_usingDirectConnection) return; // Уже на прокси
+    if (!cloud._proxyUrl || !cloud._anonKey) {
+      throw new Error('Proxy URL not configured');
+    }
+    
+    _usingDirectConnection = false;
+    _lastSwitchTime = Date.now();
+    _consecutiveErrors = 0;
+    _successCount = 0;
+    
+    // Сохраняем режим для следующей загрузки
+    try {
+      localStorage.setItem('heys_connection_mode', 'proxy');
+      logCritical('🔄 [ROUTING] Режим "proxy" сохранён — применится после перезагрузки');
+    } catch (e) {
+      console.warn('[ROUTING] Не удалось сохранить режим:', e.message);
+    }
+    
+    // НЕ пересоздаём client — текущая сессия продолжит работать на direct
+    // При следующей загрузке приложение стартует с proxy
+    addSyncLogEntry('mode_change', { newMode: 'proxy', appliedAt: 'next_reload' });
+  }
+  
+  /**
+   * Проверка, можно ли переключаться на другой режим
+   */
+  function canSwitch() {
+    // Debounce: не переключаться слишком часто
+    if (Date.now() - _lastSwitchTime < SWITCH_DEBOUNCE_MS) {
+      log(`[ROUTING] Переключение заблокировано — прошло ${Date.now() - _lastSwitchTime}ms < ${SWITCH_DEBOUNCE_MS}ms`);
+      return false;
+    }
+    // Требуем несколько последовательных ошибок
+    if (_consecutiveErrors < MIN_ERRORS_FOR_SWITCH) {
+      log(`[ROUTING] Переключение заблокировано — только ${_consecutiveErrors} ошибок < ${MIN_ERRORS_FOR_SWITCH}`);
+      return false;
+    }
+    return true;
+  }
+  
+  /**
+   * Регистрация успешного запроса
+   */
+  function registerSuccess() {
+    _consecutiveErrors = 0;
+    _successCount++;
+    
+    // После 3+ успешных запросов сохраняем режим
+    if (_successCount === MIN_SUCCESS_FOR_SAVE) {
+      const mode = _usingDirectConnection ? 'direct' : 'proxy';
+      try {
+        localStorage.setItem('heys_connection_mode', mode);
+        log(`[ROUTING] ✅ Режим '${mode}' сохранён после ${_successCount} успешных запросов`);
+      } catch (e) {
+        console.warn('[ROUTING] Не удалось сохранить режим в localStorage:', e.message);
+      }
     }
   }
   
-  // Экспортируем для отладки
+  /**
+   * Регистрация ошибки запроса
+   */
+  function registerError() {
+    // Не накапливать ошибки в offline режиме — это не проблема с routing
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return;
+    }
+    _consecutiveErrors++;
+    _successCount = 0;
+  }
+
+  // Экспортируем для отладки и использования из других модулей
   cloud.switchToDirectConnection = switchToDirectConnection;
+  cloud.switchToProxyConnection = switchToProxyConnection;
+  cloud.registerSuccess = registerSuccess;
+  cloud.registerError = registerError;
+  cloud.fetchWithRetry = fetchWithRetry; // Для внешних модулей (heys_app_v12.js)
+  cloud.getRoutingStatus = function() {
+    return {
+      mode: _usingDirectConnection ? 'direct' : 'proxy',
+      consecutiveErrors: _consecutiveErrors,
+      successCount: _successCount,
+      lastSwitchTime: _lastSwitchTime,
+      canSwitch: canSwitch()
+    };
+  };
 
   /**
    * Обёртка для запросов с таймаутом (legacy, для простых запросов)
@@ -1117,8 +1233,16 @@
   // Флаг для fallback на прямое подключение
   let _usingDirectConnection = false;
   cloud.isUsingDirectConnection = function() { return _usingDirectConnection; };
+  
+  // Защита от ping-pong переключений
+  let _lastSwitchTime = 0;
+  let _consecutiveErrors = 0;
+  let _successCount = 0;
+  const SWITCH_DEBOUNCE_MS = 30000; // Не переключаться чаще чем раз в 30 сек
+  const MIN_ERRORS_FOR_SWITCH = 2; // Требуем 2+ ошибок подряд для переключения
+  const MIN_SUCCESS_FOR_SAVE = 3; // 3+ успешных запросов для сохранения режима
 
-  cloud.init = function({ url, anonKey }){
+  cloud.init = function({ url, anonKey, localhostProxyUrl }){
     // Idempotent init: avoid double creation & duplicate intercept logs
     if (cloud._inited) { return; }
     if (!global.supabase || !global.supabase.createClient){
@@ -1129,17 +1253,144 @@
     }
     
     // Сохраняем оба URL для fallback
-    cloud._proxyUrl = url;
+    cloud._proxyUrl = localhostProxyUrl || url; // На localhost: production proxy как fallback
     cloud._directUrl = 'https://ukqolcziqcuplqfgrmsh.supabase.co';
     cloud._anonKey = anonKey;
     
+    // Определяем среду
+    const isLocalhost = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname.includes('127.0.0.1'));
+    
+    // 🔄 Smart выбор режима при старте
+    let initialUrl = url;
+    let needsHealthCheck = false;
+    
+    // На localhost: всегда используем переданный URL (direct), игнорируем сохранённый режим
+    // На production: восстанавливаем сохранённый режим
+    if (isLocalhost) {
+      log('[ROUTING] Localhost — используем direct, игнорируем сохранённый режим');
+      _usingDirectConnection = (url === cloud._directUrl);
+      needsHealthCheck = true; // Проверим доступность direct, если нет — переключим на proxy
+    } else {
+      try {
+        const savedMode = localStorage.getItem('heys_connection_mode');
+        if (savedMode === 'direct' && cloud._directUrl) {
+          log('[ROUTING] Восстанавливаем сохранённый режим: direct');
+          initialUrl = cloud._directUrl;
+          _usingDirectConnection = true;
+          needsHealthCheck = true; // Проверим доступность direct после инициализации
+        } else if (savedMode === 'proxy') {
+          log('[ROUTING] Используем сохранённый режим: proxy');
+        } else {
+          log('[ROUTING] Нет сохранённого режима, используем proxy (default для РФ)');
+        }
+      } catch (e) {
+        console.warn('[ROUTING] Ошибка чтения режима из localStorage:', e.message);
+      }
+    }
+    
+    // Health-ping функция — вызывается после создания client
+    // ⚠️ На production: только сохраняет режим для следующей загрузки (не пересоздаёт client)
+    // ⚠️ На localhost: пересоздаёт client сразу (dev режим, удобство важнее)
+    const runHealthCheck = async () => {
+      if (!needsHealthCheck || !client) return;
+      try {
+        log('[ROUTING] 🏥 Health-check подключения...');
+        
+        // Таймаут через Promise.race (Supabase не поддерживает abortSignal напрямую)
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Health-check timeout')), 3000)
+        );
+        
+        const fetchPromise = client.from('kv_store').select('k').limit(1);
+        const { error } = await Promise.race([fetchPromise, timeoutPromise]);
+        
+        if (error) {
+          log('[ROUTING] ⚠️ Текущий режим недоступен:', error.message);
+          await handleHealthCheckFailure();
+        } else {
+          log('[ROUTING] ✅ Подключение работает');
+          registerSuccess();
+        }
+      } catch (e) {
+        log('[ROUTING] ⚠️ Health-check timeout/error:', e.message);
+        await handleHealthCheckFailure();
+      }
+    };
+    
+    // Обработка провала health-check
+    const handleHealthCheckFailure = async () => {
+      const fallbackMode = _usingDirectConnection ? 'proxy' : 'direct';
+      const fallbackUrl = _usingDirectConnection ? cloud._proxyUrl : cloud._directUrl;
+      
+      // На localhost: пересоздаём client сразу (один раз) — удобство dev'а
+      if (isLocalhost && fallbackUrl && !cloud._healthCheckFallbackDone) {
+        cloud._healthCheckFallbackDone = true;
+        log('[ROUTING] 🔄 Localhost: переключаемся на', fallbackMode, 'сразу');
+        
+        try {
+          client = global.supabase.createClient(fallbackUrl, cloud._anonKey, {
+            auth: {
+              persistSession: true,
+              storageKey: 'heys_supabase_auth_token',
+              storage: global.localStorage
+            }
+          });
+          cloud.client = client;
+          _usingDirectConnection = !_usingDirectConnection;
+          
+          // Восстанавливаем сессию
+          if (client.auth && client.auth.getSession) {
+            const { data } = await client.auth.getSession();
+            if (data?.session) {
+              user = data.session.user;
+              status = CONNECTION_STATUS.ONLINE;
+              log('[ROUTING] ✅ Localhost fallback: сессия восстановлена');
+            }
+          }
+        } catch (e) {
+          log('[ROUTING] ❌ Localhost fallback failed:', e.message);
+        }
+      } else {
+        // На production: только сохраняем режим для следующей загрузки
+        try { localStorage.setItem('heys_connection_mode', fallbackMode); } catch (_) {}
+        log('[ROUTING] 💾 Сохранён режим', fallbackMode, 'для следующей загрузки');
+      }
+    };
+    
     try{
-      client = global.supabase.createClient(url, anonKey);
+      // 🔄 Миграция сессии из старого ключа в новый (один раз)
+      const OLD_AUTH_KEY = 'sb-ukqolcziqcuplqfgrmsh-auth-token';
+      const NEW_AUTH_KEY = 'heys_supabase_auth_token';
+      try {
+        const oldSession = localStorage.getItem(OLD_AUTH_KEY);
+        const newSession = localStorage.getItem(NEW_AUTH_KEY);
+        if (oldSession && !newSession) {
+          log('[AUTH] Migrating session from old key to new key');
+          localStorage.setItem(NEW_AUTH_KEY, oldSession);
+        }
+      } catch (e) {}
+      
+      // Единый storageKey для auth — сессия сохраняется при переключении proxy↔direct
+      client = global.supabase.createClient(initialUrl, anonKey, {
+        auth: {
+          persistSession: true,
+          storageKey: NEW_AUTH_KEY,
+          storage: global.localStorage
+        }
+      });
       cloud.client = client;
       status = 'offline';
       interceptSetItem();
       cloud._inited = true;
-      log('cloud bridge loaded');
+      log('cloud bridge loaded', _usingDirectConnection ? '(direct)' : '(proxy)');
+      
+      // 🏥 Health-check если стартуем в direct режиме (проверяем VPN доступен ли)
+      // Запускаем асинхронно но НЕ блокируем — fetchWithRetry сам переключится при ошибках
+      if (needsHealthCheck) {
+        // Фоновая проверка — если direct недоступен, переключимся
+        runHealthCheck().catch(() => {});
+      }
 
       // 🔄 Автовосстановление сессии при старте
       if (client.auth && client.auth.getSession) {
@@ -1237,6 +1488,10 @@
     // 🔄 Сброс флагов sync — при следующем входе нужна новая синхронизация
     initialSyncCompleted = false;
     startFailsafeTimer(); // Перезапустить failsafe для нового входа
+    // 🔄 Сброс сохранённого режима — при следующем входе определится заново
+    try {
+      localStorage.removeItem('heys_connection_mode');
+    } catch (e) {}
     logCritical('🚪 Выход из системы');
   };
 

@@ -4179,7 +4179,7 @@
         ),
         
         // Список модификаторов (для волны) или значений (для других)
-        details.items && details.items.length > 0 && React.createElement('div', { 
+        details.items?.length > 0 && React.createElement('div', { 
           style: { display: 'flex', flexDirection: 'column', gap: '6px' }
         },
           details.items.map((item, i) => 

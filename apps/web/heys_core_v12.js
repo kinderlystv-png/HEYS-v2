@@ -960,7 +960,102 @@
     }
   };
 
-  HEYS.utils = { INVIS, NUM_RE, round1, uuid, toNum, toNumInput, computeDerived, lsGet, lsSet, parsePasted, validateInput, getEmojiStyle, setEmojiStyle, getCurrentClientId };
+  /**
+   * Утилита для анализа и очистки localStorage
+   * Использование: HEYS.utils.storageCleanup.analyze() / .cleanup()
+   */
+  const storageCleanup = {
+    /**
+     * Анализ использования localStorage
+     * @returns {Object} Статистика
+     */
+    analyze: () => {
+      const stats = {
+        totalBytes: 0,
+        itemCount: 0,
+        items: [],
+        byPrefix: {}
+      };
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+        const bytes = (key.length + value.length) * 2; // UTF-16
+        
+        stats.totalBytes += bytes;
+        stats.itemCount++;
+        stats.items.push({ key, bytes, kb: Math.round(bytes / 1024 * 10) / 10 });
+        
+        // Группировка по префиксам
+        const prefix = key.split('_').slice(0, 2).join('_');
+        stats.byPrefix[prefix] = (stats.byPrefix[prefix] || 0) + bytes;
+      }
+      
+      // Сортировка по размеру
+      stats.items.sort((a, b) => b.bytes - a.bytes);
+      stats.totalKB = Math.round(stats.totalBytes / 1024 * 10) / 10;
+      stats.totalMB = Math.round(stats.totalBytes / 1024 / 1024 * 100) / 100;
+      
+      console.log(`📊 localStorage: ${stats.totalKB}KB (${stats.totalMB}MB), ${stats.itemCount} items`);
+      console.log('Top 10 by size:');
+      stats.items.slice(0, 10).forEach((item, i) => {
+        console.log(`  ${i + 1}. ${item.key}: ${item.kb}KB`);
+      });
+      
+      return stats;
+    },
+    
+    /**
+     * Очистка старых данных
+     * @param {Object} options - { daysOld: 90, dryRun: true }
+     * @returns {Object} Результат очистки
+     */
+    cleanup: (options = {}) => {
+      const { daysOld = 90, dryRun = true } = options;
+      const cutoff = Date.now() - (daysOld * 24 * 60 * 60 * 1000);
+      const result = { removed: [], kept: [], freedBytes: 0 };
+      
+      // Паттерны дней: heys_dayv2_YYYY-MM-DD или heys_<clientId>_dayv2_YYYY-MM-DD
+      const dayPattern = /heys_(?:[\w-]+_)?dayv2_(\d{4}-\d{2}-\d{2})/;
+      
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        const match = key.match(dayPattern);
+        
+        if (match) {
+          const dateStr = match[1];
+          const date = new Date(dateStr);
+          
+          if (!isNaN(date.getTime()) && date.getTime() < cutoff) {
+            const value = localStorage.getItem(key);
+            const bytes = (key.length + value.length) * 2;
+            
+            if (dryRun) {
+              result.removed.push({ key, date: dateStr, bytes });
+            } else {
+              localStorage.removeItem(key);
+              result.removed.push({ key, date: dateStr, bytes });
+            }
+            result.freedBytes += bytes;
+          } else {
+            result.kept.push(key);
+          }
+        }
+      }
+      
+      const freedKB = Math.round(result.freedBytes / 1024 * 10) / 10;
+      
+      if (dryRun) {
+        console.log(`🧹 [DRY RUN] Would remove ${result.removed.length} old days (${freedKB}KB)`);
+      } else {
+        console.log(`✅ Removed ${result.removed.length} old days (${freedKB}KB freed)`);
+      }
+      
+      return result;
+    }
+  };
+
+  HEYS.utils = { INVIS, NUM_RE, round1, uuid, toNum, toNumInput, computeDerived, lsGet, lsSet, parsePasted, validateInput, getEmojiStyle, setEmojiStyle, getCurrentClientId, storageCleanup };
   HEYS.validateInput = validateInput; // Прямой доступ для тестов
   HEYS.core = { validateInput }; // Создаем объект core с валидацией
   

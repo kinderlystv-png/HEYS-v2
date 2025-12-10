@@ -501,6 +501,7 @@
       weight:+p.weight||70, 
       deficitPctTarget:+p.deficitPctTarget||0, 
       stepsGoal:+p.stepsGoal||7000,
+      weightGoal:+p.weightGoal||0,  // Целевой вес для прогноза
       cycleTrackingEnabled: !!p.cycleTrackingEnabled
     }; 
   }

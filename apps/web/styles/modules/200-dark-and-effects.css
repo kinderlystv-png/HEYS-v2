@@ -845,6 +845,35 @@
   fill: var(--color-slate-400);
 }
 
+/* Кнопки периода для графика веса — dark mode */
+[data-theme="dark"] .weight-period-pills {
+  background: rgba(139, 92, 246, 0.25);
+}
+
+[data-theme="dark"] .weight-period-pills .kcal-period-pill {
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .weight-period-pills .kcal-period-pill.active {
+  background: var(--color-slate-700);
+  color: #c4b5fd;
+}
+
+/* Подсказка о целевом весе — dark mode */
+[data-theme="dark"] .weight-goal-hint {
+  background: rgba(234, 179, 8, 0.15);
+  border-color: rgba(234, 179, 8, 0.4);
+  color: var(--color-slate-400);
+}
+
+[data-theme="dark"] .weight-goal-hint-link {
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .weight-goal-hint-link:hover {
+  color: #f59e0b;
+}
+
 /* === ЗАДЕРЖКА ВОДЫ — DARK THEME === */
 [data-theme="dark"] .weight-clean-trend-badge {
   background: rgba(236, 72, 153, 0.2);

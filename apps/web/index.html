@@ -46,11 +46,11 @@
     <!-- Load non-critical CSS asynchronously -->
     <link
       rel="preload"
-      href="styles/main.css?v=1012"
+      href="styles/main.css?v=20"
       as="style"
       onload="this.onload=null;this.rel='stylesheet'"
     />
-    <noscript><link rel="stylesheet" href="styles/main.css?v=1012" /></noscript>
+    <noscript><link rel="stylesheet" href="styles/main.css?v=20" /></noscript>
 
     <!-- PWA Manifest and Meta Tags -->
     <link rel="manifest" href="/manifest.json" />
@@ -230,41 +230,44 @@
     <script defer src="heys_dev_utils.js" fetchpriority="high"></script>
     <script defer src="heys_simple_analytics.js" fetchpriority="high"></script>
     <script defer src="heys_core_v12.js" fetchpriority="high"></script>
-    <script defer src="heys_storage_supabase_v1.js?v=19" fetchpriority="low"></script>
-    <script defer src="heys_models_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_storage_layer_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_wheel_picker.js?v=2" fetchpriority="low"></script>
-    <script defer src="heys_swipeable.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_pull_refresh.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_storage_supabase_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_models_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_storage_layer_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_wheel_picker.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_swipeable.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_pull_refresh.js?v=20" fetchpriority="low"></script>
     <!-- Centralized ratio zones logic -->
-    <script defer src="heys_ratio_zones_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_ratio_zones_v1.js?v=20" fetchpriority="low"></script>
+    <!-- Sparkline utilities (curves, regression, caching) -->
+    <script defer src="heys_sparkline_utils_v1.js?v=20" fetchpriority="low"></script>
     <!-- Gamification system (XP, levels, achievements) -->
-    <script defer src="heys_gamification_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_gamification_v1.js?v=20" fetchpriority="low"></script>
     <!-- Day module split (Phase 2-4) -->
-    <script defer src="heys_day_utils.js?v=7" fetchpriority="low"></script>
-    <script defer src="heys_day_hooks.js?v=2" fetchpriority="low"></script>
-    <script defer src="heys_day_pickers.js?v=10" fetchpriority="low"></script>
-    <script defer src="heys_advice_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_sounds_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_day_utils.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_day_hooks.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_day_pickers.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_advice_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_meal_optimizer_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_sounds_v1.js?v=20" fetchpriority="low"></script>
     <!-- Modular components -->
-    <script defer src="heys_expandable_card_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_insulin_wave_v1.js?v=2" fetchpriority="low"></script>
-    <script defer src="heys_cycle_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_expandable_card_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_insulin_wave_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_cycle_v1.js?v=20" fetchpriority="low"></script>
     <!-- StepModal system (modular step-based modals) -->
-    <script defer src="heys_step_modal_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_steps_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_profile_step_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_meal_step_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_add_product_step_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_training_step_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_morning_checkin_v1.js?v=2" fetchpriority="low"></script>
-    <script defer src="heys_confirm_modal_v1.js?v=1" fetchpriority="low"></script>
+    <script defer src="heys_step_modal_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_steps_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_profile_step_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_meal_step_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_add_product_step_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_training_step_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_morning_checkin_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_confirm_modal_v1.js?v=20" fetchpriority="low"></script>
     <!-- End Day module split -->
-    <script defer src="heys_day_v12.js?v=12" fetchpriority="low"></script>
-    <script defer src="heys_user_v12.js?v=2" fetchpriority="low"></script>
-    <script defer src="heys_reports_v12.js?v=2" fetchpriority="low"></script>
-    <script defer src="heys_data_overview_v1.js?v=1" fetchpriority="low"></script>
-    <script defer src="heys_app_v12.js?v=16" fetchpriority="high"></script>
+    <script defer src="heys_day_v12.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_user_v12.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_reports_v12.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_data_overview_v1.js?v=20" fetchpriority="low"></script>
+    <script defer src="heys_app_v12.js?v=20" fetchpriority="high"></script>
     
     <!-- Service Worker регистрируется в heys_app_v12.js → registerServiceWorker() -->
   </body>
