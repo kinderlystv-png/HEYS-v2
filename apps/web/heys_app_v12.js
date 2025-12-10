@@ -1034,11 +1034,23 @@
                     prevLevelRef.current = newStats.level;
                   }
                   
-                  setStats(newStats);
+                  // 🔒 Оптимизация: не обновляем stats если они идентичны (предотвращает мерцание)
+                  setStats(prevStats => {
+                    if (prevStats && 
+                        prevStats.xp === newStats.xp && 
+                        prevStats.level === newStats.level &&
+                        prevStats.streak === newStats.streak) {
+                      return prevStats; // Без ре-рендера
+                    }
+                    return newStats;
+                  });
                 }
                 // Обновляем streak
                 if (HEYS.Day && HEYS.Day.getStreak) {
-                  setStreak(HEYS.Day.getStreak());
+                  setStreak(prevStreak => {
+                    const newStreak = HEYS.Day.getStreak();
+                    return prevStreak === newStreak ? prevStreak : newStreak;
+                  });
                 }
               };
 
@@ -1059,12 +1071,31 @@
 
               const handleWeeklyUpdate = () => {
                 if (HEYS.game) {
-                  setWeeklyChallenge(HEYS.game.getWeeklyChallenge());
-                  // Также обновляем daily multiplier
-                  setDailyMultiplier(HEYS.game.getDailyMultiplier());
-                  // И историю XP
+                  // 🔒 Оптимизация: используем functional updates для предотвращения лишних ре-рендеров
+                  const newChallenge = HEYS.game.getWeeklyChallenge();
+                  setWeeklyChallenge(prev => {
+                    if (prev && newChallenge && 
+                        prev.type === newChallenge.type && 
+                        prev.progress === newChallenge.progress) {
+                      return prev;
+                    }
+                    return newChallenge;
+                  });
+                  
+                  const newMultiplier = HEYS.game.getDailyMultiplier();
+                  setDailyMultiplier(prev => prev === newMultiplier ? prev : newMultiplier);
+                  
                   if (HEYS.game.getXPHistory) {
-                    setXpHistory(HEYS.game.getXPHistory());
+                    const newHistory = HEYS.game.getXPHistory();
+                    setXpHistory(prev => {
+                      // Сравниваем по длине и последнему элементу
+                      if (prev && newHistory && 
+                          prev.length === newHistory.length &&
+                          JSON.stringify(prev[prev.length - 1]) === JSON.stringify(newHistory[newHistory.length - 1])) {
+                        return prev;
+                      }
+                      return newHistory;
+                    });
                   }
                 }
               };

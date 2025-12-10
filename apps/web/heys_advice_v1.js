@@ -98,6 +98,95 @@
   const ADVICE_COOLDOWN_MS = 45000; // 45 секунд между советами
   const SESSION_KEY = 'heys_advice_session';
   const TRACKING_KEY = 'heys_advice_stats';
+  
+  // ═══════════════════════════════════════════════════════════
+  // 🎯 PRIORITY CONSTANTS — Стандартизованные приоритеты
+  // ═══════════════════════════════════════════════════════════
+  // Чем НИЖЕ число — тем ВЫШЕ приоритет показа!
+  
+  const PRIORITY = {
+    // 1-9: Критические (срывы, здоровье)
+    CRITICAL: 1,        // Срыв, критический недобор/перебор
+    HEALTH_ALERT: 5,    // Здоровье под угрозой (транс-жиры, недосып+переедание)
+    
+    // 10-29: Важные (нутриенты, тренировки)
+    IMPORTANT: 10,      // Важные напоминания
+    NUTRITION: 15,      // Нутриент-советы (белок, клетчатка)
+    TRAINING: 18,       // Советы по тренировкам
+    TIMING: 20,         // Тайминг (инсулиновая волна, сон)
+    
+    // 30-49: Нормальные (мотивация, достижения)
+    NORMAL: 30,         // Обычные советы
+    ACHIEVEMENT: 35,    // Достижения (streak, perfect day)
+    MOTIVATION: 40,     // Мотивационные советы
+    
+    // 50-79: Низкие (советы дня, сезонные)
+    LOW: 50,            // Низкий приоритет
+    SEASONAL: 60,       // Сезонные советы
+    LIFESTYLE: 65,      // Стиль жизни
+    
+    // 80-100: Фоновые (tips, gamification)
+    BACKGROUND: 80,     // Фоновые советы
+    GAMIFICATION: 90    // Игровые элементы
+  };
+  
+  // ═══════════════════════════════════════════════════════════
+  // 🚀 ADVICE CACHE — Кэширование результатов generateAdvices
+  // ═══════════════════════════════════════════════════════════
+  
+  const ADVICE_CACHE_TTL = 5 * 60 * 1000; // 5 минут
+  let adviceCache = {
+    key: null,
+    result: null,
+    timestamp: 0
+  };
+  
+  /**
+   * Генерирует ключ кэша из контекста
+   * Включает только поля, влияющие на генерацию советов
+   */
+  function generateCacheKey(ctx) {
+    if (!ctx) return null;
+    
+    const keyParts = [
+      // Основные метрики дня
+      Math.round(ctx.dayTot?.kcal || 0),
+      Math.round(ctx.dayTot?.prot || 0),
+      Math.round(ctx.dayTot?.fiber || 0),
+      Math.round(ctx.dayTot?.simple || 0),
+      ctx.mealCount || 0,
+      // Состояние
+      ctx.hour || 0,
+      ctx.currentStreak || 0,
+      ctx.hasTraining ? 1 : 0,
+      // Вода
+      Math.round((ctx.day?.waterMl || 0) / 100), // округляем до 100мл
+      // Эмоции (влияют на тон)
+      ctx.emotionalState || 'normal',
+      // Цель
+      ctx.goal?.mode || 'maintenance'
+    ];
+    
+    return keyParts.join('|');
+  }
+  
+  /**
+   * Проверяет валидность кэша
+   */
+  function isCacheValid(ctx) {
+    if (!adviceCache.result || !adviceCache.key) return false;
+    if (Date.now() - adviceCache.timestamp > ADVICE_CACHE_TTL) return false;
+    
+    const currentKey = generateCacheKey(ctx);
+    return currentKey === adviceCache.key;
+  }
+  
+  /**
+   * Инвалидирует кэш (вызывать при product_added, water_added и т.д.)
+   */
+  function invalidateAdviceCache() {
+    adviceCache = { key: null, result: null, timestamp: 0 };
+  }
   const MAX_ADVICES_PER_CATEGORY = 2; // Анти-спам: max советов одной категории
   
   // ═══════════════════════════════════════════════════════════
@@ -2398,6 +2487,11 @@
       return [];
     }
     
+    // 🚀 CACHE CHECK: Если кэш валиден — возвращаем из кэша
+    if (isCacheValid(ctx)) {
+      return adviceCache.result;
+    }
+    
     const advices = [];
     const {
       dayTot, normAbs, optimum, day, pIndex, currentStreak,
@@ -3461,6 +3555,126 @@
     }
     
     // ═════════════════════════════════════════════════════════
+    // 🎯 MEAL QUALITY SCORE СОВЕТЫ (priority: 78-80)
+    // ═════════════════════════════════════════════════════════
+    
+    // Интеграция с Meal Quality Score из heys_day_v12.js
+    // getMealQualityScore доступен через window.HEYS.getMealQualityScore (экспортируется в heys_day_v12.js)
+    
+    if (lastMealWithItems && window.HEYS?.getMealQualityScore && canShowMealAdvice()) {
+      const mealTypeInfo = window.HEYS.getMealType?.(lastMealWithItems.time) || { type: 'snack' };
+      const quality = window.HEYS.getMealQualityScore(lastMealWithItems, mealTypeInfo.type, optimum || 2000, pIndex);
+      
+      if (quality?.score !== undefined) {
+        // meal_quality_excellent — идеальный приём (score >= 85)
+        if (quality.score >= 85) {
+          advices.push({
+            id: 'meal_quality_excellent',
+            icon: '⭐',
+            text: `Отличный приём! Качество ${quality.score}/100`,
+            details: '🏆 Score 85+ означает отличный баланс макросов, хороший ГИ и достаточно белка. Так и надо!',
+            type: 'achievement',
+            priority: PRIORITY.ACHIEVEMENT,
+            category: 'nutrition',
+            triggers: ['product_added'],
+            ttl: 4000,
+            onShow: () => markMealAdviceShown()
+          });
+        }
+        
+        // meal_quality_good — хороший приём (score 70-84)
+        else if (quality.score >= 70) {
+          advices.push({
+            id: 'meal_quality_good',
+            icon: '✓',
+            text: `Неплохой приём (${quality.score}/100)`,
+            details: '👍 Score 70-84 — это хорошо! Мелкие улучшения: больше белка или меньше простых углеводов.',
+            type: 'tip',
+            priority: PRIORITY.NORMAL + 8,
+            category: 'nutrition',
+            triggers: ['product_added'],
+            ttl: 4000,
+            onShow: () => markMealAdviceShown()
+          });
+        }
+        
+        // meal_quality_poor — плохой приём (score < 50)
+        else if (quality.score < 50) {
+          // Формируем конкретные рекомендации по бейджам
+          const issues = [];
+          if (quality.badges?.some(b => b.type === 'Б')) issues.push('добавь белка');
+          if (quality.badges?.some(b => b.type === 'ТЖ')) issues.push('много транс-жиров');
+          if (quality.badges?.some(b => b.type === 'ГИ')) issues.push('высокий ГИ');
+          if (quality.badges?.some(b => b.type === '🌙')) issues.push('поздновато');
+          
+          const issueText = issues.length > 0 ? ` — ${issues.slice(0, 2).join(', ')}` : '';
+          
+          advices.push({
+            id: 'meal_quality_poor',
+            icon: '⚠️',
+            text: `Приём можно улучшить (${quality.score}/100)${issueText}`,
+            details: '💡 Score < 50 — есть над чем работать. Совет: добавь источник белка (яйцо, творог) или замени простые углеводы на сложные.',
+            type: 'warning',
+            priority: PRIORITY.NUTRITION,
+            category: 'nutrition',
+            triggers: ['product_added'],
+            ttl: 5000,
+            onShow: () => markMealAdviceShown()
+          });
+        }
+        
+        // meal_quality_trend — улучшение качества приёмов (по сравнению с вчерашним днём)
+        // Используем HEYS.storage для получения вчерашнего дня
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yKey = `heys_dayv2_${yesterday.toISOString().slice(0, 10)}`;
+        const yesterdayDay = window.HEYS?.utils?.lsGet?.(yKey);
+        
+        if (yesterdayDay?.meals?.length > 0) {
+          // Средний score вчера vs сегодня
+          let yScoreSum = 0, yCount = 0;
+          let tScoreSum = 0, tCount = 0;
+          
+          for (const m of yesterdayDay.meals) {
+            if (m.items?.length > 0) {
+              const mt = window.HEYS.getMealType?.(m.time) || { type: 'snack' };
+              const qs = window.HEYS.getMealQualityScore(m, mt.type, optimum || 2000, pIndex);
+              if (qs?.score) { yScoreSum += qs.score; yCount++; }
+            }
+          }
+          
+          for (const m of (day?.meals || [])) {
+            if (m.items?.length > 0) {
+              const mt = window.HEYS.getMealType?.(m.time) || { type: 'snack' };
+              const qs = window.HEYS.getMealQualityScore(m, mt.type, optimum || 2000, pIndex);
+              if (qs?.score) { tScoreSum += qs.score; tCount++; }
+            }
+          }
+          
+          if (yCount >= 2 && tCount >= 2) {
+            const yAvg = yScoreSum / yCount;
+            const tAvg = tScoreSum / tCount;
+            const diff = tAvg - yAvg;
+            
+            if (diff >= 10) {
+              advices.push({
+                id: 'meal_quality_improving',
+                icon: '📈',
+                text: `Качество еды улучшается! +${Math.round(diff)} за день`,
+                details: '🚀 Средний score приёмов сегодня выше чем вчера. Продолжай в том же духе!',
+                type: 'achievement',
+                priority: PRIORITY.ACHIEVEMENT,
+                category: 'nutrition',
+                triggers: ['tab_open'],
+                ttl: 5000
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    // ═════════════════════════════════════════════════════════
     // 📊 PHASE 2: DAY-QUALITY СОВЕТЫ (priority: 81-90)
     // ═════════════════════════════════════════════════════════
     
@@ -3782,6 +3996,94 @@
           ttl: 5000,
           onShow: () => { try { sessionStorage.setItem('heys_weight_trend_up', '1'); } catch(e) {} }
         });
+      }
+      
+      // ═════════════════════════════════════════════════════════
+      // 📊 WEIGHT FORECAST ADVICES — Прогноз веса к цели
+      // ═════════════════════════════════════════════════════════
+      
+      const weightGoal = prof?.weightGoal;
+      const currentWeight = day?.weightMorning || weightsForTrend[weightsForTrend.length - 1];
+      
+      if (weightGoal && currentWeight && Math.abs(currentWeight - weightGoal) > 0.5) {
+        // Расчёт прогноза на основе текущего тренда
+        const deficitPct = Math.abs(prof?.deficitPctTarget || day?.deficitPct || 10);
+        
+        // Реалистичный темп похудения: ~0.75-1% веса в неделю при умеренном дефиците
+        // При дефиците 10%: ~0.7 кг/нед, при 20%: ~1.2 кг/нед
+        const rateKgPerWeek = (deficitPct / 100) * currentWeight * 0.8; // ~0.8% веса на каждые 10% дефицита
+        const weightDiff = currentWeight - weightGoal; // + = надо худеть, - = надо набирать
+        
+        // Текущий реальный тренд (если есть данные)
+        const actualRatePerWeek = (trendPerWeek !== 0) ? Math.abs(trendPerWeek) : rateKgPerWeek;
+        
+        // Если идём в нужном направлении
+        const isGoingRight = (weightDiff > 0 && trendPerWeek < 0) || (weightDiff < 0 && trendPerWeek > 0);
+        
+        if (isGoingRight && actualRatePerWeek > 0.1) {
+          const weeksToGoal = Math.ceil(Math.abs(weightDiff) / actualRatePerWeek);
+          
+          if (weeksToGoal <= 52) { // Меньше года
+            const goalDate = new Date();
+            goalDate.setDate(goalDate.getDate() + weeksToGoal * 7);
+            const goalDateStr = goalDate.toLocaleDateString('ru-RU', { month: 'long', day: 'numeric' });
+            
+            advices.push({
+              id: 'weight_forecast_on_track',
+              icon: '🎯',
+              text: `По прогнозу ${weightGoal}кг — к ${goalDateStr}`,
+              details: `📊 При текущем темпе (${actualRatePerWeek.toFixed(1)} кг/нед) цель в ${weightGoal}кг будет достигнута через ~${weeksToGoal} нед. Продолжай!`,
+              type: 'achievement',
+              priority: PRIORITY.ACHIEVEMENT,
+              category: 'weight',
+              triggers: ['tab_open'],
+              ttl: 6000
+            });
+          } else {
+            // Очень долго — предложить увеличить дефицит
+            advices.push({
+              id: 'weight_forecast_slow',
+              icon: '🐢',
+              text: `Темп медленный — цель далеко (>${Math.round(weeksToGoal / 4)} мес)`,
+              details: `⏰ При ${actualRatePerWeek.toFixed(1)} кг/нед до ${weightGoal}кг — более ${Math.round(weeksToGoal / 4)} месяцев. Можно увеличить дефицит или добавить активности.`,
+              type: 'tip',
+              priority: PRIORITY.LOW,
+              category: 'weight',
+              triggers: ['tab_open'],
+              ttl: 6000
+            });
+          }
+        }
+        
+        // Если идём в противоположном направлении
+        if (!isGoingRight && Math.abs(trendPerWeek) > 0.2) {
+          advices.push({
+            id: 'weight_forecast_wrong_direction',
+            icon: '⚠️',
+            text: `Вес идёт от цели — проверь план`,
+            details: `🔄 Цель ${weightGoal}кг, но тренд ${trendPerWeek > 0 ? '+' : ''}${trendPerWeek.toFixed(1)} кг/нед. Пересмотри калории или добавь активности.`,
+            type: 'warning',
+            priority: PRIORITY.IMPORTANT,
+            category: 'weight',
+            triggers: ['tab_open'],
+            ttl: 6000
+          });
+        }
+        
+        // Близко к цели!
+        if (Math.abs(weightDiff) < 2) {
+          advices.push({
+            id: 'weight_almost_there',
+            icon: '🏁',
+            text: `До цели ${Math.abs(weightDiff).toFixed(1)}кг — финишная прямая!`,
+            details: `🎯 Осталось меньше 2кг до ${weightGoal}кг! Финиш близко — не сбавляй темп!`,
+            type: 'achievement',
+            priority: PRIORITY.ACHIEVEMENT - 1,
+            category: 'weight',
+            triggers: ['tab_open'],
+            ttl: 6000
+          });
+        }
       }
     }
     
@@ -5510,6 +5812,13 @@
       }
     }
     
+    // 🚀 CACHE RESULT: Сохраняем в кэш перед возвратом
+    adviceCache = {
+      key: generateCacheKey(ctx),
+      result: advices,
+      timestamp: Date.now()
+    };
+    
     return advices;
   }
   
@@ -6242,7 +6551,11 @@
     GOAL_MODES,
     // Animations
     getAdviceAnimation,
-    ADVICE_ANIMATIONS
+    ADVICE_ANIMATIONS,
+    // 🚀 Cache management
+    invalidateAdviceCache,      // 🆕 Инвалидация кэша (вызывать при product_added)
+    // 🎯 Priority constants
+    PRIORITY                    // 🆕 Стандартизованные приоритеты
   };
   
 })();

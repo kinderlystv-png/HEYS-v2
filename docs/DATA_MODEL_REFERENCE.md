@@ -1,7 +1,7 @@
 # 📊 HEYS Data Model Reference
 
 > **Справочник всех аналитических параметров HEYS**  
-> Версия: 3.6.0 | Обновлено: 2025-12-10 | **156 умных советов** | **32 фактора инсулиновой волны** | **🌸 Трекинг цикла**
+> Версия: 3.7.0 | Обновлено: 2025-12-11 | **168 умных советов** | **32 фактора инсулиновой волны** | **🌸 Трекинг цикла**
 
 📚 **[SCIENTIFIC_REFERENCES.md](./SCIENTIFIC_REFERENCES.md)** — полный список научных источников с PMID ссылками
 
@@ -570,11 +570,20 @@ HEYS.Cycle.getWeightNormalizationForecast(cycleDay) // {daysUntilNormal, message
 | **Phase 2: Milestones** | | | |
 | `weight_trend_down` | `7-day trend < -0.3kg/week` | correlation | tab_open |
 | `weight_trend_up` | `7-day trend > +0.5kg/week` | correlation | tab_open |
+| `weight_forecast_on_track` | По прогнозу цель достижима | weight | tab_open |
+| `weight_forecast_slow` | Темп медленный >1 год до цели | weight | tab_open |
+| `weight_forecast_wrong_direction` | Вес идёт от цели | weight | tab_open |
+| `weight_almost_there` | До цели <2кг | weight | tab_open |
 | `milestone_7_days` | `totalDaysTracked === 7` | achievement | tab_open |
 | `milestone_30_days` | `totalDaysTracked === 30` | achievement | tab_open |
 | `milestone_100_days` | `totalDaysTracked === 100` | achievement | tab_open |
 | `new_record_streak` | `currentStreak === personalBestStreak` | achievement | tab_open |
 | `first_training_ever` | первая тренировка в истории | achievement | tab_open |
+| **Meal Quality Score советы** | | | |
+| `meal_quality_excellent` | Score ≥ 85 | nutrition | product_added |
+| `meal_quality_good` | Score 70-84 | nutrition | product_added |
+| `meal_quality_poor` | Score < 50 | nutrition | product_added |
+| `meal_quality_improving` | Средний score сегодня > вчера +10 | nutrition | tab_open |
 
 ### Используемые переменные
 

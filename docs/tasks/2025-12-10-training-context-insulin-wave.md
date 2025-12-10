@@ -1,6 +1,6 @@
 # Task: Контекст тренировки для инсулиновой волны
 
-> **Версия**: 3.2.0 | **Дата**: 2025-12-10  
+> **Версия**: 3.3.0 | **Дата**: 2025-12-10  
 > **Время**: ~5-6 часов  
 > **Зависимости**: `heys_insulin_wave_v1.js` v3.2.2
 
@@ -325,6 +325,307 @@ function getTrainingDuration(training) {
   // Fallback по типу
   return DEFAULT_DURATION_BY_TYPE[training.type] || 45;
 }
+```
+
+### 0.13 Интеграция с существующими факторами инсулиновой волны
+
+**КРИТИЧНО**: В `heys_insulin_wave_v1.js` уже есть факторы #16-17!
+
+```javascript
+// УЖЕ СУЩЕСТВУЮТ в calculateMultiplier():
+WORKOUT_BONUS: {       // Фактор #16 — общая тренировка
+  none: 0,
+  light: -0.08,        // 20 мин
+  moderate: -0.15      // 45+ мин
+}
+POSTPRANDIAL_EXERCISE: { // Фактор #17 — тренировка ПОСЛЕ еды
+  short: -0.10,        // 15 мин
+  medium: -0.18,       // 20 мин
+  long: -0.25          // 30+ мин
+}
+```
+
+**Решение** — ActivityContext ЗАМЕНЯЕТ эти факторы (не дублирует!):
+```javascript
+function calculateMultiplier(params) {
+  // ... существующие факторы ...
+  
+  // НОВОЕ: Если есть ActivityContext — использовать его
+  if (params.activityContext) {
+    // НЕ применять WORKOUT_BONUS и POSTPRANDIAL_EXERCISE
+    // Вместо этого применить activityContext.waveBonus
+    foodMult += params.activityContext.waveBonus;
+  } else {
+    // Fallback на старую логику (для обратной совместимости)
+    foodMult += getWorkoutBonus(params);
+    foodMult += getPostprandialBonus(params);
+  }
+}
+```
+
+### 0.14 Совместимость с waveHistory
+
+**Проблема**: Структура `waveHistory` уже используется в UI.
+
+```javascript
+// Текущая структура в waveData:
+waveHistory: [{
+  meal: { id, time, ... },
+  startMin: 510,
+  endMin: 690,
+  multiplier: 0.85,
+  phases: { rise, plateau, decline },
+  // ... другие поля
+}]
+```
+
+**Решение** — добавить поле `activityContext` в каждую запись:
+```javascript
+waveHistory: [{
+  meal: { ... },
+  startMin: 510,
+  endMin: 690,
+  // НОВОЕ:
+  activityContext: {
+    type: 'post',              // Тип контекста
+    waveBonus: -0.35,          // Применённый бонус
+    harmBonus: 0,              // Применённый бонус к harm
+    badge: '🔄 Recovery',      // Для UI
+    trainingRef: { time, kcal, type } // Ссылка на тренировку
+  }
+}]
+```
+
+### 0.15 Интеграция с Meal Quality Score
+
+**Проблема**: `getMealQualityScore()` не знает о контексте активности.
+
+**Решение** — добавить бонусные баллы за контекст:
+```javascript
+// В getMealQualityScore() добавить:
+function applyActivityContextBonus(baseScore, context) {
+  if (!context?.activityContext) return baseScore;
+  
+  const { type, waveBonus, harmBonus } = context.activityContext;
+  let bonus = 0;
+  
+  // Бонус за контекст (до +10 баллов)
+  if (type === 'peri') bonus = 10;      // Еда во время = отлично!
+  else if (type === 'post') bonus = 8;  // После тренировки = хорошо
+  else if (type === 'pre') bonus = 5;   // Перед тренировкой = норм
+  else if (harmBonus < 0) bonus = 3;    // Любой бонус к harm
+  
+  return Math.min(100, baseScore + bonus);
+}
+```
+
+**UI**: Добавить бейдж в `badges[]`:
+```javascript
+if (context?.activityContext) {
+  badges.push({
+    type: context.activityContext.badge.split(' ')[0], // Эмодзи
+    ok: true,
+    label: context.activityContext.badge
+  });
+}
+```
+
+### 0.16 Интеграция с добавлением продукта (Smart Portions)
+
+**Проблема**: При добавлении продукта ПОСЛЕ тренировки система не предлагает оптимальную порцию.
+
+**Решение** — автокоррекция порций в модалке добавления:
+```javascript
+// В ProductAddModal проверять контекст
+function getSuggestedPortion(product, activityContext) {
+  if (!activityContext) return product.defaultPortion || 100;
+  
+  const { type, trainingKcal } = activityContext;
+  
+  if (type === 'post' && product.protein100 > 15) {
+    // Для восстановления нужно 25-35г белка
+    const targetProtein = Math.min(35, 25 + (trainingKcal / 200));
+    return Math.ceil(targetProtein / product.protein100 * 100);
+  }
+  
+  if (type === 'post' && product.complex100 > 30) {
+    // Для гликогена нужно ~1г углеводов на кг веса
+    const targetCarbs = context.weight || 70;
+    return Math.ceil(targetCarbs / product.complex100 * 100);
+  }
+  
+  if (type === 'pre' && product.carbs100 > 20) {
+    // Перед тренировкой — умеренные углеводы
+    return Math.min(150, Math.ceil(30 / product.carbs100 * 100));
+  }
+  
+  return product.defaultPortion || 100;
+}
+
+// UI подсказка:
+if (activityContext?.type === 'post') {
+  showHint({
+    icon: '🎯',
+    title: 'Гликогеновое окно!',
+    text: `Рекомендуем ${suggestedGrams}г для восстановления`,
+    cta: '[Применить]'
+  });
+}
+```
+
+### 0.17 Hydration Context — повышенная норма воды
+
+**Проблема**: После тренировки гидратация КРИТИЧНА, но норма воды не корректируется.
+
+**Решение** — динамическая корректировка нормы:
+```javascript
+// В waterGoalBreakdown добавить:
+function getTrainingWaterBonus(trainings) {
+  if (!trainings?.length) return 0;
+  
+  const totalDuration = trainings.reduce((sum, t) => 
+    sum + getTrainingDuration(t), 0
+  );
+  
+  // +500мл на каждые 30 минут активности
+  const bonus = Math.floor(totalDuration / 30) * 500;
+  
+  return {
+    bonus,
+    desc: `🏋️ +${bonus}мл за ${totalDuration} мин тренировок`
+  };
+}
+
+// Пример:
+// 60 мин тренировки → +1000мл к норме
+// Показывать в breakdown воды
+```
+
+**UI в WaterCard**:
+```
+💧 Вода: 1800 / 3000 мл
+   ├─ Базовая норма: 2000 мл
+   ├─ 🏋️ Тренировка 60 мин: +1000 мл
+   └─ Осталось: 1200 мл
+```
+
+### 0.18 Визуализация тренировок в календаре
+
+**Проблема**: В календаре не видно какие дни были с тренировками.
+
+**Решение** — добавить иконки в DatePickerModal:
+```javascript
+// В renderDayCell добавить:
+const TRAINING_ICONS = {
+  cardio: '🏃',
+  strength: '🏋️',
+  hobby: '⚽'
+};
+
+function getDayTrainingIcon(dayData) {
+  if (!dayData.trainings?.length) return null;
+  
+  // Берём самую интенсивную тренировку
+  const bestTraining = dayData.trainings.reduce((best, t) => {
+    const kcal = trainK(t);
+    return kcal > (best ? trainK(best) : 0) ? t : best;
+  }, null);
+  
+  return TRAINING_ICONS[bestTraining.type] || '🏃';
+}
+
+// В календаре: маленькая иконка в углу ячейки
+// CSS: position: absolute; top: 2px; right: 2px; font-size: 10px;
+```
+
+### 0.19 Адаптация Advice Module для контекста
+
+**Проблема**: Советы `post_training_protein` и др. не знают о новых контекстах.
+
+**Решение** — обновить условия в `heys_advice_v1.js`:
+```javascript
+// Было:
+'post_training_protein': {
+  condition: () => hasTraining && proteinPct < 0.8,
+  text: 'После тренировки белок важен для восстановления'
+}
+
+// Стало:
+'post_training_protein': {
+  condition: (ctx) => {
+    // Проверяем что сейчас POST-WORKOUT контекст И недостаток белка
+    const postContext = ctx.meals.some(m => 
+      m.activityContext?.type === 'post' && 
+      getMealProtein(m) < 25
+    );
+    return postContext;
+  },
+  text: 'Ты в гликогеновом окне! Добавь 25-30г белка для восстановления'
+}
+
+// Новые советы:
+'peri_workout_fuel': {
+  condition: (ctx) => ctx.meals.some(m => m.activityContext?.type === 'peri'),
+  text: '💪 Отлично! Топливо во время тренировки = максимальная эффективность'
+}
+
+'missed_recovery_window': {
+  condition: (ctx) => {
+    // Была тренировка, но POST-приёма не было в течение 2ч
+    const trainings = ctx.day.trainings || [];
+    const meals = ctx.day.meals || [];
+    return trainings.some(t => {
+      const endMin = getTrainingInterval(t).endMin;
+      const hasPostMeal = meals.some(m => {
+        const mealMin = parseHour(m.time) * 60;
+        return mealMin > endMin && mealMin < endMin + 120;
+      });
+      return !hasPostMeal;
+    });
+  },
+  text: '⚠️ Ты пропустил гликогеновое окно. В следующий раз поешь в течение 2ч после тренировки'
+}
+```
+
+### 0.20 Мобильная адаптация UI контекстов
+
+**Проблема**: 10 типов бейджей не влезут на маленьких экранах.
+
+**Решение** — адаптивный режим:
+```javascript
+// Определяем размер экрана
+const isMobile = window.innerWidth < 640;
+
+function formatContextBadge(activityContext, isMobile) {
+  if (!activityContext) return null;
+  
+  if (isMobile) {
+    // Компактный режим: иконка + процент
+    return {
+      text: `${activityContext.badge.split(' ')[0]} ${Math.round(Math.abs(activityContext.waveBonus) * 100)}%`,
+      expandable: true,
+      details: activityContext.desc
+    };
+  }
+  
+  // Desktop: полный бейдж
+  return {
+    text: activityContext.badge,
+    subtitle: `Волна -${Math.round(Math.abs(activityContext.waveBonus) * 100)}%`
+  };
+}
+```
+
+**Mobile UI**:
+```
+Перекус 15:30 — 250 ккал  🏋️-60%
+                          ↑ тап для деталей
+```
+
+**Desktop UI**:
+```
+Перекус 15:30 — 250 ккал
+🏋️ Топливо • Волна -60% • Harm ×0.5
 ```
 
 ---
@@ -1207,13 +1508,761 @@ function getFuelGauge(meals, currentHour, plannedTrainingKcal = 400) {
    Рекомендация: Можно начинать!
 ```
 
+### 5.11 Adaptive Coaching — AI-подсказки на основе паттернов 🆕
+
+После накопления данных за 14+ дней — персональные инсайты:
+
+```javascript
+function getAdaptiveCoachingTip(historyDays, trainings) {
+  if (historyDays.length < 14) return null;
+  
+  const patterns = analyzeTrainingNutritionPatterns(historyDays, trainings);
+  
+  // Паттерн 1: Недостаток белка после тренировок
+  if (patterns.avgPostWorkoutProtein < 25) {
+    return {
+      type: 'protein_deficit',
+      icon: '🤖',
+      title: 'Заметил паттерн',
+      text: `После тренировок ты в среднем съедаешь ${patterns.avgPostWorkoutProtein}г белка. 
+             Для восстановления рекомендую 25-35г.`,
+      suggestion: {
+        product: 'Творог 5%',
+        grams: 150,
+        reason: '+27г белка в окне восстановления'
+      },
+      cta: '[Добавить в следующий приём]'
+    };
+  }
+  
+  // Паттерн 2: Пропуск углеводов перед тренировкой
+  if (patterns.preWorkoutCarbsSkipRate > 0.5) {
+    return {
+      type: 'carbs_timing',
+      icon: '🤖',
+      title: 'Топливная оптимизация',
+      text: `В ${Math.round(patterns.preWorkoutCarbsSkipRate * 100)}% случаев ты тренируешься без углеводов за 1-2ч до.
+             Это может снижать интенсивность.`,
+      suggestion: { product: 'Банан', grams: 120 },
+      cta: '[Запланировать перекус]'
+    };
+  }
+  
+  // Паттерн 3: Отличная синхронизация!
+  if (patterns.avgSyncScore >= 80) {
+    return {
+      type: 'great_sync',
+      icon: '🏆',
+      title: 'Ты молодец!',
+      text: `Твоя синхронизация питания и тренировок — ${patterns.avgSyncScore}/100!
+             Это лучше чем у 85% пользователей.`,
+      cta: null
+    };
+  }
+  
+  return null;
+}
+
+function analyzeTrainingNutritionPatterns(days, trainings) {
+  // Анализ паттернов за 14+ дней
+  const trainingDays = days.filter(d => d.trainings?.length > 0);
+  
+  // Средний белок после тренировки
+  let totalPostProtein = 0, postMealCount = 0;
+  // ... логика анализа ...
+  
+  return {
+    avgPostWorkoutProtein: totalPostProtein / postMealCount || 0,
+    preWorkoutCarbsSkipRate: 0.3, // Доля тренировок без углеводов до
+    avgSyncScore: 75
+  };
+}
+```
+
+**UI**:
+```
+┌─────────────────────────────────────────┐
+│ 🤖 Заметил паттерн                      │
+│                                         │
+│ После тренировок ты в среднем съедаешь  │
+│ 18г белка. Для восстановления           │
+│ рекомендую 25-35г.                      │
+│                                         │
+│ 💡 Совет: Творог 150г = +27г белка      │
+│                                         │
+│ [Добавить в следующий приём]  [Понятно] │
+└─────────────────────────────────────────┘
+```
+
+### 5.12 Weekly Training Challenges 🆕
+
+Челленджи на неделю для вовлечения:
+
+```javascript
+const WEEKLY_CHALLENGES = [
+  {
+    id: 'zone2_tuesday',
+    name: 'Zone 2 Tuesday',
+    icon: '🏃',
+    description: '30+ минут в зоне жиросжигания по вторникам',
+    condition: (day) => {
+      const dayOfWeek = new Date(day.date).getDay();
+      if (dayOfWeek !== 2) return null; // Только вторник
+      const zone2Min = day.trainings?.reduce((sum, t) => sum + (t.z?.[1] || 0), 0) || 0;
+      return zone2Min >= 30;
+    },
+    duration: 4, // недели
+    reward: { badge: '🎖️', title: 'Мастер Zone 2' }
+  },
+  {
+    id: 'protein_timing',
+    name: 'Protein Window Pro',
+    icon: '💪',
+    description: 'Белок 25+г в течение часа после каждой тренировки',
+    condition: (day, meals) => {
+      // Проверить что после каждой тренировки был белок
+      return day.trainings?.every(t => {
+        const postMeal = findPostWorkoutMeal(t, meals, 60);
+        return postMeal && getMealProtein(postMeal) >= 25;
+      });
+    },
+    duration: 2,
+    reward: { badge: '🥇', title: 'Анаболический мастер' }
+  },
+  {
+    id: 'sync_master',
+    name: 'Sync Master',
+    icon: '⚡',
+    description: 'Training Sync Score 80+ каждый день с тренировкой',
+    condition: (day) => day.trainingSyncScore >= 80,
+    duration: 1,
+    reward: { badge: '⭐', title: 'Мастер синхронизации' }
+  }
+];
+
+function getActiveChallenge(userId) {
+  // Логика выбора/ротации челленджей
+}
+
+function getChallengeProgress(challenge, days) {
+  const successDays = days.filter(d => challenge.condition(d, d.meals));
+  return {
+    current: successDays.length,
+    target: challenge.duration,
+    progress: successDays.length / challenge.duration,
+    completed: successDays.length >= challenge.duration
+  };
+}
+```
+
+**UI**:
+```
+🎯 Челлендж недели: "Zone 2 Tuesday"
+   30+ минут в зоне жиросжигания по вторникам
+   
+   Прогресс: [✅ ✅ ⬜ ⬜] 2/4 недели
+   
+   🎖️ Награда: Бейдж "Мастер Zone 2"
+```
+
+### 5.13 Perfect Day Constructor 🆕
+
+На основе истории показать "идеальный день" пользователя:
+
+```javascript
+function constructPerfectDay(historyDays) {
+  // Найти лучшие дни (Meal Quality avg >= 80, Training Sync >= 80)
+  const bestDays = historyDays
+    .filter(d => d.avgMealQuality >= 80 && d.trainingSyncScore >= 80)
+    .sort((a, b) => (b.avgMealQuality + b.trainingSyncScore) - (a.avgMealQuality + a.trainingSyncScore));
+  
+  if (bestDays.length < 3) return null; // Недостаточно данных
+  
+  // Анализируем паттерны лучших дней
+  const analysis = {
+    avgWakeTime: average(bestDays.map(d => parseHour(d.sleepEnd))),
+    avgFirstMealTime: average(bestDays.map(d => parseHour(d.meals[0]?.time))),
+    avgTrainingTime: average(bestDays.map(d => parseHour(d.trainings[0]?.time))),
+    avgMealCount: average(bestDays.map(d => d.meals.length)),
+    topBreakfastProducts: findTopProducts(bestDays, 'breakfast'),
+    topPostWorkoutProducts: findTopProducts(bestDays, 'postWorkout'),
+  };
+  
+  return {
+    title: 'Твой идеальный день',
+    subtitle: 'На основе твоих лучших дней',
+    schedule: [
+      { time: formatTime(analysis.avgWakeTime), event: 'Подъём', icon: '⏰' },
+      { 
+        time: formatTime(analysis.avgFirstMealTime), 
+        event: 'Завтрак', 
+        icon: '🍳',
+        details: `~${analysis.avgBreakfastKcal} ккал`,
+        products: analysis.topBreakfastProducts.slice(0, 3)
+      },
+      { 
+        time: formatTime(analysis.avgTrainingTime), 
+        event: 'Тренировка', 
+        icon: '🏋️',
+        details: `${analysis.avgTrainingDuration} мин`
+      },
+      { 
+        time: formatTime(analysis.avgTrainingTime + 0.5), 
+        event: 'Восстановление', 
+        icon: '🔄',
+        details: 'Белок 25-35г',
+        products: analysis.topPostWorkoutProducts.slice(0, 3)
+      },
+      // ... остальные приёмы
+    ],
+    cta: '[Сохранить как шаблон]'
+  };
+}
+```
+
+**UI**:
+```
+📅 Твой идеальный день
+   На основе твоих лучших дней (15, 20, 28 ноября)
+
+   07:00 — ⏰ Подъём
+   07:30 — 🍳 Завтрак ~350 ккал
+           Овсянка, банан, яйца
+   09:00 — 🏋️ Тренировка 60 мин
+   10:00 — 🔄 Восстановление
+           Творог 150г, банан
+   13:00 — 🍽️ Обед ~450 ккал
+           ...
+
+   [Сохранить как шаблон]  [Применить сегодня]
+```
+
+### 5.14 Smart Portion AI — автокоррекция порций после тренировки 🆕
+
+AI предлагает скорректированные порции на основе потраченных калорий:
+
+```javascript
+function getSmartPortionSuggestion(product, activityContext, mealTime) {
+  if (!activityContext) return null;
+  
+  const { type, trainingKcal, trainingType } = activityContext;
+  const suggestions = [];
+  
+  // После силовой — увеличить белок
+  if (type === 'post' && trainingType === 'strength') {
+    if (product.protein100 > 15) {
+      const targetProtein = 30 + (trainingKcal / 300); // 30-40г белка
+      const suggestedGrams = Math.ceil(targetProtein / product.protein100 * 100);
+      const defaultGrams = product.defaultPortion || 100;
+      
+      if (suggestedGrams > defaultGrams * 1.2) {
+        suggestions.push({
+          type: 'increase',
+          original: defaultGrams,
+          suggested: suggestedGrams,
+          reason: `+${suggestedGrams - defaultGrams}г для восстановления мышц`,
+          delta: `+${Math.round((suggestedGrams - defaultGrams) / defaultGrams * 100)}%`
+        });
+      }
+    }
+  }
+  
+  // После кардио — увеличить углеводы
+  if (type === 'post' && trainingType === 'cardio') {
+    if (product.carbs100 > 40) {
+      const targetCarbs = trainingKcal / 10; // ~10ккал = 1г углеводов восполнения
+      const suggestedGrams = Math.ceil(targetCarbs / product.carbs100 * 100);
+      suggestions.push({
+        type: 'increase',
+        reason: `+${Math.round(targetCarbs)}г углеводов для гликогена`
+      });
+    }
+  }
+  
+  // PERI-WORKOUT — предложить быстрые углеводы
+  if (type === 'peri' && product.simple100 > 20) {
+    suggestions.push({
+      type: 'optimal',
+      reason: '⚡ Идеально для энергии во время тренировки!'
+    });
+  }
+  
+  return suggestions.length > 0 ? suggestions : null;
+}
+```
+
+**UI**:
+```
+┌─────────────────────────────────────────┐
+│ 🤖 Smart Portion AI                     │
+│                                         │
+│ Обнаружена силовая тренировка 45 мин    │
+│ назад! Рекомендуемые порции:            │
+│                                         │
+│ Творог 5%:  150г → 220г                 │
+│             (+70г для восстановления)   │
+│                                         │
+│ Банан:      100г → 150г                 │
+│             (+50г для гликогена)        │
+│                                         │
+│ [Применить рекомендации]    [Оставить]  │
+└─────────────────────────────────────────┘
+```
+
+### 5.15 Recovery Heatmap — тепловая карта восстановления 🆕
+
+Месячная heatmap показывающая качество восстановления после тренировок:
+
+```javascript
+function getRecoveryHeatmapData(days) {
+  return days.map(day => {
+    if (!day.trainings?.length) return { date: day.date, status: 'no_training' };
+    
+    // Анализ качества восстановления
+    const recoveryScore = analyzeRecoveryQuality(day);
+    
+    return {
+      date: day.date,
+      status: recoveryScore >= 80 ? 'excellent' : 
+              recoveryScore >= 60 ? 'good' :
+              recoveryScore >= 40 ? 'partial' : 'missed',
+      score: recoveryScore,
+      details: {
+        hadProteinInWindow: recoveryScore.proteinInWindow,
+        proteinAmount: recoveryScore.proteinGrams,
+        timeToFirstMeal: recoveryScore.minutesToFirstMeal,
+        trainingKcal: day.trainings.reduce((s, t) => s + trainK(t), 0)
+      }
+    };
+  });
+}
+
+function analyzeRecoveryQuality(day) {
+  let score = 0;
+  const trainings = day.trainings || [];
+  const meals = day.meals || [];
+  
+  for (const training of trainings) {
+    const interval = getTrainingInterval(training);
+    
+    // Поел в течение 2ч после?
+    const postMeal = meals.find(m => {
+      const mealMin = parseHour(m.time) * 60;
+      return mealMin > interval.endMin && mealMin <= interval.endMin + 120;
+    });
+    
+    if (postMeal) {
+      score += 40; // Поел в окне
+      
+      const protein = getMealProtein(postMeal);
+      if (protein >= 25) score += 30; // Достаточно белка
+      else if (protein >= 15) score += 15;
+      
+      const carbs = getMealCarbs(postMeal);
+      if (carbs >= 30) score += 20; // Достаточно углеводов
+      else if (carbs >= 15) score += 10;
+      
+      // Бонус за быстрое восстановление
+      const gap = parseHour(postMeal.time) * 60 - interval.endMin;
+      if (gap <= 30) score += 10;
+      else if (gap <= 60) score += 5;
+    }
+  }
+  
+  return Math.min(100, score);
+}
+```
+
+**UI** (в статистике/отчётах):
+```
+🗓️ Качество восстановления — Декабрь 2025
+
+Пн  Вт  Ср  Чт  Пт  Сб  Вс
+                        🟢
+🟢  ⬜  🟡  ⬜  🔴  🟢  ⬜
+🟢  🟢  ⬜  🟡  ⬜  🟢  🟢
+🟢  ⬜  🟢  🟢  🔴  ⬜  ...
+
+Легенда:
+🟢 Отлично (80+) — белок в окне
+🟡 Частично (40-79) — поел, но мало белка
+🔴 Пропустил (<40) — окно упущено
+⬜ Нет тренировки
+
+📊 Статистика месяца:
+• Тренировок: 14
+• Отличное восстановление: 9 (64%)
+• Пропущено окон: 2 (14%)
+```
+
+### 5.16 Training Twins — найди близнеца по тренировкам 🆕
+
+Система находит пользователей с похожим режимом и показывает их успешные паттерны:
+
+```javascript
+function findTrainingTwins(userId, userProfile) {
+  // Анализ паттернов пользователя
+  const userPatterns = {
+    avgTrainingsPerWeek: calculateAvgTrainings(userId, 28),
+    preferredTrainingTime: getPreferredTrainingTime(userId),
+    mainTrainingType: getMostFrequentType(userId),
+    avgTrainingDuration: getAvgDuration(userId),
+    weightGoal: userProfile.weightGoal > userProfile.weight ? 'bulk' : 'cut'
+  };
+  
+  // Поиск похожих пользователей (анонимно)
+  const twins = findSimilarUsers(userPatterns, {
+    trainingsPerWeekTolerance: 1,
+    timeTolerance: 2, // часа
+    sameGoal: true
+  });
+  
+  // Агрегация успешных паттернов близнецов
+  const twinInsights = aggregateSuccessPatterns(twins);
+  
+  return {
+    matchCount: twins.length,
+    topInsights: [
+      {
+        type: 'post_workout_meal',
+        insight: `${twinInsights.postWorkoutProteinAvg}г белка после тренировки`,
+        yourValue: userPatterns.postWorkoutProteinAvg,
+        recommendation: twinInsights.postWorkoutProteinAvg > userPatterns.postWorkoutProteinAvg
+          ? `Попробуй увеличить до ${twinInsights.postWorkoutProteinAvg}г`
+          : 'Ты уже в топе! 💪'
+      },
+      {
+        type: 'meal_timing',
+        insight: `Едят через ${twinInsights.avgMinutesToPostMeal} мин после тренировки`,
+        yourValue: userPatterns.avgMinutesToPostMeal
+      },
+      {
+        type: 'favorite_products',
+        insight: 'Топ продукты после тренировки',
+        products: twinInsights.topPostWorkoutProducts.slice(0, 5)
+      }
+    ]
+  };
+}
+```
+
+**UI**:
+```
+┌─────────────────────────────────────────┐
+│ 👥 Training Twins                       │
+│ Найдено 47 пользователей с похожим      │
+│ режимом тренировок                      │
+│                                         │
+│ 💡 Инсайты от твоих "близнецов":        │
+│                                         │
+│ Белок после тренировки:                 │
+│ Они: 32г | Ты: 24г                      │
+│ → Попробуй увеличить до 30г             │
+│                                         │
+│ Время до первого приёма:                │
+│ Они: 35 мин | Ты: 65 мин                │
+│ → Ешь быстрее после тренировки!         │
+│                                         │
+│ 🏆 Топ продукты близнецов:              │
+│ 1. Творог 5% (78%)                      │
+│ 2. Банан (65%)                          │
+│ 3. Протеин (52%)                        │
+│                                         │
+│ [Попробовать их рацион]                 │
+└─────────────────────────────────────────┘
+```
+
+### 5.17 Fitness Apps Integration — интеграция с фитнес-приложениями 🆕
+
+**Killer-фича для спортсменов!**
+
+```javascript
+// Поддерживаемые платформы
+const SUPPORTED_INTEGRATIONS = {
+  appleHealth: {
+    name: 'Apple Health',
+    icon: '🍎',
+    dataTypes: ['workouts', 'heartRate', 'steps', 'activeEnergy'],
+    authMethod: 'HealthKit'
+  },
+  googleFit: {
+    name: 'Google Fit',
+    icon: '🏃',
+    dataTypes: ['workouts', 'steps', 'calories'],
+    authMethod: 'OAuth2'
+  },
+  strava: {
+    name: 'Strava',
+    icon: '🚴',
+    dataTypes: ['activities', 'heartRateZones', 'calories'],
+    authMethod: 'OAuth2',
+    webhookSupport: true // Real-time синхронизация!
+  },
+  garmin: {
+    name: 'Garmin Connect',
+    icon: '⌚',
+    dataTypes: ['activities', 'heartRateZones', 'trainingEffect'],
+    authMethod: 'OAuth1'
+  },
+  polarFlow: {
+    name: 'Polar Flow',
+    icon: '❄️',
+    dataTypes: ['activities', 'heartRateZones', 'recoveryStatus'],
+    authMethod: 'OAuth2'
+  }
+};
+
+// Автоимпорт тренировки
+async function importWorkoutFromFitnessApp(platform, activityId) {
+  const rawData = await fetchFromPlatform(platform, activityId);
+  
+  return {
+    time: formatTime(rawData.startTime),
+    type: mapActivityType(rawData.type), // 'cardio' | 'strength' | 'hobby'
+    z: convertHeartRateToZones(rawData.heartRateData, userMaxHR),
+    source: platform,
+    sourceId: activityId,
+    // Дополнительные данные
+    _meta: {
+      avgHeartRate: rawData.avgHR,
+      maxHeartRate: rawData.maxHR,
+      calories: rawData.calories,
+      distance: rawData.distance,
+      elevationGain: rawData.elevation
+    }
+  };
+}
+
+// Strava Webhook — real-time синхронизация
+async function handleStravaWebhook(event) {
+  if (event.object_type === 'activity' && event.aspect_type === 'create') {
+    const activity = await strava.getActivity(event.object_id);
+    const training = await importWorkoutFromFitnessApp('strava', activity);
+    
+    // Автоматически добавить в текущий день
+    await addTrainingToDay(training);
+    
+    // Показать уведомление
+    showNotification({
+      title: '🚴 Тренировка импортирована!',
+      body: `${activity.name} — ${activity.elapsed_time}мин, ${activity.calories}ккал`,
+      action: 'Добавить приём восстановления'
+    });
+  }
+}
+```
+
+**UI настроек интеграции**:
+```
+⚙️ Фитнес-интеграции
+
+🍎 Apple Health          [Подключено ✅]
+   Синхронизация: тренировки, шаги
+   Последний sync: 5 мин назад
+
+🚴 Strava                [Подключить]
+   Real-time синхронизация тренировок
+   
+⌚ Garmin Connect        [Подключить]
+   Точные пульсовые зоны
+   
+🏃 Google Fit            [Подключить]
+   Шаги и активность
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 Статистика синхронизации:
+• Импортировано тренировок: 23
+• Автоматических: 18 (78%)
+• Средняя точность зон: 94%
+```
+
+### 5.18 Voice Commands для тренировок 🆕
+
+Голосовые команды для быстрого ввода:
+
+```javascript
+const VOICE_COMMANDS = {
+  // Завершение тренировки
+  patterns: [
+    /(?:окей|привет|хей)\s*heys?\s*(?:я\s*)?(?:закончил|завершил)\s*тренировку/i,
+    /(?:окей|привет|хей)\s*heys?\s*тренировка\s*(?:окончена|завершена)/i
+  ],
+  
+  handlers: {
+    'end_training': async (speech) => {
+      // Найти активную тренировку или создать новую
+      const currentTraining = findActiveTraining() || await promptTrainingType();
+      
+      // Завершить и активировать POST-WORKOUT контекст
+      await endTraining(currentTraining);
+      
+      // Установить напоминание
+      scheduleReminder({
+        delay: 30 * 60 * 1000, // 30 минут
+        title: '🔄 Время восстановления!',
+        body: 'Рекомендуем белок 25-30г + углеводы',
+        action: 'open_add_meal'
+      });
+      
+      return {
+        response: 'Отлично! Тренировка завершена. Напомню поесть через 30 минут.',
+        action: 'show_post_workout_suggestions'
+      };
+    },
+    
+    'start_training': async (speech) => {
+      // Парсинг типа тренировки из речи
+      const type = extractTrainingType(speech); // "силовую" → "strength"
+      
+      await startTraining({ type, startTime: new Date() });
+      
+      return {
+        response: `Начинаю ${type} тренировку. Удачи! 💪`,
+        action: 'show_fuel_gauge'
+      };
+    },
+    
+    'add_post_meal': async (speech) => {
+      // "Окей HEYS, добавь творог после тренировки"
+      const product = extractProduct(speech);
+      const context = getCurrentActivityContext();
+      
+      if (context?.type === 'post') {
+        const smartPortion = getSuggestedPortion(product, context);
+        return {
+          response: `Добавляю ${product.name} ${smartPortion}г. Отличный выбор для восстановления!`,
+          action: 'add_product',
+          params: { product, grams: smartPortion }
+        };
+      }
+    }
+  }
+};
+
+// Web Speech API интеграция
+function initVoiceCommands() {
+  if (!('webkitSpeechRecognition' in window)) return null;
+  
+  const recognition = new webkitSpeechRecognition();
+  recognition.continuous = true;
+  recognition.lang = 'ru-RU';
+  
+  recognition.onresult = (event) => {
+    const transcript = event.results[event.results.length - 1][0].transcript;
+    processVoiceCommand(transcript);
+  };
+  
+  return recognition;
+}
+```
+
+**UI активации**:
+```
+🎙️ Голосовые команды
+
+[🎤 Включить микрофон]
+
+Примеры команд:
+• "Окей HEYS, я закончил тренировку"
+• "Окей HEYS, начинаю силовую"
+• "Окей HEYS, добавь творог после тренировки"
+• "Окей HEYS, покажи окно восстановления"
+
+Статус: Ожидание команды...
+```
+
+---
+
+## 📚 Phase 6 — Обновление документации
+
+### 6.1 Обновить DATA_MODEL_REFERENCE.md
+
+После реализации обновить справочник `docs/DATA_MODEL_REFERENCE.md`:
+
+**Добавить новую секцию "Training Context (Activity Context Module)":**
+
+```markdown
+## Training Context (Activity Context Module)
+
+**Файл**: `heys_insulin_wave_v1.js` | **Версия**: 3.3.0 | **Контекстов**: 10
+
+### Типы контекста тренировки
+
+| ID | Название | Условие | Эффект на волну | Эффект на harm |
+|----|----------|---------|-----------------|----------------|
+| `peri` | PERI-WORKOUT | Еда ВО ВРЕМЯ тренировки | до -60% | ×0.5 |
+| `post` | POST-WORKOUT | Еда 0-360мин ПОСЛЕ | до -40% | — |
+| `pre` | PRE-WORKOUT | Еда 0-90мин ДО | до -20% | — |
+| `steps` | STEPS | >10k шагов + ужин | -10% | — |
+| `morning` | MORNING | Утр. тренировка (<12:00) | -5% весь день | — |
+| `double` | DOUBLE DAY | 2+ тренировок | -10% весь день | — |
+| `fasted` | FASTED | Тренировка натощак | POST ×1.3 | — |
+| `cardio_simple` | CARDIO+SIMPLE | Кардио + сладкое | — | штраф ×0.5 |
+| `strength_protein` | STRENGTH+PROTEIN | Силовая + белок ≥30г | — | harm −20% |
+| `night_override` | NIGHT OVERRIDE | Поздний ужин после тренировки | ночной штраф отменён | — |
+
+### Константы
+
+\`\`\`javascript
+const TRAINING_CONTEXT = {
+  periWorkout: { maxBonus: -0.60, harmMultiplier: 0.5 },
+  postWorkout: { baseGap: 120, kcalScaling: 60, maxGap: 360 },
+  preWorkout: [{ maxGap: 45, waveBonus: -0.20 }, { maxGap: 90, waveBonus: -0.10 }],
+  stepsBonus: { threshold: 10000, afterHour: 18, waveBonus: -0.10 },
+  morningTraining: { beforeHour: 12, dayWaveBonus: -0.05 },
+  doubleTraining: { minTrainings: 2, dayWaveBonus: -0.10 },
+  fastedTraining: { minFastHours: 8, postWorkoutMultiplier: 1.3 },
+  intensityMultiplier: { HIIT: 2.0, MODERATE: 1.5, LISS: 1.0 }
+};
+\`\`\`
+
+### API
+
+\`\`\`javascript
+// Получить контекст для приёма пищи
+const context = HEYS.InsulinWave.getTrainingContext({
+  mealTimeMin, trainings, steps, allMeals, weight, mets
+});
+
+// Результат
+context = {
+  type: 'post',           // Тип контекста
+  waveBonus: -0.35,       // Бонус к волне
+  harmBonus: 0,           // Бонус к вредности
+  badge: '🔄 Recovery',   // Бейдж для UI
+  desc: 'Еда через 45 мин после тренировки',
+  trainingKcal: 650,
+  nightPenaltyOverride: true
+};
+\`\`\`
+```
+
+**Добавить в секцию "Инсулиновая волна":**
+- Ссылку на Training Context
+- Номер фактора #30 (Training Context)
+
+**Обновить Changelog DATA_MODEL_REFERENCE.md:**
+```markdown
+| 3.7.0 | 2025-12-XX | **Training Context**: 10 контекстов активности, влияние на инсулиновую волну и harm |
+```
+
+### 6.2 Чеклист документации
+
+- [ ] DATA_MODEL_REFERENCE.md — новая секция Training Context
+- [ ] DATA_MODEL_REFERENCE.md — обновить секцию Инсулиновая волна (добавить фактор #30)
+- [ ] DATA_MODEL_REFERENCE.md — Changelog
+- [ ] README.md — если есть упоминание фич (опционально)
+- [ ] copilot-instructions.md — если нужно обновить архитектуру (опционально)
+
 ---
 
 ## Changelog
 
 | Версия | Дата | Изменения |
 |--------|------|-----------|
-| 3.2.0 | 2025-12-10 | **Критический аудит**: Phase 0.10 (КОМБО-тренировки), 0.11 (HIIT vs LISS с EPOC), 0.12 (fallback без зон). **3 новых WOW**: Metabolic State Indicator, Training Sync Score, Fuel Gauge |
+| 3.3.0 | 2025-12-10 | **Интеграция**: Phase 0.13 (конфликт с факторами #16-17), 0.14 (waveHistory совместимость), 0.15 (Meal Quality Score бонус). **3 новых WOW**: Adaptive Coaching (AI-паттерны), Weekly Challenges, Perfect Day Constructor |
+| 3.2.0 | 2025-12-10 | **Критический аудит**: Phase 0.10 (КОМБО-тренировки), 0.11 (HIIT vs LISS с EPOC), 0.12 (fallback без зон). **3 новых WOW**: Metabolic State Indicator, Training Sync Score, Fuel Gauge. **Phase 6**: обновление DATA_MODEL_REFERENCE.md |
 | 3.1.0 | 2025-12-10 | **Глубокий аудит**: Phase 0.7 (Advice конфликты), 0.8 (Sanity checks — лимиты данных), 0.9 (UI план — max 2 бейджа). **3 новых WOW-фичи**: Training Fuel Calculator, Recovery Timeline, Night Override Badge |
 | 3.0.0 | 2025-12-10 | **Production-ready**: Расширенный Phase 0 (6 блокеров с решениями), прогрессивное окно по kcal, выбор лучшей тренировки, WOW-фичи (Recovery Score, Training Readiness, умные подсказки) |
 | 2.6.0 | 2025-12-10 | **6 новых бонусов**: nightPenaltyOverride, morningTraining, doubleTraining, fastedTraining, cardioSimpleCarbs, strengthProtein |

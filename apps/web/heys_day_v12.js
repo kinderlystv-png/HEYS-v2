@@ -6069,6 +6069,16 @@
       };
     }, [addProductToMeal]);
 
+    // Экспорт getMealQualityScore и getMealType как публичный API для advice модуля
+    React.useEffect(() => {
+      HEYS.getMealQualityScore = getMealQualityScore;
+      HEYS.getMealType = getMealType;
+      return () => {
+        delete HEYS.getMealQualityScore;
+        delete HEYS.getMealType;
+      };
+    }, []);
+
     // === Advice Module Integration ===
     // Собираем uiState для проверки занятости пользователя
     const uiState = React.useMemo(() => ({
@@ -7223,6 +7233,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     // Listener для heysProductAdded event
     React.useEffect(() => {
       const handleProductAdded = () => {
+        // 🚀 Инвалидируем кэш советов при добавлении продукта
+        if (HEYS.advice?.invalidateAdviceCache) {
+          HEYS.advice.invalidateAdviceCache();
+        }
         setTimeout(() => setAdviceTrigger('product_added'), 500);
       };
       window.addEventListener('heysProductAdded', handleProductAdded);
@@ -13752,10 +13766,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       )
     );
     
-    // Показываем skeleton пока данные не загружены
-    if (!isHydrated) {
-      return React.createElement('div', { className: 'page page-day' }, skeletonLoader);
-    }
+    // УБРАНО: Скелетон вызывал мерцание при каждой загрузке
+    // Теперь данные показываются мгновенно из localStorage (useState инициализирован из кэша)
+    // isHydrated оставлен только для блокировки autosave до завершения sync
+    // if (!isHydrated) {
+    //   return React.createElement('div', { className: 'page page-day' }, skeletonLoader);
+    // }
   
     return React.createElement(React.Fragment, null,
       React.createElement('div',{

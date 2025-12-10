@@ -208,7 +208,16 @@
     React.useEffect(()=>{
       if(disabled) return; // ЗАЩИТА: не запускать таймер до гидратации
       if(!day || !day.date) return;
+      
+      // 🔒 ЗАЩИТА: Инициализируем prevDaySnapRef при первом включении
+      // Это предотвращает ложный save сразу после isHydrated=true
       const daySnap = JSON.stringify(stripMeta(day));
+      if (prevDaySnapRef.current === null) {
+        // Первый запуск после гидратации — просто запоминаем состояние без save
+        prevDaySnapRef.current = daySnap;
+        return;
+      }
+      
       if(prevDaySnapRef.current === daySnap) return;
       
       // ☁️ Сразу показать что данные изменились (до debounce)

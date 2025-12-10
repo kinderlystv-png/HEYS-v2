@@ -1,0 +1,22 @@
+
+> @heys/core@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/core
+> tsup
+
+CLI Building entry: {"index":"src/index.ts","server/router":"src/server/router.ts"}
+CLI Using tsconfig: tsconfig.json
+CLI tsup v7.3.0
+CLI Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/core/tsup.config.ts
+CLI Target: es2022
+CLI Cleaning output folder
+CJS Build start
+ESM Build start
+CJS dist/index.js             10.37 KB
+CJS dist/server/router.js     21.25 KB
+CJS dist/index.js.map         32.66 KB
+CJS dist/server/router.js.map 65.09 KB
+CJS ⚡️ Build success in 608ms
+ESM dist/index.mjs             9.68 KB
+ESM dist/server/router.mjs     20.90 KB
+ESM dist/index.mjs.map         32.66 KB
+ESM dist/server/router.mjs.map 65.09 KB
+ESM ⚡️ Build success in 614ms
