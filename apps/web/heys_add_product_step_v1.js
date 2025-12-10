@@ -134,9 +134,19 @@
     // продукты ещё не загружены из облака, но после heysSyncCompleted они появятся
     const [productsVersion, setProductsVersion] = useState(0);
     
+    // 🔒 Ref для пропуска первого sync (предотвращает мерцание)
+    const initialSyncDoneRef = useRef(false);
+    
     // Подписка на обновление продуктов (heysSyncCompleted или watch)
     useEffect(() => {
-      const handleSyncComplete = () => {
+      const handleSyncComplete = (e) => {
+        // 🔒 Пропускаем первый heysSyncCompleted — products уже загружены
+        if (e?.type === 'heysSyncCompleted') {
+          if (!initialSyncDoneRef.current) {
+            initialSyncDoneRef.current = true;
+            return;
+          }
+        }
         // console.log('[AddProductStep] 🔄 heysSyncCompleted → refreshing products');
         setProductsVersion(v => v + 1);
       };

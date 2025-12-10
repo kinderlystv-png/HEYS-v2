@@ -1643,8 +1643,21 @@
             }
             
             // 📦 Слушатель событий для гарантированного обновления продуктов
+            // 🔒 Флаг для предотвращения обновления при первой синхронизации
+            const initialProductsSyncDoneRef = React.useRef(false);
+            
             React.useEffect(() => {
-              const handleProductsUpdated = () => {
+              const handleProductsUpdated = (e) => {
+                // 🔒 Игнорируем heysSyncCompleted при ПЕРВОЙ загрузке — products уже загружены
+                // Это предотвращает лишний ре-рендер и мерцание UI
+                if (e.type === 'heysSyncCompleted') {
+                  if (!initialProductsSyncDoneRef.current) {
+                    initialProductsSyncDoneRef.current = true;
+                    // console.log('[HEYS] ⏭️ Products update skipped: initial sync');
+                    return;
+                  }
+                }
+                
                 const latest = window.HEYS.utils?.lsGet?.('heys_products', []) || 
                               window.HEYS.store?.get?.('heys_products', []) || [];
                 if (Array.isArray(latest) && latest.length > 0) {
@@ -1653,6 +1666,10 @@
                   setProducts(prev => {
                     if (Array.isArray(prev) && prev.length > latest.length) {
                       console.log(`[HEYS] ⚠️ Products update blocked: ${prev.length} > ${latest.length}`);
+                      return prev;
+                    }
+                    // 🔒 Оптимизация: не обновляем если количество одинаковое (скорее всего те же данные)
+                    if (Array.isArray(prev) && prev.length === latest.length) {
                       return prev;
                     }
                     return latest;
@@ -2284,6 +2301,17 @@
             
             useEffect(() => {
               const handleSyncComplete = () => {
+                // ⚡️ Первый heysSyncCompleted после инициализации не должен триггерить UI
+                // если не было фактических локальных изменений/отложенных синков — иначе мерцание
+                const hadPendingWork =
+                  syncingStartRef.current ||
+                  pendingChangesRef.current ||
+                  (syncProgress.total > 0) ||
+                  (pendingCount > 0);
+                if (!hadPendingWork) {
+                  return;
+                }
+
                 if (syncingDelayTimeoutRef.current) {
                   clearTimeout(syncingDelayTimeoutRef.current);
                   syncingDelayTimeoutRef.current = null;
@@ -3329,6 +3357,8 @@
             }, [products.length]);
 
             // При смене клиента сохраняем в localStorage (для совместимости)
+            // 🔒 Ref для отслеживания первой инициализации (чтобы не дублировать ре-рендер)
+            const clientSyncDoneRef = React.useRef(false);
             useEffect(() => {
               if (clientId) {
                 U.lsSet('heys_client_current', clientId);
@@ -3355,11 +3385,25 @@
                       // ЗАЩИТА: если синхронизация вернула пустой массив, а у нас были продукты - не затираем
                       if (loadedProducts.length === 0 && Array.isArray(productsBeforeSync) && productsBeforeSync.length > 0) {
                         console.info(`ℹ️ [SYNC] Kept ${productsBeforeSync.length} local products (cloud empty)`);
-                        setProducts(productsBeforeSync);
+                        // 🔒 Functional update: не ре-рендерим если продукты не изменились
+                        setProducts(prev => {
+                          if (Array.isArray(prev) && prev.length === productsBeforeSync.length) return prev;
+                          return productsBeforeSync;
+                        });
                         // Восстанавливаем в localStorage
                         window.HEYS.utils.lsSet('heys_products', productsBeforeSync);
                       } else {
-                        setProducts(loadedProducts);
+                        // 🔒 Functional update: не ре-рендерим если продукты не изменились
+                        setProducts(prev => {
+                          if (Array.isArray(prev) && prev.length === loadedProducts.length) return prev;
+                          return loadedProducts;
+                        });
+                      }
+                      // 🔒 При ПЕРВОЙ загрузке НЕ инкрементим syncVer — heysSyncCompleted уже обновил UI
+                      // Это предотвращает лишний ре-рендер и мерцание
+                      if (!clientSyncDoneRef.current) {
+                        clientSyncDoneRef.current = true;
+                        return;
                       }
                       setSyncVer((v) => v + 1);
                     })
@@ -3367,11 +3411,22 @@
                       console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
                       // Используем локальные продукты
                       if (Array.isArray(productsBeforeSync) && productsBeforeSync.length > 0) {
-                        setProducts(productsBeforeSync);
+                        setProducts(prev => {
+                          if (Array.isArray(prev) && prev.length === productsBeforeSync.length) return prev;
+                          return productsBeforeSync;
+                        });
+                      }
+                      if (!clientSyncDoneRef.current) {
+                        clientSyncDoneRef.current = true;
+                        return;
                       }
                       setSyncVer((v) => v + 1);
                     });
                 } else {
+                  if (!clientSyncDoneRef.current) {
+                    clientSyncDoneRef.current = true;
+                    return;
+                  }
                   setSyncVer((v) => v + 1);
                 }
               }
@@ -3405,7 +3460,13 @@
             // Слушаем событие обновления данных дня (cycleDay, meals, etc.)
             // Нужно для инвалидации datePickerActiveDays при изменении cycleDay
             useEffect(() => {
-              const handleDayUpdate = () => {
+              const handleDayUpdate = (e) => {
+                // 🔒 Игнорируем события от cloud sync — они массово приходят при загрузке
+                // и вызывают множественные ре-рендеры (мерцание UI)
+                const source = e.detail?.source;
+                if (source === 'cloud' || source === 'merge') {
+                  return;
+                }
                 setSyncVer((v) => v + 1);
               };
 
@@ -3622,7 +3683,8 @@
                   if (HEYS.shouldShowMorningCheckin) {
                     const shouldShow = HEYS.shouldShowMorningCheckin();
                     // console.log('[App] 🌅 MorningCheckin check | shouldShow:', shouldShow);
-                    setShowMorningCheckin(shouldShow);
+                    // 🔒 Не обновляем если значение то же (предотвращает ре-рендер)
+                    setShowMorningCheckin(prev => prev === shouldShow ? prev : shouldShow);
                   }
                 }, 200);
               };

@@ -477,8 +477,19 @@
       }, [products, query, searchIndex]);
 
       // Слушатель события обновления продуктов (для реактивности после sync)
+      // 🔒 Ref для пропуска первого sync (предотвращает мерцание)
+      const initialSyncDoneRef = React.useRef(false);
+      
       React.useEffect(() => {
-        const handleProductsUpdated = () => {
+        const handleProductsUpdated = (e) => {
+          // 🔒 Пропускаем первый heysSyncCompleted — products уже загружены при инициализации
+          if (e.type === 'heysSyncCompleted') {
+            if (!initialSyncDoneRef.current) {
+              initialSyncDoneRef.current = true;
+              return;
+            }
+          }
+          
           const latest = (window.HEYS.store?.get?.('heys_products', null)) || 
                         (window.HEYS.utils?.lsGet?.('heys_products', [])) || [];
           if (Array.isArray(latest) && latest.length > 0) {
@@ -491,6 +502,10 @@
                 if (window.DEV) {
                   window.DEV.log('⚠️ [RATION] BLOCKED: не уменьшаем', prev.length, '→', latest.length);
                 }
+                return prev;
+              }
+              // 🔒 Не обновляем если количество одинаковое
+              if (Array.isArray(prev) && prev.length === latest.length) {
                 return prev;
               }
               return latest;

@@ -3126,8 +3126,8 @@
       const normalizedTrainings = normalizeTrainings(v.trainings);
       const cleanedTrainings = cleanEmptyTrainings(normalizedTrainings);
       const migratedDay = { ...v, trainings: cleanedTrainings };
-      // Сохраняем миграцию обратно, чтобы больше не попадались старые поля
-      lsSet(key, migratedDay);
+      // ⚠️ НЕ сохраняем здесь! useState initializer должен быть чистой функцией
+      // Миграция сохраняется в doLocal() после sync
       return ensureDay(migratedDay, prof);
     } else {
       // Для нового дня — пустой массив тренировок
@@ -3219,18 +3219,16 @@
           }
           lastLoadedUpdatedAtRef.current = v.updatedAt || Date.now();
           
-          // Мигрируем оценки тренировок и очищаем пустые
+          // Мигрируем оценки тренировок и очищаем пустые (только в памяти, НЕ сохраняем)
+          // Миграция сохранится автоматически при следующем реальном изменении данных
           const normalizedTrainings = normalizeTrainings(v.trainings);
           const cleanedTrainings = cleanEmptyTrainings(normalizedTrainings);
           const cleanedDay = {
             ...v,
             trainings: cleanedTrainings
           };
-          // Сохраняем миграцию ТОЛЬКО если данные изменились
-          const trainingsChanged = JSON.stringify(v.trainings) !== JSON.stringify(cleanedTrainings);
-          if (trainingsChanged) {
-            lsSet(key, cleanedDay);
-          }
+          // 🔒 НЕ сохраняем миграцию сразу — это вызывает DAY SAVE и мерцание UI
+          // Данные сохранятся при следующем изменении (добавление еды, воды и т.д.)
           const newDay = ensureDay(cleanedDay, profNow);
           // 🔒 Оптимизация: не вызываем setDay если данные идентичны (предотвращает мерцание)
           setDay(prevDay => {
@@ -4666,18 +4664,31 @@
     const [savedStepsGoal, setSavedStepsGoal] = useState(() => prof.stepsGoal || 7000);
     
     // Слушаем завершение синхронизации cloud и изменения профиля для обновления stepsGoal
+    // 🔒 Флаг для пропуска первого sync (предотвращает мерцание)
+    const initialStepsSyncDoneRef = useRef(false);
+    
     useEffect(() => {
       const handleProfileUpdate = (e) => {
+        // 🔒 Пропускаем первый heysSyncCompleted — savedStepsGoal уже инициализирован из профиля
+        if (e.type === 'heysSyncCompleted') {
+          if (!initialStepsSyncDoneRef.current) {
+            initialStepsSyncDoneRef.current = true;
+            return;
+          }
+        }
+        
         // Используем значение из события напрямую (если есть), иначе из storage
         const stepsFromEvent = e?.detail?.stepsGoal;
         if (stepsFromEvent != null) {
-          setSavedStepsGoal(stepsFromEvent);
+          // 🔒 Не обновляем если значение то же (предотвращает ре-рендер)
+          setSavedStepsGoal(prev => prev === stepsFromEvent ? prev : stepsFromEvent);
           return;
         }
         // Fallback для cloud sync (heysSyncCompleted)
         const profileFromStorage = getProfile();
         if (profileFromStorage.stepsGoal) {
-          setSavedStepsGoal(profileFromStorage.stepsGoal);
+          // 🔒 Не обновляем если значение то же
+          setSavedStepsGoal(prev => prev === profileFromStorage.stepsGoal ? prev : profileFromStorage.stepsGoal);
         }
       };
       
@@ -6070,14 +6081,30 @@
     }, [addProductToMeal]);
 
     // Экспорт getMealQualityScore и getMealType как публичный API для advice модуля
+    // getMealTypeByMeal — wrapper с текущим контекстом (meals и pIndex)
     React.useEffect(() => {
       HEYS.getMealQualityScore = getMealQualityScore;
-      HEYS.getMealType = getMealType;
+      // Wrapper: принимает meal объект, находит его индекс и вызывает с полным контекстом
+      HEYS.getMealType = (meal) => {
+        if (!meal) return { type: 'snack', name: 'Перекус', icon: '🍎' };
+        const allMeals = day.meals || [];
+        // Если передали только time (string), находим meal по времени
+        if (typeof meal === 'string') {
+          const foundMeal = allMeals.find(m => m.time === meal);
+          if (!foundMeal) return { type: 'snack', name: 'Перекус', icon: '🍎' };
+          const idx = allMeals.indexOf(foundMeal);
+          return getMealType(idx, foundMeal, allMeals, pIndex);
+        }
+        // Если передали meal объект
+        const idx = allMeals.findIndex(m => m.id === meal.id || m.time === meal.time);
+        if (idx === -1) return { type: 'snack', name: 'Перекус', icon: '🍎' };
+        return getMealType(idx, meal, allMeals, pIndex);
+      };
       return () => {
         delete HEYS.getMealQualityScore;
         delete HEYS.getMealType;
       };
-    }, []);
+    }, [day.meals, pIndex]);
 
     // === Advice Module Integration ===
     // Собираем uiState для проверки занятости пользователя

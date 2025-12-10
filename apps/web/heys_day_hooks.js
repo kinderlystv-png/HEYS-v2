@@ -194,6 +194,9 @@
     },[day,now,saveToDate,stripMeta,disabled,getKey,readExisting]);
 
     React.useEffect(()=>{
+      // 🔒 ЗАЩИТА: Не инициализируем prevDaySnapRef до гидратации!
+      // Иначе после sync данные изменятся, а ref будет содержать старую версию
+      if(disabled) return;
       if(!day || !day.date) return;
       const key = getKey(day);
       const current = readExisting(key);
@@ -203,7 +206,7 @@
       }else{
         prevDaySnapRef.current = JSON.stringify(stripMeta(day));
       }
-    },[day && day.date,getKey,readExisting,stripMeta]);
+    },[day && day.date,getKey,readExisting,stripMeta,disabled]);
 
     React.useEffect(()=>{
       if(disabled) return; // ЗАЩИТА: не запускать таймер до гидратации

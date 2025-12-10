@@ -1161,12 +1161,55 @@
   });
 
   // 🔄 КРИТИЧНО: Слушаем sync из облака — сбрасываем кеш чтобы не затереть свежие данные
+  let _initialSyncDone = false; // Флаг первой синхронизации
+  let _lastSyncTime = 0; // Время последнего sync (для cooldown)
+  const SYNC_COOLDOWN_MS = 5000; // 5 секунд cooldown между реакциями на sync
+  
   window.addEventListener('heysSyncCompleted', (e) => {
+    const now = Date.now();
+    
+    // Запоминаем текущие stats ДО сброса кеша
+    const oldStats = _data ? game.getStats() : null;
+    const oldXP = oldStats?.xp || 0;
+    const oldLevel = oldStats?.level || 0;
+    const oldStreak = oldStats?.streak || 0;
+    
     // Сбрасываем in-memory кеш — при следующем loadData() прочитаем свежие данные из localStorage
     _data = null;
+    
+    // 🔒 При ПЕРВОЙ синхронизации НЕ диспатчим heysGameUpdate
+    // GamificationBar уже инициализирован с данными из localStorage
+    // Это предотвращает мерцание UI при загрузке страницы
+    if (!_initialSyncDone) {
+      _initialSyncDone = true;
+      _lastSyncTime = now;
+      console.log('[HEYS.game] ♻️ Cache invalidated after initial sync (skip UI update to prevent flicker)');
+      return;
+    }
+    
+    // 🔒 Cooldown: не реагируем на sync если прошло < 5 секунд
+    // Это предотвращает цепную реакцию sync → save → sync
+    if (now - _lastSyncTime < SYNC_COOLDOWN_MS) {
+      console.log('[HEYS.game] ♻️ Cache invalidated (cooldown active, skip UI update)');
+      return;
+    }
+    _lastSyncTime = now;
+    
+    // Получаем новые stats
+    const newStats = game.getStats();
+    
+    // 🔒 Оптимизация: НЕ диспатчим heysGameUpdate если данные не изменились
+    if (oldStats && 
+        newStats.xp === oldXP && 
+        newStats.level === oldLevel && 
+        newStats.streak === oldStreak) {
+      console.log('[HEYS.game] ♻️ Cache invalidated after cloud sync (no changes, skip UI update)');
+      return;
+    }
+    
     // Уведомляем UI об обновлении (GamificationBar перечитает stats)
-    window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: game.getStats() }));
-    console.log('[HEYS.game] ♻️ Cache invalidated after cloud sync');
+    window.dispatchEvent(new CustomEvent('heysGameUpdate', { detail: newStats }));
+    console.log('[HEYS.game] ♻️ Cache invalidated after cloud sync (stats changed)');
   });
 
   // ========== ЭКСПОРТ ==========

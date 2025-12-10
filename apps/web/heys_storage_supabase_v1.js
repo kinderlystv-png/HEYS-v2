@@ -2941,6 +2941,8 @@
         // 🔍 Диагностика: логируем сохранение данных дня с шагами
         if (k.includes('dayv2_') && value && value.steps > 0) {
             logCritical(`📅 [DAY SAVE] Saving day ${k} with steps: ${value.steps} | updatedAt: ${value.updatedAt}`);
+            // DEBUG: Stack trace для отладки источника save
+            console.trace('[DAY SAVE] Call stack:');
         }
         
         // Логируем если добавляем в очередь до завершения sync

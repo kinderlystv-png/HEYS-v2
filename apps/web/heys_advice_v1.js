@@ -3562,7 +3562,7 @@
     // getMealQualityScore доступен через window.HEYS.getMealQualityScore (экспортируется в heys_day_v12.js)
     
     if (lastMealWithItems && window.HEYS?.getMealQualityScore && canShowMealAdvice()) {
-      const mealTypeInfo = window.HEYS.getMealType?.(lastMealWithItems.time) || { type: 'snack' };
+      const mealTypeInfo = window.HEYS.getMealType?.(lastMealWithItems) || { type: 'snack' };
       const quality = window.HEYS.getMealQualityScore(lastMealWithItems, mealTypeInfo.type, optimum || 2000, pIndex);
       
       if (quality?.score !== undefined) {
@@ -3637,7 +3637,7 @@
           
           for (const m of yesterdayDay.meals) {
             if (m.items?.length > 0) {
-              const mt = window.HEYS.getMealType?.(m.time) || { type: 'snack' };
+              const mt = window.HEYS.getMealType?.(m) || { type: 'snack' };
               const qs = window.HEYS.getMealQualityScore(m, mt.type, optimum || 2000, pIndex);
               if (qs?.score) { yScoreSum += qs.score; yCount++; }
             }
@@ -3645,7 +3645,7 @@
           
           for (const m of (day?.meals || [])) {
             if (m.items?.length > 0) {
-              const mt = window.HEYS.getMealType?.(m.time) || { type: 'snack' };
+              const mt = window.HEYS.getMealType?.(m) || { type: 'snack' };
               const qs = window.HEYS.getMealQualityScore(m, mt.type, optimum || 2000, pIndex);
               if (qs?.score) { tScoreSum += qs.score; tCount++; }
             }

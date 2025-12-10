@@ -677,6 +677,11 @@
    * @returns {Object} { type: string, name: string, icon: string }
    */
   function getMealType(mealIndex, meal, allMeals, pIndex) {
+    // Защита от undefined
+    if (!allMeals || !Array.isArray(allMeals) || allMeals.length === 0) {
+      return { type: 'snack', ...MEAL_TYPES.snack };
+    }
+    
     // Первый приём дня всегда Завтрак
     if (mealIndex === 0) {
       return { type: 'breakfast', ...MEAL_TYPES.breakfast };
