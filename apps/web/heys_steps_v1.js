@@ -1958,7 +1958,7 @@
           detail: { key: `day:${dateKey}`, type: 'coldExposure' }
         }));
         window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-          detail: { date: dateKey, field: 'coldExposure', value: dayData.coldExposure }
+          detail: { date: dateKey, field: 'coldExposure', value: dayData.coldExposure, source: 'cold-exposure-step' }
         }));
       } else {
         // Если выбрано "нет" — удаляем

@@ -1231,11 +1231,14 @@
     return { points: Math.max(0, points), ok };
   }
 
-  function getMealQualityScore(meal, mealType, optimum, pIndex) {
+  function getMealQualityScore(meal, mealType, optimum, pIndex, activityContext) {
     if (!meal?.items || meal.items.length === 0) return null;
     
     const opt = optimum > 0 ? optimum : 2000;
     const totals = M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal:0, carbs:0, simple:0, complex:0, prot:0, fat:0, bad:0, good:0, trans:0, fiber:0 };
+    
+    // harmMultiplier от активности (тренировка компенсирует вред)
+    const harmMultiplier = activityContext?.harmMultiplier ?? 1;
     
     // GI взвешиваем по УГЛЕВОДАМ (не по граммам!) — для мяса/рыбы будет нейтральный 50
     let gramSum = 0, carbSum = 0, giSum = 0, harmSum = 0;
@@ -1259,7 +1262,12 @@
     });
     // Для мясных блюд (carbs ≈ 0) → нейтральный GI = 50
     const avgGI = carbSum > 0 ? giSum / carbSum : 50;
-    const avgHarm = gramSum > 0 ? harmSum / gramSum : 0;
+    const rawAvgHarm = gramSum > 0 ? harmSum / gramSum : 0;
+    
+    // === КОМПЕНСАЦИЯ ВРЕДА ТРЕНИРОВКОЙ ===
+    // harmMultiplier < 1 снижает эффективный вред (еда во время/после тренировки)
+    const avgHarm = rawAvgHarm * harmMultiplier;
+    const harmReduction = harmMultiplier < 1 ? Math.round((1 - harmMultiplier) * 100) : 0;
     
     const { kcal, prot, carbs, simple, complex, fat, bad, good, trans } = totals;
     let score = 0;
@@ -1393,6 +1401,17 @@
       positiveBadges.push({ type: '🎯', ok: true, label: 'Низкий ГИ' });
     }
     
+    // === БОНУС за компенсацию тренировкой ===
+    // Если еда во время/после тренировки, вред снижается (harmMultiplier < 1)
+    if (harmReduction > 0 && rawAvgHarm > 5) {
+      // Бонус пропорционален снижению вреда: 50% = +5, 30% = +3, 20% = +2
+      const activityBonusPoints = Math.min(5, Math.round(harmReduction / 10));
+      if (activityBonusPoints > 0) {
+        bonusPoints += activityBonusPoints;
+        positiveBadges.push({ type: activityContext?.badge || '🏋️', ok: true, label: `−${harmReduction}% вред` });
+      }
+    }
+    
     // === БОНУС за качественный ночной/поздний приём ===
     // Если приём ночью, но состав хороший — компенсируем штраф!
     const hasNightIssue = kcalScore.issues?.includes('ночь') || kcalScore.issues?.includes('поздно');
@@ -1441,7 +1460,9 @@
       { label: 'Жиры', value: fatScore.goodRatio >= 0.6 ? 'полезные ✓' : Math.round(fatScore.goodRatio * 100) + '% полезных', ok: fatScore.ok },
       { label: 'ГИ', value: Math.round(avgGI), ok: avgGI <= 70 },
       { label: 'GL', value: Math.round(mealGL), ok: mealGL <= 20 },
-      { label: 'Клетчатка', value: Math.round(fiber) + 'г', ok: fiber >= 2 }
+      { label: 'Клетчатка', value: Math.round(fiber) + 'г', ok: fiber >= 2 },
+      // Показываем вред с учётом компенсации тренировкой
+      ...(harmReduction > 0 ? [{ label: 'Вред', value: `${Math.round(rawAvgHarm)} → ${Math.round(avgHarm)} (−${harmReduction}%)`, ok: avgHarm <= 10 }] : [])
     ];
     
     // Объединяем бейджи: сначала проблемы, потом позитивные
@@ -1454,6 +1475,8 @@
       details,
       avgGI,
       avgHarm,
+      rawAvgHarm: harmReduction > 0 ? rawAvgHarm : undefined,
+      harmReduction: harmReduction > 0 ? harmReduction : undefined,
       fiber,
       bonusPoints,
       // Научные данные
@@ -1461,7 +1484,9 @@
       glLevel: glBonus.level,
       circadianPeriod: circadian.period,
       circadianBonus: circadian.bonus,
-      liquidRatio: Math.round(liquidRatio * 100)
+      liquidRatio: Math.round(liquidRatio * 100),
+      // Activity context
+      activityContext: activityContext || undefined
     };
   }
 
@@ -2028,11 +2053,28 @@
     const isStale = isMealStale(meal);
     const isCurrentMeal = displayIndex === 0 && !isStale;
     
+    // Вычисляем activityContext для этого приёма (для harmMultiplier)
+    const mealActivityContext = React.useMemo(() => {
+      if (!HEYS.InsulinWave?.calculateActivityContext) return null;
+      if (!dayData?.trainings || dayData.trainings.length === 0) return null;
+      if (!meal?.time || !meal?.items?.length) return null;
+      
+      const mealTotals = M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0 };
+      return HEYS.InsulinWave.calculateActivityContext({
+        mealTime: meal.time,
+        mealKcal: mealTotals.kcal || 0,
+        trainings: dayData.trainings,
+        householdMin: dayData.householdMin || 0,
+        steps: dayData.steps || 0,
+        allMeals: allMeals
+      });
+    }, [meal?.time, meal?.items, dayData?.trainings, dayData?.householdMin, dayData?.steps, allMeals, pIndex]);
+    
     // Вычисляем качество приёма для цветной линии слева
     const mealQuality = React.useMemo(() => {
       if (!meal?.items || meal.items.length === 0) return null;
-      return getMealQualityScore(meal, mealTypeInfo.type, optimum || 2000, pIndex);
-    }, [meal?.items, mealTypeInfo.type, optimum, pIndex]);
+      return getMealQualityScore(meal, mealTypeInfo.type, optimum || 2000, pIndex, mealActivityContext);
+    }, [meal?.items, mealTypeInfo.type, optimum, pIndex, mealActivityContext]);
     
     // Цвет линии качества
     const qualityLineColor = mealQuality 
@@ -2207,6 +2249,53 @@
           }
         }, currentWave.activityContext.badge || '')
       ),
+      // 🆕 v3.5.0: Smart Training Hint — контекстная подсказка при добавлении еды
+      mealActivityContext && mealActivityContext.type !== 'none' && (meal.items || []).length === 0 && 
+        React.createElement('div', {
+          className: 'training-context-hint',
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 12px',
+            margin: '0 -4px 8px -4px',
+            borderRadius: '8px',
+            fontSize: '13px',
+            lineHeight: '1.4',
+            background: mealActivityContext.type === 'peri' ? 'linear-gradient(135deg, #22c55e15, #22c55e25)' :
+                        mealActivityContext.type === 'post' ? 'linear-gradient(135deg, #3b82f615, #3b82f625)' :
+                        mealActivityContext.type === 'pre' ? 'linear-gradient(135deg, #eab30815, #eab30825)' :
+                        'linear-gradient(135deg, #6b728015, #6b728025)',
+            border: mealActivityContext.type === 'peri' ? '1px solid #22c55e40' :
+                    mealActivityContext.type === 'post' ? '1px solid #3b82f640' :
+                    mealActivityContext.type === 'pre' ? '1px solid #eab30840' :
+                    '1px solid #6b728040',
+            color: mealActivityContext.type === 'peri' ? '#16a34a' :
+                   mealActivityContext.type === 'post' ? '#2563eb' :
+                   mealActivityContext.type === 'pre' ? '#ca8a04' :
+                   '#374151'
+          }
+        },
+          React.createElement('span', { style: { fontSize: '18px' } }, mealActivityContext.badge || '🏋️'),
+          React.createElement('div', { style: { flex: 1 } },
+            React.createElement('div', { style: { fontWeight: 600, marginBottom: '2px' } }, 
+              mealActivityContext.type === 'peri' ? '🔥 Топливо для тренировки!' :
+              mealActivityContext.type === 'post' ? '💪 Анаболическое окно!' :
+              mealActivityContext.type === 'pre' ? '⚡ Скоро тренировка!' :
+              mealActivityContext.type === 'steps' ? '👟 Активный день!' :
+              mealActivityContext.type === 'double' ? '🏆 Двойная тренировка!' :
+              '🎯 Хорошее время!'
+            ),
+            React.createElement('div', { style: { opacity: 0.85, fontSize: '12px' } }, 
+              mealActivityContext.type === 'peri' ? 'Еда пойдёт в энергию, а не в жир. Вред снижен на ' + Math.round((1 - (mealActivityContext.harmMultiplier || 1)) * 100) + '%' :
+              mealActivityContext.type === 'post' ? 'Нутриенты усвоятся в мышцы. Отличное время для белка!' :
+              mealActivityContext.type === 'pre' ? 'Лёгкие углеводы дадут энергию для тренировки' :
+              mealActivityContext.type === 'steps' ? 'Высокая активность улучшает метаболизм' :
+              mealActivityContext.type === 'double' ? 'Двойная нагрузка — можно есть смелее!' :
+              'Инсулиновая волна будет короче'
+            )
+          )
+        ),
       // MOBILE: Meal totals at top (before search)
       (meal.items || []).length > 0 && React.createElement('div', { className: 'mpc-totals-wrap mobile-only' },
         React.createElement('div', { className: 'mpc-grid mpc-header' },
@@ -8494,7 +8583,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const mealTypeInfo = manualType && U.MEAL_TYPES && U.MEAL_TYPES[manualType]
           ? { type: manualType, ...U.MEAL_TYPES[manualType] }
           : autoTypeInfo;
-        const quality = getMealQualityScore(meal, mealTypeInfo.type, optimum, pIndex);
+        // Вычисляем activityContext для harmMultiplier
+        const mealActCtx = HEYS.InsulinWave?.calculateActivityContext?.({
+          mealTime: meal.time,
+          mealKcal: totals.kcal || 0,
+          trainings: day.trainings || [],
+          householdMin: day.householdMin || 0,
+          steps: day.steps || 0,
+          allMeals: sortedMeals
+        }) || null;
+        const quality = getMealQualityScore(meal, mealTypeInfo.type, optimum, pIndex, mealActCtx);
         return {
           name: mealTypeInfo.name,
           icon: mealTypeInfo.icon,

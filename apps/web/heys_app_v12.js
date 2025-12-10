@@ -2543,6 +2543,7 @@
               typeof cloud.getStatus === 'function' ? cloud.getStatus() : 'offline',
             );
             const [syncVer, setSyncVer] = useState(0);
+            const [calendarVer, setCalendarVer] = useState(0); // 🗓️ Отдельный state для инвалидации календаря
             const [clients, setClients] = useState([]);
             const [clientsSource, setClientsSource] = useState(''); // 'cloud' | 'cache' | 'loading'
             const [clientId, setClientId] = useState('');
@@ -2563,6 +2564,7 @@
             return {
               status, setStatus,
               syncVer, setSyncVer,
+              calendarVer, setCalendarVer,
               clients, setClients,
               clientsSource, setClientsSource,
               clientId, setClientId,
@@ -3482,11 +3484,21 @@
             // Слушаем событие обновления данных дня (cycleDay, meals, etc.)
             // Нужно для инвалидации datePickerActiveDays при изменении cycleDay
             useEffect(() => {
+              // Источники которые НЕ требуют ре-рендера App:
+              // - cloud/merge: данные из облака, UI обновляется отдельно
+              // - *-step: локальные модалки, данные уже применены через setDay в DayTab
+              // ВАЖНО: cycle-* НЕ в списке — cycleDay влияет на календарь (розовые точки)
+              const IGNORED_SOURCES = [
+                'cloud', 'merge', 'step-modal',
+                'deficit-step', 'household-step', 'training-step', 'steps-step',
+                'measurements-step', 'cold-exposure-step'
+              ];
+              
               const handleDayUpdate = (e) => {
-                // 🔒 Игнорируем события от cloud sync — они массово приходят при загрузке
-                // и вызывают множественные ре-рендеры (мерцание UI)
                 const source = e.detail?.source;
-                if (source === 'cloud' || source === 'merge') {
+                // 🔒 Игнорируем локальные источники — данные уже применены через setDay
+                // Это предотвращает мерцание UI при редактировании
+                if (source && IGNORED_SOURCES.includes(source)) {
                   return;
                 }
                 setSyncVer((v) => v + 1);
