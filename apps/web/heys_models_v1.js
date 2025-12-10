@@ -453,5 +453,150 @@
   M.getLastPortion = getLastPortion;
   M.saveLastPortion = saveLastPortion;
   
+  // === Training Helpers (v3.3.0) ===
+  // Хелперы для работы с тренировками в контексте инсулиновой волны
+  
+  // Дефолтная длительность тренировки по типу (если z = [0,0,0,0])
+  const DEFAULT_DURATION_BY_TYPE = {
+    'cardio': 45,
+    'strength': 60,
+    'hobby': 30
+  };
+  
+  // Лимиты для валидации тренировок
+  const TRAINING_LIMITS = {
+    maxDurationMin: 300,      // >5 часов — нереально
+    maxTrainingsPerDay: 5,    // >5 тренировок — подозрительно
+    maxKcalPerTraining: 2500, // >2500 ккал — скорее всего ошибка
+    minDurationMin: 5         // <5 мин — не считаем
+  };
+  
+  /**
+   * Получить длительность тренировки в минутах
+   * @param {Object} training - Объект тренировки {z: [0,0,0,0], time, type}
+   * @returns {number} - Минуты
+   */
+  function getTrainingDuration(training) {
+    if (!training) return 0;
+    const fromZones = (training.z || []).reduce((sum, v) => sum + (+v || 0), 0);
+    if (fromZones > 0) return fromZones;
+    // Fallback по типу
+    return DEFAULT_DURATION_BY_TYPE[training.type] || 45;
+  }
+  
+  /**
+   * Получить интервал тренировки (начало/конец в минутах от 00:00)
+   * @param {Object} training - Объект тренировки
+   * @returns {Object|null} - {startMin, endMin, durationMin, startTime, endTime} или null
+   */
+  function getTrainingInterval(training) {
+    const duration = getTrainingDuration(training);
+    if (!training?.time || duration === 0) return null;
+    
+    const [h, m] = training.time.split(':').map(Number);
+    if (isNaN(h) || isNaN(m)) return null;
+    
+    const startMin = h * 60 + m;
+    const endMin = startMin + duration;
+    
+    return {
+      startMin,
+      endMin,
+      durationMin: duration,
+      startTime: training.time,
+      endTime: `${String(Math.floor(endMin / 60) % 24).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`
+    };
+  }
+  
+  /**
+   * Определить тип интенсивности тренировки (HIIT/MODERATE/LISS)
+   * @param {Object} training - Объект тренировки
+   * @returns {string} - 'HIIT' | 'MODERATE' | 'LISS' | 'unknown'
+   */
+  function getTrainingIntensityType(training) {
+    const zones = training?.z || [0, 0, 0, 0];
+    const totalMin = zones.reduce((s, v) => s + (+v || 0), 0);
+    if (totalMin === 0) return 'unknown';
+    
+    const highIntensityMin = (+zones[2] || 0) + (+zones[3] || 0); // Zone 3 + Zone 4
+    const ratio = highIntensityMin / totalMin;
+    
+    if (ratio > 0.5) return 'HIIT';      // >50% в высоких зонах
+    if (ratio > 0.3) return 'MODERATE';  // 30-50%
+    return 'LISS';                        // <30% — низкоинтенсивное кардио
+  }
+  
+  /**
+   * Проверить валидность тренировки
+   * @param {Object} training - Объект тренировки
+   * @param {number} kcal - Калории тренировки (trainK)
+   * @returns {boolean}
+   */
+  function isValidTraining(training, kcal) {
+    const duration = getTrainingDuration(training);
+    if (duration < TRAINING_LIMITS.minDurationMin) return false;
+    if (duration > TRAINING_LIMITS.maxDurationMin) return false;
+    if (kcal > TRAINING_LIMITS.maxKcalPerTraining) return false;
+    if (!training.time) return false; // Нет времени — не можем определить контекст
+    return true;
+  }
+  
+  /**
+   * Объединить близкие тренировки в одну сессию
+   * @param {Object[]} trainings - Массив тренировок
+   * @param {number} maxGapMin - Максимальный промежуток для объединения (по умолчанию 30 мин)
+   * @returns {Object[]} - Объединённые тренировки
+   */
+  function mergeCloseTrainingSessions(trainings, maxGapMin = 30) {
+    if (!Array.isArray(trainings) || trainings.length < 2) return trainings || [];
+    
+    // Фильтруем тренировки с временем
+    const withTime = trainings.filter(t => t && t.time);
+    if (withTime.length < 2) return trainings;
+    
+    // Сортируем по времени
+    const sorted = [...withTime].sort((a, b) => {
+      const [ah, am] = a.time.split(':').map(Number);
+      const [bh, bm] = b.time.split(':').map(Number);
+      return (ah * 60 + am) - (bh * 60 + bm);
+    });
+    
+    const TYPE_PRIORITY = { strength: 3, cardio: 2, hobby: 1 };
+    const merged = [];
+    let current = sorted[0];
+    
+    for (let i = 1; i < sorted.length; i++) {
+      const next = sorted[i];
+      const currentInterval = getTrainingInterval(current);
+      const [nh, nm] = next.time.split(':').map(Number);
+      const nextStart = nh * 60 + nm;
+      
+      // Gap < maxGapMin → merge
+      if (currentInterval && nextStart - currentInterval.endMin < maxGapMin) {
+        current = {
+          time: current.time, // Время начала первой
+          type: (TYPE_PRIORITY[next.type] || 0) > (TYPE_PRIORITY[current.type] || 0) ? next.type : current.type,
+          z: (current.z || [0,0,0,0]).map((v, i) => (+v || 0) + (+(next.z?.[i]) || 0)), // Суммируем зоны
+          _merged: true
+        };
+      } else {
+        merged.push(current);
+        current = next;
+      }
+    }
+    merged.push(current);
+    
+    return merged;
+  }
+  
+  // Экспорт Training Helpers
+  M.getTrainingDuration = getTrainingDuration;
+  M.getTrainingInterval = getTrainingInterval;
+  M.getTrainingIntensityType = getTrainingIntensityType;
+  M.isValidTraining = isValidTraining;
+  M.mergeCloseTrainingSessions = mergeCloseTrainingSessions;
+  M.TRAINING_LIMITS = TRAINING_LIMITS;
+  M.DEFAULT_DURATION_BY_TYPE = DEFAULT_DURATION_BY_TYPE;
+  
   console.log('HEYS: Loaded', Object.keys(AUTO_PORTIONS).length, 'portion patterns');
 })(window);

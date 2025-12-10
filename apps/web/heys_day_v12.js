@@ -128,7 +128,7 @@
               if (i !== mealIndex || !m.photos) return m;
               return { ...m, photos: m.photos.filter(p => p.id !== photoId) };
             });
-            return { ...prevDay, meals };
+            return { ...prevDay, meals, updatedAt: Date.now() };
           });
         };
         window.HEYS.showPhotoViewer(mealPhotos, photoIndex, onDeleteInViewer);
@@ -150,7 +150,7 @@
             )
           };
         });
-        return { ...prevDay, meals };
+        return { ...prevDay, meals, updatedAt: Date.now() };
       });
       // Haptic feedback
       try { navigator.vibrate?.(10); } catch(e) {}
@@ -1600,7 +1600,7 @@
                     }
                   : m
               );
-              return { ...prevDay, meals };
+              return { ...prevDay, meals, updatedAt: Date.now() };
             });
             
             console.log('[HEYS] Photo added to meal', mealIndex, '(pending upload)');
@@ -1625,7 +1625,7 @@
                         )
                       };
                     });
-                    return { ...prevDay, meals };
+                    return { ...prevDay, meals, updatedAt: Date.now() };
                   });
                   console.log('[HEYS] Photo uploaded to cloud:', result.url);
                 } else if (result?.pending) {
@@ -1642,7 +1642,7 @@
                         )
                       };
                     });
-                    return { ...prevDay, meals };
+                    return { ...prevDay, meals, updatedAt: Date.now() };
                   });
                   console.log('[HEYS] Photo saved for later upload (offline)');
                 }
@@ -1660,7 +1660,7 @@
                       )
                     };
                   });
-                  return { ...prevDay, meals };
+                  return { ...prevDay, meals, updatedAt: Date.now() };
                 });
                 console.warn('[HEYS] Photo upload failed, will retry later:', e);
               }
@@ -2602,7 +2602,7 @@
                   if (i !== mealIndex || !m.photos) return m;
                   return { ...m, photos: m.photos.filter(p => p.id !== photo.id) };
                 });
-                return { ...prevDay, meals };
+                return { ...prevDay, meals, updatedAt: Date.now() };
               });
             };
             
@@ -3451,7 +3451,7 @@
             z: t.z.map((v, j) => j === zi ? (+mins || 0) : v)
           };
         });
-        return { ...prevDay, trainings: arr };
+        return { ...prevDay, trainings: arr, updatedAt: Date.now() };
       });
     }
 
@@ -3504,7 +3504,8 @@
           wellbeingAvg: averages.wellbeingAvg,
           stressAvg: averages.stressAvg,
           // Обновляем dayScore только если нет ручного override
-          ...(shouldUpdateDayScore ? { dayScore: averages.dayScore } : {})
+          ...(shouldUpdateDayScore ? { dayScore: averages.dayScore } : {}),
+          updatedAt: Date.now()
         }));
       }
     }, [
@@ -4875,7 +4876,7 @@
     // Внутренняя функция анимации воды
     function runWaterAnimation(ml) {
       const newWater = (day.waterMl || 0) + ml;
-      setDay(prev => ({ ...prev, waterMl: (prev.waterMl || 0) + ml, lastWaterTime: Date.now() }));
+      setDay(prev => ({ ...prev, waterMl: (prev.waterMl || 0) + ml, lastWaterTime: Date.now(), updatedAt: Date.now() }));
       
       // 💧 Анимация падающей капли (длиннее для плавности)
       setShowWaterDrop(true);
@@ -4903,7 +4904,7 @@
     // Убрать воду (для исправления ошибок)
     function removeWater(ml) {
       const newWater = Math.max(0, (day.waterMl || 0) - ml);
-      setDay(prev => ({ ...prev, waterMl: Math.max(0, (prev.waterMl || 0) - ml) }));
+      setDay(prev => ({ ...prev, waterMl: Math.max(0, (prev.waterMl || 0) - ml), updatedAt: Date.now() }));
       haptic('light');
     }
 
@@ -4943,7 +4944,8 @@
               householdActivities: savedDay.householdActivities || [],
               // Legacy fields для backward compatibility
               householdMin: savedDay.householdMin || 0,
-              householdTime: savedDay.householdTime || ''
+              householdTime: savedDay.householdTime || '',
+              updatedAt: Date.now()
             }));
           }
         });
@@ -5107,7 +5109,8 @@
             const savedDay = lsGet(`heys_dayv2_${date}`, {});
             setDay(prev => ({ 
               ...prev, 
-              trainings: savedDay.trainings || prev.trainings 
+              trainings: savedDay.trainings || prev.trainings,
+              updatedAt: Date.now() 
             }));
           }
         });
@@ -5203,7 +5206,7 @@
         comment: pendingTrainingComment
       };
       
-      setDay(prev => ({ ...prev, trainings: newTrainings }));
+      setDay(prev => ({ ...prev, trainings: newTrainings, updatedAt: Date.now() }));
       setShowTrainingPicker(false);
       setTrainingPickerStep(1);
       setEditingTrainingIndex(null);
@@ -5310,7 +5313,7 @@
           const entry = `[${time}] ${pendingSleepNote.trim()}`;
           newSleepNote = newSleepNote ? newSleepNote + '\n' + entry : entry;
         }
-        return { ...prevDay, sleepQuality: value, sleepNote: newSleepNote };
+        return { ...prevDay, sleepQuality: value, sleepNote: newSleepNote, updatedAt: Date.now() };
       });
       setPendingSleepNote('');
       setShowSleepQualityPicker(false);
@@ -5340,7 +5343,7 @@
           const entry = `[${time}] ${pendingDayComment.trim()}`;
           newDayComment = newDayComment ? newDayComment + '\n' + entry : entry;
         }
-        return { ...prevDay, dayScore: value, dayScoreManual: isManual, dayComment: newDayComment };
+        return { ...prevDay, dayScore: value, dayScoreManual: isManual, dayComment: newDayComment, updatedAt: Date.now() };
       });
       setPendingDayComment('');
       setShowDayScorePicker(false);
@@ -5605,7 +5608,7 @@
         const updatedMeals = (prevDay.meals || []).map((m, i) => 
           i === editingMealIndex ? { ...m, mood: moodVal, wellbeing: wellbeingVal, stress: stressVal } : m
         );
-        return { ...prevDay, meals: updatedMeals };
+        return { ...prevDay, meals: updatedMeals, updatedAt: Date.now() };
       });
       setShowTimePicker(false);
       setEditingMealIndex(null);
@@ -5631,7 +5634,7 @@
               : m
           );
           const sortedMeals = sortMealsByTime(updatedMeals);
-          return { ...prevDay, meals: sortedMeals };
+          return { ...prevDay, meals: sortedMeals, updatedAt: Date.now() };
         });
       } else {
         // Создание нового
@@ -5650,7 +5653,7 @@
           const newMeals = sortMealsByTime([...(prevDay.meals || []), newMeal]);
           newIndex = newMeals.findIndex(m => m.id === newMeal.id);
           newMealsLen = newMeals.length;
-          return { ...prevDay, meals: newMeals };
+          return { ...prevDay, meals: newMeals, updatedAt: Date.now() };
         });
         expandOnlyMeal(newIndex >= 0 ? newIndex : Math.max(0, newMealsLen - 1));
       }
@@ -5766,7 +5769,7 @@
                               ? { ...m, items: [...(m.items || []), newItem] }
                               : m
                           );
-                          return { ...prevDay, meals: updatedMeals };
+                          return { ...prevDay, meals: updatedMeals, updatedAt: Date.now() };
                         });
                         try { navigator.vibrate?.(10); } catch(e) {}
                         window.dispatchEvent(new CustomEvent('heysProductAdded', { detail: { product, grams } }));
@@ -5808,7 +5811,7 @@
           const newMeals = [...baseMeals, {id:newMealId,name:'Приём',time:'',mood:'',wellbeing:'',stress:'',items:[]}];
           newMealIndex = newMeals.length - 1;
           console.log('[HEYS] 🍽 addMeal() creating meal | id:', newMealId, '| new meals count:', newMeals.length);
-          return { ...prevDay, meals: newMeals };
+          return { ...prevDay, meals: newMeals, updatedAt: Date.now() };
         }); 
         expandOnlyMeal(newMealIndex);
         if (window.HEYS && window.HEYS.analytics) {
@@ -5844,7 +5847,7 @@
         );
         // Сортируем после обновления
         const sortedMeals = sortMealsByTime(updatedMeals);
-        return { ...prevDay, meals: sortedMeals };
+        return { ...prevDay, meals: sortedMeals, updatedAt: Date.now() };
       });
     }, [setDay, sortMealsByTime]);
     
@@ -5861,7 +5864,7 @@
       haptic('medium');
       setDay(prevDay => {
         const meals = (prevDay.meals || []).filter((_, idx) => idx !== i);
-        return { ...prevDay, meals };
+        return { ...prevDay, meals, updatedAt: Date.now() };
       });
     }, [haptic, setDay]);
     
@@ -5966,7 +5969,7 @@
     useEffect(() => {
       const calculatedSleepH = sleepHours(day.sleepStart, day.sleepEnd);
       if (calculatedSleepH !== day.sleepHours) {
-        setDay(prevDay => ({...prevDay, sleepHours: calculatedSleepH}));
+        setDay(prevDay => ({...prevDay, sleepHours: calculatedSleepH, updatedAt: Date.now()}));
       }
     }, [day.sleepStart, day.sleepEnd]);
 
@@ -6233,7 +6236,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       React.createElement('tr',null,
         React.createElement('td',{className:'label muted small'},'Шаги :'),
         React.createElement('td',null, React.createElement('input',{className:'readOnly',value:stepsK,disabled:true,title:'ккал от шагов'})),
-        React.createElement('td',null, React.createElement('input',{type:'number',value:day.steps||0,onChange:e=>setDay(prev=>({...prev,steps:+e.target.value||0}))})),
+        React.createElement('td',null, React.createElement('input',{type:'number',value:day.steps||0,onChange:e=>setDay(prev=>({...prev,steps:+e.target.value||0,updatedAt:Date.now()}))})),
         React.createElement('td',null,'шагов')
       ),
       // Row 4 — Тренировки
@@ -6247,7 +6250,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       React.createElement('tr',null,
         React.createElement('td',{className:'label muted small'},'Бытовая активность :'),
         React.createElement('td',null, React.createElement('input',{className:'readOnly',value:householdK,disabled:true})),
-        React.createElement('td',null, React.createElement('input',{type:'number',value:day.householdMin||0,onChange:e=>setDay(prev=>({...prev,householdMin:+e.target.value||0}))})),
+        React.createElement('td',null, React.createElement('input',{type:'number',value:day.householdMin||0,onChange:e=>setDay(prev=>({...prev,householdMin:+e.target.value||0,updatedAt:Date.now()}))})),
         React.createElement('td',null,'мин')
       ),
       // Row 6 — Общая активность
@@ -6267,7 +6270,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }, '🌸 +' + Math.round((cycleKcalMultiplier - 1) * 100) + '%')
         ),
         React.createElement('td',null, React.createElement('input',{className:'readOnly',value:optimum,disabled:true})),
-        React.createElement('td',null, React.createElement('input',{type:'number',value:day.deficitPct||0,onChange:e=>setDay(prev=>({...prev,deficitPct:Number(e.target.value)||0})),style:{width:'60px',textAlign:'center',fontWeight:600}})),
+        React.createElement('td',null, React.createElement('input',{type:'number',value:day.deficitPct||0,onChange:e=>setDay(prev=>({...prev,deficitPct:Number(e.target.value)||0,updatedAt:Date.now()})),style:{width:'60px',textAlign:'center',fontWeight:600}})),
         React.createElement('td',null,'Целевой дефицит')
       ),
       // Row 7 — Съедено за день
@@ -6330,7 +6333,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           ...oldTrainings.slice(ti + 1),
           emptyTraining
         ].slice(0, 3);
-        return { ...prevDay, trainings: newTrainings };
+        return { ...prevDay, trainings: newTrainings, updatedAt: Date.now() };
       });
       setVisibleTrainings(Math.max(0, visibleTrainings - 1));
     };
@@ -6355,7 +6358,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           ...prevDay, 
           householdActivities: newActivities,
           householdMin: totalMin,
-          householdTime: newActivities[0]?.time || ''
+          householdTime: newActivities[0]?.time || '',
+          updatedAt: Date.now()
         };
       });
     };
@@ -6515,9 +6519,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('span', { className: 'sleep-card-title' }, 'Сон')
               ),
               React.createElement('div', { className: 'sleep-card-times' },
-                React.createElement('input', { className: 'sleep-time-input', type: 'time', value: day.sleepStart || '', onChange: e => setDay(prev => ({...prev, sleepStart: e.target.value})) }),
+                React.createElement('input', { className: 'sleep-time-input', type: 'time', value: day.sleepStart || '', onChange: e => setDay(prev => ({...prev, sleepStart: e.target.value, updatedAt: Date.now()})) }),
                 React.createElement('span', { className: 'sleep-arrow' }, '→'),
-                React.createElement('input', { className: 'sleep-time-input', type: 'time', value: day.sleepEnd || '', onChange: e => setDay(prev => ({...prev, sleepEnd: e.target.value})) })
+                React.createElement('input', { className: 'sleep-time-input', type: 'time', value: day.sleepEnd || '', onChange: e => setDay(prev => ({...prev, sleepEnd: e.target.value, updatedAt: Date.now()})) })
               ),
               // Качество сна — большой блок как у оценки дня
               React.createElement('div', { 
@@ -6548,7 +6552,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 placeholder: 'Заметка...', 
                 value: day.sleepNote || '', 
                 rows: day.sleepNote && day.sleepNote.includes('\n') ? Math.min(day.sleepNote.split('\n').length, 4) : 1,
-                onChange: e => setDay(prev => ({...prev, sleepNote: e.target.value})) 
+                onChange: e => setDay(prev => ({...prev, sleepNote: e.target.value, updatedAt: Date.now()})) 
               })
             );
           })(),
@@ -6840,7 +6844,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 placeholder: 'Заметка...', 
                 value: day.dayComment || '', 
                 rows: day.dayComment && day.dayComment.includes('\n') ? Math.min(day.dayComment.split('\n').length, 4) : 1,
-                onChange: e => setDay(prev => ({...prev, dayComment: e.target.value})) 
+                onChange: e => setDay(prev => ({...prev, dayComment: e.target.value, updatedAt: Date.now()})) 
               })
             );
           })()
@@ -6933,7 +6937,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const validDay = newDay === null ? null : Math.min(Math.max(1, parseInt(newDay) || 1), 7);
       
       // Обновляем текущий день в state
-      setDay(prev => ({ ...prev, cycleDay: validDay }));
+      setDay(prev => ({ ...prev, cycleDay: validDay, updatedAt: Date.now() }));
       setCycleEditMode(false);
       
       // Автоматически проставляем все 7 дней
@@ -6945,7 +6949,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     
     // Сбросить день цикла и все связанные дни
     const clearCycleDay = React.useCallback(() => {
-      setDay(prev => ({ ...prev, cycleDay: null }));
+      setDay(prev => ({ ...prev, cycleDay: null, updatedAt: Date.now() }));
       setCycleEditMode(false);
       
       // Очищаем все связанные дни
@@ -13391,7 +13395,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const extraPercent = (percent - 80) / 20;
           newSteps = stepsGoal + Math.round((extraPercent * (stepsMax - stepsGoal)) / 100) * 100;
         }
-        setDay(prev => ({...prev, steps: Math.min(stepsMax, Math.max(0, newSteps))}));
+        setDay(prev => ({...prev, steps: Math.min(stepsMax, Math.max(0, newSteps)), updatedAt: Date.now()}));
       };
       
       const onMove = (ev) => {
