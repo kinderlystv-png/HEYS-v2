@@ -874,6 +874,17 @@
   color: #f59e0b;
 }
 
+/* Линия целевого веса — dark mode */
+[data-theme="dark"] .weight-goal-line {
+  stroke: #34d399;
+  stroke-opacity: 0.5;
+}
+
+[data-theme="dark"] .weight-goal-label {
+  fill: #34d399;
+  opacity: 0.7;
+}
+
 /* === ЗАДЕРЖКА ВОДЫ — DARK THEME === */
 [data-theme="dark"] .weight-clean-trend-badge {
   background: rgba(236, 72, 153, 0.2);

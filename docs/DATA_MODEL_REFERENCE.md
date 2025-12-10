@@ -481,6 +481,8 @@ HEYS.Cycle.getWeightNormalizationForecast(cycleDay) // {daysUntilNormal, message
 | `fiber_good` | `fiberPct >= 1.0` | nutrition | product_added |
 | `good_fat_low` | `goodFatPct < 0.4 && hour >= 14` | nutrition | tab_open, product_added |
 | `post_training_protein` | `hasTraining && proteinPct < 0.8` | training | tab_open, product_added |
+| `post_training_undereating_critical` | `hasTraining && kcalPct < 0.7 && hour >= 18` | training | tab_open |
+| `undereating_warning` | `kcalPct < 0.7 && hour >= 18` (crashed state) | nutrition | tab_open |
 | `evening_undereating` | `hour >= 20 && isCriticallyUnder(kcalPct, goal)` | nutrition | tab_open |
 | `evening_perfect` | `hour >= 21 && kcalPct 0.9-1.1` | lifestyle | tab_open |
 | `balanced_macros` | `mealCount>=2 && all macros 0.9-1.2` | nutrition | product_added |
@@ -525,11 +527,13 @@ HEYS.Cycle.getWeightNormalizationForecast(cycleDay) // {daysUntilNormal, message
 | `training_type_hobby` | `training.type === 'hobby'` | training | tab_open |
 | `weight_spike_up` | `\|Δweight\| > 1kg` | correlation | tab_open |
 | `weight_stable` | `7-day weights σ < 0.5kg` | achievement | tab_open |
-| `caffeine_evening` | Кофе после 16:00 | nutrition | product_added |
+| `caffeine_evening` | Кофе за <6ч до сна (с учётом реального bedtime) | nutrition | product_added |
+| `bedtime_undereating` | До сна ≤2ч + недобор калорий | timing | tab_open |
+| `undereating_dehydration_combo` | `kcalPct < 0.6 && waterPct < 0.5` — двойной удар | nutrition | tab_open |
 | `empty_stomach_late` | `hour 10-12 && mealCount === 0` | lifestyle | tab_open |
 | `late_heavy_meal` | `lastMealHour >= 21 && lastMealKcal > 500` | timing | product_added |
 | `insulin_countdown` | `minutesUntilEnd > 0 && < 60` | timing | tab_open |
-| `bedtime_protein` | `hour 20-22 && proteinPct < 0.8` | timing | tab_open |
+| `bedtime_protein` | До сна ≤4ч + мало белка (с реальным bedtime) | timing | tab_open |
 | `post_holiday_detox` | Дни после праздников (1-2 янв, и др.) | lifestyle | tab_open |
 | `best_day_recall` | Лучший день за 7 дней | motivation | tab_open |
 | `night_owl_warning` | `hour 1-5 && mealCount > 0` | lifestyle | product_added |
@@ -540,6 +544,7 @@ HEYS.Cycle.getWeightNormalizationForecast(cycleDay) // {daysUntilNormal, message
 | `workout_consistent` | 3 дня тренировок подряд | achievement | tab_open |
 | `evening_snacker` | Паттерн поздних ужинов 3 дня | correlation | tab_open |
 | `morning_skipper` | Паттерн без завтрака 3 дня | correlation | tab_open |
+| `chronic_undereating_pattern` | 3+ дней kcalPct < 0.75 | correlation | tab_open |
 | **Phase 2: Meal-level** | | | |
 | `meal_too_large` | `lastMeal.kcal > 800` | nutrition | product_added |
 | `meal_too_small` | `meal.kcal < 150 && mealCount >= 2` | nutrition | product_added |
@@ -588,9 +593,12 @@ HEYS.Cycle.getWeightNormalizationForecast(cycleDay) // {daysUntilNormal, message
 | `day.householdMin` | DayRecord | Минуты домашней активности |
 | `day.householdTime` | DayRecord | Время бытовой активности (HH:MM) |
 | `day.steps` | DayRecord | Шаги за день |
+| `day.sleepStart` | DayRecord | Время засыпания (HH:MM) из чек-ина |
 | `day.sleepQuality` | DayRecord | Качество сна (1-5) |
 | `day.trainings[].type` | Training | Тип тренировки |
 | `currentStreak` | DayTab (вычисляется) | Дней подряд в норме |
+| `getAverageBedtime()` | Advice helpers | Среднее время засыпания за 14 дней |
+| `getHoursUntilBedtime()` | Advice helpers | Часов до сна (из истории или расчёт) |
 
 ---
 

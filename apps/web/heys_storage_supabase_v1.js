@@ -695,7 +695,20 @@
   const SYNC_COMPLETED_EVENT = 'heysSyncCompleted';
   let syncProgressTotal = 0;
   let syncProgressDone = 0;
-  const AUTH_ERROR_CODES = new Set(['401', '42501']);
+  const AUTH_ERROR_CODES = new Set(['401', '42501', 'PGRST301']);
+  
+  /** Проверка, является ли ошибка ошибкой авторизации (401, RLS) */
+  function isAuthError(error) {
+    if (!error) return false;
+    // HTTP статус 401
+    if (error.status === 401 || error.statusCode === 401) return true;
+    // PostgreSQL RLS error
+    if (error.code && AUTH_ERROR_CODES.has(String(error.code))) return true;
+    // Supabase error message
+    const msg = (error.message || '').toLowerCase();
+    if (msg.includes('unauthorized') || msg.includes('jwt') || msg.includes('invalid claim')) return true;
+    return false;
+  }
   
   /** Добавить запись в журнал синхронизации */
   function addSyncLogEntry(type, details) {
@@ -785,6 +798,10 @@
     try {
       status = CONNECTION_STATUS.OFFLINE;
       user = null;
+      // 🔄 Очистка невалидного токена — предотвращает повторные 401 ошибки
+      try {
+        localStorage.removeItem('heys_supabase_auth_token');
+      } catch (e) {}
       addSyncLogEntry('sync_error', { error: 'auth_required' });
       global.dispatchEvent(new CustomEvent('heys:sync-error', { detail: { error: 'auth_required' } }));
       logCritical('❌ Требуется повторный вход (auth/RLS error)');
@@ -1203,6 +1220,10 @@
    * Зеркалирует наши ключи (heys_*, day*) в Supabase
    * Обрабатывает QuotaExceededError автоматической очисткой
    */
+  // Дедупликация: последние сохранённые ключи и их updatedAt
+  const _lastSavedKeys = new Map(); // key → { updatedAt, timestamp }
+  const DEDUP_WINDOW_MS = 1000; // Окно дедупликации: 1 секунда
+  
   function interceptSetItem(){
     try{
       if (originalSetItem) return; // Защита от повторного перехвата
@@ -1218,10 +1239,31 @@
         }
         
         if (!muteMirror && isOurKey(k)){
+          // 🔒 Дедупликация: пропускаем повторные сохранения с тем же updatedAt
+          const parsed = tryParse(v);
+          const updatedAt = parsed?.updatedAt || 0;
+          const now = Date.now();
+          const lastSaved = _lastSavedKeys.get(k);
+          
+          if (lastSaved && updatedAt > 0 && lastSaved.updatedAt === updatedAt && (now - lastSaved.timestamp) < DEDUP_WINDOW_MS) {
+            // Пропускаем дубликат
+            // DEBUG (отключено): log(`🔄 [DEDUP] Skipped duplicate save: ${k} | updatedAt: ${updatedAt}`);
+            return;
+          }
+          
+          // Запоминаем это сохранение
+          if (updatedAt > 0) {
+            _lastSavedKeys.set(k, { updatedAt, timestamp: now });
+            // Очищаем старые записи (>10 сек)
+            for (const [key, val] of _lastSavedKeys) {
+              if (now - val.timestamp > 10000) _lastSavedKeys.delete(key);
+            }
+          }
+          
           if (needsClientStorage(k)) {
-            cloud.saveClientKey(k, tryParse(v));
+            cloud.saveClientKey(k, parsed);
           } else {
-            cloud.saveKey(k, tryParse(v));
+            cloud.saveKey(k, parsed);
           }
         }
       };
@@ -1321,40 +1363,19 @@
     // Обработка провала health-check
     const handleHealthCheckFailure = async () => {
       const fallbackMode = _usingDirectConnection ? 'proxy' : 'direct';
-      const fallbackUrl = _usingDirectConnection ? cloud._proxyUrl : cloud._directUrl;
       
-      // На localhost: пересоздаём client сразу (один раз) — удобство dev'а
-      if (isLocalhost && fallbackUrl && !cloud._healthCheckFallbackDone) {
-        cloud._healthCheckFallbackDone = true;
-        log('[ROUTING] 🔄 Localhost: переключаемся на', fallbackMode, 'сразу');
-        
-        try {
-          client = global.supabase.createClient(fallbackUrl, cloud._anonKey, {
-            auth: {
-              persistSession: true,
-              storageKey: 'heys_supabase_auth_token',
-              storage: global.localStorage
-            }
-          });
-          cloud.client = client;
-          _usingDirectConnection = !_usingDirectConnection;
-          
-          // Восстанавливаем сессию
-          if (client.auth && client.auth.getSession) {
-            const { data } = await client.auth.getSession();
-            if (data?.session) {
-              user = data.session.user;
-              status = CONNECTION_STATUS.ONLINE;
-              log('[ROUTING] ✅ Localhost fallback: сессия восстановлена');
-            }
-          }
-        } catch (e) {
-          log('[ROUTING] ❌ Localhost fallback failed:', e.message);
-        }
-      } else {
-        // На production: только сохраняем режим для следующей загрузки
-        try { localStorage.setItem('heys_connection_mode', fallbackMode); } catch (_) {}
+      // Сохраняем режим для следующей загрузки — НЕ пересоздаём клиент!
+      // Пересоздание клиента вызывает "Multiple GoTrueClient instances" предупреждение
+      // и может привести к race conditions с токенами
+      try { 
+        localStorage.setItem('heys_connection_mode', fallbackMode); 
         log('[ROUTING] 💾 Сохранён режим', fallbackMode, 'для следующей загрузки');
+      } catch (_) {}
+      
+      // На localhost показываем сообщение о необходимости перезагрузки
+      if (isLocalhost && !cloud._healthCheckFallbackDone) {
+        cloud._healthCheckFallbackDone = true;
+        log('[ROUTING] ⚠️ Localhost: требуется перезагрузка для переключения на', fallbackMode);
       }
     };
     
@@ -1427,15 +1448,40 @@
 
         // Подписка на изменения auth
         client.auth.onAuthStateChange((event, session) => {
+          log('[AUTH] onAuthStateChange:', event);
           if (event === 'SIGNED_OUT') {
             user = null;
             status = CONNECTION_STATUS.OFFLINE;
             clearNamespace();
-          } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+          } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+            // Токен успешно обновлён
+            user = session.user;
+            status = CONNECTION_STATUS.ONLINE;
+            log('🔄 Token refreshed successfully');
+          } else if (event === 'SIGNED_IN' && session?.user) {
             user = session.user;
             status = CONNECTION_STATUS.ONLINE;
           }
         });
+        
+        // 🔄 Очистка невалидного токена при ошибке "Already Used"
+        // Supabase v2 использует refresh token rotation — каждый токен одноразовый
+        // Если токен уже использован (другая вкладка, race condition), очищаем его
+        const checkAndClearInvalidToken = () => {
+          try {
+            const stored = localStorage.getItem('heys_supabase_auth_token');
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              // Если нет access_token или refresh_token — токен невалидный
+              if (!parsed?.access_token && !parsed?.refresh_token) {
+                log('[AUTH] Clearing empty auth token');
+                localStorage.removeItem('heys_supabase_auth_token');
+              }
+            }
+          } catch (e) {}
+        };
+        // Проверяем сразу после инициализации
+        setTimeout(checkAndClearInvalidToken, 100);
       }
     }catch(e){ err('init failed', e); }
   };
@@ -1454,6 +1500,19 @@
     try{
       status = 'signin';
       
+      // 🔄 Очищаем старый токен перед входом — предотвращает race condition с refresh
+      try {
+        localStorage.removeItem('heys_supabase_auth_token');
+      } catch (e) {}
+      
+      // 🔄 Сначала делаем signOut чтобы очистить кэш SDK
+      try {
+        await client.auth.signOut();
+      } catch (e) {}
+      
+      // Небольшая задержка чтобы SDK успел очистить состояние
+      await new Promise(r => setTimeout(r, 100));
+      
       // Увеличен таймаут до 15 секунд для мобильных сетей
       const { data, error } = await withTimeout(
         client.auth.signInWithPassword({ email, password }),
@@ -1468,6 +1527,18 @@
       }
       user = data?.user;
       if (!user) { status = 'offline'; err('no user after signin'); return { error: 'no user' }; }
+      
+      // 🔄 Принудительно обновляем сессию в SDK после успешного входа
+      // Это гарантирует что все последующие запросы используют новый токен
+      try {
+        const { data: sessionData } = await client.auth.getSession();
+        if (sessionData?.session) {
+          log('[AUTH] Session refreshed after signIn:', sessionData.session.user?.email);
+        }
+      } catch (e) {
+        log('[AUTH] Session refresh failed:', e.message);
+      }
+      
       status = 'sync';
       await cloud.bootstrapSync();
       status = 'online';
@@ -1485,6 +1556,10 @@
     user = null;
     status = 'offline';
     clearNamespace();
+    // 🔄 Очистка auth токена — предотвращает 400 Bad Request при следующем запуске
+    try {
+      localStorage.removeItem('heys_supabase_auth_token');
+    } catch (e) {}
     // 🔄 Сброс флагов sync — при следующем входе нужна новая синхронизация
     initialSyncCompleted = false;
     startFailsafeTimer(); // Перезапустить failsafe для нового входа
@@ -1497,6 +1572,41 @@
 
   cloud.getUser = function(){ return user; };
   cloud.getStatus = function(){ return status; };
+
+  /**
+   * Полная очистка auth-данных для решения проблем с токенами
+   * Вызывать из консоли: HEYS.cloud.resetAuth()
+   */
+  cloud.resetAuth = function() {
+    try {
+      // Очищаем все auth-related ключи
+      const keysToRemove = [
+        'heys_supabase_auth_token',
+        'sb-ukqolcziqcuplqfgrmsh-auth-token',
+        'heys_connection_mode',
+        'heys_remember_me',
+        'heys_saved_email',
+        'heys_remember_email'
+      ];
+      keysToRemove.forEach(key => {
+        try { localStorage.removeItem(key); } catch (e) {}
+      });
+      
+      // Выходим из Supabase
+      if (client && client.auth) {
+        client.auth.signOut().catch(() => {});
+      }
+      
+      user = null;
+      status = CONNECTION_STATUS.OFFLINE;
+      
+      logCritical('🔄 Auth данные очищены. Перезагрузите страницу.');
+      return { success: true, message: 'Auth reset. Please reload the page.' };
+    } catch (e) {
+      console.error('[resetAuth] Error:', e);
+      return { error: e.message };
+    }
+  };
 
   /**
    * Очищает невалидные продукты из localStorage (без name)
@@ -2640,7 +2750,7 @@
         logCritical('❌ Ошибка сохранения в облако:', e.message || e);
         
         // Авторизационные ошибки — требуем вход
-        if (e?.code && AUTH_ERROR_CODES.has(String(e.code))) {
+        if (isAuthError(e)) {
           handleAuthFailure(e);
           return;
         }
@@ -2944,7 +3054,7 @@
           incrementRetry();
           savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
           notifyPendingChange();
-          if (error.code && AUTH_ERROR_CODES.has(String(error.code))) {
+          if (isAuthError(error)) {
             handleAuthFailure(error);
             return;
           }
@@ -2963,7 +3073,7 @@
         incrementRetry();
         savePendingQueue(PENDING_QUEUE_KEY, upsertQueue);
         notifyPendingChange();
-        if (e?.code && AUTH_ERROR_CODES.has(String(e.code))) {
+        if (isAuthError(e)) {
           handleAuthFailure(e);
           return;
         }

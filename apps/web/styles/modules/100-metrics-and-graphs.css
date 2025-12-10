@@ -2413,6 +2413,20 @@
   color: #b45309;
 }
 
+/* Горизонтальная линия целевого веса */
+.weight-goal-line {
+  stroke: #10b981;
+  stroke-width: 1.5;
+  stroke-opacity: 0.6;
+}
+
+.weight-goal-label {
+  font-size: 9px;
+  fill: #10b981;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
 .weight-sparkline-label {
   font-size: 9px;
   fill: #a78bfa;

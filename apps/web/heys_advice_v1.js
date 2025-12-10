@@ -1780,6 +1780,7 @@
    */
   function getEmotionalState(params) {
     const { day, currentStreak, mealCount, kcalPct, totalDaysTracked, goal } = params;
+    const hour = new Date().getHours();
     
     // Если есть goal — используем goal-aware логику
     if (goal) {
@@ -1795,8 +1796,21 @@
       } catch(e) {}
       if (lastVisitDaysAgo > 3) return 'returning';
       
-      // Срыв — критически выбился из цели
-      if (isCriticallyOver(kcalPct, goal) || isCriticallyUnder(kcalPct, goal)) return 'crashed';
+      // 🔒 Защита от ложного "срыва":
+      // - Не судим о недоборе утром (до 12:00) или если мало приёмов
+      // - Не судим о срыве если kcalPct близок к целевому диапазону
+      const isEarlyForUnder = hour < 12 || mealCount < 2;
+      const isEarlyForOver = hour < 10 || mealCount < 1;
+      
+      // Срыв — критически выбился из цели (но с защитой от раннего времени)
+      const criticallyOver = isCriticallyOver(kcalPct, goal);
+      const criticallyUnder = isCriticallyUnder(kcalPct, goal);
+      
+      // Перебор — показываем сразу (если съел >115%)
+      if (criticallyOver && !isEarlyForOver) return 'crashed';
+      
+      // Недобор — показываем только вечером (после 18:00) и если есть приёмы
+      if (criticallyUnder && hour >= 18 && mealCount >= 1) return 'crashed';
       
       // Стресс — низкое настроение
       const avgMood = calculateAverageMood(day);
@@ -1830,7 +1844,10 @@
     if (lastVisitDaysAgo > 3) return 'returning';
     
     // Срыв — сильно переел или недоел
-    if (kcalPct > 1.3 || kcalPct < 0.5) return 'crashed';
+    // ⚠️ Защита: не судим о недоборе утром или если мало приёмов
+    const isEarlyForUnder = hour < 12 || mealCount < 2;
+    if (kcalPct > 1.3) return 'crashed';
+    if (kcalPct < 0.5 && hour >= 18 && mealCount >= 1) return 'crashed';
     
     // Стресс — низкое настроение
     const avgMood = calculateAverageMood(day);
@@ -2552,17 +2569,42 @@
     // ─────────────────────────────────────────────────────────
     
     if (emotionalState === 'crashed') {
-      advices.push({
-        id: 'crash_support',
-        icon: '💙',
-        text: 'Бывает! Завтра новый день. Ты справишься!',
-        details: '🧡 Один плохой день не отменяет всего прогресса. Даже у профессионалов бывают срывы. Главное — вернуться к плану завтра.',
-        type: 'achievement',
-        priority: 1,
-        category: 'emotional',
-        triggers: ['tab_open', 'product_added'],
-        ttl: 6000
-      });
+      // 🔬 Определяем ТИП срыва: недобор или перебор
+      const isUnderEating = kcalPct < 0.7; // Критический недобор
+      const kcalDeficit = Math.round((1 - kcalPct) * (optimum || 2000)); // Сколько не хватает в ккал
+      const currentPct = Math.round(kcalPct * 100); // Текущий процент от нормы
+      
+      if (isUnderEating && hour >= 18) {
+        // 🔬 НАУЧНЫЙ СОВЕТ: лучше поздний приём чем жёсткий дефицит
+        advices.push({
+          id: 'undereating_warning',
+          icon: '⚠️',
+          text: `Съедено ${currentPct}% — не хватает ~${kcalDeficit} ккал`,
+          details: `🔬 Научный факт: жёсткий дефицит (>500 ккал) хуже позднего ужина!\n\n` +
+            `• Метаболизм замедляется на 10-15%\n` +
+            `• После тренировки критически важен белок\n` +
+            `• Риск: потеря мышц, выпадение волос, гормональный сбой\n\n` +
+            `💡 Лучше поесть даже в 23:00: творог 200г (~220 ккал, 36г белка), яйца 3шт (~240 ккал), орехи 50г (~300 ккал)`,
+          type: 'warning',
+          priority: 1,
+          category: 'nutrition',
+          triggers: ['tab_open', 'product_added'],
+          ttl: 8000
+        });
+      } else {
+        // Перебор — оригинальный поддерживающий совет
+        advices.push({
+          id: 'crash_support',
+          icon: '💙',
+          text: 'Бывает! Завтра новый день. Ты справишься!',
+          details: '🧡 Один плохой день не отменяет всего прогресса. Даже у профессионалов бывают срывы. Главное — вернуться к плану завтра.',
+          type: 'achievement',
+          priority: 1,
+          category: 'emotional',
+          triggers: ['tab_open', 'product_added'],
+          ttl: 6000
+        });
+      }
     }
     
     if (emotionalState === 'stressed') {
@@ -2886,6 +2928,27 @@
       });
     }
     
+    // 🔬 КРИТИЧНО: После тренировки + сильный недобор = нужно срочно поесть!
+    if (hasTraining && kcalPct < 0.7 && hour >= 18) {
+      const kcalMissing = Math.round((1 - kcalPct) * (optimum || 2000));
+      advices.push({
+        id: 'post_training_undereating_critical',
+        icon: '🚨',
+        text: `После тренировки не хватает ${kcalMissing} ккал — мышцам нужен белок!`,
+        details: `🔬 Научный факт: первые 2-3 часа после тренировки — "анаболическое окно".\n\n` +
+          `• Без еды после тренировки = катаболизм (разрушение мышц)\n` +
+          `• Поздний ужин лучше чем голодание после нагрузки\n` +
+          `• Идеально: 25-40г белка + сложные углеводы\n\n` +
+          `💡 Варианты: творог 200г, яйца 3шт + хлеб, курица + рис, протеин + банан`,
+        type: 'warning',
+        priority: 5, // Высокий приоритет!
+        category: 'training',
+        triggers: ['tab_open'],
+        ttl: 8000,
+        canSkipCooldown: true
+      });
+    }
+    
     // Вечерние советы (Goal-aware)
     // Недобор вечером — с учётом цели
     if (hour >= 20 && isCriticallyUnder(kcalPct, goal)) {
@@ -2895,11 +2958,15 @@
         text: goal.mode === 'bulk'
           ? `Только ${Math.round(kcalPct * 100)}% — для набора мало! Добавь вечерний приём`
           : goal.mode === 'deficit'
-            ? 'Слишком жёсткий дефицит — добавь лёгкий ужин'
+            ? 'Слишком жёсткий дефицит — лучше добавь лёгкий ужин'
             : 'Ещё можно поесть — не голодай перед сном',
         details: goal.mode === 'bulk'
           ? 'Для роста мышц нужен профицит. Вечерний приём: творог + орехи, или протеин + банан.'
-          : 'Сильный голод перед сном ухудшает качество сна и может привести к ночным перекусам.',
+          : `🔬 Дефицит >500 ккал хуже позднего ужина!\n\n` +
+            `• Метаболизм замедляется\n` +
+            `• Риск потери мышц и выпадения волос\n` +
+            `• Плохой сон от голода = ещё больше аппетита завтра\n\n` +
+            `💡 Творог, яйца, орехи — насытят без скачка инсулина`,
         type: goal.mode === 'bulk' ? 'warning' : 'tip',
         priority: 36,
         category: 'nutrition',
@@ -3040,6 +3107,27 @@
           category: 'nutrition',
           triggers: ['tab_open'],
           ttl: 5000
+        });
+      }
+      
+      // 🆕 КОМБО: Недобор калорий + мало воды = двойной удар!
+      const waterPctForCombo = (day?.waterMl || 0) / (waterGoal || 2000);
+      if (hour >= 16 && kcalPct < 0.6 && waterPctForCombo < 0.5 && mealCount >= 1) {
+        advices.push({
+          id: 'undereating_dehydration_combo',
+          icon: '🚨',
+          text: 'Мало калорий И мало воды — двойной стресс для организма!',
+          details: `🔬 Комбинация дефицита и обезвоживания особенно опасна:\n\n` +
+            `• Метаболизм замедляется ещё сильнее\n` +
+            `• Голод усиливается (жажду путают с голодом)\n` +
+            `• Головная боль, слабость, раздражительность\n` +
+            `• Почки и печень работают на износ\n\n` +
+            `💡 Сначала выпей воды! Часто "голод" = жажда. Потом поешь.`,
+          type: 'warning',
+          priority: 6, // Высокий приоритет!
+          category: 'nutrition',
+          triggers: ['tab_open'],
+          ttl: 7000
         });
       }
       
@@ -4489,22 +4577,44 @@
       }
     }
     
-    // Задача 41: Белок перед сном
-    const sleepNormHours = prof?.sleepHours || 8;
-    const expectedBedtime = 24 - sleepNormHours + 7; // Примерно когда ложится спать (если встаёт в 7)
-    const hoursUntilBed = expectedBedtime - hour;
+    // Задача 41: Белок перед сном (с реальным временем сна из истории!)
+    const bedtimeInfo = getHoursUntilBedtime(hour, prof);
+    const hoursUntilBed = bedtimeInfo.hoursUntilBed;
+    const bedtimeText = bedtimeInfo.source === 'history' 
+      ? `(обычно в ${bedtimeInfo.bedtimeFormatted})` 
+      : '';
     
-    if (hour >= 20 && hour <= 22 && proteinPct < 0.8 && hoursUntilBed > 0 && hoursUntilBed <= 4) {
+    if (hour >= 20 && hour <= 23 && proteinPct < 0.8 && hoursUntilBed > 0 && hoursUntilBed <= 4) {
       advices.push({
         id: 'bedtime_protein',
         icon: '🥛',
-        text: `До сна ~${Math.round(hoursUntilBed)}ч — последний шанс добрать белок`,
+        text: `До сна ~${Math.round(hoursUntilBed)}ч ${bedtimeText} — добери белок!`,
         details: '🌙 Казеин (творог, греческий йогурт) — идеален на ночь. Медленно усваивается и питает мышцы во сне.',
         type: 'tip',
         priority: 35,
         category: 'timing',
         triggers: ['tab_open'],
         ttl: 5000
+      });
+    }
+    
+    // 🆕 Совет если до сна мало времени и недобор калорий
+    if (hoursUntilBed > 0 && hoursUntilBed <= 2 && kcalPct < 0.7) {
+      const kcalMissing = Math.round((1 - kcalPct) * (optimum || 2000));
+      advices.push({
+        id: 'bedtime_undereating',
+        icon: '⏰',
+        text: `До сна ~${Math.round(hoursUntilBed)}ч, а не хватает ${kcalMissing} ккал!`,
+        details: `🔬 Времени мало, но лучше поесть:\n\n` +
+          `• Творог 200г = 220 ккал, 36г белка — переварится за 1.5-2ч\n` +
+          `• Протеиновый коктейль = 120-200 ккал за 30 мин\n` +
+          `• Орехи 50г = 300 ккал — быстро и сытно\n\n` +
+          `💡 Голодный сон = плохое восстановление + переедание завтра`,
+        type: 'warning',
+        priority: 8,
+        category: 'timing',
+        triggers: ['tab_open'],
+        ttl: 6000
       });
     }
     
@@ -4574,15 +4684,39 @@
       }
     }
     
-    // Задача 39: Кофе вечером
-    if (hasCoffeeAfterHour(day?.meals, 16, pIndex) && !sessionStorage.getItem('heys_caffeine_tip')) {
+    // Задача 39: Кофе вечером (с учётом реального времени сна!)
+    const coffeeCheck = (() => {
+      // Вычисляем за сколько часов до сна допустим кофеин (6ч минимум)
+      const bedInfo = getHoursUntilBedtime(hour, prof);
+      const hoursToSleep = bedInfo.hoursUntilBed;
+      
+      // Если до сна ≤6ч — кофеин уже опасен
+      const caffeineUnsafeHour = bedInfo.source === 'history'
+        ? Math.max(12, 24 - 6 + parseInt(bedInfo.bedtimeFormatted.split(':')[0]) - 24) // 6ч до сна
+        : 16; // fallback
+      
+      return { 
+        hasCoffee: hasCoffeeAfterHour(day?.meals, Math.min(caffeineUnsafeHour, 16), pIndex),
+        bedtime: bedInfo.bedtimeFormatted,
+        hoursToSleep,
+        source: bedInfo.source
+      };
+    })();
+    
+    if (coffeeCheck.hasCoffee && !sessionStorage.getItem('heys_caffeine_tip')) {
+      const coffeeDetail = coffeeCheck.source === 'history'
+        ? `⏰ Ты обычно засыпаешь в ${coffeeCheck.bedtime}. Кофеин действует 6-8 часов — может помешать заснуть!`
+        : '⏰ Кофеин действует 6-8 часов. Кофе в 16:00 = кофеин в крови до полуночи.';
+      
       advices.push({
         id: 'caffeine_evening',
         icon: '☕',
-        text: 'Кофе после 16:00 может ухудшить сон',
-        details: '⏰ Кофеин действует 6-8 часов. Кофе в 16:00 = кофеин в крови до полуночи. Альтернатива: декаф, зелёный чай, цикорий.',
-        type: 'tip',
-        priority: 42,
+        text: coffeeCheck.hoursToSleep <= 6 
+          ? `До сна ${Math.round(coffeeCheck.hoursToSleep)}ч — кофеин ещё в крови!`
+          : 'Кофе вечером может ухудшить сон',
+        details: coffeeDetail + '\n\n💡 Альтернатива: декаф, зелёный чай, цикорий.',
+        type: coffeeCheck.hoursToSleep <= 4 ? 'warning' : 'tip',
+        priority: coffeeCheck.hoursToSleep <= 4 ? 25 : 42,
         category: 'nutrition',
         triggers: ['product_added'],
         ttl: 5000,
@@ -4850,6 +4984,58 @@
             ttl: 6000,
             onShow: () => { 
               try { localStorage.setItem('heys_morning_skipper_check', Date.now().toString()); } catch(e) {} 
+            }
+          });
+        }
+      }
+    }
+    
+    // 🔬 Задача: Паттерн хронического недобора (3+ дней подряд kcalPct < 0.75)
+    const lastUnderCheck = localStorage.getItem('heys_chronic_undereating_check');
+    
+    if (!lastUnderCheck || +lastUnderCheck < weekAgoPattern) {
+      const recentForUnder = getRecentDays(3);
+      
+      if (recentForUnder.length >= 3) {
+        const underEatingDays = recentForUnder.filter(d => {
+          const dayMeals = (d.meals || []).filter(m => m.items?.length > 0);
+          if (dayMeals.length === 0) return false;
+          
+          // Вычисляем kcal за день
+          let dayKcal = 0;
+          for (const meal of dayMeals) {
+            for (const item of meal.items || []) {
+              const product = getProductForItem(item, pIndex);
+              if (product) {
+                const grams = item.grams || 100;
+                dayKcal += (product.kcal100 || 0) * grams / 100;
+              }
+            }
+          }
+          
+          // Проверяем против optimum
+          const dayRatio = dayKcal / (optimum || 2000);
+          return dayRatio < 0.75;
+        });
+        
+        if (underEatingDays.length >= 3) {
+          advices.push({
+            id: 'chronic_undereating_pattern',
+            icon: '🚨',
+            text: 'Уже 3+ дней подряд сильный недобор — это опасно для здоровья',
+            details: `🔬 Хронический дефицит (>25% от нормы) вызывает:\n\n` +
+              `• Метаболическую адаптация — организм замедляет обмен веществ\n` +
+              `• Потерю мышечной массы (тело расщепляет мышцы для энергии)\n` +
+              `• Гормональные нарушения (щитовидка, кортизол, половые гормоны)\n` +
+              `• Выпадение волос (телогеновая алопеция)\n\n` +
+              `💡 Совет: либо увеличь порции, либо проверь что норма рассчитана правильно в профиле.`,
+            type: 'warning',
+            priority: 3, // Высокий приоритет
+            category: 'correlation',
+            triggers: ['tab_open'],
+            ttl: 10000,
+            onShow: () => { 
+              try { localStorage.setItem('heys_chronic_undereating_check', Date.now().toString()); } catch(e) {} 
             }
           });
         }
@@ -5376,6 +5562,83 @@
     }
     
     return days;
+  }
+  
+  /**
+   * Вычисляет среднее время засыпания на основе истории (sleepStart из чек-ина)
+   * @param {number} [daysBack=14] - Количество дней для анализа
+   * @returns {{hour: number, minute: number, formatted: string, count: number}|null}
+   */
+  function getAverageBedtime(daysBack = 14) {
+    const recentDays = getRecentDays(daysBack);
+    
+    // Собираем все sleepStart (время засыпания)
+    const bedtimes = recentDays
+      .map(d => d.sleepStart)
+      .filter(t => t && typeof t === 'string' && t.includes(':'));
+    
+    if (bedtimes.length < 3) return null; // Нужно минимум 3 дня данных
+    
+    // Конвертируем время в минуты от полуночи (с учётом что 23:00 > 00:30)
+    const minutesFromMidnight = bedtimes.map(t => {
+      const [h, m] = t.split(':').map(Number);
+      // Если время раньше 12:00 — это после полуночи (добавляем 24ч)
+      // Например: 01:00 → 25*60=1500 мин, 23:00 → 23*60=1380 мин
+      return h < 12 ? (h + 24) * 60 + m : h * 60 + m;
+    });
+    
+    // Среднее
+    const avgMinutes = Math.round(minutesFromMidnight.reduce((a, b) => a + b, 0) / minutesFromMidnight.length);
+    
+    // Конвертируем обратно в часы:минуты
+    let hour = Math.floor(avgMinutes / 60);
+    const minute = avgMinutes % 60;
+    
+    // Если больше 24 — вычитаем (00:30 → 0.5)
+    if (hour >= 24) hour -= 24;
+    
+    const formatted = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    
+    return { hour, minute, formatted, count: bedtimes.length };
+  }
+  
+  /**
+   * Вычисляет сколько часов осталось до обычного времени сна
+   * @param {number} currentHour - Текущий час
+   * @param {Object} [prof] - Профиль пользователя (fallback на sleepHours)
+   * @returns {{hoursUntilBed: number, bedtimeFormatted: string, source: 'history'|'calculated'}}
+   */
+  function getHoursUntilBedtime(currentHour, prof) {
+    // Пробуем получить из истории
+    const avgBedtime = getAverageBedtime(14);
+    
+    if (avgBedtime) {
+      // Вычисляем разницу
+      let bedHour = avgBedtime.hour;
+      // Если время сна после полуночи, добавляем 24 для корректного расчёта
+      if (bedHour < 12) bedHour += 24;
+      
+      let hoursUntilBed = bedHour - currentHour;
+      if (hoursUntilBed < 0) hoursUntilBed += 24;
+      if (hoursUntilBed > 12) hoursUntilBed = 0; // Уже должен спать
+      
+      return {
+        hoursUntilBed,
+        bedtimeFormatted: avgBedtime.formatted,
+        source: 'history'
+      };
+    }
+    
+    // Fallback: вычисляем из профиля (если встаёт в 7)
+    const sleepNormHours = prof?.sleepHours || 8;
+    const expectedBedtime = 24 - sleepNormHours + 7; // Примерно когда ложится
+    const hoursUntilBed = expectedBedtime - currentHour;
+    
+    return {
+      hoursUntilBed: hoursUntilBed > 0 ? hoursUntilBed : 0,
+      bedtimeFormatted: `~${expectedBedtime}:00`,
+      source: 'calculated'
+    };
   }
   
   /**
@@ -5934,6 +6197,8 @@
     canShowMealAdvice,
     markMealAdviceShown,
     getRecentDays,
+    getAverageBedtime,      // 🆕 Среднее время сна из истории
+    getHoursUntilBedtime,   // 🆕 Часов до сна (из истории или расчёта)
     // 🆕 Phase 3 helpers
     analyzeProductCategories,
     getDayForecast,

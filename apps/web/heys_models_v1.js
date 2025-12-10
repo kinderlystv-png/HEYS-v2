@@ -298,6 +298,8 @@
         (d.deficitPct || ''),
       steps:+d.steps||0,
       householdMin:+d.householdMin||0,
+      // Массив бытовых активностей (новый формат)
+      householdActivities: Array.isArray(d.householdActivities) ? d.householdActivities : undefined,
       trainings:Array.isArray(d.trainings)?d.trainings:[{z:[0,0,0,0]},{z:[0,0,0,0]}],
       // Если явно передана пустая строка, оставляем пустую строку
       dayScore:(d.dayScore==='')? '' : (d.dayScore!=null?d.dayScore:''),
@@ -306,11 +308,16 @@
       stressAvg:(d.stressAvg==='')? '' : (d.stressAvg!=null?d.stressAvg:''),
       dayComment:d.dayComment||'',
       waterMl: +d.waterMl || 0,
+      lastWaterTime: d.lastWaterTime || undefined,
       meals:Array.isArray(d.meals)?d.meals:[{id:uuid(),name:'Приём пищи',time:'',mood:'',wellbeing:'',stress:'',items:[]}],
       // Замеры тела (сохраняем как есть если есть)
       measurements: d.measurements || undefined,
       // День менструального цикла (null = не указан, 1-7 = день цикла)
-      cycleDay: d.cycleDay != null ? d.cycleDay : null
+      cycleDay: d.cycleDay != null ? d.cycleDay : null,
+      // Сохраняем metadata для стабильности
+      updatedAt: d.updatedAt || undefined,
+      schemaVersion: d.schemaVersion || undefined,
+      _sourceId: d._sourceId || undefined
     };
     if(!Array.isArray(base.trainings)) base.trainings=[{z:[0,0,0,0],time:'',type:'',mood:5,wellbeing:5,stress:5,comment:''},{z:[0,0,0,0],time:'',type:'',mood:5,wellbeing:5,stress:5,comment:''}];
     if(base.trainings.length<2) while(base.trainings.length<2) base.trainings.push({z:[0,0,0,0],time:'',type:'',mood:5,wellbeing:5,stress:5,comment:''});

@@ -3092,6 +3092,10 @@
   
   // Ref для блокировки обновлений от cloud sync во время редактирования
   const blockCloudUpdatesUntilRef = React.useRef(0);
+  
+  // Ref для блокировки событий heys:day-updated во время начальной синхронизации
+  // Это предотвращает множественные setDay() вызовы и мерцание UI
+  const isSyncingRef = React.useRef(false);
 
   // Миграция тренировок: quality/feelAfter → mood/wellbeing/stress
   const normalizeTrainings = (trainings = []) => trainings.map((t = {}) => {
@@ -3222,9 +3226,35 @@
             ...v,
             trainings: cleanedTrainings
           };
-          // Сохраняем миграцию обратно
-          lsSet(key, cleanedDay);
-          setDay(ensureDay(cleanedDay, profNow));
+          // Сохраняем миграцию ТОЛЬКО если данные изменились
+          const trainingsChanged = JSON.stringify(v.trainings) !== JSON.stringify(cleanedTrainings);
+          if (trainingsChanged) {
+            lsSet(key, cleanedDay);
+          }
+          const newDay = ensureDay(cleanedDay, profNow);
+          // 🔒 Оптимизация: не вызываем setDay если данные идентичны (предотвращает мерцание)
+          setDay(prevDay => {
+            // Сравниваем по КОНТЕНТУ, а не по метаданным (updatedAt может отличаться между локальной и облачной версией)
+            if (prevDay && prevDay.date === newDay.date) {
+              const prevMealsJson = JSON.stringify(prevDay.meals || []);
+              const newMealsJson = JSON.stringify(newDay.meals || []);
+              const prevTrainingsJson = JSON.stringify(prevDay.trainings || []);
+              const newTrainingsJson = JSON.stringify(newDay.trainings || []);
+              const isSameContent = 
+                prevMealsJson === newMealsJson &&
+                prevTrainingsJson === newTrainingsJson &&
+                prevDay.waterMl === newDay.waterMl &&
+                prevDay.steps === newDay.steps &&
+                prevDay.weightMorning === newDay.weightMorning &&
+                prevDay.sleepStart === newDay.sleepStart &&
+                prevDay.sleepEnd === newDay.sleepEnd;
+              if (isSameContent) {
+                // Данные не изменились — оставляем предыдущий объект (без ре-рендера)
+                return prevDay;
+              }
+            }
+            return newDay;
+          });
           // DEBUG (отключено): console.log('[HEYS] 📅 doLocal() loaded existing day');
         } else {
           // create a clean default day for the selected date (don't inherit previous trainings)
@@ -3253,14 +3283,19 @@
       };
       if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
         if (typeof cloud.shouldSyncClient === 'function' ? cloud.shouldSyncClient(clientId, 4000) : true){
+          // 🔒 Блокируем события heys:day-updated во время синхронизации
+          // Это предотвращает множественные setDay() и мерцание UI
+          isSyncingRef.current = true;
           cloud.bootstrapClientSync(clientId)
             .then(() => {
               // После sync localStorage уже обновлён событиями heys:day-updated
               // Просто загружаем финальные данные (без задержки!)
+              isSyncingRef.current = false;
               doLocal();
             })
             .catch((err) => {
               // Нет сети или ошибка — загружаем из локального кэша
+              isSyncingRef.current = false;
               console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
               doLocal();
             });
@@ -3270,7 +3305,10 @@
       } else {
         doLocal();
       }
-      return () => { cancelled = true; };
+      return () => { 
+        cancelled = true; 
+        isSyncingRef.current = false; // Сброс при смене даты или размонтировании
+      };
     }, [date]);
 
     // Слушаем событие обновления данных дня (от Morning Check-in или внешних изменений)
@@ -3280,6 +3318,13 @@
         const updatedDate = e.detail?.date;
         const source = e.detail?.source || 'unknown';
         const forceReload = e.detail?.forceReload || false;
+        
+        // 🔒 Игнорируем события во время начальной синхронизации
+        // doLocal() в конце синхронизации загрузит все финальные данные
+        if (isSyncingRef.current && (source === 'cloud' || source === 'merge')) {
+          // DEBUG (отключено): console.log('[HEYS] 📅 Ignored event during initial sync | source:', source);
+          return;
+        }
         
         // Блокируем ВСЕ внешние обновления на 3 секунды после локального изменения
         // Но НЕ блокируем forceReload (от шагов модалки)
@@ -3315,10 +3360,33 @@
             const migratedTrainings = normalizeTrainings(v.trainings);
             const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
             const migratedDay = { ...v, trainings: cleanedTrainings };
-            // Сохраняем миграцию, чтобы не вернуть старые поля quality/feelAfter при следующей загрузке
-            lsSet(key, migratedDay);
+            // Сохраняем миграцию ТОЛЬКО если данные изменились
+            const trainingsChanged = JSON.stringify(v.trainings) !== JSON.stringify(cleanedTrainings);
+            if (trainingsChanged) {
+              lsSet(key, migratedDay);
+            }
             console.log('[HEYS] 📅 Reloading day after update | meals:', storageMealsCount, '| steps:', migratedDay.steps, '| updatedAt:', migratedDay.updatedAt);
-            setDay(ensureDay(migratedDay, profNow));
+            const newDay = ensureDay(migratedDay, profNow);
+            // 🔒 Оптимизация: не вызываем setDay если контент идентичен (предотвращает мерцание)
+            setDay(prevDay => {
+              if (prevDay && prevDay.date === newDay.date) {
+                const prevMealsJson = JSON.stringify(prevDay.meals || []);
+                const newMealsJson = JSON.stringify(newDay.meals || []);
+                const prevTrainingsJson = JSON.stringify(prevDay.trainings || []);
+                const newTrainingsJson = JSON.stringify(newDay.trainings || []);
+                const isSameContent = 
+                  prevMealsJson === newMealsJson &&
+                  prevTrainingsJson === newTrainingsJson &&
+                  prevDay.waterMl === newDay.waterMl &&
+                  prevDay.steps === newDay.steps &&
+                  prevDay.weightMorning === newDay.weightMorning;
+                if (isSameContent) {
+                  // DEBUG (отключено): console.log('[HEYS] 📅 handleDayUpdated SKIPPED — same content');
+                  return prevDay;
+                }
+              }
+              return newDay;
+            });
           }
         }
       };
@@ -10642,6 +10710,35 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             React.createElement('stop', { offset: '100%', stopColor: '#ec4899', stopOpacity: '0.03' })
           )
         ),
+        // === Горизонтальная линия целевого веса ===
+        (() => {
+          const goalWeight = +prof?.weightGoal;
+          if (!goalWeight || goalWeight <= 0) return null;
+          
+          // Проверяем что цель в пределах графика
+          if (goalWeight < adjustedMin || goalWeight > adjustedMin + range) return null;
+          
+          const goalY = paddingTop + chartHeight - ((goalWeight - adjustedMin) / range) * chartHeight;
+          
+          return React.createElement('g', { key: 'weight-goal-line', className: 'weight-goal-line-group' },
+            // Пунктирная линия
+            React.createElement('line', {
+              x1: paddingX,
+              y1: goalY,
+              x2: width - paddingX,
+              y2: goalY,
+              className: 'weight-goal-line',
+              strokeDasharray: '6 4'
+            }),
+            // Метка справа
+            React.createElement('text', {
+              x: width - paddingX - 2,
+              y: goalY - 4,
+              className: 'weight-goal-label',
+              textAnchor: 'end'
+            }, 'Цель: ' + goalWeight + ' кг')
+          );
+        })(),
         // === Розовые зоны для дней с задержкой воды (рисуем ДО основного графика) ===
         // Используем только реальные точки — прогнозные не имеют данных о цикле
         hasAnyRetentionDays && (() => {

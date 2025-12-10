@@ -4261,11 +4261,39 @@
                 
                 // Supabase автоматически восстанавливает сессию из localStorage
                 if (cloud && cloud.client && cloud.client.auth) {
-                  cloud.client.auth.getSession().then(({ data }) => {
-                    if (data && data.session && data.session.user) {
-                      setCloudUser(data.session.user);
-                      setStatus('online');
-                      // Клиенты будут загружены в отдельном useEffect при изменении cloudUser
+                  cloud.client.auth.getSession().then(async ({ data }) => {
+                    const session = data?.session;
+                    const sessionUser = session?.user;
+                    
+                    // Проверяем что сессия существует и не истекла
+                    if (sessionUser && session.expires_at) {
+                      const expiresAt = session.expires_at * 1000; // в миллисекундах
+                      const now = Date.now();
+                      const bufferMs = 60 * 1000; // 1 минута буфер
+                      
+                      if (expiresAt > now + bufferMs) {
+                        // Сессия валидна — делаем тестовый запрос чтобы убедиться
+                        try {
+                          const { error: testError } = await cloud.client.from('clients').select('id').limit(1);
+                          if (!testError) {
+                            // Всё OK — используем сессию
+                            setCloudUser(sessionUser);
+                            setStatus('online');
+                            console.log('[HEYS] ✅ Сессия восстановлена:', sessionUser.email);
+                          } else {
+                            // Ошибка — сессия невалидна, показываем форму входа
+                            console.log('[HEYS] ⚠️ Сессия невалидна (test failed), требуется вход');
+                            cloud.signOut();
+                          }
+                        } catch (e) {
+                          console.log('[HEYS] ⚠️ Сессия невалидна (exception), требуется вход');
+                          cloud.signOut();
+                        }
+                      } else {
+                        // Сессия истекла — показываем форму входа
+                        console.log('[HEYS] ⚠️ Сессия истекла, требуется вход');
+                        cloud.signOut();
+                      }
                     }
                     setIsInitializing(false);
                   }).catch(() => {
