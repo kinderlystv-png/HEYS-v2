@@ -46,4 +46,4 @@ polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 [2mdist/[22m[2massets/[22m[32mheys_storage_supabase_v1-4a51d2ca.js  [39m[1m[2m182.51 kB[22m[1m[22m
 [2mdist/[22m[2massets/[22m[35mindex-00785544.css                    [39m[1m[2m433.06 kB[22m[1m[22m[2m │ gzip: 73.58 kB[22m
 [36m[vite-plugin-static-copy][39m [32mCopied 1 items.[39m
-[32m✓ built in 808ms[39m
+[32m✓ built in 750ms[39m

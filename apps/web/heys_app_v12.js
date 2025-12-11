@@ -661,12 +661,29 @@
               scheduledAdvices: null,
             };
             
-            // Продукты
-            const productsKey = `heys_${clientId}_products`;
-            const productsRaw = localStorage.getItem(productsKey);
-            console.log('[BACKUP] Products key:', productsKey, '→', productsRaw ? 'found' : 'NOT FOUND');
-            if (productsRaw) {
-              try { backup.products = JSON.parse(productsRaw); } catch (e) {}
+            // Продукты — сначала из React state, потом localStorage
+            // React state приоритетнее т.к. localStorage может быть повреждён
+            if (HEYS.products && typeof HEYS.products.getAll === 'function') {
+              const stateProducts = HEYS.products.getAll();
+              if (Array.isArray(stateProducts) && stateProducts.length > 0) {
+                backup.products = stateProducts;
+                console.log('[BACKUP] Products from HEYS.products.getAll():', stateProducts.length);
+              }
+            }
+            
+            // Fallback на localStorage если state пустой
+            if (!backup.products || backup.products.length === 0) {
+              const productsKey = `heys_${clientId}_products`;
+              const productsRaw = localStorage.getItem(productsKey);
+              console.log('[BACKUP] Products key:', productsKey, '→', productsRaw ? 'found' : 'NOT FOUND');
+              if (productsRaw) {
+                try { 
+                  backup.products = JSON.parse(productsRaw); 
+                  console.log('[BACKUP] Products from localStorage:', backup.products.length);
+                } catch (e) {
+                  console.warn('[BACKUP] ⚠️ Products JSON parse error:', e.message);
+                }
+              }
             }
             
             // Профиль — пробуем два формата ключей
