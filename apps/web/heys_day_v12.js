@@ -9055,6 +9055,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             // 🔄 ЯВНАЯ перезагрузка данных после sync (не полагаемся только на событие)
             const dayKey = 'heys_dayv2_' + date;
             const freshDay = lsGet(dayKey, null);
+            
+            // 🔍 DEBUG: Показать что загружено (УДАЛИТЬ после отладки!)
+            const mealsInStorage = freshDay?.meals?.length || 0;
+            alert(`[DEBUG] После sync:\nKey: ${dayKey}\nMeals в localStorage: ${mealsInStorage}\nMeals names: ${(freshDay?.meals || []).map(m => m.name + ' ' + m.time).join(', ')}`);
+            
             if (freshDay && freshDay.date) {
               console.log('[PullRefresh] 🔄 Reloading day from localStorage | meals:', freshDay.meals?.length);
               const migratedTrainings = normalizeTrainings(freshDay.trainings);
