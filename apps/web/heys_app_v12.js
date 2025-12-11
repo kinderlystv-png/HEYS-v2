@@ -628,10 +628,15 @@
         // === Экспорт бэкапа всех данных в JSON ===
         // Используется из DayTab для кнопки "Скачать бэкап"
         HEYS.exportFullBackup = async function() {
-          const clientId = localStorage.getItem('heys_client_current');
+          let clientId = localStorage.getItem('heys_client_current');
           if (!clientId) {
             alert('Нет активного клиента');
             return { ok: false, error: 'no_client' };
+          }
+          
+          // Убираем лишние кавычки если есть (legacy bug)
+          if (clientId.startsWith('"') && clientId.endsWith('"')) {
+            clientId = clientId.slice(1, -1);
           }
           
           try {

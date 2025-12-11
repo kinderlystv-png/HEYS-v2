@@ -548,8 +548,9 @@
     // Получаем существующие приёмы для определения типа
     const existingMeals = useMemo(() => {
       const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
-      const dayData = safeLsGet(`heys_dayv2_${dateKey}`, {});
-      return dayData.meals || [];
+      const dayData = safeLsGet(`heys_dayv2_${dateKey}`, null);
+      // Защита от null — день может ещё не существовать (завтра, будущие даты)
+      return dayData?.meals || [];
     }, [context?.dateKey]);
     
     // Авто-определение типа приёма по времени
@@ -1097,8 +1098,9 @@
         
         // Берём оценки из предыдущего приёма если есть
         const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-        const dayData = safeLsGet(`heys_dayv2_${dateKey}`, {});
-        const meals = dayData.meals || [];
+        const dayData = safeLsGet(`heys_dayv2_${dateKey}`, null);
+        // Защита от null — день может ещё не существовать (завтра, будущие даты)
+        const meals = dayData?.meals || [];
         
         // 1. Если есть приёмы сегодня — берём последний
         if (meals.length > 0) {
@@ -1115,8 +1117,8 @@
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayKey = yesterday.toISOString().slice(0, 10);
-        const yesterdayData = safeLsGet(`heys_dayv2_${yesterdayKey}`, {});
-        const yesterdayMeals = yesterdayData.meals || [];
+        const yesterdayData = safeLsGet(`heys_dayv2_${yesterdayKey}`, null);
+        const yesterdayMeals = yesterdayData?.meals || [];
         
         if (yesterdayMeals.length > 0) {
           // Вычисляем средние оценки за вчера
