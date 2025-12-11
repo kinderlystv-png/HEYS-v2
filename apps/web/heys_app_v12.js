@@ -300,6 +300,13 @@
                 const newWorker = registration.installing;
                 console.log('[SW] 🔄 New version downloading...');
                 
+                // 🔒 Показываем модалку ТОЛЬКО если это реальное обновление (есть предыдущий SW)
+                // При первичной регистрации SW — controller = null, модалку не показываем
+                if (!navigator.serviceWorker.controller) {
+                  console.log('[SW] First-time install, no update modal needed');
+                  return;
+                }
+                
                 // Предотвращаем дублирование обновления (надёжный флаг в localStorage)
                 if (isUpdateLocked()) {
                   console.log('[SW] Update already in progress (locked), skipping');
@@ -321,7 +328,7 @@
                 }, 10000);
                 
                 newWorker?.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  if (newWorker.state === 'installed') {
                     console.log('[SW] 🎉 New version ready!');
                     clearTimeout(swUpdateTimeout); // Отменяем fallback
                     // Упрощённая анимация: ready → reloading → reload
