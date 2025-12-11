@@ -686,41 +686,59 @@
               }
             }
             
-            // Профиль — пробуем два формата ключей
-            let profileKey = `heys_${clientId}_profile`;
-            let profileRaw = localStorage.getItem(profileKey);
-            if (!profileRaw) {
-              // Fallback: legacy ключ без clientId
-              profileKey = 'heys_profile';
-              profileRaw = localStorage.getItem(profileKey);
+            // Профиль — через HEYS.store.get (учитывает memory cache и scoped keys)
+            if (HEYS.store && typeof HEYS.store.get === 'function') {
+              backup.profile = HEYS.store.get('heys_profile', null);
+              console.log('[BACKUP] Profile from HEYS.store.get:', backup.profile ? 'found' : 'NOT FOUND');
             }
-            console.log('[BACKUP] Profile key:', profileKey, '→', profileRaw ? 'found' : 'NOT FOUND');
-            if (profileRaw) {
-              try { backup.profile = JSON.parse(profileRaw); } catch (e) {}
-            }
-            
-            // Нормы — пробуем два формата ключей
-            let normsKey = `heys_${clientId}_norms`;
-            let normsRaw = localStorage.getItem(normsKey);
-            if (!normsRaw) {
-              normsKey = 'heys_norms';
-              normsRaw = localStorage.getItem(normsKey);
-            }
-            console.log('[BACKUP] Norms key:', normsKey, '→', normsRaw ? 'found' : 'NOT FOUND');
-            if (normsRaw) {
-              try { backup.norms = JSON.parse(normsRaw); } catch (e) {}
+            // Fallback на прямой localStorage
+            if (!backup.profile) {
+              let profileKey = `heys_${clientId}_profile`;
+              let profileRaw = localStorage.getItem(profileKey);
+              if (!profileRaw) {
+                profileKey = 'heys_profile';
+                profileRaw = localStorage.getItem(profileKey);
+              }
+              console.log('[BACKUP] Profile key:', profileKey, '→', profileRaw ? 'found' : 'NOT FOUND');
+              if (profileRaw) {
+                try { backup.profile = JSON.parse(profileRaw); } catch (e) {}
+              }
             }
             
-            // Пульсовые зоны — пробуем два формата ключей
-            let hrKey = `heys_${clientId}_hr_zones`;
-            let hrRaw = localStorage.getItem(hrKey);
-            if (!hrRaw) {
-              hrKey = 'heys_hr_zones';
-              hrRaw = localStorage.getItem(hrKey);
+            // Нормы — через HEYS.store.get
+            if (HEYS.store && typeof HEYS.store.get === 'function') {
+              backup.norms = HEYS.store.get('heys_norms', null);
+              console.log('[BACKUP] Norms from HEYS.store.get:', backup.norms ? 'found' : 'NOT FOUND');
             }
-            console.log('[BACKUP] HR Zones key:', hrKey, '→', hrRaw ? 'found' : 'NOT FOUND');
-            if (hrRaw) {
-              try { backup.hrZones = JSON.parse(hrRaw); } catch (e) {}
+            if (!backup.norms) {
+              let normsKey = `heys_${clientId}_norms`;
+              let normsRaw = localStorage.getItem(normsKey);
+              if (!normsRaw) {
+                normsKey = 'heys_norms';
+                normsRaw = localStorage.getItem(normsKey);
+              }
+              console.log('[BACKUP] Norms key:', normsKey, '→', normsRaw ? 'found' : 'NOT FOUND');
+              if (normsRaw) {
+                try { backup.norms = JSON.parse(normsRaw); } catch (e) {}
+              }
+            }
+            
+            // Пульсовые зоны — через HEYS.store.get
+            if (HEYS.store && typeof HEYS.store.get === 'function') {
+              backup.hrZones = HEYS.store.get('heys_hr_zones', null);
+              console.log('[BACKUP] HR Zones from HEYS.store.get:', backup.hrZones ? 'found' : 'NOT FOUND');
+            }
+            if (!backup.hrZones) {
+              let hrKey = `heys_${clientId}_hr_zones`;
+              let hrRaw = localStorage.getItem(hrKey);
+              if (!hrRaw) {
+                hrKey = 'heys_hr_zones';
+                hrRaw = localStorage.getItem(hrKey);
+              }
+              console.log('[BACKUP] HR Zones key:', hrKey, '→', hrRaw ? 'found' : 'NOT FOUND');
+              if (hrRaw) {
+                try { backup.hrZones = JSON.parse(hrRaw); } catch (e) {}
+              }
             }
             
             // Вода

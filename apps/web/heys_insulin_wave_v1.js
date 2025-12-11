@@ -669,14 +669,28 @@
       { maxGap: 90, waveBonus: -0.10, harmMultiplier: 0.8, label: '🔋 Pre-workout' }              // 45-90 мин до
     ],
 
-    // === 4. STEPS: Много шагов + ужин ===
-    // >10k шагов накопленного NEAT улучшает инсулиновую чувствительность
+    // === 4. STEPS: Шаги как NEAT ===
+    // Накопленные шаги улучшают инсулиновую чувствительность
+    // 🆕 v3.5.5: Прогрессивные пороги, работают весь день (не только вечером)
     stepsBonus: {
-      threshold: 10000,          // 10k шагов
-      afterHour: 18,             // Только вечером (когда уже накопились)
-      waveBonus: -0.10,          // -10% к волне
-      badge: '🚶 Active Day',
-      desc: '10k+ шагов → отличная инсулиновая чувствительность'
+      tiers: [
+        { threshold: 12000, waveBonus: -0.12, harmMultiplier: 0.92, badge: '🚶 12k шагов' },
+        { threshold: 10000, waveBonus: -0.10, harmMultiplier: 0.95, badge: '🚶 Активный' },
+        { threshold: 7500,  waveBonus: -0.06, harmMultiplier: 0.97, badge: '🚶 7.5k шагов' },
+        { threshold: 5000,  waveBonus: -0.04, harmMultiplier: 0.98, badge: '🚶 5k шагов' }
+      ],
+      // Для вечерних приёмов (18:00+) бонус усиливается (шаги уже накопились)
+      eveningBoost: { afterHour: 18, multiplier: 1.3 }
+    },
+
+    // === 4.1. HOUSEHOLD: Бытовая активность ===
+    // 🆕 v3.5.5: NEAT (бытовая активность) как отдельный контекст с бейджем
+    householdBonus: {
+      tiers: [
+        { threshold: 90, waveBonus: -0.12, harmMultiplier: 0.90, badge: '🏠 Очень активный' },
+        { threshold: 60, waveBonus: -0.10, harmMultiplier: 0.93, badge: '🏠 Активный быт' },
+        { threshold: 30, waveBonus: -0.05, harmMultiplier: 0.96, badge: '🏠 Умеренный быт' }
+      ]
     },
 
     // === 5. MORNING TRAINING: Утренняя тренировка ===
@@ -741,6 +755,7 @@
       post: 80,      // POST-WORKOUT — высокий
       pre: 60,       // PRE-WORKOUT — средний
       steps: 20,     // STEPS — низкий (фоновый)
+      household: 15, // HOUSEHOLD — между steps и morning
       morning: 10,   // MORNING — очень низкий (весь день)
       double: 10     // DOUBLE — очень низкий (весь день)
     },
@@ -927,19 +942,50 @@
       }
     }
     
-    // === STEPS: >10k шагов и вечерний ужин ===
+    // === STEPS: Прогрессивные пороги шагов ===
+    // 🆕 v3.5.5: Работает весь день, не только вечером. Вечером бонус усиливается.
     const cfg_steps = TRAINING_CONTEXT.stepsBonus;
-    if (steps >= cfg_steps.threshold && mealTimeMin >= cfg_steps.afterHour * 60) {
-      foundContexts.push({
-        type: 'steps',
-        priority: TRAINING_CONTEXT.priority.steps,
-        waveBonus: cfg_steps.waveBonus,
-        harmMultiplier: 1.0,
-        badge: '🚶 Активный',
-        desc: `🚶 ${steps} шагов → вечерний ужин с бонусом`,
-        trainingRef: null,
-        details: { steps }
-      });
+    for (const tier of cfg_steps.tiers) {
+      if (steps >= tier.threshold) {
+        // Вечерний бонус: после 18:00 шаги уже накопились → усиливаем эффект
+        const isEvening = mealTimeMin >= cfg_steps.eveningBoost.afterHour * 60;
+        const eveningMult = isEvening ? cfg_steps.eveningBoost.multiplier : 1.0;
+        const effectiveWaveBonus = tier.waveBonus * eveningMult;
+        
+        foundContexts.push({
+          type: 'steps',
+          priority: TRAINING_CONTEXT.priority.steps,
+          waveBonus: effectiveWaveBonus,
+          harmMultiplier: tier.harmMultiplier,
+          badge: tier.badge,
+          desc: `${tier.badge} (${Math.round(steps/1000)}k)${isEvening ? ' 🌆 вечер' : ''}`,
+          trainingRef: null,
+          details: { steps, tier: tier.threshold, isEvening, eveningMult }
+        });
+        break; // Берём только лучший (первый подходящий)
+      }
+    }
+
+    // === HOUSEHOLD: Бытовая активность ===
+    // 🆕 v3.5.5: NEAT как отдельный Activity Context с бейджем и harmMultiplier
+    const cfg_household = TRAINING_CONTEXT.householdBonus;
+    const householdMin = params.householdMin || 0;
+    if (cfg_household && householdMin > 0) {
+      for (const tier of cfg_household.tiers) {
+        if (householdMin >= tier.threshold) {
+          foundContexts.push({
+            type: 'household',
+            priority: TRAINING_CONTEXT.priority.household || 15, // Между steps и morning
+            waveBonus: tier.waveBonus,
+            harmMultiplier: tier.harmMultiplier,
+            badge: tier.badge,
+            desc: `${tier.badge} ${householdMin} мин`,
+            trainingRef: null,
+            details: { householdMin, tier: tier.threshold }
+          });
+          break;
+        }
+      }
     }
     
     // === MORNING: утренняя тренировка (до 12:00) ===
