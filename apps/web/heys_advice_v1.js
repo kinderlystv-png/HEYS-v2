@@ -2498,7 +2498,7 @@
     
     const advices = [];
     const {
-      dayTot, normAbs, optimum, day, pIndex, currentStreak,
+      dayTot, normAbs, optimum, displayOptimum, caloricDebt, day, pIndex, currentStreak,
       hour, mealCount, hasTraining, kcalPct,
       tone, specialDay, emotionalState, prof, waterGoal,
       goal: ctxGoal // 🎯 Goal из контекста (если есть)
@@ -3404,6 +3404,63 @@
           onShow: () => { try { sessionStorage.setItem('heys_seasonal_' + seasonal.id, '1'); } catch(e) {} }
         });
         break; // Только один сезонный совет за раз
+      }
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // 💰 CALORIC DEBT TIPS (priority: 30-40) — Советы о калорийном долге
+    // ─────────────────────────────────────────────────────────
+    
+    if (caloricDebt && caloricDebt.hasDebt) {
+      const debtKcal = Math.abs(caloricDebt.totalDebt);
+      const dailyBoost = caloricDebt.dailyBoost || 0;
+      const daysWithDeficit = caloricDebt.daysWithDeficit || 0;
+      
+      // Информация о бонусной зоне
+      if (dailyBoost > 0 && hour >= 10 && !sessionStorage.getItem('heys_debt_info')) {
+        advices.push({
+          id: 'caloric_debt_info',
+          icon: '💰',
+          text: `+${dailyBoost} ккал бонус за вчерашний дефицит!`,
+          details: `📊 За последние 3 дня накопился дефицит ${debtKcal} ккал. Норма увеличена до ${displayOptimum || optimum} ккал — организм сигнализирует о потребности в восполнении.`,
+          type: 'tip',
+          priority: 30,
+          category: 'nutrition',
+          triggers: ['tab_open'],
+          ttl: 6000,
+          onShow: () => { try { sessionStorage.setItem('heys_debt_info', '1'); } catch(e) {} }
+        });
+      }
+      
+      // Большой долг — предупреждение
+      if (debtKcal >= 500 && daysWithDeficit >= 2) {
+        advices.push({
+          id: 'caloric_debt_high',
+          icon: '⚠️',
+          text: 'Накопился дефицит — метаболизм может замедлиться',
+          details: `🔬 ${daysWithDeficit} дня подряд недоедание (−${debtKcal} ккал). Постоянный дефицит снижает лептин и замедляет обмен веществ. Рассмотри рефид или увеличь калории сегодня.`,
+          type: 'warning',
+          priority: 25,
+          category: 'nutrition',
+          triggers: ['tab_open'],
+          ttl: 7000
+        });
+      }
+      
+      // Прогресс погашения долга
+      const eatenPctOfBoost = dailyBoost > 0 ? (dayTot?.kcal || 0) / displayOptimum : 0;
+      if (dailyBoost > 0 && eatenPctOfBoost >= 0.9 && eatenPctOfBoost <= 1.1 && hour >= 18) {
+        advices.push({
+          id: 'caloric_debt_repaid',
+          icon: '✅',
+          text: 'Долг погашается — организм восстанавливается!',
+          details: '🎯 Ты съел с учётом бонусной зоны, но не переел. Это оптимальный способ восполнить дефицит без скачка веса.',
+          type: 'achievement',
+          priority: 10,
+          category: 'achievement',
+          triggers: ['tab_open'],
+          ttl: 5000
+        });
       }
     }
     
@@ -6201,11 +6258,13 @@
    * @param {Object} params.uiState - Состояние UI для проверки занятости
    * @param {Object} params.prof - Профиль пользователя (sex, age, weight, sleepHours, insulinWaveHours, deficitPctTarget и др.)
    * @param {number} params.waterGoal - Динамическая норма воды (из waterGoalBreakdown)
+   * @param {Object} params.caloricDebt - Данные о калорийном долге (totalDebt, dailyBoost, hasDebt и др.)
+   * @param {number} params.displayOptimum - Скорректированная норма с учётом долга
    * @returns {Object} Объект с советами и методами
    */
   function useAdviceEngine(params) {
     // ⚠️ ВАЖНО: currentStreak передаётся как параметр, НЕ вычисляется!
-    const { dayTot, normAbs, optimum, day, pIndex, currentStreak, trigger, uiState, prof, waterGoal } = params;
+    const { dayTot, normAbs, optimum, displayOptimum, caloricDebt, day, pIndex, currentStreak, trigger, uiState, prof, waterGoal } = params;
     const React = window.React;
     
     // Вычисляем контекст
@@ -6241,6 +6300,8 @@
         dayTot: dayTot || {},
         normAbs: normAbs || {},
         optimum: optimum || 2000,
+        displayOptimum: displayOptimum || optimum || 2000, // С учётом долга (fallback на optimum)
+        caloricDebt: caloricDebt || null,                   // Данные о долге
         day: day || {},
         pIndex: pIndex || { byId: new Map(), byName: new Map() },
         currentStreak: currentStreak || 0,
@@ -6255,7 +6316,7 @@
         waterGoal: waterGoal || 2000, // Норма воды
         goal                         // 🎯 Goal режим (deficit/bulk/maintenance)
       };
-    }, [dayTot, normAbs, optimum, day, pIndex, currentStreak, prof, waterGoal]);
+    }, [dayTot, normAbs, optimum, displayOptimum, caloricDebt, day, pIndex, currentStreak, prof, waterGoal]);
     
     // Генерируем все советы
     const allAdvices = React.useMemo(() => {

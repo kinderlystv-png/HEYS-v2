@@ -801,6 +801,15 @@
   color: #fca5a5;
 }
 
+[data-theme="dark"] .caloric-debt-explanation {
+  background: rgba(59, 130, 246, 0.1);
+  border-left-color: rgba(59, 130, 246, 0.4);
+}
+
+[data-theme="dark"] .caloric-debt-explanation-text {
+  color: var(--color-slate-400);
+}
+
 /* Dark theme for weight sparkline */
 [data-theme="dark"] .weight-sparkline-container {
   background: linear-gradient(135deg, #1e1b2e 0%, #1a1625 100%);

@@ -7465,10 +7465,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     const hasClient = !!(window.HEYS?.currentClientId);
     const emptyAdviceResult = { primary: null, relevant: [], adviceCount: 0, allAdvices: [], badgeAdvices: [], rateAdvice: null, scheduleAdvice: null, scheduledCount: 0 };
     
+    // Note: displayOptimum и caloricDebt определяются позже, передаём null — advice использует fallback
     const adviceResult = (adviceEngine && hasClient) ? adviceEngine({
       dayTot,
       normAbs,
       optimum,
+      displayOptimum: null, // Определяется позже, advice использует optimum как fallback
+      caloricDebt: null,    // Определяется позже
       day,
       pIndex,
       currentStreak,
@@ -8736,7 +8739,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         }
         
         // Результат
-        return {
+        const result = {
           hasDebt: cappedDebt > 100,           // Показывать если долг > 100 ккал
           debt: Math.round(cappedDebt),
           rawDebt: Math.round(rawDebt),
@@ -8749,6 +8752,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           daysAnalyzed: pastDays.length,
           totalBalance: Math.round(totalBalance)
         };
+        
+        return result;
       } catch (e) {
         console.warn('[CaloricDebt] Error:', e);
         return null;
@@ -12320,6 +12325,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               needsRefeed 
                 ? 'Refeed день: можно ' + adjustedOptimum + ' ккал (+' + dailyBoost + ')'
                 : 'Сегодня можно ' + adjustedOptimum + ' ккал (+' + dailyBoost + ')'
+            )
+          ),
+          // Пояснение для пользователя
+          React.createElement('div', { className: 'caloric-debt-explanation' },
+            React.createElement('span', { className: 'caloric-debt-explanation-text' },
+              debt > 400 
+                ? '💡 Ты недоел за последние дни. Бонусные калории помогут восстановить энергию без ущерба прогрессу.'
+                : '💡 Небольшой недобор за последние дни. Можешь съесть чуть больше — это не сорвёт результат.'
             )
           ),
           // Предупреждение о тренировках

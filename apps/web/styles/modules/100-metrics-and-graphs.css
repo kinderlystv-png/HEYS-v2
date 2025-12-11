@@ -2258,6 +2258,21 @@
   border-radius: 8px;
 }
 
+/* Explanation — пояснение для пользователя */
+.caloric-debt-explanation {
+  margin-top: 2px;
+  padding: 8px 10px;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid rgba(59, 130, 246, 0.3);
+}
+
+.caloric-debt-explanation-text {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-slate-600);
+}
+
 /* === 14. WEIGHT SPARKLINE — график веса с трендом === */
 .weight-sparkline-container {
   grid-column: 1 / -1;
