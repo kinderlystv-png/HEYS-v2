@@ -1015,7 +1015,9 @@
     if (cfg_night.enabled && mealTimeMin >= 22 * 60) {
       // Проверяем есть ли тренировка за последние N часов
       const recentTraining = trainings.find(t => {
+        if (!t || !t.time) return false;
         const interval = getTrainingInterval(t);
+        if (!interval || interval.endMin == null) return false;
         const hoursAgo = (mealTimeMin - interval.endMin) / 60;
         return hoursAgo >= 0 && hoursAgo <= cfg_night.maxHoursAfterTraining;
       });
