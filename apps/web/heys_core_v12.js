@@ -84,12 +84,25 @@
   }
   /**
    * Получение данных из localStorage с JSON парсингом
+   * Использует HEYS.store.get для scoped-ключей (с clientId) если доступен
    * @param {string} key - Ключ для чтения
    * @param {*} def - Значение по умолчанию при ошибке
    * @returns {*} Распарсенное значение или def
    */
   function lsGet(key, def){ 
-    try{ 
+    try{
+      // 🔧 FIX: Для client-specific ключей используем HEYS.store.get (с scoped-ключами)
+      // Это исправляет проблему когда данные из облака сохраняются в heys_${clientId}_products,
+      // а читаются из heys_products (legacy ключ с другими данными)
+      if (window.HEYS?.store?.get && window.HEYS?.currentClientId) {
+        // Проверяем, это client-specific ключ?
+        const clientSpecificKeys = ['heys_products', 'heys_profile', 'heys_hr_zones', 'heys_norms', 'heys_game'];
+        const isClientSpecific = clientSpecificKeys.some(k => key === k || key.includes('dayv2_'));
+        if (isClientSpecific) {
+          return window.HEYS.store.get(key, def);
+        }
+      }
+      // Fallback на прямой localStorage для глобальных ключей
       const v = localStorage.getItem(key); 
       return v? JSON.parse(v): def; 
     }catch(e){ 
@@ -99,14 +112,29 @@
   
   /**
    * Сохранение данных в localStorage с JSON сериализацией
+   * Использует HEYS.store.set для scoped-ключей (с clientId) если доступен
    * Автоматически вызывает window.HEYS.saveClientKey для синхронизации с облаком
    * @param {string} key - Ключ для сохранения
    * @param {*} val - Значение для сохранения
    */
   function lsSet(key, val){ 
-    try{ 
-      // localStorage.setItem триггерит interceptSetItem в heys_storage_supabase_v1.js,
-      // который автоматически вызывает saveClientKey — НЕ дублируем здесь!
+    try{
+      // 🔧 FIX: Для client-specific ключей используем HEYS.store.set (с scoped-ключами)
+      if (window.HEYS?.store?.set && window.HEYS?.currentClientId) {
+        const clientSpecificKeys = ['heys_products', 'heys_profile', 'heys_hr_zones', 'heys_norms', 'heys_game'];
+        const isClientSpecific = clientSpecificKeys.some(k => key === k || key.includes('dayv2_'));
+        if (isClientSpecific) {
+          window.HEYS.store.set(key, val);
+          // Событие для offline-индикатора
+          const type = key.includes('dayv2') ? 'meal' 
+            : key.includes('product') ? 'product'
+            : key.includes('profile') ? 'profile'
+            : 'data';
+          window.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key, type } }));
+          return;
+        }
+      }
+      // Fallback на прямой localStorage для глобальных ключей
       localStorage.setItem(key, JSON.stringify(val)); 
       // Событие для offline-индикатора с типом изменения
       const type = key.includes('dayv2') ? 'meal' 
