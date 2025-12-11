@@ -2557,6 +2557,15 @@
           ls.setItem(key, JSON.stringify(valueToSave));
           log(`  ✅ Saved to localStorage: ${key}`);
           
+          // 🔔 Dispatch event for dayv2 updates (для pull-to-refresh и UI refresh)
+          if (key.includes('dayv2_')) {
+            const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+            if (dateMatch) {
+              window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dateMatch[1], source: 'cloud-sync' } }));
+              log(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (cloud-sync)`);
+            }
+          }
+          
           // Уведомляем приложение об обновлении продуктов
           if (key.includes('_products') && valueToSave) {
             if (typeof window !== 'undefined' && window.dispatchEvent) {
