@@ -47,17 +47,17 @@
       // Используем lsGet с ключом 'heys_dayv2_' — он сам добавит clientId prefix!
       let dayData = {};
       try {
-        dayData = lsGet('heys_dayv2_' + dateStr, {});
+        dayData = lsGet('heys_dayv2_' + dateStr, {}) || {};
       } catch (e) {
         dayData = {};
       }
 
-      // Проверяем каждое поле
+      // Проверяем каждое поле (dayData может быть null/undefined)
       const fields = {};
       let filledCount = 0;
 
       TRACKED_FIELDS.forEach(f => {
-        const value = dayData[f.key];
+        const value = dayData ? dayData[f.key] : undefined;
         const isFilled = f.check(value);
         fields[f.key] = { value, filled: isFilled };
         if (isFilled) filledCount++;
