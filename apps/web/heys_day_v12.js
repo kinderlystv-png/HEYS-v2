@@ -9051,6 +9051,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         const syncPromise = (async () => {
           if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
             await cloud.bootstrapClientSync(clientId, { force: true });
+            
+            // 🔄 ЯВНАЯ перезагрузка данных после sync (не полагаемся только на событие)
+            const dayKey = 'heys_dayv2_' + date;
+            const freshDay = lsGet(dayKey, null);
+            if (freshDay && freshDay.date) {
+              console.log('[PullRefresh] 🔄 Reloading day from localStorage | meals:', freshDay.meals?.length);
+              const migratedTrainings = normalizeTrainings(freshDay.trainings);
+              const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
+              const migratedDay = { ...freshDay, trainings: cleanedTrainings };
+              setDay(ensureDay(migratedDay, getProfile()));
+            }
           }
         })();
         
