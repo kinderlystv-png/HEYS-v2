@@ -8698,7 +8698,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           dayBreakdown.push({
             date: d.date,
             dayNum: d.date.split('-')[2],
-            eaten: Math.round(d.kcal),  // <-- было kcal, нужно eaten для popup
+            kcal: Math.round(d.kcal),
             target: Math.round(target),
             delta: Math.round(delta),
             hasTraining: d.hasTraining,
@@ -8763,11 +8763,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       }
       return optimum;
     }, [optimum, caloricDebt]);
-    
-    // Осталось калорий с учётом долга
-    const displayRemainingKcal = React.useMemo(() => {
-      return r0(displayOptimum - eatenKcal);
-    }, [displayOptimum, eatenKcal]);
     
     // Данные для heatmap текущей недели (пн-вс)
     const weekHeatmapData = React.useMemo(() => {
@@ -11769,51 +11764,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   style: { color: titleColor }
                 }, r0(animatedKcal)),
                 React.createElement('span', { className: 'goal-divider' }, '/'),
-                React.createElement('span', { className: 'goal-target' }, displayOptimum),
-                displayOptimum > optimum && React.createElement('span', {
-                  className: 'goal-bonus-badge',
-                  style: { marginLeft: '4px', fontSize: '10px', color: '#10b981' }
-                }, '+' + (displayOptimum - optimum)),
+                React.createElement('span', { className: 'goal-target' }, optimum),
                 React.createElement('span', { className: 'goal-unit' }, 'ккал')
               )
             ),
-            React.createElement('div', { className: 'goal-progress-track' + (eatenKcal > displayOptimum ? ' has-over' : '') + (displayOptimum > optimum ? ' has-debt' : '') },
-              // Бонусная зона калорийного долга (справа от 100%, показывает расширенную зелёную зону)
-              // Позиционируется от 100% до 100% + bonus% (где bonus = (displayOptimum - optimum) / optimum)
-              displayOptimum > optimum && eatenKcal <= optimum && React.createElement('div', { 
-                className: 'goal-bonus-zone',
-                style: { 
-                  // Бонусная зона начинается с правого края (100%) и расширяется вправо
-                  // Но мы не можем показать >100%, поэтому показываем масштабированно:
-                  // Если displayOptimum = 1.17 * optimum, то зона занимает последние 14.5% бара
-                  // Формула: left = optimum / displayOptimum, width = (displayOptimum - optimum) / displayOptimum
-                  left: (optimum / displayOptimum * 100) + '%',
-                  width: ((displayOptimum - optimum) / displayOptimum * 100) + '%'
-                },
-                title: '💰 Бонусная зона: +' + (displayOptimum - optimum) + ' ккал из калорийного долга'
-              }),
-              // Маркер базовой нормы (пунктир) если есть долг и не переедание
-              displayOptimum > optimum && eatenKcal <= displayOptimum && React.createElement('div', { 
-                className: 'goal-base-marker',
-                style: { left: (optimum / displayOptimum * 100) + '%' },
-                title: 'Базовая норма: ' + optimum + ' ккал'
-              }),
+            React.createElement('div', { className: 'goal-progress-track' + (eatenKcal > optimum ? ' has-over' : '') },
               React.createElement('div', { 
                 className: 'goal-progress-fill' + (isAnimating ? ' no-transition' : ''),
                 style: { 
-                  // При наличии долга масштабируем прогресс относительно displayOptimum
-                  width: displayOptimum > optimum 
-                    ? Math.min((eatenKcal / displayOptimum * 100), 100) + '%'
-                    : Math.min(animatedProgress, 100) + '%',
+                  width: Math.min(animatedProgress, 100) + '%',
                   background: fillGradient
                 }
               }),
-              // Красная часть перебора (только если съели больше displayOptimum)
-              eatenKcal > displayOptimum && React.createElement('div', { 
+              eatenKcal > optimum && React.createElement('div', { 
                 className: 'goal-progress-over',
                 style: { 
-                  left: (displayOptimum / eatenKcal * 100) + '%',
-                  width: ((eatenKcal - displayOptimum) / eatenKcal * 100) + '%',
+                  left: (optimum / eatenKcal * 100) + '%',
+                  width: ((eatenKcal - optimum) / eatenKcal * 100) + '%',
                   background: overGradient
                 }
               }),
@@ -11822,31 +11789,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 className: 'goal-current-marker' + (isAnimating ? ' no-transition' : ''),
                 style: { 
                   // Позиция бейджа анимируется от 0 до 100% (независимо от ratio)
-                  left: displayOptimum > optimum 
-                    ? Math.min((eatenKcal / displayOptimum * 100), 100) + '%'
-                    : animatedMarkerPos + '%'
+                  left: animatedMarkerPos + '%'
                 }
               },
                 React.createElement('span', { className: 'goal-current-pct' }, 
-                  // При долге показываем % от displayOptimum
-                  displayOptimum > optimum 
-                    ? Math.round((eatenKcal / displayOptimum) * 100) + '%'
-                    : animatedRatioPct + '%'
+                  animatedRatioPct + '%'
                 )
               ),
               React.createElement('div', { 
-                className: 'goal-marker' + (eatenKcal > displayOptimum ? ' over' : ''),
-                style: eatenKcal > displayOptimum ? { left: (displayOptimum / eatenKcal * 100) + '%' } : {}
+                className: 'goal-marker' + (eatenKcal > optimum ? ' over' : ''),
+                style: eatenKcal > optimum ? { left: (optimum / eatenKcal * 100) + '%' } : {}
               }),
               // Показываем остаток калорий на пустой части полосы ИЛИ внутри бара когда мало места ИЛИ перебор
               (() => {
-                // Используем displayOptimum для debt-aware расчётов
-                const effectiveTarget = displayOptimum || optimum;
-                
-                if (eatenKcal > effectiveTarget) {
+                if (eatenKcal > optimum) {
                   // Перебор — показываем слева от маркера (перед чёрной линией)
-                  const overKcal = Math.round(eatenKcal - effectiveTarget);
-                  const markerPos = (effectiveTarget / eatenKcal * 100); // позиция маркера в %
+                  const overKcal = Math.round(eatenKcal - optimum);
+                  const markerPos = (optimum / eatenKcal * 100); // позиция маркера в %
                   return React.createElement('div', {
                     className: 'goal-remaining-inside goal-over-inside pulse-glow',
                     style: {
@@ -11872,14 +11831,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   );
                 }
                 
-                if (eatenKcal >= effectiveTarget) return null;
+                if (eatenKcal >= optimum) return null;
                 
-                // Округляем остаток (от displayOptimum)
-                const effectiveRemaining = Math.round(effectiveTarget - eatenKcal);
+                // Округляем остаток
+                const remainingRounded = Math.round(remainingKcal);
                 
                 // Цвет зависит от того сколько осталось: много = зелёный, мало = красный, средне = жёлтый
-                const effectiveRatio = eatenKcal / effectiveTarget;
-                const remainingRatio = 1 - effectiveRatio; // 1 = много осталось, 0 = мало
+                const remainingRatio = 1 - ratio; // 1 = много осталось, 0 = мало
                 let remainingColor;
                 if (remainingRatio > 0.5) {
                   remainingColor = '#16a34a';
@@ -11890,10 +11848,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 }
                 
                 // Когда прогресс > 80%, перемещаем внутрь бара
-                const effectiveProgress = displayOptimum > optimum 
-                  ? (eatenKcal / effectiveTarget * 100)
-                  : animatedProgress;
-                const isInsideBar = effectiveProgress >= 80;
+                const isInsideBar = animatedProgress >= 80;
                 
                 if (isInsideBar) {
                   // Внутри заполненной части — справа, с пульсацией
@@ -11901,7 +11856,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     className: 'goal-remaining-inside pulse-glow',
                     style: {
                       position: 'absolute',
-                      right: (100 - Math.min(effectiveProgress, 100) + 2) + '%',
+                      right: (100 - Math.min(animatedProgress, 100) + 2) + '%',
                       top: '50%',
                       transform: 'translateY(-50%)',
                       display: 'flex',
@@ -11918,7 +11873,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     }
                   }, 
                     React.createElement('span', { style: { fontSize: '10px', fontWeight: '500', color: '#6b7280' } }, 'Осталось всего'),
-                    React.createElement('span', { style: { fontSize: '13px', fontWeight: '800', color: remainingColor } }, effectiveRemaining)
+                    React.createElement('span', { style: { fontSize: '13px', fontWeight: '800', color: remainingColor } }, remainingRounded)
                   );
                 } else {
                   // На пустой части полосы
@@ -11926,7 +11881,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     className: 'goal-remaining-inline',
                     style: {
                       position: 'absolute',
-                      left: Math.max(effectiveProgress + 2, 5) + '%',
+                      left: Math.max(animatedProgress + 2, 5) + '%',
                       right: '8px',
                       top: '50%',
                       transform: 'translateY(-50%)',
@@ -11943,7 +11898,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     }
                   }, 
                     React.createElement('span', { style: { fontSize: '12px', fontWeight: '500', color: '#6b7280' } }, 'Ещё'),
-                    React.createElement('span', { style: { fontSize: '15px', fontWeight: '800', color: remainingColor } }, effectiveRemaining)
+                    React.createElement('span', { style: { fontSize: '15px', fontWeight: '800', color: remainingColor } }, remainingRounded)
                   );
                 }
               })()
@@ -12121,8 +12076,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           title: 'Нажми чтобы изменить цель дефицита'
         },
           React.createElement('div', { className: 'metrics-icon' }, '🎯'),
-          React.createElement('div', { className: 'metrics-value', style: { color: displayOptimum > optimum ? '#10b981' : '#0369a1' } }, displayOptimum),
-          React.createElement('div', { className: 'metrics-label' }, 'Цель (' + dayTargetDef + '%)' + (displayOptimum > optimum ? ' 💰Долг' : ''))
+          React.createElement('div', { className: 'metrics-value', style: { color: '#0369a1' } }, optimum),
+          React.createElement('div', { className: 'metrics-label' }, 'Цель (' + dayTargetDef + '%)')
         ),
         // Съедено
         React.createElement('div', { 
@@ -12137,8 +12092,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               y: rect.top,
               data: {
                 eaten: eatenKcal,
-                goal: displayOptimum,
-                remaining: displayRemainingKcal,
+                goal: optimum,
+                remaining: remainingKcal,
                 ratio: currentRatio,
                 deficitPct: dayTargetDef
               }
@@ -12150,28 +12105,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('div', { className: 'metrics-value', style: { color: eatenCol.text } }, r0(eatenKcal)),
           React.createElement('div', { className: 'metrics-label' }, 'Съедено')
         ),
-        // Осталось / Перебор (с учётом displayRemainingKcal)
-        (() => {
-          // Inline цвет для displayRemainingKcal
-          const displayRemainCol = displayRemainingKcal > 100 
-            ? { bg: '#22c55e20', text: '#22c55e', border: '#22c55e60' }
-            : displayRemainingKcal >= 0 
-              ? { bg: '#eab30820', text: '#eab308', border: '#eab30860' }
-              : { bg: '#ef444420', text: '#ef4444', border: '#ef444460' };
-          
-          return React.createElement('div', { 
-            className: 'metrics-card' + (shakeOver && displayRemainingKcal < 0 ? ' shake-excess' : ''),
-            style: { background: displayRemainCol.bg, borderColor: displayRemainCol.border }
-          },
-            React.createElement('div', { className: 'metrics-icon' }, displayRemainingKcal >= 0 ? '🎯' : '🚫'),
-            React.createElement('div', { className: 'metrics-value', style: { color: displayRemainCol.text } }, 
-              displayRemainingKcal >= 0 ? displayRemainingKcal : Math.abs(displayRemainingKcal)
-            ),
-            React.createElement('div', { className: 'metrics-label' }, 
-              displayRemainingKcal >= 0 ? 'Осталось' : 'Перебор'
-            )
-          );
-        })()
+        // Осталось / Перебор
+        React.createElement('div', { 
+          className: 'metrics-card' + (shakeOver && remainingKcal < 0 ? ' shake-excess' : ''),
+          style: { background: remainCol.bg, borderColor: remainCol.border }
+        },
+          React.createElement('div', { className: 'metrics-icon' }, remainingKcal >= 0 ? '🎯' : '🚫'),
+          React.createElement('div', { className: 'metrics-value', style: { color: remainCol.text } }, 
+            remainingKcal >= 0 ? remainingKcal : Math.abs(remainingKcal)
+          ),
+          React.createElement('div', { className: 'metrics-label' }, 
+            remainingKcal >= 0 ? 'Осталось' : 'Перебор'
+          )
+        )
       ),
       // Спарклайн калорий — карточка в стиле веса
       // Вычисляем статистику для badge здесь (до рендера)
@@ -13255,13 +13201,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     // Съедено / норма
                     React.createElement('span', { style: { fontSize: '12px', color: '#64748b' } }, 
                       d.eaten + ' / ' + d.target),
-                    // Дельта (инвертировано: недоел = хорошо для дефицита)
+                    // Дельта
                     React.createElement('span', { 
                       style: { 
                         fontWeight: 600,
                         minWidth: '50px',
                         textAlign: 'right',
-                        color: isPositive ? '#ef4444' : '#22c55e'
+                        color: isPositive ? '#22c55e' : '#ef4444'
                       }
                     }, (isPositive ? '+' : '') + d.delta)
                   )
@@ -13319,7 +13265,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   needsRefeed ? '🔄 Refeed рекомендуется' : '💡 Рекомендация'),
                 React.createElement('div', { style: { fontSize: '13px', color: '#475569' } },
                   needsRefeed 
-                    ? 'Сегодня можно съесть ' + adjustedOptimum + ' ккал (норма +' + Math.round(refeedBoost / optimum * 100) + '%)'
+                    ? 'Сегодня можно съесть ' + adjustedOptimum + ' ккал (норма +' + Math.round(refeedBoost * 100) + '%)'
                     : 'Сегодня можно ' + adjustedOptimum + ' ккал (+' + dailyBoost + ' к норме)')
               )
             ),
@@ -14679,7 +14625,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             ndteData.active && ndteBoostKcal > 0 && React.createElement('div', { className: 'formula-row ndte-row' },
               React.createElement('span', { className: 'formula-label' }, 
                 React.createElement('span', { style: { marginRight: '4px' } }, '🔥'),
-                'Тренировка вчера'
+                'NDTE'
               ),
               React.createElement('span', { className: 'formula-value ndte-value' }, '+' + ndteBoostKcal)
             ),
@@ -14691,17 +14637,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               React.createElement('span', { className: 'formula-label' }, dayTargetDef < 0 ? 'Дефицит' : 'Профицит'),
               React.createElement('span', { className: 'formula-value' }, (dayTargetDef > 0 ? '+' : '') + dayTargetDef + '%')
             ),
-            // 💰 Калорийный долг (если есть)
-            caloricDebt?.dailyBoost > 0 && React.createElement('div', { className: 'formula-row debt-row' },
-              React.createElement('span', { className: 'formula-label' }, 
-                React.createElement('span', { style: { marginRight: '4px' } }, '💰'),
-                'Долг'
-              ),
-              React.createElement('span', { className: 'formula-value', style: { color: '#22c55e' } }, '+' + caloricDebt.dailyBoost)
-            ),
             React.createElement('div', { className: 'formula-row formula-total' },
               React.createElement('span', { className: 'formula-label' }, 'Цель'),
-              React.createElement('span', { className: 'formula-value' }, displayOptimum)
+              React.createElement('span', { className: 'formula-value' }, optimum)
             )
           )
         ),

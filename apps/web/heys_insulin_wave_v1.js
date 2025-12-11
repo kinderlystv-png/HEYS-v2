@@ -603,7 +603,95 @@
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 🏋️ TRAINING CONTEXT — контекст тренировки для модификации инсулиновой волны
+  // � NEXT-DAY TRAINING EFFECT (NDTE) — эффект вчерашней тренировки
+  // Версия: 1.0.0 | Дата: 2025-12-11
+  //
+  // Научная база:
+  // - Magkos et al., Clinical Science, 2008: >900 ккал → HOMA-IR -32%
+  // - Mikines et al., Am J Physiol, 1988: 600-800 ккал → +48ч эффект
+  // - Jamurtas et al., Eur J Appl Physiol, 2004: REE +5-15% на 10-48ч
+  // - Cartee 2011, Bird 2017: 12-48ч повышенная инсулиновая чувствительность
+  //
+  // Эффекты:
+  // 1. TDEE буст: +4% до +15% к базовому метаболизму
+  // 2. Инсулиновая волна: -8% до -35% длительность
+  // 3. Пик инсулина: -10% до -40% амплитуда
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const NDTE = {
+    // Максимальное окно эффекта (часы)
+    maxWindowHours: 48,
+    
+    // Пороги энергозатрат и соответствующие бонусы
+    // Научное обоснование: Magkos 2008 — порог ~900 ккал для значимого эффекта
+    kcalTiers: [
+      { 
+        minKcal: 900, 
+        tdeeBoost: 0.10,      // +10% к REE (Jamurtas 2004)
+        waveReduction: 0.25,  // -25% волна (Mikines 1988: 23% меньше инсулина)
+        peakReduction: 0.30,  // -30% пик инсулина
+        label: '🔥 Мощная тренировка'
+      },
+      { 
+        minKcal: 500, 
+        tdeeBoost: 0.07,      // +7% к REE
+        waveReduction: 0.15,  // -15% волна
+        peakReduction: 0.20,  // -20% пик
+        label: '💪 Хорошая нагрузка'
+      },
+      { 
+        minKcal: 300, 
+        tdeeBoost: 0.04,      // +4% к REE
+        waveReduction: 0.08,  // -8% волна
+        peakReduction: 0.10,  // -10% пик
+        label: '⚡ Лёгкая активность'
+      }
+    ],
+    
+    // BMI модификатор — люди с избыточным весом получают БОЛЬШЕ пользы
+    // Научное обоснование: у инсулинорезистентных эффект 50-80% (vs 20-50% у здоровых)
+    bmiMultiplier: {
+      obese: { minBMI: 30, multiplier: 1.8 },     // BMI 30+ → ×1.8 (было +80%)
+      overweight: { minBMI: 25, multiplier: 1.4 }, // BMI 25-30 → ×1.4 (+40%)
+      normal: { minBMI: 18.5, multiplier: 1.0 },   // BMI нормальный → ×1.0
+      underweight: { minBMI: 0, multiplier: 0.8 }  // Недовес → ×0.8 (меньше запасов)
+    },
+    
+    // Временное затухание (decay) эффекта
+    // Mikines 1988: эффект сохраняется 48ч, но постепенно ослабевает
+    decay: {
+      halfLifeHours: 16.6,  // Половина эффекта теряется за ~17ч (exp decay)
+      // Альтернатива: ступенчатое затухание
+      tiers: [
+        { maxHours: 12, multiplier: 1.0 },   // 0-12ч: полный эффект
+        { maxHours: 24, multiplier: 0.8 },   // 12-24ч: 80%
+        { maxHours: 36, multiplier: 0.5 },   // 24-36ч: 50%
+        { maxHours: 48, multiplier: 0.25 }   // 36-48ч: 25%
+      ]
+    },
+    
+    // Учёт типа тренировки
+    // Jamurtas 2004: силовая даёт более долгий EPOC, кардио — больший эффект в первые часы
+    typeMultiplier: {
+      strength: { tdee: 1.2, wave: 0.9 },  // Силовая: +20% к TDEE бусту, -10% к волне
+      cardio: { tdee: 1.0, wave: 1.1 },    // Кардио: стандарт TDEE, +10% к волне
+      hobby: { tdee: 0.8, wave: 0.8 }      // Хобби: ослабленные эффекты
+    },
+    
+    // Кумулятивный эффект нескольких тренировок
+    // Если вчера было 2+ тренировки, эффекты складываются (с diminishing returns)
+    cumulative: {
+      enabled: true,
+      maxMultiplier: 1.5  // Максимум ×1.5 от базового эффекта
+    },
+    
+    // UI конфигурация
+    badge: '🔥 Эффект тренировки',
+    badgeColor: '#10b981'  // Зелёный (позитивный эффект)
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // �🏋️ TRAINING CONTEXT — контекст тренировки для модификации инсулиновой волны
   // Версия: 3.3.0 | Дата: 2025-12-11
   // 
   // 10 контекстов активности:
@@ -984,7 +1072,7 @@
     // === HOUSEHOLD: Бытовая активность ===
     // 🆕 v3.5.5: NEAT как отдельный Activity Context с бейджем и harmMultiplier
     const cfg_household = TRAINING_CONTEXT.householdBonus;
-    const householdMin = params.householdMin || 0;
+    // householdMin уже получен из params в деструктуризации выше
     if (cfg_household && householdMin > 0) {
       for (const tier of cfg_household.tiers) {
         if (householdMin >= tier.threshold) {
@@ -2170,6 +2258,230 @@
     return 0;
   };
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🌟 NEXT-DAY TRAINING EFFECT (NDTE) — Функции расчёта
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * 📊 Получить данные тренировок за предыдущий день
+   * @param {string} todayDate - текущая дата YYYY-MM-DD
+   * @param {Function} lsGet - функция чтения из localStorage
+   * @returns {Object} { trainings: [], totalKcal, hoursSince, date }
+   */
+  const getPreviousDayTrainings = (todayDate, lsGet) => {
+    if (!todayDate || !lsGet) return { trainings: [], totalKcal: 0, hoursSince: Infinity, date: null };
+    
+    const yesterday = new Date(todayDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yDateStr = yesterday.toISOString().split('T')[0];
+    
+    const dayData = lsGet(`heys_dayv2_${yDateStr}`, {});
+    const trainings = dayData.trainings || [];
+    
+    if (trainings.length === 0) {
+      return { trainings: [], totalKcal: 0, hoursSince: Infinity, date: yDateStr };
+    }
+    
+    // Рассчитываем общие ккал тренировок
+    const weight = HEYS.user?.getProfile?.()?.weight || 70;
+    const hrZones = lsGet('heys_hr_zones', []);
+    const mets = [2.5, 6, 8, 10].map((def, i) => +hrZones[i]?.MET || def);
+    
+    const kcalPerMin = (met, w) => (met * 3.5 * w / 200);
+    
+    let totalKcal = 0;
+    let lastTrainingEndHour = 0;
+    
+    trainings.forEach(t => {
+      const zones = t.z || [0, 0, 0, 0];
+      const kcal = zones.reduce((sum, min, i) => sum + (min || 0) * kcalPerMin(mets[i], weight), 0);
+      totalKcal += kcal;
+      
+      // Найти время окончания последней тренировки
+      if (t.time) {
+        const [h, m] = t.time.split(':').map(Number);
+        const duration = zones.reduce((a, b) => a + (b || 0), 0);
+        const endHour = h + (m + duration) / 60;
+        lastTrainingEndHour = Math.max(lastTrainingEndHour, endHour);
+      }
+    });
+    
+    // Рассчитываем сколько часов прошло с последней тренировки
+    const now = new Date();
+    const currentHour = now.getHours() + now.getMinutes() / 60;
+    // Вчерашняя тренировка: текущий час + (24 - час окончания тренировки)
+    const hoursSince = currentHour + (24 - lastTrainingEndHour);
+    
+    return {
+      trainings,
+      totalKcal: Math.round(totalKcal),
+      hoursSince: Math.round(hoursSince * 10) / 10,
+      date: yDateStr,
+      dominantType: getDominantTrainingType(trainings)
+    };
+  };
+
+  /**
+   * 🏋️ Определить доминирующий тип тренировки
+   */
+  const getDominantTrainingType = (trainings) => {
+    if (!trainings || trainings.length === 0) return null;
+    
+    const types = { strength: 0, cardio: 0, hobby: 0 };
+    trainings.forEach(t => {
+      const type = t.type || 'cardio';
+      const duration = (t.z || []).reduce((a, b) => a + (b || 0), 0);
+      types[type] = (types[type] || 0) + duration;
+    });
+    
+    // Возвращаем тип с максимальной продолжительностью
+    return Object.entries(types).reduce((a, b) => b[1] > a[1] ? b : a, ['cardio', 0])[0];
+  };
+
+  /**
+   * 📈 Рассчитать BMI множитель для NDTE
+   * @param {number} bmi - индекс массы тела
+   * @returns {number} множитель (0.8-1.8)
+   */
+  const calculateNDTEBMIMultiplier = (bmi) => {
+    if (!bmi || bmi <= 0) return 1.0;
+    
+    for (const [, tier] of Object.entries(NDTE.bmiMultiplier)) {
+      if (bmi >= tier.minBMI) return tier.multiplier;
+    }
+    return 1.0;
+  };
+
+  /**
+   * ⏰ Рассчитать временное затухание NDTE
+   * @param {number} hoursSince - часов с момента тренировки
+   * @returns {number} множитель затухания (0-1)
+   */
+  const calculateNDTEDecay = (hoursSince) => {
+    if (!hoursSince || hoursSince <= 0) return 1.0;
+    if (hoursSince >= NDTE.maxWindowHours) return 0;
+    
+    // Используем ступенчатое затухание
+    for (const tier of NDTE.decay.tiers) {
+      if (hoursSince <= tier.maxHours) return tier.multiplier;
+    }
+    return 0;
+  };
+
+  /**
+   * 🔥 Рассчитать полный эффект NDTE (Next-Day Training Effect)
+   * 
+   * @param {Object} params
+   * @param {number} params.trainingKcal - ккал вчерашней тренировки
+   * @param {number} params.hoursSince - часов с момента тренировки
+   * @param {number} params.bmi - BMI пользователя
+   * @param {string} [params.trainingType] - тип тренировки (strength/cardio/hobby)
+   * @param {number} [params.trainingsCount=1] - количество тренировок
+   * @returns {Object} эффект NDTE
+   */
+  const calculateNDTE = (params) => {
+    const { trainingKcal = 0, hoursSince = Infinity, bmi = 22, trainingType = 'cardio', trainingsCount = 1 } = params;
+    
+    // Нет эффекта если тренировка была слишком давно или слишком лёгкая
+    if (hoursSince >= NDTE.maxWindowHours || trainingKcal < 200) {
+      return {
+        active: false,
+        tdeeBoost: 0,
+        waveReduction: 0,
+        peakReduction: 0,
+        label: null,
+        badge: null
+      };
+    }
+    
+    // Найти подходящий tier по ккал
+    let baseTier = null;
+    for (const tier of NDTE.kcalTiers) {
+      if (trainingKcal >= tier.minKcal) {
+        baseTier = tier;
+        break;
+      }
+    }
+    
+    // Если ккал меньше минимального порога — линейная интерполяция
+    if (!baseTier) {
+      const ratio = trainingKcal / 300; // Нормализуем к минимальному порогу
+      const minTier = NDTE.kcalTiers[NDTE.kcalTiers.length - 1];
+      baseTier = {
+        tdeeBoost: minTier.tdeeBoost * ratio,
+        waveReduction: minTier.waveReduction * ratio,
+        peakReduction: minTier.peakReduction * ratio,
+        label: '⚡ Лёгкая активность'
+      };
+    }
+    
+    // Применяем модификаторы
+    const bmiMult = calculateNDTEBMIMultiplier(bmi);
+    const decayMult = calculateNDTEDecay(hoursSince);
+    const typeMult = NDTE.typeMultiplier[trainingType] || { tdee: 1.0, wave: 1.0 };
+    
+    // Кумулятивный эффект от нескольких тренировок
+    let cumulativeMult = 1.0;
+    if (NDTE.cumulative.enabled && trainingsCount > 1) {
+      // Diminishing returns: каждая следующая даёт меньше
+      cumulativeMult = Math.min(NDTE.cumulative.maxMultiplier, 1 + (trainingsCount - 1) * 0.2);
+    }
+    
+    // Финальные значения
+    const tdeeBoost = baseTier.tdeeBoost * bmiMult * decayMult * typeMult.tdee * cumulativeMult;
+    const waveReduction = baseTier.waveReduction * bmiMult * decayMult * typeMult.wave * cumulativeMult;
+    const peakReduction = baseTier.peakReduction * bmiMult * decayMult * cumulativeMult;
+    
+    // Ограничиваем максимальные значения
+    const cappedTdeeBoost = Math.min(0.20, tdeeBoost);        // Максимум +20% к TDEE
+    const cappedWaveReduction = Math.min(0.45, waveReduction); // Максимум -45% к волне
+    const cappedPeakReduction = Math.min(0.50, peakReduction); // Максимум -50% к пику
+    
+    return {
+      active: true,
+      tdeeBoost: Math.round(cappedTdeeBoost * 1000) / 1000,
+      waveReduction: Math.round(cappedWaveReduction * 1000) / 1000,
+      peakReduction: Math.round(cappedPeakReduction * 1000) / 1000,
+      label: baseTier.label,
+      badge: NDTE.badge,
+      badgeColor: NDTE.badgeColor,
+      
+      // Детали для UI
+      trainingKcal,
+      hoursSince: Math.round(hoursSince),
+      bmiMultiplier: bmiMult,
+      decayMultiplier: decayMult,
+      typeMultiplier: typeMult,
+      trainingsCount
+    };
+  };
+
+  /**
+   * 📊 Рассчитать BMI из веса и роста
+   * @param {number} weight - вес в кг
+   * @param {number} height - рост в см
+   * @returns {number} BMI
+   */
+  const calculateBMI = (weight, height) => {
+    if (!weight || !height || weight <= 0 || height <= 0) return 22; // Дефолт
+    const heightM = height / 100;
+    return Math.round((weight / (heightM * heightM)) * 10) / 10;
+  };
+
+  /**
+   * 🏷️ Получить категорию BMI
+   * @param {number} bmi
+   * @returns {Object} { category, color, desc }
+   */
+  const getBMICategory = (bmi) => {
+    if (bmi < 18.5) return { category: 'underweight', color: '#eab308', desc: 'Недовес' };
+    if (bmi < 25) return { category: 'normal', color: '#22c55e', desc: 'Норма' };
+    if (bmi < 30) return { category: 'overweight', color: '#f97316', desc: 'Избыток' };
+    return { category: 'obese', color: '#ef4444', desc: 'Ожирение' };
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+
   /**
    * Рассчитать нутриенты приёма пищи
    * @param {Object} meal - приём пищи
@@ -3098,6 +3410,26 @@
     // 🆕 v3.4.0: Harm multiplier от activityContext (для уменьшения вредности при тренировке)
     const activityHarmMultiplier = activityContext?.harmMultiplier || 1.0;
     
+    // 🆕 v3.6.0: Next-Day Training Effect (NDTE) — эффект вчерашней тренировки
+    // Научное обоснование: Mikines 1988, Magkos 2008 — улучшенная инсулиновая чувствительность 12-48ч
+    let ndteResult = { active: false, waveReduction: 0, peakReduction: 0 };
+    if (dayData.date && dayData.lsGet) {
+      const prevTrainings = getPreviousDayTrainings(dayData.date, dayData.lsGet);
+      if (prevTrainings.totalKcal >= 200) {
+        const heightM = (+profile.height || 170) / 100;
+        const userBmi = (profile.weight && heightM) ? profile.weight / (heightM * heightM) : 22;
+        ndteResult = calculateNDTE({
+          trainingKcal: prevTrainings.totalKcal,
+          hoursSince: prevTrainings.hoursSince,
+          bmi: userBmi,
+          trainingType: prevTrainings.dominantType || 'cardio',
+          trainingsCount: prevTrainings.trainings.length
+        });
+      }
+    }
+    // NDTE как отдельный множитель (1 - waveReduction)
+    const ndteMultiplier = ndteResult.active ? (1 - ndteResult.waveReduction) : 1.0;
+    
     const allBonuses = activityBonuses + metabolicBonuses + personalBonuses + mealStackingBonus + resistantStarchBonus + coldExposureBonus + supplementsBonusValue + autophagyBonus;
     
     // Циркадный множитель: приближаем к 1.0 при низкой GL
@@ -3127,7 +3459,8 @@
     const foodMultiplier = multipliers.total + otherBonuses;
     const activityMultiplier = Math.max(0.1, 1.0 + activityBonuses); // min 10% от волны
     
-    const finalMultiplier = foodMultiplier * activityMultiplier * scaledCircadian * spicyMultiplier;
+    // 🆕 v3.6.0: NDTE применяется как отдельный множитель (независимо от состава еды)
+    const finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier;
     
     // 🔬 DEBUG: Проверка v3.2.2 расчётов с Insulin Index (отключено для production)
     // Раскомментировать для отладки:
@@ -3311,10 +3644,17 @@
       // При GL < 5 кофеин/алкоголь/транс-жиры имеют минимальный эффект
       // (без значительного инсулинового всплеска их влияние на волну минимально)
       const mealSpecificBonuses = (alcoholBonus + caffeineBonus + transFatBonus) * dayFactorsScale;
-      // 🆕 v3.2.2: Теперь включаем ВСЕ бонусы как в основном расчёте
-      const allBonuses = scaledDayBonus + scaledActivityBonus + mealSpecificBonuses + 
-                         resistantStarchBonus + coldExposureBonus + supplementsBonusValue + autophagyBonus;
-      const finalMultiplier = (mealMult.total + allBonuses) * scaledCircadian * spicyMultiplier;
+      
+      // 🆕 v3.7.2: УНИФИКАЦИЯ с основным расчётом
+      // Разделяем бонусы: еда/метаболизм vs активность
+      // Активность применяется как МНОЖИТЕЛЬ, не сумма!
+      const otherBonuses = scaledDayBonus + mealSpecificBonuses + 
+                          resistantStarchBonus + coldExposureBonus + supplementsBonusValue + autophagyBonus;
+      const foodMultiplier = mealMult.total + otherBonuses;
+      const activityMultiplier = Math.max(0.1, 1.0 + scaledActivityBonus); // min 10% от волны
+      
+      // Единая формула (идентична основному расчёту)
+      const finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier;
       
       // 🔬 DEBUG v3.2.2: детальный расчёт для последнего приёма (отключено для production)
       // Раскомментировать для отладки:
@@ -3358,6 +3698,13 @@
         waveHours: duration / 60, // 🆕 Для отображения в часах
         baseWaveHours: scaledBaseWaveHours, // 🆕 v3.0.1: персональная база, скалированная по GL
         finalMultiplier, // 🆕 Для отладки
+        // 🆕 v3.7.1: NDTE для отображения в popup
+        ndteMultiplier,
+        ndteData: ndteResult.active ? {
+          waveReduction: ndteResult.waveReduction,
+          trainingKcal: ndteResult.trainingKcal,
+          hoursSince: ndteResult.hoursSince
+        } : null,
         mealName: getMealTypeName(meal),
         mealType: meal.mealType || null,
         gi: mealNutrients.avgGI,
@@ -3649,7 +3996,7 @@
       postprandialTraining: postprandialBonus.matchedTraining,
       
       // 🏡 NEAT — бытовая активность
-      householdMin,
+      householdMin: householdMinutes,
       neatBonus: neatBonus.bonus,
       neatDesc: neatBonus.desc,
       hasNeatBonus: neatBonus.bonus < 0,
@@ -3682,6 +4029,15 @@
       activityBonusPct: Math.abs(Math.round(activityBonuses * 100)),
       // 🆕 v3.4.0: Harm multiplier для уменьшения вредности при тренировке
       activityHarmMultiplier,
+      
+      // 🆕 v3.6.0: Next-Day Training Effect (NDTE) — эффект вчерашней тренировки
+      ndte: ndteResult,
+      hasNDTE: ndteResult.active,
+      ndteWaveReduction: ndteResult.waveReduction,
+      ndteTdeeBoost: ndteResult.tdeeBoost,
+      ndteMultiplier: ndteMultiplier,
+      ndteBadge: ndteResult.badge,
+      ndteLabel: ndteResult.label,
       
       // История
       waveHistory,
@@ -3925,6 +4281,140 @@
     );
   };
   
+  // === 🔥 NDTE BADGE — интерактивный badge с countdown (v3.7.0) ===
+  /**
+   * Рендерит интерактивный NDTE badge с пульсирующей анимацией и expand-секцией
+   * @param {Object} ndteData - данные из calculateNDTE()
+   * @param {number} ndteBoostKcal - бонус в ккал
+   * @param {boolean} expanded - развёрнут ли badge
+   * @param {Function} onToggle - callback при клике
+   */
+  const renderNDTEBadge = (ndteData, ndteBoostKcal, expanded, onToggle) => {
+    if (!ndteData || !ndteData.active) return null;
+    
+    const boostPct = Math.round(ndteData.tdeeBoost * 100);
+    const waveReductionPct = Math.round(ndteData.waveReduction * 100);
+    const peakReductionPct = Math.round((ndteData.peakReduction || 0) * 100);
+    
+    // Расчёт оставшегося времени до окончания эффекта
+    const hoursRemaining = Math.max(0, 48 - ndteData.hoursSince);
+    const decayPct = ndteData.decayMultiplier ? Math.round(ndteData.decayMultiplier * 100) : 100;
+    
+    // Форматирование времени
+    const formatTimeRemaining = (hours) => {
+      if (hours <= 0) return 'завершён';
+      const h = Math.floor(hours);
+      const m = Math.round((hours - h) * 60);
+      if (h === 0) return `${m} мин`;
+      if (m === 0) return `${h}ч`;
+      return `${h}ч ${m}м`;
+    };
+    
+    // Определение типа тренировки для иконки
+    const typeIcons = {
+      cardio: '🏃',
+      strength: '🏋️',
+      hobby: '⚽'
+    };
+    const typeIcon = typeIcons[ndteData.trainingType] || '🔥';
+    
+    return React.createElement('div', {
+      style: { display: 'inline-block', marginLeft: '6px' }
+    },
+      // Кликабельный badge
+      React.createElement('span', {
+        className: 'ndte-badge ndte-badge--active',
+        onClick: (e) => {
+          e.stopPropagation();
+          if (onToggle) onToggle();
+        },
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px'
+        }
+      },
+        React.createElement('span', null, '🔥'),
+        React.createElement('span', null, `+${boostPct}%`),
+        React.createElement('span', {
+          style: {
+            marginLeft: '2px',
+            fontSize: '10px',
+            opacity: 0.7,
+            transition: 'transform 0.2s',
+            transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)'
+          }
+        }, '▼')
+      ),
+      
+      // Expand секция
+      expanded && React.createElement('div', { className: 'ndte-expand' },
+        // Header
+        React.createElement('div', { className: 'ndte-expand__header' },
+          React.createElement('span', { className: 'ndte-expand__icon' }, '🔥'),
+          React.createElement('div', null,
+            React.createElement('div', { className: 'ndte-expand__title' }, 'Next-Day Training Effect'),
+            React.createElement('div', { className: 'ndte-expand__subtitle' }, 
+              `${typeIcon} ${ndteData.trainingKcal} ккал • ${ndteData.hoursSince} ч назад`
+            )
+          )
+        ),
+        
+        // Stats grid
+        React.createElement('div', { className: 'ndte-expand__stats' },
+          // TDEE boost
+          React.createElement('div', { className: 'ndte-expand__stat' },
+            React.createElement('span', { className: 'ndte-expand__stat-icon' }, '⚡'),
+            React.createElement('div', { className: 'ndte-expand__stat-content' },
+              React.createElement('span', { className: 'ndte-expand__stat-value' }, `+${ndteBoostKcal} ккал`),
+              React.createElement('span', { className: 'ndte-expand__stat-label' }, 'к TDEE')
+            )
+          ),
+          // Wave reduction
+          React.createElement('div', { className: 'ndte-expand__stat' },
+            React.createElement('span', { className: 'ndte-expand__stat-icon' }, '📉'),
+            React.createElement('div', { className: 'ndte-expand__stat-content' },
+              React.createElement('span', { className: 'ndte-expand__stat-value' }, `-${waveReductionPct}%`),
+              React.createElement('span', { className: 'ndte-expand__stat-label' }, 'волна короче')
+            )
+          ),
+          // Peak reduction (если есть)
+          peakReductionPct > 0 && React.createElement('div', { className: 'ndte-expand__stat' },
+            React.createElement('span', { className: 'ndte-expand__stat-icon' }, '🎯'),
+            React.createElement('div', { className: 'ndte-expand__stat-content' },
+              React.createElement('span', { className: 'ndte-expand__stat-value' }, `-${peakReductionPct}%`),
+              React.createElement('span', { className: 'ndte-expand__stat-label' }, 'пик инсулина')
+            )
+          ),
+          // BMI multiplier (если есть)
+          ndteData.bmiMultiplier && ndteData.bmiMultiplier !== 1 && React.createElement('div', { className: 'ndte-expand__stat' },
+            React.createElement('span', { className: 'ndte-expand__stat-icon' }, '📊'),
+            React.createElement('div', { className: 'ndte-expand__stat-content' },
+              React.createElement('span', { className: 'ndte-expand__stat-value' }, `×${ndteData.bmiMultiplier.toFixed(1)}`),
+              React.createElement('span', { className: 'ndte-expand__stat-label' }, 'BMI boost')
+            )
+          )
+        ),
+        
+        // Decay progress bar
+        React.createElement('div', { className: 'ndte-expand__decay' },
+          React.createElement('div', { className: 'ndte-expand__decay-header' },
+            React.createElement('span', { className: 'ndte-expand__decay-label' }, 'Эффект активен'),
+            React.createElement('span', { className: 'ndte-expand__decay-time' }, 
+              `⏱️ осталось ${formatTimeRemaining(hoursRemaining)}`
+            )
+          ),
+          React.createElement('div', { className: 'ndte-expand__decay-bar' },
+            React.createElement('div', { 
+              className: 'ndte-expand__decay-fill',
+              style: { width: `${decayPct}%` }
+            })
+          )
+        )
+      )
+    );
+  };
+  
   // === SVG ГРАФИК ВОЛНЫ (выносим наружу для использования в основной карточке) ===
   const renderWaveChart = (data) => {
     if (!data || data.remaining <= 0) return null; // Не показываем если волна завершена
@@ -4086,6 +4576,9 @@
   const MealWaveExpandSection = ({ waveData, prevWave, nextWave }) => {
     if (!waveData) return null;
     const normalize = utils.normalizeToHeysDay;
+    
+    // 🆕 v3.7.1: State для popup детализации волны
+    const [showWaveDetails, setShowWaveDetails] = React.useState(false);
     
     // 🆕 v3.4.0: Activity Context badge
     const activityContext = waveData.activityContext;
@@ -4478,6 +4971,262 @@
             );
           })
         )
+      ),
+      
+      // 🆕 v3.7.1: Кнопка "Показать расчёт"
+      React.createElement('div', {
+        style: { 
+          display: 'flex', 
+          justifyContent: 'flex-end', 
+          marginTop: '8px'
+        }
+      },
+        React.createElement('button', {
+          onClick: () => setShowWaveDetails(true),
+          style: {
+            background: 'rgba(59, 130, 246, 0.1)',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '4px 10px',
+            fontSize: '11px',
+            color: '#3b82f6',
+            fontWeight: 500,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }
+        }, 'ℹ️ Показать расчёт')
+      ),
+      
+      // 🆕 v3.7.1: Popup детализации волны
+      showWaveDetails && React.createElement('div', {
+        className: 'wave-details-overlay',
+        onClick: (e) => { if (e.target === e.currentTarget) setShowWaveDetails(false); },
+        style: {
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }
+      },
+        React.createElement('div', {
+          className: 'wave-details-popup',
+          style: {
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '20px',
+            maxWidth: '360px',
+            width: '100%',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }
+        },
+          // Заголовок
+          React.createElement('div', {
+            style: { 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '16px'
+            }
+          },
+            React.createElement('h3', { 
+              style: { margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' }
+            }, '📊 Расчёт волны'),
+            React.createElement('button', {
+              onClick: () => setShowWaveDetails(false),
+              style: {
+                background: 'none', border: 'none', fontSize: '20px', 
+                cursor: 'pointer', color: '#9ca3af', padding: '4px'
+              }
+            }, '×')
+          ),
+          
+          // Итоговая длина волны
+          React.createElement('div', {
+            style: {
+              background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '16px',
+              textAlign: 'center',
+              color: '#fff'
+            }
+          },
+            React.createElement('div', { style: { fontSize: '12px', opacity: 0.9, marginBottom: '4px' } }, 
+              'Длина волны'
+            ),
+            React.createElement('div', { style: { fontSize: '28px', fontWeight: 700 } }, 
+              (waveData.waveHours || waveData.duration / 60).toFixed(1) + 'ч'
+            ),
+            React.createElement('div', { style: { fontSize: '11px', opacity: 0.8, marginTop: '4px' } }, 
+              waveData.timeDisplay + ' → ' + waveData.endTimeDisplay
+            )
+          ),
+          
+          // Формула
+          React.createElement('div', {
+            style: {
+              background: '#f8fafc',
+              borderRadius: '10px',
+              padding: '12px',
+              marginBottom: '16px',
+              fontSize: '11px',
+              fontFamily: 'monospace',
+              color: '#64748b',
+              textAlign: 'center'
+            }
+          }, 'База × Множитель = ' + (waveData.baseWaveHours || 3).toFixed(1) + 'ч × ' + 
+             (waveData.finalMultiplier || 1).toFixed(2) + ' = ' +
+             (waveData.waveHours || waveData.duration / 60).toFixed(1) + 'ч'
+          ),
+          
+          // Факторы еды
+          React.createElement('div', { style: { marginBottom: '12px' } },
+            React.createElement('div', { 
+              style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' }
+            }, '🍽️ Факторы еды'),
+            
+            // GI
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+              React.createElement('span', { style: { color: '#64748b' } }, 'ГИ'),
+              React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.gi || 0))
+            ),
+            // GL
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+              React.createElement('span', { style: { color: '#64748b' } }, 'GL (нагрузка)'),
+              React.createElement('span', { style: { fontWeight: 500, color: waveData.gl < 10 ? '#22c55e' : waveData.gl > 20 ? '#ef4444' : '#1f2937' } }, 
+                (waveData.gl || 0).toFixed(1) + (waveData.glCategory?.desc ? ' (' + waveData.glCategory.desc + ')' : '')
+              )
+            ),
+            // Белок
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+              React.createElement('span', { style: { color: '#64748b' } }, 'Белок'),
+              React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.protein || 0) + 'г')
+            ),
+            // Клетчатка
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+              React.createElement('span', { style: { color: '#64748b' } }, 'Клетчатка'),
+              React.createElement('span', { style: { fontWeight: 500, color: waveData.fiber >= 5 ? '#22c55e' : '#1f2937' } }, 
+                Math.round(waveData.fiber || 0) + 'г'
+              )
+            ),
+            // Жиры
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+              React.createElement('span', { style: { color: '#64748b' } }, 'Жиры'),
+              React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.fat || 0) + 'г')
+            ),
+            // Углеводы
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+              React.createElement('span', { style: { color: '#64748b' } }, 'Углеводы'),
+              React.createElement('span', { style: { fontWeight: 500 } }, Math.round(waveData.carbs || 0) + 'г')
+            ),
+            // Жидкая еда
+            waveData.hasLiquid && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+              React.createElement('span', { style: { color: '#f97316' } }, '🥤 Жидкая еда'),
+              React.createElement('span', { style: { fontWeight: 500, color: '#f97316' } }, '×' + (waveData.liquidMultiplier || 0.75).toFixed(2))
+            ),
+            // Инсулиногенность
+            waveData.insulinogenicType && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+              React.createElement('span', { style: { color: '#64748b' } }, '🥛 Инсулиногенность'),
+              React.createElement('span', { style: { fontWeight: 500 } }, waveData.insulinogenicType)
+            )
+          ),
+          
+          // Дневные факторы
+          React.createElement('div', { style: { marginBottom: '12px' } },
+            React.createElement('div', { 
+              style: { fontSize: '12px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' }
+            }, '⏰ Дневные факторы'),
+            
+            // Циркадный ритм
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+              React.createElement('span', { style: { color: '#64748b' } }, 'Время суток'),
+              React.createElement('span', { style: { fontWeight: 500, color: waveData.circadianMultiplier > 1.05 ? '#f97316' : '#1f2937' } }, 
+                '×' + (waveData.circadianMultiplier || 1).toFixed(2)
+              )
+            ),
+            // Дневные бонусы
+            waveData.dayFactorsBonus && waveData.dayFactorsBonus !== 0 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+              React.createElement('span', { style: { color: '#64748b' } }, 'Сон/стресс/гидратация'),
+              React.createElement('span', { style: { fontWeight: 500, color: waveData.dayFactorsBonus > 0 ? '#ef4444' : '#22c55e' } }, 
+                (waveData.dayFactorsBonus > 0 ? '+' : '') + (waveData.dayFactorsBonus * 100).toFixed(0) + '%'
+              )
+            ),
+            // Активность
+            waveData.activityBonus && waveData.activityBonus !== 0 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+              React.createElement('span', { style: { color: '#22c55e' } }, '🏃 Активность'),
+              React.createElement('span', { style: { fontWeight: 500, color: '#22c55e' } }, 
+                (waveData.activityBonus * 100).toFixed(0) + '%'
+              )
+            ),
+            // 🆕 v3.7.1: NDTE (Next-Day Training Effect)
+            waveData.ndteData && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' } },
+              React.createElement('span', { style: { color: '#10b981' } }, '🔥 Вчера тренировка'),
+              React.createElement('span', { style: { fontWeight: 500, color: '#10b981' } }, 
+                '-' + Math.round(waveData.ndteData.waveReduction * 100) + '%'
+              )
+            )
+          ),
+          
+          // Activity Context (если есть)
+          activityContext && activityContext.type !== 'none' && React.createElement('div', { 
+            style: { 
+              marginBottom: '12px',
+              background: 'rgba(16, 185, 129, 0.1)',
+              borderRadius: '10px',
+              padding: '12px'
+            } 
+          },
+            React.createElement('div', { 
+              style: { fontSize: '12px', fontWeight: 600, color: '#10b981', marginBottom: '6px' }
+            }, activityContext.badge),
+            React.createElement('div', { 
+              style: { fontSize: '11px', color: '#64748b' }
+            }, activityContext.desc),
+            activityContext.waveBonus && React.createElement('div', { 
+              style: { fontSize: '11px', color: '#10b981', marginTop: '4px', fontWeight: 500 }
+            }, 'Волна: ' + (activityContext.waveBonus * 100).toFixed(0) + '%')
+          ),
+          
+          // GL Scale info
+          waveData.dayFactorsScale && waveData.dayFactorsScale < 1 && React.createElement('div', {
+            style: {
+              background: '#f0fdf4',
+              borderRadius: '8px',
+              padding: '10px',
+              fontSize: '11px',
+              color: '#166534',
+              marginBottom: '12px'
+            }
+          },
+            '💡 При низкой GL (' + (waveData.gl || 0).toFixed(1) + ') дневные факторы применяются на ' + 
+            Math.round((waveData.dayFactorsScale || 1) * 100) + '%'
+          ),
+          
+          // Кнопка закрытия
+          React.createElement('button', {
+            onClick: () => setShowWaveDetails(false),
+            style: {
+              width: '100%',
+              background: '#3b82f6',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '12px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              marginTop: '8px'
+            }
+          }, 'Закрыть')
+        )
       )
     );
   };
@@ -4847,6 +5596,16 @@
       if (data.hasCaffeineBonus) mods.push({ icon: '☕', name: 'Кофеин', value: `+${Math.round(data.caffeineBonus * 100)}%`, desc: 'повышает инсулин' });
       if (data.hasStressBonus) mods.push({ icon: '😰', name: 'Стресс', value: `+${Math.round(data.stressBonus * 100)}%`, desc: 'кортизол влияет' });
       if (data.hasSleepBonus) mods.push({ icon: '😴', name: 'Недосып', value: `+${Math.round(data.sleepDeprivationBonus * 100)}%`, desc: 'инсулинорезистентность' });
+      // 🆕 v3.7.0: NDTE — эффект вчерашней тренировки
+      if (data.hasNDTE && data.ndteWaveReduction > 0) {
+        const ndte = data.ndte || {};
+        mods.push({ 
+          icon: '🔥', 
+          name: 'Вчера тренировка', 
+          value: `-${Math.round(data.ndteWaveReduction * 100)}%`, 
+          desc: `${ndte.trainingKcal || '?'} ккал → инсулин.чувств. выше ${Math.round(ndte.hoursSince || 0)}ч` 
+        });
+      }
       return mods;
     };
     
@@ -4878,6 +5637,8 @@
           if (data.hasCaffeineBonus) parts.push(`+${Math.round(data.caffeineBonus * 100)}% кофеин`);
           if (data.hasStressBonus) parts.push(`+${Math.round(data.stressBonus * 100)}% стресс`);
           if (data.hasSleepBonus) parts.push(`+${Math.round(data.sleepDeprivationBonus * 100)}% недосып`);
+          // 🆕 v3.7.0: NDTE — эффект вчерашней тренировки
+          if (data.hasNDTE && data.ndteWaveReduction > 0) parts.push(`-${Math.round(data.ndteWaveReduction * 100)}% NDTE`);
           
           const formula = parts.join(' ');
           
@@ -5344,13 +6105,25 @@
     // 🆕 v3.5.3: UI компоненты
     renderActivityContextBadge,
     
+    // 🆕 v3.6.0: Next-Day Training Effect (NDTE)
+    NDTE,
+    calculateNDTE,
+    calculateNDTEBMIMultiplier,
+    calculateNDTEDecay,
+    getPreviousDayTrainings,
+    calculateBMI,
+    getBMICategory,
+    
+    // 🆕 v3.7.0: NDTE Badge UI
+    renderNDTEBadge,
+    
     // Версия
-    VERSION: '3.5.4'
+    VERSION: '3.7.0'
   };
   
   // Алиас
   HEYS.IW = HEYS.InsulinWave;
   
-  console.log('[HEYS] InsulinWave v3.5.4 loaded (Pre-workout harm reduction)');
+  console.log('[HEYS] InsulinWave v3.7.0 loaded (NDTE Badge UI с countdown)');
   
 })(typeof window !== 'undefined' ? window : global);

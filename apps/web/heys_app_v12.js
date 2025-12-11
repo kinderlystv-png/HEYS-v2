@@ -2858,6 +2858,15 @@
               setClientsSource('loading');
               
               try {
+                // � DEBUG: Проверяем состояние сессии перед запросом
+                console.log('[HEYS] 📡 fetchClientsFromCloud: curatorId=', curatorId);
+                const { data: sessionCheck } = await cloud.client.auth.getSession();
+                console.log('[HEYS] 📡 Session before clients fetch:', {
+                  hasSession: !!sessionCheck?.session,
+                  userId: sessionCheck?.session?.user?.id,
+                  expiresAt: sessionCheck?.session?.expires_at
+                });
+                
                 // 🔄 Используем fetchWithRetry с retry + fallback routing
                 const result = await (cloud.fetchWithRetry || defaultFetchWithRetry)(
                   () => cloud.client
@@ -2869,6 +2878,12 @@
                 );
                 
                 fetchingClientsRef.current = false;
+                
+                console.log('[HEYS] 📡 fetchClientsFromCloud result:', {
+                  error: result.error?.message,
+                  dataLength: result.data?.length,
+                  data: result.data
+                });
                 
                 if (result.error) {
                   console.error('Ошибка загрузки клиентов:', result.error.message);
@@ -4690,8 +4705,22 @@
                 setEmail(savedEmail);
                 initLocalData();
                 
+                // ⚠️ Проверяем access_token локально ПЕРЕД вызовом getSession()
+                // Если токен истёк — SDK попытается refresh и получит 400 Bad Request
+                const isTokenValid = () => {
+                  try {
+                    const stored = localStorage.getItem('heys_supabase_auth_token');
+                    if (!stored) return false;
+                    const parsed = JSON.parse(stored);
+                    const expiresAt = parsed?.expires_at;
+                    // Добавляем буфер 1 минута
+                    return expiresAt && expiresAt * 1000 > Date.now() + 60000;
+                  } catch (e) { return false; }
+                };
+                
                 // Supabase автоматически восстанавливает сессию из localStorage
-                if (cloud && cloud.client && cloud.client.auth) {
+                // ⚠️ Вызываем getSession() ТОЛЬКО если токен ещё валиден
+                if (cloud && cloud.client && cloud.client.auth && isTokenValid()) {
                   cloud.client.auth.getSession().then(async ({ data }) => {
                     const session = data?.session;
                     const sessionUser = session?.user;
@@ -4713,17 +4742,17 @@
                             console.log('[HEYS] ✅ Сессия восстановлена:', sessionUser.email);
                           } else {
                             // Ошибка — сессия невалидна, показываем форму входа
+                            // ⚠️ Не вызываем signOut() — пусть SDK сам разберётся
                             console.log('[HEYS] ⚠️ Сессия невалидна (test failed), требуется вход');
-                            cloud.signOut();
                           }
                         } catch (e) {
                           console.log('[HEYS] ⚠️ Сессия невалидна (exception), требуется вход');
-                          cloud.signOut();
+                          // ⚠️ Не вызываем signOut()
                         }
                       } else {
                         // Сессия истекла — показываем форму входа
                         console.log('[HEYS] ⚠️ Сессия истекла, требуется вход');
-                        cloud.signOut();
+                        // ⚠️ Не вызываем signOut()
                       }
                     }
                     setIsInitializing(false);
@@ -4731,13 +4760,17 @@
                     setIsInitializing(false);
                   });
                 } else {
+                  // Токен истёк или невалиден — показываем форму входа
+                  // НЕ вызываем getSession() чтобы избежать 400 Bad Request
+                  console.log('[HEYS] ⏭️ Токен истёк, пропуск автовосстановления');
                   setIsInitializing(false);
                 }
               } else {
                 // Нет "Запомнить меня" — показываем форму входа
-                if (cloud && cloud.signOut) {
-                  cloud.signOut();
-                }
+                // ⚠️ НЕ вызываем signOut() здесь!
+                // signOut() инвалидирует refresh token на сервере,
+                // но SDK в фоне может попытаться его использовать → 400 Bad Request.
+                // Просто игнорируем старую сессию — пользователь залогинится заново.
                 initLocalData();
                 setIsInitializing(false);
               }
@@ -4756,14 +4789,18 @@
 
             // Загрузка клиентов из облака при получении cloudUser
             useEffect(() => {
-              if (cloudUser && cloudUser.id && clientsSource === 'cache') {
-                // Есть юзер и клиенты из кэша — обновляем из облака
+              // Загружаем из облака если:
+              // - есть cloudUser
+              // - клиенты либо из кэша, либо ещё не загружены (пустая строка)
+              // - НЕ загружаем если уже loading или cloud (чтобы не дублировать)
+              if (cloudUser && cloudUser.id && (clientsSource === 'cache' || clientsSource === '')) {
+                // Есть юзер — загружаем/обновляем из облака
                 fetchClientsFromCloud(cloudUser.id).then(result => {
                   if (result.data && result.data.length > 0) {
                     setClients(result.data);
                   }
                 }).catch(e => {
-                  console.error('[HEYS] Ошибка обновления клиентов из облака:', e);
+                  console.error('[HEYS] Ошибка загрузки клиентов из облака:', e);
                 });
               }
             }, [cloudUser, clientsSource, fetchClientsFromCloud, setClients]);
@@ -4797,9 +4834,23 @@
               if (ONE_CURATOR_MODE && status !== 'online' && !hasTriedAutoSignInRef.current) {
                 hasTriedAutoSignInRef.current = true;
                 
+                // ⚠️ Проверяем access_token локально перед вызовом getSession()
+                // Если токен истёк — SDK попытается refresh и получит 400
+                const isTokenValid = () => {
+                  try {
+                    const stored = localStorage.getItem('heys_supabase_auth_token');
+                    if (!stored) return false;
+                    const parsed = JSON.parse(stored);
+                    const expiresAt = parsed?.expires_at;
+                    return expiresAt && expiresAt * 1000 > Date.now();
+                  } catch (e) { return false; }
+                };
+                
                 // Проверяем, нет ли уже активной сессии
                 const cloud = window.HEYS?.cloud;
-                if (cloud?.client?.auth?.getSession) {
+                // ⚠️ Вызываем getSession() ТОЛЬКО если токен валиден
+                // Иначе SDK попытается refresh и получит 400
+                if (cloud?.client?.auth?.getSession && isTokenValid()) {
                   cloud.client.auth.getSession().then(({ data }) => {
                     if (data?.session?.user) {
                       // Сессия уже есть — не делаем signIn
@@ -4813,6 +4864,7 @@
                     handleSignIn();
                   });
                 } else {
+                  // Токен невалиден или нет cloud — сразу signIn
                   handleSignIn();
                 }
               }

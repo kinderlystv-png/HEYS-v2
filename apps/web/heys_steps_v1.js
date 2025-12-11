@@ -869,7 +869,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {});
+      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
       const min = Number(dayData.householdMin) || 0;
       result.push({ date: key, minutes: min });
     }
@@ -1571,7 +1571,8 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {});
+      const dayData = lsGet(`heys_dayv2_${key}`, null);
+      if (!dayData || typeof dayData !== 'object') continue;
       const m = dayData.measurements;
       if (m && m.measuredAt && (m.waist || m.hips || m.thigh || m.biceps)) {
         return {
@@ -2637,6 +2638,99 @@
           }
         }, '3 шага правильной рутины:')
       ),
+      
+      // 🆕 NDTE Insight — показываем если вчера была тренировка
+      (() => {
+        const todayKey = getTodayKey();
+        const prevTrainings = HEYS.InsulinWave && HEYS.InsulinWave.getPreviousDayTrainings 
+          ? HEYS.InsulinWave.getPreviousDayTrainings(todayKey, lsGet) 
+          : null;
+        
+        if (!prevTrainings || prevTrainings.totalKcal < 200) return null;
+        
+        const prof = getProfile();
+        const bmi = HEYS.InsulinWave.calculateBMI(prof.weight, prof.height);
+        const ndteData = HEYS.InsulinWave.calculateNDTE({
+          trainingKcal: prevTrainings.totalKcal,
+          hoursSince: prevTrainings.hoursSince,
+          bmi: bmi,
+          trainingType: prevTrainings.dominantType,
+          trainingsCount: prevTrainings.trainings.length
+        });
+        
+        if (!ndteData.active) return null;
+        
+        const boostPct = Math.round(ndteData.tdeeBoost * 100);
+        const wavePct = Math.round(ndteData.waveReduction * 100);
+        
+        return React.createElement('div', {
+          style: {
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            borderRadius: '16px',
+            padding: '16px',
+            marginBottom: '16px',
+            color: '#fff',
+            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+          }
+        },
+          // Header with animated icon
+          React.createElement('div', {
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              marginBottom: '10px'
+            }
+          },
+            React.createElement('span', {
+              style: {
+                fontSize: '24px',
+                animation: 'ndteFireFlicker 1.5s ease-in-out infinite'
+              }
+            }, '🔥'),
+            React.createElement('span', {
+              style: {
+                fontSize: '16px',
+                fontWeight: '700'
+              }
+            }, 'Эффект вчерашней тренировки!')
+          ),
+          // Stats row
+          React.createElement('div', {
+            style: {
+              display: 'flex',
+              gap: '20px',
+              fontSize: '13px',
+              opacity: '0.95'
+            }
+          },
+            React.createElement('div', null,
+              React.createElement('div', { style: { fontWeight: '600', fontSize: '18px' } }, `+${boostPct}%`),
+              React.createElement('div', { style: { opacity: '0.8', fontSize: '11px' } }, 'к метаболизму')
+            ),
+            React.createElement('div', null,
+              React.createElement('div', { style: { fontWeight: '600', fontSize: '18px' } }, `-${wavePct}%`),
+              React.createElement('div', { style: { opacity: '0.8', fontSize: '11px' } }, 'к инс. волне')
+            ),
+            React.createElement('div', null,
+              React.createElement('div', { style: { fontWeight: '600', fontSize: '18px' } }, `${prevTrainings.totalKcal}`),
+              React.createElement('div', { style: { opacity: '0.8', fontSize: '11px' } }, 'ккал вчера')
+            )
+          ),
+          // Motivation text
+          React.createElement('div', {
+            style: {
+              marginTop: '10px',
+              fontSize: '12px',
+              opacity: '0.85',
+              fontStyle: 'italic'
+            }
+          }, ndteData.tdeeBoost >= 0.07 
+            ? '💪 Отличная тренировка! Твой метаболизм работает на полную мощность.'
+            : '⚡ Хорошая активность! Метаболизм слегка ускорен.'
+          )
+        );
+      })(),
       
       // Список рутин
       React.createElement('div', {

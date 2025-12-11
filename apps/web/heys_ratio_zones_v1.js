@@ -145,16 +145,18 @@
 
     /**
      * Получить цвет с градиентом внутри зоны
-     * @param {number} ratio
+     * @param {number} ratio - значение kcal/optimum
      * @param {number} alpha - прозрачность (0-1)
+     * @param {number} bonusPct - бонусный % к зелёной зоне (от калорийного долга, 0-0.25)
      * @returns {string} rgba цвет
      */
-    getGradientColor(ratio, alpha = 1) {
+    getGradientColor(ratio, alpha = 1, bonusPct = 0) {
       if (!ratio || ratio <= 0) {
         return rgbToRgba(COLORS.red, alpha);
       }
       
-      const zones = this.getZones();
+      // Расширяем зелёную зону на bonusPct (например, при долге 1.1→1.35 = зелёный)
+      const bonusEnd = 1.1 + bonusPct;
       
       // Находим позицию ratio и интерполируем
       if (ratio < 0.5) {
@@ -172,16 +174,16 @@
         // 0.9 → 1.0: зелёный → изумрудный (perfect)
         const t = (ratio - 0.9) / 0.1;
         return rgbToRgba(lerpColor(COLORS.green, COLORS.emerald, t), alpha);
-      } else if (ratio < 1.1) {
-        // 1.0 → 1.1: изумрудный (идеально)
+      } else if (ratio < bonusEnd) {
+        // 1.0 → bonusEnd: изумрудный (идеально + бонусная зона)
         return rgbToRgba(COLORS.emerald, alpha);
-      } else if (ratio < 1.3) {
-        // 1.1 → 1.3: изумрудный → жёлтый
-        const t = (ratio - 1.1) / 0.2;
+      } else if (ratio < bonusEnd + 0.2) {
+        // bonusEnd → bonusEnd+0.2: изумрудный → жёлтый
+        const t = (ratio - bonusEnd) / 0.2;
         return rgbToRgba(lerpColor(COLORS.emerald, COLORS.yellow, t), alpha);
       } else {
-        // > 1.3: жёлтый → красный (binge)
-        const t = Math.min((ratio - 1.3) / 0.2, 1);
+        // > bonusEnd+0.2: жёлтый → красный (binge)
+        const t = Math.min((ratio - bonusEnd - 0.2) / 0.2, 1);
         return rgbToRgba(lerpColor(COLORS.yellow, COLORS.red, t), alpha);
       }
     },
