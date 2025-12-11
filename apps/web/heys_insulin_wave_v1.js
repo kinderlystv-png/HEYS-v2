@@ -3382,16 +3382,24 @@
     const today = now.toISOString().slice(0, 10);
     const todayEntry = gapHistory.find(g => g.date === today);
     if (avgGapToday > 0) {
+      const oldAvg = todayEntry?.avgGap;
+      const oldCount = todayEntry?.count;
+      
       if (todayEntry) {
         todayEntry.avgGap = avgGapToday;
         todayEntry.count = gaps.length;
       } else {
         gapHistory.push({ date: today, avgGap: avgGapToday, count: gaps.length });
       }
-      gapHistory = gapHistory.slice(-GAP_HISTORY_DAYS);
-      try {
-        localStorage.setItem(GAP_HISTORY_KEY, JSON.stringify(gapHistory));
-      } catch (e) {}
+      
+      // Сохраняем ТОЛЬКО если данные изменились (чтобы не спамить sync)
+      const needsSave = !todayEntry || oldAvg !== avgGapToday || oldCount !== gaps.length;
+      if (needsSave) {
+        gapHistory = gapHistory.slice(-GAP_HISTORY_DAYS);
+        try {
+          localStorage.setItem(GAP_HISTORY_KEY, JSON.stringify(gapHistory));
+        } catch (e) {}
+      }
     }
     
     const personalAvgGap = gapHistory.length > 0

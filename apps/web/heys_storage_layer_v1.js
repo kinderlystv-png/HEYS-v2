@@ -101,7 +101,16 @@
   }
 
   function ns(){ return (global.HEYS && global.HEYS.currentClientId) || ''; }
-  function scoped(k){ const cid=ns(); if(!cid) return k; if(/^heys_(clients|client_current)$/i.test(k)) return k;
+  function scoped(k){ 
+    const cid = ns(); 
+    if (!cid) return k; 
+    if (/^heys_(clients|client_current)$/i.test(k)) return k;
+    
+    // 🐛 FIX: Если ключ уже содержит clientId — не добавляем повторно!
+    if (cid && k.includes(cid)) {
+      return k; // Уже scoped
+    }
+    
     // Ключ `k` может быть 'dayv2_2025-01-01' или 'heys_dayv2_date'.
     // Мы должны добавить client_id после 'heys_'.
     if (k.startsWith('heys_')) {

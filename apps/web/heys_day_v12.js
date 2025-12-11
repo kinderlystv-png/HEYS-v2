@@ -8784,10 +8784,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       };
       const yesterdayAvgScore = +(localStorage.getItem(getYesterdayKey()) || 0);
       
-      // Сохраняем сегодняшний avg
+      // Сохраняем сегодняшний avg ТОЛЬКО если изменился (чтобы не спамить sync)
       if (avgQualityScore > 0) {
         const todayKey = 'heys_meal_avg_' + new Date().toISOString().slice(0, 10);
-        localStorage.setItem(todayKey, String(avgQualityScore));
+        const currentSaved = +(localStorage.getItem(todayKey) || 0);
+        if (currentSaved !== avgQualityScore) {
+          localStorage.setItem(todayKey, String(avgQualityScore));
+        }
       }
 
       // Debug snapshot

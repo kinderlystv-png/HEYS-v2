@@ -1580,7 +1580,7 @@
       // Синхронизирует данные с сервера когда пользователь возвращается в приложение
       // Это критично для multi-device сценариев (телефон ↔ ноутбук)
       let lastSyncOnFocusTime = 0;
-      const SYNC_ON_FOCUS_DEBOUNCE = 5000; // Не чаще раз в 5 секунд
+      const SYNC_ON_FOCUS_DEBOUNCE = 30000; // Не чаще раз в 30 секунд (было 5 — слишком часто)
       
       const syncOnFocus = async () => {
         // Debounce: не синхронизировать слишком часто
@@ -2053,16 +2053,53 @@
         return; 
       }
       const ls = global.localStorage;
+      
+      // 🔒 ФИЛЬТРАЦИЯ: загружаем только глобальные ключи или ключи текущего клиента
+      // kv_store содержит legacy данные с clientId внутри ключа — их нужно фильтровать
+      const currentClientId = ls.getItem('heys_client_current');
+      let parsedClientId = null;
+      try { parsedClientId = currentClientId ? JSON.parse(currentClientId) : null; } catch(e) { parsedClientId = currentClientId; }
+      
+      const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+      
       // clear only global keys for full bootstrap (no clientId)
       clearNamespace();
+      
+      let loadedCount = 0;
+      let skippedCount = 0;
+      
       (data||[]).forEach(row => {
         try {
           const key = row.k;
+          
+          // Проверяем: содержит ли ключ UUID (clientId)?
+          const uuids = key.match(uuidPattern);
+          
+          if (uuids && uuids.length > 0) {
+            // Ключ содержит UUID — это клиентские данные
+            // Загружаем только если UUID совпадает с текущим клиентом
+            const hasCurrentClient = parsedClientId && uuids.some(id => 
+              id.toLowerCase() === parsedClientId.toLowerCase()
+            );
+            
+            if (!hasCurrentClient) {
+              // Чужой клиент — пропускаем
+              skippedCount++;
+              return;
+            }
+          }
+          
+          // Глобальный ключ или ключ текущего клиента — загружаем
           ls.setItem(key, JSON.stringify(row.v));
+          loadedCount++;
         } catch(e){}
       });
+      
+      if (skippedCount > 0) {
+        logCritical(`🔒 [BOOTSTRAP] Loaded ${loadedCount} keys, skipped ${skippedCount} foreign client keys`);
+      }
+      
       muteMirror = false;
-      // Убрано избыточное логирование bootstrap synced keys
     }catch(e){ err('bootstrap exception', e); muteMirror=false; }
   };
 
@@ -2106,9 +2143,9 @@
     
     const now = Date.now();
     
-    // Throttling 5 секунд — баланс между нагрузкой и актуальностью данных
-    // Раньше было 30 сек, но это слишком долго для multi-device sync
-    const SYNC_THROTTLE_MS = 5000;
+    // Throttling 15 секунд — баланс между нагрузкой и актуальностью данных
+    // 5 сек было слишком мало — 3 компонента вызывают sync параллельно при монтировании
+    const SYNC_THROTTLE_MS = 15000;
     const forceSync = options && options.force;
     if (!forceSync && cloud._lastClientSync && cloud._lastClientSync.clientId === client_id && (now - cloud._lastClientSync.ts) < SYNC_THROTTLE_MS){
       // Тихий пропуск throttled запросов
@@ -2225,13 +2262,22 @@
       // 🔄 ФАЗ 1: ДЕДУПЛИКАЦИЯ — если несколько ключей в БД превращаются в один scoped key,
       // берём самый свежий по updated_at (поле БД, не JSON)
       const keyGroups = new Map(); // scopedKey → [{ row, updated_at_ts }]
+      const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
       
       (data||[]).forEach(row => {
         let key = row.k;
         
-        // Пропускаем ключи с двойным client_id (баг)
-        if (key.includes(client_id) && key.split(client_id).length > 2) {
-          logCritical(`🐛 [LOAD SKIP] Skipping key with double client_id: ${key}`);
+        // 🔒 ФИЛЬТРАЦИЯ: пропускаем проблемные ключи
+        // 1. Ключи с двумя или более UUID (баг двойного clientId)
+        const uuids = key.match(uuidPattern);
+        if (uuids && uuids.length >= 2) {
+          logCritical(`🐛 [LOAD SKIP] Skipping key with multiple UUIDs: ${key}`);
+          return;
+        }
+        
+        // 2. Ключи с кавычками в имени (баг сериализации)
+        if (key.includes('"')) {
+          logCritical(`🐛 [LOAD SKIP] Skipping key with quotes: ${key}`);
           return;
         }
         
@@ -2938,14 +2984,20 @@
         // Критический лог: данные отправлены в облако
         if (uniqueBatch.length > 0) {
           const types = {};
+          const otherKeys = []; // DEBUG: какие ключи попадают в "other"
           uniqueBatch.forEach(item => {
             const t = item.k.includes('dayv2_') ? 'day' : 
                      item.k.includes('products') ? 'products' : 
                      item.k.includes('profile') ? 'profile' : 'other';
             types[t] = (types[t] || 0) + 1;
+            if (t === 'other') otherKeys.push(item.k);
           });
           const summary = Object.entries(types).map(([k,v]) => `${k}:${v}`).join(' ');
           logCritical('☁️ Сохранено в облако:', summary);
+          // DEBUG: показываем какие ключи попадают в "other"
+          if (otherKeys.length > 0) {
+            logCritical('  └ other keys:', otherKeys.join(', '));
+          }
           
           // Уведомляем о завершении UPLOAD (НЕ heysSyncCompleted — то для initial download!)
           if (typeof window !== 'undefined' && window.dispatchEvent) {
@@ -3327,9 +3379,40 @@
 
   cloud.saveKey = function(k, v){
     if (!user || !k) return;
+    
+    // Получаем client_id для client-level данных (products, days)
+    const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
+    
+    // 🔄 НОРМАЛИЗАЦИЯ КЛЮЧА: Убираем client_id из ключа перед сохранением в Supabase
+    // В localStorage используются scoped ключи (heys_{clientId}_products), 
+    // но в Supabase client_id хранится отдельно в колонке, поэтому ключ должен быть heys_products
+    let normalizedKey = k;
+    if (clientId && k.includes(clientId)) {
+      normalizedKey = k.replace(`heys_${clientId}_`, 'heys_');
+      // Проверяем на двойной client_id (баг): heys_{id}_{id}_... → heys_...
+      if (normalizedKey.includes(clientId)) {
+        normalizedKey = normalizedKey.replace(`${clientId}_`, '');
+      }
+    }
+    
+    // Если есть client_id — используем clientUpsertQueue (сохранение в client_kv_store)
+    if (clientId) {
+      const clientUpsertObj = {
+        user_id: user.id,
+        client_id: clientId,
+        k: normalizedKey,
+        v: v,
+        updated_at: (new Date()).toISOString(),
+      };
+      clientUpsertQueue.push(clientUpsertObj);
+      scheduleClientPush();
+      return;
+    }
+    
+    // Fallback на user-level queue (kv_store) для данных без client_id
     const upsertObj = {
       user_id: user.id,
-      k: k,
+      k: normalizedKey,
       v: v,
       updated_at: (new Date()).toISOString(),
     };

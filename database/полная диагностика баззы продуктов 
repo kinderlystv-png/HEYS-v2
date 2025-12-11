@@ -1,0 +1,124 @@
+// === ПОЛНАЯ ДИАГНОСТИКА LOCALSTORAGE ===
+(function() {
+  const MY_CLIENT = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+  const allKeys = Object.keys(localStorage);
+  const heysKeys = allKeys.filter(k => k.startsWith('heys_'));
+  
+  console.log('='.repeat(60));
+  console.log('📊 ПОЛНАЯ ДИАГНОСТИКА HEYS LOCALSTORAGE');
+  console.log('='.repeat(60));
+  console.log('Всего ключей:', allKeys.length);
+  console.log('HEYS ключей:', heysKeys.length);
+  console.log('');
+  
+  // 1. Глобальные ключи
+  const globalKeys = ['heys_client_current', 'heys_clients', 'heys_products', 'heys_theme'];
+  console.log('🌍 ГЛОБАЛЬНЫЕ КЛЮЧИ:');
+  globalKeys.forEach(k => {
+    const val = localStorage.getItem(k);
+    if (val) {
+      const preview = val.substring(0, 50);
+      const isCorrupted = preview.includes('¤');
+      console.log(`  ${k}: ${isCorrupted ? '❌ ПОВРЕЖДЁН' : '✅'} (${val.length} bytes)`);
+    } else {
+      console.log(`  ${k}: ⚪ отсутствует`);
+    }
+  });
+  console.log('');
+  
+  // 2. Ключи текущего клиента
+  const myKeys = heysKeys.filter(k => k.includes(MY_CLIENT));
+  console.log(`👤 МОИ КЛЮЧИ (${MY_CLIENT.substring(0,8)}...): ${myKeys.length}`);
+  
+  const myKeyTypes = {};
+  myKeys.forEach(k => {
+    const type = k.replace(`heys_${MY_CLIENT}_`, '').replace(/dayv2_\d{4}-\d{2}-\d{2}/, 'dayv2_*');
+    myKeyTypes[type] = (myKeyTypes[type] || 0) + 1;
+  });
+  Object.entries(myKeyTypes).sort((a,b) => b[1] - a[1]).forEach(([type, count]) => {
+    console.log(`  ${type}: ${count}`);
+  });
+  console.log('');
+  
+  // 3. Проверка продуктов
+  console.log('📦 ПРОВЕРКА ПРОДУКТОВ:');
+  const productKeys = heysKeys.filter(k => k.includes('product'));
+  productKeys.forEach(k => {
+    try {
+      const data = JSON.parse(localStorage.getItem(k));
+      const count = Array.isArray(data) ? data.length : 'not array';
+      const isMine = k.includes(MY_CLIENT);
+      console.log(`  ${isMine ? '✅' : '⚠️ ЧУЖОЙ'} ${k.substring(0, 50)}: ${count} items`);
+    } catch(e) {
+      console.log(`  ❌ ${k.substring(0, 50)}: PARSE ERROR`);
+    }
+  });
+  console.log('');
+  
+  // 4. Чужие ключи (с UUID но не мой)
+  const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+  const foreignKeys = heysKeys.filter(k => {
+    if (globalKeys.includes(k)) return false;
+    const matches = k.match(uuidPattern);
+    if (!matches) return false;
+    return !matches.some(id => id.toLowerCase() === MY_CLIENT.toLowerCase());
+  });
+  
+  console.log(`🚨 ЧУЖИЕ КЛЮЧИ: ${foreignKeys.length}`);
+  if (foreignKeys.length > 0) {
+    foreignKeys.slice(0, 10).forEach(k => console.log(`  ⚠️ ${k.substring(0, 60)}`));
+    if (foreignKeys.length > 10) console.log(`  ... и ещё ${foreignKeys.length - 10}`);
+  } else {
+    console.log('  ✅ Чужих ключей нет!');
+  }
+  console.log('');
+  
+  // 5. Двойные clientId
+  const doubleKeys = heysKeys.filter(k => {
+    const matches = k.match(uuidPattern);
+    return matches && matches.length >= 2;
+  });
+  console.log(`🔄 ДВОЙНЫЕ CLIENT_ID: ${doubleKeys.length}`);
+  if (doubleKeys.length > 0) {
+    doubleKeys.slice(0, 5).forEach(k => console.log(`  ⚠️ ${k.substring(0, 70)}`));
+  } else {
+    console.log('  ✅ Двойных ключей нет!');
+  }
+  console.log('');
+  
+  // 6. Повреждённые данные
+  console.log('💔 ПОВРЕЖДЁННЫЕ ДАННЫЕ:');
+  let corruptedCount = 0;
+  heysKeys.forEach(k => {
+    const val = localStorage.getItem(k);
+    if (val && val.includes('¤')) {
+      console.log(`  ❌ ${k.substring(0, 50)}`);
+      corruptedCount++;
+    }
+  });
+  if (corruptedCount === 0) {
+    console.log('  ✅ Повреждённых данных нет!');
+  }
+  console.log('');
+  
+  // 7. Размер данных
+  let totalSize = 0;
+  heysKeys.forEach(k => totalSize += (localStorage.getItem(k) || '').length);
+  console.log(`💾 РАЗМЕР: ${(totalSize / 1024).toFixed(1)} KB`);
+  
+  // 8. Итоговый статус
+  console.log('');
+  console.log('='.repeat(60));
+  const issues = foreignKeys.length + doubleKeys.length + corruptedCount;
+  if (issues === 0) {
+    console.log('✅ ВСЁ ЧИСТО! Проблем не обнаружено.');
+  } else {
+    console.log(`⚠️ НАЙДЕНО ПРОБЛЕМ: ${issues}`);
+    console.log('   Чужих:', foreignKeys.length);
+    console.log('   Двойных:', doubleKeys.length);
+    console.log('   Повреждённых:', corruptedCount);
+  }
+  console.log('='.repeat(60));
+  
+  return { foreignKeys, doubleKeys, corruptedCount, myKeys: myKeys.length };
+})();

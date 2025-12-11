@@ -122,7 +122,9 @@
       // 🔧 FIX: Для client-specific ключей используем HEYS.store.set (с scoped-ключами)
       if (window.HEYS?.store?.set && window.HEYS?.currentClientId) {
         const clientSpecificKeys = ['heys_products', 'heys_profile', 'heys_hr_zones', 'heys_norms', 'heys_game'];
-        const isClientSpecific = clientSpecificKeys.some(k => key === k || key.includes('dayv2_'));
+        // ⚠️ ИСКЛЮЧЕНИЕ: heys_dayv2_date — глобальный ключ (текущая выбранная дата), НЕ client-specific!
+        const isGlobalKey = key === 'heys_dayv2_date';
+        const isClientSpecific = !isGlobalKey && (clientSpecificKeys.some(k => key === k || key.includes('dayv2_')));
         if (isClientSpecific) {
           window.HEYS.store.set(key, val);
           // Событие для offline-индикатора

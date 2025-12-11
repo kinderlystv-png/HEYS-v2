@@ -1417,13 +1417,17 @@
   function getScheduledAdvices() {
     try {
       const scheduled = JSON.parse(localStorage.getItem(SCHEDULED_KEY) || '[]');
+      if (scheduled.length === 0) return []; // Ничего нет — не трогаем storage
+      
       const now = Date.now();
       
       const ready = scheduled.filter(s => s.showAt <= now);
       const remaining = scheduled.filter(s => s.showAt > now);
       
-      // Обновляем storage
-      localStorage.setItem(SCHEDULED_KEY, JSON.stringify(remaining));
+      // Обновляем storage ТОЛЬКО если есть готовые советы (чтобы не спамить)
+      if (ready.length > 0) {
+        localStorage.setItem(SCHEDULED_KEY, JSON.stringify(remaining));
+      }
       
       return ready.map(s => ({
         ...s.advice,

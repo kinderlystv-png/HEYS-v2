@@ -9,6 +9,7 @@
   // === Orphan Products Tracking ===
   // Отслеживание продуктов, для которых данные берутся из штампа вместо базы
   const orphanProductsMap = new Map(); // name => { name, usedInDays: Set, firstSeen }
+  const orphanLoggedRecently = new Map(); // name => timestamp (throttle логов)
   
   function trackOrphanProduct(item, dateStr) {
     if (!item || !item.name) return;
@@ -951,7 +952,12 @@
                        itemNameLower.includes(pName.slice(0, 10));
               });
               if (similar.length > 0) {
-                console.warn(`[HEYS] Orphan mismatch: "${itemName}" not found, similar: "${similar[0].name}"`);
+                // Throttle: не логируем чаще раза в минуту для каждого продукта
+                const lastLogged = orphanLoggedRecently.get(itemName) || 0;
+                if (Date.now() - lastLogged > 60000) {
+                  console.warn(`[HEYS] Orphan mismatch: "${itemName}" not found, similar: "${similar[0].name}"`);
+                  orphanLoggedRecently.set(itemName, Date.now());
+                }
               }
             }
           }
