@@ -2211,21 +2211,36 @@
             const remoteUpdatedAt = row.v?.updatedAt || 0;
             const localUpdatedAt = local?.updatedAt || 0;
             
-            // 🔄 FORCE MODE (pull-to-refresh): ВСЕГДА делать merge с облаком
-            // Это критично когда локальные данные "кажутся новее" из-за багов с ключами
-            if (forceSync && local && row.v) {
-              const merged = mergeDayData(local, row.v, { forceKeepAll: true });
-              if (merged) {
-                logCritical(`🔄 [FORCE MERGE] Day sync | key: ${key} | local meals: ${local.meals?.length || 0} | remote meals: ${row.v.meals?.length || 0} | merged: ${merged.meals?.length || 0}`);
-                ls.setItem(key, JSON.stringify(merged));
-                
-                const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
-                if (dateMatch) {
-                  window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dateMatch[1], source: 'force-sync' } }));
-                  logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (force-sync)`);
-                }
-                return; // Готово
+            // 🔄 FORCE MODE (pull-to-refresh): ВСЕГДА применять облачные данные
+            // При force берём remote как базу и добавляем уникальные local meals
+            if (forceSync && row.v) {
+              logCritical(`🔄 [FORCE SYNC] Processing day | key: ${key} | local: ${local?.meals?.length || 0} meals | remote: ${row.v.meals?.length || 0} meals`);
+              
+              let valueToSave;
+              if (local && local.meals?.length > 0) {
+                // Есть локальные данные — merge с forceKeepAll
+                const merged = mergeDayData(local, row.v, { forceKeepAll: true });
+                valueToSave = merged || row.v; // Если merge вернул null — берём remote
+              } else {
+                // Нет локальных данных — просто берём remote
+                valueToSave = row.v;
               }
+              
+              logCritical(`🔄 [FORCE SYNC] Saving ${valueToSave.meals?.length || 0} meals to localStorage`);
+              ls.setItem(key, JSON.stringify(valueToSave));
+              
+              const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+              if (dateMatch) {
+                window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+                  detail: { 
+                    date: dateMatch[1], 
+                    source: 'force-sync',
+                    forceReload: true  // Обязательно! Иначе событие будет заблокировано
+                  } 
+                }));
+                logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (force-sync, forceReload=true)`);
+              }
+              return; // Готово
             }
             
             // Если есть локальные изменения И облачные изменения — нужен merge
