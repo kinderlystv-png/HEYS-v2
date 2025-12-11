@@ -310,9 +310,20 @@
                 // Показываем UI обновления
                 showUpdateModal('downloading');
                 
+                // 🔒 Fallback: если через 10 секунд модалка ещё на экране — убираем
+                const swUpdateTimeout = setTimeout(() => {
+                  const modal = document.getElementById('heys-update-modal');
+                  if (modal) {
+                    console.warn('[SW] Update modal timeout, hiding...');
+                    hideUpdateModal();
+                    clearUpdateLock();
+                  }
+                }, 10000);
+                
                 newWorker?.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                     console.log('[SW] 🎉 New version ready!');
+                    clearTimeout(swUpdateTimeout); // Отменяем fallback
                     // Упрощённая анимация: ready → reloading → reload
                     updateModalStage('ready');
                     setTimeout(() => {
@@ -450,6 +461,17 @@
                 updateModalStage('reloading');
                 forceUpdateAndReload(false);
               }, 1500);
+              
+              // 🔒 Fallback: если через 8 секунд reload не произошёл — убираем модалку
+              // Это предотвращает "застревание" на blur экране
+              setTimeout(() => {
+                const modal = document.getElementById('heys-update-modal');
+                if (modal) {
+                  console.warn('[HEYS] Update modal timeout, hiding...');
+                  hideUpdateModal();
+                  clearUpdateLock();
+                }
+              }, 8000);
               
               return true;
             } else {
