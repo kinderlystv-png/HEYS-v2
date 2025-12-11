@@ -55,7 +55,7 @@ const CDN_URLS = [
 
 // === INSTALL: Предзагрузка App Shell ===
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing...');
+  console.log('[SW] Installing...', CACHE_VERSION);
   
   event.waitUntil(
     caches.open(STATIC_CACHE)
@@ -70,9 +70,12 @@ self.addEventListener('install', (event) => {
           )
         );
       })
-      // НЕ вызываем skipWaiting() автоматически!
-      // SW будет ждать явной команды от клиента при реальном обновлении.
-      // Это предотвращает потерю сессии при обычном открытии PWA.
+      .then(() => {
+        // ✅ АВТОМАТИЧЕСКИ активируем новый SW без ожидания!
+        // Это критично для бесшовного обновления PWA
+        console.log('[SW] Calling skipWaiting...');
+        return self.skipWaiting();
+      })
   );
 });
 

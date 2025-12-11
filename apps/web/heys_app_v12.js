@@ -384,18 +384,21 @@
           });
           
           // Слушаем контроллер изменений (когда SW взял контроль)
-          // НЕ делаем автоматический reload! Это вызывает потерю сессии.
-          // Reload только при явном запросе обновления (флаг heys_pending_update).
+          // ✅ АВТОМАТИЧЕСКИЙ reload при смене SW для бесшовного обновления PWA
+          let refreshing = false;
           navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('[SW] Controller changed');
-            // Проверяем, было ли это явное обновление (с новой версией)
-            if (sessionStorage.getItem('heys_pending_update') === 'true') {
-              sessionStorage.removeItem('heys_pending_update');
-              console.log('[SW] Pending update confirmed, reloading...');
+            console.log('[SW] Controller changed — new SW activated!');
+            if (refreshing) return;
+            refreshing = true;
+            
+            // Показываем уведомление об обновлении
+            showUpdateModal('reloading');
+            
+            // Небольшая задержка для завершения кэширования, затем reload
+            setTimeout(() => {
+              console.log('[SW] Reloading page with new SW...');
               window.location.reload();
-            } else {
-              console.log('[SW] Controller changed but no pending update, skipping reload');
-            }
+            }, 500);
           });
         }
         
