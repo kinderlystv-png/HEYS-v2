@@ -2109,6 +2109,7 @@
   // ============================================================
   // MORNING MOOD STEP — 📊 Утреннее настроение (обязательный)
   // Дефолт = среднее за вчера
+  // WOW-эффекты: staggered animation, пресеты, pulse, градиенты
   // ============================================================
 
   // Хелперы для оценок (как в тренировке)
@@ -2152,6 +2153,28 @@
     return '#ef4444';
   }
 
+  // Haptic feedback
+  const hapticLight = () => {
+    try { navigator.vibrate?.(5); } catch {}
+  };
+
+  // Пресеты быстрого выбора (5 вариантов)
+  const MOOD_PRESETS = [
+    { value: 2, emoji: '😫' },
+    { value: 4, emoji: '😞' },
+    { value: 6, emoji: '😐' },
+    { value: 8, emoji: '😊' },
+    { value: 10, emoji: '🔥' }
+  ];
+
+  const STRESS_PRESETS = [
+    { value: 2, emoji: '😌' },
+    { value: 4, emoji: '🙂' },
+    { value: 6, emoji: '😐' },
+    { value: 8, emoji: '😟' },
+    { value: 10, emoji: '😰' }
+  ];
+
   // Получение среднего за вчера
   function getYesterdayMoodAvg() {
     const yesterday = new Date();
@@ -2187,113 +2210,216 @@
     };
   }
 
+  // CSS для анимаций (добавляется один раз)
+  if (typeof document !== 'undefined' && !document.getElementById('morning-mood-styles')) {
+    const style = document.createElement('style');
+    style.id = 'morning-mood-styles';
+    style.textContent = `
+      @keyframes moodPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.08); }
+      }
+      @keyframes emojiPop {
+        0% { transform: scale(0.9); }
+        50% { transform: scale(1.15); }
+        100% { transform: scale(1); }
+      }
+      .mood-value-pulse {
+        animation: moodPulse 0.25s ease-out;
+      }
+      .mood-emoji-pop {
+        animation: emojiPop 0.2s ease-out;
+      }
+      .mood-preset-btn {
+        transition: background 0.1s, border-color 0.1s;
+      }
+      .mood-preset-btn:active {
+        transform: scale(0.95);
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function MorningMoodStepComponent({ data, onChange }) {
     const mood = data.mood ?? 5;
     const wellbeing = data.wellbeing ?? 5;
     const stress = data.stress ?? 5;
+    
+    // Состояние для анимации pulse
+    const [pulsingField, setPulsingField] = useState(null);
+    const [poppingEmoji, setPoppingEmoji] = useState(null);
 
     const updateField = (field, value) => {
+      hapticLight();
       onChange({ ...data, [field]: value });
+      
+      // Запускаем pulse-анимацию
+      setPulsingField(field);
+      setPoppingEmoji(field);
+      setTimeout(() => setPulsingField(null), 300);
+      setTimeout(() => setPoppingEmoji(null), 250);
     };
 
-    return React.createElement('div', { className: 'ts-step morning-mood-step' },
+    // Компонент одного рейтинга с пресетами и градиентом
+    const RatingCard = ({ field, value, emoji, emojiFn, title, color, colorFn, presets, isNegative, index }) => {
+      return React.createElement('div', { 
+        className: 'mood-rating-card',
+        style: { 
+          padding: '10px 12px',
+          borderRadius: '12px',
+          background: '#fff',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+          border: '1px solid #e2e8f0'
+        }
+      },
+        // Заголовок с эмодзи и значением
+        React.createElement('div', { 
+          style: { 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            marginBottom: '6px'
+          }
+        },
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+            React.createElement('span', { 
+              className: poppingEmoji === field ? 'mood-emoji-pop' : '',
+              style: { fontSize: '22px', transition: 'all 0.2s' } 
+            }, emojiFn(value)),
+            React.createElement('span', { style: { fontWeight: '600', fontSize: '14px', color: '#1e293b' } }, title)
+          ),
+          React.createElement('span', { 
+            className: pulsingField === field ? 'mood-value-pulse' : '',
+            style: { 
+              fontWeight: '700', 
+              fontSize: '18px',
+              color: colorFn(value),
+              minWidth: '45px',
+              textAlign: 'right'
+            } 
+          }, value + '/10')
+        ),
+        
+        // Пресеты быстрого выбора (5 вариантов)
+        React.createElement('div', { 
+          style: { 
+            display: 'flex', 
+            gap: '4px', 
+            marginBottom: '6px' 
+          } 
+        },
+          presets.map(p => {
+            const isSelected = value === p.value;
+            const btnColor = colorFn(p.value);
+            return React.createElement('button', {
+              key: p.value,
+              className: 'mood-preset-btn',
+              onClick: () => updateField(field, p.value),
+              style: {
+                flex: 1,
+                padding: '6px 2px',
+                borderRadius: '8px',
+                border: isSelected ? `2px solid ${btnColor}` : '1px solid #e5e7eb',
+                background: isSelected ? `${btnColor}20` : '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: '36px'
+              }
+            }, 
+              React.createElement('span', { style: { fontSize: '20px' } }, p.emoji)
+            );
+          })
+        ),
+        
+        // Слайдер — простой вариант, работает по tap
+        React.createElement('input', {
+          type: 'range',
+          className: 'mc-quality-slider',
+          min: 1,
+          max: 10,
+          value: value,
+          onChange: e => {
+            updateField(field, Number(e.target.value));
+          },
+          style: {
+            background: isNegative
+              ? `linear-gradient(to right, #10b981 0%, #22c55e 30%, #eab308 50%, #f97316 70%, #ef4444 100%)`
+              : `linear-gradient(to right, #ef4444 0%, #f97316 30%, #eab308 50%, #22c55e 70%, #10b981 100%)`
+          }
+        })
+      );
+    };
+
+    return React.createElement('div', { 
+      className: 'ts-step morning-mood-step',
+      style: { opacity: 1 }
+    },
       
       // === Заголовок ===
       React.createElement('div', { 
         style: { 
           textAlign: 'center', 
-          marginBottom: '16px',
-          padding: '12px',
-          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(147, 197, 253, 0.12))',
+          marginBottom: '12px',
+          padding: '10px',
+          background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
           borderRadius: '12px'
         }
       },
-        React.createElement('div', { style: { fontSize: '28px', marginBottom: '4px' } }, '🌅'),
-        React.createElement('div', { style: { fontWeight: '600', fontSize: '14px', color: '#334155' } }, 
+        React.createElement('div', { style: { fontSize: '26px', marginBottom: '2px' } }, '🌅'),
+        React.createElement('div', { style: { fontWeight: '700', fontSize: '15px', color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.2)' } }, 
           'Как себя чувствуешь?'
         )
       ),
 
-      // === Оценки ===
-      React.createElement('div', { className: 'ts-ratings-section', style: { marginTop: '8px' } },
+      // === Оценки с анимацией ===
+      React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
         
         // Настроение
-        React.createElement('div', { className: 'ts-rating-row' },
-          React.createElement('div', { className: 'ts-rating-header' },
-            React.createElement('span', { className: 'ts-rating-emoji' }, getMoodEmoji(mood)),
-            React.createElement('span', { className: 'ts-rating-label' }, 'Настроение'),
-            React.createElement('span', { 
-              className: 'ts-rating-value',
-              style: { color: getMoodColor(mood) }
-            }, mood + '/10')
-          ),
-          React.createElement('input', {
-            type: 'range',
-            className: 'ts-slider ts-slider-positive',
-            min: 1,
-            max: 10,
-            value: mood,
-            onChange: e => updateField('mood', Number(e.target.value)),
-            onTouchStart: e => e.stopPropagation(),
-            onTouchMove: e => e.stopPropagation(),
-            onTouchEnd: e => e.stopPropagation()
-          })
-        ),
+        React.createElement(RatingCard, {
+          field: 'mood',
+          value: mood,
+          emojiFn: getMoodEmoji,
+          title: 'Настроение',
+          colorFn: getMoodColor,
+          presets: MOOD_PRESETS,
+          isNegative: false,
+          index: 0
+        }),
 
-        // Самочувствие
-        React.createElement('div', { className: 'ts-rating-row' },
-          React.createElement('div', { className: 'ts-rating-header' },
-            React.createElement('span', { className: 'ts-rating-emoji' }, getWellbeingEmoji(wellbeing)),
-            React.createElement('span', { className: 'ts-rating-label' }, 'Бодрость'),
-            React.createElement('span', { 
-              className: 'ts-rating-value',
-              style: { color: getMoodColor(wellbeing) }
-            }, wellbeing + '/10')
-          ),
-          React.createElement('input', {
-            type: 'range',
-            className: 'ts-slider ts-slider-positive',
-            min: 1,
-            max: 10,
-            value: wellbeing,
-            onChange: e => updateField('wellbeing', Number(e.target.value)),
-            onTouchStart: e => e.stopPropagation(),
-            onTouchMove: e => e.stopPropagation(),
-            onTouchEnd: e => e.stopPropagation()
-          })
-        ),
+        // Бодрость
+        React.createElement(RatingCard, {
+          field: 'wellbeing',
+          value: wellbeing,
+          emojiFn: getWellbeingEmoji,
+          title: 'Бодрость',
+          colorFn: getMoodColor,
+          presets: MOOD_PRESETS,
+          isNegative: false,
+          index: 1
+        }),
 
         // Стресс
-        React.createElement('div', { className: 'ts-rating-row' },
-          React.createElement('div', { className: 'ts-rating-header' },
-            React.createElement('span', { className: 'ts-rating-emoji' }, getStressEmoji(stress)),
-            React.createElement('span', { className: 'ts-rating-label' }, 'Стресс'),
-            React.createElement('span', { 
-              className: 'ts-rating-value',
-              style: { color: getStressColor(stress) }
-            }, stress + '/10')
-          ),
-          React.createElement('input', {
-            type: 'range',
-            className: 'ts-slider ts-slider-negative',
-            min: 1,
-            max: 10,
-            value: stress,
-            onChange: e => updateField('stress', Number(e.target.value)),
-            onTouchStart: e => e.stopPropagation(),
-            onTouchMove: e => e.stopPropagation(),
-            onTouchEnd: e => e.stopPropagation()
-          })
-        )
+        React.createElement(RatingCard, {
+          field: 'stress',
+          value: stress,
+          emojiFn: getStressEmoji,
+          title: 'Стресс',
+          colorFn: getStressColor,
+          presets: STRESS_PRESETS,
+          isNegative: true,
+          index: 2
+        })
       ),
 
       // === Подсказка ===
       React.createElement('div', {
         style: {
           marginTop: '16px',
-          padding: '10px',
-          background: 'rgba(59, 130, 246, 0.06)',
-          borderRadius: '8px',
+          padding: '10px 14px',
+          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(147, 197, 253, 0.08))',
+          borderRadius: '10px',
           fontSize: '12px',
           color: '#64748b',
           textAlign: 'center'
@@ -2346,7 +2472,7 @@
         detail: { key: `day:${dateKey}`, type: 'morningMood' }
       }));
       window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-        detail: { date: dateKey, field: 'morningMood', source: 'morning-mood-step' }
+        detail: { date: dateKey, field: 'morningMood', source: 'morning-mood-step', forceReload: true }
       }));
     },
     xpAction: 'morning_mood_logged'
@@ -2354,27 +2480,73 @@
 
   // ============================================================
   // MORNING ROUTINE STEP — Завершающий мотивирующий шаг
+  // Персонализированное приветствие по настроению
   // ============================================================
   
   function MorningRoutineStepComponent({ data, onChange, context }) {
     const [checkedItems, setCheckedItems] = useState(data.checkedItems || []);
     const [showConfetti, setShowConfetti] = useState(false);
     
-    // Рандомные мотивирующие фразы для кнопки
-    const motivationalPhrases = useMemo(() => [
-      '🚀 ВПЕРЁД!',
-      '☀️ НАЧАТЬ ДЕНЬ!',
-      '💪 СТАРТУЕМ!',
-      '🔥 ПОЕХАЛИ!',
-      '⚡ НАЧИНАЕМ!',
-      '🎯 ВПЕРЁД К ЦЕЛИ!',
-      '✨ ОТЛИЧНОГО ДНЯ!'
-    ], []);
+    // Получаем утреннее настроение из данных дня
+    const dateKey = getTodayKey();
+    const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+    const morningMood = dayData.moodMorning ?? 5;
+    const morningWellbeing = dayData.wellbeingMorning ?? 5;
+    const morningStress = dayData.stressMorning ?? 5;
     
-    // Выбираем случайную фразу один раз при монтировании
-    const randomPhrase = useMemo(() => {
-      return motivationalPhrases[Math.floor(Math.random() * motivationalPhrases.length)];
-    }, []);
+    // Персонализированное приветствие на основе настроения
+    const getPersonalizedGreeting = () => {
+      const avgMood = (morningMood + morningWellbeing + (10 - morningStress)) / 3;
+      const hour = new Date().getHours();
+      const timeOfDay = hour < 12 ? 'утро' : hour < 17 ? 'день' : 'вечер';
+      
+      if (avgMood >= 7) {
+        const phrases = [
+          { emoji: '🚀', text: 'Отличный старт!' },
+          { emoji: '🔥', text: 'Ты в огне!' },
+          { emoji: '⚡', text: 'Заряжен на 100%!' },
+          { emoji: '🌟', text: `Сияющее ${timeOfDay}!` },
+          { emoji: '💫', text: 'Великолепно!' }
+        ];
+        return phrases[Math.floor(Math.random() * phrases.length)];
+      } else if (avgMood >= 5) {
+        const phrases = [
+          { emoji: '☀️', text: `Хорошее ${timeOfDay}!` },
+          { emoji: '✨', text: 'Всё будет супер!' },
+          { emoji: '💪', text: 'День будет продуктивным!' },
+          { emoji: '🎯', text: 'Вперёд к целям!' }
+        ];
+        return phrases[Math.floor(Math.random() * phrases.length)];
+      } else {
+        const phrases = [
+          { emoji: '💪', text: 'Держись! День может стать лучше' },
+          { emoji: '🌈', text: 'После тучи всегда солнце!' },
+          { emoji: '☕', text: 'Начни с чашки чего-то тёплого' },
+          { emoji: '🤗', text: 'Ты справишься!' },
+          { emoji: '🌱', text: 'Каждый день — новый шанс' }
+        ];
+        return phrases[Math.floor(Math.random() * phrases.length)];
+      }
+    };
+    
+    const personalGreeting = useMemo(getPersonalizedGreeting, [morningMood, morningWellbeing, morningStress]);
+    
+    // Рандомные мотивирующие фразы для кнопки (адаптированы под настроение)
+    const getButtonPhrase = () => {
+      const avgMood = (morningMood + morningWellbeing + (10 - morningStress)) / 3;
+      if (avgMood >= 7) {
+        const phrases = ['🚀 ВПЕРЁД!', '🔥 ПОЕХАЛИ!', '⚡ НАЧИНАЕМ!', '💪 СТАРТУЕМ!'];
+        return phrases[Math.floor(Math.random() * phrases.length)];
+      } else if (avgMood >= 5) {
+        const phrases = ['☀️ НАЧАТЬ ДЕНЬ!', '✨ ОТЛИЧНОГО ДНЯ!', '🎯 ВПЕРЁД К ЦЕЛИ!'];
+        return phrases[Math.floor(Math.random() * phrases.length)];
+      } else {
+        const phrases = ['💪 СПРАВИМСЯ!', '🌈 ВПЕРЁД!', '☕ НАЧНЁМ ПОТИХОНЬКУ'];
+        return phrases[Math.floor(Math.random() * phrases.length)];
+      }
+    };
+    
+    const randomPhrase = useMemo(getButtonPhrase, [morningMood, morningWellbeing, morningStress]);
     
     const routineItems = [
       { 
@@ -2425,8 +2597,6 @@
     };
     
     const allChecked = checkedItems.length === 3;
-    const hour = new Date().getHours();
-    const greeting = hour < 12 ? 'Отличное утро!' : hour < 17 ? 'Отличный день!' : 'Отличный вечер!';
     
     return React.createElement('div', {
       style: {
@@ -2436,7 +2606,7 @@
         padding: '8px 0'
       }
     },
-      // Заголовок с эмодзи
+      // Заголовок с персонализированным приветствием
       React.createElement('div', {
         style: {
           textAlign: 'center',
@@ -2449,7 +2619,7 @@
             marginBottom: '8px',
             animation: 'bounce 1s ease infinite'
           }
-        }, '🌟'),
+        }, personalGreeting.emoji),
         React.createElement('div', {
           style: {
             fontSize: '20px',
@@ -2457,7 +2627,7 @@
             color: '#1e293b',
             marginBottom: '4px'
           }
-        }, greeting),
+        }, personalGreeting.text),
         React.createElement('div', {
           style: {
             fontSize: '14px',

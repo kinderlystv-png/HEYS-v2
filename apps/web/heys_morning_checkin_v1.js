@@ -177,6 +177,13 @@
         if (hadProfileSteps && HEYS.ProfileSteps && HEYS.ProfileSteps.showCongratulationsModal) {
           HEYS.ProfileSteps.showCongratulationsModal();
         }
+        
+        // 🔄 Принудительно обновляем данные дня после завершения чек-ина
+        const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
+        window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+          detail: { date: todayKey, source: 'morning-checkin-complete', forceReload: true }
+        }));
+        
         if (onComplete) onComplete();
       };
       
@@ -229,6 +236,13 @@
           if (hadProfileSteps && HEYS.ProfileSteps && HEYS.ProfileSteps.showCongratulationsModal) {
             HEYS.ProfileSteps.showCongratulationsModal();
           }
+          
+          // 🔄 Принудительно обновляем данные дня после завершения чек-ина
+          const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
+          window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+            detail: { date: todayKey, source: 'morning-checkin-complete', forceReload: true }
+          }));
+          
           if (onComplete) onComplete();
         };
         

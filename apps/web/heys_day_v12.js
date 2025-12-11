@@ -3539,8 +3539,8 @@
             if (trainingsChanged) {
               lsSet(key, migratedDay);
             }
-            console.log('[HEYS] 📅 Reloading day after update | meals:', storageMealsCount, '| steps:', migratedDay.steps, '| updatedAt:', migratedDay.updatedAt);
             const newDay = ensureDay(migratedDay, profNow);
+            
             // 🔒 Оптимизация: не вызываем setDay если контент идентичен (предотвращает мерцание)
             setDay(prevDay => {
               if (prevDay && prevDay.date === newDay.date) {
@@ -3553,7 +3553,11 @@
                   prevTrainingsJson === newTrainingsJson &&
                   prevDay.waterMl === newDay.waterMl &&
                   prevDay.steps === newDay.steps &&
-                  prevDay.weightMorning === newDay.weightMorning;
+                  prevDay.weightMorning === newDay.weightMorning &&
+                  // Утренние оценки из чек-ина
+                  prevDay.moodMorning === newDay.moodMorning &&
+                  prevDay.wellbeingMorning === newDay.wellbeingMorning &&
+                  prevDay.stressMorning === newDay.stressMorning;
                 if (isSameContent) {
                   // DEBUG (отключено): console.log('[HEYS] 📅 handleDayUpdated SKIPPED — same content');
                   return prevDay;
@@ -3644,9 +3648,15 @@
       const mealStress = (meals || []).filter(m => m.stress && !isNaN(+m.stress)).map(m => +m.stress);
       
       // Собираем оценки из тренировок (mood, wellbeing, stress - теперь такие же как в meals)
-      const trainingMoods = (trainings || []).filter(t => t.mood && !isNaN(+t.mood)).map(t => +t.mood);
-      const trainingWellbeing = (trainings || []).filter(t => t.wellbeing && !isNaN(+t.wellbeing)).map(t => +t.wellbeing);
-      const trainingStress = (trainings || []).filter(t => t.stress && !isNaN(+t.stress)).map(t => +t.stress);
+      // Фильтруем только РЕАЛЬНЫЕ тренировки — с временем или минутами в зонах (не пустые заглушки)
+      const realTrainings = (trainings || []).filter(t => {
+        const hasTime = t.time && t.time.trim() !== '';
+        const hasMinutes = t.z && Array.isArray(t.z) && t.z.some(m => m > 0);
+        return hasTime || hasMinutes;
+      });
+      const trainingMoods = realTrainings.filter(t => t.mood && !isNaN(+t.mood)).map(t => +t.mood);
+      const trainingWellbeing = realTrainings.filter(t => t.wellbeing && !isNaN(+t.wellbeing)).map(t => +t.wellbeing);
+      const trainingStress = realTrainings.filter(t => t.stress && !isNaN(+t.stress)).map(t => +t.stress);
       
       // Объединяем все оценки: утро + приёмы пищи + тренировки
       const allMoods = [...morningMood, ...mealMoods, ...trainingMoods];
@@ -3674,6 +3684,7 @@
     // Автоматическое обновление средних оценок и dayScore при изменении приёмов пищи, тренировок или утренних оценок
     useEffect(() => {
       const averages = calculateDayAverages(day.meals, day.trainings, day);
+      
       // Не перезаписываем dayScore если есть ручной override (dayScoreManual)
       const shouldUpdateDayScore = !day.dayScoreManual && averages.dayScore !== day.dayScore;
       
@@ -5548,7 +5559,7 @@
     function confirmDayScorePicker() {
       const value = pendingDayScore === 0 ? 0 : parseInt(dayScoreValues[pendingDayScore]);
       setDay(prevDay => {
-        const autoScore = calculateMealAverages(prevDay.meals).dayScore;
+        const autoScore = calculateDayAverages(prevDay.meals, prevDay.trainings, prevDay).dayScore;
         const isManual = value !== 0 && value !== autoScore;
         let newDayComment = prevDay.dayComment || '';
         if (pendingDayComment.trim()) {
@@ -6835,7 +6846,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                         e.stopPropagation();
                         // Сброс на авто
                         setDay(prev => {
-                          const averages = calculateMealAverages(prev.meals);
+                          const averages = calculateDayAverages(prev.meals, prev.trainings, prev);
                           return {...prev, dayScore: averages.dayScore, dayScoreManual: false};
                         });
                       }
@@ -17444,7 +17455,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             // Подсказка про авто
             (day.moodAvg || day.wellbeingAvg || day.stressAvg) && React.createElement('div', { className: 'day-score-auto-info' },
               '✨ Автоматическая оценка: ',
-              React.createElement('strong', null, calculateMealAverages(day.meals).dayScore || '—'),
+              React.createElement('strong', null, calculateDayAverages(day.meals, day.trainings, day).dayScore || '—'),
               ' (на основе настроения, самочувствия и стресса)'
             )
           )

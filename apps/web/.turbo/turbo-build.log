@@ -47,6 +47,6 @@ dist/index.html                                    11.59 kB │ gzip:  3.24 kB
 dist/assets/heys_models_v1-623216dd.js             30.57 kB
 dist/assets/heys_core_v12-17c7988f.js              60.00 kB
 dist/assets/heys_storage_supabase_v1-93d4cc6d.js  166.34 kB
-dist/assets/index-24d3ebc0.css                    433.05 kB │ gzip: 73.57 kB
+dist/assets/index-00785544.css                    433.06 kB │ gzip: 73.58 kB
 [vite-plugin-static-copy] Copied 1 items.
-✓ built in 966ms
+✓ built in 2.20s

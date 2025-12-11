@@ -466,6 +466,16 @@
     
     const handleTouchStart = useCallback((e) => {
       if (!stepAllowSwipe) return;
+      
+      // Не перехватываем touch на слайдерах — проверяем сам элемент и родителей
+      const isRangeInput = e.target.tagName === 'INPUT' && e.target.type === 'range';
+      const hasRangeParent = e.target.closest && e.target.closest('input[type="range"]');
+      const isOnSlider = e.target.closest && e.target.closest('.mc-quality-slider, .mood-rating-card input[type="range"]');
+      
+      if (isRangeInput || hasRangeParent || isOnSlider) {
+        return;
+      }
+      
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
     }, [stepAllowSwipe, currentConfig]);
@@ -477,8 +487,22 @@
       if (!container) return;
       
       const handleTouchMove = (e) => {
-        // Разрешаем touch на range inputs (слайдерах)
-        if (e.target.tagName === 'INPUT' && e.target.type === 'range') {
+        // DEBUG: логируем что происходит
+        console.log('[TouchMove NATIVE] target:', e.target.tagName, e.target.type, e.target.className);
+        
+        // Разрешаем touch на range inputs (слайдерах) — проверяем ВСЕ возможные варианты
+        const isRangeInput = e.target.tagName === 'INPUT' && e.target.type === 'range';
+        const hasRangeClass = e.target.classList && e.target.classList.contains('mc-quality-slider');
+        const closestRange = e.target.closest ? e.target.closest('input[type="range"]') : null;
+        const closestSliderClass = e.target.closest ? e.target.closest('.mc-quality-slider') : null;
+        const closestMoodCard = e.target.closest ? e.target.closest('.mood-rating-card') : null;
+        
+        console.log('[TouchMove NATIVE] isRangeInput:', isRangeInput, 'hasRangeClass:', hasRangeClass);
+        console.log('[TouchMove NATIVE] closestRange:', closestRange, 'closestSliderClass:', closestSliderClass, 'closestMoodCard:', closestMoodCard);
+        
+        // Если это слайдер или внутри mood-rating-card — НЕ блокируем
+        if (isRangeInput || hasRangeClass || closestRange || closestSliderClass || closestMoodCard) {
+          console.log('[TouchMove NATIVE] ALLOWED — слайдер или карточка настроения');
           return;
         }
         
@@ -497,6 +521,7 @@
         }
         
         // Не внутри scrollable — блокируем scroll на backdrop
+        console.log('[TouchMove NATIVE] BLOCKED — вызываем preventDefault');
         e.preventDefault();
       };
       
@@ -506,6 +531,14 @@
 
     const handleTouchEnd = useCallback((e) => {
       if (!stepAllowSwipe) return;
+      
+      // Не перехватываем свайп на слайдерах — проверяем сам элемент и родителей
+      const isRangeInput = e.target.tagName === 'INPUT' && e.target.type === 'range';
+      const isOnSlider = e.target.closest && e.target.closest('.mc-quality-slider, .mood-rating-card input[type="range"]');
+      if (isRangeInput || isOnSlider) {
+        return;
+      }
+      
       const deltaX = e.changedTouches[0].clientX - touchStartX.current;
       const deltaY = e.changedTouches[0].clientY - touchStartY.current;
 

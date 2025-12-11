@@ -312,8 +312,18 @@
       meals:Array.isArray(d.meals)?d.meals:[{id:uuid(),name:'Приём пищи',time:'',mood:'',wellbeing:'',stress:'',items:[]}],
       // Замеры тела (сохраняем как есть если есть)
       measurements: d.measurements || undefined,
+      // Холодовое воздействие (cold_exposure шаг)
+      coldExposure: d.coldExposure || undefined,
+      // Расчётные часы сна
+      sleepHours: d.sleepHours != null ? +d.sleepHours : undefined,
+      // Время бытовой активности (legacy)
+      householdTime: d.householdTime || undefined,
       // День менструального цикла (null = не указан, 1-7 = день цикла)
       cycleDay: d.cycleDay != null ? d.cycleDay : null,
+      // Утренние рейтинги из morning_mood шага
+      moodMorning: d.moodMorning != null ? +d.moodMorning : undefined,
+      wellbeingMorning: d.wellbeingMorning != null ? +d.wellbeingMorning : undefined,
+      stressMorning: d.stressMorning != null ? +d.stressMorning : undefined,
       // Сохраняем metadata для стабильности
       updatedAt: d.updatedAt || undefined,
       schemaVersion: d.schemaVersion || undefined,
