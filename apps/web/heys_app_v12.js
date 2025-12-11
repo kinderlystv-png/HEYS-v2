@@ -639,6 +639,13 @@
             clientId = clientId.slice(1, -1);
           }
           
+          console.log('[BACKUP] Client ID:', clientId);
+          
+          // Debug: показать все ключи localStorage для этого клиента
+          const allKeys = Object.keys(localStorage);
+          const clientKeys = allKeys.filter(k => k.includes(clientId) || k.includes('heys_'));
+          console.log('[BACKUP] Found localStorage keys:', clientKeys);
+          
           try {
             // Собираем все данные клиента
             const backup = {
@@ -657,27 +664,44 @@
             // Продукты
             const productsKey = `heys_${clientId}_products`;
             const productsRaw = localStorage.getItem(productsKey);
+            console.log('[BACKUP] Products key:', productsKey, '→', productsRaw ? 'found' : 'NOT FOUND');
             if (productsRaw) {
               try { backup.products = JSON.parse(productsRaw); } catch (e) {}
             }
             
-            // Профиль
-            const profileKey = `heys_${clientId}_profile`;
-            const profileRaw = localStorage.getItem(profileKey);
+            // Профиль — пробуем два формата ключей
+            let profileKey = `heys_${clientId}_profile`;
+            let profileRaw = localStorage.getItem(profileKey);
+            if (!profileRaw) {
+              // Fallback: legacy ключ без clientId
+              profileKey = 'heys_profile';
+              profileRaw = localStorage.getItem(profileKey);
+            }
+            console.log('[BACKUP] Profile key:', profileKey, '→', profileRaw ? 'found' : 'NOT FOUND');
             if (profileRaw) {
               try { backup.profile = JSON.parse(profileRaw); } catch (e) {}
             }
             
-            // Нормы
-            const normsKey = `heys_${clientId}_norms`;
-            const normsRaw = localStorage.getItem(normsKey);
+            // Нормы — пробуем два формата ключей
+            let normsKey = `heys_${clientId}_norms`;
+            let normsRaw = localStorage.getItem(normsKey);
+            if (!normsRaw) {
+              normsKey = 'heys_norms';
+              normsRaw = localStorage.getItem(normsKey);
+            }
+            console.log('[BACKUP] Norms key:', normsKey, '→', normsRaw ? 'found' : 'NOT FOUND');
             if (normsRaw) {
               try { backup.norms = JSON.parse(normsRaw); } catch (e) {}
             }
             
-            // Пульсовые зоны
-            const hrKey = `heys_${clientId}_hr_zones`;
-            const hrRaw = localStorage.getItem(hrKey);
+            // Пульсовые зоны — пробуем два формата ключей
+            let hrKey = `heys_${clientId}_hr_zones`;
+            let hrRaw = localStorage.getItem(hrKey);
+            if (!hrRaw) {
+              hrKey = 'heys_hr_zones';
+              hrRaw = localStorage.getItem(hrKey);
+            }
+            console.log('[BACKUP] HR Zones key:', hrKey, '→', hrRaw ? 'found' : 'NOT FOUND');
             if (hrRaw) {
               try { backup.hrZones = JSON.parse(hrRaw); } catch (e) {}
             }
@@ -685,6 +709,7 @@
             // Вода
             const waterKey = `heys_${clientId}_water_history`;
             const waterRaw = localStorage.getItem(waterKey);
+            console.log('[BACKUP] Water key:', waterKey, '→', waterRaw ? 'found' : 'NOT FOUND');
             if (waterRaw) {
               try { backup.water = JSON.parse(waterRaw); } catch (e) {}
             }

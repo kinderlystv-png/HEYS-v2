@@ -862,8 +862,9 @@
     // История оценок за сегодня
     const todayMoods = useMemo(() => {
       const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
-      const dayData = safeLsGet(`heys_dayv2_${dateKey}`, {});
-      const meals = dayData.meals || [];
+      const dayData = safeLsGet(`heys_dayv2_${dateKey}`, null);
+      // Защита от null — день может ещё не существовать
+      const meals = dayData?.meals || [];
       return meals.map(m => {
         const moodVal = m.mood || 5;
         const wellVal = m.wellbeing || 5;
