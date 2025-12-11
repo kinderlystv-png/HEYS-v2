@@ -3541,25 +3541,6 @@
             // 🔒 Пропускаем первый sync чтобы избежать мерцания при загрузке
             const initialSyncDoneRef = React.useRef(false);
             
-            // ✨ Fade-in эффект при появлении контента
-            const [contentReady, setContentReady] = React.useState(false);
-            
-            // Плавное появление контента после монтирования
-            useEffect(() => {
-              // Двойной RAF + задержка = браузер гарантированно рендерит opacity:0 перед переходом
-              let cancelled = false;
-              requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                  if (!cancelled) {
-                    setTimeout(() => {
-                      if (!cancelled) setContentReady(true);
-                    }, 100);
-                  }
-                });
-              });
-              return () => { cancelled = true; };
-            }, []);
-            
             useEffect(() => {
               const markInitialSyncDone = () => {
                 // Через 1 секунду после heysSyncCompleted считаем что initial sync прошёл
@@ -5153,7 +5134,6 @@
                   'div',
                   {
                     className: 'tab-content-swipeable' + 
-                      (contentReady ? ' content-ready' : '') +
                       (slideDirection === 'left' ? ' slide-out-left' : '') +
                       (slideDirection === 'right' ? ' slide-out-right' : '') +
                       (edgeBounce === 'left' ? ' edge-bounce-left' : '') +

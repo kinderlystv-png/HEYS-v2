@@ -1201,19 +1201,6 @@ td:first-child input {
   box-sizing: border-box;
   /* Отступ сверху для fixed шапки */
   padding-top: 110px;
-  /* Плавное появление после загрузки */
-  animation: wrapFadeIn 0.4s ease-out;
-}
-
-@keyframes wrapFadeIn {
-  from { 
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* === 12. MODERN HEADER === */
@@ -3812,22 +3799,6 @@ body:has(.offline-banner) .wrap {
   padding-bottom: 100px; /* Отступ под fixed tabs */
   position: relative;
   overflow: hidden;
-  /* ✨ Fade-in effect — минималистичное проявление */
-  opacity: 0;
-  transition: opacity 0.35s ease-out;
-}
-
-/* ✨ Контент готов — плавное появление */
-.tab-content-swipeable.content-ready {
-  opacity: 1;
-}
-
-/* FABs должны быть видны сразу, не ждать fade-in */
-.tab-content-swipeable .fab-group,
-.tab-content-swipeable .water-fab,
-.tab-content-swipeable .meal-fab,
-.tab-content-swipeable .advice-fab {
-  opacity: 1 !important;
 }
 
 /* Slide animations */

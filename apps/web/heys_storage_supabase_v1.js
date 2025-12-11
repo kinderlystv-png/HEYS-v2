@@ -2604,6 +2604,7 @@
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         logCritical('📢 Dispatching heysSyncCompleted | clientId:', client_id);
         setTimeout(() => {
+          window._heysSyncCompleted = true; // Глобальный флаг для компонентов смонтированных позже
           window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id } }));
         }, 300);
       }
