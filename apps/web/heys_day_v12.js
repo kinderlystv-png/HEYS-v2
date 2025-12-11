@@ -7244,61 +7244,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       )
     );
 
-    // === Карточка бэкапа данных ===
-    const [backupBusy, setBackupBusy] = React.useState(false);
-    const handleExportBackup = React.useCallback(async () => {
-      if (backupBusy) return;
-      setBackupBusy(true);
-      try {
-        const result = await window.HEYS?.exportFullBackup?.();
-        if (result?.ok) {
-          // Успех — показываем короткий toast
-          console.log('[Backup] Success:', result);
-        }
-      } finally {
-        setBackupBusy(false);
-      }
-    }, [backupBusy]);
-    
-    const backupCard = React.createElement('div', {
-      className: 'backup-card compact-card',
-      key: 'backup-card',
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '12px 16px',
-        margin: '8px 0',
-        background: 'var(--surface, #fff)',
-        borderRadius: '12px',
-        border: '1px solid var(--border, #e5e7eb)'
-      }
-    },
-      React.createElement('div', { 
-        style: { display: 'flex', alignItems: 'center', gap: '10px' } 
-      },
-        React.createElement('span', { style: { fontSize: '20px' } }, '💾'),
-        React.createElement('span', { 
-          style: { fontSize: '14px', color: 'var(--text-secondary, #6b7280)' } 
-        }, 'Экспорт данных')
-      ),
-      React.createElement('button', {
-        onClick: handleExportBackup,
-        disabled: backupBusy,
-        style: {
-          padding: '8px 16px',
-          fontSize: '13px',
-          fontWeight: '600',
-          color: '#fff',
-          background: backupBusy ? '#9ca3af' : '#3b82f6',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: backupBusy ? 'not-allowed' : 'pointer',
-          transition: 'background 0.2s'
-        }
-      }, backupBusy ? '⏳ Экспорт...' : '📥 Скачать JSON')
-    );
-
   // compareBlock удалён по требованию
 
     // Сортируем приёмы для отображения (последние наверху)
@@ -7902,26 +7847,95 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       return { bg: '#ef444420', text: '#ef4444', border: '#ef444460' };
     }
     
-    // Статус ratio для badge
+    // Статус ratio для badge — АДАПТИВНЫЙ к времени дня
     function getRatioStatus() {
       // Если ещё ничего не съедено — приветствие, а не ошибка
       if (eatenKcal === 0) {
         return { emoji: '👋', text: 'Хорошего дня!', color: '#64748b' };
       }
       
-      const rz = window.HEYS && window.HEYS.ratioZones;
-      const zoneId = rz ? rz.getStatus(currentRatio) : 
-        (currentRatio < 0.5 ? 'crash' : currentRatio < 0.75 ? 'low' : currentRatio < 0.9 ? 'good' : currentRatio < 1.1 ? 'perfect' : currentRatio < 1.3 ? 'over' : 'binge');
+      // Адаптивная оценка: учитываем время дня
+      // Ожидаемый % калорий к текущему часу (приблизительно)
+      // 06:00 → 0%, 12:00 → 35%, 18:00 → 75%, 22:00 → 95%
+      const now = new Date();
+      const currentHour = now.getHours();
       
-      switch (zoneId) {
-        case 'crash': return { emoji: '💀', text: 'Критически мало!', color: '#ef4444' };
-        case 'low': return { emoji: '🍽️', text: 'Маловато', color: '#eab308' };
-        case 'good': return { emoji: '👍', text: 'Хорошо!', color: '#22c55e' };
-        case 'perfect': return { emoji: '🔥', text: 'Идеально!', color: '#10b981' };
-        case 'over': return { emoji: '😅', text: 'Чуть больше', color: '#eab308' };
-        case 'binge': return { emoji: '🚨', text: 'Перебор!', color: '#ef4444' };
-        default: return { emoji: '📊', text: '', color: '#64748b' };
+      // Расчёт ожидаемого прогресса (% от нормы к текущему часу)
+      // Упрощённая модель: день начинается в 6:00, заканчивается в 23:00
+      let expectedProgress;
+      if (currentHour < 6) {
+        expectedProgress = 0; // Ночь — не ожидаем еды
+      } else if (currentHour <= 9) {
+        expectedProgress = (currentHour - 6) * 0.08; // 0-24% к 9:00
+      } else if (currentHour <= 14) {
+        expectedProgress = 0.24 + (currentHour - 9) * 0.10; // 24-74% к 14:00
+      } else if (currentHour <= 20) {
+        expectedProgress = 0.74 + (currentHour - 14) * 0.04; // 74-98% к 20:00
+      } else {
+        expectedProgress = 0.98; // После 20:00 ожидаем почти 100%
       }
+      
+      // Сравниваем фактический прогресс с ожидаемым
+      // currentRatio = съедено / норма
+      const progressDiff = currentRatio - expectedProgress;
+      
+      // Определяем статус на основе разницы и абсолютного значения
+      // Если впереди графика или в пределах нормы — хорошо
+      // Если сильно отстаём — предупреждение
+      
+      // Также учитываем абсолютный перебор в конце дня
+      if (currentRatio >= 1.3) {
+        return { emoji: '🚨', text: 'Перебор!', color: '#ef4444' };
+      }
+      if (currentRatio >= 1.1) {
+        return { emoji: '😅', text: 'Чуть больше', color: '#eab308' };
+      }
+      if (currentRatio >= 0.9 && currentRatio < 1.1) {
+        return { emoji: '🔥', text: 'Идеально!', color: '#10b981' };
+      }
+      
+      // Для недобора — адаптивная оценка
+      if (currentHour < 12) {
+        // Утро: любой прогресс — хорошо
+        if (currentRatio >= 0.1) {
+          return { emoji: '🌅', text: 'Хорошее начало!', color: '#22c55e' };
+        }
+        return { emoji: '☕', text: 'Время завтрака', color: '#64748b' };
+      }
+      
+      if (currentHour < 15) {
+        // День (12-15): ожидаем ~30-55%
+        if (progressDiff >= -0.1) {
+          return { emoji: '👍', text: 'Так держать!', color: '#22c55e' };
+        }
+        if (progressDiff >= -0.25) {
+          return { emoji: '🍽️', text: 'Время обеда', color: '#eab308' };
+        }
+        return { emoji: '⚠️', text: 'Мало для обеда', color: '#f97316' };
+      }
+      
+      if (currentHour < 19) {
+        // Вечер (15-19): ожидаем ~55-85%
+        if (progressDiff >= -0.1) {
+          return { emoji: '👍', text: 'Хорошо!', color: '#22c55e' };
+        }
+        if (progressDiff >= -0.2) {
+          return { emoji: '🍽️', text: 'Пора перекусить', color: '#eab308' };
+        }
+        return { emoji: '⚠️', text: 'Маловато', color: '#f97316' };
+      }
+      
+      // Поздний вечер (19+): ожидаем ~85-100%
+      if (currentRatio >= 0.75) {
+        return { emoji: '👍', text: 'Хорошо!', color: '#22c55e' };
+      }
+      if (currentRatio >= 0.6) {
+        return { emoji: '🍽️', text: 'Нужен ужин', color: '#eab308' };
+      }
+      if (currentRatio >= 0.4) {
+        return { emoji: '⚠️', text: 'Мало калорий', color: '#f97316' };
+      }
+      return { emoji: '💀', text: 'Критически мало!', color: '#ef4444' };
     }
     const ratioStatus = getRatioStatus();
     function getDeficitColor() {
@@ -14347,7 +14361,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       (!isMobile || mobileSubTab === 'stats') && compactActivity,
       (!isMobile || mobileSubTab === 'stats') && sideBlock,
       (!isMobile || mobileSubTab === 'stats') && cycleCard,
-      (!isMobile || mobileSubTab === 'stats') && backupCard,
       
       // === FAB группа: приём пищи + вода (на обеих вкладках) ===
       isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && React.createElement('div', {

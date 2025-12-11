@@ -879,6 +879,27 @@
     }
 
     return React.createElement('div', {className:'page page-ration'},
+      // Кнопка экспорта бэкапа
+      React.createElement('div', {className:'card', style:{marginBottom:'8px', padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px'}},
+        React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'8px'}},
+          React.createElement('span', {style:{fontSize:'20px'}}, '💾'),
+          React.createElement('span', {style:{fontWeight:'500'}}, 'Резервная копия')
+        ),
+        React.createElement('button', {
+          className:'btn',
+          onClick: async () => {
+            if (window.HEYS && window.HEYS.exportFullBackup) {
+              const result = await window.HEYS.exportFullBackup();
+              if (result && result.ok) {
+                alert(`✅ Бэкап сохранён!\\n📦 Продуктов: ${result.products}\\n📅 Дней: ${result.days}`);
+              }
+            } else {
+              alert('Функция экспорта недоступна');
+            }
+          },
+          style:{whiteSpace:'nowrap'}
+        }, '📥 Скачать JSON')
+      ),
       React.createElement('div', {className:'card tone-amber', style:{marginBottom:'8px'}},
         React.createElement('div', {className:'section-title'}, 'Импорт из вставки'),
         React.createElement('textarea', {placeholder:'Вставь строки: Название + 12 чисел справа', value:paste, onChange:e=>setPaste(e.target.value)}),

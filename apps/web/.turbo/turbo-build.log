@@ -42,8 +42,8 @@ polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 [2K[1Grendering chunks (1)...[2K[1G[2K[1Gcomputing gzip size (0)...[2K[1Gcomputing gzip size (1)...[2K[1Gcomputing gzip size (2)...[2K[1G[2mdist/[22m[2massets/[22m[32mheys_simple_analytics-b3f08726.js     [39m[1m[2m 10.31 kB[22m[1m[22m
 [2mdist/[22m[32mindex.html                                   [39m[1m[2m 11.59 kB[22m[1m[22m[2m │ gzip:  3.24 kB[22m
 [2mdist/[22m[2massets/[22m[32mheys_models_v1-ec2f7bc6.js            [39m[1m[2m 31.22 kB[22m[1m[22m
-[2mdist/[22m[2massets/[22m[32mheys_core_v12-58cd0486.js             [39m[1m[2m 62.07 kB[22m[1m[22m
+[2mdist/[22m[2massets/[22m[32mheys_core_v12-3e597999.js             [39m[1m[2m 63.21 kB[22m[1m[22m
 [2mdist/[22m[2massets/[22m[32mheys_storage_supabase_v1-4a51d2ca.js  [39m[1m[2m182.51 kB[22m[1m[22m
 [2mdist/[22m[2massets/[22m[35mindex-00785544.css                    [39m[1m[2m433.06 kB[22m[1m[22m[2m │ gzip: 73.58 kB[22m
 [36m[vite-plugin-static-copy][39m [32mCopied 1 items.[39m
-[32m✓ built in 755ms[39m
+[32m✓ built in 808ms[39m
