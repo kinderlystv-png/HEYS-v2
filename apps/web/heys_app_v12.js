@@ -48,12 +48,12 @@
           document.getElementById('heys-update-modal')?.remove();
           
           const stages = {
-            checking: { icon: '🔍', title: 'Проверка обновлений', subtitle: 'Подождите...' },
-            found: { icon: '🆕', title: 'Найдено обновление!', subtitle: 'Загружаем новую версию...' },
-            downloading: { icon: '📥', title: 'Загрузка', subtitle: 'Это займёт пару секунд...' },
-            installing: { icon: '⚙️', title: 'Установка', subtitle: 'Почти готово...' },
-            ready: { icon: '✨', title: 'Готово!', subtitle: 'Приложение обновлено' },
-            reloading: { icon: '🔄', title: 'Перезагрузка', subtitle: 'Применяем изменения...' }
+            checking: { icon: '🔍', title: 'Проверка обновлений', subtitle: 'Подождите...', isSpinner: false },
+            found: { icon: '🆕', title: 'Найдено обновление!', subtitle: 'Загружаем новую версию...', isSpinner: false },
+            downloading: { icon: '📥', title: 'Загрузка', subtitle: 'Это займёт пару секунд...', isSpinner: false },
+            installing: { icon: '⚙️', title: 'Установка', subtitle: 'Почти готово...', isSpinner: false },
+            ready: { icon: '✨', title: 'Готово!', subtitle: 'Приложение обновлено', isSpinner: false },
+            reloading: { icon: 'spinner', title: 'Перезагрузка', subtitle: 'Применяем изменения...', isSpinner: true }
           };
           
           const s = stages[stage] || stages.checking;
@@ -78,6 +78,15 @@
                 from { opacity: 0; transform: scale(0.9); }
                 to { opacity: 1; transform: scale(1); }
               }
+              .heys-spinner {
+                width: 48px;
+                height: 48px;
+                border: 4px solid rgba(255,255,255,0.2);
+                border-top-color: #10b981;
+                border-radius: 50%;
+                animation: heys-update-spin 0.8s linear infinite;
+                margin: 0 auto 20px;
+              }
             </style>
             <div style="
               position: fixed; inset: 0;
@@ -100,8 +109,8 @@
                 <div id="heys-update-icon" style="
                   font-size: 64px;
                   margin-bottom: 20px;
-                  animation: ${stage === 'reloading' ? 'heys-update-spin 1s linear infinite' : 'heys-update-pulse 2s ease-in-out infinite'};
-                ">${s.icon}</div>
+                  ${s.isSpinner ? '' : 'animation: heys-update-pulse 2s ease-in-out infinite;'}
+                ">${s.isSpinner ? '<div class="heys-spinner"></div>' : s.icon}</div>
                 
                 <h2 id="heys-update-title" style="
                   color: white;
@@ -151,12 +160,12 @@
         // Обновить стадию в модалке
         function updateModalStage(stage) {
           const stages = {
-            checking: { icon: '🔍', title: 'Проверка обновлений', subtitle: 'Подождите...', progress: 20 },
-            found: { icon: '🆕', title: 'Найдено обновление!', subtitle: 'Загружаем новую версию...', progress: 40 },
-            downloading: { icon: '📥', title: 'Загрузка', subtitle: 'Это займёт пару секунд...', progress: 60 },
-            installing: { icon: '⚙️', title: 'Установка', subtitle: 'Почти готово...', progress: 80 },
-            ready: { icon: '✨', title: 'Готово!', subtitle: 'Приложение обновлено', progress: 100 },
-            reloading: { icon: '🔄', title: 'Перезагрузка', subtitle: 'Применяем изменения...', progress: 100 }
+            checking: { icon: '🔍', title: 'Проверка обновлений', subtitle: 'Подождите...', progress: 20, isSpinner: false },
+            found: { icon: '🆕', title: 'Найдено обновление!', subtitle: 'Загружаем новую версию...', progress: 40, isSpinner: false },
+            downloading: { icon: '📥', title: 'Загрузка', subtitle: 'Это займёт пару секунд...', progress: 60, isSpinner: false },
+            installing: { icon: '⚙️', title: 'Установка', subtitle: 'Почти готово...', progress: 80, isSpinner: false },
+            ready: { icon: '✨', title: 'Готово!', subtitle: 'Приложение обновлено', progress: 100, isSpinner: false },
+            reloading: { icon: 'spinner', title: 'Перезагрузка', subtitle: 'Применяем изменения...', progress: 100, isSpinner: true }
           };
           
           const s = stages[stage];
@@ -168,10 +177,14 @@
           const progress = document.getElementById('heys-update-progress');
           
           if (icon) {
-            icon.textContent = s.icon;
-            icon.style.animation = stage === 'reloading' 
-              ? 'heys-update-spin 1s linear infinite' 
-              : 'heys-update-pulse 2s ease-in-out infinite';
+            if (s.isSpinner) {
+              icon.innerHTML = '<div class="heys-spinner"></div>';
+              icon.style.animation = 'none';
+            } else {
+              icon.textContent = s.icon;
+              icon.innerHTML = s.icon;
+              icon.style.animation = 'heys-update-pulse 2s ease-in-out infinite';
+            }
           }
           if (title) title.textContent = s.title;
           if (subtitle) subtitle.textContent = s.subtitle;
@@ -211,7 +224,22 @@
                 max-width: 320px;
                 margin: 20px;
               ">
-                <div style="font-size: 48px; margin-bottom: 16px;">🔄</div>
+                <style>
+                  .heys-prompt-spinner {
+                    width: 48px;
+                    height: 48px;
+                    border: 4px solid rgba(255,255,255,0.2);
+                    border-top-color: #10b981;
+                    border-radius: 50%;
+                    animation: heys-prompt-spin 0.8s linear infinite;
+                    margin: 0 auto 16px;
+                  }
+                  @keyframes heys-prompt-spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                  }
+                </style>
+                <div class="heys-prompt-spinner"></div>
                 <h2 style="color: white; margin: 0 0 8px; font-family: system-ui, sans-serif;">Требуется обновление</h2>
                 <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin: 0 0 20px; font-family: system-ui, sans-serif;">
                   ${isIOS 
