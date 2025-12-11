@@ -640,7 +640,7 @@
    * Диапазон: -20% (дефицит/похудение) до +20% (профицит/набор)
    */
   function DeficitStepComponent({ data, onChange }) {
-    const { useRef, useCallback } = React;
+    const { useRef, useCallback, useEffect } = React;
     
     const deficit = data.deficit ?? 15;
     const containerRef = useRef(null);
@@ -695,6 +695,22 @@
       isDragging.current = false;
     }, []);
     
+    // Fix: addEventListener с passive: false для предотвращения scroll
+    useEffect(() => {
+      const el = containerRef.current;
+      if (!el) return;
+      
+      el.addEventListener('touchstart', handleTouchStart, { passive: false });
+      el.addEventListener('touchmove', handleTouchMove, { passive: false });
+      el.addEventListener('touchend', handleTouchEnd);
+      
+      return () => {
+        el.removeEventListener('touchstart', handleTouchStart);
+        el.removeEventListener('touchmove', handleTouchMove);
+        el.removeEventListener('touchend', handleTouchEnd);
+      };
+    }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+    
     // Кнопки +/- для точной настройки
     const increment = () => {
       const newVal = Math.min(maxDeficit, deficit + 1);
@@ -727,13 +743,10 @@
         )
       ),
       
-      // Вертикальный слайдер с touch
+      // Вертикальный слайдер с touch (события через useEffect с passive: false)
       React.createElement('div', { 
         className: 'deficit-slider-container',
-        ref: containerRef,
-        onTouchStart: handleTouchStart,
-        onTouchMove: handleTouchMove,
-        onTouchEnd: handleTouchEnd
+        ref: containerRef
       },
         // Кнопка +
         React.createElement('button', {

@@ -15,6 +15,52 @@
   
   // Fallbacks with error logging (not full duplicates)
   const haptic = U.haptic || (() => { warnMissing('haptic'); });
+  
+  // 🔔 Звук успеха при достижении нормы (Web Audio API)
+  const playSuccessSound = (() => {
+    let audioCtx = null;
+    let lastPlayTime = 0;
+    return () => {
+      // Проверяем настройку звука (по умолчанию включено)
+      const soundEnabled = lsGet('heys_sound_enabled', true);
+      if (!soundEnabled) return;
+      
+      // Предотвращаем слишком частые звуки (минимум 2 секунды между)
+      const now = Date.now();
+      if (now - lastPlayTime < 2000) return;
+      lastPlayTime = now;
+      
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        // Приятный "динь" — два тона
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc1.frequency.value = 880; // A5
+        osc2.frequency.value = 1174.66; // D6
+        osc1.type = 'sine';
+        osc2.type = 'sine';
+        
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        
+        osc1.start(audioCtx.currentTime);
+        osc2.start(audioCtx.currentTime + 0.1);
+        osc1.stop(audioCtx.currentTime + 0.3);
+        osc2.stop(audioCtx.currentTime + 0.4);
+      } catch(e) {
+        // Звук не поддерживается — игнорируем
+      }
+    };
+  })();
+  
   const pad2 = U.pad2 || ((n) => { warnMissing('pad2'); return String(n).padStart(2,'0'); });
   const todayISO = U.todayISO || (() => { warnMissing('todayISO'); return new Date().toISOString().slice(0,10); });
   const fmtDate = U.fmtDate || ((d) => { warnMissing('fmtDate'); return d.toISOString().slice(0,10); });
@@ -1409,6 +1455,25 @@
       if (activityBonusPoints > 0) {
         bonusPoints += activityBonusPoints;
         positiveBadges.push({ type: activityContext?.badge || '🏋️', ok: true, label: `−${harmReduction}% вред` });
+      }
+    }
+    
+    // 🆕 v3.5.4: Бонус за еду в контексте тренировки (даже если вред низкий)
+    // Хороший тайминг = +2 бонуса (peri/post/pre)
+    if (activityContext && ['peri', 'post', 'pre'].includes(activityContext.type)) {
+      const timingBonus = activityContext.type === 'peri' ? 3 : 
+                          activityContext.type === 'post' ? 2 : 
+                          1; // pre
+      if (harmReduction === 0 || rawAvgHarm <= 5) {
+        // Добавляем бонус только если не добавили выше (чтобы не дублировать)
+        bonusPoints += timingBonus;
+        positiveBadges.push({ 
+          type: activityContext.type === 'peri' ? '🔥' : 
+                activityContext.type === 'post' ? '💪' : '⚡', 
+          ok: true, 
+          label: activityContext.type === 'peri' ? 'Во время трени' : 
+                 activityContext.type === 'post' ? 'После трени' : 'Перед трени'
+        });
       }
     }
     
@@ -3749,6 +3814,9 @@
     
     // === Popup для качества приёма пищи ===
     const [mealQualityPopup, setMealQualityPopup] = useState(null); // { meal, quality, mealTypeInfo, x, y }
+    
+    // === Popup для недельной статистики "X/Y в норме" ===
+    const [weekNormPopup, setWeekNormPopup] = useState(null); // { days, inNorm, withData, x, y }
 
     // === Данные замеров для карточки статистики ===
     const measurementFields = useMemo(() => ([
@@ -3968,6 +4036,7 @@
       setMetricPopup(type === 'metric' ? payload : null);
       setTdeePopup(type === 'tdee' ? payload : null);
       setMealQualityPopup(type === 'mealQuality' ? payload : null);
+      setWeekNormPopup(type === 'weekNorm' ? payload : null);
     }, []);
     
     // === Slider для интерактивного просмотра графика ===
@@ -3986,7 +4055,7 @@
     
     // Закрытие popup при клике вне
     React.useEffect(() => {
-      if (!sparklinePopup && !macroBadgePopup && !metricPopup && !mealQualityPopup && !tdeePopup) return;
+      if (!sparklinePopup && !macroBadgePopup && !metricPopup && !mealQualityPopup && !tdeePopup && !weekNormPopup) return;
       const handleClickOutside = (e) => {
         if (sparklinePopup && !e.target.closest('.sparkline-popup')) {
           setSparklinePopup(null);
@@ -4003,6 +4072,9 @@
         if (tdeePopup && !e.target.closest('.tdee-popup')) {
           setTdeePopup(null);
         }
+        if (weekNormPopup && !e.target.closest('.week-norm-popup')) {
+          setWeekNormPopup(null);
+        }
       };
       // Delay to avoid closing immediately on the same click
       const timerId = setTimeout(() => {
@@ -4012,7 +4084,7 @@
         clearTimeout(timerId);
         document.removeEventListener('click', handleClickOutside);
       };
-    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup]);
+    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup, weekNormPopup]);
     
     // === Утилита для умного позиционирования попапов ===
     // Не даёт выходить за границы экрана
@@ -7920,12 +7992,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             if (dayData?.weightMorning > 0) {
               const cycleDayValue = dayData.cycleDay || null;
               const retentionInfo = HEYS.Cycle?.getWaterRetentionInfo?.(cycleDayValue) || { hasRetention: false };
+              // Проверяем наличие тренировок
+              const trainings = dayData.trainings || [];
+              const hasTraining = trainings.some(t => t?.z?.some(z => z > 0));
+              const trainingTypes = trainings
+                .filter(t => t?.z?.some(z => z > 0))
+                .map(t => t.type || 'cardio');
               return {
                 weight: +dayData.weightMorning,
                 cycleDay: cycleDayValue,
                 hasWaterRetention: retentionInfo.hasRetention,
                 retentionSeverity: retentionInfo.severity,
-                retentionAdvice: retentionInfo.advice
+                retentionAdvice: retentionInfo.advice,
+                hasTraining,
+                trainingTypes
               };
             }
           } catch(e) {}
@@ -7992,6 +8072,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             const todayWeight = +day.weightMorning || 0;
             if (todayWeight > 0) {
               const retentionInfo = HEYS.Cycle?.getWaterRetentionInfo?.(todayCycleDay) || { hasRetention: false };
+              // Проверяем тренировки сегодня
+              const trainings = day.trainings || [];
+              const hasTraining = trainings.some(t => t?.z?.some(z => z > 0));
+              const trainingTypes = trainings
+                .filter(t => t?.z?.some(z => z > 0))
+                .map(t => t.type || 'cardio');
               days.push({ 
                 date: dateStr, 
                 weight: todayWeight,
@@ -8000,7 +8086,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 cycleDay: todayCycleDay,
                 hasWaterRetention: retentionInfo.hasRetention,
                 retentionSeverity: retentionInfo.severity,
-                retentionAdvice: retentionInfo.advice
+                retentionAdvice: retentionInfo.advice,
+                hasTraining,
+                trainingTypes
               });
             }
             continue;
@@ -8017,7 +8105,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               cycleDay: data.cycleDay,
               hasWaterRetention: data.hasWaterRetention,
               retentionSeverity: data.retentionSeverity,
-              retentionAdvice: data.retentionAdvice
+              retentionAdvice: data.retentionAdvice,
+              hasTraining: data.hasTraining,
+              trainingTypes: data.trainingTypes
             });
           }
         }
@@ -8487,7 +8577,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         days.push({
           date: dateStr,
           name: dayNames[i],
-          status,
+          status: isToday && status === 'empty' ? 'in-progress' : status, // Сегодня без данных = "в процессе"
           ratio,
           kcal: Math.round(kcal),
           isToday,
@@ -8522,6 +8612,21 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       return { days, inNorm, withData, streak, weekendPattern, avgRatioPct };
     }, [date, optimum, pIndex, products, prof]);
+    
+    // 🎉 Confetti при streak 7+ дней (триггерится один раз при достижении)
+    const streakConfettiShownRef = React.useRef(false);
+    React.useEffect(() => {
+      if (weekHeatmapData.streak >= 7 && !streakConfettiShownRef.current && !showConfetti) {
+        streakConfettiShownRef.current = true;
+        setShowConfetti(true);
+        haptic('success');
+        setTimeout(() => setShowConfetti(false), 3000);
+      }
+      // Сбрасываем ref если streak упал ниже 7
+      if (weekHeatmapData.streak < 7) {
+        streakConfettiShownRef.current = false;
+      }
+    }, [weekHeatmapData.streak, showConfetti]);
     
     // Закрытие toast
     const dismissToast = () => {
@@ -9114,6 +9219,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         confettiShownRef.current = true;
         setShowConfetti(true);
         haptic('success');
+        playSuccessSound(); // 🔔 Звук успеха!
         
         // Скрываем через 3 секунды
         setTimeout(() => setShowConfetti(false), 3000);
@@ -9268,43 +9374,56 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Прогноз на +1 день по тренду (завтра), или сегодня+завтра если сегодня неполный
       const forecastDays = 1;
       const hasEnoughData = chartData.length >= 3;
+      // ВАЖНО: Если сегодня неполный — всегда показываем прогноз, даже если данных мало
+      // Это гарантирует что сегодняшний день всегда виден на графике
+      const shouldShowForecast = hasEnoughData || isTodayIncomplete;
       let forecastPoints = [];
       const lastChartDate = chartData[chartData.length - 1]?.date || '';
       
-      if (hasEnoughData && lastChartDate) {
+      if (shouldShowForecast && lastChartDate) {
         // Используем линейную регрессию по всем данным для более стабильного тренда
         // Это предотвращает "взлёты" из-за одного-двух дней переедания
         const n = chartData.length;
         const kcalValues = chartData.map(d => d.kcal);
         
-        // Вычисляем линейную регрессию: y = a + b*x
-        // b = (n*Σxy - Σx*Σy) / (n*Σx² - (Σx)²)
-        let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-        for (let i = 0; i < n; i++) {
-          sumX += i;
-          sumY += kcalValues[i];
-          sumXY += i * kcalValues[i];
-          sumX2 += i * i;
+        // Последнее значение и норма
+        const lastKcal = n > 0 ? kcalValues[n - 1] : goal;
+        const lastTarget = n > 0 ? (chartData[n - 1].target || goal) : goal;
+        
+        // Для прогноза: если мало данных — используем норму как прогноз
+        // Иначе используем регрессию
+        let blendedNext = goal;
+        let clampedSlope = 0;
+        
+        if (n >= 3) {
+          // Вычисляем линейную регрессию: y = a + b*x
+          // b = (n*Σxy - Σx*Σy) / (n*Σx² - (Σx)²)
+          let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+          for (let i = 0; i < n; i++) {
+            sumX += i;
+            sumY += kcalValues[i];
+            sumXY += i * kcalValues[i];
+            sumX2 += i * i;
+          }
+        
+          const denominator = n * sumX2 - sumX * sumX;
+          // slope = изменение ккал за 1 день по тренду
+          const slope = denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0;
+          const intercept = (sumY - slope * sumX) / n;
+        
+          // Ограничиваем slope чтобы не было безумных прогнозов
+          // Максимум ±150 ккал/день изменения тренда
+          clampedSlope = Math.max(-150, Math.min(150, slope));
+        
+          // Для прогноза: используем регрессию, но ближе к последнему значению
+          // Смешиваем: 60% регрессия + 40% продолжение от последнего значения
+          const regressionNext = intercept + clampedSlope * n;
+          const simpleNext = lastKcal + clampedSlope;
+          blendedNext = regressionNext * 0.6 + simpleNext * 0.4;
+        } else if (n > 0) {
+          // Мало данных — используем последнее значение или норму
+          blendedNext = lastKcal > 0 ? lastKcal : goal;
         }
-        
-        const denominator = n * sumX2 - sumX * sumX;
-        // slope = изменение ккал за 1 день по тренду
-        const slope = denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0;
-        const intercept = (sumY - slope * sumX) / n;
-        
-        // Ограничиваем slope чтобы не было безумных прогнозов
-        // Максимум ±150 ккал/день изменения тренда
-        const clampedSlope = Math.max(-150, Math.min(150, slope));
-        
-        // Последнее значение и прогноз следующего
-        const lastKcal = kcalValues[n - 1];
-        const lastTarget = chartData[n - 1].target || goal;
-        
-        // Для прогноза: используем регрессию, но ближе к последнему значению
-        // Смешиваем: 60% регрессия + 40% продолжение от последнего значения
-        const regressionNext = intercept + clampedSlope * n;
-        const simpleNext = lastKcal + clampedSlope;
-        const blendedNext = regressionNext * 0.6 + simpleNext * 0.4;
         
         // Норма для прогнозных дней = текущий optimum (goal)
         // Норма зависит от BMR + активность, а не от тренда прошлых дней
@@ -9327,12 +9446,35 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           }
         };
         
-        // === НОВАЯ ЛОГИКА: Если есть будущие дни (futureDays), используем их вместо расчёта ===
+        // === ИСПРАВЛЕНИЕ: Если сегодня неполный — сначала добавляем его как прогноз ===
+        let prevKcal = lastKcal;
+        let dayIndexOffset = 0;
+        
+        if (isTodayIncomplete && todayData) {
+          // Добавляем сегодня как первый прогнозный день
+          const todayDateStr = todayData.date;
+          const todayDayNum = todayDateStr ? new Date(todayDateStr).getDate() : '';
+          const todayForecastKcal = calculateForecastKcal(1, prevKcal);
+          prevKcal = todayForecastKcal;
+          dayIndexOffset = 1; // Сдвигаем индексы для следующих дней
+          
+          forecastPoints.push({
+            kcal: Math.max(0, todayForecastKcal),
+            target: forecastTarget,
+            isForecast: true,
+            isTodayForecast: true, // Маркер что это прогноз на сегодня
+            isFutureDay: false,
+            date: todayDateStr,
+            dayNum: todayDayNum,
+            isWeekend: isWeekend(todayDateStr) || isHoliday(todayDateStr)
+          });
+        }
+        
+        // === Добавляем будущие дни (futureDays) или стандартный прогноз ===
         if (futureDays.length > 0) {
           // Используем futureDays как основу для прогноза
-          let prevKcal = lastKcal;
           futureDays.forEach((fd, i) => {
-            const dayIndex = i + 1; // 1-based
+            const dayIndex = i + 1 + dayIndexOffset; // Учитываем сдвиг если добавили сегодня
             const forecastDayNum = fd.date ? new Date(fd.date).getDate() : '';
             const forecastKcal = calculateForecastKcal(dayIndex, prevKcal);
             prevKcal = forecastKcal; // для следующей итерации
@@ -9348,29 +9490,22 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               isWeekend: isWeekend(fd.date) || isHoliday(fd.date)
             });
           });
-        } else {
-          // Стандартная логика: прогноз на 1-2 дня вперёд
-          // Если сегодня неполный — добавляем прогноз на сегодня и завтра
-          const daysToForecast = isTodayIncomplete ? 2 : forecastDays;
-          
-          let prevKcal = lastKcal;
-          for (let i = 1; i <= daysToForecast; i++) {
-            const forecastDate = addDays(lastChartDate, i);
-            const forecastDayNum = forecastDate ? new Date(forecastDate).getDate() : '';
-            const isTodayForecast = isTodayIncomplete && i === 1;
-            const forecastKcal = calculateForecastKcal(i, prevKcal);
-            prevKcal = forecastKcal;
+        } else if (!isTodayIncomplete) {
+          // Стандартная логика: прогноз на 1 день вперёд (завтра)
+          // Только если сегодня НЕ неполный (иначе уже добавили выше)
+          const forecastDate = addDays(lastChartDate, 1);
+          const forecastDayNum = forecastDate ? new Date(forecastDate).getDate() : '';
+          const forecastKcal = calculateForecastKcal(1, prevKcal);
             
-            forecastPoints.push({
-              kcal: Math.max(0, forecastKcal),
-              target: forecastTarget,  // Стабильная норма = текущий optimum
-              isForecast: true,
-              isTodayForecast, // маркер что это прогноз на сегодня
-              date: forecastDate,
-              dayNum: forecastDayNum,
-              isWeekend: isWeekend(forecastDate) || isHoliday(forecastDate)
-            });
-          }
+          forecastPoints.push({
+            kcal: Math.max(0, forecastKcal),
+            target: forecastTarget,
+            isForecast: true,
+            isTodayForecast: false,
+            date: forecastDate,
+            dayNum: forecastDayNum,
+            isWeekend: isWeekend(forecastDate) || isHoliday(forecastDate)
+          });
         }
       }
       
@@ -9638,17 +9773,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         }
         forecastPathD = d;
         
-        // Цвет по направлению тренда относительно цели
-        const lastRatio = lastPoint.target > 0 ? lastPoint.kcal / lastPoint.target : 1;
-        const forecastRatio = forecastPoint.target > 0 ? forecastPoint.kcal / forecastPoint.target : 1;
-        // Зелёный если идём к дефициту, красный если к избытку
-        if (forecastRatio < lastRatio && forecastRatio <= 1.1) {
-          forecastColor = '#22c55e'; // зелёный — улучшение
-        } else if (forecastRatio > lastRatio && forecastRatio > 1.0) {
-          forecastColor = '#ef4444'; // красный — ухудшение
-        } else {
-          forecastColor = '#8b5cf6'; // фиолетовый — стабильно
-        }
+        // Цвет прогнозной линии — всегда оранжевый для чёткого отличия от реальных данных
+        forecastColor = '#f97316'; // orange-500 — прогноз всегда оранжевый
       }
       
       // Прогнозная линия НОРМЫ (goal) — продолжение тренда за 7 дней
@@ -10219,19 +10345,38 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         forecastPts.map((p, i) => {
           const isLast = i === forecastPts.length - 1;
           const isFutureDay = p.isFutureDay;
-          return React.createElement('text', {
-            key: 'forecast-kcal-' + i,
-            x: p.x,
-            y: p.y - 8,
-            className: 'sparkline-day-label' + (p.isTodayForecast ? ' sparkline-day-today' : ' sparkline-day-forecast'),
-            textAnchor: isLast ? 'end' : 'middle',
-            style: { 
-              opacity: isFutureDay ? 0.6 : (p.isTodayForecast ? 0.7 : 0.5), 
-              fill: isFutureDay ? 'rgba(156, 163, 175, 0.9)' : forecastColor,
-              fontSize: isFutureDay ? '11px' : undefined,
-              fontWeight: isFutureDay ? '600' : undefined
-            }
-          }, isFutureDay ? '?' : p.kcal);
+          // Цифра прогноза: синяя для сегодня, оранжевая для будущих
+          const kcalColor = p.isTodayForecast ? '#3b82f6' : (isFutureDay ? 'rgba(156, 163, 175, 0.9)' : forecastColor);
+          return React.createElement('g', { key: 'forecast-kcal-group-' + i },
+            // Цифра ккал (с гапом от треугольника)
+            React.createElement('text', {
+              key: 'forecast-kcal-' + i,
+              x: p.x,
+              y: p.y - (p.isTodayForecast ? 22 : 12),
+              className: 'sparkline-day-label' + (p.isTodayForecast ? ' sparkline-day-today' : ' sparkline-day-forecast'),
+              textAnchor: isLast ? 'end' : 'middle',
+              style: { 
+                opacity: isFutureDay ? 0.6 : (p.isTodayForecast ? 0.9 : 0.5), 
+                fill: kcalColor,
+                fontSize: p.isTodayForecast ? '12px' : (isFutureDay ? '11px' : undefined),
+                fontWeight: p.isTodayForecast ? '700' : (isFutureDay ? '600' : undefined)
+              }
+            }, isFutureDay ? '?' : p.kcal),
+            // Анимированный треугольник-указатель между цифрой и точкой для сегодняшнего прогноза
+            p.isTodayForecast && React.createElement('text', {
+              key: 'forecast-arrow-' + i,
+              x: p.x,
+              y: p.y - 8,
+              textAnchor: 'middle',
+              className: 'sparkline-today-label sparkline-forecast-arrow',
+              style: { 
+                fill: '#3b82f6', 
+                fontSize: '10px', 
+                fontWeight: '600',
+                opacity: 0.9
+              }
+            }, '▼')
+          );
         }),
         // Метки прогнозных дней (дата + "прогноз" выше в 2 строки)
         // Для isFutureDay показываем просто дату без "прогноз на завтра"
@@ -10245,29 +10390,37 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           
           return React.createElement('g', { key: 'forecast-day-' + i },
             // "прогноз" + "на сегодня/завтра" выше даты — только для динамического прогноза
+            // Увеличенный шрифт для лучшей читаемости
             isLabelMultiline && React.createElement('text', {
               x: p.x,
-              y: height - 18,
+              y: height - 22,
               className: 'sparkline-day-label sparkline-day-forecast',
               textAnchor: isLast ? 'end' : 'middle',
-              style: { opacity: 0.8, fontSize: '7px' }
+              style: { opacity: 0.9, fontSize: '8px', fill: '#3b82f6' }
             }, line1),
             isLabelMultiline && React.createElement('text', {
               x: p.x,
-              y: height - 11,
+              y: height - 13,
               className: 'sparkline-day-label sparkline-day-forecast',
               textAnchor: isLast ? 'end' : 'middle',
-              style: { opacity: 0.8, fontSize: '7px' }
+              style: { opacity: 0.9, fontSize: '8px', fill: '#3b82f6' }
             }, line2),
-            // Дата внизу
+            // Дата внизу — для сегодня чуть крупнее и жирнее, но не слишком
             React.createElement('text', {
               x: p.x,
               y: height - 2,
               className: 'sparkline-day-label' + 
+                (p.isTodayForecast ? ' sparkline-day-today' : '') +
                 (isFutureDay ? ' sparkline-day-future' : ' sparkline-day-forecast') + 
                 (p.isWeekend ? ' sparkline-day-weekend' : ''),
               textAnchor: isLast ? 'end' : 'middle',
-              style: { opacity: isFutureDay ? 0.5 : 0.8 }
+              dominantBaseline: 'alphabetic',
+              style: { 
+                opacity: isFutureDay ? 0.5 : (p.isTodayForecast ? 1 : 0.8),
+                fontSize: p.isTodayForecast ? '9.5px' : undefined,
+                fontWeight: p.isTodayForecast ? '700' : undefined,
+                fill: p.isTodayForecast ? '#3b82f6' : undefined
+              }
             }, p.dayNum)
           );
         }),
@@ -10293,13 +10446,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const deltaDelay = 2.6; // все сразу
           
           return React.createElement('g', { key: 'day-group-' + i },
-            // Дата
+            // Дата — для сегодня чуть крупнее и жирнее, цвет по ratio
             React.createElement('text', {
               x: p.x,
               y: height - 2,
               className: dayClass,
               textAnchor: anchor,
-              style: p.isUnknown ? { opacity: 0.5 } : {}
+              dominantBaseline: 'alphabetic',
+              style: p.isUnknown ? { opacity: 0.5 } : (p.isToday && p.kcal > 0 ? { fontSize: '9.5px', fontWeight: '700', fill: deltaColor } : {})
             }, p.dayNum),
             // Дельта под датой (для всех дней с данными, кроме unknown)
             p.kcal > 0 && !p.isUnknown && React.createElement('text', {
@@ -10511,28 +10665,28 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             className: 'sparkline-today-line',
             fill: 'rgba(59, 130, 246, 0.2)'
           }),
-          // Процент отклонения от нормы (ближе к точке, под графиком)
+          // Процент отклонения от нормы (с гапом от треугольника)
           todayPoint.target > 0 && React.createElement('text', {
             x: todayPoint.x,
-            y: todayPoint.y - 18,
+            y: todayPoint.y - 26,
             textAnchor: 'middle',
             className: 'sparkline-today-pct',
             style: { 
               fill: rz ? rz.getGradientColor(todayPoint.kcal / todayPoint.target, 1) : '#22c55e', 
-              fontSize: '9px', 
+              fontSize: '12px', 
               fontWeight: '700'
             }
           }, (() => {
             const deviation = Math.round((todayPoint.kcal / todayPoint.target - 1) * 100);
             return deviation >= 0 ? '+' + deviation + '%' : deviation + '%';
           })()),
-          // Метка "сегодня" — стрелка (над точкой)
+          // Анимированный треугольник-указатель (между процентом и точкой)
           React.createElement('text', {
             x: todayPoint.x,
-            y: todayPoint.y - 8,
+            y: todayPoint.y - 14,
             textAnchor: 'middle',
-            className: 'sparkline-today-label',
-            style: { fill: 'rgba(59, 130, 246, 0.9)', fontSize: '8px', fontWeight: '600' }
+            className: 'sparkline-today-label sparkline-forecast-arrow',
+            style: { fill: 'rgba(59, 130, 246, 0.9)', fontSize: '10px', fontWeight: '600' }
           }, '▼')
         ),
         // === BRUSH SELECTION — полоса выбора диапазона ===
@@ -12489,6 +12643,88 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           })
         );
       })(),
+      // === WEEK NORM POPUP (детали недели X/Y в норме) ===
+      weekNormPopup && (() => {
+        const popupW = 260;
+        const popupH = 280;
+        const pos = getSmartPopupPosition(
+          weekNormPopup.x, 
+          weekNormPopup.y, 
+          popupW, 
+          popupH,
+          { preferAbove: true, offset: 8 }
+        );
+        const { left, top } = pos;
+        const rz = HEYS.ratioZones;
+        
+        return React.createElement('div', {
+          className: 'week-norm-popup sparkline-popup sparkline-popup-v2',
+          role: 'dialog',
+          style: {
+            position: 'fixed',
+            left: left + 'px',
+            top: top + 'px',
+            width: popupW + 'px',
+            zIndex: 9999
+          },
+          onClick: (e) => e.stopPropagation()
+        },
+          React.createElement('div', { 
+            className: 'sparkline-popup-stripe',
+            style: { background: 'linear-gradient(90deg, #22c55e 0%, #10b981 100%)' }
+          }),
+          React.createElement('div', { className: 'sparkline-popup-content' },
+            React.createElement('div', { className: 'sparkline-popup-swipe' }),
+            React.createElement('div', { className: 'sparkline-popup-header-v2' },
+              React.createElement('span', { className: 'sparkline-popup-date' }, '📊 Неделя'),
+              React.createElement('span', { 
+                className: 'sparkline-popup-pct',
+                style: { color: '#16a34a', fontSize: '16px', fontWeight: 700 }
+              }, weekNormPopup.inNorm + '/' + weekNormPopup.withData + ' в норме')
+            ),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px' } },
+              weekNormPopup.days.filter(d => !d.isFuture).map((d, i) =>
+                React.createElement('div', { 
+                  key: i,
+                  style: { 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    padding: '6px 8px',
+                    borderRadius: '8px',
+                    background: d.isToday ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                    border: d.isToday ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent'
+                  }
+                },
+                  React.createElement('span', { 
+                    style: { 
+                      fontWeight: d.isToday ? 700 : 500,
+                      color: d.isWeekend ? '#ef4444' : (d.isToday ? '#3b82f6' : '#475569')
+                    }
+                  }, d.name + (d.isToday ? ' (сегодня)' : '')),
+                  d.status === 'empty' || d.status === 'in-progress' 
+                    ? React.createElement('span', { style: { color: '#94a3b8', fontSize: '12px' } }, 
+                        d.status === 'in-progress' ? '⏳ в процессе' : '— нет данных')
+                    : React.createElement('span', { 
+                        style: { 
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          color: '#fff',
+                          background: rz ? rz.getGradientColor(d.ratio, 0.9) : '#22c55e'
+                        }
+                      }, Math.round(d.ratio * 100) + '%')
+                )
+              )
+            ),
+            React.createElement('button', {
+              className: 'sparkline-popup-close',
+              onClick: () => setWeekNormPopup(null)
+            }, '✕')
+          )
+        );
+      })(),
       // === METRIC POPUP (вода, шаги, калории) ===
       metricPopup && (() => {
         // Позиционирование с защитой от выхода за экран
@@ -12847,8 +13083,22 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 )
               )
             ),
-            // Статистика X/Y в норме справа от квадратиков
-            React.createElement('span', { className: 'week-heatmap-norm' },
+            // Статистика X/Y в норме справа от квадратиков (кликабельно)
+            React.createElement('span', { 
+              className: 'week-heatmap-norm',
+              onClick: (e) => {
+                e.stopPropagation();
+                haptic('light');
+                openExclusivePopup('weekNorm', { 
+                  days: weekHeatmapData.days, 
+                  inNorm: weekHeatmapData.inNorm,
+                  withData: weekHeatmapData.withData,
+                  x: e.clientX, 
+                  y: e.clientY 
+                });
+              },
+              title: 'Нажмите для подробностей'
+            },
               weekHeatmapData.inNorm + '/' + weekHeatmapData.withData + ' в норме'
             )
           ),

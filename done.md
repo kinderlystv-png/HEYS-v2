@@ -1,25 +1,52 @@
 # ✅ DONE — HEYS v2
 
-> **Выполненные задачи** | Обновлено: 2025-12-08
+> **Выполненные задачи** | Обновлено: 2025-12-11
 
 ---
 
 ## 🎉 Декабрь 2025
 
+### 🏋️ Training Context для инсулиновой волны ✅ (2025-12-11)
+
+- [x] **10 типов контекста** — peri, post, pre, steps, morning, double, fasted,
+      strength_protein, cardio_simple, none
+- [x] **PERI-WORKOUT** — еда во время тренировки → волна до -60%, harm ×0.5
+- [x] **POST-WORKOUT v3.5.0** — kcal-based waveBonus (1000+ ккал → -60%),
+      прогрессивное окно до 6ч
+- [x] **PRE-WORKOUT v3.5.4** — harmMultiplier 0.6/0.8 (еда ДО тренировки снижает
+      вредность)
+- [x] **Postprandial Exercise v3.5.1** — бонусы удвоены, proximityBoost ×1.5,
+      kcalBoost ×1.5
+- [x] **Formula fix v3.5.2** — multiplicative vs additive для activityBonuses
+- [x] **UI v3.5.3** — `renderActivityContextBadge()` переиспользуемый хелпер,
+      бейджи в 2 местах
+- [x] **Meal Quality Score бонусы** — +3 peri, +2 post, +1 pre за тайминг
+      тренировки
+- [x] **nightPenaltyOverride** — отмена ночного штрафа после тренировки
+- [x] **Smart Hints** — контекстные подсказки в пустых карточках приёмов пищи
+- [x] **Документация** — DATA_MODEL v3.11.0, полная секция Training Context
+- [x] `pnpm build` PASS ✅
+
 ### 🌸 Трекинг менструального цикла ✅ (2025-12-08)
-- [x] **Модель данных** — `cycleDay` в DayRecord, `cycleTrackingEnabled` в Profile
+
+- [x] **Модель данных** — `cycleDay` в DayRecord, `cycleTrackingEnabled` в
+      Profile
 - [x] **Шаг в утреннем чек-ине** — CycleStepComponent с выбором дня 1-7
-- [x] **Модуль heys_cycle_v1.js** — getCyclePhase, getKcalMultiplier, getWaterMultiplier, getInsulinWaveMultiplier
+- [x] **Модуль heys_cycle_v1.js** — getCyclePhase, getKcalMultiplier,
+      getWaterMultiplier, getInsulinWaveMultiplier
 - [x] **Коррекция норм воды** — cycleBonus в waterGoalBreakdown
 - [x] **Коррекция инсулиновой волны** — фактор #26 (cycleBonusValue +12-15%)
-- [x] **7 специальных советов** — cycle_sweet_craving, cycle_iron_important, cycle_rest_ok и др.
+- [x] **7 специальных советов** — cycle_sweet_craving, cycle_iron_important,
+      cycle_rest_ok и др.
 - [x] **Визуализация в календаре** — розовые точки на днях с cycleDay
 - [x] **CycleCard в статистике** — фаза, день, корректировки
 - [x] **Документация DATA_MODEL** — версия 2.0.0, секция "Менструальный цикл"
 - [x] `pnpm type-check && pnpm build` PASS ✅
 
 ### Инсулиновая волна — предупреждение при приёме ✅ (2025-12-07)
-- [x] **Предупреждение при первом скролле** — проверка активной волны через `HEYS.InsulinWave.calculate()`
+
+- [x] **Предупреждение при первом скролле** — проверка активной волны через
+      `HEYS.InsulinWave.calculate()`
 - [x] **UI с виджетом** — `renderProgressBar` + текстовый fallback
 - [x] **Edge cases** — первый приём, редактирование, bulk mode, ночные часы
 - [x] **Analytics** — `insulin_wave_warning` с action show/wait/continue
@@ -27,8 +54,10 @@
 - [x] `pnpm build` PASS ✅
 
 ### DayTab Stability P0 ✅ (2025-12-03)
+
 - [x] **React.memo** — ProductRow, MealCard, AdviceCard
-- [x] **useCallback** — setGrams, removeItem, removeMeal, updateMealTime, changeMealType, changeMealMood/Wellbeing/Stress
+- [x] **useCallback** — setGrams, removeItem, removeMeal, updateMealTime,
+      changeMealType, changeMealMood/Wellbeing/Stress
 - [x] **Advice handlers** → useCallback
 - [x] **Guard findIndex === -1** — защита от крашей при рендере
 - [x] **Функциональный setDay** — addMeal, addProductToMeal
@@ -41,6 +70,7 @@
 ## 🎉 Ноябрь 2025
 
 ### Phase 0: UX Foundation ✅
+
 - [x] **Skeleton Loading** — shimmer animations для продуктов/дня (уже было)
 - [x] **Haptic Feedback** — вибрация для add/remove/swipe actions (уже было)
 - [x] **ErrorBoundary** — graceful fallback UI с кнопкой перезагрузки
@@ -48,11 +78,15 @@
 - [x] **Glassmorphism Modals** — blur(20px) + rgba фон + dark theme
 
 ### Quick Tasks ✅
-- [x] **Micro-animations** — продукт "влетает" с зелёной подсветкой (fly-in + scale bounce)
-- [x] **Training Type Picker** — уже реализован (cardio/strength/hobby с иконками)
+
+- [x] **Micro-animations** — продукт "влетает" с зелёной подсветкой (fly-in +
+      scale bounce)
+- [x] **Training Type Picker** — уже реализован (cardio/strength/hobby с
+      иконками)
 - [x] **Swipe Haptic** — уже реализован (20+ мест с haptic feedback)
 
 ### Advice Module
+
 - [x] **Advice Module Phase 2** — +26 советов → **103 total** (2025-11-29)
 - [x] **Advice FAB + Panel** — 💡 кнопка, swipe-to-dismiss, 10 вау-эффектов
 - [x] **Advice Module Expansion** — +21 совет → 77
@@ -60,8 +94,11 @@
 - [x] **Advice helpers Phase 0** — все 12 helpers
 
 ### UI/UX
-- [x] **Тренд веса** — спарклайн + корреляция kcal↔weight (🎯⚠️🤔💪) (2025-11-29)
-- [x] **Порции продуктов** — "1 яйцо = 60г", 25+ авто-порций, smart initial, haptic (2025-11-29)
+
+- [x] **Тренд веса** — спарклайн + корреляция kcal↔weight (🎯⚠️🤔💪)
+      (2025-11-29)
+- [x] **Порции продуктов** — "1 яйцо = 60г", 25+ авто-порций, smart initial,
+      haptic (2025-11-29)
 - [x] **Training Modal** — 2-step, wheel picker
 - [x] **Mobile Meal Cards** — базовый UI v2.7
 - [x] **CSS Refactoring** — -173 строки
@@ -69,12 +106,14 @@
 - [x] **Mobile UX Phase 3**
 
 ### Code Quality
+
 - [x] **threat-detection** — удалено 3000 строк + mock bridge
 - [x] **Удалены dead packages** — ~2500 строк
 - [x] **Script order** — models → advice → day ✓
 - [x] **Toast v2 промпт** → archive
 
 ### Refactoring
+
 - [x] **Day v12 Phases 2-4** — -383 строки (heys_day_utils, hooks, pickers)
 - [x] **Навигационные карты** — удалены ~350 строк
 - [x] **Root cleanup** — 77→5 MD файлов
@@ -96,11 +135,11 @@
 
 ## 📊 Статистика
 
-| Метрика | Значение |
-|---------|----------|
-| Советов в модуле | **103** |
-| Удалено строк кода | **~8000+** |
-| Архивированных промптов | **10+** |
+| Метрика                 | Значение   |
+| ----------------------- | ---------- |
+| Советов в модуле        | **103**    |
+| Удалено строк кода      | **~8000+** |
+| Архивированных промптов | **10+**    |
 
 ---
 

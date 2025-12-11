@@ -1995,6 +1995,11 @@
     // Устанавливаем флаг что sync в процессе
     _syncInProgress = (async () => {
     try{
+      // 🔄 Уведомляем UI что sync начинается (для показа скелетона)
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heysSyncStarting', { detail: { clientId: client_id } }));
+      }
+      
       // 🧹 Очистка невалидных продуктов перед синхронизацией (локальные)
       cloud.cleanupProducts();
       

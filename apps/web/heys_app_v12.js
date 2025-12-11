@@ -967,6 +967,8 @@
             const [streak, setStreak] = useState(() => {
               return HEYS.Day && HEYS.Day.getStreak ? HEYS.Day.getStreak() : 0;
             });
+            const [streakJustGrew, setStreakJustGrew] = useState(false);
+            const prevStreakRef = useRef(streak);
             const [expanded, setExpanded] = useState(false);
             const [notification, setNotification] = useState(null);
             const [isXPCounting, setIsXPCounting] = useState(false);
@@ -1049,6 +1051,12 @@
                 if (HEYS.Day && HEYS.Day.getStreak) {
                   setStreak(prevStreak => {
                     const newStreak = HEYS.Day.getStreak();
+                    // Pulse анимация при росте streak
+                    if (newStreak > prevStreakRef.current) {
+                      setStreakJustGrew(true);
+                      setTimeout(() => setStreakJustGrew(false), 700);
+                    }
+                    prevStreakRef.current = newStreak;
                     return prevStreak === newStreak ? prevStreak : newStreak;
                   });
                 }
@@ -1253,7 +1261,7 @@
                 
                 // Streak
                 streak > 0 && React.createElement('span', { 
-                  className: `game-streak ${getStreakClass(streak)}`,
+                  className: `game-streak ${getStreakClass(streak)}${streakJustGrew ? ' just-grew' : ''}`,
                   title: `${streak} дней подряд в норме!`
                 }, `🔥${streak}`),
                 
@@ -2858,6 +2866,7 @@
             const {
               status, setStatus,
               syncVer, setSyncVer,
+              calendarVer, setCalendarVer,
               clients, setClients,
               clientsSource, setClientsSource,
               clientId, setClientId,
@@ -3059,9 +3068,39 @@
               };
             }, []);
             
+            // 🗓️ Отдельный debounced handler для обновления календаря при cycleDay
+            // Используем отдельный calendarVer чтобы не вызывать полный ре-рендер App
+            const calendarDebounceRef = useRef(null);
+            useEffect(() => {
+              const handleCycleUpdate = (e) => {
+                const source = e.detail?.source;
+                const field = e.detail?.field;
+                
+                // Реагируем только на изменения cycleDay
+                if (field !== 'cycleDay' && !source?.startsWith('cycle')) return;
+                
+                // Debounce 500ms — если несколько изменений подряд, обновляем только один раз
+                if (calendarDebounceRef.current) {
+                  clearTimeout(calendarDebounceRef.current);
+                }
+                calendarDebounceRef.current = setTimeout(() => {
+                  setCalendarVer(v => v + 1);
+                  calendarDebounceRef.current = null;
+                }, 500);
+              };
+              
+              window.addEventListener('heys:day-updated', handleCycleUpdate);
+              return () => {
+                window.removeEventListener('heys:day-updated', handleCycleUpdate);
+                if (calendarDebounceRef.current) {
+                  clearTimeout(calendarDebounceRef.current);
+                }
+              };
+            }, []);
+            
             // Вычисляем activeDays для DatePicker (после объявления clientId и products)
-            // 🔒 ОПТИМИЗАЦИЯ: Убрали syncVer из зависимостей — он менялся слишком часто и вызывал мерцание
-            // Пересчитывается только когда: меняется месяц (selectedDate), клиент, продукты или завершается инициализация
+            // 🔒 ОПТИМИЗАЦИЯ: Используем calendarVer вместо syncVer — он меняется только при cycleDay
+            // Пересчитывается когда: меняется месяц, клиент, продукты, или cycleDay (через calendarVer)
             const datePickerActiveDays = React.useMemo(() => {
               // Fallback chain для products: props → HEYS.products.getAll() → localStorage
               const effectiveProducts = (products && products.length > 0) ? products
@@ -3094,7 +3133,7 @@
                 // Тихий fallback — activeDays для календаря не критичны
                 return new Map();
               }
-            }, [selectedDate, clientId, products, isInitializing]);
+            }, [selectedDate, clientId, products, isInitializing, calendarVer]);
 
             const downloadBackupFile = React.useCallback((payload, activeClientId, timestamp) => {
               try {
@@ -3470,10 +3509,41 @@
             }, [clientId]);
 
             // Слушаем событие обновления продуктов из облака
+            // 🔒 Пропускаем первый sync чтобы избежать мерцания при загрузке
+            const initialSyncDoneRef = React.useRef(false);
+            
+            // ✨ Fade-in эффект при появлении контента
+            const [contentReady, setContentReady] = React.useState(false);
+            
+            useEffect(() => {
+              // Fallback: если sync не происходит (offline/локально), показываем контент через 300мс
+              const fallbackTimer = setTimeout(() => {
+                if (!contentReady) setContentReady(true);
+              }, 300);
+              
+              const markInitialSyncDone = () => {
+                // Через 1 секунду после heysSyncCompleted считаем что initial sync прошёл
+                setTimeout(() => {
+                  initialSyncDoneRef.current = true;
+                }, 1000);
+                // ✨ Плавное появление контента после sync
+                setTimeout(() => {
+                  setContentReady(true);
+                }, 100);
+              };
+              window.addEventListener('heysSyncCompleted', markInitialSyncDone);
+              return () => {
+                clearTimeout(fallbackTimer);
+                window.removeEventListener('heysSyncCompleted', markInitialSyncDone);
+              };
+            }, []);
+            
             useEffect(() => {
               const handleProductsUpdate = (event) => {
                 const { products } = event.detail;
                 setProducts(products);
+                // 🔒 Пропускаем setSyncVer при первом sync — UI уже показывает актуальные данные
+                if (!initialSyncDoneRef.current) return;
                 setSyncVer((v) => v + 1);
               };
 
@@ -3482,25 +3552,35 @@
             }, []);
 
             // Слушаем событие обновления данных дня (cycleDay, meals, etc.)
-            // Нужно для инвалидации datePickerActiveDays при изменении cycleDay
+            // ⚠️ Этот handler НЕ обрабатывает cycleDay — для него есть отдельный debounced handler выше
             useEffect(() => {
               // Источники которые НЕ требуют ре-рендера App:
               // - cloud/merge: данные из облака, UI обновляется отдельно
               // - *-step: локальные модалки, данные уже применены через setDay в DayTab
-              // ВАЖНО: cycle-* НЕ в списке — cycleDay влияет на календарь (розовые точки)
+              // - cycle-*: обрабатываются отдельным debounced handler'ом (calendarVer)
               const IGNORED_SOURCES = [
                 'cloud', 'merge', 'step-modal',
                 'deficit-step', 'household-step', 'training-step', 'steps-step',
-                'measurements-step', 'cold-exposure-step'
+                'measurements-step', 'cold-exposure-step',
+                'cycle-auto', 'cycle-clear', 'cycle-save', 'cycle-step'
               ];
               
               const handleDayUpdate = (e) => {
                 const source = e.detail?.source;
+                const field = e.detail?.field;
+                
+                // 🔒 Игнорируем cycleDay изменения — для них есть отдельный debounced handler
+                if (field === 'cycleDay') return;
+                
                 // 🔒 Игнорируем локальные источники — данные уже применены через setDay
                 // Это предотвращает мерцание UI при редактировании
                 if (source && IGNORED_SOURCES.includes(source)) {
                   return;
                 }
+                
+                // 🔒 Пропускаем setSyncVer при первом sync — UI уже показывает актуальные данные
+                if (!initialSyncDoneRef.current) return;
+                
                 setSyncVer((v) => v + 1);
               };
 
@@ -3684,6 +3764,10 @@
             // Ref для актуального clientId (избегаем проблемы closure)
             const clientIdRef = React.useRef(clientId);
             React.useEffect(() => { clientIdRef.current = clientId; }, [clientId]);
+            
+            // 🔄 Sync Settling — ОТКЛЮЧЕНО
+            // Скелетон при sync вызывал "моргание" — появление/исчезновение overlay хуже чем ререндер контента
+            // Пусть контент обновляется на месте — это менее заметно для глаза
             
             // Проверяем ТОЛЬКО после события heysSyncCompleted (когда данные точно загружены)
             useEffect(() => {
@@ -5034,6 +5118,7 @@
                   'div',
                   {
                     className: 'tab-content-swipeable' + 
+                      (contentReady ? ' content-ready' : '') +
                       (slideDirection === 'left' ? ' slide-out-left' : '') +
                       (slideDirection === 'right' ? ' slide-out-right' : '') +
                       (edgeBounce === 'left' ? ' edge-bounce-left' : '') +

@@ -1,5 +1,40 @@
 // heys_insulin_wave_v1.js — Модуль инсулиновой волны
-// Версия: 3.2.2 | Дата: 2025-12-10
+// Версия: 3.5.4 | Дата: 2025-12-11
+//
+// ОБНОВЛЕНИЯ v3.5.4 (PRE-WORKOUT HARM REDUCTION):
+// - 🏋️ Еда ПЕРЕД тренировкой теперь тоже снижает вредность:
+//   - 0-45 мин до тренировки: harmMultiplier = 0.6 (−40% вред)
+//   - 45-90 мин до тренировки: harmMultiplier = 0.8 (−20% вред)
+// - Логика: еда сгорит на тренировке, поэтому "вред" минимален
+//
+// ОБНОВЛЕНИЯ v3.5.3 (UI — ПЛАШКА ACTIVITY CONTEXT):
+// - 🏋️ Вынесена helper-функция renderActivityContextBadge() для переиспользования
+// - ✅ Плашка теперь отображается в ProgressBarComponent (верхний таймер волны)
+// - ✅ Плашка отображается и в режиме липолиза (если эффект от тренировки ускорил выход)
+// - Опции: compact (уменьшенный размер), showDesc (показать описание)
+//
+// ОБНОВЛЕНИЯ v3.5.2 (ИСПРАВЛЕНИЕ ФОРМУЛЫ):
+// - 🔧 activityBonuses теперь применяется как МНОЖИТЕЛЬ, не сумма
+// - Формула: finalMultiplier = foodMultiplier × activityMultiplier × circadian
+// - После 1000+ ккал тренировки волна ~18-30 мин (раньше было 2.8ч)
+//
+// ОБНОВЛЕНИЯ v3.5.1 (POSTPRANDIAL EXERCISE — усиление):
+// - 🏃 Бонусы УДВОЕНЫ: high -50% (было -25%), moderate -35% (было -18%), light -20% (было -10%)
+// - 🆕 proximityBoost: тренировка через 15 мин после еды = бонус ×1.5 (ближе = сильнее)
+// - 🆕 kcalBoost: интенсивная тренировка (500+ ккал) = бонус ×1.5
+// - Финальный бонус может достигать -85% (практически останавливает волну)
+// - Научное обоснование: Colberg 2010, Erickson 2017 — GLUT4 активация без инсулина
+//
+// ОБНОВЛЕНИЯ v3.5.0 (KCAL-BASED WAVE REDUCTION):
+// - 🔥 POST-WORKOUT: waveBonus теперь зависит от потраченных ккал тренировки
+//   | Потрачено ккал | kcalBonus | Итоговая волна (tier + kcal) |
+//   |----------------|-----------|------------------------------|
+//   | 200-400        | −10%      | ~50% базовой                 |
+//   | 400-700        | −25%      | ~35% базовой                 |
+//   | 700-1000       | −45%      | ~20% базовой                 |
+//   | 1000+          | −60%      | ~10-15% базовой (~20-30 мин) |
+// - 🔥 PERI-WORKOUT: bonus масштабируется по intensityMult (high intensity × 1.5)
+// - Научное обоснование: Ivy 1988, Burke 2017 — истощение гликогена → GLUT4 без инсулина
 // 
 // ОБНОВЛЕНИЯ v3.2.2 (КРИТИЧЕСКИЙ ФИКС):
 // - Insulin Index теперь применяется к GL per-product (×3.0 для молока), а не как +15% бонус
@@ -284,19 +319,33 @@
 
   // 🏃‍♂️ POSTPRANDIAL EXERCISE — физическая активность ПОСЛЕ еды
   // Научное обоснование: мышечные сокращения активируют GLUT4 транспортеры,
-  // ускоряя клиренс глюкозы из крови на 20-30% (Colberg et al. 2010)
+  // ускоряя клиренс глюкозы из крови на 20-50% (Colberg et al. 2010, Erickson et al. 2017)
+  // 
+  // 🆕 v3.5.1: УСИЛЕНЫ БОНУСЫ — интенсивная тренировка сразу после еды
+  // практически ОСТАНАВЛИВАЕТ волну (GLUT4 работает без инсулина)
   const POSTPRANDIAL_EXERCISE = {
     // Окно эффекта: 0-2 часа после еды = максимальный эффект
     maxWindow: 120,  // 2 часа (в минутах)
-    // Бонусы по интенсивности (ПОСЛЕ еды)
-    highIntensity: { threshold: 30, bonus: -0.25 },  // 30+ мин высокой интенсивности → -25%
-    moderate: { threshold: 20, bonus: -0.18 },       // 20+ мин умеренной → -18%
-    light: { threshold: 15, bonus: -0.10 },          // 15+ мин лёгкой → -10%
+    // 🆕 v3.5.1: УСИЛЕННЫЕ бонусы по интенсивности (ПОСЛЕ еды)
+    // Чем раньше тренировка после еды — тем сильнее эффект
+    highIntensity: { threshold: 30, bonus: -0.50 },  // 30+ мин высокой интенсивности → -50% (было -25%)
+    moderate: { threshold: 20, bonus: -0.35 },       // 20+ мин умеренной → -35% (было -18%)
+    light: { threshold: 15, bonus: -0.20 },          // 15+ мин лёгкой → -20% (было -10%)
     // Типы тренировок — кардио эффективнее для утилизации глюкозы
     typeMultipliers: {
-      cardio: 1.2,    // Кардио +20% эффективности
+      cardio: 1.3,    // Кардио +30% эффективности (было 1.2)
       strength: 1.0,  // Силовая — стандарт
       hobby: 0.8      // Хобби (прогулка, йога) — 80%
+    },
+    // 🆕 v3.5.1: Бонус за близость к еде (чем раньше — тем сильнее)
+    // Тренировка через 10 мин после еды = +50% к бонусу
+    // Тренировка через 60 мин = стандартный бонус
+    // Тренировка через 120 мин = -50% к бонусу
+    proximityBoost: {
+      immediate: { maxGap: 15, boost: 1.5 },   // 0-15 мин → бонус ×1.5
+      soon: { maxGap: 30, boost: 1.3 },        // 15-30 мин → бонус ×1.3
+      medium: { maxGap: 60, boost: 1.0 },      // 30-60 мин → стандарт
+      late: { maxGap: 120, boost: 0.7 }        // 60-120 мин → бонус ×0.7
     }
   };
 
@@ -614,9 +663,10 @@
 
     // === 3. PRE-WORKOUT: Еда ПЕРЕД тренировкой ===
     // Топливо для тренировки, инсулин будет "сжигаться" во время активности
+    // 🆕 v3.5.4: Добавлен harmMultiplier — еда перед тренировкой менее "вредна"
     preWorkout: [
-      { maxGap: 45, waveBonus: -0.20, label: '⚡ Энергия для тренировки' },  // 0-45 мин до
-      { maxGap: 90, waveBonus: -0.10, label: '🔋 Pre-workout' }              // 45-90 мин до
+      { maxGap: 45, waveBonus: -0.20, harmMultiplier: 0.6, label: '⚡ Топливо для тренировки' },  // 0-45 мин до
+      { maxGap: 90, waveBonus: -0.10, harmMultiplier: 0.8, label: '🔋 Pre-workout' }              // 45-90 мин до
     ],
 
     // === 4. STEPS: Много шагов + ужин ===
@@ -764,15 +814,23 @@
         const cfg = TRAINING_CONTEXT.periWorkout;
         const progressPct = durationMin > 0 ? (mealTimeMin - startMin) / durationMin : 0.5;
         
+        // 🆕 v3.5.0: Intensity-scaled PERI bonus
+        // Чем интенсивнее тренировка, тем больше GLUT4 активирован
+        const intensityWaveBonus = cfg.maxBonus * intensityMult; // -0.70 × 1.5 = -1.05 → cap -0.95
+        const cappedWaveBonus = Math.max(-0.95, intensityWaveBonus);
+        
+        // harmMultiplier тоже улучшается с интенсивностью
+        const intensityHarmMult = Math.max(0.2, cfg.harmMultiplier / intensityMult);
+        
         foundContexts.push({
           type: 'peri',
           priority: TRAINING_CONTEXT.priority.peri,
-          waveBonus: cfg.maxBonus,
-          harmMultiplier: cfg.harmMultiplier,
+          waveBonus: cappedWaveBonus,
+          harmMultiplier: intensityHarmMult,
           badge: cfg.badge,
           desc: `${cfg.badge} Еда во время тренировки → топливо!`,
           trainingRef: { time: training.time, type: training.type, intensity },
-          details: { progressPct, intensityMult }
+          details: { progressPct, intensityMult, baseBonus: cfg.maxBonus, scaledBonus: cappedWaveBonus }
         });
         continue; // peri — наивысший приоритет, не проверяем другие для этой тренировки
       }
@@ -796,16 +854,53 @@
             }
           }
           
+          // 🆕 v3.5.0: KCAL-BASED WAVE REDUCTION
+          // Научное обоснование: степень истощения гликогена пропорциональна затраченной энергии
+          // Ivy et al. 1988, Burke et al. 2017: при сильном истощении глюкоза идёт в мышцы через GLUT4 без инсулина
+          //
+          // | Потрачено ккал | Дополнительный бонус | Итоговая волна |
+          // |----------------|---------------------|----------------|
+          // | 200-400        | −10%                | ~50% базовой   |
+          // | 400-700        | −25%                | ~35% базовой   |
+          // | 700-1000       | −45%                | ~20% базовой   |
+          // | 1000+          | −60%                | ~10-15% базовой (~20-30 мин) |
+          let kcalBonus = 0;
+          if (trainingKcal >= 1000) {
+            kcalBonus = -0.60; // Полное истощение гликогена — волна минимальна
+          } else if (trainingKcal >= 700) {
+            kcalBonus = -0.45; // Сильное истощение
+          } else if (trainingKcal >= 400) {
+            kcalBonus = -0.25; // Значительное истощение
+          } else if (trainingKcal >= 200) {
+            kcalBonus = -0.10; // Умеренное истощение
+          }
+          
+          // Финальный waveBonus = tier bonus + kcal bonus (суммируются, но не ниже -0.90)
+          const combinedWaveBonus = Math.max(-0.90, tier.waveBonus + kcalBonus);
+          
+          // harmMultiplier тоже зависит от ккал (больше потратил = меньше "вред")
+          const kcalHarmReduction = Math.min(0.5, trainingKcal / 2000); // max 50% reduction at 1000 ккал
+          const combinedHarmMultiplier = Math.max(0.3, (tier.harmMultiplier || 0.7) - kcalHarmReduction);
+          
           foundContexts.push({
             type: 'post',
             priority: TRAINING_CONTEXT.priority.post,
-            waveBonus: tier.waveBonus,
-            harmMultiplier: tier.harmMultiplier,
-            badge: tier.badge,
-            desc: `${tier.badge} ${gapMin} мин после тренировки → анаболическое окно`,
+            waveBonus: combinedWaveBonus,
+            harmMultiplier: combinedHarmMultiplier,
+            badge: tier.label || tier.badge,
+            desc: `${tier.label} ${gapMin} мин после ${Math.round(trainingKcal)} ккал тренировки`,
             nightPenaltyOverride: cfg.nightPenaltyOverride,
             trainingRef: { time: training.time, type: training.type, intensity },
-            details: { gapMin, windowMin, tier: tier.label, trainingKcal: Math.round(trainingKcal) }
+            details: { 
+              gapMin, 
+              windowMin, 
+              tier: tier.label, 
+              trainingKcal: Math.round(trainingKcal),
+              tierBonus: tier.waveBonus,
+              kcalBonus,
+              combinedWaveBonus,
+              combinedHarmMultiplier
+            }
           });
         }
       }
@@ -820,9 +915,9 @@
               type: 'pre',
               priority: TRAINING_CONTEXT.priority.pre,
               waveBonus: tier.waveBonus,
-              harmMultiplier: 1.0, // pre не влияет на harm
-              badge: tier.badge,
-              desc: `${tier.badge} Еда за ${gapMin} мин до тренировки → быстрое сжигание`,
+              harmMultiplier: tier.harmMultiplier || 1.0, // 🆕 v3.5.4: pre тоже снижает вред
+              badge: tier.label,
+              desc: `Еда за ${gapMin} мин до тренировки → сгорит на тренировке`,
               trainingRef: { time: training.time, type: training.type, intensity },
               details: { gapMin }
             });
@@ -2393,6 +2488,7 @@
     let bestMatch = null;
     let bestBonus = 0;
     let bestGap = null;
+    let bestDetails = null;
     
     for (const t of trainings) {
       if (!t.time) continue;
@@ -2417,25 +2513,47 @@
         
         // Определяем бонус по интенсивности
         let rawBonus = 0;
+        let intensityLevel = 'none';
         if (highIntensity >= POSTPRANDIAL_EXERCISE.highIntensity.threshold) {
           rawBonus = POSTPRANDIAL_EXERCISE.highIntensity.bonus;
+          intensityLevel = 'high';
         } else if (totalMinutes >= POSTPRANDIAL_EXERCISE.moderate.threshold) {
           rawBonus = POSTPRANDIAL_EXERCISE.moderate.bonus;
+          intensityLevel = 'moderate';
         } else if (totalMinutes >= POSTPRANDIAL_EXERCISE.light.threshold) {
           rawBonus = POSTPRANDIAL_EXERCISE.light.bonus;
+          intensityLevel = 'light';
         }
         
-        // Применяем множитель типа
-        const adjustedBonus = rawBonus * typeMult;
+        // 🆕 v3.5.1: proximityBoost — чем раньше тренировка после еды, тем сильнее
+        let proximityBoost = 0.7; // default: late
+        if (gapMinutes <= POSTPRANDIAL_EXERCISE.proximityBoost.immediate.maxGap) {
+          proximityBoost = POSTPRANDIAL_EXERCISE.proximityBoost.immediate.boost; // 1.5
+        } else if (gapMinutes <= POSTPRANDIAL_EXERCISE.proximityBoost.soon.maxGap) {
+          proximityBoost = POSTPRANDIAL_EXERCISE.proximityBoost.soon.boost; // 1.3
+        } else if (gapMinutes <= POSTPRANDIAL_EXERCISE.proximityBoost.medium.maxGap) {
+          proximityBoost = POSTPRANDIAL_EXERCISE.proximityBoost.medium.boost; // 1.0
+        }
         
-        // Эффект уменьшается по мере удаления от еды (линейно)
-        const distanceFactor = 1 - (gapMinutes / POSTPRANDIAL_EXERCISE.maxWindow) * 0.5;
-        const finalBonus = adjustedBonus * distanceFactor;
+        // 🆕 v3.5.1: kcalBonus — дополнительный бонус за интенсивную тренировку
+        // Аналогично POST-WORKOUT: больше ккал = сильнее эффект
+        const weight = 70; // default
+        const trainingKcal = totalMinutes * 5 * (weight / 70) * (highIntensity > lowIntensity ? 1.5 : 1.0);
+        let kcalBoost = 1.0;
+        if (trainingKcal >= 500) {
+          kcalBoost = 1.5; // Интенсивная тренировка → +50% к бонусу
+        } else if (trainingKcal >= 300) {
+          kcalBoost = 1.25;
+        }
+        
+        // Финальный бонус = base × type × proximity × kcal
+        const finalBonus = Math.max(-0.85, rawBonus * typeMult * proximityBoost * kcalBoost);
         
         if (finalBonus < bestBonus) { // Ищем минимальный (самый отрицательный = лучший)
           bestBonus = finalBonus;
           bestMatch = t;
           bestGap = gapMinutes;
+          bestDetails = { intensityLevel, typeMult, proximityBoost, kcalBoost, trainingKcal, rawBonus };
         }
       }
     }
@@ -2444,7 +2562,6 @@
       return { bonus: 0, matchedTraining: null, desc: null, gapMinutes: null };
     }
     
-    const gapHours = Math.round(bestGap / 60 * 10) / 10;
     const pctShorter = Math.abs(Math.round(bestBonus * 100));
     const typeEmoji = bestMatch.type === 'cardio' ? '🏃' : bestMatch.type === 'strength' ? '🏋️' : '⚽';
     
@@ -2452,7 +2569,8 @@
       bonus: bestBonus,
       matchedTraining: bestMatch,
       gapMinutes: bestGap,
-      desc: `${typeEmoji} Тренировка через ${gapHours}ч после еды → волна ${pctShorter}% короче`
+      details: bestDetails,
+      desc: `${typeEmoji} Тренировка через ${bestGap} мин после еды → волна ${pctShorter}% короче`
     };
   };
   
@@ -2917,6 +3035,7 @@
     const activityHarmMultiplier = activityContext?.harmMultiplier || 1.0;
     
     const allBonuses = activityBonuses + metabolicBonuses + personalBonuses + mealStackingBonus + resistantStarchBonus + coldExposureBonus + supplementsBonusValue + autophagyBonus;
+    
     // Циркадный множитель: приближаем к 1.0 при низкой GL
     // 🆕 v3.4.0: Если activityContext с nightPenaltyOverride — не применяем ночной штраф
     let scaledCircadian = 1.0 + (circadian.multiplier - 1.0) * circadianScale;
@@ -2924,7 +3043,27 @@
       // Ночная тренировка → ночной штраф отменён
       scaledCircadian = 1.0;
     }
-    const finalMultiplier = (multipliers.total + allBonuses) * scaledCircadian * spicyMultiplier;
+    
+    // 🆕 v3.5.2: ИСПРАВЛЕНИЕ — activityBonuses применяется как МНОЖИТЕЛЬ, не сумма!
+    // 
+    // ПРОБЛЕМА v3.5.1: activityBonuses = -0.70 складывался с multipliersTotal = 1.35
+    // Результат: 1.35 + (-0.70) = 0.65 → волна сокращалась только на 35%
+    // 
+    // ИСПРАВЛЕНИЕ: Тренировка должна сокращать волну НЕЗАВИСИМО от состава еды!
+    // Жиры/белок увеличивают волну (еда дольше переваривается)
+    // Но тренировка НАПРЯМУЮ ускоряет утилизацию глюкозы через GLUT4
+    // 
+    // Новая формула:
+    // 1) foodMultiplier = multipliers.total + otherBonuses (еда + метаболизм)
+    // 2) activityMultiplier = 1 + activityBonuses (тренировка как отдельный множитель)
+    // 3) finalMultiplier = foodMultiplier × activityMultiplier × circadian
+    
+    // Разделяем бонусы: еда/метаболизм vs активность
+    const otherBonuses = metabolicBonuses + personalBonuses + mealStackingBonus + resistantStarchBonus + coldExposureBonus + supplementsBonusValue + autophagyBonus;
+    const foodMultiplier = multipliers.total + otherBonuses;
+    const activityMultiplier = Math.max(0.1, 1.0 + activityBonuses); // min 10% от волны
+    
+    const finalMultiplier = foodMultiplier * activityMultiplier * scaledCircadian * spicyMultiplier;
     
     // 🔬 DEBUG: Проверка v3.2.2 расчётов с Insulin Index (отключено для production)
     // Раскомментировать для отладки:
@@ -3181,7 +3320,9 @@
           desc: mealActivityContext.desc,
           waveBonus: mealActivityContext.waveBonus,
           harmMultiplier: mealActivityContext.harmMultiplier || 1.0,
-          nightPenaltyOverride: mealActivityContext.nightPenaltyOverride || false
+          nightPenaltyOverride: mealActivityContext.nightPenaltyOverride || false,
+          details: mealActivityContext.details || null,
+          trainingRef: mealActivityContext.trainingRef || null
         } : null,
         isActive: idx === 0 && remainingMinutes > 0
       };
@@ -3581,6 +3722,136 @@
     return `${h}ч ${m}м`;
   };
   
+  // === 🏋️ HELPER: ПЛАШКА ACTIVITY CONTEXT (используется в нескольких местах) ===
+  const renderActivityContextBadge = (activityContext, options = {}) => {
+    if (!activityContext || activityContext.type === 'none') return null;
+    
+    const { compact = false } = options;
+    
+    // Цвета по типу контекста (все позитивные — зелёные оттенки)
+    const colors = {
+      peri: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🔥' },
+      post: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '💪' },
+      pre: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '⚡' },
+      steps: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🚶' },
+      morning: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🌅' },
+      double: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🏆' },
+      fasted: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '⚡' },
+      default: { bg: '#22c55e22', border: '#22c55e44', text: '#16a34a', icon: '🏋️' }
+    };
+    const c = colors[activityContext.type] || colors.default;
+    
+    // Человекопонятные заголовки по типу
+    const titles = {
+      peri: 'Еда ВО ВРЕМЯ тренировки',
+      post: 'Тренировка ускорила метаболизм',
+      pre: 'Топливо для тренировки',
+      steps: 'Активный день (10k+ шагов)',
+      morning: 'Утренний буст метаболизма',
+      double: 'Двойная нагрузка',
+      fasted: 'Тренировка натощак'
+    };
+    const title = titles[activityContext.type] || 'Эффект тренировки';
+    
+    // Форматируем бонус волны
+    const waveBonusPct = activityContext.waveBonus 
+      ? Math.abs(activityContext.waveBonus * 100).toFixed(0) + '% быстрее'
+      : null;
+    
+    // Детали из контекста (если есть)
+    const details = activityContext.details || {};
+    let subtitle = '';
+    
+    if (activityContext.type === 'post' && details.trainingKcal) {
+      // Например: "После 1331 ккал • волна −68%"
+      subtitle = `После ${details.trainingKcal} ккал`;
+      if (details.gapMin) {
+        subtitle += ` • ${details.gapMin} мин назад`;
+      }
+    } else if (activityContext.type === 'peri') {
+      subtitle = 'Глюкоза → сразу в мышцы';
+    } else if (activityContext.type === 'pre' && details.gapMin) {
+      subtitle = `${details.gapMin} мин до тренировки`;
+    }
+    
+    return React.createElement('div', {
+      className: 'activity-context-badge',
+      style: {
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: compact ? '8px' : '10px',
+        padding: compact ? '8px 12px' : '10px 14px',
+        marginBottom: '10px',
+        borderRadius: '12px',
+        background: c.bg,
+        border: `1px solid ${c.border}`
+      }
+    },
+      // Иконка
+      React.createElement('span', { 
+        style: { 
+          fontSize: compact ? '20px' : '24px',
+          lineHeight: 1,
+          marginTop: '2px'
+        } 
+      }, c.icon),
+      
+      // Текст
+      React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+        // Заголовок
+        React.createElement('div', { 
+          style: { 
+            fontSize: compact ? '13px' : '14px', 
+            fontWeight: '600',
+            color: c.text
+          } 
+        }, title),
+        // Подзаголовок
+        subtitle && React.createElement('div', { 
+          style: { 
+            fontSize: '12px', 
+            color: '#64748b', 
+            marginTop: '2px'
+          } 
+        }, subtitle)
+      ),
+      
+      // Бейджи справа (вертикально)
+      React.createElement('div', {
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: '4px',
+          flexShrink: 0
+        }
+      },
+        // Бонус волны
+        waveBonusPct && React.createElement('div', {
+          style: {
+            fontSize: '12px',
+            fontWeight: '700',
+            color: '#22c55e',
+            background: '#22c55e22',
+            padding: '4px 8px',
+            borderRadius: '6px'
+          }
+        }, waveBonusPct),
+        // Снижение вреда
+        activityContext.harmMultiplier && activityContext.harmMultiplier < 1 && React.createElement('div', {
+          style: {
+            fontSize: '11px',
+            fontWeight: '600',
+            color: '#3b82f6',
+            background: '#3b82f622',
+            padding: '4px 8px',
+            borderRadius: '6px'
+          }
+        }, '🛡️ −' + Math.round((1 - activityContext.harmMultiplier) * 100) + '% вред')
+      )
+    );
+  };
+  
   // === SVG ГРАФИК ВОЛНЫ (выносим наружу для использования в основной карточке) ===
   const renderWaveChart = (data) => {
     if (!data || data.remaining <= 0) return null; // Не показываем если волна завершена
@@ -3911,64 +4182,8 @@
         padding: '0 12px 12px 12px'
       } 
     },
-      // 🆕 v3.4.0: Activity Context badge (если есть)
-      activityContext && React.createElement('div', {
-        className: 'activity-context-info',
-        style: {
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '8px 12px',
-          marginBottom: '8px',
-          borderRadius: '10px',
-          background: activityContext.type === 'peri' ? '#22c55e22' :
-                      activityContext.type === 'post' ? '#3b82f622' :
-                      activityContext.type === 'pre' ? '#eab30822' :
-                      '#6b728022',
-          border: activityContext.type === 'peri' ? '1px solid #22c55e44' :
-                  activityContext.type === 'post' ? '1px solid #3b82f644' :
-                  activityContext.type === 'pre' ? '1px solid #eab30844' :
-                  '1px solid #6b728044'
-        }
-      },
-        React.createElement('span', { style: { fontSize: '18px' } }, 
-          activityContext.badge?.split(' ')[0] || '🏋️'
-        ),
-        React.createElement('div', { style: { flex: 1 } },
-          React.createElement('div', { 
-            style: { 
-              fontSize: '13px', 
-              fontWeight: '600',
-              color: activityContext.type === 'peri' ? '#16a34a' :
-                     activityContext.type === 'post' ? '#2563eb' :
-                     activityContext.type === 'pre' ? '#ca8a04' :
-                     '#374151'
-            } 
-          }, activityContext.badge),
-          React.createElement('div', { 
-            style: { fontSize: '11px', color: '#64748b', marginTop: '2px' } 
-          }, activityContext.desc)
-        ),
-        // Показать бонус волны
-        activityContext.waveBonus && React.createElement('div', {
-          style: {
-            fontSize: '12px',
-            fontWeight: '700',
-            color: '#22c55e',
-            background: '#22c55e22',
-            padding: '4px 8px',
-            borderRadius: '6px'
-          }
-        }, (activityContext.waveBonus * 100).toFixed(0) + '%'),
-        // Показать harm multiplier если есть
-        activityContext.harmMultiplier && activityContext.harmMultiplier < 1 && React.createElement('div', {
-          style: {
-            fontSize: '11px',
-            color: '#3b82f6',
-            marginLeft: '4px'
-          }
-        }, '🛡️ Вред ×' + activityContext.harmMultiplier.toFixed(1))
-      ),
+      // 🆕 v3.5.3: Activity Context badge (переиспользуемый helper)
+      activityContext && renderActivityContextBadge(activityContext, { compact: false }),
       // === SVG ГРАФИК ===
       React.createElement('svg', { 
         width: '100%', 
@@ -4264,16 +4479,24 @@
             letterSpacing: '2px',
             textShadow: '0 2px 8px rgba(0,0,0,0.2)'
           }
-        }, formatLipolysisTime(lipolysisMinutes))
+        }, formatLipolysisTime(lipolysisMinutes)),
+        // Плашка тренировки (если эффект от тренировки ускорил выход в липолиз)
+        data.activityContext && React.createElement('div', { style: { marginTop: '12px' } },
+          renderActivityContextBadge(data.activityContext, { compact: true, showDesc: false })
+        )
       );
     }
     
     // При активной волне: большой таймер обратного отсчёта
-    return React.createElement('div', {
-      style: {
-        background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)',
-        borderRadius: '16px',
-        padding: '20px',
+    return React.createElement(React.Fragment, null,
+      // Плашка тренировки (если есть) — ПОД таймером
+      data.activityContext && data.activityContext.type !== 'none' && renderActivityContextBadge(data.activityContext, { compact: false, showDesc: true }),
+      // Синий блок с таймером
+      React.createElement('div', {
+        style: {
+          background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)',
+          borderRadius: '16px',
+          padding: '20px',
         textAlign: 'center',
         marginTop: '8px',
         boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
@@ -4329,6 +4552,7 @@
       ),
       // График волны
       renderWaveChart(data)
+      )
     );
   };
   
@@ -5044,13 +5268,16 @@
     TRAINING_CONTEXT,
     calculateActivityContext,
     
+    // 🆕 v3.5.3: UI компоненты
+    renderActivityContextBadge,
+    
     // Версия
-    VERSION: '3.4.0'
+    VERSION: '3.5.4'
   };
   
   // Алиас
   HEYS.IW = HEYS.InsulinWave;
   
-  console.log('[HEYS] InsulinWave v3.4.0 loaded (Training Context)');
+  console.log('[HEYS] InsulinWave v3.5.4 loaded (Pre-workout harm reduction)');
   
 })(typeof window !== 'undefined' ? window : global);
