@@ -132,6 +132,41 @@
   // ═══════════════════════════════════════════════════════════════════
   // 🔀 MERGE ЛОГИКА ДЛЯ КОНФЛИКТОВ
   // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * Merge items (продукты) внутри meal по ID
+   * @param {Array} remoteItems - items из облака
+   * @param {Array} localItems - локальные items
+   * @param {boolean} preferLocal - если true, локальная версия побеждает при конфликте
+   *                                если false, берём ТОЛЬКО remote items (для pull-to-refresh)
+   * @returns {Array} объединённый массив items
+   */
+  function mergeItemsById(remoteItems = [], localItems = [], preferLocal = true) {
+    // 🆕 При preferLocal=false (preferRemote): берём ТОЛЬКО remote items
+    // Это нужно чтобы удаления с других устройств применялись при pull-to-refresh
+    if (!preferLocal) {
+      return remoteItems.filter(item => item && item.id);
+    }
+    
+    // preferLocal=true: объединяем оба списка, local версии перезаписывают remote
+    const itemsMap = new Map();
+    
+    // Добавляем remote items
+    remoteItems.forEach(item => {
+      if (item && item.id) {
+        itemsMap.set(item.id, item);
+      }
+    });
+    
+    // Добавляем/заменяем local items
+    localItems.forEach(item => {
+      if (item && item.id) {
+        itemsMap.set(item.id, item);
+      }
+    });
+    
+    return Array.from(itemsMap.values());
+  }
   
   /**
    * Умный merge данных дня при конфликте local vs remote
@@ -146,9 +181,11 @@
    * @param {Object} remote - данные из облака
    * @param {Object} options - опции
    * @param {boolean} options.forceKeepAll - при true НЕ считать meals "удалёнными", объединять ВСЕ
+   * @param {boolean} options.preferRemote - при true, remote items/meals побеждают (для pull-to-refresh)
    */
   function mergeDayData(local, remote, options = {}) {
     const forceKeepAll = options.forceKeepAll || false;
+    const preferRemote = options.preferRemote || false; // 🆕 Для pull-to-refresh: remote побеждает
     // Приводим тренировки к новой схеме (quality/feelAfter → mood/wellbeing/stress)
     const normalizeTrainings = (trainings = []) => trainings.map((t = {}) => {
       if (t.quality !== undefined || t.feelAfter !== undefined) {
@@ -263,7 +300,7 @@
     remoteMeals.forEach(meal => {
       if (!meal || !meal.id) return;
       
-      if (!forceKeepAll && localIsNewer && !localMealIds.has(meal.id)) {
+      if (!forceKeepAll && !preferRemote && localIsNewer && !localMealIds.has(meal.id)) {
         // Local свежее и этого meal нет в local = УДАЛЁН пользователем
         log(`🗑️ [MERGE] Meal ${meal.id} deleted locally, skipping from remote`);
         return;
@@ -275,20 +312,32 @@
     // Потом local meals — если ID совпадает, берём ЛОКАЛЬНУЮ версию (она более свежая)
     // ВАЖНО: При удалении item из приёма — locаl имеет меньше items, но это правильно!
     // При ДОБАВЛЕНИИ item — нужен merge items по ID чтобы не терять данные с других устройств
+    // 🆕 При preferRemote — remote items побеждают (для pull-to-refresh)
     localMeals.forEach(meal => {
       if (!meal || !meal.id) return;
       const existing = mealsMap.get(meal.id);
       if (!existing) {
+        // 🆕 При preferRemote: если meal нет в remote — это может быть локальное добавление
+        // которое ещё не синкнулось. Оставляем его.
         mealsMap.set(meal.id, meal);
       } else {
         // Конфликт по ID — MERGE items внутри meal!
-        // Объединяем items из local и remote по item.id
-        const mergedItems = mergeItemsById(existing.items || [], meal.items || [], localIsNewer);
+        // 🆕 При preferRemote: remote items имеют приоритет (удаления применяются)
+        const preferLocal = preferRemote ? false : localIsNewer;
+        
+        if (preferRemote) {
+          logCritical(`🔄 [MERGE] preferRemote: meal "${meal.name}" | local items: ${meal.items?.length || 0} | remote items: ${existing.items?.length || 0} → using remote`);
+        }
+        
+        const mergedItems = mergeItemsById(existing.items || [], meal.items || [], preferLocal);
         
         // Берём остальные поля из более свежей версии
-        const mergedMeal = localIsNewer 
-          ? { ...existing, ...meal, items: mergedItems }
-          : { ...meal, ...existing, items: mergedItems };
+        // 🆕 При preferRemote: берём remote как базу
+        const mergedMeal = preferRemote
+          ? { ...meal, ...existing, items: mergedItems } // remote (existing) поля поверх local
+          : localIsNewer 
+            ? { ...existing, ...meal, items: mergedItems }
+            : { ...meal, ...existing, items: mergedItems };
         
         mealsMap.set(meal.id, mergedMeal);
       }
@@ -2238,14 +2287,14 @@
             const localUpdatedAt = local?.updatedAt || 0;
             
             // 🔄 FORCE MODE (pull-to-refresh): ВСЕГДА применять облачные данные
-            // При force берём remote как базу и добавляем уникальные local meals
+            // При force берём remote как базу, remote items ПОБЕЖДАЮТ при конфликте
             if (forceSync && row.v) {
               logCritical(`🔄 [FORCE SYNC] Processing day | key: ${key} | local: ${local?.meals?.length || 0} meals | remote: ${row.v.meals?.length || 0} meals`);
               
               let valueToSave;
               if (local && local.meals?.length > 0) {
-                // Есть локальные данные — merge с forceKeepAll
-                const merged = mergeDayData(local, row.v, { forceKeepAll: true });
+                // Есть локальные данные — merge с preferRemote чтобы удаления из облака применились
+                const merged = mergeDayData(local, row.v, { forceKeepAll: true, preferRemote: true });
                 valueToSave = merged || row.v; // Если merge вернул null — берём remote
               } else {
                 // Нет локальных данных — просто берём remote
