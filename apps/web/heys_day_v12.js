@@ -7244,6 +7244,61 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       )
     );
 
+    // === Карточка бэкапа данных ===
+    const [backupBusy, setBackupBusy] = React.useState(false);
+    const handleExportBackup = React.useCallback(async () => {
+      if (backupBusy) return;
+      setBackupBusy(true);
+      try {
+        const result = await window.HEYS?.exportFullBackup?.();
+        if (result?.ok) {
+          // Успех — показываем короткий toast
+          console.log('[Backup] Success:', result);
+        }
+      } finally {
+        setBackupBusy(false);
+      }
+    }, [backupBusy]);
+    
+    const backupCard = React.createElement('div', {
+      className: 'backup-card compact-card',
+      key: 'backup-card',
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 16px',
+        margin: '8px 0',
+        background: 'var(--surface, #fff)',
+        borderRadius: '12px',
+        border: '1px solid var(--border, #e5e7eb)'
+      }
+    },
+      React.createElement('div', { 
+        style: { display: 'flex', alignItems: 'center', gap: '10px' } 
+      },
+        React.createElement('span', { style: { fontSize: '20px' } }, '💾'),
+        React.createElement('span', { 
+          style: { fontSize: '14px', color: 'var(--text-secondary, #6b7280)' } 
+        }, 'Экспорт данных')
+      ),
+      React.createElement('button', {
+        onClick: handleExportBackup,
+        disabled: backupBusy,
+        style: {
+          padding: '8px 16px',
+          fontSize: '13px',
+          fontWeight: '600',
+          color: '#fff',
+          background: backupBusy ? '#9ca3af' : '#3b82f6',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: backupBusy ? 'not-allowed' : 'pointer',
+          transition: 'background 0.2s'
+        }
+      }, backupBusy ? '⏳ Экспорт...' : '📥 Скачать JSON')
+    );
+
   // compareBlock удалён по требованию
 
     // Сортируем приёмы для отображения (последние наверху)
@@ -14292,6 +14347,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       (!isMobile || mobileSubTab === 'stats') && compactActivity,
       (!isMobile || mobileSubTab === 'stats') && sideBlock,
       (!isMobile || mobileSubTab === 'stats') && cycleCard,
+      (!isMobile || mobileSubTab === 'stats') && backupCard,
       
       // === FAB группа: приём пищи + вода (на обеих вкладках) ===
       isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && React.createElement('div', {

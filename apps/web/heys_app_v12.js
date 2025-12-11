@@ -625,6 +625,114 @@
           }, 800);
         };
         
+        // === Экспорт бэкапа всех данных в JSON ===
+        // Используется из DayTab для кнопки "Скачать бэкап"
+        HEYS.exportFullBackup = async function() {
+          const clientId = localStorage.getItem('heys_client_current');
+          if (!clientId) {
+            alert('Нет активного клиента');
+            return { ok: false, error: 'no_client' };
+          }
+          
+          try {
+            // Собираем все данные клиента
+            const backup = {
+              exportedAt: new Date().toISOString(),
+              clientId: clientId,
+              appVersion: window.APP_VERSION || 'unknown',
+              products: [],
+              profile: null,
+              norms: null,
+              hrZones: null,
+              days: {},
+              water: null,
+              scheduledAdvices: null,
+            };
+            
+            // Продукты
+            const productsKey = `heys_${clientId}_products`;
+            const productsRaw = localStorage.getItem(productsKey);
+            if (productsRaw) {
+              try { backup.products = JSON.parse(productsRaw); } catch (e) {}
+            }
+            
+            // Профиль
+            const profileKey = `heys_${clientId}_profile`;
+            const profileRaw = localStorage.getItem(profileKey);
+            if (profileRaw) {
+              try { backup.profile = JSON.parse(profileRaw); } catch (e) {}
+            }
+            
+            // Нормы
+            const normsKey = `heys_${clientId}_norms`;
+            const normsRaw = localStorage.getItem(normsKey);
+            if (normsRaw) {
+              try { backup.norms = JSON.parse(normsRaw); } catch (e) {}
+            }
+            
+            // Пульсовые зоны
+            const hrKey = `heys_${clientId}_hr_zones`;
+            const hrRaw = localStorage.getItem(hrKey);
+            if (hrRaw) {
+              try { backup.hrZones = JSON.parse(hrRaw); } catch (e) {}
+            }
+            
+            // Вода
+            const waterKey = `heys_${clientId}_water_history`;
+            const waterRaw = localStorage.getItem(waterKey);
+            if (waterRaw) {
+              try { backup.water = JSON.parse(waterRaw); } catch (e) {}
+            }
+            
+            // Советы
+            const advicesKey = `heys_${clientId}_scheduled_advices`;
+            const advicesRaw = localStorage.getItem(advicesKey);
+            if (advicesRaw) {
+              try { backup.scheduledAdvices = JSON.parse(advicesRaw); } catch (e) {}
+            }
+            
+            // Дни (за последние 90 дней)
+            const today = new Date();
+            for (let i = 0; i < 90; i++) {
+              const d = new Date(today);
+              d.setDate(d.getDate() - i);
+              const dateStr = d.toISOString().slice(0, 10);
+              const dayKey = `heys_${clientId}_dayv2_${dateStr}`;
+              const dayRaw = localStorage.getItem(dayKey);
+              if (dayRaw) {
+                try { 
+                  backup.days[dateStr] = JSON.parse(dayRaw); 
+                } catch (e) {}
+              }
+            }
+            
+            // Статистика
+            const daysCount = Object.keys(backup.days).length;
+            const productsCount = backup.products?.length || 0;
+            
+            // Скачиваем файл
+            const fileName = `heys-backup-${clientId.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.json`;
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            console.log(`[BACKUP] ✅ Exported: ${productsCount} products, ${daysCount} days`);
+            return { ok: true, products: productsCount, days: daysCount, fileName };
+            
+          } catch (err) {
+            console.error('[BACKUP] Export failed:', err);
+            alert('Ошибка экспорта: ' + err.message);
+            return { ok: false, error: err.message };
+          }
+        };
+        
         // === Mobile Debug Panel ===
         // Тройной тап на заголовок покажет дебаг-панель (для отладки на телефоне)
         function bootstrapGlobals() {
