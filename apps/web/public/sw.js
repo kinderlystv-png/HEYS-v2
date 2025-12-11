@@ -92,9 +92,12 @@ self.addEventListener('activate', (event) => {
             })
         );
       })
-      // НЕ вызываем clients.claim() автоматически!
-      // Это вызывает controllerchange → reload и теряет сессию.
-      // Клиенты получат новый SW при следующем открытии PWA.
+      .then(() => {
+        // Принудительно берём контроль над всеми клиентами
+        // Это критично для обновления PWA!
+        console.log('[SW] Claiming clients...');
+        return self.clients.claim();
+      })
   );
 });
 
