@@ -2137,36 +2137,60 @@
       // clearNamespace стирал все локальные данные, включая продукты!
       // Теперь просто перезаписываем только те ключи, что пришли с сервера
       
+      // 🔄 ФАЗ 1: ДЕДУПЛИКАЦИЯ — если несколько ключей в БД превращаются в один scoped key,
+      // берём самый свежий по updated_at (поле БД, не JSON)
+      const keyGroups = new Map(); // scopedKey → [{ row, updated_at_ts }]
+      
       (data||[]).forEach(row => {
+        let key = row.k;
+        
+        // Пропускаем ключи с двойным client_id (баг)
+        if (key.includes(client_id) && key.split(client_id).length > 2) {
+          logCritical(`🐛 [LOAD SKIP] Skipping key with double client_id: ${key}`);
+          return;
+        }
+        
+        // Нормализуем: убираем client_id для получения scoped key
+        if (key.includes(client_id)) {
+          key = key.replace(`heys_${client_id}_`, 'heys_');
+          key = key.replace(`_${client_id}_`, '_');
+        }
+        
+        // Добавляем client_id для localStorage
+        if (key.startsWith('heys_') && !key.includes(client_id)) {
+          key = 'heys_' + client_id + '_' + key.substring('heys_'.length);
+        }
+        
+        // Группируем по scoped key
+        if (!keyGroups.has(key)) {
+          keyGroups.set(key, []);
+        }
+        // Парсим updated_at в timestamp для сравнения
+        const ts = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+        keyGroups.get(key).push({ row, updated_at_ts: ts, originalKey: row.k });
+      });
+      
+      // Для каждой группы выбираем самый свежий по updated_at
+      const deduped = [];
+      keyGroups.forEach((group, scopedKey) => {
+        if (group.length === 1) {
+          deduped.push({ scopedKey, row: group[0].row });
+        } else {
+          // Сортируем по updated_at DESC и берём первый (самый свежий)
+          group.sort((a, b) => b.updated_at_ts - a.updated_at_ts);
+          const winner = group[0];
+          const loser = group[1];
+          logCritical(`🔀 [DEDUP] Key '${scopedKey}' has ${group.length} versions in DB. Using '${winner.originalKey}' (${new Date(winner.updated_at_ts).toISOString()}) over '${loser.originalKey}' (${new Date(loser.updated_at_ts).toISOString()})`);
+          deduped.push({ scopedKey, row: winner.row });
+        }
+      });
+      
+      log(`📊 [DEDUP] ${data?.length || 0} DB keys → ${deduped.length} unique scoped keys`);
+      
+      // 🔄 ФАЗ 2: ОБРАБОТКА дедуплицированных ключей
+      deduped.forEach(({ scopedKey, row }) => {
         try {
-          // row.k is stored in DB as the original key
-          // For client-scoped keys like 'heys_products', we need to store them with client_id prefix
-          let key = row.k;
-          
-          // 🔄 НОРМАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ:
-          // Обрабатываем 3 варианта ключей в БД:
-          // 1. Нормализованные: heys_products, heys_dayv2_2025-12-11 (правильно)
-          // 2. Старые (один client_id): heys_{id}_products (мигрировать)
-          // 3. Багнутые (двойной client_id): heys_{id}_{id}_dayv2_ (пропустить!)
-          
-          // Сначала проверяем на двойной client_id (баг) - пропускаем такие записи
-          if (key.includes(client_id) && key.split(client_id).length > 2) {
-            logCritical(`🐛 [LOAD SKIP] Skipping key with double client_id: ${key}`);
-            return; // Пропускаем, эти ключи нужно удалить из БД
-          }
-          
-          // Затем убираем один client_id если он есть (старый формат)
-          if (key.includes(client_id)) {
-            key = key.replace(`heys_${client_id}_`, 'heys_');
-            key = key.replace(`_${client_id}_`, '_'); // На случай другого формата
-          }
-          
-          // Если ключ 'heys_products' (без client_id), добавляем client_id для localStorage
-          if (key.startsWith('heys_') && !key.includes(client_id)) {
-            // Преобразуем в scoped key для localStorage
-            key = 'heys_' + client_id + '_' + key.substring('heys_'.length);
-            log(`  📝 [MIGRATION] Mapped '${row.k}' → '${key}'`);
-          }
+          let key = scopedKey;
           
           // Конфликт: сравнить версии и объединить если нужно
           let local = null;
