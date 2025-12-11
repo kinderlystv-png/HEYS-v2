@@ -3631,8 +3631,13 @@
       });
     }
 
-    // Функция для вычисления средних оценок из приёмов пищи И тренировок
-    function calculateDayAverages(meals, trainings) {
+    // Функция для вычисления средних оценок из утреннего чек-ина, приёмов пищи И тренировок
+    function calculateDayAverages(meals, trainings, dayData) {
+      // Утренние оценки из чек-ина (если есть — это стартовая точка дня)
+      const morningMood = dayData?.moodMorning && !isNaN(+dayData.moodMorning) ? [+dayData.moodMorning] : [];
+      const morningWellbeing = dayData?.wellbeingMorning && !isNaN(+dayData.wellbeingMorning) ? [+dayData.wellbeingMorning] : [];
+      const morningStress = dayData?.stressMorning && !isNaN(+dayData.stressMorning) ? [+dayData.stressMorning] : [];
+      
       // Собираем все оценки из приёмов пищи
       const mealMoods = (meals || []).filter(m => m.mood && !isNaN(+m.mood)).map(m => +m.mood);
       const mealWellbeing = (meals || []).filter(m => m.wellbeing && !isNaN(+m.wellbeing)).map(m => +m.wellbeing);
@@ -3643,10 +3648,10 @@
       const trainingWellbeing = (trainings || []).filter(t => t.wellbeing && !isNaN(+t.wellbeing)).map(t => +t.wellbeing);
       const trainingStress = (trainings || []).filter(t => t.stress && !isNaN(+t.stress)).map(t => +t.stress);
       
-      // Объединяем все оценки
-      const allMoods = [...mealMoods, ...trainingMoods];
-      const allWellbeing = [...mealWellbeing, ...trainingWellbeing];
-      const allStress = [...mealStress, ...trainingStress];
+      // Объединяем все оценки: утро + приёмы пищи + тренировки
+      const allMoods = [...morningMood, ...mealMoods, ...trainingMoods];
+      const allWellbeing = [...morningWellbeing, ...mealWellbeing, ...trainingWellbeing];
+      const allStress = [...morningStress, ...mealStress, ...trainingStress];
       
       const moodAvg = allMoods.length ? r1(allMoods.reduce((sum, val) => sum + val, 0) / allMoods.length) : '';
       const wellbeingAvg = allWellbeing.length ? r1(allWellbeing.reduce((sum, val) => sum + val, 0) / allWellbeing.length) : '';
@@ -3666,9 +3671,9 @@
       return { moodAvg, wellbeingAvg, stressAvg, dayScore };
     }
 
-    // Автоматическое обновление средних оценок и dayScore при изменении приёмов пищи или тренировок
+    // Автоматическое обновление средних оценок и dayScore при изменении приёмов пищи, тренировок или утренних оценок
     useEffect(() => {
-      const averages = calculateDayAverages(day.meals, day.trainings);
+      const averages = calculateDayAverages(day.meals, day.trainings, day);
       // Не перезаписываем dayScore если есть ручной override (dayScoreManual)
       const shouldUpdateDayScore = !day.dayScoreManual && averages.dayScore !== day.dayScore;
       
@@ -3687,6 +3692,7 @@
     }, [
       day.meals?.map(m => `${m.mood}-${m.wellbeing}-${m.stress}`).join('|'), 
       day.trainings?.map(t => `${t.mood}-${t.wellbeing}-${t.stress}`).join('|'),
+      day.moodMorning, day.wellbeingMorning, day.stressMorning,
       day.dayScoreManual
     ]);
 
@@ -3698,6 +3704,29 @@
         const [h, m] = t.split(':').map(Number);
         return (h || 0) * 60 + (m || 0);
       };
+      
+      // Утренняя оценка из чек-ина (стартовая точка дня)
+      if (day.moodMorning || day.wellbeingMorning || day.stressMorning) {
+        const mood = +day.moodMorning || 0;
+        const wellbeing = +day.wellbeingMorning || 0;
+        const stress = +day.stressMorning || 0;
+        if (mood || wellbeing || stress) {
+          const m = mood || 5;
+          const w = wellbeing || 5;
+          const s = stress || 5;
+          const score = (m + w + (10 - s)) / 3;
+          // Время утренней оценки: берём из sleepEnd или 7:00 по умолчанию
+          const morningTime = parseTime(day.sleepEnd) || parseTime('07:00');
+          points.push({
+            time: morningTime,
+            score: Math.round(score * 10) / 10,
+            type: 'morning',
+            name: 'Утро',
+            mood, wellbeing, stress,
+            icon: '🌅'
+          });
+        }
+      }
       
       // Собираем точки из приёмов пищи
       (day.meals || []).forEach((meal, idx) => {
@@ -3752,6 +3781,7 @@
       
       return points;
     }, [
+      day.moodMorning, day.wellbeingMorning, day.stressMorning, day.sleepEnd,
       day.meals?.map(m => `${m.time}-${m.mood}-${m.wellbeing}-${m.stress}`).join('|'),
       day.trainings?.map(t => `${t.time}-${t.mood}-${t.wellbeing}-${t.stress}`).join('|')
     ]);
@@ -10348,6 +10378,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           // Цифра прогноза: синяя для сегодня, оранжевая для будущих
           const kcalColor = p.isTodayForecast ? '#3b82f6' : (isFutureDay ? 'rgba(156, 163, 175, 0.9)' : forecastColor);
           return React.createElement('g', { key: 'forecast-kcal-group-' + i },
+            // "прогноз на сегодня" НАД цифрой — только для сегодняшнего прогноза
+            p.isTodayForecast && React.createElement('text', {
+              key: 'forecast-label-' + i,
+              x: p.x,
+              y: p.y - 38,
+              className: 'sparkline-day-label sparkline-day-forecast',
+              textAnchor: isLast ? 'end' : 'middle',
+              style: { opacity: 0.9, fontSize: '9px', fill: '#3b82f6' }
+            }, 'прогноз на сегодня'),
             // Цифра ккал (с гапом от треугольника)
             React.createElement('text', {
               key: 'forecast-kcal-' + i,
@@ -10378,33 +10417,32 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             }, '▼')
           );
         }),
-        // Метки прогнозных дней (дата + "прогноз" выше в 2 строки)
+        // Метки прогнозных дней (дата внизу, "прогноз на завтра" для завтра)
         // Для isFutureDay показываем просто дату без "прогноз на завтра"
+        // "прогноз на сегодня" теперь отрисовывается НАВЕРХУ над цифрой прогноза
         forecastPts.map((p, i) => {
           const isLast = i === forecastPts.length - 1;
           const isFutureDay = p.isFutureDay;
           const isTomorrow = !p.isTodayForecast && !isFutureDay && i === 0;
-          const isLabelMultiline = (p.isTodayForecast || isTomorrow) && !isFutureDay;
-          const line1 = 'прогноз';
-          const line2 = p.isTodayForecast ? 'на сегодня' : 'на завтра';
+          // Только для завтра показываем "прогноз на завтра" внизу
+          const showTomorrowLabel = isTomorrow && !isFutureDay;
           
           return React.createElement('g', { key: 'forecast-day-' + i },
-            // "прогноз" + "на сегодня/завтра" выше даты — только для динамического прогноза
-            // Увеличенный шрифт для лучшей читаемости
-            isLabelMultiline && React.createElement('text', {
+            // "прогноз на завтра" выше даты — только для завтра
+            showTomorrowLabel && React.createElement('text', {
               x: p.x,
               y: height - 22,
               className: 'sparkline-day-label sparkline-day-forecast',
               textAnchor: isLast ? 'end' : 'middle',
               style: { opacity: 0.9, fontSize: '8px', fill: '#3b82f6' }
-            }, line1),
-            isLabelMultiline && React.createElement('text', {
+            }, 'прогноз'),
+            showTomorrowLabel && React.createElement('text', {
               x: p.x,
               y: height - 13,
               className: 'sparkline-day-label sparkline-day-forecast',
               textAnchor: isLast ? 'end' : 'middle',
               style: { opacity: 0.9, fontSize: '8px', fill: '#3b82f6' }
-            }, line2),
+            }, 'на завтра'),
             // Дата внизу — для сегодня чуть крупнее и жирнее, но не слишком
             React.createElement('text', {
               x: p.x,

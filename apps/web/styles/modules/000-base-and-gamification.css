@@ -3983,11 +3983,11 @@ body:has(.offline-banner) .wrap {
   border-radius: 8px;
   padding: 2px;
   gap: 0;
-  height: 36px;
+  height: 40px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   flex: 0 1 auto;
-  min-width: 110px;
+  min-width: 160px;
 }
 
 .tab-switch-wrapper {
@@ -3997,7 +3997,8 @@ body:has(.offline-banner) .wrap {
   justify-content: center;
   gap: 2px;
   flex: 0 1 auto;
-  min-width: 110px;
+  min-width: 160px;
+  margin: 0 12px; /* Увеличенный gap от соседних элементов */
 }
 
 .tab.tab-switch {
@@ -4097,7 +4098,7 @@ body:has(.offline-banner) .wrap {
   grid-template-columns: 1fr 1fr;
   align-items: center;
   justify-items: center;
-  width: 118px;
+  width: 148px;
   font-size: 9px;
   font-weight: 500;
   letter-spacing: 0.02em;

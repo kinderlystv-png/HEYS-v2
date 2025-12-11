@@ -1991,9 +1991,6 @@
   function ColdExposureStepComponent({ data, onChange }) {
     const selectedType = data.coldType || 'none';
     const time = data.coldTime || new Date().toTimeString().slice(0, 5);
-    const mood = data.mood ?? 5;
-    const wellbeing = data.wellbeing ?? 5;
-    const stress = data.stress ?? 5;
 
     return React.createElement('div', { className: 'mc-cold-step' },
       // Кнопки выбора типа
@@ -2049,58 +2046,6 @@
           }
         })
       ),
-      // 3 слайдера оценок (ВСЕГДА, независимо от холода)
-      React.createElement('div', {
-        style: { marginBottom: '12px' }
-      },
-        React.createElement('div', { 
-          style: { 
-            fontSize: '13px', 
-            fontWeight: '600', 
-            color: '#64748b',
-            marginBottom: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          } 
-        }, selectedType !== 'none' ? '📊 Как ощущения после холода?' : '📊 Как сейчас себя чувствуешь?'),
-        // Настроение
-        React.createElement(ColdRatingSlider, {
-          field: 'mood',
-          value: mood,
-          emoji: COLD_MOOD_EMOJI[mood] || '😐',
-          title: 'Настроение',
-          presets: COLD_PRESETS_POSITIVE,
-          getColor: getColdPositiveColor,
-          getText: getColdMoodText,
-          isNegative: false,
-          onChange: (v) => onChange({ ...data, mood: v })
-        }),
-        // Самочувствие
-        React.createElement(ColdRatingSlider, {
-          field: 'wellbeing',
-          value: wellbeing,
-          emoji: COLD_WELLBEING_EMOJI[wellbeing] || '😐',
-          title: 'Бодрость',
-          presets: COLD_PRESETS_POSITIVE,
-          getColor: getColdPositiveColor,
-          getText: getColdWellbeingText,
-          isNegative: false,
-          onChange: (v) => onChange({ ...data, wellbeing: v })
-        }),
-        // Стресс
-        React.createElement(ColdRatingSlider, {
-          field: 'stress',
-          value: stress,
-          emoji: COLD_STRESS_EMOJI[stress] || '😐',
-          title: 'Стресс',
-          presets: COLD_PRESETS_NEGATIVE,
-          getColor: getColdNegativeColor,
-          getText: getColdStressText,
-          isNegative: true,
-          onChange: (v) => onChange({ ...data, stress: v })
-        })
-      ),
       // Подсказка о пользе
       selectedType !== 'none' && React.createElement('div', {
         style: {
@@ -2129,21 +2074,12 @@
       return {
         coldType: cold.type || 'none',
         coldTime: cold.time || new Date().toTimeString().slice(0, 5),
-        // Утреннее настроение — из dayData напрямую
-        mood: dayData.moodMorning ?? 5,
-        wellbeing: dayData.wellbeingMorning ?? 5,
-        stress: dayData.stressMorning ?? 5,
         _dateKey: dateKey
       };
     },
     save: (data) => {
       const dateKey = data._dateKey || getTodayKey();
       const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
-      
-      // Всегда сохраняем mood/wellbeing/stress — это обязательные данные
-      dayData.moodMorning = data.mood ?? 5;
-      dayData.wellbeingMorning = data.wellbeing ?? 5;
-      dayData.stressMorning = data.stress ?? 5;
       
       if (data.coldType && data.coldType !== 'none') {
         dayData.coldExposure = {
@@ -2161,13 +2097,259 @@
       lsSet(`heys_dayv2_${dateKey}`, dayData);
       
       window.dispatchEvent(new CustomEvent('heys:data-saved', { 
-        detail: { key: `day:${dateKey}`, type: 'morningMood' }
+        detail: { key: `day:${dateKey}`, type: 'coldExposure' }
       }));
       window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-        detail: { date: dateKey, field: 'morningMood', source: 'cold-exposure-step' }
+        detail: { date: dateKey, field: 'coldExposure', source: 'cold-exposure-step' }
       }));
     },
     xpAction: 'cold_exposure_logged'
+  });
+
+  // ============================================================
+  // MORNING MOOD STEP — 📊 Утреннее настроение (обязательный)
+  // Дефолт = среднее за вчера
+  // ============================================================
+
+  // Хелперы для оценок (как в тренировке)
+  function getMoodEmoji(v) {
+    if (v <= 2) return '😫';
+    if (v <= 4) return '😕';
+    if (v <= 6) return '😐';
+    if (v <= 8) return '😊';
+    return '🤩';
+  }
+
+  function getStressEmoji(v) {
+    if (v <= 2) return '😌';
+    if (v <= 4) return '🙂';
+    if (v <= 6) return '😐';
+    if (v <= 8) return '😟';
+    return '😰';
+  }
+
+  function getWellbeingEmoji(v) {
+    if (v <= 2) return '🤒';
+    if (v <= 4) return '😓';
+    if (v <= 6) return '😐';
+    if (v <= 8) return '💪';
+    return '🏆';
+  }
+
+  function getMoodColor(v) {
+    if (v <= 2) return '#ef4444';
+    if (v <= 4) return '#f97316';
+    if (v <= 6) return '#eab308';
+    if (v <= 8) return '#22c55e';
+    return '#10b981';
+  }
+
+  function getStressColor(v) {
+    if (v <= 2) return '#10b981';
+    if (v <= 4) return '#22c55e';
+    if (v <= 6) return '#eab308';
+    if (v <= 8) return '#f97316';
+    return '#ef4444';
+  }
+
+  // Получение среднего за вчера
+  function getYesterdayMoodAvg() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const key = yesterday.toISOString().slice(0, 10);
+    const dayData = lsGet(`heys_dayv2_${key}`, {});
+    
+    // Собираем все оценки настроения за день (из приёмов пищи + утреннее)
+    const moodValues = [];
+    const wellbeingValues = [];
+    const stressValues = [];
+    
+    // Утреннее настроение
+    if (dayData.moodMorning) moodValues.push(dayData.moodMorning);
+    if (dayData.wellbeingMorning) wellbeingValues.push(dayData.wellbeingMorning);
+    if (dayData.stressMorning) stressValues.push(dayData.stressMorning);
+    
+    // Из приёмов пищи
+    if (dayData.meals && dayData.meals.length > 0) {
+      dayData.meals.forEach(meal => {
+        if (meal.mood) moodValues.push(meal.mood);
+        if (meal.wellbeing) wellbeingValues.push(meal.wellbeing);
+        if (meal.stress) stressValues.push(meal.stress);
+      });
+    }
+    
+    const avg = arr => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 5;
+    
+    return {
+      mood: avg(moodValues),
+      wellbeing: avg(wellbeingValues),
+      stress: avg(stressValues)
+    };
+  }
+
+  function MorningMoodStepComponent({ data, onChange }) {
+    const mood = data.mood ?? 5;
+    const wellbeing = data.wellbeing ?? 5;
+    const stress = data.stress ?? 5;
+
+    const updateField = (field, value) => {
+      onChange({ ...data, [field]: value });
+    };
+
+    return React.createElement('div', { className: 'ts-step morning-mood-step' },
+      
+      // === Заголовок ===
+      React.createElement('div', { 
+        style: { 
+          textAlign: 'center', 
+          marginBottom: '16px',
+          padding: '12px',
+          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(147, 197, 253, 0.12))',
+          borderRadius: '12px'
+        }
+      },
+        React.createElement('div', { style: { fontSize: '28px', marginBottom: '4px' } }, '🌅'),
+        React.createElement('div', { style: { fontWeight: '600', fontSize: '14px', color: '#334155' } }, 
+          'Как себя чувствуешь?'
+        )
+      ),
+
+      // === Оценки ===
+      React.createElement('div', { className: 'ts-ratings-section', style: { marginTop: '8px' } },
+        
+        // Настроение
+        React.createElement('div', { className: 'ts-rating-row' },
+          React.createElement('div', { className: 'ts-rating-header' },
+            React.createElement('span', { className: 'ts-rating-emoji' }, getMoodEmoji(mood)),
+            React.createElement('span', { className: 'ts-rating-label' }, 'Настроение'),
+            React.createElement('span', { 
+              className: 'ts-rating-value',
+              style: { color: getMoodColor(mood) }
+            }, mood + '/10')
+          ),
+          React.createElement('input', {
+            type: 'range',
+            className: 'ts-slider ts-slider-positive',
+            min: 1,
+            max: 10,
+            value: mood,
+            onChange: e => updateField('mood', Number(e.target.value)),
+            onTouchStart: e => e.stopPropagation(),
+            onTouchMove: e => e.stopPropagation(),
+            onTouchEnd: e => e.stopPropagation()
+          })
+        ),
+
+        // Самочувствие
+        React.createElement('div', { className: 'ts-rating-row' },
+          React.createElement('div', { className: 'ts-rating-header' },
+            React.createElement('span', { className: 'ts-rating-emoji' }, getWellbeingEmoji(wellbeing)),
+            React.createElement('span', { className: 'ts-rating-label' }, 'Бодрость'),
+            React.createElement('span', { 
+              className: 'ts-rating-value',
+              style: { color: getMoodColor(wellbeing) }
+            }, wellbeing + '/10')
+          ),
+          React.createElement('input', {
+            type: 'range',
+            className: 'ts-slider ts-slider-positive',
+            min: 1,
+            max: 10,
+            value: wellbeing,
+            onChange: e => updateField('wellbeing', Number(e.target.value)),
+            onTouchStart: e => e.stopPropagation(),
+            onTouchMove: e => e.stopPropagation(),
+            onTouchEnd: e => e.stopPropagation()
+          })
+        ),
+
+        // Стресс
+        React.createElement('div', { className: 'ts-rating-row' },
+          React.createElement('div', { className: 'ts-rating-header' },
+            React.createElement('span', { className: 'ts-rating-emoji' }, getStressEmoji(stress)),
+            React.createElement('span', { className: 'ts-rating-label' }, 'Стресс'),
+            React.createElement('span', { 
+              className: 'ts-rating-value',
+              style: { color: getStressColor(stress) }
+            }, stress + '/10')
+          ),
+          React.createElement('input', {
+            type: 'range',
+            className: 'ts-slider ts-slider-negative',
+            min: 1,
+            max: 10,
+            value: stress,
+            onChange: e => updateField('stress', Number(e.target.value)),
+            onTouchStart: e => e.stopPropagation(),
+            onTouchMove: e => e.stopPropagation(),
+            onTouchEnd: e => e.stopPropagation()
+          })
+        )
+      ),
+
+      // === Подсказка ===
+      React.createElement('div', {
+        style: {
+          marginTop: '16px',
+          padding: '10px',
+          background: 'rgba(59, 130, 246, 0.06)',
+          borderRadius: '8px',
+          fontSize: '12px',
+          color: '#64748b',
+          textAlign: 'center'
+        }
+      }, '💡 Эти данные помогут отследить влияние еды на настроение')
+    );
+  }
+
+  registerStep('morning_mood', {
+    title: 'Утреннее настроение',
+    hint: 'Как себя чувствуешь?',
+    icon: '😊',
+    canSkip: false, // Обязательный шаг!
+    component: MorningMoodStepComponent,
+    getInitialData: () => {
+      const dateKey = getTodayKey();
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+      
+      // Если уже есть данные за сегодня — берём их
+      if (dayData.moodMorning !== undefined) {
+        return {
+          mood: dayData.moodMorning,
+          wellbeing: dayData.wellbeingMorning ?? 5,
+          stress: dayData.stressMorning ?? 5,
+          _dateKey: dateKey
+        };
+      }
+      
+      // Иначе берём среднее за вчера
+      const yesterdayAvg = getYesterdayMoodAvg();
+      return {
+        mood: yesterdayAvg.mood,
+        wellbeing: yesterdayAvg.wellbeing,
+        stress: yesterdayAvg.stress,
+        _dateKey: dateKey
+      };
+    },
+    save: (data) => {
+      const dateKey = data._dateKey || getTodayKey();
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      
+      dayData.moodMorning = data.mood ?? 5;
+      dayData.wellbeingMorning = data.wellbeing ?? 5;
+      dayData.stressMorning = data.stress ?? 5;
+      
+      dayData.updatedAt = Date.now();
+      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      
+      window.dispatchEvent(new CustomEvent('heys:data-saved', { 
+        detail: { key: `day:${dateKey}`, type: 'morningMood' }
+      }));
+      window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+        detail: { date: dateKey, field: 'morningMood', source: 'morning-mood-step' }
+      }));
+    },
+    xpAction: 'morning_mood_logged'
   });
 
   // ============================================================
