@@ -2143,14 +2143,28 @@
           // For client-scoped keys like 'heys_products', we need to store them with client_id prefix
           let key = row.k;
           
-          // Если ключ 'heys_products' (без client_id), добавляем client_id
-          if (key === 'heys_products' || (key.startsWith('heys_') && !key.includes(client_id))) {
+          // 🔄 НОРМАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ:
+          // Обрабатываем 3 варианта ключей в БД:
+          // 1. Нормализованные: heys_products, heys_dayv2_2025-12-11 (правильно)
+          // 2. Старые (один client_id): heys_{id}_products (мигрировать)
+          // 3. Багнутые (двойной client_id): heys_{id}_{id}_dayv2_ (пропустить!)
+          
+          // Сначала проверяем на двойной client_id (баг) - пропускаем такие записи
+          if (key.includes(client_id) && key.split(client_id).length > 2) {
+            logCritical(`🐛 [LOAD SKIP] Skipping key with double client_id: ${key}`);
+            return; // Пропускаем, эти ключи нужно удалить из БД
+          }
+          
+          // Затем убираем один client_id если он есть (старый формат)
+          if (key.includes(client_id)) {
+            key = key.replace(`heys_${client_id}_`, 'heys_');
+            key = key.replace(`_${client_id}_`, '_'); // На случай другого формата
+          }
+          
+          // Если ключ 'heys_products' (без client_id), добавляем client_id для localStorage
+          if (key.startsWith('heys_') && !key.includes(client_id)) {
             // Преобразуем в scoped key для localStorage
-            if (key.startsWith('heys_')) {
-              key = 'heys_' + client_id + '_' + key.substring('heys_'.length);
-            } else {
-              key = 'heys_' + client_id + '_' + key;
-            }
+            key = 'heys_' + client_id + '_' + key.substring('heys_'.length);
             log(`  📝 [MIGRATION] Mapped '${row.k}' → '${key}'`);
           }
           
@@ -2943,17 +2957,33 @@
             }
         }
 
+        // 🔄 НОРМАЛИЗАЦИЯ КЛЮЧА: Убираем client_id из ключа перед сохранением в Supabase
+        // В localStorage используются scoped ключи (heys_{clientId}_dayv2_...), 
+        // но в Supabase client_id хранится отдельно в колонке, поэтому ключ должен быть heys_dayv2_...
+        let normalizedKey = k;
+        if (client_id && k.includes(client_id)) {
+            // Убираем client_id из ключа: heys_{clientId}_dayv2_... → heys_dayv2_...
+            // Или heys_{clientId}_products → heys_products
+            normalizedKey = k.replace(`heys_${client_id}_`, 'heys_');
+            
+            // Проверяем на двойной client_id (баг): heys_{id}_{id}_dayv2_... → heys_dayv2_...
+            if (normalizedKey.includes(client_id)) {
+                normalizedKey = normalizedKey.replace(`${client_id}_`, '');
+                logCritical(`🐛 [NORMALIZE] Fixed double client_id in key: ${k} → ${normalizedKey}`);
+            }
+        }
+
         const upsertObj = {
             user_id: user.id,
             client_id: client_id,
-            k: k,
+            k: normalizedKey,
             v: value,
             updated_at: (new Date()).toISOString(),
         };
 
         // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем пустые массивы продуктов в Supabase
-        if (k === 'heys_products' && Array.isArray(value) && value.length === 0) {
-            log(`🚫 [SAVE BLOCKED] Refused to save empty products array to Supabase (key: ${k})`);
+        if (normalizedKey === 'heys_products' && Array.isArray(value) && value.length === 0) {
+            log(`🚫 [SAVE BLOCKED] Refused to save empty products array to Supabase (key: ${normalizedKey})`);
             return; // Блокируем затирание реальных данных пустым массивом
         }
         
