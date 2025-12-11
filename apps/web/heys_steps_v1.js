@@ -1614,7 +1614,9 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {});
+      const dayData = lsGet(`heys_dayv2_${key}`, null);
+      // Защита от null/undefined
+      if (!dayData || typeof dayData !== 'object') continue;
       const m = dayData.measurements;
       if (m && m.measuredAt) {
         list.push({ date: key, ...m });
