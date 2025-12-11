@@ -114,7 +114,15 @@
    * @param {Object} remote - данные из облака
    * @returns {Object|null} merged данные или null если merge не нужен
    */
-  function mergeDayData(local, remote) {
+  /**
+   * Merge day data from two sources
+   * @param {Object} local - локальные данные дня
+   * @param {Object} remote - данные из облака
+   * @param {Object} options - опции
+   * @param {boolean} options.forceKeepAll - при true НЕ считать meals "удалёнными", объединять ВСЕ
+   */
+  function mergeDayData(local, remote, options = {}) {
+    const forceKeepAll = options.forceKeepAll || false;
     // Приводим тренировки к новой схеме (quality/feelAfter → mood/wellbeing/stress)
     const normalizeTrainings = (trainings = []) => trainings.map((t = {}) => {
       if (t.quality !== undefined || t.feelAfter !== undefined) {
@@ -215,6 +223,7 @@
     
     // 🍽️ Meals: merge по ID с учётом УДАЛЕНИЙ
     // Если local свежее и meal отсутствует в local — значит удалён!
+    // НО: при forceKeepAll — объединяем ВСЁ (для pull-to-refresh после фикса багов)
     const localMeals = local.meals || [];
     const remoteMeals = remote.meals || [];
     const mealsMap = new Map();
@@ -222,12 +231,13 @@
     const localIsNewer = (local.updatedAt || 0) >= (remote.updatedAt || 0);
     
     // Добавляем remote meals, но ТОЛЬКО если:
-    // 1. Local НЕ свежее (remote приоритетнее), ИЛИ
-    // 2. Meal присутствует в local (не был удалён)
+    // 1. forceKeepAll = true (pull-to-refresh: берём ВСЕ meals), ИЛИ
+    // 2. Local НЕ свежее (remote приоритетнее), ИЛИ
+    // 3. Meal присутствует в local (не был удалён)
     remoteMeals.forEach(meal => {
       if (!meal || !meal.id) return;
       
-      if (localIsNewer && !localMealIds.has(meal.id)) {
+      if (!forceKeepAll && localIsNewer && !localMealIds.has(meal.id)) {
         // Local свежее и этого meal нет в local = УДАЛЁН пользователем
         log(`🗑️ [MERGE] Meal ${meal.id} deleted locally, skipping from remote`);
         return;
@@ -2200,6 +2210,23 @@
           if (key.includes('dayv2_')) {
             const remoteUpdatedAt = row.v?.updatedAt || 0;
             const localUpdatedAt = local?.updatedAt || 0;
+            
+            // 🔄 FORCE MODE (pull-to-refresh): ВСЕГДА делать merge с облаком
+            // Это критично когда локальные данные "кажутся новее" из-за багов с ключами
+            if (forceSync && local && row.v) {
+              const merged = mergeDayData(local, row.v, { forceKeepAll: true });
+              if (merged) {
+                logCritical(`🔄 [FORCE MERGE] Day sync | key: ${key} | local meals: ${local.meals?.length || 0} | remote meals: ${row.v.meals?.length || 0} | merged: ${merged.meals?.length || 0}`);
+                ls.setItem(key, JSON.stringify(merged));
+                
+                const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+                if (dateMatch) {
+                  window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dateMatch[1], source: 'force-sync' } }));
+                  logCritical(`📅 [EVENT] heys:day-updated dispatched for ${dateMatch[1]} (force-sync)`);
+                }
+                return; // Готово
+              }
+            }
             
             // Если есть локальные изменения И облачные изменения — нужен merge
             if (local && localUpdatedAt > 0 && remoteUpdatedAt > 0) {
