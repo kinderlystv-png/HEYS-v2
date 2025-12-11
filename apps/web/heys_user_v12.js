@@ -1720,7 +1720,7 @@
       setNormsPending(true);
       setNormsSaved(false);
       const timer = setTimeout(() => {
-        lsSet('heys_norms', norms);
+        lsSet('heys_norms', { ...norms, updatedAt: Date.now() });
         setNormsPending(false);
         setNormsSaved(true);
         setTimeout(() => {

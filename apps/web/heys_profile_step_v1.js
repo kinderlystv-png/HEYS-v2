@@ -941,7 +941,7 @@
         updatedProfile.gender,
         updatedProfile.age
       );
-      lsSet('heys_norms', norms);
+      lsSet('heys_norms', { ...norms, updatedAt: Date.now() });
 
       // Записываем вес в данные дня (weightMorning), чтобы check-in не спрашивал повторно
       const todayKey = new Date().toISOString().slice(0, 10);
