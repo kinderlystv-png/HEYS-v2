@@ -790,81 +790,24 @@
             // Дата достижения цели
             const targetDate = daysToGoal ? new Date(Date.now() + daysToGoal * 24 * 60 * 60 * 1000) : null;
             
-            // Состояние попапа источников
-            const [showSources, setShowSources] = React.useState(false);
-            
             return React.createElement('div', {className:'goal-calculator', style:{
               marginTop:'12px', padding:'14px 16px', 
               background:'linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%)',
               borderRadius:'12px', border:'1px solid #bfdbfe',
               position:'relative'
             }},
-              // Заголовок с иконкой источников
+              // Заголовок
               React.createElement('div', {style:{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px'}},
-                React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'6px'}},
-                  React.createElement('span', {style:{fontWeight:600, color:'#1e40af', fontSize:'14px'}}, '📐 Расчёт достижения цели'),
-                  // Иконка источников
-                  React.createElement('button', {
-                    onClick: () => setShowSources(!showSources),
-                    style:{
-                      background:'none', border:'none', cursor:'pointer', padding:'2px 4px',
-                      fontSize:'12px', color:'#64748b', display:'flex', alignItems:'center',
-                      borderRadius:'4px', transition:'background 0.15s'
-                    },
-                    onMouseOver: (e) => e.target.style.background = 'rgba(100,116,139,0.1)',
-                    onMouseOut: (e) => e.target.style.background = 'none',
-                    title: 'Научные источники'
-                  }, 'ℹ️')
-                ),
+                React.createElement('span', {
+                  style:{fontWeight:600, color:'#1e40af', fontSize:'14px'},
+                  title: 'Источники: Mifflin (1990), Hall KD (2008), Forbes GB (2000), ACSM (2009)'
+                }, '📐 Расчёт достижения цели'),
                 daysToGoal && React.createElement('span', {style:{
                   padding:'4px 10px', background:'#3b82f6', color:'#fff', borderRadius:'12px', fontSize:'12px', fontWeight:600
                 }}, 
                   weeksToGoal <= 4 ? `~${weeksToGoal} нед.` : 
                   monthsToGoal <= 12 ? `~${monthsToGoal} мес.` : 
                   `~${round1(monthsToGoal / 12)} г.`
-                )
-              ),
-              
-              // Попап с источниками
-              showSources && React.createElement('div', {style:{
-                position:'absolute', top:'40px', left:'10px', right:'10px', zIndex:100,
-                background:'#fff', borderRadius:'10px', padding:'12px 14px',
-                boxShadow:'0 4px 20px rgba(0,0,0,0.15)', border:'1px solid #e2e8f0',
-                fontSize:'12px', lineHeight:'1.5'
-              }},
-                React.createElement('div', {style:{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'8px'}},
-                  React.createElement('span', {style:{fontWeight:600, color:'#1e40af'}}, '📚 Научные источники'),
-                  React.createElement('button', {
-                    onClick: () => setShowSources(false),
-                    style:{background:'none', border:'none', cursor:'pointer', fontSize:'16px', color:'#94a3b8', padding:'0'}
-                  }, '✕')
-                ),
-                React.createElement('div', {style:{color:'#475569'}},
-                  React.createElement('div', {style:{marginBottom:'6px'}},
-                    React.createElement('b', null, 'BMR: '),
-                    'Mifflin MD et al. (1990) ',
-                    React.createElement('i', null, 'Am J Clin Nutr')
-                  ),
-                  React.createElement('div', {style:{marginBottom:'6px'}},
-                    React.createElement('b', null, 'TDEE: '),
-                    tdeeSource === 'real' 
-                      ? `Ваши данные за ${activityDays.length} дней`
-                      : 'FAO/WHO/UNU (2001) — теория'
-                  ),
-                  React.createElement('div', {style:{marginBottom:'6px'}},
-                    React.createElement('b', null, '7700 ккал/кг жира: '),
-                    'Hall KD (2008) ',
-                    React.createElement('i', null, 'Int J Obes')
-                  ),
-                  React.createElement('div', {style:{marginBottom:'6px'}},
-                    React.createElement('b', null, 'Состав потери: '),
-                    'Forbes GB (1987, 2000) ',
-                    React.createElement('i', null, 'Nutr Rev')
-                  ),
-                  React.createElement('div', {style:{marginBottom:'0'}},
-                    React.createElement('b', null, '0.5-0.9 кг/нед: '),
-                    'ACSM Position Stand (2009)'
-                  )
                 )
               ),
               

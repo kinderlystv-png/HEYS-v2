@@ -1,5 +1,14 @@
 // heys_insulin_wave_v1.js — Модуль инсулиновой волны
-// Версия: 3.5.4 | Дата: 2025-12-11
+// Версия: 3.5.5 | Дата: 2025-12-11
+//
+// ОБНОВЛЕНИЯ v3.5.5 (УЛУЧШЕННЫЕ ACTIVITY CONTEXTS):
+// - 🚶 STEPS: Прогрессивные пороги (5k/7.5k/10k/12k), работают весь день
+//   - Вечерний boost ×1.3 после 18:00 (шаги уже накопились)
+//   - harmMultiplier 0.92-0.98 для Meal Quality Score
+// - 🏠 HOUSEHOLD: Бытовая активность как отдельный Activity Context
+//   - Пороги: 30/60/90 минут с бейджами 🏠
+//   - harmMultiplier 0.90-0.96 для Meal Quality Score
+// - 📊 Оба контекста теперь влияют на вредность продуктов (не только волну)
 //
 // ОБНОВЛЕНИЯ v3.5.4 (PRE-WORKOUT HARM REDUCTION):
 // - 🏋️ Еда ПЕРЕД тренировкой теперь тоже снижает вредность:
@@ -774,15 +783,21 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
-   * 🏋️ Определить контекст активности для приёма пищи (v3.4.0)
+   * 🏋️ Определить контекст активности для приёма пищи (v3.5.5)
    * 
    * Анализирует время приёма относительно тренировок и возвращает лучший контекст.
-   * Контексты проверяются по приоритету (peri > post > pre > steps > morning/double).
+   * Контексты проверяются по приоритету (peri > post > pre > steps > household > morning/double).
+   * 
+   * 🆕 v3.5.5: Добавлены:
+   * - Прогрессивные пороги шагов (5k/7.5k/10k/12k) с вечерним boost
+   * - Бытовая активность (household) как отдельный контекст с бейджем
+   * - harmMultiplier для шагов и бытовой активности
    * 
    * @param {Object} params - параметры
    * @param {number} params.mealTimeMin - время приёма в минутах от полуночи
    * @param {Array} params.trainings - массив тренировок дня [{z:[...], time:'HH:MM', type}]
    * @param {number} params.steps - шаги за день
+   * @param {number} [params.householdMin=0] - минуты бытовой активности (NEAT)
    * @param {number} params.weight - вес пользователя (кг)
    * @param {Array} [params.allMeals] - все приёмы дня (для проверки fasted)
    * @param {Object} [params.mealNutrients] - нутриенты текущего приёма {prot, carbs, simple}
@@ -790,7 +805,7 @@
    * @returns {Object|null} - контекст активности или null
    */
   const calculateActivityContext = (params) => {
-    const { mealTimeMin, trainings = [], steps = 0, weight = 70, allMeals = [], mealNutrients = {}, mealKcal = 0 } = params;
+    const { mealTimeMin, trainings = [], steps = 0, householdMin = 0, weight = 70, allMeals = [], mealNutrients = {}, mealKcal = 0 } = params;
     
     if (!mealTimeMin && mealTimeMin !== 0) return null;
     
@@ -2914,6 +2929,7 @@
       mealTimeMin: mealMinutesForPostprandial,
       trainings,
       steps: dayData.steps || 0,
+      householdMin: dayData.householdMin || 0, // 🆕 v3.5.5: бытовая активность
       weight: dayData.profile?.weight || 70,
       allMeals: sorted,
       mealNutrients: {
@@ -2925,8 +2941,8 @@
     });
     
     // 🆕 v1.5: NEAT — бытовая активность
-    const householdMin = dayData.householdMin || 0;
-    const neatBonus = calculateNEATBonus(householdMin);
+    const householdMinutes = dayData.householdMin || 0;
+    const neatBonus = calculateNEATBonus(householdMinutes);
     
     // 🆕 v1.5: Шаги
     const steps = dayData.steps || 0;
@@ -3321,6 +3337,7 @@
         mealTimeMin: startMin,
         trainings,
         steps: dayData.steps || 0,
+        householdMin: dayData.householdMin || 0, // 🆕 v3.5.5: бытовая активность
         weight: dayData.profile?.weight || 70,
         allMeals: sorted,
         mealNutrients: {
