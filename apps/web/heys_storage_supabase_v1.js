@@ -2216,6 +2216,10 @@
             if (forceSync && row.v) {
               logCritical(`🔄 [FORCE SYNC] Processing day | key: ${key} | local: ${local?.meals?.length || 0} meals | remote: ${row.v.meals?.length || 0} meals`);
               
+              // 🔍 DEBUG: Показать что пришло из облака
+              const remoteMeals = row.v.meals || [];
+              alert(`[SYNC DEBUG]\nKey: ${key}\nRemote meals: ${remoteMeals.length}\nRemote times: ${remoteMeals.map(m => m.time + ' ' + m.name).join(', ')}\nLocal meals: ${local?.meals?.length || 0}`);
+              
               let valueToSave;
               if (local && local.meals?.length > 0) {
                 // Есть локальные данные — merge с forceKeepAll
