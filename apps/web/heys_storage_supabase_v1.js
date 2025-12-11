@@ -59,6 +59,32 @@
   };
 
   // ═══════════════════════════════════════════════════════════════════
+  // 🔧 УТИЛИТЫ
+  // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * Нормализует ключ для Supabase: убирает embedded client_id
+   * heys_{clientId}_dayv2_2025-12-11 → heys_dayv2_2025-12-11
+   * @param {string} key - исходный ключ
+   * @param {string} clientId - ID клиента
+   * @returns {string} нормализованный ключ
+   */
+  function normalizeKeyForSupabase(key, clientId) {
+    if (!clientId || !key.includes(clientId)) return key;
+    
+    // Убираем client_id из ключа: heys_{clientId}_X → heys_X
+    let normalized = key.replace(`heys_${clientId}_`, 'heys_');
+    
+    // Проверяем на двойной client_id (баг): heys_{id}_{id}_X → heys_X
+    if (normalized.includes(clientId)) {
+      normalized = normalized.replace(`${clientId}_`, '');
+      logCritical(`🐛 [NORMALIZE] Fixed double client_id in key: ${key} → ${normalized}`);
+    }
+    
+    return normalized;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
   // 🌐 ГЛОБАЛЬНОЕ СОСТОЯНИЕ
   // ═══════════════════════════════════════════════════════════════════
   
@@ -1932,7 +1958,7 @@
     // Сохраняем очищенные обратно
     const upsertData = {
       ...filters,
-      k: row.k,
+      k: table === 'client_kv_store' && clientId ? normalizeKeyForSupabase(row.k, clientId) : row.k,
       v: cleaned,
       updated_at: new Date().toISOString()
     };
@@ -2216,10 +2242,6 @@
             if (forceSync && row.v) {
               logCritical(`🔄 [FORCE SYNC] Processing day | key: ${key} | local: ${local?.meals?.length || 0} meals | remote: ${row.v.meals?.length || 0} meals`);
               
-              // 🔍 DEBUG: Показать что пришло из облака
-              const remoteMeals = row.v.meals || [];
-              alert(`[SYNC DEBUG]\nKey: ${key}\nRemote meals: ${remoteMeals.length}\nRemote times: ${remoteMeals.map(m => m.time + ' ' + m.name).join(', ')}\nLocal meals: ${local?.meals?.length || 0}`);
-              
               let valueToSave;
               if (local && local.meals?.length > 0) {
                 // Есть локальные данные — merge с forceKeepAll
@@ -2263,11 +2285,11 @@
                 }
                 
                 // Отправляем merged версию обратно в облако через очередь (гарантия доставки)
-                // Используем row.k (оригинальный ключ из БД) для правильной записи
+                // Используем нормализованный ключ (без embedded client_id)
                 const mergedUpsertObj = {
                   user_id: user.id,
                   client_id: client_id,
-                  k: row.k,
+                  k: normalizeKeyForSupabase(row.k, client_id),
                   v: merged,
                   updated_at: (new Date()).toISOString(),
                 };
@@ -2383,7 +2405,7 @@
                 const recoveryUpsertObj = {
                   user_id: user.id,
                   client_id: client_id,
-                  k: row.k,
+                  k: normalizeKeyForSupabase(row.k, client_id),
                   v: currentLocal,
                   updated_at: new Date().toISOString(),
                 };
@@ -2438,7 +2460,7 @@
                 const localUpsertObj = {
                   user_id: user.id,
                   client_id: client_id,
-                  k: row.k,
+                  k: normalizeKeyForSupabase(row.k, client_id),
                   v: localDeduped, // Отправляем дедуплицированные!
                   updated_at: (new Date()).toISOString(),
                 };
@@ -2470,7 +2492,7 @@
                 const mergedUpsertObj = {
                   user_id: user.id,
                   client_id: client_id,
-                  k: row.k, // Оригинальный ключ из БД
+                  k: normalizeKeyForSupabase(row.k, client_id),
                   v: merged,
                   updated_at: (new Date()).toISOString(),
                 };
