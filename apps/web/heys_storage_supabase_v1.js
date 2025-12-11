@@ -1490,6 +1490,45 @@
         // Проверяем сразу после инициализации
         setTimeout(checkAndClearInvalidToken, 100);
       }
+      
+      // 🔄 AUTO-SYNC при возвращении на вкладку (visibilitychange)
+      // Синхронизирует данные с сервера когда пользователь возвращается в приложение
+      // Это критично для multi-device сценариев (телефон ↔ ноутбук)
+      let lastSyncOnFocusTime = 0;
+      const SYNC_ON_FOCUS_DEBOUNCE = 5000; // Не чаще раз в 5 секунд
+      
+      const syncOnFocus = async () => {
+        // Debounce: не синхронизировать слишком часто
+        if (Date.now() - lastSyncOnFocusTime < SYNC_ON_FOCUS_DEBOUNCE) return;
+        lastSyncOnFocusTime = Date.now();
+        
+        // Только если авторизованы
+        if (!user || status !== CONNECTION_STATUS.ONLINE) return;
+        
+        const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
+        if (!clientId) return;
+        
+        log('[SYNC-ON-FOCUS] 🔄 Вкладка активна — синхронизация...');
+        
+        try {
+          await cloud.bootstrapClientSync(clientId, { silent: true });
+          log('[SYNC-ON-FOCUS] ✅ Синхронизация завершена');
+        } catch (e) {
+          log('[SYNC-ON-FOCUS] ⚠️ Ошибка синхронизации:', e?.message || e);
+        }
+      };
+      
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            syncOnFocus();
+          }
+        });
+        
+        // Также синхронизируем при focus окна (для десктопа)
+        window.addEventListener('focus', syncOnFocus);
+      }
+      
     }catch(e){ err('init failed', e); }
   };
 
