@@ -16,6 +16,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const APP_FILE = path.join(__dirname, '..', 'heys_app_v12.js');
+const SW_FILE = path.join(__dirname, '..', 'public', 'sw.js');
 const VERSION_JSON = path.join(__dirname, '..', 'public', 'version.json');
 
 // Получаем git short hash если доступен
@@ -63,6 +64,19 @@ function updateVersion() {
   
   fs.writeFileSync(VERSION_JSON, JSON.stringify(versionData, null, 2));
   console.log(`✅ version.json created: ${newVersion}`);
+  
+  // 3. Обновляем CACHE_VERSION в sw.js (критично для инвалидации SW кэша!)
+  let swContent = fs.readFileSync(SW_FILE, 'utf8');
+  const cacheVersionRegex = /const CACHE_VERSION = '[^']+'/;
+  const newCacheVersion = `heys-${Date.now()}`;
+  
+  if (cacheVersionRegex.test(swContent)) {
+    swContent = swContent.replace(cacheVersionRegex, `const CACHE_VERSION = '${newCacheVersion}'`);
+    fs.writeFileSync(SW_FILE, swContent);
+    console.log(`✅ SW CACHE_VERSION updated to: ${newCacheVersion}`);
+  } else {
+    console.log('⚠️ CACHE_VERSION not found in sw.js');
+  }
   
   return newVersion;
 }
