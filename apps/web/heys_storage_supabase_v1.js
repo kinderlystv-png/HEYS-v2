@@ -1705,6 +1705,64 @@
   cloud.getStatus = function(){ return status; };
 
   /**
+   * Принудительный push продуктов из localStorage в облако
+   * Вызывать из консоли: HEYS.cloud.forcePushProducts()
+   */
+  cloud.forcePushProducts = async function() {
+    const clientId = HEYS.utils?.getCurrentClientId?.() || HEYS.currentClientId;
+    if (!clientId) {
+      console.error('❌ Нет clientId');
+      return { error: 'No clientId' };
+    }
+    if (!user || !user.id) {
+      console.error('❌ Не авторизован');
+      return { error: 'Not authenticated' };
+    }
+    
+    const key = `heys_${clientId}_products`;
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      console.error(`❌ Нет продуктов в localStorage по ключу ${key}`);
+      return { error: 'No products in localStorage' };
+    }
+    
+    let products;
+    try {
+      products = JSON.parse(raw);
+    } catch (e) {
+      return { error: 'Parse error' };
+    }
+    
+    if (!Array.isArray(products) || products.length === 0) {
+      return { error: 'Empty products array' };
+    }
+    
+    // Фильтруем валидные продукты
+    const valid = products.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
+    
+    console.log(`📤 Pushing ${valid.length} products to cloud for client ${clientId.substring(0,8)}...`);
+    
+    // Сохраняем в Supabase
+    const { error } = await client
+      .from('client_kv_store')
+      .upsert({
+        user_id: user.id,
+        client_id: clientId,
+        k: 'heys_products',
+        v: valid,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,client_id,k' });
+    
+    if (error) {
+      console.error('❌ Ошибка сохранения:', error);
+      return { error: error.message };
+    }
+    
+    console.log(`✅ Успешно сохранено ${valid.length} продуктов в облако!`);
+    return { success: true, count: valid.length, clientId };
+  };
+
+  /**
    * Полная очистка auth-данных для решения проблем с токенами
    * Вызывать из консоли: HEYS.cloud.resetAuth()
    */
