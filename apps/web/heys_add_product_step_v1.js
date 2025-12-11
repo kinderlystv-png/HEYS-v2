@@ -40,9 +40,9 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {});
+      const dayData = lsGet(`heys_dayv2_${key}`, null);
       
-      if (dayData.meals) {
+      if (dayData && dayData.meals) {
         dayData.meals.forEach(meal => {
           if (meal.items) {
             meal.items.forEach(item => {
