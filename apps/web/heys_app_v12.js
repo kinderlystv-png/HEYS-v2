@@ -3544,25 +3544,31 @@
             // ✨ Fade-in эффект при появлении контента
             const [contentReady, setContentReady] = React.useState(false);
             
+            // Плавное появление контента после монтирования
             useEffect(() => {
-              // Fallback: если sync не происходит (offline/локально), показываем контент через 300мс
-              const fallbackTimer = setTimeout(() => {
-                if (!contentReady) setContentReady(true);
-              }, 300);
-              
+              // Двойной RAF + задержка = браузер гарантированно рендерит opacity:0 перед переходом
+              let cancelled = false;
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  if (!cancelled) {
+                    setTimeout(() => {
+                      if (!cancelled) setContentReady(true);
+                    }, 100);
+                  }
+                });
+              });
+              return () => { cancelled = true; };
+            }, []);
+            
+            useEffect(() => {
               const markInitialSyncDone = () => {
                 // Через 1 секунду после heysSyncCompleted считаем что initial sync прошёл
                 setTimeout(() => {
                   initialSyncDoneRef.current = true;
                 }, 1000);
-                // ✨ Плавное появление контента после sync
-                setTimeout(() => {
-                  setContentReady(true);
-                }, 100);
               };
               window.addEventListener('heysSyncCompleted', markInitialSyncDone);
               return () => {
-                clearTimeout(fallbackTimer);
                 window.removeEventListener('heysSyncCompleted', markInitialSyncDone);
               };
             }, []);

@@ -1857,6 +1857,7 @@
   // ============================================================
   // COLD EXPOSURE STEP — 🧊 Холодовое воздействие
   // v3.2.1: Улучшает инсулиновую чувствительность на ~5-12%
+  // v3.3.0: Добавлены 3 слайдера оценок (mood, wellbeing, stress)
   // ============================================================
 
   const COLD_TYPES = [
@@ -1866,9 +1867,133 @@
     { id: 'coldSwim', icon: '🏊', label: 'Моржевание', desc: '5+ мин, -12% волна' }
   ];
 
+  // Emoji для оценок холода
+  const COLD_MOOD_EMOJI = ['😢','😢','😕','😕','😐','😐','🙂','🙂','😊','😊','😄'];
+  const COLD_WELLBEING_EMOJI = ['🥶','🥶','😓','😓','😐','😐','🙂','🙂','💪','💪','🔥'];
+  const COLD_STRESS_EMOJI = ['😌','😌','🙂','🙂','😐','😐','😟','😟','😰','😰','😱'];
+
+  // Пресеты для быстрого выбора
+  const COLD_PRESETS_POSITIVE = [
+    { emoji: '👎', value: 2, label: 'Плохо' },
+    { emoji: '👌', value: 5, label: 'Норм' },
+    { emoji: '👍', value: 8, label: 'Хорошо' }
+  ];
+  const COLD_PRESETS_NEGATIVE = [
+    { emoji: '😌', value: 2, label: 'Спокоен' },
+    { emoji: '😐', value: 5, label: 'Средне' },
+    { emoji: '😰', value: 8, label: 'Стресс' }
+  ];
+
+  // Цвета для позитивных шкал
+  const getColdPositiveColor = (v) => {
+    if (v <= 3) return '#ef4444';
+    if (v <= 5) return '#3b82f6';
+    if (v <= 7) return '#22c55e';
+    return '#10b981';
+  };
+
+  // Цвета для негативных шкал (stress)
+  const getColdNegativeColor = (v) => {
+    if (v <= 3) return '#10b981';
+    if (v <= 5) return '#3b82f6';
+    if (v <= 7) return '#eab308';
+    return '#ef4444';
+  };
+
+  // Текст для значений
+  const getColdMoodText = (v) => v <= 2 ? 'Плохо' : v <= 4 ? 'Так себе' : v <= 6 ? 'Норм' : v <= 8 ? 'Хорошо' : 'Отлично';
+  const getColdWellbeingText = (v) => v <= 2 ? 'Замёрз' : v <= 4 ? 'Холодно' : v <= 6 ? 'Терпимо' : v <= 8 ? 'Бодрит' : 'Огонь!';
+  const getColdStressText = (v) => v <= 2 ? 'Спокоен' : v <= 4 ? 'Немного' : v <= 6 ? 'Средне' : v <= 8 ? 'Много' : 'Очень';
+
+  // Компонент слайдера оценки для холода
+  function ColdRatingSlider({ field, value, emoji, title, presets, getColor, getText, isNegative, onChange }) {
+    const color = getColor(value);
+    return React.createElement('div', {
+      className: 'cold-rating-card',
+      style: { 
+        padding: '12px',
+        borderRadius: '10px',
+        background: isNegative 
+          ? (value <= 3 ? 'rgba(16, 185, 129, 0.08)' : value >= 7 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(59, 130, 246, 0.06)')
+          : (value <= 3 ? 'rgba(239, 68, 68, 0.08)' : value >= 7 ? 'rgba(16, 185, 129, 0.08)' : 'rgba(59, 130, 246, 0.06)'),
+        marginBottom: '8px'
+      }
+    },
+      React.createElement('div', { 
+        style: { 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          marginBottom: '8px'
+        }
+      },
+        // Emoji + заголовок
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+          React.createElement('span', { style: { fontSize: '20px' } }, emoji),
+          React.createElement('span', { style: { fontWeight: '600', fontSize: '13px' } }, title)
+        ),
+        // Значение + текст
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+          React.createElement('span', { 
+            style: { 
+              fontWeight: '700', 
+              fontSize: '16px',
+              color: color
+            } 
+          }, value),
+          React.createElement('span', { 
+            style: { fontSize: '12px', color: '#64748b' } 
+          }, getText(value))
+        )
+      ),
+      // Пресеты
+      React.createElement('div', { 
+        style: { 
+          display: 'flex', 
+          gap: '6px', 
+          marginBottom: '8px' 
+        } 
+      },
+        presets.map(p => React.createElement('button', {
+          key: p.value,
+          onClick: () => onChange(p.value),
+          style: {
+            flex: 1,
+            padding: '6px',
+            borderRadius: '6px',
+            border: value === p.value ? `2px solid ${color}` : '1px solid #e2e8f0',
+            background: value === p.value ? `${color}15` : '#fff',
+            cursor: 'pointer',
+            fontSize: '14px',
+            transition: 'all 0.15s'
+          }
+        }, p.emoji))
+      ),
+      // Слайдер
+      React.createElement('input', {
+        type: 'range',
+        min: 1,
+        max: 10,
+        value: value,
+        onChange: (e) => onChange(Number(e.target.value)),
+        style: {
+          width: '100%',
+          height: '6px',
+          borderRadius: '3px',
+          appearance: 'none',
+          background: `linear-gradient(to right, ${color} ${(value - 1) * 11.1}%, #e5e7eb ${(value - 1) * 11.1}%)`,
+          cursor: 'pointer'
+        }
+      })
+    );
+  }
+
   function ColdExposureStepComponent({ data, onChange }) {
     const selectedType = data.coldType || 'none';
     const time = data.coldTime || new Date().toTimeString().slice(0, 5);
+    const mood = data.mood ?? 5;
+    const wellbeing = data.wellbeing ?? 5;
+    const stress = data.stress ?? 5;
 
     return React.createElement('div', { className: 'mc-cold-step' },
       // Кнопки выбора типа
@@ -1906,7 +2031,8 @@
           gap: '12px',
           padding: '12px',
           background: 'rgba(59, 130, 246, 0.05)',
-          borderRadius: '8px'
+          borderRadius: '8px',
+          marginBottom: '16px'
         }
       },
         React.createElement('span', { style: { fontSize: '14px', color: '#64748b' } }, '⏰ Время:'),
@@ -1923,10 +2049,61 @@
           }
         })
       ),
+      // 3 слайдера оценок (ВСЕГДА, независимо от холода)
+      React.createElement('div', {
+        style: { marginBottom: '12px' }
+      },
+        React.createElement('div', { 
+          style: { 
+            fontSize: '13px', 
+            fontWeight: '600', 
+            color: '#64748b',
+            marginBottom: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          } 
+        }, selectedType !== 'none' ? '📊 Как ощущения после холода?' : '📊 Как сейчас себя чувствуешь?'),
+        // Настроение
+        React.createElement(ColdRatingSlider, {
+          field: 'mood',
+          value: mood,
+          emoji: COLD_MOOD_EMOJI[mood] || '😐',
+          title: 'Настроение',
+          presets: COLD_PRESETS_POSITIVE,
+          getColor: getColdPositiveColor,
+          getText: getColdMoodText,
+          isNegative: false,
+          onChange: (v) => onChange({ ...data, mood: v })
+        }),
+        // Самочувствие
+        React.createElement(ColdRatingSlider, {
+          field: 'wellbeing',
+          value: wellbeing,
+          emoji: COLD_WELLBEING_EMOJI[wellbeing] || '😐',
+          title: 'Бодрость',
+          presets: COLD_PRESETS_POSITIVE,
+          getColor: getColdPositiveColor,
+          getText: getColdWellbeingText,
+          isNegative: false,
+          onChange: (v) => onChange({ ...data, wellbeing: v })
+        }),
+        // Стресс
+        React.createElement(ColdRatingSlider, {
+          field: 'stress',
+          value: stress,
+          emoji: COLD_STRESS_EMOJI[stress] || '😐',
+          title: 'Стресс',
+          presets: COLD_PRESETS_NEGATIVE,
+          getColor: getColdNegativeColor,
+          getText: getColdStressText,
+          isNegative: true,
+          onChange: (v) => onChange({ ...data, stress: v })
+        })
+      ),
       // Подсказка о пользе
       selectedType !== 'none' && React.createElement('div', {
         style: {
-          marginTop: '12px',
           padding: '10px',
           background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 197, 253, 0.15))',
           borderRadius: '8px',
@@ -1952,6 +2129,10 @@
       return {
         coldType: cold.type || 'none',
         coldTime: cold.time || new Date().toTimeString().slice(0, 5),
+        // Утреннее настроение — из dayData напрямую
+        mood: dayData.moodMorning ?? 5,
+        wellbeing: dayData.wellbeingMorning ?? 5,
+        stress: dayData.stressMorning ?? 5,
         _dateKey: dateKey
       };
     },
@@ -1959,28 +2140,32 @@
       const dateKey = data._dateKey || getTodayKey();
       const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
       
+      // Всегда сохраняем mood/wellbeing/stress — это обязательные данные
+      dayData.moodMorning = data.mood ?? 5;
+      dayData.wellbeingMorning = data.wellbeing ?? 5;
+      dayData.stressMorning = data.stress ?? 5;
+      
       if (data.coldType && data.coldType !== 'none') {
         dayData.coldExposure = {
           type: data.coldType,
           time: data.coldTime
         };
-        dayData.updatedAt = Date.now();
-        lsSet(`heys_dayv2_${dateKey}`, dayData);
-        
-        window.dispatchEvent(new CustomEvent('heys:data-saved', { 
-          detail: { key: `day:${dateKey}`, type: 'coldExposure' }
-        }));
-        window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-          detail: { date: dateKey, field: 'coldExposure', value: dayData.coldExposure, source: 'cold-exposure-step' }
-        }));
       } else {
-        // Если выбрано "нет" — удаляем
+        // Если выбрано "нет" — удаляем холод
         if (dayData.coldExposure) {
           delete dayData.coldExposure;
-          dayData.updatedAt = Date.now();
-          lsSet(`heys_dayv2_${dateKey}`, dayData);
         }
       }
+      
+      dayData.updatedAt = Date.now();
+      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      
+      window.dispatchEvent(new CustomEvent('heys:data-saved', { 
+        detail: { key: `day:${dateKey}`, type: 'morningMood' }
+      }));
+      window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+        detail: { date: dateKey, field: 'morningMood', source: 'cold-exposure-step' }
+      }));
     },
     xpAction: 'cold_exposure_logged'
   });
