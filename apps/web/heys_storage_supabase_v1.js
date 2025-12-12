@@ -129,6 +129,25 @@
   Object.defineProperty(cloud, '_rpcOnlyMode', { get: () => _rpcOnlyMode });
   Object.defineProperty(cloud, '_pinAuthClientId', { get: () => _pinAuthClientId });
 
+  /**
+   * 🔐 Универсальный sync — выбирает правильную стратегию (RPC для PIN auth, bootstrap для обычной)
+   * @param {string} clientId - ID клиента
+   * @param {Object} options - { force: boolean }
+   * @returns {Promise<void>}
+   */
+  cloud.syncClient = async function(clientId, options = {}) {
+    const isPinAuth = _rpcOnlyMode && _pinAuthClientId === clientId;
+    
+    if (isPinAuth && typeof cloud.syncClientViaRPC === 'function') {
+      return cloud.syncClientViaRPC(clientId);
+    } else if (typeof cloud.bootstrapClientSync === 'function') {
+      return cloud.bootstrapClientSync(clientId, options);
+    }
+    
+    // Fallback — ничего не делаем
+    return Promise.resolve();
+  };
+
   // ═══════════════════════════════════════════════════════════════════
   // 🔐 AUTH TOKEN SANITIZE (RTR-safe)
   // ═══════════════════════════════════════════════════════════════════

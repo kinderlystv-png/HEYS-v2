@@ -1856,14 +1856,14 @@ const HEYS = window.HEYS = window.HEYS || {};
               const finish = () => {
                 if (!cancelled) setLoading(false);
               };
-              if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
+              if (clientId && cloud && typeof cloud.syncClient === 'function') {
                 const need =
                   typeof cloud.shouldSyncClient === 'function'
                     ? cloud.shouldSyncClient(clientId, 4000)
                     : true;
                 if (need) {
                   setLoading(true);
-                  cloud.bootstrapClientSync(clientId)
+                  cloud.syncClient(clientId)
                     .then(finish)
                     .catch((err) => {
                       console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
@@ -2005,10 +2005,10 @@ const HEYS = window.HEYS = window.HEYS || {};
               if (
                 clientId &&
                 window.HEYS.cloud &&
-                typeof window.HEYS.cloud.bootstrapClientSync === 'function'
+                typeof window.HEYS.cloud.syncClient === 'function'
               ) {
                 setLoading(true);
-                window.HEYS.cloud.bootstrapClientSync(clientId)
+                window.HEYS.cloud.syncClient(clientId)
                   .then(() => {
                     if (!cancelled) {
                       syncedClientsCache.add(clientId);
@@ -2078,10 +2078,10 @@ const HEYS = window.HEYS = window.HEYS || {};
               if (
                 clientId &&
                 window.HEYS.cloud &&
-                typeof window.HEYS.cloud.bootstrapClientSync === 'function'
+                typeof window.HEYS.cloud.syncClient === 'function'
               ) {
                 setLoading(true);
-                window.HEYS.cloud.bootstrapClientSync(clientId)
+                window.HEYS.cloud.syncClient(clientId)
                   .then(() => {
                     if (!cancelled) setLoading(false);
                   })
@@ -3738,11 +3738,11 @@ const HEYS = window.HEYS = window.HEYS || {};
                 console.info('[HEYS] 👤 Клиент:', clientId.substring(0,8) + '...');
                 
                 // Подгружаем данные клиента из Supabase и обновляем продукты
-                if (cloud && typeof cloud.bootstrapClientSync === 'function') {
+                if (cloud && typeof cloud.syncClient === 'function') {
                   // КРИТИЧНО: Сохраняем текущие продукты перед синхронизацией
                   const productsBeforeSync = products.length > 0 ? products : window.HEYS.utils.lsGet('heys_products', []);
                   
-                  cloud.bootstrapClientSync(clientId)
+                  cloud.syncClient(clientId)
                     .then(() => {
                       // всегда используем HEYS.utils.lsGet для clientId-специфичного ключа
                       const loadedProducts = Array.isArray(

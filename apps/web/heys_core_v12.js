@@ -556,20 +556,20 @@
       React.useEffect(()=>{
         const clientId = window.HEYS && window.HEYS.currentClientId;
         const cloud = window.HEYS && window.HEYS.cloud;
-        if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
+        if (clientId && cloud && typeof cloud.syncClient === 'function') {
           const startTime = performance.now();
           const need = (typeof cloud.shouldSyncClient==='function') ? cloud.shouldSyncClient(clientId, 4000) : true;
           if (need){
-            cloud.bootstrapClientSync(clientId).then(()=>{
+            cloud.syncClient(clientId).then(()=>{
               const duration = performance.now() - startTime;
               if (window.HEYS && window.HEYS.analytics) {
-                window.HEYS.analytics.trackApiCall('bootstrapClientSync', duration, true);
+                window.HEYS.analytics.trackApiCall('syncClient', duration, true);
                 window.HEYS.analytics.trackDataOperation('cloud-sync');
               }
               const latest = (window.HEYS.store && window.HEYS.store.get && window.HEYS.store.get('heys_products', null)) || (window.HEYS.utils && window.HEYS.utils.lsGet && window.HEYS.utils.lsGet('heys_products', [])) || [];
               
               if (window.DEV) {
-                window.DEV.log('🔄 [SYNC] После bootstrapClientSync прочитали из localStorage:', latest.length, 'items');
+                window.DEV.log('🔄 [SYNC] После syncClient прочитали из localStorage:', latest.length, 'items');
                 window.DEV.log('🔄 [SYNC] Текущее состояние products:', products.length, 'items');
               }
               
@@ -602,9 +602,9 @@
             }).catch((error) => {
               const duration = performance.now() - startTime;
               if (window.HEYS && window.HEYS.analytics) {
-                window.HEYS.analytics.trackApiCall('bootstrapClientSync', duration, false);
+                window.HEYS.analytics.trackApiCall('syncClient', duration, false);
               }
-              console.error('Bootstrap client sync failed:', error);
+              console.error('Client sync failed:', error);
             });
           } else {
             const latest = (window.HEYS.store && window.HEYS.store.get && window.HEYS.store.get('heys_products', null)) || (window.HEYS.utils && window.HEYS.utils.lsGet && window.HEYS.utils.lsGet('heys_products', [])) || [];
