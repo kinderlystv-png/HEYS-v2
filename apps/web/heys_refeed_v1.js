@@ -185,7 +185,7 @@
    * @returns {Object} { id, icon, label, desc }
    */
   function getReasonLabel(reasonId) {
-    if (!reasonId) return { id: 'none', icon: '🔄', label: 'Без причины', desc: 'Причина не указана' };
+    if (!reasonId) return { id: 'none', icon: '🍕', label: 'Без причины', desc: 'Причина не указана' };
     const found = REFEED_REASONS.find(r => r.id === reasonId);
     if (found) return found;
     // Fallback для неизвестных причин (legacy данные)
@@ -217,7 +217,7 @@
     
     // Tooltip текст
     const tooltip = isRefeedDay 
-      ? `🔄 Загрузочный день\n${reason?.icon || ''} ${reason?.label || ''}\n${ratio !== null ? '\nВыполнение: ' + Math.round(ratio * 100) + '%' : ''}\n\n✅ Это НЕ срыв — это часть стратегии\n✅ Норма расширена до 135%${isStreakDay === true ? '\n✅ Streak сохраняется' : (isStreakDay === false ? '\n⚠️ Для streak нужно 70-135%' : '')}`
+      ? `🍕 Загрузочный день\n${reason?.icon || ''} ${reason?.label || ''}\n${ratio !== null ? '\nВыполнение: ' + Math.round(ratio * 100) + '%' : ''}\n\n✅ Это НЕ срыв — это часть стратегии\n✅ Норма расширена до 135%${isStreakDay === true ? '\n✅ Streak сохраняется' : (isStreakDay === false ? '\n⚠️ Для streak нужно 70-135%' : '')}`
       : null;
     
     return {
@@ -229,7 +229,7 @@
       heatmapStatus,
       tooltip,
       color: isRefeedDay ? '#f97316' : null,  // orange-500
-      badge: isRefeedDay ? '🔄' : null,
+      badge: isRefeedDay ? '🍕' : null,
       cssClass: isRefeedDay ? 'refeed-day' : null
     };
   }
@@ -275,7 +275,7 @@
     return React.createElement('div', { className: 'refeed-step' },
       // Заголовок
       React.createElement('div', { className: 'refeed-header' },
-        React.createElement('span', { className: 'refeed-icon' }, '🔄'),
+        React.createElement('span', { className: 'refeed-icon' }, '🍕'),
         React.createElement('h3', { className: 'refeed-title' }, 'Загрузочный день?')
       ),
 
@@ -297,7 +297,7 @@
           className: 'refeed-option refeed-option--yes' + (isRefeedDay === true ? ' active' : ''),
           onClick: () => handleSelect(true)
         },
-          React.createElement('span', { className: 'refeed-option-icon' }, '🔄'),
+          React.createElement('span', { className: 'refeed-option-icon' }, '🍕'),
           React.createElement('span', { className: 'refeed-option-label' }, 'Да, загрузка'),
           isRefeedDay === true && React.createElement('span', { className: 'refeed-option-check' }, '✓')
         ),
@@ -368,7 +368,7 @@
       key: 'refeed-card'
     },
       React.createElement('div', { className: 'refeed-card__header' },
-        React.createElement('span', { className: 'refeed-card__icon' }, '🔄'),
+        React.createElement('span', { className: 'refeed-card__icon' }, '🍕'),
         React.createElement('span', { className: 'refeed-card__title' }, 'Загрузочный день'),
         React.createElement('span', { 
           className: 'refeed-card__status refeed-card__status--' + zone.id,
@@ -434,7 +434,7 @@
     const consecutiveDays = caloricDebt?.consecutiveDeficitDays || 0;
     
     const tooltip = isActive 
-      ? '🔄 Загрузочный день — норма +35%\n\nЭто НЕ срыв! Цель: восстановить метаболизм.'
+      ? '🍕 Загрузочный день — норма +35%\n\nЭто НЕ срыв! Цель: восстановить метаболизм.'
       : '💡 Система рекомендует загрузку\n\nДолг: ' + debt + ' ккал\n' + consecutiveDays + ' дней в дефиците';
     
     return React.createElement('span', {
@@ -443,7 +443,7 @@
       onClick: onClick,
       style: { cursor: onClick ? 'pointer' : 'help' }
     },
-      isActive ? '🔄 REFEED' : '💡 Рекомендуется refeed'
+      isActive ? '🍕 REFEED' : '💡 Рекомендуется refeed'
     );
   }
   
@@ -459,7 +459,7 @@
       onClick: onToggle,
       title: isRefeedDay ? 'Отменить загрузочный день' : 'Отметить как загрузочный день (+35% к норме)'
     },
-      React.createElement('span', { className: 'refeed-toggle-icon' }, '🔄'),
+      React.createElement('span', { className: 'refeed-toggle-icon' }, '🍕'),
       React.createElement('span', { className: 'refeed-toggle-label' }, label)
     );
   }
@@ -491,7 +491,7 @@
         id: 'refeed_recommended',
         icon: '🔄',
         text: 'Система рекомендует загрузочный день',
-        details: `💰 Накопился долг ${debt} ккал или ${consecutiveDays} дней подряд в дефиците.\n\n✅ Это НЕ срыв — это часть стратегии!\n✅ +35% к норме помогает восстановить метаболизм\n✅ Отметь в утреннем чек-ине или нажми кнопку 🔄`,
+        details: `💰 Накопился долг ${debt} ккал или ${consecutiveDays} дней подряд в дефиците.\n\n✅ Это НЕ срыв — это часть стратегии!\n✅ +35% к норме помогает восстановить метаболизм\n✅ Отметь в утреннем чек-ине или нажми кнопку 🍕`,
         type: 'tip',
         priority: 28,
         category: 'nutrition',
@@ -672,7 +672,7 @@
     };
     
     const label = isRefeedDay 
-      ? `🔄 Загрузка ${reason ? reason.icon : '✓'}` 
+      ? `🍕 Загрузка ${reason ? reason.icon : '✓'}` 
       : (needsRefeed ? '+ Загрузка 💡' : '+ Загрузка');
     
     const title = isRefeedDay 

@@ -12284,7 +12284,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             isRefeedDay && React.createElement('div', { 
               className: 'metrics-refeed-hint',
               style: { fontSize: '9px', color: '#f97316', marginTop: '2px', textAlign: 'center' }
-            }, '🔄 refeed +35%')
+            }, '🍕 refeed +35%')
           );
         })()
       ),
@@ -12363,7 +12363,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         
         // Цвет и иконка по уровню долга
         const getDebtStyle = () => {
-          if (needsRefeed) return { icon: '🔄', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.3)', label: 'Refeed рекомендуется' };
+          if (needsRefeed) return { icon: '🍕', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.3)', label: 'Refeed рекомендуется' };
           if (debt > 700) return { icon: '⚠️', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.2)', label: 'Значительный долг' };
           if (debt > 400) return { icon: '📊', color: '#eab308', bg: 'rgba(234, 179, 8, 0.08)', border: 'rgba(234, 179, 8, 0.2)', label: 'Накопился долг' };
           return { icon: '📈', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.08)', border: 'rgba(59, 130, 246, 0.2)', label: 'Небольшой долг' };
@@ -13439,7 +13439,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 } 
               },
                 React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px', color: needsRefeed ? '#d97706' : '#16a34a' } },
-                  needsRefeed ? '🔄 Refeed рекомендуется' : '💡 Рекомендация'),
+                  needsRefeed ? '🍕 Refeed рекомендуется' : '💡 Рекомендация'),
                 React.createElement('div', { style: { fontSize: '13px', color: '#475569' } },
                   needsRefeed 
                     ? 'Сегодня можно съесть ' + adjustedOptimum + ' ккал (норма +' + Math.round(refeedBoost / optimum * 100) + '%)'
@@ -13794,7 +13794,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     (d.isWeekend ? ' weekend' : '') +
                     (d.isRefeedDay ? ' refeed-day' : ''),
                   title: d.isFuture ? d.name : (d.kcal > 0 ? 
-                    (d.isRefeedDay ? '🔄 Загрузочный день\n' : '') +
+                    (d.isRefeedDay ? '🍕 Загрузочный день\n' : '') +
                     d.kcal + ' ккал (' + Math.round(d.ratio * 100) + '%)' +
                     (d.isStreakDay ? '\n✅ Streak +1' : '\n⚠️ Вне нормы') : 'Нет данных'),
                   style: { 

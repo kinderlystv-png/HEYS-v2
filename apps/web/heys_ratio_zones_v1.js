@@ -347,7 +347,7 @@
       let tooltip = zone.name;
       if (isRefeedDay) {
         const reasonLabel = HEYS.Refeed?.getReasonLabel?.(dayData.refeedReason)?.label || '';
-        tooltip = `🔄 ${zone.name}\n${reasonLabel ? reasonLabel + '\n' : ''}${isStreak ? '✅ Streak сохранён' : '⚠️ Вне диапазона streak'}`;
+        tooltip = `🍕 ${zone.name}\n${reasonLabel ? reasonLabel + '\n' : ''}${isStreak ? '✅ Streak сохранён' : '⚠️ Вне диапазона streak'}`;
       }
       
       return {
@@ -358,7 +358,7 @@
         heatmapStatus,
         color: zone.color,
         tooltip,
-        emoji: isRefeedDay ? '🔄' : this.getEmoji(ratio)
+        emoji: isRefeedDay ? '🍕' : this.getEmoji(ratio)
       };
     }
   };

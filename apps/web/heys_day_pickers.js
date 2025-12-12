@@ -235,7 +235,7 @@
               React.createElement('span', { className: 'day-number' }, dt.getDate()),
               statusEmoji && React.createElement('span', { className: 'day-status' }, statusEmoji),
               hasCycle && React.createElement('span', { className: 'day-cycle-dot' }, '🌸'),
-              hasRefeed && React.createElement('span', { className: 'day-refeed-dot' }, '🔄')
+              hasRefeed && React.createElement('span', { className: 'day-refeed-dot' }, '🍕')
             );
           })
         ),
@@ -249,7 +249,7 @@
           React.createElement('span', { className: 'legend-item warn' }, '● мало'),
           React.createElement('span', { className: 'legend-item bad' }, '● переел'),
           React.createElement('span', { className: 'legend-item cycle' }, '🌸 цикл'),
-          React.createElement('span', { className: 'legend-item refeed' }, '🔄 refeed')
+          React.createElement('span', { className: 'legend-item refeed' }, '🍕 refeed')
         ),
         React.createElement('div', { className: 'date-picker-footer' },
           React.createElement('button', {
