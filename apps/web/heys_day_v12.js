@@ -16406,6 +16406,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         }, displayedAdvice.details)
       ),
       
+      // Version footer (мелким шрифтом в самом низу)
+      React.createElement('div', {
+        style: {
+          textAlign: 'center',
+          fontSize: '11px',
+          color: 'var(--text-muted, #9ca3af)',
+          padding: '16px 0 8px 0',
+          opacity: 0.7
+        }
+      }, 'v' + (HEYS.version || 'dev')),
+      
       // Meal Creation/Edit Modal (mobile only)
       showTimePicker && ReactDOM.createPortal(
         React.createElement('div', { className: 'time-picker-backdrop', onClick: cancelTimePicker },

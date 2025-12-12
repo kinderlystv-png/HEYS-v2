@@ -35,8 +35,8 @@ function generateVersion() {
   const time = now.toTimeString().slice(0, 5).replace(':', ''); // 1423
   const hash = getGitHash();
   
-  // Формат: 2025.12.03.1423 или 2025.12.03.abc1234
-  return hash ? `${date}.${hash}` : `${date}.${time}`;
+  // Формат: 2025.12.12.1423.abc1234 (всегда дата + время + hash если есть)
+  return hash ? `${date}.${time}.${hash}` : `${date}.${time}`;
 }
 
 // Обновляем версию в файле
