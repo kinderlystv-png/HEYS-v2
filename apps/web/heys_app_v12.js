@@ -4657,64 +4657,54 @@
                 return;
               }
 
-              // Есть сеть — проверяем "Запомнить меня"
-              const shouldRemember = localStorage.getItem('heys_remember_me') === 'true';
-              const savedEmail = localStorage.getItem('heys_remember_email') || localStorage.getItem('heys_saved_email');
+              // Есть сеть — пробуем восстановить сессию куратора
+              // Читаем сохранённого пользователя из localStorage
+              // ⚠️ Проверка expires_at отключена — токены отключены в Supabase
+              const readStoredAuthUser = () => {
+                try {
+                  const stored = localStorage.getItem('heys_supabase_auth_token');
+                  if (!stored) return null;
+                  const parsed = JSON.parse(stored);
+                  const u = parsed?.user;
+                  if (!u) return null;
+                  return u;
+                } catch (e) { return null; }
+              };
+
+              const storedUser = readStoredAuthUser();
+              const savedEmail = storedUser?.email || localStorage.getItem('heys_remember_email') || localStorage.getItem('heys_saved_email');
               
-              if (shouldRemember && savedEmail) {
-                // Пробуем восстановить сессию Supabase
-                setEmail(savedEmail);
+              if (storedUser && cloud && cloud.client) {
+                // Есть сохранённая сессия — восстанавливаем
+                if (savedEmail) setEmail(savedEmail);
                 initLocalData();
                 
-                // Читаем сохранённого пользователя из localStorage
-                // ⚠️ Проверка expires_at отключена — токены отключены в Supabase
-                const readStoredAuthUser = () => {
-                  try {
-                    const stored = localStorage.getItem('heys_supabase_auth_token');
-                    if (!stored) return null;
-                    const parsed = JSON.parse(stored);
-                    const u = parsed?.user;
-                    if (!u) return null;
-                    return u;
-                  } catch (e) { return null; }
-                };
+                // Ставим пользователя, затем пробуем сделать лёгкий запрос
+                setCloudUser(storedUser);
+                setStatus('online');
+                console.log('[HEYS] ✅ Сессия восстановлена (storage):', storedUser.email || storedUser.id);
 
-                const storedUser = readStoredAuthUser();
-                if (cloud && cloud.client && storedUser) {
-                  // Ставим пользователя, затем пробуем сделать лёгкий запрос
-                  setCloudUser(storedUser);
-                  setStatus('online');
-                  console.log('[HEYS] ✅ Сессия восстановлена (storage):', storedUser.email || storedUser.id);
-
-                  // Тестируем доступ к таблице clients — если RLS/сессия не ок, просто оставим gate для входа
-                  cloud.client
-                    .from('clients')
-                    .select('id')
-                    .limit(1)
-                    .then(({ error: testError }) => {
-                      if (testError) {
-                        console.log('[HEYS] ⚠️ Сессия невалидна (test failed), требуется вход');
-                      }
-                    })
-                    .catch(() => {
-                      console.log('[HEYS] ⚠️ Сессия невалидна (exception), требуется вход');
-                    })
-                    .finally(() => {
-                      setIsInitializing(false);
-                    });
-                } else {
-                  // Нет сохранённой сессии — работаем офлайн
-                  console.log('[HEYS] ⏭️ Нет сохранённой сессии куратора');
-                  setStatus('offline');
-                  setIsInitializing(false);
-                }
+                // Тестируем доступ к таблице clients — если RLS/сессия не ок, просто оставим gate для входа
+                cloud.client
+                  .from('clients')
+                  .select('id')
+                  .limit(1)
+                  .then(({ error: testError }) => {
+                    if (testError) {
+                      console.log('[HEYS] ⚠️ Сессия невалидна (test failed), требуется вход');
+                    }
+                  })
+                  .catch(() => {
+                    console.log('[HEYS] ⚠️ Сессия невалидна (exception), требуется вход');
+                  })
+                  .finally(() => {
+                    setIsInitializing(false);
+                  });
               } else {
-                // Нет "Запомнить меня" — показываем форму входа
-                // ⚠️ НЕ вызываем signOut() здесь!
-                // signOut() инвалидирует refresh token на сервере,
-                // но SDK в фоне может попытаться его использовать → 400 Bad Request.
-                // Просто игнорируем старую сессию — пользователь залогинится заново.
+                // Нет сохранённой сессии — показываем форму входа
+                console.log('[HEYS] ⏭️ Нет сохранённой сессии куратора');
                 initLocalData();
+                setStatus('offline');
                 setIsInitializing(false);
               }
             }, []);

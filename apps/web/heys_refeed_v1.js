@@ -109,6 +109,77 @@
   }
   
   /**
+   * 🆕 Получить статистику refeed дней за последние N дней
+   * @param {number} days - количество дней для анализа (default: 30)
+   * @returns {Object} статистика { count, avgExcessPct, lastRefeedDate, reasons }
+   */
+  function getHistoryStats(days = 30) {
+    const lsGet = HEYS.utils?.lsGet || ((k, d) => {
+      try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; }
+    });
+    
+    const stats = {
+      count: 0,
+      avgExcessPct: 0,
+      lastRefeedDate: null,
+      lastRefeedDaysAgo: null,
+      reasons: {},  // { manual: 3, caloric_debt: 2, ... }
+      totalExcessKcal: 0,
+      daysAnalyzed: days
+    };
+    
+    const today = new Date();
+    const excessList = [];
+    
+    for (let i = 0; i < days; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateKey = d.toISOString().slice(0, 10);
+      const day = lsGet(`heys_dayv2_${dateKey}`, null);
+      
+      if (day?.isRefeedDay === true) {
+        stats.count++;
+        
+        // Последний refeed
+        if (!stats.lastRefeedDate) {
+          stats.lastRefeedDate = dateKey;
+          stats.lastRefeedDaysAgo = i;
+        }
+        
+        // Причина
+        const reason = day.refeedReason || 'manual';
+        stats.reasons[reason] = (stats.reasons[reason] || 0) + 1;
+        
+        // Процент превышения (если есть данные о калориях)
+        if (day.meals && Array.isArray(day.meals)) {
+          // Сумма калорий
+          const profile = lsGet('heys_profile', {});
+          const optimum = profile.optimum || 2000;
+          const refeedOptimum = getRefeedOptimum(optimum, true);
+          
+          const eatenKcal = day.meals.reduce((sum, meal) => {
+            if (!meal.items) return sum;
+            return sum + meal.items.reduce((s, item) => s + (item.kcal || 0), 0);
+          }, 0);
+          
+          if (eatenKcal > 0) {
+            const excessPct = ((eatenKcal / refeedOptimum) - 1) * 100;
+            excessList.push(excessPct);
+            stats.totalExcessKcal += Math.max(0, eatenKcal - optimum);
+          }
+        }
+      }
+    }
+    
+    // Средний процент превышения
+    if (excessList.length > 0) {
+      stats.avgExcessPct = Math.round(excessList.reduce((a, b) => a + b, 0) / excessList.length);
+    }
+    
+    return stats;
+  }
+  
+  /**
    * Получить label причины с guardrail fallback
    * @param {string} reasonId - ID причины
    * @returns {Object} { id, icon, label, desc }
@@ -558,6 +629,7 @@
     getReasonById,
     getReasonLabel,      // 🆕 с guardrail fallback
     getDayMeta,          // 🆕 единая точка правды
+    getHistoryStats,     // 🆕 статистика за 30 дней
     shouldExcludeFromWeightTrend,
     shouldShowRefeedStep,
     isStreakPreserved,
@@ -575,7 +647,7 @@
     registerStep: registerRefeedStep,
     
     // Версия
-    version: '1.1.0'  // 🆕 v1.1.0 — getDayMeta + getReasonLabel
+    version: '1.2.0'  // 🆕 v1.2.0 — getHistoryStats
   };
   
   // Автоматическая регистрация шага при загрузке
@@ -585,6 +657,6 @@
     setTimeout(registerRefeedStep, 100);
   }
   
-  console.log('[HEYS] 🔄 Refeed Module v1.0.0 loaded');
+  console.log('[HEYS] 🔄 Refeed Module v1.2.0 loaded');
 
 })(typeof window !== 'undefined' ? window : global);

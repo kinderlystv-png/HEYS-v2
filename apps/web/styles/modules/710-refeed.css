@@ -558,3 +558,125 @@
   background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
   color: #fde68a;
 }
+
+/* ============================================================
+   METRICS CARD — Подсветка при refeed дне
+   ============================================================ */
+
+.metrics-card--refeed {
+  position: relative;
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.3) 0%, rgba(253, 230, 138, 0.2) 100%) !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+
+.metrics-card--refeed::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg, #f59e0b, #d97706, #f59e0b);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.6;
+  animation: refeed-glow-ring 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes refeed-glow-ring {
+  0%, 100% {
+    opacity: 0.4;
+    filter: blur(0px);
+  }
+  50% {
+    opacity: 0.8;
+    filter: blur(1px);
+  }
+}
+
+/* Hint "🔄 refeed +35%" в карточке калорий */
+.refeed-hint-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.15);
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 6px;
+  animation: refeed-hint-appear 0.3s ease-out;
+}
+
+@keyframes refeed-hint-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Анимация включения refeed (одноразовая) */
+.refeed-just-enabled {
+  animation: refeed-activate 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes refeed-activate {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 12px rgba(245, 158, 11, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}
+
+/* ============================================================
+   SPARKLINE — Флажок refeed дня
+   ============================================================ */
+
+.sparkline-refeed-flag {
+  fill: #f59e0b;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  animation: refeed-flag-wave 2s ease-in-out infinite;
+}
+
+@keyframes refeed-flag-wave {
+  0%, 100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+/* Точка sparkline с refeed */
+.sparkline-point--refeed {
+  stroke: #f59e0b !important;
+  stroke-width: 2px;
+}
+
+/* ============================================================
+   DARK THEME — дополнения
+   ============================================================ */
+
+[data-theme="dark"] .metrics-card--refeed {
+  background: linear-gradient(135deg, rgba(120, 53, 15, 0.3) 0%, rgba(146, 64, 14, 0.2) 100%) !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+}
+
+[data-theme="dark"] .refeed-hint-inline {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fcd34d;
+}
