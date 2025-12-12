@@ -413,7 +413,7 @@
                     } catch (_) {}
                   },
                   className:
-                    'w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 bg-white text-center text-2xl font-bold outline-none transition ' +
+                    'w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 bg-white text-center text-[32px] sm:text-[36px] leading-none font-bold outline-none transition ' +
                     (isPinComplete
                       ? 'border-green-400 bg-green-50/50'
                       : isFilled
@@ -449,10 +449,14 @@
         React.createElement(
           'div',
           { className: 'mt-5 space-y-2 text-center text-sm text-slate-500' },
+          React.createElement('div', null, 'Нет доступа? Обратитесь в поддержку:'),
           React.createElement(
-            'div',
-            null,
-            'Нет PIN? Попросите телефон+PIN у куратора.',
+            'a',
+            {
+              href: 'tel:+79624556111',
+              className: 'font-semibold text-indigo-600 hover:underline',
+            },
+            '+7 962 455-61-11',
           ),
           React.createElement(
             'button',

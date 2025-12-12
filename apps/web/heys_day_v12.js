@@ -9324,19 +9324,31 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // 2. Реальная синхронизация с Supabase (с force=true для bypass throttling)
         const syncPromise = (async () => {
           if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
+            console.log('[PullRefresh] 🚀 Starting force sync for client:', clientId.substring(0, 8));
+            
             await cloud.bootstrapClientSync(clientId, { force: true });
+            
+            // 🔄 ГАРАНТИЯ: Явно инвалидируем кэш перед чтением (на случай если sync не вызвал)
+            if (window.HEYS?.store?.flushMemory) {
+              window.HEYS.store.flushMemory();
+              console.log('[PullRefresh] 🧹 Memory cache flushed before reading');
+            }
             
             // 🔄 ЯВНАЯ перезагрузка данных после sync (не полагаемся только на событие)
             const dayKey = 'heys_dayv2_' + date;
             const freshDay = lsGet(dayKey, null);
             
             if (freshDay && freshDay.date) {
-              console.log('[PullRefresh] 🔄 Reloading day from localStorage | meals:', freshDay.meals?.length);
+              console.log('[PullRefresh] 🔄 Reloading day from localStorage | meals:', freshDay.meals?.length, '| updatedAt:', freshDay.updatedAt ? new Date(freshDay.updatedAt).toISOString() : 'none');
               const migratedTrainings = normalizeTrainings(freshDay.trainings);
               const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
               const migratedDay = { ...freshDay, trainings: cleanedTrainings };
               setDay(ensureDay(migratedDay, getProfile()));
+            } else {
+              console.log('[PullRefresh] ⚠️ No day data found for', date);
             }
+          } else {
+            console.log('[PullRefresh] ⚠️ Sync not available | clientId:', clientId, '| cloud:', !!cloud);
           }
         })();
         

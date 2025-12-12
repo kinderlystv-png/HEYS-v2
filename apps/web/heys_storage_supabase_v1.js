@@ -2641,7 +2641,8 @@
             // 🔒 КРИТИЧНО: Проверка на блокировку cloud sync во время локального редактирования
             // Если HEYS.Day.isBlockingCloudUpdates() = true, НЕ затираем localStorage!
             // Это предотвращает race condition когда sync читает старые данные до flush
-            if (typeof global.HEYS?.Day?.isBlockingCloudUpdates === 'function' && global.HEYS.Day.isBlockingCloudUpdates()) {
+            // ⚠️ НО! При forceSync (pull-to-refresh) ИГНОРИРУЕМ блокировку — пользователь явно хочет обновить
+            if (!forceSync && typeof global.HEYS?.Day?.isBlockingCloudUpdates === 'function' && global.HEYS.Day.isBlockingCloudUpdates()) {
               const remaining = (global.HEYS.Day.getBlockUntil?.() || 0) - Date.now();
               log(`🔒 [SYNC BLOCKED] Skipping ${key} — local edit in progress (${remaining}ms remaining)`);
               return; // Пропускаем этот ключ, НЕ затираем localStorage
