@@ -7247,6 +7247,45 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       }
     }, [setDay, date, lsGet, lsSet]);
     
+    // === REFEED DAY CARD ===
+    const showRefeedCard = day.isRefeedDay === true;
+    const refeedCard = showRefeedCard && React.createElement('div', {
+      className: 'refeed-card compact-card',
+      key: 'refeed-card'
+    },
+      React.createElement('div', { 
+        className: 'refeed-card__header' 
+      },
+        React.createElement('span', { className: 'refeed-card__icon' }, '🍽️'),
+        React.createElement('span', { className: 'refeed-card__title' }, 'Загрузочный день'),
+        (() => {
+          // Определяем статус выполнения
+          const adjustedOptimum = displayOptimum || optimum;
+          const isOk = eatenKcal <= adjustedOptimum + 200; // Допустимый перебор +200 ккал
+          const statusClass = isOk ? 'refeed-card__status--ok' : 'refeed-card__status--over';
+          const statusIcon = isOk ? '✅' : '⚠️';
+          const diff = eatenKcal - adjustedOptimum;
+          
+          return React.createElement('span', { 
+            className: 'refeed-card__status ' + statusClass 
+          }, 
+            statusIcon,
+            ' ',
+            eatenKcal + '/' + adjustedOptimum,
+            diff > 0 && ' +' + Math.round(diff)
+          );
+        })()
+      ),
+      React.createElement('div', { className: 'refeed-card__info' },
+        caloricDebt && caloricDebt.dailyBoost > 0 && React.createElement('span', { className: 'refeed-card__badge' }, 
+          '🔥 Норма +' + caloricDebt.dailyBoost + ' ккал'
+        ),
+        caloricDebt && caloricDebt.needsRefeed && React.createElement('span', { className: 'refeed-card__badge' }, 
+          '💰 Долг ' + caloricDebt.debt + ' ккал'
+        )
+      )
+    );
+    
     const cycleCard = showCycleCard && React.createElement('div', {
       className: 'cycle-card compact-card' + (cycleEditMode ? ' cycle-card--editing' : ''),
       key: 'cycle-card'
@@ -8025,9 +8064,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       try {
         const today = new Date(date);
         const weights = [];
-        const weightsClean = []; // Без дней с задержкой воды
+        const weightsClean = []; // Без дней с задержкой воды и refeed дней
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
         let hasRetentionDays = false; // Есть ли дни с задержкой воды
+        let hasRefeedDays = false; // Есть ли загрузочные дни
         
         // Собираем вес за последние 7 дней (включая сегодня)
         for (let i = 0; i < 7; i++) {
@@ -8048,21 +8088,29 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           
           if (dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0) {
             const cycleDayValue = dayData.cycleDay || null;
-            const shouldExclude = HEYS.Cycle?.shouldExcludeFromWeightTrend?.(cycleDayValue) || false;
+            const shouldExcludeCycle = HEYS.Cycle?.shouldExcludeFromWeightTrend?.(cycleDayValue) || false;
+            const shouldExcludeRefeed = dayData.isRefeedDay === true;
+            const shouldExclude = shouldExcludeCycle || shouldExcludeRefeed;
             
             const weightEntry = { 
               date: dateStr, 
               weight: +dayData.weightMorning, 
               dayIndex: 6 - i,
               cycleDay: cycleDayValue,
-              hasRetention: shouldExclude
+              hasRetention: shouldExcludeCycle,
+              isRefeedDay: shouldExcludeRefeed
             };
             
             weights.push(weightEntry);
             
-            if (shouldExclude) {
+            if (shouldExcludeCycle) {
               hasRetentionDays = true;
-            } else {
+            }
+            if (shouldExcludeRefeed) {
+              hasRefeedDays = true;
+            }
+            
+            if (!shouldExclude) {
               weightsClean.push(weightEntry);
             }
           }
@@ -8072,7 +8120,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         if (weights.length < 2) return null;
         
         // Используем чистые данные если есть минимум 2 точки, иначе все
-        const useClean = weightsClean.length >= 2 && hasRetentionDays;
+        const useClean = weightsClean.length >= 2 && (hasRetentionDays || hasRefeedDays);
         const dataForTrend = useClean ? weightsClean : weights;
         
         // Сортируем по дате (от старой к новой)
@@ -8119,8 +8167,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           direction, 
           slope: clampedSlope, 
           dataPoints: n,
-          isCleanTrend: useClean, // Тренд исключает дни с задержкой воды
-          retentionDaysExcluded: hasRetentionDays ? weights.length - weightsClean.length : 0
+          isCleanTrend: useClean, // Тренд исключает дни с задержкой воды и/или refeed
+          retentionDaysExcluded: hasRetentionDays ? weights.filter(w => w.hasRetention).length : 0,
+          refeedDaysExcluded: hasRefeedDays ? weights.filter(w => w.isRefeedDay).length : 0
         };
       } catch (e) {
         return null;
@@ -13779,11 +13828,27 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 (monthForecast.direction === 'down' ? ' down' : 
                  monthForecast.direction === 'up' ? ' up' : '')
             }, monthForecast.text),
-            // Бейдж "чистый тренд" если дни с задержкой воды исключены
+            // Бейдж "чистый тренд" если дни с задержкой воды и/или refeed исключены
             weightTrend.isCleanTrend && React.createElement('span', { 
               className: 'weight-clean-trend-badge',
-              title: 'Дни с задержкой воды исключены из тренда'
-            }, '🌸 чистый'),
+              title: (() => {
+                const parts = [];
+                if (weightTrend.retentionDaysExcluded > 0) {
+                  parts.push(weightTrend.retentionDaysExcluded + ' цикл');
+                }
+                if (weightTrend.refeedDaysExcluded > 0) {
+                  parts.push(weightTrend.refeedDaysExcluded + ' загрузка');
+                }
+                return 'Исключено: ' + parts.join(' + ');
+              })()
+            }, 
+              (() => {
+                const icons = [];
+                if (weightTrend.retentionDaysExcluded > 0) icons.push('🌸');
+                if (weightTrend.refeedDaysExcluded > 0) icons.push('🍽️');
+                return icons.join('') + ' чистый';
+              })()
+            ),
             // Кнопки выбора периода (как у калорий)
             React.createElement('div', { className: 'kcal-period-pills weight-period-pills' },
               [7, 14, 30].map(period => 
@@ -14892,6 +14957,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       (!isMobile || mobileSubTab === 'stats') && compactActivity,
       (!isMobile || mobileSubTab === 'stats') && sideBlock,
       (!isMobile || mobileSubTab === 'stats') && cycleCard,
+      (!isMobile || mobileSubTab === 'stats') && refeedCard,
       
       // === FAB группа: приём пищи + вода (на обеих вкладках) ===
       isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && React.createElement('div', {

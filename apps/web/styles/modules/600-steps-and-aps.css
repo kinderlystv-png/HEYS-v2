@@ -4368,3 +4368,91 @@ button.meal-quality-badge:active {
   background: #1f2937;
   color: #9ca3af;
 }
+
+/* ============================================================
+   REFEED DAY CARD — Карточка загрузочного дня
+   ============================================================ */
+
+.refeed-card {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid #10b981;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+}
+
+.refeed-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.refeed-card__icon {
+  font-size: 24px;
+}
+
+.refeed-card__title {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  color: #065f46;
+}
+
+.refeed-card__status {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.refeed-card__status--ok {
+  background: rgba(16, 185, 129, 0.2);
+  color: #047857;
+}
+
+.refeed-card__status--over {
+  background: rgba(239, 68, 68, 0.2);
+  color: #991b1b;
+}
+
+.refeed-card__info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.refeed-card__badge {
+  font-size: 13px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  color: #047857;
+  font-weight: 500;
+}
+
+/* Dark theme */
+[data-theme="dark"] .refeed-card {
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  border-color: #10b981;
+}
+
+[data-theme="dark"] .refeed-card__title {
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .refeed-card__status--ok {
+  background: rgba(16, 185, 129, 0.3);
+  color: #a7f3d0;
+}
+
+[data-theme="dark"] .refeed-card__status--over {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .refeed-card__badge {
+  background: rgba(0, 0, 0, 0.3);
+  color: #a7f3d0;
+}
