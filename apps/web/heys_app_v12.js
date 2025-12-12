@@ -4195,6 +4195,11 @@ const HEYS = window.HEYS = window.HEYS || {};
                                 }
                                 try { localStorage.setItem('heys_last_client_id', res.clientId); } catch (_) {}
                                 setClientId(res.clientId);
+                                
+                                // 🔄 Диспатчим событие для показа утреннего чек-ина (как после облачной синхронизации)
+                                setTimeout(() => {
+                                  window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: res.clientId } }));
+                                }, 100);
                               } catch (_) {}
                             }
                             return res;
