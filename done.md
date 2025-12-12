@@ -6,6 +6,24 @@
 
 ## 🎉 Декабрь 2025
 
+### 🍽️ Refeed Day Manual Marker ✅ (2025-12-12)
+
+- [x] **Phase 1 — Модель данных** — Добавлено поле `isRefeedDay` в DayRecord (boolean|null)
+- [x] **Phase 2 — UI Шаг в чек-ине** — RefeedDayStepComponent с полными стилями (light/dark)
+- [x] **Phase 3 — Исключение из weight trend** — Фильтрация refeed дней, счётчики excluded days
+- [x] **Phase 4 — Визуальная индикация** — Refeed card (ok/over статус), badges, weight trend icons
+- [x] **Phase 5 — Advice integration** — Совет `refeed_day_reminder` с action button
+- [x] **Документация** — DATA_MODEL v3.15.0, changelog entry, todo.md обновлён
+
+**Файл промпта**: [archive/2025-12-12-refeed-day-manual-marker.md](./docs/tasks/archive/2025-12-12-refeed-day-manual-marker.md)
+
+**Реализованная функциональность**:
+- Ручная отметка дня как загрузочный в утреннем чек-ине
+- Автоматическая рекомендация при `caloricDebt.needsRefeed`
+- Исключение из weight trend для точности метрик
+- Визуальная индикация статуса (ok/over лимита +200 ккал)
+- 169 советов (+1 refeed_day_reminder)
+
 ### 💰 Caloric Debt → Optimum Integration ✅ (2025-12-12)
 
 - [x] **Phase 1 — UI Display** — `displayOptimum` используется в 3/4 местах

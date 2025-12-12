@@ -259,6 +259,7 @@
    * @property {string} dayComment
    * @property {number} waterMl - Выпито воды в мл
    * @property {Meal[]} meals
+   * @property {boolean|null} [isRefeedDay] - Загрузочный день (null=не указано, true=refeed, false=обычный)
    */
 
   function round1(v){ return Math.round(v*10)/10; }
@@ -324,6 +325,8 @@
       moodMorning: d.moodMorning != null ? +d.moodMorning : undefined,
       wellbeingMorning: d.wellbeingMorning != null ? +d.wellbeingMorning : undefined,
       stressMorning: d.stressMorning != null ? +d.stressMorning : undefined,
+      // Загрузочный день (refeed day marker)
+      isRefeedDay: d.isRefeedDay != null ? d.isRefeedDay : null,
       // Сохраняем metadata для стабильности
       updatedAt: d.updatedAt || undefined,
       schemaVersion: d.schemaVersion || undefined,

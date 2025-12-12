@@ -1318,6 +1318,148 @@
   });
 
   // ============================================================
+  // REFEED DAY STEP — Загрузочный день
+  // ============================================================
+
+  /**
+   * Компонент шага "Загрузочный день"
+   * Показывается если:
+   * 1. caloricDebt.needsRefeed === true (автоматическая рекомендация)
+   * 2. ИЛИ пользователь может вручную выбрать (advanced users)
+   */
+  function RefeedDayStepComponent({ data, onChange }) {
+    const { useState, useCallback, useMemo } = React;
+    
+    // isRefeedDay: null = не указано, true = refeed, false = обычный
+    const [isRefeedDay, setIsRefeedDay] = useState(data?.isRefeedDay ?? null);
+    
+    // Получаем данные о калорийном долге (если доступны)
+    const caloricDebt = useMemo(() => {
+      // Попытка получить caloricDebt из глобального контекста
+      if (window.HEYS?.caloricDebt) {
+        return window.HEYS.caloricDebt;
+      }
+      // Fallback: пытаемся вычислить самостоятельно (упрощённо)
+      return null;
+    }, []);
+    
+    const needsRefeed = caloricDebt?.needsRefeed || false;
+    const debt = caloricDebt?.debt || 0;
+    const adjustedOptimum = caloricDebt?.adjustedOptimum || 0;
+    const refeedBoost = caloricDebt?.refeedBoost || 0;
+
+    // Обработчик выбора
+    const handleSelect = useCallback((value) => {
+      setIsRefeedDay(value);
+      onChange({ isRefeedDay: value });
+      // Haptic feedback
+      try { navigator.vibrate?.(10); } catch(e) {}
+    }, [onChange]);
+
+    return React.createElement('div', { className: 'refeed-step' },
+      // Заголовок
+      React.createElement('div', { className: 'refeed-header' },
+        React.createElement('span', { className: 'refeed-icon' }, '🍽️'),
+        React.createElement('h3', { className: 'refeed-title' }, 'Загрузочный день?')
+      ),
+
+      // Подсказка от системы (если есть рекомендация)
+      needsRefeed && React.createElement('div', { className: 'refeed-hint' },
+        React.createElement('div', { className: 'refeed-hint-icon' }, '💡'),
+        React.createElement('div', { className: 'refeed-hint-content' },
+          React.createElement('div', { className: 'refeed-hint-title' }, 'Система рекомендует загрузку'),
+          React.createElement('div', { className: 'refeed-hint-details' }, 
+            'Накопился долг: ' + debt + ' ккал'
+          )
+        )
+      ),
+
+      // Кнопки выбора
+      React.createElement('div', { className: 'refeed-options' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'refeed-option refeed-option-yes' + (isRefeedDay === true ? ' active' : ''),
+          onClick: () => handleSelect(true)
+        },
+          React.createElement('span', { className: 'refeed-option-icon' }, '✅'),
+          React.createElement('span', { className: 'refeed-option-label' }, 'Да, загрузка'),
+          isRefeedDay === true && React.createElement('span', { className: 'refeed-option-check' }, '✓')
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'refeed-option refeed-option-no' + (isRefeedDay === false ? ' active' : ''),
+          onClick: () => handleSelect(false)
+        },
+          React.createElement('span', { className: 'refeed-option-icon' }, '❌'),
+          React.createElement('span', { className: 'refeed-option-label' }, 'Обычный день'),
+          isRefeedDay === false && React.createElement('span', { className: 'refeed-option-check' }, '✓')
+        )
+      ),
+
+      // Информация о лимите калорий (если выбран refeed)
+      isRefeedDay === true && adjustedOptimum > 0 && React.createElement('div', { className: 'refeed-info' },
+        React.createElement('div', { className: 'refeed-info-icon' }, '💡'),
+        React.createElement('div', { className: 'refeed-info-content' },
+          React.createElement('div', { className: 'refeed-info-title' }, 'Сегодня можно съесть'),
+          React.createElement('div', { className: 'refeed-info-value' }, 
+            adjustedOptimum + ' ккал',
+            refeedBoost > 0 && React.createElement('span', { className: 'refeed-info-boost' }, 
+              ' (норма +' + refeedBoost + ')'
+            )
+          )
+        )
+      ),
+
+      // Подсказка для обычного дня
+      isRefeedDay === false && React.createElement('div', { className: 'refeed-regular-hint' },
+        'Придерживайся обычной нормы калорий'
+      )
+    );
+  }
+
+  // Регистрация шага загрузочного дня
+  registerStep('refeedDay', {
+    title: 'Загрузочный день',
+    hint: 'Управление нормой',
+    icon: '🍽️',
+    component: RefeedDayStepComponent,
+    canSkip: true,
+    // shouldShow — проверяем, есть ли рекомендация или включён manual режим
+    shouldShow: () => {
+      try {
+        const profile = lsGet('heys_profile', {});
+        // Показываем если есть автоматическая рекомендация
+        const hasRecommendation = window.HEYS?.caloricDebt?.needsRefeed || false;
+        // ИЛИ если пользователь имеет право вручную выбирать
+        const allowManual = profile.allowManualRefeed === true;
+        return hasRecommendation || allowManual;
+      } catch {
+        return false;
+      }
+    },
+    getInitialData: (ctx) => {
+      const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
+      const day = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      return { 
+        isRefeedDay: day.isRefeedDay ?? null
+      };
+    },
+    save: (data) => {
+      const dateKey = new Date().toISOString().slice(0, 10);
+      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
+      day.isRefeedDay = data.isRefeedDay;
+      day.updatedAt = Date.now();
+      lsSet(`heys_dayv2_${dateKey}`, day);
+      
+      // Уведомляем о изменении дня
+      window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+        detail: { date: dateKey, field: 'isRefeedDay', value: data.isRefeedDay, source: 'refeed-step' }
+      }));
+    },
+    xpAction: 'refeed_marked'
+  });
+
+  // ============================================================
   // CYCLE STEP — Особый период (менструальный цикл)
   // ============================================================
 
