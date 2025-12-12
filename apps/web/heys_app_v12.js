@@ -1,15 +1,7 @@
 // heys_app_v12.js — Main app entry, React root, tab navigation, Supabase integration
 
       (function () {
-        // 🔍 DEBUG: Проверяем токен В САМОМ НАЧАЛЕ загрузки
-        try {
-          const earlyToken = localStorage.getItem('heys_supabase_auth_token');
-          console.log('[HEYS] 🚀 EARLY CHECK: auth token =', earlyToken ? `${earlyToken.substring(0, 50)}...` : 'null');
-        } catch (e) {
-          console.log('[HEYS] 🚀 EARLY CHECK: error reading token', e.message);
-        }
-        
-        const HEYS = window.HEYS = window.HEYS || {};
+const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
         const APP_VERSION = '2025.12.12.2057.0513339'; // Инкрементируй при важных изменениях
@@ -4671,15 +4663,10 @@
               const readStoredAuthUser = () => {
                 try {
                   const stored = localStorage.getItem('heys_supabase_auth_token');
-                  console.log('[HEYS] 🔍 readStoredAuthUser: stored=', stored ? `${stored.substring(0, 50)}...` : 'null');
                   if (!stored) return null;
                   const parsed = JSON.parse(stored);
-                  const u = parsed?.user;
-                  console.log('[HEYS] 🔍 readStoredAuthUser: user=', u?.email || 'no user');
-                  if (!u) return null;
-                  return u;
+                  return parsed?.user || null;
                 } catch (e) { 
-                  console.log('[HEYS] 🔍 readStoredAuthUser: error=', e.message);
                   return null; 
                 }
               };
@@ -4714,8 +4701,7 @@
                     setIsInitializing(false);
                   });
               } else {
-                // Нет сохранённой сессии — показываем форму входа
-                console.log('[HEYS] ⏭️ Нет сохранённой сессии куратора');
+                // Нет сохранённой сессии куратора — это нормально для клиентского входа по PIN
                 initLocalData();
                 setStatus('offline');
                 setIsInitializing(false);
