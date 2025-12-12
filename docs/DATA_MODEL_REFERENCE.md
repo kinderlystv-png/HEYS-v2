@@ -69,6 +69,7 @@
 | `trainings`           | Training[]          | Массив тренировок (до 3)                                   | `[...]`                          |
 | `measurements`        | Measurements        | Замеры тела (опционально)                                  | `{...}`                          |
 | `cycleDay`            | number/null         | День менструального цикла (1-7, null=не отслеживается)     | `3`                              |
+| `isRefeedDay`         | boolean/null        | Загрузочный день (null=не указано, true=refeed, false=обычный) | `true`                           |
 
 ---
 
