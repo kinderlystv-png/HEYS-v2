@@ -1582,30 +1582,24 @@
       const OLD_AUTH_KEY = 'sb-ukqolcziqcuplqfgrmsh-auth-token';
       const NEW_AUTH_KEY = 'heys_supabase_auth_token';
       
-      // 🧹 RTR-safe: жёсткая очистка сохранённых сессий ПЕРЕД созданием клиента.
-      // Это устраняет главный класс проблем: GoTrueClient инициализируется,
-      // грузит session из storage и сразу пытается refresh'нуть refresh_token.
-      // Если refresh_token уже был использован (RTR) — получаем 400 и мгновенный SIGNED_OUT.
+      // 🔄 RTR-safe v2: НЕ удаляем токен при старте — проверяем его валидность
+      // Удаляем ТОЛЬКО старый ключ (sb-*), новый оставляем для восстановления сессии
       try {
-        const hadNew = !!localStorage.getItem(NEW_AUTH_KEY);
         const hadOld = !!localStorage.getItem(OLD_AUTH_KEY);
-        if (hadNew || hadOld) {
-          log('[AUTH] 🧹 (RTR-safe) Очищаем сохранённые auth токены при старте');
+        if (hadOld) {
+          log('[AUTH] 🧹 Удаляем старый auth токен (sb-*)');
+          localStorage.removeItem(OLD_AUTH_KEY);
         }
-        localStorage.removeItem(NEW_AUTH_KEY);
-        localStorage.removeItem(OLD_AUTH_KEY);
+        // NEW_AUTH_KEY оставляем — он нужен для restoreSessionFromStorage() ниже
       } catch (_) {}
       
       // Единый storageKey для auth — сессия сохраняется при переключении proxy↔direct
       client = global.supabase.createClient(initialUrl, anonKey, {
         auth: {
-          // ⚠️ RTR-safe: отключаем persistSession.
-          // Иначе SDK читает/пишет refresh_token в storage и может попытаться сделать refresh
-          // (внутри __loadSession/_useSession) → 400 refresh_token_already_used.
-          // Цена: после перезагрузки страницы куратор логинится заново.
-          persistSession: false,
+          // ⚠️ RTR-safe v2: включаем persistSession для сохранения access_token
+          // autoRefreshToken оставляем false — мы сами управляем refresh
+          persistSession: true,
           autoRefreshToken: false,
-          // storageKey оставляем для совместимости (даже если persistSession=false)
           storageKey: NEW_AUTH_KEY,
         }
       });
@@ -1623,14 +1617,13 @@
       }
 
       // 🔄 Автовосстановление сессии при старте (RTR-safe)
-      // ВАЖНО: мы НЕ вызываем client.auth.getSession()/refreshSession(),
-      // потому что любые попытки refresh при RTR могут дать 400 refresh_token_already_used
-      // и выбить пользователя из сессии.
-      // Вместо этого читаем сохранённый токен из storageKey и поднимаем user локально.
+      // 🔄 RTR-safe v2: Восстановление сессии при старте
+      // Теперь persistSession=true, SDK сам восстановит сессию из storage
+      // Мы просто читаем user и проверяем access_token
       const restoreSessionFromStorage = () => {
         try {
           const stored = localStorage.getItem('heys_supabase_auth_token');
-          if (!stored) return null;
+          if (!stored) return { user: null, expired: false };
           const parsed = JSON.parse(stored);
           const expiresAt = parsed?.expires_at;
           const accessToken = parsed?.access_token;
@@ -1638,21 +1631,25 @@
           const storedUser = parsed?.user;
 
           // Мини-валидация
-          if (!accessToken || !refreshToken || !storedUser) return null;
+          if (!accessToken || !storedUser) return { user: null, expired: false };
+          
           // Буфер 60 секунд — чтобы не влетать в граничные условия
-          if (!expiresAt || expiresAt * 1000 <= Date.now() + 60000) return null;
-          return { user: storedUser, expiresAt };
+          const isExpired = !expiresAt || expiresAt * 1000 <= Date.now() + 60000;
+          
+          return { user: storedUser, expired: isExpired, refreshToken };
         } catch (_) {
-          return null;
+          return { user: null, expired: false };
         }
       };
 
       if (!_signInInProgress) {
         const restored = restoreSessionFromStorage();
-        if (restored?.user) {
+        
+        if (restored.user && !restored.expired) {
+          // Токен валиден — используем без refresh
           user = restored.user;
           status = CONNECTION_STATUS.SYNC;
-          logCritical('🔄 Сессия восстановлена (storage):', user.email || user.id);
+          logCritical('🔄 Сессия восстановлена (access_token валиден):', user.email || user.id);
           const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
           const finishOnline = () => {
             if (_signInInProgress) return;
@@ -1669,13 +1666,65 @@
           } else {
             finishOnline();
           }
+        } else if (restored.user && restored.expired && restored.refreshToken) {
+          // Токен истёк, но есть refresh_token — пробуем обновить (один раз)
+          logCritical('🔄 Access token истёк, пробуем refresh...');
+          
+          // SDK с persistSession=true должен сам обработать это через getSession()
+          client.auth.getSession().then(({ data, error }) => {
+            if (error || !data?.session?.user) {
+              // Refresh не удался (возможно RTR 400) — очищаем и требуем логин
+              logCritical('⚠️ Refresh не удался:', error?.message || 'no session');
+              try {
+                localStorage.removeItem('heys_supabase_auth_token');
+              } catch (_) {}
+              status = CONNECTION_STATUS.OFFLINE;
+              user = null;
+            } else {
+              // Refresh успешен!
+              user = data.session.user;
+              status = CONNECTION_STATUS.ONLINE;
+              logCritical('✅ Сессия обновлена через refresh:', user.email || user.id);
+              
+              const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
+              if (clientId) {
+                cloud.bootstrapClientSync(clientId).catch(() => {});
+              }
+              cloud.retrySync && cloud.retrySync();
+            }
+          }).catch((e) => {
+            logCritical('⚠️ Refresh exception:', e?.message || e);
+            try {
+              localStorage.removeItem('heys_supabase_auth_token');
+            } catch (_) {}
+            status = CONNECTION_STATUS.OFFLINE;
+            user = null;
+          });
         }
       }
 
-      // ⚠️ RTR-safe: НЕ подписываемся на onAuthStateChange.
-      // Причина: внутри GoTrueClient подписка вызывает __loadSession/_useSession,
-      // что может привести к немедленному refresh_token запросу и 400 refresh_token_already_used.
-      // Мы управляем user/status вручную (signIn/signOut + локальное восстановление из storage).
+      // ⚠️ RTR-safe v2: подписываемся на onAuthStateChange но ИГНОРИРУЕМ SIGNED_OUT
+      // при первых 10 секундах после старта (защита от ложных срабатываний RTR)
+      let _ignoreSignedOutUntil = Date.now() + 10000;
+      
+      client.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          user = session.user;
+          status = CONNECTION_STATUS.ONLINE;
+          logCritical('🔑 Auth event: SIGNED_IN', user.email || user.id);
+        } else if (event === 'SIGNED_OUT') {
+          if (Date.now() < _ignoreSignedOutUntil) {
+            logCritical('⏭️ Игнорируем SIGNED_OUT (startup window)');
+            return;
+          }
+          user = null;
+          status = CONNECTION_STATUS.OFFLINE;
+          logCritical('🚪 Auth event: SIGNED_OUT');
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          user = session.user;
+          logCritical('🔄 Auth event: TOKEN_REFRESHED');
+        }
+      });
       
       // 🔄 AUTO-SYNC при возвращении на вкладку (visibilitychange)
       // Синхронизирует данные с сервера когда пользователь возвращается в приложение
