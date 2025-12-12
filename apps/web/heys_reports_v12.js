@@ -1246,6 +1246,73 @@
     const week4 = useMemo(() => collectWeek(21), [collectWeek]);
     const all28 = [].concat(week1, week2, week3, week4);
 
+    // 🔥 Аналитика Refeed дней за 28 дней
+    const refeedAnalytics = useMemo(() => {
+      if (!isInitialized || all28.length === 0) return null;
+      
+      const REFEED_THRESHOLD = 1000;
+      const REFEED_CONSECUTIVE = 5;
+      const REFEED_BOOST_PCT = 0.35;
+      
+      let refeedDays = [];
+      let totalDebt = 0;
+      let consecutiveDeficitDays = 0;
+      
+      // Проходим по дням в хронологическом порядке (от старых к новым)
+      const chronological = [...all28].reverse();
+      
+      for (let i = 0; i < chronological.length; i++) {
+        const row = chronological[i];
+        const eaten = row.totals?.kcal || 0;
+        const target = row.dailyExp || 2000;
+        const balance = eaten - target;
+        
+        // Считаем долг и consecutive deficit
+        if (balance < 0 && Math.abs(balance) > target * 0.2) {
+          consecutiveDeficitDays++;
+          totalDebt += Math.abs(balance);
+        } else {
+          consecutiveDeficitDays = 0;
+          totalDebt = 0;
+        }
+        
+        // Проверяем триггеры refeed
+        const needsRefeed = totalDebt >= REFEED_THRESHOLD || consecutiveDeficitDays >= REFEED_CONSECUTIVE;
+        
+        if (needsRefeed) {
+          const refeedTarget = Math.round(target * (1 + REFEED_BOOST_PCT));
+          const actualEaten = eaten;
+          const wasCompleted = actualEaten >= target && actualEaten <= refeedTarget * 1.15;
+          
+          refeedDays.push({
+            date: row.dstr,
+            debt: Math.round(totalDebt),
+            consecutiveDays: consecutiveDeficitDays,
+            target: refeedTarget,
+            eaten: actualEaten,
+            completed: wasCompleted
+          });
+          
+          // Сбрасываем долг после refeed дня
+          totalDebt = 0;
+          consecutiveDeficitDays = 0;
+        }
+      }
+      
+      const completedCount = refeedDays.filter(d => d.completed).length;
+      const avgDebt = refeedDays.length > 0 
+        ? Math.round(refeedDays.reduce((sum, d) => sum + d.debt, 0) / refeedDays.length)
+        : 0;
+      
+      return {
+        total: refeedDays.length,
+        completed: completedCount,
+        failed: refeedDays.length - completedCount,
+        avgDebt,
+        days: refeedDays.reverse() // Возвращаем в порядке от новых к старым
+      };
+    }, [all28, isInitialized]);
+
     const [showCharts, setShowCharts] = useState(false);
 
     // Показываем индикатор загрузки пока инициализируется
@@ -1263,6 +1330,70 @@
           React.createElement('button', {className:'btn acc', onClick:()=>setShowCharts(true)}, 'Показать графики')
         )
       ),
+      
+      // 🔥 Refeed Day Analytics Card
+      refeedAnalytics && refeedAnalytics.total > 0 && React.createElement('div', {
+        className:'card',
+        style:{
+          margin:'8px 0 16px 0',
+          padding:'16px',
+          background:'linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.12))',
+          border:'1px solid rgba(245, 158, 11, 0.3)',
+          borderRadius:'12px'
+        }
+      },
+        React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px'}},
+          React.createElement('span', {style:{fontSize:'20px'}}, '🔥'),
+          React.createElement('div', {style:{fontWeight:700, fontSize:'16px', color:'#b45309'}}, 'Refeed дни за 28 дней')
+        ),
+        
+        // Статистика в 3 колонки
+        React.createElement('div', {
+          style:{
+            display:'grid',
+            gridTemplateColumns:'repeat(auto-fit, minmax(150px, 1fr))',
+            gap:'12px',
+            marginBottom:'12px'
+          }
+        },
+          // Всего refeed дней
+          React.createElement('div', {style:{padding:'12px', background:'rgba(255,255,255,0.6)', borderRadius:'8px', textAlign:'center'}},
+            React.createElement('div', {style:{fontSize:'24px', fontWeight:'800', color:'#f59e0b'}}, refeedAnalytics.total),
+            React.createElement('div', {style:{fontSize:'12px', color:'#78716c', marginTop:'4px'}}, 'Всего рефидов')
+          ),
+          
+          // Выполнено
+          React.createElement('div', {style:{padding:'12px', background:'rgba(255,255,255,0.6)', borderRadius:'8px', textAlign:'center'}},
+            React.createElement('div', {style:{fontSize:'24px', fontWeight:'800', color:'#22c55e'}}, refeedAnalytics.completed),
+            React.createElement('div', {style:{fontSize:'12px', color:'#78716c', marginTop:'4px'}}, 'Выполнено ✓')
+          ),
+          
+          // Средний долг
+          React.createElement('div', {style:{padding:'12px', background:'rgba(255,255,255,0.6)', borderRadius:'8px', textAlign:'center'}},
+            React.createElement('div', {style:{fontSize:'24px', fontWeight:'800', color:'#ef4444'}}, '−'+refeedAnalytics.avgDebt),
+            React.createElement('div', {style:{fontSize:'12px', color:'#78716c', marginTop:'4px'}}, 'Средний долг (ккал)')
+          )
+        ),
+        
+        // Интерпретация
+        React.createElement('div', {
+          style:{
+            padding:'10px 12px',
+            background:'rgba(255,255,255,0.8)',
+            borderRadius:'8px',
+            fontSize:'13px',
+            color:'#57534e',
+            lineHeight:'1.5'
+          }
+        },
+          refeedAnalytics.total >= 3 
+            ? '⚠️ Частые refeed дни ('+refeedAnalytics.total+' за месяц) — дефицит слишком агрессивный. Рассмотри снижение дефицита до 10-15%.'
+            : refeedAnalytics.total === 1 || refeedAnalytics.total === 2
+            ? '✅ Умеренная частота рефидов ('+refeedAnalytics.total+' за месяц) — дефицит в пределах нормы.'
+            : '✅ Отличный баланс! Refeed дней не требуется — дефицит комфортный.'
+        )
+      ),
+      
       React.createElement(WeekTable, {title:'Неделя 1 (последние 7 дней)', rows: week1, tone:'tone-blue'}),
       React.createElement(CalorieChart, {week1Data: week1}),
       React.createElement(WeekTable, {title:'Неделя 2', rows: week2, tone:'tone-amber'}),
