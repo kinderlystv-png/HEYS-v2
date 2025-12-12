@@ -4985,16 +4985,32 @@
                                     }, getClientInitials(currentClientName)),
                                     React.createElement('div', {
                                       style: { fontSize: 16, fontWeight: 600, color: 'var(--text)' }
-                                    }, currentClientName),
-                                    React.createElement('div', {
-                                      style: { fontSize: 12, color: 'var(--muted)', marginTop: 2 }
-                                    }, '📱 Вход по телефону')
+                                    }, currentClientName)
+                                  ),
+                                  // Кнопка настроек
+                                  React.createElement('div', {
+                                    key: 'settings',
+                                    style: {
+                                      padding: '12px 16px',
+                                      textAlign: 'center',
+                                      cursor: 'pointer',
+                                      fontSize: 14,
+                                      borderBottom: '1px solid var(--border)'
+                                    },
+                                    onClick: () => {
+                                      setShowClientDropdown(false);
+                                      setActiveTab('profile');
+                                    }
+                                  },
+                                    React.createElement('span', { 
+                                      style: { color: 'var(--text)' } 
+                                    }, '⚙️ Перейти в настройки')
                                   ),
                                   // Кнопка выхода
                                   React.createElement('div', {
                                     key: 'logout',
                                     style: {
-                                      padding: '14px 16px',
+                                      padding: '12px 16px',
                                       textAlign: 'center',
                                       cursor: 'pointer',
                                       fontSize: 14

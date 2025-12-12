@@ -5,6 +5,10 @@
   "installCommand": "cd ../.. && pnpm install",
   "rewrites": [
     {
+      "source": "/api/supabase/rest/v1/rpc/:fn",
+      "destination": "/api/rpc?fn=:fn"
+    },
+    {
       "source": "/api/supabase/rest/v1/:table",
       "destination": "/api/rest?table=:table"
     },
