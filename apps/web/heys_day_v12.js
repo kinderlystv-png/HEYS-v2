@@ -11803,7 +11803,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             React.createElement('div', { className: 'goal-progress-header' },
               React.createElement('span', { 
                 className: 'goal-progress-title' + (isRefeedDay ? ' goal-progress-title-refeed' : ''),
-                style: { color: titleColor, fontWeight: isRefeedDay ? 700 : 600 }
+                style: { color: titleColor, fontWeight: isRefeedDay ? 700 : 600, cursor: isRefeedDay ? 'help' : 'default' },
+                title: isRefeedDay 
+                  ? '🔥 Refeed Day — контролируемое превышение нормы (+35%)\n\nЭто НЕ срыв! Цель: восстановить лептин, T3 и предотвратить метаболическую адаптацию.\n\nТриггеры: долг ≥' + (caloricDebt.debt || 0) + ' ккал ИЛИ ' + (caloricDebt.consecutiveDeficitDays || 0) + ' дней подряд в дефиците >20%'
+                  : undefined
               }, titleIcon + ' ' + titleText),
               React.createElement('span', { className: 'goal-progress-stats' },
                 React.createElement('span', { 
@@ -11996,6 +11999,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 className: 'goal-zone-label goal-zone-label-100',
                 style: { left: (ratio > 1 ? (1.0 / ratio) * 100 : 100) + '%' }
               }, '100%')
+            ),
+            // 💰 Калорийный долг — подсказка под progress bar (если есть долг)
+            caloricDebt && caloricDebt.hasDebt && caloricDebt.dailyBoost > 0 && React.createElement('div', {
+              className: 'goal-debt-hint',
+              style: {
+                marginTop: '4px',
+                padding: '6px 10px',
+                borderRadius: '8px',
+                background: isRefeedDay ? 'rgba(245, 158, 11, 0.1)' : 'rgba(34, 197, 94, 0.08)',
+                border: isRefeedDay ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(34, 197, 94, 0.25)',
+                fontSize: '11px',
+                color: isRefeedDay ? '#b45309' : '#16a34a',
+                fontWeight: 500,
+                textAlign: 'center'
+              }
+            },
+              isRefeedDay 
+                ? `🔥 Refeed: долг −${Math.abs(caloricDebt.debt || 0)} ккал за ${caloricDebt.daysAnalyzed || 3} дня`
+                : `💰 Восполнение долга: −${Math.abs(caloricDebt.debt || 0)} ккал → +${caloricDebt.dailyBoost || 0} ккал сегодня`
             )
           );
         })()
