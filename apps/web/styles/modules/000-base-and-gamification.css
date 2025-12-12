@@ -111,6 +111,19 @@ input.phone-input-large {
   animation: heys-pin-digit-fade 1.2s ease-out forwards;
 }
 
+/* Скрываем браузерную «reveal» кнопку и текст в PIN input при показе overlay */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="password"]::-webkit-contacts-auto-fill-button,
+input[type="password"]::-webkit-credentials-auto-fill-button {
+  display: none !important;
+}
+
+/* Safari: отключаем авто-подсветку цифры перед точкой */
+input[type="password"] {
+  -webkit-text-security: disc;
+}
+
 :root {
   /* Color palette */
   --color-white: #ffffff;

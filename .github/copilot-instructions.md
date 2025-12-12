@@ -1,11 +1,11 @@
 ---
-description: HEYS v2 — AI Development Guide v2.5.0
+description: HEYS v2 — AI Development Guide v2.7.0
 applyTo: '**/*'
 ---
 
 # HEYS v2 – AI Development Guide
 
-> 🇷🇺 Ответы · EN Code · v2.5.0
+> 🇷🇺 Ответы · EN Code · v2.7.0
 
 📊 **[DATA_MODEL_REFERENCE.md](../docs/DATA_MODEL_REFERENCE.md)** — справочник
 всех аналитических параметров (dayTot, normAbs, Product, Meal, Training и др.)
@@ -348,6 +348,136 @@ console.log('Session:', data?.session?.user?.email);
 
 ---
 
+## 3.3. 🔐 PIN-авторизация клиентов (vs Curator auth)
+
+### Два типа авторизации
+
+HEYS поддерживает **два режима** авторизации с разными механизмами sync:
+
+| Режим           | Кто использует       | Supabase user | Sync метод            | Флаг                |
+| --------------- | -------------------- | ------------- | --------------------- | ------------------- |
+| **Curator**     | Нутрициолог (куратор)| ✅ Есть       | `bootstrapClientSync` | `_rpcOnlyMode=false`|
+| **PIN auth**    | Клиент (телефон+PIN) | ❌ Нет        | `syncClientViaRPC`    | `_rpcOnlyMode=true` |
+
+### Архитектура PIN auth
+
+```
+Клиент вводит телефон+PIN
+    ↓
+RPC: client_pin_auth(phone, pin)
+    ↓
+Возвращает client_id (без Supabase session!)
+    ↓
+Все операции через RPC с client_id
+    ↓
+user = null, но данные доступны
+```
+
+**Ключевые переменные** в `heys_storage_supabase_v1.js`:
+
+```javascript
+let _rpcOnlyMode = false;      // true = PIN auth, false = обычная auth
+let _pinAuthClientId = null;   // client_id для PIN auth клиента
+```
+
+### Универсальный sync — `cloud.syncClient()`
+
+**Проблема**: Старый `bootstrapClientSync()` требует Supabase session (`user`).
+Для PIN auth клиентов `user = null` → sync не работал.
+
+**Решение**: Универсальный метод `cloud.syncClient()`:
+
+```javascript
+// ✅ ПРАВИЛЬНО — универсальный sync (автовыбор стратегии)
+await HEYS.cloud.syncClient(clientId);
+
+// ❌ НЕПРАВИЛЬНО — только для curator auth
+await HEYS.cloud.bootstrapClientSync(clientId);
+```
+
+**Как работает `syncClient()`**:
+
+```javascript
+cloud.syncClient = async function(clientId, options = {}) {
+  const isPinAuth = _rpcOnlyMode && _pinAuthClientId === clientId;
+  
+  if (isPinAuth) {
+    // PIN auth → RPC sync (без Supabase user)
+    return cloud.syncClientViaRPC(clientId);
+  } else {
+    // Curator auth → стандартный bootstrap sync
+    return cloud.bootstrapClientSync(clientId, options);
+  }
+};
+```
+
+### Места замены (исправлено 2025-12-12)
+
+Все вызовы `bootstrapClientSync` заменены на `syncClient`:
+
+| Файл                          | Место                      | Было                    | Стало        |
+| ----------------------------- | -------------------------- | ----------------------- | ------------ |
+| `heys_app_v12.js`             | DayWrapper useEffect       | `bootstrapClientSync()` | `syncClient()`|
+| `heys_app_v12.js`             | RationWrapper useEffect    | `bootstrapClientSync()` | `syncClient()`|
+| `heys_app_v12.js`             | UserWrapper useEffect      | `bootstrapClientSync()` | `syncClient()`|
+| `heys_app_v12.js`             | App client change handler  | `bootstrapClientSync()` | `syncClient()`|
+| `heys_core_v12.js`            | ProductsManager.sync()     | `bootstrapClientSync()` | `syncClient()`|
+| `heys_day_v12.js`             | PullRefresh handler        | Только localStorage     | `syncClient()`|
+
+### Диагностика в консоли
+
+```javascript
+// Проверить режим auth
+console.log('RPC only mode:', HEYS.cloud._rpcOnlyMode);
+console.log('PIN client ID:', HEYS.cloud._pinAuthClientId);
+
+// Для PIN auth должно быть:
+// _rpcOnlyMode = true
+// _pinAuthClientId = "3125a359-..."
+
+// Для curator auth:
+// _rpcOnlyMode = false
+// _pinAuthClientId = null
+```
+
+### Частые проблемы PIN auth
+
+| Симптом                              | Причина                                    | Решение                              |
+| ------------------------------------ | ------------------------------------------ | ------------------------------------ |
+| Данные не синхронизируются           | Используется `bootstrapClientSync`         | Заменить на `syncClient()`           |
+| PullRefresh не обновляет данные      | Читает только localStorage                 | Вызвать `syncClient()` перед чтением |
+| `user.id` undefined                  | PIN auth не имеет Supabase user            | Проверять `_rpcOnlyMode` перед `user.id`|
+| Ложный "требуется обновление"        | String comparison версий                   | Использовать `isNewerVersion()`      |
+
+### Сравнение версий (фикс 2025-12-12)
+
+**Проблема**: Версии `2025.12.12.2113.xxx` vs `2025.12.12.2057.yyy` сравнивались как строки → ложные update prompts.
+
+**Решение**: Функция `isNewerVersion()`:
+
+```javascript
+function isNewerVersion(serverVersion, currentVersion) {
+  // Извлекаем числовую часть: "2025.12.12.2113" → 202512122113
+  const getNumeric = (v) => {
+    const parts = v.split('.');
+    const numeric = parts.slice(0, 4).join('');
+    return parseInt(numeric, 10) || 0;
+  };
+  return getNumeric(serverVersion) > getNumeric(currentVersion);
+}
+```
+
+### Правила работы с PIN auth
+
+| 🚫 Запрещено                         | ✅ Правильно                                |
+| ------------------------------------ | ------------------------------------------- |
+| `cloud.bootstrapClientSync()` везде  | `cloud.syncClient()` — универсальный        |
+| `user.id` без проверки               | `if (!_rpcOnlyMode) user.id`                |
+| String comparison версий `!==`       | `isNewerVersion(server, current)`           |
+| PullRefresh только из localStorage   | `syncClient()` → flush cache → read         |
+
+---
+
 ## 4. Архитектура
 
 ```
@@ -641,6 +771,7 @@ docs: update architecture diagram
 
 | Версия | Дата       | Изменения                                                                                                                                                                        |
 | ------ | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2.7.0  | 2025-12-12 | **PIN-авторизация секция 3.3**: Два типа авторизации (Curator vs PIN), универсальный `cloud.syncClient()`, замена bootstrapClientSync во всех местах, семантическое сравнение версий `isNewerVersion()`, диагностика и troubleshooting |
 | 2.6.0  | 2025-12-12 | **Caloric Debt + GI Scaling**: Добавлена секция 💰 Caloric Debt в DATA_MODEL_REFERENCE. **v3.5.6**: Увеличен порог для GI с GL≥10 до GL≥20 (хлебцы 24г теперь ~1.9ч вместо 2.2ч) |
 | 2.5.0  | 2025-12-09 | **Orphan продукты секция 3.1**: диагностика, корневые причины, правила сохранения продуктов, исправление sync блокировки при дедупликации                                        |
 | 2.4.0  | 2025-12-03 | **CSS/Стили секция**: Tailwind-first, BEM naming, `heys-components.css`; **CSS Refactoring Rules**: NO-TOUCH zones, модульная структура, `pnpm css:audit`                        |

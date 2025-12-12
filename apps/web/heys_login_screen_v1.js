@@ -358,6 +358,8 @@
                     autoComplete: i === 0 ? 'one-time-code' : 'off',
                     maxLength: 1,
                     value: digit,
+                    // Скрываем текст input пока показывается overlay (иначе видна «маленькая цифра» браузера)
+                    style: overlay.d ? { color: 'transparent', caretColor: 'transparent' } : undefined,
                     onChange: (e) => {
                       setErr('');
                       const v = String(e.target.value || '').replace(/\D/g, '').slice(0, 1);
