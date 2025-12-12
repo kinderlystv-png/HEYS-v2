@@ -3,7 +3,7 @@ template-version: 3.3.0
 created: 2025-12-12
 updated: 2025-12-12
 purpose: Refeed Day UI — визуализация и чек-ин для дней восстановления
-status: Новый
+status: ✅ Выполнено (Must Have завершены)
 ---
 
 # Task: Refeed Day Check-in — UI для дней восстановления калорийного долга
