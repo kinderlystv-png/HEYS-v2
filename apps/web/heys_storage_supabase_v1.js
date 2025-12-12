@@ -1833,6 +1833,7 @@
       if (data?.session) {
         log('[AUTH] Session from signIn:', data.session.user?.email);
         // 🔄 RTR-safe v4: Сохраняем сессию вручную (persistSession=false)
+        // ⚠️ Используем originalSetItem напрямую чтобы обойти перехват
         try {
           const tokenData = {
             access_token: data.session.access_token,
@@ -1840,8 +1841,18 @@
             expires_at: data.session.expires_at,
             user: data.session.user
           };
-          localStorage.setItem('heys_supabase_auth_token', JSON.stringify(tokenData));
+          const tokenJson = JSON.stringify(tokenData);
+          // Используем оригинальный setItem если доступен
+          const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
+          setFn('heys_supabase_auth_token', tokenJson);
           logCritical('[AUTH] ✅ Сессия сохранена в localStorage, email:', data.session.user?.email);
+          // Верификация
+          const check = global.localStorage.getItem('heys_supabase_auth_token');
+          if (!check) {
+            logCritical('[AUTH] ❌ ВЕРИФИКАЦИЯ ПРОВАЛЕНА: токен не читается обратно!');
+          } else {
+            logCritical('[AUTH] ✅ Верификация OK, токен сохранён');
+          }
         } catch (saveErr) {
           logCritical('[AUTH] ❌ Ошибка сохранения сессии:', saveErr?.message || saveErr);
         }
