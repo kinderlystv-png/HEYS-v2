@@ -2106,14 +2106,32 @@
   cloud.cleanupProducts = function() {
     try {
       const clientId = HEYS.utils?.getCurrentClientId?.() || '';
+      // Ключ продуктов в localStorage всегда heys_{clientId}_products
       const key = clientId ? `heys_${clientId}_products` : 'heys_products';
       const raw = localStorage.getItem(key);
-      if (!raw) return { cleaned: 0, total: 0 };
+      
+      // Если ключ не найден — попробуем без clientId (legacy)
+      if (!raw && clientId) {
+        const legacyRaw = localStorage.getItem('heys_products');
+        if (legacyRaw) {
+          // Миграция: скопировать в ключ с clientId
+          try {
+            const parsed = JSON.parse(legacyRaw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              localStorage.setItem(key, legacyRaw);
+              console.log(`[CLEANUP] Migrated heys_products → ${key}`);
+            }
+          } catch(_) {}
+        }
+      }
+      
+      const finalRaw = localStorage.getItem(key);
+      if (!finalRaw) return { cleaned: 0, total: 0 };
       
       // Защита от повреждённых данных (не-JSON)
       let products;
       try {
-        products = JSON.parse(raw);
+        products = JSON.parse(finalRaw);
       } catch (parseError) {
         // Данные временно некорректны (возможно race condition при записи)
         // НЕ удаляем — пусть следующий sync перезапишет
@@ -2601,6 +2619,12 @@
   cloud.bootstrapClientSync = async function(client_id, options){
     // 🔐 PIN-авторизация: работаем без user, если client_id проверен через verify_client_pin
     const isPinAuth = _pinAuthClientId && _pinAuthClientId === client_id;
+    
+    // 🔐 Если RPC режим и sync уже завершён — пропускаем (данные загружены через syncClientViaRPC)
+    if (_rpcOnlyMode && initialSyncCompleted && isPinAuth) {
+      log('[RPC MODE] Skipping bootstrapClientSync — already synced via RPC');
+      return;
+    }
     
     // Для обычной авторизации нужен client и user, для PIN — только client
     if (!client || !client_id) return;
