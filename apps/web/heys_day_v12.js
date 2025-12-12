@@ -15035,11 +15035,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         caloricDebt: caloricDebt,
         optimum: optimum,
         onToggle: (isActive, reason) => {
-          // Сохраняем через handleSave — патч к текущему day
-          handleSave({ 
-            isRefeedDay: isActive ? true : null,
-            refeedReason: isActive ? reason : null
-          });
+          // Сохраняем через setDay — обновляем состояние дня
+          setDay(prev => ({ 
+            ...prev, 
+            isRefeedDay: isActive ? true : false,
+            refeedReason: isActive ? reason : null,
+            updatedAt: Date.now()
+          }));
         }
       }),
       (!isMobile || mobileSubTab === 'diary') && daySummary,
