@@ -94,22 +94,27 @@
   let user = null;
   let muteMirror = false;
   
-  // � PIN-авторизация: client_id проверенный через verify_client_pin (без Supabase user)
+  // 🔐 PIN-авторизация: client_id проверенный через verify_client_pin (без Supabase user)
   let _pinAuthClientId = null;
+  let _rpcOnlyMode = false; // Режим RPC для сохранений (без Supabase user)
+  
   cloud.setPinAuthClient = function(clientId) { 
-    _pinAuthClientId = clientId; 
-    log('🔐 PIN auth client set:', clientId?.substring(0, 8) + '...');
+    _pinAuthClientId = clientId;
+    _rpcOnlyMode = true;
+    log('🔐 PIN auth client set + RPC mode ON:', clientId?.substring(0, 8) + '...');
   };
   cloud.getPinAuthClient = function() { return _pinAuthClientId; };
-  cloud.clearPinAuthClient = function() { _pinAuthClientId = null; };
+  cloud.clearPinAuthClient = function() { 
+    _pinAuthClientId = null;
+    _rpcOnlyMode = false;
+  };
   
-  // �🔄 Флаг для предотвращения race condition между автовосстановлением и явным signIn
+  // Экспорт для отладки
+  Object.defineProperty(cloud, '_rpcOnlyMode', { get: () => _rpcOnlyMode });
+  Object.defineProperty(cloud, '_pinAuthClientId', { get: () => _pinAuthClientId });
+  
+  // 🔄 Флаг для предотвращения race condition между автовосстановлением и явным signIn
   let _signInInProgress = false;
-  
-  // 🔄 Timestamp до которого игнорируем SIGNED_OUT (защита от ложных событий SDK)
-  let _ignoreSignedOutUntil = 0;
-  
-  // Оригинальный setItem (до перехвата) — для safeSetItem
   let originalSetItem = null;
   
   // 🚨 Флаг блокировки сохранения до завершения первого sync
@@ -1644,6 +1649,16 @@
       interceptSetItem();
       cloud._inited = true;
       log('cloud bridge loaded', _usingDirectConnection ? '(direct)' : '(proxy)');
+      
+      // 🔐 Восстановление PIN auth при перезагрузке страницы
+      try {
+        const pinAuthClient = global.localStorage.getItem('heys_pin_auth_client');
+        if (pinAuthClient) {
+          _pinAuthClientId = pinAuthClient;
+          _rpcOnlyMode = true;
+          logCritical('🔐 PIN auth восстановлен для клиента:', pinAuthClient.substring(0, 8) + '...');
+        }
+      } catch(_) {}
       
       // 🏥 Health-check если стартуем в direct режиме (проверяем VPN доступен ли)
       // Запускаем асинхронно но НЕ блокируем — fetchWithRetry сам переключится при ошибках
@@ -3420,9 +3435,14 @@
     return (Date.now() - rec.ts) > (maxAgeMs||4000);
   };
 
-  // 🔐 Флаг: работаем через RPC (клиент без сессии куратора)
-  let _rpcOnlyMode = false;
-  cloud.setRpcOnlyMode = function(enabled) { _rpcOnlyMode = enabled; };
+  // 🔐 Флаг _rpcOnlyMode объявлен выше в секции PIN-авторизации (строка ~99)
+  // Функции для совместимости со старым кодом (но используют основную переменную)
+  cloud.setRpcOnlyMode = function(enabled) { 
+    _rpcOnlyMode = enabled; 
+    if (enabled && _pinAuthClientId) {
+      log('🔐 RPC mode enabled for PIN auth client');
+    }
+  };
   cloud.isRpcOnlyMode = function() { return _rpcOnlyMode; };
 
   // Дебаунсинг для клиентских данных
@@ -4307,11 +4327,15 @@
       // Если нет (вход по PIN) — используем RPC и включаем RPC-режим для сохранений
       if (user) {
         _rpcOnlyMode = false; // Куратор — обычный режим
+        _pinAuthClientId = null; // Очищаем PIN auth
+        try { global.localStorage.removeItem('heys_pin_auth_client'); } catch(_) {}
         await cloud.bootstrapClientSync(newClientId);
       } else {
         logCritical('🔐 [SWITCH] Нет Supabase сессии — используем RPC sync');
         _rpcOnlyMode = true; // Клиент по PIN — RPC режим для сохранений
         _pinAuthClientId = newClientId; // 🔐 Сохраняем client_id для проверки в saveClientKey
+        // 🔐 Сохраняем флаг PIN auth в localStorage для восстановления после перезагрузки
+        try { global.localStorage.setItem('heys_pin_auth_client', newClientId); } catch(_) {}
         const rpcResult = await cloud.syncClientViaRPC(newClientId);
         if (!rpcResult.success) {
           throw new Error(rpcResult.error || 'RPC sync failed');
