@@ -24,6 +24,27 @@ const HEYS = window.HEYS = window.HEYS || {};
         
         HEYS.version = APP_VERSION;
         
+        // === Семантическое сравнение версий ===
+        // Версия: YYYY.MM.DD.HHMM.hash → сравниваем числовую часть
+        function isNewerVersion(serverVersion, currentVersion) {
+          if (!serverVersion || !currentVersion) return false;
+          if (serverVersion === currentVersion) return false;
+          
+          // Извлекаем числовую часть: 2025.12.12.2113 → 202512122113
+          const extractNumeric = (v) => {
+            const parts = v.split('.');
+            if (parts.length < 4) return 0;
+            // YYYY.MM.DD.HHMM → concatenate
+            return parseInt(parts.slice(0, 4).join(''), 10) || 0;
+          };
+          
+          const serverNum = extractNumeric(serverVersion);
+          const currentNum = extractNumeric(currentVersion);
+          
+          // Серверная версия новее только если её число БОЛЬШЕ
+          return serverNum > currentNum;
+        }
+        
         // Проверка блокировки обновления
         function isUpdateLocked() {
           try {
@@ -462,7 +483,8 @@ const HEYS = window.HEYS = window.HEYS || {};
             
             const data = await response.json();
             
-            if (data.version && data.version !== APP_VERSION) {
+            // Сравниваем версии семантически (серверная должна быть НОВЕЕ)
+            if (data.version && isNewerVersion(data.version, APP_VERSION)) {
               console.log(`[HEYS] 🆕 Server has new version: ${data.version} (current: ${APP_VERSION})`);
               
               // === Защита от бесконечного цикла обновлений ===
@@ -520,6 +542,10 @@ const HEYS = window.HEYS = window.HEYS || {};
               }, 8000);
               
               return true;
+            } else if (data.version && data.version !== APP_VERSION) {
+              // Серверная версия отличается, но НЕ новее — пропускаем
+              console.log(`[HEYS] ⏭️ Server version ${data.version} is older than current ${APP_VERSION}, skipping update`);
+              return false;
             } else {
               console.log(`[HEYS] ✅ Version up-to-date: ${APP_VERSION}`);
               return false;
