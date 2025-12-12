@@ -11791,11 +11791,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             titleText = 'Перебор';
           }
           
+          // 🔥 Refeed Day бейдж — перекрывает обычный заголовок если активен
+          const isRefeedDay = caloricDebt && caloricDebt.needsRefeed;
+          if (isRefeedDay) {
+            titleColor = '#f59e0b';
+            titleIcon = '🔥';
+            titleText = 'REFEED DAY';
+          }
+          
           return React.createElement(React.Fragment, null,
             React.createElement('div', { className: 'goal-progress-header' },
               React.createElement('span', { 
-                className: 'goal-progress-title',
-                style: { color: titleColor }
+                className: 'goal-progress-title' + (isRefeedDay ? ' goal-progress-title-refeed' : ''),
+                style: { color: titleColor, fontWeight: isRefeedDay ? 700 : 600 }
               }, titleIcon + ' ' + titleText),
               React.createElement('span', { className: 'goal-progress-stats' },
                 React.createElement('span', { 

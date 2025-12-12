@@ -3415,9 +3415,58 @@
       const debtKcal = Math.abs(caloricDebt.totalDebt);
       const dailyBoost = caloricDebt.dailyBoost || 0;
       const daysWithDeficit = caloricDebt.daysWithDeficit || 0;
+      const needsRefeed = caloricDebt.needsRefeed || false;
+      const refeedBoost = caloricDebt.refeedBoost || 0;
       
-      // Информация о бонусной зоне
-      if (dailyBoost > 0 && hour >= 10 && !sessionStorage.getItem('heys_debt_info')) {
+      // 🔥 REFEED DAY — Рекомендация (приоритет выше обычного долга)
+      if (needsRefeed && hour >= 8 && hour <= 12 && !sessionStorage.getItem('heys_refeed_recommended')) {
+        advices.push({
+          id: 'refeed_recommended',
+          icon: '🔥',
+          text: `Сегодня Refeed Day! Норма +${refeedBoost} ккал для восстановления`,
+          details: `🔬 Накопился критический дефицит (${debtKcal} ккал) или ${caloricDebt.consecutiveDeficitDays} дней подряд в дефиците. Это НЕ срыв — это часть стратегии! +35% к норме помогает восстановить лептин, T3 и предотвратить метаболическую адаптацию.`,
+          type: 'special',
+          priority: 35,
+          category: 'nutrition',
+          triggers: ['tab_open'],
+          ttl: 8000,
+          onShow: () => { try { sessionStorage.setItem('heys_refeed_recommended', '1'); } catch(e) {} }
+        });
+      }
+      
+      // 🍽️ REFEED DAY — В процессе (мотивация съесть норму)
+      const eatenPctOfRefeed = needsRefeed && refeedBoost > 0 ? (dayTot?.kcal || 0) / (optimum + refeedBoost) : 0;
+      if (needsRefeed && eatenPctOfRefeed >= 0.5 && eatenPctOfRefeed < 0.9 && hour >= 14) {
+        advices.push({
+          id: 'refeed_in_progress',
+          icon: '🍽️',
+          text: 'Refeed день идёт! Не останавливайся',
+          details: `💪 Ты съел ${Math.round(eatenPctOfRefeed * 100)}% от refeed нормы. Цель — ${optimum + refeedBoost} ккал. Это контролируемое превышение помогает телу восстановиться.`,
+          type: 'tip',
+          priority: 20,
+          category: 'nutrition',
+          triggers: ['tab_open'],
+          ttl: 6000
+        });
+      }
+      
+      // ✅ REFEED DAY — Выполнен (ачивка)
+      if (needsRefeed && eatenPctOfRefeed >= 0.9 && eatenPctOfRefeed <= 1.15 && hour >= 20) {
+        advices.push({
+          id: 'refeed_completed',
+          icon: '✅',
+          text: 'Refeed выполнен! Метаболизм восстанавливается',
+          details: `🎯 Ты съел ${Math.round(dayTot?.kcal || 0)} ккал — это в пределах refeed нормы (+35%). Лептин и T3 временно вернутся к норме, метаболизм ускорится. Завтра можно вернуться к обычному дефициту.`,
+          type: 'achievement',
+          priority: 10,
+          category: 'achievement',
+          triggers: ['tab_open'],
+          ttl: 7000
+        });
+      }
+      
+      // Информация о бонусной зоне (только если НЕ refeed день)
+      if (!needsRefeed && dailyBoost > 0 && hour >= 10 && !sessionStorage.getItem('heys_debt_info')) {
         advices.push({
           id: 'caloric_debt_info',
           icon: '💰',
@@ -3432,8 +3481,8 @@
         });
       }
       
-      // Большой долг — предупреждение
-      if (debtKcal >= 500 && daysWithDeficit >= 2) {
+      // Большой долг — предупреждение (только если НЕ refeed день)
+      if (!needsRefeed && debtKcal >= 500 && daysWithDeficit >= 2) {
         advices.push({
           id: 'caloric_debt_high',
           icon: '⚠️',
