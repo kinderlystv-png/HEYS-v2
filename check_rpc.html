@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Check Supabase RPC</title>
+</head>
+<body>
+  <h1>Проверка наличия reset_client_pin</h1>
+  <button onclick="checkRPC()">Проверить</button>
+  <pre id="result"></pre>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const { createClient } = supabase;
+    
+    const client = createClient(
+      'https://ukqolcziqcuplqfgrmsh.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI1NTU5NzgsImV4cCI6MjA0ODEzMTk3OH0.FeT8OLj9TDPXl-VDWdFcOZQ6IK9XLRnWLTaR4yQG17o'
+    );
+
+    async function checkRPC() {
+      const result = document.getElementById('result');
+      result.textContent = 'Проверка...';
+      
+      try {
+        // Попробуем вызвать функцию с фейковыми данными
+        const res = await client.rpc('reset_client_pin', {
+          p_client_id: '00000000-0000-0000-0000-000000000000',
+          p_pin_salt: 'test',
+          p_pin_hash: 'test'
+        });
+        
+        if (res.error) {
+          result.textContent = 'Ошибка: ' + JSON.stringify(res.error, null, 2);
+        } else {
+          result.textContent = 'Функция существует! Ответ: ' + JSON.stringify(res, null, 2);
+        }
+      } catch (e) {
+        result.textContent = 'Exception: ' + e.message;
+      }
+    }
+  </script>
+</body>
+</html>

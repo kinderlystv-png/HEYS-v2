@@ -206,6 +206,7 @@
             const isSel = same(dt, sel);
             const isToday = same(dt, today);
             const hasCycle = dayData?.cycleDay != null;
+            const hasRefeed = dayData?.isRefeedDay === true;
             const hasRealData = dayData && dayData.kcal > 0; // Есть реальные данные (еда)
             
             // Фон только для дней с едой
@@ -223,7 +224,8 @@
                 isSel ? 'selected' : '',
                 isToday ? 'today' : '',
                 hasRealData ? 'has-data' : '',
-                hasCycle ? 'has-cycle' : ''
+                hasCycle ? 'has-cycle' : '',
+                hasRefeed ? 'has-refeed' : ''
               ].join(' ').trim(),
               style: cellStyle,
               onClick: () => { onSelect(dateStr); setIsOpen(false); setTooltip(null); },
@@ -232,7 +234,8 @@
             }, 
               React.createElement('span', { className: 'day-number' }, dt.getDate()),
               statusEmoji && React.createElement('span', { className: 'day-status' }, statusEmoji),
-              hasCycle && React.createElement('span', { className: 'day-cycle-dot' }, '🌸')
+              hasCycle && React.createElement('span', { className: 'day-cycle-dot' }, '🌸'),
+              hasRefeed && React.createElement('span', { className: 'day-refeed-dot' }, '🔄')
             );
           })
         ),
@@ -245,7 +248,8 @@
           React.createElement('span', { className: 'legend-item good' }, '● норма'),
           React.createElement('span', { className: 'legend-item warn' }, '● мало'),
           React.createElement('span', { className: 'legend-item bad' }, '● переел'),
-          React.createElement('span', { className: 'legend-item cycle' }, '🌸 цикл')
+          React.createElement('span', { className: 'legend-item cycle' }, '🌸 цикл'),
+          React.createElement('span', { className: 'legend-item refeed' }, '🔄 refeed')
         ),
         React.createElement('div', { className: 'date-picker-footer' },
           React.createElement('button', {

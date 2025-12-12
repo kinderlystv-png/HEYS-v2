@@ -3585,7 +3585,21 @@ body:has(.offline-banner) .wrap {
   opacity: 0.85;
 }
 
+/* Refeed dot indicator (загрузочный день) */
+.day-refeed-dot {
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  font-size: 7px;
+  line-height: 1;
+  opacity: 0.85;
+}
+
 .date-picker-day.has-cycle {
+  position: relative;
+}
+
+.date-picker-day.has-refeed {
   position: relative;
 }
 
@@ -3622,6 +3636,7 @@ body:has(.offline-banner) .wrap {
 .legend-item.warn { color: #eab308; }
 .legend-item.bad { color: var(--color-red-500); }
 .legend-item.cycle { color: #ec4899; font-size: 11px; }
+.legend-item.refeed { color: #f97316; font-size: 11px; }
 
 /* Сегодняшний день - синий как в навигации */
 .date-picker-day.today {

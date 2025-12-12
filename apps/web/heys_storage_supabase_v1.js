@@ -1637,58 +1637,48 @@
       }
 
       // 🔄 Автовосстановление сессии при старте (RTR-safe)
-      // 🔄 RTR-safe v2: Восстановление сессии при старте
-      // Теперь persistSession=true, SDK сам восстановит сессию из storage
-      // Мы просто читаем user и проверяем access_token
+      // 🔄 Восстановление сессии при старте (токены отключены в Supabase)
+      // Просто читаем user из localStorage без проверки expires_at
       const restoreSessionFromStorage = () => {
         try {
           const stored = localStorage.getItem('heys_supabase_auth_token');
-          if (!stored) return { user: null, expired: false };
+          if (!stored) return { user: null };
           const parsed = JSON.parse(stored);
-          const expiresAt = parsed?.expires_at;
           const accessToken = parsed?.access_token;
           const refreshToken = parsed?.refresh_token;
           const storedUser = parsed?.user;
 
           // Мини-валидация
-          if (!accessToken || !storedUser) return { user: null, expired: false };
+          if (!accessToken || !storedUser) return { user: null };
           
-          // Буфер 60 секунд — чтобы не влетать в граничные условия
-          const isExpired = !expiresAt || expiresAt * 1000 <= Date.now() + 60000;
-          
-          return { user: storedUser, expired: isExpired, refreshToken };
+          return { user: storedUser, accessToken, refreshToken };
         } catch (_) {
-          return { user: null, expired: false };
+          return { user: null };
         }
       };
 
       if (!_signInInProgress) {
         const restored = restoreSessionFromStorage();
         
-        if (restored.user && !restored.expired) {
-          // Токен валиден — используем без refresh
+        if (restored.user) {
+          // Токен есть — используем (проверка expires_at отключена, т.к. токены в Supabase отключены)
           user = restored.user;
           status = CONNECTION_STATUS.SYNC;
-          logCritical('🔄 Сессия восстановлена (access_token валиден):', user.email || user.id);
+          logCritical('🔄 Сессия восстановлена:', user.email || user.id);
           
-          // 🔄 RTR-safe v4: Устанавливаем сессию в SDK через setSession()
-          // Это необходимо потому что persistSession=false
+          // Устанавливаем сессию в SDK через setSession()
           try {
-            const stored = localStorage.getItem('heys_supabase_auth_token');
-            if (stored) {
-              const parsed = JSON.parse(stored);
-              if (parsed.access_token && parsed.refresh_token) {
-                client.auth.setSession({
-                  access_token: parsed.access_token,
-                  refresh_token: parsed.refresh_token
-                }).then(({ error }) => {
-                  if (error) {
-                    logCritical('⚠️ setSession error:', error.message);
-                  } else {
-                    logCritical('✅ Сессия установлена в SDK');
-                  }
-                }).catch(() => {});
-              }
+            if (restored.accessToken && restored.refreshToken) {
+              client.auth.setSession({
+                access_token: restored.accessToken,
+                refresh_token: restored.refreshToken
+              }).then(({ error }) => {
+                if (error) {
+                  logCritical('⚠️ setSession error:', error.message);
+                } else {
+                  logCritical('✅ Сессия установлена в SDK');
+                }
+              }).catch(() => {});
             }
           } catch (_) {}
           
@@ -1708,16 +1698,6 @@
           } else {
             finishOnline();
           }
-        } else if (restored.user && restored.expired && restored.refreshToken) {
-          // 🚫 RTR-safe v3: НЕ пытаемся refresh — это триггерит 400 Bad Request
-          // При Refresh Token Rotation токен одноразовый и скорее всего уже использован
-          // Лучше сразу очистить и показать экран логина
-          logCritical('⚠️ Access token истёк — требуется повторный вход');
-          try {
-            localStorage.removeItem('heys_supabase_auth_token');
-          } catch (_) {}
-          status = CONNECTION_STATUS.OFFLINE;
-          user = null;
         }
       }
 

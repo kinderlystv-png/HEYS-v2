@@ -1055,7 +1055,9 @@
         sleepHours,
         moodAvg: +dayData.moodAvg || 0,
         dayScore: +dayData.dayScore || 0,
-        cycleDay: dayData.cycleDay || null // День менструального цикла (1-N или null)
+        cycleDay: dayData.cycleDay || null, // День менструального цикла (1-N или null)
+        isRefeedDay: dayData.isRefeedDay || false, // Загрузочный день
+        refeedReason: dayData.refeedReason || null // Причина refeed
       };
     } catch (e) {
       return null;
@@ -1244,7 +1246,9 @@
           hasTraining, trainingTypes, trainingMinutes,
           moodAvg, sleepHours, dayScore,
           prot, fat, carbs,
-          cycleDay
+          cycleDay,
+          isRefeedDay: dayInfo.isRefeedDay || false,
+          refeedReason: dayInfo.refeedReason || null
         });
       }
     } catch (e) {

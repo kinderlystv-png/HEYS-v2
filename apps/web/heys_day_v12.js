@@ -8864,22 +8864,34 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         let ratio = null;
         let kcal = 0;
         let status = 'empty'; // empty | low | green | yellow | red | perfect
+        let isRefeedDay = false; // Загрузочный день
         
         // Используем централизованный ratioZones
         const rz = HEYS.ratioZones;
         
         if (!isFuture) {
           const dayInfo = allActiveDays.get(dateStr);
+          isRefeedDay = dayInfo?.isRefeedDay || false;
+          
           if (dayInfo && dayInfo.kcal > 0) {
             kcal = dayInfo.kcal;
             const target = dayInfo.target || optimum;
             if (kcal > 0 && target > 0) {
               ratio = kcal / target;
-              // Используем ratioZones для определения статуса
-              status = rz ? rz.getHeatmapStatus(ratio) : 'empty';
+              // Используем ratioZones для определения статуса — с учётом refeed
+              if (isRefeedDay && rz && rz.getDayZone) {
+                // Refeed: используем расширенные зоны (до 1.35 = ok)
+                const refeedZone = rz.getDayZone(ratio, { isRefeedDay: true });
+                status = refeedZone.id === 'refeed_ok' ? 'green' : 
+                         refeedZone.id === 'refeed_under' ? 'yellow' : 'red';
+              } else {
+                status = rz ? rz.getHeatmapStatus(ratio) : 'empty';
+              }
               
-              // Считаем streak (последовательные успешные дни — green)
-              const isSuccess = rz ? rz.isSuccess(ratio) : (ratio >= 0.75 && ratio <= 1.1);
+              // Считаем streak (последовательные успешные дни — green) — с учётом refeed
+              const isSuccess = rz?.isStreakDayWithRefeed 
+                ? rz.isStreakDayWithRefeed(ratio, { isRefeedDay })
+                : (rz ? rz.isSuccess(ratio) : (ratio >= 0.75 && ratio <= 1.1));
               if (isSuccess && (days.length === 0 || days[days.length - 1].status === 'green')) {
                 streak++;
               } else if (!isSuccess) {
@@ -8907,6 +8919,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           isToday,
           isFuture,
           isWeekend,
+          isRefeedDay, // Загрузочный день
           // Градиентный цвет из ratioZones
           bgColor: ratio && rz ? rz.getGradientColor(ratio, 0.6) : null
         });

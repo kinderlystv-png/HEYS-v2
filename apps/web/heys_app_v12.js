@@ -4,7 +4,7 @@
         const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.12.2004.d054a17'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.12.2031.6d65403'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -4665,39 +4665,22 @@
                 setEmail(savedEmail);
                 initLocalData();
                 
-                // ⚠️ Проверяем access_token локально ПЕРЕД вызовом getSession()
-                // Если токен истёк — SDK попытается refresh и получит 400 Bad Request
-                const isTokenValid = () => {
-                  try {
-                    const stored = localStorage.getItem('heys_supabase_auth_token');
-                    if (!stored) return false;
-                    const parsed = JSON.parse(stored);
-                    const expiresAt = parsed?.expires_at;
-                    // Добавляем буфер 1 минута
-                    return expiresAt && expiresAt * 1000 > Date.now() + 60000;
-                  } catch (e) { return false; }
-                };
-                
-                // ⚠️ RTR-safe: НЕ вызываем cloud.client.auth.getSession()
-                // В Supabase RTR любой скрытый refresh может привести к 400 refresh_token_already_used.
-                // Вместо этого читаем сохранённый токен из localStorage.
+                // Читаем сохранённого пользователя из localStorage
+                // ⚠️ Проверка expires_at отключена — токены отключены в Supabase
                 const readStoredAuthUser = () => {
                   try {
                     const stored = localStorage.getItem('heys_supabase_auth_token');
                     if (!stored) return null;
                     const parsed = JSON.parse(stored);
-                    const expiresAt = parsed?.expires_at;
                     const u = parsed?.user;
-                    if (!u || !expiresAt) return null;
-                    // Буфер 1 минута
-                    if (expiresAt * 1000 <= Date.now() + 60000) return null;
+                    if (!u) return null;
                     return u;
                   } catch (e) { return null; }
                 };
 
-                const storedUser = isTokenValid() ? readStoredAuthUser() : null;
+                const storedUser = readStoredAuthUser();
                 if (cloud && cloud.client && storedUser) {
-                  // Ставим пользователя, затем пробуем сделать лёгкий запрос (он НЕ должен вызывать refresh)
+                  // Ставим пользователя, затем пробуем сделать лёгкий запрос
                   setCloudUser(storedUser);
                   setStatus('online');
                   console.log('[HEYS] ✅ Сессия восстановлена (storage):', storedUser.email || storedUser.id);
@@ -4718,26 +4701,10 @@
                     .finally(() => {
                       setIsInitializing(false);
                     });
-                } else if (cloud && cloud.client) {
-                  // 🚫 RTR-safe v3: НЕ пытаемся refresh — это триггерит 400 Bad Request
-                  // При Refresh Token Rotation токен одноразовый и скорее всего уже использован
-                  // Просто очищаем и показываем экран логина
-                  console.log('[HEYS] ⚠️ Токен истёк, требуется повторный вход');
-                  try {
-                    localStorage.removeItem('heys_supabase_auth_token');
-                  } catch (_) {}
-                  setStatus('offline');
-                  setIsInitializing(false);
                 } else {
-                  console.log('[HEYS] ⏭️ Токен истёк, пропуск автовосстановления');
-                  // Показываем уведомление о необходимости повторного входа
+                  // Нет сохранённой сессии — работаем офлайн
+                  console.log('[HEYS] ⏭️ Нет сохранённой сессии куратора');
                   setStatus('offline');
-                  // Отложенное уведомление — даём UI время загрузиться
-                  setTimeout(() => {
-                    if (typeof HEYS !== 'undefined' && HEYS.toast) {
-                      HEYS.toast.warning('Сессия истекла. Войдите в настройках для синхронизации.', 5000);
-                    }
-                  }, 2000);
                   setIsInitializing(false);
                 }
               } else {
