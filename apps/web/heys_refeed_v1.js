@@ -633,7 +633,61 @@
       xpAction: 'refeed_marked'
     });
     
-    console.log('[Refeed] ✅ Шаг зарегистрирован');
+    if (window.location?.hostname === 'localhost') {
+      console.log('[Refeed] ✅ Шаг зарегистрирован');
+    }
+  }
+
+  // === RENDER HELPERS ===
+
+  /**
+   * Render Refeed Toggle кнопка для карточки калорий
+   * @param {Object} props - { isRefeedDay, refeedReason, caloricDebt, optimum, onToggle }
+   * @returns {React.Element|null}
+   */
+  function renderRefeedToggle(props) {
+    const { isRefeedDay, refeedReason, caloricDebt, optimum, onToggle } = props || {};
+    
+    const needsRefeed = caloricDebt?.needsRefeed === true;
+    
+    // Показываем только если: отмечен ИЛИ рекомендуется ИЛИ есть долг >500
+    const shouldShow = isRefeedDay || needsRefeed || (caloricDebt?.debt > 500);
+    if (!shouldShow) return null;
+    
+    // Определяем причину для бейджа
+    const reason = isRefeedDay && refeedReason ? getReasonById(refeedReason) : null;
+    
+    // Wrapper для onToggle
+    const handleToggle = () => {
+      if (isRefeedDay) {
+        // Отключение — просто сбрасываем
+        onToggle?.(false, null);
+      } else {
+        // Включение — показываем popup выбора причины или ставим дефолтную
+        // Для простоты пока ставим 'deficit' если есть долг, иначе 'rest'
+        const defaultReason = caloricDebt?.debt > 500 ? 'deficit' : 'rest';
+        onToggle?.(true, defaultReason);
+      }
+    };
+    
+    const label = isRefeedDay 
+      ? `🔄 Загрузка ${reason ? reason.icon : '✓'}` 
+      : (needsRefeed ? '+ Загрузка 💡' : '+ Загрузка');
+    
+    const title = isRefeedDay 
+      ? `Загрузочный день: ${reason?.label || 'активен'}\nКликни чтобы отменить`
+      : `Отметить как загрузочный день (+35% к норме)`;
+    
+    return React.createElement('button', {
+      type: 'button',
+      className: 'refeed-toggle' + 
+        (isRefeedDay ? ' refeed-toggle--active' : '') + 
+        (needsRefeed && !isRefeedDay ? ' refeed-toggle--recommended' : ''),
+      onClick: handleToggle,
+      title: title
+    },
+      React.createElement('span', { className: 'refeed-toggle-label' }, label)
+    );
   }
 
   // === ЭКСПОРТ МОДУЛЯ ===
@@ -671,12 +725,12 @@
     // Инициализация
     registerStep: registerRefeedStep,
     
-    // Версия
     // Хелперы для UI
+    renderRefeedToggle,  // 🆕 v1.3.1 — toggle для карточки калорий
     renderRefeedStats,
     
     // Версия
-    version: '1.3.0'  // v1.3.0 — renderRefeedStats в UI
+    version: '1.3.1'  // v1.3.1 — renderRefeedToggle fix
   };
   
   // Автоматическая регистрация шага при загрузке
@@ -688,7 +742,7 @@
   
   // Логируем только в dev режиме
   if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
-    console.log('[HEYS] 🔄 Refeed Module v1.3.0 loaded');
+    console.log('[HEYS] 🔄 Refeed Module v1.3.1 loaded');
   }
 
 })(typeof window !== 'undefined' ? window : global);
