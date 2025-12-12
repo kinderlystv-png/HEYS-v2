@@ -94,7 +94,16 @@
   let user = null;
   let muteMirror = false;
   
-  // 🔄 Флаг для предотвращения race condition между автовосстановлением и явным signIn
+  // � PIN-авторизация: client_id проверенный через verify_client_pin (без Supabase user)
+  let _pinAuthClientId = null;
+  cloud.setPinAuthClient = function(clientId) { 
+    _pinAuthClientId = clientId; 
+    log('🔐 PIN auth client set:', clientId?.substring(0, 8) + '...');
+  };
+  cloud.getPinAuthClient = function() { return _pinAuthClientId; };
+  cloud.clearPinAuthClient = function() { _pinAuthClientId = null; };
+  
+  // �🔄 Флаг для предотвращения race condition между автовосстановлением и явным signIn
   let _signInInProgress = false;
   
   // 🔄 Timestamp до которого игнорируем SIGNED_OUT (защита от ложных событий SDK)
@@ -2517,7 +2526,7 @@
       
       // Уведомляем UI о завершении
       if (typeof window !== 'undefined' && window.dispatchEvent) {
-        window.dispatchEvent(new CustomEvent('heysSyncComplete', { 
+        window.dispatchEvent(new CustomEvent('heysSyncCompleted', { 
           detail: { clientId, loaded: loadedCount, viaRPC: true } 
         }));
       }
@@ -2574,7 +2583,12 @@
   let _syncInProgress = null; // null | Promise
   // options.force = true — bypass throttling (для pull-to-refresh)
   cloud.bootstrapClientSync = async function(client_id, options){
-    if (!client || !user || !client_id) return;
+    // 🔐 PIN-авторизация: работаем без user, если client_id проверен через verify_client_pin
+    const isPinAuth = _pinAuthClientId && _pinAuthClientId === client_id;
+    
+    // Для обычной авторизации нужен client и user, для PIN — только client
+    if (!client || !client_id) return;
+    if (!user && !isPinAuth) return; // Нет ни user, ни PIN-авторизации
     
     // Дедупликация: если sync уже в процессе для этого клиента — ждём его завершения
     if (_syncInProgress) {
@@ -3683,7 +3697,9 @@
             return; // Тихий пропуск сохранения до выбора реального клиента
         }
 
-        if (!user || !user.id) {
+        // 🔐 PIN-авторизация: работаем без user
+        const isPinAuth = _pinAuthClientId && _pinAuthClientId === client_id;
+        if (!user && !isPinAuth) {
             return;
         }
 
@@ -3804,15 +3820,26 @@
     };
 
     // Функция только проверяет существование клиента (больше НЕ создаём автоматически)
+    // 🔐 Для PIN-авторизации: проверяем только по id (без curator_id)
     cloud.ensureClient = async function(clientId) {
-        if (!client || !user || !clientId) return false;
+        if (!client || !clientId) return false;
+        
+        // 🔐 PIN-авторизация: клиент уже проверен через verify_client_pin
+        const isPinAuth = _pinAuthClientId && _pinAuthClientId === clientId;
+        
         try {
-            const { data, error } = await client
+            let query = client
               .from('clients')
               .select('id')
-              .eq('id', clientId)
-              .eq('curator_id', user.id)
-              .limit(1);
+              .eq('id', clientId);
+            
+            // Для обычной авторизации проверяем curator_id
+            // Для PIN — только существование клиента (RLS на таблице clients запретит доступ чужим)
+            if (user && !isPinAuth) {
+              query = query.eq('curator_id', user.id);
+            }
+            
+            const { data, error } = await query.limit(1);
             if (error) return false;
             return (data && data.length > 0);
         } catch(e){
@@ -3821,8 +3848,11 @@
     };
 
     // Функция для отправки данных в client_kv_store
+    // 🔐 Поддерживает PIN-авторизацию (без user)
     cloud.upsert = async function(tableName, obj, conflictKey) {
-        if (!client || !user) {
+        const isPinAuth = _pinAuthClientId && obj.client_id === _pinAuthClientId;
+        
+        if (!client || (!user && !isPinAuth)) {
             throw new Error('Client or user not available');
         }
         
@@ -4281,6 +4311,7 @@
       } else {
         logCritical('🔐 [SWITCH] Нет Supabase сессии — используем RPC sync');
         _rpcOnlyMode = true; // Клиент по PIN — RPC режим для сохранений
+        _pinAuthClientId = newClientId; // 🔐 Сохраняем client_id для проверки в saveClientKey
         const rpcResult = await cloud.syncClientViaRPC(newClientId);
         if (!rpcResult.success) {
           throw new Error(rpcResult.error || 'RPC sync failed');
