@@ -2726,7 +2726,7 @@
   background: linear-gradient(135deg, #f8fafc 0%, var(--color-slate-100) 100%);
   border: 1px solid var(--color-slate-200);
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: 12px 16px 28px 16px;
   position: relative;
   transition: box-shadow 0.3s ease, transform 0.1s ease;
 }
