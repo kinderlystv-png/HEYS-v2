@@ -4811,9 +4811,18 @@
               return parts.length > 0 ? parts.join(', ') : '';
             };
 
-            const currentClientName = Array.isArray(clients) 
-              ? (clients.find((c) => c.id === clientId)?.name || 'Выберите клиента')
-              : 'Выберите клиента';
+            // Имя клиента: в RPC режиме из профиля, иначе из списка clients
+            const currentClientName = (() => {
+              if (HEYS.cloud?.isRpcOnlyMode?.()) {
+                const U = window.HEYS && window.HEYS.utils;
+                const profile = U && U.lsGet ? U.lsGet('heys_profile', {}) : {};
+                const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(' ');
+                return fullName || 'Мой профиль';
+              }
+              return Array.isArray(clients) 
+                ? (clients.find((c) => c.id === clientId)?.name || 'Выберите клиента')
+                : 'Выберите клиента';
+            })();
             
             // Morning Check-in блокирует основной контент (показывается ДО загрузки)
             const isMorningCheckinBlocking = showMorningCheckin === true && HEYS.MorningCheckin;
