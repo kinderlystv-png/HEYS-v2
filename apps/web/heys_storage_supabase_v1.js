@@ -1883,6 +1883,83 @@
   };
 
   /**
+   * Принудительный push данных дня из localStorage в облако
+   * Вызывать из консоли: HEYS.cloud.forcePushDay('2025-12-12') или без аргументов для сегодня
+   */
+  cloud.forcePushDay = async function(dateStr) {
+    const clientId = HEYS.utils?.getCurrentClientId?.() || HEYS.currentClientId;
+    if (!clientId) {
+      console.error('❌ Нет clientId');
+      return { error: 'No clientId' };
+    }
+    if (!user || !user.id) {
+      console.error('❌ Не авторизован');
+      return { error: 'Not authenticated' };
+    }
+    
+    // Если дата не передана — используем сегодня
+    const date = dateStr || new Date().toISOString().split('T')[0];
+    const key = `heys_${clientId}_dayv2_${date}`;
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      console.error(`❌ Нет данных дня в localStorage по ключу ${key}`);
+      return { error: 'No day data in localStorage' };
+    }
+    
+    let dayData;
+    try {
+      dayData = JSON.parse(raw);
+    } catch (e) {
+      return { error: 'Parse error' };
+    }
+    
+    console.log(`📤 Pushing day ${date} to cloud for client ${clientId.substring(0,8)}...`);
+    console.log(`   Meals: ${dayData.meals?.length || 0}, Items: ${dayData.meals?.reduce((s,m) => s + (m.items?.length || 0), 0) || 0}`);
+    
+    // Сохраняем в Supabase
+    const { error } = await client
+      .from('client_kv_store')
+      .upsert({
+        user_id: user.id,
+        client_id: clientId,
+        k: `heys_dayv2_${date}`,
+        v: dayData,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,client_id,k' });
+    
+    if (error) {
+      console.error('❌ Ошибка сохранения:', error);
+      return { error: error.message };
+    }
+    
+    console.log(`✅ Успешно сохранён день ${date} в облако!`);
+    return { success: true, date, mealsCount: dayData.meals?.length || 0, clientId };
+  };
+
+  /**
+   * Принудительный push ВСЕХ данных дней за последние N дней
+   * Вызывать из консоли: HEYS.cloud.forcePushAllDays(7) — за неделю
+   */
+  cloud.forcePushAllDays = async function(daysBack = 7) {
+    const clientId = HEYS.utils?.getCurrentClientId?.() || HEYS.currentClientId;
+    if (!clientId || !user || !user.id) {
+      return { error: 'Not authenticated or no clientId' };
+    }
+    
+    const results = [];
+    for (let i = 0; i < daysBack; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const result = await cloud.forcePushDay(dateStr);
+      if (result.success) results.push(dateStr);
+    }
+    
+    console.log(`✅ Синхронизировано ${results.length} дней: ${results.join(', ')}`);
+    return { success: true, days: results };
+  };
+
+  /**
    * Полная очистка auth-данных для решения проблем с токенами
    * Вызывать из консоли: HEYS.cloud.resetAuth()
    */
