@@ -542,8 +542,8 @@
     
     // Значения для пикера часов (форматированные строки)
     const hoursValues = useMemo(() => HOURS_ORDER.map(h => pad2(h)), []);
-    // Значения для пикера минут
-    const minutesValues = useMemo(() => Array.from({ length: 12 }, (_, i) => i * 5), []);
+    // Значения для пикера минут (форматированные строки с ведущим нулём)
+    const minutesValues = useMemo(() => Array.from({ length: 12 }, (_, i) => pad2(i * 5)), []);
     
     // Получаем существующие приёмы для определения типа
     const existingMeals = useMemo(() => {
@@ -812,8 +812,8 @@
         React.createElement('span', { className: 'meal-time-separator' }, ':'),
         React.createElement(WheelPicker, {
           values: minutesValues,
-          value: minutes,
-          onChange: updateMinutes,
+          value: pad2(minutes),
+          onChange: (v) => updateMinutes(parseInt(v, 10)),
           label: 'Минуты',
           suffix: ''
         })

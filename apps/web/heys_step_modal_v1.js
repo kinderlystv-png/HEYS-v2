@@ -279,8 +279,80 @@
     );
   }
 
+  // === TimePicker — переиспользуемый компонент выбора времени ===
+  /**
+   * Унифицированный пикер времени (часы:минуты)
+   * @param {Object} props
+   * @param {number} props.hours - Значение часов (0-23)
+   * @param {number} props.minutes - Значение минут (0-55, шаг 5)
+   * @param {function} props.onHoursChange - Callback при изменении часов
+   * @param {function} props.onMinutesChange - Callback при изменении минут
+   * @param {string} [props.hoursLabel='ЧАСЫ'] - Подпись над часами
+   * @param {string} [props.minutesLabel='МИНУТЫ'] - Подпись над минутами
+   * @param {boolean} [props.wrap=true] - Циклическая прокрутка
+   * @param {boolean} [props.compact=false] - Компактный режим (3 значения)
+   * @param {string} [props.className=''] - Дополнительный класс контейнера
+   * @param {number[]} [props.hoursValues] - Кастомный массив часов
+   * @param {number[]} [props.minutesValues] - Кастомный массив минут
+   * @param {string} [props.display] - Формат отображения времени сверху ('HH:MM' или null)
+   */
+  const DEFAULT_HOURS = Array.from({ length: 24 }, (_, i) => i);
+  const DEFAULT_MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+  const pad2 = (v) => String(v).padStart(2, '0');
+
+  function TimePicker({
+    hours,
+    minutes,
+    onHoursChange,
+    onMinutesChange,
+    hoursLabel = 'ЧАСЫ',
+    minutesLabel = 'МИНУТЫ',
+    wrap = true,
+    compact = false,
+    className = '',
+    hoursValues = DEFAULT_HOURS,
+    minutesValues = DEFAULT_MINUTES,
+    display = 'HH:MM'
+  }) {
+    return React.createElement('div', { className: `mc-time-picker ${className}`.trim() },
+      // Дисплей времени сверху
+      display && React.createElement('div', { className: 'mc-time-display' },
+        React.createElement('span', { className: 'mc-time-display-value' }, 
+          `${pad2(hours)}:${pad2(minutes)}`
+        )
+      ),
+      // Подписи
+      React.createElement('div', { className: 'mc-time-labels' },
+        React.createElement('span', { className: 'mc-time-label' }, hoursLabel),
+        React.createElement('span', { className: 'mc-time-label' }, minutesLabel)
+      ),
+      // Пикеры
+      React.createElement('div', { className: 'mc-time-pickers' },
+        React.createElement(WheelPicker, {
+          values: hoursValues,
+          value: hours,
+          onChange: onHoursChange,
+          label: '',
+          formatValue: pad2,
+          wrap,
+          compact
+        }),
+        React.createElement('span', { className: 'mc-time-sep' }, ':'),
+        React.createElement(WheelPicker, {
+          values: minutesValues,
+          value: minutes,
+          onChange: onMinutesChange,
+          label: '',
+          formatValue: pad2,
+          wrap,
+          compact
+        })
+      )
+    );
+  }
+
   // === Реестр шагов ===
-  const StepRegistry = {};
+  const StepRegistry = {};;
 
   /**
    * Регистрация нового шага
@@ -765,6 +837,8 @@
     registerStep,
     registry: StepRegistry,
     WheelPicker,
+    TimePicker,
+    pad2,
     Context: StepModalContext,
     utils: {
       lsGet,
