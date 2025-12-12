@@ -24,7 +24,7 @@
     
     // Сначала проверяем сегодняшний вес (для редактирования из карточки)
     const todayKey = today.toISOString().slice(0, 10);
-    const todayData = lsGet(`heys_dayv2_${todayKey}`, {});
+    const todayData = lsGet(`heys_dayv2_${todayKey}`, {}) || {};
     if (todayData.weightMorning) {
       return { weight: todayData.weightMorning, daysAgo: 0, date: todayKey };
     }
@@ -34,7 +34,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {});
+      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
       if (dayData.weightMorning) {
         return { weight: dayData.weightMorning, daysAgo: i, date: key };
       }
@@ -49,7 +49,7 @@
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const key = yesterday.toISOString().slice(0, 10);
-    const dayData = lsGet(`heys_dayv2_${key}`, {});
+    const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
     return dayData.weightMorning || null;
   }
 
@@ -60,7 +60,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {});
+      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
       if (dayData.weightMorning) {
         weights.push({ day: -i, weight: dayData.weightMorning });
       }
@@ -151,7 +151,7 @@
     },
     save: (data) => {
       const todayKey = getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${todayKey}`, {});
+      const dayData = lsGet(`heys_dayv2_${todayKey}`, {}) || {};
       const weight = (data.weightKg || 70) + (data.weightG || 0) / 10;
       dayData.date = todayKey;
       dayData.weightMorning = weight;
@@ -171,7 +171,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {});
+      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
       if (dayData.sleepStart && dayData.sleepEnd) {
         return {
           sleepStart: dayData.sleepStart,
@@ -287,7 +287,7 @@
     },
     save: (data) => {
       const todayKey = getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${todayKey}`, {});
+      const dayData = lsGet(`heys_dayv2_${todayKey}`, {}) || {};
       const sleepStart = `${String(data.sleepStartH).padStart(2, '0')}:${String(data.sleepStartM).padStart(2, '0')}`;
       const sleepEnd = `${String(data.sleepEndH).padStart(2, '0')}:${String(data.sleepEndM).padStart(2, '0')}`;
       const sleepHours = calcSleepHours(data.sleepStartH, data.sleepStartM, data.sleepEndH, data.sleepEndM);
@@ -465,7 +465,7 @@
     },
     save: (data) => {
       const todayKey = getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${todayKey}`, {});
+      const dayData = lsGet(`heys_dayv2_${todayKey}`, {}) || {};
       dayData.sleepQuality = data.sleepQuality;
       
       if (data.sleepNote && data.sleepNote.trim()) {
@@ -493,7 +493,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {});
+      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
       if (dayData.steps && dayData.steps > 0) {
         stepsData.push(dayData.steps);
       }
@@ -627,7 +627,7 @@
    * Получить текущий дефицит из дня или профиля
    */
   function getCurrentDeficit(dateKey) {
-    const day = lsGet(`heys_dayv2_${dateKey}`, {});
+    const day = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
     if (day.deficitPct !== undefined && day.deficitPct !== null && day.deficitPct !== '') {
       return day.deficitPct;
     }
@@ -823,7 +823,7 @@
     },
     save: (data) => {
       const dateKey = data.dateKey || new Date().toISOString().slice(0, 10);
-      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
       day.deficitPct = data.deficit;
       day.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, day);
@@ -1190,7 +1190,7 @@
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
       const editIndex = ctx?.editIndex ?? null;
       console.log('[Household getInitialData] dateKey:', dateKey, 'editIndex:', editIndex);
-      const day = lsGet(`heys_dayv2_${dateKey}`, {});
+      const day = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
       console.log('[Household getInitialData] day:', day);
       console.log('[Household getInitialData] day.householdActivities:', day.householdActivities);
       console.log('[Household getInitialData] day.householdMin:', day.householdMin);
@@ -1222,7 +1222,7 @@
       const dateKey = data.dateKey || new Date().toISOString().slice(0, 10);
       const editIndex = data.editIndex;
       console.log('[Household save] editIndex:', editIndex, 'typeof:', typeof editIndex);
-      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
       console.log('[Household save] day.householdActivities:', day.householdActivities);
       
       // Инициализируем массив если его нет
@@ -1278,7 +1278,7 @@
     getInitialData: (ctx, prevData) => {
       // Получаем данные от предыдущего шага (household_minutes)
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-      const day = lsGet(`heys_dayv2_${dateKey}`, {});
+      const day = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
       // Приоритет: данные от предыдущего шага > данные из storage
       const minutes = prevData?.minutes ?? day.householdMin ?? 0;
       const householdTime = prevData?.householdTime ?? day.householdTime ?? '';
@@ -1295,7 +1295,7 @@
     component: HouseholdMinutesComponent,  // Показываем только минуты в старом режиме
     getInitialData: (ctx) => {
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-      const day = lsGet(`heys_dayv2_${dateKey}`, {});
+      const day = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
       const weekly = getWeeklyHouseholdStats();
       const minutes = day.householdMin || weekly.avg || 0;
       const householdTime = day.householdTime || '';
@@ -1303,7 +1303,7 @@
     },
     save: (data) => {
       const dateKey = data.dateKey || new Date().toISOString().slice(0, 10);
-      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
       day.householdMin = data.minutes;
       day.householdTime = data.householdTime || '';
       day.updatedAt = Date.now();
@@ -1488,7 +1488,7 @@
     shouldShow: shouldShowCycleStep,
     getInitialData: (ctx) => {
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-      const day = lsGet(`heys_dayv2_${dateKey}`, {});
+      const day = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
       return { 
         cycleDay: day.cycleDay || null,
         _dateKey: dateKey 
@@ -1505,7 +1505,7 @@
           HEYS.Cycle.setCycleDaysAuto(dateKey, cycleDay, lsGet, lsSet);
         } else {
           // Fallback: просто сохраняем один день
-          const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+          const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
           day.cycleDay = cycleDay;
           day.updatedAt = Date.now();
           lsSet(`heys_dayv2_${dateKey}`, day);
@@ -1516,7 +1516,7 @@
           HEYS.Cycle.clearCycleDays(dateKey, lsGet, lsSet);
         } else {
           // Fallback: очищаем только текущий день
-          const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+          const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
           day.cycleDay = null;
           day.updatedAt = Date.now();
           lsSet(`heys_dayv2_${dateKey}`, day);
@@ -1599,7 +1599,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {});
+      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
       const m = dayData.measurements;
       if (m && m.measuredAt && m[field]) {
         return { value: m[field], date: key, daysAgo: i };
