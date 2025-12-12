@@ -8789,14 +8789,19 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       }
     }, [sparklineData, optimum, day.trainings]);
     
-    // === displayOptimum — норма с учётом калорийного долга ===
+    // === displayOptimum — норма с учётом калорийного долга и refeed ===
     // Используется для UI отображения "сколько можно съесть сегодня"
     const displayOptimum = useMemo(() => {
+      // 1. Refeed day — +35% к норме (приоритет над caloricDebt)
+      if (day.isRefeedDay && HEYS.Refeed) {
+        return HEYS.Refeed.getRefeedOptimum(optimum);
+      }
+      // 2. Caloric debt — добавляем долг к норме
       if (caloricDebt && caloricDebt.dailyBoost > 0) {
         return optimum + caloricDebt.dailyBoost;
       }
       return optimum;
-    }, [optimum, caloricDebt]);
+    }, [optimum, caloricDebt, day.isRefeedDay]);
     
     // Осталось калорий с учётом долга
     const displayRemainingKcal = React.useMemo(() => {
@@ -11786,7 +11791,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           
           // Цвет заголовка — общий статус дня
           let titleColor, titleIcon, titleText;
-          if (ratio < 0.80) {
+          
+          // === REFEED DAY — особый статус ===
+          if (day.isRefeedDay && HEYS.Refeed) {
+            const refeedZone = HEYS.Refeed.getRefeedZone(ratio);
+            titleColor = refeedZone.color;
+            titleIcon = refeedZone.icon;
+            titleText = refeedZone.name;
+          } else if (ratio < 0.80) {
             titleColor = '#eab308';
             titleIcon = '📉';
             titleText = 'Маловато';
@@ -14909,6 +14921,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       (!isMobile || mobileSubTab === 'stats') && compactActivity,
       (!isMobile || mobileSubTab === 'stats') && sideBlock,
       (!isMobile || mobileSubTab === 'stats') && cycleCard,
+      // Refeed Card — показывается если сегодня загрузочный день
+      (!isMobile || mobileSubTab === 'stats') && day.isRefeedDay && HEYS.Refeed && HEYS.Refeed.renderRefeedCard({
+        isRefeedDay: day.isRefeedDay,
+        refeedReason: day.refeedReason,
+        caloricDebt: caloricDebt,
+        eatenKcal: eatenKcal,
+        optimum: optimum
+      }),
       
       // === FAB группа: приём пищи + вода (на обеих вкладках) ===
       isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && React.createElement('div', {

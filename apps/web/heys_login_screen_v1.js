@@ -281,6 +281,12 @@
         const newDigits = input.replace(/\D/g, '').slice(0, 10);
         // Обновляем состояние — храним форматированную строку для display
         setPhoneMasked(newDigits);
+        // Автофокус на PIN после ввода 10 цифр
+        if (newDigits.length === 10) {
+          setTimeout(() => {
+            try { pinRefs.current[0] && pinRefs.current[0].focus(); } catch (_) {}
+          }, 50);
+        }
       };
       
       // Обработчик нажатия клавиш для правильного удаления
@@ -362,6 +368,14 @@
                       else clearHidePinDigit(i);
                       if (v && i < 3) {
                         try { pinRefs.current[i + 1] && pinRefs.current[i + 1].focus(); } catch (_) {}
+                      }
+                      // Автоматический вход после ввода последней цифры PIN
+                      if (v && i === 3) {
+                        const newPin = arr.join('');
+                        const isPinValid = auth && auth.validatePin(newPin);
+                        if (clientPhoneValid && isPinValid && !busy) {
+                          setTimeout(() => handleClientLogin(), 100);
+                        }
                       }
                     },
                     onKeyDown: (e) => {

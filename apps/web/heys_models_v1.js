@@ -320,6 +320,9 @@
       householdTime: d.householdTime || undefined,
       // День менструального цикла (null = не указан, 1-7 = день цикла)
       cycleDay: d.cycleDay != null ? d.cycleDay : null,
+      // Загрузочный день (Refeed Day)
+      isRefeedDay: d.isRefeedDay != null ? d.isRefeedDay : null,
+      refeedReason: d.refeedReason || null, // 'deficit' | 'training' | 'holiday' | 'rest'
       // Утренние рейтинги из morning_mood шага
       moodMorning: d.moodMorning != null ? +d.moodMorning : undefined,
       wellbeingMorning: d.wellbeingMorning != null ? +d.wellbeingMorning : undefined,

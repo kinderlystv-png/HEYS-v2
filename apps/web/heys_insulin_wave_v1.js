@@ -439,6 +439,51 @@
     weak: [/пиво/i, /сидр/i, /эль/i]
   };
 
+  // ⚠️ Важно: RegExp без границ слова даёт ложные совпадения.
+  // Пример: "свино-говядина" содержит подстроку "вино".
+  // Поэтому для алкоголя используем токены (слова) + exact/prefix матчи.
+  const ALCOHOL_MATCH = {
+    strongExact: ['водка', 'виски', 'whisky', 'whiskey', 'коньяк', 'cognac', 'текила', 'tequila', 'джин', 'gin', 'ром', 'rum'],
+    mediumExact: ['вино', 'wine', 'шампанское', 'champagne', 'просекко', 'мартини', 'martini', 'вермут', 'vermouth'],
+    weakExact: ['пиво', 'beer', 'сидр', 'cider', 'эль', 'ale', 'лагер', 'lager', 'ликер', 'liqueur'],
+    // Prefix — для словоформ/составных слов (но избегаем коротких корней типа "ром")
+    strongPrefix: ['алкогол', 'alcohol'],
+    mediumPrefix: [],
+    weakPrefix: ['лагер'],
+    // Комбо-фразы: коктейль + алкоголь (любой порядок)
+    comboAll: ['коктейл', 'cocktail'],
+  };
+
+  function normalizeTextForTokenMatch(s) {
+    return String(s || '')
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      // Всё кроме букв/цифр → пробел
+      .replace(/[^a-z0-9а-яе]+/gi, ' ')
+      .trim()
+      .replace(/\s+/g, ' ');
+  }
+
+  function tokenizeText(sNorm) {
+    return sNorm ? sNorm.split(' ') : [];
+  }
+
+  function tokensHasExact(tokens, exactList) {
+    if (!tokens.length || !exactList?.length) return false;
+    const set = new Set(exactList);
+    return tokens.some((t) => set.has(t));
+  }
+
+  function tokensHasPrefix(tokens, prefixList) {
+    if (!tokens.length || !prefixList?.length) return false;
+    return tokens.some((t) => prefixList.some((p) => t.startsWith(p)));
+  }
+
+  function tokensHasAll(tokens, words) {
+    if (!tokens.length || !words?.length) return false;
+    return words.every((w) => tokens.some((t) => t.startsWith(w)));
+  }
+
   // ☕ CAFFEINE — кофеин имеет краткосрочный эффект на инсулин
   // Исследования неоднозначны: острый эффект ~5-10%, но долгосрочно нейтрален (Lane, 2011)
   const CAFFEINE_BONUS = {
@@ -2104,28 +2149,38 @@
    */
   const getAlcoholBonus = (prod) => {
     if (!prod) return { type: null, bonus: 0 };
-    const name = (prod.name || '').toLowerCase();
-    
-    // Проверяем крепкие напитки (приоритет выше)
-    for (const pattern of ALCOHOL_BONUS.strong) {
-      if (pattern.test(name)) return { type: 'strong', bonus: ALCOHOL_BONUS.high.bonus };
+    const nameNorm = normalizeTextForTokenMatch(prod.name || '');
+    const tokens = tokenizeText(nameNorm);
+
+    // Комбо: коктейль + алкоголь
+    if (tokensHasAll(tokens, ALCOHOL_MATCH.comboAll) && tokensHasPrefix(tokens, ALCOHOL_MATCH.strongPrefix)) {
+      return { type: 'general', bonus: ALCOHOL_BONUS.low.bonus };
     }
-    
-    // Проверяем средней крепости
-    for (const pattern of ALCOHOL_BONUS.medium) {
-      if (pattern.test(name)) return { type: 'medium', bonus: ALCOHOL_BONUS.medium.bonus };
+
+    // Крепкие (приоритет выше)
+    if (tokensHasExact(tokens, ALCOHOL_MATCH.strongExact)) {
+      return { type: 'strong', bonus: ALCOHOL_BONUS.high.bonus };
     }
-    
-    // Проверяем слабоалкогольные
-    for (const pattern of ALCOHOL_BONUS.weak) {
-      if (pattern.test(name)) return { type: 'weak', bonus: ALCOHOL_BONUS.low.bonus };
+
+    // Средние
+    if (tokensHasExact(tokens, ALCOHOL_MATCH.mediumExact)) {
+      return { type: 'medium', bonus: ALCOHOL_BONUS.medium.bonus };
     }
-    
-    // Общая проверка по паттернам
-    for (const pattern of ALCOHOL_BONUS.patterns) {
-      if (pattern.test(name)) return { type: 'general', bonus: ALCOHOL_BONUS.low.bonus };
+
+    // Слабые
+    if (tokensHasExact(tokens, ALCOHOL_MATCH.weakExact) || tokensHasPrefix(tokens, ALCOHOL_MATCH.weakPrefix)) {
+      return { type: 'weak', bonus: ALCOHOL_BONUS.low.bonus };
     }
-    
+
+    // Общий случай: любое упоминание алкоголя (без ложных совпадений по подстроке)
+    if (
+      tokensHasPrefix(tokens, ALCOHOL_MATCH.strongPrefix) ||
+      tokensHasPrefix(tokens, ALCOHOL_MATCH.mediumPrefix) ||
+      tokensHasPrefix(tokens, ALCOHOL_MATCH.weakPrefix)
+    ) {
+      return { type: 'general', bonus: ALCOHOL_BONUS.low.bonus };
+    }
+
     return { type: null, bonus: 0 };
   };
 
