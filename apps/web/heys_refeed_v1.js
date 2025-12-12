@@ -652,10 +652,10 @@
     const { isRefeedDay, refeedReason, caloricDebt, optimum, onToggle } = props || {};
     
     const needsRefeed = caloricDebt?.needsRefeed === true;
+    const hasDebt = caloricDebt?.debt > 500;
     
-    // Показываем только если: отмечен ИЛИ рекомендуется ИЛИ есть долг >500
-    const shouldShow = isRefeedDay || needsRefeed || (caloricDebt?.debt > 500);
-    if (!shouldShow) return null;
+    // Кнопка показывается ВСЕГДА — пользователь сам решает когда включить refeed
+    // Но если нет рекомендации и не включён — показываем компактнее
     
     // Определяем причину для бейджа
     const reason = isRefeedDay && refeedReason ? getReasonById(refeedReason) : null;
@@ -675,7 +675,7 @@
     
     const label = isRefeedDay 
       ? `🍕 Загрузка ${reason ? reason.icon : '✓'}` 
-      : (needsRefeed ? '+ Загрузка 💡' : '+ Загрузка');
+      : (needsRefeed ? '💡 Загрузка' : (hasDebt ? '+ Загрузка' : '🍕'));
     
     const title = isRefeedDay 
       ? `Загрузочный день: ${reason?.label || 'активен'}\nКликни чтобы отменить`
@@ -685,7 +685,8 @@
       type: 'button',
       className: 'refeed-toggle' + 
         (isRefeedDay ? ' refeed-toggle--active' : '') + 
-        (needsRefeed && !isRefeedDay ? ' refeed-toggle--recommended' : ''),
+        (needsRefeed && !isRefeedDay ? ' refeed-toggle--recommended' : '') +
+        (!isRefeedDay && !needsRefeed && !hasDebt ? ' refeed-toggle--minimal' : ''),
       onClick: handleToggle,
       title: title
     },

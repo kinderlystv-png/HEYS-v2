@@ -425,6 +425,20 @@
   animation: refeed-toggle-hint 3s ease-in-out infinite;
 }
 
+/* Минимальная версия — только иконка, без текста */
+.refeed-toggle--minimal {
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px dashed #d1d5db;
+  opacity: 0.6;
+}
+
+.refeed-toggle--minimal:hover {
+  opacity: 1;
+  background: #fef3c7;
+  border-style: solid;
+}
+
 @keyframes refeed-toggle-hint {
   0%, 100% {
     background: #f9fafb;
