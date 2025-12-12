@@ -3412,11 +3412,13 @@
     // ─────────────────────────────────────────────────────────
     
     if (caloricDebt && caloricDebt.hasDebt) {
-      const debtKcal = Math.abs(caloricDebt.totalDebt);
+      const debtKcal = Math.abs(caloricDebt.totalDebt || 0);
       const dailyBoost = caloricDebt.dailyBoost || 0;
       const daysWithDeficit = caloricDebt.daysWithDeficit || 0;
       const needsRefeed = caloricDebt.needsRefeed || false;
       const refeedBoost = caloricDebt.refeedBoost || 0;
+      const consecutiveDeficitDays = caloricDebt.consecutiveDeficitDays || 0;
+      const eatenPctOfTarget = (dayTot?.kcal || 0) / (needsRefeed ? (optimum + refeedBoost) : displayOptimum);
       
       // 🔥 REFEED DAY — Рекомендация (приоритет выше обычного долга)
       if (needsRefeed && hour >= 8 && hour <= 12 && !sessionStorage.getItem('heys_refeed_recommended')) {
@@ -3424,7 +3426,7 @@
           id: 'refeed_recommended',
           icon: '🔥',
           text: `Сегодня Refeed Day! Норма +${refeedBoost} ккал для восстановления`,
-          details: `🔬 Накопился критический дефицит (${debtKcal} ккал) или ${caloricDebt.consecutiveDeficitDays} дней подряд в дефиците. Это НЕ срыв — это часть стратегии! +35% к норме помогает восстановить лептин, T3 и предотвратить метаболическую адаптацию.`,
+          details: `🔬 Накопился критический дефицит (${debtKcal} ккал) или ${consecutiveDeficitDays} дней подряд в дефиците. Это НЕ срыв — это часть стратегии! +35% к норме помогает восстановить лептин, T3 и предотвратить метаболическую адаптацию.`,
           type: 'special',
           priority: 35,
           category: 'nutrition',
@@ -3435,13 +3437,12 @@
       }
       
       // 🍽️ REFEED DAY — В процессе (мотивация съесть норму)
-      const eatenPctOfRefeed = needsRefeed && refeedBoost > 0 ? (dayTot?.kcal || 0) / (optimum + refeedBoost) : 0;
-      if (needsRefeed && eatenPctOfRefeed >= 0.5 && eatenPctOfRefeed < 0.9 && hour >= 14) {
+      if (needsRefeed && eatenPctOfTarget >= 0.5 && eatenPctOfTarget < 0.9 && hour >= 14) {
         advices.push({
           id: 'refeed_in_progress',
           icon: '🍽️',
           text: 'Refeed день идёт! Не останавливайся',
-          details: `💪 Ты съел ${Math.round(eatenPctOfRefeed * 100)}% от refeed нормы. Цель — ${optimum + refeedBoost} ккал. Это контролируемое превышение помогает телу восстановиться.`,
+          details: `💪 Ты съел ${Math.round(eatenPctOfTarget * 100)}% от refeed нормы. Цель — ${optimum + refeedBoost} ккал. Это контролируемое превышение помогает телу восстановиться.`,
           type: 'tip',
           priority: 20,
           category: 'nutrition',
@@ -3451,7 +3452,7 @@
       }
       
       // ✅ REFEED DAY — Выполнен (ачивка)
-      if (needsRefeed && eatenPctOfRefeed >= 0.9 && eatenPctOfRefeed <= 1.15 && hour >= 20) {
+      if (needsRefeed && eatenPctOfTarget >= 0.9 && eatenPctOfTarget <= 1.15 && hour >= 20) {
         advices.push({
           id: 'refeed_completed',
           icon: '✅',
