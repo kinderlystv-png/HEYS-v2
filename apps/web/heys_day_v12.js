@@ -12268,7 +12268,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           
           // 🆕 Refeed day микро-объяснение
           const isRefeedDay = day?.isRefeedDay === true;
-          const refeedMeta = isRefeedDay && HEYS.Refeed?.getDayMeta ? HEYS.Refeed.getDayMeta(day, ratio) : null;
+          const refeedMeta = isRefeedDay && HEYS.Refeed?.getDayMeta ? HEYS.Refeed.getDayMeta(day, currentRatio) : null;
           
           return React.createElement('div', { 
             className: 'metrics-card' + (shakeOver && displayRemainingKcal < 0 ? ' shake-excess' : '') + (isRefeedDay ? ' metrics-card--refeed' : ''),
