@@ -115,6 +115,7 @@
   
   // 🔄 Флаг для предотвращения race condition между автовосстановлением и явным signIn
   let _signInInProgress = false;
+  let _rpcSyncInProgress = false; // 🔐 Флаг RPC sync в процессе
   let originalSetItem = null;
   
   // 🚨 Флаг блокировки сохранения до завершения первого sync
@@ -1656,7 +1657,21 @@
         if (pinAuthClient) {
           _pinAuthClientId = pinAuthClient;
           _rpcOnlyMode = true;
+          _rpcSyncInProgress = true; // 🔐 Блокируем bootstrapClientSync
           logCritical('🔐 PIN auth восстановлен для клиента:', pinAuthClient.substring(0, 8) + '...');
+          
+          // 🔄 Запускаем RPC sync сразу при восстановлении
+          cloud.syncClientViaRPC(pinAuthClient).then(result => {
+            _rpcSyncInProgress = false;
+            if (result.success) {
+              logCritical('✅ [RPC RESTORE] Sync завершён:', result.loaded, 'ключей');
+            } else {
+              logCritical('⚠️ [RPC RESTORE] Sync failed:', result.error);
+            }
+          }).catch(e => {
+            _rpcSyncInProgress = false;
+            logCritical('❌ [RPC RESTORE] Error:', e.message);
+          });
         }
       } catch(_) {}
       
@@ -2620,10 +2635,16 @@
     // 🔐 PIN-авторизация: работаем без user, если client_id проверен через verify_client_pin
     const isPinAuth = _pinAuthClientId && _pinAuthClientId === client_id;
     
-    // 🔐 Если RPC режим и sync уже завершён — пропускаем (данные загружены через syncClientViaRPC)
-    if (_rpcOnlyMode && initialSyncCompleted && isPinAuth) {
-      log('[RPC MODE] Skipping bootstrapClientSync — already synced via RPC');
-      return;
+    // 🔐 Если RPC sync в процессе или уже завершён — пропускаем
+    if (_rpcOnlyMode && isPinAuth) {
+      if (_rpcSyncInProgress) {
+        log('[RPC MODE] Skipping bootstrapClientSync — RPC sync in progress');
+        return;
+      }
+      if (initialSyncCompleted) {
+        log('[RPC MODE] Skipping bootstrapClientSync — already synced via RPC');
+        return;
+      }
     }
     
     // Для обычной авторизации нужен client и user, для PIN — только client
