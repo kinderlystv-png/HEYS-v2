@@ -393,6 +393,31 @@
         isStreakPreserved(ratio, true)
           ? '✅ Streak сохраняется (ratio ' + Math.round(ratio * 100) + '%)'
           : '⚠️ Для streak нужен ratio 70-135%'
+      ),
+      // Мини-статистика refeed за месяц
+      renderRefeedStats()
+    );
+  }
+  
+  /**
+   * Мини-блок статистики refeed за 30 дней
+   */
+  function renderRefeedStats() {
+    const stats = getHistoryStats(30);
+    if (!stats || stats.count === 0) return null;
+    
+    return React.createElement('div', { 
+      className: 'refeed-card__stats',
+      title: 'Статистика загрузочных дней за 30 дней'
+    },
+      React.createElement('span', { className: 'refeed-card__stats-item' },
+        '📊 ', stats.count, ' refeed за месяц'
+      ),
+      stats.avgExcessPct > 0 && React.createElement('span', { className: 'refeed-card__stats-item' },
+        '↗️ +', stats.avgExcessPct, '% в среднем'
+      ),
+      stats.lastRefeedDaysAgo > 0 && React.createElement('span', { className: 'refeed-card__stats-item' },
+        '📅 ', stats.lastRefeedDaysAgo, ' дн. назад'
       )
     );
   }
@@ -647,7 +672,11 @@
     registerStep: registerRefeedStep,
     
     // Версия
-    version: '1.2.0'  // 🆕 v1.2.0 — getHistoryStats
+    // Хелперы для UI
+    renderRefeedStats,
+    
+    // Версия
+    version: '1.3.0'  // v1.3.0 — renderRefeedStats в UI
   };
   
   // Автоматическая регистрация шага при загрузке
@@ -657,6 +686,9 @@
     setTimeout(registerRefeedStep, 100);
   }
   
-  console.log('[HEYS] 🔄 Refeed Module v1.2.0 loaded');
+  // Логируем только в dev режиме
+  if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
+    console.log('[HEYS] 🔄 Refeed Module v1.3.0 loaded');
+  }
 
 })(typeof window !== 'undefined' ? window : global);

@@ -1592,18 +1592,14 @@
           localStorage.removeItem(OLD_AUTH_KEY);
         }
         
-        // Проверяем NEW_AUTH_KEY — если токен истёк, удаляем ДО createClient
+        // ⚠️ Проверка expires_at ОТКЛЮЧЕНА — токены отключены в Supabase
+        // Раньше тут был код удаления истёкших токенов, но т.к. refresh tokens
+        // отключены в проекте, expires_at не обновляется и токен "истекает"
+        // хотя сессия на самом деле валидна. Просто проверяем что JSON валидный.
         const stored = localStorage.getItem(NEW_AUTH_KEY);
         if (stored) {
           try {
-            const parsed = JSON.parse(stored);
-            const expiresAt = parsed?.expires_at;
-            // Буфер 60 секунд
-            const isExpired = !expiresAt || expiresAt * 1000 <= Date.now() + 60000;
-            if (isExpired) {
-              log('[AUTH] ⚠️ Токен истёк — удаляем ДО создания клиента (RTR-safe)');
-              localStorage.removeItem(NEW_AUTH_KEY);
-            }
+            JSON.parse(stored); // Проверка что JSON валидный
           } catch (_) {
             // Невалидный JSON — удаляем
             localStorage.removeItem(NEW_AUTH_KEY);

@@ -2,17 +2,17 @@
 > @heys/ui@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/ui
 > tsup
 
-[34mCLI[39m Building entry: src/index.ts
-[34mCLI[39m Using tsconfig: tsconfig.json
-[34mCLI[39m tsup v7.3.0
-[34mCLI[39m Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/ui/tsup.config.ts
-[34mCLI[39m Target: es2022
-[34mCLI[39m Cleaning output folder
-[34mCJS[39m Build start
-[34mESM[39m Build start
-[32mCJS[39m [1mdist/index.cjs     [22m[32m73.65 KB[39m
-[32mCJS[39m [1mdist/index.cjs.map [22m[32m275.84 KB[39m
-[32mCJS[39m ⚡️ Build success in 2920ms
-[32mESM[39m [1mdist/index.js     [22m[32m73.04 KB[39m
-[32mESM[39m [1mdist/index.js.map [22m[32m275.84 KB[39m
-[32mESM[39m ⚡️ Build success in 2920ms
+CLI Building entry: src/index.ts
+CLI Using tsconfig: tsconfig.json
+CLI tsup v7.3.0
+CLI Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/ui/tsup.config.ts
+CLI Target: es2022
+CLI Cleaning output folder
+CJS Build start
+ESM Build start
+CJS dist/index.cjs     73.65 KB
+CJS dist/index.cjs.map 275.84 KB
+CJS ⚡️ Build success in 960ms
+ESM dist/index.js     73.04 KB
+ESM dist/index.js.map 275.84 KB
+ESM ⚡️ Build success in 961ms
