@@ -8898,7 +8898,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           isFuture,
           isWeekend,
           // Градиентный цвет из ratioZones
-          bgColor: ratio && rz ? rz.getGradientColor(ratio, 0.6) : null
+          bgColor: ratio && rz ? rz.getGradientColor(ratio, 0.6) : null,
+          // 🔥 Refeed day indicator — добавляем для сегодняшнего дня если активен refeed
+          isRefeedDay: isToday && caloricDebt && caloricDebt.needsRefeed
         });
       }
       
@@ -11820,11 +11822,22 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             titleText = 'Перебор';
           }
           
+          // 🔥 Refeed Day бейдж — перекрывает обычный заголовок если активен
+          const isRefeedDay = caloricDebt && caloricDebt.needsRefeed;
+          if (isRefeedDay) {
+            titleColor = '#f59e0b';
+            titleIcon = '🔥';
+            titleText = 'REFEED DAY';
+          }
+          
           return React.createElement(React.Fragment, null,
             React.createElement('div', { className: 'goal-progress-header' },
               React.createElement('span', { 
-                className: 'goal-progress-title',
-                style: { color: titleColor }
+                className: 'goal-progress-title' + (isRefeedDay ? ' goal-progress-title-refeed' : ''),
+                style: { color: titleColor, fontWeight: isRefeedDay ? 700 : 600, cursor: isRefeedDay ? 'help' : 'default' },
+                title: isRefeedDay 
+                  ? `🔥 Refeed Day — контролируемое превышение нормы (+35%)\n\nЭто НЕ срыв! Цель: восстановить лептин, T3 и предотвратить метаболическую адаптацию.\n\nТриггеры: долг ≥${caloricDebt?.debt || 0} ккал ИЛИ ${caloricDebt?.consecutiveDeficitDays || 0} дней подряд в дефиците >20%`
+                  : undefined
               }, titleIcon + ' ' + titleText),
               React.createElement('span', { className: 'goal-progress-stats' },
                 React.createElement('span', { 
@@ -12017,7 +12030,31 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 className: 'goal-zone-label goal-zone-label-100',
                 style: { left: (ratio > 1 ? (1.0 / ratio) * 100 : 100) + '%' }
               }, '100%')
-            )
+            ),
+            // 💰 Калорийный долг — подсказка под progress bar (если есть долг)
+            (() => {
+              const showDebtHint = caloricDebt && caloricDebt.hasDebt && caloricDebt.dailyBoost > 0;
+              if (!showDebtHint) return null;
+              
+              return React.createElement('div', {
+                className: 'goal-debt-hint',
+                style: {
+                  marginTop: '4px',
+                  padding: '6px 10px',
+                  borderRadius: '8px',
+                  background: isRefeedDay ? 'rgba(245, 158, 11, 0.1)' : 'rgba(34, 197, 94, 0.08)',
+                  border: isRefeedDay ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(34, 197, 94, 0.25)',
+                  fontSize: '11px',
+                  color: isRefeedDay ? '#b45309' : '#16a34a',
+                  fontWeight: 500,
+                  textAlign: 'center'
+                }
+              },
+                isRefeedDay 
+                  ? `🔥 Refeed: долг −${Math.abs(caloricDebt.debt || 0)} ккал за ${caloricDebt.daysAnalyzed || 3} дня`
+                  : `💰 Восполнение долга: −${Math.abs(caloricDebt.debt || 0)} ккал → +${caloricDebt.dailyBoost || 0} ккал сегодня`
+              );
+            })()
           );
         })()
       ),
@@ -13739,8 +13776,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   key: i,
                   className: 'week-heatmap-day ' + d.status + 
                     (d.isToday ? ' today' : '') +
-                    (d.isWeekend ? ' weekend' : ''),
-                  title: d.isFuture ? d.name : (d.kcal > 0 ? d.kcal + ' ккал (' + Math.round(d.ratio * 100) + '%)' : 'Нет данных'),
+                    (d.isWeekend ? ' weekend' : '') +
+                    (d.isRefeedDay ? ' refeed-day' : ''),
+                  title: d.isFuture ? d.name : (d.kcal > 0 ? d.kcal + ' ккал (' + Math.round(d.ratio * 100) + '%)' : 'Нет данных') + (d.isRefeedDay ? ' 🔥 REFEED DAY' : ''),
                   style: { 
                     '--stagger-delay': (i * 50) + 'ms',
                     '--day-bg-color': d.bgColor || 'transparent'
@@ -13756,7 +13794,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   React.createElement('div', { 
                     className: 'week-heatmap-cell',
                     style: d.bgColor ? { background: d.bgColor } : undefined
-                  })
+                  },
+                    // 🔥 Refeed day marker
+                    d.isRefeedDay && React.createElement('span', {
+                      className: 'week-heatmap-refeed-marker',
+                      style: {
+                        position: 'absolute',
+                        top: '-2px',
+                        right: '-2px',
+                        fontSize: '10px',
+                        lineHeight: '1',
+                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))'
+                      }
+                    }, '🔥')
+                  )
                 )
               )
             ),

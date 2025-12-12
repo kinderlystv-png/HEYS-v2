@@ -1,0 +1,281 @@
+---
+template-version: 3.3.0
+created: 2025-12-12
+updated: 2025-12-12
+purpose: Refeed Day UI — визуализация и чек-ин для дней восстановления
+status: ✅ Выполнено (Must Have завершены)
+---
+
+# Task: Refeed Day Check-in — UI для дней восстановления калорийного долга
+
+## 🎯 WHY (Бизнес-контекст)
+
+**Problem**: Система калорийного долга автоматически определяет когда нужен Refeed Day (+35% к норме), но пользователь не видит явного уведомления и не понимает разницу между "я сорвался" и "мне физиологически нужен рефид".
+
+**Impact**: Пользователи могут чувствовать вину за "перебор" в refeed день, не понимая что это часть стратегии восстановления. Или наоборот — игнорировать рекомендацию и продолжать хронический дефицит.
+
+**Value**: Образовательный подход + снятие психологического напряжения. Пользователь понимает: "Сегодня НУЖНО есть больше — это часть плана, не срыв".
+
+---
+
+## 🤖 Output Preferences
+
+**Workflow**: Propose plan first
+
+**Code style**: Follow copilot-instructions.md, Russian comments
+
+---
+
+## 📋 WHAT (Чек-лист задач)
+
+### Must Have (критично для релиза)
+
+- [ ] **UI Badge в заголовке дня** — `apps/web/heys_day_v12.js:renderDayHeader()`
+  - **Why**: Пользователь должен СРАЗУ видеть что сегодня особый день
+  - **Acceptance**: При `needsRefeed === true` показывается бейдж "🔥 REFEED DAY" с пояснением
+  - **Files**: `apps/web/heys_day_v12.js` (найти секцию с датой дня)
+
+- [ ] **Tooltip с объяснением** — что такое Refeed Day
+  - **Why**: Многие не знают термин, нужен образовательный момент
+  - **Acceptance**: При клике/hover на бейдж показывается:
+    - "Контролируемое превышение нормы (+35%)"
+    - "Цель: предотвратить метаболическую адаптацию"
+    - "Это НЕ срыв — это часть стратегии"
+  - **Files**: `apps/web/heys_day_v12.js`
+
+- [ ] **Советы про Refeed** — `apps/web/heys_advice_v1.js`
+  - **Why**: Автоматические советы должны мотивировать съесть норму в refeed день
+  - **Acceptance**: Добавить советы:
+    - `refeed_recommended` — "Сегодня Refeed Day! Норма +35% для восстановления"
+    - `refeed_in_progress` — "Отличное начало! Refeed день помогает метаболизму"
+    - `refeed_completed` — "Refeed выполнен! Ты помог своему телу восстановиться"
+  - **Files**: `apps/web/heys_advice_v1.js`
+
+### Should Have (важно, но не блокер)
+
+- [ ] **Визуализация долга в goal-progress-bar**
+  - **Why**: Показать ПОЧЕМУ сегодня refeed (сколько долга накопилось)
+  - **Acceptance**: Под progress bar текст "Калорийный долг: −1200 ккал за 3 дня"
+  - **Files**: `apps/web/heys_day_v12.js:renderGoalProgressBar()`
+
+- [ ] **История Refeed дней в календаре**
+  - **Why**: Пользователь видит паттерн — как часто нужны рефиды
+  - **Acceptance**: В календаре специальный маркер для refeed дней (например 🔥 emoji)
+  - **Files**: `apps/web/heys_day_v12.js` (календарь)
+
+### Could Have (nice to have)
+
+- [ ] **Аналитика Refeed дней** — сколько было за месяц
+  - **Why**: Трекинг частоты рефидов = индикатор агрессивности дефицита
+  - **Files**: `apps/web/heys_reports_v12.js`
+
+---
+
+## ✅ DONE (Критерии приёмки)
+
+### Functional
+
+- [ ] **Works as expected**: При `needsRefeed === true` показывается бейдж с пояснением
+- [ ] **Edge cases handled**: Если долга нет, бейдж не показывается
+- [ ] **Mobile-friendly**: Бейдж читаемый на iPhone SE, тап открывает tooltip
+
+### Quality Gates
+
+- [ ] **Testing Strategy**:
+  - **How**: Manual browser test с принудительным выставлением `needsRefeed: true`
+  - **Where**: localhost:3001
+  - **Edge cases**: 
+    - Долг = 0 (бейдж не показывается)
+    - Долг = 1000 (бейдж показывается)
+    - Consecutive deficit = 5 дней (бейдж показывается)
+- [ ] **Type safety**: `pnpm type-check` PASS
+- [ ] **Linting**: `pnpm lint` PASS
+- [ ] **Build**: `pnpm build` PASS
+
+### UI Testing (для UI задач)
+
+**Mobile (Chrome DevTools → iPhone SE):**
+- [ ] Бейдж "🔥 REFEED DAY" виден и читаемый
+- [ ] Тап на бейдж открывает tooltip
+- [ ] Tooltip не выходит за границы экрана
+- [ ] Goal progress bar корректно отображает +35% норму
+
+**Desktop (>768px):**
+- [ ] Hover на бейдж показывает tooltip
+- [ ] Click закрывает tooltip
+
+**Общее:**
+- [ ] Нет ошибок в console
+- [ ] Советы появляются в нужное время
+
+### Performance
+
+- [ ] **Bundle**: Добавляемый код < 2KB (только UI компоненты)
+- [ ] **Latency**: Рендер бейджа не блокирует основной поток
+
+### Documentation
+
+- [ ] **PR created**: Link to this PROMPT in PR description
+- [ ] **Code reviewed**: Self-review completed
+
+---
+
+## 🤖 AI Context (Technical Specs)
+
+### 📐 Architecture
+
+**Refeed Day Logic** (уже реализовано):
+- `apps/web/heys_day_v12.js:calculateCaloricDebt()` — расчёт долга и флага `needsRefeed`
+- `docs/DATA_MODEL_REFERENCE.md#refeed-day` — документация триггеров
+
+**Что добавляем**:
+- UI badge в заголовке дня
+- Tooltip с образовательным контентом
+- Советы в `heys_advice_v1.js`
+
+### ❌ Anti-Patterns (DO NOT)
+
+1. **NO** изменение логики расчёта `caloricDebt` — она уже работает правильно
+2. **NO** добавление сложных анимаций — бейдж должен быть простым и быстрым
+3. **NO** inline styles — используй Tailwind классы
+4. **NO** дублирование кода советов — переиспользуй существующие паттерны
+
+### 🔑 Key Patterns
+
+**Refeed Day Detection**:
+```javascript
+// В calculateCaloricDebt() уже есть:
+const needsRefeed = 
+  rawDebt >= REFEED_THRESHOLD || 
+  consecutiveDeficitDays >= REFEED_CONSECUTIVE ||
+  (rawDebt > 500 && todayTraining);
+
+const refeedBoost = needsRefeed ? optimum * REFEED_BOOST_PCT : 0;
+```
+
+**Badge Rendering** (следовать паттерну):
+```javascript
+// Пример из существующего кода
+React.createElement(
+  'div',
+  { className: 'badge badge--refeed' },
+  '🔥 REFEED DAY'
+)
+```
+
+**Советы** (паттерн из `heys_advice_v1.js`):
+```javascript
+{
+  id: 'refeed_recommended',
+  category: 'caloric_debt',
+  condition: (params) => params.caloricDebt?.needsRefeed === true,
+  message: 'Сегодня Refeed Day! Норма +35% для восстановления',
+  icon: '🔥'
+}
+```
+
+---
+
+## 📂 Quick Reference
+
+### Ключевые файлы
+
+| Файл | Что там | Что менять |
+|------|---------|------------|
+| `apps/web/heys_day_v12.js` | Основной UI дня | Добавить бейдж в заголовок, tooltip |
+| `apps/web/heys_advice_v1.js` | Советы | Добавить 3 новых совета про refeed |
+| `docs/DATA_MODEL_REFERENCE.md` | Документация | Уже описан Refeed Day (строки 508-516) |
+| `apps/web/heys_ratio_zones_v1.js` | Цветовые зоны | Может понадобиться цвет для refeed дня |
+
+### Существующие UI паттерны
+
+**Бейджи** — поиск по `badge--`:
+- `.badge--training` — зелёный бейдж для тренировок
+- `.badge--deficit` — красный бейдж для дефицита
+- Создать `.badge--refeed` по аналогии
+
+**Tooltips** — поиск по `Tooltip`:
+- `TooltipSimple` — простой tooltip с текстом
+- Переиспользовать для объяснения Refeed Day
+
+---
+
+## 📝 Notes
+
+- **Priority**: medium (важно для UX, но не критический баг)
+- **Complexity**: S (1-2 часа — только UI компоненты)
+- **Blockers**: Нет (логика уже реализована)
+- **Related Tasks**: 
+  - [2025-12-11-caloric-debt-optimum-integration.md](./2025-12-11-caloric-debt-optimum-integration.md) — система калорийного долга
+  - [DATA_MODEL_REFERENCE.md](../DATA_MODEL_REFERENCE.md#refeed-day) — документация
+- **Created**: 2025-12-12
+
+---
+
+## 🧠 Концепция Refeed Day
+
+### Что это?
+
+**Refeed Day** — контролируемое превышение нормы (+35%) при критическом недоборе калорий.
+
+### Отличие от "срыва" (binge)
+
+| Критерий | Refeed Day | Срыв (Binge) |
+|----------|-----------|--------------|
+| **Планирование** | Запланирован системой на основе долга | Спонтанный, неконтролируемый |
+| **Размер** | +35% к норме (чёткая граница) | Без ограничений, часто >>норма |
+| **Цель** | Физиологическая (восстановление гормонов) | Эмоциональная разрядка |
+| **Последствия** | Метаболизм восстанавливается | Чувство вины, откат прогресса |
+| **Осознанность** | Осознанное решение | Потеря контроля |
+
+### Физиологическое обоснование
+
+**Проблема хронического дефицита**:
+- ⬇️ Лептин (гормон сытости) — усиливается голод
+- ⬇️ T3 (тиреоидный гормон) — замедляется метаболизм
+- ⬆️ Кортизол (стресс) — катаболизм мышц
+- ⬇️ Тестостерон — снижение либидо, энергии
+
+**Эффект Refeed**:
+- ⬆️ Лептин временно восстанавливается (сигнал "еды достаточно")
+- ⬆️ T3 возвращается к норме (метаболизм ускоряется)
+- ⬇️ Кортизол снижается (снятие стресса)
+- Пополнение гликогена (энергия для тренировок)
+
+**Научная база**:
+- Trexler et al., 2014 — "Metabolic adaptation to weight loss"
+- Dulloo & Jacquet, 1998 — "Adaptive reduction in BMR"
+- Dirlewanger et al., 2000 — "Effects of short-term carbohydrate or fat overfeeding on leptin"
+
+### Триггеры Refeed Day в HEYS
+
+Система автоматически определяет необходимость refeed при:
+
+1. **Критический долг**: накопилось ≥1000 ккал дефицита за 3 дня
+2. **Хронический дефицит**: 5+ дней подряд в дефиците >20%
+3. **Тренировка + долг**: долг >500 ккал И сегодня тренировка (повышенная потребность)
+
+### Как выглядит Refeed Day
+
+**Норма**: 2000 ккал  
+**Refeed**: 2000 + 35% = **2700 ккал**
+
+**Рекомендации**:
+- Акцент на углеводы (восстановление гликогена)
+- Умеренный белок (обычная норма)
+- Минимум жиров (чтобы углеводы пошли в гликоген, а не в жир)
+- Избегать junk food — качественные источники (рис, паста, фрукты, мёд)
+
+---
+
+## 🚀 Usage
+
+1. Copy template → `docs/tasks/2025-12-12-refeed-day-checkin.md` ✅
+2. Fill all sections ✅
+3. Use in PR: "Task prompt: docs/tasks/2025-12-12-refeed-day-checkin.md"
+4. После выполнения → `docs/tasks/archive/`
+
+---
+
+**Version**: 1.0.0 | **Created**: 2025-12-12
+**Changes**: Initial version — Refeed Day UI check-in and documentation
