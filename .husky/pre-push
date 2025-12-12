@@ -1,14 +1,15 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-echo "🧪 Запуск критических тестов sync/auth/storage..."
+echo "🧪 Запуск критических тестов sync/auth/storage/products..."
 
-# Запускаем тесты для синхронизации, авторизации и storage layer
+# Запускаем тесты для синхронизации, авторизации, storage layer и защиты продуктов
 pnpm --filter @heys/web test -- \
   __tests__/sync-race-condition.test.js \
   __tests__/merge-day-data.test.js \
   __tests__/auth-session.test.js \
-  __tests__/storage-layer.test.js
+  __tests__/storage-layer.test.js \
+  __tests__/products-protection.test.js
 
 # Проверяем код выхода
 if [ $? -ne 0 ]; then
@@ -16,4 +17,4 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-echo "✅ Все критические тесты прошли (91 test)!"
+echo "✅ Все критические тесты прошли (130 tests)!"
