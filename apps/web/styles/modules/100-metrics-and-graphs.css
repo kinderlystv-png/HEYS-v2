@@ -2939,7 +2939,7 @@
 /* === Маркер текущего % на позиции заполнения === */
 .goal-current-marker {
   position: absolute;
-  top: -20px;
+  bottom: -22px;
   transform: translateX(-50%);
   z-index: 15;
   transition: left 1.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -2959,18 +2959,19 @@
   padding: 2px 5px;
   border-radius: 4px;
   white-space: nowrap;
+  position: relative;
 }
 
-/* Треугольник снизу */
+/* Треугольник сверху (указывает на бар) */
 .goal-current-pct::after {
   content: '';
   position: absolute;
-  bottom: -4px;
+  top: -4px;
   left: 50%;
   transform: translateX(-50%);
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-top: 4px solid var(--color-slate-700);
+  border-bottom: 4px solid var(--color-slate-700);
 }
 
 /* === Метки зон под полосой (80%, 100%) === */
