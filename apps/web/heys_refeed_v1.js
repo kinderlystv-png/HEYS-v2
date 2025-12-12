@@ -86,6 +86,17 @@
   }
   
   /**
+   * Проверить нужно ли показывать шаг refeed в чек-ине
+   * Показываем всегда после sleepQuality — клиент сам решает
+   * @returns {boolean}
+   */
+  function shouldShowRefeedStep() {
+    // Всегда показываем шаг — клиент может осознанно выбрать refeed
+    // Система подсветит рекомендацию если есть caloric debt
+    return true;
+  }
+  
+  /**
    * Проверить сохраняется ли streak в refeed день
    * @param {number} ratio - eaten/optimum
    * @param {boolean} isRefeedDay
@@ -406,10 +417,15 @@
   /**
    * Регистрация шага в системе чек-инов
    */
+  let _registerRetries = 0;
   function registerRefeedStep() {
     if (!HEYS.Steps?.registerStep) {
-      console.warn('[Refeed] HEYS.Steps не готов, отложенная регистрация');
-      setTimeout(registerRefeedStep, 500);
+      if (_registerRetries < 20) { // Max 10 seconds
+        _registerRetries++;
+        setTimeout(registerRefeedStep, 500);
+      } else {
+        console.warn('[Refeed] HEYS.Steps not found after 10s, giving up');
+      }
       return;
     }
     
@@ -486,6 +502,7 @@
     getRefeedOptimum,
     getReasonById,
     shouldExcludeFromWeightTrend,
+    shouldShowRefeedStep,
     isStreakPreserved,
     
     // Компоненты
