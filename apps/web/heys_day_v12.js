@@ -8893,7 +8893,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           isFuture,
           isWeekend,
           // Градиентный цвет из ratioZones
-          bgColor: ratio && rz ? rz.getGradientColor(ratio, 0.6) : null
+          bgColor: ratio && rz ? rz.getGradientColor(ratio, 0.6) : null,
+          // 🔥 Refeed day indicator — добавляем для сегодняшнего дня если активен refeed
+          isRefeedDay: isToday && caloricDebt && caloricDebt.needsRefeed
         });
       }
       
@@ -13745,8 +13747,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   key: i,
                   className: 'week-heatmap-day ' + d.status + 
                     (d.isToday ? ' today' : '') +
-                    (d.isWeekend ? ' weekend' : ''),
-                  title: d.isFuture ? d.name : (d.kcal > 0 ? d.kcal + ' ккал (' + Math.round(d.ratio * 100) + '%)' : 'Нет данных'),
+                    (d.isWeekend ? ' weekend' : '') +
+                    (d.isRefeedDay ? ' refeed-day' : ''),
+                  title: d.isFuture ? d.name : (d.kcal > 0 ? d.kcal + ' ккал (' + Math.round(d.ratio * 100) + '%)' : 'Нет данных') + (d.isRefeedDay ? ' 🔥 REFEED DAY' : ''),
                   style: { 
                     '--stagger-delay': (i * 50) + 'ms',
                     '--day-bg-color': d.bgColor || 'transparent'
@@ -13762,7 +13765,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   React.createElement('div', { 
                     className: 'week-heatmap-cell',
                     style: d.bgColor ? { background: d.bgColor } : undefined
-                  })
+                  },
+                    // 🔥 Refeed day marker
+                    d.isRefeedDay && React.createElement('span', {
+                      className: 'week-heatmap-refeed-marker',
+                      style: {
+                        position: 'absolute',
+                        top: '-2px',
+                        right: '-2px',
+                        fontSize: '10px',
+                        lineHeight: '1',
+                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))'
+                      }
+                    }, '🔥')
+                  )
                 )
               )
             ),
