@@ -87,6 +87,9 @@
    * Проверяем, нужно ли показывать утренний чек-ин
    * ВАЖНО: Эта функция вызывается ПОСЛЕ события heysSyncCompleted,
    * поэтому проверка isInitialSyncCompleted не нужна
+   * 
+   * КРИТИЧНО: Если профиль не заполнен — ВСЕГДА показываем чек-ин!
+   * Это нужно чтобы новый пользователь обязательно прошёл регистрационные шаги.
    */
   function shouldShowMorningCheckin() {
     const U = HEYS.utils || {};
@@ -96,6 +99,16 @@
     if (!currentClientId) {
       // console.log('[MorningCheckin] No clientId, skip check');
       return false;
+    }
+    
+    // 🔒 КРИТИЧНО: Если профиль не заполнен — ВСЕГДА показываем!
+    // Регистрационные шаги (profile-personal, profile-body, etc.) обязательны для новых пользователей
+    const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
+    if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
+      if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
+        console.log('[MorningCheckin] 🆕 Profile incomplete — forcing checkin with registration steps');
+        return true;
+      }
     }
     
     const todayKey = getTodayKey();
