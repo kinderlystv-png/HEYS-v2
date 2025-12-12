@@ -1,10 +1,18 @@
 // heys_app_v12.js — Main app entry, React root, tab navigation, Supabase integration
 
       (function () {
+        // 🔍 EARLY DEBUG: Проверяем auth token ДО любого кода
+        try {
+          const _earlyToken = localStorage.getItem('heys_supabase_auth_token');
+          console.log('[HEYS] 🚀 BOOT: auth token exists?', _earlyToken ? 'YES (' + _earlyToken.length + ' chars)' : 'NO');
+        } catch (e) {
+          console.log('[HEYS] 🚀 BOOT: error checking token', e.message);
+        }
+        
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.12.2057.0513339'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.12.2113.4495ac8'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
