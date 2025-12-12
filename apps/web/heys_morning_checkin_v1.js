@@ -135,6 +135,16 @@
     if (!hasProfileSteps) {
       steps.push('weight');
     }
+    
+    // 2.5 Загрузочный день (условно — после веса, до сна)
+    if (HEYS.Steps && typeof HEYS.Steps.registerStep === 'function') {
+      // Проверяем shouldShow для refeedDay шага
+      const refeedStep = HEYS.Steps._steps?.refeedDay;
+      if (refeedStep && refeedStep.shouldShow && refeedStep.shouldShow()) {
+        steps.push('refeedDay');
+      }
+    }
+    
     steps.push('sleepTime', 'sleepQuality');
     
     // 3. Условные шаги
