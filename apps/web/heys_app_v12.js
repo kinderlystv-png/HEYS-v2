@@ -1,6 +1,14 @@
 // heys_app_v12.js — Main app entry, React root, tab navigation, Supabase integration
 
       (function () {
+        // 🔍 DEBUG: Проверяем токен В САМОМ НАЧАЛЕ загрузки
+        try {
+          const earlyToken = localStorage.getItem('heys_supabase_auth_token');
+          console.log('[HEYS] 🚀 EARLY CHECK: auth token =', earlyToken ? `${earlyToken.substring(0, 50)}...` : 'null');
+        } catch (e) {
+          console.log('[HEYS] 🚀 EARLY CHECK: error reading token', e.message);
+        }
+        
         const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
