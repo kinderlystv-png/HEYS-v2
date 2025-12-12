@@ -2463,15 +2463,20 @@
       }
       
       // Проверяем, изменились ли данные с последней синхронизации
+      // 🔄 При force=true (pull-to-refresh) — пропускаем эту проверку
       const lastSyncTime = cloud._lastClientSync?.ts || 0;
       const hasUpdates = (metaData || []).some(row => 
         new Date(row.updated_at).getTime() > lastSyncTime
       );
       
-      if (!hasUpdates && cloud._lastClientSync?.clientId === client_id) {
+      if (!forceSync && !hasUpdates && cloud._lastClientSync?.clientId === client_id) {
         log('client bootstrap skipped (no updates)', client_id);
         cloud._lastClientSync.ts = now; // Обновляем timestamp для throttling
         return;
+      }
+      
+      if (forceSync) {
+        log('🔄 [FORCE SYNC] Pull-to-refresh — загружаем данные принудительно');
       }
       
       // Теперь загружаем полные данные только если есть обновления
