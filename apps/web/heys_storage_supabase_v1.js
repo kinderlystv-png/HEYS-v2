@@ -1823,14 +1823,17 @@
         log('[AUTH] Session from signIn:', data.session.user?.email);
         // 🔄 RTR-safe v4: Сохраняем сессию вручную (persistSession=false)
         try {
-          localStorage.setItem('heys_supabase_auth_token', JSON.stringify({
+          const tokenData = {
             access_token: data.session.access_token,
             refresh_token: data.session.refresh_token,
             expires_at: data.session.expires_at,
             user: data.session.user
-          }));
-          log('[AUTH] ✅ Сессия сохранена в localStorage');
-        } catch (_) {}
+          };
+          localStorage.setItem('heys_supabase_auth_token', JSON.stringify(tokenData));
+          logCritical('[AUTH] ✅ Сессия сохранена в localStorage, email:', data.session.user?.email);
+        } catch (saveErr) {
+          logCritical('[AUTH] ❌ Ошибка сохранения сессии:', saveErr?.message || saveErr);
+        }
       }
       
       status = 'sync';

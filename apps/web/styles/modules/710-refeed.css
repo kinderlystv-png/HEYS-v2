@@ -331,6 +331,24 @@
   border-top: 1px solid rgba(245, 158, 11, 0.3);
 }
 
+/* Мини-статистика refeed за месяц */
+.refeed-card__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(245, 158, 11, 0.2);
+  margin-top: 4px;
+}
+
+.refeed-card__stats-item {
+  font-size: 11px;
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
 /* ============================================================
    REFEED BADGE — Бейдж в заголовке цели
    ============================================================ */
@@ -541,6 +559,15 @@
 [data-theme="dark"] .refeed-card__hint {
   color: #fde68a;
   border-top-color: rgba(245, 158, 11, 0.4);
+}
+
+[data-theme="dark"] .refeed-card__stats {
+  border-top-color: rgba(245, 158, 11, 0.3);
+}
+
+[data-theme="dark"] .refeed-card__stats-item {
+  background: rgba(0, 0, 0, 0.3);
+  color: #fcd34d;
 }
 
 [data-theme="dark"] .refeed-toggle {

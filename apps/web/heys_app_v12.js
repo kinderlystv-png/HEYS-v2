@@ -4663,12 +4663,17 @@
               const readStoredAuthUser = () => {
                 try {
                   const stored = localStorage.getItem('heys_supabase_auth_token');
+                  console.log('[HEYS] 🔍 readStoredAuthUser: stored=', stored ? `${stored.substring(0, 50)}...` : 'null');
                   if (!stored) return null;
                   const parsed = JSON.parse(stored);
                   const u = parsed?.user;
+                  console.log('[HEYS] 🔍 readStoredAuthUser: user=', u?.email || 'no user');
                   if (!u) return null;
                   return u;
-                } catch (e) { return null; }
+                } catch (e) { 
+                  console.log('[HEYS] 🔍 readStoredAuthUser: error=', e.message);
+                  return null; 
+                }
               };
 
               const storedUser = readStoredAuthUser();
