@@ -28,11 +28,20 @@ function getGitHash() {
   }
 }
 
-// Генерируем версию
+// Генерируем версию (всегда по Москве UTC+3)
 function generateVersion() {
+  // Получаем время в Москве
   const now = new Date();
-  const date = now.toISOString().slice(0, 10).replace(/-/g, '.'); // 2025.12.03
-  const time = now.toTimeString().slice(0, 5).replace(':', ''); // 1423
+  const moscowDate = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+  
+  const year = moscowDate.getFullYear();
+  const month = String(moscowDate.getMonth() + 1).padStart(2, '0');
+  const day = String(moscowDate.getDate()).padStart(2, '0');
+  const hour = String(moscowDate.getHours()).padStart(2, '0');
+  const minute = String(moscowDate.getMinutes()).padStart(2, '0');
+  
+  const date = `${year}.${month}.${day}`;
+  const time = `${hour}${minute}`;
   const hash = getGitHash();
   
   // Формат: 2025.12.12.1423.abc1234 (всегда дата + время + hash если есть)
