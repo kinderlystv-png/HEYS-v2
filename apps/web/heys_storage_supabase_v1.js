@@ -122,6 +122,10 @@
   let initialSyncCompleted = false;
   let failsafeTimerId = null;
   cloud.isInitialSyncCompleted = function() { return initialSyncCompleted; };
+  
+  // 🔧 Debug getters (для консоли)
+  Object.defineProperty(cloud, '_initialSyncCompleted', { get: () => initialSyncCompleted });
+  Object.defineProperty(cloud, '_rpcSyncInProgress', { get: () => _rpcSyncInProgress });
 
   // ═══════════════════════════════════════════════════════════════════
   // 🔐 AUTH TOKEN SANITIZE (RTR-safe)
