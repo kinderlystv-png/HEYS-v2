@@ -6293,10 +6293,14 @@
               });
             });
             
-            // Хороший день: используем централизованный ratioZones
+            // Хороший день: используем централизованный ratioZones с учётом refeed
             const ratio = totalKcal / (optimum || 1);
             const rz = HEYS.ratioZones;
-            if (rz ? rz.isSuccess(ratio) : (ratio >= 0.75 && ratio <= 1.10)) {
+            // isStreakDayWithRefeed учитывает refeed день (расширенный диапазон 0.70-1.35)
+            const isStreakDay = rz?.isStreakDayWithRefeed 
+              ? rz.isStreakDayWithRefeed(ratio, dayData)
+              : (rz ? rz.isSuccess(ratio) : (ratio >= 0.75 && ratio <= 1.10));
+            if (isStreakDay) {
               count++;
             } else if (i > 0) break; // Первый день может быть незавершён
           } else if (i > 0) break;
@@ -8048,7 +8052,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           
           if (dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0) {
             const cycleDayValue = dayData.cycleDay || null;
-            const shouldExclude = HEYS.Cycle?.shouldExcludeFromWeightTrend?.(cycleDayValue) || false;
+            // Исключаем из тренда: менструальный цикл ИЛИ refeed день
+            const cycleExclude = HEYS.Cycle?.shouldExcludeFromWeightTrend?.(cycleDayValue) || false;
+            const refeedExclude = HEYS.Refeed?.shouldExcludeFromWeightTrend?.(dayData) || false;
+            const shouldExclude = cycleExclude || refeedExclude;
             
             const weightEntry = { 
               date: dateStr, 
@@ -8513,7 +8520,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               dayScore: +day.dayScore || 0,
               prot: Math.round(dayTot.prot || 0),
               fat: Math.round(dayTot.fat || 0),
-              carbs: Math.round(dayTot.carbs || 0)
+              carbs: Math.round(dayTot.carbs || 0),
+              isRefeedDay: day.isRefeedDay || false  // 🔄 Refeed day flag
             };
           }
           
@@ -8533,7 +8541,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               steps: dayInfo.steps || 0,
               prot: dayInfo.prot || 0,
               fat: dayInfo.fat || 0,
-              carbs: dayInfo.carbs || 0
+              carbs: dayInfo.carbs || 0,
+              isRefeedDay: dayInfo.isRefeedDay || false  // 🔄 Refeed day flag
             };
           }
           
@@ -8589,11 +8598,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               sleepHours: fallbackSleepHours,
               sleepQuality: +dayData.sleepQuality || 0,
               dayScore: +dayData.dayScore || 0,
-              steps: +dayData.steps || 0
+              steps: +dayData.steps || 0,
+              isRefeedDay: dayData.isRefeedDay || false  // 🔄 Refeed day flag
             };
           }
           
-          return { date: dateStr, kcal: 0, target: optimum, isToday: false, hasTraining: false, trainingTypes: [], sleepHours: 0, sleepQuality: 0, dayScore: 0, steps: 0 };
+          return { date: dateStr, kcal: 0, target: optimum, isToday: false, hasTraining: false, trainingTypes: [], sleepHours: 0, sleepQuality: 0, dayScore: 0, steps: 0, isRefeedDay: false };
         };
         
         // Собираем данные за период (от startDate до сегодня)
@@ -9893,9 +9903,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         // Извлекаем день из даты (последние 2 символа)
         const dayNum = d.date ? d.date.slice(-2).replace(/^0/, '') : '';
         const ratio = (d.target || goal) > 0 ? d.kcal / (d.target || goal) : 0;
-        // Хороший день: используем централизованный ratioZones
+        // Хороший день: используем централизованный ratioZones с учётом refeed
         const rz = HEYS.ratioZones;
-        const isPerfect = d.isUnknown ? false : (rz ? rz.isSuccess(ratio) : (ratio >= 0.75 && ratio <= 1.10));
+        // isPerfect учитывает refeed (расширенный диапазон 0.70-1.35)
+        const isPerfect = d.isUnknown ? false : (rz?.isStreakDayWithRefeed 
+          ? rz.isStreakDayWithRefeed(ratio, d)
+          : (rz ? rz.isSuccess(ratio) : (ratio >= 0.75 && ratio <= 1.10)));
         // Выходные/праздники
         const isWeekendDay = isWeekend(d.date) || isHoliday(d.date);
         // День недели (0=Вс, 1=Пн, ...)
@@ -9910,7 +9923,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           sleepHours: d.sleepHours || 0, dayScore: d.dayScore || 0,
           steps: d.steps || 0,
           prot: d.prot || 0, fat: d.fat || 0, carbs: d.carbs || 0,
-          dayOfWeek
+          dayOfWeek,
+          isRefeedDay: d.isRefeedDay || false  // 🔄 Refeed day flag для UI
         };
       });
       
@@ -10891,21 +10905,35 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               );
             }
           
-            // Идеальный день — золотая пульсирующая точка
+            // Идеальный день — золотая пульсирующая точка (или оранжевая для refeed)
             if (p.isPerfect && p.kcal > 0) {
-              return React.createElement('circle', {
-                key: 'gold-' + i,
-                cx: p.x,
-                cy: p.y,
-                r: p.isToday ? 5 : 4,
-                className: 'sparkline-dot-gold' + (p.isToday ? ' sparkline-dot-gold-today' : ''),
-                style: { cursor: 'pointer', '--delay': animDelay + 's' },
-                onClick: (e) => {
-                  e.stopPropagation();
-                  haptic('medium');
-                  openExclusivePopup('sparkline', { type: 'perfect', point: p, x: e.clientX, y: e.clientY });
-                }
-              });
+              // Refeed день: оранжевая граница + 🔄 бейдж
+              const isRefeed = p.isRefeedDay && ratio > 1.1;
+              return React.createElement('g', { key: 'perfect-' + i },
+                React.createElement('circle', {
+                  key: 'gold-' + i,
+                  cx: p.x,
+                  cy: p.y,
+                  r: p.isToday ? 5 : 4,
+                  className: isRefeed 
+                    ? 'sparkline-dot-refeed' + (p.isToday ? ' sparkline-dot-refeed-today' : '')
+                    : 'sparkline-dot-gold' + (p.isToday ? ' sparkline-dot-gold-today' : ''),
+                  style: { cursor: 'pointer', '--delay': animDelay + 's' },
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    haptic('medium');
+                    openExclusivePopup('sparkline', { type: isRefeed ? 'refeed' : 'perfect', point: p, x: e.clientX, y: e.clientY });
+                  }
+                }),
+                // Refeed бейдж (🔄) над точкой
+                isRefeed && React.createElement('text', {
+                  x: p.x,
+                  y: p.y - 10,
+                  textAnchor: 'middle',
+                  className: 'sparkline-refeed-badge',
+                  style: { fontSize: '10px', '--delay': animDelay + 0.2 + 's' }
+                }, '🔄')
+              );
             }
           
             // Обычная точка — цвет через inline style из ratioZones
@@ -14970,6 +14998,20 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // === ПОД-ВКЛАДКА 2: Дневник питания (или всё на десктопе) ===
       (!isMobile || mobileSubTab === 'diary') && goalProgressBar,
+      // Refeed Toggle — кнопка включения загрузочного дня (показывается если есть рекомендация или активен)
+      (!isMobile || mobileSubTab === 'diary') && HEYS.Refeed && HEYS.Refeed.renderRefeedToggle({
+        isRefeedDay: day.isRefeedDay,
+        refeedReason: day.refeedReason,
+        caloricDebt: caloricDebt,
+        optimum: optimum,
+        onToggle: (isActive, reason) => {
+          // Сохраняем через handleSave — патч к текущему day
+          handleSave({ 
+            isRefeedDay: isActive ? true : null,
+            refeedReason: isActive ? reason : null
+          });
+        }
+      }),
       (!isMobile || mobileSubTab === 'diary') && daySummary,
       
       // === Мини-график распределения калорий по приёмам ===
@@ -16443,16 +16485,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         }, displayedAdvice.details)
       ),
       
-      // Version footer (мелким шрифтом в самом низу)
-      React.createElement('div', {
-        style: {
-          textAlign: 'center',
-          fontSize: '11px',
-          color: 'var(--text-muted, #9ca3af)',
-          padding: '16px 0 8px 0',
-          opacity: 0.7
-        }
-      }, 'v' + (HEYS.version || 'dev')),
+      // Version footer removed (moved to LoginScreen)
+      null,
       
       // Meal Creation/Edit Modal (mobile only)
       showTimePicker && ReactDOM.createPortal(

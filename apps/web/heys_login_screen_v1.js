@@ -123,14 +123,15 @@
       });
     }
 
-    async function handleClientLogin() {
+    async function handleClientLogin(pinOverride) {
       if (!onClientLogin) return;
       setErr('');
       setClientDiag(null);
       setBusy(true);
       try {
         const phoneDigits = fullPhone; // 7 + 10 цифр = 11 цифр
-        const res = await onClientLogin({ phone: phoneDigits, pin });
+        const effectivePin = typeof pinOverride === 'string' ? pinOverride : pin;
+        const res = await onClientLogin({ phone: phoneDigits, pin: effectivePin });
         if (!res || res.ok === false) {
           const code = res && res.error;
 
@@ -374,7 +375,7 @@
                         const newPin = arr.join('');
                         const isPinValid = auth && auth.validatePin(newPin);
                         if (clientPhoneValid && isPinValid && !busy) {
-                          setTimeout(() => handleClientLogin(), 100);
+                          setTimeout(() => handleClientLogin(newPin), 100);
                         }
                       }
                     },
@@ -556,13 +557,18 @@
       'div',
       {
         className:
-          'fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-indigo-500 to-violet-700 px-5 py-10',
+          'fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-indigo-500 to-violet-700 px-5 py-10',
       },
       mode === 'start'
         ? renderStart()
         : mode === 'client'
           ? renderClientLogin()
           : renderCuratorLogin(),
+      React.createElement(
+        'div',
+        { className: 'mt-6 text-xs font-medium text-white/40 tracking-wider font-mono' },
+        'v' + (HEYS.version || 'dev'),
+      ),
     );
   }
 
