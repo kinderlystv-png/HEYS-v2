@@ -693,6 +693,29 @@
     );
   }
 
+  /**
+   * Обёртка для RefeedCard — адаптирует props из day_v12
+   * @param {Object} props - { isRefeedDay, refeedReason, caloricDebt, eatenKcal, optimum }
+   */
+  function renderRefeedCard(props) {
+    const { isRefeedDay, refeedReason, caloricDebt, eatenKcal, optimum } = props || {};
+    
+    if (!isRefeedDay) return null;
+    
+    // Адаптируем props к формату RefeedCard
+    const dayData = {
+      isRefeedDay: isRefeedDay,
+      refeedReason: refeedReason
+    };
+    
+    return React.createElement(RefeedCard, {
+      day: dayData,
+      optimum: optimum,
+      eatenKcal: eatenKcal,
+      caloricDebt: caloricDebt
+    });
+  }
+
   // === ЭКСПОРТ МОДУЛЯ ===
   
   HEYS.Refeed = {
@@ -730,10 +753,11 @@
     
     // Хелперы для UI
     renderRefeedToggle,  // 🆕 v1.3.1 — toggle для карточки калорий
+    renderRefeedCard,    // 🆕 v1.3.3 — карточка refeed для статистики
     renderRefeedStats,
     
     // Версия
-    version: '1.3.2'  // v1.3.2 — getRefeedZone null-safety fix
+    version: '1.3.3'  // v1.3.3 — добавлен renderRefeedCard
   };
   
   // Автоматическая регистрация шага при загрузке
@@ -745,7 +769,7 @@
   
   // Логируем только в dev режиме
   if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
-    console.log('[HEYS] 🔄 Refeed Module v1.3.2 loaded');
+    console.log('[HEYS] 🔄 Refeed Module v1.3.3 loaded');
   }
 
 })(typeof window !== 'undefined' ? window : global);
