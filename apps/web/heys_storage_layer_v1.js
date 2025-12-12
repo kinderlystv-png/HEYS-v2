@@ -125,7 +125,21 @@
   Store.get = (function(orig){
     return function(k, def){
       const sk = scoped(k);
-      if (memory.has(sk)) return memory.get(sk);
+      // 🔧 FIX: Если в memory лежит null/undefined, но передан def — возвращаем def
+      // Это исправляет баг когда lsGet(key, null) кэширует null, а следующий
+      // вызов lsGet(key, {}) возвращает null вместо {}
+      if (memory.has(sk)) {
+        const cached = memory.get(sk);
+        // Возвращаем кэш только если он не null/undefined, или если def тоже null/undefined
+        if (cached !== null && cached !== undefined) {
+          return cached;
+        }
+        // Кэш null/undefined — если есть def, возвращаем def
+        if (def !== undefined && def !== null) {
+          return def;
+        }
+        return cached;
+      }
       let v = rawGet(sk, undefined);
       if (v === undefined || v === null) {
         // try legacy unscoped key
@@ -169,6 +183,17 @@
   Store.watch = function(k, fn){ const sk=scoped(k); if(!watchers.has(sk)) watchers.set(sk,new Set()); watchers.get(sk).add(fn); return ()=>{ const set=watchers.get(sk); if(set){ set.delete(fn); if(!set.size) watchers.delete(sk); } }; };
 
   Store.flushMemory = function(){ memory.clear(); };
+  
+  /**
+   * Инвалидирует кэш для конкретного ключа (при прямой записи в localStorage извне)
+   * @param {string} k - ключ для инвалидации
+   */
+  Store.invalidate = function(k) { 
+    const sk = scoped(k); 
+    memory.delete(sk);
+    // Также пробуем удалить raw key (если он уже scoped)
+    memory.delete(k);
+  };
 
   // ═══════════════════════════════════════════════════════════════════
   // ⭐ ИЗБРАННЫЕ ПРОДУКТЫ

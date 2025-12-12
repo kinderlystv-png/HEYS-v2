@@ -2183,7 +2183,8 @@
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const key = yesterday.toISOString().slice(0, 10);
-    const dayData = lsGet(`heys_dayv2_${key}`, {});
+    // 🔧 FIX: Добавляем || {} на случай если lsGet вернёт null
+    const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
     
     // Собираем все оценки настроения за день (из приёмов пищи + утреннее)
     const moodValues = [];
@@ -2439,7 +2440,8 @@
     component: MorningMoodStepComponent,
     getInitialData: () => {
       const dateKey = getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+      // 🔧 FIX: Добавляем || {} на случай если lsGet вернёт null (новый клиент)
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
       
       // Если уже есть данные за сегодня — берём их
       if (dayData.moodMorning !== undefined) {
@@ -2492,7 +2494,8 @@
     
     // Получаем утреннее настроение из данных дня
     const dateKey = getTodayKey();
-    const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
+    // 🔧 FIX: Добавляем || {} на случай если lsGet вернёт null
+    const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
     const morningMood = dayData.moodMorning ?? 5;
     const morningWellbeing = dayData.wellbeingMorning ?? 5;
     const morningStress = dayData.stressMorning ?? 5;

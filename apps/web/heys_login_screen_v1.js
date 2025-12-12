@@ -6,25 +6,31 @@
     return Math.max(a, Math.min(b, v));
   }
 
+  // Форматирует 10 цифр в (XXX) XXX-XX-XX
+  function formatPhoneBody(digits) {
+    const d = (digits || '').slice(0, 10);
+    if (!d) return '';
+    
+    let result = '';
+    if (d.length > 0) result += '(' + d.slice(0, 3);
+    if (d.length >= 3) result += ') ';
+    if (d.length > 3) result += d.slice(3, 6);
+    if (d.length >= 6) result += '-';
+    if (d.length > 6) result += d.slice(6, 8);
+    if (d.length >= 8) result += '-';
+    if (d.length > 8) result += d.slice(8, 10);
+    
+    return result;
+  }
+
+  // Старая функция для совместимости
   function maskPhone(raw) {
-    // оставляем только цифры
     const digits = String(raw || '').replace(/\D/g, '');
-    // будем маскировать как +7 (___) ___-__-__
-    // поддерживаем ввод: 7XXXXXXXXXX / 8XXXXXXXXXX / XXXXXXXXXX
     let d = digits;
     if (d.length === 11 && d[0] === '8') d = '7' + d.slice(1);
     if (d.length === 10) d = '7' + d;
-
-    // отображаем только 11 цифр максимум
     d = d.slice(0, 11);
-
-    const p = d.padEnd(11, '_');
-    const a = p.slice(1, 4);
-    const b = p.slice(4, 7);
-    const c = p.slice(7, 9);
-    const e = p.slice(9, 11);
-
-    return `+7 (${a}) ${b}-${c}-${e}`;
+    return '+7' + d.slice(1);
   }
 
   function unmaskPhone(masked) {
@@ -39,13 +45,16 @@
     } = props || {};
 
     const React = global.React;
-    const { useMemo, useState } = React;
+    const { useMemo, useState, useRef } = React;
 
     const [mode, setMode] = useState(initialMode);
 
     // client
     const [phoneMasked, setPhoneMasked] = useState('');
-    const [pin, setPin] = useState('');
+    const [pinDigits, setPinDigits] = useState(['', '', '', '']);
+    const [pinReveal, setPinReveal] = useState([false, false, false, false]);
+    const pinRefs = useRef([]);
+    const pinHideTimers = useRef([null, null, null, null]);
 
     // curator
     const [email, setEmail] = useState('');
@@ -57,11 +66,54 @@
 
     const auth = HEYS.auth;
 
-    const clientPhoneValid = useMemo(() => auth && auth.isValidPhone(phoneMasked), [auth, phoneMasked]);
+    // phoneMasked теперь хранит только 10 цифр (без 7)
+    // Для валидации и отправки добавляем 7 в начало
+    const fullPhone = '7' + phoneMasked;
+    const clientPhoneValid = useMemo(() => phoneMasked.length === 10, [phoneMasked]);
+    const pin = useMemo(() => (pinDigits || []).join(''), [pinDigits]);
     const clientPinValid = useMemo(() => auth && auth.validatePin(pin), [auth, pin]);
 
     const canClientLogin = clientPhoneValid && clientPinValid && !busy;
     const canCuratorLogin = Boolean(email && password) && !busy;
+
+    function scheduleHidePinDigit(i, delayMs = 700) {
+      try {
+        const t = pinHideTimers.current && pinHideTimers.current[i];
+        if (t) clearTimeout(t);
+      } catch (_) {}
+
+      setPinReveal((prev) => {
+        const next = (prev || [false, false, false, false]).slice(0, 4);
+        while (next.length < 4) next.push(false);
+        next[i] = true;
+        return next;
+      });
+
+      try {
+        pinHideTimers.current[i] = setTimeout(() => {
+          setPinReveal((prev) => {
+            const next = (prev || [false, false, false, false]).slice(0, 4);
+            while (next.length < 4) next.push(false);
+            next[i] = false;
+            return next;
+          });
+        }, delayMs);
+      } catch (_) {}
+    }
+
+    function clearHidePinDigit(i) {
+      try {
+        const t = pinHideTimers.current && pinHideTimers.current[i];
+        if (t) clearTimeout(t);
+        if (pinHideTimers.current) pinHideTimers.current[i] = null;
+      } catch (_) {}
+      setPinReveal((prev) => {
+        const next = (prev || [false, false, false, false]).slice(0, 4);
+        while (next.length < 4) next.push(false);
+        next[i] = false;
+        return next;
+      });
+    }
 
     async function handleClientLogin() {
       if (!onClientLogin) return;
@@ -69,7 +121,7 @@
       setClientDiag(null);
       setBusy(true);
       try {
-        const phoneDigits = unmaskPhone(phoneMasked);
+        const phoneDigits = fullPhone; // 7 + 10 цифр = 11 цифр
         const res = await onClientLogin({ phone: phoneDigits, pin });
         if (!res || res.ok === false) {
           const code = res && res.error;
@@ -208,40 +260,171 @@
     }
 
     function renderClientLogin() {
+      // Храним только 10 цифр (без 7)
+      const phoneDigits = phoneMasked.replace(/\D/g, '').slice(0, 10);
+      const isPhoneComplete = phoneDigits.length === 10;
+      const isPinComplete = (pinDigits || []).every(Boolean);
+      
+      // Обработчик ввода телефона
+      const handlePhoneInput = (e) => {
+        setErr('');
+        const input = e.target.value;
+        // Извлекаем только цифры из того что ввели
+        const newDigits = input.replace(/\D/g, '').slice(0, 10);
+        // Обновляем состояние — храним форматированную строку для display
+        setPhoneMasked(newDigits);
+      };
+      
+      // Обработчик нажатия клавиш для правильного удаления
+      const handlePhoneKeyDown = (e) => {
+        if (e.key === 'Backspace' && phoneDigits.length > 0) {
+          e.preventDefault();
+          setPhoneMasked(phoneDigits.slice(0, -1));
+        }
+      };
+      
       return Card(
         React.createElement(
           'div',
           { className: 'text-center' },
-          React.createElement('div', { className: 'mb-2 text-4xl' }, '📱'),
-          React.createElement('div', { className: 'text-xl font-bold text-slate-900' }, 'Вход по телефону'),
-          React.createElement('div', { className: 'mt-1 text-sm text-slate-500' }, 'Введите телефон и 4-значный PIN'),
+          React.createElement('div', { className: 'mb-3 text-5xl' }, '📱'),
+          React.createElement('div', { className: 'text-2xl font-bold text-slate-900' }, 'Вход по телефону'),
+          React.createElement('div', { className: 'mt-2 text-base text-slate-500' }, 'Введите телефон и 4-значный PIN'),
         ),
-        React.createElement('div', { className: 'mt-5 space-y-3' },
-          Input({
-            type: 'text',
-            inputMode: 'tel',
-            autoComplete: 'tel',
-            placeholder: '+7 (___) ___-__-__',
-            value: phoneMasked,
-            onChange: (e) => {
-              setErr('');
-              setPhoneMasked(maskPhone(e.target.value));
+        React.createElement('div', { className: 'mt-6 space-y-4' },
+          // Современный ввод телефона с фиксированным +7
+          React.createElement('div', { className: 'space-y-2' },
+            React.createElement('label', { className: 'block text-sm font-medium text-slate-600 ml-1' }, 'Номер телефона'),
+            React.createElement('div', {
+              className: 'relative flex items-center gap-3 rounded-2xl border-2 px-4 py-3 pr-12 transition-all sm:px-5 sm:py-4 ' +
+                (isPhoneComplete ? 'border-green-400 bg-green-50/50' : 'border-slate-200 bg-white focus-within:border-indigo-500')
             },
-          }),
-          Input({
-            type: 'password',
-            inputMode: 'numeric',
-            autoComplete: 'one-time-code',
-            placeholder: 'PIN (4 цифры)',
-            value: pin,
-            onChange: (e) => {
-              setErr('');
-              const v = String(e.target.value || '').replace(/\D/g, '').slice(0, 4);
-              setPin(v);
+              // Фиксированный префикс +7 (размер и baseline синхронизированы с input)
+              React.createElement('span', {
+                className: 'phone-prefix-large flex-shrink-0 font-bold text-slate-700 select-none'
+              }, '+7'),
+              // Поле ввода — без отдельных границ, без внутреннего padding (padding на контейнере)
+              React.createElement('input', {
+                type: 'tel',
+                inputMode: 'numeric',
+                autoComplete: 'tel',
+                placeholder: '(999) 123-45-67',
+                value: formatPhoneBody(phoneDigits),
+                onChange: handlePhoneInput,
+                onKeyDown: handlePhoneKeyDown,
+                className: 'phone-input-large flex-1 font-bold text-slate-700 placeholder:text-slate-400 placeholder:font-bold',
+                style: { minWidth: 0 }
+              }),
+              // Индикатор валидности (вне потока, чтобы не сдвигать номер)
+              React.createElement('div', {
+                'aria-hidden': true,
+                className:
+                  'absolute right-4 sm:right-5 top-1/2 -translate-y-1/2 text-3xl font-bold leading-none text-green-500 transition-opacity pointer-events-none ' +
+                  (isPhoneComplete ? 'opacity-100' : 'opacity-0')
+              }, '✓'),
+            ),
+          ),
+          
+          // PIN ввод — 4 отдельных поля (как в модных приложениях)
+          React.createElement('div', { className: 'space-y-2' },
+            React.createElement('label', { className: 'block text-sm font-medium text-slate-600 ml-1' }, 'PIN-код'),
+            React.createElement('div', {
+              className: 'flex items-center justify-between gap-3'
             },
-            onKeyDown: (e) => e.key === 'Enter' && canClientLogin && handleClientLogin(),
-          }),
-          err && React.createElement('div', { className: 'rounded-xl bg-red-50 px-3 py-2 text-center text-sm text-red-600' }, err),
+              [0, 1, 2, 3].map((i) => {
+                const digit = (pinDigits && pinDigits[i]) || '';
+                const isFilled = Boolean(digit);
+                const isRevealed = Boolean(pinReveal && pinReveal[i]);
+                return React.createElement('input', {
+                  key: 'pin_' + i,
+                  ref: (el) => { pinRefs.current[i] = el; },
+                  type: digit ? (isRevealed ? 'tel' : 'password') : 'tel',
+                  inputMode: 'numeric',
+                  autoComplete: i === 0 ? 'one-time-code' : 'off',
+                  maxLength: 1,
+                  value: digit,
+                  onChange: (e) => {
+                    setErr('');
+                    const v = String(e.target.value || '').replace(/\D/g, '').slice(0, 1);
+                    const arr = (pinDigits || []).slice(0, 4);
+                    while (arr.length < 4) arr.push('');
+                    arr[i] = v;
+                    setPinDigits(arr);
+                    if (v) scheduleHidePinDigit(i);
+                    else clearHidePinDigit(i);
+                    if (v && i < 3) {
+                      try { pinRefs.current[i + 1] && pinRefs.current[i + 1].focus(); } catch (_) {}
+                    }
+                  },
+                  onKeyDown: (e) => {
+                    if (e.key === 'Backspace') {
+                      const cur = (pinDigits && pinDigits[i]) || '';
+                      if (!cur && i > 0) {
+                        e.preventDefault();
+                        const arr = (pinDigits || []).slice(0, 4);
+                        while (arr.length < 4) arr.push('');
+                        arr[i - 1] = '';
+                        setPinDigits(arr);
+                        clearHidePinDigit(i - 1);
+                        try { pinRefs.current[i - 1] && pinRefs.current[i - 1].focus(); } catch (_) {}
+                        return;
+                      }
+                      // если есть символ — очистим его (браузер сам, но делаем явно)
+                      if (cur) {
+                        e.preventDefault();
+                        const arr = (pinDigits || []).slice(0, 4);
+                        while (arr.length < 4) arr.push('');
+                        arr[i] = '';
+                        setPinDigits(arr);
+                        clearHidePinDigit(i);
+                        return;
+                      }
+                    }
+                    if (e.key === 'ArrowLeft' && i > 0) {
+                      e.preventDefault();
+                      try { pinRefs.current[i - 1] && pinRefs.current[i - 1].focus(); } catch (_) {}
+                    }
+                    if (e.key === 'ArrowRight' && i < 3) {
+                      e.preventDefault();
+                      try { pinRefs.current[i + 1] && pinRefs.current[i + 1].focus(); } catch (_) {}
+                    }
+                    if (e.key === 'Enter' && canClientLogin) {
+                      handleClientLogin();
+                    }
+                  },
+                  onPaste: (e) => {
+                    try {
+                      const txt = (e.clipboardData && e.clipboardData.getData('text')) || '';
+                      const digits = String(txt).replace(/\D/g, '').slice(0, 4);
+                      if (digits) {
+                        e.preventDefault();
+                        setErr('');
+                        const arr = ['', '', '', ''];
+                        for (let k = 0; k < 4; k++) {
+                          arr[k] = digits[k] || '';
+                          if (arr[k]) scheduleHidePinDigit(k, 900);
+                          else clearHidePinDigit(k);
+                        }
+                        setPinDigits(arr);
+                        // фокус на следующий незаполненный
+                        const nextIdx = Math.min(3, digits.length);
+                        try { pinRefs.current[nextIdx] && pinRefs.current[nextIdx].focus(); } catch (_) {}
+                      }
+                    } catch (_) {}
+                  },
+                  className:
+                    'w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 bg-white text-center text-2xl font-bold outline-none transition ' +
+                    (isPinComplete
+                      ? 'border-green-400 bg-green-50/50'
+                      : isFilled
+                        ? 'border-slate-300'
+                        : 'border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-200/60'),
+                });
+              })
+            ),
+          ),
+          
+          err && React.createElement('div', { className: 'rounded-xl bg-red-50 px-4 py-3 text-center text-sm text-red-600' }, err),
           clientDiag && React.createElement(
             'div',
             { className: 'rounded-xl bg-black/5 px-3 py-2 text-left text-[12px] text-slate-700' },

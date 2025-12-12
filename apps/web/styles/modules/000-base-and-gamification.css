@@ -62,6 +62,33 @@
   select:focus {
     font-size: 16px !important;
   }
+  /* Исключение для крупного ввода телефона */
+  input.phone-input-large:focus {
+    font-size: clamp(16px, 5.2vw, 28px) !important;
+  }
+}
+
+/*
+  Крупный ввод телефона (login)
+  Важно: в проекте есть глобальные правила для input с !important (в т.ч. font-size/padding).
+  Поэтому здесь тоже используем !important и повышенную специфичность.
+*/
+/* Размер под iPhone: уменьшается на узких экранах, но остаётся большим */
+.phone-prefix-large,
+input.phone-input-large {
+  font-size: clamp(16px, 5.2vw, 28px) !important;
+  line-height: clamp(22px, 6.2vw, 34px) !important;
+  letter-spacing: -0.01em;
+}
+
+input.phone-input-large {
+  height: clamp(22px, 6.2vw, 34px) !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 :root {

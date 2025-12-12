@@ -3112,6 +3112,13 @@
       initialSyncCompleted = true;
       cancelFailsafeTimer(); // Отменяем failsafe — sync успешен
       
+      // 🔄 КРИТИЧНО: Инвалидируем memory-кэш Store после прямой записи в localStorage
+      // Иначе lsGet() вернёт устаревшие данные из кэша при pull-to-refresh
+      if (global.HEYS?.store?.flushMemory) {
+        global.HEYS.store.flushMemory();
+        logCritical('🧹 [CACHE] Memory cache flushed after sync');
+      }
+      
       // 🧹 Однократная очистка облака от невалидных продуктов (после первой синхронизации)
       if (!cloud._cloudCleanupDone) {
         cloud._cloudCleanupDone = true;
