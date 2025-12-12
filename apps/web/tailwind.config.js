@@ -1,6 +1,13 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./src/**/*.{html,js,ts,tsx}', './index.html'],
+  // Важно: legacy web app живёт в корне apps/web и использует Tailwind className прямо в heys_*.js
+  content: ['./index.html', './src/**/*.{html,js,ts,tsx}', './heys_*.js'],
+  // Legacy тема переключается через data-theme="dark" (см. index.html)
+  darkMode: ['class', '[data-theme="dark"]'],
+  // Preflight может ломать legacy CSS каскад. Оставляем утилиты без reset.
+  corePlugins: {
+    preflight: false,
+  },
   theme: {
     extend: {
       colors: {

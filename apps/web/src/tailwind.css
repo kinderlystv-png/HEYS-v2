@@ -1,0 +1,5 @@
+/* tailwind.css — production Tailwind build entry (через Vite/PostCSS)
+ * Важно: preflight выключен в tailwind.config.js, чтобы не ломать legacy каскад.
+ */
+
+@import "tailwindcss";

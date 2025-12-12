@@ -13,8 +13,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>HEYS Nutrition Tracker - Production</title>
 
-    <!-- Tailwind CSS CDN (для Profile Wizard и новых компонентов) -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS (production-friendly через Vite/PostCSS) -->
+    <link rel="stylesheet" href="/src/tailwind.css" />
 
     <!-- Critical CSS for instant rendering -->
     <link rel="stylesheet" href="styles/critical.css" />
@@ -230,7 +230,7 @@
     <script defer src="heys_dev_utils.js" fetchpriority="high"></script>
     <script defer src="heys_simple_analytics.js" fetchpriority="high"></script>
     <script defer src="heys_core_v12.js" fetchpriority="high"></script>
-    <script defer src="heys_storage_supabase_v1.js?v=22" fetchpriority="low"></script>
+    <script defer src="heys_storage_supabase_v1.js?v=28" fetchpriority="low"></script>
     <script defer src="heys_models_v1.js?v=20" fetchpriority="low"></script>
     <script defer src="heys_storage_layer_v1.js?v=20" fetchpriority="low"></script>
     <script defer src="heys_wheel_picker.js?v=20" fetchpriority="low"></script>
@@ -267,7 +267,10 @@
     <script defer src="heys_user_v12.js?v=20" fetchpriority="low"></script>
     <script defer src="heys_reports_v12.js?v=20" fetchpriority="low"></script>
     <script defer src="heys_data_overview_v1.js?v=20" fetchpriority="low"></script>
-    <script defer src="heys_app_v12.js?v=21" fetchpriority="high"></script>
+    <!-- Auth + Login (client phone+PIN, curator email+password) -->
+    <script defer src="heys_auth_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_login_screen_v1.js?v=1" fetchpriority="high"></script>
+    <script defer src="heys_app_v12.js?v=22" fetchpriority="high"></script>
     
     <!-- Service Worker регистрируется в heys_app_v12.js → registerServiceWorker() -->
   </body>

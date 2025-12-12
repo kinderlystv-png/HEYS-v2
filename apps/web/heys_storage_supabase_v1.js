@@ -107,6 +107,54 @@
   let initialSyncCompleted = false;
   let failsafeTimerId = null;
   cloud.isInitialSyncCompleted = function() { return initialSyncCompleted; };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔐 AUTH TOKEN SANITIZE (RTR-safe)
+  // ═══════════════════════════════════════════════════════════════════
+  // ВАЖНО: делаем это СРАЗУ при загрузке скрипта, до heys_app_v12.js.
+  // Иначе app может увидеть протухший токен и/или Supabase SDK может попытаться
+  // refresh'нуть одноразовый refresh_token (RTR) → 400 refresh_token_already_used.
+  const OLD_AUTH_KEY__BOOT = 'sb-ukqolcziqcuplqfgrmsh-auth-token';
+  const NEW_AUTH_KEY__BOOT = 'heys_supabase_auth_token';
+
+  function sanitizeStoredAuthToken__BOOT() {
+    try {
+      const stored = global.localStorage && global.localStorage.getItem
+        ? global.localStorage.getItem(NEW_AUTH_KEY__BOOT)
+        : null;
+      if (!stored) return;
+
+      const parsed = JSON.parse(stored);
+      const expiresAt = parsed?.expires_at;
+      const refreshToken = parsed?.refresh_token;
+
+      // Если токен битый/неполный — удаляем
+      if (!refreshToken || !expiresAt) {
+        try {
+          global.localStorage.removeItem(NEW_AUTH_KEY__BOOT);
+          global.localStorage.removeItem(OLD_AUTH_KEY__BOOT);
+        } catch (_) {}
+        return;
+      }
+
+      // Если access_token истёк — удаляем (RTR refresh может уже быть использован)
+      if (expiresAt * 1000 < Date.now()) {
+        try {
+          global.localStorage.removeItem(NEW_AUTH_KEY__BOOT);
+          global.localStorage.removeItem(OLD_AUTH_KEY__BOOT);
+        } catch (_) {}
+      }
+    } catch (e) {
+      // Не парсится → удаляем
+      try {
+        global.localStorage.removeItem(NEW_AUTH_KEY__BOOT);
+        global.localStorage.removeItem(OLD_AUTH_KEY__BOOT);
+      } catch (_) {}
+    }
+  }
+
+  // Запускаем раннюю санацию (sync)
+  sanitizeStoredAuthToken__BOOT();
   
   // 🔄 FAILSAFE: Если sync не завершился за 45 секунд — разрешаем сохранения
   // Увеличено с 15 до 45 сек — пользователю нужно время на ввод логина/пароля
@@ -1246,6 +1294,12 @@
    */
   function isOurKey(k){
     if (typeof k !== 'string') return false;
+
+    // 🔒 Никогда не трогаем auth-сессию Supabase
+    // Иначе bootstrapSync/clearNamespace удалит токен и пользователь «вылетит» сразу после входа.
+    if (k === 'heys_supabase_auth_token') return false;
+    if (k.indexOf('sb-') === 0) return false;
+
     if (k.indexOf(KEY_PREFIXES.HEYS) === 0) return true;
     // также разрешаем ключи дней
     const lower = k.toLowerCase();
@@ -1330,6 +1384,14 @@
   // Дедупликация: последние сохранённые ключи и их updatedAt
   const _lastSavedKeys = new Map(); // key → { updatedAt, timestamp }
   const DEDUP_WINDOW_MS = 1000; // Окно дедупликации: 1 секунда
+
+  // 🔒 Ключи, которые НИКОГДА нельзя зеркалировать в cloud (и нельзя триггерить SDK запросы)
+  // Причина: при записи Supabase session эти ключи могут вызвать _useSession/__loadSession
+  // и привести к refresh_token 400 (RTR), а также это чувствительные данные.
+  const AUTH_STORAGE_KEYS_TO_SKIP = new Set([
+    'heys_supabase_auth_token',
+    'sb-ukqolcziqcuplqfgrmsh-auth-token'
+  ]);
   
   function interceptSetItem(){
     try{
@@ -1342,6 +1404,20 @@
         if (!safeSetItem(k, v)) {
           // Если не удалось сохранить даже после очистки — логируем
           console.warn('[HEYS] Не удалось сохранить:', k);
+          return;
+        }
+
+        // 🔒 Никогда не зеркалим ключи авторизации (и любые sb-* ключи)
+        try {
+          const keyStr = String(k || '');
+          const lower = keyStr.toLowerCase();
+          if (AUTH_STORAGE_KEYS_TO_SKIP.has(keyStr) || lower.startsWith('sb-')) {
+            return;
+          }
+        } catch (_) {}
+
+        // Во время signIn не зеркалим вообще ничего — это источник гонок и RTR refresh 400
+        if (typeof _signInInProgress !== 'undefined' && _signInInProgress) {
           return;
         }
         
@@ -1445,22 +1521,35 @@
       if (!needsHealthCheck || !client) return;
       try {
         log('[ROUTING] 🏥 Health-check подключения...');
-        
-        // Таймаут через Promise.race (Supabase не поддерживает abortSignal напрямую)
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Health-check timeout')), 3000)
+
+        // ⚠️ КРИТИЧНО (RTR): НЕ используем client.from(...)
+        // Любой запрос через Supabase SDK вызывает auth._useSession/__loadSession
+        // и может триггерить refresh_token запрос (400 refresh_token_already_used).
+        // Для health-check используем анонимный PostgREST fetch по anonKey.
+        const url = `${initialUrl.replace(/\/$/, '')}/rest/v1/kv_store?select=k&limit=1`;
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Health-check timeout')), 3000),
         );
-        
-        const fetchPromise = client.from('kv_store').select('k').limit(1);
-        const { error } = await Promise.race([fetchPromise, timeoutPromise]);
-        
-        if (error) {
-          log('[ROUTING] ⚠️ Текущий режим недоступен:', error.message);
+
+        const fetchPromise = fetch(url, {
+          method: 'GET',
+          headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+          },
+        });
+
+        const res = await Promise.race([fetchPromise, timeoutPromise]);
+        if (!res || !res.ok) {
+          const msg = res ? `${res.status} ${res.statusText}` : 'no response';
+          log('[ROUTING] ⚠️ Текущий режим недоступен:', msg);
           await handleHealthCheckFailure();
-        } else {
-          log('[ROUTING] ✅ Подключение работает');
-          registerSuccess();
+          return;
         }
+
+        log('[ROUTING] ✅ Подключение работает');
+        registerSuccess();
       } catch (e) {
         log('[ROUTING] ⚠️ Health-check timeout/error:', e.message);
         await handleHealthCheckFailure();
@@ -1487,64 +1576,37 @@
     };
     
     try{
-      // 🔄 Миграция сессии из старого ключа в новый (один раз)
+      // ⚠️ RTR-safe: НЕ мигрируем сессии из старого sb-* ключа.
+      // При Refresh Token Rotation старые refresh_token могут быть уже использованы,
+      // и любая попытка их «восстановить» приводит к 400 refresh_token_already_used.
       const OLD_AUTH_KEY = 'sb-ukqolcziqcuplqfgrmsh-auth-token';
       const NEW_AUTH_KEY = 'heys_supabase_auth_token';
-      try {
-        const oldSession = localStorage.getItem(OLD_AUTH_KEY);
-        const newSession = localStorage.getItem(NEW_AUTH_KEY);
-        if (oldSession && !newSession) {
-          log('[AUTH] Migrating session from old key to new key');
-          localStorage.setItem(NEW_AUTH_KEY, oldSession);
-        }
-      } catch (e) {}
       
-      // 🧹 Проверка валидности токена ПЕРЕД созданием клиента
-      // ⚠️ КРИТИЧНО: Если access_token истёк — SDK при любом запросе попытается refresh
-      // и получит 400 Bad Request если refresh_token уже использован (RTR).
-      // Поэтому удаляем ЛЮБОЙ истёкший токен — пусть пользователь залогинится заново.
+      // 🧹 RTR-safe: жёсткая очистка сохранённых сессий ПЕРЕД созданием клиента.
+      // Это устраняет главный класс проблем: GoTrueClient инициализируется,
+      // грузит session из storage и сразу пытается refresh'нуть refresh_token.
+      // Если refresh_token уже был использован (RTR) — получаем 400 и мгновенный SIGNED_OUT.
       try {
-        const storedToken = localStorage.getItem(NEW_AUTH_KEY);
-        if (storedToken) {
-          const parsed = JSON.parse(storedToken);
-          const expiresAt = parsed?.expires_at;
-          const refreshToken = parsed?.refresh_token;
-          
-          // Если нет refresh_token или expires_at — токен невалиден
-          if (!refreshToken) {
-            log('[AUTH] 🧹 Очищаем токен без refresh_token');
-            localStorage.removeItem(NEW_AUTH_KEY);
-            localStorage.removeItem(OLD_AUTH_KEY);
-          }
-          // ⚠️ Если access_token истёк — удаляем токен СРАЗУ
-          // SDK попытается refresh и получит 400 если RTR уже использовал этот refresh_token
-          // Лучше удалить и заставить пользователя залогиниться заново
-          else if (expiresAt && (expiresAt * 1000) < Date.now()) {
-            log('[AUTH] 🧹 Очищаем истёкший токен (access_token expired)');
-            localStorage.removeItem(NEW_AUTH_KEY);
-            localStorage.removeItem(OLD_AUTH_KEY);
-          }
+        const hadNew = !!localStorage.getItem(NEW_AUTH_KEY);
+        const hadOld = !!localStorage.getItem(OLD_AUTH_KEY);
+        if (hadNew || hadOld) {
+          log('[AUTH] 🧹 (RTR-safe) Очищаем сохранённые auth токены при старте');
         }
-      } catch (e) {
-        // Если не можем распарсить токен — он повреждён, удаляем
-        log('[AUTH] 🧹 Очищаем повреждённый токен');
-        try {
-          localStorage.removeItem(NEW_AUTH_KEY);
-          localStorage.removeItem(OLD_AUTH_KEY);
-        } catch (e2) {}
-      }
+        localStorage.removeItem(NEW_AUTH_KEY);
+        localStorage.removeItem(OLD_AUTH_KEY);
+      } catch (_) {}
       
       // Единый storageKey для auth — сессия сохраняется при переключении proxy↔direct
       client = global.supabase.createClient(initialUrl, anonKey, {
         auth: {
-          persistSession: true,
-          // 🔄 Отключаем автоматический refresh токена в фоне
-          // Это предотвращает 400 Bad Request при битых/старых токенах в storage
-          // SDK не будет пытаться обновить токен сразу при инициализации
-          // Refresh будет происходить только при явных вызовах API
+          // ⚠️ RTR-safe: отключаем persistSession.
+          // Иначе SDK читает/пишет refresh_token в storage и может попытаться сделать refresh
+          // (внутри __loadSession/_useSession) → 400 refresh_token_already_used.
+          // Цена: после перезагрузки страницы куратор логинится заново.
+          persistSession: false,
           autoRefreshToken: false,
+          // storageKey оставляем для совместимости (даже если persistSession=false)
           storageKey: NEW_AUTH_KEY,
-          storage: global.localStorage
         }
       });
       cloud.client = client;
@@ -1560,188 +1622,60 @@
         runHealthCheck().catch(() => {});
       }
 
-      // 🔄 Автовосстановление сессии при старте
-      // ⚠️ ВАЖНО: getSession() может триггерить refresh если access_token истёк
-      // Поэтому сначала проверяем токен локально
-      const shouldSkipAutoRestore = () => {
+      // 🔄 Автовосстановление сессии при старте (RTR-safe)
+      // ВАЖНО: мы НЕ вызываем client.auth.getSession()/refreshSession(),
+      // потому что любые попытки refresh при RTR могут дать 400 refresh_token_already_used
+      // и выбить пользователя из сессии.
+      // Вместо этого читаем сохранённый токен из storageKey и поднимаем user локально.
+      const restoreSessionFromStorage = () => {
         try {
           const stored = localStorage.getItem('heys_supabase_auth_token');
-          if (!stored) return true; // Нет токена — пропускаем
+          if (!stored) return null;
           const parsed = JSON.parse(stored);
-          // Если access_token истёк — SDK попытается refresh и получит 400
-          // Лучше пропустить автовосстановление и ждать явного signIn
           const expiresAt = parsed?.expires_at;
-          if (expiresAt && expiresAt * 1000 < Date.now()) {
-            log('[AUTH] ⏭️ Access token истёк — пропуск автовосстановления');
-            return true;
-          }
-        } catch (e) {}
-        return false;
-      };
-      
-      if (client.auth && client.auth.getSession && !shouldSkipAutoRestore()) {
-        client.auth.getSession().then(({ data, error }) => {
-          // 🔄 Если ошибка при восстановлении сессии — очищаем невалидный токен
-          // Это предотвращает повторные 400 Bad Request при следующих загрузках
-          if (error) {
-            log('[AUTH] ⚠️ Ошибка восстановления сессии:', error.message);
-            try {
-              localStorage.removeItem('heys_supabase_auth_token');
-              localStorage.removeItem('sb-ukqolcziqcuplqfgrmsh-auth-token');
-              log('[AUTH] 🧹 Очищен невалидный токен');
-            } catch (e) {}
-            return;
-          }
-          
-          // 🔄 Не восстанавливаем если уже идёт явный signIn
-          if (_signInInProgress) {
-            log('[AUTH] ⏭️ Пропуск автовосстановления — signIn в процессе');
-            return;
-          }
-          
-          const session = data?.session;
-          const restoredUser = session?.user;
-          const expiresAt = session?.expires_at ? session.expires_at * 1000 : null;
-          
-          // Проверяем не истекла ли сессия
-          if (expiresAt && expiresAt < Date.now()) {
-            logCritical('⚠️ Сессия истекла, требуется повторный вход');
-            // Очищаем просроченный токен
-            try {
-              localStorage.removeItem('heys_supabase_auth_token');
-            } catch (e) {}
-            status = CONNECTION_STATUS.OFFLINE;
-            return;
-          }
-          
-          // 🔄 Если токен истекает в ближайшие 5 минут — обновляем его
-          // Поскольку autoRefreshToken: false, делаем это вручную
-          const REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 минут
-          if (session && expiresAt && expiresAt < Date.now() + REFRESH_THRESHOLD_MS) {
-            log('[AUTH] 🔄 Токен скоро истечёт, обновляем...');
-            client.auth.refreshSession().then(({ data: refreshData, error: refreshError }) => {
-              if (refreshError) {
-                log('[AUTH] ⚠️ Не удалось обновить токен:', refreshError.message);
-                // Очищаем невалидный токен
-                try { localStorage.removeItem('heys_supabase_auth_token'); } catch (e) {}
-              } else if (refreshData?.session) {
-                log('[AUTH] ✅ Токен обновлён');
-              }
-            }).catch(() => {});
-          }
-          
-          if (restoredUser) {
-            user = restoredUser;
-            status = CONNECTION_STATUS.SYNC;
-            logCritical('🔄 Сессия восстановлена:', user.email || user.id);
-            const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
-            const finishOnline = () => {
-              // Ещё раз проверяем — если signIn начался пока мы синхронизировались, не мешаем
-              if (_signInInProgress) return;
-              status = CONNECTION_STATUS.ONLINE;
-              cloud.retrySync && cloud.retrySync();
-            };
-            if (clientId) {
-              cloud.bootstrapClientSync(clientId)
-                .then(finishOnline)
-                .catch((e) => {
-                  logCritical('⚠️ Ошибка bootstrap после восстановления сессии:', e?.message || e);
-                  finishOnline();
-                });
-            } else {
-              finishOnline();
-            }
-          }
-        }).catch(() => {});
+          const accessToken = parsed?.access_token;
+          const refreshToken = parsed?.refresh_token;
+          const storedUser = parsed?.user;
 
-        // Подписка на изменения auth
-        client.auth.onAuthStateChange((event, session) => {
-          log('[AUTH] onAuthStateChange:', event);
-          
-          if (event === 'SIGNED_OUT') {
-            // ⚠️ ВАЖНО: SDK выбрасывает SIGNED_OUT при неудачном refresh (400)
-            logCritical('[AUTH] 🚨 SIGNED_OUT event received');
-            
-            // 1. Если мы в процессе signIn — это ложное срабатывание от старого токена
-            if (_signInInProgress) {
-              logCritical('[AUTH] ⏭️ Игнорируем SIGNED_OUT — signIn в процессе');
-              return;
-            }
-            
-            // 2. Если недавно был успешный signIn — игнорируем async SIGNED_OUT от SDK
-            if (Date.now() < _ignoreSignedOutUntil) {
-              const msLeft = _ignoreSignedOutUntil - Date.now();
-              logCritical(`[AUTH] ⏭️ Игнорируем SIGNED_OUT — защитный период (осталось ${Math.round(msLeft/1000)}с)`);
-              return;
-            }
-            
-            // 3. Если у нас активная сессия — игнорируем ложный SIGNED_OUT
-            if (user && status === CONNECTION_STATUS.ONLINE) {
-              logCritical('[AUTH] ⏭️ Игнорируем SIGNED_OUT — активная сессия');
-              return;
-            }
-            
-            logCritical('[AUTH] ❌ SIGNED_OUT — выполняем выход');
-            user = null;
-            status = CONNECTION_STATUS.OFFLINE;
-            clearNamespace();
-          } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-            // Токен успешно обновлён
-            user = session.user;
+          // Мини-валидация
+          if (!accessToken || !refreshToken || !storedUser) return null;
+          // Буфер 60 секунд — чтобы не влетать в граничные условия
+          if (!expiresAt || expiresAt * 1000 <= Date.now() + 60000) return null;
+          return { user: storedUser, expiresAt };
+        } catch (_) {
+          return null;
+        }
+      };
+
+      if (!_signInInProgress) {
+        const restored = restoreSessionFromStorage();
+        if (restored?.user) {
+          user = restored.user;
+          status = CONNECTION_STATUS.SYNC;
+          logCritical('🔄 Сессия восстановлена (storage):', user.email || user.id);
+          const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
+          const finishOnline = () => {
+            if (_signInInProgress) return;
             status = CONNECTION_STATUS.ONLINE;
-            log('🔄 Token refreshed successfully');
-          } else if (event === 'SIGNED_IN' && session?.user) {
-            user = session.user;
-            status = CONNECTION_STATUS.ONLINE;
+            cloud.retrySync && cloud.retrySync();
+          };
+          if (clientId) {
+            cloud.bootstrapClientSync(clientId)
+              .then(finishOnline)
+              .catch((e) => {
+                logCritical('⚠️ Ошибка bootstrap после восстановления сессии:', e?.message || e);
+                finishOnline();
+              });
+          } else {
+            finishOnline();
           }
-        });
-        
-        // 🔄 Периодический refresh токена (раз в 50 минут)
-        // Поскольку autoRefreshToken: false, делаем это вручную
-        // Access token живёт 60 минут, обновляем заранее
-        const REFRESH_INTERVAL_MS = 50 * 60 * 1000; // 50 минут
-        setInterval(async () => {
-          if (!user || status !== CONNECTION_STATUS.ONLINE) return;
-          
-          try {
-            const { data: sessionData } = await client.auth.getSession();
-            const expiresAt = sessionData?.session?.expires_at;
-            if (!expiresAt) return;
-            
-            // Если токен истекает в ближайшие 10 минут — обновляем
-            if (expiresAt * 1000 < Date.now() + 10 * 60 * 1000) {
-              log('[AUTH] 🔄 Периодический refresh токена...');
-              const { error } = await client.auth.refreshSession();
-              if (error) {
-                log('[AUTH] ⚠️ Periodic refresh failed:', error.message);
-              } else {
-                log('[AUTH] ✅ Periodic refresh successful');
-              }
-            }
-          } catch (e) {
-            log('[AUTH] ⚠️ Periodic refresh error:', e.message);
-          }
-        }, REFRESH_INTERVAL_MS);
-        
-        // 🔄 Очистка невалидного токена при ошибке "Already Used"
-        // Supabase v2 использует refresh token rotation — каждый токен одноразовый
-        // Если токен уже использован (другая вкладка, race condition), очищаем его
-        const checkAndClearInvalidToken = () => {
-          try {
-            const stored = localStorage.getItem('heys_supabase_auth_token');
-            if (stored) {
-              const parsed = JSON.parse(stored);
-              // Если нет access_token или refresh_token — токен невалидный
-              if (!parsed?.access_token && !parsed?.refresh_token) {
-                log('[AUTH] Clearing empty auth token');
-                localStorage.removeItem('heys_supabase_auth_token');
-              }
-            }
-          } catch (e) {}
-        };
-        // Проверяем сразу после инициализации
-        setTimeout(checkAndClearInvalidToken, 100);
+        }
       }
+
+      // ⚠️ RTR-safe: НЕ подписываемся на onAuthStateChange.
+      // Причина: внутри GoTrueClient подписка вызывает __loadSession/_useSession,
+      // что может привести к немедленному refresh_token запросу и 400 refresh_token_already_used.
+      // Мы управляем user/status вручную (signIn/signOut + локальное восстановление из storage).
       
       // 🔄 AUTO-SYNC при возвращении на вкладку (visibilitychange)
       // Синхронизирует данные с сервера когда пользователь возвращается в приложение
@@ -1810,6 +1744,13 @@
     
     try{
       status = 'signin';
+
+      // 🧹 Перед входом удаляем любые старые токены из storage.
+      // Это предотвращает попытки refresh одноразового refresh_token (RTR) из прошлых сессий.
+      try {
+        localStorage.removeItem('heys_supabase_auth_token');
+        localStorage.removeItem('sb-ukqolcziqcuplqfgrmsh-auth-token');
+      } catch (_) {}
       
       // ⚠️ НЕ вызываем signOut() здесь!
       // Supabase SDK сам заменит сессию при signInWithPassword.

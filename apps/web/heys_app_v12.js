@@ -2828,7 +2828,7 @@
             setSyncVer,
             setLoginError,
           }) {
-            const ONE_CURATOR_MODE = true;
+            const ONE_CURATOR_MODE = false;
             const signInCooldownUntilRef = useRef(0);
             const fetchingClientsRef = useRef(false); // 🔧 FIX: Защита от дублирования запросов
             
@@ -2858,15 +2858,6 @@
               setClientsSource('loading');
               
               try {
-                // � DEBUG: Проверяем состояние сессии перед запросом
-                console.log('[HEYS] 📡 fetchClientsFromCloud: curatorId=', curatorId);
-                const { data: sessionCheck } = await cloud.client.auth.getSession();
-                console.log('[HEYS] 📡 Session before clients fetch:', {
-                  hasSession: !!sessionCheck?.session,
-                  userId: sessionCheck?.session?.user?.id,
-                  expiresAt: sessionCheck?.session?.expires_at
-                });
-                
                 // 🔄 Используем fetchWithRetry с retry + fallback routing
                 const result = await (cloud.fetchWithRetry || defaultFetchWithRetry)(
                   () => cloud.client
@@ -2878,12 +2869,6 @@
                 );
                 
                 fetchingClientsRef.current = false;
-                
-                console.log('[HEYS] 📡 fetchClientsFromCloud result:', {
-                  error: result.error?.message,
-                  dataLength: result.data?.length,
-                  data: result.data
-                });
                 
                 if (result.error) {
                   console.error('Ошибка загрузки клиентов:', result.error.message);
@@ -2906,8 +2891,11 @@
               }
             }, [cloud]);
             
-            const addClientToCloud = useCallback(async (name) => {
-              const clientName = (name || '').trim() || `Клиент ${clients.length + 1}`;
+            const addClientToCloud = useCallback(async (arg) => {
+              const payload = typeof arg === 'string' ? { name: arg } : (arg || {});
+              const clientName = (payload.name || '').trim() || `Клиент ${clients.length + 1}`;
+              const clientPhone = (payload.phone || '').trim();
+              const clientPin = (payload.pin || '').trim();
 
               if (!cloud.client || !cloudUser || !cloudUser.id) {
                 const newClient = {
@@ -2923,6 +2911,33 @@
               }
 
               const userId = cloudUser.id;
+
+              // 🧩 Если доступны RPC для phone+PIN — создаём клиента через них (кураторский флоу)
+              // (Телефон/PIN опциональны: если не заполнены — fallback на старый insert)
+              try {
+                const auth = window.HEYS && window.HEYS.auth;
+                const createWithPin = auth && auth.createClientWithPin;
+                if (createWithPin && clientPhone && clientPin) {
+                  const created = await createWithPin({ name: clientName, phone: clientPhone, pin: clientPin });
+                  if (created && created.ok && created.clientId) {
+                    const result = await fetchClientsFromCloud(userId);
+                    setClients(result.data);
+                    setClientId(created.clientId);
+                    U.lsSet('heys_client_current', created.clientId);
+                    try {
+                      alert('✅ Клиент создан\n\nТелефон: ' + created.phone + '\nPIN: ' + created.pin);
+                    } catch (_) {}
+                    return;
+                  }
+                  if (created && created.error) {
+                    alert('Ошибка создания клиента: ' + created.error);
+                    return;
+                  }
+                }
+              } catch (e) {
+                // Падаем в fallback insert ниже
+              }
+
               const { data, error } = await cloud.client
                 .from('clients')
                 .insert([{ name: clientName, curator_id: userId }])
@@ -3977,9 +3992,8 @@
             }
 
             // Login form state (нужно до gate!)
-            // DEV: дефолтные данные для тестирования — убрать перед продакшеном!
-            const [email, setEmail] = useState('poplanton@mail.ru');
-            const [pwd, setPwd] = useState('007670');
+            const [email, setEmail] = useState('');
+            const [pwd, setPwd] = useState('');
             const [rememberMe, setRememberMe] = useState(() => {
               // Восстанавливаем checkbox из localStorage
               return localStorage.getItem('heys_remember_me') === 'true';
@@ -3990,6 +4004,8 @@
             const handleSignOut = cloudSignOut;
             const [clientSearch, setClientSearch] = useState(''); // Поиск клиентов
             const [showClientDropdown, setShowClientDropdown] = useState(false); // Dropdown в шапке
+            const [newPhone, setNewPhone] = useState('');
+            const [newPin, setNewPin] = useState('');
             
             // Morning Check-in — показываем ПОСЛЕ синхронизации, если нет веса за сегодня
             // ВАЖНО: НЕ проверяем сразу при смене clientId! Ждём ТОЛЬКО heysSyncCompleted,
@@ -4146,167 +4162,34 @@
                       message: 'Загрузка...', 
                       subtitle: 'Подключение к серверу' 
                     })
-                  // Если не залогинен — показать красивую форму входа
+                  // Если не залогинен — показываем единый экран входа (клиент/куратор)
                   : !cloudUser
                     ? React.createElement(
-                        'div',
-                        { className: 'modal-backdrop', style: { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' } },
-                        React.createElement(
-                          'div',
-                          { 
-                            className: 'modal login-modal', 
-                            style: { 
-                              maxWidth: 360, 
-                              padding: '32px 28px',
-                              borderRadius: 20,
-                              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-                            } 
+                        HEYS.LoginScreen,
+                        {
+                          initialMode: 'start',
+                          onCuratorLogin: async ({ email, password }) => {
+                            const res = await cloudSignIn(email, password, { rememberMe: false });
+                            return res && res.error ? { error: res.error } : { ok: true };
                           },
-                          // Логотип
-                          React.createElement('div', { 
-                            style: { 
-                              textAlign: 'center', 
-                              marginBottom: 24 
-                            } 
+                          onClientLogin: async ({ phone, pin }) => {
+                            const auth = HEYS && HEYS.auth;
+                            const fn = auth && auth.loginClient;
+                            const res = fn ? await fn({ phone, pin }) : { ok: false, error: 'cloud_not_ready' };
+                            if (res && res.ok && res.clientId) {
+                              try {
+                                if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                  await HEYS.cloud.switchClient(res.clientId);
+                                } else {
+                                  U.lsSet('heys_client_current', res.clientId);
+                                }
+                                try { localStorage.setItem('heys_last_client_id', res.clientId); } catch (_) {}
+                                setClientId(res.clientId);
+                              } catch (_) {}
+                            }
+                            return res;
                           },
-                            React.createElement('div', { 
-                              style: { 
-                                fontSize: 48, 
-                                marginBottom: 8,
-                                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
-                              } 
-                            }, '🍎'),
-                            React.createElement('div', { 
-                              style: { 
-                                fontSize: 28, 
-                                fontWeight: 700, 
-                                color: 'var(--text)',
-                                letterSpacing: '-0.5px'
-                              } 
-                            }, 'HEYS'),
-                            React.createElement('div', { 
-                              style: { 
-                                fontSize: 14, 
-                                color: 'var(--muted)',
-                                marginTop: 4
-                              } 
-                            }, 'Умный дневник питания')
-                          ),
-                          // Email поле
-                          React.createElement('div', { style: { marginBottom: 12 } },
-                            React.createElement('input', {
-                              type: 'email',
-                              placeholder: '📧  Email',
-                              value: email,
-                              onChange: (e) => { setEmail(e.target.value); setLoginError(''); },
-                              onKeyDown: (e) => e.key === 'Enter' && handleSignIn(),
-                              style: { 
-                                width: '100%', 
-                                padding: '14px 16px', 
-                                borderRadius: 12, 
-                                border: '2px solid var(--border)', 
-                                fontSize: 16,
-                                transition: 'border-color 0.2s, box-shadow 0.2s',
-                                outline: 'none'
-                              }
-                            })
-                          ),
-                          // Пароль поле
-                          React.createElement('div', { style: { marginBottom: 16 } },
-                            React.createElement('input', {
-                              type: 'password',
-                              placeholder: '🔒  Пароль',
-                              value: pwd,
-                              onChange: (e) => { setPwd(e.target.value); setLoginError(''); },
-                              onKeyDown: (e) => e.key === 'Enter' && handleSignIn(),
-                              style: { 
-                                width: '100%', 
-                                padding: '14px 16px', 
-                                borderRadius: 12, 
-                                border: '2px solid var(--border)', 
-                                fontSize: 16,
-                                transition: 'border-color 0.2s, box-shadow 0.2s',
-                                outline: 'none'
-                              }
-                            })
-                          ),
-                          // TODO: Checkbox "Запомнить меня" — временно скрыт, так как Supabase всегда сохраняет сессию
-                          // React.createElement('label', { 
-                          //   style: { 
-                          //     display: 'flex', 
-                          //     alignItems: 'center', 
-                          //     gap: 8, 
-                          //     marginBottom: 20,
-                          //     cursor: 'pointer',
-                          //     fontSize: 14,
-                          //     color: 'var(--muted)'
-                          //   } 
-                          // },
-                          //   React.createElement('input', {
-                          //     type: 'checkbox',
-                          //     checked: rememberMe,
-                          //     onChange: (e) => setRememberMe(e.target.checked),
-                          //     style: { 
-                          //       width: 18, 
-                          //       height: 18, 
-                          //       accentColor: '#667eea',
-                          //       cursor: 'pointer'
-                          //     }
-                          //   }),
-                          //   'Запомнить меня'
-                          // ),
-                          // Ошибка входа
-                          loginError && React.createElement('div', { 
-                            style: { 
-                              padding: '10px 14px', 
-                              marginBottom: 16, 
-                              background: '#fee2e2', 
-                              color: '#dc2626', 
-                              borderRadius: 10,
-                              fontSize: 14,
-                              textAlign: 'center'
-                            } 
-                          }, loginError),
-                          // Кнопка входа
-                          React.createElement(
-                            'button',
-                            { 
-                              className: 'btn acc', 
-                              onClick: handleSignIn,
-                              style: { 
-                                width: '100%', 
-                                padding: '14px', 
-                                fontSize: 16,
-                                fontWeight: 600,
-                                borderRadius: 12,
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                border: 'none',
-                                color: '#fff',
-                                cursor: status === 'signin' ? 'wait' : 'pointer',
-                                transition: 'transform 0.2s, box-shadow 0.2s',
-                                boxShadow: '0 4px 14px rgba(102, 126, 234, 0.4)'
-                              },
-                              disabled: status === 'signin'
-                            },
-                            status === 'signin' 
-                              ? React.createElement('span', null, '⏳ Вход...')
-                              : React.createElement('span', null, 'Войти →')
-                          ),
-                          // Подсказка
-                          React.createElement(
-                            'div',
-                            { style: { marginTop: 20, textAlign: 'center', color: 'var(--muted)', fontSize: 13 } },
-                            !navigator.onLine
-                              ? '📡 Нет подключения к сети'
-                              : (() => {
-                                  const hour = new Date().getHours();
-                                  if (hour >= 5 && hour < 12) return '🌅 Доброе утро!';
-                                  if (hour >= 12 && hour < 18) return '☀️ Добрый день!';
-                                  if (hour >= 18 && hour < 23) return '🌆 Добрый вечер!';
-                                  return '🌙 Доброй ночи!';
-                                })()
-                          )
-                        )
+                        }
                       )
                     // Модалка выбора клиента (только после логина)
                   : React.createElement(
@@ -4586,17 +4469,55 @@
                               margin: '16px 0' 
                             } 
                           }),
-                          // Создание нового клиента
+                          // Создание нового клиента (куратор выдаёт телефон+PIN)
                           React.createElement(
                             'div',
-                            { style: { display: 'flex', gap: 10 } },
+                            { style: { display: 'grid', gap: 10 } },
                             React.createElement('input', {
-                              placeholder: '+ Новый клиент...',
+                              placeholder: '+ Имя клиента',
                               value: newName,
                               onChange: (e) => setNewName(e.target.value),
-                              onKeyDown: (e) => e.key === 'Enter' && newName.trim() && addClientToCloud(newName),
                               style: { 
-                                flex: 1,
+                                width: '100%',
+                                padding: '12px 14px',
+                                borderRadius: 12,
+                                border: '2px solid var(--border)',
+                                fontSize: 15,
+                                outline: 'none'
+                              }
+                            }),
+                            React.createElement('input', {
+                              placeholder: 'Телефон (например +79991234567)',
+                              value: newPhone,
+                              onChange: (e) => setNewPhone(e.target.value),
+                              inputMode: 'tel',
+                              style: { 
+                                width: '100%',
+                                padding: '12px 14px',
+                                borderRadius: 12,
+                                border: '2px solid var(--border)',
+                                fontSize: 15,
+                                outline: 'none'
+                              }
+                            }),
+                            React.createElement('input', {
+                              placeholder: 'PIN (4 цифры)',
+                              value: newPin,
+                              onChange: (e) => setNewPin(e.target.value),
+                              onKeyDown: (e) => {
+                                const canCreate = newName.trim() && newPhone.trim() && newPin.trim();
+                                if (e.key === 'Enter' && canCreate) {
+                                  addClientToCloud({ name: newName, phone: newPhone, pin: newPin }).then(() => {
+                                    setNewName('');
+                                    setNewPhone('');
+                                    setNewPin('');
+                                  });
+                                }
+                              },
+                              inputMode: 'numeric',
+                              type: 'password',
+                              style: { 
+                                width: '100%',
                                 padding: '12px 14px',
                                 borderRadius: 12,
                                 border: '2px solid var(--border)',
@@ -4608,22 +4529,35 @@
                               'button',
                               { 
                                 className: 'btn acc', 
-                                onClick: () => addClientToCloud(newName),
-                                disabled: !newName.trim(),
+                                onClick: () => {
+                                  const canCreate = newName.trim() && newPhone.trim() && newPin.trim();
+                                  if (!canCreate) return;
+                                  addClientToCloud({ name: newName, phone: newPhone, pin: newPin }).then(() => {
+                                    setNewName('');
+                                    setNewPhone('');
+                                    setNewPin('');
+                                  });
+                                },
+                                disabled: !(newName.trim() && newPhone.trim() && newPin.trim()),
                                 style: {
                                   padding: '12px 20px',
                                   borderRadius: 12,
-                                  background: newName.trim() 
+                                  background: (newName.trim() && newPhone.trim() && newPin.trim())
                                     ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
                                     : 'var(--border)',
                                   border: 'none',
-                                  color: newName.trim() ? '#fff' : 'var(--muted)',
+                                  color: (newName.trim() && newPhone.trim() && newPin.trim()) ? '#fff' : 'var(--muted)',
                                   fontWeight: 600,
-                                  cursor: newName.trim() ? 'pointer' : 'not-allowed',
+                                  cursor: (newName.trim() && newPhone.trim() && newPin.trim()) ? 'pointer' : 'not-allowed',
                                   transition: 'all 0.2s'
                                 }
                               },
-                              'Создать'
+                              'Создать клиента'
+                            ),
+                            React.createElement(
+                              'div',
+                              { style: { fontSize: 12, color: 'var(--muted)', lineHeight: 1.4 } },
+                              'Клиент входит по телефону + PIN. Сохраните и передайте эти данные клиенту.'
                             )
                           ),
                           // Выход
@@ -4698,7 +4632,7 @@
 
               // Есть сеть — проверяем "Запомнить меня"
               const shouldRemember = localStorage.getItem('heys_remember_me') === 'true';
-              const savedEmail = localStorage.getItem('heys_saved_email');
+              const savedEmail = localStorage.getItem('heys_remember_email') || localStorage.getItem('heys_saved_email');
               
               if (shouldRemember && savedEmail) {
                 // Пробуем восстановить сессию Supabase
@@ -4718,50 +4652,47 @@
                   } catch (e) { return false; }
                 };
                 
-                // Supabase автоматически восстанавливает сессию из localStorage
-                // ⚠️ Вызываем getSession() ТОЛЬКО если токен ещё валиден
-                if (cloud && cloud.client && cloud.client.auth && isTokenValid()) {
-                  cloud.client.auth.getSession().then(async ({ data }) => {
-                    const session = data?.session;
-                    const sessionUser = session?.user;
-                    
-                    // Проверяем что сессия существует и не истекла
-                    if (sessionUser && session.expires_at) {
-                      const expiresAt = session.expires_at * 1000; // в миллисекундах
-                      const now = Date.now();
-                      const bufferMs = 60 * 1000; // 1 минута буфер
-                      
-                      if (expiresAt > now + bufferMs) {
-                        // Сессия валидна — делаем тестовый запрос чтобы убедиться
-                        try {
-                          const { error: testError } = await cloud.client.from('clients').select('id').limit(1);
-                          if (!testError) {
-                            // Всё OK — используем сессию
-                            setCloudUser(sessionUser);
-                            setStatus('online');
-                            console.log('[HEYS] ✅ Сессия восстановлена:', sessionUser.email);
-                          } else {
-                            // Ошибка — сессия невалидна, показываем форму входа
-                            // ⚠️ Не вызываем signOut() — пусть SDK сам разберётся
-                            console.log('[HEYS] ⚠️ Сессия невалидна (test failed), требуется вход');
-                          }
-                        } catch (e) {
-                          console.log('[HEYS] ⚠️ Сессия невалидна (exception), требуется вход');
-                          // ⚠️ Не вызываем signOut()
-                        }
-                      } else {
-                        // Сессия истекла — показываем форму входа
-                        console.log('[HEYS] ⚠️ Сессия истекла, требуется вход');
-                        // ⚠️ Не вызываем signOut()
+                // ⚠️ RTR-safe: НЕ вызываем cloud.client.auth.getSession()
+                // В Supabase RTR любой скрытый refresh может привести к 400 refresh_token_already_used.
+                // Вместо этого читаем сохранённый токен из localStorage.
+                const readStoredAuthUser = () => {
+                  try {
+                    const stored = localStorage.getItem('heys_supabase_auth_token');
+                    if (!stored) return null;
+                    const parsed = JSON.parse(stored);
+                    const expiresAt = parsed?.expires_at;
+                    const u = parsed?.user;
+                    if (!u || !expiresAt) return null;
+                    // Буфер 1 минута
+                    if (expiresAt * 1000 <= Date.now() + 60000) return null;
+                    return u;
+                  } catch (e) { return null; }
+                };
+
+                const storedUser = isTokenValid() ? readStoredAuthUser() : null;
+                if (cloud && cloud.client && storedUser) {
+                  // Ставим пользователя, затем пробуем сделать лёгкий запрос (он НЕ должен вызывать refresh)
+                  setCloudUser(storedUser);
+                  setStatus('online');
+                  console.log('[HEYS] ✅ Сессия восстановлена (storage):', storedUser.email || storedUser.id);
+
+                  // Тестируем доступ к таблице clients — если RLS/сессия не ок, просто оставим gate для входа
+                  cloud.client
+                    .from('clients')
+                    .select('id')
+                    .limit(1)
+                    .then(({ error: testError }) => {
+                      if (testError) {
+                        console.log('[HEYS] ⚠️ Сессия невалидна (test failed), требуется вход');
                       }
-                    }
-                    setIsInitializing(false);
-                  }).catch(() => {
-                    setIsInitializing(false);
-                  });
+                    })
+                    .catch(() => {
+                      console.log('[HEYS] ⚠️ Сессия невалидна (exception), требуется вход');
+                    })
+                    .finally(() => {
+                      setIsInitializing(false);
+                    });
                 } else {
-                  // Токен истёк или невалиден — показываем форму входа
-                  // НЕ вызываем getSession() чтобы избежать 400 Bad Request
                   console.log('[HEYS] ⏭️ Токен истёк, пропуск автовосстановления');
                   setIsInitializing(false);
                 }
@@ -4824,56 +4755,7 @@
               };
             }, [products]);
 
-            // auto sign-in in single-curator mode
-            // ВАЖНО: НЕ включаем handleSignIn в зависимости — это вызовет бесконечный цикл!
-            // handleSignIn пересоздаётся при изменении email/pwd, что триггерит useEffect снова.
-            const hasTriedAutoSignInRef = React.useRef(false);
-            useEffect(() => {
-              // Пытаемся залогиниться только ОДИН раз при старте
-              // И только если НЕТ активной сессии (чтобы не конфликтовать с восстановлением)
-              if (ONE_CURATOR_MODE && status !== 'online' && !hasTriedAutoSignInRef.current) {
-                hasTriedAutoSignInRef.current = true;
-                
-                // ⚠️ Проверяем access_token локально перед вызовом getSession()
-                // Если токен истёк — SDK попытается refresh и получит 400
-                const isTokenValid = () => {
-                  try {
-                    const stored = localStorage.getItem('heys_supabase_auth_token');
-                    if (!stored) return false;
-                    const parsed = JSON.parse(stored);
-                    const expiresAt = parsed?.expires_at;
-                    return expiresAt && expiresAt * 1000 > Date.now();
-                  } catch (e) { return false; }
-                };
-                
-                // Проверяем, нет ли уже активной сессии
-                const cloud = window.HEYS?.cloud;
-                // ⚠️ Вызываем getSession() ТОЛЬКО если токен валиден
-                // Иначе SDK попытается refresh и получит 400
-                if (cloud?.client?.auth?.getSession && isTokenValid()) {
-                  cloud.client.auth.getSession().then(({ data }) => {
-                    if (data?.session?.user) {
-                      // Сессия уже есть — не делаем signIn
-                      // console.log('[App] Session already exists, skipping auto signIn');
-                    } else {
-                      // Сессии нет — делаем signIn
-                      handleSignIn();
-                    }
-                  }).catch(() => {
-                    // Ошибка getSession — пробуем signIn
-                    handleSignIn();
-                  });
-                } else {
-                  // Токен невалиден или нет cloud — сразу signIn
-                  handleSignIn();
-                }
-              }
-              // Сбрасываем флаг если вышли из аккаунта (status изменился на offline)
-              if (status === 'offline') {
-                hasTriedAutoSignInRef.current = false;
-              }
-              // eslint-disable-next-line react-hooks/exhaustive-deps
-            }, [ONE_CURATOR_MODE, status]); // handleSignIn исключён намеренно!
+            // Автологин отключён: показываем пользователю стартовый экран входа.
             
             // Формируем текст для pending details
             const getPendingText = () => {
