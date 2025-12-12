@@ -4496,9 +4496,26 @@
                               }
                             }),
                             React.createElement('input', {
-                              placeholder: 'Телефон (например +79991234567)',
-                              value: newPhone,
-                              onChange: (e) => setNewPhone(e.target.value),
+                              placeholder: 'Телефон',
+                              value: (() => {
+                                // Форматируем как +7 (XXX) XXX-XX-XX
+                                const d = (newPhone || '').replace(/\D/g, '').slice(0, 11);
+                                if (!d) return '';
+                                let result = '+7';
+                                const body = d.startsWith('7') ? d.slice(1) : d.startsWith('8') ? d.slice(1) : d;
+                                if (body.length > 0) result += ' (' + body.slice(0, 3);
+                                if (body.length >= 3) result += ') ';
+                                if (body.length > 3) result += body.slice(3, 6);
+                                if (body.length >= 6) result += '-';
+                                if (body.length > 6) result += body.slice(6, 8);
+                                if (body.length >= 8) result += '-';
+                                if (body.length > 8) result += body.slice(8, 10);
+                                return result;
+                              })(),
+                              onChange: (e) => {
+                                const digits = (e.target.value || '').replace(/\D/g, '').slice(0, 11);
+                                setNewPhone(digits);
+                              },
                               inputMode: 'tel',
                               style: { 
                                 width: '100%',
@@ -4702,41 +4719,15 @@
                       setIsInitializing(false);
                     });
                 } else if (cloud && cloud.client) {
-                  // Токен истёк или отсутствует — пробуем восстановить через getSession()
-                  // getSession() сначала проверит storage, потом попробует refresh если нужно
-                  console.log('[HEYS] 🔄 Токен истёк, пробуем обновить сессию...');
-                  
-                  cloud.client.auth.getSession()
-                    .then(({ data, error }) => {
-                      if (error || !data?.session?.user) {
-                        console.log('[HEYS] ⏭️ Refresh не удался:', error?.message || 'no session');
-                        setStatus('offline');
-                        // Отложенное уведомление — даём UI время загрузиться
-                        setTimeout(() => {
-                          if (typeof HEYS !== 'undefined' && HEYS.toast) {
-                            HEYS.toast.warning('Сессия истекла. Войдите в настройках для синхронизации.', 5000);
-                          }
-                        }, 2000);
-                      } else {
-                        // Успешный refresh!
-                        const refreshedUser = data.session.user;
-                        setCloudUser(refreshedUser);
-                        setStatus('online');
-                        console.log('[HEYS] ✅ Сессия обновлена:', refreshedUser.email);
-                        
-                        // Запускаем синхронизацию
-                        if (cloud.bootstrapClientSync && clientId) {
-                          cloud.bootstrapClientSync(clientId).catch(() => {});
-                        }
-                      }
-                    })
-                    .catch((e) => {
-                      console.log('[HEYS] ⏭️ Refresh exception:', e?.message);
-                      setStatus('offline');
-                    })
-                    .finally(() => {
-                      setIsInitializing(false);
-                    });
+                  // 🚫 RTR-safe v3: НЕ пытаемся refresh — это триггерит 400 Bad Request
+                  // При Refresh Token Rotation токен одноразовый и скорее всего уже использован
+                  // Просто очищаем и показываем экран логина
+                  console.log('[HEYS] ⚠️ Токен истёк, требуется повторный вход');
+                  try {
+                    localStorage.removeItem('heys_supabase_auth_token');
+                  } catch (_) {}
+                  setStatus('offline');
+                  setIsInitializing(false);
                 } else {
                   console.log('[HEYS] ⏭️ Токен истёк, пропуск автовосстановления');
                   // Показываем уведомление о необходимости повторного входа
@@ -4964,133 +4955,194 @@
                                 animation: 'fadeSlideIn 0.2s ease'
                               }
                             },
-                            // Заголовок
-                            React.createElement('div', { 
-                              style: { 
-                                padding: '12px 16px 8px', 
-                                fontSize: 12, 
-                                color: 'var(--muted)',
-                                fontWeight: 600,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px'
-                              } 
-                            }, `Быстрый выбор (${clients.length})`),
-                            // Список клиентов (сортировка: последний использованный сверху)
-                            [...clients]
-                              .sort((a, b) => {
-                                const lastA = localStorage.getItem('heys_last_client_id') === a.id ? 1 : 0;
-                                const lastB = localStorage.getItem('heys_last_client_id') === b.id ? 1 : 0;
-                                if (lastA !== lastB) return lastB - lastA;
-                                // Затем по активности (streak)
-                                const statsA = getClientStats(a.id);
-                                const statsB = getClientStats(b.id);
-                                return (statsB.streak || 0) - (statsA.streak || 0);
-                              })
-                              .map((c) => 
-                              React.createElement(
-                                'div',
-                                {
-                                  key: c.id,
-                                  className: 'client-dropdown-item' + (c.id === clientId ? ' active' : ''),
-                                  style: {
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 10,
-                                    padding: '10px 16px',
-                                    cursor: 'pointer',
-                                    transition: 'background 0.15s',
-                                    background: c.id === clientId ? 'rgba(102, 126, 234, 0.1)' : 'transparent'
+                            // Проверяем режим: клиент (RPC) или куратор
+                            HEYS.cloud?.isRpcOnlyMode?.()
+                              // === КЛИЕНТСКИЙ РЕЖИМ: только имя + кнопка выхода ===
+                              ? [
+                                  // Заголовок "Мой аккаунт"
+                                  React.createElement('div', { 
+                                    key: 'header',
+                                    style: { 
+                                      padding: '16px 16px 12px', 
+                                      textAlign: 'center',
+                                      borderBottom: '1px solid var(--border)'
+                                    } 
                                   },
-                                  onClick: async () => {
-                                    if (c.id !== clientId) {
-                                      if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                        await HEYS.cloud.switchClient(c.id);
-                                      } else {
-                                        U.lsSet('heys_client_current', c.id);
+                                    React.createElement('div', {
+                                      style: {
+                                        width: 48,
+                                        height: 48,
+                                        borderRadius: '50%',
+                                        background: getAvatarColor(currentClientName),
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#fff',
+                                        fontWeight: 600,
+                                        fontSize: 18,
+                                        margin: '0 auto 8px'
                                       }
-                                      localStorage.setItem('heys_last_client_id', c.id);
-                                      setClientId(c.id);
+                                    }, getClientInitials(currentClientName)),
+                                    React.createElement('div', {
+                                      style: { fontSize: 16, fontWeight: 600, color: 'var(--text)' }
+                                    }, currentClientName),
+                                    React.createElement('div', {
+                                      style: { fontSize: 12, color: 'var(--muted)', marginTop: 2 }
+                                    }, '📱 Вход по телефону')
+                                  ),
+                                  // Кнопка выхода
+                                  React.createElement('div', {
+                                    key: 'logout',
+                                    style: {
+                                      padding: '14px 16px',
+                                      textAlign: 'center',
+                                      cursor: 'pointer',
+                                      fontSize: 14
+                                    },
+                                    onClick: () => {
+                                      setShowClientDropdown(false);
+                                      handleSignOut();
                                     }
-                                    setShowClientDropdown(false);
-                                  }
-                                },
-                                // Мини-аватар
-                                React.createElement('div', { 
-                                  style: { 
-                                    width: 32, 
-                                    height: 32, 
-                                    borderRadius: '50%',
-                                    background: getAvatarColor(c.name),
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: '#fff',
-                                    fontWeight: 600,
-                                    fontSize: 12,
-                                    flexShrink: 0
-                                  } 
-                                }, getClientInitials(c.name)),
-                                // Имя
-                                React.createElement('span', { 
-                                  style: { 
-                                    flex: 1,
-                                    fontWeight: c.id === clientId ? 600 : 400,
-                                    color: c.id === clientId ? '#667eea' : 'var(--text)'
-                                  } 
-                                }, c.name),
-                                // Галочка для выбранного
-                                c.id === clientId && React.createElement('span', { 
-                                  style: { color: '#667eea' } 
-                                }, '✓')
-                              )
-                            ),
-                            // Разделитель
-                            React.createElement('div', { 
-                              style: { height: 1, background: 'var(--border)', margin: '8px 0' } 
-                            }),
-                            // Кнопка "Все клиенты"
-                            React.createElement(
-                              'div',
-                              {
-                                style: {
-                                  padding: '10px 16px 12px',
-                                  textAlign: 'center',
-                                  color: '#667eea',
-                                  fontWeight: 500,
-                                  cursor: 'pointer',
-                                  fontSize: 14
-                                },
-                                onClick: () => {
-                                  localStorage.removeItem('heys_client_current');
-                                  window.HEYS.currentClientId = null;
-                                  setClientId('');
-                                  setShowClientDropdown(false);
-                                }
-                              },
-                              '👥 Все клиенты'
-                            ),
-                            // Кнопка Выход с email
-                            React.createElement(
-                              'div',
-                              {
-                                style: {
-                                  padding: '8px 16px 12px',
-                                  textAlign: 'center',
-                                  cursor: 'pointer',
-                                  fontSize: 13
-                                },
-                                onClick: () => {
-                                  setShowClientDropdown(false);
-                handleSignOut();
-                                }
-                              },
-                              React.createElement('div', { 
-                                style: { color: 'var(--muted)', fontSize: 11, marginBottom: 4 } 
-                              }, cloudUser?.email || ''),
-                              React.createElement('span', { 
-                                style: { color: '#ef4444' } 
-                              }, '🚪 Выйти')
-                            )
+                                  },
+                                    React.createElement('span', { 
+                                      style: { color: '#ef4444' } 
+                                    }, '🚪 Выйти из аккаунта')
+                                  )
+                                ]
+                              // === РЕЖИМ КУРАТОРА: полный список клиентов ===
+                              : [
+                                  // Заголовок
+                                  React.createElement('div', { 
+                                    key: 'header',
+                                    style: { 
+                                      padding: '12px 16px 8px', 
+                                      fontSize: 12, 
+                                      color: 'var(--muted)',
+                                      fontWeight: 600,
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.5px'
+                                    } 
+                                  }, `Быстрый выбор (${clients.length})`),
+                                  // Список клиентов (сортировка: последний использованный сверху)
+                                  [...clients]
+                                    .sort((a, b) => {
+                                      const lastA = localStorage.getItem('heys_last_client_id') === a.id ? 1 : 0;
+                                      const lastB = localStorage.getItem('heys_last_client_id') === b.id ? 1 : 0;
+                                      if (lastA !== lastB) return lastB - lastA;
+                                      // Затем по активности (streak)
+                                      const statsA = getClientStats(a.id);
+                                      const statsB = getClientStats(b.id);
+                                      return (statsB.streak || 0) - (statsA.streak || 0);
+                                    })
+                                    .map((c) => 
+                                    React.createElement(
+                                      'div',
+                                      {
+                                        key: c.id,
+                                        className: 'client-dropdown-item' + (c.id === clientId ? ' active' : ''),
+                                        style: {
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: 10,
+                                          padding: '10px 16px',
+                                          cursor: 'pointer',
+                                          transition: 'background 0.15s',
+                                          background: c.id === clientId ? 'rgba(102, 126, 234, 0.1)' : 'transparent'
+                                        },
+                                        onClick: async () => {
+                                          if (c.id !== clientId) {
+                                            if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                              await HEYS.cloud.switchClient(c.id);
+                                            } else {
+                                              U.lsSet('heys_client_current', c.id);
+                                            }
+                                            localStorage.setItem('heys_last_client_id', c.id);
+                                            setClientId(c.id);
+                                          }
+                                          setShowClientDropdown(false);
+                                        }
+                                      },
+                                      // Мини-аватар
+                                      React.createElement('div', { 
+                                        style: { 
+                                          width: 32, 
+                                          height: 32, 
+                                          borderRadius: '50%',
+                                          background: getAvatarColor(c.name),
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          color: '#fff',
+                                          fontWeight: 600,
+                                          fontSize: 12,
+                                          flexShrink: 0
+                                        } 
+                                      }, getClientInitials(c.name)),
+                                      // Имя
+                                      React.createElement('span', { 
+                                        style: { 
+                                          flex: 1,
+                                          fontWeight: c.id === clientId ? 600 : 400,
+                                          color: c.id === clientId ? '#667eea' : 'var(--text)'
+                                        } 
+                                      }, c.name),
+                                      // Галочка для выбранного
+                                      c.id === clientId && React.createElement('span', { 
+                                        style: { color: '#667eea' } 
+                                      }, '✓')
+                                    )
+                                  ),
+                                  // Разделитель
+                                  React.createElement('div', { 
+                                    key: 'divider',
+                                    style: { height: 1, background: 'var(--border)', margin: '8px 0' } 
+                                  }),
+                                  // Кнопка "Все клиенты"
+                                  React.createElement(
+                                    'div',
+                                    {
+                                      key: 'all-clients',
+                                      style: {
+                                        padding: '10px 16px 12px',
+                                        textAlign: 'center',
+                                        color: '#667eea',
+                                        fontWeight: 500,
+                                        cursor: 'pointer',
+                                        fontSize: 14
+                                      },
+                                      onClick: () => {
+                                        localStorage.removeItem('heys_client_current');
+                                        window.HEYS.currentClientId = null;
+                                        setClientId('');
+                                        setShowClientDropdown(false);
+                                      }
+                                    },
+                                    '👥 Все клиенты'
+                                  ),
+                                  // Кнопка Выход с email
+                                  React.createElement(
+                                    'div',
+                                    {
+                                      key: 'logout',
+                                      style: {
+                                        padding: '8px 16px 12px',
+                                        textAlign: 'center',
+                                        cursor: 'pointer',
+                                        fontSize: 13
+                                      },
+                                      onClick: () => {
+                                        setShowClientDropdown(false);
+                                        handleSignOut();
+                                      }
+                                    },
+                                    React.createElement('div', { 
+                                      style: { color: 'var(--muted)', fontSize: 11, marginBottom: 4 } 
+                                    }, cloudUser?.email || ''),
+                                    React.createElement('span', { 
+                                      style: { color: '#ef4444' } 
+                                    }, '🚪 Выйти')
+                                  )
+                                ]
                           ),
                           // Overlay для закрытия dropdown при клике вне
                           showClientDropdown && React.createElement('div', {

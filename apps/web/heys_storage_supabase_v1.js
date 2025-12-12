@@ -1582,25 +1582,45 @@
       const OLD_AUTH_KEY = 'sb-ukqolcziqcuplqfgrmsh-auth-token';
       const NEW_AUTH_KEY = 'heys_supabase_auth_token';
       
-      // 🔄 RTR-safe v2: НЕ удаляем токен при старте — проверяем его валидность
-      // Удаляем ТОЛЬКО старый ключ (sb-*), новый оставляем для восстановления сессии
+      // 🔄 RTR-safe v3: Очищаем ИСТЁКШИЕ токены ДО создания клиента
+      // Иначе SDK при инициализации попытается сделать refresh и получит 400
       try {
+        // Удаляем старый ключ (sb-*)
         const hadOld = !!localStorage.getItem(OLD_AUTH_KEY);
         if (hadOld) {
           log('[AUTH] 🧹 Удаляем старый auth токен (sb-*)');
           localStorage.removeItem(OLD_AUTH_KEY);
         }
-        // NEW_AUTH_KEY оставляем — он нужен для restoreSessionFromStorage() ниже
+        
+        // Проверяем NEW_AUTH_KEY — если токен истёк, удаляем ДО createClient
+        const stored = localStorage.getItem(NEW_AUTH_KEY);
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            const expiresAt = parsed?.expires_at;
+            // Буфер 60 секунд
+            const isExpired = !expiresAt || expiresAt * 1000 <= Date.now() + 60000;
+            if (isExpired) {
+              log('[AUTH] ⚠️ Токен истёк — удаляем ДО создания клиента (RTR-safe)');
+              localStorage.removeItem(NEW_AUTH_KEY);
+            }
+          } catch (_) {
+            // Невалидный JSON — удаляем
+            localStorage.removeItem(NEW_AUTH_KEY);
+          }
+        }
       } catch (_) {}
       
       // Единый storageKey для auth — сессия сохраняется при переключении proxy↔direct
       client = global.supabase.createClient(initialUrl, anonKey, {
         auth: {
-          // ⚠️ RTR-safe v2: включаем persistSession для сохранения access_token
-          // autoRefreshToken оставляем false — мы сами управляем refresh
-          persistSession: true,
+          // ⚠️ RTR-safe v4: ПОЛНОСТЬЮ отключаем авто-управление сессией
+          // persistSession=false — SDK НЕ сохраняет и НЕ восстанавливает сессию
+          // autoRefreshToken=false — SDK НЕ пытается refresh
+          // Мы управляем сессией вручную через setSession() после signIn
+          persistSession: false,
           autoRefreshToken: false,
-          storageKey: NEW_AUTH_KEY,
+          // storageKey не нужен при persistSession=false
         }
       });
       cloud.client = client;
@@ -1650,6 +1670,28 @@
           user = restored.user;
           status = CONNECTION_STATUS.SYNC;
           logCritical('🔄 Сессия восстановлена (access_token валиден):', user.email || user.id);
+          
+          // 🔄 RTR-safe v4: Устанавливаем сессию в SDK через setSession()
+          // Это необходимо потому что persistSession=false
+          try {
+            const stored = localStorage.getItem('heys_supabase_auth_token');
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (parsed.access_token && parsed.refresh_token) {
+                client.auth.setSession({
+                  access_token: parsed.access_token,
+                  refresh_token: parsed.refresh_token
+                }).then(({ error }) => {
+                  if (error) {
+                    logCritical('⚠️ setSession error:', error.message);
+                  } else {
+                    logCritical('✅ Сессия установлена в SDK');
+                  }
+                }).catch(() => {});
+              }
+            }
+          } catch (_) {}
+          
           const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
           const finishOnline = () => {
             if (_signInInProgress) return;
@@ -1667,39 +1709,15 @@
             finishOnline();
           }
         } else if (restored.user && restored.expired && restored.refreshToken) {
-          // Токен истёк, но есть refresh_token — пробуем обновить (один раз)
-          logCritical('🔄 Access token истёк, пробуем refresh...');
-          
-          // SDK с persistSession=true должен сам обработать это через getSession()
-          client.auth.getSession().then(({ data, error }) => {
-            if (error || !data?.session?.user) {
-              // Refresh не удался (возможно RTR 400) — очищаем и требуем логин
-              logCritical('⚠️ Refresh не удался:', error?.message || 'no session');
-              try {
-                localStorage.removeItem('heys_supabase_auth_token');
-              } catch (_) {}
-              status = CONNECTION_STATUS.OFFLINE;
-              user = null;
-            } else {
-              // Refresh успешен!
-              user = data.session.user;
-              status = CONNECTION_STATUS.ONLINE;
-              logCritical('✅ Сессия обновлена через refresh:', user.email || user.id);
-              
-              const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
-              if (clientId) {
-                cloud.bootstrapClientSync(clientId).catch(() => {});
-              }
-              cloud.retrySync && cloud.retrySync();
-            }
-          }).catch((e) => {
-            logCritical('⚠️ Refresh exception:', e?.message || e);
-            try {
-              localStorage.removeItem('heys_supabase_auth_token');
-            } catch (_) {}
-            status = CONNECTION_STATUS.OFFLINE;
-            user = null;
-          });
+          // 🚫 RTR-safe v3: НЕ пытаемся refresh — это триггерит 400 Bad Request
+          // При Refresh Token Rotation токен одноразовый и скорее всего уже использован
+          // Лучше сразу очистить и показать экран логина
+          logCritical('⚠️ Access token истёк — требуется повторный вход');
+          try {
+            localStorage.removeItem('heys_supabase_auth_token');
+          } catch (_) {}
+          status = CONNECTION_STATUS.OFFLINE;
+          user = null;
         }
       }
 
@@ -1827,6 +1845,16 @@
       // если SDK пытается обновить токен который уже в storage
       if (data?.session) {
         log('[AUTH] Session from signIn:', data.session.user?.email);
+        // 🔄 RTR-safe v4: Сохраняем сессию вручную (persistSession=false)
+        try {
+          localStorage.setItem('heys_supabase_auth_token', JSON.stringify({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+            expires_at: data.session.expires_at,
+            user: data.session.user
+          }));
+          log('[AUTH] ✅ Сессия сохранена в localStorage');
+        } catch (_) {}
       }
       
       status = 'sync';
