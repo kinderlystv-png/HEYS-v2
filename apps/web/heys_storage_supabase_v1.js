@@ -3541,6 +3541,15 @@
         // ═══════════════════════════════════════════════════════════════
         // ОБЫЧНЫЙ РЕЖИМ: через Supabase session (куратор)
         // ═══════════════════════════════════════════════════════════════
+        // 🔐 Если нет user — нельзя сохранять в обычном режиме
+        if (!user) {
+          log('⚠️ [SAVE] No user session, returning items to queue');
+          clientUpsertQueue.push(...uniqueBatch);
+          savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+          notifyPendingChange();
+          return;
+        }
+        
         const promises = uniqueBatch.map(item => {
           // Добавляем user_id если его нет (таблица требует NOT NULL)
           const itemWithUser = item.user_id ? item : { ...item, user_id: user.id };
@@ -3776,7 +3785,7 @@
         }
 
         const upsertObj = {
-            user_id: user.id,
+            user_id: user?.id || null, // 🔐 PIN auth: user может быть null
             client_id: client_id,
             k: normalizedKey,
             v: value,
