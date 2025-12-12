@@ -123,11 +123,13 @@
   let failsafeTimerId = null;
   cloud.isInitialSyncCompleted = function() { return initialSyncCompleted; };
   
-  // 🔧 Debug getters (для консоли)
-  Object.defineProperty(cloud, '_initialSyncCompleted', { get: () => initialSyncCompleted });
-  Object.defineProperty(cloud, '_rpcSyncInProgress', { get: () => _rpcSyncInProgress });
-  Object.defineProperty(cloud, '_rpcOnlyMode', { get: () => _rpcOnlyMode });
-  Object.defineProperty(cloud, '_pinAuthClientId', { get: () => _pinAuthClientId });
+  // 🔧 Debug getters (для консоли) — только если ещё не определены
+  if (!Object.getOwnPropertyDescriptor(cloud, '_rpcOnlyMode')) {
+    Object.defineProperty(cloud, '_initialSyncCompleted', { get: () => initialSyncCompleted });
+    Object.defineProperty(cloud, '_rpcSyncInProgress', { get: () => _rpcSyncInProgress });
+    Object.defineProperty(cloud, '_rpcOnlyMode', { get: () => _rpcOnlyMode });
+    Object.defineProperty(cloud, '_pinAuthClientId', { get: () => _pinAuthClientId });
+  }
 
   /**
    * 🔐 Универсальный sync — выбирает правильную стратегию (RPC для PIN auth, bootstrap для обычной)
