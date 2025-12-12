@@ -2072,8 +2072,8 @@
     component: ColdExposureStepComponent,
     getInitialData: () => {
       const dateKey = getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
-      const cold = dayData.coldExposure || {};
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
+      const cold = dayData.coldExposure ?? {};  // null-safe: ?? вместо ||
       return {
         coldType: cold.type || 'none',
         coldTime: cold.time || new Date().toTimeString().slice(0, 5),
