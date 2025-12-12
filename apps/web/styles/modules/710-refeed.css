@@ -439,6 +439,12 @@
   border-style: solid;
 }
 
+/* Toggle внутри goal-progress-card */
+.goal-progress-card .refeed-toggle {
+  margin-top: 8px;
+  align-self: flex-start;
+}
+
 @keyframes refeed-toggle-hint {
   0%, 100% {
     background: #f9fafb;

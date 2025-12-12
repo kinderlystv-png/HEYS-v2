@@ -12061,7 +12061,23 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 className: 'goal-zone-label goal-zone-label-100',
                 style: { left: (ratio > 1 ? (1.0 / ratio) * 100 : 100) + '%' }
               }, '100%')
-            )
+            ),
+            // Refeed Toggle — кнопка включения загрузочного дня (под прогресс-баром)
+            HEYS.Refeed && HEYS.Refeed.renderRefeedToggle({
+              isRefeedDay: day.isRefeedDay,
+              refeedReason: day.refeedReason,
+              caloricDebt: caloricDebt,
+              optimum: optimum,
+              onToggle: (isActive, reason) => {
+                // Сохраняем через setDay — обновляем состояние дня
+                setDay(prev => ({ 
+                  ...prev, 
+                  isRefeedDay: isActive ? true : false,
+                  refeedReason: isActive ? reason : null,
+                  updatedAt: Date.now()
+                }));
+              }
+            })
           );
         })()
       ),
@@ -15028,22 +15044,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       
       // === ПОД-ВКЛАДКА 2: Дневник питания (или всё на десктопе) ===
       (!isMobile || mobileSubTab === 'diary') && goalProgressBar,
-      // Refeed Toggle — кнопка включения загрузочного дня (показывается если есть рекомендация или активен)
-      (!isMobile || mobileSubTab === 'diary') && HEYS.Refeed && HEYS.Refeed.renderRefeedToggle({
-        isRefeedDay: day.isRefeedDay,
-        refeedReason: day.refeedReason,
-        caloricDebt: caloricDebt,
-        optimum: optimum,
-        onToggle: (isActive, reason) => {
-          // Сохраняем через setDay — обновляем состояние дня
-          setDay(prev => ({ 
-            ...prev, 
-            isRefeedDay: isActive ? true : false,
-            refeedReason: isActive ? reason : null,
-            updatedAt: Date.now()
-          }));
-        }
-      }),
       (!isMobile || mobileSubTab === 'diary') && daySummary,
       
       // === Мини-график распределения калорий по приёмам ===
