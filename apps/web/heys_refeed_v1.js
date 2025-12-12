@@ -38,7 +38,9 @@
    * @returns {Object} зона
    */
   function getRefeedZone(ratio, isRefeedDay) {
+    // Защита от null/undefined — вернуть under зону (ещё не поел)
     if (!isRefeedDay) return null;
+    if (ratio == null || ratio <= 0) return REFEED_ZONES.under;
     
     if (ratio < 0.9) return REFEED_ZONES.under;
     if (ratio >= 0.9 && ratio <= REFEED_OK_RATIO) return REFEED_ZONES.ok;
@@ -731,7 +733,7 @@
     renderRefeedStats,
     
     // Версия
-    version: '1.3.1'  // v1.3.1 — renderRefeedToggle fix
+    version: '1.3.2'  // v1.3.2 — getRefeedZone null-safety fix
   };
   
   // Автоматическая регистрация шага при загрузке
@@ -743,7 +745,7 @@
   
   // Логируем только в dev режиме
   if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
-    console.log('[HEYS] 🔄 Refeed Module v1.3.1 loaded');
+    console.log('[HEYS] 🔄 Refeed Module v1.3.2 loaded');
   }
 
 })(typeof window !== 'undefined' ? window : global);

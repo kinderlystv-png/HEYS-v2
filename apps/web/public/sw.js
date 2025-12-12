@@ -2,7 +2,7 @@
 // Стратегия: Cache-First для статики, Network-First для API
 // Версия обновляется автоматически при билде
 
-const CACHE_VERSION = 'heys-1765562235275';
+const CACHE_VERSION = 'heys-1765572570460';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 

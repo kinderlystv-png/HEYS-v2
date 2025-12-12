@@ -11836,10 +11836,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           
           // === REFEED DAY — особый статус ===
           if (day.isRefeedDay && HEYS.Refeed) {
-            const refeedZone = HEYS.Refeed.getRefeedZone(ratio);
-            titleColor = refeedZone.color;
-            titleIcon = refeedZone.icon;
-            titleText = refeedZone.name;
+            const refeedZone = HEYS.Refeed.getRefeedZone(ratio, true);
+            if (refeedZone) {
+              titleColor = refeedZone.color;
+              titleIcon = refeedZone.icon;
+              titleText = refeedZone.name;
+            }
           } else if (ratio < 0.80) {
             titleColor = '#eab308';
             titleIcon = '📉';
