@@ -107,6 +107,61 @@
     // Streak сохраняется при ratio 0.70-1.35 в refeed день
     return ratio >= 0.70 && ratio <= REFEED_OK_RATIO;
   }
+  
+  /**
+   * Получить label причины с guardrail fallback
+   * @param {string} reasonId - ID причины
+   * @returns {Object} { id, icon, label, desc }
+   */
+  function getReasonLabel(reasonId) {
+    if (!reasonId) return { id: 'none', icon: '🔄', label: 'Без причины', desc: 'Причина не указана' };
+    const found = REFEED_REASONS.find(r => r.id === reasonId);
+    if (found) return found;
+    // Fallback для неизвестных причин (legacy данные)
+    return { id: 'other', icon: '❓', label: 'Другое', desc: reasonId };
+  }
+  
+  /**
+   * 🆕 Единая точка правды о refeed дне — все UI компоненты берут отсюда
+   * @param {Object} dayData - данные дня { isRefeedDay, refeedReason, ... }
+   * @param {number} ratio - kcal/optimum (опционально)
+   * @returns {Object} полная метаинформация о refeed
+   */
+  function getDayMeta(dayData, ratio = null) {
+    const isRefeedDay = dayData?.isRefeedDay === true;
+    const reasonId = dayData?.refeedReason || null;
+    const reason = isRefeedDay ? getReasonLabel(reasonId) : null;
+    
+    // Зона выполнения (если есть ratio)
+    const zone = ratio !== null && isRefeedDay ? getRefeedZone(ratio, true) : null;
+    const isStreakDay = ratio !== null && isRefeedDay ? isStreakPreserved(ratio, true) : null;
+    
+    // Heatmap статус
+    let heatmapStatus = null;
+    if (ratio !== null && isRefeedDay) {
+      if (zone?.id === 'refeed_ok') heatmapStatus = 'green';
+      else if (zone?.id === 'refeed_under' || zone?.id === 'refeed_over') heatmapStatus = 'yellow';
+      else if (zone?.id === 'refeed_binge') heatmapStatus = 'red';
+    }
+    
+    // Tooltip текст
+    const tooltip = isRefeedDay 
+      ? `🔄 Загрузочный день\n${reason?.icon || ''} ${reason?.label || ''}\n${ratio !== null ? '\nВыполнение: ' + Math.round(ratio * 100) + '%' : ''}\n\n✅ Это НЕ срыв — это часть стратегии\n✅ Норма расширена до 135%${isStreakDay === true ? '\n✅ Streak сохраняется' : (isStreakDay === false ? '\n⚠️ Для streak нужно 70-135%' : '')}`
+      : null;
+    
+    return {
+      isRefeedDay,
+      reasonId,
+      reason,
+      zone,
+      isStreakDay,
+      heatmapStatus,
+      tooltip,
+      color: isRefeedDay ? '#f97316' : null,  // orange-500
+      badge: isRefeedDay ? '🔄' : null,
+      cssClass: isRefeedDay ? 'refeed-day' : null
+    };
+  }
 
   // === REACT КОМПОНЕНТЫ ===
   
@@ -501,6 +556,8 @@
     shouldRecommendRefeed,
     getRefeedOptimum,
     getReasonById,
+    getReasonLabel,      // 🆕 с guardrail fallback
+    getDayMeta,          // 🆕 единая точка правды
     shouldExcludeFromWeightTrend,
     shouldShowRefeedStep,
     isStreakPreserved,
@@ -518,7 +575,7 @@
     registerStep: registerRefeedStep,
     
     // Версия
-    version: '1.0.0'
+    version: '1.1.0'  // 🆕 v1.1.0 — getDayMeta + getReasonLabel
   };
   
   // Автоматическая регистрация шага при загрузке

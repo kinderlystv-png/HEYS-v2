@@ -12263,9 +12263,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               ? { bg: '#eab30820', text: '#eab308', border: '#eab30860' }
               : { bg: '#ef444420', text: '#ef4444', border: '#ef444460' };
           
+          // 🆕 Refeed day микро-объяснение
+          const isRefeedDay = day?.isRefeedDay === true;
+          const refeedMeta = isRefeedDay && HEYS.Refeed?.getDayMeta ? HEYS.Refeed.getDayMeta(day, ratio) : null;
+          
           return React.createElement('div', { 
-            className: 'metrics-card' + (shakeOver && displayRemainingKcal < 0 ? ' shake-excess' : ''),
-            style: { background: displayRemainCol.bg, borderColor: displayRemainCol.border }
+            className: 'metrics-card' + (shakeOver && displayRemainingKcal < 0 ? ' shake-excess' : '') + (isRefeedDay ? ' metrics-card--refeed' : ''),
+            style: { background: displayRemainCol.bg, borderColor: displayRemainCol.border },
+            title: refeedMeta?.tooltip || ''
           },
             React.createElement('div', { className: 'metrics-icon' }, displayRemainingKcal >= 0 ? '🎯' : '🚫'),
             React.createElement('div', { className: 'metrics-value', style: { color: displayRemainCol.text } }, 
@@ -12273,7 +12278,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             ),
             React.createElement('div', { className: 'metrics-label' }, 
               displayRemainingKcal >= 0 ? 'Осталось' : 'Перебор'
-            )
+            ),
+            // 🆕 Refeed day hint
+            isRefeedDay && React.createElement('div', { 
+              className: 'metrics-refeed-hint',
+              style: { fontSize: '9px', color: '#f97316', marginTop: '2px', textAlign: 'center' }
+            }, '🔄 refeed +35%')
           );
         })()
       ),
@@ -13780,8 +13790,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   key: i,
                   className: 'week-heatmap-day ' + d.status + 
                     (d.isToday ? ' today' : '') +
-                    (d.isWeekend ? ' weekend' : ''),
-                  title: d.isFuture ? d.name : (d.kcal > 0 ? d.kcal + ' ккал (' + Math.round(d.ratio * 100) + '%)' : 'Нет данных'),
+                    (d.isWeekend ? ' weekend' : '') +
+                    (d.isRefeedDay ? ' refeed-day' : ''),
+                  title: d.isFuture ? d.name : (d.kcal > 0 ? 
+                    (d.isRefeedDay ? '🔄 Загрузочный день\n' : '') +
+                    d.kcal + ' ккал (' + Math.round(d.ratio * 100) + '%)' +
+                    (d.isStreakDay ? '\n✅ Streak +1' : '\n⚠️ Вне нормы') : 'Нет данных'),
                   style: { 
                     '--stagger-delay': (i * 50) + 'ms',
                     '--day-bg-color': d.bgColor || 'transparent'

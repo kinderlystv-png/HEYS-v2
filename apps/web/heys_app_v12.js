@@ -4178,7 +4178,8 @@
                         {
                           initialMode: 'client',
                           onCuratorLogin: async ({ email, password }) => {
-                            const res = await cloudSignIn(email, password, { rememberMe: false });
+                            // Куратор всегда запоминается — вход по email подразумевает сессию
+                            const res = await cloudSignIn(email, password, { rememberMe: true });
                             return res && res.error ? { error: res.error } : { ok: true };
                           },
                           onClientLogin: async ({ phone, pin }) => {

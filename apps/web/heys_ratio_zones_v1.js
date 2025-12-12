@@ -310,6 +310,56 @@
         return this.isRefeedStreakDay(ratio);
       }
       return this.isSuccess(ratio);
+    },
+    
+    /**
+     * 🆕 Единый метод определения успешности дня (с учётом refeed)
+     * Возвращает всё что нужно UI: статус, цвет, streak, tooltip
+     * @param {number} ratio - значение kcal/optimum
+     * @param {Object} dayData - данные дня { isRefeedDay, refeedReason, ... }
+     * @returns {Object} { isSuccess, isStreak, zone, heatmapStatus, color, tooltip }
+     */
+    getDaySuccess(ratio, dayData) {
+      const isRefeedDay = dayData?.isRefeedDay === true;
+      
+      // Получаем зону (с учётом refeed)
+      const zone = this.getDayZone(ratio, dayData);
+      
+      // Определяем streak
+      const isStreak = this.isStreakDayWithRefeed(ratio, dayData);
+      
+      // Heatmap статус
+      let heatmapStatus;
+      if (isRefeedDay) {
+        // Refeed: зелёный 70-135%, жёлтый <70% или >135%<150%, красный >150%
+        if (zone.id === 'refeed_ok') heatmapStatus = 'green';
+        else if (zone.id === 'refeed_under' || zone.id === 'refeed_over') heatmapStatus = 'yellow';
+        else heatmapStatus = 'red';
+      } else {
+        // Обычный день: стандартная логика
+        heatmapStatus = this.getHeatmapStatus(ratio);
+      }
+      
+      // Определяем успешность
+      const isSuccess = heatmapStatus === 'green';
+      
+      // Tooltip
+      let tooltip = zone.name;
+      if (isRefeedDay) {
+        const reasonLabel = HEYS.Refeed?.getReasonLabel?.(dayData.refeedReason)?.label || '';
+        tooltip = `🔄 ${zone.name}\n${reasonLabel ? reasonLabel + '\n' : ''}${isStreak ? '✅ Streak сохранён' : '⚠️ Вне диапазона streak'}`;
+      }
+      
+      return {
+        isSuccess,
+        isStreak,
+        isRefeedDay,
+        zone,
+        heatmapStatus,
+        color: zone.color,
+        tooltip,
+        emoji: isRefeedDay ? '🔄' : this.getEmoji(ratio)
+      };
     }
   };
 
