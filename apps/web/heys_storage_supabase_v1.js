@@ -126,6 +126,8 @@
   // 🔧 Debug getters (для консоли)
   Object.defineProperty(cloud, '_initialSyncCompleted', { get: () => initialSyncCompleted });
   Object.defineProperty(cloud, '_rpcSyncInProgress', { get: () => _rpcSyncInProgress });
+  Object.defineProperty(cloud, '_rpcOnlyMode', { get: () => _rpcOnlyMode });
+  Object.defineProperty(cloud, '_pinAuthClientId', { get: () => _pinAuthClientId });
 
   // ═══════════════════════════════════════════════════════════════════
   // 🔐 AUTH TOKEN SANITIZE (RTR-safe)

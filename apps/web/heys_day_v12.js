@@ -9356,10 +9356,17 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         
         // 2. Реальная синхронизация с Supabase (с force=true для bypass throttling)
         const syncPromise = (async () => {
-          if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
+          if (clientId && cloud) {
             console.log('[PullRefresh] 🚀 Starting force sync for client:', clientId.substring(0, 8));
             
-            await cloud.bootstrapClientSync(clientId, { force: true });
+            // 🔐 Для PIN auth используем RPC sync, для обычной — bootstrapClientSync
+            const isPinAuth = cloud._rpcOnlyMode && cloud._pinAuthClientId === clientId;
+            if (isPinAuth && typeof cloud.syncClientViaRPC === 'function') {
+              console.log('[PullRefresh] 🔐 Using RPC sync (PIN auth)');
+              await cloud.syncClientViaRPC(clientId);
+            } else if (typeof cloud.bootstrapClientSync === 'function') {
+              await cloud.bootstrapClientSync(clientId, { force: true });
+            }
             
             // 🔄 ГАРАНТИЯ: Явно инвалидируем кэш перед чтением (на случай если sync не вызвал)
             if (window.HEYS?.store?.flushMemory) {
