@@ -943,8 +943,59 @@
   /**
    * Проверить условие триггера
    */
+  function normalizeTextForKeywordMatch(s) {
+    return String(s || '')
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      // Буквы/цифры (латиница + кириллица). Всё остальное → пробел.
+      .replace(/[^a-z0-9а-яе]+/gi, ' ')
+      .trim()
+      .replace(/\s+/g, ' ');
+  }
+
+  function tokenizeNormalizedText(sNorm) {
+    return sNorm ? sNorm.split(' ') : [];
+  }
+
+  /**
+   * Надёжный матч ключевых слов по тексту приёма.
+   *
+   * Важно: многие keywords заданы как "корень" (напр. "куркум"), поэтому
+   * используем startsWith по токенам. Это также предотвращает ложные совпадения
+   * типа "вино" внутри "свино".
+   */
+  function textHasKeyword(mealTokens, mealNorm, keyword) {
+    const kwNorm = normalizeTextForKeywordMatch(keyword);
+    if (!kwNorm) return false;
+    const kwTokens = kwNorm.split(' ');
+    if (kwTokens.length === 1) {
+      const needle = kwTokens[0];
+      return mealTokens.some((t) => t.startsWith(needle));
+    }
+
+    // Multi-word: ищем последовательность токенов (каждый токен startsWith корня)
+    for (let i = 0; i <= mealTokens.length - kwTokens.length; i++) {
+      let ok = true;
+      for (let j = 0; j < kwTokens.length; j++) {
+        if (!mealTokens[i + j].startsWith(kwTokens[j])) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) return true;
+    }
+
+    // Fallback: на случай нестандартной токенизации
+    return mealNorm.includes(kwNorm);
+  }
+
   function checkTrigger(trigger, context) {
     const { meal, mealTotals, dayData, profile, products, time } = context;
+
+    // Текст текущего приёма — используется в нескольких триггерах
+    const mealTextRaw = (meal?.items || []).map((it) => (it.name || '')).join(' ');
+    const mealTextNorm = normalizeTextForKeywordMatch(mealTextRaw);
+    const mealTokens = tokenizeNormalizedText(mealTextNorm);
     
     // has: nutrient
     if (trigger.has) {
@@ -979,24 +1030,21 @@
     // hasKeyword
     if (trigger.hasKeyword) {
       const keywords = Array.isArray(trigger.hasKeyword) ? trigger.hasKeyword : [trigger.hasKeyword];
-      const mealText = (meal?.items || []).map(it => (it.name || '').toLowerCase()).join(' ');
-      const hasAny = keywords.some(kw => mealText.includes(kw.toLowerCase()));
+      const hasAny = keywords.some((kw) => textHasKeyword(mealTokens, mealTextNorm, kw));
       if (!hasAny) return false;
     }
     
     // missingKeyword
     if (trigger.missingKeyword) {
       const keywords = Array.isArray(trigger.missingKeyword) ? trigger.missingKeyword : [trigger.missingKeyword];
-      const mealText = (meal?.items || []).map(it => (it.name || '').toLowerCase()).join(' ');
-      const hasAny = keywords.some(kw => mealText.includes(kw.toLowerCase()));
+      const hasAny = keywords.some((kw) => textHasKeyword(mealTokens, mealTextNorm, kw));
       if (hasAny) return false;
     }
     
     // hasKeyword2 — второй набор ключевых слов (для проверки конфликтов)
     if (trigger.hasKeyword2) {
       const keywords = Array.isArray(trigger.hasKeyword2) ? trigger.hasKeyword2 : [trigger.hasKeyword2];
-      const mealText = (meal?.items || []).map(it => (it.name || '').toLowerCase()).join(' ');
-      const hasAny = keywords.some(kw => mealText.includes(kw.toLowerCase()));
+      const hasAny = keywords.some((kw) => textHasKeyword(mealTokens, mealTextNorm, kw));
       if (!hasAny) return false;
     }
     

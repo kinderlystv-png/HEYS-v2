@@ -4811,12 +4811,17 @@
               return parts.length > 0 ? parts.join(', ') : '';
             };
 
+            // === Кэшированные переменные для производительности ===
+            const isRpcMode = HEYS.cloud?.isRpcOnlyMode?.() || false;
+            const cachedProfile = (() => {
+              const U = window.HEYS && window.HEYS.utils;
+              return U && U.lsGet ? U.lsGet('heys_profile', {}) : {};
+            })();
+
             // Имя клиента: в RPC режиме из профиля, иначе из списка clients
             const currentClientName = (() => {
-              if (HEYS.cloud?.isRpcOnlyMode?.()) {
-                const U = window.HEYS && window.HEYS.utils;
-                const profile = U && U.lsGet ? U.lsGet('heys_profile', {}) : {};
-                const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(' ');
+              if (isRpcMode) {
+                const fullName = [cachedProfile.firstName, cachedProfile.lastName].filter(Boolean).join(' ');
                 return fullName || 'Мой профиль';
               }
               return Array.isArray(clients) 
@@ -4913,12 +4918,10 @@
                             React.createElement(
                               'div',
                               { className: 'hdr-client-info' },
-                              // Имя и фамилия в 2 строки из профиля
+                              // Имя и фамилия в 2 строки из профиля (используем кэш)
                               (() => {
-                                const U = window.HEYS && window.HEYS.utils;
-                                const profile = U && U.lsGet ? U.lsGet('heys_profile', {}) : {};
-                                const firstName = profile.firstName || '';
-                                const lastName = profile.lastName || '';
+                                const firstName = cachedProfile.firstName || '';
+                                const lastName = cachedProfile.lastName || '';
                                 // Если профиль пустой — fallback на имя клиента
                                 if (!firstName && !lastName) {
                                   const parts = currentClientName.split(' ');
@@ -4965,7 +4968,7 @@
                               }
                             },
                             // Проверяем режим: клиент (RPC) или куратор
-                            HEYS.cloud?.isRpcOnlyMode?.()
+                            isRpcMode
                               // === КЛИЕНТСКИЙ РЕЖИМ: только имя + кнопка выхода ===
                               ? [
                                   // Заголовок "Мой аккаунт"
@@ -5272,9 +5275,8 @@
                                     if (!getActiveDaysForMonthFn || !clientId || effectiveProducts.length === 0) {
                                       return new Map();
                                     }
-                                    const profile = U && U.lsGet ? U.lsGet('heys_profile', {}) : {};
                                     try {
-                                      return getActiveDaysForMonthFn(year, month, profile, effectiveProducts);
+                                      return getActiveDaysForMonthFn(year, month, cachedProfile, effectiveProducts);
                                     } catch (e) {
                                       return new Map();
                                     }
