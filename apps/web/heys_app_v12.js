@@ -4692,8 +4692,51 @@
                     .finally(() => {
                       setIsInitializing(false);
                     });
+                } else if (cloud && cloud.client) {
+                  // Токен истёк — пробуем refresh
+                  console.log('[HEYS] 🔄 Токен истёк, пробуем обновить сессию...');
+                  
+                  cloud.client.auth.refreshSession()
+                    .then(({ data, error }) => {
+                      if (error || !data?.session?.user) {
+                        console.log('[HEYS] ⏭️ Refresh не удался:', error?.message || 'no session');
+                        setStatus('offline');
+                        // Отложенное уведомление — даём UI время загрузиться
+                        setTimeout(() => {
+                          if (typeof HEYS !== 'undefined' && HEYS.toast) {
+                            HEYS.toast.warning('Сессия истекла. Войдите в настройках для синхронизации.', 5000);
+                          }
+                        }, 2000);
+                      } else {
+                        // Успешный refresh!
+                        const refreshedUser = data.session.user;
+                        setCloudUser(refreshedUser);
+                        setStatus('online');
+                        console.log('[HEYS] ✅ Сессия обновлена:', refreshedUser.email);
+                        
+                        // Запускаем синхронизацию
+                        if (cloud.bootstrapClientSync && clientId) {
+                          cloud.bootstrapClientSync(clientId).catch(() => {});
+                        }
+                      }
+                    })
+                    .catch((e) => {
+                      console.log('[HEYS] ⏭️ Refresh exception:', e?.message);
+                      setStatus('offline');
+                    })
+                    .finally(() => {
+                      setIsInitializing(false);
+                    });
                 } else {
                   console.log('[HEYS] ⏭️ Токен истёк, пропуск автовосстановления');
+                  // Показываем уведомление о необходимости повторного входа
+                  setStatus('offline');
+                  // Отложенное уведомление — даём UI время загрузиться
+                  setTimeout(() => {
+                    if (typeof HEYS !== 'undefined' && HEYS.toast) {
+                      HEYS.toast.warning('Сессия истекла. Войдите в настройках для синхронизации.', 5000);
+                    }
+                  }, 2000);
                   setIsInitializing(false);
                 }
               } else {
