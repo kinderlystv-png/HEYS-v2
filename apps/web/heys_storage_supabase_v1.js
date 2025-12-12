@@ -3235,26 +3235,46 @@
         const promises = uniqueBatch.map(item => {
           // Добавляем user_id если его нет (таблица требует NOT NULL)
           const itemWithUser = item.user_id ? item : { ...item, user_id: user.id };
-          // DEBUG: логируем первый item для диагностики
-          // if (uniqueBatch.indexOf(item) === 0) {
-          //   console.log('[DEBUG] client_kv_store upsert payload:', JSON.stringify(itemWithUser, null, 2).substring(0, 500));
-          // }
+          
           // Primary key = (user_id, client_id, k), используем его для onConflict
           return cloud.upsert('client_kv_store', itemWithUser, 'user_id,client_id,k')
+            .then(() => ({ success: true, item: itemWithUser }))
             .catch(err => {
               console.error('[DEBUG] Upsert error:', err?.message || err, 'for key:', itemWithUser?.k);
+              return { success: false, item: itemWithUser, error: err };
             });
         });
-        await Promise.allSettled(promises);
         
-        // Успех — сбрасываем retry счётчик
-        resetRetry();
+        const results = await Promise.all(promises);
+        const failedItems = results.filter(r => !r.success).map(r => r.item);
+        const successItems = results.filter(r => r.success).map(r => r.item);
         
-        // Критический лог: данные отправлены в облако
-        if (uniqueBatch.length > 0) {
+        // Обработка неудачных
+        if (failedItems.length > 0) {
+          // Вернуть в очередь
+          clientUpsertQueue.push(...failedItems);
+          incrementRetry();
+          savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+          notifyPendingChange();
+          
+          const authError = results.find(r => !r.success && isAuthError(r.error))?.error;
+          if (authError) {
+            handleAuthFailure(authError);
+            return;
+          }
+          
+          // Запланировать повторную попытку
+          scheduleClientPush();
+        } else {
+          // Полный успех — сбрасываем retry счётчик
+          resetRetry();
+        }
+        
+        // Критический лог: данные отправлены в облако (только успешные)
+        if (successItems.length > 0) {
           const types = {};
           const otherKeys = []; // DEBUG: какие ключи попадают в "other"
-          uniqueBatch.forEach(item => {
+          successItems.forEach(item => {
             const t = item.k.includes('dayv2_') ? 'day' : 
                      item.k.includes('products') ? 'products' : 
                      item.k.includes('profile') ? 'profile' : 'other';
@@ -3270,11 +3290,11 @@
           
           // Уведомляем о завершении UPLOAD (НЕ heysSyncCompleted — то для initial download!)
           if (typeof window !== 'undefined' && window.dispatchEvent) {
-            window.dispatchEvent(new CustomEvent('heys:data-uploaded', { detail: { saved: uniqueBatch.length } }));
+            window.dispatchEvent(new CustomEvent('heys:data-uploaded', { detail: { saved: successItems.length } }));
           }
         }
         
-        // Обновляем персистентную очередь
+        // Обновляем персистентную очередь (если были ошибки, failedItems уже там)
         savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
         notifyPendingChange();
       }catch(e){
