@@ -974,6 +974,13 @@
   line-height: 1.5;
 }
 
+/* Wheel Picker контейнер для дефицита */
+.deficit-wheel-container {
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
 /* ======================== */
 /* Household Step            */
 /* ======================== */

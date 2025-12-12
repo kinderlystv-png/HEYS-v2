@@ -142,21 +142,40 @@
     hint: 'Взвесьтесь натощак',
     icon: '⚖️',
     component: WeightStepComponent,
-    getInitialData: () => {
+    getInitialData: (context) => {
+      // Если есть dateKey в context — берём вес из того дня (для редактирования)
+      if (context && context.dateKey) {
+        const dayData = lsGet(`heys_dayv2_${context.dateKey}`, {}) || {};
+        if (dayData.weightMorning) {
+          return {
+            weightKg: Math.floor(dayData.weightMorning),
+            weightG: Math.round((dayData.weightMorning % 1) * 10)
+          };
+        }
+      }
+      // Иначе — последний известный вес
       const last = getLastKnownWeight();
       return {
         weightKg: Math.floor(last.weight),
         weightG: Math.round((last.weight % 1) * 10)
       };
     },
-    save: (data) => {
-      const todayKey = getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${todayKey}`, {}) || {};
+    save: (data, context) => {
+      // Используем dateKey из context, или сегодняшний день как fallback
+      const dateKey = (context && context.dateKey) || getTodayKey();
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
       const weight = (data.weightKg || 70) + (data.weightG || 0) / 10;
-      dayData.date = todayKey;
+      dayData.date = dateKey;
       dayData.weightMorning = weight;
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${todayKey}`, dayData);
+      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      
+      // Диспатчим событие для обновления UI
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+          detail: { date: dateKey, field: 'weightMorning', value: weight, forceReload: true } 
+        }));
+      }
     },
     xpAction: 'weight_logged'
   });
@@ -640,18 +659,12 @@
    * Диапазон: -20% (дефицит/похудение) до +20% (профицит/набор)
    */
   function DeficitStepComponent({ data, onChange }) {
-    const { useRef, useCallback, useEffect } = React;
+    const { useMemo, useCallback } = React;
     
-    const deficit = data.deficit ?? 15;
-    const containerRef = useRef(null);
-    const isDragging = useRef(false);
-    const startY = useRef(0);
-    const startValue = useRef(deficit);
+    const deficit = data.deficit ?? 0;
     
-    // Визуальные параметры
-    const minDeficit = -20;
-    const maxDeficit = 20;
-    const range = maxDeficit - minDeficit; // 40
+    // Значения для колеса: от -20 до +20
+    const deficitValues = useMemo(() => Array.from({ length: 41 }, (_, i) => i - 20), []);
     
     // Получаем цвет и описание в зависимости от значения
     const getDeficitInfo = useCallback((val) => {
@@ -664,65 +677,13 @@
     
     const info = getDeficitInfo(deficit);
     
-    // Позиция ползунка (0 = -20%, 100 = +20%)
-    const sliderPosition = ((deficit - minDeficit) / range) * 100;
-    
-    // Обработка touch событий для вертикального слайдера
-    const handleTouchStart = useCallback((e) => {
-      isDragging.current = true;
-      startY.current = e.touches[0].clientY;
-      startValue.current = deficit;
-      e.preventDefault();
-    }, [deficit]);
-    
-    const handleTouchMove = useCallback((e) => {
-      if (!isDragging.current || !containerRef.current) return;
-      
-      const rect = containerRef.current.getBoundingClientRect();
-      const deltaY = startY.current - e.touches[0].clientY;
-      const sensitivity = range / rect.height;
-      let newValue = startValue.current + Math.round(deltaY * sensitivity);
-      
-      newValue = Math.max(minDeficit, Math.min(maxDeficit, newValue));
-      if (newValue !== deficit) {
-        onChange({ ...data, deficit: newValue });
-        // Haptic feedback
-        if (navigator.vibrate) navigator.vibrate(5);
-      }
-    }, [deficit, data, onChange]);
-    
-    const handleTouchEnd = useCallback(() => {
-      isDragging.current = false;
-    }, []);
-    
-    // Fix: addEventListener с passive: false для предотвращения scroll
-    useEffect(() => {
-      const el = containerRef.current;
-      if (!el) return;
-      
-      el.addEventListener('touchstart', handleTouchStart, { passive: false });
-      el.addEventListener('touchmove', handleTouchMove, { passive: false });
-      el.addEventListener('touchend', handleTouchEnd);
-      
-      return () => {
-        el.removeEventListener('touchstart', handleTouchStart);
-        el.removeEventListener('touchmove', handleTouchMove);
-        el.removeEventListener('touchend', handleTouchEnd);
-      };
-    }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
-    
-    // Кнопки +/- для точной настройки
-    const increment = () => {
-      const newVal = Math.min(maxDeficit, deficit + 1);
-      onChange({ ...data, deficit: newVal });
-      if (navigator.vibrate) navigator.vibrate(10);
+    const setDeficit = (v) => {
+      onChange({ ...data, deficit: v });
+      if (navigator.vibrate) navigator.vibrate(5);
     };
     
-    const decrement = () => {
-      const newVal = Math.max(minDeficit, deficit - 1);
-      onChange({ ...data, deficit: newVal });
-      if (navigator.vibrate) navigator.vibrate(10);
-    };
+    // Форматирование значения для отображения в колесе
+    const formatValue = (v) => (v > 0 ? '+' : '') + v + '%';
     
     // Быстрые пресеты
     const presets = [
@@ -743,45 +704,15 @@
         )
       ),
       
-      // Вертикальный слайдер с touch (события через useEffect с passive: false)
-      React.createElement('div', { 
-        className: 'deficit-slider-container',
-        ref: containerRef
-      },
-        // Кнопка +
-        React.createElement('button', {
-          className: 'deficit-btn deficit-btn-plus',
-          onClick: increment,
-          disabled: deficit >= maxDeficit
-        }, '+'),
-        
-        // Трек слайдера
-        React.createElement('div', { className: 'deficit-slider-track' },
-          // Заполненная часть
-          React.createElement('div', { 
-            className: 'deficit-slider-fill',
-            style: { 
-              height: sliderPosition + '%',
-              background: `linear-gradient(to top, ${info.color}40, ${info.color})`
-            }
-          }),
-          // Ползунок
-          React.createElement('div', { 
-            className: 'deficit-slider-thumb',
-            style: { 
-              bottom: sliderPosition + '%',
-              backgroundColor: info.color,
-              boxShadow: `0 0 10px ${info.color}80`
-            }
-          })
-        ),
-        
-        // Кнопка -
-        React.createElement('button', {
-          className: 'deficit-btn deficit-btn-minus',
-          onClick: decrement,
-          disabled: deficit <= minDeficit
-        }, '−')
+      // WheelPicker вместо слайдера
+      React.createElement('div', { className: 'deficit-wheel-container' },
+        React.createElement(WheelPicker, {
+          values: deficitValues,
+          value: deficit,
+          onChange: setDeficit,
+          label: '%',
+          formatValue: formatValue
+        })
       ),
       
       // Подсказка
@@ -830,7 +761,7 @@
       
       // Уведомляем о изменении дня
       window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-        detail: { date: dateKey, field: 'deficitPct', value: data.deficit, source: 'deficit-step' }
+        detail: { date: dateKey, field: 'deficitPct', value: data.deficit, source: 'deficit-step', forceReload: true }
       }));
     }
   });

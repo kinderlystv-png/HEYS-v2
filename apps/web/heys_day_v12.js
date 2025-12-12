@@ -4966,7 +4966,13 @@
     // === Открытие StepModal для веса и шагов ===
     function openWeightPicker() {
       if (HEYS.showCheckin && HEYS.showCheckin.weight) {
-        HEYS.showCheckin.weight();
+        HEYS.showCheckin.weight(date, (weightData) => {
+          // Мгновенное обновление UI через setDay
+          if (weightData && (weightData.weightKg !== undefined || weightData.weightG !== undefined)) {
+            const newWeight = (weightData.weightKg || 70) + (weightData.weightG || 0) / 10;
+            setDay(prev => ({ ...prev, weightMorning: newWeight, updatedAt: Date.now() }));
+          }
+        });
       }
     }
     
@@ -4987,7 +4993,14 @@
     function openDeficitPicker() {
       // Используем StepModal вместо старого пикера
       if (HEYS.showCheckin && HEYS.showCheckin.deficit) {
-        HEYS.showCheckin.deficit(date);
+        HEYS.showCheckin.deficit(date, (stepData) => {
+          // Мгновенное обновление UI через setDay
+          // stepData = { deficit: { deficit: -15, dateKey: '...' } }
+          const deficitValue = stepData?.deficit?.deficit;
+          if (deficitValue !== undefined) {
+            setDay(prev => ({ ...prev, deficitPct: deficitValue, updatedAt: Date.now() }));
+          }
+        });
       }
     }
 
