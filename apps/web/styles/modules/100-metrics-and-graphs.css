@@ -2807,12 +2807,27 @@
 
 .goal-progress-track {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   height: 24px;
+}
+
+/* Wrapper для toggle слева */
+.goal-refeed-toggle-wrapper {
+  flex-shrink: 0;
+}
+
+/* Контейнер для самого прогресс-бара */
+.goal-progress-track-inner {
+  position: relative;
+  flex: 1;
+  height: 100%;
   border-radius: 12px;
 }
 
 /* Серый фон только до маркера при переборе */
-.goal-progress-track::before {
+.goal-progress-track-inner::before {
   content: '';
   position: absolute;
   top: 0;

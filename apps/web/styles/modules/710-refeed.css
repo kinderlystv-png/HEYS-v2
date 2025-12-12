@@ -427,10 +427,11 @@
 
 /* Минимальная версия — только иконка, без текста */
 .refeed-toggle--minimal {
-  padding: 6px 10px;
+  padding: 4px 8px;
   background: transparent;
   border: 1px dashed #d1d5db;
   opacity: 0.6;
+  font-size: 14px;
 }
 
 .refeed-toggle--minimal:hover {
@@ -439,10 +440,20 @@
   border-style: solid;
 }
 
-/* Toggle внутри goal-progress-card */
-.goal-progress-card .refeed-toggle {
-  margin-top: 8px;
-  align-self: flex-start;
+/* Toggle внутри goal-progress-track (слева от бара) */
+.goal-refeed-toggle-wrapper .refeed-toggle {
+  padding: 4px 10px;
+  font-size: 12px;
+  height: 24px;
+  margin: 0;
+}
+
+.goal-refeed-toggle-wrapper .refeed-toggle--minimal {
+  padding: 4px 8px;
+}
+
+.goal-refeed-toggle-wrapper .refeed-toggle--active {
+  padding: 4px 10px;
 }
 
 @keyframes refeed-toggle-hint {

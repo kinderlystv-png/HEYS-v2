@@ -11884,7 +11884,26 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('span', { className: 'goal-unit' }, 'ккал')
               )
             ),
-            React.createElement('div', { className: 'goal-progress-track' + (eatenKcal > displayOptimum ? ' has-over' : '') + (displayOptimum > optimum ? ' has-debt' : '') },
+            React.createElement('div', { className: 'goal-progress-track' + (eatenKcal > displayOptimum ? ' has-over' : '') + (displayOptimum > optimum ? ' has-debt' : '') + (day.isRefeedDay ? ' has-refeed' : '') },
+              // Refeed Toggle — слева от прогресс-бара
+              HEYS.Refeed && React.createElement('div', { className: 'goal-refeed-toggle-wrapper' },
+                HEYS.Refeed.renderRefeedToggle({
+                  isRefeedDay: day.isRefeedDay,
+                  refeedReason: day.refeedReason,
+                  caloricDebt: caloricDebt,
+                  optimum: optimum,
+                  onToggle: (isActive, reason) => {
+                    setDay(prev => ({ 
+                      ...prev, 
+                      isRefeedDay: isActive ? true : false,
+                      refeedReason: isActive ? reason : null,
+                      updatedAt: Date.now()
+                    }));
+                  }
+                })
+              ),
+              // Контейнер для самого прогресс-бара
+              React.createElement('div', { className: 'goal-progress-track-inner' },
               // Бонусная зона калорийного долга (справа от 100%, показывает расширенную зелёную зону)
               // Позиционируется от 100% до 100% + bonus% (где bonus = (displayOptimum - optimum) / optimum)
               displayOptimum > optimum && eatenKcal <= optimum && React.createElement('div', { 
@@ -12061,23 +12080,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 className: 'goal-zone-label goal-zone-label-100',
                 style: { left: (ratio > 1 ? (1.0 / ratio) * 100 : 100) + '%' }
               }, '100%')
-            ),
-            // Refeed Toggle — кнопка включения загрузочного дня (под прогресс-баром)
-            HEYS.Refeed && HEYS.Refeed.renderRefeedToggle({
-              isRefeedDay: day.isRefeedDay,
-              refeedReason: day.refeedReason,
-              caloricDebt: caloricDebt,
-              optimum: optimum,
-              onToggle: (isActive, reason) => {
-                // Сохраняем через setDay — обновляем состояние дня
-                setDay(prev => ({ 
-                  ...prev, 
-                  isRefeedDay: isActive ? true : false,
-                  refeedReason: isActive ? reason : null,
-                  updatedAt: Date.now()
-                }));
-              }
-            })
+            )
+              ) // закрытие goal-progress-track-inner
           );
         })()
       ),
