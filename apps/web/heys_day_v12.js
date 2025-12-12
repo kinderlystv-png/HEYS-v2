@@ -3341,9 +3341,14 @@
     useEffect(() => {
       HEYS.Day = HEYS.Day || {};
       HEYS.Day.requestFlush = flush;
+      // 🔒 Экспортируем функцию проверки блокировки для cloud sync
+      HEYS.Day.isBlockingCloudUpdates = () => Date.now() < blockCloudUpdatesUntilRef.current;
+      HEYS.Day.getBlockUntil = () => blockCloudUpdatesUntilRef.current;
       return () => {
         if (HEYS.Day && HEYS.Day.requestFlush === flush) {
           delete HEYS.Day.requestFlush;
+          delete HEYS.Day.isBlockingCloudUpdates;
+          delete HEYS.Day.getBlockUntil;
         }
       };
     }, [flush]);
@@ -5965,6 +5970,16 @@
               return { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
             });
             
+            // 🔒 КРИТИЧНО: Принудительный flush СРАЗУ после setDay
+            // Это гарантирует что данные записаны в localStorage ДО cloud sync
+            // Без этого sync может прочитать старые данные и затереть новый meal
+            setTimeout(() => {
+              if (typeof flush === 'function') {
+                flush();
+                console.log('[HEYS] 🍽 Forced flush after meal creation');
+              }
+            }, 10); // Минимальная задержка чтобы React state успел обновиться
+            
             if (window.HEYS && window.HEYS.analytics) {
               window.HEYS.analytics.trackDataOperation('meal-created');
             }
@@ -6017,14 +6032,28 @@
                           mealIndex: targetMealIndex
                         });
                         
+                        // 🔒 Защита от перезаписи cloud sync
+                        const newUpdatedAt = Date.now();
+                        lastLoadedUpdatedAtRef.current = newUpdatedAt;
+                        blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
+                        
                         setDay((prevDay = {}) => {
                           const updatedMeals = (prevDay.meals || []).map((m, i) =>
                             i === targetMealIndex
                               ? { ...m, items: [...(m.items || []), newItem] }
                               : m
                           );
-                          return { ...prevDay, meals: updatedMeals, updatedAt: Date.now() };
+                          return { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
                         });
+                        
+                        // 🔒 КРИТИЧНО: Принудительный flush СРАЗУ после добавления продукта
+                        setTimeout(() => {
+                          if (typeof flush === 'function') {
+                            flush();
+                            console.log('[HEYS] 🍽 Forced flush after product added');
+                          }
+                        }, 10);
+                        
                         try { navigator.vibrate?.(10); } catch(e) {}
                         window.dispatchEvent(new CustomEvent('heysProductAdded', { detail: { product, grams } }));
                         try {
