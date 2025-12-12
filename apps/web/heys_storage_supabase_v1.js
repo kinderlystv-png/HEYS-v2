@@ -735,8 +735,19 @@
     // Используем оригинальный setItem если доступен (избегаем рекурсии через перехват)
     const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
     
+    // 🔍 Debug: логируем сохранение auth токена
+    if (key === 'heys_supabase_auth_token') {
+      logCritical('[DEBUG] safeSetItem called for auth token, value length:', value?.length || 0);
+    }
+    
     try {
       setFn(key, value);
+      if (key === 'heys_supabase_auth_token') {
+        logCritical('[DEBUG] ✅ Auth token saved successfully');
+        // Верификация: читаем обратно
+        const check = global.localStorage.getItem(key);
+        logCritical('[DEBUG] Verification read:', check ? `${check.substring(0, 50)}...` : 'null');
+      }
       return true;
     } catch (e) {
       if (e.name === 'QuotaExceededError' || e.code === 22) {
