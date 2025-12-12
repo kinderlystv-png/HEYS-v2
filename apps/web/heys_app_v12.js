@@ -4,7 +4,7 @@
         const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.12.1629.6938b95'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.12.1633.d49ecc2'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -4693,10 +4693,11 @@
                       setIsInitializing(false);
                     });
                 } else if (cloud && cloud.client) {
-                  // Токен истёк — пробуем refresh
+                  // Токен истёк или отсутствует — пробуем восстановить через getSession()
+                  // getSession() сначала проверит storage, потом попробует refresh если нужно
                   console.log('[HEYS] 🔄 Токен истёк, пробуем обновить сессию...');
                   
-                  cloud.client.auth.refreshSession()
+                  cloud.client.auth.getSession()
                     .then(({ data, error }) => {
                       if (error || !data?.session?.user) {
                         console.log('[HEYS] ⏭️ Refresh не удался:', error?.message || 'no session');
