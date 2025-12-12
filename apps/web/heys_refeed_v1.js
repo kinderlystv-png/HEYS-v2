@@ -570,12 +570,13 @@
    */
   let _registerRetries = 0;
   function registerRefeedStep() {
-    if (!HEYS.Steps?.registerStep) {
+    // registerStep находится в HEYS.StepModal, не в HEYS.Steps!
+    if (!HEYS.StepModal?.registerStep) {
       if (_registerRetries < 20) { // Max 10 seconds
         _registerRetries++;
         setTimeout(registerRefeedStep, 500);
       } else {
-        console.warn('[Refeed] HEYS.Steps not found after 10s, giving up');
+        console.warn('[Refeed] HEYS.StepModal not found after 10s, giving up');
       }
       return;
     }
@@ -587,7 +588,7 @@
       try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
     });
     
-    HEYS.Steps.registerStep('refeedDay', {
+    HEYS.StepModal.registerStep('refeedDay', {
       title: 'Загрузочный день',
       hint: 'Контролируемое превышение',
       icon: '🔄',

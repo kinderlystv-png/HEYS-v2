@@ -2532,9 +2532,10 @@
       // Обновляем timestamp последней синхронизации
       cloud._lastClientSync = { clientId, ts: Date.now(), viaRPC: true };
       
-      // Помечаем initial sync как завершённый
+      // Помечаем initial sync как завершённый и отменяем failsafe
       if (!initialSyncCompleted) {
         initialSyncCompleted = true;
+        cancelFailsafeTimer(); // 🔐 Отменяем failsafe — sync успешен
       }
       
       logCritical(`✅ [RPC SYNC] Загружено ${loadedCount} ключей для клиента ${clientId.slice(0,8)}`);
