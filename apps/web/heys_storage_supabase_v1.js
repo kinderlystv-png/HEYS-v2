@@ -2636,17 +2636,59 @@
         updated_at: item.updated_at || new Date().toISOString()
       }));
       
-      const { data, error } = await client.rpc('set_client_kv_data', {
-        p_client_id: clientId,
-        p_items: rpcItems
-      });
+      // 🔧 Логируем размер для диагностики больших данных
+      const jsonSize = JSON.stringify(rpcItems).length;
+      const jsonSizeKB = Math.round(jsonSize / 1024);
+      
+      if (jsonSize > 100000) {
+        logCritical(`⚠️ [RPC SAVE] Large payload: ${jsonSizeKB}KB, ${rpcItems.length} items`);
+      }
+      
+      // 🔧 Helper: выполнить RPC с retry
+      async function rpcWithRetry(payload, maxRetries = 3) {
+        let lastError = null;
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            const { data, error } = await client.rpc('set_client_kv_data', {
+              p_client_id: clientId,
+              p_items: payload
+            });
+            if (error) {
+              lastError = error;
+              if (attempt < maxRetries) {
+                const delay = Math.pow(2, attempt) * 500; // 1s, 2s, 4s
+                logCritical(`⚠️ [RPC SAVE] Attempt ${attempt} failed: ${error.message}, retry in ${delay}ms`);
+                await new Promise(r => setTimeout(r, delay));
+                continue;
+              }
+            }
+            return { data, error };
+          } catch (e) {
+            lastError = { message: e.message };
+            if (attempt < maxRetries) {
+              const delay = Math.pow(2, attempt) * 500;
+              logCritical(`⚠️ [RPC SAVE] Attempt ${attempt} exception: ${e.message}, retry in ${delay}ms`);
+              await new Promise(r => setTimeout(r, delay));
+              continue;
+            }
+          }
+        }
+        return { data: null, error: lastError };
+      }
+      
+      // 🔧 Для очень больших данных (>500KB) логируем и предупреждаем
+      if (jsonSize > 500000) {
+        logCritical(`🚨 [RPC SAVE] VERY LARGE payload: ${jsonSizeKB}KB — may timeout!`);
+      }
+      
+      const { data, error } = await rpcWithRetry(rpcItems);
       
       if (error) {
-        logCritical(`❌ [RPC SAVE] Ошибка: ${error.message}`);
+        logCritical(`❌ [RPC SAVE] Ошибка после retry: ${error.message}`);
         return { success: false, error: error.message };
       }
       
-      logCritical(`☁️ [RPC SAVE] Сохранено ${data} записей для клиента ${clientId.slice(0,8)}`);
+      logCritical(`☁️ [RPC SAVE] Сохранено ${data} записей (${jsonSizeKB}KB) для клиента ${clientId.slice(0,8)}`);
       return { success: true, saved: data };
       
     } catch(e) {
@@ -4666,6 +4708,24 @@
     global.addEventListener('online', () => {
       log('🌐 Online detected, uploading pending photos...');
       setTimeout(() => cloud.uploadPendingPhotos(), 2000);
+    });
+    
+    // 🔐 Beforeunload: предупреждение если есть несохранённые данные
+    global.addEventListener('beforeunload', (e) => {
+      if (clientUpsertQueue && clientUpsertQueue.length > 0) {
+        logCritical(`⚠️ [BEFOREUNLOAD] ${clientUpsertQueue.length} unsaved items in queue!`);
+        // Сохраняем в localStorage (персистентность уже должна быть, но на всякий случай)
+        savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+        // Показываем предупреждение браузера (только если есть критические данные)
+        const hasCriticalData = clientUpsertQueue.some(item => 
+          item.k?.includes('products') || item.k?.includes('dayv2_')
+        );
+        if (hasCriticalData) {
+          e.preventDefault();
+          e.returnValue = 'У вас есть несохранённые данные. Покинуть страницу?';
+          return e.returnValue;
+        }
+      }
     });
   }
 
