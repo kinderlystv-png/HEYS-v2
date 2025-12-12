@@ -972,7 +972,9 @@
           // Находим tier
           let tier = cfg.tiers[cfg.tiers.length - 1];
           for (const t of cfg.tiers) {
-            if (gapMin <= t.maxGap) {
+            // Fix: use maxMin if maxGap is missing (inconsistency in config)
+            const threshold = t.maxGap || t.maxMin;
+            if (gapMin <= threshold) {
               tier = t;
               break;
             }

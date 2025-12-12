@@ -14,7 +14,9 @@ pnpm --filter @heys/web test -- \
   __tests__/storage-quota.test.js \
   __tests__/storage-compress.test.js \
   __tests__/events-sync.test.js \
-  __tests__/pwa-update-logic.test.js
+  __tests__/pwa-update-logic.test.js \
+  __tests__/insulin-wave.test.js \
+  __tests__/cycle.test.js
 
 # Проверяем код выхода
 if [ $? -ne 0 ]; then
@@ -22,4 +24,4 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-echo "✅ Все критические тесты прошли (208 tests)!"
+echo "✅ Все критические тесты прошли!"
