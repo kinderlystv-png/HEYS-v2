@@ -91,6 +91,26 @@ input.phone-input-large {
   outline: none !important;
 }
 
+/* PIN overlay digit (bank-style): show briefly then fade to reveal dot beneath */
+@keyframes heys-pin-digit-fade {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+.pin-digit-overlay {
+  animation: heys-pin-digit-fade 1.2s ease-out forwards;
+}
+
 :root {
   /* Color palette */
   --color-white: #ffffff;

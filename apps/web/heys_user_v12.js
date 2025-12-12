@@ -242,6 +242,11 @@
       return lsGet('heys_profile', DEFAULT_PROFILE);
     });
     const [profileSaved, setProfileSaved] = React.useState(false);
+
+    // Смена PIN
+    const [pinForm, setPinForm] = React.useState({ pin: '', confirm: '' });
+    const [pinStatus, setPinStatus] = React.useState('idle'); // idle | pending | success | error
+    const [pinMessage, setPinMessage] = React.useState('');
     
     // === Accordion state (с сохранением в localStorage) ===
     const SECTIONS_KEY = 'heys_profile_sections';
@@ -257,6 +262,70 @@
         try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(next)); } catch {}
         return next;
       });
+    };
+
+    const getCurrentClientId = () => {
+      let cid = (window.HEYS && window.HEYS.currentClientId) || localStorage.getItem('heys_client_current') || '';
+      if (cid && typeof cid === 'string' && cid.startsWith('"')) {
+        try { cid = JSON.parse(cid); } catch (_) {}
+      }
+      return cid || '';
+    };
+
+    const getShortClientId = (id) => id ? String(id).slice(0, 8) : '—';
+
+    const handlePinUpdate = async () => {
+      const auth = window.HEYS && window.HEYS.auth;
+      const clientId = getCurrentClientId();
+      setPinMessage('');
+
+      if (!clientId) {
+        setPinStatus('error');
+        setPinMessage('Клиент не выбран. Выберите клиента в шапке.');
+        return;
+      }
+
+      if (!auth || typeof auth.resetClientPin !== 'function' || typeof auth.validatePin !== 'function') {
+        setPinStatus('error');
+        setPinMessage('Модуль авторизации не загружен.');
+        return;
+      }
+
+      if (!auth.validatePin(pinForm.pin) || !auth.validatePin(pinForm.confirm)) {
+        setPinStatus('error');
+        setPinMessage('PIN должен состоять из 4 цифр.');
+        return;
+      }
+
+      if (pinForm.pin !== pinForm.confirm) {
+        setPinStatus('error');
+        setPinMessage('PIN и подтверждение не совпадают.');
+        return;
+      }
+
+      setPinStatus('pending');
+      try {
+        const res = await auth.resetClientPin({ clientId, newPin: pinForm.pin });
+        if (!res || !res.ok) {
+          const msg = res && res.message ? res.message : 'Не удалось обновить PIN';
+          setPinStatus('error');
+          setPinMessage(msg);
+          if (window.HEYS && window.HEYS.analytics && window.HEYS.analytics.trackError) {
+            window.HEYS.analytics.trackError('pin_change_failed', { clientId: getShortClientId(clientId), message: msg });
+          }
+          return;
+        }
+        setPinStatus('success');
+        setPinMessage('PIN обновлён. Не забудьте сообщить его клиенту.');
+        setPinForm({ pin: '', confirm: '' });
+        setTimeout(() => { setPinStatus('idle'); setPinMessage(''); }, 2000);
+      } catch (e) {
+        setPinStatus('error');
+        setPinMessage(e?.message || 'Ошибка при обновлении PIN');
+        if (window.HEYS && window.HEYS.analytics && window.HEYS.analytics.trackError) {
+          window.HEYS.analytics.trackError('pin_change_exception', { clientId: getShortClientId(clientId), message: e?.message });
+        }
+      }
     };
 
     // Дефолтные пульсовые зоны (фиксированные диапазоны, MET рассчитывается)
@@ -1155,7 +1224,71 @@
         )
       ), // end ProfileSection norms
 
-      // === СЕКЦИЯ 4: Система и аналитика ===
+      // === СЕКЦИЯ 4: Безопасность (PIN) ===
+      React.createElement(ProfileSection, {
+        id: 'security',
+        icon: '🔒',
+        title: 'Безопасность',
+        subtitle: 'Смена PIN для входа',
+        tone: 'amber',
+        expanded: expandedSections.security,
+        onToggle: () => toggleSection('security')
+      },
+        React.createElement('div', {className:'profile-section__fields'},
+          React.createElement('div', {className:'profile-field-group'},
+            React.createElement('div', {className:'profile-field-group__header', style:{alignItems:'center', gap:'8px'}},
+              React.createElement('span', {className:'profile-field-group__icon'}, '📞'),
+              React.createElement('span', {className:'profile-field-group__title'}, 'PIN клиента'),
+              React.createElement('span', {className:'profile-field-group__badge'}, `Client ID: ${getShortClientId(getCurrentClientId())}`)
+            ),
+            React.createElement('div', {className:'muted', style:{marginBottom:'8px'}}, 'Новый PIN должен состоять из 4 цифр. Старый PIN не требуется — изменение доступно только куратору.'),
+            React.createElement('div', {className:'field-list'},
+              React.createElement('div', {className:'inline-field'},
+                React.createElement('label', null, 'Новый PIN'),
+                React.createElement('span', {className:'sep'}, '-'),
+                React.createElement('input', {
+                  type:'password',
+                  inputMode:'numeric',
+                  pattern:'\\d*',
+                  maxLength:4,
+                  value:pinForm.pin,
+                  onChange:e=>setPinForm(prev=>({...prev, pin:e.target.value.replace(/[^0-9]/g,'').slice(0,4)})),
+                  placeholder:'4 цифры',
+                  style:{width:'120px'}
+                })
+              ),
+              React.createElement('div', {className:'inline-field'},
+                React.createElement('label', null, 'Подтверждение'),
+                React.createElement('span', {className:'sep'}, '-'),
+                React.createElement('input', {
+                  type:'password',
+                  inputMode:'numeric',
+                  pattern:'\\d*',
+                  maxLength:4,
+                  value:pinForm.confirm,
+                  onChange:e=>setPinForm(prev=>({...prev, confirm:e.target.value.replace(/[^0-9]/g,'').slice(0,4)})),
+                  placeholder:'Ещё раз',
+                  style:{width:'120px'}
+                })
+              )
+            ),
+            React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'10px', marginTop:'10px'}},
+              React.createElement('button', {
+                className:'btn',
+                onClick:handlePinUpdate,
+                disabled:pinStatus === 'pending',
+                style:{minWidth:'140px'}
+              }, pinStatus === 'pending' ? 'Сохраняю…' : 'Обновить PIN'),
+              pinStatus === 'pending' && React.createElement('span', {style:{color:'#f59e0b'}}, '⏳'),
+              pinStatus === 'success' && React.createElement('span', {style:{color:'#22c55e'}}, '✓ Готово'),
+              pinStatus === 'error' && React.createElement('span', {style:{color:'#ef4444'}}, '⚠️ Ошибка')
+            ),
+            pinMessage && React.createElement('div', {className:'muted', style:{marginTop:'6px', color: pinStatus === 'error' ? '#ef4444' : 'var(--gray-600)'}}, pinMessage)
+          )
+        )
+      ), // end ProfileSection security
+
+      // === СЕКЦИЯ 5: Система и аналитика ===
       React.createElement(ProfileSection, {
         id: 'system',
         icon: '⚙️',

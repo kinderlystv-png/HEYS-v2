@@ -624,6 +624,15 @@
             }
           }, 800);
         };
+
+        // Тихая проверка версии (без UI) — для pull-to-refresh
+        HEYS.checkVersionSilent = async () => {
+          try {
+            await checkServerVersion(true);
+          } catch (e) {
+            console.log('[HEYS] ⚠️ Silent version check failed (offline?)');
+          }
+        };
         
         // === Экспорт бэкапа всех данных в JSON ===
         // Используется из DayTab для кнопки "Скачать бэкап"
@@ -4167,7 +4176,7 @@
                     ? React.createElement(
                         HEYS.LoginScreen,
                         {
-                          initialMode: 'start',
+                          initialMode: 'client',
                           onCuratorLogin: async ({ email, password }) => {
                             const res = await cloudSignIn(email, password, { rememberMe: false });
                             return res && res.error ? { error: res.error } : { ok: true };

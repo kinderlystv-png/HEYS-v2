@@ -1833,7 +1833,10 @@
       await cloud.bootstrapSync();
       status = 'online';
       
-      // 🛡️ Защитный период: игнорируем SIGNED_OUT в течение 10 секунд после signIn
+      // � При входе куратора — отключаем RPC-only режим
+      _rpcOnlyMode = false;
+      
+      // �🛡️ Защитный период: игнорируем SIGNED_OUT в течение 10 секунд после signIn
       // SDK может асинхронно выбросить SIGNED_OUT от старого токена
       _ignoreSignedOutUntil = Date.now() + 10000;
       
@@ -2405,6 +2408,137 @@
       
       muteMirror = false;
     }catch(e){ err('bootstrap exception', e); muteMirror=false; }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔐 SYNC VIA RPC — для входа клиента по телефону+PIN (без Supabase сессии)
+  // ═══════════════════════════════════════════════════════════════════
+  
+  /**
+   * Синхронизирует данные клиента через RPC-функции (без auth.uid())
+   * Используется после успешной верификации PIN клиента
+   * @param {string} clientId - UUID клиента
+   * @param {Object} options - { force: boolean }
+   * @returns {Promise<{success: boolean, loaded?: number, error?: string}>}
+   */
+  cloud.syncClientViaRPC = async function(clientId, options = {}) {
+    if (!client || !clientId) {
+      return { success: false, error: 'no_client_or_id' };
+    }
+    
+    const ls = global.localStorage;
+    
+    try {
+      logCritical(`🔐 [RPC SYNC] Загрузка данных клиента ${clientId.slice(0,8)}...`);
+      
+      // Уведомляем UI о начале синхронизации
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heysSyncStarting', { detail: { clientId } }));
+      }
+      
+      // Вызываем RPC функцию для получения данных
+      const { data, error } = await client.rpc('get_client_kv_data', {
+        p_client_id: clientId
+      });
+      
+      if (error) {
+        logCritical(`❌ [RPC SYNC] Ошибка: ${error.message}`);
+        return { success: false, error: error.message };
+      }
+      
+      // Записываем данные в localStorage
+      muteMirror = true;
+      let loadedCount = 0;
+      
+      // Сначала очищаем старые данные этого клиента (если есть)
+      const prefix = `heys_${clientId}_`;
+      const keysToRemove = [];
+      for (let i = 0; i < ls.length; i++) {
+        const key = ls.key(i);
+        if (key && key.startsWith(prefix)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => ls.removeItem(key));
+      
+      // Записываем новые данные
+      (data || []).forEach(row => {
+        try {
+          // Ключи в client_kv_store уже нормализованы (heys_profile, heys_dayv2_2025-12-12)
+          // Нужно добавить clientId для локального хранения
+          const localKey = `heys_${clientId}_${row.k.replace(/^heys_/, '')}`;
+          ls.setItem(localKey, JSON.stringify(row.v));
+          loadedCount++;
+        } catch(e) {
+          console.warn('[RPC SYNC] Failed to save key:', row.k, e);
+        }
+      });
+      
+      muteMirror = false;
+      
+      // Обновляем timestamp последней синхронизации
+      cloud._lastClientSync = { clientId, ts: Date.now(), viaRPC: true };
+      
+      // Помечаем initial sync как завершённый
+      if (!initialSyncCompleted) {
+        initialSyncCompleted = true;
+      }
+      
+      logCritical(`✅ [RPC SYNC] Загружено ${loadedCount} ключей для клиента ${clientId.slice(0,8)}`);
+      
+      // Уведомляем UI о завершении
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('heysSyncComplete', { 
+          detail: { clientId, loaded: loadedCount, viaRPC: true } 
+        }));
+      }
+      
+      return { success: true, loaded: loadedCount };
+      
+    } catch(e) {
+      muteMirror = false;
+      logCritical(`❌ [RPC SYNC] Exception: ${e.message}`);
+      return { success: false, error: e.message };
+    }
+  };
+  
+  /**
+   * Сохраняет данные клиента через RPC (без auth.uid())
+   * Используется для клиентов, вошедших по PIN
+   * @param {string} clientId - UUID клиента
+   * @param {Array<{k: string, v: any, updated_at?: string}>} items - массив данных для сохранения
+   * @returns {Promise<{success: boolean, saved?: number, error?: string}>}
+   */
+  cloud.saveClientViaRPC = async function(clientId, items) {
+    if (!client || !clientId || !items || items.length === 0) {
+      return { success: false, error: 'invalid_params' };
+    }
+    
+    try {
+      // Преобразуем items в формат для RPC
+      const rpcItems = items.map(item => ({
+        k: normalizeKeyForSupabase(item.k, clientId),
+        v: item.v,
+        updated_at: item.updated_at || new Date().toISOString()
+      }));
+      
+      const { data, error } = await client.rpc('set_client_kv_data', {
+        p_client_id: clientId,
+        p_items: rpcItems
+      });
+      
+      if (error) {
+        logCritical(`❌ [RPC SAVE] Ошибка: ${error.message}`);
+        return { success: false, error: error.message };
+      }
+      
+      logCritical(`☁️ [RPC SAVE] Сохранено ${data} записей для клиента ${clientId.slice(0,8)}`);
+      return { success: true, saved: data };
+      
+    } catch(e) {
+      logCritical(`❌ [RPC SAVE] Exception: ${e.message}`);
+      return { success: false, error: e.message };
+    }
   };
 
   // Флаг для дедупликации параллельных вызовов bootstrapClientSync
@@ -3243,6 +3377,11 @@
     return (Date.now() - rec.ts) > (maxAgeMs||4000);
   };
 
+  // 🔐 Флаг: работаем через RPC (клиент без сессии куратора)
+  let _rpcOnlyMode = false;
+  cloud.setRpcOnlyMode = function(enabled) { _rpcOnlyMode = enabled; };
+  cloud.isRpcOnlyMode = function() { return _rpcOnlyMode; };
+
   // Дебаунсинг для клиентских данных
   let clientUpsertQueue = loadPendingQueue(PENDING_CLIENT_QUEUE_KEY);
   let clientUpsertTimer = null;
@@ -3259,7 +3398,12 @@
     clientUpsertTimer = setTimeout(async () => {
       const batch = clientUpsertQueue.splice(0, clientUpsertQueue.length);
       clientUpsertTimer = null;
-      if (!client || !user || !batch.length) {
+      
+      // Нужен либо user (куратор), либо RPC режим (клиент по PIN)
+      const canSync = (client && user) || (client && _rpcOnlyMode);
+      if (!canSync || !batch.length) {
+        // Вернуть в очередь
+        if (batch.length) clientUpsertQueue.push(...batch);
         savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
         notifyPendingChange();
         return;
@@ -3289,6 +3433,50 @@
       }
       
       try{
+        // ═══════════════════════════════════════════════════════════════
+        // 🔐 RPC MODE: сохраняем через RPC без Supabase сессии
+        // ═══════════════════════════════════════════════════════════════
+        if (_rpcOnlyMode && !user) {
+          // Группируем по client_id
+          const byClientId = {};
+          uniqueBatch.forEach(item => {
+            const cid = item.client_id;
+            if (!byClientId[cid]) byClientId[cid] = [];
+            byClientId[cid].push({ k: item.k, v: item.v, updated_at: item.updated_at });
+          });
+          
+          // Сохраняем каждый клиент отдельно
+          let totalSaved = 0;
+          let anyError = null;
+          for (const [clientId, items] of Object.entries(byClientId)) {
+            const result = await cloud.saveClientViaRPC(clientId, items);
+            if (result.success) {
+              totalSaved += result.saved || items.length;
+            } else {
+              anyError = result.error;
+              // Вернуть в очередь
+              items.forEach(item => clientUpsertQueue.push({ ...item, client_id: clientId }));
+            }
+          }
+          
+          if (anyError) {
+            incrementRetry();
+            savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+            notifyPendingChange();
+            scheduleClientPush();
+          } else {
+            resetRetry();
+            logCritical(`☁️ [RPC] Сохранено в облако: ${totalSaved} записей`);
+          }
+          
+          savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
+          notifyPendingChange();
+          return;
+        }
+        
+        // ═══════════════════════════════════════════════════════════════
+        // ОБЫЧНЫЙ РЕЖИМ: через Supabase session (куратор)
+        // ═══════════════════════════════════════════════════════════════
         const promises = uniqueBatch.map(item => {
           // Добавляем user_id если его нет (таблица требует NOT NULL)
           const itemWithUser = item.user_id ? item : { ...item, user_id: user.id };
@@ -4056,14 +4244,26 @@
     // 6. Синхронизируем данные нового клиента из облака
     log('📥 Загружаем данные нового клиента...');
     try {
-      await cloud.bootstrapClientSync(newClientId);
+      // Если есть Supabase user (куратор) — используем обычную синхронизацию
+      // Если нет (вход по PIN) — используем RPC и включаем RPC-режим для сохранений
+      if (user) {
+        _rpcOnlyMode = false; // Куратор — обычный режим
+        await cloud.bootstrapClientSync(newClientId);
+      } else {
+        logCritical('🔐 [SWITCH] Нет Supabase сессии — используем RPC sync');
+        _rpcOnlyMode = true; // Клиент по PIN — RPC режим для сохранений
+        const rpcResult = await cloud.syncClientViaRPC(newClientId);
+        if (!rpcResult.success) {
+          throw new Error(rpcResult.error || 'RPC sync failed');
+        }
+      }
       log('✅ Переключение завершено успешно');
       
       // Показываем итоговый размер storage
       const sizeMB = getStorageSize();
       log(`📊 Размер localStorage: ${sizeMB.toFixed(2)} MB`);
       
-      // Событие heysSyncCompleted уже отправлено внутри bootstrapClientSync
+      // Событие heysSyncCompleted уже отправлено внутри bootstrapClientSync/syncClientViaRPC
       
       return true;
     } catch (e) {

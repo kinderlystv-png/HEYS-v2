@@ -41,7 +41,7 @@
     const {
       onClientLogin,
       onCuratorLogin,
-      initialMode = 'start',
+      initialMode = 'client',
     } = props || {};
 
     const React = global.React;
@@ -52,7 +52,12 @@
     // client
     const [phoneMasked, setPhoneMasked] = useState('');
     const [pinDigits, setPinDigits] = useState(['', '', '', '']);
-    const [pinReveal, setPinReveal] = useState([false, false, false, false]);
+    const [pinOverlay, setPinOverlay] = useState([
+      { d: '', k: 0 },
+      { d: '', k: 0 },
+      { d: '', k: 0 },
+      { d: '', k: 0 },
+    ]);
     const pinRefs = useRef([]);
     const pinHideTimers = useRef([null, null, null, null]);
 
@@ -76,28 +81,31 @@
     const canClientLogin = clientPhoneValid && clientPinValid && !busy;
     const canCuratorLogin = Boolean(email && password) && !busy;
 
-    function scheduleHidePinDigit(i, delayMs = 700) {
+    function showPinOverlayDigit(i, digit, totalMs = 700) {
       try {
         const t = pinHideTimers.current && pinHideTimers.current[i];
         if (t) clearTimeout(t);
       } catch (_) {}
 
-      setPinReveal((prev) => {
-        const next = (prev || [false, false, false, false]).slice(0, 4);
-        while (next.length < 4) next.push(false);
-        next[i] = true;
+      // Ставим оверлей-цифру (анимация у span), под ней остаётся «точка» (password)
+      setPinOverlay((prev) => {
+        const next = (prev || []).slice(0, 4);
+        while (next.length < 4) next.push({ d: '', k: 0 });
+        next[i] = { d: String(digit || ''), k: Date.now() + Math.random() };
         return next;
       });
 
+      // Автосброс оверлея как fallback (если onAnimationEnd не сработает)
       try {
         pinHideTimers.current[i] = setTimeout(() => {
-          setPinReveal((prev) => {
-            const next = (prev || [false, false, false, false]).slice(0, 4);
-            while (next.length < 4) next.push(false);
-            next[i] = false;
+          setPinOverlay((prev) => {
+            const next = (prev || []).slice(0, 4);
+            while (next.length < 4) next.push({ d: '', k: 0 });
+            // очищаем только если это тот же ключ (чтобы не сбить новый ввод)
+            if (next[i] && next[i].d && next[i].k) next[i] = { d: '', k: 0 };
             return next;
           });
-        }, delayMs);
+        }, Math.max(300, totalMs + 150));
       } catch (_) {}
     }
 
@@ -107,10 +115,10 @@
         if (t) clearTimeout(t);
         if (pinHideTimers.current) pinHideTimers.current[i] = null;
       } catch (_) {}
-      setPinReveal((prev) => {
-        const next = (prev || [false, false, false, false]).slice(0, 4);
-        while (next.length < 4) next.push(false);
-        next[i] = false;
+      setPinOverlay((prev) => {
+        const next = (prev || []).slice(0, 4);
+        while (next.length < 4) next.push({ d: '', k: 0 });
+        next[i] = { d: '', k: 0 };
         return next;
       });
     }
@@ -284,26 +292,28 @@
       };
       
       return Card(
+        // Заголовок
         React.createElement(
           'div',
-          { className: 'text-center' },
-          React.createElement('div', { className: 'mb-3 text-5xl' }, '📱'),
-          React.createElement('div', { className: 'text-2xl font-bold text-slate-900' }, 'Вход по телефону'),
-          React.createElement('div', { className: 'mt-2 text-base text-slate-500' }, 'Введите телефон и 4-значный PIN'),
+          { className: 'text-center mb-8' },
+          React.createElement('div', { className: 'text-3xl font-extrabold text-slate-900 tracking-tight' }, '👋 Привет!'),
+          React.createElement('div', { className: 'mt-1 text-base text-slate-500' }, 'Вход для клиентов'),
         ),
-        React.createElement('div', { className: 'mt-6 space-y-4' },
+        
+        // Форма
+        React.createElement('div', { className: 'space-y-6' },
           // Современный ввод телефона с фиксированным +7
-          React.createElement('div', { className: 'space-y-2' },
-            React.createElement('label', { className: 'block text-sm font-medium text-slate-600 ml-1' }, 'Номер телефона'),
+          React.createElement('div', { className: 'space-y-3' },
+            React.createElement('div', { className: 'text-center text-base font-semibold text-slate-700' }, 'Телефон'),
             React.createElement('div', {
-              className: 'relative flex items-center gap-3 rounded-2xl border-2 px-4 py-3 pr-12 transition-all sm:px-5 sm:py-4 ' +
-                (isPhoneComplete ? 'border-green-400 bg-green-50/50' : 'border-slate-200 bg-white focus-within:border-indigo-500')
+              className: 'flex items-center justify-center gap-2 rounded-2xl border-2 px-4 py-3 transition-all sm:px-5 sm:py-4 ' +
+                (isPhoneComplete ? 'border-green-500 bg-green-50/50' : 'border-slate-200 bg-white focus-within:border-indigo-500')
             },
               // Фиксированный префикс +7 (размер и baseline синхронизированы с input)
               React.createElement('span', {
                 className: 'phone-prefix-large flex-shrink-0 font-bold text-slate-700 select-none'
               }, '+7'),
-              // Поле ввода — без отдельных границ, без внутреннего padding (padding на контейнере)
+              // Поле ввода — ширина по содержимому
               React.createElement('input', {
                 type: 'tel',
                 inputMode: 'numeric',
@@ -312,114 +322,131 @@
                 value: formatPhoneBody(phoneDigits),
                 onChange: handlePhoneInput,
                 onKeyDown: handlePhoneKeyDown,
-                className: 'phone-input-large flex-1 font-bold text-slate-700 placeholder:text-slate-400 placeholder:font-bold',
-                style: { minWidth: 0 }
+                className: 'phone-input-large font-bold text-slate-700 placeholder:text-slate-400 placeholder:font-bold',
+                style: { width: '195px' }
               }),
-              // Индикатор валидности (вне потока, чтобы не сдвигать номер)
-              React.createElement('div', {
-                'aria-hidden': true,
-                className:
-                  'absolute right-4 sm:right-5 top-1/2 -translate-y-1/2 text-3xl font-bold leading-none text-green-500 transition-opacity pointer-events-none ' +
-                  (isPhoneComplete ? 'opacity-100' : 'opacity-0')
-              }, '✓'),
             ),
           ),
           
           // PIN ввод — 4 отдельных поля (как в модных приложениях)
-          React.createElement('div', { className: 'space-y-2' },
-            React.createElement('label', { className: 'block text-sm font-medium text-slate-600 ml-1' }, 'PIN-код'),
+          React.createElement('div', { className: 'space-y-3' },
+            React.createElement('div', { className: 'text-center text-base font-semibold text-slate-700' }, 'PIN-код'),
             React.createElement('div', {
               className: 'flex items-center justify-between gap-3'
             },
               [0, 1, 2, 3].map((i) => {
                 const digit = (pinDigits && pinDigits[i]) || '';
                 const isFilled = Boolean(digit);
-                const isRevealed = Boolean(pinReveal && pinReveal[i]);
-                return React.createElement('input', {
-                  key: 'pin_' + i,
-                  ref: (el) => { pinRefs.current[i] = el; },
-                  type: digit ? (isRevealed ? 'tel' : 'password') : 'tel',
-                  inputMode: 'numeric',
-                  autoComplete: i === 0 ? 'one-time-code' : 'off',
-                  maxLength: 1,
-                  value: digit,
-                  onChange: (e) => {
-                    setErr('');
-                    const v = String(e.target.value || '').replace(/\D/g, '').slice(0, 1);
-                    const arr = (pinDigits || []).slice(0, 4);
-                    while (arr.length < 4) arr.push('');
-                    arr[i] = v;
-                    setPinDigits(arr);
-                    if (v) scheduleHidePinDigit(i);
-                    else clearHidePinDigit(i);
-                    if (v && i < 3) {
-                      try { pinRefs.current[i + 1] && pinRefs.current[i + 1].focus(); } catch (_) {}
-                    }
-                  },
-                  onKeyDown: (e) => {
-                    if (e.key === 'Backspace') {
-                      const cur = (pinDigits && pinDigits[i]) || '';
-                      if (!cur && i > 0) {
-                        e.preventDefault();
-                        const arr = (pinDigits || []).slice(0, 4);
-                        while (arr.length < 4) arr.push('');
-                        arr[i - 1] = '';
-                        setPinDigits(arr);
-                        clearHidePinDigit(i - 1);
-                        try { pinRefs.current[i - 1] && pinRefs.current[i - 1].focus(); } catch (_) {}
-                        return;
+                const overlay = (pinOverlay && pinOverlay[i]) || { d: '', k: 0 };
+                return React.createElement('div', {
+                  key: 'pin_wrap_' + i,
+                  className: 'relative w-14 h-[72px] sm:w-16 sm:h-20 flex-shrink-0',
+                },
+                  React.createElement('input', {
+                    key: 'pin_' + i,
+                    ref: (el) => { pinRefs.current[i] = el; },
+                    type: 'password',
+                    inputMode: 'numeric',
+                    pattern: '[0-9]*',
+                    autoComplete: i === 0 ? 'one-time-code' : 'off',
+                    maxLength: 1,
+                    value: digit,
+                    onChange: (e) => {
+                      setErr('');
+                      const v = String(e.target.value || '').replace(/\D/g, '').slice(0, 1);
+                      const arr = (pinDigits || []).slice(0, 4);
+                      while (arr.length < 4) arr.push('');
+                      arr[i] = v;
+                      setPinDigits(arr);
+                      if (v) showPinOverlayDigit(i, v, 1200);
+                      else clearHidePinDigit(i);
+                      if (v && i < 3) {
+                        try { pinRefs.current[i + 1] && pinRefs.current[i + 1].focus(); } catch (_) {}
                       }
-                      // если есть символ — очистим его (браузер сам, но делаем явно)
-                      if (cur) {
-                        e.preventDefault();
-                        const arr = (pinDigits || []).slice(0, 4);
-                        while (arr.length < 4) arr.push('');
-                        arr[i] = '';
-                        setPinDigits(arr);
-                        clearHidePinDigit(i);
-                        return;
-                      }
-                    }
-                    if (e.key === 'ArrowLeft' && i > 0) {
-                      e.preventDefault();
-                      try { pinRefs.current[i - 1] && pinRefs.current[i - 1].focus(); } catch (_) {}
-                    }
-                    if (e.key === 'ArrowRight' && i < 3) {
-                      e.preventDefault();
-                      try { pinRefs.current[i + 1] && pinRefs.current[i + 1].focus(); } catch (_) {}
-                    }
-                    if (e.key === 'Enter' && canClientLogin) {
-                      handleClientLogin();
-                    }
-                  },
-                  onPaste: (e) => {
-                    try {
-                      const txt = (e.clipboardData && e.clipboardData.getData('text')) || '';
-                      const digits = String(txt).replace(/\D/g, '').slice(0, 4);
-                      if (digits) {
-                        e.preventDefault();
-                        setErr('');
-                        const arr = ['', '', '', ''];
-                        for (let k = 0; k < 4; k++) {
-                          arr[k] = digits[k] || '';
-                          if (arr[k]) scheduleHidePinDigit(k, 900);
-                          else clearHidePinDigit(k);
+                    },
+                    onKeyDown: (e) => {
+                      if (e.key === 'Backspace') {
+                        const cur = (pinDigits && pinDigits[i]) || '';
+                        if (!cur && i > 0) {
+                          e.preventDefault();
+                          const arr = (pinDigits || []).slice(0, 4);
+                          while (arr.length < 4) arr.push('');
+                          arr[i - 1] = '';
+                          setPinDigits(arr);
+                          clearHidePinDigit(i - 1);
+                          try { pinRefs.current[i - 1] && pinRefs.current[i - 1].focus(); } catch (_) {}
+                          return;
                         }
-                        setPinDigits(arr);
-                        // фокус на следующий незаполненный
-                        const nextIdx = Math.min(3, digits.length);
-                        try { pinRefs.current[nextIdx] && pinRefs.current[nextIdx].focus(); } catch (_) {}
+                        if (cur) {
+                          e.preventDefault();
+                          const arr = (pinDigits || []).slice(0, 4);
+                          while (arr.length < 4) arr.push('');
+                          arr[i] = '';
+                          setPinDigits(arr);
+                          clearHidePinDigit(i);
+                          return;
+                        }
                       }
-                    } catch (_) {}
-                  },
-                  className:
-                    'w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 bg-white text-center text-[32px] sm:text-[36px] leading-none font-bold outline-none transition ' +
-                    (isPinComplete
-                      ? 'border-green-400 bg-green-50/50'
-                      : isFilled
-                        ? 'border-slate-300'
-                        : 'border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-200/60'),
-                });
+                      if (e.key === 'ArrowLeft' && i > 0) {
+                        e.preventDefault();
+                        try { pinRefs.current[i - 1] && pinRefs.current[i - 1].focus(); } catch (_) {}
+                      }
+                      if (e.key === 'ArrowRight' && i < 3) {
+                        e.preventDefault();
+                        try { pinRefs.current[i + 1] && pinRefs.current[i + 1].focus(); } catch (_) {}
+                      }
+                      if (e.key === 'Enter' && canClientLogin) {
+                        handleClientLogin();
+                      }
+                    },
+                    onPaste: (e) => {
+                      try {
+                        const txt = (e.clipboardData && e.clipboardData.getData('text')) || '';
+                        const digits = String(txt).replace(/\D/g, '').slice(0, 4);
+                        if (digits) {
+                          e.preventDefault();
+                          setErr('');
+                          const arr = ['', '', '', ''];
+                          for (let k = 0; k < 4; k++) {
+                            arr[k] = digits[k] || '';
+                            if (arr[k]) showPinOverlayDigit(k, arr[k], 1400);
+                            else clearHidePinDigit(k);
+                          }
+                          setPinDigits(arr);
+                          const nextIdx = Math.min(3, digits.length);
+                          try { pinRefs.current[nextIdx] && pinRefs.current[nextIdx].focus(); } catch (_) {}
+                        }
+                      } catch (_) {}
+                    },
+                    className:
+                      'w-full h-full rounded-2xl border-2 bg-white text-center text-[32px] sm:text-[36px] leading-none font-bold outline-none transition ' +
+                      (isPinComplete
+                        ? 'border-green-400 bg-green-50/50'
+                        : isFilled
+                          ? 'border-slate-300'
+                          : 'border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-200/60'),
+                  }),
+                  (overlay && overlay.d)
+                    ? React.createElement(
+                        'span',
+                        {
+                          key: 'pin_overlay_' + i + '_' + overlay.k,
+                          className:
+                            'pin-digit-overlay absolute inset-0 flex items-center justify-center text-slate-800 text-[32px] sm:text-[36px] font-bold leading-none pointer-events-none',
+                          onAnimationEnd: () => {
+                            // Сбрасываем только если это тот же overlay
+                            setPinOverlay((prev) => {
+                              const next = (prev || []).slice(0, 4);
+                              while (next.length < 4) next.push({ d: '', k: 0 });
+                              if (next[i] && next[i].k === overlay.k) next[i] = { d: '', k: 0 };
+                              return next;
+                            });
+                          },
+                        },
+                        overlay.d,
+                      )
+                    : null,
+                );
               })
             ),
           ),
@@ -448,20 +475,20 @@
         ),
         React.createElement(
           'div',
-          { className: 'mt-5 space-y-2 text-center text-sm text-slate-500' },
+          { className: 'mt-6 space-y-3 text-center text-sm text-slate-500' },
           React.createElement('div', null, 'Нет доступа? Обратитесь в поддержку:'),
           React.createElement(
             'a',
             {
               href: 'tel:+79624556111',
-              className: 'font-semibold text-indigo-600 hover:underline',
+              className: 'block font-semibold text-indigo-600 hover:underline',
             },
             '+7 962 455-61-11',
           ),
           React.createElement(
             'button',
-            { className: 'text-indigo-600 hover:underline', onClick: () => { setErr(''); setMode('start'); } },
-            '← Назад',
+            { className: 'mt-3 font-medium text-indigo-500 hover:text-indigo-700 hover:underline', onClick: () => { setErr(''); setMode('curator'); } },
+            'Вход для куратора →',
           ),
         ),
       );

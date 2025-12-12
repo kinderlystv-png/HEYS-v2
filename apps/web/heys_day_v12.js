@@ -9316,7 +9316,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       });
       
       try {
-        // 1. Тихая проверка версии (без модалки — SW сам обновится в фоне)
+        // 1. Тихая проверка версии (без UI)
+        if (window.HEYS?.checkVersionSilent) {
+          window.HEYS.checkVersionSilent();
+        }
+
+        // 1a. Тихая проверка версии SW (без модалки — SW сам обновится в фоне)
         if (navigator.serviceWorker?.controller) {
           navigator.serviceWorker.ready.then(reg => reg.update?.()).catch(() => {});
         }

@@ -201,4 +201,91 @@ $$;
 revoke all on function public.reset_client_pin(uuid, text, text) from public;
 grant execute on function public.reset_client_pin(uuid, text, text) to authenticated;
 
+-- ============================================================================
+-- 6) RPC: получить все данные клиента из client_kv_store
+-- Доступ: anon (после verify_client_pin) — проверяется только что client_id существует
+-- ============================================================================
+drop function if exists public.get_client_kv_data(uuid);
+create or replace function public.get_client_kv_data(p_client_id uuid)
+returns table(k text, v jsonb, updated_at timestamptz)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- Проверяем что client_id существует
+  if not exists (select 1 from public.clients where id = p_client_id) then
+    raise exception 'client_not_found';
+  end if;
+
+  return query
+    select kv.k, kv.v, kv.updated_at
+      from public.client_kv_store kv
+     where kv.client_id = p_client_id;
+end;
+$$;
+
+revoke all on function public.get_client_kv_data(uuid) from public;
+grant execute on function public.get_client_kv_data(uuid) to anon, authenticated;
+
+-- ============================================================================
+-- 7) RPC: сохранить данные клиента в client_kv_store (bulk upsert)
+-- Доступ: anon (после verify_client_pin)
+-- p_items: jsonb array [{k, v, updated_at}, ...]
+-- ВАЖНО: primary key = (user_id, client_id, k), user_id берём из curator_id клиента
+-- ============================================================================
+drop function if exists public.set_client_kv_data(uuid, jsonb);
+create or replace function public.set_client_kv_data(
+  p_client_id uuid,
+  p_items jsonb
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  item jsonb;
+  upserted_count integer := 0;
+  c record;
+begin
+  -- Проверяем что client_id существует и получаем curator_id
+  select * into c from public.clients where id = p_client_id;
+  if not found then
+    raise exception 'client_not_found';
+  end if;
+
+  -- Проверяем что p_items — массив
+  if jsonb_typeof(p_items) != 'array' then
+    raise exception 'items_must_be_array';
+  end if;
+
+  -- Upsert каждого элемента
+  -- user_id берём из curator_id клиента (таблица требует NOT NULL user_id)
+  for item in select * from jsonb_array_elements(p_items)
+  loop
+    insert into public.client_kv_store(user_id, client_id, k, v, updated_at)
+    values (
+      c.curator_id,  -- user_id = curator_id клиента
+      p_client_id,
+      item->>'k',
+      item->'v',
+      coalesce((item->>'updated_at')::timestamptz, now())
+    )
+    on conflict (user_id, client_id, k) do update
+      set v = excluded.v,
+          updated_at = excluded.updated_at
+    where client_kv_store.updated_at < excluded.updated_at
+       or client_kv_store.updated_at is null;
+
+    upserted_count := upserted_count + 1;
+  end loop;
+
+  return upserted_count;
+end;
+$$;
+
+revoke all on function public.set_client_kv_data(uuid, jsonb) from public;
+grant execute on function public.set_client_kv_data(uuid, jsonb) to anon, authenticated;
+
 commit;
