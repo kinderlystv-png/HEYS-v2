@@ -265,6 +265,51 @@
         isPerfect: this.isPerfect(ratio),
         emoji: this.getEmoji(ratio)
       };
+    },
+
+    // === REFEED DAY SUPPORT ===
+    
+    /**
+     * Получить зону с учётом refeed дня
+     * @param {number} ratio - значение kcal/optimum
+     * @param {Object} dayData - данные дня { isRefeedDay, ... }
+     * @returns {Object} зона { id, name, color, textColor }
+     */
+    getDayZone(ratio, dayData) {
+      // Если refeed день — используем расширенные зоны
+      if (dayData?.isRefeedDay) {
+        if (ratio < 0.70) {
+          return { id: 'refeed_under', name: 'Маловато для refeed', color: '#f59e0b', textColor: '#000' };
+        }
+        if (ratio < 1.35) {
+          return { id: 'refeed_ok', name: 'Загрузочный день ✓', color: '#22c55e', textColor: '#fff' };
+        }
+        return { id: 'refeed_over', name: 'Даже для refeed много!', color: '#ef4444', textColor: '#fff' };
+      }
+      // Обычный день — стандартная логика
+      return this.getZone(ratio);
+    },
+
+    /**
+     * Проверка: сохраняется ли streak в refeed день
+     * @param {number} ratio - значение kcal/optimum
+     * @returns {boolean} true если ratio в диапазоне 0.70-1.35
+     */
+    isRefeedStreakDay(ratio) {
+      return ratio >= 0.70 && ratio < 1.35;
+    },
+
+    /**
+     * Универсальная проверка streak дня (с учётом refeed)
+     * @param {number} ratio - значение kcal/optimum
+     * @param {Object} dayData - данные дня { isRefeedDay, ... }
+     * @returns {boolean}
+     */
+    isStreakDayWithRefeed(ratio, dayData) {
+      if (dayData?.isRefeedDay) {
+        return this.isRefeedStreakDay(ratio);
+      }
+      return this.isSuccess(ratio);
     }
   };
 
