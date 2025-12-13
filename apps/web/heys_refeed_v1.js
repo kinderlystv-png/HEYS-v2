@@ -309,8 +309,7 @@
           onClick: () => handleSelect(false)
         },
           React.createElement('span', { className: 'refeed-option-icon' }, '📊'),
-          React.createElement('span', { className: 'refeed-option-label' }, 'Обычный день'),
-          isRefeedDay === false && React.createElement('span', { className: 'refeed-option-check' }, '✓')
+          React.createElement('span', { className: 'refeed-option-label' }, 'Обычный день')
         ),
         // Загрузочный день — второй
         React.createElement('button', {
@@ -319,8 +318,7 @@
           onClick: () => handleSelect(true)
         },
           React.createElement('span', { className: 'refeed-option-icon' }, '🍕'),
-          React.createElement('span', { className: 'refeed-option-label' }, 'Да, загрузка'),
-          isRefeedDay === true && React.createElement('span', { className: 'refeed-option-check' }, '✓')
+          React.createElement('span', { className: 'refeed-option-label' }, 'Загрузочный')
         )
       ),
 
