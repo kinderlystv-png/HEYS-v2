@@ -3997,7 +3997,23 @@
 
     const openMeasurementsEditor = () => {
       if (HEYS.showCheckin?.measurements) {
-        HEYS.showCheckin.measurements(date); // Передаём текущую выбранную дату
+        HEYS.showCheckin.measurements(date, (stepData) => {
+          // Мгновенное обновление UI через setDay
+          const m = stepData?.measurements;
+          if (m && (m.waist || m.hips || m.thigh || m.biceps)) {
+            setDay(prev => ({
+              ...prev,
+              measurements: {
+                waist: m.waist ?? null,
+                hips: m.hips ?? null,
+                thigh: m.thigh ?? null,
+                biceps: m.biceps ?? null,
+                measuredAt: date
+              },
+              updatedAt: Date.now()
+            }));
+          }
+        });
       } else if (HEYS.StepModal?.show) {
         HEYS.StepModal.show({
           steps: ['measurements'],
