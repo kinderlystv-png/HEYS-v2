@@ -23,9 +23,9 @@
   
   // Зоны выполнения refeed дня
   const REFEED_ZONES = {
-    ok: { id: 'refeed_ok', name: 'Refeed выполнен', color: '#22c55e', textColor: '#fff', icon: '✅' },
-    over: { id: 'refeed_over', name: 'Перебор refeed', color: '#f59e0b', textColor: '#fff', icon: '⚠️' },
-    under: { id: 'refeed_under', name: 'Refeed не выполнен', color: '#eab308', textColor: '#000', icon: '📉' },
+    ok: { id: 'refeed_ok', name: 'Загрузочный день выполнен', color: '#22c55e', textColor: '#fff', icon: '✅' },
+    over: { id: 'refeed_over', name: 'Перебор загрузочного дня', color: '#f59e0b', textColor: '#fff', icon: '⚠️' },
+    under: { id: 'refeed_under', name: 'Загрузочный день не выполнен', color: '#eab308', textColor: '#000', icon: '📉' },
     binge: { id: 'refeed_binge', name: 'Сильный перебор', color: '#ef4444', textColor: '#fff', icon: '🚨' }
   };
 
@@ -242,10 +242,18 @@
    * Шаг утреннего чек-ина — Refeed Day
    */
   function RefeedDayStepComponent({ data, onChange }) {
-    const { useState, useCallback, useMemo } = React;
+    const { useState, useCallback, useMemo, useEffect } = React;
     
-    const [isRefeedDay, setIsRefeedDay] = useState(data?.isRefeedDay ?? null);
+    // По умолчанию — обычный день (isRefeedDay = false)
+    const [isRefeedDay, setIsRefeedDay] = useState(data?.isRefeedDay ?? false);
     const [refeedReason, setRefeedReason] = useState(data?.refeedReason ?? null);
+    
+    // Сообщаем родителю начальное значение
+    useEffect(() => {
+      if (data?.isRefeedDay === undefined || data?.isRefeedDay === null) {
+        onChange({ isRefeedDay: false, refeedReason: null });
+      }
+    }, []);
     
     // Получаем данные о калорийном долге
     const caloricDebt = useMemo(() => {
@@ -277,8 +285,8 @@
     return React.createElement('div', { className: 'refeed-step' },
       // Заголовок
       React.createElement('div', { className: 'refeed-header' },
-        React.createElement('span', { className: 'refeed-icon' }, '🍕'),
-        React.createElement('h3', { className: 'refeed-title' }, 'Загрузочный день?')
+        React.createElement('span', { className: 'refeed-icon' }, '📅'),
+        React.createElement('h3', { className: 'refeed-title' }, 'Тип дня')
       ),
 
       // Подсказка от системы (если есть рекомендация)
@@ -292,17 +300,9 @@
         )
       ),
 
-      // Кнопки выбора Да/Нет
+      // Кнопки выбора: Обычный день (по умолчанию) / Загрузочный
       React.createElement('div', { className: 'refeed-options' },
-        React.createElement('button', {
-          type: 'button',
-          className: 'refeed-option refeed-option--yes' + (isRefeedDay === true ? ' active' : ''),
-          onClick: () => handleSelect(true)
-        },
-          React.createElement('span', { className: 'refeed-option-icon' }, '🍕'),
-          React.createElement('span', { className: 'refeed-option-label' }, 'Да, загрузка'),
-          isRefeedDay === true && React.createElement('span', { className: 'refeed-option-check' }, '✓')
-        ),
+        // Обычный день — первый, выбран по умолчанию
         React.createElement('button', {
           type: 'button',
           className: 'refeed-option refeed-option--no' + (isRefeedDay === false ? ' active' : ''),
@@ -311,6 +311,16 @@
           React.createElement('span', { className: 'refeed-option-icon' }, '📊'),
           React.createElement('span', { className: 'refeed-option-label' }, 'Обычный день'),
           isRefeedDay === false && React.createElement('span', { className: 'refeed-option-check' }, '✓')
+        ),
+        // Загрузочный день — второй
+        React.createElement('button', {
+          type: 'button',
+          className: 'refeed-option refeed-option--yes' + (isRefeedDay === true ? ' active' : ''),
+          onClick: () => handleSelect(true)
+        },
+          React.createElement('span', { className: 'refeed-option-icon' }, '🍕'),
+          React.createElement('span', { className: 'refeed-option-label' }, 'Да, загрузка'),
+          isRefeedDay === true && React.createElement('span', { className: 'refeed-option-check' }, '✓')
         )
       ),
 

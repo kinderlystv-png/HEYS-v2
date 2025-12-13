@@ -8833,7 +8833,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     const displayOptimum = useMemo(() => {
       // 1. Refeed day — +35% к норме (приоритет над caloricDebt)
       if (day.isRefeedDay && HEYS.Refeed) {
-        return HEYS.Refeed.getRefeedOptimum(optimum);
+        return HEYS.Refeed.getRefeedOptimum(optimum, true);
       }
       // 2. Caloric debt — добавляем долг к норме
       if (caloricDebt && caloricDebt.dailyBoost > 0) {
@@ -12271,14 +12271,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         ),
         // Цель — кликабельная для изменения дефицита
         React.createElement('div', { 
-          className: 'metrics-card',
-          style: { background: '#f0f9ff', borderColor: '#bae6fd', cursor: 'pointer' },
+          className: 'metrics-card' + (day.isRefeedDay ? ' metrics-card--refeed' : ''),
+          style: { 
+            background: day.isRefeedDay ? '#fff7ed' : '#f0f9ff', 
+            borderColor: day.isRefeedDay ? '#fdba74' : '#bae6fd', 
+            cursor: 'pointer' 
+          },
           onClick: openDeficitPicker,
           title: 'Нажми чтобы изменить цель дефицита'
         },
           React.createElement('div', { className: 'metrics-icon' }, '🎯'),
-          React.createElement('div', { className: 'metrics-value', style: { color: displayOptimum > optimum ? '#10b981' : '#0369a1' } }, displayOptimum),
-          React.createElement('div', { className: 'metrics-label' }, 'Цель (' + dayTargetDef + '%)' + (displayOptimum > optimum ? ' 💰Долг' : ''))
+          React.createElement('div', { className: 'metrics-value', style: { color: day.isRefeedDay ? '#f97316' : (displayOptimum > optimum ? '#10b981' : '#0369a1') } }, displayOptimum),
+          React.createElement('div', { className: 'metrics-label' }, 
+            'Цель (' + dayTargetDef + '%)' + (!day.isRefeedDay && displayOptimum > optimum ? ' 💰' : '')
+          ),
+          // 🍕 Refeed hint (как в "Осталось")
+          day.isRefeedDay && React.createElement('div', { 
+            className: 'metrics-refeed-hint',
+            style: { fontSize: '9px', color: '#f97316', marginTop: '2px', textAlign: 'center' }
+          }, '🍕 загрузка +35%')
         ),
         // Съедено
         React.createElement('div', { 
@@ -12335,7 +12346,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             isRefeedDay && React.createElement('div', { 
               className: 'metrics-refeed-hint',
               style: { fontSize: '9px', color: '#f97316', marginTop: '2px', textAlign: 'center' }
-            }, '🍕 refeed +35%')
+            }, '🍕 загрузка +35%')
           );
         })()
       ),
@@ -12414,7 +12425,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         
         // Цвет и иконка по уровню долга
         const getDebtStyle = () => {
-          if (needsRefeed) return { icon: '🍕', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.3)', label: 'Refeed рекомендуется' };
+          if (needsRefeed) return { icon: '🍕', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.3)', label: 'Загрузка рекомендуется' };
           if (debt > 700) return { icon: '⚠️', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.2)', label: 'Значительный долг' };
           if (debt > 400) return { icon: '📊', color: '#eab308', bg: 'rgba(234, 179, 8, 0.08)', border: 'rgba(234, 179, 8, 0.2)', label: 'Накопился долг' };
           return { icon: '📈', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.08)', border: 'rgba(59, 130, 246, 0.2)', label: 'Небольшой долг' };
@@ -12484,7 +12495,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             React.createElement('span', { className: 'caloric-debt-rec-icon' }, needsRefeed ? '🍽️' : '💡'),
             React.createElement('span', { className: 'caloric-debt-rec-text' },
               needsRefeed 
-                ? 'Refeed день: можно ' + adjustedOptimum + ' ккал (+' + dailyBoost + ')'
+                ? 'Загрузка: можно ' + adjustedOptimum + ' ккал (+' + dailyBoost + ')'
                 : 'Сегодня можно ' + adjustedOptimum + ' ккал (+' + dailyBoost + ')'
             )
           ),
@@ -13490,7 +13501,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 } 
               },
                 React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px', color: needsRefeed ? '#d97706' : '#16a34a' } },
-                  needsRefeed ? '🍕 Refeed рекомендуется' : '💡 Рекомендация'),
+                  needsRefeed ? '🍕 Загрузка рекомендуется' : '💡 Рекомендация'),
                 React.createElement('div', { style: { fontSize: '13px', color: '#475569' } },
                   needsRefeed 
                     ? 'Сегодня можно съесть ' + adjustedOptimum + ' ккал (норма +' + Math.round(refeedBoost / optimum * 100) + '%)'
@@ -14869,13 +14880,24 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               React.createElement('span', { className: 'formula-label' }, dayTargetDef < 0 ? 'Дефицит' : 'Профицит'),
               React.createElement('span', { className: 'formula-value' }, (dayTargetDef > 0 ? '+' : '') + dayTargetDef + '%')
             ),
-            // 💰 Калорийный долг (если есть)
+            // 💰 Калорийный долг (если есть) — показываем всегда для информации
             caloricDebt?.dailyBoost > 0 && React.createElement('div', { className: 'formula-row debt-row' },
               React.createElement('span', { className: 'formula-label' }, 
                 React.createElement('span', { style: { marginRight: '4px' } }, '💰'),
                 'Долг'
               ),
-              React.createElement('span', { className: 'formula-value', style: { color: '#22c55e' } }, '+' + caloricDebt.dailyBoost)
+              // При refeed долг показываем серым (не добавляется к цели)
+              React.createElement('span', { className: 'formula-value', style: { color: day.isRefeedDay ? '#9ca3af' : '#22c55e' } }, 
+                (day.isRefeedDay ? '(' : '+') + caloricDebt.dailyBoost + (day.isRefeedDay ? ')' : '')
+              )
+            ),
+            // 🍕 Refeed day boost (Загрузка)
+            day.isRefeedDay && React.createElement('div', { className: 'formula-row refeed-row' },
+              React.createElement('span', { className: 'formula-label' }, 
+                React.createElement('span', { style: { marginRight: '4px' } }, '🍕'),
+                'Загрузка'
+              ),
+              React.createElement('span', { className: 'formula-value', style: { color: '#f97316' } }, '+35%')
             ),
             React.createElement('div', { className: 'formula-row formula-total' },
               React.createElement('span', { className: 'formula-label' }, 'Цель'),
