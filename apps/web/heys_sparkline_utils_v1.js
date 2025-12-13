@@ -52,7 +52,7 @@
       // Тренд веса
       weightDown: '#22c55e',     // green-500 (хорошо)
       weightUp: '#ef4444',       // red-500 (плохо)
-      weightStable: '#8b5cf6',   // violet-500
+      weightStable: '#3b82f6',   // violet-500
       
       // Цикл
       retention: '#ec4899',      // pink-500

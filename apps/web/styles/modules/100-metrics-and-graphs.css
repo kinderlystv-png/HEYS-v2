@@ -1547,7 +1547,7 @@
 
 .sparkline-annotation-training {
   font-size: 10px;
-  fill: #8b5cf6; /* фиолетовый для тренировок */
+  fill: #3b82f6; /* фиолетовый для тренировок */
   opacity: 0;
   animation: fadeInSimple 0.3s ease-out forwards;
   animation-delay: var(--delay, 0s);
@@ -1560,7 +1560,7 @@
 
 /* Пунктирная линия от эмодзи тренировки к точке — синхронизирована с точкой */
 .sparkline-training-line {
-  stroke: #a78bfa; /* светло-фиолетовый */
+  stroke: #60a5fa; /* светло-фиолетовый */
   stroke-width: 1;
   stroke-dasharray: 2 2;
   opacity: 0;
@@ -2428,13 +2428,13 @@
 .weight-single-unit {
   font-size: 16px;
   font-weight: 500;
-  color: #a78bfa;
+  color: #60a5fa;
 }
 
 .weight-single-hint {
   margin-top: 8px;
   font-size: 12px;
-  color: #8b5cf6;
+  color: #3b82f6;
   opacity: 0.8;
 }
 
@@ -2632,7 +2632,7 @@
 }
 
 .weight-sparkline-container.trend-same .weight-sparkline-line {
-  stroke: #8b5cf6;
+  stroke: #3b82f6;
 }
 
 .weight-sparkline-dot {
@@ -2748,7 +2748,7 @@
 
 .weight-sparkline-label {
   font-size: 9px;
-  fill: #a78bfa;
+  fill: #60a5fa;
   font-weight: 500;
 }
 
@@ -4145,7 +4145,7 @@
 
 .household-value-time {
   font-size: 12px;
-  color: var(--color-indigo-500, #6366f1);
+  color: var(--color-indigo-500, #3b82f6);
   font-weight: 600;
   margin-left: 4px;
 }
@@ -4985,7 +4985,7 @@
 
 .training-card-rating.feel {
   background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
-  border: 1px solid #c4b5fd;
+  border: 1px solid #93c5fd;
 }
 
 /* Physical (physical состояние) - оранжевый */
@@ -5001,7 +5001,7 @@
 /* Wellbeing (самочувствие) - фиолетовый */
 .training-card-rating.wellbeing {
   background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
-  border: 1px solid #c4b5fd;
+  border: 1px solid #93c5fd;
 }
 
 .training-card-rating.wellbeing .training-card-rating-value {
@@ -5152,7 +5152,7 @@
 }
 
 .picker-step-dot.active {
-  background: #6366f1;
+  background: #3b82f6;
 }
 
 /* DEV: Clear weight button */
@@ -5471,7 +5471,7 @@
 
 /* Emotional - фиолетовый */
 .macro-toast-emotional {
-  --toast-gradient: linear-gradient(135deg, #c4b5fd 0%, #8b5cf6 100%);
+  --toast-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
   --toast-bg: #f5f3ff; /* violet-50 */
 }
 
@@ -5489,7 +5489,7 @@
 
 /* Lifestyle - индиго */
 .macro-toast-lifestyle {
-  --toast-gradient: linear-gradient(135deg, #a5b4fc 0%, #6366f1 100%);
+  --toast-gradient: linear-gradient(135deg, #a5b4fc 0%, #3b82f6 100%);
   --toast-bg: #eef2ff; /* indigo-50 */
 }
 

@@ -4182,7 +4182,7 @@ const HEYS = window.HEYS = window.HEYS || {};
 
             // Цветные аватары по первой букве имени
             const AVATAR_COLORS = [
-              'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // А, К, Ф — фиолетовый
+              'linear-gradient(135deg, #4285f4 0%, #2563eb 100%)', // А, К, Ф — фиолетовый
               'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', // Б, Л, Х — розовый
               'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', // В, М, Ц — голубой
               'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', // Г, Н, Ч — зелёный
@@ -4425,7 +4425,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                                         padding: '12px 14px',
                                         borderRadius: 14,
                                         background: 'var(--card)',
-                                        border: isLast ? '2px solid #667eea' : '2px solid var(--border)',
+                                        border: isLast ? '2px solid #4285f4' : '2px solid var(--border)',
                                         cursor: 'pointer',
                                         transition: 'all 0.2s',
                                         animation: `fadeSlideIn 0.3s ease ${idx * 0.05}s both`
@@ -4487,7 +4487,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                                         ),
                                         // Метка "Последний"
                                         isLast && React.createElement('span', { 
-                                          style: { color: '#667eea', fontWeight: 500 } 
+                                          style: { color: '#4285f4', fontWeight: 500 } 
                                         }, '✓')
                                       )
                                     ),
@@ -5175,12 +5175,12 @@ const HEYS = window.HEYS = window.HEYS || {};
                                         style: { 
                                           flex: 1,
                                           fontWeight: c.id === clientId ? 600 : 400,
-                                          color: c.id === clientId ? '#667eea' : 'var(--text)'
+                                          color: c.id === clientId ? '#4285f4' : 'var(--text)'
                                         } 
                                       }, c.name),
                                       // Галочка для выбранного
                                       c.id === clientId && React.createElement('span', { 
-                                        style: { color: '#667eea' } 
+                                        style: { color: '#4285f4' } 
                                       }, '✓')
                                     )
                                   ),
@@ -5197,7 +5197,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                                       style: {
                                         padding: '10px 16px 12px',
                                         textAlign: 'center',
-                                        color: '#667eea',
+                                        color: '#4285f4',
                                         fontWeight: 500,
                                         cursor: 'pointer',
                                         fontSize: 14

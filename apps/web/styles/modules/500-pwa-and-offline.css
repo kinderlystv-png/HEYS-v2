@@ -769,7 +769,7 @@
 .mc-sleep-hours {
   font-size: 48px;
   font-weight: 800;
-  color: #8b5cf6;
+  color: #3b82f6;
 }
 
 .mc-sleep-unit {
@@ -1555,8 +1555,8 @@
 }
 
 .household-time-preset.active {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  border-color: #6366f1;
+  background: linear-gradient(135deg, #3b82f6 0%, #3b82f6 100%);
+  border-color: #3b82f6;
   color: #fff;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
 }
@@ -1677,7 +1677,7 @@
 .mc-quality-value {
   font-size: 56px;
   font-weight: 800;
-  color: #8b5cf6;
+  color: #3b82f6;
   letter-spacing: -2px;
 }
 
@@ -1690,7 +1690,7 @@
 .mc-quality-label {
   font-size: 18px;
   font-weight: 600;
-  color: #8b5cf6;
+  color: #3b82f6;
   min-height: 24px;
 }
 
@@ -1715,7 +1715,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
   transition: transform 0.15s ease;
@@ -1730,7 +1730,7 @@
   height: 28px;
   border: none;
   border-radius: 50%;
-  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
 }
@@ -1871,7 +1871,7 @@
 
 .mc-quality-btn.active {
   background: rgba(139, 92, 246, 0.1);
-  border-color: #8b5cf6;
+  border-color: #3b82f6;
   box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
 }
 
@@ -1886,7 +1886,7 @@
 }
 
 .mc-quality-btn.active .mc-quality-btn-label {
-  color: #8b5cf6;
+  color: #3b82f6;
 }
 
 /* Footer */
@@ -1984,15 +1984,15 @@
 
 /* Dark mode - Sleep Quality */
 [data-theme="dark"] .mc-quality-value {
-  color: #a78bfa;
+  color: #60a5fa;
 }
 
 [data-theme="dark"] .mc-quality-label {
-  color: #a78bfa;
+  color: #60a5fa;
 }
 
 [data-theme="dark"] .mc-quality-slider {
-  background: linear-gradient(to right, #8b5cf6 0%, #8b5cf6 var(--progress, 66%), var(--color-slate-700) var(--progress, 66%), var(--color-slate-700) 100%);
+  background: linear-gradient(to right, #3b82f6 0%, #3b82f6 var(--progress, 66%), var(--color-slate-700) var(--progress, 66%), var(--color-slate-700) 100%);
 }
 
 [data-theme="dark"] .mc-quality-btn {
@@ -2001,7 +2001,7 @@
 
 [data-theme="dark"] .mc-quality-btn.active {
   background: rgba(139, 92, 246, 0.2);
-  border-color: #a78bfa;
+  border-color: #60a5fa;
 }
 
 [data-theme="dark"] .mc-quality-btn-label {
@@ -2009,7 +2009,7 @@
 }
 
 [data-theme="dark"] .mc-quality-btn.active .mc-quality-btn-label {
-  color: #a78bfa;
+  color: #60a5fa;
 }
 
 /* Dark mode - Deficit Step */
@@ -2465,7 +2465,7 @@
 .mc-sleep-value {
   font-size: 48px;
   font-weight: 800;
-  color: #8b5cf6;
+  color: #3b82f6;
 }
 
 /* Time pickers */

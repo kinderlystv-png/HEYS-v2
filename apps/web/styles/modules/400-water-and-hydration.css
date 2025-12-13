@@ -1089,7 +1089,7 @@ html.dark .water-tip-text {
 }
 
 .advice-list-item-emotional {
-  --advice-gradient: linear-gradient(135deg, #c4b5fd 0%, #8b5cf6 100%);
+  --advice-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
   --advice-bg: #f5f3ff; /* violet-50 */
 }
 
@@ -1099,7 +1099,7 @@ html.dark .water-tip-text {
 }
 
 .advice-list-item-insight {
-  --advice-gradient: linear-gradient(135deg, #c4b5fd 0%, #8b5cf6 100%);
+  --advice-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
   --advice-bg: #f5f3ff; /* violet-50 */
 }
 

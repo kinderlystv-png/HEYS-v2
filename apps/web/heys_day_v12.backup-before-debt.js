@@ -11267,7 +11267,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const weightTrend = avgSecond - avgFirst; // положительный = вес растёт
       
       // Цвет градиента по тренду
-      const trendColor = weightTrend <= -0.1 ? '#22c55e' : (weightTrend >= 0.1 ? '#ef4444' : '#8b5cf6');
+      const trendColor = weightTrend <= -0.1 ? '#22c55e' : (weightTrend >= 0.1 ? '#ef4444' : '#3b82f6');
       
       // Цвет прогноза — серый для нейтральности (прогноз — это неизвестность)
       const forecastColor = '#9ca3af'; // gray-400
@@ -11282,7 +11282,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const weightLineGradientStops = realPoints.map((p, i) => {
         const prevWeight = i > 0 ? realPoints[i-1].weight : p.weight;
         const localTrend = p.weight - prevWeight;
-        const dotColor = localTrend < -0.05 ? '#22c55e' : (localTrend > 0.05 ? '#ef4444' : '#8b5cf6');
+        const dotColor = localTrend < -0.05 ? '#22c55e' : (localTrend > 0.05 ? '#ef4444' : '#3b82f6');
         const offset = realPoints.length > 1 ? (i / (realPoints.length - 1)) * 100 : 50;
         return { offset, color: dotColor };
       });
@@ -11468,7 +11468,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           const firstWeight = realPoints[0]?.weight || todayPt.weight;
           const weightChange = todayPt.weight - firstWeight;
           const changeText = weightChange >= 0 ? '+' + weightChange.toFixed(1) : weightChange.toFixed(1);
-          const changeColor = weightChange < -0.05 ? '#22c55e' : (weightChange > 0.05 ? '#ef4444' : '#8b5cf6');
+          const changeColor = weightChange < -0.05 ? '#22c55e' : (weightChange > 0.05 ? '#ef4444' : '#3b82f6');
           
           return React.createElement('g', { key: 'weight-today-line-group' },
             // Изменение веса над точкой (выше)
@@ -11569,7 +11569,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           // Для прогнозных точек — серый цвет
           const dotColor = p.isFuture 
             ? forecastColor  // серый для прогноза
-            : (localTrend < -0.05 ? '#22c55e' : (localTrend > 0.05 ? '#ef4444' : '#8b5cf6'));
+            : (localTrend < -0.05 ? '#22c55e' : (localTrend > 0.05 ? '#ef4444' : '#3b82f6'));
           
           let dotClass = 'weight-sparkline-dot sparkline-dot';
           if (p.isToday) dotClass += ' weight-sparkline-dot-today sparkline-dot-pulse';
@@ -11922,7 +11922,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             style: {
               left: Math.random() * 100 + '%',
               animationDelay: Math.random() * 0.5 + 's',
-              backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'][i % 5]
+              backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#3b82f6'][i % 5]
             }
           })
         )
@@ -13909,7 +13909,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           // Цветная полоса (градиент для прогноза)
           React.createElement('div', { 
             className: 'sparkline-popup-stripe',
-            style: { background: 'linear-gradient(90deg, #8b5cf6, #a78bfa)' }
+            style: { background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }
           }),
           // Контент
           React.createElement('div', { className: 'sparkline-popup-content' },
@@ -13927,7 +13927,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             ),
             // Основное значение
             React.createElement('div', { className: 'sparkline-popup-value-row' },
-              React.createElement('span', { style: { color: '#8b5cf6', fontWeight: 700, fontSize: '18px' } }, 
+              React.createElement('span', { style: { color: '#3b82f6', fontWeight: 700, fontSize: '18px' } }, 
                 '⚖️ ~' + point.weight + ' кг'
               )
             ),
@@ -15494,7 +15494,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               React.createElement('defs', null,
                 React.createElement('linearGradient', { id: 'activeWaveGrad2', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
                   React.createElement('stop', { offset: '0%', stopColor: '#3b82f6' }),
-                  React.createElement('stop', { offset: '100%', stopColor: '#8b5cf6' })
+                  React.createElement('stop', { offset: '100%', stopColor: '#3b82f6' })
                 )
               ),
               React.createElement('line', { x1: padding, y1: barY + barH / 2, x2: w - padding, y2: barY + barH / 2, stroke: '#e5e7eb', strokeWidth: 2, strokeLinecap: 'round' }),
@@ -15530,7 +15530,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 'Приём'
               ),
               React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '3px' } },
-                React.createElement('span', { style: { width: '16px', height: '8px', borderRadius: '2px', background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)' } }),
+                React.createElement('span', { style: { width: '16px', height: '8px', borderRadius: '2px', background: 'linear-gradient(90deg, #3b82f6, #3b82f6)' } }),
                 'Активная'
               ),
               React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '3px' } },
@@ -16870,7 +16870,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     style: {
                       left: (5 + Math.random() * 90) + '%',
                       animationDelay: (Math.random() * 0.5) + 's',
-                      backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'][i % 5]
+                      backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#3b82f6'][i % 5]
                     }
                   })
                 )

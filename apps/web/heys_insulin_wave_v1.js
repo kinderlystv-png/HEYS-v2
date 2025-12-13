@@ -1365,7 +1365,7 @@
       early: { minHours: 12, maxHours: 16, label: 'Переход к голоданию', color: '#eab308', icon: '⏳' },
       active: { minHours: 16, maxHours: 24, label: 'Аутофагия активна', color: '#22c55e', icon: '🔄' },
       deep: { minHours: 24, maxHours: 48, label: 'Глубокая аутофагия', color: '#10b981', icon: '✨' },
-      extended: { minHours: 48, maxHours: Infinity, label: 'Продлённый пост', color: '#8b5cf6', icon: '🌟' }
+      extended: { minHours: 48, maxHours: Infinity, label: 'Продлённый пост', color: '#3b82f6', icon: '🌟' }
     },
     // Минимум для показа таймера
     minHoursToShow: 12,
@@ -4788,7 +4788,7 @@
       waves.push({
         id: 'prev',
         label: prevWave.mealName || 'Предыдущий',
-        color: '#8b5cf6',
+        color: '#3b82f6',
         start: s,
         end: e,
         gi: prevWave.gi || 50,
@@ -4941,8 +4941,8 @@
           ),
           // Градиент для предыдущей волны
           React.createElement('linearGradient', { id: 'waveGradPrev', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
-            React.createElement('stop', { offset: '0%', stopColor: '#8b5cf6', stopOpacity: 0.5 }),
-            React.createElement('stop', { offset: '100%', stopColor: '#8b5cf6', stopOpacity: 0.05 })
+            React.createElement('stop', { offset: '0%', stopColor: '#3b82f6', stopOpacity: 0.5 }),
+            React.createElement('stop', { offset: '100%', stopColor: '#3b82f6', stopOpacity: 0.05 })
           ),
           // Градиент для следующей волны
           React.createElement('linearGradient', { id: 'waveGradNext', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
@@ -5226,7 +5226,7 @@
           // Итоговая длина волны
           React.createElement('div', {
             style: {
-              background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+              background: 'linear-gradient(135deg, #3b82f6, #3b82f6)',
               borderRadius: '12px',
               padding: '16px',
               marginBottom: '16px',
@@ -5491,7 +5491,7 @@
       // Синий блок с таймером
       React.createElement('div', {
         style: {
-          background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)',
+          background: 'linear-gradient(135deg, #3b82f6 0%, #3b82f6 50%, #3b82f6 100%)',
           borderRadius: '16px',
           padding: '20px',
         textAlign: 'center',
@@ -5596,7 +5596,7 @@
         React.createElement('defs', null,
           React.createElement('linearGradient', { id: 'activeWaveGrad2', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
             React.createElement('stop', { offset: '0%', stopColor: '#3b82f6' }),
-            React.createElement('stop', { offset: '100%', stopColor: '#8b5cf6' })
+            React.createElement('stop', { offset: '100%', stopColor: '#3b82f6' })
           )
         ),
         
@@ -5661,7 +5661,7 @@
           'Приём'
         ),
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '3px' } },
-          React.createElement('span', { style: { width: '16px', height: '8px', borderRadius: '2px', background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)' } }),
+          React.createElement('span', { style: { width: '16px', height: '8px', borderRadius: '2px', background: 'linear-gradient(90deg, #3b82f6, #3b82f6)' } }),
           'Активная'
         ),
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '3px' } },

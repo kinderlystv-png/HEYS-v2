@@ -561,7 +561,7 @@
       { value: -10, label: 'Умеренное похудение', emoji: '🎯', color: '#eab308' },
       { value: 0, label: 'Поддержание веса', emoji: '⚖️', color: '#22c55e' },
       { value: 10, label: 'Умеренный набор', emoji: '💪', color: '#3b82f6' },
-      { value: 15, label: 'Активный набор', emoji: '💪💪', color: '#8b5cf6' }
+      { value: 15, label: 'Активный набор', emoji: '💪💪', color: '#3b82f6' }
     ];
     
     const getDeficitInfo = (val) => {
@@ -572,7 +572,7 @@
       if (val < 0) return { emoji: '🔥', color: '#f97316', label: 'Дефицит' };
       if (val === 0) return { emoji: '⚖️', color: '#22c55e', label: 'Поддержание' };
       if (val <= 10) return { emoji: '💪', color: '#3b82f6', label: 'Профицит' };
-      return { emoji: '💪💪', color: '#8b5cf6', label: 'Агрессивный набор' };
+      return { emoji: '💪💪', color: '#3b82f6', label: 'Агрессивный набор' };
     };
 
     return React.createElement('div', {className:'page page-user'},
@@ -1115,7 +1115,7 @@
               (() => {
                 // Рассчитываем прогресс от стартового веса (базовый вес в профиле)
                 const progressPct = weightDiff === 0 ? 100 : Math.max(0, Math.min(100, 100 - Math.abs(weightDiff) / Math.abs(w - wGoal) * 100)) || 0;
-                const barColor = weightDiff === 0 ? '#22c55e' : weightDiff > 0 ? '#3b82f6' : '#8b5cf6';
+                const barColor = weightDiff === 0 ? '#22c55e' : weightDiff > 0 ? '#3b82f6' : '#3b82f6';
                 return React.createElement('div', {style:{height:'8px', background:'var(--gray-200)', borderRadius:'4px', overflow:'hidden'}},
                   React.createElement('div', {style:{height:'100%', width: (weightDiff === 0 ? 100 : 50) + '%', background:barColor, borderRadius:'4px', transition:'width 0.3s'}})
                 );

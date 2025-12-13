@@ -787,7 +787,7 @@ td:first-child input {
 
 .compact-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
   background: var(--color-white);
 }
@@ -805,7 +805,7 @@ td:first-child input {
 }
 
 .compact-badge {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #3b82f6 100%);
   color: white;
   padding: 6px 12px;
   border-radius: 20px;
@@ -846,7 +846,7 @@ td:first-child input {
 
 .compact-note:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
   background: var(--color-white);
 }
@@ -997,8 +997,8 @@ td:first-child input {
 }
 
 .compact-train-add:hover {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: #4285f4;
+  color: #4285f4;
   background: #f8fafc;
 }
 
@@ -1193,7 +1193,7 @@ td:first-child input {
 .train-rating-mini.wellbeing {
   background: #ede9fe;
   color: #7c3aed;
-  border: 1px solid #c4b5fd;
+  border: 1px solid #93c5fd;
 }
 
 .train-rating-mini.stress {
@@ -2144,7 +2144,7 @@ td:first-child input {
 
 .weekly-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+  background: linear-gradient(90deg, #3b82f6 0%, #3b82f6 50%, #a855f7 100%);
   border-radius: 5px;
   transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
@@ -2824,7 +2824,7 @@ td:first-child input {
   gap: 10px;
   padding: 6px 16px;
   background: #f0f0f0;
-  border: 1px solid #667eea;
+  border: 1px solid #4285f4;
   border-top: none;
   border-radius: 0 0 16px 16px;
   flex-wrap: nowrap;
@@ -3226,7 +3226,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .hdr-btn.primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4285f4 0%, #2563eb 100%);
   color: white;
   border: none;
 }
@@ -3310,7 +3310,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .date-picker-trigger.open {
-  border-color: #667eea;
+  border-color: #4285f4;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
 }
 
@@ -3470,7 +3470,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .date-picker-day.selected {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4285f4 0%, #2563eb 100%);
   color: white;
   font-weight: 600;
 }
@@ -3503,7 +3503,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .date-picker-btn.today-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4285f4 0%, #2563eb 100%);
   color: white;
 }
 
@@ -3557,9 +3557,9 @@ body:has(.offline-banner) .wrap {
   padding: 6px 12px;
   margin-bottom: 8px;
   background: #f0f9ff;
-  border: 1px dashed #667eea;
+  border: 1px dashed #4285f4;
   border-radius: 6px;
-  color: #667eea;
+  color: #4285f4;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -4737,8 +4737,8 @@ body:has(.offline-banner) .wrap {
 .meal-sep.meal-type-snack2 .meal-kcal-badge,
 .meal-sep.meal-type-snack3 .meal-kcal-badge { background: #f3f4f6; color: var(--color-gray-500); }
 
-.meal-sep.meal-type-night { color: #6366f1; } /* фиолетовый — ночной */
-.meal-sep.meal-type-night .meal-kcal-badge { background: #eef2ff; color: #6366f1; }
+.meal-sep.meal-type-night { color: #3b82f6; } /* фиолетовый — ночной */
+.meal-sep.meal-type-night .meal-kcal-badge { background: #eef2ff; color: #3b82f6; }
 
 /* Подсказка "изменить" рядом с типом приёма */
 .meal-type-hint {
@@ -4784,7 +4784,7 @@ body:has(.offline-banner) .wrap {
 .meal-type-preview-value.meal-type-snack1,
 .meal-type-preview-value.meal-type-snack2,
 .meal-type-preview-value.meal-type-snack3 { color: var(--color-gray-500); background: #f3f4f6; }
-.meal-type-preview-value.meal-type-night { color: #6366f1; background: #eef2ff; }
+.meal-type-preview-value.meal-type-night { color: #3b82f6; background: #eef2ff; }
 
 .meal-type-preview-icon {
   font-size: 16px;
@@ -4920,7 +4920,7 @@ body:has(.offline-banner) .wrap {
 }
 .meal-header-inside.meal-type-night .meal-kcal-badge-inside { 
   background: #eef2ff; 
-  color: #6366f1; 
+  color: #3b82f6; 
 }
 
 .meal-card {
@@ -5054,7 +5054,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .login-modal input:focus {
-  border-color: #667eea !important;
+  border-color: #4285f4 !important;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
 }
 
@@ -5087,12 +5087,12 @@ body:has(.offline-banner) .wrap {
 }
 
 .client-select-modal input:focus {
-  border-color: #667eea !important;
+  border-color: #4285f4 !important;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
 }
 
 .client-card:hover {
-  border-color: #667eea !important;
+  border-color: #4285f4 !important;
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%) !important;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
@@ -6110,7 +6110,7 @@ body:has(.offline-banner) .wrap {
   .meal-rating-mini.wellbeing {
     background: #ede9fe;
     color: #7c3aed;
-    border: 1px solid #c4b5fd;
+    border: 1px solid #93c5fd;
   }
   
   .meal-rating-mini.stress {
@@ -7440,7 +7440,7 @@ body:has(.offline-banner) .wrap {
 
 .profile-section.tone-violet {
   background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
-  border: 1px solid #c4b5fd;
+  border: 1px solid #93c5fd;
 }
 
 .profile-section.tone-violet .profile-section__icon {

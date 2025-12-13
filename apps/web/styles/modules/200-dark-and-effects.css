@@ -307,7 +307,7 @@
 [data-theme="dark"] .meal-sep.meal-type-snack1,
 [data-theme="dark"] .meal-sep.meal-type-snack2,
 [data-theme="dark"] .meal-sep.meal-type-snack3 { color: var(--color-gray-400); }
-[data-theme="dark"] .meal-sep.meal-type-night { color: #a78bfa; }
+[data-theme="dark"] .meal-sep.meal-type-night { color: #60a5fa; }
 
 [data-theme="dark"] .meal-time-badge { 
   background: #78350f; 
@@ -324,7 +324,7 @@
 [data-theme="dark"] .meal-sep.meal-type-breakfast .meal-kcal-badge { background: #431407; color: #fb923c; }
 [data-theme="dark"] .meal-sep.meal-type-lunch .meal-kcal-badge { background: #14532d; color: #4ade80; }
 [data-theme="dark"] .meal-sep.meal-type-dinner .meal-kcal-badge { background: #1e3a8a; color: #60a5fa; }
-[data-theme="dark"] .meal-sep.meal-type-night .meal-kcal-badge { background: #3730a3; color: #a78bfa; }
+[data-theme="dark"] .meal-sep.meal-type-night .meal-kcal-badge { background: #3730a3; color: #60a5fa; }
 
 /* ============================================
    DARK: Meal Header Inside Card
@@ -390,11 +390,11 @@
 
 [data-theme="dark"] .meal-header-inside.meal-type-night {
   background: linear-gradient(135deg, #3730a3 0%, #4338ca 50%, #1e293b 100%);
-  border-bottom-color: #6366f1;
+  border-bottom-color: #3b82f6;
 }
 [data-theme="dark"] .meal-header-inside.meal-type-night .meal-kcal-badge-inside {
   background: #3730a3;
-  color: #a78bfa;
+  color: #60a5fa;
 }
 
 [data-theme="dark"] .btn {
@@ -618,7 +618,7 @@
 }
 
 [data-theme="dark"] .weight-sparkline-point-line {
-  stroke: #a78bfa; /* purple-400 — ярче */
+  stroke: #60a5fa; /* purple-400 — ярче */
 }
 
 /* Dark theme for new sparkline elements */
@@ -832,7 +832,7 @@
 }
 
 [data-theme="dark"] .weight-sparkline-title {
-  color: #c4b5fd;
+  color: #93c5fd;
 }
 
 [data-theme="dark"] .weight-trend-badge.down {
@@ -847,7 +847,7 @@
 
 [data-theme="dark"] .weight-trend-badge.same {
   background: #3b2f63;
-  color: #c4b5fd;
+  color: #93c5fd;
 }
 
 [data-theme="dark"] .weight-forecast-badge {
@@ -866,7 +866,7 @@
 }
 
 [data-theme="dark"] .weight-sparkline-line {
-  stroke: #a78bfa;
+  stroke: #60a5fa;
 }
 
 [data-theme="dark"] .weight-sparkline-container.trend-down .weight-sparkline-line {
@@ -878,7 +878,7 @@
 }
 
 [data-theme="dark"] .weight-sparkline-container.trend-same .weight-sparkline-line {
-  stroke: #a78bfa;
+  stroke: #60a5fa;
 }
 
 [data-theme="dark"] .weight-sparkline-label {
@@ -886,7 +886,7 @@
 }
 
 [data-theme="dark"] .weight-sparkline-label-today {
-  fill: #c4b5fd;
+  fill: #93c5fd;
 }
 
 [data-theme="dark"] .weight-sparkline-day-label {
@@ -903,12 +903,12 @@
 }
 
 [data-theme="dark"] .weight-period-pills .kcal-period-pill {
-  color: #a78bfa;
+  color: #60a5fa;
 }
 
 [data-theme="dark"] .weight-period-pills .kcal-period-pill.active {
   background: var(--color-slate-700);
-  color: #c4b5fd;
+  color: #93c5fd;
 }
 
 /* Подсказка о целевом весе — dark mode */
@@ -1188,11 +1188,11 @@
 
 [data-theme="dark"] .training-card-rating.feel {
   background: linear-gradient(135deg, #2e1065 0%, #4c1d95 100%);
-  border-color: #8b5cf6;
+  border-color: #3b82f6;
 }
 
 [data-theme="dark"] .training-card-rating.feel .training-card-rating-value {
-  color: #a78bfa;
+  color: #60a5fa;
 }
 
 /* Dark theme: physical (оранжевый) */
@@ -1208,11 +1208,11 @@
 /* Dark theme: wellbeing (фиолетовый) */
 [data-theme="dark"] .training-card-rating.wellbeing {
   background: linear-gradient(135deg, #2e1065 0%, #4c1d95 100%);
-  border-color: #8b5cf6;
+  border-color: #3b82f6;
 }
 
 [data-theme="dark"] .training-card-rating.wellbeing .training-card-rating-value {
-  color: #a78bfa;
+  color: #60a5fa;
 }
 
 /* Dark theme: mood (зелёный) */
@@ -1287,8 +1287,8 @@
 
 [data-theme="dark"] .train-rating-mini.wellbeing {
   background: #2e1065;
-  border-color: #8b5cf6;
-  color: #c4b5fd;
+  border-color: #3b82f6;
+  color: #93c5fd;
 }
 
 [data-theme="dark"] .train-rating-mini.stress {
@@ -1306,8 +1306,8 @@
 
 [data-theme="dark"] .meal-rating-mini.wellbeing {
   background: #2e1065;
-  border-color: #8b5cf6;
-  color: #c4b5fd;
+  border-color: #3b82f6;
+  color: #93c5fd;
 }
 
 [data-theme="dark"] .meal-rating-mini.stress {
@@ -1417,7 +1417,7 @@
 
 [data-theme="dark"] .card.tone-violet.main-violet .violet-table th {
   background: #2a2445;
-  color: #c4b5fd;
+  color: #93c5fd;
 }
 
 [data-theme="dark"] .card.tone-violet.main-violet .violet-table td {
@@ -1750,7 +1750,7 @@
 }
 
 .sparkline-empty-state.weight-empty .sparkline-empty-hint {
-  color: #8b5cf6;
+  color: #3b82f6;
 }
 
 .sparkline-empty-state.weight-empty .sparkline-empty-progress {
@@ -1759,7 +1759,7 @@
 
 .sparkline-empty-state.weight-empty .sparkline-empty-progress-bar,
 .sparkline-empty-progress-bar.weight {
-  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
   box-shadow: 0 0 8px rgba(139, 92, 246, 0.3);
 }
 
@@ -2115,7 +2115,7 @@
 
 .sleep-quality-display.clickable:active {
   transform: scale(0.98);
-  background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+  background: linear-gradient(135deg, #ddd6fe 0%, #93c5fd 100%);
 }
 
 .sleep-quality-value-big {
@@ -2133,7 +2133,7 @@
 
 .sleep-duration-hint {
   font-size: 11px;
-  color: #8b5cf6;
+  color: #3b82f6;
   margin-left: 8px;
   padding: 2px 6px;
   background: rgba(139, 92, 246, 0.1);

@@ -2,7 +2,7 @@
 
 .demo-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4285f4 0%, #2563eb 100%);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -43,7 +43,7 @@
   background: #4299e1;
 }
 .badge.primary {
-  background: #667eea;
+  background: #4285f4;
 }
 
 .demo-description {

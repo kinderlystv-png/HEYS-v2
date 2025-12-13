@@ -389,7 +389,7 @@
   // КОМПОНЕНТ: ConfettiEffect — эффект конфетти
   // ============================================================
 
-  const CONFETTI_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'];
+  const CONFETTI_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#3b82f6'];
 
   function ConfettiEffect({ show, count = 20 }) {
     if (!show) return null;
