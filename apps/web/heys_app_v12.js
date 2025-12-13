@@ -369,6 +369,9 @@ const HEYS = window.HEYS = window.HEYS || {};
                   console.log('[SW] Update already in progress (locked), skipping');
                   return;
                 }
+                
+                // 🔒 Устанавливаем флаг ДО показа модалки — это реальное обновление
+                sessionStorage.setItem('heys_pending_update', 'true');
                 setUpdateLock();
                 
                 // Показываем UI обновления
@@ -418,16 +421,25 @@ const HEYS = window.HEYS = window.HEYS || {};
           navigator.serviceWorker.addEventListener('controllerchange', () => {
             console.log('[SW] Controller changed — new SW activated!');
             if (refreshing) return;
-            refreshing = true;
             
-            // Показываем уведомление об обновлении
-            showUpdateModal('reloading');
+            // 🔒 Показываем модалку и делаем reload ТОЛЬКО если это реальное обновление
+            // При первичной установке SW (после очистки кэша) — НЕ делаем reload
+            const isRealUpdate = sessionStorage.getItem('heys_pending_update') === 'true' || isUpdateLocked();
             
-            // Небольшая задержка для завершения кэширования, затем reload
-            setTimeout(() => {
-              console.log('[SW] Reloading page with new SW...');
-              window.location.reload();
-            }, 500);
+            if (isRealUpdate) {
+              // Реальное обновление — показываем модалку и делаем reload
+              refreshing = true;
+              showUpdateModal('reloading');
+              
+              // Небольшая задержка для завершения кэширования, затем reload
+              setTimeout(() => {
+                console.log('[SW] Reloading page with new SW...');
+                window.location.reload();
+              }, 500);
+            } else {
+              // Первичная установка SW — НЕ делаем reload, страница уже загружена
+              console.log('[SW] First-time controller activation, no reload needed');
+            }
           });
         }
         

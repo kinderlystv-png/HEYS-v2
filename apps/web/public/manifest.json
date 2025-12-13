@@ -1,11 +1,11 @@
 {
   "name": "HEYS Nutrition Tracker",
-  "short_name": "HEYS",
+  "short_name": "HEYS lab",
   "description": "Отслеживание питания и тренировок",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "background_color": "#434587",
+  "theme_color": "#434587",
   "orientation": "portrait-primary",
   "icons": [
     {
