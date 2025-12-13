@@ -1098,23 +1098,36 @@ const HEYS = window.HEYS = window.HEYS || {};
           setTimeout(initializeApp, INIT_RETRY_DELAY);
         };
         const waitForDependencies = (onReady) => {
-          // Обновляем статус в splash screen
-          if (window.updateSplashStatus) {
-            if (!isReactReady()) {
-              window.updateSplashStatus('Загрузка React...');
-            } else if (!isHeysReady()) {
-              window.updateSplashStatus('Загрузка модулей...');
-            }
+          // Показываем минимальный loader если ждём больше 200мс
+          if (reactCheckCount === 2 && !document.getElementById('heys-init-loader')) {
+            const loader = document.createElement('div');
+            loader.id = 'heys-init-loader';
+            loader.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:99999';
+            loader.innerHTML = '<div style="width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
+            document.body.appendChild(loader);
           }
           
           if (isReactReady() && isHeysReady()) {
-            if (window.updateSplashStatus) {
-              window.updateSplashStatus('Инициализация...');
-            }
+            console.log('[HEYS] ✅ Dependencies ready, initializing app...');
+            // Убираем loader если показывали
+            document.getElementById('heys-init-loader')?.remove();
             onReady();
             return;
           }
+          
           reactCheckCount++;
+          
+          // Защита от зависания — макс 50 попыток (5 секунд)
+          if (reactCheckCount > 50) {
+            console.error('[HEYS] ❌ Timeout waiting for dependencies!');
+            console.error('React ready:', isReactReady());
+            console.error('HEYS ready:', isHeysReady());
+            document.getElementById('heys-init-loader')?.remove();
+            // Показываем сообщение об ошибке
+            document.body.innerHTML = '<div style="padding:40px;text-align:center;font-family:system-ui"><h1>⚠️ Ошибка загрузки</h1><p>Не удалось загрузить приложение. Обновите страницу.</p><button onclick="location.reload()" style="margin-top:20px;padding:12px 24px;background:#10b981;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer">Обновить</button></div>';
+            return;
+          }
+          
           setTimeout(() => waitForDependencies(onReady), INIT_RETRY_DELAY);
         };
         
