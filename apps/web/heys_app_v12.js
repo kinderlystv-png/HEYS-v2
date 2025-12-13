@@ -3150,13 +3150,6 @@ const HEYS = window.HEYS = window.HEYS || {};
           function renderRoot(AppComponent) {
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
-            // 🚀 Скрываем PWA splash screen после первого рендера
-            if (typeof window.hidePwaSplash === 'function') {
-              // Небольшая задержка чтобы React успел отрисовать первый кадр
-              requestAnimationFrame(() => {
-                setTimeout(window.hidePwaSplash, 50);
-              });
-            }
           }
 
           function App() {
