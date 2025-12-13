@@ -6828,7 +6828,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
   // Компактный блок сна и оценки дня в SaaS стиле (две плашки в розовом контейнере)
   const sideBlock = React.createElement('div',{className:'area-side right-col'},
       React.createElement('div', { className: 'compact-sleep compact-card' },
-        React.createElement('div', { className: 'compact-card-header' }, '😴 Сон и самочувствие'),
+        React.createElement('div', { className: 'compact-card-header' }, '😴 СОН И САМОЧУВСТВИЕ'),
         
         // Ряд с двумя плашками
         React.createElement('div', { className: 'sleep-cards-row' },
@@ -7011,7 +7011,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         React.createElement('div', { className: 'measurements-card__header' },
           React.createElement('div', { className: 'measurements-card__title' },
             React.createElement('span', { className: 'measurements-card__icon' }, '📐'),
-            React.createElement('span', null, 'Замеры тела'),
+            React.createElement('span', null, 'ЗАМЕРЫ ТЕЛА'),
             measurementsNeedUpdate && React.createElement('span', { className: 'measurements-card__badge' }, '📏 Пора обновить')
           ),
           React.createElement('div', { className: 'measurements-card__header-right' },
