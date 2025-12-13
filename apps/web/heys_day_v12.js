@@ -8009,8 +8009,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     // Данные для sparkline веса за N дней
     const weightSparklineData = React.useMemo(() => {
       try {
-        const realToday = new Date();
-        const realTodayStr = fmtDate(realToday);
+        // Используем выбранный день (date) как "сегодня" для sparkline
+        const realToday = new Date(date + 'T12:00:00');
+        const realTodayStr = date;
         const days = [];
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
         
@@ -8265,8 +8266,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     // Это даёт "тренд на будущее" вместо пустых дней в прошлом
     const sparklineData = React.useMemo(() => {
       try {
-        const realToday = new Date();
-        const realTodayStr = fmtDate(realToday);
+        // === ВАЖНО: Используем выбранный день (date) как "сегодня" для sparkline ===
+        // Это позволяет корректно показывать данные при просмотре любого дня,
+        // включая ночные часы (00:00-02:59) когда HEYS-день ещё не закончился
+        const realToday = new Date(date + 'T12:00:00'); // Парсим date из пропсов
+        const realTodayStr = date; // date уже в формате YYYY-MM-DD
         const days = [];
         const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
         
@@ -8551,8 +8555,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       }
       
       try {
-        const realToday = new Date();
-        const realTodayStr = fmtDate(realToday);
+        // Используем выбранный день (date) как "сегодня"
+        const realTodayStr = date;
         
         // Берём последние DEBT_WINDOW дней (исключая сегодня — его ещё едим)
         const pastDays = sparklineData.filter(d => {
@@ -8774,6 +8778,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           isFuture,
           isWeekend,
           isRefeedDay, // Загрузочный день
+          isPerfect: ratio && rz ? rz.isPerfect(ratio) : false, // Идеальный день (0.9-1.1)
           // Градиентный цвет из ratioZones
           bgColor: ratio && rz ? rz.getGradientColor(ratio, 0.6) : null
         });
@@ -9724,6 +9729,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             isFutureDay: false,
             date: todayDateStr,
             dayNum: todayDayNum,
+            dayOfWeek: todayDateStr ? new Date(todayDateStr).getDay() : 0,
             isWeekend: isWeekend(todayDateStr) || isHoliday(todayDateStr)
           });
         }
@@ -9745,33 +9751,43 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               isTodayForecast: false,
               date: fd.date,
               dayNum: forecastDayNum,
+              dayOfWeek: fd.date ? new Date(fd.date).getDay() : 0,
               isWeekend: isWeekend(fd.date) || isHoliday(fd.date)
             });
           });
-        } else if (!isTodayIncomplete) {
-          // Стандартная логика: прогноз на 1 день вперёд (завтра)
-          // Только если сегодня НЕ неполный (иначе уже добавили выше)
-          const forecastDate = addDays(lastChartDate, 1);
-          const forecastDayNum = forecastDate ? new Date(forecastDate).getDate() : '';
-          const forecastKcal = calculateForecastKcal(1, prevKcal);
+        } else {
+          // === ВСЕГДА добавляем прогноз на завтра ===
+          // Определяем базовую дату для прогноза:
+          // - Если сегодня неполный — прогноз начинается от сегодня (уже добавлен выше)
+          // - Иначе прогноз на день после последнего в chartData
+          const baseDate = isTodayIncomplete && todayData 
+            ? todayData.date  // Сегодня уже добавлен как прогноз
+            : lastChartDate;
+          
+          const tomorrowDate = addDays(baseDate, 1);
+          const tomorrowDayNum = tomorrowDate ? new Date(tomorrowDate).getDate() : '';
+          const tomorrowDayIndex = isTodayIncomplete ? 2 : 1; // Если сегодня прогноз — завтра это 2-й день
+          const tomorrowKcal = calculateForecastKcal(tomorrowDayIndex, prevKcal);
             
           forecastPoints.push({
-            kcal: Math.max(0, forecastKcal),
+            kcal: Math.max(0, tomorrowKcal),
             target: forecastTarget,
             isForecast: true,
             isTodayForecast: false,
-            date: forecastDate,
-            dayNum: forecastDayNum,
-            isWeekend: isWeekend(forecastDate) || isHoliday(forecastDate)
+            isFutureDay: true,
+            date: tomorrowDate,
+            dayNum: tomorrowDayNum,
+            dayOfWeek: tomorrowDate ? new Date(tomorrowDate).getDay() : 0,
+            isWeekend: isWeekend(tomorrowDate) || isHoliday(tomorrowDate)
           });
         }
       }
       
       const totalPoints = chartData.length + forecastPoints.length;
       const width = 360;
-      const height = 130; // увеличено для дельты под датами
+      const height = 158; // увеличено для даты + дельты + дня недели
       const paddingTop = 16; // для меток над точками
-      const paddingBottom = 26; // место для дат + дельты
+      const paddingBottom = 52; // место для дат + дельты + дня недели
       const paddingX = 8; // минимальные отступы — точки почти у края
       const chartHeight = height - paddingTop - paddingBottom;
       
@@ -10663,22 +10679,22 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             // "прогноз на завтра" выше даты — только для завтра
             showTomorrowLabel && React.createElement('text', {
               x: p.x,
-              y: height - 22,
+              y: height - 34,
               className: 'sparkline-day-label sparkline-day-forecast',
               textAnchor: isLast ? 'end' : 'middle',
               style: { opacity: 0.9, fontSize: '8px', fill: '#3b82f6' }
             }, 'прогноз'),
             showTomorrowLabel && React.createElement('text', {
               x: p.x,
-              y: height - 13,
+              y: height - 25,
               className: 'sparkline-day-label sparkline-day-forecast',
               textAnchor: isLast ? 'end' : 'middle',
               style: { opacity: 0.9, fontSize: '8px', fill: '#3b82f6' }
             }, 'на завтра'),
-            // Дата внизу — для сегодня чуть крупнее и жирнее, но не слишком
+            // Дата — на том же уровне что и обычные дни
             React.createElement('text', {
               x: p.x,
-              y: height - 2,
+              y: height - 26,
               className: 'sparkline-day-label' + 
                 (p.isTodayForecast ? ' sparkline-day-today' : '') +
                 (isFutureDay ? ' sparkline-day-future' : ' sparkline-day-forecast') + 
@@ -10691,7 +10707,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 fontWeight: p.isTodayForecast ? '700' : undefined,
                 fill: p.isTodayForecast ? '#3b82f6' : undefined
               }
-            }, p.dayNum)
+            }, p.dayNum),
+            // День недели для прогнозных дней
+            React.createElement('text', {
+              x: p.x,
+              y: height - 2,
+              className: 'sparkline-weekday-label' + (p.isWeekend ? ' sparkline-weekday-weekend' : ''),
+              textAnchor: 'middle',
+              style: { fontSize: '8px', fill: p.isWeekend ? '#ef4444' : 'rgba(100, 116, 139, 0.5)' }
+            }, ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][p.dayOfWeek !== undefined ? p.dayOfWeek : (p.date ? new Date(p.date).getDay() : 0)] || '')
           );
         }),
         // Метки дней внизу + дельта для всех дней (дельта появляется синхронно с точкой)
@@ -10701,16 +10725,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           if (p.isToday) dayClass += ' sparkline-day-today';
           if (p.isWeekend) dayClass += ' sparkline-day-weekend';
           if (p.isUnknown) dayClass += ' sparkline-day-unknown';
-          // Динамический anchor для крайних точек
-          const isFirst = i === 0;
-          const isLast = i === points.length - 1 && forecastPts.length === 0;
-          const anchor = isFirst ? 'start' : (isLast ? 'end' : 'middle');
           
           // Дельта: разница между съеденным и нормой
           const delta = p.kcal - p.target;
           const deltaText = delta >= 0 ? '+' + Math.round(delta) : Math.round(delta);
-          const ratio = p.target > 0 ? p.kcal / p.target : 0;
-          const deltaColor = rz ? rz.getGradientColor(ratio, 1) : '#64748b';
+          // Цвет дельты: минус (дефицит) = зелёный, плюс (переел) = красный
+          const deltaColor = delta >= 0 ? '#ef4444' : '#22c55e';
           
           // Delay: все дельты и эмодзи появляются одновременно — взрыв от оси X
           const deltaDelay = 2.6; // все сразу
@@ -10719,26 +10739,34 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             // Дата — для сегодня чуть крупнее и жирнее, цвет по ratio
             React.createElement('text', {
               x: p.x,
-              y: height - 2,
+              y: height - 26,
               className: dayClass,
-              textAnchor: anchor,
+              textAnchor: 'middle',
               dominantBaseline: 'alphabetic',
               style: p.isUnknown ? { opacity: 0.5 } : (p.isToday && p.kcal > 0 ? { fontSize: '9.5px', fontWeight: '700', fill: deltaColor } : {})
             }, p.dayNum),
             // Дельта под датой (для всех дней с данными, кроме unknown)
             p.kcal > 0 && !p.isUnknown && React.createElement('text', {
               x: p.x,
-              y: height + 10,
+              y: height - 14,
               className: 'sparkline-delta-label',
-              textAnchor: anchor,
+              textAnchor: 'middle',
               style: { fill: deltaColor, '--delay': deltaDelay + 's' }
             }, deltaText),
-            // Для unknown дней — показываем "?" вместо дельты
+            // День недели под дельтой
+            React.createElement('text', {
+              x: p.x,
+              y: height - 2,
+              className: 'sparkline-weekday-label' + (p.isWeekend ? ' sparkline-weekday-weekend' : '') + (p.isToday ? ' sparkline-weekday-today' : ''),
+              textAnchor: 'middle',
+              style: { fontSize: '8px', fill: p.isWeekend ? '#ef4444' : 'rgba(100, 116, 139, 0.7)' }
+            }, ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][p.dayOfWeek !== undefined ? p.dayOfWeek : (p.date ? new Date(p.date).getDay() : 0)] || ''),
+            // Для unknown дней — показываем "—" вместо дельты
             p.isUnknown && React.createElement('text', {
               x: p.x,
-              y: height + 10,
+              y: height - 14,
               className: 'sparkline-delta-label sparkline-delta-unknown',
-              textAnchor: anchor,
+              textAnchor: 'middle',
               style: { fill: 'rgba(156, 163, 175, 0.6)', '--delay': deltaDelay + 's' }
             }, '—')
           );
@@ -11083,7 +11111,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           // Вычисляем ширину бара: data.length дней из totalPoints (включая прогноз)
           const barWidthPct = totalPoints > 1 ? ((data.length) / totalPoints) * 100 : 85;
           
+          // ВРЕМЕННО ЗАКОММЕНТИРОВАНО: надпись и бар оценки дня
+          return null;
+          /*
           return React.createElement('div', { className: 'sparkline-mood-container' },
+            React.createElement('span', { 
+              className: 'sparkline-mood-label',
+              style: { textAlign: 'left', lineHeight: '1', fontSize: '8px', marginRight: '4px' }
+            }, 'Оценка дня'),
             React.createElement('div', { 
               className: 'sparkline-mood-bar-modern',
               style: { 
@@ -11091,16 +11126,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 background: 'linear-gradient(to right, ' + 
                   moodStops.map(s => s.color + ' ' + s.offset + '%').join(', ') + ')'
               }
-            }),
-            React.createElement('span', { 
-              className: 'sparkline-mood-label',
-              style: { textAlign: 'right', lineHeight: '1.1', fontSize: '8px' }
-            }, 
-              React.createElement('span', null, 'Оценка'),
-              React.createElement('br'),
-              React.createElement('span', null, 'дня')
-            )
+            })
           );
+          */
         }
         
         // Fallback: Mini heatmap калорий
@@ -13939,8 +13967,27 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   React.createElement('span', { className: 'week-heatmap-name' }, d.name),
                   React.createElement('div', { 
                     className: 'week-heatmap-cell',
-                    style: d.bgColor ? { background: d.bgColor } : undefined
-                  })
+                    style: d.bgColor ? { 
+                      background: d.bgColor,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    } : {
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }
+                  },
+                    // Эмодзи пиццы для refeed дней, огонёк для идеальных
+                    d.isRefeedDay && React.createElement('span', { 
+                      className: 'week-heatmap-refeed-emoji',
+                      style: { fontSize: '14px', lineHeight: 1 }
+                    }, '🍕'),
+                    !d.isRefeedDay && d.isPerfect && React.createElement('span', { 
+                      className: 'week-heatmap-perfect-emoji',
+                      style: { fontSize: '14px', lineHeight: 1 }
+                    }, '🔥')
+                  )
                 )
               )
             ),
