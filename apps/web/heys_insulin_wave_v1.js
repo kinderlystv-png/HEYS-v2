@@ -943,8 +943,25 @@
    * @param {number} [params.mealKcal] - калории приёма
    * @returns {Object|null} - контекст активности или null
    */
+  
+  /**
+   * Проверяет, является ли тренировка "реальной" (не пустой/дефолтной)
+   * Тренировка валидна если: есть время ИЛИ хотя бы одна зона пульса > 0
+   */
+  const isValidTraining = (t) => {
+    if (!t) return false;
+    // Есть время — валидна
+    if (t.time && t.time !== '') return true;
+    // Есть хоть одна зона > 0 — валидна
+    const zones = t.z || [];
+    return zones.some(z => +z > 0);
+  };
+  
   const calculateActivityContext = (params) => {
-    const { mealTimeMin, trainings = [], steps = 0, householdMin = 0, weight = 70, allMeals = [], mealNutrients = {}, mealKcal = 0 } = params;
+    const { mealTimeMin, trainings: rawTrainings = [], steps = 0, householdMin = 0, weight = 70, allMeals = [], mealNutrients = {}, mealKcal = 0 } = params;
+    
+    // 🆕 v3.7.3: Фильтруем пустые/дефолтные тренировки
+    const trainings = rawTrainings.filter(isValidTraining);
     
     if (!mealTimeMin && mealTimeMin !== 0) return null;
     
@@ -2339,7 +2356,8 @@
     const yDateStr = yesterday.toISOString().split('T')[0];
     
     const dayData = lsGet(`heys_dayv2_${yDateStr}`, {});
-    const trainings = dayData.trainings || [];
+    // 🆕 v3.7.3: Фильтруем пустые тренировки
+    const trainings = (dayData.trainings || []).filter(isValidTraining);
     
     if (trainings.length === 0) {
       return { trainings: [], totalKcal: 0, hoursSince: Infinity, date: yDateStr };
@@ -2876,11 +2894,13 @@
   
   /**
    * Рассчитать workout бонус (ускорение волны от тренировки)
-   * @param {Array} trainings - массив тренировок дня
+   * @param {Array} trainings - массив тренировок дня (уже отфильтрованный)
    * @returns {Object} { bonus, totalMinutes, intensityMinutes, desc }
    */
-  const calculateWorkoutBonus = (trainings) => {
-    if (!trainings || trainings.length === 0) {
+  const calculateWorkoutBonus = (rawTrainings) => {
+    // 🆕 v3.7.3: Фильтруем пустые тренировки
+    const trainings = (rawTrainings || []).filter(isValidTraining);
+    if (trainings.length === 0) {
       return { bonus: 0, totalMinutes: 0, intensityMinutes: 0, desc: null };
     }
     
@@ -2918,12 +2938,14 @@
    * Научное обоснование: активация GLUT4 транспортеров мышцами
    * ускоряет утилизацию глюкозы на 20-30% (Colberg et al. 2010)
    * 
-   * @param {Array} trainings - массив тренировок дня
+   * @param {Array} rawTrainings - массив тренировок дня
    * @param {number} mealTimeMinutes - время приёма пищи в минутах от полуночи
    * @returns {Object} { bonus, matchedTraining, desc, gapMinutes }
    */
-  const calculatePostprandialExerciseBonus = (trainings, mealTimeMinutes) => {
-    if (!trainings || trainings.length === 0 || !mealTimeMinutes) {
+  const calculatePostprandialExerciseBonus = (rawTrainings, mealTimeMinutes) => {
+    // 🆕 v3.7.3: Фильтруем пустые тренировки
+    const trainings = (rawTrainings || []).filter(isValidTraining);
+    if (trainings.length === 0 || !mealTimeMinutes) {
       return { bonus: 0, matchedTraining: null, desc: null, gapMinutes: null };
     }
     
@@ -3568,6 +3590,10 @@
     let diffMinutes = nowMinutes - mealMinutes;
     if (diffMinutes < 0) diffMinutes = 0;
     
+    // 🆕 v3.7.4: Текущее время голодания (с момента последнего приёма до сейчас)
+    // Отличается от fastingHours (время ДО последнего приёма, для бонуса)
+    const currentFastingHours = diffMinutes / 60;
+    
     let remainingMinutes = Math.max(0, waveMinutes - diffMinutes);
     const progressPct = Math.min(100, (diffMinutes / waveMinutes) * 100);
     
@@ -4187,10 +4213,15 @@
       hasSupplements: supplementsResult.hasSupplements,
       supplementsBonus: supplementsBonusValue,
       
-      // 🆕 v3.2.0: Аутофагия
-      autophagy: autophagyResult,
+      // 🆕 v3.2.0: Аутофагия (расчёт бонуса для волны — по fastingHours ДО приёма)
       autophagyBonus,
-      isAutophagyActive: autophagyResult.phase === 'active' || autophagyResult.phase === 'deep' || autophagyResult.phase === 'extended',
+      // 🆕 v3.7.4: Текущая аутофагия (для UI — по currentFastingHours, время ПОСЛЕ последнего приёма)
+      autophagy: getAutophagyPhase(currentFastingHours),
+      currentFastingHours: Math.round(currentFastingHours * 10) / 10,
+      isAutophagyActive: (() => {
+        const currentPhase = getAutophagyPhase(currentFastingHours);
+        return currentPhase.phase === 'active' || currentPhase.phase === 'deep' || currentPhase.phase === 'extended';
+      })(),
       
       // 🏆 Рекорд липолиза
       lipolysisRecord: getLipolysisRecord(),
@@ -6185,13 +6216,16 @@
     // 🆕 v3.7.0: NDTE Badge UI
     renderNDTEBadge,
     
+    // 🆕 v3.7.3: Валидация тренировок
+    isValidTraining,
+    
     // Версия
-    VERSION: '3.7.0'
+    VERSION: '3.7.4'
   };
   
   // Алиас
   HEYS.IW = HEYS.InsulinWave;
   
-  console.log('[HEYS] InsulinWave v3.7.0 loaded (NDTE Badge UI с countdown)');
+  console.log('[HEYS] InsulinWave v3.7.3 loaded (фильтр пустых тренировок)');
   
 })(typeof window !== 'undefined' ? window : global);

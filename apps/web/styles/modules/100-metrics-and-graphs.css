@@ -2147,6 +2147,49 @@
   text-align: center;
 }
 
+/* Блок дефицита/жира внутри heatmap */
+.week-heatmap-deficit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* ≤5% от цели — зелёный фон (идеально) */
+.week-heatmap-deficit.positive {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.15);
+}
+.week-heatmap-deficit.positive:active {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%);
+}
+
+/* 6-15% от цели — жёлтый фон (нормально) */
+.week-heatmap-deficit.mixed {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0%, rgba(245, 158, 11, 0.05) 100%);
+  border: 1px solid rgba(234, 179, 8, 0.15);
+}
+.week-heatmap-deficit.mixed:active {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(245, 158, 11, 0.08) 100%);
+}
+
+/* >15% от цели — красный/оранжевый фон (много отклонились) */
+.week-heatmap-deficit.warning {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(220, 38, 38, 0.05) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+.week-heatmap-deficit.warning:active {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(220, 38, 38, 0.08) 100%);
+}
+
+.week-heatmap-deficit:active {
+  transform: scale(0.98);
+}
+
 /* Empty state для week heatmap */
 .week-heatmap-empty {
   display: flex;

@@ -3261,20 +3261,24 @@ const HEYS = window.HEYS = window.HEYS || {};
                   try { window.HEYS.Day.requestFlush(); } catch (e) {}
                   setReportsRefresh(Date.now());
                 }
-                setSlideDirection('left');
-                setTimeout(() => {
-                  setTab(nextTab);
-                  setSlideDirection(null);
-                }, 150);
+                // Фаза 1: выход старого контента
+                setSlideDirection('out-left');
                 if (navigator.vibrate) navigator.vibrate(10);
+                setTimeout(() => {
+                  // Фаза 2: смена вкладки + вход нового контента
+                  setTab(nextTab);
+                  setSlideDirection('in-left');
+                  setTimeout(() => setSlideDirection(null), 220);
+                }, 120);
               } else if (deltaX > 0 && currentIndex > 0) {
                 // Свайп вправо → предыдущая вкладка
-                setSlideDirection('right');
+                setSlideDirection('out-right');
+                if (navigator.vibrate) navigator.vibrate(10);
                 setTimeout(() => {
                   setTab(TABS_ORDER[currentIndex - 1]);
-                  setSlideDirection(null);
-                }, 150);
-                if (navigator.vibrate) navigator.vibrate(10);
+                  setSlideDirection('in-right');
+                  setTimeout(() => setSlideDirection(null), 220);
+                }, 120);
               } else if (deltaX < 0 && currentIndex === TABS_ORDER.length - 1) {
                 // Край справа — показываем bounce
                 setEdgeBounce('right');
@@ -5409,8 +5413,10 @@ const HEYS = window.HEYS = window.HEYS || {};
                   'div',
                   {
                     className: 'tab-content-swipeable' + 
-                      (slideDirection === 'left' ? ' slide-out-left' : '') +
-                      (slideDirection === 'right' ? ' slide-out-right' : '') +
+                      (slideDirection === 'out-left' ? ' slide-out-left' : '') +
+                      (slideDirection === 'out-right' ? ' slide-out-right' : '') +
+                      (slideDirection === 'in-left' ? ' slide-in-left' : '') +
+                      (slideDirection === 'in-right' ? ' slide-in-right' : '') +
                       (edgeBounce === 'left' ? ' edge-bounce-left' : '') +
                       (edgeBounce === 'right' ? ' edge-bounce-right' : ''),
                     onTouchStart: onTouchStart,

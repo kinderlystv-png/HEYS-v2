@@ -3443,7 +3443,7 @@
           const defaultDay = ensureDay({ 
             date: date, 
             meals: (loadMealsForDate(date) || []), 
-            trainings: [{ z: [0,0,0,0] }, { z: [0,0,0,0] }],
+            trainings: [],
             // Явно устанавливаем пустые значения для полей сна и оценки
             sleepStart: '',
             sleepEnd: '',
@@ -3588,7 +3588,7 @@
     const z= (lsGet('heys_hr_zones',[]).map(x=>+x.MET||0)); const mets=[2.5,6,8,10].map((_,i)=>z[i]||[2.5,6,8,10][i]);
     const weight=+day.weightMorning||+prof.weight||70; const kcalMin=mets.map(m=>kcalPerMin(m,weight));
     const trainK= t=>(t.z||[0,0,0,0]).reduce((s,min,i)=> s+r0((+min||0)*(kcalMin[i]||0)),0);
-    const TR=(day.trainings&&Array.isArray(day.trainings)&&day.trainings.length>=1)?day.trainings:[{z:[0,0,0,0]},{z:[0,0,0,0]},{z:[0,0,0,0]}];
+    const TR=(day.trainings&&Array.isArray(day.trainings))?day.trainings:[];
   const train1k=trainK(TR[0]||{z:[0,0,0,0]}), train2k=trainK(TR[1]||{z:[0,0,0,0]}), train3k=trainK(TR[2]||{z:[0,0,0,0]});
   const stepsK=r0(stepsKcal(day.steps||0,weight,prof.sex,0.7));
   // Backward compatible: householdActivities массив или legacy householdMin
@@ -3653,7 +3653,7 @@
 
     function updateTraining(i, zi, mins) {
       setDay(prevDay => {
-        const arr = (prevDay.trainings || [{z:[0,0,0,0]}, {z:[0,0,0,0]}]).map((t, idx) => {
+        const arr = (prevDay.trainings || []).map((t, idx) => {
           if (idx !== i) return t;
           return {
             ...t,  // сохраняем time, type и другие поля
@@ -3890,6 +3890,9 @@
 
     // === Popup для калорийного долга ===
     const [debtPopup, setDebtPopup] = useState(null); // { x, y, data: caloricDebt }
+
+    // === Popup для научного расчёта дефицита недели ===
+    const [weekDeficitPopup, setWeekDeficitPopup] = useState(null); // { x, y, data: { totalEaten, totalBurned, deficitKcal, deficitPct, fatGrams, avgTargetDeficit } }
 
     // === Данные замеров для карточки статистики ===
     const measurementFields = useMemo(() => ([
@@ -4167,6 +4170,9 @@
         if (debtPopup && !e.target.closest('.debt-popup') && !e.target.closest('.caloric-debt-card')) {
           setDebtPopup(null);
         }
+        if (weekDeficitPopup && !e.target.closest('.week-deficit-popup') && !e.target.closest('.week-heatmap-deficit')) {
+          setWeekDeficitPopup(null);
+        }
       };
       // Delay to avoid closing immediately on the same click
       const timerId = setTimeout(() => {
@@ -4176,7 +4182,7 @@
         clearTimeout(timerId);
         document.removeEventListener('click', handleClickOutside);
       };
-    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup, weekNormPopup, debtPopup]);
+    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup, weekNormPopup, debtPopup, weekDeficitPopup]);
     
     // === Утилита для умного позиционирования попапов ===
     // Не даёт выходить за границы экрана
@@ -5395,11 +5401,15 @@
             // Данные уже сохранены через save() в TrainingStep
             // Обновляем локальное состояние
             const savedDay = lsGet(`heys_dayv2_${date}`, {});
+            const savedTrainings = savedDay.trainings || [];
             setDay(prev => ({ 
               ...prev, 
-              trainings: savedDay.trainings || prev.trainings,
+              trainings: savedTrainings,
               updatedAt: Date.now() 
             }));
+            // Обновляем visibleTrainings на основе реальных данных
+            const validCount = savedTrainings.filter(t => t && t.z && t.z.some(v => +v > 0)).length;
+            setVisibleTrainings(validCount);
           }
         });
         return;
@@ -6464,7 +6474,7 @@
             setDay(ensureDay({ 
               date: d, 
               meals: (loadMealsForDate(d) || []), 
-              trainings: [{ z:[0,0,0,0] }, { z:[0,0,0,0] }],
+              trainings: [],
               // Явно устанавливаем пустые значения для всех полей
               weightMorning: '',
               deficitPct: '',
@@ -6487,7 +6497,7 @@
             date: date,
             meals:[], 
             steps:0, 
-            trainings:[{z:[0,0,0,0]},{z:[0,0,0,0]}],
+            trainings:[],
             // Очищаем поля сна и оценки дня
             sleepStart:'',
             sleepEnd:'',
@@ -6967,191 +6977,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                   React.createElement('span', { className: 'mood-card-label' }, 'Стресс'),
                   React.createElement('span', { className: 'mood-card-value' }, day.stressAvg || '—')
                 )
-              ),
-              // === Sparkline динамики настроения в течение дня ===
-              moodSparklineData.length >= 2 && React.createElement('div', {
-                className: 'mood-sparkline-container',
-                style: {
-                  position: 'relative',
-                  height: '85px',
-                  margin: '12px 0 8px 0',
-                  padding: '8px 0'
-                }
-              },
-                (() => {
-                  const points = moodSparklineData;
-                  const svgW = 280;
-                  const svgH = 60; // Увеличил высоту для лучшей видимости
-                  const padding = 12;
-                  
-                  // Диапазон времени
-                  const minTime = Math.min(...points.map(p => p.time)) - 30;
-                  const maxTime = Math.max(...points.map(p => p.time)) + 30;
-                  const timeRange = Math.max(maxTime - minTime, 60);
-                  
-                  // Динамический масштаб: точно по данным + минимальный padding
-                  const scores = points.map(p => p.score);
-                  const dataMin = Math.min(...scores);
-                  const dataMax = Math.max(...scores);
-                  const dataRange = dataMax - dataMin;
-                  
-                  // Минимальный диапазон 1.5 для наглядности, padding 15% от диапазона
-                  const effectiveRange = Math.max(dataRange, 0.5);
-                  const paddingAmount = effectiveRange * 0.25;
-                  // НЕ округляем — используем точные значения для максимальной детализации
-                  const minScore = Math.max(1, dataMin - paddingAmount);
-                  const maxScore = Math.min(10, dataMax + paddingAmount);
-                  const scoreRange = Math.max(maxScore - minScore, 0.5);
-                  
-                  // Вычисляем координаты точек
-                  const coords = points.map((p, idx) => {
-                    const x = padding + ((p.time - minTime) / timeRange) * (svgW - 2 * padding);
-                    const y = svgH - padding - ((p.score - minScore) / scoreRange) * (svgH - 2 * padding);
-                    return { ...p, x, y, idx };
-                  });
-                  
-                  // Находим лучшую и худшую точку
-                  const bestIdx = coords.reduce((best, p, i) => p.score > coords[best].score ? i : best, 0);
-                  const worstIdx = coords.reduce((worst, p, i) => p.score < coords[worst].score ? i : worst, 0);
-                  
-                  // Строим path для линии
-                  const linePath = coords.length > 1 
-                    ? 'M ' + coords.map(c => `${c.x},${c.y}`).join(' L ')
-                    : '';
-                  
-                  // Строим path для градиентной заливки
-                  const areaPath = coords.length > 1 
-                    ? `M ${coords[0].x},${svgH - padding} ` + 
-                      coords.map(c => `L ${c.x},${c.y}`).join(' ') + 
-                      ` L ${coords[coords.length - 1].x},${svgH - padding} Z`
-                    : '';
-                  
-                  // Определяем тренд
-                  const trend = coords.length >= 2 
-                    ? coords[coords.length - 1].score - coords[0].score 
-                    : 0;
-                  const trendIcon = trend > 0.5 ? '📈' : trend < -0.5 ? '📉' : '➡️';
-                  const trendColor = trend > 0.5 ? '#16a34a' : trend < -0.5 ? '#dc2626' : '#6b7280';
-                  
-                  // Цвет линии по среднему score
-                  const avgScore = coords.reduce((sum, c) => sum + c.score, 0) / coords.length;
-                  const lineColor = avgScore >= 7 ? '#10b981' : avgScore >= 5 ? '#eab308' : '#ef4444';
-                  
-                  return React.createElement('div', { style: { position: 'relative' } },
-                    // Заголовок с трендом
-                    React.createElement('div', { 
-                      style: { 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        marginBottom: '4px',
-                        padding: '0 4px'
-                      }
-                    },
-                      React.createElement('span', { 
-                        style: { fontSize: '11px', color: 'var(--text-tertiary, #9ca3af)', fontWeight: '500' }
-                      }, '📊 Динамика дня'),
-                      React.createElement('span', { 
-                        style: { fontSize: '11px', color: trendColor, fontWeight: '600' }
-                      }, trendIcon + ' ' + (trend > 0 ? '+' : '') + trend.toFixed(1))
-                    ),
-                    // SVG график
-                    React.createElement('svg', {
-                      viewBox: `0 0 ${svgW} ${svgH + 16}`,
-                      style: { width: '100%', height: '60px' },
-                      preserveAspectRatio: 'xMidYMid meet'
-                    },
-                      // Градиенты
-                      React.createElement('defs', null,
-                        React.createElement('linearGradient', { id: 'moodSparkGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
-                          React.createElement('stop', { offset: '0%', stopColor: lineColor, stopOpacity: '0.4' }),
-                          React.createElement('stop', { offset: '100%', stopColor: lineColor, stopOpacity: '0.05' })
-                        )
-                      ),
-                      // Горизонтальные референсные линии (хорошо/плохо) — только если в видимом диапазоне
-                      // Линия "хорошо" = 7 (показываем если 7 попадает в диапазон)
-                      (7 >= minScore && 7 <= maxScore) && React.createElement('line', {
-                        x1: padding, y1: svgH - padding - ((7 - minScore) / scoreRange) * (svgH - 2 * padding),
-                        x2: svgW - padding, y2: svgH - padding - ((7 - minScore) / scoreRange) * (svgH - 2 * padding),
-                        stroke: '#22c55e', strokeWidth: '0.5', strokeDasharray: '3,3', opacity: '0.5'
-                      }),
-                      // Линия "плохо" = 4 (показываем если 4 попадает в диапазон)
-                      (4 >= minScore && 4 <= maxScore) && React.createElement('line', {
-                        x1: padding, y1: svgH - padding - ((4 - minScore) / scoreRange) * (svgH - 2 * padding),
-                        x2: svgW - padding, y2: svgH - padding - ((4 - minScore) / scoreRange) * (svgH - 2 * padding),
-                        stroke: '#ef4444', strokeWidth: '0.5', strokeDasharray: '3,3', opacity: '0.5'
-                      }),
-                      // Подписи min/max шкалы слева (округляем до 1 знака)
-                      React.createElement('text', {
-                        x: 2, y: padding + 3,
-                        fontSize: '8', fill: 'var(--text-tertiary, #9ca3af)', textAnchor: 'start'
-                      }, Math.round(maxScore * 10) / 10),
-                      React.createElement('text', {
-                        x: 2, y: svgH - padding + 3,
-                        fontSize: '8', fill: 'var(--text-tertiary, #9ca3af)', textAnchor: 'start'
-                      }, Math.round(minScore * 10) / 10),
-                      // Заливка под линией
-                      areaPath && React.createElement('path', {
-                        d: areaPath,
-                        fill: 'url(#moodSparkGrad)',
-                        className: 'mood-sparkline-area'
-                      }),
-                      // Основная линия
-                      linePath && React.createElement('path', {
-                        d: linePath,
-                        fill: 'none',
-                        stroke: lineColor,
-                        strokeWidth: '2',
-                        strokeLinecap: 'round',
-                        strokeLinejoin: 'round',
-                        className: 'mood-sparkline-line'
-                      }),
-                      // Точки
-                      coords.map((c, i) => {
-                        const isBest = i === bestIdx && coords.length > 2;
-                        const isWorst = i === worstIdx && coords.length > 2;
-                        const pointColor = c.score >= 7 ? '#10b981' : c.score >= 5 ? '#eab308' : '#ef4444';
-                        const r = isBest || isWorst ? 5 : 4;
-                        return React.createElement('g', { key: 'mood-pt-' + i },
-                          // Белый ореол
-                          React.createElement('circle', {
-                            cx: c.x, cy: c.y, r: r + 1.5,
-                            fill: 'white'
-                          }),
-                          // Точка
-                          React.createElement('circle', {
-                            cx: c.x, cy: c.y, r: r,
-                            fill: pointColor,
-                            stroke: isBest ? '#fbbf24' : isWorst ? '#f87171' : 'white',
-                            strokeWidth: isBest || isWorst ? 2 : 1,
-                            className: isBest ? 'mood-point-best' : isWorst ? 'mood-point-worst' : ''
-                          }),
-                          // Иконка типа над точкой
-                          React.createElement('text', {
-                            x: c.x, y: c.y - 10,
-                            textAnchor: 'middle',
-                            fontSize: '8',
-                            fill: 'var(--text-secondary, #6b7280)'
-                          }, c.icon)
-                        );
-                      }),
-                      // Подписи времени
-                      coords.filter((c, i) => i === 0 || i === coords.length - 1).map((c, i) => {
-                        const hours = Math.floor(c.time / 60);
-                        const mins = c.time % 60;
-                        const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
-                        return React.createElement('text', {
-                          key: 'time-' + i,
-                          x: c.x,
-                          y: svgH + 8,
-                          textAnchor: i === 0 ? 'start' : 'end',
-                          fontSize: '9',
-                          fill: 'var(--text-tertiary, #9ca3af)'
-                        }, timeStr);
-                      })
-                    )
-                  );
-                })()
               ),
               // Время последнего приёма и корреляция
               (lastMealTime || sleepCorrelation) && React.createElement('div', { className: 'day-insights-row' },
@@ -8976,7 +8801,38 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         }
       }
       
-      return { days, inNorm, withData, streak, weekendPattern, avgRatioPct };
+      // 🆕 Суммы калорий за неделю (потрачено / съедено) + средний целевой дефицит
+      let totalEaten = 0;
+      let totalBurned = 0;
+      let totalTargetDeficit = 0;
+      let daysWithDeficit = 0;
+      
+      days.forEach(d => {
+        if (d.kcal > 0) {
+          totalEaten += d.kcal;
+          // Загружаем полные данные дня для расчёта TDEE
+          const dayData = U.lsGet('heys_dayv2_' + d.date, null);
+          if (dayData && HEYS.TDEE?.calculate) {
+            // Используем централизованный модуль TDEE
+            const tdeeResult = HEYS.TDEE.calculate(dayData, prof, { lsGet: U.lsGet, includeNDTE: true });
+            totalBurned += tdeeResult.tdee;
+            // Собираем целевой дефицит каждого дня
+            totalTargetDeficit += tdeeResult.deficitPct || 0;
+            daysWithDeficit++;
+          } else {
+            // Fallback на норму если модуль не загружен
+            const dayTarget = allActiveDays.get(d.date)?.target || optimum;
+            totalBurned += dayTarget;
+            totalTargetDeficit += prof.deficitPctTarget || 0;
+            daysWithDeficit++;
+          }
+        }
+      });
+      
+      // Средний целевой дефицит за эти дни
+      const avgTargetDeficit = daysWithDeficit > 0 ? Math.round(totalTargetDeficit / daysWithDeficit) : (prof.deficitPctTarget || 0);
+      
+      return { days, inNorm, withData, streak, weekendPattern, avgRatioPct, totalEaten, totalBurned, avgTargetDeficit };
     }, [date, optimum, pIndex, products, prof]);
     
     // 🎉 Confetti при streak 7+ дней (триггерится один раз при достижении)
@@ -12390,15 +12246,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         return React.createElement('div', { className: 'kcal-sparkline-container' },
           React.createElement('div', { className: 'kcal-sparkline-header' },
             React.createElement('span', { className: 'kcal-sparkline-title' }, '📊 Калории'),
-            // Average Deficit Badge + Period Pills
+            // Period Pills
             React.createElement('div', { className: 'kcal-header-right' },
-              // Badge "средний дефицит в %" (слева от кнопок)
-              totalDaysWithData >= 3 && React.createElement('div', {
-                className: deficitBadgeClass + ' kcal-goal-badge-inline',
-                title: tooltipText
-              }, 
-                deficitText
-              ),
               // Кнопки выбора периода
             React.createElement('div', { className: 'kcal-period-pills' },
               [7, 14, 30].map(period => 
@@ -13516,6 +13365,271 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           )
         );
       })(),
+      // === WEEK DEFICIT POPUP (научный расчёт сожжённого жира) ===
+      weekDeficitPopup && (() => {
+        const { totalEaten, totalBurned, deficitKcal, deficitPct, fatBurnedGrams, 
+                avgTargetDeficit, daysWithData, isDeficit } = weekDeficitPopup.data;
+        
+        const popupW = 320;
+        const popupH = 420;
+        const pos = getSmartPopupPosition(
+          weekDeficitPopup.x, 
+          weekDeficitPopup.y, 
+          popupW, 
+          popupH,
+          { preferAbove: true, offset: 8 }
+        );
+        const { left, top } = pos;
+        
+        // Цвет полосы зависит от дефицита
+        const getStripeColor = () => {
+          if (!isDeficit) return 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)'; // Профицит = плохо
+          if (deficitKcal > 5000) return 'linear-gradient(90deg, #22c55e 0%, #16a34a 100%)'; // Хороший дефицит
+          if (deficitKcal > 2000) return 'linear-gradient(90deg, #10b981 0%, #059669 100%)';
+          return 'linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)'; // Небольшой дефицит
+        };
+        
+        // Научные константы
+        const KCAL_PER_KG = 7700;
+        const FAT_PERCENT = 0.77;
+        const GLYCOGEN_PERCENT = 0.18;
+        const MUSCLE_PERCENT = 0.05;
+        
+        // Расчёты компонентов потери веса
+        const fatKcal = isDeficit ? Math.round(deficitKcal * FAT_PERCENT) : 0;
+        const glycogenKcal = isDeficit ? Math.round(deficitKcal * GLYCOGEN_PERCENT) : 0;
+        const muscleKcal = isDeficit ? Math.round(deficitKcal * MUSCLE_PERCENT) : 0;
+        
+        const fatGrams = Math.round(fatKcal / 7.7);
+        const glycogenGrams = Math.round(glycogenKcal / 4); // 4 ккал/г углеводов
+        const muscleGrams = Math.round(muscleKcal / 4); // 4 ккал/г белка
+        
+        // Всего потеря веса (жир + вода из гликогена)
+        // Гликоген связывает 3г воды на 1г гликогена
+        const waterFromGlycogen = glycogenGrams * 3;
+        const totalWeightLoss = fatGrams + glycogenGrams + waterFromGlycogen + muscleGrams;
+        
+        const formatWeight = (g) => g >= 1000 ? (g / 1000).toFixed(2) + ' кг' : g + ' г';
+        
+        return React.createElement('div', {
+          className: 'week-deficit-popup sparkline-popup sparkline-popup-v2',
+          role: 'dialog',
+          style: {
+            position: 'fixed',
+            left: left + 'px',
+            top: top + 'px',
+            width: popupW + 'px',
+            zIndex: 9999
+          },
+          onClick: (e) => e.stopPropagation()
+        },
+          // Цветная полоса сверху
+          React.createElement('div', { 
+            className: 'sparkline-popup-stripe',
+            style: { background: getStripeColor() }
+          }),
+          React.createElement('div', { className: 'sparkline-popup-content' },
+            // Swipe indicator
+            React.createElement('div', { className: 'sparkline-popup-swipe' }),
+            // Заголовок
+            React.createElement('div', { 
+              className: 'sparkline-popup-header-v2',
+              style: { flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }
+            },
+              React.createElement('span', { 
+                className: 'sparkline-popup-date', 
+                style: { fontSize: '14px', color: '#64748b' } 
+              }, '🔬 Научный расчёт за ' + daysWithData + ' дней'),
+              React.createElement('span', { 
+                style: { 
+                  color: isDeficit ? '#22c55e' : '#ef4444', 
+                  fontSize: '24px', 
+                  fontWeight: 700 
+                }
+              }, (isDeficit ? '−' : '+') + Math.abs(deficitKcal).toLocaleString('ru') + ' ккал')
+            ),
+            
+            // Основные числа
+            React.createElement('div', { 
+              style: { 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: '12px', 
+                marginTop: '16px',
+                padding: '12px',
+                background: 'rgba(100, 116, 139, 0.05)',
+                borderRadius: '12px'
+              } 
+            },
+              // Потрачено
+              React.createElement('div', { style: { textAlign: 'center' } },
+                React.createElement('div', { style: { fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' } }, 'Потрачено'),
+                React.createElement('div', { style: { fontSize: '18px', fontWeight: 700, color: '#16a34a' } }, totalBurned.toLocaleString('ru')),
+                React.createElement('div', { style: { fontSize: '11px', color: '#94a3b8' } }, 'ккал (TDEE)')
+              ),
+              // Съедено
+              React.createElement('div', { style: { textAlign: 'center' } },
+                React.createElement('div', { style: { fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' } }, 'Съедено'),
+                React.createElement('div', { style: { fontSize: '18px', fontWeight: 700, color: '#0ea5e9' } }, totalEaten.toLocaleString('ru')),
+                React.createElement('div', { style: { fontSize: '11px', color: '#94a3b8' } }, 'ккал')
+              )
+            ),
+            
+            // Разделитель
+            React.createElement('div', { 
+              style: { 
+                height: '1px', 
+                background: 'rgba(100, 116, 139, 0.2)', 
+                margin: '16px 0' 
+              } 
+            }),
+            
+            // Научная формула
+            isDeficit && React.createElement('div', { style: { marginBottom: '12px' } },
+              React.createElement('div', { 
+                style: { 
+                  fontSize: '12px', 
+                  fontWeight: 600, 
+                  color: '#475569', 
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                } 
+              }, 
+                React.createElement('span', null, '📐'),
+                'Состав потери веса (Hall KD, 2008)'
+              ),
+              // Компоненты потери
+              React.createElement('div', { 
+                style: { 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '6px',
+                  fontSize: '13px'
+                } 
+              },
+                // Жир
+                React.createElement('div', { 
+                  style: { 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '8px 10px',
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(34, 197, 94, 0.2)'
+                  } 
+                },
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    React.createElement('span', null, '🔥'),
+                    React.createElement('span', { style: { color: '#475569' } }, 'Жир (77%)')
+                  ),
+                  React.createElement('span', { style: { fontWeight: 600, color: '#16a34a' } }, 
+                    '−' + formatWeight(fatGrams))
+                ),
+                // Гликоген + вода
+                React.createElement('div', { 
+                  style: { 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '8px 10px',
+                    background: 'rgba(14, 165, 233, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(14, 165, 233, 0.2)'
+                  } 
+                },
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    React.createElement('span', null, '💧'),
+                    React.createElement('span', { style: { color: '#475569' } }, 'Гликоген + вода (18%)')
+                  ),
+                  React.createElement('span', { style: { fontWeight: 600, color: '#0ea5e9' } }, 
+                    '−' + formatWeight(glycogenGrams + waterFromGlycogen))
+                ),
+                // Мышцы (если тренировки, меньше)
+                React.createElement('div', { 
+                  style: { 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '8px 10px',
+                    background: 'rgba(234, 179, 8, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(234, 179, 8, 0.2)'
+                  } 
+                },
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                    React.createElement('span', null, '💪'),
+                    React.createElement('span', { style: { color: '#475569' } }, 'Мышцы (5%)*')
+                  ),
+                  React.createElement('span', { style: { fontWeight: 600, color: '#d97706' } }, 
+                    '−' + formatWeight(muscleGrams))
+                )
+              )
+            ),
+            
+            // Итого
+            isDeficit && React.createElement('div', { 
+              style: { 
+                padding: '12px 14px',
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%)',
+                borderRadius: '12px',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                marginTop: '8px'
+              } 
+            },
+              React.createElement('div', { 
+                style: { 
+                  display: 'flex', 
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                } 
+              },
+                React.createElement('span', { style: { fontWeight: 600, color: '#16a34a' } }, '🎯 Чистый жир:'),
+                React.createElement('span', { style: { fontSize: '18px', fontWeight: 700, color: '#16a34a' } }, 
+                  '−' + formatWeight(fatGrams))
+              )
+            ),
+            
+            // Профицит (набор)
+            !isDeficit && React.createElement('div', { 
+              style: { 
+                padding: '12px 14px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                borderRadius: '12px',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                marginTop: '8px'
+              } 
+            },
+              React.createElement('div', { style: { fontSize: '13px', color: '#dc2626' } },
+                '⚠️ Профицит ' + Math.abs(deficitKcal).toLocaleString('ru') + ' ккал может привести к набору ~' + 
+                formatWeight(Math.round(Math.abs(deficitKcal) / 7.7)) + ' жира'
+              )
+            ),
+            
+            // Сноска
+            React.createElement('div', { 
+              style: { 
+                fontSize: '10px', 
+                color: '#94a3b8', 
+                marginTop: '12px',
+                lineHeight: '1.4'
+              } 
+            },
+              '* При адекватном белке (1.6-2.2 г/кг) и силовых тренировках потеря мышц минимальна. ',
+              React.createElement('span', { style: { fontStyle: 'italic' } }, 
+                'Hall KD. Computational model of in vivo human energy metabolism. Am J Physiol 2008.')
+            ),
+            
+            // Кнопка закрытия
+            React.createElement('button', {
+              className: 'sparkline-popup-close',
+              onClick: () => setWeekDeficitPopup(null)
+            }, '✕')
+          )
+        );
+      })(),
       // === METRIC POPUP (вода, шаги, калории) ===
       metricPopup && (() => {
         // Позиционирование с защитой от выхода за экран
@@ -13766,47 +13880,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           'Добавь вес для анализа связи калорий и веса'
         )
       ),
-      // Блок корреляции калорий и веса (диагноз + совет)
-      (kcalTrend && weightTrend) && React.createElement('div', { 
-        className: 'correlation-block correlation-clickable' + 
-          (correlationPulse ? ' pulse' : '') +
-          (kcalTrend.direction === 'deficit' && weightTrend.direction === 'down' ? ' positive' :
-           kcalTrend.direction === 'excess' && weightTrend.direction === 'up' ? ' warning' :
-           kcalTrend.direction === 'deficit' && weightTrend.direction === 'up' ? ' mixed' : ''),
-        onClick: () => {
-          haptic('light');
-          setToastVisible(true);
-          setAdviceTrigger('manual');
-        }
-      },
-        React.createElement('span', { className: 'correlation-icon' },
-          kcalTrend.direction === 'deficit' && weightTrend.direction === 'down' ? '🎯' :
-          kcalTrend.direction === 'excess' && weightTrend.direction === 'up' ? '⚠️' :
-          kcalTrend.direction === 'deficit' && weightTrend.direction === 'up' ? '🤔' :
-          kcalTrend.direction === 'excess' && weightTrend.direction === 'down' ? '💪' : '📊'
-        ),
-        React.createElement('span', { className: 'correlation-text' },
-          // 🎯 Дефицит работает
-          kcalTrend.direction === 'deficit' && weightTrend.direction === 'down' 
-            ? 'Дефицит работает! ' + r1(weightTrend.diff) + 'кг — продолжай!' :
-          // ⚠️ Избыток + рост веса
-          kcalTrend.direction === 'excess' && weightTrend.direction === 'up' 
-            ? 'Избыток → +' + r1(Math.abs(weightTrend.diff)) + 'кг. Сократи порции' :
-          // 🤔 Парадокс: дефицит, но вес растёт
-          kcalTrend.direction === 'deficit' && weightTrend.direction === 'up' 
-            ? '+' + r1(weightTrend.diff) + 'кг при дефиците — вероятно вода' :
-          // 💪 Парадокс: избыток, но вес падает
-          kcalTrend.direction === 'excess' && weightTrend.direction === 'down' 
-            ? r1(weightTrend.diff) + 'кг! Активность компенсирует' :
-          // 📊 Plateau: оба в норме
-          kcalTrend.direction === 'same' && weightTrend.direction === 'same'
-            ? 'Баланс: вес стабилен' :
-          // Калории в норме, вес меняется
-          kcalTrend.direction === 'same' 
-            ? 'Калории в норме, вес ' + (weightTrend.direction === 'down' ? 'снижается' : 'растёт') :
-          'Анализируем данные...'
-        )
-      ),
       // === Mini-heatmap недели (скрываем если нет данных — появится как сюрприз) ===
       weekHeatmapData && weekHeatmapData.withData > 0 && (() => {
         // Вычисляем badge для среднего ratio недели (% от нормы)
@@ -13836,14 +13909,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             React.createElement('span', { className: 'week-heatmap-title' }, '📅 Неделя'),
             weekHeatmapData.streak >= 2 && React.createElement('span', { 
               className: 'week-heatmap-streak' 
-            }, '🔥 ' + weekHeatmapData.streak),
-            // Средний ratio справа в header с цветом по зоне
-            React.createElement('span', { 
-              className: 'week-heatmap-stat ' + colorClass,
-              title: 'Среднее выполнение нормы за ' + weekHeatmapData.withData + ' дн. (' + zone.name + ')'
-            },
-              'в среднем ' + deficitIcon + ' ' + deviationText
-            )
+            }, '🔥 ' + weekHeatmapData.streak)
           ),
           // Grid с днями недели + статистика X/Y в норме
           React.createElement('div', { className: 'week-heatmap-row' },
@@ -13897,9 +13963,86 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               weekHeatmapData.inNorm + '/' + weekHeatmapData.withData + ' в норме'
             )
           ),
-          weekHeatmapData.weekendPattern && React.createElement('div', { 
-            className: 'week-heatmap-pattern' 
-          }, weekHeatmapData.weekendPattern)
+          // === Блок статистики дефицита/жира внутри heatmap ===
+          weekHeatmapData.totalEaten > 0 && (() => {
+            const totalEaten = weekHeatmapData.totalEaten;
+            const totalBurned = weekHeatmapData.totalBurned;
+            const daysWithData = weekHeatmapData.withData || 7;
+            const diff = totalEaten - totalBurned;
+            const diffPct = totalBurned > 0 ? Math.round((diff / totalBurned) * 100) : 0;
+            const isDeficit = diff < 0;
+            
+            // Целевой дефицит за эти дни
+            const targetDef = weekHeatmapData.avgTargetDeficit || 0;
+            const deviation = Math.abs(diffPct - targetDef);
+            
+            // ФОН карточки зависит от близости к цели:
+            // ≤5% от цели → зелёный фон (идеально)
+            // 6-15% от цели → жёлтый фон (нормально)
+            // >15% от цели → красный/оранжевый фон (много отклонились)
+            let colorClass, icon;
+            if (deviation <= 5) {
+              colorClass = 'positive';
+              icon = '✅';
+            } else if (deviation <= 15) {
+              colorClass = 'mixed';
+              icon = isDeficit ? '📉' : '📈';
+            } else {
+              colorClass = 'warning';
+              icon = '⚠️';
+            }
+            
+            // ЦВЕТ ЦИФРЫ процента: <0 красный, >0 зелёный, =0 серый
+            const pctColor = diffPct < 0 ? '#dc2626' : diffPct > 0 ? '#16a34a' : '#6b7280';
+            const diffSign = diffPct >= 0 ? '+' : '';
+            const targetSign = targetDef >= 0 ? '+' : '';
+            
+            // 🔬 Научный расчёт сожжённого жира (Hall KD, 2008)
+            const FAT_PERCENT = 0.77;
+            const deficitKcal = Math.abs(diff);
+            const fatBurnedGrams = isDeficit ? Math.round((deficitKcal * FAT_PERCENT) / 7.7) : 0;
+            const fatBurnedText = fatBurnedGrams > 0 ? 
+              (fatBurnedGrams >= 1000 ? (fatBurnedGrams / 1000).toFixed(1) + ' кг' : fatBurnedGrams + ' г') + ' жира' : null;
+            
+            return React.createElement('div', { 
+              className: 'week-heatmap-deficit ' + colorClass,
+              onClick: (e) => {
+                e.stopPropagation();
+                haptic('light');
+                const rect = e.currentTarget.getBoundingClientRect();
+                setWeekDeficitPopup({
+                  x: rect.left + rect.width / 2,
+                  y: rect.top,
+                  data: {
+                    totalEaten,
+                    totalBurned,
+                    deficitKcal,
+                    deficitPct: diffPct,
+                    fatBurnedGrams,
+                    avgTargetDeficit: targetDef,
+                    daysWithData,
+                    isDeficit
+                  }
+                });
+              }
+            },
+              React.createElement('span', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' } },
+                // Первая строка: потрачено / съедено + процент
+                React.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px' } },
+                  React.createElement('span', { style: { fontWeight: '600' } }, totalBurned.toLocaleString('ru')),
+                  React.createElement('span', { style: { color: '#9ca3af' } }, '/'),
+                  React.createElement('span', { style: { fontWeight: '600' } }, totalEaten.toLocaleString('ru')),
+                  React.createElement('span', { style: { marginLeft: '6px', fontWeight: '600', color: pctColor } }, diffSign + diffPct + '%'),
+                  React.createElement('span', { style: { marginLeft: '4px', fontSize: '11px', color: '#9ca3af' } }, '(цель ' + targetSign + targetDef + '%)')
+                ),
+                // Вторая строка: сожжённый жир
+                fatBurnedText && React.createElement('span', { 
+                  style: { fontSize: '12px', color: '#16a34a', fontWeight: '500' },
+                  title: 'Научный расчёт: дефицит ' + deficitKcal + ' ккал × 77% / 7.7 ккал/г'
+                }, '🔥 −' + fatBurnedText)
+              )
+            );
+          })()
         );
       })(),
       // Спарклайн веса — показываем если есть хотя бы 1 точка (вес из профиля)
@@ -13930,17 +14073,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             weightTrend.isCleanTrend && React.createElement('span', { 
               className: 'weight-clean-trend-badge',
               title: 'Дни с задержкой воды исключены из тренда'
-            }, '🌸 чистый'),
-            // Кнопки выбора периода (как у калорий)
-            React.createElement('div', { className: 'kcal-period-pills weight-period-pills' },
-              [7, 14, 30].map(period => 
-                React.createElement('button', {
-                  key: 'weight-period-' + period,
-                  className: 'kcal-period-pill' + (chartPeriod === period ? ' active' : ''),
-                  onClick: () => handlePeriodChange(period)
-                }, period + 'д')
-              )
-            )
+            }, '🌸 чистый')
           ) // закрываем badges div
         ), // закрываем условие weightSparklineData.length >= 2
         renderWeightSparkline(weightSparklineData),
@@ -14940,9 +15073,9 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             className: 'add-training-btn',
             onClick: () => {
               const newIndex = visibleTrainings;
-              setVisibleTrainings(visibleTrainings + 1);
-              // Сразу открываем picker для новой тренировки
-              setTimeout(() => openTrainingPicker(newIndex), 50);
+              // НЕ увеличиваем visibleTrainings сразу — 
+              // он обновится автоматически когда тренировка сохранится
+              openTrainingPicker(newIndex);
             }
           }, '+ Тренировка')
         )
@@ -16124,7 +16257,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 }, insulinWaveData.autophagy.label),
                 React.createElement('div', { 
                   style: { fontSize: '11px', color: '#64748b' }
-                }, 'Клеточное очищение • ' + Math.round(insulinWaveData.fastingHours) + 'ч голода')
+                }, 'Клеточное очищение • ' + Math.round(insulinWaveData.currentFastingHours || 0) + 'ч голода')
               ),
               // Прогресс-бар внутри фазы
               React.createElement('div', { 

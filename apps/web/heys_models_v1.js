@@ -300,7 +300,7 @@
       householdMin:+d.householdMin||0,
       // Массив бытовых активностей (новый формат)
       householdActivities: Array.isArray(d.householdActivities) ? d.householdActivities : undefined,
-      trainings:Array.isArray(d.trainings)?d.trainings:[{z:[0,0,0,0]},{z:[0,0,0,0]}],
+      trainings:Array.isArray(d.trainings)?d.trainings:[],
       // Если явно передана пустая строка, оставляем пустую строку
       dayScore:(d.dayScore==='')? '' : (d.dayScore!=null?d.dayScore:''),
       moodAvg:(d.moodAvg==='')? '' : (d.moodAvg!=null?d.moodAvg:''),
@@ -332,9 +332,19 @@
       schemaVersion: d.schemaVersion || undefined,
       _sourceId: d._sourceId || undefined
     };
-    if(!Array.isArray(base.trainings)) base.trainings=[{z:[0,0,0,0],time:'',type:'',mood:5,wellbeing:5,stress:5,comment:''},{z:[0,0,0,0],time:'',type:'',mood:5,wellbeing:5,stress:5,comment:''}];
-    if(base.trainings.length<2) while(base.trainings.length<2) base.trainings.push({z:[0,0,0,0],time:'',type:'',mood:5,wellbeing:5,stress:5,comment:''});
-    base.trainings = base.trainings.map(t => {
+    // 🆕 v3.7.3: Не создаём пустые тренировки, только очищаем невалидные
+    if(!Array.isArray(base.trainings)) base.trainings=[];
+    // Фильтруем пустые/невалидные тренировки (без времени И без зон)
+    const isValidTraining = (t) => {
+      if (!t) return false;
+      // Есть время — валидна
+      if (t.time && t.time !== '') return true;
+      // Есть хоть одна зона > 0 — валидна  
+      const zones = t.z || [];
+      return zones.some(z => +z > 0);
+    };
+    // Нормализуем существующие тренировки (миграция полей)
+    base.trainings = base.trainings.filter(isValidTraining).map(t => {
       // Миграция: quality → mood, feelAfter → wellbeing
       const mood = (t && t.mood !== undefined) ? +t.mood : (t && t.quality !== undefined) ? +t.quality : 5;
       const wellbeing = (t && t.wellbeing !== undefined) ? +t.wellbeing : (t && t.feelAfter !== undefined) ? +t.feelAfter : 5;
