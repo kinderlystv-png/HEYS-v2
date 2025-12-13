@@ -1086,7 +1086,19 @@ const HEYS = window.HEYS = window.HEYS || {};
           setTimeout(initializeApp, INIT_RETRY_DELAY);
         };
         const waitForDependencies = (onReady) => {
+          // Обновляем статус в splash screen
+          if (window.updateSplashStatus) {
+            if (!isReactReady()) {
+              window.updateSplashStatus('Загрузка React...');
+            } else if (!isHeysReady()) {
+              window.updateSplashStatus('Загрузка модулей...');
+            }
+          }
+          
           if (isReactReady() && isHeysReady()) {
+            if (window.updateSplashStatus) {
+              window.updateSplashStatus('Инициализация...');
+            }
             onReady();
             return;
           }
@@ -3128,7 +3140,10 @@ const HEYS = window.HEYS = window.HEYS || {};
             root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
             // 🚀 Скрываем PWA splash screen после первого рендера
             if (typeof window.hidePwaSplash === 'function') {
-              setTimeout(window.hidePwaSplash, 100);
+              // Небольшая задержка чтобы React успел отрисовать первый кадр
+              requestAnimationFrame(() => {
+                setTimeout(window.hidePwaSplash, 50);
+              });
             }
           }
 

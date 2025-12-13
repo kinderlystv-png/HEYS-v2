@@ -127,8 +127,12 @@
       </style>
     </div>
     <script>
-      // Скрываем splash после загрузки React
+      // Скрываем splash ТОЛЬКО когда React готов
+      window._pwaSplashHidden = false;
       window.hidePwaSplash = function() {
+        if (window._pwaSplashHidden) return;
+        window._pwaSplashHidden = true;
+        
         var splash = document.getElementById('pwa-splash');
         var progress = document.getElementById('splash-progress');
         var status = document.getElementById('splash-status');
@@ -152,8 +156,34 @@
         }
       };
       
-      // Fallback: скрыть через 6 секунд если React не загрузился
-      setTimeout(window.hidePwaSplash, 6000);
+      // Обновляем статус загрузки
+      window.updateSplashStatus = function(text) {
+        var status = document.getElementById('splash-status');
+        if (status && !window._pwaSplashHidden) {
+          status.textContent = text;
+        }
+      };
+      
+      // Fallback: если через 15 секунд React не загрузился — показываем ошибку
+      setTimeout(function() {
+        if (!window._pwaSplashHidden && !window.React) {
+          window.updateSplashStatus('Ошибка загрузки. Перезагрузите страницу.');
+          var progress = document.getElementById('splash-progress');
+          if (progress) {
+            progress.style.background = '#ef4444';
+            progress.style.width = '100%';
+          }
+        }
+      }, 15000);
+      
+      // Обновляем статус по мере загрузки модулей
+      var loadedModules = 0;
+      window.moduleLoaded = function(name) {
+        loadedModules++;
+        if (loadedModules % 5 === 0) {
+          window.updateSplashStatus('Загрузка модулей... ' + loadedModules);
+        }
+      };
     </script>
     
     <div id="root"></div>
