@@ -180,8 +180,11 @@
   /**
    * MorningCheckin — обёртка над новым StepModal
    * Использует шаги: [profile-steps], weight, sleepTime, sleepQuality, [measurements], stepsGoal
+   * 
+   * @param {function} onComplete - Вызывается при завершении всех шагов
+   * @param {function} onClose - Вызывается при закрытии крестиком (отложить на потом)
    */
-  function MorningCheckin({ onComplete }) {
+  function MorningCheckin({ onComplete, onClose }) {
     // Если StepModal доступен — используем его
     if (HEYS.StepModal && HEYS.StepModal.Component) {
       const U = HEYS.utils || {};
@@ -207,6 +210,7 @@
       return React.createElement(HEYS.StepModal.Component, {
         steps: steps,
         onComplete: wrappedOnComplete,
+        onClose: onClose, // Крестик в хедере для закрытия без сохранения
         showProgress: true,
         showStreak: true,
         showGreeting: true,

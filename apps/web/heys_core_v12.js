@@ -878,27 +878,224 @@
       }
     }
 
+    // Функция экспорта только продуктов
+    function exportProductsOnly() {
+      if (!products || products.length === 0) {
+        alert('Нет продуктов для экспорта');
+        return;
+      }
+      
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        type: 'products_only',
+        count: products.length,
+        products: products
+      };
+      
+      const clientId = localStorage.getItem('heys_client_current') || 'unknown';
+      const cleanClientId = clientId.replace(/"/g, '').slice(0, 8);
+      const fileName = `heys-products-${cleanClientId}-${new Date().toISOString().slice(0, 10)}.json`;
+      
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      DEV.log(`✅ [EXPORT] Экспортировано ${products.length} продуктов в ${fileName}`);
+      alert(`✅ Экспортировано ${products.length} продуктов!`);
+    }
+
+    // Функция импорта из JSON файла
+    async function importFromFile(file) {
+      if (!file) return;
+      
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        
+        DEV.log('[IMPORT FILE] Загружен файл:', file.name);
+        DEV.log('[IMPORT FILE] Структура:', Object.keys(data));
+        
+        // Определяем формат файла
+        let importedProducts = [];
+        
+        // Формат полного бэкапа HEYS (exportFullBackup)
+        if (data.products && Array.isArray(data.products)) {
+          importedProducts = data.products;
+          DEV.log('[IMPORT FILE] Формат: полный бэкап HEYS, продуктов:', importedProducts.length);
+        }
+        // Формат просто массива продуктов
+        else if (Array.isArray(data)) {
+          importedProducts = data;
+          DEV.log('[IMPORT FILE] Формат: массив продуктов, штук:', importedProducts.length);
+        }
+        else {
+          alert('Неизвестный формат файла. Ожидается JSON с полем "products" или массив продуктов.');
+          return;
+        }
+        
+        if (importedProducts.length === 0) {
+          alert('В файле не найдено продуктов для импорта.');
+          return;
+        }
+        
+        // Валидация продуктов
+        const validProducts = importedProducts.filter(p => {
+          if (!p.name || typeof p.name !== 'string') return false;
+          return true;
+        }).map(p => {
+          // Гарантируем наличие всех полей
+          const product = {
+            id: p.id || uuid(),
+            name: p.name,
+            simple100: toNum(p.simple100),
+            complex100: toNum(p.complex100),
+            protein100: toNum(p.protein100),
+            badFat100: toNum(p.badFat100),
+            goodFat100: toNum(p.goodFat100),
+            trans100: toNum(p.trans100),
+            fiber100: toNum(p.fiber100),
+            gi: toNum(p.gi || p.gi100 || p.GI || p.giIndex),
+            harmScore: toNum(p.harmScore || p.harm || p.harm100 || p.harmPct),
+            createdAt: p.createdAt || Date.now()
+          };
+          // Вычисляем производные поля
+          return { ...product, ...computeDerived(product) };
+        });
+        
+        if (validProducts.length === 0) {
+          alert('Не найдено валидных продуктов для импорта.');
+          return;
+        }
+        
+        // Спрашиваем режим импорта
+        const mode = await new Promise(resolve => {
+          const choice = confirm(
+            `Найдено ${validProducts.length} продуктов.\\n\\n` +
+            `OK — Умный импорт (новые добавятся, существующие обновятся)\\n` +
+            `Отмена — Отменить импорт`
+          );
+          resolve(choice ? 'merge' : 'cancel');
+        });
+        
+        if (mode === 'cancel') {
+          DEV.log('[IMPORT FILE] Импорт отменён пользователем');
+          return;
+        }
+        
+        // Умный импорт (merge)
+        const normalize = (name) => (name || '').trim().toLowerCase();
+        const existingMap = new Map();
+        products.forEach((p, idx) => {
+          existingMap.set(normalize(p.name), { product: p, index: idx });
+        });
+        
+        let updated = 0;
+        let added = 0;
+        const newProducts = [...products];
+        
+        for (const row of validProducts) {
+          const key = normalize(row.name);
+          const existing = existingMap.get(key);
+          
+          if (existing) {
+            newProducts[existing.index] = { 
+              ...existing.product, 
+              ...row, 
+              id: existing.product.id
+            };
+            updated++;
+          } else {
+            newProducts.push(row);
+            existingMap.set(key, { product: row, index: newProducts.length - 1 });
+            added++;
+          }
+        }
+        
+        setProducts(newProducts);
+        
+        DEV.log(`✅ [IMPORT FILE] Завершено: +${added} новых, ↻${updated} обновлено`);
+        alert(`✅ Импорт из файла завершён!\\n\\n• Добавлено новых: ${added}\\n• Обновлено существующих: ${updated}`);
+        
+        if (window.HEYS?.analytics) {
+          window.HEYS.analytics.trackDataOperation('products-imported-file', validProducts.length);
+        }
+        
+      } catch (err) {
+        console.error('[IMPORT FILE] Ошибка:', err);
+        alert('Ошибка чтения файла: ' + err.message);
+      }
+    }
+
     return React.createElement('div', {className:'page page-ration'},
-      // Кнопка экспорта бэкапа
-      React.createElement('div', {className:'card', style:{marginBottom:'8px', padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px'}},
-        React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'8px'}},
-          React.createElement('span', {style:{fontSize:'20px'}}, '💾'),
-          React.createElement('span', {style:{fontWeight:'500'}}, 'Резервная копия')
-        ),
-        React.createElement('button', {
-          className:'btn',
-          onClick: async () => {
-            if (window.HEYS && window.HEYS.exportFullBackup) {
-              const result = await window.HEYS.exportFullBackup();
-              if (result && result.ok) {
-                alert(`✅ Бэкап сохранён!\\n📦 Продуктов: ${result.products}\\n📅 Дней: ${result.days}`);
+      // Кнопки экспорта и импорта бэкапа
+      React.createElement('div', {className:'card', style:{marginBottom:'8px', padding:'12px 16px'}},
+        // Полный бэкап
+        React.createElement('div', {style:{display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px', marginBottom:'12px'}},
+          React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'8px'}},
+            React.createElement('span', {style:{fontSize:'20px'}}, '💾'),
+            React.createElement('span', {style:{fontWeight:'500'}}, 'Полный бэкап'),
+            React.createElement('span', {className:'muted', style:{fontSize:'11px'}}, '(всё)')
+          ),
+          React.createElement('button', {
+            className:'btn',
+            onClick: async () => {
+              if (window.HEYS && window.HEYS.exportFullBackup) {
+                const result = await window.HEYS.exportFullBackup();
+                if (result && result.ok) {
+                  alert(`✅ Бэкап сохранён!\\n📦 Продуктов: ${result.products}\\n📅 Дней: ${result.days}`);
+                }
+              } else {
+                alert('Функция экспорта недоступна');
               }
-            } else {
-              alert('Функция экспорта недоступна');
-            }
+            },
+            style:{whiteSpace:'nowrap'}
+          }, '📥 Скачать всё')
+        ),
+        // Экспорт только продуктов
+        React.createElement('div', {style:{display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px', paddingTop:'12px', borderTop:'1px solid var(--border-color, #e5e5e5)', marginBottom:'12px'}},
+          React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'8px'}},
+            React.createElement('span', {style:{fontSize:'20px'}}, '🥗'),
+            React.createElement('span', {style:{fontWeight:'500'}}, 'Экспорт продуктов'),
+            React.createElement('span', {className:'muted', style:{fontSize:'11px'}}, `(${products.length})`)
+          ),
+          React.createElement('button', {
+            className:'btn',
+            onClick: exportProductsOnly,
+            style:{whiteSpace:'nowrap'}
+          }, '📥 Скачать')
+        ),
+        // Импорт из файла
+        React.createElement('div', {style:{display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px', paddingTop:'12px', borderTop:'1px solid var(--border-color, #e5e5e5)'}},
+          React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'8px'}},
+            React.createElement('span', {style:{fontSize:'20px'}}, '📤'),
+            React.createElement('span', {style:{fontWeight:'500'}}, 'Импорт из файла')
+          ),
+          React.createElement('label', {
+            className:'btn',
+            style:{whiteSpace:'nowrap', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:'4px'}
           },
-          style:{whiteSpace:'nowrap'}
-        }, '📥 Скачать JSON')
+            '📂 Выбрать JSON',
+            React.createElement('input', {
+              type: 'file',
+              accept: '.json,application/json',
+              style: {display:'none'},
+              onChange: (e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  importFromFile(file);
+                  e.target.value = ''; // Сброс для повторного выбора того же файла
+                }
+              }
+            })
+          )
+        )
       ),
       React.createElement('div', {className:'card tone-amber', style:{marginBottom:'8px'}},
         React.createElement('div', {className:'section-title'}, 'Импорт из вставки'),
