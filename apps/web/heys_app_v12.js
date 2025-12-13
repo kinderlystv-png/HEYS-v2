@@ -521,16 +521,18 @@ const HEYS = window.HEYS = window.HEYS || {};
               }
               setUpdateLock();
               
-              // Показываем красивый UI обновления
+              // Показываем красивый UI обновления с полным flow этапов
               showUpdateModal('found');
               
-              // Упрощённая анимация: found → reloading → reload
+              // 🎬 Полная анимация всех этапов: found → downloading → installing → reloading
+              setTimeout(() => updateModalStage('downloading'), 1200);
+              setTimeout(() => updateModalStage('installing'), 2400);
               setTimeout(() => {
                 updateModalStage('reloading');
                 forceUpdateAndReload(false);
-              }, 1500);
+              }, 3600);
               
-              // 🔒 Fallback: если через 8 секунд reload не произошёл — убираем модалку
+              // 🔒 Fallback: если через 12 секунд reload не произошёл — убираем модалку
               // Это предотвращает "застревание" на blur экране
               setTimeout(() => {
                 const modal = document.getElementById('heys-update-modal');
@@ -539,7 +541,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                   hideUpdateModal();
                   clearUpdateLock();
                 }
-              }, 8000);
+              }, 12000);
               
               return true;
             } else if (data.version && data.version !== APP_VERSION) {
@@ -3124,6 +3126,10 @@ const HEYS = window.HEYS = window.HEYS || {};
           function renderRoot(AppComponent) {
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
+            // 🚀 Скрываем PWA splash screen после первого рендера
+            if (typeof window.hidePwaSplash === 'function') {
+              setTimeout(window.hidePwaSplash, 100);
+            }
           }
 
           function App() {
@@ -4685,10 +4691,21 @@ const HEYS = window.HEYS = window.HEYS || {};
                 // Проверяем есть ли сохраненный клиент
                 const currentClient = U.lsGet('heys_client_current');
                 const storedClientsArray = U.lsGet('heys_clients', []);
+                
+                // 🔐 PIN auth: проверяем также heys_pin_auth_client (клиент вошедший по PIN)
+                const pinAuthClient = localStorage.getItem('heys_pin_auth_client');
+                
                 if (currentClient && storedClientsArray.some((c) => c.id === currentClient)) {
+                  // Куратор выбрал клиента из списка
                   setClientId(currentClient);
                   window.HEYS = window.HEYS || {};
                   window.HEYS.currentClientId = currentClient;
+                } else if (pinAuthClient) {
+                  // 🔐 PIN auth: клиент вошёл по телефону+PIN — устанавливаем его clientId
+                  setClientId(pinAuthClient);
+                  window.HEYS = window.HEYS || {};
+                  window.HEYS.currentClientId = pinAuthClient;
+                  console.log('[HEYS] 🔐 PIN auth client restored:', pinAuthClient.slice(0, 8) + '...');
                 }
 
                 setSyncVer((v) => v + 1);

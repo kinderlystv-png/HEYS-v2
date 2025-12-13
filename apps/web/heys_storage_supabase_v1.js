@@ -133,21 +133,41 @@
 
   /**
    * 🔐 Универсальный sync — выбирает правильную стратегию (RPC для PIN auth, bootstrap для обычной)
+   * In-flight deduplication: если sync уже в процессе — возвращаем тот же Promise
    * @param {string} clientId - ID клиента
    * @param {Object} options - { force: boolean }
    * @returns {Promise<void>}
    */
+  let _syncInFlight = null; // { clientId, promise }
+  
   cloud.syncClient = async function(clientId, options = {}) {
-    const isPinAuth = _rpcOnlyMode && _pinAuthClientId === clientId;
-    
-    if (isPinAuth && typeof cloud.syncClientViaRPC === 'function') {
-      return cloud.syncClientViaRPC(clientId);
-    } else if (typeof cloud.bootstrapClientSync === 'function') {
-      return cloud.bootstrapClientSync(clientId, options);
+    // Deduplication: если sync для этого же клиента уже идёт — вернём тот же Promise
+    if (_syncInFlight && _syncInFlight.clientId === clientId && !options.force) {
+      log('🔄 [SYNC] Already in flight for', clientId.slice(0,8) + '..., reusing promise');
+      return _syncInFlight.promise;
     }
     
-    // Fallback — ничего не делаем
-    return Promise.resolve();
+    const isPinAuth = _rpcOnlyMode && _pinAuthClientId === clientId;
+    
+    // Создаём Promise и сохраняем его для deduplication
+    const syncPromise = (async () => {
+      try {
+        if (isPinAuth && typeof cloud.syncClientViaRPC === 'function') {
+          return await cloud.syncClientViaRPC(clientId);
+        } else if (typeof cloud.bootstrapClientSync === 'function') {
+          return await cloud.bootstrapClientSync(clientId, options);
+        }
+        // Fallback — ничего не делаем
+      } finally {
+        // Очищаем in-flight после завершения
+        if (_syncInFlight && _syncInFlight.clientId === clientId) {
+          _syncInFlight = null;
+        }
+      }
+    })();
+    
+    _syncInFlight = { clientId, promise: syncPromise };
+    return syncPromise;
   };
 
   // ═══════════════════════════════════════════════════════════════════

@@ -3874,11 +3874,19 @@ body:has(.offline-banner) .wrap {
   padding-bottom: 100px; /* Отступ под fixed tabs */
   position: relative;
   overflow: hidden;
-  will-change: transform, opacity;
-  transform: translateZ(0); /* GPU acceleration */
+  /* Убрали transform: translateZ(0) — ломает position: fixed для FAB */
+  /* GPU acceleration включается только при анимации через will-change */
 }
 
 /* Slide animations — iOS-like smooth feel */
+/* will-change добавляется только во время анимации, чтобы не ломать position: fixed */
+.tab-content-swipeable.slide-out-left,
+.tab-content-swipeable.slide-out-right,
+.tab-content-swipeable.slide-in-left,
+.tab-content-swipeable.slide-in-right {
+  will-change: transform, opacity;
+}
+
 .tab-content-swipeable.slide-out-left {
   animation: slideOutLeft 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }

@@ -106,14 +106,13 @@
   };
   
   // 🔬 НАУЧНЫЙ АУДИТ 2025-12-10 (ChatGPT Research):
-  // Белок вызывает ЗНАЧИТЕЛЬНЫЙ инсулиновый ответ (Nuttall et al. 1984, Floyd 1966)
-  // 'Высокобелковый приём может поддерживать приподнятый инсулин до 4-5 часов'
-  // 50г белка = существенное удлинение волны
-  // Добавлен порог veryHigh для >50г белка
+  // Белок вызывает инсулиновый ответ (Nuttall et al. 1984, Floyd 1966)
+  // Но ОСНОВНАЯ причина длины волны — углеводы. Белок — вторичный фактор.
+  // 🔬 v3.7.5: Калибровка — снижены бонусы (реальный эффект ~5-10%, не 15-25%)
   const PROTEIN_BONUS = {
-    veryHigh: { threshold: 50, bonus: 0.25 },  // 50+ г белка → +25% к волне
-    high: { threshold: 35, bonus: 0.15 },      // 35-50 г → +15%
-    medium: { threshold: 20, bonus: 0.08 }     // 20-35 г → +8%
+    veryHigh: { threshold: 50, bonus: 0.12 },  // 50+ г белка → +12% к волне (было +25%)
+    high: { threshold: 35, bonus: 0.08 },      // 35-50 г → +8% (было +15%)
+    medium: { threshold: 20, bonus: 0.05 }     // 20-35 г → +5% (было +8%)
   };
   // 🔬 НАУЧНЫЙ АУДИТ 2025-12-10 (ChatGPT Research):
   // Клетчатка СНИЖАЕТ пик инсулина и общую AUC на 20-30% (Wolever 1991, Jenkins 1978)
@@ -125,18 +124,15 @@
     medium: { threshold: 5, bonus: -0.08 }     // 5-10 г → -8%
   };
   
-  // 🧈 FAT SLOWDOWN — жиры значительно замедляют опорожнение желудка (gastric emptying)
-  // Исследования: жирная пища может замедлить пищеварение на 30-50% (Liddle et al., 1991)
-  // Примеры: пицца, бургер, жареное — волна 4-5 часов вместо 3
-  // 
-  // 🔬 НАУЧНЫЙ АУДИТ 2025-12-09:
-  // Жиры замедляют УСВОЕНИЕ углеводов, но если углеводов мало — эффект минимален
-  // Бонус теперь применяется пропорционально GL (см. calculateMultiplier)
-  // Снижены бонусы: +35%→+25%, +20%→+15%, +10%→+8%
+  // 🧈 FAT SLOWDOWN — жиры замедляют опорожнение желудка (gastric emptying)
+  // Исследования: Liddle et al., 1991 — пищеварение замедляется
+  // НО: эффект на ИНСУЛИН меньше чем на пищеварение!
+  // 🔬 v3.7.5: Калибровка — снижены бонусы (реальный эффект ~10-15%, не 25%)
+  // Жиры СГЛАЖИВАЮТ пик, но не так сильно удлиняют волну
   const FAT_BONUS = {
-    high: { threshold: 25, bonus: 0.25 },    // 25+ г жира → +25% к длине волны
-    medium: { threshold: 15, bonus: 0.15 },  // 15+ г жира → +15% к длине волны
-    low: { threshold: 8, bonus: 0.08 }       // 8+ г жира → +8%
+    high: { threshold: 25, bonus: 0.15 },    // 25+ г жира → +15% к длине волны (было +25%)
+    medium: { threshold: 15, bonus: 0.10 },  // 15+ г жира → +10% к длине волны (было +15%)
+    low: { threshold: 8, bonus: 0.05 }       // 8+ г жира → +5% (было +8%)
   };
   
   // 🥤 LIQUID FOOD — жидкая пища усваивается БЫСТРЕЕ
@@ -262,14 +258,18 @@
 
   // 🔗 КУМУЛЯТИВНЫЙ ЭФФЕКТ (Meal Stacking) — перехлёст волн
   // Научное обоснование: когда новый приём пищи попадает в "активную" волну,
-  // остаточный инсулин суммируется с новым всплеском
-  // Wolever 2006: "second meal effect" — влияние предыдущего приёма на следующий
+  // 🔬 НАУЧНАЯ КОРРЕКЦИЯ v3.7.4: "Second Meal Effect" работает В ОБРАТНУЮ СТОРОНУ!
+  // Wolever 2006: первый приём с низким ГИ УЛУЧШАЕТ инсулиновый ответ на второй
+  // Инсулин уже в крови → меньше нового инсулина нужно → волна КОРОЧЕ
+  // 
+  // Старая логика (НЕПРАВИЛЬНАЯ): перехлёст удлинял волну (+40%)
+  // Новая логика (ПРАВИЛЬНАЯ): перехлёст укорачивает волну (-10...-15%)
   const MEAL_STACKING = {
     enabled: true,
-    // Максимальный бонус от перехлёста (не более +40% к длине новой волны)
-    maxStackBonus: 0.40,
-    // Коэффициент затухания (чем дальше от конца предыдущей волны, тем меньше эффект)
-    // 0 минут до конца = полный эффект, 60 минут до конца = 50% эффект
+    // 🆕 v3.7.4: ОТРИЦАТЕЛЬНЫЙ бонус — волна КОРОЧЕ при перехлёсте
+    // Научное обоснование: инсулин уже секретирован → меньше нужно для второго приёма
+    maxStackBonus: -0.15, // До -15% к длине волны (укорачивает!)
+    // Коэффициент затухания
     decayRate: 0.5
   };
 
@@ -521,21 +521,24 @@
   // 🌟 SLEEP QUALITY — качество сна влияет независимо от продолжительности
   // Плохой сон (частые пробуждения, неглубокий) увеличивает инсулинорезистентность
   // Tasali et al. (2008): фрагментированный сон = +23% инсулинорезистентности
+  // 🔬 v3.7.4: Скорректировано — +23% это для КЛИНИЧЕСКИ плохого сна в лаборатории
+  // Для обычного бытового плохого сна эффект ~8%
   // ⚠️ Шкала качества в HEYS: 1-10
   const SLEEP_QUALITY_BONUS = {
-    poor: { maxQuality: 4, bonus: 0.12 },      // Качество 1-4 → +12%
-    mediocre: { maxQuality: 6, bonus: 0.06 },  // Качество 5-6 → +6%
+    poor: { maxQuality: 4, bonus: 0.08 },      // Качество 1-4 → +8% (было +12%)
+    mediocre: { maxQuality: 6, bonus: 0.04 },  // Качество 5-6 → +4% (было +6%)
     good: { maxQuality: 10, bonus: 0.00 }      // Качество 7-10 → нет эффекта
   };
 
   // 💧 HYDRATION — дегидратация ухудшает метаболизм глюкозы
   // Carroll et al. (2016): дегидратация повышает кортизол и глюкозу
+  // 🔬 v3.7.4: Скорректировано — эффект дегидратации на инсулин ~5-8%, не 12%
   // Норма: ~35 мл/кг веса в день (для 70кг = 2450мл)
   const HYDRATION_BONUS = {
     // Процент от нормы → бонус
-    severe: { maxPct: 30, bonus: 0.12 },    // <30% нормы → +12%
-    moderate: { maxPct: 50, bonus: 0.08 },  // 30-50% → +8%
-    mild: { maxPct: 70, bonus: 0.04 },      // 50-70% → +4%
+    severe: { maxPct: 30, bonus: 0.08 },    // <30% нормы → +8% (было +12%)
+    moderate: { maxPct: 50, bonus: 0.05 },  // 30-50% → +5% (было +8%)
+    mild: { maxPct: 70, bonus: 0.03 },      // 50-70% → +3% (было +4%)
     normal: { maxPct: 100, bonus: 0.00 }    // 70%+ → нет эффекта
   };
 
@@ -1678,16 +1681,18 @@
   /**
    * 🔗 Рассчитать кумулятивный эффект от перехлёста волн (Meal Stacking)
    * Если новый приём попадает в "активную" волну предыдущего,
-   * остаточный инсулин удлиняет новую волну
+   * 🔬 v3.7.4: НАУЧНАЯ КОРРЕКЦИЯ — "Second Meal Effect" (Wolever 2006)
+   * Если инсулин уже в крови (от предыдущего приёма), нужно МЕНЬШЕ нового инсулина
+   * Результат: волна КОРОЧЕ, не длиннее!
    * 
    * @param {number} prevWaveEndMinutes - время окончания предыдущей волны (от полуночи)
    * @param {number} newMealMinutes - время нового приёма (от полуночи)
    * @param {number} prevGL - GL предыдущего приёма
-   * @returns {Object} { stackBonus, overlapMinutes, desc }
+   * @returns {Object} { stackBonus, overlapMinutes, desc, hasStacking }
    */
   const calculateMealStackingBonus = (prevWaveEndMinutes, newMealMinutes, prevGL = 15) => {
     if (!MEAL_STACKING.enabled) {
-      return { stackBonus: 0, overlapMinutes: 0, desc: null };
+      return { stackBonus: 0, overlapMinutes: 0, desc: null, hasStacking: false };
     }
     
     // Сколько минут новый приём "внутри" предыдущей волны
@@ -1700,28 +1705,33 @@
     
     // Если нет перехлёста (новый приём после конца волны)
     if (overlapMinutes <= 0) {
-      return { stackBonus: 0, overlapMinutes: 0, desc: null };
+      return { stackBonus: 0, overlapMinutes: 0, desc: null, hasStacking: false };
     }
     
-    // Затухание: чем ближе к концу волны, тем меньше эффект
-    // overlapMinutes=60 → 50% эффекта, overlapMinutes=120 → 100% эффекта
-    const decayFactor = Math.min(1, overlapMinutes / 60 * MEAL_STACKING.decayRate);
+    // 🔬 v3.7.4: Second Meal Effect — бонус ОТРИЦАТЕЛЬНЫЙ (укорачивает волну)
+    // Чем больше перехлёст → тем больше инсулина уже в крови → меньше нужно нового
+    // overlapMinutes=60 → ~50% эффекта, overlapMinutes=120 → ~100% эффекта
+    const decayFactor = Math.min(1, overlapMinutes / 90 * MEAL_STACKING.decayRate);
     
-    // GL влияет на силу эффекта (высокая GL = больше остаточного инсулина)
-    const glFactor = Math.min(1.5, prevGL / 20);
+    // GL предыдущего приёма: высокая GL = больше остаточного инсулина = сильнее эффект
+    // Но делим на 30 вместо 20 — эффект не должен быть слишком сильным
+    const glFactor = Math.min(1.2, prevGL / 30);
     
-    // Итоговый бонус
+    // Итоговый бонус (ОТРИЦАТЕЛЬНЫЙ — волна короче!)
     let stackBonus = decayFactor * glFactor * MEAL_STACKING.maxStackBonus;
-    stackBonus = Math.min(MEAL_STACKING.maxStackBonus, stackBonus);
+    // maxStackBonus = -0.15, значит stackBonus будет от 0 до -0.15
+    stackBonus = Math.max(MEAL_STACKING.maxStackBonus, stackBonus);
     
-    const desc = stackBonus > 0.05 
-      ? `🔗 Перехлёст ${overlapMinutes} мин → волна +${Math.round(stackBonus * 100)}%`
+    // Описание для UI
+    const desc = stackBonus < -0.03
+      ? `🔗 Second meal effect → волна ${Math.round(Math.abs(stackBonus) * 100)}% короче`
       : null;
     
     return {
       stackBonus: Math.round(stackBonus * 100) / 100,
       overlapMinutes,
-      desc
+      desc,
+      hasStacking: stackBonus < -0.03
     };
   };
 
@@ -3550,11 +3560,66 @@
     const activityMultiplier = Math.max(0.1, 1.0 + activityBonuses); // min 10% от волны
     
     // 🆕 v3.6.0: NDTE применяется как отдельный множитель (независимо от состава еды)
-    const finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier;
+    let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier;
     
-    // 🔬 DEBUG: Проверка v3.2.2 расчётов с Insulin Index (отключено для production)
-    // Раскомментировать для отладки:
-    // console.log('[InsulinWave v3.2.2 DEBUG]', { gl, baseGL: nutrients.baseGlycemicLoad, insulinogenicType: nutrients.insulinogenicType, finalMultiplier });
+    // 🔬 v3.7.5: Физиологический лимит — волна не может быть больше ×1.5 от базы
+    // Научное обоснование: реальные исследования показывают что даже при
+    // максимальных факторах волна редко превышает 4-4.5 часа (×1.5 от базы 3ч)
+    // Brand-Miller 2003: High-GL meal ≈ 3-4 часа инсулинового ответа
+    const MAX_MULTIPLIER = 1.50;
+    if (finalMultiplier > MAX_MULTIPLIER) {
+      console.log('[InsulinWave] ⚠️ Multiplier capped:', finalMultiplier.toFixed(3), '→', MAX_MULTIPLIER);
+      finalMultiplier = MAX_MULTIPLIER;
+    }
+    
+    // 🔬 DEBUG: Детальный расчёт инсулиновой волны
+    console.log('[InsulinWave DEBUG]', { 
+      effectiveBaseWaveHours: effectiveBaseWaveHours.toFixed(2),
+      finalMultiplier: finalMultiplier.toFixed(3),
+      expected: (effectiveBaseWaveHours * finalMultiplier).toFixed(2) + 'ч',
+      components: {
+        foodMultiplier: foodMultiplier.toFixed(3),
+        activityMultiplier: activityMultiplier.toFixed(3),
+        ndteMultiplier: ndteMultiplier.toFixed(3),
+        scaledCircadian: scaledCircadian.toFixed(3),
+        spicyMultiplier: spicyMultiplier.toFixed(3)
+      },
+      foodDetails: {
+        'multipliers.total': multipliers.total.toFixed(3),
+        otherBonuses: otherBonuses.toFixed(3)
+      },
+      // 🆕 Детали otherBonuses
+      otherBonusesDetails: {
+        metabolicBonuses: metabolicBonuses.toFixed(3),
+        personalBonuses: personalBonuses.toFixed(3),
+        mealStackingBonus: mealStackingBonus.toFixed(3),
+        resistantStarchBonus: resistantStarchBonus.toFixed(3),
+        coldExposureBonus: coldExposureBonus.toFixed(3),
+        supplementsBonusValue: supplementsBonusValue.toFixed(3),
+        autophagyBonus: autophagyBonus.toFixed(3)
+      },
+      // 🆕 v3.7.5: Детали personalBonuses (что именно даёт бонус)
+      personalBonusesBreakdown: {
+        sleepQualityBonus: sleepQualityBonus.toFixed(3),
+        hydrationBonus: hydrationBonus.toFixed(3),
+        transFatBonus: transFatBonus.toFixed(3),
+        cycleBonusValue: cycleBonusValue.toFixed(3),
+        dayFactorsScale: dayFactorsScale.toFixed(3)
+      },
+      // 🆕 Детали multipliers.total
+      multipliersDetails: {
+        gi: multipliers.gi?.toFixed(3),
+        protein: multipliers.protein?.toFixed(3),
+        fiber: multipliers.fiber?.toFixed(3),
+        fat: multipliers.fat?.toFixed(3),
+        carbs: multipliers.carbs?.toFixed(3),
+        liquid: multipliers.liquid?.toFixed(3),
+        foodForm: multipliers.foodForm?.toFixed(3),
+        insulinogenic: multipliers.insulinogenic?.toFixed(3)
+      },
+      gl: nutrients.glycemicLoad?.toFixed(1) || 'null',
+      insulinogenicType: nutrients.insulinogenicType
+    });
     
     // 🆕 v3.0.0: Используем персональную базу вместо фиксированных 3 часов
     // Скорректированная длина волны
@@ -3846,6 +3911,8 @@
       lastMealWave.duration = Math.round(adjustedWaveHours * 60);
       lastMealWave.endMin = lastMealWave.startMin + lastMealWave.duration;
       lastMealWave.endTimeDisplay = utils.minutesToTime(lastMealWave.endMin);
+      lastMealWave.finalMultiplier = finalMultiplier; // 🆕 Синхронизация множителя
+      lastMealWave.baseWaveHours = effectiveBaseWaveHours; // 🆕 Синхронизация базы
     }
     // waveMinutes уже корректно рассчитан в основном блоке
     // remainingMinutes тоже
@@ -3984,6 +4051,9 @@
       
       // Волна
       insulinWaveHours: adjustedWaveHours,
+      waveHours: adjustedWaveHours, // 🆕 Алиас для UI popup
+      duration: Math.round(adjustedWaveHours * 60), // 🆕 В минутах для UI
+      finalMultiplier, // 🆕 Для отображения в popup "База × Множитель"
       baseWaveHours: effectiveBaseWaveHours, // 🆕 v3.0.0: теперь персональная база
       
       // 🆕 v3.0.0: Персональная база волны
@@ -4011,16 +4081,22 @@
       
       // ГИ данные
       avgGI: nutrients.avgGI,
+      gi: nutrients.avgGI, // 🆕 Алиас для UI popup
       giCategory: multipliers.category,
       giMultiplier: multipliers.gi,
       
       // Нутриенты
       totalProtein: nutrients.totalProtein,
+      protein: nutrients.totalProtein, // 🆕 Алиас для UI popup
       totalFiber: nutrients.totalFiber,
+      fiber: nutrients.totalFiber, // 🆕 Алиас для UI popup
       totalCarbs: nutrients.totalCarbs,
+      carbs: nutrients.totalCarbs, // 🆕 Алиас для UI popup
       totalSimple: nutrients.totalSimple,
       totalFat: nutrients.totalFat,
+      fat: nutrients.totalFat, // 🆕 Алиас для UI popup
       glycemicLoad: nutrients.glycemicLoad,
+      gl: nutrients.glycemicLoad, // 🆕 Алиас для UI popup
       proteinBonus: multipliers.protein,
       fiberBonus: multipliers.fiber,
       fatBonus: multipliers.fat,
@@ -6226,6 +6302,6 @@
   // Алиас
   HEYS.IW = HEYS.InsulinWave;
   
-  console.log('[HEYS] InsulinWave v3.7.3 loaded (фильтр пустых тренировок)');
+  console.log('[HEYS] InsulinWave v3.7.5 loaded (калибровка: protein/fat бонусы снижены, лимит ×1.5)');
   
 })(typeof window !== 'undefined' ? window : global);
