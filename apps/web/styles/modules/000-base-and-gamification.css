@@ -1289,9 +1289,9 @@ td:first-child input {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4285f4 0%, #2563eb 100%);
   border-radius: 16px 16px 0 0;
-  border: 1px solid #667eea;
+  border: 1px solid #4285f4;
   border-bottom: none;
   color: white;
 }
