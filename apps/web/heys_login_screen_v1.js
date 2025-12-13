@@ -201,7 +201,7 @@
       React.createElement('input', {
         ...p,
         className:
-          'w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-[16px] outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-200/60 ' +
+          'w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-[16px] outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-200/60 ' +
           (p.className || ''),
       });
 
@@ -211,7 +211,7 @@
         {
           ...p,
           className:
-            'w-full rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 px-4 py-3 text-[16px] font-semibold text-white shadow-lg shadow-indigo-500/30 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ' +
+            'w-full rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3 text-[16px] font-semibold text-white shadow-lg shadow-blue-500/30 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ' +
             (p.className || ''),
         },
         children,
@@ -548,7 +548,7 @@
           React.createElement('div', null, greeting),
           React.createElement(
             'button',
-            { className: 'text-indigo-600 hover:underline', onClick: () => { setErr(''); setMode('start'); } },
+            { className: 'text-blue-600 hover:underline', onClick: () => { setErr(''); setMode('start'); } },
             '← Назад',
           ),
         ),
@@ -559,7 +559,7 @@
       'div',
       {
         className:
-          'fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-indigo-500 to-violet-700 px-5 py-10',
+          'fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700 px-5 py-10',
       },
       mode === 'start'
         ? renderStart()

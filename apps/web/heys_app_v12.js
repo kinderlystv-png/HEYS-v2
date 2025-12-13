@@ -166,7 +166,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                 ">
                   <div id="heys-update-progress" style="
                     height: 100%;
-                    background: linear-gradient(90deg, #667eea, #764ba2);
+                    background: linear-gradient(90deg, #4285f4, #2563eb);
                     border-radius: 10px;
                     width: ${stage === 'checking' ? '20%' : stage === 'found' ? '40%' : stage === 'downloading' ? '60%' : stage === 'installing' ? '80%' : '100%'};
                     transition: width 0.5s ease-out;
@@ -277,7 +277,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                 </p>
                 ${isIOS ? '' : `
                   <button id="heys-manual-update-btn" style="
-                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    background: linear-gradient(135deg, #4285f4, #2563eb);
                     color: white; border: none; padding: 12px 24px; border-radius: 12px;
                     font-size: 16px; cursor: pointer; width: 100%;
                     font-family: system-ui, sans-serif;
@@ -4295,7 +4295,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                     // Модалка выбора клиента (только после логина)
                   : React.createElement(
                   'div',
-                  { className: 'modal-backdrop', style: { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' } },
+                  { className: 'modal-backdrop', style: { background: 'linear-gradient(135deg, #4285f4 0%, #2563eb 100%)' } },
                   React.createElement(
                     'div',
                     { 
@@ -4661,7 +4661,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                                   padding: '12px 20px',
                                   borderRadius: 12,
                                   background: (newName.trim() && newPhone.trim() && newPin.trim())
-                                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                                    ? 'linear-gradient(135deg, #4285f4 0%, #2563eb 100%)' 
                                     : 'var(--border)',
                                   border: 'none',
                                   color: (newName.trim() && newPhone.trim() && newPin.trim()) ? '#fff' : 'var(--muted)',
