@@ -314,7 +314,7 @@
             React.createElement('div', { className: 'text-center text-base font-semibold text-slate-700' }, 'Телефон'),
             React.createElement('div', {
               className: 'flex items-center justify-center gap-2 rounded-2xl border-2 px-4 py-3 transition-all sm:px-5 sm:py-4 ' +
-                (isPhoneComplete ? 'border-green-500 bg-green-50/50' : 'border-slate-200 bg-white focus-within:border-indigo-500')
+                (isPhoneComplete ? 'border-green-500 bg-green-50/50' : 'border-slate-200 bg-white focus-within:border-blue-500')
             },
               // Фиксированный префикс +7 (размер и baseline синхронизированы с input)
               React.createElement('span', {
@@ -441,7 +441,7 @@
                         ? 'border-green-400 bg-green-50/50'
                         : isFilled
                           ? 'border-slate-300'
-                          : 'border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-200/60'),
+                          : 'border-slate-200 focus:border-blue-400 focus:ring-4 focus:ring-blue-200/60'),
                   }),
                   (overlay && overlay.d)
                     ? React.createElement(
@@ -498,13 +498,13 @@
             'a',
             {
               href: 'tel:+79624556111',
-              className: 'block font-semibold text-indigo-600 hover:underline',
+              className: 'block font-semibold text-blue-600 hover:underline',
             },
             '+7 962 455-61-11',
           ),
           React.createElement(
             'button',
-            { className: 'mt-3 font-medium text-indigo-500 hover:text-indigo-700 hover:underline', onClick: () => { setErr(''); setMode('curator'); } },
+            { className: 'mt-3 font-medium text-blue-500 hover:text-blue-700 hover:underline', onClick: () => { setErr(''); setMode('curator'); } },
             'Вход для куратора →',
           ),
         ),
