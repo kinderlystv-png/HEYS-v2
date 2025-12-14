@@ -2358,6 +2358,40 @@
   color: var(--balance-color, #3b82f6);
 }
 
+/* Мини-график баланса в header карточки перебора */
+.caloric-balance-viz-inline {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  font-family: monospace;
+  line-height: 1;
+  margin-left: 8px;
+}
+
+/* Увеличенный график */
+.caloric-balance-viz-inline.caloric-balance-viz-large {
+  gap: 3px;
+}
+
+.caloric-balance-viz-inline.caloric-balance-viz-large .balance-viz-bar {
+  font-size: 18px !important;
+}
+
+/* Кликабельные столбцы графика */
+.balance-viz-bar-clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.balance-viz-bar-clickable:hover {
+  transform: scale(1.2);
+  opacity: 0.85;
+}
+
+.balance-viz-bar-clickable:active {
+  transform: scale(0.95);
+}
+
 .caloric-balance-badge {
   font-size: 12px;
   font-weight: 700;
@@ -2416,6 +2450,33 @@
   background: rgba(59, 130, 246, 0.05);
   border-radius: 8px;
   border-left: 3px solid var(--balance-color, rgba(59, 130, 246, 0.3));
+}
+
+/* Инсайты недели внутри карточки перебора */
+.caloric-balance-insights {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.caloric-balance-insight-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  line-height: 1.3;
+}
+
+.caloric-insight-emoji {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.caloric-insight-text {
+  flex: 1;
 }
 
 /* День недели вместо номера */
@@ -2715,6 +2776,157 @@
   font-size: 12px;
   color: var(--color-slate-600);
   padding: 4px 0;
+}
+
+/* === 13.7 INSIGHTS CARD — карточка "Инсайты недели" (сворачиваемая) === */
+.caloric-insights-card {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, rgba(99, 102, 241, 0.04) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-top: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.caloric-insights-card:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.10) 0%, rgba(99, 102, 241, 0.06) 100%);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.caloric-insights-card.expanded {
+  padding-bottom: 16px;
+}
+
+/* Header */
+.caloric-insights-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.caloric-insights-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.caloric-insights-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.caloric-insights-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-slate-700);
+}
+
+.caloric-insights-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  padding: 3px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.caloric-insights-chevron {
+  font-size: 10px;
+  color: var(--color-slate-400);
+  transition: transform 0.3s ease;
+  margin-left: 8px;
+}
+
+/* Правая часть header — график + chevron */
+.caloric-insights-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Inline мини-график в строке заголовка */
+.caloric-insights-viz-inline {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  font-family: monospace;
+  line-height: 1;
+}
+
+/* Mini viz — мини-график баланса (старый, если нужен отдельно) */
+.caloric-insights-viz {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 0;
+  font-size: 18px;
+  font-family: monospace;
+}
+
+.balance-viz-bar {
+  cursor: pointer;
+  transition: transform 0.15s ease, text-shadow 0.15s ease;
+}
+
+.balance-viz-bar:hover {
+  transform: scaleY(1.3);
+}
+
+/* Details */
+.caloric-insights-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: slideDownFade 0.3s ease;
+}
+
+.caloric-insights-divider {
+  height: 1px;
+  background: rgba(59, 130, 246, 0.15);
+  margin: 8px 0 4px;
+}
+
+.caloric-insight-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 13px;
+  transition: background 0.2s ease;
+}
+
+.caloric-insight-item:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.caloric-insight-emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.caloric-insight-text {
+  flex: 1;
+  font-weight: 500;
+}
+
+/* Slide down animation */
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* === 14. WEIGHT SPARKLINE — график веса с трендом === */

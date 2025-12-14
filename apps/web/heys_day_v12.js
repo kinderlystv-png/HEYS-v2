@@ -3894,6 +3894,12 @@
     // === Popup для научного расчёта дефицита недели ===
     const [weekDeficitPopup, setWeekDeficitPopup] = useState(null); // { x, y, data: { totalEaten, totalBurned, deficitKcal, deficitPct, fatGrams, avgTargetDeficit } }
 
+    // === Состояние сворачивания карточки инсайтов ===
+    const [insightsExpanded, setInsightsExpanded] = useState(false);
+    
+    // === Popup для клика на столбик баланса ===
+    const [balanceDayPopup, setBalanceDayPopup] = useState(null); // { day, x, y }
+
     // === Данные замеров для карточки статистики ===
     const measurementFields = useMemo(() => ([
       { key: 'waist', label: 'Обхват талии', icon: '📏' },
@@ -4167,11 +4173,11 @@
         if (weekNormPopup && !e.target.closest('.week-norm-popup')) {
           setWeekNormPopup(null);
         }
-        if (debtPopup && !e.target.closest('.debt-popup') && !e.target.closest('.caloric-debt-card')) {
-          setDebtPopup(null);
-        }
         if (weekDeficitPopup && !e.target.closest('.week-deficit-popup') && !e.target.closest('.week-heatmap-deficit')) {
           setWeekDeficitPopup(null);
+        }
+        if (balanceDayPopup && !e.target.closest('.balance-day-popup') && !e.target.closest('.balance-viz-bar') && !e.target.closest('.balance-viz-bar-clickable')) {
+          setBalanceDayPopup(null);
         }
       };
       // Delay to avoid closing immediately on the same click
@@ -4182,7 +4188,7 @@
         clearTimeout(timerId);
         document.removeEventListener('click', handleClickOutside);
       };
-    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup, weekNormPopup, debtPopup, weekDeficitPopup]);
+    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup, weekNormPopup, weekDeficitPopup, balanceDayPopup]);
     
     // === Утилита для умного позиционирования попапов ===
     // Не даёт выходить за границы экрана
@@ -8790,6 +8796,486 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               : 'Вес стабилен'
         };
         
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔬 НАУЧНАЯ АНАЛИТИКА v4.3 — Deep Metabolic Insights
+        // ═══════════════════════════════════════════════════════════════════
+        
+        // --- 1. TEF Analysis (Thermic Effect of Food) ---
+        // Westerterp, 2004: TEF составляет 10-15% от калорий
+        const todayMeals = day.meals || [];
+        let todayProtein = 0, todayCarbs = 0, todayFat = 0;
+        todayMeals.forEach(meal => {
+          (meal.items || []).forEach(item => {
+            const g = item.grams || 0;
+            const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+            if (prod && g > 0) {
+              todayProtein += (prod.protein100 || 0) * g / 100;
+              todayCarbs += ((prod.simple100 || 0) + (prod.complex100 || 0)) * g / 100;
+              todayFat += ((prod.badFat100 || 0) + (prod.goodFat100 || 0) + (prod.trans100 || 0)) * g / 100;
+            }
+          });
+        });
+        
+        // TEF коэффициенты: белок 25%, углеводы 8%, жиры 3%
+        const tefProtein = todayProtein * 4 * 0.25;
+        const tefCarbs = todayCarbs * 4 * 0.08;
+        const tefFat = todayFat * 9 * 0.03;
+        const totalTEF = Math.round(tefProtein + tefCarbs + tefFat);
+        const tefPct = eatenKcal > 0 ? Math.round(totalTEF / eatenKcal * 100) : 0;
+        
+        const tefAnalysis = {
+          total: totalTEF,
+          percent: tefPct,
+          breakdown: { protein: Math.round(tefProtein), carbs: Math.round(tefCarbs), fat: Math.round(tefFat) },
+          quality: tefPct >= 12 ? 'excellent' : tefPct >= 10 ? 'good' : tefPct >= 8 ? 'normal' : 'low',
+          insight: tefPct >= 12 
+            ? `🔥 Отличный TEF ${tefPct}%! Много белка = больше калорий на переваривание`
+            : tefPct < 8
+              ? `⚠️ Низкий TEF ${tefPct}%. Добавь белка для ускорения метаболизма`
+              : `✓ TEF ${tefPct}% — стандартный термический эффект`,
+          pmid: '15507147' // Westerterp, 2004
+        };
+        
+        // --- 2. EPOC Analysis (Excess Post-exercise Oxygen Consumption) ---
+        // LaForgia et al., 2006: EPOC может добавить 6-15% к затратам тренировки
+        const todayTrainings = day.trainings || [];
+        let epocKcal = 0;
+        let epocInsight = null;
+        
+        if (todayTrainings.length > 0) {
+          todayTrainings.forEach(tr => {
+            const zones = tr.z || [0, 0, 0, 0];
+            const totalMin = zones.reduce((s, v) => s + v, 0);
+            const highIntensityMin = (zones[2] || 0) + (zones[3] || 0);
+            const intensity = totalMin > 0 ? highIntensityMin / totalMin : 0;
+            
+            // EPOC зависит от интенсивности: 6% (низкая) до 15% (высокая)
+            const epocRate = 0.06 + intensity * 0.09;
+            const trainingKcal = zones.reduce((sum, mins, idx) => {
+              const met = hrZones[idx]?.MET || (idx + 1) * 2;
+              return sum + (mins * met * (prof?.weight || 70) / 60);
+            }, 0);
+            epocKcal += trainingKcal * epocRate;
+          });
+          
+          epocKcal = Math.round(epocKcal);
+          epocInsight = epocKcal > 50 
+            ? `🔥 +${epocKcal} ккал EPOC — метаболизм повышен после тренировки`
+            : epocKcal > 20
+              ? `⚡ +${epocKcal} ккал EPOC от тренировки`
+              : null;
+        }
+        
+        const epocAnalysis = {
+          kcal: epocKcal,
+          insight: epocInsight,
+          hasTraining: todayTrainings.length > 0,
+          pmid: '16825252' // LaForgia, 2006
+        };
+        
+        // --- 3. Adaptive Thermogenesis ---
+        // Rosenbaum & Leibel, 2010: При хроническом дефиците метаболизм падает на 10-15%
+        const chronicDeficit = pastDays.filter(d => d.ratio < 0.85).length;
+        const adaptiveReduction = chronicDeficit >= 5 ? 0.12 : chronicDeficit >= 3 ? 0.08 : chronicDeficit >= 2 ? 0.04 : 0;
+        
+        const adaptiveThermogenesis = {
+          chronicDeficitDays: chronicDeficit,
+          metabolicReduction: adaptiveReduction,
+          reducedKcal: Math.round(optimum * adaptiveReduction),
+          isAdapted: adaptiveReduction > 0,
+          insight: adaptiveReduction >= 0.10
+            ? `⚠️ Метаболизм снижен на ~${Math.round(adaptiveReduction * 100)}% из-за хронического дефицита. Рекомендуется refeed`
+            : adaptiveReduction >= 0.05
+              ? `📉 Лёгкая адаптация метаболизма (−${Math.round(adaptiveReduction * 100)}%). Избегай длительного дефицита`
+              : null,
+          pmid: '20107198' // Rosenbaum & Leibel, 2010
+        };
+        
+        // --- 4. Hormonal Balance (Leptin/Ghrelin) ---
+        // Spiegel et al., 2004: Недосып повышает грелин на 28%, снижает лептин на 18%
+        const sleepHours = day.sleepHours || 0;
+        const sleepDebt = Math.max(0, (prof?.sleepHours || 8) - sleepHours);
+        
+        let ghrelinChange = 0, leptinChange = 0;
+        if (sleepDebt >= 2) {
+          ghrelinChange = Math.min(28, sleepDebt * 10); // До +28%
+          leptinChange = Math.min(18, sleepDebt * 6);   // До -18%
+        }
+        
+        const hormonalBalance = {
+          sleepDebt,
+          ghrelinIncrease: ghrelinChange,
+          leptinDecrease: leptinChange,
+          hungerRisk: ghrelinChange > 15 ? 'high' : ghrelinChange > 5 ? 'moderate' : 'low',
+          insight: ghrelinChange > 15
+            ? `😴 Недосып ${sleepDebt.toFixed(1)}ч → грелин +${ghrelinChange}%. Повышенный голод сегодня!`
+            : ghrelinChange > 5
+              ? `💤 Лёгкий недосып влияет на аппетит (+${ghrelinChange}% грелин)`
+              : null,
+          pmid: '15602591' // Spiegel, 2004
+        };
+        
+        // --- 5. Insulin Timing Analysis ---
+        // Jakubowicz et al., 2013: Большой завтрак лучше для похудения
+        const mealsByTime = [...todayMeals].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+        let breakfastKcal = 0, dinnerKcal = 0;
+        
+        mealsByTime.forEach(meal => {
+          const hour = parseInt((meal.time || '12:00').split(':')[0], 10);
+          const mealKcal = (meal.items || []).reduce((sum, item) => {
+            const g = item.grams || 0;
+            const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+            return sum + (prod?.kcal100 || 0) * g / 100;
+          }, 0);
+          
+          if (hour < 10) breakfastKcal += mealKcal;
+          if (hour >= 19) dinnerKcal += mealKcal;
+        });
+        
+        const breakfastRatio = eatenKcal > 0 ? breakfastKcal / eatenKcal : 0;
+        const dinnerRatio = eatenKcal > 0 ? dinnerKcal / eatenKcal : 0;
+        
+        const insulinTimingAnalysis = {
+          breakfastKcal: Math.round(breakfastKcal),
+          dinnerKcal: Math.round(dinnerKcal),
+          breakfastRatio,
+          dinnerRatio,
+          isOptimal: breakfastRatio >= 0.25 && dinnerRatio <= 0.30,
+          insight: breakfastRatio < 0.15 && eatenKcal > 500
+            ? `🌅 Мало калорий утром (${Math.round(breakfastRatio * 100)}%). Большой завтрак ускоряет метаболизм`
+            : dinnerRatio > 0.40
+              ? `🌙 Много калорий вечером (${Math.round(dinnerRatio * 100)}%). Перенеси часть на утро`
+              : breakfastRatio >= 0.25
+                ? `✅ Отличное распределение! Завтрак ${Math.round(breakfastRatio * 100)}% калорий`
+                : null,
+          pmid: '23512957' // Jakubowicz, 2013
+        };
+        
+        // --- 6. Cortisol & Stress Analysis ---
+        // Epel et al., 2001: Стресс увеличивает тягу к сладкому и жирному
+        const avgStress = day.stressAvg || 0;
+        const highStressDays = pastDays.filter(d => (d.stressAvg || 0) >= 6).length;
+        
+        // Считаем простые углеводы за сегодня
+        let todaySimple = 0;
+        todayMeals.forEach(meal => {
+          (meal.items || []).forEach(item => {
+            const g = item.grams || 0;
+            const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+            if (prod && g > 0) {
+              todaySimple += (prod.simple100 || 0) * g / 100;
+            }
+          });
+        });
+        
+        const stressEatingPattern = avgStress >= 6 && todaySimple > 50;
+        
+        const cortisolAnalysis = {
+          todayStress: avgStress,
+          highStressDays,
+          simpleCarbs: Math.round(todaySimple),
+          stressEatingDetected: stressEatingPattern,
+          insight: stressEatingPattern
+            ? `😰 Стресс ${avgStress}/10 + много сладкого (${Math.round(todaySimple)}г). Кортизол провоцирует тягу к быстрым углеводам`
+            : avgStress >= 7
+              ? `⚠️ Высокий стресс (${avgStress}/10) может усилить аппетит. Будь внимательней`
+              : highStressDays >= 3
+                ? `📊 ${highStressDays} стрессовых дней за неделю. Это влияет на пищевое поведение`
+                : null,
+          pmid: '11070333' // Epel, 2001
+        };
+        
+        // --- 7. Circadian Rhythm Analysis ---
+        // Garaulet et al., 2013: Поздний ужин ассоциирован с худшим похудением
+        const lastMealTime = mealsByTime.length > 0 ? mealsByTime[mealsByTime.length - 1]?.time : null;
+        const lastMealHour = lastMealTime ? parseInt(lastMealTime.split(':')[0], 10) : 0;
+        const sleepStart = day.sleepStart || '23:00';
+        const sleepStartHour = parseInt(sleepStart.split(':')[0], 10);
+        const hoursBeforeSleep = lastMealHour > 0 ? sleepStartHour - lastMealHour : 0;
+        
+        const circadianAnalysis = {
+          lastMealTime,
+          lastMealHour,
+          hoursBeforeSleep,
+          isLateEater: lastMealHour >= 21,
+          insight: hoursBeforeSleep < 2 && hoursBeforeSleep >= 0
+            ? `🌙 Еда за ${hoursBeforeSleep}ч до сна. Рекомендуется минимум 3 часа`
+            : lastMealHour >= 22
+              ? `⏰ Поздний ужин (${lastMealTime}). Это замедляет метаболизм ночью`
+              : lastMealHour > 0 && lastMealHour <= 19
+                ? `✅ Последний приём в ${lastMealTime} — отлично для метаболизма!`
+                : null,
+          pmid: '23357955' // Garaulet, 2013
+        };
+        
+        // --- 8. Meal Frequency Analysis ---
+        // Leidy et al., 2011: 3-4 приёма оптимально для контроля аппетита
+        const mealCount = todayMeals.length;
+        const avgMealKcal = mealCount > 0 ? eatenKcal / mealCount : 0;
+        
+        const mealFrequencyAnalysis = {
+          count: mealCount,
+          avgKcal: Math.round(avgMealKcal),
+          isOptimal: mealCount >= 3 && mealCount <= 5,
+          insight: mealCount <= 2 && eatenKcal > 1000
+            ? `🍽️ Только ${mealCount} приёма пищи. 3-4 приёма лучше для сытости и метаболизма`
+            : mealCount >= 6
+              ? `🔄 ${mealCount} приёмов — много перекусов. Это может стимулировать аппетит`
+              : avgMealKcal > 600 && mealCount >= 3
+                ? `⚠️ Большие порции (${Math.round(avgMealKcal)} ккал/приём). Раздели на меньшие`
+                : null,
+          pmid: '21123467' // Leidy, 2011
+        };
+        
+        // --- 9. Metabolic Window Analysis ---
+        // Ivy & Kuo, 1998: 30-60 мин после тренировки — окно для восстановления
+        let postWorkoutMealFound = false;
+        let postWorkoutProtein = 0;
+        
+        todayTrainings.forEach(tr => {
+          const trainingHour = parseInt((tr.time || '12:00').split(':')[0], 10);
+          const trainingMin = parseInt((tr.time || '12:00').split(':')[1], 10) || 0;
+          
+          todayMeals.forEach(meal => {
+            const mealHour = parseInt((meal.time || '12:00').split(':')[0], 10);
+            const mealMin = parseInt((meal.time || '12:00').split(':')[1], 10) || 0;
+            const diffMin = (mealHour * 60 + mealMin) - (trainingHour * 60 + trainingMin);
+            
+            if (diffMin > 0 && diffMin <= 90) {
+              postWorkoutMealFound = true;
+              (meal.items || []).forEach(item => {
+                const g = item.grams || 0;
+                const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+                if (prod && g > 0) {
+                  postWorkoutProtein += (prod.protein100 || 0) * g / 100;
+                }
+              });
+            }
+          });
+        });
+        
+        const metabolicWindowAnalysis = {
+          hasTraining: todayTrainings.length > 0,
+          postWorkoutMealFound,
+          postWorkoutProtein: Math.round(postWorkoutProtein),
+          isOptimal: postWorkoutMealFound && postWorkoutProtein >= 20,
+          insight: todayTrainings.length > 0 && !postWorkoutMealFound
+            ? `💪 Тренировка была, но нет приёма пищи в течение 90 мин. Упущено метаболическое окно!`
+            : postWorkoutMealFound && postWorkoutProtein < 20
+              ? `🥛 После тренировки только ${Math.round(postWorkoutProtein)}г белка. Нужно минимум 20г`
+              : postWorkoutMealFound && postWorkoutProtein >= 20
+                ? `✅ Отлично! ${Math.round(postWorkoutProtein)}г белка после тренировки`
+                : null,
+          pmid: '9694422' // Ivy & Kuo, 1998
+        };
+        
+        // --- 10. Weight Prediction (Hall Model) ---
+        // Hall et al., 2011: Модель предсказания веса на основе баланса
+        const currentWeight = prof?.weight || 70;
+        const weeklyBalanceKcal = totalBalance * 7 / Math.max(pastDays.length, 1);
+        const predictedWeightChange = weeklyBalanceKcal / 7700; // кг за неделю
+        const monthlyPrediction = predictedWeightChange * 4;
+        
+        const weightPrediction = {
+          weeklyChange: Math.round(predictedWeightChange * 1000) / 1000,
+          monthlyChange: Math.round(monthlyPrediction * 10) / 10,
+          predictedWeight: Math.round((currentWeight + monthlyPrediction) * 10) / 10,
+          insight: Math.abs(monthlyPrediction) >= 0.5
+            ? predictedWeightChange > 0
+              ? `📈 При текущем темпе: +${monthlyPrediction.toFixed(1)}кг за месяц`
+              : `📉 При текущем темпе: ${monthlyPrediction.toFixed(1)}кг за месяц`
+            : `⚖️ Вес стабилен (изменение <0.5кг/мес)`,
+          pmid: '21872751' // Hall, 2011
+        };
+        
+        // --- 11. Fat Quality Analysis (Omega Balance) ---
+        // Simopoulos, 2008: Оптимальное соотношение Omega-6:Omega-3 = 4:1
+        let totalGoodFat = 0, totalBadFat = 0, totalTransFat = 0;
+        todayMeals.forEach(meal => {
+          (meal.items || []).forEach(item => {
+            const g = item.grams || 0;
+            const prod = pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+            if (prod && g > 0) {
+              totalGoodFat += (prod.goodFat100 || 0) * g / 100;
+              totalBadFat += (prod.badFat100 || 0) * g / 100;
+              totalTransFat += (prod.trans100 || 0) * g / 100;
+            }
+          });
+        });
+        
+        const totalFatConsumed = totalGoodFat + totalBadFat + totalTransFat;
+        const goodFatRatio = totalFatConsumed > 0 ? totalGoodFat / totalFatConsumed : 0;
+        
+        const fatQualityAnalysis = {
+          goodFat: Math.round(totalGoodFat),
+          badFat: Math.round(totalBadFat),
+          transFat: Math.round(totalTransFat * 10) / 10,
+          goodFatRatio,
+          quality: goodFatRatio >= 0.6 ? 'excellent' : goodFatRatio >= 0.4 ? 'good' : goodFatRatio >= 0.25 ? 'moderate' : 'poor',
+          insight: totalTransFat > 1
+            ? `🚫 Транс-жиры ${totalTransFat.toFixed(1)}г! Это очень вредно для сердца`
+            : goodFatRatio < 0.25 && totalFatConsumed > 20
+              ? `⚠️ Мало полезных жиров (${Math.round(goodFatRatio * 100)}%). Добавь рыбу, орехи, авокадо`
+              : goodFatRatio >= 0.6
+                ? `✅ Отличный баланс жиров! ${Math.round(goodFatRatio * 100)}% полезных`
+                : null,
+          pmid: '18408140' // Simopoulos, 2008
+        };
+        
+        // --- 12. Insulin Wave Integration ---
+        // Связь с модулем инсулиновой волны
+        let insulinWaveInsight = null;
+        if (typeof HEYS !== 'undefined' && HEYS.InsulinWave) {
+          try {
+            const waveData = HEYS.InsulinWave.getLastWaveData?.() || {};
+            if (waveData.status === 'active' && waveData.remaining > 0) {
+              insulinWaveInsight = {
+                status: 'active',
+                remaining: waveData.remaining,
+                text: `🌊 Инсулиновая волна активна ещё ${waveData.remaining} мин. Жиросжигание заблокировано`,
+                recommendation: 'Дождись окончания волны перед следующим приёмом пищи'
+              };
+            } else if (waveData.status === 'lipolysis') {
+              insulinWaveInsight = {
+                status: 'lipolysis',
+                text: `🔥 Липолиз активен! Жир сжигается`,
+                recommendation: 'Отличное время для лёгкой активности'
+              };
+            }
+          } catch (e) { /* ignore */ }
+        }
+        
+        // --- 13. Sleep-Calorie Correlation ---
+        // Связь недосыпа и переедания за прошлые дни
+        const sleepCalorieCorrelation = pastDays.reduce((acc, d) => {
+          const sleep = d.sleepHours || 0;
+          const ratio = d.ratio || 0;
+          if (sleep > 0 && sleep < 6 && ratio > 1.1) {
+            acc.badSleepOvereatDays++;
+          }
+          if (sleep >= 7 && ratio >= 0.85 && ratio <= 1.1) {
+            acc.goodSleepBalancedDays++;
+          }
+          return acc;
+        }, { badSleepOvereatDays: 0, goodSleepBalancedDays: 0 });
+        
+        const sleepInsight = sleepCalorieCorrelation.badSleepOvereatDays >= 2
+          ? {
+              type: 'correlation',
+              text: `😴 ${sleepCalorieCorrelation.badSleepOvereatDays} дня: недосып → переедание. Сон влияет на аппетит!`,
+              pmid: '15602591'
+            }
+          : sleepCalorieCorrelation.goodSleepBalancedDays >= 3
+            ? {
+                type: 'positive',
+                text: `✅ Хороший сон = контроль аппетита (${sleepCalorieCorrelation.goodSleepBalancedDays} сбалансированных дня)`,
+                pmid: '15602591'
+              }
+            : null;
+        
+        // --- 14. Hydration Impact ---
+        // Dennis et al., 2010: Вода перед едой снижает потребление на 75-90 ккал
+        const waterMl = day.waterMl || 0;
+        const waterGoal = typeof HEYS !== 'undefined' && HEYS.utils?.getWaterGoal 
+          ? HEYS.utils.getWaterGoal(prof) 
+          : 2000;
+        const waterRatio = waterGoal > 0 ? waterMl / waterGoal : 0;
+        
+        const waterInsight = waterRatio < 0.5 && eatenKcal > optimum
+          ? {
+              type: 'warning',
+              text: `💧 Мало воды (${Math.round(waterRatio * 100)}%) + перебор калорий. Вода помогает контролировать аппетит`,
+              pmid: '19661958'
+            }
+          : waterRatio >= 1.0
+            ? {
+                type: 'positive',
+                text: `💧 Отличная гидратация! Это помогает метаболизму и сытости`,
+                pmid: '19661958'
+              }
+            : null;
+        
+        // --- 15. Last Week Comparison ---
+        // Сравнение с прошлой неделей
+        let lastWeekBalance = 0;
+        let lastWeekDays = 0;
+        // todayDate уже объявлен выше (строка ~8590)
+        
+        for (let i = 7; i < 14; i++) {
+          const checkDate = new Date(todayDate);
+          checkDate.setDate(todayDate.getDate() - i);
+          const checkDateStr = fmtDate(checkDate);
+          const dayData = sparklineData?.activeDays?.get?.(checkDateStr);
+          if (dayData && dayData.kcal && dayData.optimum) {
+            lastWeekBalance += dayData.kcal - dayData.optimum;
+            lastWeekDays++;
+          }
+        }
+        
+        const lastWeekComparison = lastWeekDays >= 3 ? {
+          lastWeekBalance: Math.round(lastWeekBalance),
+          thisWeekBalance: Math.round(totalBalance),
+          improvement: totalBalance < lastWeekBalance,
+          diff: Math.round(totalBalance - lastWeekBalance),
+          insight: totalBalance < lastWeekBalance - 200
+            ? `📈 Эта неделя лучше прошлой на ${Math.abs(Math.round(totalBalance - lastWeekBalance))} ккал!`
+            : totalBalance > lastWeekBalance + 200
+              ? `📉 Эта неделя хуже прошлой на ${Math.round(totalBalance - lastWeekBalance)} ккал`
+              : `↔️ Баланс на уровне прошлой недели`
+        } : null;
+        
+        // --- 16. Smart Timing (не показывать лишнее утром) ---
+        const currentHour = new Date().getHours();
+        const showExcessWarning = currentHour >= 14 || (hasExcess && netExcess > 300);
+        const showDebtWarning = currentHour >= 12 || (hasDebt && rawDebt > 400);
+        
+        const smartTiming = {
+          currentHour,
+          showExcessWarning,
+          showDebtWarning,
+          reason: currentHour < 12 
+            ? 'Утро — ещё рано делать выводы о балансе дня' 
+            : 'День в разгаре — данные актуальны'
+        };
+        
+        // --- 17. Cycle Awareness (если доступен модуль цикла) ---
+        let cycleInsight = null;
+        if (typeof HEYS !== 'undefined' && HEYS.Cycle && day.cycleDay) {
+          const phase = HEYS.Cycle.getCyclePhase?.(day.cycleDay);
+          if (phase) {
+            const kcalMult = HEYS.Cycle.getKcalMultiplier?.(day.cycleDay) || 1;
+            if (kcalMult > 1.05) {
+              cycleInsight = {
+                phase: phase.name,
+                multiplier: kcalMult,
+                text: `🌸 ${phase.name} фаза цикла: норма калорий увеличена на ${Math.round((kcalMult - 1) * 100)}%`,
+                recommendation: 'Лёгкий перебор в эту фазу — норма'
+              };
+            }
+          }
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // Собираем все научные инсайты в массив
+        // ═══════════════════════════════════════════════════════════════════
+        const scientificInsights = [
+          tefAnalysis.insight && { ...tefAnalysis, type: 'tef' },
+          epocAnalysis.insight && { type: 'epoc', ...epocAnalysis },
+          adaptiveThermogenesis.insight && { type: 'adaptive', ...adaptiveThermogenesis },
+          hormonalBalance.insight && { type: 'hormonal', ...hormonalBalance },
+          insulinTimingAnalysis.insight && { type: 'timing', ...insulinTimingAnalysis },
+          cortisolAnalysis.insight && { type: 'cortisol', ...cortisolAnalysis },
+          circadianAnalysis.insight && { type: 'circadian', ...circadianAnalysis },
+          mealFrequencyAnalysis.insight && { type: 'frequency', ...mealFrequencyAnalysis },
+          metabolicWindowAnalysis.insight && { type: 'window', ...metabolicWindowAnalysis },
+          fatQualityAnalysis.insight && { type: 'fatQuality', ...fatQualityAnalysis },
+          insulinWaveInsight && { type: 'insulinWave', ...insulinWaveInsight },
+          sleepInsight,
+          waterInsight,
+          lastWeekComparison?.insight && { type: 'comparison', ...lastWeekComparison },
+          cycleInsight && { type: 'cycle', ...cycleInsight }
+        ].filter(Boolean);
+        
         // === РЕЗУЛЬТАТ ===
         return {
           // Долг (недобор)
@@ -8819,13 +9305,200 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           trend,
           severity,
           weightImpact,
-          goalMode: goalThresholds.mode
+          goalMode: goalThresholds.mode,
+          
+          // 🔬 Научная аналитика v4.3
+          scientificInsights,
+          tefAnalysis,
+          epocAnalysis,
+          adaptiveThermogenesis,
+          hormonalBalance,
+          insulinTimingAnalysis,
+          cortisolAnalysis,
+          circadianAnalysis,
+          mealFrequencyAnalysis,
+          metabolicWindowAnalysis,
+          weightPrediction,
+          fatQualityAnalysis,
+          insulinWaveInsight,
+          sleepInsight,
+          waterInsight,
+          lastWeekComparison,
+          smartTiming,
+          cycleInsight
         };
       } catch (e) {
         console.warn('[CaloricDebt] Error:', e);
         return null;
       }
     }, [sparklineData, optimum, day.trainings, day.steps, day.deficitPct, prof?.deficitPctTarget]);
+    
+    // === BALANCE VIZ — Мини-график баланса за неделю ===
+    // Визуализация для карточки "Инсайты недели"
+    const balanceViz = React.useMemo(() => {
+      // Если нет caloricDebt — создаём базовую визуализацию из текущего дня
+      const dayBreakdown = caloricDebt?.dayBreakdown || [];
+      
+      // Если вообще нет данных — показываем хотя бы текущий день
+      if (dayBreakdown.length === 0) {
+        const todayDelta = Math.round(eatenKcal - optimum);
+        const todayRatio = optimum > 0 ? eatenKcal / optimum : 0;
+        
+        // Цвет для текущего дня
+        let todayColor;
+        if (Math.abs(todayDelta) <= 100) {
+          todayColor = '#22c55e';
+        } else if (todayDelta < 0) {
+          todayColor = '#eab308';
+        } else {
+          todayColor = '#ef4444';
+        }
+        
+        const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+        const todayIdx = new Date().getDay();
+        
+        return {
+          viz: [{
+            bar: todayDelta > 0 ? '▅' : todayDelta < -200 ? '▂' : '▄',
+            color: todayColor,
+            delta: todayDelta,
+            day: dayNames[todayIdx],
+            date: new Date().toISOString().split('T')[0],
+            eaten: Math.round(eatenKcal),
+            target: Math.round(optimum),
+            hasTraining: (day.trainings || []).length > 0,
+            ratio: todayRatio
+          }],
+          insights: [{
+            type: 'today',
+            emoji: '📊',
+            text: 'Сегодня: ' + (todayDelta > 0 ? '+' : '') + todayDelta + ' ккал от нормы',
+            color: todayColor
+          }],
+          totalBalance: todayDelta,
+          daysCount: 1
+        };
+      }
+      
+      const { totalBalance, trend, goalMode } = caloricDebt || {};
+      
+      // Столбики для визуализации
+      const bars = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+      
+      // Находим максимальную дельту для нормализации
+      const maxDelta = Math.max(...dayBreakdown.map(d => Math.abs(d.delta)), 100);
+      
+      const viz = dayBreakdown.map(d => {
+        // Нормализуем дельту к высоте столбика (0-7)
+        const normalized = Math.min(Math.abs(d.delta) / maxDelta, 1);
+        const barIdx = Math.floor(normalized * 7);
+        
+        // Цвет: зелёный = в норме (±100), жёлтый = недобор, красный = перебор
+        let color;
+        if (Math.abs(d.delta) <= 100) {
+          color = '#22c55e'; // Зелёный — баланс
+        } else if (d.delta < 0) {
+          color = '#eab308'; // Жёлтый — недобор
+        } else {
+          color = '#ef4444'; // Красный — перебор
+        }
+        
+        return {
+          bar: bars[barIdx],
+          color,
+          delta: d.delta,
+          day: d.dayName,
+          date: d.date,
+          eaten: d.eaten,
+          target: d.target,
+          hasTraining: d.hasTraining,
+          ratio: d.ratio
+        };
+      });
+      
+      // === РАЗДЕЛЯЕМ ИНСАЙТЫ ===
+      // 1. balanceInsights — про перебор/баланс (для карточки перебора)
+      // 2. scienceInsights — научная аналитика (для "Инсайты недели")
+      
+      const balanceInsights = [];
+      const scienceInsights = [];
+      
+      // === ИНСАЙТЫ БАЛАНСА (для карточки перебора) ===
+      
+      // 1. Тренд
+      if (trend && trend.direction !== 'stable') {
+        balanceInsights.push({
+          type: 'trend',
+          emoji: trend.emoji,
+          text: trend.text,
+          color: trend.direction === 'improving' ? '#22c55e' : '#ef4444'
+        });
+      }
+      
+      // 2. Паттерн выходных
+      const weekendDays = dayBreakdown.filter((d, i) => i >= 5); // Сб, Вс
+      const weekdayDays = dayBreakdown.filter((d, i) => i < 5);
+      const weekendAvg = weekendDays.length > 0 ? weekendDays.reduce((s, d) => s + d.delta, 0) / weekendDays.length : 0;
+      const weekdayAvg = weekdayDays.length > 0 ? weekdayDays.reduce((s, d) => s + d.delta, 0) / weekdayDays.length : 0;
+      
+      if (weekendAvg > weekdayAvg + 150) {
+        balanceInsights.push({
+          type: 'pattern',
+          emoji: '🎉',
+          text: 'В выходные переедаешь (+' + Math.round(weekendAvg - weekdayAvg) + ' ккал)',
+          color: '#f59e0b'
+        });
+      }
+      
+      // 3. Прогноз на конец недели
+      if (dayBreakdown.length >= 3) {
+        const avgDelta = totalBalance / dayBreakdown.length;
+        const remainingDays = 7 - dayBreakdown.length;
+        const forecastBalance = totalBalance + avgDelta * remainingDays;
+        
+        balanceInsights.push({
+          type: 'forecast',
+          emoji: forecastBalance > 200 ? '📈' : forecastBalance < -200 ? '📉' : '✅',
+          text: 'Прогноз на Вс: ' + (forecastBalance > 0 ? '+' : '') + Math.round(forecastBalance) + ' ккал',
+          color: Math.abs(forecastBalance) <= 200 ? '#22c55e' : '#f59e0b'
+        });
+      }
+      
+      // 4. Связь с весом
+      const gramsDelta = Math.round(Math.abs(totalBalance) / 7.7);
+      if (gramsDelta >= 50) {
+        balanceInsights.push({
+          type: 'weight',
+          emoji: '⚖️',
+          text: (totalBalance > 0 ? '+' : '−') + gramsDelta + 'г к весу за неделю',
+          color: '#64748b'
+        });
+      }
+      
+      // === НАУЧНЫЕ ИНСАЙТЫ (для блока "Инсайты недели") ===
+      if (caloricDebt?.scientificInsights) {
+        caloricDebt.scientificInsights.slice(0, 6).forEach(sci => {
+          if (sci && sci.insight) {
+            scienceInsights.push({
+              type: sci.type || 'science',
+              emoji: sci.insight.charAt(0) === '✅' || sci.insight.charAt(0) === '🔥' ? sci.insight.charAt(0) : '🔬',
+              text: sci.insight.replace(/^[^\s]+\s/, ''), // Убираем первый эмодзи
+              color: sci.insight.includes('⚠️') || sci.insight.includes('📉') ? '#f59e0b' : '#22c55e',
+              pmid: sci.pmid
+            });
+          }
+        });
+      }
+      
+      return {
+        viz,
+        balanceInsights,    // Для карточки перебора
+        scienceInsights,    // Для блока "Инсайты недели"
+        insights: balanceInsights, // Совместимость со старым кодом
+        totalBalance,
+        daysCount: dayBreakdown.length
+      };
+    }, [caloricDebt, eatenKcal, optimum, day.trainings]);
     
     // === displayOptimum — норма с учётом калорийного долга и refeed ===
     // Используется для UI отображения "сколько можно съесть сегодня"
@@ -12620,6 +13293,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               className: 'caloric-balance-badge',
               style: { backgroundColor: style.color }
             }, '+' + excess),
+            // Мини-график баланса ПОСЛЕ бейджа (увеличенный)
+            balanceViz && React.createElement('div', { className: 'caloric-balance-viz-inline caloric-balance-viz-large' },
+              balanceViz.viz.map((v, i) => React.createElement('span', { 
+                key: i, 
+                className: 'balance-viz-bar balance-viz-bar-clickable',
+                style: { 
+                  color: v.color,
+                  fontSize: '16px',
+                  lineHeight: 1,
+                  cursor: 'pointer'
+                },
+                title: v.day + ': ' + (v.delta > 0 ? '+' : '') + v.delta + ' ккал',
+                onClick: (e) => {
+                  e.stopPropagation();
+                  const rect = e.target.getBoundingClientRect();
+                  setBalanceDayPopup({ day: v, x: rect.left + rect.width / 2, y: rect.top });
+                }
+              }, v.bar))
+            ),
             React.createElement('span', { className: 'caloric-balance-chevron' }, 
               balanceCardExpanded ? '▲' : '▼'
             )
@@ -12627,36 +13319,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           
           // === DETAILS (только при раскрытии) ===
           balanceCardExpanded && React.createElement('div', { className: 'caloric-balance-details' },
-            // Breakdown по дням
-            React.createElement('div', { className: 'caloric-debt-days' },
-              dayBreakdown.map((d, i) => {
-                const isPositive = d.delta >= 0;
-                const isNegative = d.delta < 0;
-                const isTraining = d.hasTraining;
-                
-                return React.createElement('div', {
-                  key: d.date,
-                  className: 'caloric-debt-day' + 
-                    (isPositive ? ' positive' : '') + 
-                    (isNegative ? ' negative' : '') +
-                    (isTraining ? ' training' : '')
-                },
-                  React.createElement('span', { className: 'caloric-debt-day-name' }, d.dayName),
-                  React.createElement('span', { 
-                    className: 'caloric-debt-day-delta',
-                    style: { color: isPositive ? '#22c55e' : '#ef4444' }
-                  }, formatDelta(d.delta)),
-                  isTraining && React.createElement('span', { className: 'caloric-debt-day-train' }, '🏋️')
-                );
-              })
-            ),
-            
-            // Тренд
-            trend && trend.direction !== 'stable' && React.createElement('div', { 
-              className: 'caloric-excess-trend',
-              style: { color: trend.direction === 'improving' ? '#22c55e' : '#ef4444' }
-            },
-              trend.emoji + ' ' + trend.text
+            // Инсайты БАЛАНСА (тренд, паттерн, прогноз, влияние на вес)
+            balanceViz && balanceViz.balanceInsights && balanceViz.balanceInsights.length > 0 && React.createElement('div', { className: 'caloric-balance-insights' },
+              balanceViz.balanceInsights.map((insight, i) => React.createElement('div', {
+                key: i,
+                className: 'caloric-balance-insight-item',
+                style: { color: insight.color }
+              },
+                React.createElement('span', { className: 'caloric-insight-emoji' }, insight.emoji),
+                React.createElement('span', { className: 'caloric-insight-text' }, insight.text)
+              ))
             ),
             
             // Компенсация тренировками
@@ -12698,6 +13370,48 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           )
         );
       })(),
+      
+      // === INSIGHTS CARD — Карточка "Научная аналитика" (сворачиваемая) ===
+      balanceViz && balanceViz.scienceInsights && balanceViz.scienceInsights.length > 0 && React.createElement('div', {
+        className: 'caloric-insights-card' + (insightsExpanded ? ' expanded' : ''),
+        onClick: () => setInsightsExpanded(!insightsExpanded)
+      },
+        // === HEADER ===
+        React.createElement('div', { className: 'caloric-insights-header' },
+          React.createElement('div', { className: 'caloric-insights-title' },
+            React.createElement('span', { className: 'caloric-insights-icon' }, '🔬'),
+            React.createElement('span', { className: 'caloric-insights-label' }, 'Научная аналитика'),
+            React.createElement('span', { className: 'caloric-insights-badge' }, 
+              balanceViz.scienceInsights.length + ' инсайт' + (balanceViz.scienceInsights.length === 1 ? '' : balanceViz.scienceInsights.length < 5 ? 'а' : 'ов')
+            )
+          ),
+          React.createElement('span', { 
+            className: 'caloric-insights-chevron',
+            style: { transform: insightsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }
+          }, '▼')
+        ),
+        
+        // === DETAILS — научные инсайты (только при раскрытии) ===
+        insightsExpanded && React.createElement('div', { className: 'caloric-insights-details' },
+          React.createElement('div', { className: 'caloric-insights-divider' }),
+          balanceViz.scienceInsights.map((insight, i) => React.createElement('div', {
+            key: i,
+            className: 'caloric-insight-item',
+            style: { color: insight.color }
+          },
+            React.createElement('span', { className: 'caloric-insight-emoji' }, insight.emoji),
+            React.createElement('span', { className: 'caloric-insight-text' }, insight.text),
+            insight.pmid && React.createElement('a', {
+              href: 'https://pubmed.ncbi.nlm.nih.gov/' + insight.pmid,
+              target: '_blank',
+              rel: 'noopener',
+              className: 'caloric-insight-pmid',
+              onClick: (e) => e.stopPropagation(),
+              style: { fontSize: '10px', color: '#94a3b8', marginLeft: '4px' }
+            }, 'PMID')
+          ))
+        )
+      ),
       
       // Popup с деталями при клике на точку — НОВЫЙ КОНСИСТЕНТНЫЙ ДИЗАЙН
       sparklinePopup && sparklinePopup.type === 'kcal' && (() => {
@@ -13532,176 +14246,6 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           )
         );
       })(),
-      // === DEBT POPUP (детали калорийного долга) ===
-      debtPopup && (() => {
-        const { debt, rawDebt, dailyBoost, adjustedOptimum, needsRefeed, refeedBoost, 
-                dayBreakdown, totalBalance, consecutiveDeficitDays, daysAnalyzed } = debtPopup.data;
-        
-        const popupW = 300;
-        const popupH = 360;
-        const pos = getSmartPopupPosition(
-          debtPopup.x, 
-          debtPopup.y, 
-          popupW, 
-          popupH,
-          { preferAbove: true, offset: 8 }
-        );
-        const { left, top } = pos;
-        
-        // Определяем цвет полосы
-        const getStripeColor = () => {
-          if (needsRefeed) return 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)';
-          if (debt > 700) return 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)';
-          if (debt > 400) return 'linear-gradient(90deg, #eab308 0%, #ca8a04 100%)';
-          return 'linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)';
-        };
-        
-        return React.createElement('div', {
-          className: 'debt-popup sparkline-popup sparkline-popup-v2',
-          role: 'dialog',
-          style: {
-            position: 'fixed',
-            left: left + 'px',
-            top: top + 'px',
-            width: popupW + 'px',
-            zIndex: 9999
-          },
-          onClick: (e) => e.stopPropagation()
-        },
-          // Цветная полоса сверху
-          React.createElement('div', { 
-            className: 'sparkline-popup-stripe',
-            style: { background: getStripeColor() }
-          }),
-          React.createElement('div', { className: 'sparkline-popup-content' },
-            // Swipe indicator
-            React.createElement('div', { className: 'sparkline-popup-swipe' }),
-            // Заголовок
-            React.createElement('div', { className: 'sparkline-popup-header-v2' },
-              React.createElement('span', { className: 'sparkline-popup-date' }, '📊 Баланс за ' + daysAnalyzed + ' дня'),
-              React.createElement('span', { 
-                className: 'sparkline-popup-pct',
-                style: { 
-                  color: totalBalance >= 0 ? '#22c55e' : '#ef4444', 
-                  fontSize: '16px', 
-                  fontWeight: 700 
-                }
-              }, (totalBalance >= 0 ? '+' : '') + totalBalance + ' ккал')
-            ),
-            // Детали по дням
-            React.createElement('div', { 
-              style: { 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '4px', 
-                marginTop: '12px',
-                maxHeight: '160px',
-                overflowY: 'auto'
-              } 
-            },
-              dayBreakdown.map((d, i) => {
-                const isPositive = d.delta >= 0;
-                return React.createElement('div', { 
-                  key: d.date,
-                  style: { 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    padding: '6px 10px',
-                    borderRadius: '8px',
-                    background: d.hasTraining ? 'rgba(234, 179, 8, 0.1)' : 'rgba(100, 116, 139, 0.05)',
-                    border: d.hasTraining ? '1px solid rgba(234, 179, 8, 0.3)' : '1px solid transparent'
-                  }
-                },
-                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                    React.createElement('span', { 
-                      style: { fontWeight: 600, color: '#475569', minWidth: '24px' }
-                    }, d.dayNum),
-                    d.hasTraining && React.createElement('span', { 
-                      style: { fontSize: '12px' }, 
-                      title: 'День с тренировкой — дефицит ×1.3' 
-                    }, '🏋️')
-                  ),
-                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
-                    // Съедено / норма
-                    React.createElement('span', { style: { fontSize: '12px', color: '#64748b' } }, 
-                      d.eaten + ' / ' + d.target),
-                    // Дельта (инвертировано: недоел = хорошо для дефицита)
-                    React.createElement('span', { 
-                      style: { 
-                        fontWeight: 600,
-                        minWidth: '50px',
-                        textAlign: 'right',
-                        color: isPositive ? '#ef4444' : '#22c55e'
-                      }
-                    }, (isPositive ? '+' : '') + d.delta)
-                  )
-                );
-              })
-            ),
-            // Разделитель
-            React.createElement('div', { 
-              style: { 
-                height: '1px', 
-                background: 'rgba(100, 116, 139, 0.2)', 
-                margin: '12px 0' 
-              } 
-            }),
-            // Итоговая рекомендация
-            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
-              // Долг
-              debt > 0 && React.createElement('div', { 
-                style: { 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center' 
-                } 
-              },
-                React.createElement('span', { style: { color: '#64748b' } }, 'Накопленный долг:'),
-                React.createElement('span', { style: { fontWeight: 600, color: '#ef4444' } }, '-' + debt + ' ккал')
-              ),
-              // Сколько дней недоедания подряд
-              consecutiveDeficitDays >= 2 && React.createElement('div', { 
-                style: { 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center' 
-                } 
-              },
-                React.createElement('span', { style: { color: '#64748b' } }, 'Дней в дефиците подряд:'),
-                React.createElement('span', { 
-                  style: { 
-                    fontWeight: 600, 
-                    color: consecutiveDeficitDays >= 5 ? '#ef4444' : '#eab308' 
-                  } 
-                }, consecutiveDeficitDays)
-              ),
-              // Рекомендация
-              dailyBoost > 0 && React.createElement('div', { 
-                style: { 
-                  marginTop: '4px',
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  background: needsRefeed ? 'rgba(245, 158, 11, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-                  border: needsRefeed ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(34, 197, 94, 0.3)'
-                } 
-              },
-                React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px', color: needsRefeed ? '#d97706' : '#16a34a' } },
-                  needsRefeed ? '🍕 Загрузка рекомендуется' : '💡 Рекомендация'),
-                React.createElement('div', { style: { fontSize: '13px', color: '#475569' } },
-                  needsRefeed 
-                    ? 'Сегодня можно съесть ' + adjustedOptimum + ' ккал (норма +' + Math.round(refeedBoost / optimum * 100) + '%)'
-                    : 'Сегодня можно ' + adjustedOptimum + ' ккал (+' + dailyBoost + ' к норме)')
-              )
-            ),
-            // Кнопка закрытия
-            React.createElement('button', {
-              className: 'sparkline-popup-close',
-              onClick: () => setDebtPopup(null)
-            }, '✕')
-          )
-        );
-      })(),
       // === WEEK DEFICIT POPUP (научный расчёт сожжённого жира) ===
       weekDeficitPopup && (() => {
         const { totalEaten, totalBurned, deficitKcal, deficitPct, fatBurnedGrams, 
@@ -13967,6 +14511,169 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           )
         );
       })(),
+      
+      // === BALANCE DAY POPUP — детали дня при клике на столбик баланса ===
+      balanceDayPopup && (() => {
+        const { day: v, x, y } = balanceDayPopup;
+        
+        // Позиционирование
+        const popupW = 240;
+        const popupH = 200;
+        const pos = getSmartPopupPosition(x, y, popupW, popupH, { preferAbove: true, offset: 8 });
+        const { left, top } = pos;
+        
+        // Цвет полосы
+        const stripeColor = Math.abs(v.delta) <= 100 
+          ? '#22c55e'  // Баланс
+          : v.delta < 0 
+            ? '#f59e0b'  // Недобор (оранжевый)
+            : '#ef4444'; // Перебор (красный)
+        
+        return React.createElement(React.Fragment, null,
+          // Overlay для закрытия по клику вне
+          React.createElement('div', {
+            className: 'balance-day-popup-overlay',
+            style: {
+              position: 'fixed',
+              inset: 0,
+              zIndex: 10000,
+              background: 'transparent'
+            },
+            onClick: () => setBalanceDayPopup(null)
+          }),
+          React.createElement('div', {
+            className: 'balance-day-popup sparkline-popup-v2',
+            style: {
+              position: 'fixed',
+              left: left + 'px',
+              top: top + 'px',
+              width: popupW + 'px',
+              zIndex: 10001,
+              background: '#fff',
+              borderRadius: '16px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+              overflow: 'hidden',
+              animation: 'fadeInScale 0.2s ease'
+            },
+            onClick: (e) => e.stopPropagation()
+          },
+          // Цветная полоса сверху
+          React.createElement('div', { 
+            style: { 
+              height: '4px', 
+              background: stripeColor,
+              borderRadius: '16px 16px 0 0'
+            }
+          }),
+          // Контент
+          React.createElement('div', { style: { padding: '16px' } },
+            // Заголовок
+            React.createElement('div', { 
+              style: { 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '12px',
+                paddingRight: '24px'
+              }
+            },
+              React.createElement('span', { 
+                style: { fontSize: '16px', fontWeight: 600, color: '#1e293b' }
+              }, v.day + ', ' + v.date.split('-').slice(1).reverse().join('.')),
+              v.hasTraining && React.createElement('span', { 
+                style: { fontSize: '14px' },
+                title: 'Была тренировка'
+              }, '🏋️')
+            ),
+            // Съедено / Норма
+            React.createElement('div', { 
+              style: { 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: '12px',
+                marginBottom: '12px'
+              }
+            },
+              React.createElement('div', { 
+                style: { 
+                  textAlign: 'center', 
+                  padding: '10px', 
+                  background: 'rgba(14, 165, 233, 0.1)',
+                  borderRadius: '10px'
+                }
+              },
+                React.createElement('div', { style: { fontSize: '11px', color: '#64748b', textTransform: 'uppercase' } }, 'Съедено'),
+                React.createElement('div', { style: { fontSize: '18px', fontWeight: 700, color: '#0ea5e9' } }, v.eaten)
+              ),
+              React.createElement('div', { 
+                style: { 
+                  textAlign: 'center', 
+                  padding: '10px', 
+                  background: 'rgba(100, 116, 139, 0.1)',
+                  borderRadius: '10px'
+                }
+              },
+                React.createElement('div', { style: { fontSize: '11px', color: '#64748b', textTransform: 'uppercase' } }, 'Норма'),
+                React.createElement('div', { style: { fontSize: '18px', fontWeight: 700, color: '#475569' } }, v.target)
+              )
+            ),
+            // Баланс
+            React.createElement('div', { 
+              style: { 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '10px 12px',
+                background: stripeColor + '15',
+                borderRadius: '10px',
+                border: '1px solid ' + stripeColor + '30'
+              }
+            },
+              React.createElement('span', { style: { color: '#475569', fontSize: '13px' } }, 'Баланс'),
+              React.createElement('span', { 
+                style: { 
+                  fontSize: '18px', 
+                  fontWeight: 700, 
+                  color: stripeColor 
+                }
+              }, (v.delta > 0 ? '+' : '') + v.delta + ' ккал')
+            ),
+            // Выполнение %
+            React.createElement('div', { 
+              style: { 
+                marginTop: '8px',
+                fontSize: '12px',
+                color: '#94a3b8',
+                textAlign: 'center'
+              }
+            }, 'Выполнение: ' + Math.round(v.ratio * 100) + '%'),
+            // Кнопка закрытия
+            React.createElement('button', {
+              style: {
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                width: '24px',
+                height: '24px',
+                background: 'rgba(0,0,0,0.05)',
+                border: 'none',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: '#64748b',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              },
+              onClick: (e) => {
+                e.stopPropagation();
+                setBalanceDayPopup(null);
+              }
+            }, '✕')
+          )
+        ));
+      })(),
+      
       // === METRIC POPUP (вода, шаги, калории) ===
       metricPopup && (() => {
         // Позиционирование с защитой от выхода за экран
