@@ -5,6 +5,18 @@
   "installCommand": "cd ../.. && pnpm install",
   "rewrites": [
     {
+      "source": "/api/supabase/auth/v1/token",
+      "destination": "/api/supabase/auth/v1/token"
+    },
+    {
+      "source": "/api/supabase/auth/v1/user",
+      "destination": "/api/supabase/auth/v1/user"
+    },
+    {
+      "source": "/api/supabase/auth/v1/logout",
+      "destination": "/api/supabase/auth/v1/logout"
+    },
+    {
       "source": "/api/supabase/rest/v1/rpc/:fn",
       "destination": "/api/rpc?fn=:fn"
     },
