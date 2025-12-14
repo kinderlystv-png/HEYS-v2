@@ -8540,39 +8540,83 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
     }, [sparklineData, optimum]);
     
     // === CALORIC DEBT RECOVERY — расчёт калорийного долга за последние 3 дня ===
+    // === CALORIC BALANCE MODULE v3.0 ===
+    // Анализ баланса калорий за текущую неделю (с понедельника)
+    // Включает: долг, перебор, тренд, рекомендации кардио, учёт шагов и тренировок
     const caloricDebt = React.useMemo(() => {
-      const DEBT_WINDOW = 3;           // Окно расчёта (дней)
-      const MAX_DEBT = 1500;           // Максимум учитываемого долга
-      const RECOVERY_DAYS = 2;         // На сколько дней распределить
-      const MAX_BOOST_PCT = 0.25;      // Максимум +25% к норме
-      const TRAINING_MULT = 1.3;       // Недобор в тренировочный день ×1.3
-      const REFEED_THRESHOLD = 1000;   // Порог для refeed
-      const REFEED_CONSECUTIVE = 5;    // Дней подряд в дефиците >20%
-      const REFEED_BOOST_PCT = 0.35;   // +35% в refeed day
+      // === КОНСТАНТЫ ===
+      const CFG = {
+        MAX_DEBT: 1500,              // Максимум учитываемого долга
+        RECOVERY_DAYS: 2,            // На сколько дней распределить долг
+        MAX_BOOST_PCT: 0.25,         // Максимум +25% к норме
+        TRAINING_MULT: 1.3,          // Недобор в тренировочный день ×1.3
+        REFEED_THRESHOLD: 1000,      // Порог для refeed
+        REFEED_CONSECUTIVE: 5,       // Дней подряд в дефиците >20%
+        REFEED_BOOST_PCT: 0.35,      // +35% в refeed day
+        EXCESS_THRESHOLD: 100,       // Показывать перебор если > 100 ккал
+        CARDIO_KCAL_PER_MIN: 6,      // ~6 ккал/мин лёгкого кардио
+        STEPS_KCAL_PER_1000: 40,     // ~40 ккал на 1000 шагов
+        KCAL_PER_GRAM: 7.7           // Калории в грамме жира
+      };
+      
+      // === GOAL-AWARE THRESHOLDS ===
+      // Пороги зависят от цели пользователя
+      const getGoalThresholds = () => {
+        const deficitPct = day.deficitPct ?? prof?.deficitPctTarget ?? 0;
+        if (deficitPct <= -10) {
+          // Похудение — перебор критичнее
+          return { debtThreshold: 80, excessThreshold: 150, mode: 'loss' };
+        } else if (deficitPct >= 10) {
+          // Набор — недобор критичнее
+          return { debtThreshold: 150, excessThreshold: 200, mode: 'bulk' };
+        }
+        // Поддержание — симметрично
+        return { debtThreshold: 100, excessThreshold: 100, mode: 'maintenance' };
+      };
+      const goalThresholds = getGoalThresholds();
       
       if (!sparklineData || sparklineData.length < 2 || !optimum || optimum <= 0) {
         return null;
       }
       
       try {
-        // Используем выбранный день (date) как "сегодня"
-        const realTodayStr = date;
+        // === ОПРЕДЕЛЯЕМ НЕДЕЛЮ (с понедельника до вчера) ===
+        const todayDate = new Date(date + 'T12:00:00');
+        const todayStr = date;
+        const dayOfWeek = todayDate.getDay(); // 0 = вс, 1 = пн
+        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const monday = new Date(todayDate);
+        monday.setDate(todayDate.getDate() - daysFromMonday);
+        const mondayStr = fmtDate(monday);
         
-        // Берём последние DEBT_WINDOW дней (исключая сегодня — его ещё едим)
+        // Фильтруем дни: с понедельника до вчера (сегодня не считаем — ещё едим)
         const pastDays = sparklineData.filter(d => {
-          if (d.isToday) return false;           // Сегодня не считаем
-          if (d.isFuture) return false;          // Прогноз не считаем
-          if (d.kcal <= 0) return false;         // Пустые дни не считаем
+          if (d.isToday) return false;
+          if (d.isFuture) return false;
+          if (d.kcal <= 0) return false;
+          if (d.date < mondayStr) return false; // До понедельника не берём
+          if (d.date >= todayStr) return false; // Сегодня и позже не берём
           return true;
-        }).slice(-DEBT_WINDOW);
+        });
         
         if (pastDays.length === 0) return null;
         
-        // Считаем баланс с учётом тренировок
+        // === НАЗВАНИЯ ДНЕЙ НЕДЕЛИ ===
+        const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+        
+        // === СБОР ДАННЫХ ===
         let totalBalance = 0;
+        let weightedBalance = 0;
         let consecutiveDeficit = 0;
         let maxConsecutiveDeficit = 0;
+        let totalTrainingKcal = 0;
         const dayBreakdown = [];
+        const totalDays = pastDays.length;
+        
+        // Для тренда: первая и вторая половина
+        let firstHalfBalance = 0;
+        let secondHalfBalance = 0;
+        const midPoint = Math.floor(totalDays / 2);
         
         pastDays.forEach((d, idx) => {
           const target = d.target || optimum;
@@ -8580,10 +8624,28 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           
           // Тренировка усиливает критичность недобора
           if (delta < 0 && d.hasTraining) {
-            delta *= TRAINING_MULT;
+            delta *= CFG.TRAINING_MULT;
+          }
+          
+          // Собираем калории от тренировок за неделю
+          if (d.hasTraining && d.trainingKcal) {
+            totalTrainingKcal += d.trainingKcal;
           }
           
           totalBalance += delta;
+          
+          // Весовой коэффициент: вчера важнее понедельника
+          // Формула: 0.5 + (0.5 * (totalDays - daysAgo) / totalDays)
+          const daysAgo = totalDays - idx;
+          const weight = 0.5 + (0.5 * (totalDays - daysAgo) / totalDays);
+          weightedBalance += delta * weight;
+          
+          // Тренд: первая vs вторая половина
+          if (idx < midPoint) {
+            firstHalfBalance += delta;
+          } else {
+            secondHalfBalance += delta;
+          }
           
           // Считаем последовательные дни в дефиците >20%
           const ratio = d.kcal / target;
@@ -8594,11 +8656,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             consecutiveDeficit = 0;
           }
           
+          // День недели
+          const dayDate = new Date(d.date + 'T12:00:00');
+          const dayOfWeekIdx = dayDate.getDay();
+          
           // Breakdown для UI
           dayBreakdown.push({
             date: d.date,
             dayNum: d.date.split('-')[2],
-            eaten: Math.round(d.kcal),  // <-- было kcal, нужно eaten для popup
+            dayName: dayNames[dayOfWeekIdx],
+            eaten: Math.round(d.kcal),
             target: Math.round(target),
             delta: Math.round(delta),
             hasTraining: d.hasTraining,
@@ -8606,11 +8673,35 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           });
         });
         
-        // Долг = отрицательный баланс (если переели, долга нет)
+        // === ДОЛГ (недобор) ===
         const rawDebt = Math.max(0, -totalBalance);
-        const cappedDebt = Math.min(rawDebt, MAX_DEBT);
+        const cappedDebt = Math.min(rawDebt, CFG.MAX_DEBT);
+        const hasDebt = cappedDebt > goalThresholds.debtThreshold;
         
-        // Определяем нужен ли refeed
+        // === ПЕРЕБОР ===
+        const rawExcess = Math.max(0, totalBalance);
+        // При переборе учитываем тренировки за неделю (компенсируют 50%)
+        const netExcess = Math.max(0, rawExcess - totalTrainingKcal * 0.5);
+        const hasExcess = netExcess > goalThresholds.excessThreshold;
+        
+        // === ТРЕНД ===
+        let trend = { direction: 'stable', text: 'Стабильно', emoji: '➡️' };
+        if (totalDays >= 4) {
+          const trendDiff = secondHalfBalance - firstHalfBalance;
+          if (trendDiff < -100) {
+            trend = { direction: 'improving', text: 'Недобор уменьшается', emoji: '📈' };
+          } else if (trendDiff > 100) {
+            trend = { direction: 'worsening', text: 'Перебор растёт', emoji: '📉' };
+          }
+        }
+        
+        // === SEVERITY (степень серьёзности) ===
+        let severity = 0; // 0 = незначительно, 1 = умеренно, 2 = значительно
+        const absBalance = Math.abs(totalBalance);
+        if (absBalance > 800) severity = 2;
+        else if (absBalance > 400) severity = 1;
+        
+        // === REFEED ===
         const hasHardTrainingToday = (day.trainings || []).some(t => {
           if (!t || !t.z) return false;
           const totalMin = t.z.reduce((s, m) => s + (+m || 0), 0);
@@ -8618,26 +8709,91 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         });
         
         const needsRefeed = 
-          cappedDebt >= REFEED_THRESHOLD ||
-          maxConsecutiveDeficit >= REFEED_CONSECUTIVE ||
+          cappedDebt >= CFG.REFEED_THRESHOLD ||
+          maxConsecutiveDeficit >= CFG.REFEED_CONSECUTIVE ||
           (cappedDebt > 500 && hasHardTrainingToday);
         
-        // Рассчитываем boost
+        // === BOOST (добавка к норме при долге) ===
         let dailyBoost = 0;
         let refeedBoost = 0;
         
         if (needsRefeed) {
-          refeedBoost = Math.round(optimum * REFEED_BOOST_PCT);
-          dailyBoost = refeedBoost; // Refeed = сегодня +35%
-        } else if (cappedDebt > 0) {
-          const rawBoost = cappedDebt / RECOVERY_DAYS;
-          const maxBoost = optimum * MAX_BOOST_PCT;
+          refeedBoost = Math.round(optimum * CFG.REFEED_BOOST_PCT);
+          dailyBoost = refeedBoost;
+        } else if (hasDebt) {
+          const rawBoost = cappedDebt / CFG.RECOVERY_DAYS;
+          const maxBoost = optimum * CFG.MAX_BOOST_PCT;
           dailyBoost = Math.round(Math.min(rawBoost, maxBoost));
         }
         
-        // Результат
-        const result = {
-          hasDebt: cappedDebt > 100,           // Показывать если долг > 100 ккал
+        // === РЕКОМЕНДАЦИЯ КАРДИО (при переборе) ===
+        let cardioRecommendation = null;
+        if (hasExcess && !hasHardTrainingToday) {
+          // Учитываем сегодняшние шаги
+          const todaySteps = day.steps || 0;
+          const stepsKcal = Math.round(todaySteps / 1000 * CFG.STEPS_KCAL_PER_1000);
+          const remainingExcess = Math.max(0, netExcess - stepsKcal);
+          
+          if (remainingExcess > 50) {
+            const rawMinutes = Math.round(remainingExcess / CFG.CARDIO_KCAL_PER_MIN);
+            
+            // Если > 60 мин — делим на 2 дня
+            const splitDays = rawMinutes > 60 ? 2 : 1;
+            const minutesPerDay = Math.round(rawMinutes / splitDays);
+            
+            // Тип активности
+            let activityType, activityIcon;
+            if (minutesPerDay <= 20) {
+              activityType = 'прогулка';
+              activityIcon = '🚶';
+            } else if (minutesPerDay <= 45) {
+              activityType = 'лёгкое кардио';
+              activityIcon = '🏃';
+            } else {
+              activityType = 'активное кардио';
+              activityIcon = '🏃‍♂️';
+            }
+            
+            cardioRecommendation = {
+              excessKcal: Math.round(netExcess),
+              stepsCompensation: stepsKcal,
+              remainingExcess,
+              minutes: minutesPerDay,
+              splitDays,
+              activityType,
+              activityIcon,
+              text: splitDays > 1 
+                ? `${splitDays} дня по ${minutesPerDay} мин ${activityType}`
+                : `${minutesPerDay} мин ${activityType}`
+            };
+          } else if (stepsKcal > 0) {
+            // Шаги полностью компенсировали перебор
+            cardioRecommendation = {
+              excessKcal: Math.round(netExcess),
+              stepsCompensation: stepsKcal,
+              remainingExcess: 0,
+              minutes: 0,
+              compensatedBySteps: true,
+              text: 'Отличная активность! Шаги компенсировали перебор'
+            };
+          }
+        }
+        
+        // === СВЯЗЬ С ВЕСОМ ===
+        const weightImpact = {
+          grams: Math.round(Math.abs(totalBalance) / CFG.KCAL_PER_GRAM),
+          isGain: totalBalance > 0,
+          text: totalBalance > 50 
+            ? `~+${Math.round(totalBalance / CFG.KCAL_PER_GRAM)}г к весу`
+            : totalBalance < -50
+              ? `~−${Math.round(Math.abs(totalBalance) / CFG.KCAL_PER_GRAM)}г веса`
+              : 'Вес стабилен'
+        };
+        
+        // === РЕЗУЛЬТАТ ===
+        return {
+          // Долг (недобор)
+          hasDebt,
           debt: Math.round(cappedDebt),
           rawDebt: Math.round(rawDebt),
           dailyBoost,
@@ -8645,17 +8801,31 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           needsRefeed,
           refeedBoost,
           consecutiveDeficitDays: maxConsecutiveDeficit,
+          
+          // Перебор
+          hasExcess,
+          excess: Math.round(netExcess),
+          rawExcess: Math.round(rawExcess),
+          totalTrainingKcal: Math.round(totalTrainingKcal),
+          cardioRecommendation,
+          
+          // Общее
           dayBreakdown,
           daysAnalyzed: pastDays.length,
-          totalBalance: Math.round(totalBalance)
+          totalBalance: Math.round(totalBalance),
+          weightedBalance: Math.round(weightedBalance),
+          
+          // Аналитика
+          trend,
+          severity,
+          weightImpact,
+          goalMode: goalThresholds.mode
         };
-        
-        return result;
       } catch (e) {
         console.warn('[CaloricDebt] Error:', e);
         return null;
       }
-    }, [sparklineData, optimum, day.trainings]);
+    }, [sparklineData, optimum, day.trainings, day.steps, day.deficitPct, prof?.deficitPctTarget]);
     
     // === displayOptimum — норма с учётом калорийного долга и refeed ===
     // Используется для UI отображения "сколько можно съесть сегодня"
@@ -12390,6 +12560,88 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           )
         );
       })(),
+      
+      // === CALORIC EXCESS CARD — Карточка перебора с рекомендацией кардио ===
+      caloricDebt && caloricDebt.hasExcess && !caloricDebt.hasDebt && (() => {
+        const { excess, rawExcess, cardioRecommendation, totalTrainingKcal, dayBreakdown, trend, severity, weightImpact, goalMode } = caloricDebt;
+        
+        // Стиль по severity
+        const getExcessStyle = () => {
+          if (severity === 2) return { icon: '🚨', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.2)', label: 'Значительный перебор' };
+          if (severity === 1) return { icon: '📊', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.08)', border: 'rgba(245, 158, 11, 0.2)', label: 'Умеренный перебор' };
+          return { icon: '📈', color: '#eab308', bg: 'rgba(234, 179, 8, 0.08)', border: 'rgba(234, 179, 8, 0.2)', label: 'Небольшой перебор' };
+        };
+        const style = getExcessStyle();
+        
+        return React.createElement('div', {
+          className: 'caloric-excess-card',
+          style: { 
+            background: style.bg, 
+            borderColor: style.border,
+            '--excess-color': style.color
+          }
+        },
+          // Header
+          React.createElement('div', { className: 'caloric-debt-header' },
+            React.createElement('span', { className: 'caloric-debt-icon' }, style.icon),
+            React.createElement('span', { className: 'caloric-debt-title' }, 'Баланс за ' + dayBreakdown.length + ' дней'),
+            React.createElement('span', { 
+              className: 'caloric-debt-badge',
+              style: { backgroundColor: style.color }
+            }, '+' + excess + ' ккал')
+          ),
+          
+          // Тренд
+          trend && trend.direction !== 'stable' && React.createElement('div', { 
+            className: 'caloric-excess-trend',
+            style: { color: trend.direction === 'improving' ? '#22c55e' : '#ef4444' }
+          },
+            React.createElement('span', null, trend.emoji + ' ' + trend.text)
+          ),
+          
+          // Компенсация тренировками
+          totalTrainingKcal > 0 && React.createElement('div', { className: 'caloric-excess-training' },
+            React.createElement('span', null, '🏋️ Тренировки компенсировали ~' + Math.round(totalTrainingKcal * 0.5) + ' ккал')
+          ),
+          
+          // Рекомендация кардио
+          cardioRecommendation && React.createElement('div', { className: 'caloric-excess-recommendation' },
+            cardioRecommendation.compensatedBySteps 
+              ? React.createElement('div', { className: 'caloric-excess-success' },
+                  React.createElement('span', { className: 'caloric-excess-rec-icon' }, '🎉'),
+                  React.createElement('span', { className: 'caloric-excess-rec-text' }, cardioRecommendation.text)
+                )
+              : React.createElement('div', { className: 'caloric-excess-cardio' },
+                  React.createElement('span', { className: 'caloric-excess-rec-icon' }, cardioRecommendation.activityIcon),
+                  React.createElement('div', { className: 'caloric-excess-rec-content' },
+                    React.createElement('span', { className: 'caloric-excess-rec-title' }, 'Рекомендация:'),
+                    React.createElement('span', { className: 'caloric-excess-rec-text' }, cardioRecommendation.text),
+                    cardioRecommendation.stepsCompensation > 0 && 
+                      React.createElement('span', { className: 'caloric-excess-steps-note' }, 
+                        '👟 Шаги уже списали ' + cardioRecommendation.stepsCompensation + ' ккал'
+                      )
+                  )
+                )
+          ),
+          
+          // Влияние на вес
+          weightImpact && severity >= 1 && React.createElement('div', { className: 'caloric-excess-weight' },
+            React.createElement('span', null, '⚖️ ' + weightImpact.text)
+          ),
+          
+          // Пояснение — без осуждения!
+          React.createElement('div', { className: 'caloric-debt-explanation' },
+            React.createElement('span', { className: 'caloric-debt-explanation-text' },
+              goalMode === 'bulk'
+                ? '💡 При наборе массы небольшой профицит — это нормально!'
+                : goalMode === 'loss'
+                  ? '💡 Перебор за неделю можно компенсировать активностью. Это не срыв, это данные.'
+                  : '💡 Баланс немного в плюсе. Лёгкая активность поможет его выровнять.'
+            )
+          )
+        );
+      })(),
+      
       // Popup с деталями при клике на точку — НОВЫЙ КОНСИСТЕНТНЫЙ ДИЗАЙН
       sparklinePopup && sparklinePopup.type === 'kcal' && (() => {
         const point = sparklinePopup.point;
