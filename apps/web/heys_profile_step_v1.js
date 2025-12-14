@@ -911,6 +911,9 @@
 
       const profile = lsGet('heys_profile', {});
       
+      // Вес из регистрации (целый) — это базовый и изначально текущий
+      const registrationWeight = step2.weight || profile.weight || 70;
+      
       // Обновляем профиль
       const updatedProfile = {
         ...profile,
@@ -919,9 +922,13 @@
         birthDate: step1.birthDate || profile.birthDate || '',
         age: step1.birthDate ? calcAgeFromBirthDate(step1.birthDate) : profile.age || 30,
         cycleTrackingEnabled: step1.cycleTrackingEnabled || false,
-        weight: step2.weight || profile.weight || 70,
+        // Базовый вес (стартовый, из регистрации) — НЕ меняется после
+        baseWeight: profile.baseWeight || registrationWeight,
+        // Текущий вес — изначально = базовый, потом обновляется из чек-ина
+        weight: profile.weight || registrationWeight,
         height: step2.height || profile.height || 175,
-        weightGoal: step2.weightGoal || profile.weightGoal || step2.weight || 70,
+        // Целевой вес (из регистрации)
+        weightGoal: step2.weightGoal || profile.weightGoal || registrationWeight,
         deficitPctTarget: step3.deficitPctTarget ?? profile.deficitPctTarget ?? 0,
         sleepHours: step4.sleepHours || profile.sleepHours || 8,
         insulinWaveHours: step4.insulinWaveHours || profile.insulinWaveHours || 3,
@@ -997,14 +1004,325 @@
   });
 
   // ============================================================
-  // ЭКРАН ПОЗДРАВЛЕНИЯ (W4)
+  // ШАГ ПРИВЕТСТВИЯ (welcome) — визуальный разделитель между регистрацией и чек-ином
+  // ============================================================
+  
+  /**
+   * Сохраняет данные профиля из stepData
+   * Используется при нажатии "Пропустить" на шаге welcome
+   */
+  function saveProfileFromStepData(allStepsData) {
+    const step1 = allStepsData['profile-personal'] || {};
+    const step2 = allStepsData['profile-body'] || {};
+    const step3 = allStepsData['profile-goals'] || {};
+    const step4 = allStepsData['profile-metabolism'] || {};
+    
+    console.log('[saveProfileFromStepData] Saving with data:', { step1, step2, step3, step4 });
+
+    const profile = lsGet('heys_profile', {});
+    
+    // Вес из регистрации (целый) — это базовый и изначально текущий
+    const registrationWeight = step2.weight || profile.weight || 70;
+    
+    // Обновляем профиль
+    const updatedProfile = {
+      ...profile,
+      firstName: step1.firstName || profile.firstName || '',
+      gender: step1.gender || profile.gender || 'Мужской',
+      birthDate: step1.birthDate || profile.birthDate || '',
+      age: step1.birthDate ? calcAgeFromBirthDate(step1.birthDate) : profile.age || 30,
+      cycleTrackingEnabled: step1.cycleTrackingEnabled || false,
+      // Базовый вес (стартовый, из регистрации) — НЕ меняется после
+      baseWeight: profile.baseWeight || registrationWeight,
+      // Текущий вес — изначально = базовый, потом обновляется из чек-ина
+      weight: profile.weight || registrationWeight,
+      height: step2.height || profile.height || 175,
+      // Целевой вес (из регистрации)
+      weightGoal: step2.weightGoal || profile.weightGoal || registrationWeight,
+      deficitPctTarget: step3.deficitPctTarget ?? profile.deficitPctTarget ?? 0,
+      sleepHours: step4.sleepHours || profile.sleepHours || 8,
+      insulinWaveHours: step4.insulinWaveHours || profile.insulinWaveHours || 3,
+      profileCompleted: true
+    };
+
+    lsSet('heys_profile', updatedProfile);
+    
+    // Диспатчим событие для обновления UI профиля
+    window.dispatchEvent(new CustomEvent('heys:profile-updated', { 
+      detail: { profile: updatedProfile, source: 'wizard-skip' } 
+    }));
+
+    // Авторасчёт норм БЖУ
+    const norms = calcNormsFromGoal(
+      updatedProfile.deficitPctTarget,
+      updatedProfile.gender,
+      updatedProfile.age
+    );
+    lsSet('heys_norms', { ...norms, updatedAt: Date.now() });
+
+    // НЕ записываем вес в данные дня при пропуске!
+    // Чек-ин должен спросить вес при следующем запуске
+    // (вес мог измениться с момента регистрации)
+
+    // Синхронизация имени с списком клиентов
+    let currentClientId = localStorage.getItem('heys_client_current');
+    if (currentClientId && currentClientId.startsWith('"')) {
+      try { currentClientId = JSON.parse(currentClientId); } catch(e) {}
+    }
+    if (currentClientId && updatedProfile.firstName) {
+      try {
+        const clientsRaw = localStorage.getItem('heys_clients');
+        const clients = clientsRaw ? JSON.parse(clientsRaw) : [];
+        const updatedClients = clients.map(c => 
+          c.id === currentClientId ? { ...c, name: updatedProfile.firstName } : c
+        );
+        localStorage.setItem('heys_clients', JSON.stringify(updatedClients));
+        
+        window.dispatchEvent(new CustomEvent('heys:clients-updated', { 
+          detail: { clients: updatedClients, source: 'wizard-skip' } 
+        }));
+      } catch (e) {
+        console.warn('[saveProfileFromStepData] Failed to sync client name:', e);
+      }
+    }
+
+    console.log('[saveProfileFromStepData] Profile saved:', updatedProfile);
+    console.log('[saveProfileFromStepData] Norms calculated:', norms);
+  }
+  
+  /**
+   * Записывает вес из регистрации в данные дня
+   * Используется при нажатии "Начать чек-ин" на шаге welcome
+   * чтобы чек-ин НЕ спрашивал вес повторно
+   */
+  function syncWeightToDay(allStepsData) {
+    const step2 = allStepsData['profile-body'] || {};
+    const weight = step2.weight;
+    
+    if (!weight) {
+      console.log('[syncWeightToDay] No weight in stepData, skipping');
+      return;
+    }
+    
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const dayData = lsGet(`heys_dayv2_${todayKey}`, {});
+    
+    if (!dayData.weightMorning) {
+      dayData.weightMorning = weight;
+      dayData.updatedAt = Date.now();
+      lsSet(`heys_dayv2_${todayKey}`, dayData);
+      console.log('[syncWeightToDay] Weight synced to day:', weight, 'kg for', todayKey);
+    } else {
+      console.log('[syncWeightToDay] Day already has weight:', dayData.weightMorning);
+    }
+  }
+  
+  function WelcomeStepComponent({ stepData, context }) {
+    const profile = lsGet('heys_profile', {});
+    const norms = lsGet('heys_norms', {});
+    
+    // Функции из контекста
+    const onNext = context?.onNext;
+    const onClose = context?.onClose;
+    
+    // Имя из профиля (уже сохранено на предыдущем шаге)
+    const firstName = profile.firstName || stepData['profile-personal']?.firstName || '';
+    
+    // Расчёт прогноза
+    const weightDiff = (profile.weightGoal || 70) - (profile.weight || 70);
+    const diffSign = weightDiff > 0 ? '+' : '';
+    const weeks = calcTimeToGoal(profile.weight, profile.weightGoal, profile.deficitPctTarget);
+    
+    // Проценты БЖУ
+    const protPct = norms.proteinPct || 25;
+    const carbsPct = norms.carbsPct || 50;
+    const fatPct = 100 - protPct - carbsPct;
+    
+    return React.createElement('div', { 
+      className: 'welcome-step-content',
+      style: { 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center',
+        padding: '20px',
+        textAlign: 'center'
+      }
+    },
+      // Эмодзи
+      React.createElement('div', { 
+        style: { fontSize: '72px', marginBottom: '16px' }
+      }, '🎉'),
+      
+      // Заголовок
+      React.createElement('h2', { 
+        style: { 
+          fontSize: '24px', 
+          fontWeight: 'bold', 
+          color: '#1f2937',
+          marginBottom: '8px'
+        }
+      }, firstName ? `Добро пожаловать, ${firstName}!` : 'Добро пожаловать!'),
+      
+      // Подзаголовок
+      React.createElement('p', { 
+        style: { 
+          fontSize: '16px', 
+          color: '#6b7280',
+          marginBottom: '24px'
+        }
+      }, 'Ваш персональный план готов'),
+      
+      // Карточка с параметрами
+      React.createElement('div', { 
+        style: { 
+          background: '#ecfdf5', 
+          borderRadius: '16px',
+          padding: '20px',
+          width: '100%',
+          maxWidth: '320px',
+          marginBottom: '24px'
+        }
+      },
+        // Цель
+        React.createElement('div', { 
+          style: { 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '12px'
+          }
+        },
+          React.createElement('span', { style: { color: '#374151' } }, '🎯 Цель:'),
+          React.createElement('span', { 
+            style: { fontWeight: '500', color: '#059669' }
+          }, `${profile.weightGoal || 70} кг (${diffSign}${Math.abs(weightDiff).toFixed(1)} кг)`)
+        ),
+        
+        // БЖУ
+        React.createElement('div', { 
+          style: { 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '12px'
+          }
+        },
+          React.createElement('span', { style: { color: '#374151' } }, '📊 БЖУ:'),
+          React.createElement('span', { 
+            style: { fontWeight: '500', color: '#059669' }
+          }, `Б${protPct}% У${carbsPct}% Ж${fatPct}%`)
+        ),
+        
+        // Прогноз
+        React.createElement('div', { 
+          style: { 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }
+        },
+          React.createElement('span', { style: { color: '#374151' } }, '⏱ Прогноз:'),
+          React.createElement('span', { 
+            style: { fontWeight: '500', color: '#059669' }
+          }, weeks)
+        )
+      ),
+      
+      // Сноска
+      React.createElement('p', { 
+        style: { 
+          fontSize: '14px', 
+          color: '#9ca3af',
+          marginBottom: '24px'
+        }
+      }, 'Нормы рассчитаны по вашим данным. Можете изменить в Профиле.'),
+      
+      // Кнопка "Начать чек-ин"
+      React.createElement('button', {
+        style: {
+          width: '100%',
+          maxWidth: '320px',
+          padding: '14px 24px',
+          background: '#10b981',
+          color: 'white',
+          border: 'none',
+          borderRadius: '12px',
+          fontSize: '16px',
+          fontWeight: '600',
+          cursor: 'pointer',
+          marginBottom: '12px'
+        },
+        onClick: () => {
+          // Вес из регистрации остаётся в профиле (базовый)
+          // Чек-ин спросит утренний вес с десятыми долями
+          console.log('[WelcomeStep] Starting checkin (weight will be asked)');
+          onNext && onNext();
+        }
+      }, '☀️ Начать утренний чек-ин'),
+      
+      // Кнопка "Пропустить"
+      React.createElement('button', {
+        style: {
+          width: '100%',
+          maxWidth: '320px',
+          padding: '12px 24px',
+          background: 'transparent',
+          color: '#6b7280',
+          border: 'none',
+          borderRadius: '12px',
+          fontSize: '14px',
+          cursor: 'pointer'
+        },
+        onClick: () => {
+          // Сохраняем данные профиля из stepData (регистрация уже пройдена)
+          saveProfileFromStepData(stepData);
+          console.log('[WelcomeStep] Profile saved (skipped checkin)');
+          
+          // Закрываем модалку через onClose из контекста
+          if (onClose) {
+            onClose();
+          } else if (window.HEYS?.StepModal?.hide) {
+            window.HEYS.StepModal.hide();
+          }
+        }
+      }, 'Пока пропустить и ознакомиться с приложением')
+    );
+  }
+  
+  // Регистрируем шаг welcome (с отложенной регистрацией на случай если StepModal загрузится позже)
+  function registerWelcomeStep() {
+    if (HEYS.StepModal && HEYS.StepModal.registerStep) {
+      HEYS.StepModal.registerStep('welcome', {
+        title: 'Готово!',
+        hint: 'Регистрация завершена',
+        icon: '🎉',
+        component: WelcomeStepComponent,
+        canSkip: false,
+        hideHeaderNext: true,  // Скрываем кнопку в хедере — используем кнопки в контенте
+        getInitialData: () => ({}),
+        validate: () => true,
+        save: () => {} // Ничего не сохраняем, это информационный шаг
+      });
+      console.log('[heys_profile_step_v1] Welcome step registered');
+      return true;
+    }
+    return false;
+  }
+  
+  // Попробуем сразу, если не получится — через 100мс
+  if (!registerWelcomeStep()) {
+    setTimeout(registerWelcomeStep, 100);
+  }
+
+  // ============================================================
+  // ЭКРАН ПОЗДРАВЛЕНИЯ (W4) — legacy, теперь используем шаг welcome
   // ============================================================
 
   function showCongratulationsModal() {
     const profile = lsGet('heys_profile', {});
     const norms = lsGet('heys_norms', {});
     
-    const firstName = profile.firstName || 'друг';
+    const firstName = profile.firstName || '';
     const weightDiff = profile.weightGoal - profile.weight;
     const diffSign = weightDiff > 0 ? '+' : '';
     const weeks = calcTimeToGoal(profile.weight, profile.weightGoal, profile.deficitPctTarget);

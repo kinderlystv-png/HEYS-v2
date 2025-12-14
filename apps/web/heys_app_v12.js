@@ -3283,7 +3283,8 @@ const HEYS = window.HEYS = window.HEYS || {};
             // useEffect автосмены клиента — ниже всех useState!
             
             // === SWIPE NAVIGATION ===
-            const TABS_ORDER = ['ration', 'stats', 'diary', 'reports', 'overview', 'user'];
+            // Свайп работает только между 3 вкладками переключателя (по кругу)
+            const SWIPEABLE_TABS = ['stats', 'diary', 'insights'];
             const touchRef = React.useRef({ startX: 0, startY: 0, startTime: 0 });
             const MIN_SWIPE_DISTANCE = 60;
             const MAX_SWIPE_TIME = 500; // ms — увеличено для более плавного свайпа
@@ -3326,18 +3327,17 @@ const HEYS = window.HEYS = window.HEYS || {};
               if (Math.abs(deltaY) > Math.abs(deltaX) * 0.7) return; // Более мягкое условие
               if (Math.abs(deltaX) < MIN_SWIPE_DISTANCE) return;
               
-              // Свайп между stats и diary обрабатывается глобально
-              // (больше нет отдельной вкладки 'day')
+              // Свайп работает только между 3 вкладками переключателя (по кругу)
+              const currentIndex = SWIPEABLE_TABS.indexOf(tab);
               
-              const currentIndex = TABS_ORDER.indexOf(tab);
+              // Если текущая вкладка не в свайпабельных — игнорируем
+              if (currentIndex === -1) return;
               
-              if (deltaX < 0 && currentIndex < TABS_ORDER.length - 1) {
-                // Свайп влево → следующая вкладка
-                const nextTab = TABS_ORDER[currentIndex + 1];
-                if (nextTab === 'reports' && window.HEYS?.Day?.requestFlush) {
-                  try { window.HEYS.Day.requestFlush(); } catch (e) {}
-                  setReportsRefresh(Date.now());
-                }
+              if (deltaX < 0) {
+                // Свайп влево → следующая вкладка (по кругу)
+                const nextIndex = (currentIndex + 1) % SWIPEABLE_TABS.length;
+                const nextTab = SWIPEABLE_TABS[nextIndex];
+                
                 // Фаза 1: выход старого контента
                 setSlideDirection('out-left');
                 if (navigator.vibrate) navigator.vibrate(10);
@@ -3347,25 +3347,18 @@ const HEYS = window.HEYS = window.HEYS || {};
                   setSlideDirection('in-left');
                   setTimeout(() => setSlideDirection(null), 220);
                 }, 120);
-              } else if (deltaX > 0 && currentIndex > 0) {
-                // Свайп вправо → предыдущая вкладка
+              } else if (deltaX > 0) {
+                // Свайп вправо → предыдущая вкладка (по кругу)
+                const prevIndex = (currentIndex - 1 + SWIPEABLE_TABS.length) % SWIPEABLE_TABS.length;
+                const prevTab = SWIPEABLE_TABS[prevIndex];
+                
                 setSlideDirection('out-right');
                 if (navigator.vibrate) navigator.vibrate(10);
                 setTimeout(() => {
-                  setTab(TABS_ORDER[currentIndex - 1]);
+                  setTab(prevTab);
                   setSlideDirection('in-right');
                   setTimeout(() => setSlideDirection(null), 220);
                 }, 120);
-              } else if (deltaX < 0 && currentIndex === TABS_ORDER.length - 1) {
-                // Край справа — показываем bounce
-                setEdgeBounce('right');
-                if (navigator.vibrate) navigator.vibrate([5, 30, 5]);
-                setTimeout(() => setEdgeBounce(null), 300);
-              } else if (deltaX > 0 && currentIndex === 0) {
-                // Край слева — показываем bounce
-                setEdgeBounce('left');
-                if (navigator.vibrate) navigator.vibrate([5, 30, 5]);
-                setTimeout(() => setEdgeBounce(null), 300);
               }
             }, [tab]);
             const [reportsRefresh, setReportsRefresh] = useState(0);
@@ -5321,7 +5314,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                             }
                           }),
                           // Кнопки "Вчера" + "Сегодня" + DatePicker
-                          (tab === 'stats' || tab === 'diary' || tab === 'reports') && window.HEYS.DatePicker
+                          (tab === 'stats' || tab === 'diary' || tab === 'reports' || tab === 'insights') && window.HEYS.DatePicker
                             ? React.createElement('div', { className: 'hdr-date-group' },
                                 // Кнопка быстрого перехода на вчера
                                 React.createElement('button', {
@@ -5419,17 +5412,15 @@ const HEYS = window.HEYS = window.HEYS || {};
                   // iOS Switch группа для stats/diary — ПО ЦЕНТРУ + подписи
                   React.createElement(
                     'div',
-                    { className: 'tab-switch-wrapper' },
+                    { className: 'tab-switch-wrapper tab-switch-wrapper--triple' },
                     React.createElement(
                       'div',
-                      { 
-                        className: 'tab-switch-group',
-                        onClick: () => setTab(tab === 'stats' ? 'diary' : 'stats'),
-                      },
+                      { className: 'tab-switch-group tab-switch-group--triple' },
                       React.createElement(
                         'div',
                         {
                           className: 'tab tab-switch ' + (tab === 'stats' ? 'active' : ''),
+                          onClick: () => setTab('stats'),
                         },
                         React.createElement('span', { className: 'tab-icon' }, '📊'),
                         React.createElement('span', { className: 'tab-text' }, 'Итоги'),
@@ -5438,17 +5429,28 @@ const HEYS = window.HEYS = window.HEYS || {};
                         'div',
                         {
                           className: 'tab tab-switch ' + (tab === 'diary' ? 'active' : ''),
+                          onClick: () => setTab('diary'),
                         },
                         React.createElement('span', { className: 'tab-icon' }, '🍴'),
                         React.createElement('span', { className: 'tab-text' }, 'Еда'),
+                      ),
+                      React.createElement(
+                        'div',
+                        {
+                          className: 'tab tab-switch ' + (tab === 'insights' ? 'active' : ''),
+                          onClick: () => setTab('insights'),
+                        },
+                        React.createElement('span', { className: 'tab-icon' }, '🔮'),
+                        React.createElement('span', { className: 'tab-text' }, 'Инсайты'),
                       ),
                     ),
                     // Подписи под переключателем
                     React.createElement(
                       'div',
-                      { className: 'tab-switch-labels' },
-                      React.createElement('span', { className: 'tab-switch-label' + (tab === 'stats' ? ' active' : '') }, 'Отчёты'),
-                      React.createElement('span', { className: 'tab-switch-label' + (tab === 'diary' ? ' active' : '') }, 'Дневник'),
+                      { className: 'tab-switch-labels tab-switch-labels--triple' },
+                      React.createElement('span', { className: 'tab-switch-label' + (tab === 'stats' ? ' active' : ''), onClick: () => setTab('stats') }, 'Отчёты'),
+                      React.createElement('span', { className: 'tab-switch-label' + (tab === 'diary' ? ' active' : ''), onClick: () => setTab('diary') }, 'Дневник'),
+                      React.createElement('span', { className: 'tab-switch-label' + (tab === 'insights' ? ' active' : ''), onClick: () => setTab('insights') }, 'Инсайты'),
                     ),
                   ),
                   // Графики — только для десктопа
@@ -5526,6 +5528,20 @@ const HEYS = window.HEYS = window.HEYS || {};
                         setProducts,
                         clientId,
                       })
+                    : tab === 'insights'
+                      ? (window.HEYS?.PredictiveInsights?.components?.InsightsTab
+                          ? React.createElement(window.HEYS.PredictiveInsights.components.InsightsTab, {
+                              key: 'insights' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                              lsGet: window.HEYS?.utils?.lsGet,
+                              profile: null,
+                              pIndex: null,
+                              optimum: null,
+                              selectedDate: selectedDate,
+                            })
+                          : React.createElement('div', { style: { padding: 16 } },
+                              React.createElement('div', { className: 'skeleton-sparkline', style: { height: 160, marginBottom: 16 } }),
+                              React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
+                            ))
                     : (tab === 'stats' || tab === 'diary')
                       ? React.createElement(DayTabWithCloudSync, {
                           key: 'day' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,

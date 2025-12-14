@@ -139,15 +139,18 @@
     if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
       if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
         steps.push('profile-personal', 'profile-body', 'profile-goals', 'profile-metabolism');
+        // 🎉 Шаг приветствия после регистрации — визуальный разделитель
+        steps.push('welcome');
         hasProfileSteps = true;
       }
     }
     
-    // 2. Стандартные шаги чек-ина
-    // Пропускаем weight если есть profile-шаги (вес уже указан в wizard)
-    if (!hasProfileSteps) {
-      steps.push('weight');
-    }
+    // 2. Шаг веса — ВСЕГДА спрашиваем в чек-ине
+    // Вес в регистрации (целый) → профиль (базовый вес для расчётов)
+    // Вес в чек-ине (с десятыми) → день (точное утреннее взвешивание)
+    steps.push('weight');
+    
+    // 3. Остальные шаги чек-ина
     steps.push('sleepTime', 'sleepQuality');
     
     // 3. 🔄 Загрузочный день (Refeed) — СРАЗУ после sleepQuality
@@ -155,7 +158,12 @@
     steps.push('refeedDay');
     
     // 4. Условные шаги (cycle, measurements)
-    if (HEYS.Steps && HEYS.Steps.shouldShowCycleStep && HEYS.Steps.shouldShowCycleStep()) {
+    // Для cycle: показываем если cycleTrackingEnabled=true ИЛИ если это регистрация (шаг спросит сам)
+    // При регистрации профиль ещё пуст, но шаг cycle сам определит пол из StepModal data
+    if (hasProfileSteps) {
+      // При регистрации всегда добавляем cycle — шаг сам решит показывать ли (по полу из данных регистрации)
+      steps.push('cycle');
+    } else if (HEYS.Steps && HEYS.Steps.shouldShowCycleStep && HEYS.Steps.shouldShowCycleStep()) {
       steps.push('cycle');
     }
     if (HEYS.Steps && HEYS.Steps.shouldShowMeasurements && HEYS.Steps.shouldShowMeasurements()) {
@@ -165,7 +173,7 @@
     // 5. 🧊 Холодовое воздействие (опциональный шаг)
     steps.push('cold_exposure');
     
-    // 6. � Витамины (опциональный шаг, запоминается на след. день)
+    // 6. 💊 Витамины (опциональный шаг, запоминается на след. день)
     steps.push('supplements');
     
     // 7. 😊 Утреннее настроение (обязательный шаг)
@@ -192,14 +200,11 @@
     if (HEYS.StepModal && HEYS.StepModal.Component) {
       const U = HEYS.utils || {};
       const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
-      const hadProfileSteps = HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete && HEYS.ProfileSteps.isProfileIncomplete(profile);
       const steps = getCheckinSteps(profile);
       
-      // Обёртка для onComplete: показать поздравления если были profile-шаги
+      // Обёртка для onComplete: обновляем данные дня
       const wrappedOnComplete = () => {
-        if (hadProfileSteps && HEYS.ProfileSteps && HEYS.ProfileSteps.showCongratulationsModal) {
-          HEYS.ProfileSteps.showCongratulationsModal();
-        }
+        // 🎉 Поздравительная модалка теперь показывается как шаг 'welcome' внутри flow
         
         // 🔄 Принудительно обновляем данные дня после завершения чек-ина
         const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
@@ -252,14 +257,11 @@
       if (HEYS.StepModal) {
         const U = HEYS.utils || {};
         const profile = U.lsGet ? U.lsGet('heys_profile', {}) : {};
-        const hadProfileSteps = HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete && HEYS.ProfileSteps.isProfileIncomplete(profile);
         const steps = getCheckinSteps(profile);
         
-        // Обёртка для onComplete: показать поздравления если были profile-шаги
+        // Обёртка для onComplete: обновляем данные дня
         const wrappedOnComplete = () => {
-          if (hadProfileSteps && HEYS.ProfileSteps && HEYS.ProfileSteps.showCongratulationsModal) {
-            HEYS.ProfileSteps.showCongratulationsModal();
-          }
+          // 🎉 Поздравительная модалка теперь показывается как шаг 'welcome' внутри flow
           
           // 🔄 Принудительно обновляем данные дня после завершения чек-ина
           const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);

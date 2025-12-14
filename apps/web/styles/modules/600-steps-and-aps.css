@@ -3426,6 +3426,14 @@ button.meal-quality-badge:active {
   padding: 16px 0;
 }
 
+.mc-cycle-question {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
 .mc-cycle-header {
   display: flex;
   justify-content: space-between;

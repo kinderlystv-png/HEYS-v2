@@ -742,7 +742,7 @@
               data: stepData[currentConfig.id] || {},
               onChange: (data) => updateStepData(currentConfig.id, data),
               stepData: stepData,
-              context: { ...context, onNext: handleNext }  // Передаём onNext для кастомных кнопок
+              context: { ...context, onNext: handleNext, onClose: handleClose }  // Передаём onNext и onClose для кастомных кнопок
             })
           ),
 

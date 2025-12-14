@@ -629,7 +629,7 @@
         // === ГРУППА 2: Параметры тела ===
         React.createElement(ProfileFieldGroup, {icon: '📏', title: 'Параметры тела'},
           React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Рост (см)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', value:profile.height, onChange:e=>updateProfileField('height', Number(e.target.value)||0), onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'height'})),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Базовый вес (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weight, onChange:e=>updateProfileField('weight', Number(e.target.value)||0), onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'weight'})),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Базовый вес (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'1', value:profile.baseWeight || profile.weight, onChange:e=>updateProfileField('baseWeight', Number(e.target.value)||0), onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'baseWeight'})),
           // Текущий вес (из последнего чек-ина)
           (() => {
             // Ищем последний день с весом за последние 30 дней
@@ -647,7 +647,8 @@
                 break;
               }
             }
-            const diff = currentWeight && profile.weight ? round1(currentWeight - profile.weight) : null;
+            const baseWeight = profile.baseWeight || profile.weight;
+            const diff = currentWeight && baseWeight ? round1(currentWeight - baseWeight) : null;
             return React.createElement('div', {className:'inline-field'},
               React.createElement('label', null, '⚖️ Текущий вес'),
               React.createElement('span', {className:'sep'}, '-'),
@@ -664,11 +665,11 @@
               )
             );
           })(),
-          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Целевой вес (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'0.1', value:profile.weightGoal||0, onChange:e=>updateProfileField('weightGoal', Number(e.target.value)||0), placeholder:'0 = не задан', onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'weightGoal'})),
+          React.createElement('div', {className:'inline-field'}, React.createElement('label', null, 'Целевой вес (кг)'), React.createElement('span', {className:'sep'}, '-'), React.createElement('input', {type:'number', step:'1', value:profile.weightGoal||0, onChange:e=>updateProfileField('weightGoal', Number(e.target.value)||0), placeholder:'0 = не задан', onFocus:e=>e.target.select()}), React.createElement(FieldStatus, {fieldKey:'weightGoal'})),
           
           // === ПРОДВИНУТЫЙ РАСЧЁТ ДОСТИЖЕНИЯ ЦЕЛИ ===
           (() => {
-            const baseWeight = toNum(profile.weight || 70);
+            const startWeight = toNum(profile.baseWeight || profile.weight || 70);
             const goalWeight = toNum(profile.weightGoal);
             const deficitPct = toNum(profile.deficitPctTarget) || 0;
             const height = toNum(profile.height || 175) / 100;
@@ -679,7 +680,7 @@
             if (!goalWeight || goalWeight <= 0) return null;
             
             // Получаем текущий вес из последнего чек-ина
-            let currentWeight = baseWeight;
+            let currentWeight = startWeight;
             for (let i = 0; i < 30; i++) {
               const d = new Date();
               d.setDate(d.getDate() - i);

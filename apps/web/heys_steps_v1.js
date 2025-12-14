@@ -170,7 +170,22 @@
       dayData.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, dayData);
       
-      // Диспатчим событие для обновления UI
+      // Также обновляем текущий вес в профиле (для расчёта TDEE, BMR и т.д.)
+      const profile = lsGet('heys_profile', {});
+      if (profile.weight !== weight) {
+        profile.weight = weight;
+        lsSet('heys_profile', profile);
+        console.log('[WeightStep] Profile weight updated:', weight, 'kg');
+        
+        // Диспатчим событие для обновления UI профиля
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('heys:profile-updated', { 
+            detail: { profile, source: 'weight-step' } 
+          }));
+        }
+      }
+      
+      // Диспатчим событие для обновления UI дня
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('heys:day-updated', { 
           detail: { date: dateKey, field: 'weightMorning', value: weight, forceReload: true } 
@@ -1268,9 +1283,23 @@
 
   /**
    * Компонент шага "Особый период" (v2 — с автоматическим проставлением)
+   * Показывается только для женщин (проверка из stepData или профиля)
    */
-  function CycleStepComponent({ data, onChange }) {
-    const { useState, useCallback } = React;
+  function CycleStepComponent({ data, onChange, stepData, context }) {
+    const { useState, useCallback, useEffect } = React;
+    
+    // Проверяем пол: из stepData (регистрация) или из профиля
+    const genderFromSteps = stepData?.['profile-personal']?.gender;
+    const profile = lsGet('heys_profile', {});
+    const gender = genderFromSteps || profile.gender;
+    const isFemale = gender === 'Женский';
+    
+    // Также проверяем cycleTrackingEnabled из шагов или профиля
+    const trackingFromSteps = stepData?.['profile-personal']?.cycleTrackingEnabled;
+    const cycleTrackingEnabled = trackingFromSteps !== undefined ? trackingFromSteps : profile.cycleTrackingEnabled;
+    
+    // Если не женщина или трекинг выключен — автоматически пропускаем шаг
+    const shouldSkip = !isFemale || cycleTrackingEnabled === false;
     
     // cycleDay: null = нет периода, 1-7 = день периода
     const [cycleDay, setCycleDay] = useState(data?.cycleDay || null);
@@ -1279,6 +1308,28 @@
     
     // Получаем текущую дату
     const dateKey = data?._dateKey || new Date().toISOString().slice(0, 10);
+    
+    // Автопропуск если не нужен этот шаг
+    useEffect(() => {
+      if (shouldSkip && context?.onNext) {
+        // Небольшая задержка чтобы не было мигания
+        const timer = setTimeout(() => {
+          onChange({ cycleDay: null, _skipped: true });
+          context.onNext();
+        }, 50);
+        return () => clearTimeout(timer);
+      }
+    }, [shouldSkip, context, onChange]);
+    
+    // Если должны пропустить — показываем заглушку
+    if (shouldSkip) {
+      return React.createElement('div', { className: 'mc-cycle-step mc-cycle-skip' },
+        React.createElement('div', { className: 'mc-cycle-header' },
+          React.createElement('span', { className: 'mc-cycle-icon' }, '🌸'),
+          React.createElement('span', { className: 'mc-cycle-title' }, 'Пропускаем...')
+        )
+      );
+    }
 
     // Обработчик toggle "Да/Нет"
     const handleToggle = useCallback(() => {
@@ -1323,11 +1374,16 @@
     ];
 
     return React.createElement('div', { className: 'mc-cycle-step' },
-      // Заголовок с иконкой
+      // Вопрос — чтобы было понятно о чём спрашиваем
+      React.createElement('div', { className: 'mc-cycle-question' },
+        'Сегодня особые дни?'
+      ),
+      
+      // Заголовок с toggle
       React.createElement('div', { className: 'mc-cycle-header' },
         React.createElement('div', { className: 'mc-cycle-header-left' },
           React.createElement('span', { className: 'mc-cycle-icon' }, '🌸'),
-          React.createElement('span', { className: 'mc-cycle-title' }, 'Особый период')
+          React.createElement('span', { className: 'mc-cycle-title' }, 'Особые дни')
         ),
         // Toggle кнопка
         React.createElement('button', {
