@@ -1,8 +1,9 @@
 # 📊 HEYS Data Model Reference
 
 > **Справочник всех аналитических параметров HEYS**  
-> Версия: 3.15.0 | Обновлено: 2025-12-12 | **168 умных советов** | **33 фактора
-> инсулиновой волны** | **🏋️ Training Context** | **💰 Caloric Debt** | **🔄 Refeed Day**
+> Версия: 3.16.0 | Обновлено: 2025-12-15 | **170 умных советов** | **33 фактора
+> инсулиновой волны** | **🏋️ Training Context** | **💰 Caloric Debt** | **🔄
+> Refeed Day**
 
 📚 **[SCIENTIFIC_REFERENCES.md](./SCIENTIFIC_REFERENCES.md)** — полный список
 научных источников с PMID ссылками
@@ -519,56 +520,56 @@ Refeed Day — **осознанный** день повышенного кало
 
 ### Константы
 
-| Константа           | Значение | Описание                         |
-| ------------------- | -------- | -------------------------------- |
-| `REFEED_BOOST_PCT`  | 0.35     | +35% к норме калорий             |
-| `REFEED_THRESHOLD`  | 1000     | Порог долга для рекомендации     |
-| `REFEED_CONSECUTIVE`| 5        | Дней в дефиците для рекомендации |
-| `REFEED_OK_RATIO`   | 1.35     | Допустимый перебор (135%)        |
+| Константа            | Значение | Описание                         |
+| -------------------- | -------- | -------------------------------- |
+| `REFEED_BOOST_PCT`   | 0.35     | +35% к норме калорий             |
+| `REFEED_THRESHOLD`   | 1000     | Порог долга для рекомендации     |
+| `REFEED_CONSECUTIVE` | 5        | Дней в дефиците для рекомендации |
+| `REFEED_OK_RATIO`    | 1.35     | Допустимый перебор (135%)        |
 
 ### Причины refeed дня
 
-| ID         | Иконка | Название                         | Описание                            |
-| ---------- | ------ | -------------------------------- | ----------------------------------- |
-| `deficit`  | 💰     | Восстановление после дефицита    | Накопился долг калорий              |
-| `training` | 💪     | После интенсивной тренировки     | Нужно восстановить гликоген         |
-| `holiday`  | 🎉     | Праздник / особый день           | Запланированное превышение          |
-| `rest`     | 🧘     | Ментальный отдых от диеты        | Снятие психологического напряжения  |
+| ID         | Иконка | Название                      | Описание                           |
+| ---------- | ------ | ----------------------------- | ---------------------------------- |
+| `deficit`  | 💰     | Восстановление после дефицита | Накопился долг калорий             |
+| `training` | 💪     | После интенсивной тренировки  | Нужно восстановить гликоген        |
+| `holiday`  | 🎉     | Праздник / особый день        | Запланированное превышение         |
+| `rest`     | 🧘     | Ментальный отдых от диеты     | Снятие психологического напряжения |
 
 ### Зоны выполнения refeed
 
-| Зона           | Ratio       | Цвет      | Streak |
-| -------------- | ----------- | --------- | ------ |
-| `refeed_under` | < 70%       | 🟡 Жёлтый | ❌     |
-| `refeed_ok`    | 70% - 135%  | 🟢 Зелёный| ✅     |
-| `refeed_over`  | 135% - 150% | 🟠 Оранж  | ❌     |
-| `refeed_binge` | > 150%      | 🔴 Красный| ❌     |
+| Зона           | Ratio       | Цвет       | Streak |
+| -------------- | ----------- | ---------- | ------ |
+| `refeed_under` | < 70%       | 🟡 Жёлтый  | ❌     |
+| `refeed_ok`    | 70% - 135%  | 🟢 Зелёный | ✅     |
+| `refeed_over`  | 135% - 150% | 🟠 Оранж   | ❌     |
+| `refeed_binge` | > 150%      | 🔴 Красный | ❌     |
 
 ### Поля в DayRecord
 
-| Поле           | Тип     | Описание                              |
-| -------------- | ------- | ------------------------------------- |
-| `isRefeedDay`  | boolean | Отмечен ли день как загрузочный       |
+| Поле           | Тип     | Описание                                   |
+| -------------- | ------- | ------------------------------------------ |
+| `isRefeedDay`  | boolean | Отмечен ли день как загрузочный            |
 | `refeedReason` | string  | ID причины (deficit/training/holiday/rest) |
 
 ### API
 
 ```javascript
 // Утилиты
-HEYS.Refeed.getRefeedZone(ratio, isRefeedDay);  // Зона выполнения
+HEYS.Refeed.getRefeedZone(ratio, isRefeedDay); // Зона выполнения
 HEYS.Refeed.shouldRecommendRefeed(caloricDebt); // Рекомендовать ли refeed
 HEYS.Refeed.getRefeedOptimum(optimum, isRefeedDay); // Норма с бустом
-HEYS.Refeed.getReasonById(reasonId);            // Получить причину
-HEYS.Refeed.getReasonLabel(reasonId);           // Label с fallback
-HEYS.Refeed.getDayMeta(dayData, ratio);         // 🆕 Единая точка правды
-HEYS.Refeed.getHistoryStats(days);              // 🆕 Статистика за N дней
+HEYS.Refeed.getReasonById(reasonId); // Получить причину
+HEYS.Refeed.getReasonLabel(reasonId); // Label с fallback
+HEYS.Refeed.getDayMeta(dayData, ratio); // 🆕 Единая точка правды
+HEYS.Refeed.getHistoryStats(days); // 🆕 Статистика за N дней
 HEYS.Refeed.isStreakPreserved(ratio, isRefeedDay); // Сохраняется ли streak
 
 // Компоненты
 HEYS.Refeed.RefeedCard({ day, optimum, eatenKcal, caloricDebt });
 HEYS.Refeed.RefeedBadge({ isRefeedDay, needsRefeed, caloricDebt, onClick });
 HEYS.Refeed.RefeedToggle({ isRefeedDay, onToggle, needsRefeed });
-HEYS.Refeed.renderRefeedStats();                // 🆕 Мини-статистика
+HEYS.Refeed.renderRefeedStats(); // 🆕 Мини-статистика
 ```
 
 ### getDayMeta — единая точка правды
@@ -587,7 +588,7 @@ meta = {
   color: '#22c55e',
   tooltip: '🔄 Загрузочный день...',
   badge: '🔄',
-  cssClass: 'refeed-day'
+  cssClass: 'refeed-day',
 };
 ```
 
@@ -598,13 +599,13 @@ const stats = HEYS.Refeed.getHistoryStats(30);
 
 // Результат
 stats = {
-  count: 3,              // Кол-во refeed дней
-  avgExcessPct: 18,      // Средний перебор (%)
+  count: 3, // Кол-во refeed дней
+  avgExcessPct: 18, // Средний перебор (%)
   lastRefeedDate: '2025-12-10',
   lastRefeedDaysAgo: 2,
   reasons: { deficit: 2, holiday: 1 },
   totalExcessKcal: 1250,
-  daysAnalyzed: 30
+  daysAnalyzed: 30,
 };
 ```
 
@@ -619,13 +620,13 @@ stats = {
 
 ### Советы для refeed (5 шт)
 
-| ID                           | Условие                           | Описание                              |
-| ---------------------------- | --------------------------------- | ------------------------------------- |
-| `refeed_recommended`         | needsRefeed && !isRefeedDay       | "Система рекомендует загрузку"        |
-| `refeed_in_progress`         | isRefeedDay && 30-85% от нормы    | "Не бойся есть сегодня!"              |
-| `refeed_almost_done`         | isRefeedDay && 85-100%            | "Осталось немного до нормы"           |
-| `refeed_completed`           | isRefeedDay && 100-135%           | "Отлично! Refeed выполнен"            |
-| `refeed_over`                | isRefeedDay && >135%              | "Перебор даже для refeed"             |
+| ID                   | Условие                        | Описание                       |
+| -------------------- | ------------------------------ | ------------------------------ |
+| `refeed_recommended` | needsRefeed && !isRefeedDay    | "Система рекомендует загрузку" |
+| `refeed_in_progress` | isRefeedDay && 30-85% от нормы | "Не бойся есть сегодня!"       |
+| `refeed_almost_done` | isRefeedDay && 85-100%         | "Осталось немного до нормы"    |
+| `refeed_completed`   | isRefeedDay && 100-135%        | "Отлично! Refeed выполнен"     |
+| `refeed_over`        | isRefeedDay && >135%           | "Перебор даже для refeed"      |
 
 ---
 
@@ -685,132 +686,135 @@ stats = {
 
 ### Все типы советов
 
-| ID                                   | Условие                                                     | Категория    | Триггер                 |
-| ------------------------------------ | ----------------------------------------------------------- | ------------ | ----------------------- |
-| `young_sleep`                        | `age<25 && hour 1-5`                                        | personalized | tab_open                |
-| `monday_motivation`                  | Понедельник утро                                            | motivation   | tab_open                |
-| `friday_reminder`                    | Пятница вечер                                               | motivation   | tab_open                |
-| `sunday_planning`                    | Воскресенье вечер                                           | motivation   | tab_open                |
-| `crash_support`                      | `isCriticallyOver/Under(kcalPct, goal)`                     | emotional    | tab_open, product_added |
-| `stress_support`                     | `avgMood < 3`                                               | emotional    | tab_open                |
-| `streak_7`                           | `currentStreak >= 7`                                        | achievement  | tab_open                |
-| `streak_3`                           | `currentStreak 3-6`                                         | achievement  | tab_open                |
-| `perfect_day`                        | `hour>=18 && isInTargetRange(kcalPct, goal) && macros>=0.9` | achievement  | tab_open                |
-| `first_day`                          | `mealCount === 1` (первый раз)                              | achievement  | product_added           |
-| `kcal_excess_critical`               | `isCriticallyOver(kcalPct, goal)`                           | nutrition    | product_added           |
-| `kcal_excess_mild`                   | `kcalPct > goal.targetRange.max`                            | nutrition    | product_added           |
-| `kcal_under_critical`                | `isCriticallyUnder(kcalPct, goal) && hour >= 14`            | nutrition    | tab_open, product_added |
-| `trans_fat_warning`                  | `transPct > 1.0`                                            | nutrition    | product_added           |
-| `simple_carbs_warning`               | `simplePct > 1.3`                                           | nutrition    | product_added           |
-| `harm_warning`                       | `harmPct > 1.0`                                             | nutrition    | product_added           |
-| `protein_low`                        | `proteinPct < 0.5 && hour >= 12`                            | nutrition    | tab_open, product_added |
-| `fiber_low`                          | `fiberPct < 0.3 && mealCount >= 2`                          | nutrition    | tab_open, product_added |
-| `fiber_good`                         | `fiberPct >= 1.0`                                           | nutrition    | product_added           |
-| `good_fat_low`                       | `goodFatPct < 0.4 && hour >= 14`                            | nutrition    | tab_open, product_added |
-| `post_training_protein`              | `hasTraining && proteinPct < 0.8`                           | training     | tab_open, product_added |
-| `post_training_undereating_critical` | `hasTraining && kcalPct < 0.7 && hour >= 18`                | training     | tab_open                |
-| `undereating_warning`                | `kcalPct < 0.7 && hour >= 18` (crashed state)               | nutrition    | tab_open                |
-| `evening_undereating`                | `hour >= 20 && isCriticallyUnder(kcalPct, goal)`            | nutrition    | tab_open                |
-| `evening_perfect`                    | `hour >= 21 && kcalPct 0.9-1.1`                             | lifestyle    | tab_open                |
-| `balanced_macros`                    | `mealCount>=2 && all macros 0.9-1.2`                        | nutrition    | product_added           |
-| `sleep_low`                          | `sleepHours > 0 && < 6`                                     | lifestyle    | tab_open                |
-| `morning_breakfast`                  | `hour 7-10 && mealCount === 0`                              | lifestyle    | tab_open                |
-| `steps_goal`                         | `steps >= 10000`                                            | lifestyle    | tab_open                |
-| `winter_vitamin_d`                   | `month 10-2` (ноябрь-март)                                  | lifestyle    | tab_open                |
-| `variety_low`                        | `items>=5 && uniqueProducts<3`                              | nutrition    | tab_open, product_added |
-| `after_sweet_protein`                | `lastMeal simplePct>0.6 && kcal>100`                        | nutrition    | product_added           |
-| `sleep_hunger_correlation`           | `sleepDeficit>2 && kcalPct>1.15`                            | correlation  | tab_open, product_added |
-| `sleep_hunger_warning`               | `sleepDeficit>1.5 && hour<12 && kcalPct<0.3`                | correlation  | tab_open                |
-| `stress_sweet_pattern`               | `avgStress>=4 && simplePct>1.2`                             | correlation  | product_added           |
-| `low_stress_balance`                 | `avgStress 1-2 && kcalPct 0.9-1.1`                          | correlation  | tab_open                |
-| `hard_workout_recovery`              | `highIntensity>20min && proteinPct<1.0`                     | training     | tab_open, product_added |
-| `cardio_carbs_balance`               | `fatBurn>30min && carbsPct>1.2`                             | training     | product_added           |
-| `great_workout`                      | `totalMinutes >= 45`                                        | training     | tab_open                |
-| `water_evening_low`                  | `hour>=18 && waterPct<0.5`                                  | hydration    | tab_open                |
-| `water_reminder`                     | `hoursSinceWater>2 && hour 10-21`                           | hydration    | tab_open, product_added |
-| `water_goal_reached`                 | `waterPct >= 1.0`                                           | hydration    | tab_open                |
-| `high_gi_warning`                    | `avgGI>70 && mealCount>=2`                                  | nutrition    | tab_open, product_added |
-| `low_gi_great`                       | `avgGI 0-55 && mealCount>=2`                                | nutrition    | tab_open                |
-| `simple_complex_ratio`               | `totalCarbs>50 && simpleRatio>0.5`                          | nutrition    | product_added           |
-| `carbs_balance_perfect`              | `simpleRatio<=0.3 && mealCount>=2`                          | nutrition    | tab_open                |
-| `fat_quality_low`                    | `totalFat>20 && goodRatio<0.4`                              | nutrition    | tab_open, product_added |
-| `fat_quality_great`                  | `goodRatio>=0.6`                                            | nutrition    | tab_open                |
-| `insulin_too_fast`                   | `gap < insulinWave*0.5`                                     | timing       | product_added           |
-| `insulin_perfect`                    | `avgGap >= insulinWave*0.9 && meals>=3`                     | timing       | tab_open                |
-| `late_dinner_warning`                | `lastMealHour >= 22`                                        | timing       | product_added           |
-| `good_dinner_time`                   | `lastMealHour 18-20 && hour>=21`                            | timing       | tab_open                |
-| `bad_sleep_advice`                   | `sleepQuality 1-2 && hour<12`                               | sleep        | tab_open                |
-| `great_sleep`                        | `sleepQuality>=4 && sleepHours>=7`                          | sleep        | tab_open                |
-| `sugar_mood_crash`                   | `moodDrop>=2 && prevMealSimple>30g`                         | emotional    | tab_open                |
-| `wellbeing_low_food`                 | `avgWellbeing<3 && kcalPct<0.4 && hour>=12`                 | emotional    | tab_open                |
-| `wellbeing_nutrition_link`           | `avgWellbeing>=4 && kcalPct 0.8-1.1`                        | emotional    | tab_open                |
-| `iron_reminder`                      | `gender='Женский' && mealCount>=2 && !hasIronFood`          | personalized | tab_open                |
-| `age_protein`                        | `age>=40 && proteinPct<0.9`                                 | personalized | tab_open, product_added |
-| `household_bonus`                    | `householdMin >= 60`                                        | activity     | tab_open                |
-| `sedentary_day`                      | `household=0 && steps<3000 && !training && hour>=18`        | activity     | tab_open                |
-| `day_score_low`                      | `dayScore < 5 && hour >= 20`                                | emotional    | tab_open                |
-| `day_score_high`                     | `dayScore >= 8 && hour >= 20`                               | achievement  | tab_open                |
-| `training_type_strength`             | `training.type === 'strength' && proteinPct < 1.0`          | training     | tab_open, product_added |
-| `training_type_hobby`                | `training.type === 'hobby'`                                 | training     | tab_open                |
-| `weight_spike_up`                    | `\|Δweight\| > 1kg`                                         | correlation  | tab_open                |
-| `weight_stable`                      | `7-day weights σ < 0.5kg`                                   | achievement  | tab_open                |
-| `caffeine_evening`                   | Кофе за <6ч до сна (с учётом реального bedtime)             | nutrition    | product_added           |
-| `bedtime_undereating`                | До сна ≤2ч + недобор калорий                                | timing       | tab_open                |
-| `undereating_dehydration_combo`      | `kcalPct < 0.6 && waterPct < 0.5` — двойной удар            | nutrition    | tab_open                |
-| `empty_stomach_late`                 | `hour 10-12 && mealCount === 0`                             | lifestyle    | tab_open                |
-| `late_heavy_meal`                    | `lastMealHour >= 21 && lastMealKcal > 500`                  | timing       | product_added           |
-| `insulin_countdown`                  | `minutesUntilEnd > 0 && < 60`                               | timing       | tab_open                |
-| `bedtime_protein`                    | До сна ≤4ч + мало белка (с реальным bedtime)                | timing       | tab_open                |
-| `post_holiday_detox`                 | Дни после праздников (1-2 янв, и др.)                       | lifestyle    | tab_open                |
-| `best_day_recall`                    | Лучший день за 7 дней                                       | motivation   | tab_open                |
-| `night_owl_warning`                  | `hour 1-5 && mealCount > 0`                                 | lifestyle    | product_added           |
-| `lunch_time`                         | `hour === 13 && mealCount === 1`                            | lifestyle    | tab_open                |
-| `protein_champion`                   | `proteinPct >= 1.2`                                         | achievement  | tab_open, product_added |
-| `snack_window`                       | `hour === 16 && kcalPct < 0.6`                              | lifestyle    | tab_open                |
-| `mood_improving`                     | Настроение выросло между приёмами                           | correlation  | product_added           |
-| `workout_consistent`                 | 3 дня тренировок подряд                                     | achievement  | tab_open                |
-| `evening_snacker`                    | Паттерн поздних ужинов 3 дня                                | correlation  | tab_open                |
-| `morning_skipper`                    | Паттерн без завтрака 3 дня                                  | correlation  | tab_open                |
-| `chronic_undereating_pattern`        | 3+ дней kcalPct < 0.75                                      | correlation  | tab_open                |
-| **Phase 2: Meal-level**              |                                                             |              |                         |
-| `meal_too_large`                     | `lastMeal.kcal > 800`                                       | nutrition    | product_added           |
-| `meal_too_small`                     | `meal.kcal < 150 && mealCount >= 2`                         | nutrition    | product_added           |
-| `protein_per_meal_low`               | `meal.prot < 20 && meal.kcal > 200`                         | nutrition    | product_added           |
-| `evening_carbs_high`                 | `hour >= 20 && lastMeal.carbs > 50`                         | nutrition    | product_added           |
-| `fiber_per_meal_good`                | `meal.fiber > 8`                                            | nutrition    | product_added           |
-| `variety_meal_good`                  | `meal.items.length >= 4`                                    | nutrition    | product_added           |
-| `late_first_meal`                    | `firstMeal.time >= '12:00' && hour >= 13`                   | lifestyle    | tab_open                |
-| **Phase 2: Day-quality**             |                                                             |              |                         |
-| `trans_free_day`                     | `dayTot.trans === 0 && mealCount >= 2`                      | achievement  | tab_open                |
-| `sugar_low_day`                      | `dayTot.simple < 25 && mealCount >= 2`                      | achievement  | tab_open                |
-| `super_hydration`                    | `waterMl >= 2500`                                           | hydration    | tab_open                |
-| `variety_day_good`                   | `uniqueProducts >= 10`                                      | nutrition    | tab_open                |
-| `deficit_on_track`                   | `kcalPct 0.85-0.95 && deficitPct > 0`                       | lifestyle    | tab_open                |
-| `weekend_relax`                      | `(Сб или Вс) && kcalPct 1.1-1.3`                            | lifestyle    | tab_open                |
-| **Phase 2: Timing & Patterns**       |                                                             |              |                         |
-| `fasting_window_good`                | `gap ужин→завтрак >= 14h`                                   | timing       | tab_open                |
-| `long_fast_warning`                  | `gap между приёмами > 7h && hour 10-18`                     | timing       | tab_open                |
-| `meal_spacing_perfect`               | `все gaps 3-5 часов && meals >= 3`                          | timing       | tab_open                |
-| `training_recovery_window`           | `30-60 мин после тренировки`                                | training     | tab_open                |
-| `sleep_debt_accumulating`            | `3 дня < 6 часов сна`                                       | sleep        | tab_open                |
-| `stress_eating_detected`             | `avgStress >= 4 && kcalPct > 1.15`                          | correlation  | tab_open                |
-| **Phase 2: Milestones**              |                                                             |              |                         |
-| `weight_trend_down`                  | `7-day trend < -0.3kg/week`                                 | correlation  | tab_open                |
-| `weight_trend_up`                    | `7-day trend > +0.5kg/week`                                 | correlation  | tab_open                |
-| `weight_forecast_on_track`           | По прогнозу цель достижима                                  | weight       | tab_open                |
-| `weight_forecast_slow`               | Темп медленный >1 год до цели                               | weight       | tab_open                |
-| `weight_forecast_wrong_direction`    | Вес идёт от цели                                            | weight       | tab_open                |
-| `weight_almost_there`                | До цели <2кг                                                | weight       | tab_open                |
-| `milestone_7_days`                   | `totalDaysTracked === 7`                                    | achievement  | tab_open                |
-| `milestone_30_days`                  | `totalDaysTracked === 30`                                   | achievement  | tab_open                |
-| `milestone_100_days`                 | `totalDaysTracked === 100`                                  | achievement  | tab_open                |
-| `new_record_streak`                  | `currentStreak === personalBestStreak`                      | achievement  | tab_open                |
-| `first_training_ever`                | первая тренировка в истории                                 | achievement  | tab_open                |
-| **Meal Quality Score советы**        |                                                             |              |                         |
-| `meal_quality_excellent`             | Score ≥ 85                                                  | nutrition    | product_added           |
-| `meal_quality_good`                  | Score 70-84                                                 | nutrition    | product_added           |
-| `meal_quality_poor`                  | Score < 50                                                  | nutrition    | product_added           |
-| `meal_quality_improving`             | Средний score сегодня > вчера +10                           | nutrition    | tab_open                |
+| ID                                   | Условие                                                           | Категория    | Триггер                    |
+| ------------------------------------ | ----------------------------------------------------------------- | ------------ | -------------------------- |
+| `young_sleep`                        | `age<25 && hour 1-5`                                              | personalized | tab_open                   |
+| `monday_motivation`                  | Понедельник утро                                                  | motivation   | tab_open                   |
+| `friday_reminder`                    | Пятница вечер                                                     | motivation   | tab_open                   |
+| `sunday_planning`                    | Воскресенье вечер                                                 | motivation   | tab_open                   |
+| `crash_support`                      | `isCriticallyOver/Under(kcalPct, goal)`                           | emotional    | tab_open, product_added    |
+| `stress_support`                     | `avgMood < 3`                                                     | emotional    | tab_open                   |
+| `streak_7`                           | `currentStreak >= 7`                                              | achievement  | tab_open                   |
+| `streak_3`                           | `currentStreak 3-6`                                               | achievement  | tab_open                   |
+| `perfect_day`                        | `hour>=18 && isInTargetRange(kcalPct, goal) && macros>=0.9`       | achievement  | tab_open                   |
+| `first_day`                          | `mealCount === 1` (первый раз)                                    | achievement  | product_added              |
+| `kcal_excess_critical`               | `isCriticallyOver(kcalPct, goal)`                                 | nutrition    | product_added              |
+| `kcal_excess_mild`                   | `kcalPct > goal.targetRange.max`                                  | nutrition    | product_added              |
+| `kcal_under_critical`                | `isCriticallyUnder(kcalPct, goal) && hour >= 14`                  | nutrition    | tab_open, product_added    |
+| `trans_fat_warning`                  | `transPct > 1.0`                                                  | nutrition    | product_added              |
+| `simple_carbs_warning`               | `simplePct > 1.3`                                                 | nutrition    | product_added              |
+| `harm_warning`                       | `harmPct > 1.0`                                                   | nutrition    | product_added              |
+| `protein_low`                        | `proteinPct < 0.5 && hour >= 12`                                  | nutrition    | tab_open, product_added    |
+| `fiber_low`                          | `fiberPct < 0.3 && mealCount >= 2`                                | nutrition    | tab_open, product_added    |
+| `fiber_good`                         | `fiberPct >= 1.0`                                                 | nutrition    | product_added              |
+| `good_fat_low`                       | `goodFatPct < 0.4 && hour >= 14`                                  | nutrition    | tab_open, product_added    |
+| `post_training_protein`              | `hasTraining && proteinPct < 0.8`                                 | training     | tab_open, product_added    |
+| `post_training_undereating_critical` | `hasTraining && kcalPct < 0.7 && hour >= 18`                      | training     | tab_open                   |
+| `undereating_warning`                | `kcalPct < 0.7 && hour >= 18` (crashed state)                     | nutrition    | tab_open                   |
+| `evening_undereating`                | `hour >= 20 && isCriticallyUnder(kcalPct, goal)`                  | nutrition    | tab_open                   |
+| `evening_perfect`                    | `hour >= 21 && kcalPct 0.9-1.1`                                   | lifestyle    | tab_open                   |
+| `balanced_macros`                    | `mealCount>=2 && all macros 0.9-1.2`                              | nutrition    | product_added              |
+| `sleep_low`                          | `sleepHours > 0 && < 6`                                           | lifestyle    | tab_open                   |
+| `morning_breakfast`                  | `hour 7-10 && mealCount === 0`                                    | lifestyle    | tab_open                   |
+| `steps_goal`                         | `steps >= 10000`                                                  | lifestyle    | tab_open                   |
+| `winter_vitamin_d`                   | `month 10-2` (ноябрь-март)                                        | lifestyle    | tab_open                   |
+| `variety_low`                        | `items>=5 && uniqueProducts<3`                                    | nutrition    | tab_open, product_added    |
+| `after_sweet_protein`                | `lastMeal simplePct>0.6 && kcal>100`                              | nutrition    | product_added              |
+| `sleep_hunger_correlation`           | `sleepDeficit>2 && kcalPct>1.15`                                  | correlation  | tab_open, product_added    |
+| `sleep_hunger_warning`               | `sleepDeficit>1.5 && hour<12 && kcalPct<0.3`                      | correlation  | tab_open                   |
+| `stress_sweet_pattern`               | `avgStress>=4 && simplePct>1.2`                                   | correlation  | product_added              |
+| `low_stress_balance`                 | `avgStress 1-2 && kcalPct 0.9-1.1`                                | correlation  | tab_open                   |
+| `hard_workout_recovery`              | `highIntensity>20min && proteinPct<1.0`                           | training     | tab_open, product_added    |
+| `cardio_carbs_balance`               | `fatBurn>30min && carbsPct>1.2`                                   | training     | product_added              |
+| `great_workout`                      | `totalMinutes >= 45`                                              | training     | tab_open                   |
+| `water_evening_low`                  | `hour>=18 && waterPct<0.5`                                        | hydration    | tab_open                   |
+| `water_reminder`                     | `hoursSinceWater>2 && hour 10-21`                                 | hydration    | tab_open, product_added    |
+| `water_goal_reached`                 | `waterPct >= 1.0`                                                 | hydration    | tab_open                   |
+| `high_gi_warning`                    | `avgGI>70 && mealCount>=2`                                        | nutrition    | tab_open, product_added    |
+| `low_gi_great`                       | `avgGI 0-55 && mealCount>=2`                                      | nutrition    | tab_open                   |
+| `simple_complex_ratio`               | `totalCarbs>50 && simpleRatio>0.5`                                | nutrition    | product_added              |
+| `carbs_balance_perfect`              | `simpleRatio<=0.3 && mealCount>=2`                                | nutrition    | tab_open                   |
+| `fat_quality_low`                    | `totalFat>20 && goodRatio<0.4`                                    | nutrition    | tab_open, product_added    |
+| `fat_quality_great`                  | `goodRatio>=0.6`                                                  | nutrition    | tab_open                   |
+| `insulin_too_fast`                   | `gap < insulinWave*0.5`                                           | timing       | product_added              |
+| `insulin_perfect`                    | `avgGap >= insulinWave*0.9 && meals>=3`                           | timing       | tab_open                   |
+| `late_dinner_warning`                | `lastMealHour >= 22`                                              | timing       | product_added              |
+| `good_dinner_time`                   | `lastMealHour 18-20 && hour>=21`                                  | timing       | tab_open                   |
+| `bad_sleep_advice`                   | `sleepQuality 1-2 && hour<12`                                     | sleep        | tab_open                   |
+| `great_sleep`                        | `sleepQuality>=4 && sleepHours>=7`                                | sleep        | tab_open                   |
+| `sugar_mood_crash`                   | `moodDrop>=2 && prevMealSimple>30g`                               | emotional    | tab_open                   |
+| `wellbeing_low_food`                 | `avgWellbeing<3 && kcalPct<0.4 && hour>=12`                       | emotional    | tab_open                   |
+| `wellbeing_nutrition_link`           | `avgWellbeing>=4 && kcalPct 0.8-1.1`                              | emotional    | tab_open                   |
+| `iron_reminder`                      | `gender='Женский' && mealCount>=2 && !hasIronFood`                | personalized | tab_open                   |
+| **💊 Supplements (Phase 3)**         |                                                                   |              |                            |
+| `morning_supplements_reminder`       | Утро (6-12) + есть запланированные непринятые витамины            | health       | tab_open, checkin_complete |
+| `evening_supplements_reminder`       | Вечер (18-23) + есть запланированные непринятые вечерние витамины | health       | product_added              |
+| `age_protein`                        | `age>=40 && proteinPct<0.9`                                       | personalized | tab_open, product_added    |
+| `household_bonus`                    | `householdMin >= 60`                                              | activity     | tab_open                   |
+| `sedentary_day`                      | `household=0 && steps<3000 && !training && hour>=18`              | activity     | tab_open                   |
+| `day_score_low`                      | `dayScore < 5 && hour >= 20`                                      | emotional    | tab_open                   |
+| `day_score_high`                     | `dayScore >= 8 && hour >= 20`                                     | achievement  | tab_open                   |
+| `training_type_strength`             | `training.type === 'strength' && proteinPct < 1.0`                | training     | tab_open, product_added    |
+| `training_type_hobby`                | `training.type === 'hobby'`                                       | training     | tab_open                   |
+| `weight_spike_up`                    | `\|Δweight\| > 1kg`                                               | correlation  | tab_open                   |
+| `weight_stable`                      | `7-day weights σ < 0.5kg`                                         | achievement  | tab_open                   |
+| `caffeine_evening`                   | Кофе за <6ч до сна (с учётом реального bedtime)                   | nutrition    | product_added              |
+| `bedtime_undereating`                | До сна ≤2ч + недобор калорий                                      | timing       | tab_open                   |
+| `undereating_dehydration_combo`      | `kcalPct < 0.6 && waterPct < 0.5` — двойной удар                  | nutrition    | tab_open                   |
+| `empty_stomach_late`                 | `hour 10-12 && mealCount === 0`                                   | lifestyle    | tab_open                   |
+| `late_heavy_meal`                    | `lastMealHour >= 21 && lastMealKcal > 500`                        | timing       | product_added              |
+| `insulin_countdown`                  | `minutesUntilEnd > 0 && < 60`                                     | timing       | tab_open                   |
+| `bedtime_protein`                    | До сна ≤4ч + мало белка (с реальным bedtime)                      | timing       | tab_open                   |
+| `post_holiday_detox`                 | Дни после праздников (1-2 янв, и др.)                             | lifestyle    | tab_open                   |
+| `best_day_recall`                    | Лучший день за 7 дней                                             | motivation   | tab_open                   |
+| `night_owl_warning`                  | `hour 1-5 && mealCount > 0`                                       | lifestyle    | product_added              |
+| `lunch_time`                         | `hour === 13 && mealCount === 1`                                  | lifestyle    | tab_open                   |
+| `protein_champion`                   | `proteinPct >= 1.2`                                               | achievement  | tab_open, product_added    |
+| `snack_window`                       | `hour === 16 && kcalPct < 0.6`                                    | lifestyle    | tab_open                   |
+| `mood_improving`                     | Настроение выросло между приёмами                                 | correlation  | product_added              |
+| `workout_consistent`                 | 3 дня тренировок подряд                                           | achievement  | tab_open                   |
+| `evening_snacker`                    | Паттерн поздних ужинов 3 дня                                      | correlation  | tab_open                   |
+| `morning_skipper`                    | Паттерн без завтрака 3 дня                                        | correlation  | tab_open                   |
+| `chronic_undereating_pattern`        | 3+ дней kcalPct < 0.75                                            | correlation  | tab_open                   |
+| **Phase 2: Meal-level**              |                                                                   |              |                            |
+| `meal_too_large`                     | `lastMeal.kcal > 800`                                             | nutrition    | product_added              |
+| `meal_too_small`                     | `meal.kcal < 150 && mealCount >= 2`                               | nutrition    | product_added              |
+| `protein_per_meal_low`               | `meal.prot < 20 && meal.kcal > 200`                               | nutrition    | product_added              |
+| `evening_carbs_high`                 | `hour >= 20 && lastMeal.carbs > 50`                               | nutrition    | product_added              |
+| `fiber_per_meal_good`                | `meal.fiber > 8`                                                  | nutrition    | product_added              |
+| `variety_meal_good`                  | `meal.items.length >= 4`                                          | nutrition    | product_added              |
+| `late_first_meal`                    | `firstMeal.time >= '12:00' && hour >= 13`                         | lifestyle    | tab_open                   |
+| **Phase 2: Day-quality**             |                                                                   |              |                            |
+| `trans_free_day`                     | `dayTot.trans === 0 && mealCount >= 2`                            | achievement  | tab_open                   |
+| `sugar_low_day`                      | `dayTot.simple < 25 && mealCount >= 2`                            | achievement  | tab_open                   |
+| `super_hydration`                    | `waterMl >= 2500`                                                 | hydration    | tab_open                   |
+| `variety_day_good`                   | `uniqueProducts >= 10`                                            | nutrition    | tab_open                   |
+| `deficit_on_track`                   | `kcalPct 0.85-0.95 && deficitPct > 0`                             | lifestyle    | tab_open                   |
+| `weekend_relax`                      | `(Сб или Вс) && kcalPct 1.1-1.3`                                  | lifestyle    | tab_open                   |
+| **Phase 2: Timing & Patterns**       |                                                                   |              |                            |
+| `fasting_window_good`                | `gap ужин→завтрак >= 14h`                                         | timing       | tab_open                   |
+| `long_fast_warning`                  | `gap между приёмами > 7h && hour 10-18`                           | timing       | tab_open                   |
+| `meal_spacing_perfect`               | `все gaps 3-5 часов && meals >= 3`                                | timing       | tab_open                   |
+| `training_recovery_window`           | `30-60 мин после тренировки`                                      | training     | tab_open                   |
+| `sleep_debt_accumulating`            | `3 дня < 6 часов сна`                                             | sleep        | tab_open                   |
+| `stress_eating_detected`             | `avgStress >= 4 && kcalPct > 1.15`                                | correlation  | tab_open                   |
+| **Phase 2: Milestones**              |                                                                   |              |                            |
+| `weight_trend_down`                  | `7-day trend < -0.3kg/week`                                       | correlation  | tab_open                   |
+| `weight_trend_up`                    | `7-day trend > +0.5kg/week`                                       | correlation  | tab_open                   |
+| `weight_forecast_on_track`           | По прогнозу цель достижима                                        | weight       | tab_open                   |
+| `weight_forecast_slow`               | Темп медленный >1 год до цели                                     | weight       | tab_open                   |
+| `weight_forecast_wrong_direction`    | Вес идёт от цели                                                  | weight       | tab_open                   |
+| `weight_almost_there`                | До цели <2кг                                                      | weight       | tab_open                   |
+| `milestone_7_days`                   | `totalDaysTracked === 7`                                          | achievement  | tab_open                   |
+| `milestone_30_days`                  | `totalDaysTracked === 30`                                         | achievement  | tab_open                   |
+| `milestone_100_days`                 | `totalDaysTracked === 100`                                        | achievement  | tab_open                   |
+| `new_record_streak`                  | `currentStreak === personalBestStreak`                            | achievement  | tab_open                   |
+| `first_training_ever`                | первая тренировка в истории                                       | achievement  | tab_open                   |
+| **Meal Quality Score советы**        |                                                                   |              |                            |
+| `meal_quality_excellent`             | Score ≥ 85                                                        | nutrition    | product_added              |
+| `meal_quality_good`                  | Score 70-84                                                       | nutrition    | product_added              |
+| `meal_quality_poor`                  | Score < 50                                                        | nutrition    | product_added              |
+| `meal_quality_improving`             | Средний score сегодня > вчера +10                                 | nutrition    | tab_open                   |
 
 ### Используемые переменные
 
@@ -1915,7 +1919,8 @@ HEYS.InsulinWave.calculateNDTEDecay(hoursSince); // затухание
 
 | Версия | Дата       | Изменения                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | ------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.15.0 | 2025-12-12 | **🔄 Refeed Day v1.3.0**: Полная документация системы загрузочных дней — 4 причины (deficit/training/holiday/rest), зоны выполнения (70-135% = ОК), streak-совместимость, API (`getDayMeta`, `getHistoryStats`, `renderRefeedStats`), UI-интеграция (чек-ин, бейджи, sparkline, heatmap), 5 советов для refeed. **Оранжевая тема** `#f97316` для всех refeed-индикаторов                                                                                             |
+| 3.16.0 | 2025-12-15 | **💊 Supplements Reminders v1.2**: Утренний совет по витаминам после чек-ина + Вечерний совет при добавлении еды (18-23ч). Персонализированные научные обоснования времени приёма (натощак/с едой/с жирами/перед сном). 25+ витаминов с научной базой. Синергии (Mg+Glycine, Mg+Melatonin). Кнопка "✅ Принял". **isReminder: true** — показывается даже при отключённых советах! Приоритет 0 — первый совет дня/вечера!                                              |
+| 3.15.0 | 2025-12-12 | **🔄 Refeed Day v1.3.0**: Полная документация системы загрузочных дней — 4 причины (deficit/training/holiday/rest), зоны выполнения (70-135% = ОК), streak-совместимость, API (`getDayMeta`, `getHistoryStats`, `renderRefeedStats`), UI-интеграция (чек-ин, бейджи, sparkline, heatmap), 5 советов для refeed. **Оранжевая тема** `#f97316` для всех refeed-индикаторов                                                                                              |
 | 3.14.0 | 2025-12-12 | **💰 Caloric Debt System**: Полная документация системы калорийного долга — расчёт за 3 дня, `displayOptimum`, `displayRemainingKcal`, refeed day при критическом недоборе. **Советы**: `caloric_debt_recovery`, `caloric_debt_boost_eaten`. **🔬 GI Scaling Fix v3.5.6**: Увеличен порог для полного влияния GI с GL≥10 до GL≥20, плавное скалирование 0-100% в диапазоне GL 5-20. Пример: хлебцы 24г (GL=13, GI=75) — волна ~1.9ч вместо 2.2ч                       |
 | 3.13.0 | 2025-12-11 | **🔍 Аудит реализации факторов v3.7.2**: Полная проверка 33 факторов инсулиновой волны — 32 из 33 **реально используются** в коде. Найдена нереализованная константа: `MEAL_ORDER_BONUS` (порядок еды). Таблица добавлена в документацию. **Унификация формулы**: waveHistory теперь использует ту же формулу что и main calculation. **NDTE в popup**: добавлена строка "🔥 Вчера тренировка" с −X%                                                                  |
 | 3.12.0 | 2025-12-11 | **🔥 NDTE (Next-Day Training Effect) v3.6.0**: Эффект вчерашней тренировки на сегодняшний метаболизм. **TDEE boost** +4-15% в зависимости от ккал тренировки (300/500/900 пороги). **Волна короче** на 8-35%. **BMI multiplier** — при ожирении эффект сильнее (×1.8). **Decay curve** — затухание 48ч (100%→70%→40%→15%→0%). **UI**: бейдж "🔥 +X%" в строке "Общие затраты". Научное: Magkos 2008, Mikines 1988, Jamurtas 2004                                      |

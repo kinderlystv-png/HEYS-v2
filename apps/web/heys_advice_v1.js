@@ -541,7 +541,8 @@
       emotional: true,      // Эмоции и настроение
       achievement: true,    // Достижения
       timing: true,         // Тайминг приёмов
-      correlation: true     // Корреляции
+      correlation: true,    // Корреляции
+      health: true          // 💊 Здоровье (витамины, напоминания) — НЕЛЬЗЯ отключить
     },
     // Общие настройки
     toastsEnabled: true,    // Автопоказ тостов (FAB всегда работает)
@@ -558,6 +559,7 @@
     hydration: { name: 'Вода', icon: '💧', desc: 'Гидратация и напоминания' },
     lifestyle: { name: 'Образ жизни', icon: '🌅', desc: 'Режим, привычки' },
     training: { name: 'Тренировки', icon: '💪', desc: 'Активность и спорт' },
+    health: { name: 'Здоровье', icon: '💊', desc: 'Витамины, напоминания', isReminder: true },
     sleep: { name: 'Сон', icon: '😴', desc: 'Качество и количество сна' },
     emotional: { name: 'Эмоции', icon: '💙', desc: 'Настроение и стресс' },
     achievement: { name: 'Достижения', icon: '🏆', desc: 'Streak, рекорды' },
@@ -2531,7 +2533,140 @@
     const harmPct = (dayTot?.harm || 0) / (normAbs?.harm || 1);
     
     // ─────────────────────────────────────────────────────────
-    // 🎯 SPECIAL DAY TIPS — Мотивация по дням
+    // 💊 УТРЕННИЕ ВИТАМИНЫ — Приоритетный совет после чек-ина
+    // ─────────────────────────────────────────────────────────
+    
+    // Проверяем: прошёл ли утренний чек-ин с витаминами сегодня
+    const checkinCompleted = sessionStorage.getItem('heys_morning_checkin_done') === 'true';
+    const supplementsAdviceShown = sessionStorage.getItem('heys_morning_supplements_advice_shown');
+    const plannedSupplements = day?.supplementsPlanned || prof?.plannedSupplements || [];
+    const takenSupplements = day?.supplementsTaken || [];
+    
+    // Показываем совет если:
+    // 1. Чек-ин завершён ИЛИ есть запланированные витамины
+    // 2. Совет ещё не показывали сегодня
+    // 3. Утро (6-12)
+    // 4. Есть непринятые витамины
+    const hasPendingSupplements = plannedSupplements.length > 0 && 
+      plannedSupplements.some(id => !takenSupplements.includes(id));
+    
+    if (hour >= 6 && hour <= 12 && hasPendingSupplements && !supplementsAdviceShown) {
+      // Используем функцию из модуля Supplements Science если доступна
+      if (HEYS.Supplements?.generateMorningSupplementAdvice) {
+        const supplementAdvice = HEYS.Supplements.generateMorningSupplementAdvice(
+          plannedSupplements.filter(id => !takenSupplements.includes(id)),
+          { mealCount, hasEaten: mealCount > 0, profile: prof }
+        );
+        
+        if (supplementAdvice) {
+          advices.push({
+            ...supplementAdvice,
+            priority: 0, // Самый высокий приоритет — первый совет!
+            category: 'health', // 💊 Категория напоминаний — показывается ВСЕГДА
+            isReminder: true,   // 💊 Флаг: это напоминание, не совет — bypass настроек
+            onShow: () => { 
+              try { 
+                sessionStorage.setItem('heys_morning_supplements_advice_shown', Date.now().toString()); 
+              } catch(e) {} 
+            }
+          });
+        }
+      } else {
+        // Fallback: простой совет если модуль Science не загружен
+        const pendingSupps = plannedSupplements.filter(id => !takenSupplements.includes(id));
+        const suppNames = pendingSupps
+          .map(id => HEYS.Supplements?.CATALOG?.[id]?.name || id)
+          .slice(0, 3)
+          .join(', ');
+        
+        advices.push({
+          id: 'morning_supplements_reminder',
+          icon: '💊',
+          text: `Время витаминов: ${suppNames}${pendingSupps.length > 3 ? ` и ещё ${pendingSupps.length - 3}` : ''}`,
+          details: 'Утренние витамины лучше принимать с завтраком для максимального усвоения. Отметь их в карточке витаминов!',
+          type: 'health',
+          priority: 0, // Самый высокий приоритет
+          category: 'health', // 💊 Категория напоминаний — показывается ВСЕГДА
+          isReminder: true,   // 💊 Флаг: это напоминание, не совет — bypass настроек
+          triggers: ['tab_open', 'checkin_complete'],
+          ttl: 8000,
+          onShow: () => { 
+            try { 
+              sessionStorage.setItem('heys_morning_supplements_advice_shown', Date.now().toString()); 
+            } catch(e) {} 
+          }
+        });
+      }
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // � ВЕЧЕРНИЕ ВИТАМИНЫ — Напоминание при добавлении еды вечером
+    // ─────────────────────────────────────────────────────────
+    
+    const eveningSupplementsAdviceShown = sessionStorage.getItem('heys_evening_supplements_advice_shown');
+    
+    // Фильтруем вечерние витамины из запланированных
+    const eveningTimings = ['evening', 'beforeBed'];
+    const eveningSupps = plannedSupplements.filter(id => {
+      if (takenSupplements.includes(id)) return false; // Уже принят
+      const info = HEYS.Supplements?.SCIENCE?.MORNING_SUPPLEMENT_SCIENCE?.[id];
+      return info && eveningTimings.includes(info.timing);
+    });
+    
+    // Показываем совет если:
+    // 1. Вечер (18-23)
+    // 2. Есть непринятые вечерние витамины
+    // 3. Совет ещё не показывали сегодня вечером
+    if (hour >= 18 && hour <= 23 && eveningSupps.length > 0 && !eveningSupplementsAdviceShown) {
+      // Используем функцию из модуля Supplements Science если доступна
+      if (HEYS.Supplements?.generateEveningSupplementAdvice) {
+        const eveningAdvice = HEYS.Supplements.generateEveningSupplementAdvice(
+          plannedSupplements.filter(id => !takenSupplements.includes(id)),
+          { mealCount, hasEaten: mealCount > 0, profile: prof }
+        );
+        
+        if (eveningAdvice) {
+          advices.push({
+            ...eveningAdvice,
+            priority: 0, // Самый высокий приоритет — первый совет!
+            category: 'health', // 💊 Категория напоминаний — показывается ВСЕГДА
+            isReminder: true,   // 💊 Флаг: это напоминание, не совет — bypass настроек
+            onShow: () => { 
+              try { 
+                sessionStorage.setItem('heys_evening_supplements_advice_shown', Date.now().toString()); 
+              } catch(e) {} 
+            }
+          });
+        }
+      } else {
+        // Fallback: простой совет если модуль Science не загружен
+        const suppNames = eveningSupps
+          .map(id => HEYS.Supplements?.CATALOG?.[id]?.name || id)
+          .slice(0, 3)
+          .join(', ');
+        
+        advices.push({
+          id: 'evening_supplements_reminder',
+          icon: '🌙',
+          text: `Вечерние витамины: ${suppNames}${eveningSupps.length > 3 ? ` и ещё ${eveningSupps.length - 3}` : ''}`,
+          details: 'Не забудь принять вечерние витамины! Магний и мелатонин лучше работают перед сном. Отметь их в карточке витаминов!',
+          type: 'health',
+          priority: 0, // Самый высокий приоритет
+          category: 'health', // 💊 Категория напоминаний — показывается ВСЕГДА
+          isReminder: true,   // 💊 Флаг: это напоминание, не совет — bypass настроек
+          triggers: ['product_added'],
+          ttl: 8000,
+          onShow: () => { 
+            try { 
+              sessionStorage.setItem('heys_evening_supplements_advice_shown', Date.now().toString()); 
+            } catch(e) {} 
+          }
+        });
+      }
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // �🎯 SPECIAL DAY TIPS — Мотивация по дням
     // ─────────────────────────────────────────────────────────
     
     if (specialDay === 'monday_morning') {
@@ -6662,8 +6797,13 @@
     }, [ctx]);
     
     // 🔧 Фильтруем по включённым категориям
+    // 💊 Советы с isReminder: true (напоминания) показываются ВСЕГДА
     const categoryFilteredAdvices = React.useMemo(() => {
       return allAdvices.filter(a => {
+        // Напоминания (витамины и т.д.) показываются всегда
+        if (a.isReminder === true) return true;
+        // Категория health — это напоминания, всегда показываем
+        if (a.category === 'health') return true;
         if (!a.category) return true;
         return isCategoryEnabled(a.category);
       });

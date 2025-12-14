@@ -206,10 +206,22 @@
       const wrappedOnComplete = () => {
         // 🎉 Поздравительная модалка теперь показывается как шаг 'welcome' внутри flow
         
+        // � Устанавливаем флаг для советов по витаминам
+        try {
+          sessionStorage.setItem('heys_morning_checkin_done', 'true');
+          // Очищаем флаг показа совета — чтобы он показался после чек-ина
+          sessionStorage.removeItem('heys_morning_supplements_advice_shown');
+        } catch(e) { /* sessionStorage недоступен */ }
+        
         // 🔄 Принудительно обновляем данные дня после завершения чек-ина
         const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
         window.dispatchEvent(new CustomEvent('heys:day-updated', { 
           detail: { date: todayKey, source: 'morning-checkin-complete', forceReload: true }
+        }));
+        
+        // 💊 Вызываем событие для обновления советов
+        window.dispatchEvent(new CustomEvent('heys:checkin-complete', {
+          detail: { date: todayKey, type: 'morning' }
         }));
         
         if (onComplete) onComplete();
@@ -263,10 +275,22 @@
         const wrappedOnComplete = () => {
           // 🎉 Поздравительная модалка теперь показывается как шаг 'welcome' внутри flow
           
+          // � Устанавливаем флаг для советов по витаминам
+          try {
+            sessionStorage.setItem('heys_morning_checkin_done', 'true');
+            // Очищаем флаг показа совета — чтобы он показался после чек-ина
+            sessionStorage.removeItem('heys_morning_supplements_advice_shown');
+          } catch(e) { /* sessionStorage недоступен */ }
+          
           // 🔄 Принудительно обновляем данные дня после завершения чек-ина
           const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
           window.dispatchEvent(new CustomEvent('heys:day-updated', { 
             detail: { date: todayKey, source: 'morning-checkin-complete', forceReload: true }
+          }));
+          
+          // 💊 Вызываем событие для обновления советов
+          window.dispatchEvent(new CustomEvent('heys:checkin-complete', {
+            detail: { date: todayKey, type: 'morning' }
           }));
           
           if (onComplete) onComplete();
