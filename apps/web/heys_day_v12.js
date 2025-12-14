@@ -15233,7 +15233,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Supplements Card — карточка витаминов
       (!isMobile || mobileSubTab === 'stats') && HEYS.Supplements && HEYS.Supplements.renderCard({
         dateKey: date,
-        onForceUpdate: () => setForceUpdate(f => f + 1)
+        onForceUpdate: () => {
+          // Dispatch event to force day reload
+          window.dispatchEvent(new CustomEvent('heys:day-updated', {
+            detail: { date, source: 'supplements-update', forceReload: true }
+          }));
+        }
       }),
       // Refeed Card — показывается если сегодня загрузочный день
       (!isMobile || mobileSubTab === 'stats') && day.isRefeedDay && HEYS.Refeed && HEYS.Refeed.renderRefeedCard({
