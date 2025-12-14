@@ -742,7 +742,8 @@
       // Вычисляем производные
       const carbs100 = simple + complex;
       const fat100 = bad + good + trans;
-      const kcal100 = 4 * (protein + carbs100) + 8 * fat100;
+      // TEF-aware formula: protein 3 kcal/g (25% TEF), carbs 4 kcal/g, fat 9 kcal/g (Atwater)
+      const kcal100 = 3 * protein + 4 * carbs100 + 9 * fat100;
       
       return {
         id: Math.random().toString(36).slice(2, 10),

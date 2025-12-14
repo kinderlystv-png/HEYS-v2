@@ -365,7 +365,9 @@
   function computeDerivedProduct(p){
     const carbs= (+p.carbs100)|| ( (+p.simple100||0)+(+p.complex100||0) );
     const fat= (+p.fat100) || ( (+p.badFat100||0)+(+p.goodFat100||0)+(+p.trans100||0) );
-    const kcal = (+p.kcal100) || (4*((+p.protein100||0)+carbs) + 8*fat);
+    // TEF-aware formula: protein 3 kcal/g (25% TEF), carbs 4 kcal/g, fat 9 kcal/g (Atwater)
+    // ALWAYS recalculate - ignore pasted kcal100 for consistency
+    const kcal = 3*(+p.protein100||0) + 4*carbs + 9*fat;
     return {carbs100:round1(carbs), fat100:round1(fat), kcal100:round1(kcal)};
   }
 

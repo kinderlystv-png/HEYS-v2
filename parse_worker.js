@@ -82,7 +82,8 @@ function parsePastedInWorker(text) {
   function computeDerived(p) {
     const carbs100 = toNum(p.simple100) + toNum(p.complex100);
     const fat100 = toNum(p.badFat100) + toNum(p.goodFat100) + toNum(p.trans100);
-    const kcal100 = 4 * (toNum(p.protein100) + carbs100) + 8 * fat100;
+    // TEF-aware formula: protein 3 kcal/g (25% TEF), carbs 4 kcal/g, fat 9 kcal/g (Atwater)
+    const kcal100 = 3 * toNum(p.protein100) + 4 * carbs100 + 9 * fat100;
     return { carbs100: round1(carbs100), fat100: round1(fat100), kcal100: round1(kcal100) };
   }
   function parsePastedSync(text) {

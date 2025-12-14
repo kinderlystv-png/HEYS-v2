@@ -1125,7 +1125,28 @@
               color: allTaken ? '#16a34a' : '#64748b',
               fontWeight: '600'
             }
-          }, `${takenCount}/${planned.length} ✓`)
+          }, `${takenCount}/${planned.length} ✓`),
+          // Кнопка редактирования
+          React.createElement('button', {
+            onClick: () => {
+              if (HEYS.showCheckin?.supplements) {
+                HEYS.showCheckin.supplements(dateKey, () => {
+                  if (onForceUpdate) onForceUpdate();
+                });
+              }
+            },
+            style: {
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px',
+              fontSize: '14px',
+              color: '#94a3b8',
+              display: 'flex',
+              alignItems: 'center'
+            },
+            title: 'Изменить выбранные витамины'
+          }, '⚙️')
         )
       ),
       // v3.1: Напоминание по времени
@@ -1183,7 +1204,18 @@
           color: '#16a34a',
           marginTop: '4px'
         }
-      }, '✓ Всё принял')
+      }, '✓ Всё принял'),
+      // Подсказка про долгое нажатие (показываем если есть научные данные)
+      hasScience && React.createElement('div', {
+        style: {
+          fontSize: '10px',
+          color: '#94a3b8',
+          textAlign: 'center',
+          marginTop: '8px',
+          paddingTop: '8px',
+          borderTop: '1px solid #f1f5f9'
+        }
+      }, '💡 Долгое нажатие на витамин 🔬 → научная информация')
     );
   }
 
