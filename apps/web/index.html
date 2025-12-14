@@ -2,12 +2,33 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
+    <!-- 🔍 PWA Debug: Boot timing logger (saved to localStorage for mobile diagnosis) -->
+    <script>
+      (function() {
+        window.__heysBootLog = [];
+        window.__heysBootStart = Date.now();
+        window.__heysLog = function(msg) {
+          var entry = { t: Date.now() - window.__heysBootStart, m: msg };
+          window.__heysBootLog.push(entry);
+          try {
+            localStorage.setItem('heys_boot_log', JSON.stringify(window.__heysBootLog.slice(-50)));
+          } catch(e) {}
+          console.log('[BOOT +' + entry.t + 'ms]', msg);
+        };
+        window.__heysLog('HTML parsing started');
+        
+        // Check if PWA standalone mode
+        var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        window.__heysLog('PWA standalone: ' + isStandalone);
+      })();
+    </script>
     <!-- Prevent FOUC: Apply theme before CSS loads -->
     <script>
       (function() {
         var t = localStorage.getItem('heys_theme');
         var isDark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         if (isDark) document.documentElement.setAttribute('data-theme', 'dark');
+        window.__heysLog && window.__heysLog('Theme applied: ' + (isDark ? 'dark' : 'light'));
       })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -65,6 +86,22 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
   </head>
   <body class="emoji-system">
+    <!-- 🔍 vConsole для отладки на телефоне (включается через ?debug=1 или localStorage heys_debug=1) -->
+    <script>
+      (function() {
+        window.__heysLog && window.__heysLog('Body parsing started');
+        var debug = new URLSearchParams(window.location.search).get('debug') === '1' || localStorage.getItem('heys_debug') === '1';
+        if (debug) {
+          var s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js';
+          s.onload = function() {
+            new window.VConsole({ theme: 'dark' });
+            window.__heysLog && window.__heysLog('vConsole loaded');
+          };
+          document.head.appendChild(s);
+        }
+      })();
+    </script>
     <div id="root"></div>
 
     <!-- Emoji style initialization - runs BEFORE twemoji loads -->

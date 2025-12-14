@@ -1,18 +1,24 @@
 // heys_app_v12.js — Main app entry, React root, tab navigation, Supabase integration
 
       (function () {
+        // 🔍 PWA Boot logging
+        const bootLog = (msg) => window.__heysLog && window.__heysLog('[APP] ' + msg);
+        bootLog('heys_app_v12.js started');
+        
         // 🔍 EARLY DEBUG: Проверяем auth token ДО любого кода
         try {
           const _earlyToken = localStorage.getItem('heys_supabase_auth_token');
           console.log('[HEYS] 🚀 BOOT: auth token exists?', _earlyToken ? 'YES (' + _earlyToken.length + ' chars)' : 'NO');
+          bootLog('auth token: ' + (_earlyToken ? 'YES' : 'NO'));
         } catch (e) {
           console.log('[HEYS] 🚀 BOOT: error checking token', e.message);
+          bootLog('auth check error: ' + e.message);
         }
         
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.13.1547.a40405a'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.14.1105.pwa-debug'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -23,6 +29,24 @@ const HEYS = window.HEYS = window.HEYS || {};
         const UPDATE_COOLDOWN_MS = 60000; // 1 минута между попытками
         
         HEYS.version = APP_VERSION;
+        
+        // 🔍 PWA Debug helper — показать boot лог (вызвать в консоли или после загрузки)
+        HEYS.showBootLog = function() {
+          try {
+            const log = JSON.parse(localStorage.getItem('heys_boot_log') || '[]');
+            console.table(log);
+            return log;
+          } catch(e) {
+            console.log('No boot log');
+            return [];
+          }
+        };
+        
+        // 🔍 PWA Debug — включить/выключить vConsole
+        HEYS.enableDebug = function(enabled = true) {
+          localStorage.setItem('heys_debug', enabled ? '1' : '0');
+          console.log('Debug mode:', enabled ? 'ON (reload to see vConsole)' : 'OFF');
+        };
         
         // === Семантическое сравнение версий ===
         // Версия: YYYY.MM.DD.HHMM.hash → сравниваем числовую часть
@@ -315,11 +339,17 @@ const HEYS = window.HEYS = window.HEYS || {};
 
         // === Service Worker Registration (Production only) ===
         function registerServiceWorker() {
-          if (!('serviceWorker' in navigator)) return;
+          const bootLog = (msg) => window.__heysLog && window.__heysLog('[SW] ' + msg);
+          
+          if (!('serviceWorker' in navigator)) {
+            bootLog('not supported');
+            return;
+          }
           
           // ❌ НЕ регистрируем SW на localhost — мешает разработке (HMR, updatefound и т.д.)
           if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             console.log('[SW] ⏭️ Skipped on localhost (dev mode)');
+            bootLog('skipped (localhost)');
             // Удаляем существующий SW если есть (чтобы не мешал разработке)
             navigator.serviceWorker.getRegistrations().then(registrations => {
               registrations.forEach(reg => {
@@ -331,6 +361,7 @@ const HEYS = window.HEYS = window.HEYS || {};
             return;
           }
           
+          bootLog('registering...');
           navigator.serviceWorker.register('/sw.js')
             .then((registration) => {
               console.log('[SW] ✅ Registered successfully');
@@ -1098,8 +1129,12 @@ const HEYS = window.HEYS = window.HEYS || {};
           setTimeout(initializeApp, INIT_RETRY_DELAY);
         };
         const waitForDependencies = (onReady) => {
+          // 🔍 PWA Boot logging
+          const bootLog = (msg) => window.__heysLog && window.__heysLog('[DEPS] ' + msg);
+          
           // Показываем минимальный loader если ждём больше 200мс
           if (reactCheckCount === 2 && !document.getElementById('heys-init-loader')) {
+            bootLog('showing loader (waiting for deps)');
             const loader = document.createElement('div');
             loader.id = 'heys-init-loader';
             loader.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:99999';
@@ -1109,6 +1144,7 @@ const HEYS = window.HEYS = window.HEYS || {};
           
           if (isReactReady() && isHeysReady()) {
             console.log('[HEYS] ✅ Dependencies ready, initializing app...');
+            bootLog('deps ready, init app');
             // Убираем loader если показывали
             document.getElementById('heys-init-loader')?.remove();
             onReady();
@@ -1116,12 +1152,14 @@ const HEYS = window.HEYS = window.HEYS || {};
           }
           
           reactCheckCount++;
+          bootLog('waiting #' + reactCheckCount + ' React:' + isReactReady() + ' HEYS:' + isHeysReady());
           
           // Защита от зависания — макс 50 попыток (5 секунд)
           if (reactCheckCount > 50) {
             console.error('[HEYS] ❌ Timeout waiting for dependencies!');
             console.error('React ready:', isReactReady());
             console.error('HEYS ready:', isHeysReady());
+            bootLog('TIMEOUT! React:' + isReactReady() + ' HEYS:' + isHeysReady());
             document.getElementById('heys-init-loader')?.remove();
             // Показываем сообщение об ошибке
             document.body.innerHTML = '<div style="padding:40px;text-align:center;font-family:system-ui"><h1>⚠️ Ошибка загрузки</h1><p>Не удалось загрузить приложение. Обновите страницу.</p><button onclick="location.reload()" style="margin-top:20px;padding:12px 24px;background:#10b981;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer">Обновить</button></div>';

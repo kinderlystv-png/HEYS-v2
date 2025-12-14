@@ -2,7 +2,7 @@
 // Стратегия: Cache-First для статики, Network-First для API
 // Версия обновляется автоматически при билде
 
-const CACHE_VERSION = 'heys-1765630054656';
+const CACHE_VERSION = 'heys-1734167100000';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
@@ -57,25 +57,25 @@ const CDN_URLS = [
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing...', CACHE_VERSION);
   
+  // Не блокируем установку долгим precache — иначе чёрный экран при первом запуске
+  // Сначала активируемся, потом кэшируем в фоне
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => {
-        console.log('[SW] Precaching App Shell');
-        // Добавляем с ignoreSearch для версионных параметров (?v=1)
-        return Promise.all(
-          PRECACHE_URLS.map(url => 
-            cache.add(url).catch(err => {
-              console.warn('[SW] Failed to cache:', url, err.message);
-            })
-          )
-        );
-      })
-      .then(() => {
-        // ✅ АВТОМАТИЧЕСКИ активируем новый SW без ожидания!
-        // Это критично для бесшовного обновления PWA
-        console.log('[SW] Calling skipWaiting...');
-        return self.skipWaiting();
-      })
+    self.skipWaiting().then(() => {
+      console.log('[SW] skipWaiting done, now precaching in background...');
+      // Кэшируем в фоне — НЕ блокирует activate
+      caches.open(STATIC_CACHE)
+        .then((cache) => {
+          console.log('[SW] Background precaching App Shell');
+          return Promise.all(
+            PRECACHE_URLS.map(url => 
+              cache.add(url).catch(err => {
+                console.warn('[SW] Failed to cache:', url, err.message);
+              })
+            )
+          );
+        })
+        .then(() => console.log('[SW] Background precache complete'));
+    })
   );
 });
 
