@@ -1022,17 +1022,25 @@
             
             const handleTouchEnd = (e) => {
               clearTimeout(longPressTimer);
-              if (!isLongPress) {
-                // Короткое нажатие — toggle
-                const btn = e.currentTarget;
-                btn.style.transform = 'scale(1.15)';
-                setTimeout(() => { btn.style.transform = 'scale(1)'; }, 150);
-                toggleTaken(id);
-              }
+              // Не делаем toggle здесь — это сделает onClick
+              // isLongPress сбросится в handleClick если был long press
             };
             
             const handleTouchMove = () => {
               clearTimeout(longPressTimer);
+            };
+            
+            // Обработчик клика (для десктопа и мобильных без hasScienceData)
+            const handleClick = (e) => {
+              // Если это был long press на touch — не toggle (уже открыт popup)
+              if (isLongPress) {
+                isLongPress = false;
+                return;
+              }
+              const btn = e.currentTarget;
+              btn.style.transform = 'scale(1.15)';
+              setTimeout(() => { btn.style.transform = 'scale(1)'; }, 150);
+              toggleTaken(id);
             };
             
             return React.createElement('button', {
@@ -1041,12 +1049,7 @@
               onTouchStart: hasScienceData ? handleTouchStart : null,
               onTouchEnd: hasScienceData ? handleTouchEnd : null,
               onTouchMove: hasScienceData ? handleTouchMove : null,
-              onClick: !hasScienceData ? (e) => {
-                const btn = e.currentTarget;
-                btn.style.transform = 'scale(1.15)';
-                setTimeout(() => { btn.style.transform = 'scale(1)'; }, 150);
-                toggleTaken(id);
-              } : null,
+              onClick: handleClick,  // Всегда обрабатываем клик
               title: supp.tip + (hasScienceData ? ' (долгое нажатие = 🔬 наука)' : ''),
               style: {
                 display: 'flex',
