@@ -2213,7 +2213,85 @@
   border-color: #cbd5e1;
 }
 
-/* === 13.5 CALORIC DEBT CARD — карточка калорийного долга === */
+/* === 13.5 CALORIC BALANCE CARDS — упрощённые карточки баланса === */
+.caloric-balance-card {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 4px;
+}
+
+.caloric-balance-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.caloric-balance-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.caloric-balance-text {
+  font-size: 14px;
+  color: var(--color-slate-700);
+  flex: 1;
+}
+
+.caloric-balance-trend {
+  font-size: 16px;
+  margin-left: auto;
+}
+
+.caloric-balance-trend-text {
+  font-size: 12px;
+  font-weight: 500;
+  padding-left: 26px;
+  margin-top: -4px;
+}
+
+.caloric-balance-steps {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-slate-500);
+  padding-left: 26px;
+}
+
+.caloric-balance-rec {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+}
+
+.caloric-balance-rec-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.caloric-balance-rec-text {
+  font-size: 13px;
+  color: var(--color-slate-600);
+  line-height: 1.35;
+}
+
+.caloric-balance-warning {
+  padding: 6px 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 6px;
+  font-size: 12px;
+  color: #ef4444;
+}
+
+/* === CALORIC DEBT CARD (legacy, может ещё использоваться) === */
 .caloric-debt-card {
   grid-column: 1 / -1;
   display: flex;
@@ -2371,6 +2449,45 @@
   font-size: 12px;
   line-height: 1.4;
   color: var(--color-slate-600);
+}
+
+/* === 13.6 CALORIC EXCESS CARD — карточка перебора (рекомендация кардио) === */
+.caloric-excess-card {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 4px;
+  transition: all 0.2s ease;
+}
+
+.caloric-excess-card:hover {
+  border-color: var(--excess-color, rgba(34, 197, 94, 0.4));
+}
+
+/* Recommendation для excess — с иконкой активности */
+.caloric-excess-recommendation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.caloric-excess-recommendation .caloric-debt-rec-icon {
+  font-size: 18px;
+}
+
+.caloric-excess-recommendation .caloric-debt-rec-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--excess-color, #22c55e);
 }
 
 /* === 14. WEIGHT SPARKLINE — график веса с трендом === */

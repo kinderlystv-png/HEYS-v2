@@ -2815,6 +2815,148 @@
     );
   }
 
+  // ============================================================
+  // SUPPLEMENTS STEP — 💊 Витамины на сегодня
+  // Все категории видны для discovery, выбранные — с оранжевой рамкой
+  // ============================================================
+
+  function SupplementsStepComponent({ data, onChange }) {
+    const Supps = HEYS.Supplements;
+    if (!Supps) {
+      return React.createElement('div', { 
+        style: { padding: '20px', textAlign: 'center', color: '#64748b' }
+      }, '⏳ Загрузка витаминов...');
+    }
+    
+    const byCategory = useMemo(() => Supps.getByCategory(), []);
+    const selected = data.selected || [];
+    
+    const toggle = (id) => {
+      const newSelected = selected.includes(id) 
+        ? selected.filter(s => s !== id)
+        : [...selected, id];
+      onChange({ ...data, selected: newSelected });
+    };
+    
+    return React.createElement('div', { 
+      className: 'mc-supplements-step',
+      style: { 
+        maxHeight: '60vh',
+        overflowY: 'auto',
+        paddingRight: '4px'
+      }
+    },
+      // Категории
+      Object.entries(byCategory).map(([catId, supps]) => {
+        const cat = Supps.CATEGORIES[catId];
+        return React.createElement('div', { 
+          key: catId,
+          style: { marginBottom: '16px' }
+        },
+          // Заголовок категории
+          React.createElement('div', { 
+            style: { 
+              fontSize: '13px', 
+              fontWeight: '600', 
+              color: '#64748b',
+              marginBottom: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }
+          }, 
+            React.createElement('span', null, cat.icon),
+            React.createElement('span', null, cat.name)
+          ),
+          // Чипы витаминов
+          React.createElement('div', { 
+            style: { 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: '8px' 
+            }
+          },
+            supps.map(supp => {
+              const isSelected = selected.includes(supp.id);
+              return React.createElement('button', {
+                key: supp.id,
+                onClick: () => toggle(supp.id),
+                style: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '8px 12px',
+                  borderRadius: '20px',
+                  border: isSelected ? '2px solid #f97316' : '2px solid #e2e8f0',
+                  background: isSelected ? 'rgba(249, 115, 22, 0.1)' : '#fff',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: isSelected ? '600' : '500',
+                  color: isSelected ? '#ea580c' : '#374151',
+                  transition: 'all 0.2s'
+                }
+              },
+                React.createElement('span', null, supp.icon),
+                React.createElement('span', null, supp.name)
+              );
+            })
+          )
+        );
+      }),
+      // Счётчик внизу
+      React.createElement('div', { 
+        style: { 
+          marginTop: '16px',
+          padding: '12px',
+          background: selected.length > 0 ? 'rgba(249, 115, 22, 0.1)' : '#f8fafc',
+          borderRadius: '12px',
+          textAlign: 'center',
+          fontSize: '14px',
+          fontWeight: '600',
+          color: selected.length > 0 ? '#ea580c' : '#64748b',
+          position: 'sticky',
+          bottom: '0'
+        }
+      }, 
+        selected.length > 0 
+          ? `💊 Выбрано: ${selected.length}` 
+          : '💊 Выберите витамины на сегодня'
+      )
+    );
+  }
+
+  registerStep('supplements', {
+    title: 'Витамины',
+    hint: 'Что планируете принять?',
+    icon: '💊',
+    canSkip: true,
+    component: SupplementsStepComponent,
+    getInitialData: () => {
+      // Берём из профиля (запомненный выбор с прошлого дня)
+      const planned = HEYS.Supplements?.getPlanned() || [];
+      return { selected: planned };
+    },
+    save: (data) => {
+      const dateKey = getTodayKey();
+      
+      // 1. Сохраняем в профиль (для следующего дня)
+      if (HEYS.Supplements && HEYS.Supplements.savePlanned) {
+        HEYS.Supplements.savePlanned(data.selected);
+      }
+      
+      // 2. Сохраняем в день как planned
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      dayData.supplementsPlanned = data.selected;
+      dayData.updatedAt = Date.now();
+      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      
+      window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+        detail: { date: dateKey, field: 'supplementsPlanned' }
+      }));
+    },
+    xpAction: 'supplements_planned'
+  });
+
   registerStep('morningRoutine', {
     title: 'Утренняя рутина',
     hint: 'Начни день правильно!',
@@ -2849,6 +2991,7 @@
     Cycle: CycleStepComponent,
     Measurements: MeasurementsStepComponent,
     ColdExposure: ColdExposureStepComponent,
+    Supplements: SupplementsStepComponent,  // 💊 Витамины
     MorningRoutine: MorningRoutineStepComponent,  // 🌟 Мотивирующий финал
     getLastMeasurementByField,
     getMeasurementsHistory,
@@ -2867,6 +3010,6 @@
     shouldShowCycleStep
   };
 
-  console.log('[HEYS] Steps registered: weight, sleepTime, sleepQuality, stepsGoal, deficit, household_minutes, household_stats, cycle, measurements, cold_exposure, morningRoutine');
+  console.log('[HEYS] Steps registered: weight, sleepTime, sleepQuality, stepsGoal, deficit, household_minutes, household_stats, cycle, measurements, cold_exposure, supplements, morningRoutine');
 
 })(typeof window !== 'undefined' ? window : global);

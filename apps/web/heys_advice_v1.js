@@ -4730,6 +4730,55 @@
     // Задача 22: Гликемический индекс
     const avgGI = dayTot?.gi || 0;
     
+    // 🆕 Высокий ГИ во время активной инсулиновой волны
+    if (trigger === 'product_added' && HEYS.InsulinWave) {
+      try {
+        const iwData = HEYS.InsulinWave.calculate({
+          meals: day?.meals || [],
+          pIndex: window.HEYS?.day?.productIndex,
+          getProductFromItem: (item, idx) => {
+            if (!idx?.byId) return null;
+            return idx.byId.get(item.product_id) || idx.byId.get(String(item.product_id));
+          },
+          baseWaveHours: prof?.insulinWaveHours || 3
+        });
+        
+        // Если волна активна и последний добавленный продукт с высоким ГИ
+        if (iwData && iwData.status !== 'ready' && iwData.avgGI > 65) {
+          const remainingText = iwData.remaining > 60 
+            ? Math.round(iwData.remaining / 60) + 'ч'
+            : Math.round(iwData.remaining) + ' мин';
+          
+          advices.push({
+            id: 'high_gi_during_wave',
+            icon: '⚡',
+            text: `ГИ ${iwData.avgGI} во время волны (${remainingText}) — сахар в крови подскочит`,
+            type: 'warning',
+            priority: 8, // Высокий приоритет
+            category: 'nutrition',
+            triggers: ['product_added'],
+            ttl: 6000
+          });
+        }
+        
+        // Хороший выбор — низкий ГИ во время активной волны
+        if (iwData && iwData.status !== 'ready' && iwData.avgGI <= 40) {
+          advices.push({
+            id: 'low_gi_during_wave',
+            icon: '👍',
+            text: `ГИ ${iwData.avgGI} — отличный выбор для активной волны!`,
+            type: 'achievement',
+            priority: 35,
+            category: 'nutrition',
+            triggers: ['product_added'],
+            ttl: 4000
+          });
+        }
+      } catch (e) {
+        // InsulinWave module not available
+      }
+    }
+    
     if (avgGI > 70 && mealCount >= 2) {
       advices.push({
         id: 'high_gi_warning',
@@ -5876,6 +5925,225 @@
           ttl: 5000,
           onShow: () => { try { sessionStorage.setItem('heys_smart_rec_shown', '1'); } catch(e) {} }
         });
+      }
+    }
+    
+    // ─────────────────────────────────────────────────────────
+    // 💊 SUPPLEMENTS ADVICES (витамины) (NEW!)
+    // ─────────────────────────────────────────────────────────
+    
+    // Интеграция с модулем витаминов
+    if (window.HEYS?.Supplements) {
+      const Supps = window.HEYS.Supplements;
+      const dateKey = day?.date || new Date().toISOString().slice(0, 10);
+      const planned = Supps.getPlanned?.() || [];
+      const taken = Supps.getTaken?.(dateKey) || [];
+      const notTaken = planned.filter(id => !taken.includes(id));
+      
+      // 1. Утреннее напоминание (7-10)
+      if (hour >= 7 && hour <= 10 && !sessionStorage.getItem('heys_supp_morning')) {
+        const morningSupps = notTaken.filter(id => {
+          const s = Supps.CATALOG?.[id];
+          return s && (s.timing === 'morning' || s.timing === 'empty');
+        });
+        
+        if (morningSupps.length > 0) {
+          const names = morningSupps.slice(0, 3).map(id => Supps.CATALOG[id]?.name).join(', ');
+          advices.push({
+            id: 'supplements_morning_reminder',
+            icon: '💊',
+            text: `Утренние витамины: ${names}`,
+            details: '🌅 Натощак лучше усваиваются: B12, железо. D3 можно с завтраком.',
+            type: 'tip',
+            priority: 22,
+            category: 'supplements',
+            triggers: ['tab_open'],
+            ttl: 5000,
+            onShow: () => { try { sessionStorage.setItem('heys_supp_morning', '1'); } catch(e) {} }
+          });
+        }
+      }
+      
+      // 2. Вечернее напоминание (21-23)
+      if (hour >= 21 && hour <= 23 && !sessionStorage.getItem('heys_supp_evening')) {
+        const eveningSupps = notTaken.filter(id => {
+          const s = Supps.CATALOG?.[id];
+          return s && (s.timing === 'evening' || s.timing === 'beforeBed');
+        });
+        
+        if (eveningSupps.length > 0) {
+          const names = eveningSupps.slice(0, 3).map(id => Supps.CATALOG[id]?.name).join(', ');
+          advices.push({
+            id: 'supplements_evening_reminder',
+            icon: '🌙',
+            text: `Вечерние: ${names}`,
+            details: '😴 Магний и мелатонин помогают расслабиться перед сном.',
+            type: 'tip',
+            priority: 25,
+            category: 'supplements',
+            triggers: ['tab_open'],
+            ttl: 5000,
+            onShow: () => { try { sessionStorage.setItem('heys_supp_evening', '1'); } catch(e) {} }
+          });
+        }
+      }
+      
+      // 3. Синергия с жирной едой
+      const lastMeal = (day?.meals || []).slice(-1)[0];
+      if (lastMeal && lastMeal.items?.length > 0 && !sessionStorage.getItem('heys_supp_fat_synergy')) {
+        // Считаем жиры в последнем приёме
+        let mealFat = 0;
+        for (const item of lastMeal.items) {
+          const p = getProductForItem(item, pIndex);
+          if (p) mealFat += (p.fat100 || 0) * (item.grams || 100) / 100;
+        }
+        
+        if (mealFat >= 10) {
+          const fatSoluble = notTaken.filter(id => 
+            Supps.CATALOG?.[id]?.timing === 'withFat'
+          );
+          
+          if (fatSoluble.length > 0) {
+            const names = fatSoluble.map(id => Supps.CATALOG[id]?.name).join(', ');
+            advices.push({
+              id: 'supplements_fat_meal_synergy',
+              icon: '🥑',
+              text: `Жирный приём! Идеально для: ${names}`,
+              details: '🧬 Жирорастворимые витамины (D, E, K, A) усваиваются в 3-4 раза лучше с жирами.',
+              type: 'tip',
+              priority: 18,
+              category: 'supplements',
+              triggers: ['product_added'],
+              ttl: 6000,
+              onShow: () => { try { sessionStorage.setItem('heys_supp_fat_synergy', '1'); } catch(e) {} }
+            });
+          }
+        }
+      }
+      
+      // 4. Конфликт: молочка + железо
+      if (lastMeal && lastMeal.items?.length > 0 && !sessionStorage.getItem('heys_supp_dairy_iron')) {
+        const dairyFoods = ['творог', 'молоко', 'сыр', 'йогурт', 'кефир', 'сметана'];
+        const hasDairy = lastMeal.items.some(item =>
+          dairyFoods.some(f => (item.name || '').toLowerCase().includes(f))
+        );
+        
+        if (hasDairy && notTaken.includes('iron')) {
+          advices.push({
+            id: 'supplements_dairy_iron_conflict',
+            icon: '⚠️',
+            text: 'Молочка + железо = плохо усваивается',
+            details: '🧀 Кальций из молочки блокирует усвоение железа. Раздели приём на 2-3 часа.',
+            type: 'warning',
+            priority: 20,
+            category: 'supplements',
+            triggers: ['product_added'],
+            ttl: 5000,
+            onShow: () => { try { sessionStorage.setItem('heys_supp_dairy_iron', '1'); } catch(e) {} }
+          });
+        }
+      }
+      
+      // 5. Кофе + минералы
+      if (lastMeal && !sessionStorage.getItem('heys_supp_coffee_minerals')) {
+        const hasCoffee = (lastMeal.items || []).some(item =>
+          (item.name || '').toLowerCase().includes('кофе')
+        );
+        const mineralSupps = notTaken.filter(id => 
+          ['iron', 'calcium', 'zinc', 'magnesium'].includes(id)
+        );
+        
+        if (hasCoffee && mineralSupps.length > 0) {
+          const names = mineralSupps.map(id => Supps.CATALOG[id]?.name).join(', ');
+          advices.push({
+            id: 'supplements_coffee_minerals',
+            icon: '☕',
+            text: `Кофе блокирует: ${names}`,
+            details: '☕ Танины и кофеин снижают усвоение минералов на 40-60%. Подожди 1-2 часа.',
+            type: 'warning',
+            priority: 23,
+            category: 'supplements',
+            triggers: ['product_added'],
+            ttl: 5000,
+            onShow: () => { try { sessionStorage.setItem('heys_supp_coffee_minerals', '1'); } catch(e) {} }
+          });
+        }
+      }
+      
+      // 6. Еда с железом + витамин C (синергия!)
+      if (lastMeal && !sessionStorage.getItem('heys_supp_iron_vitc')) {
+        const ironRichFoods = ['печень', 'говядина', 'гречка', 'чечевица', 'шпинат', 'фасоль'];
+        const hasIronFood = (lastMeal.items || []).some(item =>
+          ironRichFoods.some(f => (item.name || '').toLowerCase().includes(f))
+        );
+        
+        if (hasIronFood && notTaken.includes('vitC')) {
+          advices.push({
+            id: 'supplements_iron_vitc_synergy',
+            icon: '🍊',
+            text: 'Еда с железом! Витамин C усилит усвоение ×3',
+            details: '🧬 Витамин C превращает негемовое железо в легкоусваиваемую форму.',
+            type: 'tip',
+            priority: 17,
+            category: 'supplements',
+            triggers: ['product_added'],
+            ttl: 6000,
+            onShow: () => { try { sessionStorage.setItem('heys_supp_iron_vitc', '1'); } catch(e) {} }
+          });
+        }
+      }
+      
+      // 7. Streak витаминов
+      const compliance = Supps.getComplianceStats?.();
+      if (compliance?.currentStreak >= 5 && !sessionStorage.getItem('heys_supp_streak')) {
+        advices.push({
+          id: 'supplements_streak',
+          icon: '🔥',
+          text: `${compliance.currentStreak} дней подряд все витамины!`,
+          details: '💪 Регулярность важнее дозировки. Продолжай!',
+          type: 'achievement',
+          priority: 45,
+          category: 'supplements',
+          triggers: ['tab_open'],
+          ttl: 5000,
+          onShow: () => { try { sessionStorage.setItem('heys_supp_streak', '1'); } catch(e) {} }
+        });
+      }
+      
+      // 8. Все приняты сегодня
+      if (planned.length > 0 && notTaken.length === 0 && !sessionStorage.getItem('heys_supp_all_done')) {
+        advices.push({
+          id: 'supplements_all_taken',
+          icon: '✅',
+          text: 'Все витамины приняты! Молодец!',
+          details: '💊 Последовательность — ключ к результату.',
+          type: 'achievement',
+          priority: 55,
+          category: 'supplements',
+          triggers: ['tab_open'],
+          ttl: 4000,
+          onShow: () => { try { sessionStorage.setItem('heys_supp_all_done', '1'); } catch(e) {} }
+        });
+      }
+      
+      // 9. Персональные рекомендации по профилю
+      if (!sessionStorage.getItem('heys_supp_personal_rec')) {
+        const recs = Supps.getSmartRecommendations?.(prof, day) || [];
+        if (recs.length > 0) {
+          const rec = recs[0]; // Показываем первую
+          advices.push({
+            id: 'supplements_personal_rec',
+            icon: '💡',
+            text: rec.reason,
+            details: `Рекомендуем добавить ${Supps.CATALOG?.[rec.id]?.name || rec.id} в план.`,
+            type: 'tip',
+            priority: 50,
+            category: 'supplements',
+            triggers: ['tab_open'],
+            ttl: 6000,
+            onShow: () => { try { sessionStorage.setItem('heys_supp_personal_rec', '1'); } catch(e) {} }
+          });
+        }
       }
     }
     

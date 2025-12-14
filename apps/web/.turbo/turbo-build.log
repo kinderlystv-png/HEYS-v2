@@ -6,16 +6,16 @@
 > @heys/web@13.0.1 prebuild /Users/poplavskijanton/HEYS-v2/apps/web
 > node scripts/update-version.cjs && node -e "const fs=require('fs');const f=process.cwd()+'/public/sw.js';let c=fs.readFileSync(f,'utf8');c=c.replace(/heys-[\w.-]+/,'heys-'+Date.now());fs.writeFileSync(f,c);console.log('SW version:',Date.now())"
 
-✅ APP_VERSION updated to: 2025.12.13.1547.a40405a
-✅ version.json created: 2025.12.13.1547.a40405a
-✅ SW CACHE_VERSION updated to: heys-1765630054394
-SW version: 1765630054657
+✅ APP_VERSION updated to: 2025.12.14.1343.30f78a1
+✅ version.json created: 2025.12.14.1343.30f78a1
+✅ SW CACHE_VERSION updated to: heys-1765708985861
+SW version: 1765708985927
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 vite v4.5.14 building for production...
 <script src="heys_dev_utils.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_simple_analytics.js"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_core_v12.js"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_storage_supabase_v1.js?v=28"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_storage_supabase_v1.js?v=29"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_models_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_storage_layer_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_wheel_picker.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
@@ -35,6 +35,7 @@ vite v4.5.14 building for production...
 <script src="heys_insulin_wave_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_cycle_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_refeed_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_supplements_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_step_modal_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_steps_v1.js?v=21"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_profile_step_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
@@ -49,16 +50,16 @@ vite v4.5.14 building for production...
 <script src="heys_data_overview_v1.js?v=20"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_auth_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_login_screen_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_app_v12.js?v=22"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_app_v12.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
 transforming...
 ✓ 4 modules transformed.
 rendering chunks...
 computing gzip size...
 dist/assets/heys_simple_analytics-b3f08726.js      10.31 kB
-dist/index.html                                    11.95 kB │ gzip:  3.30 kB
+dist/index.html                                    13.75 kB │ gzip:  3.85 kB
 dist/assets/heys_models_v1-c59b9b8b.js             31.80 kB
 dist/assets/heys_core_v12-3e32fac8.js              71.75 kB
-dist/assets/heys_storage_supabase_v1-aae499ff.js  218.21 kB
-dist/assets/index-c5511f37.css                    489.50 kB │ gzip: 83.47 kB
+dist/assets/heys_storage_supabase_v1-8202cbb2.js  232.99 kB
+dist/assets/index-6d57349b.css                    492.03 kB │ gzip: 83.75 kB
 [vite-plugin-static-copy] Copied 1 items.
-✓ built in 1.43s
+✓ built in 1.73s
