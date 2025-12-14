@@ -3888,8 +3888,8 @@
     // === Popup для недельной статистики "X/Y в норме" ===
     const [weekNormPopup, setWeekNormPopup] = useState(null); // { days, inNorm, withData, x, y }
 
-    // === Popup для калорийного долга ===
-    const [debtPopup, setDebtPopup] = useState(null); // { x, y, data: caloricDebt }
+    // === Состояние раскрытия карточки баланса калорий ===
+    const [balanceCardExpanded, setBalanceCardExpanded] = useState(false);
 
     // === Popup для научного расчёта дефицита недели ===
     const [weekDeficitPopup, setWeekDeficitPopup] = useState(null); // { x, y, data: { totalEaten, totalBurned, deficitKcal, deficitPct, fatGrams, avgTargetDeficit } }
@@ -12468,7 +12468,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       })(),
       // === CALORIC DEBT CARD — Карточка калорийного долга ===
       caloricDebt && caloricDebt.hasDebt && (() => {
-        const { debt, dailyBoost, adjustedOptimum, needsRefeed, dayBreakdown, totalBalance, consecutiveDeficitDays } = caloricDebt;
+        const { debt, dailyBoost, adjustedOptimum, needsRefeed, dayBreakdown, totalBalance, consecutiveDeficitDays, trend, weightImpact } = caloricDebt;
         
         // Цвет и иконка по уровню долга
         const getDebtStyle = () => {
@@ -12486,82 +12486,94 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
         
         return React.createElement('div', {
-          className: 'caloric-debt-card',
+          className: 'caloric-balance-card' + (balanceCardExpanded ? ' expanded' : ''),
           style: { 
             background: style.bg, 
             borderColor: style.border,
-            '--debt-color': style.color
+            '--balance-color': style.color
           },
           onClick: (e) => {
             e.stopPropagation();
-            const rect = e.currentTarget.getBoundingClientRect();
-            setDebtPopup({
-              x: rect.left + rect.width / 2,
-              y: rect.bottom + 8,
-              data: caloricDebt
-            });
+            setBalanceCardExpanded(!balanceCardExpanded);
           }
         },
-          // Header: иконка + заголовок + badge
-          React.createElement('div', { className: 'caloric-debt-header' },
-            React.createElement('span', { className: 'caloric-debt-icon' }, style.icon),
-            React.createElement('span', { className: 'caloric-debt-title' }, 'Баланс за ' + dayBreakdown.length + ' дня'),
-            debt > 0 && React.createElement('span', { 
-              className: 'caloric-debt-badge',
+          // === HEADER (всегда виден) — компактная строка ===
+          React.createElement('div', { className: 'caloric-balance-header' },
+            React.createElement('span', { className: 'caloric-balance-icon' }, style.icon),
+            React.createElement('div', { className: 'caloric-balance-summary' },
+              React.createElement('span', { className: 'caloric-balance-label' }, 
+                needsRefeed ? 'Нужна загрузка' : 'Недобор за ' + dayBreakdown.length + ' дн'
+              ),
+              dailyBoost > 0 && React.createElement('span', { className: 'caloric-balance-boost' }, 
+                '→ +' + dailyBoost + ' ккал сегодня'
+              )
+            ),
+            React.createElement('span', { 
+              className: 'caloric-balance-badge',
               style: { backgroundColor: style.color }
-            }, '-' + debt + ' ккал')
-          ),
-          // Breakdown по дням — горизонтальная лента
-          React.createElement('div', { className: 'caloric-debt-days' },
-            dayBreakdown.map((d, i) => {
-              const isPositive = d.delta >= 0;
-              const isNegative = d.delta < 0;
-              const isTraining = d.hasTraining;
-              
-              return React.createElement('div', {
-                key: d.date,
-                className: 'caloric-debt-day' + 
-                  (isPositive ? ' positive' : '') + 
-                  (isNegative ? ' negative' : '') +
-                  (isTraining ? ' training' : '')
-              },
-                // День
-                React.createElement('span', { className: 'caloric-debt-day-num' }, d.dayNum),
-                // Дельта
-                React.createElement('span', { 
-                  className: 'caloric-debt-day-delta',
-                  style: { color: isPositive ? '#22c55e' : '#ef4444' }
-                }, formatDelta(d.delta)),
-                // Иконка тренировки
-                isTraining && React.createElement('span', { className: 'caloric-debt-day-train' }, '🏋️')
-              );
-            })
-          ),
-          // Рекомендация
-          dailyBoost > 0 && React.createElement('div', { className: 'caloric-debt-recommendation' },
-            React.createElement('span', { className: 'caloric-debt-rec-icon' }, needsRefeed ? '🍽️' : '💡'),
-            React.createElement('span', { className: 'caloric-debt-rec-text' },
-              needsRefeed 
-                ? 'Загрузка: можно ' + adjustedOptimum + ' ккал (+' + dailyBoost + ')'
-                : 'Сегодня можно ' + adjustedOptimum + ' ккал (+' + dailyBoost + ')'
+            }, '-' + debt),
+            React.createElement('span', { className: 'caloric-balance-chevron' }, 
+              balanceCardExpanded ? '▲' : '▼'
             )
           ),
-          // Пояснение для пользователя
-          React.createElement('div', { className: 'caloric-debt-explanation' },
-            React.createElement('span', { className: 'caloric-debt-explanation-text' },
+          
+          // === DETAILS (только при раскрытии) ===
+          balanceCardExpanded && React.createElement('div', { className: 'caloric-balance-details' },
+            // Breakdown по дням
+            React.createElement('div', { className: 'caloric-debt-days' },
+              dayBreakdown.map((d, i) => {
+                const isPositive = d.delta >= 0;
+                const isNegative = d.delta < 0;
+                const isTraining = d.hasTraining;
+                
+                return React.createElement('div', {
+                  key: d.date,
+                  className: 'caloric-debt-day' + 
+                    (isPositive ? ' positive' : '') + 
+                    (isNegative ? ' negative' : '') +
+                    (isTraining ? ' training' : '')
+                },
+                  React.createElement('span', { className: 'caloric-debt-day-name' }, d.dayName),
+                  React.createElement('span', { 
+                    className: 'caloric-debt-day-delta',
+                    style: { color: isPositive ? '#22c55e' : '#ef4444' }
+                  }, formatDelta(d.delta)),
+                  isTraining && React.createElement('span', { className: 'caloric-debt-day-train' }, '🏋️')
+                );
+              })
+            ),
+            
+            // Рекомендация
+            dailyBoost > 0 && React.createElement('div', { className: 'caloric-debt-recommendation' },
+              React.createElement('span', { className: 'caloric-debt-rec-icon' }, needsRefeed ? '🍽️' : '💡'),
+              React.createElement('span', { className: 'caloric-debt-rec-text' },
+                needsRefeed 
+                  ? 'Загрузка: сегодня можно ' + adjustedOptimum + ' ккал'
+                  : 'Сегодня норма увеличена до ' + adjustedOptimum + ' ккал'
+              )
+            ),
+            
+            // Влияние на вес
+            weightImpact && React.createElement('div', { className: 'caloric-balance-weight' },
+              React.createElement('span', null, '⚖️ ' + weightImpact.text)
+            ),
+            
+            // Предупреждение
+            consecutiveDeficitDays >= 3 && React.createElement('div', { className: 'caloric-debt-warning' },
+              React.createElement('span', null, '⚠️ ' + consecutiveDeficitDays + ' дней подряд в сильном дефиците')
+            ),
+            
+            // Пояснение
+            React.createElement('div', { className: 'caloric-balance-explanation' },
               debt > 400 
-                ? '💡 Ты недоел за последние дни. Бонусные калории помогут восстановить энергию без ущерба прогрессу.'
-                : '💡 Небольшой недобор за последние дни. Можешь съесть чуть больше — это не сорвёт результат.'
+                ? '💡 Недобор накопился — бонусные калории помогут восстановить энергию'
+                : '💡 Небольшой недобор. Можешь съесть чуть больше'
             )
-          ),
-          // Предупреждение о тренировках
-          consecutiveDeficitDays >= 3 && React.createElement('div', { className: 'caloric-debt-warning' },
-            React.createElement('span', null, '⚠️ ' + consecutiveDeficitDays + ' дней подряд в сильном дефиците')
           )
         );
       })(),
       
-      // === CALORIC EXCESS CARD — Карточка перебора с рекомендацией кардио ===
+      // === CALORIC EXCESS CARD — Карточка перебора (раскрывающаяся) ===
       caloricDebt && caloricDebt.hasExcess && !caloricDebt.hasDebt && (() => {
         const { excess, rawExcess, cardioRecommendation, totalTrainingKcal, dayBreakdown, trend, severity, weightImpact, goalMode } = caloricDebt;
         
@@ -12573,70 +12585,115 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
         const style = getExcessStyle();
         
+        // Форматирование дельты
+        const formatDelta = (d) => d >= 0 ? '+' + d : String(d);
+        
+        // Краткая рекомендация для header
+        const shortRec = cardioRecommendation 
+          ? (cardioRecommendation.compensatedBySteps 
+              ? '✓ шаги компенсировали' 
+              : cardioRecommendation.activityIcon + ' ' + cardioRecommendation.minutes + ' мин')
+          : null;
+        
         return React.createElement('div', {
-          className: 'caloric-excess-card',
+          className: 'caloric-balance-card excess' + (balanceCardExpanded ? ' expanded' : ''),
           style: { 
             background: style.bg, 
             borderColor: style.border,
-            '--excess-color': style.color
+            '--balance-color': style.color
+          },
+          onClick: (e) => {
+            e.stopPropagation();
+            setBalanceCardExpanded(!balanceCardExpanded);
           }
         },
-          // Header
-          React.createElement('div', { className: 'caloric-debt-header' },
-            React.createElement('span', { className: 'caloric-debt-icon' }, style.icon),
-            React.createElement('span', { className: 'caloric-debt-title' }, 'Баланс за ' + dayBreakdown.length + ' дней'),
+          // === HEADER (всегда виден) — компактная строка ===
+          React.createElement('div', { className: 'caloric-balance-header' },
+            React.createElement('span', { className: 'caloric-balance-icon' }, style.icon),
+            React.createElement('div', { className: 'caloric-balance-summary' },
+              React.createElement('span', { className: 'caloric-balance-label' }, 
+                'Перебор за ' + dayBreakdown.length + ' дн'
+              ),
+              shortRec && React.createElement('span', { className: 'caloric-balance-rec-short' }, shortRec)
+            ),
             React.createElement('span', { 
-              className: 'caloric-debt-badge',
+              className: 'caloric-balance-badge',
               style: { backgroundColor: style.color }
-            }, '+' + excess + ' ккал')
+            }, '+' + excess),
+            React.createElement('span', { className: 'caloric-balance-chevron' }, 
+              balanceCardExpanded ? '▲' : '▼'
+            )
           ),
           
-          // Тренд
-          trend && trend.direction !== 'stable' && React.createElement('div', { 
-            className: 'caloric-excess-trend',
-            style: { color: trend.direction === 'improving' ? '#22c55e' : '#ef4444' }
-          },
-            React.createElement('span', null, trend.emoji + ' ' + trend.text)
-          ),
-          
-          // Компенсация тренировками
-          totalTrainingKcal > 0 && React.createElement('div', { className: 'caloric-excess-training' },
-            React.createElement('span', null, '🏋️ Тренировки компенсировали ~' + Math.round(totalTrainingKcal * 0.5) + ' ккал')
-          ),
-          
-          // Рекомендация кардио
-          cardioRecommendation && React.createElement('div', { className: 'caloric-excess-recommendation' },
-            cardioRecommendation.compensatedBySteps 
-              ? React.createElement('div', { className: 'caloric-excess-success' },
-                  React.createElement('span', { className: 'caloric-excess-rec-icon' }, '🎉'),
-                  React.createElement('span', { className: 'caloric-excess-rec-text' }, cardioRecommendation.text)
-                )
-              : React.createElement('div', { className: 'caloric-excess-cardio' },
-                  React.createElement('span', { className: 'caloric-excess-rec-icon' }, cardioRecommendation.activityIcon),
-                  React.createElement('div', { className: 'caloric-excess-rec-content' },
-                    React.createElement('span', { className: 'caloric-excess-rec-title' }, 'Рекомендация:'),
-                    React.createElement('span', { className: 'caloric-excess-rec-text' }, cardioRecommendation.text),
-                    cardioRecommendation.stepsCompensation > 0 && 
-                      React.createElement('span', { className: 'caloric-excess-steps-note' }, 
-                        '👟 Шаги уже списали ' + cardioRecommendation.stepsCompensation + ' ккал'
-                      )
+          // === DETAILS (только при раскрытии) ===
+          balanceCardExpanded && React.createElement('div', { className: 'caloric-balance-details' },
+            // Breakdown по дням
+            React.createElement('div', { className: 'caloric-debt-days' },
+              dayBreakdown.map((d, i) => {
+                const isPositive = d.delta >= 0;
+                const isNegative = d.delta < 0;
+                const isTraining = d.hasTraining;
+                
+                return React.createElement('div', {
+                  key: d.date,
+                  className: 'caloric-debt-day' + 
+                    (isPositive ? ' positive' : '') + 
+                    (isNegative ? ' negative' : '') +
+                    (isTraining ? ' training' : '')
+                },
+                  React.createElement('span', { className: 'caloric-debt-day-name' }, d.dayName),
+                  React.createElement('span', { 
+                    className: 'caloric-debt-day-delta',
+                    style: { color: isPositive ? '#22c55e' : '#ef4444' }
+                  }, formatDelta(d.delta)),
+                  isTraining && React.createElement('span', { className: 'caloric-debt-day-train' }, '🏋️')
+                );
+              })
+            ),
+            
+            // Тренд
+            trend && trend.direction !== 'stable' && React.createElement('div', { 
+              className: 'caloric-excess-trend',
+              style: { color: trend.direction === 'improving' ? '#22c55e' : '#ef4444' }
+            },
+              trend.emoji + ' ' + trend.text
+            ),
+            
+            // Компенсация тренировками
+            totalTrainingKcal > 0 && React.createElement('div', { className: 'caloric-excess-training' },
+              '🏋️ Тренировки компенсировали ~' + Math.round(totalTrainingKcal * 0.5) + ' ккал'
+            ),
+            
+            // Рекомендация кардио (подробная)
+            cardioRecommendation && !cardioRecommendation.compensatedBySteps && React.createElement('div', { className: 'caloric-excess-cardio' },
+              React.createElement('span', { className: 'caloric-excess-rec-icon' }, cardioRecommendation.activityIcon),
+              React.createElement('div', { className: 'caloric-excess-rec-content' },
+                React.createElement('span', { className: 'caloric-excess-rec-title' }, 'Рекомендация:'),
+                React.createElement('span', { className: 'caloric-excess-rec-text' }, cardioRecommendation.text),
+                cardioRecommendation.stepsCompensation > 0 && 
+                  React.createElement('span', { className: 'caloric-excess-steps-note' }, 
+                    '👟 Шаги уже списали ' + cardioRecommendation.stepsCompensation + ' ккал'
                   )
-                )
-          ),
-          
-          // Влияние на вес
-          weightImpact && severity >= 1 && React.createElement('div', { className: 'caloric-excess-weight' },
-            React.createElement('span', null, '⚖️ ' + weightImpact.text)
-          ),
-          
-          // Пояснение — без осуждения!
-          React.createElement('div', { className: 'caloric-debt-explanation' },
-            React.createElement('span', { className: 'caloric-debt-explanation-text' },
+              )
+            ),
+            
+            // Успех — шаги компенсировали всё
+            cardioRecommendation && cardioRecommendation.compensatedBySteps && React.createElement('div', { className: 'caloric-excess-success' },
+              React.createElement('span', null, '🎉 ' + cardioRecommendation.text)
+            ),
+            
+            // Влияние на вес
+            weightImpact && severity >= 1 && React.createElement('div', { className: 'caloric-balance-weight' },
+              '⚖️ ' + weightImpact.text
+            ),
+            
+            // Пояснение
+            React.createElement('div', { className: 'caloric-balance-explanation' },
               goalMode === 'bulk'
                 ? '💡 При наборе массы небольшой профицит — это нормально!'
                 : goalMode === 'loss'
-                  ? '💡 Перебор за неделю можно компенсировать активностью. Это не срыв, это данные.'
-                  : '💡 Баланс немного в плюсе. Лёгкая активность поможет его выровнять.'
+                  ? '💡 Перебор можно компенсировать активностью. Это не срыв, это данные.'
+                  : '💡 Баланс в плюсе. Лёгкая активность поможет выровнять.'
             )
           )
         );

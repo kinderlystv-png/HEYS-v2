@@ -2291,6 +2291,142 @@
   color: #ef4444;
 }
 
+/* === CALORIC BALANCE CARD — Раскрывающаяся карточка баланса === */
+.caloric-balance-card {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.caloric-balance-card:hover {
+  border-color: var(--balance-color, rgba(59, 130, 246, 0.4));
+}
+
+.caloric-balance-card.excess {
+  background: rgba(234, 179, 8, 0.08);
+  border-color: rgba(234, 179, 8, 0.2);
+}
+
+/* Header — компактная строка */
+.caloric-balance-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.caloric-balance-icon {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.caloric-balance-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.caloric-balance-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-slate-700);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.caloric-balance-boost {
+  font-size: 11px;
+  font-weight: 500;
+  color: #22c55e;
+}
+
+.caloric-balance-rec-short {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--balance-color, #3b82f6);
+}
+
+.caloric-balance-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.caloric-balance-chevron {
+  font-size: 10px;
+  color: var(--color-slate-400);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.caloric-balance-card.expanded .caloric-balance-chevron {
+  color: var(--balance-color, #3b82f6);
+}
+
+/* Details — раскрывающаяся секция */
+.caloric-balance-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Weight и explanation в details */
+.caloric-balance-weight {
+  font-size: 12px;
+  color: var(--color-slate-600);
+  padding: 4px 0;
+}
+
+.caloric-balance-explanation {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-slate-600);
+  padding: 8px 10px;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid var(--balance-color, rgba(59, 130, 246, 0.3));
+}
+
+/* День недели вместо номера */
+.caloric-debt-day-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-slate-500);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
 /* === CALORIC DEBT CARD (legacy, может ещё использоваться) === */
 .caloric-debt-card {
   grid-column: 1 / -1;
