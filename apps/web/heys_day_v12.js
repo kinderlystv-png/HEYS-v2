@@ -15230,6 +15230,11 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       (!isMobile || mobileSubTab === 'stats') && compactActivity,
       (!isMobile || mobileSubTab === 'stats') && sideBlock,
       (!isMobile || mobileSubTab === 'stats') && cycleCard,
+      // Supplements Card — карточка витаминов
+      (!isMobile || mobileSubTab === 'stats') && HEYS.Supplements && HEYS.Supplements.renderSupplementsCard({
+        dateKey: date,
+        onForceUpdate: () => setForceUpdate(f => f + 1)
+      }),
       // Refeed Card — показывается если сегодня загрузочный день
       (!isMobile || mobileSubTab === 'stats') && day.isRefeedDay && HEYS.Refeed && HEYS.Refeed.renderRefeedCard({
         isRefeedDay: day.isRefeedDay,
