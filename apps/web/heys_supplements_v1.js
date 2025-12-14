@@ -863,11 +863,66 @@
     const U = HEYS.utils || {};
     const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${dateKey}`, {}) : {};
     
-    const planned = dayData.supplementsPlanned || [];
+    // v3.3: Используем planned из дня ИЛИ из профиля (если чек-ин не был)
+    const planned = dayData.supplementsPlanned || getPlannedSupplements();
     const taken = dayData.supplementsTaken || [];
     
-    // Если ничего не запланировано — не показываем карточку
-    if (planned.length === 0) return null;
+    // v3.4: Если ничего не запланировано — показываем карточку с сообщением
+    if (planned.length === 0) {
+      return React.createElement('div', { 
+        className: 'compact-card supplements-card',
+        style: {
+          background: '#fff',
+          borderRadius: '16px',
+          padding: '16px',
+          marginBottom: '12px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+        }
+      },
+        React.createElement('div', { 
+          style: { 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '8px'
+          }
+        },
+          React.createElement('span', { 
+            style: { fontWeight: '600', fontSize: '15px' }
+          }, '💊 Витамины')
+        ),
+        React.createElement('div', {
+          style: {
+            textAlign: 'center',
+            padding: '12px',
+            color: '#94a3b8',
+            fontSize: '13px'
+          }
+        },
+          React.createElement('div', { style: { marginBottom: '8px' } }, 'Витамины не выбраны'),
+          React.createElement('div', { style: { fontSize: '11px' } }, 
+            'Выберите в утреннем чек-ине или ',
+            React.createElement('button', {
+              onClick: () => {
+                // Открыть выбор витаминов
+                if (HEYS.showCheckin?.supplements) {
+                  HEYS.showCheckin.supplements();
+                }
+              },
+              style: {
+                background: 'none',
+                border: 'none',
+                color: '#3b82f6',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                padding: 0,
+                fontSize: '11px'
+              }
+            }, 'настройте сейчас')
+          )
+        )
+      );
+    }
     
     const allTaken = planned.length > 0 && planned.every(id => taken.includes(id));
     const takenCount = planned.filter(id => taken.includes(id)).length;
@@ -881,6 +936,9 @@
     // v2.0: Проверяем бонус к инсулиновой волне
     const insulinBonus = getInsulinWaveBonus(dateKey);
     
+    // v3.3: Проверяем наличие научных данных
+    const hasScience = HEYS.Supplements.SCIENCE?.BIOAVAILABILITY;
+    
     const toggleTaken = (id) => {
       const isTaken = taken.includes(id);
       markSupplementTaken(dateKey, id, !isTaken);
@@ -890,6 +948,23 @@
     const markAll = () => {
       markAllSupplementsTaken(dateKey);
       if (onForceUpdate) onForceUpdate();
+    };
+    
+    // v3.3: Открыть научный popup
+    const openSciencePopup = (suppId) => {
+      if (!hasScience) return;
+      // Создаём контейнер для popup если его нет
+      let container = document.getElementById('supp-science-popup');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'supp-science-popup';
+        document.body.appendChild(container);
+      }
+      // Рендерим popup
+      const closePopup = () => {
+        ReactDOM.unmountComponentAtNode(container);
+      };
+      ReactDOM.render(renderSciencePopup(suppId, closePopup), container);
     };
 
     // Рендер группы витаминов с анимацией
@@ -926,17 +1001,50 @@
             const supp = SUPPLEMENTS_CATALOG[id];
             if (!supp) return null;
             const isTaken = taken.includes(id);
-            return React.createElement('button', {
-              key: id,
-              className: 'supp-chip',
-              onClick: (e) => {
-                // Анимация при тапе
+            const hasScienceData = hasScience && HEYS.Supplements.SCIENCE.BIOAVAILABILITY[id];
+            
+            // v3.3: Таймер для долгого нажатия
+            let longPressTimer = null;
+            let isLongPress = false;
+            
+            const handleTouchStart = (e) => {
+              isLongPress = false;
+              longPressTimer = setTimeout(() => {
+                isLongPress = true;
+                // Вибрация для тактильной обратной связи
+                if (navigator.vibrate) navigator.vibrate(50);
+                openSciencePopup(id);
+              }, 500); // 500ms для долгого нажатия
+            };
+            
+            const handleTouchEnd = (e) => {
+              clearTimeout(longPressTimer);
+              if (!isLongPress) {
+                // Короткое нажатие — toggle
                 const btn = e.currentTarget;
                 btn.style.transform = 'scale(1.15)';
                 setTimeout(() => { btn.style.transform = 'scale(1)'; }, 150);
                 toggleTaken(id);
-              },
-              title: supp.tip,
+              }
+            };
+            
+            const handleTouchMove = () => {
+              clearTimeout(longPressTimer);
+            };
+            
+            return React.createElement('button', {
+              key: id,
+              className: 'supp-chip',
+              onTouchStart: hasScienceData ? handleTouchStart : null,
+              onTouchEnd: hasScienceData ? handleTouchEnd : null,
+              onTouchMove: hasScienceData ? handleTouchMove : null,
+              onClick: !hasScienceData ? (e) => {
+                const btn = e.currentTarget;
+                btn.style.transform = 'scale(1.15)';
+                setTimeout(() => { btn.style.transform = 'scale(1)'; }, 150);
+                toggleTaken(id);
+              } : null,
+              title: supp.tip + (hasScienceData ? ' (долгое нажатие = 🔬 наука)' : ''),
               style: {
                 display: 'flex',
                 alignItems: 'center',
@@ -950,11 +1058,20 @@
                 fontWeight: '500',
                 color: isTaken ? '#16a34a' : '#64748b',
                 transition: 'all 0.15s ease',
-                transform: 'scale(1)'
+                transform: 'scale(1)',
+                position: 'relative'
               }
             },
               React.createElement('span', null, isTaken ? '✅' : supp.icon),
-              React.createElement('span', null, supp.name)
+              React.createElement('span', null, supp.name),
+              // v3.3: Индикатор научных данных
+              hasScienceData && React.createElement('span', {
+                style: {
+                  fontSize: '8px',
+                  marginLeft: '2px',
+                  opacity: 0.6
+                }
+              }, '🔬')
             );
           })
         )
@@ -1064,7 +1181,362 @@
     );
   }
 
-  // === ЭКСПОРТ v3.1 ===
+  // === v3.3: НАУЧНЫЕ UI КОМПОНЕНТЫ ===
+
+  /**
+   * Рендер научной информации о добавке (popup)
+   */
+  function renderSciencePopup(suppId, onClose) {
+    // Проверяем наличие научного модуля
+    const science = HEYS.Supplements.SCIENCE;
+    if (!science || !science.BIOAVAILABILITY) {
+      return React.createElement('div', { 
+        style: { padding: '16px', textAlign: 'center', color: '#64748b' }
+      }, 'Научный модуль не загружен');
+    }
+    
+    const supp = SUPPLEMENTS_CATALOG[suppId];
+    const bio = science.BIOAVAILABILITY[suppId];
+    
+    if (!supp) return null;
+    
+    // Получаем расширенные данные
+    const synergies = HEYS.Supplements.getSynergies?.(suppId) || [];
+    const antagonisms = HEYS.Supplements.getAntagonisms?.(suppId) || [];
+    const foodTips = HEYS.Supplements.getFoodTips?.(suppId) || [];
+    const optimalTime = HEYS.Supplements.getOptimalTime?.(suppId);
+    
+    const sectionStyle = {
+      marginBottom: '12px',
+      padding: '10px',
+      background: '#f8fafc',
+      borderRadius: '10px'
+    };
+    
+    const labelStyle = {
+      fontSize: '11px',
+      fontWeight: '600',
+      color: '#64748b',
+      marginBottom: '4px',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
+    };
+    
+    const valueStyle = {
+      fontSize: '14px',
+      color: '#1e293b'
+    };
+    
+    return React.createElement('div', {
+      style: {
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10000,
+        padding: '16px'
+      },
+      onClick: (e) => { if (e.target === e.currentTarget) onClose(); }
+    },
+      React.createElement('div', {
+        style: {
+          background: '#fff',
+          borderRadius: '20px',
+          maxWidth: '400px',
+          width: '100%',
+          maxHeight: '85vh',
+          overflow: 'auto',
+          padding: '20px'
+        }
+      },
+        // Заголовок
+        React.createElement('div', {
+          style: { 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '16px'
+          }
+        },
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+            React.createElement('span', { style: { fontSize: '28px' } }, supp.icon),
+            React.createElement('div', null,
+              React.createElement('div', { style: { fontWeight: '700', fontSize: '18px' } }, supp.name),
+              React.createElement('div', { style: { fontSize: '12px', color: '#64748b' } }, 
+                SUPPLEMENT_CATEGORIES[supp.category]?.name || supp.category
+              )
+            )
+          ),
+          React.createElement('button', {
+            onClick: onClose,
+            style: {
+              background: 'none',
+              border: 'none',
+              fontSize: '24px',
+              cursor: 'pointer',
+              padding: '4px',
+              color: '#94a3b8'
+            }
+          }, '×')
+        ),
+        
+        // Подсказка
+        supp.tip && React.createElement('div', {
+          style: {
+            background: '#f0fdf4',
+            color: '#16a34a',
+            padding: '10px 12px',
+            borderRadius: '10px',
+            fontSize: '13px',
+            marginBottom: '16px'
+          }
+        }, '💡 ', supp.tip),
+        
+        // Биодоступность (если есть научные данные)
+        bio && React.createElement('div', { style: sectionStyle },
+          React.createElement('div', { style: labelStyle }, '🔬 Биодоступность'),
+          React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' } },
+            React.createElement('div', {
+              style: {
+                background: '#fef3c7',
+                color: '#92400e',
+                padding: '4px 10px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: '500'
+              }
+            }, `Базовая: ${Math.round(bio.baseAbsorption * 100)}%`),
+            bio.withFat && React.createElement('div', {
+              style: {
+                background: '#dcfce7',
+                color: '#166534',
+                padding: '4px 10px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: '500'
+              }
+            }, `С жирами: ${Math.round(bio.withFat * 100)}%`)
+          ),
+          bio.mechanism && React.createElement('div', {
+            style: { fontSize: '12px', color: '#64748b', marginTop: '8px', lineHeight: '1.5' }
+          }, bio.mechanism),
+          bio.optimalDose && React.createElement('div', {
+            style: { fontSize: '13px', marginTop: '8px', fontWeight: '500' }
+          }, '💊 Оптимальная доза: ', bio.optimalDose)
+        ),
+        
+        // Формы (если есть)
+        bio?.forms && React.createElement('div', { style: sectionStyle },
+          React.createElement('div', { style: labelStyle }, '🧬 Формы'),
+          Object.entries(bio.forms).map(([formId, form]) => 
+            React.createElement('div', {
+              key: formId,
+              style: { 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                padding: '6px 0',
+                borderBottom: '1px solid #e2e8f0',
+                fontSize: '13px'
+              }
+            },
+              React.createElement('span', { style: { fontWeight: '500' } }, formId),
+              React.createElement('span', { style: { color: '#64748b' } }, 
+                `${Math.round(form.absorption * 100)}% — ${form.use || form.conversion || ''}`
+              )
+            )
+          )
+        ),
+        
+        // Оптимальное время
+        optimalTime && React.createElement('div', { style: sectionStyle },
+          React.createElement('div', { style: labelStyle }, '⏰ Оптимальное время'),
+          React.createElement('div', { style: valueStyle },
+            optimalTime.period === 'any' 
+              ? optimalTime.reason
+              : `${TIMING[optimalTime.period]?.icon || ''} ${TIMING[optimalTime.period]?.name || optimalTime.period} — ${optimalTime.reason}`
+          )
+        ),
+        
+        // Синергии
+        synergies.length > 0 && React.createElement('div', { style: sectionStyle },
+          React.createElement('div', { style: labelStyle }, '✨ Синергии'),
+          synergies.map((s, i) => 
+            React.createElement('div', {
+              key: i,
+              style: { 
+                padding: '8px 0',
+                borderBottom: i < synergies.length - 1 ? '1px solid #e2e8f0' : 'none'
+              }
+            },
+              React.createElement('div', { style: { fontWeight: '600', fontSize: '14px', color: '#16a34a' } },
+                `+ ${SUPPLEMENTS_CATALOG[s.partner]?.name || s.partner}`
+              ),
+              s.mechanism && React.createElement('div', { 
+                style: { fontSize: '12px', color: '#64748b', marginTop: '2px' }
+              }, s.mechanism),
+              s.ratio && React.createElement('div', { 
+                style: { fontSize: '12px', color: '#0ea5e9', marginTop: '2px' }
+              }, '📐 ', s.ratio)
+            )
+          )
+        ),
+        
+        // Антагонизмы
+        antagonisms.length > 0 && React.createElement('div', { style: sectionStyle },
+          React.createElement('div', { style: labelStyle }, '⚠️ Не сочетать'),
+          antagonisms.map((a, i) => 
+            React.createElement('div', {
+              key: i,
+              style: { 
+                padding: '8px 0',
+                borderBottom: i < antagonisms.length - 1 ? '1px solid #e2e8f0' : 'none'
+              }
+            },
+              React.createElement('div', { style: { fontWeight: '600', fontSize: '14px', color: '#d97706' } },
+                `✗ ${SUPPLEMENTS_CATALOG[a.conflict]?.name || a.conflict}`
+              ),
+              a.mechanism && React.createElement('div', { 
+                style: { fontSize: '12px', color: '#64748b', marginTop: '2px' }
+              }, a.mechanism),
+              a.solution && React.createElement('div', { 
+                style: { fontSize: '12px', color: '#0ea5e9', marginTop: '2px' }
+              }, '💡 ', a.solution)
+            )
+          )
+        ),
+        
+        // Советы по еде
+        foodTips.length > 0 && React.createElement('div', { style: sectionStyle },
+          React.createElement('div', { style: labelStyle }, '🍽️ С едой'),
+          foodTips.map((tip, i) =>
+            React.createElement('div', {
+              key: i,
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 0',
+                fontSize: '13px'
+              }
+            },
+              React.createElement('span', {
+                style: {
+                  background: tip.type === 'enhancer' ? '#dcfce7' : '#fef3c7',
+                  color: tip.type === 'enhancer' ? '#166534' : '#92400e',
+                  padding: '2px 8px',
+                  borderRadius: '8px',
+                  fontSize: '11px'
+                }
+              }, tip.type === 'enhancer' ? '✓' : '✗'),
+              React.createElement('span', null, tip.food),
+              React.createElement('span', { style: { color: '#64748b' } }, tip.effect)
+            )
+          )
+        ),
+        
+        // Тестирование
+        bio?.testMarker && React.createElement('div', { style: sectionStyle },
+          React.createElement('div', { style: labelStyle }, '🧪 Анализы'),
+          React.createElement('div', { style: valueStyle }, bio.testMarker),
+          bio.optimalLevel && React.createElement('div', { 
+            style: { fontSize: '12px', color: '#16a34a', marginTop: '4px' }
+          }, '✓ Оптимум: ', bio.optimalLevel)
+        ),
+        
+        // Кнопка закрыть
+        React.createElement('button', {
+          onClick: onClose,
+          style: {
+            width: '100%',
+            padding: '12px',
+            background: '#f1f5f9',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            marginTop: '8px'
+          }
+        }, 'Закрыть')
+      )
+    );
+  }
+
+  /**
+   * Рендер умных рекомендаций с научным обоснованием
+   */
+  function renderScientificRecommendations(profile, dayData, meals) {
+    const recs = HEYS.Supplements.getScientificRecommendations?.(profile, dayData, meals);
+    if (!recs || recs.length === 0) return null;
+    
+    const priorityColors = {
+      critical: { bg: '#fef2f2', border: '#fca5a5', text: '#dc2626' },
+      high: { bg: '#fff7ed', border: '#fdba74', text: '#ea580c' },
+      medium: { bg: '#fefce8', border: '#fde047', text: '#ca8a04' },
+      timing: { bg: '#ecfdf5', border: '#6ee7b7', text: '#059669' },
+      low: { bg: '#f8fafc', border: '#e2e8f0', text: '#64748b' }
+    };
+    
+    return React.createElement('div', {
+      style: {
+        background: '#fff',
+        borderRadius: '16px',
+        padding: '16px',
+        marginBottom: '12px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
+      }
+    },
+      React.createElement('div', { 
+        style: { fontWeight: '600', fontSize: '15px', marginBottom: '12px' }
+      }, '🔬 Научные рекомендации'),
+      recs.slice(0, 5).map((rec, i) => {
+        const colors = priorityColors[rec.priority] || priorityColors.low;
+        const supp = SUPPLEMENTS_CATALOG[rec.id];
+        
+        return React.createElement('div', {
+          key: i,
+          style: {
+            background: colors.bg,
+            border: `1px solid ${colors.border}`,
+            borderRadius: '12px',
+            padding: '10px 12px',
+            marginBottom: '8px'
+          }
+        },
+          React.createElement('div', { 
+            style: { 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              marginBottom: '4px'
+            }
+          },
+            React.createElement('span', { style: { fontSize: '18px' } }, supp?.icon || '💊'),
+            React.createElement('span', { 
+              style: { fontWeight: '600', color: colors.text }
+            }, supp?.name || rec.id),
+            rec.priority === 'critical' && React.createElement('span', {
+              style: { 
+                fontSize: '10px', 
+                background: colors.text, 
+                color: '#fff',
+                padding: '2px 6px',
+                borderRadius: '6px',
+                fontWeight: '600'
+              }
+            }, 'ВАЖНО')
+          ),
+          React.createElement('div', { 
+            style: { fontSize: '12px', color: '#64748b', lineHeight: '1.4' }
+          }, rec.reason)
+        );
+      })
+    );
+  }
+
+  // === ЭКСПОРТ v3.3 ===
   HEYS.Supplements = {
     // Каталоги
     CATALOG: SUPPLEMENTS_CATALOG,
@@ -1098,6 +1570,9 @@
     // v3.2 функции — интеграция с едой и рекомендации
     getSmartRecommendations,
     getMealBasedAdvice,
+    // v3.3 функции — научный UI
+    renderSciencePopup,
+    renderScientificRecommendations,
     // Рендер
     renderCard: renderSupplementsCard,
   };
@@ -1105,6 +1580,6 @@
   // Загружаем кастомные добавки при инициализации
   loadCustomSupplements();
 
-  console.log('[HEYS] Supplements module v3.2 loaded: 29+ supplements, courses, smart recommendations');
+  console.log('[HEYS] Supplements module v3.4 loaded: science UI, 29+ supplements, courses');
 
 })(typeof window !== 'undefined' ? window : global);

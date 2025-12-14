@@ -15231,7 +15231,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       (!isMobile || mobileSubTab === 'stats') && sideBlock,
       (!isMobile || mobileSubTab === 'stats') && cycleCard,
       // Supplements Card — карточка витаминов
-      (!isMobile || mobileSubTab === 'stats') && HEYS.Supplements && HEYS.Supplements.renderSupplementsCard({
+      (!isMobile || mobileSubTab === 'stats') && HEYS.Supplements && HEYS.Supplements.renderCard({
         dateKey: date,
         onForceUpdate: () => setForceUpdate(f => f + 1)
       }),
