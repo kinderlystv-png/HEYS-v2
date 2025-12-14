@@ -8371,15 +8371,21 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               if (endMin < startMin) endMin += 24 * 60;
               sleepHours = (endMin - startMin) / 60;
             }
+            const todayKcal = Math.round(eatenKcal || 0);
+            const todayRatio = optimum > 0 ? todayKcal / optimum : 0;
             return { 
               date: dateStr, 
-              kcal: Math.round(eatenKcal || 0), 
+              kcal: todayKcal, 
               target: optimum,
+              ratio: todayRatio, // 🆕 Ratio для инсайтов
               isToday: true,
               hasTraining,
               trainingTypes,
               trainingMinutes,
               sleepHours,
+              steps: +day.steps || 0, // 🆕 Шаги для текущего дня
+              waterMl: +day.waterMl || 0, // 🆕 Вода для текущего дня
+              weightMorning: +day.weightMorning || 0, // 🆕 Вес для текущего дня
               moodAvg: +day.moodAvg || 0,
               dayScore: +day.dayScore || 0,
               prot: Math.round(dayTot.prot || 0),
@@ -8395,6 +8401,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               date: dateStr, 
               kcal: dayInfo.kcal, 
               target: dayInfo.target,
+              ratio: dayInfo.ratio || (dayInfo.target > 0 ? dayInfo.kcal / dayInfo.target : 0), // 🆕 Ratio для инсайтов
               isToday: false,
               hasTraining: dayInfo.hasTraining || false,
               trainingTypes: dayInfo.trainingTypes || [],
@@ -8403,6 +8410,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               sleepQuality: dayInfo.sleepQuality || 0,
               dayScore: dayInfo.dayScore || 0,
               steps: dayInfo.steps || 0,
+              waterMl: dayInfo.waterMl || 0, // 🆕 Вода для персонализированных инсайтов
+              weightMorning: dayInfo.weightMorning || 0, // 🆕 Вес для персонализированных инсайтов
               prot: dayInfo.prot || 0,
               fat: dayInfo.fat || 0,
               carbs: dayInfo.carbs || 0,
@@ -8452,10 +8461,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               if (endMin < startMin) endMin += 24 * 60;
               fallbackSleepHours = (endMin - startMin) / 60;
             }
+            const fallbackTotalKcal = Math.round(totalKcal);
             return { 
               date: dateStr, 
-              kcal: Math.round(totalKcal), 
-              target: optimum, 
+              kcal: fallbackTotalKcal, 
+              target: optimum,
+              ratio: optimum > 0 ? fallbackTotalKcal / optimum : 0, // 🆕 Ratio для инсайтов
               isToday: false, 
               hasTraining: dayTrainings.length > 0, 
               trainingTypes: dayTrainings.map(t => t.type || 'cardio'),
@@ -8463,11 +8474,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               sleepQuality: +dayData.sleepQuality || 0,
               dayScore: +dayData.dayScore || 0,
               steps: +dayData.steps || 0,
+              waterMl: +dayData.waterMl || 0, // 🆕 Вода для персонализированных инсайтов
+              weightMorning: +dayData.weightMorning || 0, // 🆕 Вес для персонализированных инсайтов
+              prot: 0, // fallback — нет детальных данных
+              fat: 0,
+              carbs: 0,
               isRefeedDay: dayData.isRefeedDay || false  // 🔄 Refeed day flag
             };
           }
           
-          return { date: dateStr, kcal: 0, target: optimum, isToday: false, hasTraining: false, trainingTypes: [], sleepHours: 0, sleepQuality: 0, dayScore: 0, steps: 0, isRefeedDay: false };
+          return { date: dateStr, kcal: 0, target: optimum, ratio: 0, isToday: false, hasTraining: false, trainingTypes: [], sleepHours: 0, sleepQuality: 0, dayScore: 0, steps: 0, waterMl: 0, weightMorning: 0, prot: 0, fat: 0, carbs: 0, isRefeedDay: false };
         };
         
         // Собираем данные за период (от startDate до сегодня)
@@ -8488,7 +8504,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           days.push({ 
             date: dateStr, 
             kcal: 0, 
-            target: optimum, 
+            target: optimum,
+            ratio: 0, // 🆕 Для консистентности
             isToday: false, 
             isFuture: true,  // Маркер будущего дня
             hasTraining: false, 
@@ -8496,7 +8513,12 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             sleepHours: 0, 
             sleepQuality: 0, 
             dayScore: 0, 
-            steps: 0 
+            steps: 0,
+            waterMl: 0,
+            weightMorning: 0,
+            prot: 0,
+            fat: 0,
+            carbs: 0
           });
         }
         
@@ -8586,21 +8608,21 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       }
       
       try {
-        // === ОПРЕДЕЛЯЕМ НЕДЕЛЮ (с понедельника до вчера) ===
+        // === ОПРЕДЕЛЯЕМ ПЕРИОД: последние 7 дней (для инсайтов недели) ===
         const todayDate = new Date(date + 'T12:00:00');
         const todayStr = date;
-        const dayOfWeek = todayDate.getDay(); // 0 = вс, 1 = пн
-        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const monday = new Date(todayDate);
-        monday.setDate(todayDate.getDate() - daysFromMonday);
-        const mondayStr = fmtDate(monday);
         
-        // Фильтруем дни: с понедельника до вчера (сегодня не считаем — ещё едим)
+        // Берём последние 7 дней (не включая сегодня)
+        const weekAgo = new Date(todayDate);
+        weekAgo.setDate(todayDate.getDate() - 7);
+        const weekAgoStr = fmtDate(weekAgo);
+        
+        // Фильтруем дни: последние 7 дней до вчера (сегодня не считаем — ещё едим)
         const pastDays = sparklineData.filter(d => {
           if (d.isToday) return false;
           if (d.isFuture) return false;
           if (d.kcal <= 0) return false;
-          if (d.date < mondayStr) return false; // До понедельника не берём
+          if (d.date < weekAgoStr) return false; // Старше 7 дней не берём
           if (d.date >= todayStr) return false; // Сегодня и позже не берём
           return true;
         });
@@ -9256,25 +9278,671 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         }
         
         // ═══════════════════════════════════════════════════════════════════
-        // Собираем все научные инсайты в массив
+        // 🔬 НАУЧНАЯ АНАЛИТИКА v5.0 — Smart Insights System
         // ═══════════════════════════════════════════════════════════════════
-        const scientificInsights = [
-          tefAnalysis.insight && { ...tefAnalysis, type: 'tef' },
-          epocAnalysis.insight && { type: 'epoc', ...epocAnalysis },
-          adaptiveThermogenesis.insight && { type: 'adaptive', ...adaptiveThermogenesis },
-          hormonalBalance.insight && { type: 'hormonal', ...hormonalBalance },
-          insulinTimingAnalysis.insight && { type: 'timing', ...insulinTimingAnalysis },
-          cortisolAnalysis.insight && { type: 'cortisol', ...cortisolAnalysis },
-          circadianAnalysis.insight && { type: 'circadian', ...circadianAnalysis },
-          mealFrequencyAnalysis.insight && { type: 'frequency', ...mealFrequencyAnalysis },
-          metabolicWindowAnalysis.insight && { type: 'window', ...metabolicWindowAnalysis },
-          fatQualityAnalysis.insight && { type: 'fatQuality', ...fatQualityAnalysis },
-          insulinWaveInsight && { type: 'insulinWave', ...insulinWaveInsight },
-          sleepInsight,
-          waterInsight,
-          lastWeekComparison?.insight && { type: 'comparison', ...lastWeekComparison },
-          cycleInsight && { type: 'cycle', ...cycleInsight }
-        ].filter(Boolean);
+        
+        // --- Определяем контекст времени суток ---
+        const insightHour = currentHour;
+        const isMorning = insightHour >= 6 && insightHour < 12;
+        const isEvening = insightHour >= 18 && insightHour < 24;
+        const isNight = insightHour >= 0 && insightHour < 6;
+        
+        // --- Категории инсайтов с приоритетами ---
+        // priority: 1 = критический (всегда показывать), 2 = важный, 3 = информативный, 4 = норма (фильтруется)
+        // severity: 'critical' | 'warning' | 'positive' | 'info'
+        // group: 'sleep' | 'metabolism' | 'timing' | 'nutrition' | 'activity' | 'hormones' | 'pattern'
+        // action: конкретное действие
+        
+        const rawInsights = [];
+        
+        // --- 1. Адаптивный термогенез (критический!) ---
+        if (adaptiveThermogenesis.isAdapted) {
+          rawInsights.push({
+            type: 'adaptive',
+            group: 'metabolism',
+            priority: 1,
+            severity: adaptiveThermogenesis.metabolicReduction >= 0.10 ? 'critical' : 'warning',
+            emoji: '⚠️',
+            text: adaptiveThermogenesis.insight,
+            action: 'Запланируй refeed день — это восстановит метаболизм',
+            pmid: adaptiveThermogenesis.pmid,
+            timeRelevance: 1 // Всегда релевантно
+          });
+        }
+        
+        // --- 2. Гормональный баланс (сон/грелин) ---
+        if (hormonalBalance.ghrelinIncrease > 5) {
+          const morningBoost = isMorning ? 1.5 : 1; // Утром важнее
+          rawInsights.push({
+            type: 'hormonal',
+            group: 'sleep',
+            priority: hormonalBalance.ghrelinIncrease > 15 ? 1 : 2,
+            severity: hormonalBalance.ghrelinIncrease > 15 ? 'critical' : 'warning',
+            emoji: '😴',
+            text: hormonalBalance.insight,
+            action: hormonalBalance.ghrelinIncrease > 15 
+              ? 'Ешь белок и клетчатку — они подавляют грелин'
+              : 'Добавь 20 мин дневного сна если возможно',
+            pmid: hormonalBalance.pmid,
+            timeRelevance: morningBoost
+          });
+        }
+        
+        // --- 3. TEF анализ (только если отличается от нормы) ---
+        if (tefAnalysis.quality === 'excellent' || tefAnalysis.quality === 'low') {
+          rawInsights.push({
+            type: 'tef',
+            group: 'metabolism',
+            priority: tefAnalysis.quality === 'low' ? 2 : 3,
+            severity: tefAnalysis.quality === 'excellent' ? 'positive' : 'warning',
+            emoji: tefAnalysis.quality === 'excellent' ? '🔥' : '📉',
+            text: tefAnalysis.insight,
+            action: tefAnalysis.quality === 'low' 
+              ? 'Добавь белок — он сжигает до 25% своих калорий на переваривание'
+              : null,
+            pmid: tefAnalysis.pmid,
+            timeRelevance: 1
+          });
+        }
+        
+        // --- 4. EPOC (только если есть тренировка) ---
+        if (epocAnalysis.hasTraining && epocAnalysis.kcal > 20) {
+          rawInsights.push({
+            type: 'epoc',
+            group: 'activity',
+            priority: 3,
+            severity: 'positive',
+            emoji: '🔥',
+            text: epocAnalysis.insight,
+            action: null, // Это позитивный факт
+            pmid: epocAnalysis.pmid,
+            timeRelevance: 1
+          });
+        }
+        
+        // --- 5. Тайминг еды ---
+        if (insulinTimingAnalysis.insight) {
+          const isActionable = insulinTimingAnalysis.breakfastRatio < 0.15 || insulinTimingAnalysis.dinnerRatio > 0.40;
+          if (isActionable || insulinTimingAnalysis.isOptimal) {
+            rawInsights.push({
+              type: 'timing',
+              group: 'timing',
+              priority: isActionable ? 2 : 4,
+              severity: insulinTimingAnalysis.isOptimal ? 'positive' : 'warning',
+              emoji: insulinTimingAnalysis.isOptimal ? '✅' : insulinTimingAnalysis.breakfastRatio < 0.15 ? '🌅' : '🌙',
+              text: insulinTimingAnalysis.insight,
+              action: insulinTimingAnalysis.breakfastRatio < 0.15
+                ? 'Завтра начни с белкового завтрака 300+ ккал'
+                : insulinTimingAnalysis.dinnerRatio > 0.40
+                  ? 'Перенеси 20% ужина на обед'
+                  : null,
+              pmid: insulinTimingAnalysis.pmid,
+              timeRelevance: isMorning && insulinTimingAnalysis.breakfastRatio < 0.15 ? 1.5 : 1
+            });
+          }
+        }
+        
+        // --- 6. Циркадные ритмы (поздний ужин) ---
+        if (circadianAnalysis.insight) {
+          const isLate = circadianAnalysis.isLateEater || circadianAnalysis.hoursBeforeSleep < 2;
+          const eveningBoost = isEvening ? 1.5 : 1;
+          rawInsights.push({
+            type: 'circadian',
+            group: 'timing',
+            priority: isLate ? 2 : 4,
+            severity: circadianAnalysis.lastMealHour <= 19 ? 'positive' : 'warning',
+            emoji: circadianAnalysis.lastMealHour <= 19 ? '✅' : '🌙',
+            text: circadianAnalysis.insight,
+            action: isLate ? 'Ужинай до 20:00 — это ускорит метаболизм на 5-10%' : null,
+            pmid: circadianAnalysis.pmid,
+            timeRelevance: eveningBoost
+          });
+        }
+        
+        // --- 7. Стресс и кортизол ---
+        if (cortisolAnalysis.insight) {
+          rawInsights.push({
+            type: 'cortisol',
+            group: 'hormones',
+            priority: cortisolAnalysis.stressEatingDetected ? 1 : cortisolAnalysis.todayStress >= 7 ? 2 : 3,
+            severity: cortisolAnalysis.stressEatingDetected ? 'critical' : 'warning',
+            emoji: '😰',
+            text: cortisolAnalysis.insight,
+            action: cortisolAnalysis.stressEatingDetected
+              ? '5 мин дыхательных упражнений снизят кортизол на 25%'
+              : 'Прогулка 15 мин снижает кортизол',
+            pmid: cortisolAnalysis.pmid,
+            timeRelevance: 1
+          });
+        }
+        
+        // --- 8. Частота приёмов пищи ---
+        if (mealFrequencyAnalysis.insight) {
+          rawInsights.push({
+            type: 'frequency',
+            group: 'timing',
+            priority: 3,
+            severity: mealFrequencyAnalysis.isOptimal ? 'positive' : 'warning',
+            emoji: '🍽️',
+            text: mealFrequencyAnalysis.insight,
+            action: mealFrequencyAnalysis.count <= 2 
+              ? 'Раздели калории на 3-4 приёма для лучшей сытости'
+              : mealFrequencyAnalysis.count >= 6
+                ? 'Объедини перекусы в полноценные приёмы'
+                : null,
+            pmid: mealFrequencyAnalysis.pmid,
+            timeRelevance: 1
+          });
+        }
+        
+        // --- 9. Метаболическое окно после тренировки ---
+        if (metabolicWindowAnalysis.insight && metabolicWindowAnalysis.hasTraining) {
+          rawInsights.push({
+            type: 'window',
+            group: 'activity',
+            priority: !metabolicWindowAnalysis.postWorkoutMealFound ? 2 : 3,
+            severity: metabolicWindowAnalysis.isOptimal ? 'positive' : 'warning',
+            emoji: metabolicWindowAnalysis.isOptimal ? '✅' : '💪',
+            text: metabolicWindowAnalysis.insight,
+            action: !metabolicWindowAnalysis.postWorkoutMealFound
+              ? 'После тренировки съешь 20-30г белка в течение 90 мин'
+              : null,
+            pmid: metabolicWindowAnalysis.pmid,
+            timeRelevance: 1
+          });
+        }
+        
+        // --- 10. Качество жиров ---
+        if (fatQualityAnalysis.insight) {
+          const isCritical = fatQualityAnalysis.transFat > 1;
+          rawInsights.push({
+            type: 'fatQuality',
+            group: 'nutrition',
+            priority: isCritical ? 1 : fatQualityAnalysis.quality === 'excellent' ? 4 : 3,
+            severity: isCritical ? 'critical' : fatQualityAnalysis.quality === 'excellent' ? 'positive' : 'warning',
+            emoji: isCritical ? '🚫' : fatQualityAnalysis.quality === 'excellent' ? '✅' : '⚠️',
+            text: fatQualityAnalysis.insight,
+            action: isCritical 
+              ? 'Исключи маргарин, фастфуд, выпечку — они содержат транс-жиры'
+              : fatQualityAnalysis.goodFatRatio < 0.25
+                ? 'Добавь орехи, авокадо или жирную рыбу'
+                : null,
+            pmid: fatQualityAnalysis.pmid,
+            timeRelevance: 1
+          });
+        }
+        
+        // --- 11. Инсулиновая волна ---
+        if (insulinWaveInsight) {
+          rawInsights.push({
+            type: 'insulinWave',
+            group: 'metabolism',
+            priority: insulinWaveInsight.status === 'active' ? 2 : 4,
+            severity: insulinWaveInsight.status === 'lipolysis' ? 'positive' : 'info',
+            emoji: insulinWaveInsight.status === 'lipolysis' ? '🔥' : '🌊',
+            text: insulinWaveInsight.text,
+            action: insulinWaveInsight.recommendation,
+            pmid: null,
+            timeRelevance: 1.2 // Всегда чуть важнее
+          });
+        }
+        
+        // --- 12. Корреляция сна и переедания ---
+        if (sleepInsight) {
+          rawInsights.push({
+            type: 'sleepCorrelation',
+            group: 'sleep',
+            priority: sleepInsight.type === 'correlation' ? 2 : 3,
+            severity: sleepInsight.type === 'positive' ? 'positive' : 'warning',
+            emoji: sleepInsight.type === 'positive' ? '✅' : '😴',
+            text: sleepInsight.text,
+            action: sleepInsight.type === 'correlation' 
+              ? 'Ложись на 30 мин раньше — это снизит аппетит завтра'
+              : null,
+            pmid: sleepInsight.pmid,
+            timeRelevance: isMorning ? 1.3 : isEvening ? 1.5 : 1
+          });
+        }
+        
+        // --- 13. Гидратация ---
+        if (waterInsight) {
+          rawInsights.push({
+            type: 'water',
+            group: 'nutrition',
+            priority: waterInsight.type === 'warning' ? 2 : 4,
+            severity: waterInsight.type === 'positive' ? 'positive' : 'warning',
+            emoji: '💧',
+            text: waterInsight.text,
+            action: waterInsight.type === 'warning'
+              ? 'Выпей стакан воды перед следующим приёмом пищи'
+              : null,
+            pmid: waterInsight.pmid,
+            timeRelevance: 1
+          });
+        }
+        
+        // --- 14. Сравнение с прошлой неделей ---
+        if (lastWeekComparison?.insight) {
+          rawInsights.push({
+            type: 'comparison',
+            group: 'pattern',
+            priority: 3,
+            severity: lastWeekComparison.improvement ? 'positive' : 'info',
+            emoji: lastWeekComparison.improvement ? '📈' : lastWeekComparison.diff > 200 ? '📉' : '↔️',
+            text: lastWeekComparison.insight,
+            action: null,
+            pmid: null,
+            timeRelevance: 1
+          });
+        }
+        
+        // --- 15. Цикл ---
+        if (cycleInsight) {
+          rawInsights.push({
+            type: 'cycle',
+            group: 'hormones',
+            priority: 2,
+            severity: 'info',
+            emoji: '🌸',
+            text: cycleInsight.text,
+            action: cycleInsight.recommendation,
+            pmid: null,
+            timeRelevance: 1
+          });
+        }
+        
+        // --- 16. 🆕 Персональные паттерны (анализ истории) ---
+        // Паттерн: недосып → переедание
+        const sleepOvereatPattern = pastDays.filter(d => 
+          (d.sleepHours || 0) < 6 && (d.ratio || 0) > 1.15
+        ).length;
+        if (sleepOvereatPattern >= 2) {
+          rawInsights.push({
+            type: 'personalPattern',
+            group: 'pattern',
+            priority: 1,
+            severity: 'critical',
+            emoji: '🔄',
+            text: `Твой паттерн: ${sleepOvereatPattern} из ${pastDays.length} дней — недосып → переедание`,
+            action: 'Это твоя главная точка роста! Фокус на сон = контроль веса',
+            pmid: '15602591',
+            timeRelevance: 1.5,
+            isPersonal: true
+          });
+        }
+        
+        // Паттерн: выходные → перебор
+        const weekendOvereatPattern = pastDays.filter(d => {
+          const dayDate = new Date(d.date);
+          const dow = dayDate.getDay();
+          return (dow === 0 || dow === 6) && (d.ratio || 0) > 1.2;
+        }).length;
+        const totalWeekends = pastDays.filter(d => {
+          const dayDate = new Date(d.date);
+          const dow = dayDate.getDay();
+          return dow === 0 || dow === 6;
+        }).length;
+        if (weekendOvereatPattern >= 2 && totalWeekends >= 2 && weekendOvereatPattern / totalWeekends >= 0.5) {
+          rawInsights.push({
+            type: 'personalPattern',
+            group: 'pattern',
+            priority: 2,
+            severity: 'warning',
+            emoji: '🎉',
+            text: `Паттерн выходных: ${weekendOvereatPattern} из ${totalWeekends} — перебор >20%`,
+            action: 'Планируй выходные заранее — добавь активность или refeed',
+            pmid: null,
+            timeRelevance: 1.3,
+            isPersonal: true
+          });
+        }
+        
+        // --- 17. 🆕 Хронический недосып (на основе реальных данных) ---
+        const daysWithSleep = pastDays.filter(d => (d.sleepHours || 0) > 0);
+        const avgSleepHours = daysWithSleep.length > 0 
+          ? daysWithSleep.reduce((s, d) => s + (d.sleepHours || 0), 0) / daysWithSleep.length 
+          : 0;
+        const sleepNorm = prof.sleepHours || 8;
+        const sleepDeficitHours = sleepNorm - avgSleepHours;
+        
+        if (avgSleepHours > 0 && sleepDeficitHours >= 0.8 && daysWithSleep.length >= 3) {
+          rawInsights.push({
+            type: 'chronicSleepDeficit',
+            group: 'sleep',
+            priority: sleepDeficitHours >= 1.5 ? 1 : 2,
+            severity: sleepDeficitHours >= 1.5 ? 'critical' : 'warning',
+            emoji: '😴',
+            text: `Недосып: ${avgSleepHours.toFixed(1)}ч в среднем при норме ${sleepNorm}ч (−${sleepDeficitHours.toFixed(1)}ч)`,
+            action: 'Ложись на 30 мин раньше сегодня. Недосып → +15% голода, −20% силы воли',
+            pmid: '15602591',
+            timeRelevance: 1.6,
+            isPersonal: true
+          });
+        }
+        
+        // --- 18. 🆕 Низкая активность / сидячий образ жизни ---
+        const daysWithSteps = pastDays.filter(d => (d.steps || 0) > 0);
+        const avgSteps = daysWithSteps.length > 0 
+          ? Math.round(daysWithSteps.reduce((s, d) => s + (d.steps || 0), 0) / daysWithSteps.length)
+          : 0;
+        const stepsGoal = prof.stepsGoal || 7000;
+        const stepsPct = avgSteps / stepsGoal;
+        
+        if (avgSteps > 0 && avgSteps < 3000 && daysWithSteps.length >= 3) {
+          rawInsights.push({
+            type: 'sedentaryPattern',
+            group: 'activity',
+            priority: 1,
+            severity: 'critical',
+            emoji: '🪑',
+            text: `Очень низкая активность: ${avgSteps} шагов/день (${Math.round(stepsPct * 100)}% от цели ${stepsGoal})`,
+            action: 'Каждый час вставай на 5 мин. NEAT сжигает до 350 ккал/день!',
+            pmid: '17827399',
+            timeRelevance: 1.5,
+            isPersonal: true
+          });
+        } else if (avgSteps > 0 && stepsPct < 0.6 && daysWithSteps.length >= 3) {
+          rawInsights.push({
+            type: 'lowStepsPattern',
+            group: 'activity',
+            priority: 2,
+            severity: 'warning',
+            emoji: '👟',
+            text: `Шагов мало: ${avgSteps}/день — это ${Math.round(stepsPct * 100)}% от твоей цели ${stepsGoal}`,
+            action: 'Добавь 15-мин прогулку после обеда. Это +2000 шагов и −100 ккал',
+            pmid: null,
+            timeRelevance: 1.3,
+            isPersonal: true
+          });
+        }
+        
+        // --- 19. 🆕 Комбо: агрессивный дефицит + недосып = срыв ---
+        const deficitPct = prof.deficitPctTarget || 0;
+        if (deficitPct <= -15 && avgSleepHours > 0 && avgSleepHours < 7) {
+          rawInsights.push({
+            type: 'deficitSleepCombo',
+            group: 'metabolism',
+            priority: 1,
+            severity: 'critical',
+            emoji: '⚠️',
+            text: `Опасное комбо: дефицит ${deficitPct}% + сон ${avgSleepHours.toFixed(1)}ч`,
+            action: 'При недосыпе организм теряет мышцы вместо жира. Снизь дефицит до −10% или спи 7+ часов',
+            pmid: '20921542',
+            timeRelevance: 1.8,
+            isPersonal: true
+          });
+        }
+        
+        // --- 20. 🆕 Низкое потребление воды ---
+        const daysWithWater = pastDays.filter(d => (d.waterMl || 0) > 0);
+        const avgWaterMl = daysWithWater.length > 0 
+          ? Math.round(daysWithWater.reduce((s, d) => s + (d.waterMl || 0), 0) / daysWithWater.length)
+          : 0;
+        const waterNorm = (prof.weight || 70) * 30; // 30мл на кг
+        
+        if (avgWaterMl > 0 && avgWaterMl < waterNorm * 0.5 && daysWithWater.length >= 3) {
+          rawInsights.push({
+            type: 'lowWaterPattern',
+            group: 'nutrition',
+            priority: 2,
+            severity: 'warning',
+            emoji: '💧',
+            text: `Мало воды: ${avgWaterMl}мл/день при норме ${waterNorm}мл (${Math.round(avgWaterMl / waterNorm * 100)}%)`,
+            action: 'Дегидратация маскируется под голод. Пей стакан воды перед каждым приёмом пищи',
+            pmid: '28739050',
+            timeRelevance: 1.2,
+            isPersonal: true
+          });
+        }
+        
+        // --- 21. 🆕 Нерегулярные тренировки ---
+        const daysWithTraining = pastDays.filter(d => d.hasTraining).length;
+        const trainingFrequency = pastDays.length > 0 ? daysWithTraining / pastDays.length : 0;
+        
+        if (pastDays.length >= 7 && trainingFrequency < 0.3 && daysWithTraining < 3) {
+          rawInsights.push({
+            type: 'lowTrainingPattern',
+            group: 'activity',
+            priority: 2,
+            severity: 'warning',
+            emoji: '🏋️',
+            text: `Мало тренировок: ${daysWithTraining} из ${pastDays.length} дней (${Math.round(trainingFrequency * 100)}%)`,
+            action: 'Даже 2-3 тренировки в неделю ускоряют метаболизм на 5-15% на следующий день (NDTE)',
+            pmid: '3056758',
+            timeRelevance: 1.2,
+            isPersonal: true
+          });
+        }
+        
+        // --- 22. 🆕 Скачки веса (высокая вариабельность) ---
+        const daysWithWeight = pastDays.filter(d => (d.weightMorning || 0) > 0);
+        if (daysWithWeight.length >= 5) {
+          const weights = daysWithWeight.map(d => d.weightMorning);
+          const avgWeight = weights.reduce((s, w) => s + w, 0) / weights.length;
+          const variance = weights.reduce((s, w) => s + Math.pow(w - avgWeight, 2), 0) / weights.length;
+          const stdDev = Math.sqrt(variance);
+          const weightRange = Math.max(...weights) - Math.min(...weights);
+          
+          if (stdDev > 0.8 || weightRange > 2.5) {
+            rawInsights.push({
+              type: 'weightFluctuation',
+              group: 'pattern',
+              priority: 2,
+              severity: 'info',
+              emoji: '📊',
+              text: `Скачки веса: ±${stdDev.toFixed(1)}кг (диапазон ${weightRange.toFixed(1)}кг за ${daysWithWeight.length} дней)`,
+              action: 'Это нормально! Вода, соль, стресс. Смотри на тренд 7-14 дней, не на дневные скачки',
+              pmid: null,
+              timeRelevance: 1.0,
+              isPersonal: true
+            });
+          }
+        }
+        
+        // ========== ПИТАНИЕ И МАКРОСЫ (главное!) ==========
+        
+        // --- 23. 🆕 Хронический недобор калорий ---
+        const daysWithRatio = pastDays.filter(d => d.ratio && d.ratio > 0);
+        const avgRatio = daysWithRatio.length > 0 
+          ? daysWithRatio.reduce((s, d) => s + d.ratio, 0) / daysWithRatio.length 
+          : 0;
+        const chronicUndereating = daysWithRatio.filter(d => d.ratio < 0.85).length;
+        
+        if (avgRatio > 0 && avgRatio < 0.85 && daysWithRatio.length >= 5) {
+          rawInsights.push({
+            type: 'chronicUndereating',
+            group: 'nutrition',
+            priority: 1,
+            severity: 'critical',
+            emoji: '🚨',
+            text: `Хронический недоед: ${Math.round(avgRatio * 100)}% от нормы (${chronicUndereating} из ${daysWithRatio.length} дней <85%)`,
+            action: 'Метаболизм замедляется! Добавь 200-300 ккал или сделай refeed день',
+            pmid: '20921542',
+            timeRelevance: 1.8,
+            isPersonal: true
+          });
+        } else if (avgRatio > 0 && avgRatio < 0.92 && daysWithRatio.length >= 5) {
+          rawInsights.push({
+            type: 'slightUndereating',
+            group: 'nutrition',
+            priority: 2,
+            severity: 'warning',
+            emoji: '📉',
+            text: `Систематический недобор: ${Math.round(avgRatio * 100)}% от нормы за ${daysWithRatio.length} дней`,
+            action: 'Немного не добираешь. Добавь перекус или увеличь порции на 10%',
+            pmid: null,
+            timeRelevance: 1.3,
+            isPersonal: true
+          });
+        }
+        
+        // --- 24. 🆕 Хронический перебор калорий ---
+        const chronicOvereating = daysWithRatio.filter(d => d.ratio > 1.15).length;
+        
+        if (avgRatio > 1.15 && daysWithRatio.length >= 5) {
+          rawInsights.push({
+            type: 'chronicOvereating',
+            group: 'nutrition',
+            priority: 1,
+            severity: 'critical',
+            emoji: '⚠️',
+            text: `Систематический перебор: ${Math.round(avgRatio * 100)}% от нормы (${chronicOvereating} из ${daysWithRatio.length} дней >115%)`,
+            action: 'Пересмотри размер порций или увеличь активность. 100 лишних ккал/день = +5кг/год',
+            pmid: null,
+            timeRelevance: 1.6,
+            isPersonal: true
+          });
+        }
+        
+        // --- 25. 🆕 Низкий белок в среднем ---
+        const daysWithProt = pastDays.filter(d => d.prot > 0 && d.target > 0);
+        const avgProtPct = daysWithProt.length > 0
+          ? daysWithProt.reduce((s, d) => s + (d.prot * 4 / d.target), 0) / daysWithProt.length
+          : 0;
+        const proteinNormPct = 0.25; // 25% от калоража — норма
+        
+        if (avgProtPct > 0 && avgProtPct < proteinNormPct * 0.7 && daysWithProt.length >= 5) {
+          rawInsights.push({
+            type: 'chronicLowProtein',
+            group: 'nutrition',
+            priority: 1,
+            severity: 'critical',
+            emoji: '🥩',
+            text: `Критически мало белка: ${Math.round(avgProtPct * 100)}% от калоража (норма ${Math.round(proteinNormPct * 100)}%)`,
+            action: 'На дефиците теряешь мышцы! Добавь белок к каждому приёму: творог, яйца, мясо',
+            pmid: '22150425',
+            timeRelevance: 1.7,
+            isPersonal: true
+          });
+        } else if (avgProtPct > 0 && avgProtPct < proteinNormPct * 0.85 && daysWithProt.length >= 5) {
+          rawInsights.push({
+            type: 'lowProtein',
+            group: 'nutrition',
+            priority: 2,
+            severity: 'warning',
+            emoji: '🍗',
+            text: `Маловато белка: ${Math.round(avgProtPct * 100)}% от калоража (цель ${Math.round(proteinNormPct * 100)}%)`,
+            action: 'Добавь 20-30г белка в день. Протеин = сытость + сохранение мышц',
+            pmid: null,
+            timeRelevance: 1.4,
+            isPersonal: true
+          });
+        }
+        
+        // --- 26. 🆕 Перебор углеводов ---
+        const daysWithCarbs = pastDays.filter(d => d.carbs > 0 && d.target > 0);
+        const avgCarbsPct = daysWithCarbs.length > 0
+          ? daysWithCarbs.reduce((s, d) => s + (d.carbs * 4 / d.target), 0) / daysWithCarbs.length
+          : 0;
+        const carbsNormPct = 0.45; // 45% от калоража
+        
+        if (avgCarbsPct > carbsNormPct * 1.3 && daysWithCarbs.length >= 5) {
+          rawInsights.push({
+            type: 'highCarbs',
+            group: 'nutrition',
+            priority: 2,
+            severity: 'warning',
+            emoji: '🍞',
+            text: `Много углеводов: ${Math.round(avgCarbsPct * 100)}% от калоража (норма ~${Math.round(carbsNormPct * 100)}%)`,
+            action: 'Высокие углеводы = частые инсулиновые волны. Замени часть на белок/жиры',
+            pmid: null,
+            timeRelevance: 1.2,
+            isPersonal: true
+          });
+        }
+        
+        // --- 27. 🆕 Нестабильность калоража (йо-йо питание) ---
+        if (daysWithRatio.length >= 5) {
+          const ratios = daysWithRatio.map(d => d.ratio);
+          const avgR = ratios.reduce((s, r) => s + r, 0) / ratios.length;
+          const ratioVariance = ratios.reduce((s, r) => s + Math.pow(r - avgR, 2), 0) / ratios.length;
+          const ratioStdDev = Math.sqrt(ratioVariance);
+          
+          if (ratioStdDev > 0.25) {
+            rawInsights.push({
+              type: 'unstableCalories',
+              group: 'pattern',
+              priority: 2,
+              severity: 'warning',
+              emoji: '🎢',
+              text: `Йо-йо питание: калории скачут ±${Math.round(ratioStdDev * 100)}% от нормы`,
+              action: 'Стабильность важнее идеала! Лучше 95% каждый день, чем 70%→130%',
+              pmid: null,
+              timeRelevance: 1.3,
+              isPersonal: true
+            });
+          }
+        }
+        
+        // --- 28. 🆕 Отличный баланс калорий ---
+        if (avgRatio >= 0.92 && avgRatio <= 1.08 && daysWithRatio.length >= 5) {
+          const goodDays = daysWithRatio.filter(d => d.ratio >= 0.85 && d.ratio <= 1.15).length;
+          const goodPct = goodDays / daysWithRatio.length;
+          
+          if (goodPct >= 0.7) {
+            rawInsights.push({
+              type: 'stableCalories',
+              group: 'nutrition',
+              priority: 3,
+              severity: 'positive',
+              emoji: '🎯',
+              text: `Стабильное питание: ${Math.round(avgRatio * 100)}% от нормы, ${goodDays}/${daysWithRatio.length} дней в цели`,
+              action: 'Отлично! Такая стабильность = предсказуемый результат. Продолжай!',
+              pmid: null,
+              timeRelevance: 1.0,
+              isPersonal: true
+            });
+          }
+        }
+        
+        // --- 29. 🆕 Отличный белок ---
+        if (avgProtPct >= proteinNormPct * 0.95 && daysWithProt.length >= 5) {
+          rawInsights.push({
+            type: 'goodProtein',
+            group: 'nutrition',
+            priority: 3,
+            severity: 'positive',
+            emoji: '💪',
+            text: `Белок в норме: ${Math.round(avgProtPct * 100)}% от калоража — мышцы защищены!`,
+            action: 'Так держать! Белок сохраняет мышцы даже на дефиците',
+            pmid: null,
+            timeRelevance: 0.9,
+            isPersonal: true
+          });
+        }
+        
+        // --- Сортировка и фильтрация ---
+        // 1. Фильтруем "норма" инсайты (priority 4) если есть более важные
+        // 2. Сортируем по: severity → priority → timeRelevance
+        
+        const severityOrder = { critical: 0, warning: 1, positive: 2, info: 3 };
+        
+        const sortedInsights = rawInsights
+          .map(ins => ({
+            ...ins,
+            score: (4 - severityOrder[ins.severity]) * 100 + (5 - ins.priority) * 10 + (ins.timeRelevance || 1) * 5
+          }))
+          .sort((a, b) => b.score - a.score);
+        
+        // Если есть критические/warning — убираем "положительные" инсайты чтобы не отвлекать
+        const hasCritical = sortedInsights.some(i => i.severity === 'critical' || i.severity === 'warning');
+        const scientificInsights = hasCritical
+          ? sortedInsights.filter(i => i.severity !== 'positive' || i.priority <= 2 || i.isPersonal)
+          : sortedInsights;
+        
+        // Группируем по теме для UI
+        const insightGroups = {
+          sleep: scientificInsights.filter(i => i.group === 'sleep'),
+          metabolism: scientificInsights.filter(i => i.group === 'metabolism'),
+          timing: scientificInsights.filter(i => i.group === 'timing'),
+          nutrition: scientificInsights.filter(i => i.group === 'nutrition'),
+          activity: scientificInsights.filter(i => i.group === 'activity'),
+          hormones: scientificInsights.filter(i => i.group === 'hormones'),
+          pattern: scientificInsights.filter(i => i.group === 'pattern')
+        };
+        
+        // Главный инсайт дня (самый важный)
+        const mainInsight = scientificInsights[0] || null;
         
         // === РЕЗУЛЬТАТ ===
         return {
@@ -9307,8 +9975,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           weightImpact,
           goalMode: goalThresholds.mode,
           
-          // 🔬 Научная аналитика v4.3
+          // 🔬 Научная аналитика v5.0
           scientificInsights,
+          insightGroups,
+          mainInsight,
+          hasCriticalInsights: hasCritical,
+          
+          // Детальные анализы (для расширенного UI)
           tefAnalysis,
           epocAnalysis,
           adaptiveThermogenesis,
@@ -9412,7 +10085,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           eaten: d.eaten,
           target: d.target,
           hasTraining: d.hasTraining,
-          ratio: d.ratio
+          ratio: d.ratio,
+          dayOfWeek: new Date(d.date).getDay() // 0=Вс, 6=Сб
         };
       });
       
@@ -9423,57 +10097,183 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       const balanceInsights = [];
       const scienceInsights = [];
       
+      // === SEVERITY для тона сообщений ===
+      const severity = caloricDebt?.severity || 0;
+      const severityTone = severity >= 3 ? 'critical' : severity >= 2 ? 'warning' : 'mild';
+      
       // === ИНСАЙТЫ БАЛАНСА (для карточки перебора) ===
       
-      // 1. Тренд
+      // 1. Тренд с severity-dependent текстом
       if (trend && trend.direction !== 'stable') {
+        let trendText = trend.text;
+        if (trend.direction === 'worsening' && severity >= 2) {
+          trendText = 'Перебор нарастает — нужно действовать';
+        }
         balanceInsights.push({
           type: 'trend',
           emoji: trend.emoji,
-          text: trend.text,
-          color: trend.direction === 'improving' ? '#22c55e' : '#ef4444'
+          text: trendText,
+          color: trend.direction === 'improving' ? '#22c55e' : '#ef4444',
+          priority: 1
         });
       }
       
-      // 2. Паттерн выходных
-      const weekendDays = dayBreakdown.filter((d, i) => i >= 5); // Сб, Вс
-      const weekdayDays = dayBreakdown.filter((d, i) => i < 5);
+      // 2. Паттерн выходных — ИСПРАВЛЕНО: по dayOfWeek, не по индексу
+      const weekendDays = viz.filter(d => d.dayOfWeek === 0 || d.dayOfWeek === 6); // Вс или Сб
+      const weekdayDays = viz.filter(d => d.dayOfWeek >= 1 && d.dayOfWeek <= 5); // Пн-Пт
       const weekendAvg = weekendDays.length > 0 ? weekendDays.reduce((s, d) => s + d.delta, 0) / weekendDays.length : 0;
       const weekdayAvg = weekdayDays.length > 0 ? weekdayDays.reduce((s, d) => s + d.delta, 0) / weekdayDays.length : 0;
       
-      if (weekendAvg > weekdayAvg + 150) {
+      if (weekendDays.length > 0 && weekendAvg > weekdayAvg + 100) {
+        const diff = Math.round(weekendAvg - weekdayAvg);
         balanceInsights.push({
           type: 'pattern',
           emoji: '🎉',
-          text: 'В выходные переедаешь (+' + Math.round(weekendAvg - weekdayAvg) + ' ккал)',
-          color: '#f59e0b'
+          text: 'В выходные +' + diff + ' ккал к будням',
+          color: '#f59e0b',
+          priority: 2
         });
       }
       
-      // 3. Прогноз на конец недели
-      if (dayBreakdown.length >= 3) {
-        const avgDelta = totalBalance / dayBreakdown.length;
-        const remainingDays = 7 - dayBreakdown.length;
-        const forecastBalance = totalBalance + avgDelta * remainingDays;
+      // 3. 🔬 EPOC-adjusted перебор (научно!)
+      // EPOC = 6-15% от калорий тренировки (PMID: 12882417)
+      const totalTrainingKcal = caloricDebt?.totalTrainingKcal || 0;
+      const epocKcal = Math.round(totalTrainingKcal * 0.12); // 12% — средний EPOC
+      const netExcess = totalBalance - epocKcal;
+      
+      if (totalTrainingKcal > 100 && epocKcal > 30) {
+        balanceInsights.push({
+          type: 'epoc',
+          emoji: '🔥',
+          text: 'EPOC сжёг ещё ~' + epocKcal + ' ккал после тренировок',
+          color: '#22c55e',
+          priority: 3,
+          pmid: '12882417'
+        });
+      }
+      
+      // 4. ⏰ Тайминг перебора — когда съедены лишние калории
+      // Анализируем приёмы пищи за текущий день
+      const todayMeals = day.meals || [];
+      if (todayMeals.length >= 2 && totalBalance > 100) {
+        const mealsByTime = todayMeals.map(m => {
+          const hour = parseInt((m.time || '12:00').split(':')[0]);
+          const mealKcal = (m.items || []).reduce((sum, item) => {
+            const prod = pIndex?.byId?.get?.(item.product_id);
+            const kcal100 = prod?.kcal100 || item.kcal100 || 0;
+            return sum + (kcal100 * (item.grams || 0) / 100);
+          }, 0);
+          return { hour, kcal: mealKcal };
+        });
         
+        const eveningKcal = mealsByTime.filter(m => m.hour >= 19).reduce((s, m) => s + m.kcal, 0);
+        const totalDayKcal = mealsByTime.reduce((s, m) => s + m.kcal, 0);
+        const eveningPct = totalDayKcal > 0 ? Math.round(eveningKcal / totalDayKcal * 100) : 0;
+        
+        if (eveningPct >= 45) {
+          balanceInsights.push({
+            type: 'timing',
+            emoji: '🌙',
+            text: eveningPct + '% калорий после 19:00 — ↓термогенез',
+            color: '#f59e0b',
+            priority: 2,
+            pmid: '31064667' // Ночное питание и метаболизм
+          });
+        }
+      }
+      
+      // 5. 📈 Умный прогноз с учётом паттерна выходных
+      if (dayBreakdown.length >= 3) {
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0=Вс
+        const remainingDays = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+        
+        // Считаем средние для будней и выходных отдельно
+        const weekdayAvgDelta = weekdayDays.length > 0 ? weekdayDays.reduce((s, d) => s + d.delta, 0) / weekdayDays.length : 0;
+        const weekendAvgDelta = weekendDays.length > 0 ? weekendDays.reduce((s, d) => s + d.delta, 0) / weekendDays.length : weekdayAvgDelta * 1.3;
+        
+        // Прогноз с учётом типа оставшихся дней
+        let forecastDelta = 0;
+        for (let d = dayOfWeek + 1; d <= 7; d++) {
+          const dow = d % 7;
+          forecastDelta += (dow === 0 || dow === 6) ? weekendAvgDelta : weekdayAvgDelta;
+        }
+        
+        const forecastBalance = totalBalance + forecastDelta;
+        
+        if (remainingDays > 0) {
+          balanceInsights.push({
+            type: 'forecast',
+            emoji: forecastBalance > 300 ? '📈' : forecastBalance < -300 ? '📉' : '✅',
+            text: 'К воскресенью: ' + (forecastBalance > 0 ? '+' : '') + Math.round(forecastBalance) + ' ккал',
+            color: Math.abs(forecastBalance) <= 300 ? '#22c55e' : forecastBalance > 0 ? '#ef4444' : '#f59e0b',
+            priority: 3
+          });
+        }
+      }
+      
+      // 6. 🧬 Forbes equation — научный расчёт влияния на вес
+      // Forbes: ΔFat = ΔEnergy × (Fat% / (Fat% + 10.4))
+      // При жире 25%: ~70% перебора → жир, 30% → гликоген+вода
+      // PMID: 10365981
+      const bodyFatPct = prof?.bodyFatPct || 25; // Предполагаем 25% если не указано
+      const forbesFatRatio = bodyFatPct / (bodyFatPct + 10.4);
+      const fatGain = Math.round(Math.abs(totalBalance) * forbesFatRatio / 9); // 9 ккал/г жира
+      const glycogenWater = Math.round(Math.abs(totalBalance) * (1 - forbesFatRatio) / 4); // гликоген + вода
+      
+      if (Math.abs(totalBalance) >= 200) {
+        const sign = totalBalance > 0 ? '+' : '−';
         balanceInsights.push({
-          type: 'forecast',
-          emoji: forecastBalance > 200 ? '📈' : forecastBalance < -200 ? '📉' : '✅',
-          text: 'Прогноз на Вс: ' + (forecastBalance > 0 ? '+' : '') + Math.round(forecastBalance) + ' ккал',
-          color: Math.abs(forecastBalance) <= 200 ? '#22c55e' : '#f59e0b'
+          type: 'forbes',
+          emoji: '🧬',
+          text: sign + fatGain + 'г жира, ' + sign + glycogenWater + 'г воды/гликогена',
+          color: '#64748b',
+          priority: 4,
+          pmid: '10365981'
         });
       }
       
-      // 4. Связь с весом
-      const gramsDelta = Math.round(Math.abs(totalBalance) / 7.7);
-      if (gramsDelta >= 50) {
-        balanceInsights.push({
-          type: 'weight',
-          emoji: '⚖️',
-          text: (totalBalance > 0 ? '+' : '−') + gramsDelta + 'г к весу за неделю',
-          color: '#64748b'
-        });
+      // 7. 🎯 Контекст цели
+      const currentGoalMode = goalMode || 'maintenance';
+      const deficitPct = prof?.deficitPctTarget || day.deficitPct || 0;
+      
+      if (currentGoalMode === 'loss' && totalBalance > 200) {
+        // Сколько дней прогресса потеряно
+        const dailyDeficit = optimum * Math.abs(deficitPct) / 100;
+        const daysLost = dailyDeficit > 0 ? Math.round(totalBalance / dailyDeficit * 10) / 10 : 0;
+        
+        if (daysLost >= 0.5) {
+          balanceInsights.push({
+            type: 'goal',
+            emoji: '🎯',
+            text: '~' + daysLost + ' дн прогресса к цели упущено',
+            color: '#ef4444',
+            priority: 2
+          });
+        }
       }
+      
+      // 8. 💧 Гидратация и "ложный" вес
+      // Углеводы задерживают воду: 1г углеводов = 3-4г воды
+      if (caloricDebt?.dayBreakdown?.length > 0) {
+        const yesterdayIdx = caloricDebt.dayBreakdown.length - 2;
+        if (yesterdayIdx >= 0) {
+          const yesterday = caloricDebt.dayBreakdown[yesterdayIdx];
+          // Если вчера был большой перебор, сегодня может быть +вес (вода)
+          if (yesterday.delta > 300) {
+            balanceInsights.push({
+              type: 'water',
+              emoji: '💧',
+              text: 'Вчерашние углеводы → +' + Math.round(yesterday.delta * 0.3 / 100) * 100 + 'г воды сегодня',
+              color: '#3b82f6',
+              priority: 5
+            });
+          }
+        }
+      }
+      
+      // Сортируем по приоритету
+      balanceInsights.sort((a, b) => (a.priority || 99) - (b.priority || 99));
       
       // === НАУЧНЫЕ ИНСАЙТЫ (для блока "Инсайты недели") ===
       if (caloricDebt?.scientificInsights) {
@@ -9496,9 +10296,14 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         scienceInsights,    // Для блока "Инсайты недели"
         insights: balanceInsights, // Совместимость со старым кодом
         totalBalance,
-        daysCount: dayBreakdown.length
+        netExcess,          // EPOC-adjusted
+        epocKcal,           // Сколько EPOC сжёг
+        fatGain,            // Forbes: граммы жира
+        glycogenWater,      // Forbes: гликоген+вода
+        daysCount: dayBreakdown.length,
+        severityTone        // mild/warning/critical
       };
-    }, [caloricDebt, eatenKcal, optimum, day.trainings]);
+    }, [caloricDebt, eatenKcal, optimum, day.trainings, day.meals, pIndex, prof]);
     
     // === displayOptimum — норма с учётом калорийного долга и refeed ===
     // Используется для UI отображения "сколько можно съесть сегодня"
@@ -13319,21 +14124,73 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           
           // === DETAILS (только при раскрытии) ===
           balanceCardExpanded && React.createElement('div', { className: 'caloric-balance-details' },
-            // Инсайты БАЛАНСА (тренд, паттерн, прогноз, влияние на вес)
-            balanceViz && balanceViz.balanceInsights && balanceViz.balanceInsights.length > 0 && React.createElement('div', { className: 'caloric-balance-insights' },
-              balanceViz.balanceInsights.map((insight, i) => React.createElement('div', {
-                key: i,
-                className: 'caloric-balance-insight-item',
-                style: { color: insight.color }
-              },
-                React.createElement('span', { className: 'caloric-insight-emoji' }, insight.emoji),
-                React.createElement('span', { className: 'caloric-insight-text' }, insight.text)
-              ))
+            // 🔬 Научная сводка — Forbes equation
+            balanceViz && balanceViz.fatGain > 0 && React.createElement('div', { 
+              className: 'caloric-excess-science-summary',
+              style: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                padding: '8px 12px',
+                background: 'rgba(59, 130, 246, 0.08)',
+                borderRadius: '8px',
+                marginBottom: '8px',
+                fontSize: '13px'
+              }
+            },
+              React.createElement('span', null, '🧬'),
+              React.createElement('div', { style: { flex: 1 } },
+                React.createElement('div', { style: { fontWeight: 500, color: '#1e40af' } },
+                  'По Forbes: ' + (balanceViz.totalBalance > 0 ? '+' : '') + balanceViz.fatGain + 'г жира, ' + 
+                  (balanceViz.totalBalance > 0 ? '+' : '') + balanceViz.glycogenWater + 'г воды'
+                ),
+                balanceViz.epocKcal > 30 && React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } },
+                  'EPOC сжёг ~' + balanceViz.epocKcal + ' ккал после тренировок'
+                )
+              ),
+              React.createElement('a', {
+                href: 'https://pubmed.ncbi.nlm.nih.gov/10365981/',
+                target: '_blank',
+                rel: 'noopener',
+                onClick: (e) => e.stopPropagation(),
+                style: { fontSize: '10px', color: '#3b82f6', textDecoration: 'none' }
+              }, 'PMID')
             ),
             
-            // Компенсация тренировками
-            totalTrainingKcal > 0 && React.createElement('div', { className: 'caloric-excess-training' },
-              '🏋️ Тренировки компенсировали ~' + Math.round(totalTrainingKcal * 0.5) + ' ккал'
+            // Инсайты БАЛАНСА (тренд, паттерн, прогноз, и т.д.)
+            balanceViz && balanceViz.balanceInsights && balanceViz.balanceInsights.length > 0 && React.createElement('div', { className: 'caloric-balance-insights' },
+              balanceViz.balanceInsights.map((insight, i) => {
+                // Толщина линии по типу: trend/pattern/goal = 4px, epoc/forbes = 3px, остальное = 2px
+                const borderWidth = (insight.type === 'trend' || insight.type === 'pattern' || insight.type === 'goal') 
+                  ? 4 
+                  : (insight.type === 'epoc' || insight.type === 'forbes' || insight.type === 'timing') 
+                    ? 3 
+                    : 2;
+                return React.createElement('div', {
+                  key: i,
+                  className: 'caloric-balance-insight-item',
+                  style: { 
+                    color: insight.color,
+                    borderLeftWidth: borderWidth + 'px'
+                  }
+                },
+                  React.createElement('span', { className: 'caloric-insight-emoji' }, insight.emoji),
+                  React.createElement('span', { className: 'caloric-insight-text' }, insight.text),
+                  // PMID ссылка если есть
+                  insight.pmid && React.createElement('a', {
+                    href: 'https://pubmed.ncbi.nlm.nih.gov/' + insight.pmid + '/',
+                    target: '_blank',
+                    rel: 'noopener',
+                    onClick: (e) => e.stopPropagation(),
+                    style: { 
+                      fontSize: '9px', 
+                      color: '#94a3b8', 
+                      textDecoration: 'none',
+                      marginLeft: '4px'
+                    }
+                  }, '📚')
+                );
+              })
             ),
             
             // Рекомендация кардио (подробная)
@@ -13354,16 +14211,13 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               React.createElement('span', null, '🎉 ' + cardioRecommendation.text)
             ),
             
-            // Влияние на вес
-            weightImpact && severity >= 1 && React.createElement('div', { className: 'caloric-balance-weight' },
-              '⚖️ ' + weightImpact.text
-            ),
-            
-            // Пояснение
+            // Severity-dependent пояснение
             React.createElement('div', { className: 'caloric-balance-explanation' },
               goalMode === 'bulk'
                 ? '💡 При наборе массы небольшой профицит — это нормально!'
-                : goalMode === 'loss'
+                : severity >= 2
+                  ? '⚠️ Серьёзный перебор. Рекомендуем активность и контроль порций.'
+                  : goalMode === 'loss'
                   ? '💡 Перебор можно компенсировать активностью. Это не срыв, это данные.'
                   : '💡 Баланс в плюсе. Лёгкая активность поможет выровнять.'
             )
@@ -13371,45 +14225,243 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         );
       })(),
       
-      // === INSIGHTS CARD — Карточка "Научная аналитика" (сворачиваемая) ===
-      balanceViz && balanceViz.scienceInsights && balanceViz.scienceInsights.length > 0 && React.createElement('div', {
+      // === INSIGHTS CARD v5.1 — Научная аналитика (яркий дизайн) ===
+      caloricDebt && caloricDebt.scientificInsights && caloricDebt.scientificInsights.length > 0 && React.createElement('div', {
         className: 'caloric-insights-card' + (insightsExpanded ? ' expanded' : ''),
+        style: {
+          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+          border: '1px solid rgba(59, 130, 246, 0.2)'
+        },
         onClick: () => setInsightsExpanded(!insightsExpanded)
       },
-        // === HEADER ===
-        React.createElement('div', { className: 'caloric-insights-header' },
-          React.createElement('div', { className: 'caloric-insights-title' },
+        // === HEADER с бейджем справа ===
+        React.createElement('div', { 
+          className: 'caloric-insights-header',
+          style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' }
+        },
+          React.createElement('div', { 
+            style: { display: 'flex', alignItems: 'center', gap: '8px' }
+          },
             React.createElement('span', { className: 'caloric-insights-icon' }, '🔬'),
-            React.createElement('span', { className: 'caloric-insights-label' }, 'Научная аналитика'),
-            React.createElement('span', { className: 'caloric-insights-badge' }, 
-              balanceViz.scienceInsights.length + ' инсайт' + (balanceViz.scienceInsights.length === 1 ? '' : balanceViz.scienceInsights.length < 5 ? 'а' : 'ов')
-            )
+            React.createElement('span', { className: 'caloric-insights-label' }, 'Научная аналитика')
           ),
-          React.createElement('span', { 
-            className: 'caloric-insights-chevron',
-            style: { transform: insightsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }
-          }, '▼')
+          React.createElement('div', { 
+            style: { display: 'flex', alignItems: 'center', gap: '8px' }
+          },
+            React.createElement('span', { 
+              className: 'caloric-insights-badge',
+              style: { 
+                background: '#3b82f6', 
+                color: '#fff', 
+                fontWeight: '600' 
+              }
+            }, 
+              caloricDebt.scientificInsights.length + ' инсайт' + (caloricDebt.scientificInsights.length === 1 ? '' : caloricDebt.scientificInsights.length < 5 ? 'а' : 'ов')
+            ),
+            React.createElement('span', { 
+              className: 'caloric-insights-chevron',
+              style: { transform: insightsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }
+            }, '▼')
+          )
         ),
         
         // === DETAILS — научные инсайты (только при раскрытии) ===
         insightsExpanded && React.createElement('div', { className: 'caloric-insights-details' },
           React.createElement('div', { className: 'caloric-insights-divider' }),
-          balanceViz.scienceInsights.map((insight, i) => React.createElement('div', {
-            key: i,
-            className: 'caloric-insight-item',
-            style: { color: insight.color }
+          
+          // === ИНСАЙТЫ — дружелюбные синие карточки ===
+          caloricDebt.scientificInsights.map((insight, i) => {
+            // Цветовая схема — дружелюбный синий для всех, с акцентами по severity
+            const severityAccent = {
+              critical: { accent: '#ef4444', badgeBg: '#fee2e2', badgeText: '#dc2626' },
+              warning: { accent: '#f59e0b', badgeBg: '#fef3c7', badgeText: '#92400e' },
+              positive: { accent: '#22c55e', badgeBg: '#dcfce7', badgeText: '#166534' },
+              info: { accent: '#3b82f6', badgeBg: '#dbeafe', badgeText: '#1e40af' }
+            };
+            const accent = severityAccent[insight.severity] || severityAccent.info;
+            
+            // Все карточки — светло-синий дружелюбный фон
+            const colors = {
+              bg: '#f0f9ff',
+              border: accent.accent,
+              text: '#1e3a5f',
+              icon: accent.accent,
+              badge: '#dbeafe'
+            };
+            
+            const borderWidth = insight.priority === 1 ? '5px' : insight.priority === 2 ? '4px' : '3px';
+            
+            return React.createElement('div', {
+              key: i,
+              style: { 
+                background: colors.bg,
+                borderLeft: borderWidth + ' solid ' + colors.border,
+                borderRadius: '0 12px 12px 0',
+                padding: '12px 14px',
+                marginBottom: '10px',
+                boxShadow: insight.priority <= 2 ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+              }
+            },
+              // === Header: emoji + текст + badges ===
+              React.createElement('div', { 
+                style: { 
+                  display: 'flex', 
+                  alignItems: 'flex-start', 
+                  gap: '10px',
+                  marginBottom: insight.action ? '10px' : '0'
+                }
+              },
+                // Emoji в круге
+                React.createElement('div', { 
+                  style: { 
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: colors.badge,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '18px',
+                    flexShrink: 0,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.08)'
+                  }
+                }, insight.emoji),
+                
+                // Текст + badges
+                React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                  // Основной текст (убираем эмодзи из начала если есть)
+                  React.createElement('div', { 
+                    style: { 
+                      fontSize: '14px', 
+                      fontWeight: '600',
+                      lineHeight: '1.4',
+                      color: colors.text,
+                      marginBottom: '4px'
+                    }
+                  }, insight.text.replace(/^[\p{Emoji}\s]+/u, '').trim()),
+                  
+                  // Badges row
+                  React.createElement('div', { 
+                    style: { display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }
+                  },
+                    // Персональный паттерн badge
+                    insight.isPersonal && React.createElement('span', {
+                      style: {
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        padding: '2px 8px',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                        color: '#fff',
+                        borderRadius: '10px',
+                        fontSize: '10px',
+                        fontWeight: '700',
+                        letterSpacing: '0.3px',
+                        boxShadow: '0 2px 4px rgba(139,92,246,0.3)'
+                      }
+                    }, '🔄 ТВОЙ ПАТТЕРН'),
+                    
+                    // Priority badge
+                    insight.priority === 1 && !insight.isPersonal && React.createElement('span', {
+                      style: {
+                        padding: '2px 6px',
+                        background: colors.border,
+                        color: '#fff',
+                        borderRadius: '8px',
+                        fontSize: '9px',
+                        fontWeight: '700'
+                      }
+                    }, '❗ ВАЖНО'),
+                    
+                    // PMID ссылка
+                    insight.pmid && React.createElement('a', {
+                      href: 'https://pubmed.ncbi.nlm.nih.gov/' + insight.pmid,
+                      target: '_blank',
+                      rel: 'noopener',
+                      onClick: (e) => e.stopPropagation(),
+                      style: { 
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '2px',
+                        fontSize: '10px', 
+                        color: '#64748b', 
+                        textDecoration: 'none',
+                        padding: '2px 6px',
+                        background: 'rgba(0,0,0,0.05)',
+                        borderRadius: '6px'
+                      }
+                    }, '📚 Наука')
+                  )
+                )
+              ),
+              
+              // === ACTION BUTTON — "Что делать?" (простой) ===
+              insight.action && React.createElement('div', { 
+                onClick: (e) => e.stopPropagation(),
+                style: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 12px',
+                  background: 'rgba(59,130,246,0.08)',
+                  borderRadius: '8px'
+                }
+              },
+                React.createElement('span', { 
+                  style: { fontSize: '14px' }
+                }, '💡'),
+                React.createElement('span', { 
+                  style: { 
+                    fontSize: '12px', 
+                    color: '#3b82f6',
+                    fontWeight: '500'
+                  }
+                }, insight.action)
+              )
+            );
+          }),
+          
+          // === FOOTER — группы инсайтов ===
+          caloricDebt.insightGroups && React.createElement('div', { 
+            style: {
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '8px',
+              marginTop: '14px',
+              paddingTop: '14px',
+              borderTop: '1px dashed rgba(0,0,0,0.1)'
+            }
           },
-            React.createElement('span', { className: 'caloric-insight-emoji' }, insight.emoji),
-            React.createElement('span', { className: 'caloric-insight-text' }, insight.text),
-            insight.pmid && React.createElement('a', {
-              href: 'https://pubmed.ncbi.nlm.nih.gov/' + insight.pmid,
-              target: '_blank',
-              rel: 'noopener',
-              className: 'caloric-insight-pmid',
-              onClick: (e) => e.stopPropagation(),
-              style: { fontSize: '10px', color: '#94a3b8', marginLeft: '4px' }
-            }, 'PMID')
-          ))
+            Object.entries(caloricDebt.insightGroups)
+              .map(([group, items]) => {
+                const groupData = {
+                  sleep: { icon: '😴', color: '#6366f1', bg: '#eef2ff' },
+                  metabolism: { icon: '🔥', color: '#f97316', bg: '#fff7ed' },
+                  timing: { icon: '⏰', color: '#06b6d4', bg: '#ecfeff' },
+                  nutrition: { icon: '🥗', color: '#22c55e', bg: '#f0fdf4' },
+                  activity: { icon: '🏃', color: '#ec4899', bg: '#fdf2f8' },
+                  hormones: { icon: '💊', color: '#8b5cf6', bg: '#f5f3ff' },
+                  pattern: { icon: '🔄', color: '#3b82f6', bg: '#eff6ff' }
+                };
+                const data = groupData[group] || { icon: '📊', color: '#64748b', bg: '#f8fafc' };
+                const count = items.length;
+                return React.createElement('div', { 
+                  key: group,
+                  style: { 
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 10px',
+                    background: count > 0 ? data.bg : '#f8fafc',
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    color: count > 0 ? data.color : '#cbd5e1',
+                    opacity: count > 0 ? 1 : 0.6
+                  }
+                }, data.icon, ' ', count);
+              })
+          )
         )
       ),
       

@@ -1,0 +1,19 @@
+
+> @heys/storage@14.0.0 build /Users/poplavskijanton/HEYS-v2/packages/storage
+> tsup
+
+CLI Building entry: src/index.ts
+CLI Using tsconfig: tsconfig.json
+CLI tsup v7.3.0
+CLI Using tsup config: /Users/poplavskijanton/HEYS-v2/packages/storage/tsup.config.ts
+CLI Target: es2022
+CLI Cleaning output folder
+CJS Build start
+ESM Build start
+Entry module "dist/index.cjs" is using named and default exports together. Consumers of your bundle will have to use `chunk.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+CJS dist/index.cjs     71.76 KB
+CJS dist/index.cjs.map 272.43 KB
+CJS ⚡️ Build success in 3673ms
+ESM dist/index.js     71.65 KB
+ESM dist/index.js.map 272.43 KB
+ESM ⚡️ Build success in 3672ms

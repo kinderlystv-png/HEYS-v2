@@ -2456,7 +2456,7 @@
 .caloric-balance-insights {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .caloric-balance-insight-item {
@@ -2464,19 +2464,28 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  padding: 6px 10px;
-  background: rgba(0, 0, 0, 0.03);
-  border-radius: 8px;
+  padding: 4px 0 4px 10px;
+  border-left: 3px solid currentColor;
   line-height: 1.3;
+  opacity: 0.9;
 }
 
 .caloric-insight-emoji {
-  font-size: 15px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 
 .caloric-insight-text {
   flex: 1;
+}
+
+/* Научная сводка Forbes */
+.caloric-excess-science-summary {
+  transition: background 0.2s ease;
+}
+
+.caloric-excess-science-summary:hover {
+  background: rgba(59, 130, 246, 0.12) !important;
 }
 
 /* День недели вместо номера */
@@ -2915,6 +2924,174 @@
 .caloric-insight-text {
   flex: 1;
   font-weight: 500;
+}
+
+/* === 13.1 SCIENTIFIC INSIGHTS V2 — улучшенная карточка инсайтов === */
+
+/* Главный инсайт (preview в collapsed state) */
+.insight-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-slate-600);
+  padding: 4px 0 8px;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.insight-main-emoji {
+  font-size: 14px;
+}
+
+.insight-main-text {
+  flex: 1;
+  line-height: 1.35;
+}
+
+/* V2 карточка инсайта с severity-border */
+.caloric-insight-item-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 10px;
+  border-left-width: 3px;
+  border-left-style: solid;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.caloric-insight-item-v2:hover {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Severity colors (border-left-color) */
+.caloric-insight-item-v2.severity-critical {
+  border-left-color: #ef4444;
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.caloric-insight-item-v2.severity-warning {
+  border-left-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.caloric-insight-item-v2.severity-positive {
+  border-left-color: #22c55e;
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.caloric-insight-item-v2.severity-info {
+  border-left-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+/* Header row: emoji + text + badges */
+.insight-header-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.insight-header-row .caloric-insight-emoji {
+  flex-shrink: 0;
+}
+
+.insight-header-row .caloric-insight-text {
+  flex: 1;
+  line-height: 1.4;
+}
+
+/* Personal pattern badge */
+.insight-badge-personal {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+  color: white;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Action button "Что делать?" */
+.insight-action {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--color-slate-700);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.insight-action-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.insight-action-text {
+  flex: 1;
+}
+
+/* Summary footer with group icons */
+.insights-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 0 4px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+  margin-top: 8px;
+}
+
+.insights-summary-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+/* Группы тем (фон по группе) */
+.caloric-insight-item-v2.group-sleep {
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.caloric-insight-item-v2.group-metabolism {
+  background: rgba(249, 115, 22, 0.06);
+}
+
+.caloric-insight-item-v2.group-timing {
+  background: rgba(6, 182, 212, 0.06);
+}
+
+.caloric-insight-item-v2.group-nutrition {
+  background: rgba(34, 197, 94, 0.06);
+}
+
+.caloric-insight-item-v2.group-activity {
+  background: rgba(236, 72, 153, 0.06);
+}
+
+.caloric-insight-item-v2.group-hormones {
+  background: rgba(139, 92, 246, 0.06);
+}
+
+.caloric-insight-item-v2.group-pattern {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%);
 }
 
 /* Slide down animation */

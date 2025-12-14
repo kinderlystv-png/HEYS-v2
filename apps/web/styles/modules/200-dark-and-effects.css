@@ -790,7 +790,16 @@
 
 /* Dark theme for caloric balance insights */
 [data-theme="dark"] .caloric-balance-insight-item {
-  background: rgba(255, 255, 255, 0.06);
+  opacity: 0.85;
+}
+
+/* Dark theme for science summary */
+[data-theme="dark"] .caloric-excess-science-summary {
+  background: rgba(59, 130, 246, 0.15) !important;
+}
+
+[data-theme="dark"] .caloric-excess-science-summary:hover {
+  background: rgba(59, 130, 246, 0.22) !important;
 }
 
 /* Dark theme for caloric debt card */
@@ -889,6 +898,79 @@
 
 [data-theme="dark"] .caloric-insight-item:hover {
   background: rgba(30, 41, 59, 0.8);
+}
+
+/* === SCIENTIFIC INSIGHTS V2 — Dark Mode === */
+
+[data-theme="dark"] .insight-main {
+  color: var(--color-slate-400);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .caloric-insight-item-v2 {
+  background: rgba(30, 41, 59, 0.6);
+}
+
+[data-theme="dark"] .caloric-insight-item-v2:hover {
+  background: rgba(30, 41, 59, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .caloric-insight-item-v2.severity-critical {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+[data-theme="dark"] .caloric-insight-item-v2.severity-warning {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+[data-theme="dark"] .caloric-insight-item-v2.severity-positive {
+  background: rgba(34, 197, 94, 0.1);
+}
+
+[data-theme="dark"] .caloric-insight-item-v2.severity-info {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+[data-theme="dark"] .insight-action {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--color-slate-300);
+}
+
+[data-theme="dark"] .insights-summary {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .insights-summary-icon {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .caloric-insight-item-v2.group-sleep {
+  background: rgba(99, 102, 241, 0.12);
+}
+
+[data-theme="dark"] .caloric-insight-item-v2.group-metabolism {
+  background: rgba(249, 115, 22, 0.12);
+}
+
+[data-theme="dark"] .caloric-insight-item-v2.group-timing {
+  background: rgba(6, 182, 212, 0.12);
+}
+
+[data-theme="dark"] .caloric-insight-item-v2.group-nutrition {
+  background: rgba(34, 197, 94, 0.12);
+}
+
+[data-theme="dark"] .caloric-insight-item-v2.group-activity {
+  background: rgba(236, 72, 153, 0.12);
+}
+
+[data-theme="dark"] .caloric-insight-item-v2.group-hormones {
+  background: rgba(139, 92, 246, 0.12);
+}
+
+[data-theme="dark"] .caloric-insight-item-v2.group-pattern {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);
 }
 
 /* Dark theme for balance day popup */

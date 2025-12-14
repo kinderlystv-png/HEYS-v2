@@ -1047,6 +1047,7 @@
         fat: Math.round(totalFat),
         carbs: Math.round(totalCarbs),
         steps: +dayData.steps || 0,
+        waterMl: +dayData.waterMl || 0, // 🆕 Вода для персонализированных инсайтов
         householdMin: +dayData.householdMin || 0,
         trainings: dayData.trainings || [],
         trainingMinutes,
@@ -1232,7 +1233,7 @@
         // moodAvg для mood-полосы на графике
         const moodAvg = dayInfo.moodAvg ? +dayInfo.moodAvg : null;
         
-        // Дополнительные данные для sparkline
+        // Дополнительные данные для sparkline и персонализированных инсайтов
         const sleepHours = dayInfo.sleepHours || 0;
         const trainingMinutes = dayInfo.trainingMinutes || 0;
         const prot = dayInfo.prot || 0;
@@ -1240,12 +1241,16 @@
         const carbs = dayInfo.carbs || 0;
         const dayScore = dayInfo.dayScore || 0;
         const cycleDay = dayInfo.cycleDay || null; // День менструального цикла
+        // steps уже объявлен выше для расчёта stepsKcal
+        const waterMl = dayInfo.waterMl || 0; // 🆕 Вода для персонализированных инсайтов
+        const weightMorning = dayInfo.weightMorning || 0; // 🆕 Вес для персонализированных инсайтов
         
         daysData.set(dateStr, { 
           kcal: dayInfo.kcal, target, ratio, 
           hasTraining, trainingTypes, trainingMinutes,
           moodAvg, sleepHours, dayScore,
           prot, fat, carbs,
+          steps, waterMl, weightMorning, // 🆕 Добавлены для персонализированных инсайтов
           cycleDay,
           isRefeedDay: dayInfo.isRefeedDay || false,
           refeedReason: dayInfo.refeedReason || null

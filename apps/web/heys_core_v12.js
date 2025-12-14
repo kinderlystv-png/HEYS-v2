@@ -1319,7 +1319,57 @@
     }
   };
 
-  HEYS.utils = { INVIS, NUM_RE, round1, uuid, toNum, toNumInput, computeDerived, lsGet, lsSet, parsePasted, validateInput, getEmojiStyle, setEmojiStyle, getCurrentClientId, storageCleanup };
+  /**
+   * Вычисление возраста из даты рождения
+   * @param {string} birthDate - Дата в формате YYYY-MM-DD
+   * @returns {number} Возраст в годах
+   */
+  function calcAgeFromBirthDate(birthDate) {
+    if (!birthDate) return 0;
+    const birth = new Date(birthDate);
+    if (isNaN(birth.getTime())) return 0;
+    
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  }
+
+  /**
+   * Получение профиля пользователя с актуальным возрастом
+   * @returns {Object} Профиль пользователя
+   */
+  function getProfile() {
+    const p = lsGet('heys_profile', {}) || {};
+    const g = p.gender || p.sex || 'Мужской';
+    const sex = String(g).toLowerCase().startsWith('ж') ? 'female' : 'male';
+    
+    // Вычисляем возраст из birthDate (приоритет) или берём сохранённый age
+    let age = p.birthDate ? calcAgeFromBirthDate(p.birthDate) : (+p.age || 30);
+    if (age < 10 || age > 120) age = 30; // Защита от некорректных значений
+    
+    return {
+      sex,
+      gender: g,
+      height: +p.height || 175,
+      age,
+      birthDate: p.birthDate || null,
+      sleepHours: +p.sleepHours || 8,
+      weight: +p.weight || 70,
+      weightGoal: +p.weightGoal || 0,
+      deficitPctTarget: +p.deficitPctTarget || 0,
+      stepsGoal: +p.stepsGoal || 7000,
+      insulinWaveHours: +p.insulinWaveHours || 3,
+      cycleTrackingEnabled: !!p.cycleTrackingEnabled,
+      firstName: p.firstName || '',
+      lastName: p.lastName || ''
+    };
+  }
+
+  HEYS.utils = { INVIS, NUM_RE, round1, uuid, toNum, toNumInput, computeDerived, lsGet, lsSet, parsePasted, validateInput, getEmojiStyle, setEmojiStyle, getCurrentClientId, storageCleanup, getProfile, calcAgeFromBirthDate };
   HEYS.validateInput = validateInput; // Прямой доступ для тестов
   HEYS.core = { validateInput }; // Создаем объект core с валидацией
   
