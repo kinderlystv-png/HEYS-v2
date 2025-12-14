@@ -4731,7 +4731,8 @@
     const avgGI = dayTot?.gi || 0;
     
     // 🆕 Высокий ГИ во время активной инсулиновой волны
-    if (trigger === 'product_added' && HEYS.InsulinWave) {
+    // (фильтрация по триггеру происходит в useAdviceEngine через triggers поле)
+    if (HEYS.InsulinWave) {
       try {
         const iwData = HEYS.InsulinWave.calculate({
           meals: day?.meals || [],
