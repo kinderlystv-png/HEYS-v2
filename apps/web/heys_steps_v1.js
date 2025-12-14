@@ -2843,7 +2843,8 @@
       style: { 
         maxHeight: '60vh',
         overflowY: 'auto',
-        paddingRight: '4px'
+        paddingRight: '4px',
+        paddingBottom: '60px' // Место для sticky-счётчика
       }
     },
       // Категории
