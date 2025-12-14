@@ -2582,7 +2582,7 @@
         
         if (!prevTrainings || prevTrainings.totalKcal < 200) return null;
         
-        const prof = getProfile();
+        const prof = lsGet('heys_profile', { weight: 70, height: 170 });
         const bmi = HEYS.InsulinWave.calculateBMI(prof.weight, prof.height);
         const ndteData = HEYS.InsulinWave.calculateNDTE({
           trainingKcal: prevTrainings.totalKcal,
