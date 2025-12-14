@@ -347,6 +347,19 @@
       }
     },
     
+    // Только витамины
+    supplements: (dateKey, onComplete) => {
+      if (HEYS.StepModal) {
+        HEYS.StepModal.show({
+          steps: ['supplements'],
+          title: '💊 Витамины',
+          showProgress: false,
+          context: { dateKey: dateKey || new Date().toISOString().slice(0, 10) },
+          onComplete
+        });
+      }
+    },
+    
     // Добавить приём пищи (через MealStep)
     meal: (dateKey, onComplete) => {
       if (HEYS.MealStep) {

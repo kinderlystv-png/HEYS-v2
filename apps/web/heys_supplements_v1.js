@@ -906,7 +906,10 @@
               onClick: () => {
                 // Открыть выбор витаминов
                 if (HEYS.showCheckin?.supplements) {
-                  HEYS.showCheckin.supplements();
+                  HEYS.showCheckin.supplements(dateKey, () => {
+                    // После выбора — обновить карточку
+                    if (onForceUpdate) onForceUpdate();
+                  });
                 }
               },
               style: {
