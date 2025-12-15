@@ -386,36 +386,62 @@
     });
     
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
+    const profile = lsGet('heys_profile', {});
     
-    // Используем HEYS.InsulinWave если доступно
-    if (HEYS.InsulinWave && HEYS.InsulinWave.calculateWaveStatus) {
+    // Используем HEYS.InsulinWave.calculate() если доступно
+    if (HEYS.InsulinWave && HEYS.InsulinWave.calculate && day.meals && day.meals.length > 0) {
       try {
-        const waveStatus = HEYS.InsulinWave.calculateWaveStatus(dateStr);
+        // Получаем pIndex и getProductFromItem из HEYS.products
+        const pIndex = HEYS.products?.buildIndex?.() || { byId: new Map() };
+        const getProductFromItem = (item, idx) => {
+          if (!item) return null;
+          // Пробуем найти по product_id
+          if (item.product_id && idx?.byId?.get) {
+            return idx.byId.get(item.product_id) || idx.byId.get(String(item.product_id));
+          }
+          // Fallback: данные внутри item (штамп)
+          return item;
+        };
         
-        if (waveStatus.status === 'lipolysis') {
+        const waveData = HEYS.InsulinWave.calculate({
+          meals: day.meals,
+          pIndex,
+          getProductFromItem,
+          baseWaveHours: profile.insulinWaveHours || 3,
+          trainings: day.trainings || [],
+          dayData: {
+            ...day,
+            profile,
+            date: dateStr,
+            lsGet
+          },
+          now: new Date()
+        });
+        
+        if (waveData && waveData.status === 'lipolysis') {
           return {
             phase: 'catabolic',
             label: BASELINE.PHASES.CATABOLIC.label,
             emoji: BASELINE.PHASES.CATABOLIC.emoji,
-            hoursInPhase: waveStatus.hoursSinceLastMeal || 0,
+            hoursInPhase: (waveData.lipolysisMinutes || 0) / 60,
             nextPhase: null,
             timeToLipolysis: 0,
             isLipolysis: true,
             details: 'Липолиз активен — жиросжигание'
           };
-        } else {
-          const hoursRemaining = waveStatus.waveEndMinutes / 60;
+        } else if (waveData) {
+          const hoursRemaining = (waveData.remaining || 0) / 60;
           const phase = hoursRemaining > 2 ? 'anabolic' : 'transitional';
           
           return {
             phase,
             label: BASELINE.PHASES[phase.toUpperCase()].label,
             emoji: BASELINE.PHASES[phase.toUpperCase()].emoji,
-            hoursInPhase: waveStatus.currentMinutes / 60,
+            hoursInPhase: ((waveData.duration || 180) - (waveData.remaining || 0)) / 60,
             nextPhase: phase === 'anabolic' ? 'transitional' : 'catabolic',
             timeToLipolysis: Math.max(0, hoursRemaining),
             isLipolysis: false,
-            details: `До липолиза: ${Math.round(hoursRemaining * 60)} мин`
+            details: `До липолиза: ${Math.round(waveData.remaining || 0)} мин`
           };
         }
       } catch (e) {
@@ -587,7 +613,7 @@
   }
   
   /**
-   * Получить историю дней
+   * Получить историю дней с вычисленными макро-процентами
    */
   function getDaysHistory(daysBack) {
     const lsGet = U.lsGet || ((k, d) => {
@@ -596,6 +622,7 @@
     
     const days = [];
     const today = new Date();
+    const pIndex = HEYS.products?.buildIndex?.() || { byId: new Map() };
     
     for (let i = 0; i < daysBack; i++) {
       const d = new Date(today);
@@ -604,7 +631,24 @@
       const day = lsGet(`heys_dayv2_${dateStr}`, null);
       
       if (day && day.meals && day.meals.length > 0) {
-        days.push({ ...day, dateStr, daysAgo: i });
+        // Вычисляем dayTot для расчёта процентов макросов
+        const dayTot = calculateDayTotals(day, pIndex);
+        const totalKcal = dayTot.kcal || 0;
+        
+        // Вычисляем проценты макросов от калорий (как в нормах)
+        // Белок 4 ккал/г, углеводы 4 ккал/г, жиры 9 ккал/г
+        const enrichedDay = {
+          ...day,
+          dateStr,
+          daysAgo: i,
+          dayTot, // Добавляем dayTot для прочих анализов
+          // Проценты макросов (доля калорий от данного нутриента)
+          carbsPct: totalKcal > 0 ? (dayTot.carbs * 4) / totalKcal : 0,
+          protPct: totalKcal > 0 ? (dayTot.prot * 4) / totalKcal : 0,
+          fatPct: totalKcal > 0 ? (dayTot.fat * 9) / totalKcal : 0
+        };
+        
+        days.push(enrichedDay);
       }
     }
     
