@@ -559,69 +559,128 @@
 }
 
 /* === DARK MODE === */
+/* Используем [data-theme="dark"] и .dark для совместимости */
 
-@media (prefers-color-scheme: dark) {
-  .metabolic-status-card {
-    background: var(--card-bg-dark, #1e293b);
-    border-color: var(--border-color-dark, #334155);
-  }
-  
-  .metabolic-status-card__header {
-    background: var(--card-header-bg-dark, #0f172a);
-  }
-  
-  .metabolic-status-card__header:active {
-    background: var(--card-header-bg-active-dark, #1e293b);
-  }
-  
-  .metabolic-status-card__summary,
-  .metabolic-status-card__section {
-    border-color: var(--border-color-dark, #334155);
-  }
-  
-  .reason-card {
-    background: var(--bg-secondary-dark, #0f172a);
-  }
-  
-  .reason-card__science-text {
-    background: var(--bg-info-dark, #1e3a5f);
-  }
-  
-  .action-card {
-    background: var(--bg-secondary-dark, #0f172a);
-    border-color: var(--border-color-dark, #334155);
-  }
-  
-  .crash-risk-alert--low {
-    background: linear-gradient(135deg, #1e293b 0%, #14532d 100%);
-  }
-  
-  .crash-risk-alert--medium {
-    background: linear-gradient(135deg, #1e293b 0%, #713f12 100%);
-  }
-  
-  .crash-risk-alert--high {
-    background: linear-gradient(135deg, #1e293b 0%, #7f1d1d 100%);
-  }
-  
-  .tomorrow-forecast {
-    background: var(--card-bg-dark, #1e293b);
-    border-color: var(--border-color-dark, #334155);
-  }
-  
-  .tomorrow-forecast__header {
-    background: var(--card-header-bg-dark, #0f172a);
-  }
-  
-  .tomorrow-forecast__training {
-    background: linear-gradient(135deg, #1e3a5f 0%, #0c4a6e 100%);
-  }
-  
-  .energy-window {
-    background: var(--bg-secondary-dark, #0f172a);
-  }
-  
-  .energy-window--optimal {
-    background: #14532d;
-  }
+[data-theme="dark"] .metabolic-status-card,
+.dark .metabolic-status-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .metabolic-status-card--empty,
+.dark .metabolic-status-card--empty {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .metabolic-status-card__header,
+.dark .metabolic-status-card__header {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .metabolic-status-card__header:active,
+.dark .metabolic-status-card__header:active {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .metabolic-status-card__summary,
+[data-theme="dark"] .metabolic-status-card__section,
+.dark .metabolic-status-card__summary,
+.dark .metabolic-status-card__section {
+  border-color: #334155;
+}
+
+[data-theme="dark"] .metabolic-status-card__section-title,
+.dark .metabolic-status-card__section-title {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .metabolic-status-card__chevron,
+[data-theme="dark"] .metabolic-status-card__phase-time,
+.dark .metabolic-status-card__chevron,
+.dark .metabolic-status-card__phase-time {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .reason-card,
+.dark .reason-card {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .reason-card__science-text,
+.dark .reason-card__science-text {
+  background: #1e3a5f;
+}
+
+[data-theme="dark"] .action-card,
+.dark .action-card {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .crash-risk-alert,
+.dark .crash-risk-alert {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .crash-risk-alert--low,
+.dark .crash-risk-alert--low {
+  background: linear-gradient(135deg, #1e293b 0%, #14532d 100%);
+  border-color: #22c55e;
+}
+
+[data-theme="dark"] .crash-risk-alert--medium,
+.dark .crash-risk-alert--medium {
+  background: linear-gradient(135deg, #1e293b 0%, #422006 100%);
+  border-color: #eab308;
+}
+
+[data-theme="dark"] .crash-risk-alert--high,
+.dark .crash-risk-alert--high {
+  background: linear-gradient(135deg, #1e293b 0%, #7f1d1d 100%);
+  border-color: #ef4444;
+}
+
+[data-theme="dark"] .crash-risk-alert__trigger,
+.dark .crash-risk-alert__trigger {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .tomorrow-forecast,
+.dark .tomorrow-forecast {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .tomorrow-forecast__header,
+.dark .tomorrow-forecast__header {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .tomorrow-forecast__training,
+.dark .tomorrow-forecast__training {
+  background: linear-gradient(135deg, #1e3a5f 0%, #0c4a6e 100%);
+}
+
+[data-theme="dark"] .energy-window,
+.dark .energy-window {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .energy-window--optimal,
+.dark .energy-window--optimal {
+  background: #14532d;
+}
+
+[data-theme="dark"] .energy-window__period,
+[data-theme="dark"] .energy-window__recommendation,
+.dark .energy-window__period,
+.dark .energy-window__recommendation {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .energy-window__label,
+[data-theme="dark"] .tomorrow-forecast__training-reason,
+.dark .energy-window__label,
+.dark .tomorrow-forecast__training-reason {
+  color: #94a3b8;
 }

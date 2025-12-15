@@ -237,7 +237,10 @@
     );
     
     // Поиск с фильтром категории
-    const lc = search.trim().toLowerCase();
+    // Используем normalizeText из SmartSearch (единый источник)
+    const normalizeSearch = HEYS?.SmartSearchWithTypos?.utils?.normalizeText 
+      || ((text) => String(text || '').toLowerCase().replace(/ё/g, 'е'));
+    const lc = normalizeSearch(search.trim());
     const searchResults = useMemo(() => {
       let results = [];
       
@@ -256,17 +259,17 @@
           }
         }
         
-        // Fallback
+        // Fallback с нормализацией ё→е
         if (!results.length) {
           results = latestProducts.filter(p => 
-            String(p.name || '').toLowerCase().includes(lc)
+            normalizeSearch(p.name).includes(lc)
           );
         }
         
         // Умная сортировка: точные совпадения первыми
         results.sort((a, b) => {
-          const aName = String(a.name || '').toLowerCase();
-          const bName = String(b.name || '').toLowerCase();
+          const aName = normalizeSearch(a.name);
+          const bName = normalizeSearch(b.name);
           const aStartsWith = aName.startsWith(lc) ? 0 : 1;
           const bStartsWith = bName.startsWith(lc) ? 0 : 1;
           if (aStartsWith !== bStartsWith) return aStartsWith - bStartsWith;
@@ -286,6 +289,16 @@
       
       return results.slice(0, 20);
     }, [lc, latestProducts, selectedCategory]);
+    
+    // "Возможно вы искали" — альтернативные запросы при пустых результатах
+    const didYouMean = useMemo(() => {
+      if (!lc || searchResults.length > 0) return [];
+      
+      if (HEYS?.SmartSearchWithTypos?.getDidYouMean) {
+        return HEYS.SmartSearchWithTypos.getDidYouMean(lc, latestProducts, 3);
+      }
+      return [];
+    }, [lc, searchResults.length, latestProducts]);
     
     // Toggle избранного
     const toggleFavorite = useCallback((e, productId) => {
@@ -486,7 +499,7 @@
       setTimeout(() => setSearch(s => s.trim()), 10);
     }, [context]);
 
-    // Рендер карточки продукта
+    // Рендер карточки продукта с подсветкой совпадений
     const renderProductCard = (product, showFavorite = true) => {
       const pid = String(product.id ?? product.product_id ?? product.name);
       const isFav = favorites.has(pid);
@@ -496,6 +509,11 @@
       const fat = Math.round((product.badFat100 || 0) + (product.goodFat100 || 0) + (product.trans100 || 0));
       const harmVal = product.harm ?? product.harmScore ?? product.harm100;
       const harmBg = getHarmBg(harmVal);
+      
+      // Подсветка совпадений в названии
+      const highlightedName = lc && HEYS?.SmartSearchWithTypos?.renderHighlightedText
+        ? HEYS.SmartSearchWithTypos.renderHighlightedText(product.name, search, React)
+        : product.name;
       
       return React.createElement('div', {
         key: pid,
@@ -510,7 +528,7 @@
         
         // Инфо
         React.createElement('div', { className: 'aps-product-info' },
-          React.createElement('div', { className: 'aps-product-name' }, product.name),
+          React.createElement('div', { className: 'aps-product-name' }, highlightedName),
           React.createElement('div', { className: 'aps-product-meta' },
             React.createElement('span', { className: 'aps-meta-kcal' }, kcal + ' ккал'),
             React.createElement('span', { className: 'aps-meta-sep' }, '·'),
@@ -650,12 +668,70 @@
           searchResults?.length > 0 && React.createElement('div', { className: 'aps-products-list' },
             searchResults.map(p => renderProductCard(p))
           ),
+          // Пустой результат с "Возможно вы искали"
           searchResults.length === 0 && React.createElement('div', { className: 'aps-empty' },
             React.createElement('span', null, '😕'),
-            React.createElement('span', null, 'Попробуйте другой запрос'),
+            
+            // "Возможно вы искали" — кликабельные альтернативы
+            didYouMean.length > 0 && React.createElement('div', { 
+              className: 'aps-did-you-mean',
+              style: {
+                marginTop: '12px',
+                padding: '12px',
+                backgroundColor: 'rgba(255, 213, 0, 0.1)',
+                borderRadius: '8px',
+                textAlign: 'left'
+              }
+            },
+              React.createElement('div', { 
+                style: { 
+                  fontSize: '13px', 
+                  color: 'var(--text-secondary)', 
+                  marginBottom: '8px' 
+                } 
+              }, '💡 Возможно вы искали:'),
+              React.createElement('div', { 
+                style: { 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: '8px' 
+                } 
+              },
+                didYouMean.map((item, i) => 
+                  React.createElement('button', {
+                    key: i,
+                    onClick: () => setSearch(item.text),
+                    style: {
+                      padding: '6px 12px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '16px',
+                      backgroundColor: 'var(--bg-card)',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }
+                  },
+                    React.createElement('span', null, item.text),
+                    item.label && React.createElement('span', { 
+                      style: { 
+                        fontSize: '10px', 
+                        color: 'var(--text-tertiary)',
+                        marginLeft: '4px'
+                      } 
+                    }, item.label)
+                  )
+                )
+              )
+            ),
+            
+            !didYouMean.length && React.createElement('span', null, 'Попробуйте другой запрос'),
+            
             React.createElement('button', {
               className: 'aps-add-new-btn',
-              onClick: handleNewProduct
+              onClick: handleNewProduct,
+              style: { marginTop: didYouMean.length > 0 ? '12px' : '8px' }
             }, '+ Добавить "' + search + '"')
           )
         ),

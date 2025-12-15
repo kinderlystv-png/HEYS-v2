@@ -443,8 +443,12 @@
         
         return result;
           
+        // Используем normalizeText из SmartSearch (единый источник)
+        const normalizeSearchText = window.HEYS?.SmartSearchWithTypos?.utils?.normalizeText 
+          || ((text) => String(text || '').toLowerCase().replace(/ё/g, 'е'));
+        
         function performSearch() {
-          const q = query.trim().toLowerCase();
+          const q = normalizeSearchText(query.trim());
           if (!q) return products;
           
           // Если доступен умный поиск, используем его
@@ -476,7 +480,7 @@
               if (window.HEYS && window.HEYS.analytics) {
                 window.HEYS.analytics.trackDataOperation('cache-miss');
               }
-              return products.filter(p => (p.name || '').toLowerCase().includes(q));
+              return products.filter(p => normalizeSearchText(p.name).includes(q));
             }
           } else {
             // Для длинных запросов - комбинированный подход
@@ -495,14 +499,14 @@
                 window.HEYS.analytics.trackDataOperation('cache-hit');
               }
               const candidates = Array.from(candidateIndices).map(idx => products[idx]);
-              return candidates.filter(p => (p.name || '').toLowerCase().includes(q));
+              return candidates.filter(p => normalizeSearchText(p.name).includes(q));
             }
             
             // Fallback к обычному поиску
             if (window.HEYS && window.HEYS.analytics) {
               window.HEYS.analytics.trackDataOperation('cache-miss');
             }
-            return products.filter(p => (p.name || '').toLowerCase().includes(q));
+            return products.filter(p => normalizeSearchText(p.name).includes(q));
           }
         }
       }, [products, query, searchIndex]);
