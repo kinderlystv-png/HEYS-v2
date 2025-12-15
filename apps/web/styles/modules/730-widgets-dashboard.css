@@ -1,0 +1,1374 @@
+/* ===================================================================
+ * 730-widgets-dashboard.css
+ * Widget Dashboard System — Production CSS
+ * Version: 1.0.0
+ * Created: 2025-12-15
+ * 
+ * Design System:
+ * - Консистентность: единые tokens, border-radius, spacing
+ * - Уникальность: border-top color + unique visualization
+ * =================================================================== */
+
+/* ===== Design Tokens (CSS Custom Properties) ===== */
+:root {
+  /* Spacing (кратно 4px) */
+  --widget-spacing-xs: 4px;
+  --widget-spacing-sm: 8px;
+  --widget-spacing-md: 12px;
+  --widget-spacing-lg: 16px;
+  
+  /* Border */
+  --widget-border-radius: 16px;
+  --widget-border-width: 1px;
+  
+  /* Shadow */
+  --widget-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --widget-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --widget-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.2);
+  
+  /* Typography */
+  --widget-font-title: 14px;
+  --widget-font-value: 24px;
+  --widget-font-label: 12px;
+  
+  /* Colors (per category) */
+  --widget-nutrition: #f97316;  /* orange — калории, макросы */
+  --widget-health: #8b5cf6;     /* purple — сон, вес */
+  --widget-motivation: #10b981; /* green — streak, прогресс, шаги */
+  --widget-advanced: #3b82f6;   /* blue — инсулин, вода */
+  --widget-cycle: #ec4899;      /* pink — цикл */
+  
+  /* Grid */
+  --widget-grid-columns: 4;
+  --widget-grid-gap: 8px;
+  --widget-row-height: 80px;
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] {
+  --widget-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --widget-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --widget-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* ===== Tab Container ===== */
+.widgets-tab {
+  min-height: calc(100vh - 120px);
+  padding-bottom: 100px; /* safe area для navbar */
+}
+
+.widgets-tab__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--widget-spacing-md);
+  position: sticky;
+  top: 0;
+  background: var(--bg-primary, #f8f9fa);
+  z-index: 10;
+}
+
+.widgets-tab__title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.widgets-tab__actions {
+  display: flex;
+  gap: var(--widget-spacing-sm);
+}
+
+.widgets-tab__btn {
+  padding: var(--widget-spacing-sm) var(--widget-spacing-md);
+  border-radius: 8px;
+  background: var(--bg-secondary, #fff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.widgets-tab__btn:hover {
+  background: var(--bg-hover, #f3f4f6);
+}
+
+.widgets-tab__btn--primary {
+  background: var(--primary, #3b82f6);
+  color: white;
+  border-color: var(--primary, #3b82f6);
+}
+
+.widgets-tab__btn--primary:hover {
+  background: var(--primary-dark, #2563eb);
+}
+
+/* Header Controls */
+.widgets-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--widget-spacing-sm) var(--widget-spacing-md);
+  position: sticky;
+  top: 0;
+  background: var(--bg-primary, #f8f9fa);
+  z-index: 100;
+}
+
+.widgets-header__left {
+  display: flex;
+  gap: var(--widget-spacing-sm);
+  align-items: center;
+}
+
+.widgets-header__btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--bg-secondary, #fff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.widgets-header__btn:hover:not(.disabled) {
+  background: var(--bg-hover, #f3f4f6);
+}
+
+.widgets-header__btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.widgets-header__btn--edit {
+  background: var(--primary, #3b82f6);
+  color: white;
+  border-color: var(--primary, #3b82f6);
+}
+
+.widgets-header__btn--edit:hover {
+  background: var(--primary-dark, #2563eb);
+}
+
+.widgets-header__btn--edit.active {
+  background: #22c55e;
+  border-color: #22c55e;
+}
+
+.widgets-header__btn--add {
+  background: var(--primary, #3b82f6);
+  color: white;
+  border-color: var(--primary, #3b82f6);
+}
+
+.widgets-header__btn--undo,
+.widgets-header__btn--redo {
+  padding: 8px 10px;
+  font-size: 16px;
+}
+
+/* ===== Grid Container ===== */
+.widgets-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--widget-grid-columns), 1fr);
+  gap: var(--widget-grid-gap);
+  padding: var(--widget-spacing-sm);
+  min-height: calc(100vh - 180px);
+  align-content: start;
+}
+
+/* ===== Widget Base (Консистентность) ===== */
+.widget {
+  background: var(--card-bg, #fff);
+  border-radius: var(--widget-border-radius);
+  padding: var(--widget-spacing-md);
+  box-shadow: var(--widget-shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.widget:hover {
+  box-shadow: var(--widget-shadow-md);
+  transform: translateY(-2px);
+}
+
+.widget:active {
+  transform: scale(0.98);
+}
+
+/* Widget Header */
+.widget__header {
+  display: flex;
+  align-items: center;
+  gap: var(--widget-spacing-sm);
+  margin-bottom: var(--widget-spacing-sm);
+}
+
+.widget__icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.widget__title {
+  font-size: var(--widget-font-title);
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  flex: 1;
+}
+
+/* Widget Body */
+.widget__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Widget Value */
+.widget__value {
+  font-size: var(--widget-font-value);
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+  line-height: 1.2;
+}
+
+.widget__value--small {
+  font-size: 18px;
+}
+
+.widget__value--large {
+  font-size: 32px;
+}
+
+/* Widget Label */
+.widget__label {
+  font-size: var(--widget-font-label);
+  color: var(--text-tertiary, #9ca3af);
+  margin-top: 2px;
+}
+
+/* Widget Footer */
+.widget__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--widget-spacing-sm);
+}
+
+/* Quick Action */
+.widget__quick-action {
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: var(--bg-secondary, #f3f4f6);
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.widget__quick-action:hover {
+  background: var(--bg-hover, #e5e7eb);
+}
+
+/* ===== Widget Identity (Уникальность) ===== */
+
+/* Калории 🔥 — gradient progress */
+.widget--kcal {
+  border-top: 3px solid var(--widget-nutrition);
+}
+
+.widget--kcal .widget__progress-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: #e5e7eb;
+  overflow: hidden;
+  margin-top: var(--widget-spacing-sm);
+}
+
+.widget--kcal .widget__progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    #ef4444 0%,    /* red at 0% */
+    #eab308 50%,   /* yellow at middle */
+    #22c55e 90%,   /* green at 90% */
+    #10b981 100%   /* emerald at perfect */
+  );
+  transition: width 0.5s ease;
+}
+
+/* Вода 💧 — circular ring + wave */
+.widget--water {
+  border-top: 3px solid var(--widget-advanced);
+}
+
+.widget--water .widget__ring-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+}
+
+.widget--water .widget__ring {
+  transform: rotate(-90deg);
+}
+
+.widget--water .widget__ring-bg {
+  stroke: #e5e7eb;
+  stroke-width: 8;
+  fill: none;
+}
+
+.widget--water .widget__ring-fill {
+  stroke: #3b82f6;
+  stroke-width: 8;
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.widget--water .widget__wave {
+  position: absolute;
+  bottom: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: wave 2s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-4px); }
+}
+
+/* Сон 😴 — stars quality + time */
+.widget--sleep {
+  border-top: 3px solid var(--widget-health);
+}
+
+.widget--sleep .widget__stars {
+  color: #fbbf24; /* yellow stars */
+  font-size: 16px;
+  letter-spacing: 2px;
+}
+
+.widget--sleep .widget__time-range {
+  font-size: 12px;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+/* Вес ⚖️ — mini sparkline */
+.widget--weight {
+  border-top: 3px solid var(--widget-health);
+}
+
+.widget--weight .widget__sparkline-container {
+  height: 40px;
+  margin-top: var(--widget-spacing-sm);
+}
+
+.widget--weight .widget__sparkline {
+  width: 100%;
+  height: 100%;
+}
+
+.widget--weight .widget__sparkline-path {
+  stroke: var(--widget-health);
+  stroke-width: 2;
+  fill: none;
+}
+
+.widget--weight .widget__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.widget--weight .widget__trend--up {
+  color: #ef4444;
+}
+
+.widget--weight .widget__trend--down {
+  color: #22c55e;
+}
+
+/* Шаги 👟 — radial ring */
+.widget--steps {
+  border-top: 3px solid var(--widget-motivation);
+}
+
+.widget--steps .widget__ring-fill {
+  stroke: var(--widget-motivation);
+}
+
+/* Streak 🔥 — flame + number */
+.widget--streak {
+  border-top: 3px solid var(--widget-motivation);
+  text-align: center;
+}
+
+.widget--streak .widget__flame {
+  font-size: 48px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.widget--streak .widget__streak-number {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--widget-motivation);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* Инсулин 📈 — wave curve */
+.widget--insulin {
+  border-top: 3px solid var(--widget-advanced);
+}
+
+.widget--insulin .widget__wave-container {
+  height: 80px;
+  margin-top: var(--widget-spacing-sm);
+}
+
+.widget--insulin .widget__wave-curve {
+  stroke: var(--widget-advanced);
+  stroke-width: 2;
+  fill: url(#insulinGradient);
+}
+
+.widget--insulin .widget__status {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.widget--insulin .widget__status--active {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.widget--insulin .widget__status--lipolysis {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+/* Макросы 🥗 — 3 bars P/C/F */
+.widget--macros {
+  border-top: 3px solid var(--widget-nutrition);
+}
+
+.widget--macros .widget__bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: var(--widget-spacing-sm);
+}
+
+.widget--macros .widget__bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.widget--macros .widget__bar-label {
+  width: 24px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+}
+
+.widget--macros .widget__bar-track {
+  flex: 1;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.widget--macros .widget__bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.widget--macros .widget__bar-fill--protein {
+  background: #ef4444; /* red */
+}
+
+.widget--macros .widget__bar-fill--carbs {
+  background: #3b82f6; /* blue */
+}
+
+.widget--macros .widget__bar-fill--fat {
+  background: #eab308; /* yellow */
+}
+
+/* Цикл 🌸 — phase badge */
+.widget--cycle {
+  border-top: 3px solid var(--widget-cycle);
+}
+
+.widget--cycle .widget__phase-icon {
+  font-size: 32px;
+}
+
+.widget--cycle .widget__phase-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--widget-cycle);
+}
+
+.widget--cycle .widget__day-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: rgba(236, 72, 153, 0.15);
+  color: var(--widget-cycle);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Прогресс 📊 — linear bar + ETA */
+.widget--progress {
+  border-top: 3px solid var(--widget-motivation);
+}
+
+.widget--progress .widget__progress-track {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: var(--widget-spacing-sm);
+}
+
+.widget--progress .widget__progress-fill {
+  height: 100%;
+  background: var(--widget-motivation);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.widget--progress .widget__eta {
+  font-size: 12px;
+  color: var(--text-tertiary, #9ca3af);
+  margin-top: 4px;
+}
+
+/* ===== Size Modifiers ===== */
+.widget--compact {
+  grid-column: span 2;
+  grid-row: span 2;
+  min-height: 160px;
+}
+
+.widget--wide {
+  grid-column: span 4;
+  grid-row: span 2;
+  min-height: 160px;
+}
+
+.widget--tall {
+  grid-column: span 2;
+  grid-row: span 4;
+  min-height: 320px;
+}
+
+.widget--large {
+  grid-column: span 4;
+  grid-row: span 4;
+  min-height: 320px;
+}
+
+/* ===== Edit Mode ===== */
+.widgets-grid--editing {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 10px,
+    rgba(0, 0, 0, 0.02) 10px,
+    rgba(0, 0, 0, 0.02) 20px
+  );
+}
+
+.widget--editing {
+  animation: widget-shake 0.3s ease-in-out infinite;
+  cursor: grab;
+}
+
+.widget--editing:active {
+  cursor: grabbing;
+}
+
+@keyframes widget-shake {
+  0%, 100% { transform: rotate(-1deg); }
+  50% { transform: rotate(1deg); }
+}
+
+/* Delete Button */
+.widget__delete-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: white;
+  border: 2px solid white;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.widget--editing .widget__delete-btn {
+  display: flex;
+}
+
+.widget__delete-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+/* Settings Button */
+.widget__settings-btn {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary, #3b82f6);
+  color: white;
+  border: 2px solid white;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.widget--editing .widget__settings-btn {
+  display: flex;
+}
+
+.widget__settings-btn:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+}
+
+/* Resize Handle */
+.widget__resize-handle {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  cursor: se-resize;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.widget--editing .widget__resize-handle {
+  opacity: 0.5;
+}
+
+.widget__resize-handle::before {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+}
+
+/* ===== Dragging States ===== */
+.widget--dragging {
+  opacity: 0.5;
+  transform: scale(0.98) !important;
+  box-shadow: none;
+  z-index: 1;
+  animation: none !important;
+}
+
+.widget--drag-over {
+  border: 2px dashed var(--primary, #3b82f6);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+/* Ghost Element (follows cursor/finger) */
+.widget-ghost {
+  position: fixed;
+  pointer-events: none;
+  opacity: 0.85;
+  transform: scale(1.03);
+  z-index: 10000;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  border-radius: var(--widget-border-radius);
+  background: var(--card-bg, #fff);
+  will-change: transform, left, top;
+  transition: box-shadow 0.2s ease;
+}
+
+.widget-ghost--invalid {
+  opacity: 0.5;
+  box-shadow: 0 20px 60px rgba(239, 68, 68, 0.3);
+}
+
+/* Placeholder (shows drop position) */
+.widget-placeholder {
+  background: rgba(59, 130, 246, 0.08);
+  border: 2px dashed #3b82f6;
+  border-radius: var(--widget-border-radius);
+  transition: all 0.15s ease-out;
+  pointer-events: none;
+}
+
+.widget-placeholder--valid {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.widget-placeholder--invalid {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* Drop Animation */
+.widget--just-dropped {
+  animation: widget-drop 0.3s ease-out;
+}
+
+@keyframes widget-drop {
+  from { transform: scale(1.1); opacity: 0.8; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ===== Empty State ===== */
+.widgets-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+  padding: var(--widget-spacing-lg);
+}
+
+.widgets-empty__icon {
+  font-size: 64px;
+  margin-bottom: var(--widget-spacing-md);
+  opacity: 0.5;
+}
+
+.widgets-empty__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  margin-bottom: var(--widget-spacing-sm);
+}
+
+.widgets-empty__subtitle {
+  font-size: 14px;
+  color: var(--text-secondary, #6b7280);
+  margin-bottom: var(--widget-spacing-lg);
+  max-width: 280px;
+}
+
+.widgets-empty__btn {
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: var(--primary, #3b82f6);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s ease;
+}
+
+.widgets-empty__btn:hover {
+  background: var(--primary-dark, #2563eb);
+}
+
+/* ===== Accessibility ===== */
+.widget:focus-visible {
+  outline: 2px solid var(--primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .widget,
+  .widget--editing,
+  .widget--streak .widget__flame,
+  .widget--water .widget__wave {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 480px) {
+  :root {
+    --widget-grid-columns: 4;
+    --widget-grid-gap: 6px;
+    --widget-row-height: 70px;
+  }
+  
+  .widgets-grid {
+    padding: 6px;
+  }
+  
+  .widget {
+    padding: 10px;
+  }
+  
+  .widget__value {
+    font-size: 20px;
+  }
+  
+  .widget--streak .widget__flame {
+    font-size: 36px;
+  }
+  
+  .widget--streak .widget__streak-number {
+    font-size: 28px;
+  }
+}
+
+/* ===== Loading & Error States ===== */
+.widget__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  flex: 1;
+}
+
+.widget__spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border-light, #e5e7eb);
+  border-top-color: var(--primary, #3b82f6);
+  border-radius: 50%;
+  animation: widget-spin 0.8s linear infinite;
+}
+
+@keyframes widget-spin {
+  to { transform: rotate(360deg); }
+}
+
+.widget__error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  flex: 1;
+  color: var(--text-tertiary, #9ca3af);
+  font-size: 12px;
+}
+
+/* ===== Widget Content Styles ===== */
+
+/* Calories Widget */
+.widget-calories {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.widget-calories__value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.widget-calories__label {
+  font-size: 12px;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.widget-calories__remaining {
+  font-size: 11px;
+  color: var(--text-secondary, #6b7280);
+  margin-top: 2px;
+}
+
+.widget-calories__pct {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* Water Widget */
+.widget-water {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.widget-water__value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--widget-advanced);
+}
+
+.widget-water__progress {
+  height: 6px;
+  background: var(--bg-secondary, #f3f4f6);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.widget-water__bar {
+  height: 100%;
+  background: var(--widget-advanced);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.widget-water__label {
+  font-size: 11px;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+/* Sleep Widget */
+.widget-sleep {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.widget-sleep__value {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.widget-sleep__label {
+  font-size: 11px;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.widget-sleep__quality {
+  font-size: 11px;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* Streak Widget */
+.widget-streak {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.widget-streak__value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--widget-motivation);
+}
+
+.widget-streak__days {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.widget-streak__max {
+  font-size: 11px;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+/* Weight Widget */
+.widget-weight {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.widget-weight__value {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.widget-weight__empty {
+  font-size: 14px;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.widget-weight__goal {
+  font-size: 11px;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* Steps Widget */
+.widget-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.widget-steps__value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--widget-motivation);
+}
+
+.widget-steps__km {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.widget-steps__goal {
+  font-size: 11px;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+/* Macros Widget */
+.widget-macros {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.widget-macros__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.widget-macros__label {
+  width: 16px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.widget-macros__label--prot { color: #ef4444; }
+.widget-macros__label--fat { color: #eab308; }
+.widget-macros__label--carbs { color: #3b82f6; }
+
+.widget-macros__track {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-secondary, #f3f4f6);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.widget-macros__bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.widget-macros__bar--prot { background: #ef4444; }
+.widget-macros__bar--fat { background: #eab308; }
+.widget-macros__bar--carbs { background: #3b82f6; }
+
+.widget-macros__value {
+  width: 28px;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* Insulin Widget */
+.widget-insulin {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.widget-insulin__status {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.widget-insulin__status--active {
+  color: var(--widget-advanced);
+}
+
+.widget-insulin__status--lipolysis {
+  color: var(--widget-motivation);
+}
+
+.widget-insulin__timer {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.widget-insulin__label {
+  font-size: 11px;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+/* Heatmap Widget */
+.widget-heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.widget-heatmap__days {
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+}
+
+.widget-heatmap__day {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--bg-secondary, #f3f4f6);
+}
+
+.widget-heatmap__day--green {
+  background: #22c55e;
+}
+
+.widget-heatmap__day--yellow {
+  background: #eab308;
+}
+
+.widget-heatmap__day--red {
+  background: #ef4444;
+}
+
+.widget-heatmap__label {
+  font-size: 10px;
+  color: var(--text-tertiary, #9ca3af);
+  text-align: center;
+}
+
+/* Cycle Widget */
+.widget-cycle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.widget-cycle__empty {
+  font-size: 12px;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.widget-cycle__day {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--widget-cycle);
+}
+
+.widget-cycle__phase {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* ===================================================================
+ * Widget Catalog Modal
+ * =================================================================== */
+.widgets-catalog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.widgets-catalog {
+  background: var(--bg-primary, #fff);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.widgets-catalog__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--widget-spacing-lg);
+  border-bottom: 1px solid var(--border-light, #e5e7eb);
+}
+
+.widgets-catalog__header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.widgets-catalog__close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-secondary, #f3f4f6);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.widgets-catalog__close:hover {
+  background: var(--bg-hover, #e5e7eb);
+}
+
+/* Category Filters */
+.widgets-catalog__categories {
+  display: flex;
+  gap: var(--widget-spacing-sm);
+  padding: var(--widget-spacing-md) var(--widget-spacing-lg);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.widgets-catalog__category {
+  padding: var(--widget-spacing-sm) var(--widget-spacing-md);
+  border-radius: 20px;
+  border: 1px solid var(--border-light, #e5e7eb);
+  background: var(--bg-primary, #fff);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.widgets-catalog__category:hover {
+  background: var(--bg-secondary, #f3f4f6);
+}
+
+.widgets-catalog__category.active {
+  background: var(--primary, #3b82f6);
+  color: white;
+  border-color: var(--primary, #3b82f6);
+}
+
+/* Widget List */
+.widgets-catalog__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--widget-spacing-md) var(--widget-spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--widget-spacing-sm);
+}
+
+.widgets-catalog__item {
+  display: flex;
+  align-items: center;
+  gap: var(--widget-spacing-md);
+  padding: var(--widget-spacing-md);
+  border-radius: var(--widget-border-radius);
+  background: var(--bg-secondary, #f8f9fa);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+  position: relative;
+  z-index: 1;
+}
+
+.widgets-catalog__item * {
+  pointer-events: none;
+}
+
+.widgets-catalog__item:hover {
+  background: var(--bg-hover, #e5e7eb);
+  border-color: var(--primary, #3b82f6);
+}
+
+.widgets-catalog__item:active {
+  transform: scale(0.98);
+}
+
+.widgets-catalog__item-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--bg-primary, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.widgets-catalog__item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.widgets-catalog__item-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.widgets-catalog__item-desc {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Dark mode */
+[data-theme="dark"] .widgets-catalog {
+  background: var(--bg-dark-primary, #1f2937);
+}
+
+[data-theme="dark"] .widgets-catalog__item {
+  background: var(--bg-dark-secondary, #374151);
+}
+
+[data-theme="dark"] .widgets-catalog__item-icon {
+  background: var(--bg-dark-tertiary, #4b5563);
+}

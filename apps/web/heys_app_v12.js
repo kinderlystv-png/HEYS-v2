@@ -18,7 +18,7 @@
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.15.2133.49b15d1'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.16.0102.4218a59'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -3306,8 +3306,9 @@ const HEYS = window.HEYS = window.HEYS || {};
             // useEffect автосмены клиента — ниже всех useState!
             
             // === SWIPE NAVIGATION ===
-            // Свайп работает только между 3 вкладками переключателя (по кругу)
-            const SWIPEABLE_TABS = ['stats', 'diary', 'insights'];
+            // Свайп работает только между 4 вкладками переключателя (по кругу)
+            // widgets исключаются из свайпа когда editMode активен (drag & drop)
+            const SWIPEABLE_TABS = ['widgets', 'stats', 'diary', 'insights'];
             const touchRef = React.useRef({ startX: 0, startY: 0, startTime: 0 });
             const MIN_SWIPE_DISTANCE = 60;
             const MAX_SWIPE_TIME = 500; // ms — увеличено для более плавного свайпа
@@ -3320,6 +3321,10 @@ const HEYS = window.HEYS = window.HEYS || {};
               // Игнорируем свайпы на интерактивных элементах, модалках, слайдерах и тостах
               const target = e.target;
               if (target.closest('input, textarea, select, button, .swipeable-container, table, .tab-switch-group, .advice-list-overlay, .macro-toast, .no-swipe-zone, [type="range"]')) {
+                return;
+              }
+              // Защита от конфликта свайпа и drag & drop в режиме редактирования виджетов
+              if (window.HEYS?.Widgets?.state?.isEditMode?.() || target.closest('.widgets-grid--editing')) {
                 return;
               }
               const touch = e.touches[0];
@@ -3350,7 +3355,7 @@ const HEYS = window.HEYS = window.HEYS || {};
               if (Math.abs(deltaY) > Math.abs(deltaX) * 0.7) return; // Более мягкое условие
               if (Math.abs(deltaX) < MIN_SWIPE_DISTANCE) return;
               
-              // Свайп работает только между 3 вкладками переключателя (по кругу)
+              // Свайп работает между 4 вкладками переключателя (по кругу)
               const currentIndex = SWIPEABLE_TABS.indexOf(tab);
               
               // Если текущая вкладка не в свайпабельных — игнорируем
@@ -5337,7 +5342,7 @@ const HEYS = window.HEYS = window.HEYS || {};
                             }
                           }),
                           // Кнопки "Вчера" + "Сегодня" + DatePicker
-                          (tab === 'stats' || tab === 'diary' || tab === 'reports' || tab === 'insights') && window.HEYS.DatePicker
+                          (tab === 'stats' || tab === 'diary' || tab === 'reports' || tab === 'insights' || tab === 'widgets') && window.HEYS.DatePicker
                             ? React.createElement('div', { className: 'hdr-date-group' },
                                 // Кнопка быстрого перехода на вчера
                                 React.createElement('button', {
@@ -5419,18 +5424,18 @@ const HEYS = window.HEYS = window.HEYS || {};
                     React.createElement('span', { className: 'tab-icon' }, '📦'),
                     React.createElement('span', { className: 'tab-text' }, 'База'),
                   ),
-                  // Обзор — слева (тройной тап = debug panel)
+                  // Виджеты — слева (тройной тап = debug panel)
                   React.createElement(
                     'div',
                     {
-                      className: 'tab ' + (tab === 'overview' ? 'active' : ''),
+                      className: 'tab ' + (tab === 'widgets' ? 'active' : ''),
                       onClick: () => {
                         window.HEYS?.debugPanel?.handleTap();
-                        setTab('overview');
+                        setTab('widgets');
                       },
                     },
-                    React.createElement('span', { className: 'tab-icon' }, '📋'),
-                    React.createElement('span', { className: 'tab-text' }, 'Обзор'),
+                    React.createElement('span', { className: 'tab-icon' }, '🎛️'),
+                    React.createElement('span', { className: 'tab-text' }, 'Виджеты'),
                   ),
                   // iOS Switch группа для stats/diary — ПО ЦЕНТРУ + подписи
                   React.createElement(
@@ -5584,6 +5589,19 @@ const HEYS = window.HEYS = window.HEYS || {};
                               ? React.createElement(window.HEYS.DataOverviewTab, {
                                   key: 'overview' + syncVer + '_' + String(clientId || ''),
                                   clientId,
+                                  setTab,
+                                  setSelectedDate,
+                                })
+                              : React.createElement('div', { style: { padding: 16 } },
+                                  React.createElement('div', { className: 'skeleton-sparkline', style: { height: 80, marginBottom: 16 } }),
+                                  React.createElement('div', { className: 'skeleton-block', style: { height: 100 } })
+                                ))
+                        : tab === 'widgets'
+                          ? (window.HEYS && window.HEYS.Widgets && window.HEYS.Widgets.WidgetsTab
+                              ? React.createElement(window.HEYS.Widgets.WidgetsTab, {
+                                  key: 'widgets' + syncVer + '_' + String(clientId || '') + '_' + selectedDate,
+                                  clientId,
+                                  selectedDate,
                                   setTab,
                                   setSelectedDate,
                                 })

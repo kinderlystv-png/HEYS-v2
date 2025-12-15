@@ -2,7 +2,7 @@
 // Стратегия: Cache-First для статики, Network-First для API
 // Версия обновляется автоматически при билде
 
-const CACHE_VERSION = 'heys-1765823614063';
+const CACHE_VERSION = 'heys-1765836150167';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
@@ -19,6 +19,7 @@ const PRECACHE_URLS = [
   '/styles/modules/400-water-and-hydration.css',
   '/styles/modules/500-pwa-and-offline.css',
   '/styles/modules/600-steps-and-aps.css',
+  '/styles/modules/730-widgets-dashboard.css',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
@@ -42,7 +43,13 @@ const PRECACHE_URLS = [
   '/heys_ratio_zones_v1.js',
   '/heys_gamification_v1.js',
   '/heys_data_overview_v1.js',
-  '/heys_dev_utils.js'
+  '/heys_dev_utils.js',
+  // Widgets Dashboard модули
+  '/heys_widgets_events_v1.js',
+  '/heys_widgets_registry_v1.js',
+  '/heys_widgets_core_v1.js',
+  '/heys_widgets_ui_v1.js',
+  '/widgets/widget_data.js'
 ];
 
 // CDN ресурсы (React, Supabase) — кэшируем при первом запросе

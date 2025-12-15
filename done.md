@@ -1,10 +1,24 @@
 # ✅ DONE — HEYS v2
 
-> **Выполненные задачи** | Обновлено: 2025-12-12
+> **Выполненные задачи** | Обновлено: 2025-12-15
 
 ---
 
 ## 🎉 Декабрь 2025
+
+### 🎛️ Вкладка-конструктор виджетов (Widgets Dashboard) ✅ (2025-12-15)
+
+- [x] **Phase 0: Foundation** — CSS (730-widgets-dashboard.css), JS modules wiring
+- [x] **Phase 1: Core Engine** — Grid Engine (2 columns), DnD Manager, State Manager
+- [x] **Phase 2: Widget Framework** — Registry (10 types), Events pub/sub, Data layer
+- [x] **Phase 3-4: Widgets + UI** — 10 виджетов (calories, water, sleep, streak, weight, steps, macros, insulin, heatmap, cycle)
+- [x] **CatalogModal** — категории (nutrition, health, motivation, advanced)
+- [x] **SettingsModal** — выбор размера (compact, wide, tall, large)
+- [x] **WidgetsTab** — основной контейнер с edit mode toggle
+- [x] **Phase 5: Advanced** — Undo/Redo (20 steps), Keyboard (Escape, Ctrl+Z), Presets (minimal, balanced, fitness, detailed)
+- [x] **PWA precache** — все модули в sw.js
+- [x] **Navigation** — SWIPEABLE_TABS, swipe блокировка в edit mode
+- [x] `pnpm type-check && pnpm build` PASS ✅
 
 ### 💰 Caloric Debt → Optimum Integration ✅ (2025-12-12)
 

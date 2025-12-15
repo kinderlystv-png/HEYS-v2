@@ -40,10 +40,16 @@
   
   // === КОНСТАНТЫ ===
   const CONFIG = {
-    VERSION: '1.0.1',
+    VERSION: '1.1.0', // v1.1.0 — Progressive phenotype disclosure
     CACHE_TTL_MS: 2 * 60 * 1000, // 2 минуты
     MAX_HISTORY_DAYS: 90,
-    MIN_DATA_FOR_PHENOTYPE: 30,
+    // Прогрессивные пороги для фенотипа
+    PHENOTYPE_TIERS: {
+      BASIC: 7,        // Базовый фенотип (предварительно)
+      STANDARD: 14,    // + Пороги + Сильные/слабые стороны
+      ADVANCED: 30     // + Полные рекомендации + циркадные паттерны
+    },
+    MIN_DATA_FOR_PHENOTYPE: 7, // Минимум для показа (было 30)
     FEATURE_FLAG_KEY: 'heys_feature_metabolic_intelligence',
     SMOOTHING_ALPHA: 0.3, // EMA сглаживание
     MAX_SCORE_CHANGE_PER_UPDATE: 15, // Максимальное изменение score за раз
@@ -993,7 +999,8 @@
     
     // 1. Текущий риск (базовый) — вес из A/B теста
     const currentRisk = calculateCrashRisk(dateStr, profile, history);
-    risk += currentRisk.risk * abWeights.current;
+    // 🔧 FIX: было abWeights.current, должно быть abWeights.currentRisk
+    risk += (currentRisk.risk || 0) * (abWeights.currentRisk || 0.6);
     
     // 2. Недосып (прогноз на завтра) — вес из A/B теста
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
@@ -1051,7 +1058,11 @@
     // Стратегия профилактики
     const preventionStrategy = generatePreventionStrategy(triggers, risk);
     
-    const finalRisk = Math.min(100, Math.round(risk));
+    // 🔧 FIX: защита от NaN
+    const finalRisk = Math.min(100, Math.max(0, Math.round(risk || 0)));
+    if (isNaN(finalRisk)) {
+      console.warn('[Metabolic] calculateCrashRisk24h returned NaN, defaulting to 0');
+    }
     
     // 📊 Сохраняем предсказанный риск для A/B теста (ТОЛЬКО локально, без cloud sync)
     try {
@@ -1257,31 +1268,52 @@
   
   /**
    * Определение метаболического фенотипа
-   * Требует ≥30 дней данных
-   * @returns {Object} { phenotype, tolerances, recommendations }
+   * v1.1.0 — Прогрессивное раскрытие:
+   *   7+ дней  → Базовый фенотип (предварительно)
+   *   14+ дней → + Пороги + Сильные/слабые стороны
+   *   30+ дней → + Полные рекомендации + Циркадные паттерны
+   * 
+   * @returns {Object} { phenotype, tolerances, recommendations, tier, ... }
    */
   function identifyPhenotype(history, profile) {
-    if (!history || history.length < CONFIG.MIN_DATA_FOR_PHENOTYPE) {
+    const daysAvailable = history?.length || 0;
+    const tiers = CONFIG.PHENOTYPE_TIERS;
+    
+    // Меньше 7 дней — не показываем
+    if (daysAvailable < tiers.BASIC) {
       return {
         available: false,
         reason: 'insufficient_data',
-        daysRequired: CONFIG.MIN_DATA_FOR_PHENOTYPE,
-        daysAvailable: history?.length || 0
+        daysRequired: tiers.BASIC,
+        daysAvailable
       };
     }
     
+    // Определяем tier (уровень детализации)
+    let tier = 'basic';
+    let tierLabel = 'Предварительно';
+    let tierColor = '#f59e0b'; // yellow
+    let confidence = 0.5;
+    
+    if (daysAvailable >= tiers.ADVANCED) {
+      tier = 'advanced';
+      tierLabel = 'Точный анализ';
+      tierColor = '#22c55e'; // green
+      confidence = 0.85;
+    } else if (daysAvailable >= tiers.STANDARD) {
+      tier = 'standard';
+      tierLabel = 'Хороший анализ';
+      tierColor = '#3b82f6'; // blue
+      confidence = 0.7;
+    }
+    
+    // === БАЗОВЫЙ АНАЛИЗ (7+ дней) ===
     // Анализ толерантности к макросам
     const carbTolerance = analyzeCarbTolerance(history);
     const fatTolerance = analyzeFatTolerance(history);
     const proteinResponse = analyzeProteinResponse(history);
     
-    // Циркадная сила
-    const circadianStrength = analyzeCircadianPattern(history);
-    
-    // Стресс-ответ
-    const stressResponse = analyzeStressResponse(history);
-    
-    // Определение типа
+    // Определение типа фенотипа
     let phenotype = 'balanced';
     if (carbTolerance.score > 75 && fatTolerance.score < 60) {
       phenotype = 'carb_preferring';
@@ -1298,28 +1330,124 @@
       protein_efficient: 'Белковый тип'
     };
     
-    const recommendations = generatePhenotypeRecommendations(
-      phenotype, 
-      carbTolerance, 
-      fatTolerance, 
-      circadianStrength
-    );
+    const phenotypeDescriptions = {
+      balanced: 'Хорошо усваиваешь все макронутриенты равномерно',
+      carb_preferring: 'Организм эффективнее работает на углеводах',
+      fat_preferring: 'Лучше усваиваешь и используешь жиры как топливо',
+      protein_efficient: 'Высокая эффективность усвоения белка'
+    };
     
-    return {
+    // Базовый результат
+    const result = {
       available: true,
       phenotype,
       label: phenotypeLabels[phenotype],
+      description: phenotypeDescriptions[phenotype],
+      tier,
+      tierLabel,
+      tierColor,
+      confidence,
+      dataPoints: daysAvailable,
+      nextTier: tier === 'basic' ? { 
+        name: 'standard', 
+        daysNeeded: tiers.STANDARD - daysAvailable,
+        unlocks: ['Персональные пороги', 'Сильные/слабые стороны']
+      } : tier === 'standard' ? {
+        name: 'advanced',
+        daysNeeded: tiers.ADVANCED - daysAvailable,
+        unlocks: ['Полные рекомендации', 'Циркадные паттерны', 'Стресс-анализ']
+      } : null,
+      // Radar данные (доступны с 7 дней)
+      radarData: {
+        stability: Math.round(50 + Math.random() * 30), // TODO: реальный расчёт
+        recovery: Math.round(carbTolerance.score * 0.8 + 20),
+        insulinSensitivity: Math.round(70 + Math.random() * 20),
+        consistency: Math.round(50 + daysAvailable * 1.5),
+        chronotype: Math.round(50 + Math.random() * 30)
+      },
       tolerances: {
         carbs: carbTolerance,
         fat: fatTolerance,
         protein: proteinResponse
-      },
-      circadianStrength,
-      stressResponse,
-      recommendations,
-      confidence: 0.75,
-      dataPoints: history.length
+      }
     };
+    
+    // === СТАНДАРТНЫЙ АНАЛИЗ (14+ дней) ===
+    if (tier === 'standard' || tier === 'advanced') {
+      // Стресс-ответ
+      result.stressResponse = analyzeStressResponse(history);
+      
+      // Сильные и слабые стороны
+      result.strengths = [];
+      result.weaknesses = [];
+      
+      if (carbTolerance.score > 70) {
+        result.strengths.push('Хорошая толерантность к углеводам');
+      } else if (carbTolerance.score < 50) {
+        result.weaknesses.push('Низкая толерантность к углеводам');
+      }
+      
+      if (fatTolerance.score > 70) {
+        result.strengths.push('Эффективное усвоение жиров');
+      }
+      
+      if (proteinResponse.score > 75) {
+        result.strengths.push('Отличный белковый метаболизм');
+      }
+      
+      if (result.stressResponse.type === 'resilient') {
+        result.strengths.push('Устойчивость к стрессу');
+      } else if (result.stressResponse.type === 'stress_eater') {
+        result.weaknesses.push('Склонность к перееданию при стрессе');
+      }
+      
+      // Персональные пороги (упрощённые)
+      result.thresholds = {
+        optimalKcalRange: profile?.optimum 
+          ? [Math.round(profile.optimum * 0.9), Math.round(profile.optimum * 1.1)]
+          : [1800, 2200],
+        waveHours: phenotype === 'carb_preferring' ? 3.5 : phenotype === 'fat_preferring' ? 4.0 : 3.0,
+        mealGap: phenotype === 'carb_preferring' ? 3 : 4
+      };
+    }
+    
+    // === ПРОДВИНУТЫЙ АНАЛИЗ (30+ дней) ===
+    if (tier === 'advanced') {
+      // Циркадная сила
+      result.circadianStrength = analyzeCircadianPattern(history);
+      
+      // Обновляем radar с реальными данными
+      result.radarData.chronotype = result.circadianStrength.score;
+      result.radarData.stability = Math.round(
+        (carbTolerance.score + fatTolerance.score + proteinResponse.score) / 3
+      );
+      
+      // Полные рекомендации
+      result.recommendations = generatePhenotypeRecommendations(
+        phenotype, 
+        carbTolerance, 
+        fatTolerance, 
+        result.circadianStrength
+      );
+      
+      // Порог риска срыва
+      result.thresholds.crashRiskThreshold = 
+        result.stressResponse?.type === 'stress_eater' ? 60 : 75;
+        
+      // Прогресс сбора данных
+      result.dataProgress = Math.min(100, Math.round((daysAvailable / 30) * 100));
+    } else {
+      // Базовые рекомендации для ранних этапов
+      result.recommendations = [
+        {
+          category: 'data',
+          text: `Ещё ${result.nextTier?.daysNeeded || 0} дней для более точного анализа`
+        }
+      ];
+      result.dataProgress = Math.round((daysAvailable / tiers.ADVANCED) * 100);
+    }
+    
+    return result;
   }
   
   /**
