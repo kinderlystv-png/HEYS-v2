@@ -15,7 +15,8 @@
  * 08. Profile Wizard ............. modules/700-profile-wizard.css
  * 09. Refeed Day ................. modules/710-refeed.css
  * 10. Predictive Insights ........ modules/720-predictive-insights.css
- * 11. Meal Optimizer ............. modules/800-meal-optimizer.css
+ * 11. Metabolic Intelligence ..... modules/725-metabolic-intelligence.css
+ * 12. Meal Optimizer ............. modules/800-meal-optimizer.css
  */
 @import url("./modules/001-design-tokens.css");
 @import url("./modules/000-base-and-gamification.css");
@@ -28,4 +29,5 @@
 @import url("./modules/700-profile-wizard.css");
 @import url("./modules/710-refeed.css");
 @import url("./modules/720-predictive-insights.css");
+@import url("./modules/725-metabolic-intelligence.css");
 @import url("./modules/800-meal-optimizer.css");

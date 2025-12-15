@@ -2967,6 +2967,21 @@
         })
       ),
       
+      // === METABOLIC INTELLIGENCE L0: Status Card ===
+      h(MetabolicStatusCard, {
+        lsGet,
+        profile,
+        pIndex,
+        selectedDate
+      }),
+      
+      // === METABOLIC INTELLIGENCE L1: Predictive Dashboard ===
+      h(PredictiveDashboard, {
+        lsGet,
+        profile,
+        selectedDate
+      }),
+      
       // === L1: What-If секция (collapsible) ===
       h(CollapsibleSection, {
         title: 'Что если...',
@@ -3164,6 +3179,319 @@
     );
   }
 
+  // === METABOLIC INTELLIGENCE UI COMPONENTS ===
+  
+  /**
+   * MetabolicStatusCard — главная карточка метаболического статуса 0-100
+   */
+  function MetabolicStatusCard({ lsGet, profile, pIndex, selectedDate }) {
+    const [showDetails, setShowDetails] = useState(false);
+    
+    const status = useMemo(() => {
+      if (!HEYS.Metabolic?.getStatus) return null;
+      
+      return HEYS.Metabolic.getStatus({
+        dateStr: selectedDate || new Date().toISOString().split('T')[0],
+        pIndex: pIndex || window.HEYS?.products?.buildIndex?.(),
+        profile: profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
+        forceRefresh: false
+      });
+    }, [lsGet, profile, pIndex, selectedDate]);
+    
+    if (!status || !status.available) {
+      return h('div', { className: 'metabolic-status-card metabolic-status-card--empty' },
+        h('div', { className: 'metabolic-status-card__icon' }, '📊'),
+        h('div', { className: 'metabolic-status-card__message' },
+          status?.message || 'Добавь данные для анализа статуса'
+        )
+      );
+    }
+    
+    // Цвет по статусу
+    const getStatusColor = (score) => {
+      if (score >= 80) return '#22c55e'; // green
+      if (score >= 60) return '#10b981'; // emerald
+      if (score >= 40) return '#eab308'; // yellow
+      return '#ef4444'; // red
+    };
+    
+    const statusColor = getStatusColor(status.score);
+    
+    // Эмодзи по risk level
+    const riskEmojis = {
+      low: '✅',
+      medium: '⚠️',
+      high: '🚨'
+    };
+    
+    return h('div', { className: `metabolic-status-card ${showDetails ? 'metabolic-status-card--expanded' : ''}` },
+      // Заголовок
+      h('div', { 
+        className: 'metabolic-status-card__header',
+        onClick: () => setShowDetails(!showDetails)
+      },
+        h('div', { className: 'metabolic-status-card__title' },
+          h('span', { className: 'metabolic-status-card__icon' }, '💪'),
+          h('span', { className: 'metabolic-status-card__label' }, 'Метаболический Статус')
+        ),
+        h('div', { className: 'metabolic-status-card__score-badge', style: { backgroundColor: statusColor } },
+          status.score
+        ),
+        h('span', { className: 'metabolic-status-card__chevron' }, showDetails ? '▼' : '▶')
+      ),
+      
+      // Краткая сводка
+      h('div', { className: 'metabolic-status-card__summary' },
+        // Metabolic Phase
+        status.metabolicPhase && h('div', { className: 'metabolic-status-card__phase' },
+          h('span', { className: 'metabolic-status-card__phase-emoji' }, status.metabolicPhase.emoji),
+          h('span', { className: 'metabolic-status-card__phase-label' }, status.metabolicPhase.label),
+          status.metabolicPhase.timeToLipolysis > 0 && h('span', { className: 'metabolic-status-card__phase-time' },
+            ` → ${Math.round(status.metabolicPhase.timeToLipolysis * 60)} мин до липолиза`
+          )
+        ),
+        
+        // Risk Level
+        h('div', { className: `metabolic-status-card__risk metabolic-status-card__risk--${status.riskLevel}` },
+          h('span', { className: 'metabolic-status-card__risk-emoji' }, riskEmojis[status.riskLevel]),
+          h('span', { className: 'metabolic-status-card__risk-label' },
+            status.riskLevel === 'low' ? 'Низкий риск срыва' :
+            status.riskLevel === 'medium' ? 'Средний риск срыва' :
+            'Высокий риск срыва'
+          )
+        )
+      ),
+      
+      // Детали (развернутые)
+      showDetails && h('div', { className: 'metabolic-status-card__details' },
+        // Причины снижения статуса
+        status.reasons && status.reasons.length > 0 && h('div', { className: 'metabolic-status-card__section' },
+          h('div', { className: 'metabolic-status-card__section-title' }, '📉 Что влияет на статус'),
+          h('div', { className: 'metabolic-status-card__reasons' },
+            status.reasons.map((reason, idx) =>
+              h(ReasonCard, { key: reason.id || idx, reason })
+            )
+          )
+        ),
+        
+        // Приоритизированные действия
+        status.nextSteps && status.nextSteps.length > 0 && h('div', { className: 'metabolic-status-card__section' },
+          h('div', { className: 'metabolic-status-card__section-title' }, '🎯 Приоритетные действия'),
+          h('div', { className: 'metabolic-status-card__steps' },
+            status.nextSteps.slice(0, 3).map((step, idx) =>
+              h(ActionCard, { key: step.id || idx, step })
+            )
+          )
+        ),
+        
+        // Риск факторы
+        status.riskFactors && status.riskFactors.length > 0 && h('div', { className: 'metabolic-status-card__section' },
+          h('div', { className: 'metabolic-status-card__section-title' }, 
+            `${riskEmojis[status.riskLevel]} Факторы риска`
+          ),
+          h('div', { className: 'metabolic-status-card__risk-factors' },
+            status.riskFactors.map((factor, idx) =>
+              h('div', { key: factor.id || idx, className: 'metabolic-status-card__risk-factor' },
+                h('span', { className: 'metabolic-status-card__risk-factor-label' }, factor.label),
+                h('span', { className: 'metabolic-status-card__risk-factor-impact' }, `+${factor.impact}`)
+              )
+            )
+          )
+        ),
+        
+        // Confidence
+        h('div', { className: 'metabolic-status-card__confidence' },
+          h('span', { className: 'metabolic-status-card__confidence-label' }, 'Уверенность: '),
+          h('span', { className: 'metabolic-status-card__confidence-value' },
+            status.confidence === 'high' ? 'Высокая' :
+            status.confidence === 'medium' ? 'Средняя' :
+            'Низкая'
+          ),
+          status.debug?.inventory && h('span', { className: 'metabolic-status-card__confidence-pct' },
+            ` (${status.debug.inventory.completeness}% данных)`
+          )
+        )
+      )
+    );
+  }
+  
+  /**
+   * ReasonCard — карточка причины снижения статуса
+   */
+  function ReasonCard({ reason }) {
+    const [showScience, setShowScience] = useState(false);
+    
+    const pillarIcons = {
+      nutrition: '🍽️',
+      timing: '⏰',
+      activity: '🏃',
+      recovery: '😴'
+    };
+    
+    return h('div', { className: `reason-card reason-card--${reason.pillar}` },
+      h('div', { className: 'reason-card__header' },
+        h('span', { className: 'reason-card__icon' }, pillarIcons[reason.pillar] || '📊'),
+        h('span', { className: 'reason-card__label' }, reason.label),
+        h('span', { className: 'reason-card__impact' }, `-${reason.impact}`)
+      ),
+      h('div', { className: 'reason-card__short' }, reason.short),
+      reason.details && h('div', { className: 'reason-card__details' }, reason.details),
+      reason.scientificBasis && h('div', { className: 'reason-card__science' },
+        h('button', {
+          className: 'reason-card__science-toggle',
+          onClick: () => setShowScience(!showScience)
+        }, showScience ? '📖 Скрыть обоснование' : '📖 Научное обоснование'),
+        showScience && h('div', { className: 'reason-card__science-text' }, reason.scientificBasis)
+      )
+    );
+  }
+  
+  /**
+   * ActionCard — карточка приоритизированного действия
+   */
+  function ActionCard({ step }) {
+    const priorityColors = {
+      0: '#ef4444', // urgent
+      1: '#f97316', // high
+      2: '#eab308', // medium
+      3: '#22c55e'  // low
+    };
+    
+    const priorityLabels = {
+      0: 'СРОЧНО',
+      1: 'Важно',
+      2: 'Желательно',
+      3: 'Опционально'
+    };
+    
+    return h('div', { className: 'action-card' },
+      h('div', { className: 'action-card__header' },
+        h('span', { className: 'action-card__label' }, step.label),
+        h('span', { 
+          className: 'action-card__priority',
+          style: { backgroundColor: priorityColors[step.priority || 3] }
+        }, priorityLabels[step.priority || 3])
+      ),
+      step.why && h('div', { className: 'action-card__why' }, step.why),
+      h('div', { className: 'action-card__footer' },
+        step.etaMin && h('span', { className: 'action-card__eta' },
+          `⏱️ ${step.etaMin < 60 ? `${step.etaMin} мин` : `${Math.round(step.etaMin / 60)} ч`}`
+        ),
+        step.expectedEffect && h('span', { className: 'action-card__effect' },
+          `💫 ${step.expectedEffect}`
+        )
+      )
+    );
+  }
+  
+  /**
+   * PredictiveDashboard — предиктивная панель (crash risk, forecast)
+   */
+  function PredictiveDashboard({ lsGet, profile, selectedDate }) {
+    const [showForecast, setShowForecast] = useState(false);
+    
+    const prediction = useMemo(() => {
+      if (!HEYS.Metabolic?.calculateCrashRisk24h) return null;
+      
+      const history = HEYS.Metabolic.getDaysHistory ? HEYS.Metabolic.getDaysHistory(30) : [];
+      
+      return HEYS.Metabolic.calculateCrashRisk24h(
+        selectedDate || new Date().toISOString().split('T')[0],
+        profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
+        history
+      );
+    }, [lsGet, profile, selectedDate]);
+    
+    const forecast = useMemo(() => {
+      if (!HEYS.Metabolic?.calculatePerformanceForecast) return null;
+      
+      const history = HEYS.Metabolic.getDaysHistory ? HEYS.Metabolic.getDaysHistory(30) : [];
+      
+      return HEYS.Metabolic.calculatePerformanceForecast(
+        selectedDate || new Date().toISOString().split('T')[0],
+        profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
+        history
+      );
+    }, [lsGet, profile, selectedDate]);
+    
+    if (!prediction || prediction.risk < 30) {
+      // Не показываем если риск низкий
+      return null;
+    }
+    
+    const riskColors = {
+      low: '#22c55e',
+      medium: '#eab308',
+      high: '#ef4444'
+    };
+    
+    return h('div', { className: 'predictive-dashboard' },
+      // Crash Risk Alert
+      h('div', { 
+        className: `crash-risk-alert crash-risk-alert--${prediction.riskLevel}`,
+        style: { borderColor: riskColors[prediction.riskLevel] }
+      },
+        h('div', { className: 'crash-risk-alert__header' },
+          h('span', { className: 'crash-risk-alert__icon' }, '🚨'),
+          h('span', { className: 'crash-risk-alert__title' }, 'Прогноз риска срыва'),
+          h('span', { 
+            className: 'crash-risk-alert__risk',
+            style: { color: riskColors[prediction.riskLevel] }
+          }, `${prediction.risk}%`)
+        ),
+        
+        prediction.primaryTrigger && h('div', { className: 'crash-risk-alert__trigger' },
+          h('strong', null, 'Главный триггер: '),
+          prediction.primaryTrigger.label
+        ),
+        
+        prediction.preventionStrategy && prediction.preventionStrategy.length > 0 && h('div', { className: 'crash-risk-alert__prevention' },
+          h('div', { className: 'crash-risk-alert__prevention-title' }, '🛡️ Профилактика:'),
+          prediction.preventionStrategy.slice(0, 2).map((strategy, idx) =>
+            h('div', { key: idx, className: 'crash-risk-alert__strategy' },
+              `${idx + 1}. ${strategy.action} — ${strategy.reason}`
+            )
+          )
+        )
+      ),
+      
+      // Tomorrow Forecast (collapsible)
+      forecast && h('div', { className: 'tomorrow-forecast' },
+        h('div', {
+          className: 'tomorrow-forecast__header',
+          onClick: () => setShowForecast(!showForecast)
+        },
+          h('span', { className: 'tomorrow-forecast__title' }, '🔮 Прогноз на завтра'),
+          h('span', { className: 'tomorrow-forecast__chevron' }, showForecast ? '▼' : '▶')
+        ),
+        
+        showForecast && h('div', { className: 'tomorrow-forecast__content' },
+          // Energy Windows
+          forecast.energyWindows && h('div', { className: 'tomorrow-forecast__windows' },
+            h('div', { className: 'tomorrow-forecast__windows-title' }, '⚡ Окна энергии'),
+            forecast.energyWindows.map((window, idx) =>
+              h('div', { 
+                key: idx, 
+                className: `energy-window ${window.optimal ? 'energy-window--optimal' : ''}`
+              },
+                h('div', { className: 'energy-window__period' }, window.period),
+                h('div', { className: 'energy-window__label' }, window.label),
+                h('div', { className: 'energy-window__recommendation' }, window.recommendation)
+              )
+            )
+          ),
+          
+          // Training Window
+          forecast.trainingWindow && h('div', { className: 'tomorrow-forecast__training' },
+            h('div', { className: 'tomorrow-forecast__training-title' }, '🏋️ Лучшее время для тренировки'),
+            h('div', { className: 'tomorrow-forecast__training-time' }, forecast.trainingWindow.time),
+            h('div', { className: 'tomorrow-forecast__training-reason' }, forecast.trainingWindow.reason)
+          )
+        )
+      )
+    );
+  }
+  
   // Добавляем компоненты в экспорт
   HEYS.PredictiveInsights.components = {
     HealthRing,
@@ -3184,9 +3512,14 @@
     MetabolismSection,
     // v2.0: Info компоненты
     InfoButton,
-    MetricWithInfo
+    MetricWithInfo,
+    // Metabolic Intelligence компоненты
+    MetabolicStatusCard,
+    ReasonCard,
+    ActionCard,
+    PredictiveDashboard
   };
-
+  
   // Debug в консоли
   if (typeof window !== 'undefined') {
     window.debugPredictiveInsights = () => {
@@ -3194,6 +3527,17 @@
       console.log('🔮 Predictive Insights:', result);
       return result;
     };
+    
+    window.debugMetabolicStatus = () => {
+      if (!HEYS.Metabolic?.getStatus) {
+        console.error('❌ HEYS.Metabolic not loaded');
+        return null;
+      }
+      
+      const result = HEYS.Metabolic.getStatus();
+      console.log('💪 Metabolic Status:', result);
+      return result;
+    };
   }
-
+  
 })(typeof window !== 'undefined' ? window : global);

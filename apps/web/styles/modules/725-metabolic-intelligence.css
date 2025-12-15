@@ -1,0 +1,627 @@
+/* 725-metabolic-intelligence.css — Metabolic Intelligence v1.0.0 */
+/* Компоненты: MetabolicStatusCard, ReasonCard, ActionCard, PredictiveDashboard */
+
+/* === METABOLIC STATUS CARD === */
+
+.metabolic-status-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  margin: 16px 0;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.metabolic-status-card--empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-secondary, #64748b);
+}
+
+.metabolic-status-card__icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.metabolic-status-card__message {
+  font-size: 14px;
+}
+
+/* Header */
+.metabolic-status-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--card-header-bg, #f8fafc);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.metabolic-status-card__header:active {
+  background: var(--card-header-bg-active, #f1f5f9);
+}
+
+.metabolic-status-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.metabolic-status-card__score-badge {
+  min-width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.metabolic-status-card__chevron {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  transition: transform 0.2s ease;
+}
+
+.metabolic-status-card--expanded .metabolic-status-card__chevron {
+  transform: rotate(90deg);
+}
+
+/* Summary */
+.metabolic-status-card__summary {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.metabolic-status-card__phase,
+.metabolic-status-card__risk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.metabolic-status-card__phase-emoji,
+.metabolic-status-card__risk-emoji {
+  font-size: 18px;
+}
+
+.metabolic-status-card__phase-label {
+  font-weight: 600;
+}
+
+.metabolic-status-card__phase-time {
+  color: var(--text-secondary, #64748b);
+  font-size: 13px;
+}
+
+.metabolic-status-card__risk--low {
+  color: #22c55e;
+}
+
+.metabolic-status-card__risk--medium {
+  color: #eab308;
+}
+
+.metabolic-status-card__risk--high {
+  color: #ef4444;
+}
+
+/* Details */
+.metabolic-status-card__details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.metabolic-status-card__section {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.metabolic-status-card__section:last-child {
+  border-bottom: none;
+}
+
+.metabolic-status-card__section-title {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 12px;
+  color: var(--text-primary, #0f172a);
+}
+
+.metabolic-status-card__reasons,
+.metabolic-status-card__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.metabolic-status-card__risk-factors {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metabolic-status-card__risk-factor {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-secondary, #f8fafc);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.metabolic-status-card__risk-factor-label {
+  flex: 1;
+}
+
+.metabolic-status-card__risk-factor-impact {
+  font-weight: 600;
+  color: #ef4444;
+}
+
+.metabolic-status-card__confidence {
+  padding: 12px;
+  background: var(--bg-secondary, #f8fafc);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+
+.metabolic-status-card__confidence-value {
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+}
+
+/* === REASON CARD === */
+
+.reason-card {
+  padding: 12px;
+  background: var(--bg-secondary, #f8fafc);
+  border-left: 4px solid var(--border-color, #e2e8f0);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.reason-card--nutrition {
+  border-left-color: #22c55e;
+}
+
+.reason-card--timing {
+  border-left-color: #3b82f6;
+}
+
+.reason-card--activity {
+  border-left-color: #f59e0b;
+}
+
+.reason-card--recovery {
+  border-left-color: #8b5cf6;
+}
+
+.reason-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.reason-card__icon {
+  font-size: 16px;
+}
+
+.reason-card__label {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.reason-card__impact {
+  font-weight: 700;
+  font-size: 14px;
+  color: #ef4444;
+}
+
+.reason-card__short {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 4px;
+}
+
+.reason-card__details {
+  font-size: 13px;
+  color: var(--text-primary, #0f172a);
+  margin-bottom: 8px;
+}
+
+.reason-card__science {
+  margin-top: 8px;
+}
+
+.reason-card__science-toggle {
+  background: transparent;
+  border: 1px solid var(--border-color, #e2e8f0);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 32px;
+}
+
+.reason-card__science-toggle:active {
+  background: var(--bg-secondary, #f1f5f9);
+}
+
+.reason-card__science-text {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--bg-info, #dbeafe);
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary, #0f172a);
+}
+
+/* === ACTION CARD === */
+
+.action-card {
+  padding: 12px;
+  background: var(--bg-secondary, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.action-card:active {
+  transform: scale(0.98);
+}
+
+.action-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.action-card__label {
+  font-weight: 600;
+  font-size: 14px;
+  flex: 1;
+}
+
+.action-card__priority {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-card__why {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.action-card__footer {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+.action-card__eta,
+.action-card__effect {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* === PREDICTIVE DASHBOARD === */
+
+.predictive-dashboard {
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Crash Risk Alert */
+.crash-risk-alert {
+  background: var(--card-bg, #fff);
+  border: 2px solid;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.crash-risk-alert--low {
+  border-color: #22c55e;
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+}
+
+.crash-risk-alert--medium {
+  border-color: #eab308;
+  background: linear-gradient(135deg, #ffffff 0%, #fefce8 100%);
+}
+
+.crash-risk-alert--high {
+  border-color: #ef4444;
+  background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+}
+
+.crash-risk-alert__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.crash-risk-alert__icon {
+  font-size: 24px;
+}
+
+.crash-risk-alert__title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.crash-risk-alert__risk {
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.crash-risk-alert__trigger {
+  padding: 8px 12px;
+  background: var(--bg-secondary, rgba(0, 0, 0, 0.05));
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.crash-risk-alert__prevention {
+  margin-top: 12px;
+}
+
+.crash-risk-alert__prevention-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.crash-risk-alert__strategy {
+  padding: 8px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+.crash-risk-alert__strategy:last-child {
+  border-bottom: none;
+}
+
+/* Tomorrow Forecast */
+.tomorrow-forecast {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tomorrow-forecast__header {
+  padding: 14px 16px;
+  background: var(--card-header-bg, #f8fafc);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tomorrow-forecast__header:active {
+  background: var(--card-header-bg-active, #f1f5f9);
+}
+
+.tomorrow-forecast__title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.tomorrow-forecast__chevron {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  transition: transform 0.2s ease;
+}
+
+.tomorrow-forecast__content {
+  padding: 16px;
+}
+
+.tomorrow-forecast__windows {
+  margin-bottom: 16px;
+}
+
+.tomorrow-forecast__windows-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.energy-window {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-secondary, #f8fafc);
+  border-left: 3px solid var(--border-color, #cbd5e1);
+  border-radius: 6px;
+}
+
+.energy-window--optimal {
+  background: #f0fdf4;
+  border-left-color: #22c55e;
+}
+
+.energy-window__period {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary, #0f172a);
+  margin-bottom: 4px;
+}
+
+.energy-window__label {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 4px;
+}
+
+.energy-window__recommendation {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-primary, #0f172a);
+}
+
+.tomorrow-forecast__training {
+  padding: 12px;
+  background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%);
+  border-radius: 8px;
+}
+
+.tomorrow-forecast__training-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.tomorrow-forecast__training-time {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0369a1;
+  margin-bottom: 4px;
+}
+
+.tomorrow-forecast__training-reason {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+
+/* === RESPONSIVE === */
+
+@media (max-width: 768px) {
+  .metabolic-status-card__header {
+    padding: 12px;
+  }
+  
+  .metabolic-status-card__score-badge {
+    min-width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  
+  .metabolic-status-card__summary,
+  .metabolic-status-card__section {
+    padding: 12px;
+  }
+  
+  .crash-risk-alert {
+    padding: 12px;
+  }
+  
+  .crash-risk-alert__icon {
+    font-size: 20px;
+  }
+  
+  .crash-risk-alert__title {
+    font-size: 14px;
+  }
+  
+  .crash-risk-alert__risk {
+    font-size: 18px;
+  }
+}
+
+/* === DARK MODE === */
+
+@media (prefers-color-scheme: dark) {
+  .metabolic-status-card {
+    background: var(--card-bg-dark, #1e293b);
+    border-color: var(--border-color-dark, #334155);
+  }
+  
+  .metabolic-status-card__header {
+    background: var(--card-header-bg-dark, #0f172a);
+  }
+  
+  .metabolic-status-card__header:active {
+    background: var(--card-header-bg-active-dark, #1e293b);
+  }
+  
+  .metabolic-status-card__summary,
+  .metabolic-status-card__section {
+    border-color: var(--border-color-dark, #334155);
+  }
+  
+  .reason-card {
+    background: var(--bg-secondary-dark, #0f172a);
+  }
+  
+  .reason-card__science-text {
+    background: var(--bg-info-dark, #1e3a5f);
+  }
+  
+  .action-card {
+    background: var(--bg-secondary-dark, #0f172a);
+    border-color: var(--border-color-dark, #334155);
+  }
+  
+  .crash-risk-alert--low {
+    background: linear-gradient(135deg, #1e293b 0%, #14532d 100%);
+  }
+  
+  .crash-risk-alert--medium {
+    background: linear-gradient(135deg, #1e293b 0%, #713f12 100%);
+  }
+  
+  .crash-risk-alert--high {
+    background: linear-gradient(135deg, #1e293b 0%, #7f1d1d 100%);
+  }
+  
+  .tomorrow-forecast {
+    background: var(--card-bg-dark, #1e293b);
+    border-color: var(--border-color-dark, #334155);
+  }
+  
+  .tomorrow-forecast__header {
+    background: var(--card-header-bg-dark, #0f172a);
+  }
+  
+  .tomorrow-forecast__training {
+    background: linear-gradient(135deg, #1e3a5f 0%, #0c4a6e 100%);
+  }
+  
+  .energy-window {
+    background: var(--bg-secondary-dark, #0f172a);
+  }
+  
+  .energy-window--optimal {
+    background: #14532d;
+  }
+}
