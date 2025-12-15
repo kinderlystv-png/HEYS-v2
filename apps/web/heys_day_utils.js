@@ -1130,6 +1130,164 @@
     return productsMap;
   }
 
+  // ═══════════════════════════════════════════════════════════════════
+  // 🚀 LAZY-LOADING DAYS — Оптимизированная загрузка дней
+  // ═══════════════════════════════════════════════════════════════════
+  
+  // Кэш загруженных дней (для предотвращения повторных чтений)
+  const DAYS_CACHE = new Map(); // dateStr => { data, timestamp }
+  const DAYS_CACHE_TTL = 5 * 60 * 1000; // 5 минут TTL
+  
+  /**
+   * Lazy-загрузка дней — загружает только последние N дней
+   * Оптимизирует холодный старт приложения
+   * 
+   * @param {number} daysBack - Сколько дней назад загружать (default: 30)
+   * @param {Object} options - Опции
+   * @param {boolean} options.forceRefresh - Игнорировать кэш
+   * @param {Function} options.onProgress - Callback прогресса (loaded, total)
+   * @returns {Map<string, Object>} Map дат с данными дней
+   */
+  function loadRecentDays(daysBack = 30, options = {}) {
+    const { forceRefresh = false, onProgress } = options;
+    const result = new Map();
+    const now = Date.now();
+    const today = new Date();
+    
+    for (let i = 0; i < daysBack; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = fmtDate(d);
+      
+      // Проверяем кэш
+      if (!forceRefresh && DAYS_CACHE.has(dateStr)) {
+        const cached = DAYS_CACHE.get(dateStr);
+        if (now - cached.timestamp < DAYS_CACHE_TTL) {
+          result.set(dateStr, cached.data);
+          if (onProgress) onProgress(i + 1, daysBack);
+          continue;
+        }
+      }
+      
+      // Загружаем день
+      const dayData = lsGet('heys_dayv2_' + dateStr, null);
+      if (dayData && typeof dayData === 'object') {
+        result.set(dateStr, dayData);
+        DAYS_CACHE.set(dateStr, { data: dayData, timestamp: now });
+      }
+      
+      if (onProgress) onProgress(i + 1, daysBack);
+    }
+    
+    return result;
+  }
+  
+  /**
+   * Lazy-загрузка одного дня с кэшированием
+   * @param {string} dateStr - Дата в формате YYYY-MM-DD
+   * @param {boolean} forceRefresh - Игнорировать кэш
+   * @returns {Object|null} Данные дня или null
+   */
+  function loadDay(dateStr, forceRefresh = false) {
+    const now = Date.now();
+    
+    // Проверяем кэш
+    if (!forceRefresh && DAYS_CACHE.has(dateStr)) {
+      const cached = DAYS_CACHE.get(dateStr);
+      if (now - cached.timestamp < DAYS_CACHE_TTL) {
+        return cached.data;
+      }
+    }
+    
+    // Загружаем день
+    const dayData = lsGet('heys_dayv2_' + dateStr, null);
+    if (dayData && typeof dayData === 'object') {
+      DAYS_CACHE.set(dateStr, { data: dayData, timestamp: now });
+      return dayData;
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Инвалидирует кэш дня (вызывать после сохранения)
+   * @param {string} dateStr - Дата в формате YYYY-MM-DD
+   */
+  function invalidateDayCache(dateStr) {
+    DAYS_CACHE.delete(dateStr);
+  }
+  
+  /**
+   * Очищает весь кэш дней
+   */
+  function clearDaysCache() {
+    DAYS_CACHE.clear();
+  }
+  
+  /**
+   * Получить статистику кэша
+   * @returns {{size: number, hitRate: number}}
+   */
+  function getDaysCacheStats() {
+    let validCount = 0;
+    const now = Date.now();
+    
+    DAYS_CACHE.forEach((cached) => {
+      if (now - cached.timestamp < DAYS_CACHE_TTL) {
+        validCount++;
+      }
+    });
+    
+    return {
+      size: DAYS_CACHE.size,
+      validEntries: validCount,
+      expiredEntries: DAYS_CACHE.size - validCount
+    };
+  }
+  
+  /**
+   * Предзагрузка дней для месяца (для календаря)
+   * Загружает данные асинхронно чтобы не блокировать UI
+   * 
+   * @param {number} year
+   * @param {number} month - 0-11
+   * @returns {Promise<Map<string, Object>>}
+   */
+  async function preloadMonthDays(year, month) {
+    return new Promise((resolve) => {
+      const result = new Map();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      
+      // Используем requestIdleCallback для фоновой загрузки
+      const loadBatch = (startDay, batchSize = 5) => {
+        const endDay = Math.min(startDay + batchSize, daysInMonth + 1);
+        
+        for (let d = startDay; d < endDay; d++) {
+          const dateStr = fmtDate(new Date(year, month, d));
+          const dayData = loadDay(dateStr);
+          if (dayData) {
+            result.set(dateStr, dayData);
+          }
+        }
+        
+        if (endDay <= daysInMonth) {
+          // Продолжаем загрузку в следующем idle callback
+          if (typeof requestIdleCallback !== 'undefined') {
+            requestIdleCallback(() => loadBatch(endDay, batchSize));
+          } else {
+            setTimeout(() => loadBatch(endDay, batchSize), 0);
+          }
+        } else {
+          // Загрузка завершена
+          resolve(result);
+        }
+      };
+      
+      // Начинаем загрузку
+      loadBatch(1);
+    });
+  }
+
   /**
    * Вычисляет Set активных дней для месяца
    * Активный день = съедено ≥ 1/3 BMR (реальное ведение дневника)
@@ -1325,7 +1483,14 @@
     // Calendar indicators
     getDayCalories,
     getProductsMap,
-    getActiveDaysForMonth
+    getActiveDaysForMonth,
+    // 🚀 Lazy-loading API
+    loadRecentDays,
+    loadDay,
+    invalidateDayCache,
+    clearDaysCache,
+    getDaysCacheStats,
+    preloadMonthDays
   };
 
 })(window);

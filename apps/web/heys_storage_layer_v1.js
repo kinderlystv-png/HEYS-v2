@@ -6,41 +6,73 @@
   const memory = new Map();
   const watchers = new Map(); // key -> Set<fn>
 
-  // ---------- Сжатие данных ----------
+  // ═══════════════════════════════════════════════════════════════════
+  // 🗜️ COMPRESSION v2.0 — Улучшенное сжатие данных (~25-30% экономия)
+  // ═══════════════════════════════════════════════════════════════════
+  
+  // Паттерны для сжатия (упорядочены по частоте использования)
+  const COMPRESS_PATTERNS = {
+    // Продукты (самые частые)
+    '"name":"': '¤n¤',
+    '"kcal100":': '¤k¤',
+    '"protein100":': '¤p¤',
+    '"carbs100":': '¤c¤',
+    '"fat100":': '¤f¤',
+    '"simple100":': '¤s¤',
+    '"complex100":': '¤x¤',
+    '"badFat100":': '¤b¤',
+    '"goodFat100":': '¤g¤',
+    '"trans100":': '¤t¤',
+    '"fiber100":': '¤i¤',
+    '"gi":': '¤G¤',
+    '"harm":': '¤H¤',
+    '"harmScore":': '¤h¤',
+    '"category":"': '¤C¤',
+    '"portions":': '¤P¤',
+    // Дни питания
+    '"meals":': '¤M¤',
+    '"items":': '¤I¤',
+    '"product_id":': '¤D¤',
+    '"time":"': '¤T¤',
+    '"date":"': '¤d¤',
+    '"trainings":': '¤R¤',
+    '"weightMorning":': '¤W¤',
+    '"sleepHours":': '¤S¤',
+    '"waterMl":': '¤w¤',
+    '"steps":': '¤e¤',
+    '"mood":': '¤m¤',
+    '"wellbeing":': '¤B¤',
+    '"stress":': '¤E¤',
+    '"grams":': '¤r¤',
+    // Общие JSON паттерны
+    '":true': '¤1¤',
+    '":false': '¤0¤',
+    '":null': '¤_¤',
+    '"id":': '¤j¤'
+  };
+  
+  // Инвертированные паттерны для декомпрессии
+  const DECOMPRESS_PATTERNS = Object.fromEntries(
+    Object.entries(COMPRESS_PATTERNS).map(([k, v]) => [v, k])
+  );
+  
   function compress(obj) {
     try {
-      const json = JSON.stringify(obj);
+      let json = JSON.stringify(obj);
       
-      // Простое сжатие: убираем лишние пробелы и повторяющиеся паттерны
-      let compressed = json
-        .replace(/":"/g, '":"')
-        .replace(/","/g, '","')
-        .replace(/{""/g, '{"')
-        .replace(/"}/g, '"}');
+      // 1. Сжатие числовых значений (убираем лишние нули)
+      // 10.00 → 10, 5.50 → 5.5
+      json = json.replace(/:(-?\d+)\.0+(?=[,}\]])/g, ':$1');
+      json = json.replace(/:(-?\d+\.\d*?)0+(?=[,}\]])/g, ':$1');
       
-      // Замена часто встречающихся паттернов на короткие коды
-      const patterns = {
-        '"name":"': '¤n¤',
-        '"kcal100"': '¤k¤',
-        '"protein100"': '¤p¤',
-        '"carbs100"': '¤c¤',
-        '"fat100"': '¤f¤',
-        '"simple100"': '¤s¤',
-        '"complex100"': '¤x¤',
-        '"badFat100"': '¤b¤',
-        '"goodFat100"': '¤g¤',
-        '"trans100"': '¤t¤',
-        '"fiber100"': '¤i¤',
-        '"gi"': '¤G¤',
-        '"harmScore"': '¤h¤'
-      };
-      
-      for (const [pattern, code] of Object.entries(patterns)) {
+      // 2. Применяем паттерны сжатия
+      let compressed = json;
+      for (const [pattern, code] of Object.entries(COMPRESS_PATTERNS)) {
         compressed = compressed.split(pattern).join(code);
       }
       
-      // Если сжатие дает результат, возвращаем с префиксом
-      if (compressed.length < json.length * 0.9) {
+      // 3. Если сжатие эффективно (>8%), используем его
+      if (compressed.length < json.length * 0.92) {
         return '¤Z¤' + compressed;
       }
       
@@ -52,36 +84,21 @@
   
   function decompress(str) {
     try {
-      if (!str.startsWith('¤Z¤')) {
+      if (!str || !str.startsWith('¤Z¤')) {
         return JSON.parse(str);
       }
       
-      let compressed = str.substring(3);
+      let decompressed = str.substring(3);
       
       // Восстановление паттернов
-      const patterns = {
-        '¤n¤': '"name":"',
-        '¤k¤': '"kcal100"',
-        '¤p¤': '"protein100"',
-        '¤c¤': '"carbs100"',
-        '¤f¤': '"fat100"',
-        '¤s¤': '"simple100"',
-        '¤x¤': '"complex100"',
-        '¤b¤': '"badFat100"',
-        '¤g¤': '"goodFat100"',
-        '¤t¤': '"trans100"',
-        '¤i¤': '"fiber100"',
-        '¤G¤': '"gi"',
-        '¤h¤': '"harmScore"'
-      };
-      
-      for (const [code, pattern] of Object.entries(patterns)) {
-        compressed = compressed.split(code).join(pattern);
+      for (const [code, pattern] of Object.entries(DECOMPRESS_PATTERNS)) {
+        decompressed = decompressed.split(code).join(pattern);
       }
       
-      return JSON.parse(compressed);
+      return JSON.parse(decompressed);
     } catch (e) {
-      return JSON.parse(str);
+      // Fallback для некорректных данных
+      try { return JSON.parse(str); } catch (e2) { return null; }
     }
   }
 
@@ -264,5 +281,178 @@
       Store.set(FAVORITES_KEY, Array.from(favorites));
     }
   };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔒 PERSISTENT STORAGE API — Защита от очистки браузером
+  // ═══════════════════════════════════════════════════════════════════
+  
+  /**
+   * Запрашивает у браузера постоянное хранилище
+   * Защищает данные от автоматической очистки при нехватке места
+   * @returns {Promise<{persisted: boolean, estimate: {usage: number, quota: number}}>}
+   */
+  Store.requestPersistentStorage = async function() {
+    const result = { persisted: false, estimate: null };
+    
+    try {
+      // Проверяем поддержку API
+      if (!navigator.storage || !navigator.storage.persist) {
+        console.log('[Storage] Persistent Storage API не поддерживается');
+        return result;
+      }
+      
+      // Проверяем текущий статус
+      const alreadyPersisted = await navigator.storage.persisted();
+      if (alreadyPersisted) {
+        console.log('[Storage] ✅ Хранилище уже защищено от очистки');
+        result.persisted = true;
+      } else {
+        // Запрашиваем постоянное хранилище
+        const granted = await navigator.storage.persist();
+        result.persisted = granted;
+        if (granted) {
+          console.log('[Storage] ✅ Постоянное хранилище предоставлено');
+        } else {
+          console.log('[Storage] ⚠️ Браузер отклонил запрос (недостаточно взаимодействия)');
+        }
+      }
+      
+      // Получаем информацию о квоте
+      if (navigator.storage.estimate) {
+        const estimate = await navigator.storage.estimate();
+        result.estimate = {
+          usage: Math.round(estimate.usage / 1024 / 1024 * 100) / 100, // MB
+          quota: Math.round(estimate.quota / 1024 / 1024 * 100) / 100, // MB
+          usedPct: Math.round(estimate.usage / estimate.quota * 100)
+        };
+        console.log(`[Storage] Использовано: ${result.estimate.usage}MB / ${result.estimate.quota}MB (${result.estimate.usedPct}%)`);
+      }
+      
+    } catch (e) {
+      console.warn('[Storage] Ошибка Persistent Storage:', e);
+    }
+    
+    return result;
+  };
+  
+  /**
+   * Проверить статус постоянного хранилища
+   * @returns {Promise<boolean>}
+   */
+  Store.isPersistent = async function() {
+    try {
+      if (navigator.storage && navigator.storage.persisted) {
+        return await navigator.storage.persisted();
+      }
+    } catch (e) {}
+    return false;
+  };
+  
+  /**
+   * Получить информацию о хранилище
+   * @returns {Promise<{usage: number, quota: number, usedPct: number, persisted: boolean}>}
+   */
+  Store.getStorageInfo = async function() {
+    const info = { usage: 0, quota: 0, usedPct: 0, persisted: false };
+    
+    try {
+      if (navigator.storage) {
+        if (navigator.storage.estimate) {
+          const est = await navigator.storage.estimate();
+          info.usage = Math.round(est.usage / 1024 / 1024 * 100) / 100;
+          info.quota = Math.round(est.quota / 1024 / 1024 * 100) / 100;
+          info.usedPct = Math.round(est.usage / est.quota * 100);
+        }
+        if (navigator.storage.persisted) {
+          info.persisted = await navigator.storage.persisted();
+        }
+      }
+    } catch (e) {}
+    
+    return info;
+  };
+  
+  // ═══════════════════════════════════════════════════════════════════
+  // 📊 COMPRESSION STATS — Статистика сжатия
+  // ═══════════════════════════════════════════════════════════════════
+  
+  /**
+   * Анализ эффективности сжатия для конкретного ключа
+   * @param {string} key - ключ в localStorage
+   * @returns {{raw: number, compressed: number, saved: number, savedPct: number}}
+   */
+  Store.analyzeCompression = function(key) {
+    try {
+      const sk = scoped(key);
+      const stored = localStorage.getItem(sk);
+      if (!stored) return null;
+      
+      const isCompressed = stored.startsWith('¤Z¤');
+      const data = decompress(stored);
+      const rawJson = JSON.stringify(data);
+      
+      return {
+        key: sk,
+        isCompressed,
+        raw: rawJson.length,
+        stored: stored.length,
+        saved: rawJson.length - stored.length,
+        savedPct: Math.round((1 - stored.length / rawJson.length) * 100)
+      };
+    } catch (e) {
+      return null;
+    }
+  };
+  
+  /**
+   * Общая статистика по всему localStorage
+   * @returns {{totalRaw: number, totalStored: number, savedPct: number, keys: number}}
+   */
+  Store.getCompressionStats = function() {
+    let totalRaw = 0;
+    let totalStored = 0;
+    let compressedKeys = 0;
+    let totalKeys = 0;
+    
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key.startsWith('heys_')) continue;
+      
+      totalKeys++;
+      const stored = localStorage.getItem(key);
+      totalStored += stored.length * 2; // UTF-16
+      
+      if (stored.startsWith('¤Z¤')) {
+        compressedKeys++;
+        try {
+          const data = decompress(stored);
+          totalRaw += JSON.stringify(data).length * 2;
+        } catch (e) {
+          totalRaw += stored.length * 2;
+        }
+      } else {
+        totalRaw += stored.length * 2;
+      }
+    }
+    
+    return {
+      totalRaw: Math.round(totalRaw / 1024), // KB
+      totalStored: Math.round(totalStored / 1024), // KB
+      savedKB: Math.round((totalRaw - totalStored) / 1024),
+      savedPct: totalRaw > 0 ? Math.round((1 - totalStored / totalRaw) * 100) : 0,
+      keys: totalKeys,
+      compressedKeys
+    };
+  };
+  
+  // Автоматический запрос persistent storage при загрузке
+  if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+      // Запрашиваем через 2 сек после загрузки (когда есть взаимодействие)
+      setTimeout(() => {
+        Store.requestPersistentStorage().catch(() => {});
+      }, 2000);
+    });
+  }
 
 })(window);
