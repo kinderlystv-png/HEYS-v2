@@ -807,7 +807,8 @@
           values: hoursValues,
           value: currentHourValue,
           onChange: updateHours,
-          label: 'Часы'
+          label: 'Часы',
+          wrap: true
         }),
         React.createElement('span', { className: 'meal-time-separator' }, ':'),
         React.createElement(WheelPicker, {
@@ -815,7 +816,8 @@
           value: pad2(minutes),
           onChange: (v) => updateMinutes(parseInt(v, 10)),
           label: 'Минуты',
-          suffix: ''
+          suffix: '',
+          wrap: true
         })
       ),
       

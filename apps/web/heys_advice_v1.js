@@ -1163,6 +1163,26 @@
       if (pct < 0.5) score += 20 * RELEVANCE_WEIGHT;
     }
     
+    // 5. 🆕 Crash Risk boost — повышаем приоритет советов при высоком риске срыва
+    if (ctx.crashRisk && ctx.crashRisk.level === 'high') {
+      // Советы, связанные с предотвращением срыва, получают бонус
+      const crashPreventionCategories = ['emotional', 'nutrition', 'recovery'];
+      const crashPreventionIds = [
+        'crash_support', 'stress_support', 'sleep_hunger_correlation',
+        'undereating_warning', 'evening_undereating', 'chronic_undereating_pattern'
+      ];
+      
+      if (crashPreventionCategories.includes(advice.category) || 
+          crashPreventionIds.includes(advice.id)) {
+        score += 30; // Значительный бонус при высоком риске
+      }
+    } else if (ctx.crashRisk && ctx.crashRisk.level === 'medium') {
+      // Умеренный бонус при среднем риске
+      if (advice.category === 'emotional' || advice.id?.includes('stress')) {
+        score += 15;
+      }
+    }
+    
     return score;
   }
   
@@ -6724,6 +6744,16 @@
         totalDaysTracked: 30 // Приблизительно
       });
       
+      // 🆕 Получаем crashRisk из Metabolic Intelligence
+      let crashRisk = null;
+      if (window.HEYS?.Metabolic?.calculateCrashRisk24h) {
+        try {
+          crashRisk = window.HEYS.Metabolic.calculateCrashRisk24h();
+        } catch (e) {
+          // Игнорируем ошибки при получении crashRisk
+        }
+      }
+      
       return {
         dayTot: dayTot || {},
         normAbs: normAbs || {},
@@ -6742,7 +6772,8 @@
         emotionalState,
         prof: prof || {},           // Профиль пользователя
         waterGoal: waterGoal || 2000, // Норма воды
-        goal                         // 🎯 Goal режим (deficit/bulk/maintenance)
+        goal,                        // 🎯 Goal режим (deficit/bulk/maintenance)
+        crashRisk                    // 🆕 Риск срыва из Metabolic Intelligence
       };
     }, [dayTot, normAbs, optimum, displayOptimum, caloricDebt, day, pIndex, currentStreak, prof, waterGoal]);
     
@@ -6915,6 +6946,7 @@
       scheduledCount,
       allAdvices,
       ctx,
+      crashRisk: ctx?.crashRisk, // 🆕 Экспортируем crashRisk для UI
       // Методы
       markShown: (id) => {
         markAdviceShown(id);
@@ -6926,6 +6958,23 @@
       canShow: canShowAdvice,
       resetSession: resetSessionAdvices
     };
+  }
+  
+  /**
+   * 🆕 Получение crashRisk из Metabolic Intelligence
+   * Helper для добавления в контекст советов
+   * @returns {Object|null} { risk: 0-100, level: 'low'|'medium'|'high', factors: [] }
+   */
+  function getCrashRiskForContext() {
+    if (!window.HEYS?.Metabolic?.calculateCrashRisk24h) {
+      return null;
+    }
+    
+    try {
+      return window.HEYS.Metabolic.calculateCrashRisk24h();
+    } catch (e) {
+      return null;
+    }
   }
   
   // ═══════════════════════════════════════════════════════════

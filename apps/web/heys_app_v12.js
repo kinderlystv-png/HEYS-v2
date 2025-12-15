@@ -18,7 +18,7 @@
 const HEYS = window.HEYS = window.HEYS || {};
         
         // === App Version & Auto-logout on Update ===
-        const APP_VERSION = '2025.12.15.1323.62587ee'; // Инкрементируй при важных изменениях
+        const APP_VERSION = '2025.12.15.2035.0c40dd0'; // Инкрементируй при важных изменениях
         const VERSION_KEY = 'heys_app_version';
         const UPDATE_LOCK_KEY = 'heys_update_in_progress'; // Блокировка дублирования
         const UPDATE_LOCK_TIMEOUT = 30000; // 30 сек макс на обновление
@@ -2978,6 +2978,9 @@ const HEYS = window.HEYS = window.HEYS || {};
               setClientsSource('loading');
               
               try {
+                // � На localhost — быстрый fallback на localStorage при ошибке сети
+                const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                
                 // 🔄 Используем fetchWithRetry с retry + fallback routing
                 const result = await (cloud.fetchWithRetry || defaultFetchWithRetry)(
                   () => cloud.client
@@ -2985,13 +2988,24 @@ const HEYS = window.HEYS = window.HEYS || {};
                     .select('id, name')
                     .eq('curator_id', curatorId)
                     .order('updated_at', { ascending: true }),
-                  { label: 'fetchClients', maxRetries: 2, timeoutMs: 8000 }
+                  { 
+                    label: 'fetchClients', 
+                    maxRetries: isLocalhost ? 0 : 2,  // На localhost — без retry
+                    timeoutMs: isLocalhost ? 3000 : 8000  // На localhost — короткий таймаут
+                  }
                 );
                 
                 fetchingClientsRef.current = false;
                 
                 if (result.error) {
-                  console.error('Ошибка загрузки клиентов:', result.error.message);
+                  // 🏠 При ошибке — используем localStorage кэш
+                  console.warn('[HEYS] ⚠️ fetchClients error, using localStorage cache');
+                  const cached = localStorage.getItem('heys_clients');
+                  if (cached) {
+                    const data = JSON.parse(cached);
+                    setClientsSource('local');
+                    return { data, source: 'local' };
+                  }
                   setClientsSource('error');
                   return { data: [], source: 'error' };
                 }
@@ -3006,6 +3020,15 @@ const HEYS = window.HEYS = window.HEYS || {};
               } catch (e) {
                 fetchingClientsRef.current = false;
                 console.error('[HEYS] ❌ fetchClientsFromCloud failed:', e.message);
+                // 🏠 При exception — тоже используем localStorage
+                const cached = localStorage.getItem('heys_clients');
+                if (cached) {
+                  try {
+                    const data = JSON.parse(cached);
+                    setClientsSource('local');
+                    return { data, source: 'local' };
+                  } catch {}
+                }
                 setClientsSource('error');
                 return { data: [], source: 'error' };
               }

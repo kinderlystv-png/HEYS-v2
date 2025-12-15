@@ -8861,6 +8861,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         let epocKcal = 0;
         let epocInsight = null;
         
+        // Получаем пульсовые зоны из localStorage (формат: [{MET: 2.5}, {MET: 6}, ...])
+        const hrZonesRaw = lsGet('heys_hr_zones', []);
+        const defaultMets = [2.5, 6, 8, 10]; // Дефолтные MET для 4 зон
+        
         if (todayTrainings.length > 0) {
           todayTrainings.forEach(tr => {
             const zones = tr.z || [0, 0, 0, 0];
@@ -8871,7 +8875,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             // EPOC зависит от интенсивности: 6% (низкая) до 15% (высокая)
             const epocRate = 0.06 + intensity * 0.09;
             const trainingKcal = zones.reduce((sum, mins, idx) => {
-              const met = hrZones[idx]?.MET || (idx + 1) * 2;
+              const met = +hrZonesRaw[idx]?.MET || defaultMets[idx] || (idx + 1) * 2;
               return sum + (mins * met * (prof?.weight || 70) / 60);
             }, 0);
             epocKcal += trainingKcal * epocRate;
@@ -10416,6 +10420,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         days.push({
           date: dateStr,
           name: dayNames[i],
+          dayNumber: d.getDate(), // Число месяца (15, 16, 17...)
           status: isToday && status === 'empty' ? 'in-progress' : status, // Сегодня без данных = "в процессе"
           ratio,
           kcal: Math.round(kcal),
@@ -15789,6 +15794,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                     }
                   }
                 },
+                  React.createElement('span', { className: 'week-heatmap-date' }, d.dayNumber),
                   React.createElement('span', { className: 'week-heatmap-name' }, d.name),
                   React.createElement('div', { 
                     className: 'week-heatmap-cell',
@@ -19682,7 +19688,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               React.createElement(WheelColumn, {
                 values: zoneMinutesValues.map(v => v + ' мин'),
                 selected: pendingZoneMinutes,
-                onChange: (i) => setPendingZoneMinutes(i)
+                onChange: (i) => setPendingZoneMinutes(i),
+                wrap: false
               })
             )
           )
@@ -19790,7 +19797,8 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                             next[zi] = i;
                             return next;
                           });
-                        }
+                        },
+                        wrap: false
                       })
                     )
                   )

@@ -108,7 +108,14 @@
 
     // 💡 Советы (2)
     advice_reader: { id: 'advice_reader', name: 'Внимательный', desc: 'Прочитать 50 советов', xp: 50, icon: '💡', category: 'habits', rarity: 'common' },
-    advice_master: { id: 'advice_master', name: 'Мудрец', desc: 'Прочитать 200 советов', xp: 150, icon: '🧠', category: 'habits', rarity: 'rare' }
+    advice_master: { id: 'advice_master', name: 'Мудрец', desc: 'Прочитать 200 советов', xp: 150, icon: '🧠', category: 'habits', rarity: 'rare' },
+
+    // 🧠 Метаболизм (5) — НОВЫЕ для Metabolic Intelligence
+    metabolic_stable: { id: 'metabolic_stable', name: 'Стабильный метаболизм', desc: 'Оценка ≥70 7 дней подряд', xp: 100, icon: '🧠', category: 'metabolic', rarity: 'rare' },
+    crash_avoided: { id: 'crash_avoided', name: 'Срыв предотвращён', desc: 'Предупреждение о риске → успешный день', xp: 50, icon: '🛡️', category: 'metabolic', rarity: 'rare' },
+    low_risk_master: { id: 'low_risk_master', name: 'Мастер контроля', desc: 'Низкий риск срыва 14 дней', xp: 200, icon: '🎯', category: 'metabolic', rarity: 'epic' },
+    phenotype_discovered: { id: 'phenotype_discovered', name: 'Фенотип раскрыт', desc: 'Определён метаболический фенотип', xp: 100, icon: '🧬', category: 'metabolic', rarity: 'epic' },
+    weekly_wrap_viewed: { id: 'weekly_wrap_viewed', name: 'Аналитик', desc: 'Посмотреть 4 еженедельных отчёта', xp: 75, icon: '📊', category: 'metabolic', rarity: 'rare' }
   };
 
   const ACHIEVEMENT_CATEGORIES = [
@@ -117,7 +124,8 @@
     { id: 'quality', name: '💎 Качество дня', achievements: ['perfect_day', 'perfect_week', 'balanced_macros', 'fiber_champion'] },
     { id: 'activity', name: '💧 Вода и активность', achievements: ['water_day', 'water_master', 'training_week', 'steps_champion'] },
     { id: 'levels', name: '⭐ Уровни', achievements: ['level_5', 'level_10', 'level_15', 'level_20', 'level_25'] },
-    { id: 'habits', name: '🌅 Привычки', achievements: ['early_bird', 'night_owl_safe'] }
+    { id: 'habits', name: '🌅 Привычки', achievements: ['early_bird', 'night_owl_safe'] },
+    { id: 'metabolic', name: '🧠 Метаболизм', achievements: ['metabolic_stable', 'crash_avoided', 'low_risk_master', 'phenotype_discovered', 'weekly_wrap_viewed'] }
   ];
 
   const RARITY_COLORS = {
@@ -972,13 +980,74 @@
     showNotification,
 
     // День выполнен (вызывается при ratio 0.75-1.1)
-    checkDayCompleted(ratio) {
+    checkDayCompleted(ratio, dateStr) {
       if (ratio >= 0.75 && ratio <= 1.1) {
         this.addXP(0, 'day_completed');
       }
       if (ratio >= 0.95 && ratio <= 1.05) {
         this.addXP(0, 'perfect_day');
       }
+      
+      // 📊 Записываем результат для A/B теста (если включён)
+      if (dateStr && HEYS.Metabolic?.recordABResult) {
+        try {
+          // Читаем напрямую из localStorage (A/B данные не синхронизируются в облако)
+          const stored = localStorage.getItem(`heys_predicted_risk_${dateStr}`);
+          const dayRisk = stored ? JSON.parse(stored) : null;
+          if (dayRisk !== null && typeof dayRisk === 'number') {
+            HEYS.Metabolic.recordABResult(dateStr, dayRisk, ratio);
+          }
+        } catch (e) {
+          // Тихо игнорируем ошибки
+        }
+      }
+    },
+    
+    /**
+     * 🧠 Проверка метаболических достижений (новая функция)
+     * Вызывается из Metabolic Intelligence модуля
+     */
+    checkMetabolicAchievements(data) {
+      const { score, risk, phenotype, weeklyWrapViewed } = data || {};
+      
+      // metabolic_stable: оценка ≥70 7 дней подряд
+      if (data.stableDaysCount >= 7 && !this.isAchievementUnlocked('metabolic_stable')) {
+        _unlockAchievement('metabolic_stable');
+      }
+      
+      // low_risk_master: низкий риск 14 дней
+      if (data.lowRiskDaysCount >= 14 && !this.isAchievementUnlocked('low_risk_master')) {
+        _unlockAchievement('low_risk_master');
+      }
+      
+      // phenotype_discovered: фенотип определён с confidence ≥70%
+      if (phenotype?.confidence >= 70 && !this.isAchievementUnlocked('phenotype_discovered')) {
+        _unlockAchievement('phenotype_discovered');
+      }
+      
+      // weekly_wrap_viewed: 4 просмотра отчётов
+      const wrapViewCount = U.lsGet?.('heys_weekly_wrap_view_count', 0) || 0;
+      if (wrapViewCount >= 4 && !this.isAchievementUnlocked('weekly_wrap_viewed')) {
+        _unlockAchievement('weekly_wrap_viewed');
+      }
+    },
+    
+    /**
+     * 🛡️ Проверка crash_avoided — риск был высокий, но день успешный
+     */
+    checkCrashAvoided(hadHighRisk, daySuccessful) {
+      if (hadHighRisk && daySuccessful && !this.isAchievementUnlocked('crash_avoided')) {
+        _unlockAchievement('crash_avoided');
+      }
+    },
+    
+    /**
+     * 📊 Инкремент просмотров Weekly Wrap
+     */
+    incrementWeeklyWrapViews() {
+      const count = (U.lsGet?.('heys_weekly_wrap_view_count', 0) || 0) + 1;
+      U.lsSet?.('heys_weekly_wrap_view_count', count);
+      return count;
     },
 
     // Сброс данных (для тестирования)

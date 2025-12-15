@@ -53,12 +53,17 @@
    * @param {number} props.selected - Индекс выбранного значения
    * @param {Function} props.onChange - Callback при изменении (получает новый индекс)
    * @param {string} [props.label] - Подпись сверху колонки
+   * @param {boolean} [props.wrap=true] - Циклическая прокрутка (по умолчанию true)
    */
-  function WheelColumn({ values, selected, onChange, label }) {
+  function WheelColumn({ values, selected, onChange, label, wrap = true }) {
     const containerRef = React.useRef(null);
     const itemHeight = 44;
+    const len = values.length;
     const [offset, setOffset] = React.useState(-selected * itemHeight);
     const offsetRef = React.useRef(offset);
+    
+    // Циклический индекс
+    const wrapIndex = (i) => ((i % len) + len) % len;
     
     // Синхронизация ref с state
     React.useEffect(() => {
@@ -85,13 +90,31 @@
     // Вычисление index из offset
     const getIndexFromOffset = React.useCallback((off) => {
       const idx = Math.round(-off / itemHeight);
-      return Math.max(0, Math.min(values.length - 1, idx));
-    }, [values.length]);
+      if (wrap) {
+        return wrapIndex(idx);
+      }
+      return Math.max(0, Math.min(len - 1, idx));
+    }, [len, wrap]);
     
     // Snap к ближайшему элементу с анимацией
     const snapToIndex = React.useCallback((targetIndex, animated = true) => {
-      const clampedIndex = Math.max(0, Math.min(values.length - 1, targetIndex));
-      const targetOffset = -clampedIndex * itemHeight;
+      let clampedIndex;
+      let targetOffset;
+      
+      if (wrap) {
+        clampedIndex = wrapIndex(targetIndex);
+        // Для циклического режима — находим кратчайший путь к целевому индексу
+        const currentIdx = Math.round(-offsetRef.current / itemHeight);
+        const diff = clampedIndex - currentIdx;
+        // Нормализуем разницу к ближайшему пути
+        let adjustedDiff = diff;
+        if (diff > len / 2) adjustedDiff = diff - len;
+        if (diff < -len / 2) adjustedDiff = diff + len;
+        targetOffset = -(currentIdx + adjustedDiff) * itemHeight;
+      } else {
+        clampedIndex = Math.max(0, Math.min(len - 1, targetIndex));
+        targetOffset = -clampedIndex * itemHeight;
+      }
       
       if (animated) {
         const startOffset = offsetRef.current;
@@ -125,7 +148,7 @@
           onChange(clampedIndex);
         }
       }
-    }, [values.length, selected, onChange]);
+    }, [len, selected, onChange, wrap]);
     
     // Регистрация touch handlers с passive: false
     React.useEffect(() => {
@@ -166,14 +189,20 @@
         }
         
         const newOffset = touchState.current.startOffset + (touch.clientY - touchState.current.startY);
-        const minOffset = -(values.length - 1) * itemHeight;
-        const maxOffset = 0;
         
         let clampedOffset = newOffset;
-        if (newOffset > maxOffset) {
-          clampedOffset = maxOffset + (newOffset - maxOffset) * 0.3; // Резиновый эффект
-        } else if (newOffset < minOffset) {
-          clampedOffset = minOffset + (newOffset - minOffset) * 0.3;
+        if (wrap) {
+          // В циклическом режиме — без ограничений, просто обновляем offset
+          clampedOffset = newOffset;
+        } else {
+          // В обычном режиме — резиновый эффект на границах
+          const minOffset = -(len - 1) * itemHeight;
+          const maxOffset = 0;
+          if (newOffset > maxOffset) {
+            clampedOffset = maxOffset + (newOffset - maxOffset) * 0.3;
+          } else if (newOffset < minOffset) {
+            clampedOffset = minOffset + (newOffset - minOffset) * 0.3;
+          }
         }
         
         setOffset(clampedOffset);
@@ -207,20 +236,22 @@
         let currentOffset = offsetRef.current;
         let currentVelocity = velocity * 15; // Усиление
         const friction = 0.95;
-        const minOffset = -(values.length - 1) * itemHeight;
-        const maxOffset = 0;
         
         const animate = () => {
           currentVelocity *= friction;
           currentOffset += currentVelocity;
           
-          // Границы
-          if (currentOffset > maxOffset) {
-            currentOffset = maxOffset;
-            currentVelocity = 0;
-          } else if (currentOffset < minOffset) {
-            currentOffset = minOffset;
-            currentVelocity = 0;
+          // Границы (только для не-циклического режима)
+          if (!wrap) {
+            const minOffset = -(len - 1) * itemHeight;
+            const maxOffset = 0;
+            if (currentOffset > maxOffset) {
+              currentOffset = maxOffset;
+              currentVelocity = 0;
+            } else if (currentOffset < minOffset) {
+              currentOffset = minOffset;
+              currentVelocity = 0;
+            }
           }
           
           setOffset(currentOffset);
@@ -255,7 +286,7 @@
           cancelAnimationFrame(touchState.current.animationId);
         }
       };
-    }, [values.length, snapToIndex, getIndexFromOffset]);
+    }, [len, wrap, snapToIndex, getIndexFromOffset]);
     
     // Вычисляем текущий центральный индекс из offset
     const currentCenterIndex = getIndexFromOffset(offset);

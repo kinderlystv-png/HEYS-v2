@@ -216,17 +216,21 @@
   // Запускаем раннюю санацию (sync)
   sanitizeStoredAuthToken__BOOT();
   
-  // 🔄 FAILSAFE: Если sync не завершился за 45 секунд — разрешаем сохранения
-  // Увеличено с 15 до 45 сек — пользователю нужно время на ввод логина/пароля
-  // Таймер отменяется при успешном signIn → bootstrapClientSync
+  // 🔄 FAILSAFE: Если sync не завершился за N секунд — разрешаем сохранения
+  // На localhost: 10 сек (быстрый dev режим)
+  // В production: 45 сек (пользователю нужно время на ввод логина/пароля)
+  const isLocalhostDev = typeof window !== 'undefined' && 
+    (window.location?.hostname === 'localhost' || window.location?.hostname === '127.0.0.1');
+  const FAILSAFE_TIMEOUT_MS = isLocalhostDev ? 10000 : 45000;
+  
   function startFailsafeTimer() {
     if (failsafeTimerId) clearTimeout(failsafeTimerId);
     failsafeTimerId = setTimeout(() => {
       if (!initialSyncCompleted) {
-        logCritical('⚠️ [FAILSAFE] Initial sync timeout (45s) — enabling saves');
+        logCritical(`⚠️ [FAILSAFE] Sync timeout (${FAILSAFE_TIMEOUT_MS/1000}s) — enabling offline mode`);
         initialSyncCompleted = true;
       }
-    }, 45000);
+    }, FAILSAFE_TIMEOUT_MS);
   }
   
   function cancelFailsafeTimer() {
@@ -1390,6 +1394,10 @@
     // Иначе bootstrapSync/clearNamespace удалит токен и пользователь «вылетит» сразу после входа.
     if (k === 'heys_supabase_auth_token') return false;
     if (k.indexOf('sb-') === 0) return false;
+    
+    // 🧪 A/B тестирование и локальная аналитика — НЕ синхронизировать в облако
+    if (k.indexOf('heys_ab_') === 0) return false;
+    if (k.indexOf('heys_predicted_risk_') === 0) return false;
 
     if (k.indexOf(KEY_PREFIXES.HEYS) === 0) return true;
     // также разрешаем ключи дней

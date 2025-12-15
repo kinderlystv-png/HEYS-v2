@@ -53,6 +53,51 @@
       low: { enter: 30, exit: 25 },
       medium: { enter: 60, exit: 55 },
       high: { enter: 85, exit: 80 }
+    },
+    
+    // 🆕 A/B Testing Config
+    AB_TESTING: {
+      enabled: true,
+      variants: {
+        // Вариант A: текущая формула (default)
+        A: {
+          id: 'A',
+          name: 'Стандартная формула',
+          weights: {
+            currentRisk: 0.6,
+            sleepDebt: 25,
+            weekend: 20,
+            chronicDeficit: 30,
+            historical: 15
+          }
+        },
+        // Вариант B: усиленный акцент на сне
+        B: {
+          id: 'B',
+          name: 'Sleep-focused',
+          weights: {
+            currentRisk: 0.5,
+            sleepDebt: 35,
+            weekend: 15,
+            chronicDeficit: 25,
+            historical: 15
+          }
+        },
+        // Вариант C: усиленный акцент на хроническом дефиците
+        C: {
+          id: 'C',
+          name: 'Deficit-focused',
+          weights: {
+            currentRisk: 0.55,
+            sleepDebt: 20,
+            weekend: 20,
+            chronicDeficit: 40,
+            historical: 10
+          }
+        }
+      },
+      storageKey: 'heys_ab_variant',
+      resultsKey: 'heys_ab_results'
     }
   };
   
@@ -651,7 +696,10 @@
       const dateStr = d.toISOString().split('T')[0];
       const day = lsGet(`heys_dayv2_${dateStr}`, null);
       
-      if (day && day.meals && day.meals.length > 0) {
+      // День считается "с данными" если есть хотя бы один приём пищи с продуктами
+      const hasMeals = day?.meals?.some?.(m => m?.items?.length > 0);
+      
+      if (day && hasMeals) {
         // Вычисляем dayTot для расчёта процентов макросов
         const dayTot = calculateDayTotals(day, pIndex);
         const totalKcal = dayTot.kcal || 0;
@@ -932,6 +980,9 @@
   function calculateCrashRisk24h(dateStr, profile, history) {
     const lsGet = getScopedLsGet();
     
+    // Получаем веса из A/B варианта
+    const abWeights = getABWeights();
+    
     const tomorrow = new Date(dateStr);
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
@@ -940,54 +991,54 @@
     let risk = 0;
     let triggers = [];
     
-    // 1. Текущий риск (базовый)
+    // 1. Текущий риск (базовый) — вес из A/B теста
     const currentRisk = calculateCrashRisk(dateStr, profile, history);
-    risk += currentRisk.risk * 0.6; // 60% от текущего
+    risk += currentRisk.risk * abWeights.current;
     
-    // 2. Недосып (прогноз на завтра)
+    // 2. Недосып (прогноз на завтра) — вес из A/B теста
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
     const sleepHours = day.sleepHours || 0;
     if (sleepHours < 6) {
-      risk += 25;
+      risk += abWeights.sleepDebt;
       triggers.push({
         id: 'sleep_debt_tomorrow',
         label: 'Риск переедания после недосыпа',
-        impact: 25,
+        impact: abWeights.sleepDebt,
         confidence: 0.8
       });
     }
     
-    // 3. Выходные / Пятница
+    // 3. Выходные / Пятница — вес из A/B теста
     if (dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0) {
-      risk += 20;
+      risk += abWeights.weekend;
       triggers.push({
         id: 'weekend',
         label: 'Выходные — повышен риск',
-        impact: 20,
+        impact: abWeights.weekend,
         confidence: 0.7
       });
     }
     
-    // 4. Хронический дефицит (накопленный стресс)
+    // 4. Хронический дефицит (накопленный стресс) — вес из A/B теста
     const consecutiveDays = countConsecutiveDeficitDays(history);
     if (consecutiveDays >= 4) {
-      risk += 30;
+      risk += abWeights.chronicDeficit;
       triggers.push({
         id: 'metabolic_stress',
         label: 'Метаболический стресс от дефицита',
-        impact: 30,
+        impact: abWeights.chronicDeficit,
         confidence: 0.85
       });
     }
     
-    // 5. Паттерн из истории (если есть срывы в похожий день недели)
+    // 5. Паттерн из истории — вес из A/B теста
     const historicalPattern = findHistoricalPattern(history, dayOfWeek);
     if (historicalPattern.hasCrashPattern) {
-      risk += 15;
+      risk += abWeights.historical;
       triggers.push({
         id: 'historical_pattern',
         label: 'В прошлом были срывы в такие дни',
-        impact: 15,
+        impact: abWeights.historical,
         confidence: 0.6
       });
     }
@@ -1000,14 +1051,25 @@
     // Стратегия профилактики
     const preventionStrategy = generatePreventionStrategy(triggers, risk);
     
+    const finalRisk = Math.min(100, Math.round(risk));
+    
+    // 📊 Сохраняем предсказанный риск для A/B теста (ТОЛЬКО локально, без cloud sync)
+    try {
+      // Используем localStorage напрямую, чтобы избежать синхронизации с облаком
+      localStorage.setItem(`heys_predicted_risk_${tomorrowStr}`, JSON.stringify(finalRisk));
+    } catch (e) {
+      // Тихо игнорируем ошибки localStorage
+    }
+    
     return {
-      risk: Math.min(100, Math.round(risk)),
-      riskLevel: risk < 30 ? 'low' : risk < 60 ? 'medium' : 'high',
+      risk: finalRisk,
+      riskLevel: finalRisk < 30 ? 'low' : finalRisk < 60 ? 'medium' : 'high',
       primaryTrigger,
       triggers,
       preventionStrategy,
       timeframe: '24-48 часов',
-      confidence: triggers.length > 0 ? 0.75 : 0.5
+      confidence: triggers.length > 0 ? 0.75 : 0.5,
+      abVariant: getABVariant().id // Для отладки
     };
   }
   
@@ -1686,6 +1748,535 @@
     return isNaN(slope) ? 0 : slope;
   }
   
+  // === PHASE 5: AUTO-CALIBRATION ===
+  
+  /**
+   * Автокалибровка весов на основе feedback
+   * Использует собранный feedback для корректировки коэффициентов риска
+   * @returns {Object} откалиброванные веса
+   */
+  function getCalibratedWeights() {
+    const lsGet = getScopedLsGet();
+    const lsSet = U.lsSet || ((k, v) => {
+      try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+    });
+    
+    // Базовые веса
+    const defaultWeights = {
+      sleepDebt: { mild: 15, moderate: 25, high: 40 },
+      stress: { moderate: 15, high: 30 },
+      chronicDeficit: { moderate: 20, severe: 35 },
+      weekend: 15
+    };
+    
+    // Загружаем сохранённые калибровки
+    const calibrationKey = 'heys_risk_calibration';
+    const calibration = lsGet(calibrationKey, null);
+    
+    if (!calibration) {
+      return defaultWeights;
+    }
+    
+    // Анализируем feedback для корректировки
+    const feedback = lsGet('heys_metabolic_feedback', []);
+    if (feedback.length < 10) {
+      return calibration.weights || defaultWeights;
+    }
+    
+    // Группируем feedback по факторам
+    const factorFeedback = {};
+    feedback.forEach(f => {
+      if (f.details?.factorId) {
+        if (!factorFeedback[f.details.factorId]) {
+          factorFeedback[f.details.factorId] = { correct: 0, incorrect: 0 };
+        }
+        if (f.correct) factorFeedback[f.details.factorId].correct++;
+        else factorFeedback[f.details.factorId].incorrect++;
+      }
+    });
+    
+    // Корректируем веса на основе точности
+    const weights = { ...defaultWeights };
+    const adjustmentFactor = 0.1; // 10% корректировка за итерацию
+    
+    Object.entries(factorFeedback).forEach(([factorId, stats]) => {
+      const total = stats.correct + stats.incorrect;
+      if (total >= 5) {
+        const accuracy = stats.correct / total;
+        // Если точность низкая — уменьшаем вес, если высокая — увеличиваем
+        const adjustment = (accuracy - 0.5) * adjustmentFactor;
+        
+        // Применяем к соответствующему весу
+        if (factorId.includes('sleep')) {
+          weights.sleepDebt.mild = Math.max(5, Math.min(25, defaultWeights.sleepDebt.mild * (1 + adjustment)));
+          weights.sleepDebt.moderate = Math.max(10, Math.min(35, defaultWeights.sleepDebt.moderate * (1 + adjustment)));
+          weights.sleepDebt.high = Math.max(20, Math.min(50, defaultWeights.sleepDebt.high * (1 + adjustment)));
+        } else if (factorId.includes('stress')) {
+          weights.stress.moderate = Math.max(5, Math.min(25, defaultWeights.stress.moderate * (1 + adjustment)));
+          weights.stress.high = Math.max(15, Math.min(40, defaultWeights.stress.high * (1 + adjustment)));
+        } else if (factorId.includes('deficit')) {
+          weights.chronicDeficit.moderate = Math.max(10, Math.min(30, defaultWeights.chronicDeficit.moderate * (1 + adjustment)));
+          weights.chronicDeficit.severe = Math.max(20, Math.min(45, defaultWeights.chronicDeficit.severe * (1 + adjustment)));
+        }
+      }
+    });
+    
+    // Сохраняем откалиброванные веса
+    lsSet(calibrationKey, {
+      weights,
+      updatedAt: Date.now(),
+      feedbackCount: feedback.length
+    });
+    
+    return weights;
+  }
+  
+  /**
+   * Получить персональные пороги из истории
+   * Анализирует личную историю для определения индивидуальных границ
+   */
+  function getPersonalThresholds() {
+    const lsGet = getScopedLsGet();
+    
+    const thresholdsKey = 'heys_personal_thresholds';
+    const cached = lsGet(thresholdsKey, null);
+    
+    // Если есть свежие данные — возвращаем
+    if (cached && cached.updatedAt && Date.now() - cached.updatedAt < 24 * 60 * 60 * 1000) {
+      return cached;
+    }
+    
+    // Анализируем историю за 30 дней
+    const history = getDaysHistory(30);
+    if (history.length < 14) {
+      return {
+        available: false,
+        reason: 'need_more_data',
+        daysRequired: 14,
+        daysHave: history.length
+      };
+    }
+    
+    // Собираем данные о срывах и рисках
+    const crashDays = history.filter(d => d.ratio && d.ratio > 1.3);
+    const goodDays = history.filter(d => d.ratio && d.ratio >= 0.85 && d.ratio <= 1.15);
+    
+    // Анализируем условия перед срывами
+    const preCrashConditions = crashDays.map(crash => {
+      const idx = history.findIndex(d => d.dateStr === crash.dateStr);
+      if (idx <= 0) return null;
+      return history[idx - 1]; // День перед срывом
+    }).filter(Boolean);
+    
+    // Персональные пороги
+    const thresholds = {
+      available: true,
+      
+      // Персональный порог недосыпа
+      sleepThreshold: preCrashConditions.length > 0
+        ? Math.round(preCrashConditions.reduce((sum, d) => sum + (d.sleepHours || 7), 0) / preCrashConditions.length)
+        : 6,
+      
+      // Персональный порог стресса  
+      stressThreshold: preCrashConditions.length > 0
+        ? Math.round(preCrashConditions.reduce((sum, d) => sum + (d.stressAvg || 5), 0) / preCrashConditions.length)
+        : 7,
+      
+      // Персональный порог дефицита (дней подряд)
+      deficitDaysThreshold: crashDays.length > 0 ? 3 : 5,
+      
+      // Персональная "опасная зона" калорий
+      dangerZoneRatio: crashDays.length > 0
+        ? Math.round(crashDays.reduce((sum, d) => sum + (d.ratio || 1), 0) / crashDays.length * 100) / 100
+        : 1.3,
+      
+      // Статистика
+      crashCount: crashDays.length,
+      goodDaysCount: goodDays.length,
+      successRate: Math.round((goodDays.length / history.length) * 100),
+      
+      updatedAt: Date.now()
+    };
+    
+    // Кэшируем
+    const lsSet = U.lsSet || ((k, v) => {
+      try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+    });
+    lsSet(thresholdsKey, thresholds);
+    
+    return thresholds;
+  }
+  
+  // === PHASE 6: WEEKLY WRAP ===
+  
+  /**
+   * Генерация Weekly Wrap — еженедельный отчёт
+   * Показывается в воскресенье вечером
+   * @returns {Object} структурированный отчёт недели
+   */
+  function generateWeeklyWrap() {
+    const lsGet = getScopedLsGet();
+    const profile = lsGet('heys_profile', {});
+    const pIndex = HEYS.products?.buildIndex?.();
+    
+    // Получаем данные за неделю
+    const history = getDaysHistory(7);
+    
+    if (history.length < 3) {
+      return {
+        available: false,
+        reason: 'not_enough_data',
+        daysTracked: history.length,
+        minRequired: 3
+      };
+    }
+    
+    // Собираем статусы
+    const dailyData = history.map(day => {
+      const status = getStatus({
+        dateStr: day.dateStr,
+        pIndex,
+        profile,
+        forceRefresh: false
+      });
+      
+      return {
+        date: day.dateStr,
+        dayName: new Date(day.dateStr).toLocaleDateString('ru-RU', { weekday: 'short' }),
+        score: status?.score || 0,
+        risk: status?.risk || 0,
+        riskLevel: status?.riskLevel || 'low',
+        ratio: day.ratio || 0,
+        sleepHours: day.sleepHours || 0,
+        steps: day.steps || 0,
+        available: status?.available || false
+      };
+    }).filter(d => d.available);
+    
+    if (dailyData.length === 0) {
+      return { available: false, reason: 'no_valid_data' };
+    }
+    
+    // === ТРЕНДЫ ===
+    const avgScore = Math.round(dailyData.reduce((sum, d) => sum + d.score, 0) / dailyData.length);
+    const avgRisk = Math.round(dailyData.reduce((sum, d) => sum + d.risk, 0) / dailyData.length);
+    const scoreTrend = calculateTrend(dailyData.map(d => d.score));
+    const riskTrend = calculateTrend(dailyData.map(d => d.risk));
+    
+    // === ЛУЧШИЙ/ХУДШИЙ ДЕНЬ ===
+    const bestDay = dailyData.reduce((max, d) => d.score > max.score ? d : max, dailyData[0]);
+    const worstDay = dailyData.reduce((min, d) => d.score < min.score ? d : min, dailyData[0]);
+    
+    // === ДОСТИЖЕНИЯ ===
+    const achievements = [];
+    const goodDays = dailyData.filter(d => d.score >= 70).length;
+    const lowRiskDays = dailyData.filter(d => d.riskLevel === 'low').length;
+    const streakDays = dailyData.filter(d => d.ratio >= 0.85 && d.ratio <= 1.15).length;
+    
+    if (goodDays >= 5) achievements.push({ id: 'stable_week', emoji: '🏆', label: '5+ дней в норме' });
+    if (lowRiskDays >= 6) achievements.push({ id: 'low_risk_master', emoji: '🛡️', label: 'Мастер контроля риска' });
+    if (streakDays >= 7) achievements.push({ id: 'perfect_week', emoji: '⭐', label: 'Идеальная неделя!' });
+    if (avgScore >= 80) achievements.push({ id: 'high_performer', emoji: '🚀', label: 'Высокая эффективность' });
+    
+    // === ИНСАЙТЫ ===
+    const insights = [];
+    
+    // Паттерн выходных
+    const weekendDays = dailyData.filter(d => {
+      const dow = new Date(d.date).getDay();
+      return dow === 0 || dow === 6;
+    });
+    const weekdayDays = dailyData.filter(d => {
+      const dow = new Date(d.date).getDay();
+      return dow !== 0 && dow !== 6;
+    });
+    
+    if (weekendDays.length > 0 && weekdayDays.length > 0) {
+      const weekendAvg = weekendDays.reduce((s, d) => s + d.score, 0) / weekendDays.length;
+      const weekdayAvg = weekdayDays.reduce((s, d) => s + d.score, 0) / weekdayDays.length;
+      
+      if (weekendAvg < weekdayAvg - 15) {
+        insights.push({
+          id: 'weekend_drop',
+          emoji: '📉',
+          text: `Выходные сложнее: score ${Math.round(weekendAvg)} vs ${Math.round(weekdayAvg)} в будни`
+        });
+      } else if (weekendAvg > weekdayAvg + 10) {
+        insights.push({
+          id: 'weekend_better',
+          emoji: '📈',
+          text: 'В выходные лучше контроль — больше времени на себя!'
+        });
+      }
+    }
+    
+    // Паттерн сна → риск
+    const lowSleepDays = dailyData.filter(d => d.sleepHours < 6);
+    if (lowSleepDays.length >= 2) {
+      const avgRiskLowSleep = lowSleepDays.reduce((s, d) => s + d.risk, 0) / lowSleepDays.length;
+      insights.push({
+        id: 'sleep_risk_correlation',
+        emoji: '😴',
+        text: `Недосып повышает риск: ${Math.round(avgRiskLowSleep)}% в дни с <6ч сна`
+      });
+    }
+    
+    // === ПРОГНОЗ НА СЛЕДУЮЩУЮ НЕДЕЛЮ ===
+    const nextWeekForecast = {
+      predictedScore: Math.max(0, Math.min(100, avgScore + scoreTrend * 7)),
+      predictedRisk: Math.max(0, Math.min(100, avgRisk + riskTrend * 7)),
+      trend: scoreTrend > 0.5 ? 'improving' : scoreTrend < -0.5 ? 'declining' : 'stable',
+      recommendation: scoreTrend < -0.5 
+        ? 'Фокус на восстановлении — сон и снижение стресса' 
+        : scoreTrend > 0.5 
+          ? 'Отличный прогресс! Держи темп' 
+          : 'Стабильный курс — продолжай в том же духе'
+    };
+    
+    // === СРАВНЕНИЕ С ПРОШЛОЙ НЕДЕЛЕЙ ===
+    const prevWeekHistory = getDaysHistory(14).slice(7);
+    let comparison = null;
+    
+    if (prevWeekHistory.length >= 3) {
+      const prevWeekData = prevWeekHistory.map(day => {
+        const status = getStatus({ dateStr: day.dateStr, pIndex, profile, forceRefresh: false });
+        return { score: status?.score || 0 };
+      }).filter(d => d.score > 0);
+      
+      if (prevWeekData.length > 0) {
+        const prevAvgScore = Math.round(prevWeekData.reduce((s, d) => s + d.score, 0) / prevWeekData.length);
+        comparison = {
+          prevAvgScore,
+          currentAvgScore: avgScore,
+          delta: avgScore - prevAvgScore,
+          improved: avgScore > prevAvgScore
+        };
+      }
+    }
+    
+    return {
+      available: true,
+      generatedAt: new Date().toISOString(),
+      weekNumber: getWeekNumber(new Date()),
+      daysTracked: dailyData.length,
+      
+      // Основные метрики
+      summary: {
+        avgScore,
+        avgRisk,
+        bestDay: { date: bestDay.date, dayName: bestDay.dayName, score: bestDay.score },
+        worstDay: { date: worstDay.date, dayName: worstDay.dayName, score: worstDay.score },
+        goodDays,
+        lowRiskDays,
+        streakDays
+      },
+      
+      // Тренды
+      trends: {
+        score: { value: scoreTrend, direction: scoreTrend > 0.5 ? 'up' : scoreTrend < -0.5 ? 'down' : 'stable' },
+        risk: { value: riskTrend, direction: riskTrend > 0.5 ? 'up' : riskTrend < -0.5 ? 'down' : 'stable' }
+      },
+      
+      // Достижения
+      achievements,
+      
+      // Инсайты
+      insights,
+      
+      // Прогноз
+      nextWeekForecast,
+      
+      // Сравнение с прошлой неделей
+      comparison,
+      
+      // Daily breakdown для графика
+      dailyData
+    };
+  }
+  
+  /**
+   * Получить номер недели в году
+   */
+  function getWeekNumber(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  }
+  
+  /**
+   * Проверить, нужно ли показать Weekly Wrap
+   * Показываем в воскресенье после 18:00
+   */
+  function shouldShowWeeklyWrap() {
+    const lsGet = getScopedLsGet();
+    
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = воскресенье
+    const hour = now.getHours();
+    
+    // Воскресенье после 18:00
+    if (dayOfWeek !== 0 || hour < 18) {
+      return false;
+    }
+    
+    // Проверяем, не показывали ли уже на этой неделе
+    const lastShownKey = 'heys_weekly_wrap_last_shown';
+    const lastShown = lsGet(lastShownKey, 0);
+    const weekNumber = getWeekNumber(now);
+    
+    if (lastShown === weekNumber) {
+      return false;
+    }
+    
+    return true;
+  }
+  
+  /**
+   * Отметить Weekly Wrap как показанный
+   */
+  function markWeeklyWrapShown() {
+    const lsSet = U.lsSet || ((k, v) => {
+      try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+    });
+    
+    const weekNumber = getWeekNumber(new Date());
+    lsSet('heys_weekly_wrap_last_shown', weekNumber);
+  }
+  
+  // ========================================
+  // A/B Testing для формул риска
+  // ========================================
+  
+  // Хелперы для A/B (используют прямой localStorage без cloud sync)
+  function abLsGet(key, defaultVal) {
+    try {
+      const stored = localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : defaultVal;
+    } catch (e) {
+      return defaultVal;
+    }
+  }
+  
+  function abLsSet(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      // Ignore
+    }
+  }
+  
+  /**
+   * Получить текущий вариант A/B теста для пользователя
+   * Вариант присваивается случайно и сохраняется
+   */
+  function getABVariant() {
+    if (!CONFIG.AB_TESTING.enabled) {
+      return CONFIG.AB_TESTING.variants.A;
+    }
+    
+    // Проверяем сохранённый вариант (локально, без cloud sync)
+    const savedVariant = abLsGet(CONFIG.AB_TESTING.storageKey, null);
+    if (savedVariant && CONFIG.AB_TESTING.variants[savedVariant]) {
+      return CONFIG.AB_TESTING.variants[savedVariant];
+    }
+    
+    // Случайно выбираем вариант
+    const variantKeys = Object.keys(CONFIG.AB_TESTING.variants);
+    const randomIndex = Math.floor(Math.random() * variantKeys.length);
+    const selectedKey = variantKeys[randomIndex];
+    
+    // Сохраняем выбор (локально)
+    abLsSet(CONFIG.AB_TESTING.storageKey, selectedKey);
+    
+    return CONFIG.AB_TESTING.variants[selectedKey];
+  }
+  
+  /**
+   * Получить веса для расчёта риска из A/B варианта
+   */
+  function getABWeights() {
+    const variant = getABVariant();
+    return variant.weights;
+  }
+  
+  /**
+   * Записать результат A/B теста (после факта)
+   * Вызывается когда день закончен и мы знаем был ли срыв
+   */
+  function recordABResult(dateStr, predictedRisk, actualRatio) {
+    if (!CONFIG.AB_TESTING.enabled) return;
+    
+    const variant = getABVariant();
+    const wasCrash = actualRatio > 1.3 || actualRatio < 0.5; // Срыв = переедание или сильный недобор
+    const wasHighRisk = predictedRisk >= 60;
+    
+    // Точность предсказания:
+    // True Positive: высокий риск был предсказан И случился срыв
+    // True Negative: низкий риск был предсказан И НЕ случился срыв
+    // False Positive: высокий риск был предсказан, но срыва НЕ было
+    // False Negative: низкий риск был предсказан, но срыв случился
+    
+    const results = abLsGet(CONFIG.AB_TESTING.resultsKey, {
+      A: { tp: 0, tn: 0, fp: 0, fn: 0 },
+      B: { tp: 0, tn: 0, fp: 0, fn: 0 },
+      C: { tp: 0, tn: 0, fp: 0, fn: 0 }
+    });
+    
+    if (!results[variant.id]) {
+      results[variant.id] = { tp: 0, tn: 0, fp: 0, fn: 0 };
+    }
+    
+    if (wasHighRisk && wasCrash) {
+      results[variant.id].tp++; // True Positive
+    } else if (!wasHighRisk && !wasCrash) {
+      results[variant.id].tn++; // True Negative
+    } else if (wasHighRisk && !wasCrash) {
+      results[variant.id].fp++; // False Positive
+    } else if (!wasHighRisk && wasCrash) {
+      results[variant.id].fn++; // False Negative
+    }
+    
+    abLsSet(CONFIG.AB_TESTING.resultsKey, results);
+    
+    return results[variant.id];
+  }
+  
+  /**
+   * Получить статистику A/B теста
+   */
+  function getABStats() {
+    const results = abLsGet(CONFIG.AB_TESTING.resultsKey, {});
+    
+    const stats = {};
+    
+    for (const [variantId, data] of Object.entries(results)) {
+      const total = data.tp + data.tn + data.fp + data.fn;
+      if (total === 0) continue;
+      
+      const accuracy = (data.tp + data.tn) / total;
+      const precision = data.tp + data.fp > 0 ? data.tp / (data.tp + data.fp) : 0;
+      const recall = data.tp + data.fn > 0 ? data.tp / (data.tp + data.fn) : 0;
+      const f1 = precision + recall > 0 ? 2 * (precision * recall) / (precision + recall) : 0;
+      
+      stats[variantId] = {
+        total,
+        accuracy: Math.round(accuracy * 100),
+        precision: Math.round(precision * 100),
+        recall: Math.round(recall * 100),
+        f1: Math.round(f1 * 100),
+        ...data
+      };
+    }
+    
+    return {
+      currentVariant: getABVariant().id,
+      variantStats: stats,
+      bestVariant: Object.entries(stats).sort((a, b) => b[1].f1 - a[1].f1)[0]?.[0] || 'A'
+    };
+  }
+  
   // === EXPORT ===
   HEYS.Metabolic = {
     VERSION: CONFIG.VERSION,
@@ -1714,6 +2305,24 @@
     // Phase 4: Integration
     generateReport,
     
+    // Phase 5: Auto-Calibration
+    getCalibratedWeights,
+    getPersonalThresholds,
+    
+    // Phase 6: Weekly Wrap
+    generateWeeklyWrap,
+    shouldShowWeeklyWrap,
+    markWeeklyWrapShown,
+    
+    // Phase 7: Gamification Integration
+    notifyGamification,
+    
+    // Phase 8: A/B Testing
+    getABVariant,
+    getABWeights,
+    recordABResult,
+    getABStats,
+    
     // Utils
     getDaysHistory, // Экспортируем для использования в UI
     
@@ -1721,5 +2330,86 @@
     CONFIG,
     BASELINE
   };
+  
+  // === DEBUG ===
+  // Вызови в консоли: HEYS.Metabolic.debugDaysHistory()
+  HEYS.Metabolic.debugDaysHistory = function() {
+    const lsGet = getScopedLsGet();
+    const today = new Date();
+    const results = [];
+    
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const day = lsGet(`heys_dayv2_${dateStr}`, null);
+      
+      const hasMeals = day?.meals?.some?.(m => m?.items?.length > 0);
+      const mealsCount = day?.meals?.length || 0;
+      const itemsCount = day?.meals?.reduce?.((sum, m) => sum + (m?.items?.length || 0), 0) || 0;
+      
+      results.push({
+        date: dateStr,
+        daysAgo: i,
+        exists: !!day,
+        hasMeals,
+        mealsCount,
+        itemsCount,
+        steps: day?.steps || 0,
+        weight: day?.weightMorning || null
+      });
+    }
+    
+    console.table(results);
+    const validDays = results.filter(r => r.hasMeals).length;
+    console.log(`✅ Дней с едой: ${validDays} / 14 (нужно 7 для фенотипа)`);
+    return results;
+  };
+  
+  // ========================================
+  // Phase 7: Gamification Integration
+  // ========================================
+  
+  /**
+   * 🎮 Уведомление системы геймификации о метаболических событиях
+   * Собирает данные и вызывает проверку достижений
+   */
+  function notifyGamification() {
+    if (!window.HEYS?.game) return;
+    
+    try {
+      const days = getDaysHistory(14);
+      if (days.length < 7) return;
+      
+      // Подсчёт дней со стабильным score (≥70)
+      let stableDaysCount = 0;
+      for (let i = 0; i < Math.min(7, days.length); i++) {
+        const dayScore = calculateDayScore(days[i]);
+        if (dayScore >= 70) stableDaysCount++;
+        else break; // Прерываем streak
+      }
+      
+      // Подсчёт дней с низким риском
+      let lowRiskDaysCount = 0;
+      for (let i = 0; i < Math.min(14, days.length); i++) {
+        const risk = calculateCrashRisk24h();
+        if (risk.level === 'low') lowRiskDaysCount++;
+        else break;
+      }
+      
+      // Получаем фенотип
+      const phenotype = identifyPhenotype();
+      
+      // Вызываем проверку достижений
+      window.HEYS.game.checkMetabolicAchievements?.({
+        stableDaysCount,
+        lowRiskDaysCount,
+        phenotype
+      });
+      
+    } catch (e) {
+      // Игнорируем ошибки
+    }
+  }
   
 })(typeof window !== 'undefined' ? window : global);

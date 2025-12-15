@@ -141,7 +141,7 @@
   }
 
   // === WheelPicker (переиспользуемый) ===
-  function WheelPicker({ values, value, onChange, label, suffix = '', currentSuffix = null, formatValue = null, wrap = false, height = null, compact = false }) {
+  function WheelPicker({ values, value, onChange, label, suffix = '', currentSuffix = null, formatValue = null, wrap = true, height = null, compact = false }) {
     const containerRef = useRef(null);
     const currentIndex = values.indexOf(value);
     const len = values.length;

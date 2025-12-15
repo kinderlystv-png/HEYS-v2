@@ -655,88 +655,182 @@
 }
 
 /* =============================================================================
-   INSIGHTS TAB — Полноэкранная вкладка
+   INSIGHTS TAB v2 — WOW Premium Design
+   Солидно, современно, компактно, структурно
    ============================================================================= */
 
 .insights-tab {
-  padding: 16px;
-  padding-bottom: 100px; /* Для bottom nav */
+  padding: 0;
+  padding-bottom: 100px;
   min-height: 100vh;
-  background: var(--bg-primary, #f9fafb);
+  background: linear-gradient(180deg, 
+    #f8fafc 0%, 
+    #f1f5f9 50%,
+    #e2e8f0 100%
+  );
 }
 
 .dark .insights-tab {
-  background: var(--bg-primary-dark, #111827);
+  background: linear-gradient(180deg, 
+    #0f172a 0%, 
+    #1e293b 50%,
+    #0f172a 100%
+  );
+}
+
+/* === HERO HEADER === */
+.insights-tab__hero {
+  background: linear-gradient(135deg, 
+    #10b981 0%, 
+    #0ea5e9 50%,
+    #8b5cf6 100%
+  );
+  padding: 24px 20px 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+.insights-tab__hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -30%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.15) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+.insights-tab__hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(180deg, transparent, var(--bg-primary, #f8fafc));
+  pointer-events: none;
+}
+
+.dark .insights-tab__hero::after {
+  background: linear-gradient(180deg, transparent, #0f172a);
 }
 
 .insights-tab__header {
+  position: relative;
+  z-index: 1;
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .insights-tab__title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary, #1f2937);
+  font-size: 22px;
+  font-weight: 800;
+  color: white;
   margin: 0 0 4px 0;
-}
-
-.dark .insights-tab__title {
-  color: var(--text-primary-dark, #f9fafb);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  letter-spacing: -0.02em;
 }
 
 .insights-tab__subtitle {
-  font-size: 14px;
-  color: var(--text-secondary, #6b7280);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
 }
 
-/* Табы в InsightsTab */
+/* === GLASS TABS === */
 .insights-tab__tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-  background: rgba(107, 114, 128, 0.1);
-  border-radius: 12px;
+  gap: 4px;
+  margin: 16px 20px 0;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 14px;
   padding: 4px;
+  position: relative;
+  z-index: 2;
+}
+
+.dark .insights-tab__tabs {
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .insights-tab__tab {
   flex: 1;
-  padding: 10px 16px;
+  padding: 10px 14px;
   border: none;
-  border-radius: 10px;
+  border-radius: 11px;
   background: transparent;
-  color: var(--text-secondary, #6b7280);
-  font-size: 14px;
-  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .insights-tab__tab:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 .insights-tab__tab.active {
   background: white;
-  color: var(--text-primary, #1f2937);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #1f2937;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 .dark .insights-tab__tab.active {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
 }
 
-/* Главное кольцо Health Score */
+/* === MAIN CONTENT AREA === */
+.insights-tab__content {
+  padding: 0 16px;
+  margin-top: -50px;
+  position: relative;
+  z-index: 3;
+}
+
+/* === HERO SCORE RING (floating card) === */
+.insights-tab__score-card {
+  background: white;
+  border-radius: 24px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.04),
+    0 12px 40px rgba(16, 185, 129, 0.12);
+  position: relative;
+  overflow: hidden;
+}
+
+.dark .insights-tab__score-card {
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.3),
+    0 12px 40px rgba(16, 185, 129, 0.08);
+}
+
+.insights-tab__score-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #10b981, #0ea5e9, #8b5cf6);
+}
+
 .insights-tab__score {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-bottom: 24px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .insights-tab__score-label {
@@ -753,60 +847,165 @@
 }
 
 .insights-tab__score-value {
-  font-size: 36px;
-  font-weight: 700;
-  background: var(--insights-score-gradient);
+  font-size: 42px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #10b981 0%, #0ea5e9 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   line-height: 1;
   margin-bottom: 2px;
+  letter-spacing: -0.03em;
 }
 
 .insights-tab__score-text {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-secondary, #6b7280);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  line-height: 1;
+  letter-spacing: 1.5px;
+  font-weight: 700;
 }
 
-/* SVG кольцо внутри score */
 .insights-tab__score svg {
   display: block;
+  filter: drop-shadow(0 4px 12px rgba(16, 185, 129, 0.2));
 }
 
-/* 4 кольца категорий */
+/* === CATEGORY RINGS GRID (Compact Cards) === */
 .insights-tab__rings {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
-/* Секции */
+.insights-rings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.insights-ring-card {
+  background: white;
+  border-radius: 16px;
+  padding: 14px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.dark .insights-ring-card {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.insights-ring-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.insights-ring-card__ring {
+  flex-shrink: 0;
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.insights-ring-card__ring svg {
+  display: block;
+  transform: rotate(-90deg);
+}
+
+.insights-ring-card__value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #1f2937);
+}
+
+.insights-ring-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.insights-ring-card__label {
+  font-size: 11px;
+  color: var(--text-secondary, #6b7280);
+  margin-bottom: 2px;
+  font-weight: 500;
+}
+
+.insights-ring-card__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #1f2937);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Цветовые акценты для категорий */
+.insights-ring-card--nutrition { border-left: 3px solid #22c55e; }
+.insights-ring-card--timing { border-left: 3px solid #3b82f6; }
+.insights-ring-card--activity { border-left: 3px solid #f59e0b; }
+.insights-ring-card--recovery { border-left: 3px solid #8b5cf6; }
+
+/* === SECTION DIVIDER === */
+.insights-tab__divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.08), transparent);
+  margin: 16px 0;
+}
+
+.dark .insights-tab__divider {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+
+/* === SECTIONS === */
 .insights-tab__section {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .insights-tab__section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary, #1f2937);
-  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 10px 4px;
 }
 
-.dark .insights-tab__section-title {
-  color: var(--text-primary-dark, #f9fafb);
+/* === METABOLIC ROW (Ring + Traffic Light) === */
+.insights-tab__metabolic-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-/* Confidence indicator */
+.insights-tab__metabolic-row > * {
+  flex: 1;
+}
+
+/* === CONFIDENCE FOOTER === */
 .insights-tab__confidence {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px;
-  background: rgba(107, 114, 128, 0.05);
-  border-radius: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(59, 130, 246, 0.08));
+  border-radius: 16px;
   margin-top: 20px;
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.dark .insights-tab__confidence {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.12));
+  border-color: rgba(16, 185, 129, 0.2);
 }
 
 .insights-tab__confidence-icon {
@@ -814,8 +1013,19 @@
 }
 
 .insights-tab__confidence-text {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary, #6b7280);
+  font-weight: 500;
+}
+
+/* === ANIMATIONS === */
+@keyframes insights-hero-pulse {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.25; }
+}
+
+.insights-tab__hero::before {
+  animation: insights-hero-pulse 4s ease-in-out infinite;
 }
 
 /* =============================================================================
@@ -856,15 +1066,30 @@
 }
 
 /* =============================================================================
-   COLLAPSIBLE SECTION — Раскрывающиеся секции
+   COLLAPSIBLE SECTION v2 — Premium Accordions
    ============================================================================= */
 
 .insights-collapsible {
-  background: var(--card-bg, #fff);
+  background: white;
   border-radius: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  transition: all 0.25s ease;
+}
+
+.dark .insights-collapsible {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.insights-collapsible--open {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.dark .insights-collapsible--open {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .insights-collapsible--compact {
@@ -882,47 +1107,74 @@
 }
 
 .insights-collapsible__header:active {
-  background-color: var(--bg-hover, rgba(0, 0, 0, 0.03));
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.dark .insights-collapsible__header:active {
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 .insights-collapsible__title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex: 1;
 }
 
 .insights-collapsible__icon {
-  font-size: 18px;
-  line-height: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(59, 130, 246, 0.1));
   flex-shrink: 0;
 }
 
 .insights-collapsible__text {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary, #1f2937);
+  letter-spacing: -0.01em;
+}
+
+.dark .insights-collapsible__text {
+  color: #f1f5f9;
 }
 
 .insights-collapsible__badge {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary, #6b7280);
-  background: var(--bg-secondary, #f3f4f6);
-  padding: 3px 8px;
-  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 4px 10px;
+  border-radius: 20px;
 }
 
 .insights-collapsible__chevron {
-  font-size: 16px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
   color: var(--text-tertiary, #9ca3af);
-  transition: transform 0.25s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  font-weight: 500;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 6px;
+}
+
+.dark .insights-collapsible__chevron {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .insights-collapsible--open .insights-collapsible__chevron {
   transform: rotate(90deg);
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
 }
 
 .insights-collapsible__content {
@@ -935,7 +1187,7 @@
 }
 
 .insights-collapsible--open .insights-collapsible__content {
-  max-height: 2000px; /* Достаточно для любого контента */
+  max-height: 2000px;
   padding: 0 16px 16px 16px;
   opacity: 1;
 }
@@ -1430,4 +1682,1416 @@
 
 [data-theme="dark"] .metric-with-info__value {
   color: var(--text-primary-dark, #f9fafb);
+}
+
+/* =============================================================================
+   METABOLIC INTELLIGENCE v2.1 — Новые компоненты
+   ============================================================================= */
+
+/* === METABOLIC ROW (Ring + Traffic Light) === */
+.insights-tab__metabolic-row {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+/* === METABOLIC STATE RING === */
+.metabolic-ring {
+  flex: 1;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.metabolic-ring__visual {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin-bottom: 12px;
+}
+
+.metabolic-ring__phase-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  text-align: center;
+  max-width: 60px;
+}
+
+.metabolic-ring__time {
+  font-size: 10px;
+  color: var(--text-secondary, #6b7280);
+  margin-top: 2px;
+}
+
+.metabolic-ring__legend {
+  display: flex;
+  gap: 12px;
+  font-size: 10px;
+}
+
+.metabolic-ring__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.metabolic-ring__legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* === RISK TRAFFIC LIGHT === */
+.risk-traffic-light {
+  flex: 1;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(245, 158, 11, 0.05) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.risk-traffic-light__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  margin-bottom: 12px;
+}
+
+.risk-traffic-light__lights {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.risk-traffic-light__light {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.risk-traffic-light__light--red {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.risk-traffic-light__light--red.active {
+  background: #ef4444;
+  color: white;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+}
+
+.risk-traffic-light__light--yellow {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.risk-traffic-light__light--yellow.active {
+  background: #f59e0b;
+  color: white;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+}
+
+.risk-traffic-light__light--green {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.risk-traffic-light__light--green.active {
+  background: #22c55e;
+  color: white;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
+}
+
+.risk-traffic-light__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.risk-traffic-light__description {
+  font-size: 10px;
+  color: var(--text-secondary, #6b7280);
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* === DATA COMPLETENESS CARD v2 === */
+.data-completeness-card {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin: 12px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.dark .data-completeness-card {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.data-completeness-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.data-completeness-card__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.data-completeness-card__count {
+  font-size: 13px;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.data-completeness-card__progress {
+  height: 4px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.dark .data-completeness-card__progress {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.data-completeness-card__progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+  border-radius: 2px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.data-completeness-card__features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.data-completeness-card__feature {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.data-completeness-card__feature--unlocked {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.dark .data-completeness-card__feature {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark .data-completeness-card__feature--unlocked {
+  background: rgba(16, 185, 129, 0.15);
+}
+
+/* =============================================
+   METABOLIC QUICK STATUS — Compact Row v2
+   ============================================= */
+
+.metabolic-quick-status {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.metabolic-quick-status__card {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 120px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metabolic-quick-status__card:active {
+  transform: scale(0.98);
+}
+
+.dark .metabolic-quick-status__card {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Score */
+.metabolic-quick-status__score {
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.metabolic-quick-status__score-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.metabolic-quick-status__phase {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary, #1f2937);
+}
+
+.metabolic-quick-status__phase-emoji {
+  font-size: 14px;
+}
+
+.metabolic-quick-status__time {
+  font-size: 10px;
+  color: var(--text-tertiary, #9ca3af);
+  margin-top: 2px;
+}
+
+.metabolic-quick-status__lipolysis {
+  font-size: 10px;
+  font-weight: 600;
+  color: #22c55e;
+  margin-top: 4px;
+}
+
+/* Risk Card */
+.metabolic-quick-status__card--low {
+  border-left: 3px solid #22c55e;
+}
+
+.metabolic-quick-status__card--medium {
+  border-left: 3px solid #eab308;
+}
+
+.metabolic-quick-status__card--high {
+  border-left: 3px solid #ef4444;
+}
+
+.metabolic-quick-status__risk-indicator {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.metabolic-quick-status__light {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  transition: opacity 0.3s ease, box-shadow 0.3s ease;
+}
+
+.metabolic-quick-status__light--green {
+  background: #22c55e;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
+}
+
+.metabolic-quick-status__light--yellow {
+  background: #eab308;
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.5);
+}
+
+.metabolic-quick-status__light--red {
+  background: #ef4444;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+}
+
+.metabolic-quick-status__risk-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.metabolic-quick-status__risk-level {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* Empty State */
+.metabolic-quick-status--empty .metabolic-quick-status__card {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px dashed rgba(0, 0, 0, 0.1);
+}
+
+.dark .metabolic-quick-status--empty .metabolic-quick-status__card {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.metabolic-quick-status__empty-icon {
+  font-size: 28px;
+  margin-bottom: 6px;
+  opacity: 0.5;
+}
+
+.metabolic-quick-status__empty-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.metabolic-quick-status__empty-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #22c55e;
+  margin-top: 4px;
+}
+
+/* =============================================
+   MEAL TIMING v2 — Premium Timeline Design
+   ============================================= */
+
+.meal-timing-v2 {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 20px;
+  padding: 20px;
+  margin: 16px 0;
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+/* Header */
+.meal-timing-v2__header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.meal-timing-v2__header-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 14px;
+  font-size: 24px;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.25);
+}
+
+.meal-timing-v2__header-content {
+  flex: 1;
+}
+
+.meal-timing-v2__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 2px 0;
+  letter-spacing: -0.3px;
+}
+
+.meal-timing-v2__subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Timeline */
+.meal-timing-v2__timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  padding-left: 4px;
+}
+
+.meal-timing-v2__item {
+  display: flex;
+  gap: 16px;
+  position: relative;
+  padding-bottom: 20px;
+}
+
+.meal-timing-v2__item:last-child {
+  padding-bottom: 0;
+}
+
+/* Connector line */
+.meal-timing-v2__connector {
+  position: absolute;
+  left: 22px;
+  top: 48px;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
+  border-radius: 1px;
+}
+
+.meal-timing-v2__item--active .meal-timing-v2__connector {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+
+.meal-timing-v2__item--past .meal-timing-v2__connector {
+  background: #d1d5db;
+}
+
+/* Time badge */
+.meal-timing-v2__time-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  position: relative;
+  z-index: 1;
+}
+
+.meal-timing-v2__time {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.meal-timing-v2__item--past .meal-timing-v2__time-badge {
+  opacity: 0.5;
+  filter: grayscale(0.3);
+}
+
+.meal-timing-v2__item--active .meal-timing-v2__time-badge {
+  animation: pulse-glow 2s ease-in-out infinite;
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);
+}
+
+@keyframes pulse-glow {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Card */
+.meal-timing-v2__card {
+  flex: 1;
+  background: var(--accent-bg, #f8fafc);
+  border-radius: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.meal-timing-v2__item--active .meal-timing-v2__card {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  border-color: rgba(34, 197, 94, 0.2);
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.15);
+}
+
+.meal-timing-v2__item--past .meal-timing-v2__card {
+  opacity: 0.6;
+}
+
+.meal-timing-v2__card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.meal-timing-v2__card-icon {
+  font-size: 24px;
+}
+
+.meal-timing-v2__card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.meal-timing-v2__card-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.2px;
+}
+
+.meal-timing-v2__now-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #16a34a;
+  background: rgba(34, 197, 94, 0.15);
+  padding: 3px 8px;
+  border-radius: 20px;
+  animation: now-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes now-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.meal-timing-v2__card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meal-timing-v2__card-focus {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.meal-timing-v2__card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.meal-timing-v2__card-pct {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.meal-timing-v2__pct-value {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.meal-timing-v2__priority-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #d97706;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+/* Training window */
+.meal-timing-v2__training {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  border-radius: 14px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.meal-timing-v2__training-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border-radius: 12px;
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.meal-timing-v2__training-content {
+  flex: 1;
+}
+
+.meal-timing-v2__training-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #5b21b6;
+  margin-bottom: 2px;
+}
+
+.meal-timing-v2__training-time {
+  font-size: 15px;
+  font-weight: 600;
+  color: #7c3aed;
+}
+
+.meal-timing-v2__training-reason {
+  font-size: 12px;
+  color: #7c3aed;
+  opacity: 0.8;
+}
+
+/* Sleep impact */
+.meal-timing-v2__sleep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.meal-timing-v2__sleep--positive {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  color: #15803d;
+}
+
+.meal-timing-v2__sleep--negative {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: #b45309;
+}
+
+.meal-timing-v2__sleep-icon {
+  font-size: 18px;
+}
+
+.meal-timing-v2__sleep-text {
+  flex: 1;
+  font-weight: 500;
+}
+
+.meal-timing-v2__sleep-check {
+  font-size: 16px;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+/* Dark mode */
+.dark .meal-timing-v2 {
+  background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.dark .meal-timing-v2__header {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .meal-timing-v2__header-icon {
+  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+}
+
+.dark .meal-timing-v2__title {
+  color: #f1f5f9;
+}
+
+.dark .meal-timing-v2__subtitle {
+  color: #94a3b8;
+}
+
+.dark .meal-timing-v2__connector {
+  background: linear-gradient(180deg, #334155 0%, #475569 100%);
+}
+
+.dark .meal-timing-v2__card {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .meal-timing-v2__card-name {
+  color: #f1f5f9;
+}
+
+.dark .meal-timing-v2__card-focus {
+  color: #cbd5e1;
+}
+
+.dark .meal-timing-v2__pct-value {
+  color: #f1f5f9;
+}
+
+.dark .meal-timing-v2__item--active .meal-timing-v2__card {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%);
+}
+
+.dark .meal-timing-v2__training {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.15) 100%);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.dark .meal-timing-v2__training-title {
+  color: #c4b5fd;
+}
+
+.dark .meal-timing-v2__training-time,
+.dark .meal-timing-v2__training-reason {
+  color: #a78bfa;
+}
+
+.dark .meal-timing-v2__sleep--positive {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%);
+  border-color: rgba(34, 197, 94, 0.25);
+  color: #86efac;
+}
+
+.dark .meal-timing-v2__sleep--negative {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(234, 179, 8, 0.15) 100%);
+  border-color: rgba(245, 158, 11, 0.25);
+  color: #fcd34d;
+}
+
+/* === LEGACY meal-timing-card (оставляем для совместимости) === */
+.meal-timing-card {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(239, 68, 68, 0.05) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.meal-timing-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.meal-timing-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+}
+
+.meal-timing-card__windows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.meal-timing-card__window {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+}
+
+.dark .meal-timing-card__window {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.meal-timing-card__window-icon {
+  font-size: 20px;
+}
+
+.meal-timing-card__window-content {
+  flex: 1;
+}
+
+.meal-timing-card__window-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+}
+
+.meal-timing-card__window-time {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  margin-top: 2px;
+}
+
+.meal-timing-card__window-badge {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.meal-timing-card__empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-secondary, #6b7280);
+  font-size: 13px;
+}
+
+/* Dark mode для новых компонентов */
+.dark .metabolic-ring {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.dark .metabolic-ring__phase-label {
+  color: var(--text-primary-dark, #f9fafb);
+}
+
+.dark .risk-traffic-light {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.dark .risk-traffic-light__title {
+  color: var(--text-primary-dark, #f9fafb);
+}
+
+.dark .data-completeness-card {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(59, 130, 246, 0.12) 100%);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.dark .data-completeness-card__title {
+  color: var(--text-primary-dark, #f9fafb);
+}
+
+.dark .meal-timing-card {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(239, 68, 68, 0.1) 100%);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.dark .meal-timing-card__title,
+.dark .meal-timing-card__window-name {
+  color: var(--text-primary-dark, #f9fafb);
+}
+
+/* =============================================================================
+   WEEKLY WRAP CARD — Еженедельный отчёт
+   ============================================================================= */
+
+.weekly-wrap-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.weekly-wrap-card {
+  background: #fff;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(40px) scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+.dark .weekly-wrap-card {
+  background: #1f2937;
+}
+
+/* Header */
+.weekly-wrap-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.weekly-wrap-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.weekly-wrap-card__emoji {
+  font-size: 24px;
+}
+
+.weekly-wrap-card__week {
+  font-size: 13px;
+  color: #6b7280;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: #6366f1;
+}
+
+.weekly-wrap-card__close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+  font-size: 20px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.weekly-wrap-card__close:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #6b7280;
+}
+
+/* Tabs */
+.weekly-wrap-card__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.weekly-wrap-card__tab {
+  flex: 1;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.weekly-wrap-card__tab:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.weekly-wrap-card__tab--active {
+  background: #fff;
+  color: #6366f1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Content */
+.weekly-wrap-card__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Main Score */
+.weekly-wrap-card__main-score {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.weekly-wrap-card__score-value {
+  font-size: 72px;
+  font-weight: 800;
+  line-height: 1;
+  background: linear-gradient(135deg, #22c55e, #10b981);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.weekly-wrap-card__score-label {
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 8px;
+}
+
+.weekly-wrap-card__comparison {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 12px;
+  margin-top: 8px;
+}
+
+.weekly-wrap-card__comparison--up {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+
+.weekly-wrap-card__comparison--down {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+/* Stats Grid */
+.weekly-wrap-card__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.weekly-wrap-card__stat {
+  text-align: center;
+  background: rgba(99, 102, 241, 0.08);
+  padding: 16px 8px;
+  border-radius: 16px;
+}
+
+.weekly-wrap-card__stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #6366f1;
+}
+
+.weekly-wrap-card__stat-label {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* Highlights (Best/Worst day) */
+.weekly-wrap-card__highlights {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.weekly-wrap-card__highlight {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.weekly-wrap-card__highlight--best {
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.weekly-wrap-card__highlight--worst {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.weekly-wrap-card__highlight-emoji {
+  font-size: 20px;
+}
+
+.weekly-wrap-card__highlight-day {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.weekly-wrap-card__highlight-score {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.weekly-wrap-card__highlight--best .weekly-wrap-card__highlight-score {
+  color: #16a34a;
+}
+
+.weekly-wrap-card__highlight--worst .weekly-wrap-card__highlight-score {
+  color: #dc2626;
+}
+
+/* Achievements */
+.weekly-wrap-card__achievements {
+  margin-bottom: 16px;
+}
+
+.weekly-wrap-card__achievements-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.weekly-wrap-card__achievements-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.weekly-wrap-card__achievement {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2));
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.weekly-wrap-card__achievement-emoji {
+  font-size: 16px;
+}
+
+.weekly-wrap-card__achievement-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #92400e;
+}
+
+/* Chart Tab */
+.weekly-wrap-card__chart {
+  padding-top: 8px;
+}
+
+.weekly-wrap-card__chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.weekly-wrap-card__chart-bars {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 150px;
+  padding: 0 8px;
+  margin-bottom: 24px;
+}
+
+.weekly-wrap-card__bar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 36px;
+}
+
+.weekly-wrap-card__bar {
+  width: 28px;
+  min-height: 4px;
+  border-radius: 6px 6px 2px 2px;
+  transition: height 0.3s ease-out;
+}
+
+.weekly-wrap-card__bar-label {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+
+.weekly-wrap-card__bar-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 4px;
+}
+
+/* Trends */
+.weekly-wrap-card__trends {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 12px;
+}
+
+.weekly-wrap-card__trend {
+  font-size: 14px;
+  color: #374151;
+}
+
+/* Insights Tab */
+.weekly-wrap-card__insights {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.weekly-wrap-card__insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 12px;
+}
+
+.weekly-wrap-card__insight-emoji {
+  font-size: 20px;
+}
+
+.weekly-wrap-card__insight-text {
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.weekly-wrap-card__no-insights {
+  text-align: center;
+  padding: 24px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Forecast */
+.weekly-wrap-card__forecast {
+  margin-top: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.weekly-wrap-card__forecast-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #7c3aed;
+  margin-bottom: 12px;
+}
+
+.weekly-wrap-card__forecast-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.weekly-wrap-card__forecast-score {
+  font-size: 14px;
+  color: #374151;
+}
+
+.weekly-wrap-card__forecast-score span {
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.weekly-wrap-card__forecast-rec {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+/* Footer */
+.weekly-wrap-card__footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.weekly-wrap-card__share {
+  flex: 1;
+  padding: 14px;
+  border: 2px solid #6366f1;
+  background: transparent;
+  color: #6366f1;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.weekly-wrap-card__share:hover {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.weekly-wrap-card__done {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.weekly-wrap-card__done:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+/* Dark mode */
+.dark .weekly-wrap-card__title,
+.dark .weekly-wrap-card__highlight-day,
+.dark .weekly-wrap-card__chart-title,
+.dark .weekly-wrap-card__trend,
+.dark .weekly-wrap-card__insight-text,
+.dark .weekly-wrap-card__forecast-score,
+.dark .weekly-wrap-card__bar-value,
+.dark .weekly-wrap-card__achievements-title {
+  color: #f9fafb;
+}
+
+.dark .weekly-wrap-card__score-label,
+.dark .weekly-wrap-card__stat-label,
+.dark .weekly-wrap-card__bar-label,
+.dark .weekly-wrap-card__no-insights,
+.dark .weekly-wrap-card__forecast-rec {
+  color: #9ca3af;
+}
+
+.dark .weekly-wrap-card__tab--active {
+  background: #374151;
 }

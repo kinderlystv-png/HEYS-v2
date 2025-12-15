@@ -2571,16 +2571,65 @@
     );
   }
 
-  function HealthRingsGrid({ healthScore, onCategoryClick }) {
+  function HealthRingsGrid({ healthScore, onCategoryClick, compact }) {
     if (!healthScore || !healthScore.breakdown) return null;
     
     const categories = [
       { key: 'nutrition', label: 'Питание', color: '#22c55e', infoKey: 'CATEGORY_NUTRITION' },
       { key: 'timing', label: 'Тайминг', color: '#3b82f6', infoKey: 'CATEGORY_TIMING' },
-      { key: 'activity', label: 'Актив.', color: '#f59e0b', infoKey: 'CATEGORY_ACTIVITY' },
-      { key: 'recovery', label: 'Восстан.', color: '#8b5cf6', infoKey: 'CATEGORY_RECOVERY' }
+      { key: 'activity', label: 'Активность', color: '#f59e0b', infoKey: 'CATEGORY_ACTIVITY' },
+      { key: 'recovery', label: 'Восстановление', color: '#8b5cf6', infoKey: 'CATEGORY_RECOVERY' }
     ];
     
+    // Compact mode: карточки с мини-кольцами
+    if (compact) {
+      return h('div', { className: 'insights-rings-grid' },
+        categories.map(cat => {
+          const score = healthScore.breakdown[cat.key]?.score || 0;
+          const radius = 18;
+          const circumference = 2 * Math.PI * radius;
+          const offset = circumference - (score / 100) * circumference;
+          
+          return h('div', { 
+            key: cat.key,
+            className: `insights-ring-card insights-ring-card--${cat.key}`,
+            onClick: () => onCategoryClick && onCategoryClick(cat.key)
+          },
+            // Mini ring
+            h('div', { className: 'insights-ring-card__ring' },
+              h('svg', { width: 48, height: 48, viewBox: '0 0 48 48' },
+                h('circle', {
+                  cx: 24, cy: 24, r: radius,
+                  fill: 'none',
+                  stroke: 'rgba(0,0,0,0.06)',
+                  strokeWidth: 4
+                }),
+                h('circle', {
+                  cx: 24, cy: 24, r: radius,
+                  fill: 'none',
+                  stroke: cat.color,
+                  strokeWidth: 4,
+                  strokeLinecap: 'round',
+                  strokeDasharray: circumference,
+                  strokeDashoffset: offset,
+                  style: { transition: 'stroke-dashoffset 0.8s ease' }
+                })
+              ),
+              h('span', { className: 'insights-ring-card__value' }, Math.round(score))
+            ),
+            // Info
+            h('div', { className: 'insights-ring-card__info' },
+              h('div', { className: 'insights-ring-card__label' }, cat.label),
+              h('div', { className: 'insights-ring-card__title' }, 
+                score >= 80 ? 'Отлично' : score >= 60 ? 'Хорошо' : score >= 40 ? 'Норма' : 'Улучшить'
+              )
+            )
+          );
+        })
+      );
+    }
+    
+    // Full mode: стандартные кольца
     return h('div', { className: 'insights-rings' },
       categories.map(cat =>
         h(HealthRing, {
@@ -2911,64 +2960,92 @@
     // EmptyState если мало данных
     if (!insights.available) {
       return h('div', { className: 'insights-tab' },
-        h('div', { className: 'insights-tab__header' },
-          h('h2', { className: 'insights-tab__title' }, '🔮 Умная аналитика')
+        h('div', { className: 'insights-tab__hero' },
+          h('div', { className: 'insights-tab__header' },
+            h('h2', { className: 'insights-tab__title' }, '🔮 Умная аналитика')
+          )
         ),
-        h(EmptyState, { 
-          daysAnalyzed: insights.daysAnalyzed || insights.daysWithData || 0,
-          minRequired: insights.minDaysRequired || 3
-        })
+        h('div', { className: 'insights-tab__content' },
+          h(EmptyState, { 
+            daysAnalyzed: insights.daysAnalyzed || insights.daysWithData || 0,
+            minRequired: insights.minDaysRequired || 3
+          })
+        )
       );
     }
     
     return h('div', { className: 'insights-tab' },
-      // Заголовок
-      h('div', { className: 'insights-tab__header' },
-        h('h2', { className: 'insights-tab__title' }, '🔮 Умная аналитика'),
-        h('div', { className: 'insights-tab__subtitle' },
-          activeTab === 'today' 
-            ? 'Анализ за 7 дней' 
-            : 'Глубокий анализ за 30 дней'
+      // === HERO HEADER ===
+      h('div', { className: 'insights-tab__hero' },
+        h('div', { className: 'insights-tab__header' },
+          h('h2', { className: 'insights-tab__title' }, '🔮 Умная аналитика'),
+          h('div', { className: 'insights-tab__subtitle' },
+            activeTab === 'today' 
+              ? 'Анализ за 7 дней' 
+              : 'Глубокий анализ за 30 дней'
+          )
+        ),
+        
+        // Glass Tabs внутри hero
+        h('div', { className: 'insights-tab__tabs' },
+          h('button', {
+            className: 'insights-tab__tab' + (activeTab === 'today' ? ' active' : ''),
+            onClick: () => setActiveTab('today')
+          }, '📅 Сегодня'),
+          h('button', {
+            className: 'insights-tab__tab' + (activeTab === 'week' ? ' active' : ''),
+            onClick: () => setActiveTab('week')
+          }, '📊 Неделя')
         )
       ),
       
-      // Табы Сегодня/Неделя
-      h('div', { className: 'insights-tab__tabs' },
-        h('button', {
-          className: 'insights-tab__tab' + (activeTab === 'today' ? ' active' : ''),
-          onClick: () => setActiveTab('today')
-        }, '📅 Сегодня'),
-        h('button', {
-          className: 'insights-tab__tab' + (activeTab === 'week' ? ' active' : ''),
-          onClick: () => setActiveTab('week')
-        }, '📊 Неделя')
-      ),
-      
-      // === L0: Главное кольцо Health Score ===
-      h('div', { className: 'insights-tab__score' },
-        h(TotalHealthRing, {
-          score: insights.healthScore.total,
-          size: 160,
-          strokeWidth: 14,
-          debugData: insights.healthScore.debug || {
-            mode: insights.healthScore.mode,
-            weights: insights.healthScore.weights,
-            breakdown: insights.healthScore.breakdown
-          }
-        })
-      ),
-      
-      // === L0: 4 кольца категорий ===
-      h('div', { className: 'insights-tab__rings' },
-        h(HealthRingsGrid, {
-          healthScore: insights.healthScore,
-          onCategoryClick: setSelectedCategory,
-          compact: false
-        })
-      ),
-      
-      // === METABOLIC INTELLIGENCE L0: Status Card ===
-      h(MetabolicStatusCard, {
+      // === MAIN CONTENT ===
+      h('div', { className: 'insights-tab__content' },
+        
+        // L0: Health Score Card (floating)
+        h('div', { className: 'insights-tab__score-card' },
+          h('div', { className: 'insights-tab__score' },
+            h(TotalHealthRing, {
+              score: insights.healthScore.total,
+              size: 140,
+              strokeWidth: 12,
+              debugData: insights.healthScore.debug || {
+                mode: insights.healthScore.mode,
+                weights: insights.healthScore.weights,
+                breakdown: insights.healthScore.breakdown
+              }
+            })
+          )
+        ),
+        
+        // L0: 4 кольца категорий (compact grid)
+        h('div', { className: 'insights-tab__rings' },
+          h(HealthRingsGrid, {
+            healthScore: insights.healthScore,
+            onCategoryClick: setSelectedCategory,
+            compact: true
+          })
+        ),
+        
+        // Divider
+        h('div', { className: 'insights-tab__divider' }),
+        
+        // Section: Metabolic Status + Risk (compact row)
+        h(MetabolicQuickStatus, {
+          lsGet,
+          profile,
+          pIndex,
+          selectedDate
+        }),
+        
+        // Data Completeness
+        h(DataCompletenessCard, {
+          lsGet,
+          selectedDate
+        }),
+        
+        // Meal Timing
+        h(MealTimingCard, {
         lsGet,
         profile,
         pIndex,
@@ -3045,6 +3122,8 @@
           }
         })
       )
+      
+      ) // закрытие insights-tab__content
     );
   }
 
@@ -3182,11 +3261,206 @@
   // === METABOLIC INTELLIGENCE UI COMPONENTS ===
   
   /**
-   * MetabolicStatusCard — главная карточка метаболического статуса 0-100
+   * StatusProgressRing — SVG кольцо прогресса 0-100 с count-up анимацией
    */
-  function MetabolicStatusCard({ lsGet, profile, pIndex, selectedDate }) {
-    const [showDetails, setShowDetails] = useState(false);
+  function StatusProgressRing({ score, size = 120, strokeWidth = 10 }) {
+    const [displayScore, setDisplayScore] = useState(0);
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const progress = (displayScore / 100) * circumference;
+    const offset = circumference - progress;
     
+    // Count-up анимация при изменении score
+    useEffect(() => {
+      const duration = 1500; // ms
+      const start = displayScore;
+      const diff = score - start;
+      const startTime = performance.now();
+      
+      const animate = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        // Ease out cubic
+        const eased = 1 - Math.pow(1 - t, 3);
+        const current = Math.round(start + diff * eased);
+        setDisplayScore(current);
+        
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+      
+      requestAnimationFrame(animate);
+    }, [score]);
+    
+    // Градиентный цвет по score (0-100)
+    const getGradientColor = (s) => {
+      if (s >= 85) return { start: '#10b981', end: '#22c55e' }; // emerald → green
+      if (s >= 70) return { start: '#22c55e', end: '#84cc16' }; // green → lime
+      if (s >= 50) return { start: '#eab308', end: '#f59e0b' }; // yellow → amber
+      if (s >= 30) return { start: '#f59e0b', end: '#ef4444' }; // amber → red
+      return { start: '#ef4444', end: '#dc2626' }; // red shades
+    };
+    
+    const colors = getGradientColor(displayScore);
+    const gradientId = 'statusGradient' + Math.random().toString(36).substr(2, 9);
+    
+    return h('svg', {
+      width: size,
+      height: size,
+      className: 'status-progress-ring',
+      viewBox: `0 0 ${size} ${size}`
+    },
+      // Gradient definition
+      h('defs', null,
+        h('linearGradient', { id: gradientId, x1: '0%', y1: '0%', x2: '100%', y2: '100%' },
+          h('stop', { offset: '0%', stopColor: colors.start }),
+          h('stop', { offset: '100%', stopColor: colors.end })
+        )
+      ),
+      // Background circle
+      h('circle', {
+        cx: size / 2,
+        cy: size / 2,
+        r: radius,
+        fill: 'none',
+        stroke: 'var(--border-color, #e2e8f0)',
+        strokeWidth: strokeWidth
+      }),
+      // Progress circle
+      h('circle', {
+        cx: size / 2,
+        cy: size / 2,
+        r: radius,
+        fill: 'none',
+        stroke: `url(#${gradientId})`,
+        strokeWidth: strokeWidth,
+        strokeLinecap: 'round',
+        strokeDasharray: circumference,
+        strokeDashoffset: offset,
+        transform: `rotate(-90 ${size / 2} ${size / 2})`,
+        style: { transition: 'stroke-dashoffset 0.1s ease' }
+      }),
+      // Score text
+      h('text', {
+        x: size / 2,
+        y: size / 2,
+        textAnchor: 'middle',
+        dominantBaseline: 'middle',
+        className: 'status-progress-ring__score',
+        style: { 
+          fontSize: size * 0.28,
+          fontWeight: 700,
+          fill: 'var(--text-primary, #0f172a)'
+        }
+      }, displayScore),
+      // Label
+      h('text', {
+        x: size / 2,
+        y: size / 2 + size * 0.18,
+        textAnchor: 'middle',
+        className: 'status-progress-ring__label',
+        style: {
+          fontSize: size * 0.1,
+          fill: 'var(--text-secondary, #64748b)'
+        }
+      }, 'из 100')
+    );
+  }
+  
+  /**
+   * StatusTrendBadge — тренд ↑/↓ относительно вчера
+   */
+  function StatusTrendBadge({ currentScore, prevScore }) {
+    if (prevScore === null || prevScore === undefined) return null;
+    
+    const diff = currentScore - prevScore;
+    if (diff === 0) return null;
+    
+    const isUp = diff > 0;
+    const absDiff = Math.abs(diff);
+    
+    return h('div', { 
+      className: `status-trend-badge status-trend-badge--${isUp ? 'up' : 'down'}`
+    },
+      h('span', { className: 'status-trend-badge__arrow' }, isUp ? '↑' : '↓'),
+      h('span', { className: 'status-trend-badge__value' }, absDiff),
+      h('span', { className: 'status-trend-badge__label' }, 'vs вчера')
+    );
+  }
+  
+  /**
+   * PillarBreakdownBars — breakdown по столпам (nutrition/timing/activity/recovery)
+   */
+  function PillarBreakdownBars({ pillars }) {
+    if (!pillars || Object.keys(pillars).length === 0) return null;
+    
+    const pillarConfig = {
+      nutrition: { label: 'Питание', icon: '🍽️', color: '#22c55e' },
+      timing: { label: 'Тайминг', icon: '⏰', color: '#3b82f6' },
+      activity: { label: 'Активность', icon: '🏃', color: '#f59e0b' },
+      recovery: { label: 'Восстановление', icon: '😴', color: '#8b5cf6' }
+    };
+    
+    return h('div', { className: 'pillar-breakdown-bars' },
+      Object.entries(pillars).map(([key, value]) => {
+        const config = pillarConfig[key] || { label: key, icon: '📊', color: '#64748b' };
+        const pct = Math.min(100, Math.max(0, value));
+        
+        return h('div', { key, className: 'pillar-breakdown-bars__item' },
+          h('div', { className: 'pillar-breakdown-bars__header' },
+            h('span', { className: 'pillar-breakdown-bars__icon' }, config.icon),
+            h('span', { className: 'pillar-breakdown-bars__label' }, config.label),
+            h('span', { className: 'pillar-breakdown-bars__value' }, `${Math.round(pct)}%`)
+          ),
+          h('div', { className: 'pillar-breakdown-bars__track' },
+            h('div', { 
+              className: 'pillar-breakdown-bars__fill',
+              style: { 
+                width: `${pct}%`,
+                backgroundColor: config.color
+              }
+            })
+          )
+        );
+      })
+    );
+  }
+  
+  /**
+   * ConfidenceBadge — бейдж уверенности (low/medium/high)
+   */
+  function ConfidenceBadge({ confidence, completeness }) {
+    const config = {
+      high: { label: 'Высокая', color: '#22c55e', icon: '✓' },
+      medium: { label: 'Средняя', color: '#eab308', icon: '~' },
+      low: { label: 'Низкая', color: '#ef4444', icon: '?' }
+    };
+    
+    const c = config[confidence] || config.low;
+    
+    return h('div', { 
+      className: 'confidence-badge',
+      style: { borderColor: c.color }
+    },
+      h('span', { 
+        className: 'confidence-badge__icon',
+        style: { backgroundColor: c.color }
+      }, c.icon),
+      h('span', { className: 'confidence-badge__label' }, 
+        `${c.label} уверенность`
+      ),
+      completeness !== undefined && h('span', { className: 'confidence-badge__pct' },
+        ` (${completeness}% данных)`
+      )
+    );
+  }
+  
+  /**
+   * MetabolicQuickStatus — компактная карточка статуса + риска
+   * Показывает: Score 0-100, фазу метаболизма, риск срыва
+   */
+  function MetabolicQuickStatus({ lsGet, profile, pIndex, selectedDate }) {
     const status = useMemo(() => {
       if (!HEYS.Metabolic?.getStatus) return null;
       
@@ -3198,6 +3472,136 @@
       });
     }, [lsGet, profile, pIndex, selectedDate]);
     
+    // Use riskLevel from status (same source as PredictiveDashboard)
+    const risk = useMemo(() => {
+      const riskData = {
+        low: { level: 'low', emoji: '✅', label: 'Низкий', color: '#22c55e' },
+        medium: { level: 'medium', emoji: '⚠️', label: 'Средний', color: '#eab308' },
+        high: { level: 'high', emoji: '🚨', label: 'Высокий', color: '#ef4444' }
+      };
+      
+      // Use status.riskLevel from Metabolic module (единый источник)
+      const level = status?.riskLevel || 'low';
+      return riskData[level] || riskData.low;
+    }, [status]);
+    
+    // Phase data
+    const phase = status?.metabolicPhase || null;
+    
+    // Empty state
+    if (!status?.available) {
+      return h('div', { className: 'metabolic-quick-status metabolic-quick-status--empty' },
+        h('div', { className: 'metabolic-quick-status__card' },
+          h('div', { className: 'metabolic-quick-status__empty-icon' }, '📊'),
+          h('div', { className: 'metabolic-quick-status__empty-text' }, 'Добавь данные')
+        ),
+        h('div', { className: 'metabolic-quick-status__card' },
+          h('div', { className: 'metabolic-quick-status__empty-icon' }, '✅'),
+          h('div', { className: 'metabolic-quick-status__empty-text' }, 'Риск срыва'),
+          h('div', { className: 'metabolic-quick-status__empty-label' }, 'Низкий')
+        )
+      );
+    }
+    
+    // Score color
+    const getScoreColor = (score) => {
+      if (score >= 80) return '#22c55e';
+      if (score >= 60) return '#84cc16';
+      if (score >= 40) return '#eab308';
+      return '#ef4444';
+    };
+    
+    return h('div', { className: 'metabolic-quick-status' },
+      // Card 1: Status Score
+      h('div', { className: 'metabolic-quick-status__card' },
+        h('div', { className: 'metabolic-quick-status__score', style: { color: getScoreColor(status.score) } },
+          status.score
+        ),
+        h('div', { className: 'metabolic-quick-status__score-label' }, 'Метаболизм'),
+        phase && h('div', { className: 'metabolic-quick-status__phase' },
+          h('span', { className: 'metabolic-quick-status__phase-emoji' }, phase.emoji || '⚡'),
+          h('span', { className: 'metabolic-quick-status__phase-text' }, phase.label || phase.phase)
+        ),
+        phase?.timeToLipolysis > 0 && h('div', { className: 'metabolic-quick-status__time' },
+          `→ ${Math.round(phase.timeToLipolysis * 60)} мин`
+        ),
+        phase?.isLipolysis && h('div', { className: 'metabolic-quick-status__lipolysis' }, '🔥 Жиросжигание')
+      ),
+      
+      // Card 2: Risk
+      h('div', { className: `metabolic-quick-status__card metabolic-quick-status__card--${risk.level}` },
+        h('div', { className: 'metabolic-quick-status__risk-indicator' },
+          h('div', { className: 'metabolic-quick-status__light metabolic-quick-status__light--green', 
+            style: { opacity: risk.level === 'low' ? 1 : 0.2 } }),
+          h('div', { className: 'metabolic-quick-status__light metabolic-quick-status__light--yellow', 
+            style: { opacity: risk.level === 'medium' ? 1 : 0.2 } }),
+          h('div', { className: 'metabolic-quick-status__light metabolic-quick-status__light--red', 
+            style: { opacity: risk.level === 'high' ? 1 : 0.2 } })
+        ),
+        h('div', { className: 'metabolic-quick-status__risk-label' },
+          h('span', null, risk.emoji),
+          'Риск срыва'
+        ),
+        h('div', { className: 'metabolic-quick-status__risk-level', style: { color: risk.color } },
+          risk.label
+        )
+      )
+    );
+  }
+
+  /**
+   * MetabolicStatusCard — главная карточка метаболического статуса 0-100
+   * v2.0: с ring animation, trend, breakdown bars, confidence badge
+   */
+  function MetabolicStatusCard({ lsGet, profile, pIndex, selectedDate }) {
+    const [showDetails, setShowDetails] = useState(false);
+    
+    // Получаем текущий статус
+    const status = useMemo(() => {
+      if (!HEYS.Metabolic?.getStatus) return null;
+      
+      return HEYS.Metabolic.getStatus({
+        dateStr: selectedDate || new Date().toISOString().split('T')[0],
+        pIndex: pIndex || window.HEYS?.products?.buildIndex?.(),
+        profile: profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
+        forceRefresh: false
+      });
+    }, [lsGet, profile, pIndex, selectedDate]);
+    
+    // Получаем вчерашний статус для тренда
+    const prevStatus = useMemo(() => {
+      if (!HEYS.Metabolic?.getStatus) return null;
+      
+      const today = selectedDate || new Date().toISOString().split('T')[0];
+      const prevDate = new Date(today);
+      prevDate.setDate(prevDate.getDate() - 1);
+      const prevDateStr = prevDate.toISOString().split('T')[0];
+      
+      try {
+        return HEYS.Metabolic.getStatus({
+          dateStr: prevDateStr,
+          pIndex: pIndex || window.HEYS?.products?.buildIndex?.(),
+          profile: profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
+          forceRefresh: false
+        });
+      } catch {
+        return null;
+      }
+    }, [lsGet, profile, pIndex, selectedDate]);
+    
+    // Вычисляем breakdown по столпам из reasons
+    const pillarScores = useMemo(() => {
+      if (!status?.reasons?.length) return null;
+      
+      const pillars = { nutrition: 100, timing: 100, activity: 100, recovery: 100 };
+      status.reasons.forEach(r => {
+        if (r.pillar && pillars[r.pillar] !== undefined) {
+          pillars[r.pillar] = Math.max(0, pillars[r.pillar] - (r.impact || 10));
+        }
+      });
+      return pillars;
+    }, [status]);
+    
     if (!status || !status.available) {
       return h('div', { className: 'metabolic-status-card metabolic-status-card--empty' },
         h('div', { className: 'metabolic-status-card__icon' }, '📊'),
@@ -3207,16 +3611,6 @@
       );
     }
     
-    // Цвет по статусу
-    const getStatusColor = (score) => {
-      if (score >= 80) return '#22c55e'; // green
-      if (score >= 60) return '#10b981'; // emerald
-      if (score >= 40) return '#eab308'; // yellow
-      return '#ef4444'; // red
-    };
-    
-    const statusColor = getStatusColor(status.score);
-    
     // Эмодзи по risk level
     const riskEmojis = {
       low: '✅',
@@ -3224,42 +3618,45 @@
       high: '🚨'
     };
     
-    return h('div', { className: `metabolic-status-card ${showDetails ? 'metabolic-status-card--expanded' : ''}` },
-      // Заголовок
+    return h('div', { className: `metabolic-status-card metabolic-status-card--v2 ${showDetails ? 'metabolic-status-card--expanded' : ''}` },
+      // Заголовок с ring и trend
       h('div', { 
-        className: 'metabolic-status-card__header',
+        className: 'metabolic-status-card__header metabolic-status-card__header--v2',
         onClick: () => setShowDetails(!showDetails)
       },
-        h('div', { className: 'metabolic-status-card__title' },
-          h('span', { className: 'metabolic-status-card__icon' }, '💪'),
-          h('span', { className: 'metabolic-status-card__label' }, 'Метаболический Статус')
+        h('div', { className: 'metabolic-status-card__ring-container' },
+          h(StatusProgressRing, { score: status.score, size: 100, strokeWidth: 8 }),
+          prevStatus?.available && h(StatusTrendBadge, { 
+            currentScore: status.score, 
+            prevScore: prevStatus.score 
+          })
         ),
-        h('div', { className: 'metabolic-status-card__score-badge', style: { backgroundColor: statusColor } },
-          status.score
+        h('div', { className: 'metabolic-status-card__info' },
+          h('div', { className: 'metabolic-status-card__title-v2' }, 'Метаболический Статус'),
+          // Metabolic Phase
+          status.metabolicPhase && h('div', { className: 'metabolic-status-card__phase' },
+            h('span', { className: 'metabolic-status-card__phase-emoji' }, status.metabolicPhase.emoji),
+            h('span', { className: 'metabolic-status-card__phase-label' }, status.metabolicPhase.label),
+            status.metabolicPhase.timeToLipolysis > 0 && h('span', { className: 'metabolic-status-card__phase-time' },
+              ` → ${Math.round(status.metabolicPhase.timeToLipolysis * 60)} мин`
+            )
+          ),
+          // Risk Level
+          h('div', { className: `metabolic-status-card__risk metabolic-status-card__risk--${status.riskLevel}` },
+            h('span', { className: 'metabolic-status-card__risk-emoji' }, riskEmojis[status.riskLevel]),
+            h('span', { className: 'metabolic-status-card__risk-label' },
+              status.riskLevel === 'low' ? 'Низкий риск' :
+              status.riskLevel === 'medium' ? 'Средний риск' :
+              'Высокий риск'
+            )
+          )
         ),
         h('span', { className: 'metabolic-status-card__chevron' }, showDetails ? '▼' : '▶')
       ),
       
-      // Краткая сводка
-      h('div', { className: 'metabolic-status-card__summary' },
-        // Metabolic Phase
-        status.metabolicPhase && h('div', { className: 'metabolic-status-card__phase' },
-          h('span', { className: 'metabolic-status-card__phase-emoji' }, status.metabolicPhase.emoji),
-          h('span', { className: 'metabolic-status-card__phase-label' }, status.metabolicPhase.label),
-          status.metabolicPhase.timeToLipolysis > 0 && h('span', { className: 'metabolic-status-card__phase-time' },
-            ` → ${Math.round(status.metabolicPhase.timeToLipolysis * 60)} мин до липолиза`
-          )
-        ),
-        
-        // Risk Level
-        h('div', { className: `metabolic-status-card__risk metabolic-status-card__risk--${status.riskLevel}` },
-          h('span', { className: 'metabolic-status-card__risk-emoji' }, riskEmojis[status.riskLevel]),
-          h('span', { className: 'metabolic-status-card__risk-label' },
-            status.riskLevel === 'low' ? 'Низкий риск срыва' :
-            status.riskLevel === 'medium' ? 'Средний риск срыва' :
-            'Высокий риск срыва'
-          )
-        )
+      // Breakdown по столпам (всегда видим)
+      pillarScores && h('div', { className: 'metabolic-status-card__breakdown' },
+        h(PillarBreakdownBars, { pillars: pillarScores })
       ),
       
       // Детали (развернутые)
@@ -3299,17 +3696,12 @@
           )
         ),
         
-        // Confidence
-        h('div', { className: 'metabolic-status-card__confidence' },
-          h('span', { className: 'metabolic-status-card__confidence-label' }, 'Уверенность: '),
-          h('span', { className: 'metabolic-status-card__confidence-value' },
-            status.confidence === 'high' ? 'Высокая' :
-            status.confidence === 'medium' ? 'Средняя' :
-            'Низкая'
-          ),
-          status.debug?.inventory && h('span', { className: 'metabolic-status-card__confidence-pct' },
-            ` (${status.debug.inventory.completeness}% данных)`
-          )
+        // Confidence Badge
+        h('div', { className: 'metabolic-status-card__confidence-section' },
+          h(ConfidenceBadge, { 
+            confidence: status.confidence,
+            completeness: status.debug?.inventory?.completeness 
+          })
         )
       )
     );
@@ -3385,9 +3777,805 @@
   }
   
   /**
-   * PredictiveDashboard — предиктивная панель (crash risk, forecast)
+   * PredictiveDashboard — предиктивная панель с табами (Risk | Forecast | Phenotype)
+   * v2.0: tabs, timeline navigation
    */
-  function PredictiveDashboard({ lsGet, profile, selectedDate }) {
+  function PredictiveDashboard({ lsGet, profile, selectedDate, pIndex }) {
+    const [activeTab, setActiveTab] = useState('risk');
+    const [dateOffset, setDateOffset] = useState(0); // -7..+7 дней
+    const [showForecast, setShowForecast] = useState(false);
+    
+    // Вычисляем дату с offset
+    const viewDate = useMemo(() => {
+      const base = selectedDate ? new Date(selectedDate) : new Date();
+      base.setDate(base.getDate() + dateOffset);
+      return base.toISOString().split('T')[0];
+    }, [selectedDate, dateOffset]);
+    
+    const isToday = dateOffset === 0;
+    const isFuture = dateOffset > 0;
+    const isPast = dateOffset < 0;
+    
+    const prediction = useMemo(() => {
+      if (!HEYS.Metabolic?.calculateCrashRisk24h) return null;
+      
+      const history = HEYS.Metabolic.getDaysHistory ? HEYS.Metabolic.getDaysHistory(30) : [];
+      
+      return HEYS.Metabolic.calculateCrashRisk24h(
+        viewDate,
+        profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
+        history
+      );
+    }, [lsGet, profile, viewDate]);
+    
+    const forecast = useMemo(() => {
+      if (!HEYS.Metabolic?.calculatePerformanceForecast) return null;
+      
+      const history = HEYS.Metabolic.getDaysHistory ? HEYS.Metabolic.getDaysHistory(30) : [];
+      
+      return HEYS.Metabolic.calculatePerformanceForecast(
+        viewDate,
+        profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
+        history
+      );
+    }, [lsGet, profile, viewDate]);
+    
+    const phenotype = useMemo(() => {
+      if (!HEYS.Metabolic?.identifyPhenotype) return null;
+      
+      const history = HEYS.Metabolic.getDaysHistory ? HEYS.Metabolic.getDaysHistory(30) : [];
+      if (history.length < 7) return null;
+      
+      try {
+        return HEYS.Metabolic.identifyPhenotype(
+          profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
+          history
+        );
+      } catch {
+        return null;
+      }
+    }, [lsGet, profile]);
+    
+    const riskColors = {
+      low: '#22c55e',
+      medium: '#eab308',
+      high: '#ef4444'
+    };
+    
+    // Форматирование даты для timeline
+    const formatTimelineDate = (offset) => {
+      const d = new Date(selectedDate || new Date());
+      d.setDate(d.getDate() + offset);
+      const day = d.getDate();
+      const weekday = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][d.getDay()];
+      if (offset === 0) return 'Сегодня';
+      if (offset === 1) return 'Завтра';
+      if (offset === -1) return 'Вчера';
+      return `${weekday} ${day}`;
+    };
+    
+    const tabs = [
+      { id: 'risk', label: '🚨 Риск', badge: prediction?.risk > 30 ? prediction.risk + '%' : null },
+      { id: 'forecast', label: '🔮 Прогноз', badge: null },
+      { id: 'phenotype', label: '🧬 Фенотип', badge: phenotype?.type ? phenotype.typeEmoji : null }
+    ];
+    
+    return h('div', { className: 'predictive-dashboard predictive-dashboard--v2' },
+      // Timeline Navigation
+      h('div', { className: 'predictive-dashboard__timeline' },
+        h('button', { 
+          className: 'predictive-dashboard__timeline-btn',
+          disabled: dateOffset <= -7,
+          onClick: () => setDateOffset(d => Math.max(-7, d - 1))
+        }, '←'),
+        h('div', { className: 'predictive-dashboard__timeline-dates' },
+          [-3, -2, -1, 0, 1, 2, 3].map(offset =>
+            h('button', {
+              key: offset,
+              className: `predictive-dashboard__timeline-date ${dateOffset === offset ? 'predictive-dashboard__timeline-date--active' : ''} ${offset === 0 ? 'predictive-dashboard__timeline-date--today' : ''}`,
+              onClick: () => setDateOffset(offset)
+            }, formatTimelineDate(offset))
+          )
+        ),
+        h('button', { 
+          className: 'predictive-dashboard__timeline-btn',
+          disabled: dateOffset >= 7,
+          onClick: () => setDateOffset(d => Math.min(7, d + 1))
+        }, '→')
+      ),
+      
+      // Tabs
+      h('div', { className: 'predictive-dashboard__tabs' },
+        tabs.map(tab =>
+          h('button', {
+            key: tab.id,
+            className: `predictive-dashboard__tab ${activeTab === tab.id ? 'predictive-dashboard__tab--active' : ''}`,
+            onClick: () => setActiveTab(tab.id)
+          },
+            h('span', { className: 'predictive-dashboard__tab-label' }, tab.label),
+            tab.badge && h('span', { className: 'predictive-dashboard__tab-badge' }, tab.badge)
+          )
+        )
+      ),
+      
+      // Tab Content
+      h('div', { className: 'predictive-dashboard__content' },
+        // RISK TAB
+        activeTab === 'risk' && h('div', { className: 'predictive-dashboard__panel' },
+          prediction ? h(RiskPanel, { prediction, riskColors, isPast, isFuture }) : 
+            h('div', { className: 'predictive-dashboard__empty' }, 'Нет данных для анализа риска')
+        ),
+        
+        // FORECAST TAB
+        activeTab === 'forecast' && h('div', { className: 'predictive-dashboard__panel' },
+          forecast ? h(ForecastPanel, { forecast, isPast }) :
+            h('div', { className: 'predictive-dashboard__empty' }, 'Нет данных для прогноза')
+        ),
+        
+        // PHENOTYPE TAB
+        activeTab === 'phenotype' && h('div', { className: 'predictive-dashboard__panel' },
+          phenotype ? h(PhenotypePanel, { phenotype }) :
+            h('div', { className: 'predictive-dashboard__empty' }, 
+              'Нужно минимум 7 дней данных для определения фенотипа'
+            )
+        )
+      )
+    );
+  }
+  
+  /**
+   * RiskPanel — содержимое таба Risk
+   */
+  function RiskPanel({ prediction, riskColors, isPast, isFuture }) {
+    const riskLevel = prediction.riskLevel || (prediction.risk < 30 ? 'low' : prediction.risk < 60 ? 'medium' : 'high');
+    
+    // Генерируем predictionId для feedback
+    const predictionId = prediction.id || `risk_${prediction.date || Date.now()}`;
+    
+    return h('div', { className: 'risk-panel' },
+      // Risk Meter (gauge)
+      h('div', { className: 'risk-panel__meter' },
+        h(RiskMeter, { risk: prediction.risk, riskLevel })
+      ),
+      
+      // Status with inline feedback
+      h('div', { className: 'risk-panel__status-row' },
+        h('div', { className: 'risk-panel__status' },
+          isPast ? '📊 Анализ прошлого дня' :
+          isFuture ? '🔮 Прогноз на будущее' :
+          prediction.risk >= 30 ? '⚠️ Требует внимания' : '✅ Всё под контролем'
+        ),
+        // Inline feedback для прошлых дней
+        isPast && h(FeedbackPrompt, { predictionId, type: 'risk', compact: true })
+      ),
+      
+      // Primary Trigger
+      prediction.primaryTrigger && h('div', { className: 'risk-panel__trigger' },
+        h('div', { className: 'risk-panel__trigger-label' }, 'Главный триггер:'),
+        h('div', { className: 'risk-panel__trigger-value' }, prediction.primaryTrigger.label)
+      ),
+      
+      // Prevention Strategies
+      prediction.preventionStrategy && prediction.preventionStrategy.length > 0 && h('div', { className: 'risk-panel__prevention' },
+        h('div', { className: 'risk-panel__prevention-title' }, '🛡️ Профилактика'),
+        prediction.preventionStrategy.slice(0, 3).map((strategy, idx) =>
+          h('div', { key: idx, className: 'risk-panel__strategy' },
+            h('span', { className: 'risk-panel__strategy-num' }, idx + 1),
+            h('div', { className: 'risk-panel__strategy-content' },
+              h('div', { className: 'risk-panel__strategy-action' }, strategy.action),
+              h('div', { className: 'risk-panel__strategy-reason' }, strategy.reason)
+            )
+          )
+        )
+      ),
+      
+      // Risk Factors
+      prediction.factors && prediction.factors.length > 0 && h('div', { className: 'risk-panel__factors' },
+        h('div', { className: 'risk-panel__factors-title' }, '📋 Факторы риска'),
+        prediction.factors.slice(0, 5).map((factor, idx) =>
+          h('div', { key: idx, className: 'risk-panel__factor' },
+            h('span', { className: 'risk-panel__factor-label' }, factor.label),
+            h('span', { className: 'risk-panel__factor-weight' }, `+${factor.weight || factor.impact}`)
+          )
+        )
+      ),
+      
+      // Full feedback widget for past days
+      isPast && prediction.risk >= 30 && h(FeedbackWidget, { 
+        predictionType: 'crash_risk',
+        predictionId
+      })
+    );
+  }
+  
+  /**
+   * RiskMeter — визуальный спидометр риска 0-100%
+   */
+  function RiskMeter({ risk, riskLevel }) {
+    const size = 160;
+    const strokeWidth = 12;
+    const radius = (size - strokeWidth) / 2;
+    // Полукруг (180 градусов)
+    const halfCircumference = Math.PI * radius;
+    const progress = (risk / 100) * halfCircumference;
+    const offset = halfCircumference - progress;
+    
+    const colors = {
+      low: '#22c55e',
+      medium: '#eab308',
+      high: '#ef4444'
+    };
+    
+    return h('div', { className: 'risk-meter', style: { width: size, height: size / 2 + 30 } },
+      h('svg', {
+        viewBox: `0 0 ${size} ${size / 2 + 20}`,
+        className: 'risk-meter__svg'
+      },
+        // Background arc
+        h('path', {
+          d: `M ${strokeWidth / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${size / 2}`,
+          fill: 'none',
+          stroke: 'var(--border-color, #e2e8f0)',
+          strokeWidth: strokeWidth,
+          strokeLinecap: 'round'
+        }),
+        // Progress arc
+        h('path', {
+          d: `M ${strokeWidth / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${size / 2}`,
+          fill: 'none',
+          stroke: colors[riskLevel] || colors.medium,
+          strokeWidth: strokeWidth,
+          strokeLinecap: 'round',
+          strokeDasharray: halfCircumference,
+          strokeDashoffset: offset,
+          style: { transition: 'stroke-dashoffset 0.6s ease' }
+        }),
+        // Value text
+        h('text', {
+          x: size / 2,
+          y: size / 2 - 5,
+          textAnchor: 'middle',
+          className: 'risk-meter__value',
+          style: { 
+            fontSize: 36,
+            fontWeight: 700,
+            fill: colors[riskLevel] || 'var(--text-primary)'
+          }
+        }, `${risk}%`),
+        // Label
+        h('text', {
+          x: size / 2,
+          y: size / 2 + 20,
+          textAnchor: 'middle',
+          className: 'risk-meter__label',
+          style: { fontSize: 12, fill: 'var(--text-secondary, #64748b)' }
+        }, 'Риск срыва')
+      )
+    );
+  }
+  
+  /**
+   * ForecastPanel — содержимое таба Forecast
+   * Интегрирован с InsulinWave для показа окон еды
+   */
+  function ForecastPanel({ forecast, isPast }) {
+    // 🆕 Получаем данные инсулиновой волны для более точного прогноза
+    const [insulinWaveData, setInsulinWaveData] = useState(null);
+    
+    useEffect(() => {
+      if (window.HEYS?.InsulinWave?.calculate) {
+        try {
+          // Получаем текущее состояние волны
+          const waveData = window.HEYS.InsulinWave.getLatestWaveData?.() || null;
+          setInsulinWaveData(waveData);
+        } catch (e) {
+          // Игнорируем ошибки
+        }
+      }
+    }, []);
+    
+    // Форматирование времени окончания волны
+    const getWaveEndInfo = () => {
+      if (!insulinWaveData) return null;
+      
+      const { status, remaining, endTime, currentPhase } = insulinWaveData;
+      
+      if (status === 'lipolysis') {
+        return { 
+          status: 'burning', 
+          label: '🔥 Липолиз активен',
+          desc: 'Сейчас идёт активное жиросжигание',
+          color: '#22c55e'
+        };
+      }
+      
+      if (status === 'active' && remaining > 0) {
+        return {
+          status: 'wave',
+          label: `⏳ ${remaining} мин до окончания волны`,
+          desc: `Окончание в ${endTime}${currentPhase ? ` • Фаза: ${currentPhase}` : ''}`,
+          color: '#f59e0b'
+        };
+      }
+      
+      if (status === 'almost') {
+        return {
+          status: 'almost',
+          label: `⚡ ${remaining} мин до липолиза`,
+          desc: 'Скоро начнётся жиросжигание',
+          color: '#3b82f6'
+        };
+      }
+      
+      return null;
+    };
+    
+    const waveEndInfo = getWaveEndInfo();
+    
+    return h('div', { className: 'forecast-panel' },
+      isPast && h('div', { className: 'forecast-panel__note' },
+        '📊 Анализ прошлого дня'
+      ),
+      
+      // 🆕 Insulin Wave Status
+      waveEndInfo && h('div', { 
+        className: 'forecast-panel__wave-status',
+        style: { borderColor: waveEndInfo.color }
+      },
+        h('div', { className: 'forecast-panel__wave-label', style: { color: waveEndInfo.color } }, 
+          waveEndInfo.label
+        ),
+        h('div', { className: 'forecast-panel__wave-desc' }, waveEndInfo.desc)
+      ),
+      
+      // Energy Windows
+      forecast.energyWindows && forecast.energyWindows.length > 0 && h('div', { className: 'forecast-panel__section' },
+        h('div', { className: 'forecast-panel__section-title' }, '⚡ Окна энергии'),
+        h('div', { className: 'forecast-panel__windows' },
+          forecast.energyWindows.map((window, idx) =>
+            h('div', { 
+              key: idx, 
+              className: `forecast-panel__window ${window.optimal ? 'forecast-panel__window--optimal' : ''}`
+            },
+              h('div', { className: 'forecast-panel__window-period' }, window.period),
+              h('div', { className: 'forecast-panel__window-label' }, window.label),
+              window.optimal && h('span', { className: 'forecast-panel__window-badge' }, '⭐ Оптимально'),
+              h('div', { className: 'forecast-panel__window-rec' }, window.recommendation)
+            )
+          )
+        )
+      ),
+      
+      // Training Window
+      forecast.trainingWindow && h('div', { className: 'forecast-panel__section' },
+        h('div', { className: 'forecast-panel__section-title' }, '🏋️ Лучшее время для тренировки'),
+        h('div', { className: 'forecast-panel__training' },
+          h('div', { className: 'forecast-panel__training-time' }, forecast.trainingWindow.time),
+          h('div', { className: 'forecast-panel__training-reason' }, forecast.trainingWindow.reason)
+        )
+      ),
+      
+      // 🆕 Next Meal Recommendation based on insulin wave
+      insulinWaveData && insulinWaveData.status !== 'lipolysis' && h('div', { className: 'forecast-panel__section' },
+        h('div', { className: 'forecast-panel__section-title' }, '🍽️ Следующий приём пищи'),
+        h('div', { className: 'forecast-panel__next-meal' },
+          h('div', { className: 'forecast-panel__next-meal-time' },
+            insulinWaveData.remaining < 30 
+              ? '⚡ Скоро можно есть!'
+              : `Рекомендуется после ${insulinWaveData.endTime}`
+          ),
+          h('div', { className: 'forecast-panel__next-meal-tip' },
+            insulinWaveData.remaining < 60
+              ? 'Подготовь лёгкий перекус с белком'
+              : 'Дождись окончания волны для лучшего усвоения'
+          )
+        )
+      ),
+      
+      // What-if scenarios (placeholder)
+      h('div', { className: 'forecast-panel__scenarios' },
+        h('div', { className: 'forecast-panel__scenarios-title' }, '🎯 Сценарии'),
+        h('div', { className: 'forecast-panel__scenario forecast-panel__scenario--likely' },
+          h('span', { className: 'forecast-panel__scenario-emoji' }, '📊'),
+          h('span', { className: 'forecast-panel__scenario-label' }, 'Вероятный'),
+          h('span', { className: 'forecast-panel__scenario-desc' }, forecast.likelyOutcome || 'Стабильный день')
+        ),
+        h('div', { className: 'forecast-panel__scenario forecast-panel__scenario--optimistic' },
+          h('span', { className: 'forecast-panel__scenario-emoji' }, '🌟'),
+          h('span', { className: 'forecast-panel__scenario-label' }, 'Оптимистичный'),
+          h('span', { className: 'forecast-panel__scenario-desc' }, forecast.optimisticOutcome || 'При соблюдении плана')
+        )
+      )
+    );
+  }
+  
+  /**
+   * PhenotypePanel — содержимое таба Phenotype (расширенное)
+   * Включает radar chart, пороги, рекомендации
+   */
+  function PhenotypePanel({ phenotype }) {
+    const [showRadar, setShowRadar] = useState(true);
+    
+    const phenotypeConfig = {
+      sprinter: { emoji: '🏃', color: '#ef4444', label: 'Спринтер', desc: 'Быстрый метаболизм, высокие пики энергии, короткие волны' },
+      marathoner: { emoji: '🏃‍♂️', color: '#3b82f6', label: 'Марафонец', desc: 'Стабильная энергия, длинные волны, хорошая выносливость' },
+      powerlifter: { emoji: '🏋️', color: '#8b5cf6', label: 'Силовик', desc: 'Высокая мышечная масса, быстрое восстановление' },
+      balanced: { emoji: '⚖️', color: '#22c55e', label: 'Сбалансированный', desc: 'Гармоничный профиль без ярких перекосов' },
+      nightowl: { emoji: '🦉', color: '#6366f1', label: 'Сова', desc: 'Поздний хронотип, высокая активность вечером' },
+      earlybird: { emoji: '🐦', color: '#f59e0b', label: 'Жаворонок', desc: 'Ранний хронотип, пик энергии утром' }
+    };
+    
+    const config = phenotypeConfig[phenotype.type] || { 
+      emoji: '🧬', 
+      color: '#64748b', 
+      label: phenotype.type || 'Определяется',
+      desc: 'Накапливаем данные для определения фенотипа'
+    };
+    
+    // Подготовка данных для radar
+    const radarData = phenotype.traits || {
+      stability: 70,
+      recovery: 60,
+      insulinSensitivity: 80,
+      consistency: 65,
+      chronotype: 50
+    };
+    
+    return h('div', { className: 'phenotype-panel phenotype-panel--full' },
+      // Type card with emoji
+      h('div', { className: 'phenotype-panel__card', style: { borderColor: config.color } },
+        h('div', { className: 'phenotype-panel__emoji' }, config.emoji),
+        h('div', { className: 'phenotype-panel__type' }, config.label),
+        h('div', { className: 'phenotype-panel__type-desc' }, config.desc),
+        phenotype.confidence && h('div', { className: 'phenotype-panel__confidence' }, 
+          h('div', { className: 'phenotype-panel__confidence-bar' },
+            h('div', { 
+              className: 'phenotype-panel__confidence-fill',
+              style: { width: `${phenotype.confidence}%`, background: config.color }
+            })
+          ),
+          h('span', null, `Уверенность: ${phenotype.confidence}%`)
+        )
+      ),
+      
+      // Radar Chart
+      showRadar && h('div', { className: 'phenotype-panel__radar-section' },
+        h('div', { className: 'phenotype-panel__section-title' }, '📊 Профиль метаболизма'),
+        h(PhenotypeRadar, { data: radarData, color: config.color })
+      ),
+      
+      // Thresholds (персональные пороги)
+      phenotype.thresholds && h('div', { className: 'phenotype-panel__thresholds' },
+        h('div', { className: 'phenotype-panel__section-title' }, '🎯 Твои пороги'),
+        h('div', { className: 'phenotype-panel__threshold-grid' },
+          phenotype.thresholds.optimalKcalRange && h('div', { className: 'phenotype-panel__threshold' },
+            h('span', { className: 'phenotype-panel__threshold-label' }, 'Оптимальные ккал'),
+            h('span', { className: 'phenotype-panel__threshold-value' }, 
+              `${phenotype.thresholds.optimalKcalRange[0]}–${phenotype.thresholds.optimalKcalRange[1]}`
+            )
+          ),
+          phenotype.thresholds.waveHours && h('div', { className: 'phenotype-panel__threshold' },
+            h('span', { className: 'phenotype-panel__threshold-label' }, 'Инсулиновая волна'),
+            h('span', { className: 'phenotype-panel__threshold-value' }, `${phenotype.thresholds.waveHours}ч`)
+          ),
+          phenotype.thresholds.mealGap && h('div', { className: 'phenotype-panel__threshold' },
+            h('span', { className: 'phenotype-panel__threshold-label' }, 'Перерыв между едой'),
+            h('span', { className: 'phenotype-panel__threshold-value' }, `${phenotype.thresholds.mealGap}ч`)
+          ),
+          phenotype.thresholds.crashRiskThreshold && h('div', { className: 'phenotype-panel__threshold' },
+            h('span', { className: 'phenotype-panel__threshold-label' }, 'Порог риска срыва'),
+            h('span', { className: 'phenotype-panel__threshold-value' }, `${phenotype.thresholds.crashRiskThreshold}%`)
+          )
+        )
+      ),
+      
+      // Strengths
+      phenotype.strengths && phenotype.strengths.length > 0 && h('div', { className: 'phenotype-panel__section' },
+        h('div', { className: 'phenotype-panel__section-title' }, '💪 Сильные стороны'),
+        h('div', { className: 'phenotype-panel__list' },
+          phenotype.strengths.map((s, idx) =>
+            h('div', { key: idx, className: 'phenotype-panel__item phenotype-panel__item--strength' },
+              '✓ ' + s
+            )
+          )
+        )
+      ),
+      
+      // Weaknesses
+      phenotype.weaknesses && phenotype.weaknesses.length > 0 && h('div', { className: 'phenotype-panel__section' },
+        h('div', { className: 'phenotype-panel__section-title' }, '⚠️ Зоны роста'),
+        h('div', { className: 'phenotype-panel__list' },
+          phenotype.weaknesses.map((w, idx) =>
+            h('div', { key: idx, className: 'phenotype-panel__item phenotype-panel__item--weakness' },
+              '• ' + w
+            )
+          )
+        )
+      ),
+      
+      // Recommendations
+      phenotype.recommendations && phenotype.recommendations.length > 0 && h('div', { className: 'phenotype-panel__section' },
+        h('div', { className: 'phenotype-panel__section-title' }, '💡 Рекомендации'),
+        h('div', { className: 'phenotype-panel__recommendations' },
+          phenotype.recommendations.slice(0, 3).map((rec, idx) =>
+            h('div', { key: idx, className: 'phenotype-panel__recommendation' },
+              h('span', { className: 'phenotype-panel__rec-num' }, idx + 1),
+              h('span', { className: 'phenotype-panel__rec-text' }, rec)
+            )
+          )
+        )
+      ),
+      
+      // Data collection progress
+      phenotype.dataProgress && phenotype.dataProgress < 100 && h('div', { className: 'phenotype-panel__progress' },
+        h('div', { className: 'phenotype-panel__progress-label' },
+          `📊 Данных: ${phenotype.dataProgress}% (нужно ${Math.ceil((100 - phenotype.dataProgress) / 3.33)} дней)`
+        ),
+        h('div', { className: 'phenotype-panel__progress-bar' },
+          h('div', { 
+            className: 'phenotype-panel__progress-fill',
+            style: { width: `${phenotype.dataProgress}%` }
+          })
+        )
+      )
+    );
+  }
+  
+  /**
+   * PhenotypeRadar — SVG radar chart для визуализации профиля
+   */
+  function PhenotypeRadar({ data, color = '#3b82f6', size = 200 }) {
+    const center = size / 2;
+    const radius = size / 2 - 30;
+    
+    const traits = [
+      { key: 'stability', label: 'Стабильность' },
+      { key: 'recovery', label: 'Восстановление' },
+      { key: 'insulinSensitivity', label: 'Инсулин. чувств.' },
+      { key: 'consistency', label: 'Постоянство' },
+      { key: 'chronotype', label: 'Хронотип' }
+    ];
+    
+    const angleStep = (2 * Math.PI) / traits.length;
+    
+    // Вычисление точек для полигона
+    const points = traits.map((trait, i) => {
+      const value = (data[trait.key] || 50) / 100;
+      const angle = -Math.PI / 2 + i * angleStep;
+      const x = center + Math.cos(angle) * radius * value;
+      const y = center + Math.sin(angle) * radius * value;
+      return { x, y, value: data[trait.key] || 50, label: trait.label };
+    });
+    
+    const polygonPoints = points.map(p => `${p.x},${p.y}`).join(' ');
+    
+    // Точки для осей
+    const axisPoints = traits.map((_, i) => {
+      const angle = -Math.PI / 2 + i * angleStep;
+      return {
+        x: center + Math.cos(angle) * radius,
+        y: center + Math.sin(angle) * radius,
+        labelX: center + Math.cos(angle) * (radius + 18),
+        labelY: center + Math.sin(angle) * (radius + 18)
+      };
+    });
+    
+    return h('div', { className: 'phenotype-radar', style: { width: size, height: size } },
+      h('svg', { viewBox: `0 0 ${size} ${size}`, className: 'phenotype-radar__svg' },
+        // Background circles
+        [0.25, 0.5, 0.75, 1].map(scale =>
+          h('circle', {
+            key: scale,
+            cx: center,
+            cy: center,
+            r: radius * scale,
+            fill: 'none',
+            stroke: 'var(--border-color, #e2e8f0)',
+            strokeWidth: 1,
+            strokeDasharray: scale < 1 ? '4,4' : 'none'
+          })
+        ),
+        
+        // Axes
+        axisPoints.map((axis, i) =>
+          h('line', {
+            key: i,
+            x1: center,
+            y1: center,
+            x2: axis.x,
+            y2: axis.y,
+            stroke: 'var(--border-color, #e2e8f0)',
+            strokeWidth: 1
+          })
+        ),
+        
+        // Data polygon
+        h('polygon', {
+          points: polygonPoints,
+          fill: color,
+          fillOpacity: 0.2,
+          stroke: color,
+          strokeWidth: 2
+        }),
+        
+        // Data points
+        points.map((point, i) =>
+          h('circle', {
+            key: i,
+            cx: point.x,
+            cy: point.y,
+            r: 5,
+            fill: color,
+            stroke: '#fff',
+            strokeWidth: 2
+          })
+        ),
+        
+        // Axis labels
+        axisPoints.map((axis, i) =>
+          h('text', {
+            key: i,
+            x: axis.labelX,
+            y: axis.labelY,
+            textAnchor: 'middle',
+            dominantBaseline: 'middle',
+            className: 'phenotype-radar__label',
+            style: { fontSize: 10, fill: 'var(--text-secondary, #64748b)' }
+          }, traits[i].label)
+        )
+      ),
+      
+      // Legend
+      h('div', { className: 'phenotype-radar__legend' },
+        points.map((point, i) =>
+          h('div', { key: i, className: 'phenotype-radar__legend-item' },
+            h('span', { className: 'phenotype-radar__legend-dot', style: { background: color } }),
+            h('span', { className: 'phenotype-radar__legend-label' }, point.label),
+            h('span', { className: 'phenotype-radar__legend-value' }, `${point.value}%`)
+          )
+        )
+      )
+    );
+  }
+  
+  /**
+   * FeedbackWidget — виджет для сбора обратной связи по прогнозам
+   * Интегрируется с HEYS.Metabolic.submitFeedback
+   */
+  function FeedbackWidget({ predictionType, predictionId, onSubmit }) {
+    const [submitted, setSubmitted] = useState(false);
+    const [showDetails, setShowDetails] = useState(false);
+    const [detailText, setDetailText] = useState('');
+    
+    // Статистика точности
+    const stats = useMemo(() => {
+      if (HEYS.Metabolic?.getFeedbackStats) {
+        return HEYS.Metabolic.getFeedbackStats();
+      }
+      return { total: 0, accuracy: 0 };
+    }, []);
+    
+    const handleFeedback = (correct) => {
+      if (HEYS.Metabolic?.submitFeedback) {
+        const details = detailText ? { comment: detailText } : {};
+        HEYS.Metabolic.submitFeedback(predictionId, correct, {
+          ...details,
+          type: predictionType
+        });
+      }
+      setSubmitted(true);
+      if (onSubmit) onSubmit(correct);
+    };
+    
+    if (submitted) {
+      return h('div', { className: 'feedback-widget feedback-widget--submitted' },
+        h('span', { className: 'feedback-widget__thanks' }, '✅ Спасибо за отзыв!'),
+        stats.total > 5 && h('span', { className: 'feedback-widget__accuracy' },
+          `Точность прогнозов: ${stats.accuracy}%`
+        )
+      );
+    }
+    
+    return h('div', { className: 'feedback-widget' },
+      h('div', { className: 'feedback-widget__question' },
+        '🎯 Прогноз оказался точным?'
+      ),
+      
+      h('div', { className: 'feedback-widget__buttons' },
+        h('button', {
+          className: 'feedback-widget__btn feedback-widget__btn--yes',
+          onClick: () => handleFeedback(true)
+        }, '👍 Да'),
+        h('button', {
+          className: 'feedback-widget__btn feedback-widget__btn--no',
+          onClick: () => setShowDetails(true)
+        }, '👎 Нет'),
+        h('button', {
+          className: 'feedback-widget__btn feedback-widget__btn--skip',
+          onClick: () => setSubmitted(true)
+        }, 'Пропустить')
+      ),
+      
+      showDetails && h('div', { className: 'feedback-widget__details' },
+        h('textarea', {
+          className: 'feedback-widget__textarea',
+          placeholder: 'Что пошло не так? (опционально)',
+          value: detailText,
+          onChange: (e) => setDetailText(e.target.value),
+          rows: 2
+        }),
+        h('button', {
+          className: 'feedback-widget__submit',
+          onClick: () => handleFeedback(false)
+        }, 'Отправить')
+      ),
+      
+      stats.total > 0 && h('div', { className: 'feedback-widget__stats' },
+        `📊 Отзывов: ${stats.total} • Точность: ${stats.accuracy}%`
+      )
+    );
+  }
+  
+  /**
+   * FeedbackPrompt — inline prompt для конкретного прогноза
+   * Меньше чем FeedbackWidget, встраивается в карточки
+   */
+  function FeedbackPrompt({ predictionId, type, compact = false }) {
+    const [voted, setVoted] = useState(false);
+    
+    const handleVote = (correct) => {
+      if (HEYS.Metabolic?.submitFeedback) {
+        HEYS.Metabolic.submitFeedback(predictionId, correct, { type });
+      }
+      setVoted(true);
+    };
+    
+    if (voted) {
+      return h('span', { className: 'feedback-prompt feedback-prompt--voted' }, '✓');
+    }
+    
+    return h('div', { className: `feedback-prompt ${compact ? 'feedback-prompt--compact' : ''}` },
+      h('button', {
+        className: 'feedback-prompt__btn feedback-prompt__btn--up',
+        onClick: () => handleVote(true),
+        title: 'Прогноз точный'
+      }, '👍'),
+      h('button', {
+        className: 'feedback-prompt__btn feedback-prompt__btn--down',
+        onClick: () => handleVote(false),
+        title: 'Прогноз неточный'
+      }, '👎')
+    );
+  }
+  
+  /**
+   * AccuracyBadge — бейдж с точностью системы
+   */
+  function AccuracyBadge() {
+    const stats = useMemo(() => {
+      if (HEYS.Metabolic?.getFeedbackStats) {
+        return HEYS.Metabolic.getFeedbackStats();
+      }
+      return { total: 0, accuracy: 0 };
+    }, []);
+    
+    if (stats.total < 5) return null;
+    
+    const color = stats.accuracy >= 80 ? '#22c55e' : stats.accuracy >= 60 ? '#eab308' : '#ef4444';
+    
+    return h('div', { 
+      className: 'accuracy-badge',
+      style: { borderColor: color },
+      title: `На основе ${stats.total} отзывов`
+    },
+      h('span', { className: 'accuracy-badge__icon' }, '🎯'),
+      h('span', { className: 'accuracy-badge__value', style: { color } }, `${stats.accuracy}%`),
+      h('span', { className: 'accuracy-badge__label' }, 'точность')
+    );
+  }
+  
+  // Legacy PredictiveDashboard wrapper for backward compatibility
+  function PredictiveDashboardLegacy({ lsGet, profile, selectedDate }) {
     const [showForecast, setShowForecast] = useState(false);
     
     const prediction = useMemo(() => {
@@ -3492,6 +4680,632 @@
     );
   }
   
+  // === METABOLIC STATE RING — кольцевая визуализация фаз ===
+  
+  /**
+   * MetabolicStateRing — визуализация текущей метаболической фазы
+   * Показывает: анаболическая → переходная → катаболическая (липолиз)
+   */
+  function MetabolicStateRing({ phase, size = 120, strokeWidth = 10, showLabel = true }) {
+    if (!phase || !phase.phase) {
+      return h('div', { className: 'metabolic-ring metabolic-ring--empty' },
+        h('div', { className: 'metabolic-ring__placeholder' }, '❓')
+      );
+    }
+    
+    const phaseColors = {
+      anabolic: { primary: '#3b82f6', secondary: '#93c5fd', gradient: 'linear-gradient(135deg, #3b82f6, #60a5fa)' },
+      transitional: { primary: '#f59e0b', secondary: '#fcd34d', gradient: 'linear-gradient(135deg, #f59e0b, #fbbf24)' },
+      catabolic: { primary: '#22c55e', secondary: '#86efac', gradient: 'linear-gradient(135deg, #22c55e, #4ade80)' },
+      unknown: { primary: '#6b7280', secondary: '#d1d5db', gradient: 'linear-gradient(135deg, #6b7280, #9ca3af)' }
+    };
+    
+    const colors = phaseColors[phase.phase] || phaseColors.unknown;
+    
+    // Прогресс внутри фазы (для анимации)
+    let progress = 0;
+    if (phase.phase === 'anabolic') {
+      progress = Math.min(100, (phase.hoursInPhase / 3) * 100);
+    } else if (phase.phase === 'transitional') {
+      progress = Math.min(100, ((phase.hoursInPhase - 3) / 2) * 100);
+    } else if (phase.phase === 'catabolic') {
+      progress = Math.min(100, ((phase.hoursInPhase - 5) / 3) * 100);
+    }
+    
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const strokeDashoffset = circumference - (progress / 100) * circumference;
+    
+    return h('div', { className: `metabolic-ring metabolic-ring--${phase.phase}`, style: { width: size, height: size } },
+      h('svg', { 
+        className: 'metabolic-ring__svg',
+        viewBox: `0 0 ${size} ${size}`,
+        style: { transform: 'rotate(-90deg)' }
+      },
+        // Background circle
+        h('circle', {
+          className: 'metabolic-ring__bg',
+          cx: size / 2,
+          cy: size / 2,
+          r: radius,
+          stroke: colors.secondary,
+          strokeWidth: strokeWidth,
+          fill: 'transparent',
+          opacity: 0.3
+        }),
+        // Progress circle
+        h('circle', {
+          className: 'metabolic-ring__progress',
+          cx: size / 2,
+          cy: size / 2,
+          r: radius,
+          stroke: colors.primary,
+          strokeWidth: strokeWidth,
+          fill: 'transparent',
+          strokeLinecap: 'round',
+          strokeDasharray: circumference,
+          strokeDashoffset: strokeDashoffset,
+          style: { transition: 'stroke-dashoffset 0.5s ease-in-out' }
+        })
+      ),
+      // Center content
+      h('div', { className: 'metabolic-ring__center' },
+        h('div', { className: 'metabolic-ring__emoji' }, phase.emoji),
+        showLabel && h('div', { className: 'metabolic-ring__label' }, phase.label),
+        phase.timeToLipolysis > 0 && h('div', { className: 'metabolic-ring__time' },
+          `${Math.round(phase.timeToLipolysis * 60)} мин`
+        ),
+        phase.isLipolysis && h('div', { className: 'metabolic-ring__lipolysis' }, '🔥 Жиросжигание!')
+      )
+    );
+  }
+  
+  // === TRAFFIC LIGHT — светофор для рисков ===
+  
+  /**
+   * RiskTrafficLight — светофор риска срыва
+   * Low = зелёный, Medium = жёлтый, High = красный
+   */
+  function RiskTrafficLight({ riskLevel, riskValue, factors, compact = false }) {
+    const lights = [
+      { level: 'low', color: '#22c55e', label: 'Низкий', emoji: '✅' },
+      { level: 'medium', color: '#eab308', label: 'Средний', emoji: '⚠️' },
+      { level: 'high', color: '#ef4444', label: 'Высокий', emoji: '🚨' }
+    ];
+    
+    const currentLevel = riskLevel || 'low';
+    const currentLight = lights.find(l => l.level === currentLevel) || lights[0];
+    
+    if (compact) {
+      return h('div', { className: `risk-traffic-light risk-traffic-light--compact risk-traffic-light--${currentLevel}` },
+        h('div', { className: 'risk-traffic-light__indicator', style: { backgroundColor: currentLight.color } },
+          currentLight.emoji
+        ),
+        h('span', { className: 'risk-traffic-light__label' }, currentLight.label),
+        riskValue !== undefined && h('span', { className: 'risk-traffic-light__value' }, `${riskValue}%`)
+      );
+    }
+    
+    return h('div', { className: `risk-traffic-light risk-traffic-light--${currentLevel}` },
+      // Светофор
+      h('div', { className: 'risk-traffic-light__housing' },
+        lights.map(light => 
+          h('div', { 
+            key: light.level,
+            className: `risk-traffic-light__light risk-traffic-light__light--${light.level}`,
+            style: { 
+              backgroundColor: light.level === currentLevel ? light.color : '#374151',
+              boxShadow: light.level === currentLevel ? `0 0 20px ${light.color}` : 'none',
+              opacity: light.level === currentLevel ? 1 : 0.3
+            }
+          })
+        )
+      ),
+      // Детали
+      h('div', { className: 'risk-traffic-light__details' },
+        h('div', { className: 'risk-traffic-light__header' },
+          h('span', { className: 'risk-traffic-light__emoji' }, currentLight.emoji),
+          h('span', { className: 'risk-traffic-light__title' }, 'Риск срыва'),
+          h('span', { className: 'risk-traffic-light__level', style: { color: currentLight.color } }, 
+            currentLight.label
+          ),
+          riskValue !== undefined && h('span', { className: 'risk-traffic-light__percent' }, `${riskValue}%`)
+        ),
+        // Факторы (если есть)
+        factors && factors.length > 0 && h('div', { className: 'risk-traffic-light__factors' },
+          factors.slice(0, 3).map((factor, idx) =>
+            h('div', { key: idx, className: 'risk-traffic-light__factor' },
+              h('span', { className: 'risk-traffic-light__factor-label' }, factor.label),
+              h('span', { className: 'risk-traffic-light__factor-impact' }, `+${factor.impact}`)
+            )
+          )
+        ),
+        // Совет по снижению
+        currentLevel !== 'low' && h('div', { className: 'risk-traffic-light__tip' },
+          h('span', { className: 'risk-traffic-light__tip-icon' }, '💡'),
+          h('span', { className: 'risk-traffic-light__tip-text' },
+            currentLevel === 'high' 
+              ? 'Сделай refeed день или высыпись'
+              : 'Добавь прогулку или лёгкий перекус'
+          )
+        )
+      )
+    );
+  }
+  
+  // === DATA COMPLETENESS UI ===
+  
+  /**
+   * DataCompletenessCard — карточка полноты данных
+   * Показывает прогресс заполнения и что разблокируется
+   */
+  function DataCompletenessCard({ lsGet, profile, daysRequired = 30 }) {
+    const completeness = useMemo(() => {
+      if (!HEYS.Metabolic?.getDaysHistory) return null;
+      
+      const history = HEYS.Metabolic.getDaysHistory(daysRequired);
+      const daysWithData = history.length;
+      const percentage = Math.round((daysWithData / daysRequired) * 100);
+      const daysRemaining = Math.max(0, daysRequired - daysWithData);
+      
+      // Проверяем полноту последнего дня (сегодня)
+      const today = new Date().toISOString().split('T')[0];
+      const inventory = HEYS.Metabolic.inventoryData ? HEYS.Metabolic.inventoryData(today) : null;
+      const todayCompleteness = inventory ? HEYS.Metabolic.calculateDataCompleteness(inventory) : 0;
+      
+      // Определяем разблокированные фичи
+      const features = [
+        { name: 'Базовый статус', required: 1, emoji: '📊', unlocked: daysWithData >= 1 },
+        { name: 'Риск срыва', required: 3, emoji: '⚠️', unlocked: daysWithData >= 3 },
+        { name: 'Паттерны', required: 7, emoji: '🔍', unlocked: daysWithData >= 7 },
+        { name: 'Персональные пороги', required: 14, emoji: '🎯', unlocked: daysWithData >= 14 },
+        { name: 'Метаболический фенотип', required: 30, emoji: '🧬', unlocked: daysWithData >= 30 }
+      ];
+      
+      const nextFeature = features.find(f => !f.unlocked);
+      
+      return {
+        daysWithData,
+        daysRequired,
+        percentage,
+        daysRemaining,
+        todayCompleteness,
+        features,
+        nextFeature
+      };
+    }, [lsGet, daysRequired]);
+    
+    if (!completeness) {
+      return null;
+    }
+    
+    return h('div', { className: 'data-completeness-card' },
+      h('div', { className: 'data-completeness-card__header' },
+        h('span', { className: 'data-completeness-card__icon' }, '📊'),
+        h('span', { className: 'data-completeness-card__title' }, 'Данные'),
+        h('span', { className: 'data-completeness-card__count' },
+          `${completeness.daysWithData}/${completeness.daysRequired} дней`
+        )
+      ),
+      
+      // Прогресс-бар
+      h('div', { className: 'data-completeness-card__progress' },
+        h('div', { className: 'data-completeness-card__progress-bar' },
+          h('div', { 
+            className: 'data-completeness-card__progress-fill',
+            style: { width: `${completeness.percentage}%` }
+          })
+        ),
+        h('span', { className: 'data-completeness-card__progress-text' }, `${completeness.percentage}%`)
+      ),
+      
+      // Сегодняшняя полнота
+      h('div', { className: 'data-completeness-card__today' },
+        h('span', { className: 'data-completeness-card__today-label' }, 'Сегодня: '),
+        h('span', { 
+          className: 'data-completeness-card__today-value',
+          style: { color: completeness.todayCompleteness >= 80 ? '#22c55e' : completeness.todayCompleteness >= 50 ? '#eab308' : '#ef4444' }
+        }, `${completeness.todayCompleteness}% заполнено`)
+      ),
+      
+      // Следующая разблокировка
+      completeness.nextFeature && h('div', { className: 'data-completeness-card__next' },
+        h('span', { className: 'data-completeness-card__next-emoji' }, completeness.nextFeature.emoji),
+        h('span', { className: 'data-completeness-card__next-text' },
+          `${completeness.nextFeature.name} через ${completeness.nextFeature.required - completeness.daysWithData} дн.`
+        )
+      ),
+      
+      // Разблокированные фичи (иконки)
+      h('div', { className: 'data-completeness-card__features' },
+        completeness.features.map((feature, idx) =>
+          h('div', { 
+            key: idx,
+            className: `data-completeness-card__feature ${feature.unlocked ? 'data-completeness-card__feature--unlocked' : ''}`,
+            title: `${feature.name} (${feature.required} дней)`
+          }, feature.emoji)
+        )
+      )
+    );
+  }
+  
+  // === MEAL TIMING RECOMMENDATIONS (v2 — Premium Design) ===
+  
+  /**
+   * MealTimingCard v2 — WOW дизайн с timeline и иконками
+   */
+  function MealTimingCard({ lsGet, profile, selectedDate }) {
+    const timing = useMemo(() => {
+      if (!HEYS.Metabolic?.calculatePerformanceForecast) return null;
+      
+      const history = HEYS.Metabolic.getDaysHistory ? HEYS.Metabolic.getDaysHistory(7) : [];
+      
+      return HEYS.Metabolic.calculatePerformanceForecast(
+        selectedDate || new Date().toISOString().split('T')[0],
+        profile || window.HEYS?.utils?.lsGet?.('heys_profile', {}),
+        history
+      );
+    }, [lsGet, profile, selectedDate]);
+    
+    if (!timing || !timing.optimalMeals) {
+      return null;
+    }
+    
+    // Конфиг иконок и цветов для типов приёмов
+    const mealConfig = {
+      'Завтрак': { icon: '🌅', gradient: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', lightBg: '#fef3c7' },
+      'Обед': { icon: '☀️', gradient: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)', lightBg: '#d1fae5' },
+      'Ужин': { icon: '🌙', gradient: 'linear-gradient(135deg, #818cf8 0%, #6366f1 100%)', lightBg: '#e0e7ff' },
+      'Перекус': { icon: '🍎', gradient: 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)', lightBg: '#fce7f3' }
+    };
+    
+    const getMealConfig = (name) => {
+      for (const [key, config] of Object.entries(mealConfig)) {
+        if (name.toLowerCase().includes(key.toLowerCase())) return config;
+      }
+      return { icon: '🍽️', gradient: 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)', lightBg: '#f1f5f9' };
+    };
+    
+    // Вычисляем текущее время для индикатора "сейчас"
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    return h('div', { className: 'meal-timing-v2' },
+      // Header с градиентом
+      h('div', { className: 'meal-timing-v2__header' },
+        h('div', { className: 'meal-timing-v2__header-icon' }, '⏰'),
+        h('div', { className: 'meal-timing-v2__header-content' },
+          h('h3', { className: 'meal-timing-v2__title' }, 'Твой идеальный день'),
+          h('p', { className: 'meal-timing-v2__subtitle' }, 'Персональное расписание на основе твоего ритма')
+        )
+      ),
+      
+      // Timeline с приёмами
+      h('div', { className: 'meal-timing-v2__timeline' },
+        timing.optimalMeals.filter(m => m.priority !== 'low').map((meal, idx, arr) => {
+          const config = getMealConfig(meal.name);
+          const [startHour] = meal.time.split('-')[0].split(':').map(Number);
+          const isNow = currentHour >= startHour && currentHour < startHour + 2;
+          const isPast = currentHour > startHour + 2;
+          
+          return h('div', { 
+            key: idx, 
+            className: `meal-timing-v2__item ${isNow ? 'meal-timing-v2__item--active' : ''} ${isPast ? 'meal-timing-v2__item--past' : ''}`
+          },
+            // Timeline connector
+            idx < arr.length - 1 && h('div', { className: 'meal-timing-v2__connector' }),
+            
+            // Time badge
+            h('div', { className: 'meal-timing-v2__time-badge', style: { background: config.gradient } },
+              h('span', { className: 'meal-timing-v2__time' }, meal.time.split('-')[0])
+            ),
+            
+            // Card content
+            h('div', { className: 'meal-timing-v2__card', style: { '--accent-bg': config.lightBg } },
+              h('div', { className: 'meal-timing-v2__card-header' },
+                h('span', { className: 'meal-timing-v2__card-icon' }, config.icon),
+                h('div', { className: 'meal-timing-v2__card-title' },
+                  h('span', { className: 'meal-timing-v2__card-name' }, meal.name),
+                  isNow && h('span', { className: 'meal-timing-v2__now-badge' }, '● СЕЙЧАС')
+                )
+              ),
+              h('div', { className: 'meal-timing-v2__card-body' },
+                h('p', { className: 'meal-timing-v2__card-focus' }, meal.focus),
+                h('div', { className: 'meal-timing-v2__card-meta' },
+                  h('span', { className: 'meal-timing-v2__card-pct' }, 
+                    h('span', { className: 'meal-timing-v2__pct-value' }, `${meal.caloriesPct}%`),
+                    ' дневных ккал'
+                  ),
+                  meal.priority === 'high' && h('span', { className: 'meal-timing-v2__priority-badge' }, '⭐ Важно')
+                )
+              )
+            )
+          );
+        })
+      ),
+      
+      // Тренировочное окно (если есть)
+      timing.trainingWindow && h('div', { className: 'meal-timing-v2__training' },
+        h('div', { className: 'meal-timing-v2__training-icon' }, '💪'),
+        h('div', { className: 'meal-timing-v2__training-content' },
+          h('div', { className: 'meal-timing-v2__training-title' }, 'Пик силы и выносливости'),
+          h('div', { className: 'meal-timing-v2__training-time' }, timing.trainingWindow.time),
+          h('div', { className: 'meal-timing-v2__training-reason' }, timing.trainingWindow.reason)
+        )
+      ),
+      
+      // Sleep impact chip
+      h('div', { className: `meal-timing-v2__sleep meal-timing-v2__sleep--${timing.sleepImpact}` },
+        h('span', { className: 'meal-timing-v2__sleep-icon' }, 
+          timing.sleepImpact === 'positive' ? '😴' : '⚠️'
+        ),
+        h('span', { className: 'meal-timing-v2__sleep-text' },
+          timing.sleepImpact === 'positive' 
+            ? 'Сон в норме — энергия стабильна весь день'
+            : 'Недосып — рекомендуем лёгкий день'
+        ),
+        timing.sleepImpact === 'positive' && h('span', { className: 'meal-timing-v2__sleep-check' }, '✓')
+      )
+    );
+  }
+  
+  /**
+   * WeeklyWrapCard — еженедельный отчёт
+   * Показывается в воскресенье вечером с анимацией
+   */
+  function WeeklyWrapCard({ onClose }) {
+    const [wrap, setWrap] = useState(null);
+    const [activeTab, setActiveTab] = useState('summary');
+    const [showShare, setShowShare] = useState(false);
+    
+    useEffect(() => {
+      if (HEYS.Metabolic?.generateWeeklyWrap) {
+        setWrap(HEYS.Metabolic.generateWeeklyWrap());
+        
+        // 🎮 Gamification: инкремент просмотров
+        if (HEYS.game?.incrementWeeklyWrapViews) {
+          const viewCount = HEYS.game.incrementWeeklyWrapViews();
+          // Проверяем достижение после инкремента
+          HEYS.game.checkMetabolicAchievements?.({ weeklyWrapViewed: viewCount >= 4 });
+        }
+      }
+    }, []);
+    
+    if (!wrap || !wrap.available) {
+      return null;
+    }
+    
+    const { summary, trends, achievements, insights, nextWeekForecast, comparison, dailyData } = wrap;
+    
+    // Закрытие с отметкой
+    const handleClose = () => {
+      if (HEYS.Metabolic?.markWeeklyWrapShown) {
+        HEYS.Metabolic.markWeeklyWrapShown();
+      }
+      onClose?.();
+    };
+    
+    // Цвет score
+    const getScoreColor = (score) => {
+      if (score >= 80) return '#22c55e';
+      if (score >= 60) return '#eab308';
+      return '#ef4444';
+    };
+    
+    // Тренд иконка
+    const getTrendIcon = (direction) => {
+      if (direction === 'up') return '📈';
+      if (direction === 'down') return '📉';
+      return '➡️';
+    };
+    
+    // Share функция
+    const shareResults = async () => {
+      const text = `🏆 HEYS Weekly Wrap #${wrap.weekNumber}\n\n` +
+        `📊 Средний score: ${summary.avgScore}\n` +
+        `🛡️ Дней без риска: ${summary.lowRiskDays}/7\n` +
+        `🔥 Дней в норме: ${summary.streakDays}\n\n` +
+        (achievements.length > 0 ? `🎖️ ${achievements.map(a => a.label).join(', ')}\n\n` : '') +
+        `Отслеживай питание с HEYS!`;
+      
+      if (navigator.share) {
+        try {
+          await navigator.share({ text });
+        } catch (e) {
+          // Пользователь отменил
+        }
+      } else {
+        await navigator.clipboard.writeText(text);
+        setShowShare(true);
+        setTimeout(() => setShowShare(false), 2000);
+      }
+    };
+    
+    return h('div', { className: 'weekly-wrap-overlay' },
+      h('div', { className: 'weekly-wrap-card' },
+        // Header
+        h('div', { className: 'weekly-wrap-card__header' },
+          h('div', { className: 'weekly-wrap-card__title' },
+            h('span', { className: 'weekly-wrap-card__emoji' }, '📊'),
+            'Итоги недели'
+          ),
+          h('div', { className: 'weekly-wrap-card__week' }, `Неделя ${wrap.weekNumber}`),
+          h('button', { 
+            className: 'weekly-wrap-card__close',
+            onClick: handleClose
+          }, '×')
+        ),
+        
+        // Tabs
+        h('div', { className: 'weekly-wrap-card__tabs' },
+          ['summary', 'chart', 'insights'].map(tab =>
+            h('button', {
+              key: tab,
+              className: `weekly-wrap-card__tab ${activeTab === tab ? 'weekly-wrap-card__tab--active' : ''}`,
+              onClick: () => setActiveTab(tab)
+            }, tab === 'summary' ? '📊 Итоги' : tab === 'chart' ? '📈 График' : '💡 Инсайты')
+          )
+        ),
+        
+        // Content
+        h('div', { className: 'weekly-wrap-card__content' },
+          
+          // Tab: Summary
+          activeTab === 'summary' && h(React.Fragment, null,
+            // Main score
+            h('div', { className: 'weekly-wrap-card__main-score' },
+              h('div', { 
+                className: 'weekly-wrap-card__score-value',
+                style: { color: getScoreColor(summary.avgScore) }
+              }, summary.avgScore),
+              h('div', { className: 'weekly-wrap-card__score-label' }, 'Средний score'),
+              comparison && h('div', { 
+                className: `weekly-wrap-card__comparison ${comparison.improved ? 'weekly-wrap-card__comparison--up' : 'weekly-wrap-card__comparison--down'}`
+              },
+                comparison.improved ? '↑' : '↓',
+                ` ${Math.abs(comparison.delta)} vs прошлая неделя`
+              )
+            ),
+            
+            // Stats grid
+            h('div', { className: 'weekly-wrap-card__stats' },
+              h('div', { className: 'weekly-wrap-card__stat' },
+                h('div', { className: 'weekly-wrap-card__stat-value' }, summary.goodDays),
+                h('div', { className: 'weekly-wrap-card__stat-label' }, 'Хороших дней')
+              ),
+              h('div', { className: 'weekly-wrap-card__stat' },
+                h('div', { className: 'weekly-wrap-card__stat-value' }, summary.lowRiskDays),
+                h('div', { className: 'weekly-wrap-card__stat-label' }, 'Дней без риска')
+              ),
+              h('div', { className: 'weekly-wrap-card__stat' },
+                h('div', { className: 'weekly-wrap-card__stat-value' }, summary.streakDays),
+                h('div', { className: 'weekly-wrap-card__stat-label' }, 'В streak')
+              )
+            ),
+            
+            // Best/Worst day
+            h('div', { className: 'weekly-wrap-card__highlights' },
+              h('div', { className: 'weekly-wrap-card__highlight weekly-wrap-card__highlight--best' },
+                h('span', { className: 'weekly-wrap-card__highlight-emoji' }, '🏆'),
+                h('span', { className: 'weekly-wrap-card__highlight-day' }, summary.bestDay.dayName),
+                h('span', { className: 'weekly-wrap-card__highlight-score' }, summary.bestDay.score)
+              ),
+              h('div', { className: 'weekly-wrap-card__highlight weekly-wrap-card__highlight--worst' },
+                h('span', { className: 'weekly-wrap-card__highlight-emoji' }, '😔'),
+                h('span', { className: 'weekly-wrap-card__highlight-day' }, summary.worstDay.dayName),
+                h('span', { className: 'weekly-wrap-card__highlight-score' }, summary.worstDay.score)
+              )
+            ),
+            
+            // Achievements
+            achievements.length > 0 && h('div', { className: 'weekly-wrap-card__achievements' },
+              h('div', { className: 'weekly-wrap-card__achievements-title' }, '🎖️ Достижения'),
+              h('div', { className: 'weekly-wrap-card__achievements-list' },
+                achievements.map(a =>
+                  h('div', { 
+                    key: a.id,
+                    className: 'weekly-wrap-card__achievement'
+                  },
+                    h('span', { className: 'weekly-wrap-card__achievement-emoji' }, a.emoji),
+                    h('span', { className: 'weekly-wrap-card__achievement-label' }, a.label)
+                  )
+                )
+              )
+            )
+          ),
+          
+          // Tab: Chart
+          activeTab === 'chart' && h('div', { className: 'weekly-wrap-card__chart' },
+            h('div', { className: 'weekly-wrap-card__chart-title' }, 'Score по дням'),
+            h('div', { className: 'weekly-wrap-card__chart-bars' },
+              dailyData.map(day =>
+                h('div', { 
+                  key: day.date,
+                  className: 'weekly-wrap-card__bar-container'
+                },
+                  h('div', { 
+                    className: 'weekly-wrap-card__bar',
+                    style: { 
+                      height: `${day.score}%`,
+                      backgroundColor: getScoreColor(day.score)
+                    }
+                  }),
+                  h('div', { className: 'weekly-wrap-card__bar-label' }, day.dayName),
+                  h('div', { className: 'weekly-wrap-card__bar-value' }, day.score)
+                )
+              )
+            ),
+            
+            // Trends
+            h('div', { className: 'weekly-wrap-card__trends' },
+              h('div', { className: 'weekly-wrap-card__trend' },
+                h('span', null, getTrendIcon(trends.score.direction)),
+                ' Score: ',
+                trends.score.direction === 'up' ? 'растёт' : 
+                trends.score.direction === 'down' ? 'падает' : 'стабилен'
+              ),
+              h('div', { className: 'weekly-wrap-card__trend' },
+                h('span', null, getTrendIcon(trends.risk.direction)),
+                ' Риск: ',
+                trends.risk.direction === 'up' ? 'растёт ⚠️' : 
+                trends.risk.direction === 'down' ? 'снижается ✅' : 'стабилен'
+              )
+            )
+          ),
+          
+          // Tab: Insights
+          activeTab === 'insights' && h('div', { className: 'weekly-wrap-card__insights' },
+            insights.length > 0 
+              ? insights.map(insight =>
+                  h('div', { 
+                    key: insight.id,
+                    className: 'weekly-wrap-card__insight'
+                  },
+                    h('span', { className: 'weekly-wrap-card__insight-emoji' }, insight.emoji),
+                    h('span', { className: 'weekly-wrap-card__insight-text' }, insight.text)
+                  )
+                )
+              : h('div', { className: 'weekly-wrap-card__no-insights' },
+                  '✨ На этой неделе всё отлично!'
+                ),
+            
+            // Forecast
+            h('div', { className: 'weekly-wrap-card__forecast' },
+              h('div', { className: 'weekly-wrap-card__forecast-title' }, '🔮 Прогноз на следующую неделю'),
+              h('div', { className: 'weekly-wrap-card__forecast-content' },
+                h('div', { className: 'weekly-wrap-card__forecast-score' },
+                  'Ожидаемый score: ',
+                  h('span', { style: { color: getScoreColor(nextWeekForecast.predictedScore) } },
+                    Math.round(nextWeekForecast.predictedScore)
+                  )
+                ),
+                h('div', { className: 'weekly-wrap-card__forecast-rec' },
+                  '💡 ',
+                  nextWeekForecast.recommendation
+                )
+              )
+            )
+          )
+        ),
+        
+        // Footer
+        h('div', { className: 'weekly-wrap-card__footer' },
+          h('button', {
+            className: 'weekly-wrap-card__share',
+            onClick: shareResults
+          },
+            showShare ? '✓ Скопировано!' : '📤 Поделиться'
+          ),
+          h('button', {
+            className: 'weekly-wrap-card__done',
+            onClick: handleClose
+          }, 'Готово')
+        )
+      )
+    );
+  }
+  
   // Добавляем компоненты в экспорт
   HEYS.PredictiveInsights.components = {
     HealthRing,
@@ -3503,6 +5317,7 @@
     WhatIfSection,
     WeightPrediction,
     WeeklyWrap,
+    WeeklyWrapCard,  // NEW
     EmptyState,
     InsightsCard,
     InsightsTab,
@@ -3517,7 +5332,12 @@
     MetabolicStatusCard,
     ReasonCard,
     ActionCard,
-    PredictiveDashboard
+    PredictiveDashboard,
+    // v2.1: Новые компоненты Metabolic Intelligence
+    MetabolicStateRing,
+    RiskTrafficLight,
+    DataCompletenessCard,
+    MealTimingCard
   };
   
   // Debug в консоли
@@ -3537,6 +5357,43 @@
       const result = HEYS.Metabolic.getStatus();
       console.log('💪 Metabolic Status:', result);
       return result;
+    };
+    
+    window.debugWeeklyWrap = () => {
+      if (!HEYS.Metabolic?.generateWeeklyWrap) {
+        console.error('❌ HEYS.Metabolic.generateWeeklyWrap not loaded');
+        return null;
+      }
+      
+      const result = HEYS.Metabolic.generateWeeklyWrap();
+      console.log('📊 Weekly Wrap:', result);
+      return result;
+    };
+    
+    window.debugABTest = () => {
+      if (!HEYS.Metabolic?.getABStats) {
+        console.error('❌ HEYS.Metabolic.getABStats not loaded');
+        return null;
+      }
+      
+      const stats = HEYS.Metabolic.getABStats();
+      const variant = HEYS.Metabolic.getABVariant();
+      const weights = HEYS.Metabolic.getABWeights();
+      
+      console.group('📊 A/B Test Results');
+      console.log('🎯 Current Variant:', variant.id, '-', variant.name);
+      console.log('⚖️ Weights:', weights);
+      console.log('📈 Stats:', stats);
+      
+      if (Object.keys(stats.variantStats).length > 0) {
+        console.table(stats.variantStats);
+        console.log('🏆 Best Variant (by F1):', stats.bestVariant);
+      } else {
+        console.log('⏳ Not enough data yet');
+      }
+      console.groupEnd();
+      
+      return { variant, weights, stats };
     };
   }
   
