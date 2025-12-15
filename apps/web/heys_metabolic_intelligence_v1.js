@@ -1,4 +1,4 @@
-// heys_metabolic_intelligence_v1.js — Metabolic Intelligence Module v1.0.0
+// heys_metabolic_intelligence_v1.js — Metabolic Intelligence Module v1.0.1
 // META-версия: полная научная аналитика метаболического здоровья
 // Зависимости: HEYS.InsulinWave, HEYS.PredictiveInsights, HEYS.ratioZones, U.lsGet/lsSet
 (function(global) {
@@ -7,9 +7,40 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const U = HEYS.utils || {};
   
+  // === HELPER: localStorage с поддержкой clientId namespace ===
+  // ВАЖНО: Данные хранятся с clientId prefix: heys_${clientId}_dayv2_2025-12-15
+  function getScopedLsGet() {
+    // Если U.lsGet доступен — он уже умеет работать с clientId
+    if (U.lsGet) return U.lsGet;
+    
+    // Fallback с поддержкой clientId
+    return function(key, defaultVal) {
+      try {
+        // Пробуем через HEYS.store.get который учитывает clientId
+        if (window.HEYS?.store?.get) {
+          return window.HEYS.store.get(key, defaultVal);
+        }
+        // Fallback: пробуем с clientId prefix для client-specific ключей
+        const clientId = localStorage.getItem('heys_client_current');
+        const isClientKey = key.includes('dayv2_') || key === 'heys_profile' || 
+                           key === 'heys_products' || key === 'heys_norms';
+        if (clientId && isClientKey) {
+          const scopedKey = `heys_${clientId}_${key.replace('heys_', '')}`;
+          const val = localStorage.getItem(scopedKey);
+          if (val) return JSON.parse(val);
+        }
+        // Last resort: без prefix
+        const v = localStorage.getItem(key);
+        return v ? JSON.parse(v) : defaultVal;
+      } catch (e) {
+        return defaultVal;
+      }
+    };
+  }
+  
   // === КОНСТАНТЫ ===
   const CONFIG = {
-    VERSION: '1.0.0',
+    VERSION: '1.0.1',
     CACHE_TTL_MS: 2 * 60 * 1000, // 2 минуты
     MAX_HISTORY_DAYS: 90,
     MIN_DATA_FOR_PHENOTYPE: 30,
@@ -62,9 +93,7 @@
    * @returns {Object} объект с флагами доступности данных
    */
   function inventoryData(dateStr) {
-    const lsGet = U.lsGet || ((k, d) => {
-      try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-    });
+    const lsGet = getScopedLsGet();
     
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
     const profile = lsGet('heys_profile', {});
@@ -129,9 +158,7 @@
    * @returns {Object} { score, reasons[], details }
    */
   function calculatePlanAdherence(dateStr, pIndex, profile) {
-    const lsGet = U.lsGet || ((k, d) => {
-      try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-    });
+    const lsGet = getScopedLsGet();
     
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
     const optimum = profile?.optimum || 2000;
@@ -259,9 +286,7 @@
    * Факторы: недосып, стресс, дефицит >3 дней, триггеры
    */
   function calculateCrashRisk(dateStr, profile, history) {
-    const lsGet = U.lsGet || ((k, d) => {
-      try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-    });
+    const lsGet = getScopedLsGet();
     
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
     let riskScore = 0;
@@ -381,9 +406,7 @@
    * @returns {Object} { phase, hoursInPhase, nextPhase, timeToLipolysis }
    */
   function calculateMetabolicPhase(dateStr) {
-    const lsGet = U.lsGet || ((k, d) => {
-      try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-    });
+    const lsGet = getScopedLsGet();
     
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
     const profile = lsGet('heys_profile', {});
@@ -616,9 +639,7 @@
    * Получить историю дней с вычисленными макро-процентами
    */
   function getDaysHistory(daysBack) {
-    const lsGet = U.lsGet || ((k, d) => {
-      try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-    });
+    const lsGet = getScopedLsGet();
     
     const days = [];
     const today = new Date();
@@ -663,9 +684,7 @@
    * @returns {Object} полная структура статуса
    */
   function getStatus(options = {}) {
-    const lsGet = U.lsGet || ((k, d) => {
-      try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-    });
+    const lsGet = getScopedLsGet();
     
     const {
       dateStr = new Date().toISOString().split('T')[0],
@@ -911,9 +930,7 @@
    * @returns {Object} { risk, primaryTrigger, preventionStrategy, timeframe }
    */
   function calculateCrashRisk24h(dateStr, profile, history) {
-    const lsGet = U.lsGet || ((k, d) => {
-      try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-    });
+    const lsGet = getScopedLsGet();
     
     const tomorrow = new Date(dateStr);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -1067,9 +1084,7 @@
    * @returns {Object} { energyWindows[], trainingWindow, optimalMeals[] }
    */
   function calculatePerformanceForecast(dateStr, profile, history) {
-    const lsGet = U.lsGet || ((k, d) => {
-      try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-    });
+    const lsGet = getScopedLsGet();
     
     const day = lsGet(`heys_dayv2_${dateStr}`, {});
     
@@ -1503,9 +1518,7 @@
    * Feedback система — сохранение отклика пользователя
    */
   function submitFeedback(predictionId, correct, details = {}) {
-    const lsGet = U.lsGet || ((k, d) => {
-      try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-    });
+    const lsGet = getScopedLsGet();
     const lsSet = U.lsSet || ((k, v) => {
       try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { }
     });
@@ -1538,9 +1551,7 @@
    * Получить статистику по feedback
    */
   function getFeedbackStats() {
-    const lsGet = U.lsGet || ((k, d) => {
-      try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-    });
+    const lsGet = getScopedLsGet();
     
     const feedbackKey = 'heys_metabolic_feedback';
     const feedback = lsGet(feedbackKey, []);
@@ -1565,9 +1576,7 @@
    * @returns {Object} структурированный отчёт
    */
   function generateReport(period = 'week') {
-    const lsGet = U.lsGet || ((k, d) => {
-      try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-    });
+    const lsGet = getScopedLsGet();
     
     const daysBack = period === 'week' ? 7 : 30;
     const history = getDaysHistory(daysBack);
