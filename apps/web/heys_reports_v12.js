@@ -303,7 +303,14 @@
     // const actTotal=r1(train1k+train2k+stepsK+householdK);
     // const tdee=r1(bmr+actTotal);
     const actTotal = r1(train1k + train2k + stepsK + householdK);
-    const dailyExp = r1(bmr + actTotal); // это и есть tdee из фиолетовой таблицы
+    
+    // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF
+    const tefData = HEYS.TEF?.calculateFromDayTot?.(totals) || { total: 0 };
+    const tefKcal = r1(tefData.total);
+    // baseExpenditure — без TEF, для расчёта optimum (норма не зависит от съеденного)
+    const baseExpenditure = r1(bmr + actTotal);
+    // dailyExp — с TEF, для отображения фактических затрат
+    const dailyExp = r1(baseExpenditure + tefKcal);
 
     // Диагностический лог для отладки расхождений между Днём и Отчётностью
     if (window._HEYS_DEBUG_TDEE) {
@@ -318,8 +325,10 @@
       console.log('HEYS_TDEE_DEBUG [REPORTS]   train1k:', train1k, '| train2k:', train2k);
       console.log('HEYS_TDEE_DEBUG [REPORTS]   stepsK:', stepsK, '| householdK:', householdK);
       console.log('HEYS_TDEE_DEBUG [REPORTS]   actTotal:', actTotal);
+      console.log('HEYS_TDEE_DEBUG [REPORTS]   tefKcal:', tefKcal);
       console.log('HEYS_TDEE_DEBUG [REPORTS] Итоговые значения:');
-      console.log('HEYS_TDEE_DEBUG [REPORTS]   dailyExp (Общие затраты):', dailyExp);
+      console.log('HEYS_TDEE_DEBUG [REPORTS]   baseExpenditure (без TEF):', baseExpenditure);
+      console.log('HEYS_TDEE_DEBUG [REPORTS]   dailyExp (с TEF):', dailyExp);
       console.log('HEYS_TDEE_DEBUG [REPORTS]   totals.kcal (съедено):', round1(totals.kcal));
       console.groupEnd();
     }
@@ -340,7 +349,8 @@
     // Убрано избыточное логирование дефицита калорий
     // sleepComment в дневнике хранится как sleepNote (ранее) — поддержим оба поля
     const calculatedSleepHours = sleepHours(dayObj.sleepStart, dayObj.sleepEnd);
-    return { dstr: dateStr, totals, bmr, activitySubtotal: actTotal, activitiesKcal: train1k + train2k, dailyExp, weight: weight,
+    return { dstr: dateStr, totals, bmr, activitySubtotal: actTotal, activitiesKcal: train1k + train2k, 
+      tefKcal, baseExpenditure, dailyExp, weight: weight, // 🆕 v3.9.1: TEF и baseExpenditure
       carbsPct, protPct, fatPct, simplePct, complexPct, giAvg, harmAvg,
       mealsCount, dayTargetDef, // добавляем целевой дефицит дня
       sleepHours: calculatedSleepHours || dayObj.sleepHours || 0, sleepQuality: dayObj.sleepQuality, sleepComment: (dayObj.sleepComment!=null? dayObj.sleepComment : dayObj.sleepNote),

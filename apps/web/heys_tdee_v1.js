@@ -104,6 +104,18 @@
     // Общая активность
     const actTotal = r0(trainingsKcal + stepsK + householdKcal);
     
+    // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF
+    let tefKcal = 0;
+    if (options.dayMacros) {
+      // Если макросы переданы явно
+      tefKcal = HEYS.TEF?.calculateFromMacros?.(options.dayMacros)?.total || 0;
+    } else if (day.meals && Array.isArray(day.meals) && options.pIndex) {
+      // Расчёт из приёмов пищи через модуль
+      const getProduct = (item) => options.pIndex?.byId?.get?.(String(item.product_id || item.id)?.toLowerCase());
+      const tefResult = HEYS.TEF?.calculateFromMeals?.(day.meals, options.pIndex, (item) => getProduct(item));
+      tefKcal = tefResult?.total || 0;
+    }
+
     // NDTE (Next-Day Training Effect) — буст от вчерашней тренировки
     let ndteBoost = 0;
     if (options.includeNDTE !== false && HEYS.InsulinWave?.calculateNDTE && HEYS.InsulinWave?.getPreviousDayTrainings && day.date) {
@@ -122,8 +134,10 @@
       }
     }
     
-    // TDEE = BMR + активность + NDTE буст
-    const tdee = r0(bmr + actTotal + ndteBoost);
+    // baseExpenditure — без TEF, для расчёта optimum (норма не должна "догонять" съеденное)
+    const baseExpenditure = r0(bmr + actTotal + ndteBoost);
+    // TDEE — с TEF, для отображения фактических затрат
+    const tdee = r0(baseExpenditure + tefKcal);
     
     // Целевой дефицит
     const profileTargetDef = +profile.deficitPctTarget || 0;
@@ -133,7 +147,8 @@
     
     // Коррекция на менструальный цикл
     const cycleKcalMultiplier = HEYS.Cycle?.getKcalMultiplier?.(day.cycleDay) || 1;
-    const baseOptimum = r0(tdee * (1 + dayTargetDef / 100));
+    // Optimum рассчитывается от baseExpenditure (без TEF)
+    const baseOptimum = r0(baseExpenditure * (1 + dayTargetDef / 100));
     const optimum = r0(baseOptimum * cycleKcalMultiplier);
     
     return {
@@ -146,7 +161,9 @@
       stepsKcal: stepsK,
       householdKcal,
       ndteBoost,
-      tdee,
+      tefKcal,             // 🆕 v3.9.1: TEF
+      baseExpenditure,     // 🆕 v3.9.1: без TEF (для optimum)
+      tdee,                // с TEF (для UI)
       optimum,
       weight,
       deficitPct: dayTargetDef,

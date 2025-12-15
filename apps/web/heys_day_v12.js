@@ -3617,14 +3617,36 @@
   }
   const ndteBoostKcal = r0(bmr * ndteData.tdeeBoost);
   
-  const tdee=r0(bmr+actTotal+ndteBoostKcal);
+  // 🆕 v3.9.0: TEF (Thermic Effect of Food) — затраты на переваривание
+  // Научное обоснование: Westerterp 2004, Tappy 1996 — белок 20-30%, углеводы 5-10%, жиры 0-3%
+  const dayMacros = (function() {
+    let prot = 0, carbs = 0, fat = 0;
+    (day.meals||[]).forEach(m => {
+      const t = M.mealTotals ? M.mealTotals(m, pIndex) : { prot: 0, carbs: 0, fat: 0 };
+      prot += t.prot || 0;
+      carbs += t.carbs || 0;
+      fat += t.fat || 0;
+    });
+    return { prot, carbs, fat };
+  })();
+  // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF
+  const tefData = HEYS.TEF?.calculateFromMacros?.(dayMacros) || { total: 0 };
+  const tefKcal = tefData.total;
+  
+  // 🔬 v3.9.1: Разделение baseExpenditure (для нормы) и tdee (для UI)
+  // baseExpenditure — стабильная база без TEF, используется для расчёта optimum
+  // tdee — включает TEF, показывается пользователю как фактические затраты
+  const baseExpenditure = r0(bmr + actTotal + ndteBoostKcal);  // БЕЗ TEF — для нормы
+  const tdee = r0(baseExpenditure + tefKcal);                   // С TEF — для UI
+  
   const profileTargetDef=+(lsGet('heys_profile',{}).deficitPctTarget)||0; // отрицательное число для дефицита
   // day.deficitPct может быть '', null, undefined — проверяем все случаи (как в currentDeficit для UI)
   const dayTargetDef = (day.deficitPct !== '' && day.deficitPct != null) ? +day.deficitPct : profileTargetDef;
   
   // Коррекция на менструальный цикл (×1.05-1.10 в менструальную фазу)
   const cycleKcalMultiplier = HEYS.Cycle?.getKcalMultiplier?.(day.cycleDay) || 1;
-  const baseOptimum = r0(tdee*(1+dayTargetDef/100));
+  // Optimum рассчитывается от baseExpenditure (без TEF), чтобы норма не "догоняла" съеденное
+  const baseOptimum = r0(baseExpenditure*(1+dayTargetDef/100));
   const optimum = r0(baseOptimum * cycleKcalMultiplier);
 
   const eatenKcal=(day.meals||[]).reduce((a,m)=>{ const t=(M.mealTotals? M.mealTotals(m,pIndex): {kcal:0}); return a+(t.kcal||0); },0);
@@ -3896,6 +3918,9 @@
     
     // === Popup для клика на столбик баланса ===
     const [balanceDayPopup, setBalanceDayPopup] = useState(null); // { day, x, y }
+    
+    // === Popup для научного объяснения TEF ===
+    const [tefInfoPopup, setTefInfoPopup] = useState(null); // { x, y }
 
     // === Данные замеров для карточки статистики ===
     const measurementFields = useMemo(() => ([
@@ -4150,7 +4175,7 @@
     
     // Закрытие popup при клике вне
     React.useEffect(() => {
-      if (!sparklinePopup && !macroBadgePopup && !metricPopup && !mealQualityPopup && !tdeePopup && !weekNormPopup) return;
+      if (!sparklinePopup && !macroBadgePopup && !metricPopup && !mealQualityPopup && !tdeePopup && !weekNormPopup && !tefInfoPopup) return;
       const handleClickOutside = (e) => {
         if (sparklinePopup && !e.target.closest('.sparkline-popup')) {
           setSparklinePopup(null);
@@ -4176,6 +4201,9 @@
         if (balanceDayPopup && !e.target.closest('.balance-day-popup') && !e.target.closest('.balance-viz-bar') && !e.target.closest('.balance-viz-bar-clickable')) {
           setBalanceDayPopup(null);
         }
+        if (tefInfoPopup && !e.target.closest('.tef-info-popup') && !e.target.closest('.tef-help-icon')) {
+          setTefInfoPopup(null);
+        }
       };
       // Delay to avoid closing immediately on the same click
       const timerId = setTimeout(() => {
@@ -4185,7 +4213,7 @@
         clearTimeout(timerId);
         document.removeEventListener('click', handleClickOutside);
       };
-    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup, weekNormPopup, weekDeficitPopup, balanceDayPopup]);
+    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup, weekNormPopup, weekDeficitPopup, balanceDayPopup, tefInfoPopup]);
     
     // === Утилита для умного позиционирования попапов ===
     // Не даёт выходить за границы экрана
@@ -6594,7 +6622,38 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         React.createElement('td',null,''),
         React.createElement('td',null,'')
       ),
-      // Row 6 — Нужно съесть ккал + Целевой дефицит (редактируемый по дням)
+      // Row 7 — TEF (Термический эффект пищи) v1.0.0
+      tefKcal > 0 && React.createElement('tr',null,
+        React.createElement('td',{className:'label muted small', title: 'Thermic Effect of Food — затраты на переваривание'}, 
+          '🔥 Переваривание (TEF) :',
+          React.createElement('span',{
+            className: 'tef-help-icon',
+            onClick: (e) => {
+              e.stopPropagation();
+              const rect = e.target.getBoundingClientRect();
+              setTefInfoPopup({ x: rect.left + rect.width / 2, y: rect.bottom });
+            },
+            style:{
+              marginLeft:'6px',
+              display:'inline-flex',
+              alignItems:'center',
+              justifyContent:'center',
+              width:'14px',
+              height:'14px',
+              borderRadius:'50%',
+              background:'rgba(100,116,139,0.15)',
+              color:'#64748b',
+              fontSize:'9px',
+              fontWeight:600,
+              cursor:'pointer'
+            }
+          }, '?')
+        ),
+        React.createElement('td',null, React.createElement('input',{className:'readOnly',value:tefKcal,disabled:true})),
+        React.createElement('td',null,''),
+        React.createElement('td',null,'')
+      ),
+      // Row 8 — Нужно съесть ккал + Целевой дефицит (редактируемый по дням)
       React.createElement('tr',{className:'vio-row need-kcal'},
         React.createElement('td',{className:'label small'},
           React.createElement('strong',null,'Нужно съесть ккал :'),
@@ -8835,17 +8894,15 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           });
         });
         
-        // TEF коэффициенты: белок 25%, углеводы 8%, жиры 3%
-        const tefProtein = todayProtein * 4 * 0.25;
-        const tefCarbs = todayCarbs * 4 * 0.08;
-        const tefFat = todayFat * 9 * 0.03;
-        const totalTEF = Math.round(tefProtein + tefCarbs + tefFat);
+        // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF
+        const tefResult = HEYS.TEF?.calculate?.(todayProtein, todayCarbs, todayFat) || { total: 0, breakdown: { protein: 0, carbs: 0, fat: 0 } };
+        const totalTEF = tefResult.total;
         const tefPct = eatenKcal > 0 ? Math.round(totalTEF / eatenKcal * 100) : 0;
         
         const tefAnalysis = {
           total: totalTEF,
           percent: tefPct,
-          breakdown: { protein: Math.round(tefProtein), carbs: Math.round(tefCarbs), fat: Math.round(tefFat) },
+          breakdown: tefResult.breakdown,
           quality: tefPct >= 12 ? 'excellent' : tefPct >= 10 ? 'good' : tefPct >= 8 ? 'normal' : 'low',
           insight: tefPct >= 12 
             ? `🔥 Отличный TEF ${tefPct}%! Много белка = больше калорий на переваривание`
@@ -13789,6 +13846,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 train1k,
                 train2k,
                 train3k,
+                tefKcal,
                 tdee,
                 weight,
                 steps: day.steps || 0,
@@ -14951,8 +15009,16 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 ),
                 React.createElement('span', { className: 'tdee-row-value tdee-positive' }, '+' + d.train3k + ' ккал')
               ),
+              // TEF (Thermic Effect of Food) — затраты на переваривание
+              d.tefKcal > 0 && React.createElement('div', { className: 'tdee-row' },
+                React.createElement('span', { className: 'tdee-row-icon' }, '🔥'),
+                React.createElement('span', { className: 'tdee-row-label' }, 
+                  'Переваривание пищи (TEF)'
+                ),
+                React.createElement('span', { className: 'tdee-row-value tdee-positive' }, '+' + d.tefKcal + ' ккал')
+              ),
               // Если нет активности
-              actTotal === 0 && React.createElement('div', { className: 'tdee-row tdee-row-empty' },
+              actTotal === 0 && !d.tefKcal && React.createElement('div', { className: 'tdee-row tdee-row-empty' },
                 React.createElement('span', { className: 'tdee-row-icon' }, '💤'),
                 React.createElement('span', { className: 'tdee-row-label' }, 'Нет активности за сегодня'),
                 React.createElement('span', { className: 'tdee-row-value' }, '+0 ккал')
@@ -15486,6 +15552,256 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             }, '✕')
           )
         ));
+      })(),
+      
+      // === TEF INFO POPUP — научная информация о TEF ===
+      tefInfoPopup && (() => {
+        const popupW = 320;
+        const popupH = 420;
+        const pos = getSmartPopupPosition(
+          tefInfoPopup.x, 
+          tefInfoPopup.y, 
+          popupW, 
+          popupH,
+          { preferAbove: false, offset: 8 }
+        );
+        const { left, top } = pos;
+        
+        // Получаем данные из модуля TEF
+        const tefInfo = HEYS.TEF?.SCIENCE_INFO || {
+          name: 'Thermic Effect of Food',
+          nameRu: 'Термический эффект пищи',
+          description: 'Энергия на переваривание',
+          formula: 'TEF = Б×4×25% + У×4×7.5% + Ж×9×1.5%',
+          sources: [{ author: 'Westerterp', year: 2004, pmid: '15507147' }],
+          ranges: {
+            protein: { label: '20-30%', used: 0.25 },
+            carbs: { label: '5-10%', used: 0.075 },
+            fat: { label: '0-3%', used: 0.015 }
+          }
+        };
+        
+        return React.createElement(React.Fragment, null,
+          // Overlay
+          React.createElement('div', {
+            className: 'tef-info-popup-overlay',
+            style: {
+              position: 'fixed',
+              inset: 0,
+              zIndex: 10000,
+              background: 'rgba(0, 0, 0, 0.3)'
+            },
+            onClick: () => setTefInfoPopup(null)
+          }),
+          React.createElement('div', {
+            className: 'tef-info-popup sparkline-popup-v2',
+            role: 'dialog',
+            'aria-label': 'Информация о TEF',
+            style: {
+              position: 'fixed',
+              left: left + 'px',
+              top: top + 'px',
+              width: popupW + 'px',
+              zIndex: 10001,
+              background: '#fff',
+              borderRadius: '20px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+              overflow: 'hidden',
+              animation: 'fadeInScale 0.2s ease'
+            },
+            onClick: (e) => e.stopPropagation()
+          },
+            // Цветная полоса сверху (оранжевая для TEF)
+            React.createElement('div', { 
+              style: { 
+                height: '4px', 
+                background: 'linear-gradient(90deg, #f97316 0%, #fb923c 100%)' 
+              }
+            }),
+            // Контент
+            React.createElement('div', { style: { padding: '20px' } },
+              // Заголовок
+              React.createElement('div', { 
+                style: { 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginBottom: '16px'
+                }
+              },
+                React.createElement('span', { style: { fontSize: '28px' } }, '🔥'),
+                React.createElement('div', null,
+                  React.createElement('div', { 
+                    style: { fontSize: '18px', fontWeight: 700, color: '#1e293b' }
+                  }, 'TEF'),
+                  React.createElement('div', { 
+                    style: { fontSize: '13px', color: '#64748b' }
+                  }, tefInfo.nameRu)
+                )
+              ),
+              // Описание
+              React.createElement('div', { 
+                style: { 
+                  fontSize: '14px', 
+                  color: '#475569', 
+                  marginBottom: '16px',
+                  lineHeight: '1.5'
+                }
+              }, tefInfo.description),
+              // Формула
+              React.createElement('div', { 
+                style: { 
+                  background: 'rgba(249, 115, 22, 0.08)',
+                  borderRadius: '12px',
+                  padding: '14px',
+                  marginBottom: '16px'
+                }
+              },
+                React.createElement('div', { 
+                  style: { 
+                    fontSize: '11px', 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.5px',
+                    color: '#f97316',
+                    fontWeight: 600,
+                    marginBottom: '8px'
+                  }
+                }, '📐 Формула'),
+                React.createElement('div', { 
+                  style: { 
+                    fontSize: '13px', 
+                    fontFamily: 'monospace',
+                    color: '#1e293b',
+                    background: 'rgba(0,0,0,0.04)',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    lineHeight: '1.6'
+                  }
+                }, 
+                  React.createElement('div', null, 'TEF = Белок×4×', React.createElement('b', null, '25%')),
+                  React.createElement('div', { style: { paddingLeft: '38px' } }, '+ Углеводы×4×', React.createElement('b', null, '7.5%')),
+                  React.createElement('div', { style: { paddingLeft: '38px' } }, '+ Жиры×9×', React.createElement('b', null, '1.5%'))
+                )
+              ),
+              // Диапазоны TEF по макросам
+              React.createElement('div', { 
+                style: { 
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '10px',
+                  marginBottom: '16px'
+                }
+              },
+                // Белок
+                React.createElement('div', { 
+                  style: { 
+                    textAlign: 'center',
+                    padding: '10px',
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    borderRadius: '10px'
+                  }
+                },
+                  React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } }, 'Белок'),
+                  React.createElement('div', { style: { fontSize: '16px', fontWeight: 700, color: '#ef4444' } }, tefInfo.ranges.protein.label),
+                  React.createElement('div', { style: { fontSize: '10px', color: '#94a3b8' } }, 'используем 25%')
+                ),
+                // Углеводы
+                React.createElement('div', { 
+                  style: { 
+                    textAlign: 'center',
+                    padding: '10px',
+                    background: 'rgba(34, 197, 94, 0.08)',
+                    borderRadius: '10px'
+                  }
+                },
+                  React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } }, 'Углеводы'),
+                  React.createElement('div', { style: { fontSize: '16px', fontWeight: 700, color: '#22c55e' } }, tefInfo.ranges.carbs.label),
+                  React.createElement('div', { style: { fontSize: '10px', color: '#94a3b8' } }, 'используем 7.5%')
+                ),
+                // Жиры
+                React.createElement('div', { 
+                  style: { 
+                    textAlign: 'center',
+                    padding: '10px',
+                    background: 'rgba(234, 179, 8, 0.08)',
+                    borderRadius: '10px'
+                  }
+                },
+                  React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } }, 'Жиры'),
+                  React.createElement('div', { style: { fontSize: '16px', fontWeight: 700, color: '#eab308' } }, tefInfo.ranges.fat.label),
+                  React.createElement('div', { style: { fontSize: '10px', color: '#94a3b8' } }, 'используем 1.5%')
+                )
+              ),
+              // Научные источники
+              React.createElement('div', { 
+                style: { 
+                  borderTop: '1px solid rgba(100, 116, 139, 0.15)',
+                  paddingTop: '14px'
+                }
+              },
+                React.createElement('div', { 
+                  style: { 
+                    fontSize: '11px', 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.5px',
+                    color: '#64748b',
+                    fontWeight: 600,
+                    marginBottom: '8px'
+                  }
+                }, '📚 Научные источники'),
+                tefInfo.sources.map((src, i) => 
+                  React.createElement('div', { 
+                    key: i,
+                    style: { 
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '12px',
+                      color: '#475569',
+                      padding: '6px 0'
+                    }
+                  },
+                    React.createElement('span', null, src.author + ' et al., ' + src.year),
+                    React.createElement('a', { 
+                      href: 'https://pubmed.ncbi.nlm.nih.gov/' + src.pmid,
+                      target: '_blank',
+                      rel: 'noopener noreferrer',
+                      style: { 
+                        fontSize: '11px',
+                        color: '#3b82f6',
+                        textDecoration: 'none'
+                      },
+                      onClick: (e) => e.stopPropagation()
+                    }, 'PMID: ' + src.pmid)
+                  )
+                )
+              ),
+              // Кнопка закрытия
+              React.createElement('button', {
+                style: {
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  width: '28px',
+                  height: '28px',
+                  background: 'rgba(0,0,0,0.05)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                },
+                onClick: (e) => {
+                  e.stopPropagation();
+                  setTefInfoPopup(null);
+                }
+              }, '✕')
+            )
+          )
+        );
       })(),
       
       // === METRIC POPUP (вода, шаги, калории) ===
@@ -16882,6 +17198,37 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 'Тренировка вчера'
               ),
               React.createElement('span', { className: 'formula-value ndte-value' }, '+' + ndteBoostKcal)
+            ),
+            // 🔬 TEF v1.0.0: Затраты на переваривание пищи
+            tefKcal > 0 && React.createElement('div', { className: 'formula-row tef-row' },
+              React.createElement('span', { className: 'formula-label', title: tefData.breakdown ? `Б: ${tefData.breakdown.protein} | У: ${tefData.breakdown.carbs} | Ж: ${tefData.breakdown.fat}` : '' }, 
+                React.createElement('span', { style: { marginRight: '4px' } }, '🔥'),
+                '+ TEF',
+                // Иконка "?" для открытия popup с научной информацией
+                React.createElement('span', { 
+                  className: 'tef-help-icon',
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    const rect = e.target.getBoundingClientRect();
+                    setTefInfoPopup({ x: rect.left + rect.width / 2, y: rect.bottom });
+                  },
+                  style: {
+                    marginLeft: '6px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    background: 'rgba(100, 116, 139, 0.15)',
+                    color: '#64748b',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }
+                }, '?')
+              ),
+              React.createElement('span', { className: 'formula-value tef-value' }, tefKcal)
             ),
             React.createElement('div', { className: 'formula-row formula-subtotal' },
               React.createElement('span', { className: 'formula-label' }, '= Затраты'),
