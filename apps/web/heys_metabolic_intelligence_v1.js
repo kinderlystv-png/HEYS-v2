@@ -5,13 +5,13 @@
   'use strict';
   
   const HEYS = global.HEYS = global.HEYS || {};
-  const U = HEYS.utils || {};
   
   // === HELPER: localStorage с поддержкой clientId namespace ===
   // ВАЖНО: Данные хранятся с clientId prefix: heys_${clientId}_dayv2_2025-12-15
   function getScopedLsGet() {
-    // Если U.lsGet доступен — он уже умеет работать с clientId
-    if (U.lsGet) return U.lsGet;
+    // ВАЖНО: Проверяем HEYS.utils.lsGet ДИНАМИЧЕСКИ, т.к. модуль может загрузиться раньше core
+    const dynamicLsGet = HEYS.utils?.lsGet;
+    if (dynamicLsGet) return dynamicLsGet;
     
     // Fallback с поддержкой clientId
     return function(key, defaultVal) {

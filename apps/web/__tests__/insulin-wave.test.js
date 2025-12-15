@@ -124,12 +124,13 @@ describe('Insulin Wave Module (Critical)', () => {
         steps: 0
       });
 
-      // Should be capped at -90% or similar high reduction
-      // Base tier 1 (0-30min) = -40%
-      // Kcal bonus (>1000) = -60%
-      // Total = -100% -> capped at max reduction
-      expect(context.waveBonus).toBeLessThanOrEqual(-0.7);
-      expect(context.waveBonus).toBeGreaterThanOrEqual(-0.95);
+      // v3.7.7: Multiplicative model (not additive)
+      // Tier 1 (0-30min) = -40% base
+      // kcalMultiplier (1200 ккал) = ×1.50
+      // typeBonus (cardio) = ×1.15
+      // Combined: -40% × 1.50 × 1.15 = -69% → capped at -60%
+      expect(context.waveBonus).toBeLessThanOrEqual(-0.5);
+      expect(context.waveBonus).toBeGreaterThanOrEqual(-0.65);
     });
   });
 });
