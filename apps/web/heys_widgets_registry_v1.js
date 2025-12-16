@@ -47,6 +47,23 @@
   };
   
   // === Widget Size Presets ===
+  // Legacy size-id aliases (обратная совместимость для сохранённых layout'ов).
+  // ВАЖНО: наружу (UI) мы используем только формат NxM, но старые значения
+  // могут жить в localStorage у пользователей.
+  const LEGACY_SIZE_ALIASES = {
+    // Старые имена
+    mini: '1x1',
+    short: '2x1',
+    tall2: '1x2',
+    compact: '2x2',
+    medium: '3x2',
+    wide: '4x2',
+    tall3: '2x3',
+    tall: '2x4',
+    wide3: '4x3',
+    large: '4x4'
+  };
+
   const SIZES = {
     // ВАЖНО: сетка теперь 4 колонки (единица = 1 колонка/ряд).
     // Чтобы сохранить привычные пропорции старой 2-колоночной сетки,
@@ -57,16 +74,32 @@
     // - wide    = 4×2
     // - large   = 4×4
     // Дополнительно: mini = 1×1 (value-only виджет)
-    mini: { cols: 1, rows: 1, label: 'Мини', cssClass: 'widget--mini' },
-    compact: { cols: 2, rows: 2, label: 'Компактный', cssClass: 'widget--compact' },
-    // Промежуточные размеры для ощущения «шаг 1 клетка»
-    medium: { cols: 3, rows: 2, label: '3×2', cssClass: 'widget--medium' },
-    wide: { cols: 4, rows: 2, label: 'Широкий', cssClass: 'widget--wide' },
-    wide3: { cols: 4, rows: 3, label: '4×3', cssClass: 'widget--wide3' },
-    tall3: { cols: 2, rows: 3, label: '2×3', cssClass: 'widget--tall3' },
-    tall: { cols: 2, rows: 4, label: 'Высокий', cssClass: 'widget--tall' },
-    large: { cols: 4, rows: 4, label: 'Большой', cssClass: 'widget--large' }
+    // === Все размеры от 1×1 до 4×4 (16 вариантов) ===
+    // Формат: 'NxM' где N=cols, M=rows
+    // Row 1: height = 1
+    '1x1': { cols: 1, rows: 1, label: '1×1', cssClass: 'widget--1x1' },
+    '2x1': { cols: 2, rows: 1, label: '2×1', cssClass: 'widget--2x1' },
+    '3x1': { cols: 3, rows: 1, label: '3×1', cssClass: 'widget--3x1' },
+    '4x1': { cols: 4, rows: 1, label: '4×1', cssClass: 'widget--4x1' },
+    // Row 2: height = 2
+    '1x2': { cols: 1, rows: 2, label: '1×2', cssClass: 'widget--1x2' },
+    '2x2': { cols: 2, rows: 2, label: '2×2', cssClass: 'widget--2x2' },
+    '3x2': { cols: 3, rows: 2, label: '3×2', cssClass: 'widget--3x2' },
+    '4x2': { cols: 4, rows: 2, label: '4×2', cssClass: 'widget--4x2' },
+    // Row 3: height = 3
+    '1x3': { cols: 1, rows: 3, label: '1×3', cssClass: 'widget--1x3' },
+    '2x3': { cols: 2, rows: 3, label: '2×3', cssClass: 'widget--2x3' },
+    '3x3': { cols: 3, rows: 3, label: '3×3', cssClass: 'widget--3x3' },
+    '4x3': { cols: 4, rows: 3, label: '4×3', cssClass: 'widget--4x3' },
+    // Row 4: height = 4
+    '1x4': { cols: 1, rows: 4, label: '1×4', cssClass: 'widget--1x4' },
+    '2x4': { cols: 2, rows: 4, label: '2×4', cssClass: 'widget--2x4' },
+    '3x4': { cols: 3, rows: 4, label: '3×4', cssClass: 'widget--3x4' },
+    '4x4': { cols: 4, rows: 4, label: '4×4', cssClass: 'widget--4x4' }
   };
+
+  // Все размеры 1x1..4x4 (в порядке объявления в SIZES)
+  const ALL_SIZES_4X4 = Object.keys(SIZES);
   
   // === Widget Type Definitions ===
   // 10 типов виджетов согласно ТЗ
@@ -78,8 +111,8 @@
       category: 'nutrition',
       icon: '🔥',
       description: 'Текущие калории и норма',
-      defaultSize: 'compact',
-      availableSizes: ['compact', 'medium', 'wide'],
+      defaultSize: '2x2',
+      availableSizes: ALL_SIZES_4X4,
       dataKeys: ['dayTot.kcal', 'optimum'],
       component: 'WidgetCalories',
       settings: {
@@ -94,8 +127,8 @@
       category: 'nutrition',
       icon: '🥗',
       description: 'Баланс белков, жиров, углеводов',
-      defaultSize: 'wide',
-      availableSizes: ['wide', 'wide3', 'large'],
+      defaultSize: '4x2',
+      availableSizes: ALL_SIZES_4X4,
       dataKeys: ['dayTot.prot', 'dayTot.fat', 'dayTot.carbs', 'normAbs'],
       component: 'WidgetMacros',
       settings: {
@@ -110,8 +143,8 @@
       category: 'nutrition',
       icon: '📈',
       description: 'Таймер инсулиновой волны',
-      defaultSize: 'compact',
-      availableSizes: ['compact', 'medium', 'wide'],
+      defaultSize: '2x2',
+      availableSizes: ALL_SIZES_4X4,
       dataKeys: ['waveData'],
       component: 'WidgetInsulin',
       settings: {
@@ -127,8 +160,8 @@
       category: 'health',
       icon: '😴',
       description: 'Часы сна и качество',
-      defaultSize: 'compact',
-      availableSizes: ['compact', 'medium', 'wide'],
+      defaultSize: '2x2',
+      availableSizes: ALL_SIZES_4X4,
       dataKeys: ['day.sleepHours', 'day.sleepQuality', 'prof.sleepHours'],
       component: 'WidgetSleep',
       settings: {
@@ -143,8 +176,8 @@
       category: 'health',
       icon: '💧',
       description: 'Выпито воды и норма',
-      defaultSize: 'compact',
-      availableSizes: ['compact', 'medium', 'wide'],
+      defaultSize: '2x2',
+      availableSizes: ALL_SIZES_4X4,
       dataKeys: ['day.waterMl', 'waterGoal'],
       component: 'WidgetWater',
       settings: {
@@ -159,8 +192,8 @@
       category: 'health',
       icon: '⚖️',
       description: 'Текущий вес и тренд',
-      defaultSize: 'wide',
-      availableSizes: ['mini', 'compact', 'tall3', 'tall', 'medium', 'wide', 'wide3', 'large'],
+      defaultSize: '4x2',
+      availableSizes: ALL_SIZES_4X4,
       dataKeys: ['day.weightMorning', 'prof.weight', 'prof.weightGoal', 'weightTrend'],
       component: 'WidgetWeight',
       settings: {
@@ -176,8 +209,8 @@
       category: 'health',
       icon: '👟',
       description: 'Шаги за день',
-      defaultSize: 'compact',
-      availableSizes: ['compact', 'medium', 'wide'],
+      defaultSize: '2x2',
+      availableSizes: ALL_SIZES_4X4,
       dataKeys: ['day.steps', 'prof.stepsGoal'],
       component: 'WidgetSteps',
       settings: {
@@ -193,8 +226,8 @@
       category: 'motivation',
       icon: '🔥',
       description: 'Серия дней в норме',
-      defaultSize: 'compact',
-      availableSizes: ['compact', 'medium', 'wide'],
+      defaultSize: '2x2',
+      availableSizes: ALL_SIZES_4X4,
       dataKeys: ['currentStreak', 'maxStreak'],
       component: 'WidgetStreak',
       settings: {
@@ -209,8 +242,8 @@
       category: 'motivation',
       icon: '📅',
       description: 'Активность за неделю/месяц',
-      defaultSize: 'wide',
-      availableSizes: ['wide', 'wide3', 'large'],
+      defaultSize: '4x2',
+      availableSizes: ALL_SIZES_4X4,
       dataKeys: ['activeDays'],
       component: 'WidgetHeatmap',
       settings: {
@@ -228,8 +261,8 @@
       category: 'cycle',
       icon: '🌸',
       description: 'День менструального цикла',
-      defaultSize: 'compact',
-      availableSizes: ['compact', 'medium', 'wide'],
+      defaultSize: '2x2',
+      availableSizes: ALL_SIZES_4X4,
       dataKeys: ['day.cycleDay', 'cyclePhase'],
       component: 'WidgetCycle',
       requiresCondition: () => {
@@ -245,6 +278,39 @@
   
   // === Registry Implementation ===
   const registry = {
+    /**
+     * Нормализовать ID размера:
+     * - поддерживает legacy имена (compact/wide/...) → NxM
+     * - поддерживает формат sNxM (s4x3) → NxM
+     * - поддерживает символ умножения × → x
+     * @param {string} sizeId
+     * @returns {string|null}
+     */
+    normalizeSizeId(sizeId) {
+      if (!sizeId || typeof sizeId !== 'string') return null;
+
+      // Уже в новом формате
+      if (SIZES[sizeId]) return sizeId;
+
+      // Legacy mapping
+      if (LEGACY_SIZE_ALIASES[sizeId]) return LEGACY_SIZE_ALIASES[sizeId];
+
+      // sNxM → NxM
+      const m = sizeId.match(/^s([1-4])x([1-4])$/);
+      if (m) {
+        const norm = `${m[1]}x${m[2]}`;
+        return SIZES[norm] ? norm : sizeId;
+      }
+
+      // 4×3 → 4x3
+      if (sizeId.includes('×')) {
+        const norm = sizeId.replace(/×/g, 'x');
+        if (SIZES[norm]) return norm;
+      }
+
+      return sizeId;
+    },
+
     /**
      * Получить определение типа виджета
      * @param {string} type - ID типа виджета
@@ -307,7 +373,8 @@
      * @returns {Object|null}
      */
     getSize(sizeId) {
-      return SIZES[sizeId] || null;
+      const norm = this.normalizeSizeId(sizeId);
+      return (norm && SIZES[norm]) ? SIZES[norm] : null;
     },
     
     /**
@@ -327,7 +394,8 @@
     supportsSize(type, sizeId) {
       const widgetType = WIDGET_TYPES[type];
       if (!widgetType) return false;
-      return widgetType.availableSizes.includes(sizeId);
+      const norm = this.normalizeSizeId(sizeId);
+      return widgetType.availableSizes.includes(norm);
     },
     
     /**
@@ -343,11 +411,12 @@
         return null;
       }
       
-      const size = options.size || widgetType.defaultSize;
+      const rawSize = options.size || widgetType.defaultSize;
+      const size = this.normalizeSizeId(rawSize) || widgetType.defaultSize;
       const sizePreset = SIZES[size];
       
       if (!sizePreset) {
-        console.error(`[Widgets Registry] Unknown size: ${size}`);
+        console.error(`[Widgets Registry] Unknown size: ${rawSize}`);
         return null;
       }
       
@@ -380,7 +449,8 @@
       if (!widget || typeof widget !== 'object') return false;
       if (!widget.id || typeof widget.id !== 'string') return false;
       if (!widget.type || !WIDGET_TYPES[widget.type]) return false;
-      if (!widget.size || !SIZES[widget.size]) return false;
+      const norm = this.normalizeSizeId(widget.size);
+      if (!norm || !SIZES[norm]) return false;
       return true;
     },
     
@@ -400,8 +470,8 @@
       
       WIDGET_TYPES[widgetDef.type] = {
         ...widgetDef,
-        defaultSize: widgetDef.defaultSize || 'compact',
-        availableSizes: widgetDef.availableSizes || ['compact'],
+        defaultSize: widgetDef.defaultSize || '2x2',
+        availableSizes: widgetDef.availableSizes || ['2x2'],
         category: widgetDef.category || 'advanced'
       };
       
@@ -414,6 +484,7 @@
   HEYS.Widgets.registry = registry;
   HEYS.Widgets.CATEGORIES = CATEGORIES;
   HEYS.Widgets.SIZES = SIZES;
+  HEYS.Widgets.LEGACY_SIZE_ALIASES = LEGACY_SIZE_ALIASES;
   HEYS.Widgets.WIDGET_TYPES = WIDGET_TYPES;
   
   console.log('[HEYS] Widgets Registry v1.0.0 loaded');

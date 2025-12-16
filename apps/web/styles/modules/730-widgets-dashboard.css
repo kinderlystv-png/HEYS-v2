@@ -409,7 +409,23 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* важно для flex: даём дочерним блокам ужиматься вместо вылезания за границы */
+  --widget-safe-bottom: 0px;
+  padding-bottom: var(--widget-safe-bottom);
 }
+
+/* ===== Safe Zones (внутренний “air gap”, чтобы ничего не прилипало к границам) =====
+   Идея: лучше слегка ужать контент, чем позволять ему упираться/обрезаться.
+*/
+.widget--1x3 .widget__content,
+.widget--2x3 .widget__content,
+.widget--3x3 .widget__content,
+.widget--4x3 .widget__content { --widget-safe-bottom: 8px; }
+
+.widget--1x4 .widget__content,
+.widget--2x4 .widget__content,
+.widget--3x4 .widget__content,
+.widget--4x4 .widget__content { --widget-safe-bottom: 10px; }
 
 /* Widget Value — Large, bold numbers */
 .widget__value {
@@ -901,10 +917,10 @@
   font-weight: var(--widget-weight-medium);
 }
 
-/* ===== Size Modifiers ===== */
-.widget--mini {
-  /* Мини-виджет — это полноценный 1×1.
-     Важно: НЕ выключаем растягивание grid-item, иначе высота станет «0.5» и визуально ломается единица сетки. */
+/* ===== Size Modifiers: All 16 sizes from 1×1 to 4×4 ===== */
+
+/* === Row 1: height = 1 row === */
+.widget--1x1 {
   min-height: 0;
   height: 100%;
   padding: 10px;
@@ -912,31 +928,33 @@
   align-self: stretch;
 }
 
-.widget--compact {
+.widget--2x1,
+.widget--3x1,
+.widget--4x1 {
   min-height: 0;
 }
 
-.widget--medium {
+/* === Row 2: height = 2 rows === */
+.widget--1x2,
+.widget--2x2,
+.widget--3x2,
+.widget--4x2 {
   min-height: 0;
 }
 
-.widget--wide {
+/* === Row 3: height = 3 rows === */
+.widget--1x3,
+.widget--2x3,
+.widget--3x3,
+.widget--4x3 {
   min-height: 0;
 }
 
-.widget--wide3 {
-  min-height: 0;
-}
-
-.widget--tall {
-  min-height: 0;
-}
-
-.widget--tall3 {
-  min-height: 0;
-}
-
-.widget--large {
+/* === Row 4: height = 4 rows === */
+.widget--1x4,
+.widget--2x4,
+.widget--3x4,
+.widget--4x4 {
   min-height: 0;
 }
 
@@ -971,11 +989,25 @@
 }
 
 /* Mini size: без хедера, центрируем контент */
-.widget--mini .widget__header {
+/* Small sizes: без хедера, центрируем контент */
+/* 1 row height: всегда без хедера */
+.widget--1x1 .widget__header,
+.widget--2x1 .widget__header,
+.widget--3x1 .widget__header,
+.widget--4x1 .widget__header {
   display: none;
 }
 
-.widget--mini .widget__content {
+/* 1x1 (mini): компактный стиль */
+.widget--1x1 {
+  padding: 10px;
+  border-radius: var(--widget-radius-md);
+}
+
+.widget--1x1 .widget__content,
+.widget--2x1 .widget__content,
+.widget--3x1 .widget__content,
+.widget--4x1 .widget__content {
   justify-content: center;
   align-items: center;
   text-align: center;
@@ -1071,6 +1103,50 @@
 .widget__settings-btn:hover {
   background: #2563eb;
   transform: scale(1.1);
+}
+
+/* Size Badge (edit-mode) — компактный индикатор NxM, не перекрывает контент */
+.widget__size-badge {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.18);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: rgba(15, 23, 42, 0.88);
+  z-index: 11;
+  pointer-events: auto;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+[data-theme="dark"] .widget__size-badge {
+  background: rgba(15, 23, 42, 0.78);
+  border-color: rgba(226, 232, 240, 0.14);
+  color: rgba(226, 232, 240, 0.90);
+}
+
+.widget__size-badge--active {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.22);
+}
+
+.widget__size-badge-warn {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(239, 68, 68, 0.92);
+}
+
+[data-theme="dark"] .widget__size-badge-warn {
+  color: rgba(248, 113, 113, 0.95);
 }
 
 /* Resize Handle */
@@ -1503,7 +1579,7 @@
     padding: 10px;
   }
 
-  .widget--mini {
+  .widget--1x1 {
     min-height: 0;
     padding: 8px;
   }
@@ -1560,6 +1636,31 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.widget-calories__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* Micro/short variants — чтобы 1x1/1x2/4x1 не выглядели «обрубком» */
+.widget-calories--micro {
+  gap: 0;
+}
+
+.widget-calories--micro .widget-calories__value {
+  font-size: 20px;
+}
+
+.widget-calories--micro .widget-calories__pct {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.widget-calories--short .widget-calories__value {
+  font-size: 26px;
 }
 
 .widget-calories__value {
@@ -1633,6 +1734,34 @@
   gap: 8px;
 }
 
+.widget-water__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.widget-water__pct-inline {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(10, 132, 255, 0.10);
+  color: #0A84FF;
+}
+
+.widget-water--micro {
+  gap: 2px;
+}
+
+.widget-water--micro .widget-water__value {
+  font-size: 18px;
+}
+
+.widget-water--short .widget-water__value {
+  font-size: 24px;
+}
+
 .widget-water__value {
   font-size: 28px;
   font-weight: 700;
@@ -1674,6 +1803,14 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.widget-sleep--micro {
+  gap: 2px;
+}
+
+.widget-sleep--micro .widget-sleep__value {
+  font-size: 18px;
 }
 
 .widget-sleep__value {
@@ -1724,6 +1861,18 @@
   gap: 6px;
 }
 
+.widget-streak--micro {
+  gap: 2px;
+}
+
+.widget-streak--micro .widget-streak__value {
+  font-size: 22px;
+}
+
+.widget-streak--short .widget-streak__value {
+  font-size: 28px;
+}
+
 .widget-streak__value {
   font-size: 36px;
   font-weight: 800;
@@ -1769,48 +1918,118 @@
   width: 100%;
 }
 
-/* Size Variants */
-.widget-weight--mini {
+/* Size Variants — NxM format */
+.widget-weight--1x1 {
   align-items: center;
   justify-content: center;
   gap: 2px;
 }
 
-.widget-weight--compact {
+.widget-weight--2x2 {
   align-items: center;
   justify-content: center;
   text-align: center;
   gap: 6px;
 }
 
-.widget-weight--medium {
-  gap: 8px;
+.widget-weight--2x1 {
+  justify-content: center;
+  gap: 6px;
 }
 
-.widget-weight--wide {
-  gap: 8px;
-}
-
-.widget-weight--tall3 {
+.widget-weight--1x2 {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   padding: 4px 0;
 }
 
-.widget-weight--tall {
+.widget-weight--3x2 {
+  gap: 8px;
+}
+
+.widget-weight--4x2 {
+  gap: 8px;
+}
+
+.widget-weight--2x3 {
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.widget-weight--2x4 {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   padding: 4px 0;
 }
 
-.widget-weight--wide3 {
+.widget-weight--4x3 {
   gap: 10px;
 }
 
-.widget-weight--large {
+.widget-weight--4x4 {
   gap: 12px;
+}
+
+/* Fallback styles for missing sizes (3x1, 4x1, 3x3, 3x4, 1x3, 1x4) */
+.widget-weight--3x1,
+.widget-weight--4x1 {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 100%;
+  width: 100%;
+}
+
+.widget-weight--3x1 .widget-weight__left,
+.widget-weight--4x1 .widget-weight__left,
+.widget-weight--3x1 .widget-weight__right,
+.widget-weight--4x1 .widget-weight__right {
+  gap: 2px;
+}
+
+.widget-weight--3x1 .widget-weight__val--md,
+.widget-weight--4x1 .widget-weight__val--md {
+  font-size: 32px;
+}
+
+.widget-weight--3x1 .widget-weight__trend-arrow,
+.widget-weight--4x1 .widget-weight__trend-arrow {
+  font-size: 20px;
+}
+
+.widget-weight--1x3,
+.widget-weight--1x4 {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  height: 100%;
+  width: 100%;
+}
+
+.widget-weight--1x3 .widget-weight__val--md,
+.widget-weight--1x4 .widget-weight__val--md {
+  font-size: 38px;
+}
+
+.widget-weight--1x3 .widget-weight__trend-arrow,
+.widget-weight--1x4 .widget-weight__trend-arrow {
+  font-size: 24px;
+}
+
+.widget-weight--3x3,
+.widget-weight--3x4 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 /* ===== WeightValue Block ===== */
@@ -1902,6 +2121,14 @@
   width: 100%;
 }
 
+.widget-weight__chart-compact {
+  width: 100%;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .widget-weight__chart-full {
   flex: 1;
   min-height: 60px;
@@ -1928,11 +2155,19 @@
 /* ===== GoalBlock ===== */
 .widget-weight__goal-line {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items:baseline;
+  gap:.4rem;
   gap: 8px;
   font-size: 12px;
   width: 100%;
+}
+
+.widget-weight__goal-label{
+  opacity:.85;
+}
+
+.widget-weight__goal-inline-val{
+  font-weight:700;
 }
 
 .widget-weight__goal-block {
@@ -1993,14 +2228,30 @@
 .widget-weight__progress-info {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  font-size:12px;
   gap: 8px;
 }
 
+
+.widget-weight__progress-pct{
+  font-weight:700;
+}
+
+.widget-weight__progress-label{
+  opacity:.85;
+}
 .widget-weight__progress-label {
   font-size: 11px;
   font-weight: 500;
   color: var(--text-secondary, #6b7280);
+}
+
+/* Вертикальный прогресс: подпись цели — отдельный класс, чтобы не конфликтовать с label в горизонтальном режиме */
+.widget-weight__progress-goal {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  opacity: 0.9;
 }
 
 .widget-weight__progress-pct {
@@ -2089,6 +2340,18 @@
   border-radius: 6px;
 }
 
+/* 4x3/4x4: меньше вертикальной плотности → меньше риск клиппинга нижних строк (например, “Прогноз”) */
+.widget-weight--4x3 .widget-weight__stats,
+.widget-weight--4x4 .widget-weight__stats {
+  gap: 5px;
+}
+
+.widget-weight--4x3 .widget-weight__stat,
+.widget-weight--4x4 .widget-weight__stat {
+  padding: 3px 7px;
+  font-size: 10.5px;
+}
+
 .widget-weight__stat--pink {
   color: #ec4899;
   background: rgba(236, 72, 153, 0.1);
@@ -2130,6 +2393,11 @@
   width: 100%;
 }
 
+.widget-weight--4x3 .widget-weight__bottom,
+.widget-weight--4x4 .widget-weight__bottom {
+  gap: 10px;
+}
+
 .widget-weight__left {
   display: flex;
   flex-direction: column;
@@ -2141,6 +2409,23 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
+}
+
+.widget-weight__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+}
+
+.widget-weight__mid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .widget-weight__header {
@@ -2168,6 +2453,14 @@
   text-align: center;
 }
 
+.widget-weight__hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary, #9ca3af);
+  text-align: center;
+  line-height: 1.2;
+}
+
 /* ===== Sparkline ===== */
 .widget-weight__sparkline {
   display: block;
@@ -2185,6 +2478,38 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.widget-steps__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.widget-steps__pct {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(48, 209, 88, 0.10);
+  color: #30D158;
+}
+
+.widget-steps--micro {
+  gap: 2px;
+}
+
+.widget-steps--micro .widget-steps__value {
+  font-size: 18px;
+}
+
+.widget-steps--short .widget-steps__value {
+  font-size: 24px;
+}
+
+.widget-steps--short .widget-steps__progress {
+  margin-top: 4px;
 }
 
 .widget-steps__value {
@@ -2234,6 +2559,28 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.widget-macros--compact {
+  gap: 8px;
+}
+
+.widget-macros--micro {
+  gap: 6px;
+}
+
+.widget-macros--micro .widget-macros__row,
+.widget-macros--compact .widget-macros__row {
+  gap: 8px;
+}
+
+.widget-macros--micro .widget-macros__label {
+  width: 18px;
+  font-size: 10px;
+}
+
+.widget-macros--micro .widget-macros__bar-container {
+  height: 7px;
 }
 
 .widget-macros__row {
@@ -2307,6 +2654,31 @@
   gap: 8px;
 }
 
+.widget-insulin__micro {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.widget-insulin__micro-emoji {
+  font-size: 22px;
+}
+
+.widget-insulin__micro-time {
+  font-size: 13px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(10, 132, 255, 0.10);
+  color: #0A84FF;
+}
+
+.widget-insulin--micro {
+  gap: 0;
+}
+
 .widget-insulin__status {
   display: inline-flex;
   align-items: center;
@@ -2359,6 +2731,28 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.widget-heatmap--micro {
+  gap: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.widget-heatmap--compact .widget-heatmap__grid {
+  gap: 4px;
+}
+
+.widget-heatmap--micro .widget-heatmap__cell {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+}
+
+.widget-heatmap--compact .widget-heatmap__cell {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
 }
 
 .widget-heatmap__grid {
@@ -2418,6 +2812,14 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.widget-cycle--micro {
+  gap: 2px;
+}
+
+.widget-cycle--micro .widget-cycle__day {
+  font-size: 18px;
 }
 
 .widget-cycle__empty {

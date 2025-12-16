@@ -18,6 +18,75 @@
   
   const React = global.React;
   const { useState, useEffect, useMemo, useCallback, useRef } = React || {};
+
+  // Debug/telemetry helpers (без прямого console.*)
+  const _widgetsOnce = HEYS.Widgets._once || (HEYS.Widgets._once = {});
+
+  function widgetsDebugEnabled() {
+    try {
+      return localStorage.getItem('heys_debug_widgets') === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function widgetsOnce(key) {
+    if (!key) return true;
+    if (_widgetsOnce[key]) return false;
+    _widgetsOnce[key] = true;
+    return true;
+  }
+
+  function trackWidgetIssue(eventName, payload) {
+    const a = HEYS.analytics;
+    if (!a || typeof a.trackError !== 'function') return;
+    try {
+      // В проекте встречаются обе сигнатуры:
+      // - trackError('event_name', { ...payload })
+      // - trackError(Error|string, 'source')
+      if (payload && typeof payload === 'object') {
+        a.trackError(eventName, payload);
+        return;
+      }
+    } catch (e) {
+      // no-op
+    }
+    try {
+      a.trackError(String(eventName || 'widgets_issue'), 'widgets');
+    } catch (e) {
+      // no-op
+    }
+  }
+
+  // Единая утилита: размеры виджета (не завязаны на «популярность»)
+  function getWidgetDims(widget) {
+    const registry = HEYS.Widgets?.registry;
+    const sizeId = widget?.size;
+    const size = sizeId && typeof registry?.getSize === 'function' ? registry.getSize(sizeId) : null;
+
+    let cols = widget?.cols ?? size?.cols;
+    let rows = widget?.rows ?? size?.rows;
+
+    if (!Number.isFinite(cols) || !Number.isFinite(rows)) {
+      const m = typeof sizeId === 'string' ? sizeId.match(/^([1-4])x([1-4])$/) : null;
+      if (m) {
+        cols = Number(m[1]);
+        rows = Number(m[2]);
+      }
+    }
+
+    cols = Number.isFinite(cols) ? Math.max(1, Math.min(4, cols)) : 1;
+    rows = Number.isFinite(rows) ? Math.max(1, Math.min(4, rows)) : 1;
+
+    const area = cols * rows;
+    const isMicro = area <= 1;
+    const isTiny = area <= 2;
+    const isShort = rows === 1;
+    const isTall = cols === 1 && rows >= 2;
+    const isWide = cols >= 3 && rows <= 2;
+
+    return { cols, rows, area, isMicro, isTiny, isShort, isTall, isWide, sizeId };
+  }
   
   // === Widget Card Component ===
   function WidgetCard({ widget, isEditMode, onRemove, onSettings }) {
@@ -25,6 +94,12 @@
     const widgetType = registry?.getType(widget.type);
     const category = registry?.getCategory(widgetType?.category);
     const elementRef = useRef(null);
+    
+    // Refs для resize handles (для native touch events)
+    const handleNRef = useRef(null);
+    const handleERef = useRef(null);
+    const handleSRef = useRef(null);
+    const handleWRef = useRef(null);
 
     // Drag-resize (без popover): тянем за хендлы на гранях → снап к доступным размерам
     const resizeDragRef = useRef({
@@ -57,7 +132,7 @@
       const t = e?.target;
       if (t && typeof t.closest === 'function') {
         // Клики/тачи по resize-хендлам и overlay не должны запускать drag
-        if (t.closest('.widget__resize-handle') || t.closest('.widget__resize-overlay')) {
+        if (t.closest('.widget__resize-handle') || t.closest('.widget__size-badge')) {
           return;
         }
       }
@@ -93,7 +168,7 @@
     const availableSizes = useMemo(() => {
       const typeDef = widgetType;
       if (typeDef?.availableSizes && typeDef.availableSizes.length) return typeDef.availableSizes;
-      return [typeDef?.defaultSize || widget.size || 'compact'];
+      return [typeDef?.defaultSize || widget.size || '2x2'];
     }, [widgetType, widget.size]);
 
     const currentSizeLabel = useMemo(() => {
@@ -114,9 +189,21 @@
     }, []);
 
     const pickNearestSize = useCallback((targetCols, targetRows, deltaCols = 0, deltaRows = 0) => {
-      const sizes = (availableSizes && availableSizes.length) ? availableSizes : [widget.size || 'compact'];
+      const sizes = (availableSizes && availableSizes.length) ? availableSizes : [widget.size || '2x2'];
       const reg = HEYS.Widgets.registry;
       const preferBigger = (deltaCols + deltaRows) >= 0;
+
+      if (widgetsDebugEnabled() && widgetsOnce(`resize:pickNearestSize:${widget.type}`)) {
+        trackWidgetIssue('widgets_resize_pickNearestSize', {
+          type: widget.type,
+          targetCols,
+          targetRows,
+          deltaCols,
+          deltaRows,
+          preferBigger,
+          availableSizes: sizes
+        });
+      }
 
       let best = null;
       for (const sizeId of sizes) {
@@ -146,7 +233,7 @@
         }
       }
 
-      return best || { sizeId: widget.size || 'compact', cols: widget.cols || 1, rows: widget.rows || 1 };
+      return best || { sizeId: widget.size || '2x2', cols: widget.cols || 1, rows: widget.rows || 1 };
     }, [availableSizes, widget.size, widget.cols, widget.rows]);
 
     const updateResizePreview = useCallback((next) => {
@@ -210,7 +297,11 @@
     const startResizeDrag = useCallback((direction, e, isTouchEvent = false) => {
       if (!isEditMode) return;
       e.stopPropagation();
-      e.preventDefault();
+      // Для pointer events вызываем preventDefault здесь
+      // Для touch events preventDefault уже вызван в native listener (с { passive: false })
+      if (!isTouchEvent) {
+        e.preventDefault();
+      }
 
       // Если DnD уже «подготовился» (в edit-mode prepareForDrag ставит listeners),
       // то при попытке resize он может внезапно стартовать. Отменяем.
@@ -236,7 +327,7 @@
       ref.startY = clientY;
       ref.baseCols = widget.cols || 1;
       ref.baseRows = widget.rows || 1;
-      ref.baseSizeId = widget.size || 'compact';
+      ref.baseSizeId = widget.size || '2x2';
       ref.basePos = {
         col: Number.isFinite(widget?.position?.col) ? widget.position.col : 0,
         row: Number.isFinite(widget?.position?.row) ? widget.position.row : 0
@@ -255,6 +346,95 @@
         }
       }
 
+      // CRITICAL FIX: Для touch events добавляем document listeners СРАЗУ с capture: true
+      // (не ждём useEffect — React слишком медленный, touch уже закончится)
+      if (isTouchEvent) {
+        // Сначала удаляем старые listeners если есть (защита от утечки)
+        if (ref.touchMoveHandler) {
+          console.log('[RESIZE] Removing stale touch listeners from document');
+          document.removeEventListener('touchmove', ref.touchMoveHandler, { capture: true });
+          document.removeEventListener('touchend', ref.touchEndHandler, { capture: true });
+          document.removeEventListener('touchcancel', ref.touchEndHandler, { capture: true });
+        }
+        
+        console.log('[RESIZE] Adding immediate touch listeners on document (capture)');
+        
+        // Сохраняем handlers в ref для возможности cleanup
+        ref.touchMoveHandler = (te) => {
+          console.log('[RESIZE] touchmove RAW, active:', ref.active, 'touches:', te.touches?.length);
+          if (!ref.active) return;
+          te.preventDefault();
+          te.stopPropagation(); // Не даём другим handlers перехватить
+          
+          const touch = te.touches[0];
+          if (!touch) return;
+          
+          const dx = touch.clientX - ref.startX;
+          const dy = touch.clientY - ref.startY;
+
+          const rawDeltaCols = Math.round(dx / unitX);
+          const rawDeltaRows = Math.round(dy / unitY);
+
+          const intentDeltaCols = (ref.direction === 'w') ? -rawDeltaCols : (ref.direction === 'e' ? rawDeltaCols : 0);
+          const intentDeltaRows = (ref.direction === 'n') ? -rawDeltaRows : (ref.direction === 's' ? rawDeltaRows : 0);
+
+          if (intentDeltaCols === ref.lastDeltaCols && intentDeltaRows === ref.lastDeltaRows) return;
+          ref.lastDeltaCols = intentDeltaCols;
+          ref.lastDeltaRows = intentDeltaRows;
+
+          const targetCols = Math.max(1, Math.min(ref.baseCols + intentDeltaCols, gridCols));
+          const targetRows = Math.max(1, ref.baseRows + intentDeltaRows);
+
+          console.log('[RESIZE] touch calc:', { direction, dx, dy, intentDeltaCols, intentDeltaRows, targetCols, targetRows });
+
+          const nearest = pickNearestSize(targetCols, targetRows, intentDeltaCols, intentDeltaRows);
+          const cols = Math.max(1, Math.min(nearest.cols, gridCols));
+          const rows = Math.max(1, nearest.rows);
+
+          let col = ref.basePos.col;
+          let row = ref.basePos.row;
+          if (ref.direction === 'w') col = ref.fixedRight - cols;
+          if (ref.direction === 'n') row = ref.fixedBottom - rows;
+          col = Math.max(0, col);
+          if (col + cols > gridCols) col = Math.max(0, gridCols - cols);
+          row = Math.max(0, row);
+
+          updateResizePreview({
+            active: true,
+            direction: ref.direction,
+            sizeId: nearest.sizeId,
+            cols,
+            rows,
+            position: { col, row },
+            unitX,
+            unitY,
+            gridCols,
+            overflowRight: (col + cols > gridCols)
+          });
+        };
+
+        ref.touchEndHandler = () => {
+          console.log('[RESIZE] touch end - cleanup, ref.active was:', ref.active);
+          ref.active = false; // ВАЖНО: сбрасываем active при touchend
+          if (ref.touchMoveHandler) {
+            // CRITICAL: удаляем с теми же options что и добавляли (capture: true)
+            document.removeEventListener('touchmove', ref.touchMoveHandler, { capture: true });
+            document.removeEventListener('touchend', ref.touchEndHandler, { capture: true });
+            document.removeEventListener('touchcancel', ref.touchEndHandler, { capture: true });
+            ref.touchMoveHandler = null;
+            ref.touchEndHandler = null;
+          }
+          endResizeDrag('touchend');
+        };
+
+        console.log('[RESIZE] About to add touchmove listener, handler exists:', !!ref.touchMoveHandler);
+        // CRITICAL: capture: true гарантирует получение событий ДО любой отмены
+        document.addEventListener('touchmove', ref.touchMoveHandler, { passive: false, capture: true });
+        document.addEventListener('touchend', ref.touchEndHandler, { passive: true, capture: true });
+        document.addEventListener('touchcancel', ref.touchEndHandler, { passive: true, capture: true });
+        console.log('[RESIZE] Touch listeners added to document (capture phase)');
+      }
+
       const initial = pickNearestSize(ref.baseCols, ref.baseRows, 0, 0);
       updateResizePreview({
         active: true,
@@ -267,18 +447,56 @@
         unitY,
         gridCols
       });
-    }, [getEventCoords, getGridCols, isEditMode, pickNearestSize, updateResizePreview, widget.cols, widget.rows, widget.size, widget?.position?.col, widget?.position?.row]);
+    }, [endResizeDrag, getEventCoords, getGridCols, isEditMode, pickNearestSize, updateResizePreview, widget.cols, widget.rows, widget.size, widget?.position?.col, widget?.position?.row]);
 
     // Pointer down handler (для desktop и некоторых мобильных)
     const handleResizeHandlePointerDown = useCallback((direction, e) => {
+      // CRITICAL: stop propagation чтобы widget card handlePointerDown НЕ вызвал dnd._prepareForDrag
+      e.stopPropagation();
+      e.preventDefault();
       startResizeDrag(direction, e, false);
     }, [startResizeDrag]);
 
-    // Touch start handler (для iOS Safari и PWA)
+    // Touch start handler (для iOS Safari и PWA) — вызывается из native listener
     const handleResizeHandleTouchStart = useCallback((direction, e) => {
       console.log('[RESIZE] touchstart direction:', direction, 'touches:', e.touches?.length);
+      // preventDefault через native listener уже вызван
       startResizeDrag(direction, e, true);
     }, [startResizeDrag]);
+
+    // Native touch listeners для resize handles (с { passive: false } чтобы preventDefault работал)
+    useEffect(() => {
+      if (!isEditMode) return;
+      
+      const handles = [
+        { ref: handleNRef, dir: 'n' },
+        { ref: handleERef, dir: 'e' },
+        { ref: handleSRef, dir: 's' },
+        { ref: handleWRef, dir: 'w' }
+      ];
+      
+      const touchStartHandlers = handles.map(({ ref, dir }) => {
+        const handler = (e) => {
+          console.log('[RESIZE] native touchstart', dir, e.touches?.length);
+          e.preventDefault(); // Теперь работает!
+          e.stopPropagation();
+          handleResizeHandleTouchStart(dir, e);
+        };
+        
+        if (ref.current) {
+          ref.current.addEventListener('touchstart', handler, { passive: false });
+        }
+        return { ref, handler };
+      });
+      
+      return () => {
+        touchStartHandlers.forEach(({ ref, handler }) => {
+          if (ref.current) {
+            ref.current.removeEventListener('touchstart', handler);
+          }
+        });
+      };
+    }, [isEditMode, handleResizeHandleTouchStart]);
 
     // Ключевое: используем resizePreview?.active как триггер для useEffect
     // (ref.active не триггерит ререндер, а state — да)
@@ -338,7 +556,18 @@
         const targetCols = Math.max(1, Math.min(ref.baseCols + intentDeltaCols, gridCols));
         const targetRows = Math.max(1, ref.baseRows + intentDeltaRows);
 
+        console.log('[RESIZE] calc:', {
+          direction: ref.direction,
+          baseCols: ref.baseCols,
+          baseRows: ref.baseRows,
+          intentDeltaCols,
+          intentDeltaRows,
+          targetCols,
+          targetRows
+        });
+
         const nearest = pickNearestSize(targetCols, targetRows, intentDeltaCols, intentDeltaRows);
+        console.log('[RESIZE] nearest:', nearest);
         const cols = Math.max(1, Math.min(nearest.cols, gridCols));
         const rows = Math.max(1, nearest.rows);
 
@@ -415,7 +644,7 @@
 
     const sizeClass = `widget--${effectiveWidget.size}`;
     const typeClass = `widget--${effectiveWidget.type}`;
-    const isMini = effectiveWidget?.size === 'mini';
+    const isMini = effectiveWidget?.size === '1x1';
     const previewLabel = useMemo(() => {
       const s = HEYS.Widgets.registry?.getSize?.(previewSizeId);
       return s?.label || previewSizeId;
@@ -458,16 +687,17 @@
         React.createElement(WidgetContent, { widget: effectiveWidget, widgetType })
       ),
 
-      // Resize preview overlay
-      isEditMode && isResizing && React.createElement('div', {
-        className: 'widget__resize-overlay',
+      // Edit mode: компактный бейдж размера (не перекрывает контент)
+      isEditMode && React.createElement('div', {
+        className: `widget__size-badge ${isResizing ? 'widget__size-badge--active' : ''}`,
+        title: `Размер: ${previewLabel} (${previewCols}×${previewRows})${resizePreview?.overflowRight ? ' — может не поместиться справа' : ''}`,
         onPointerDown: (e) => e.stopPropagation(),
+        onPointerUp: (e) => e.stopPropagation(),
         onPointerMove: (e) => e.stopPropagation(),
-        onPointerUp: (e) => e.stopPropagation()
+        onClick: (e) => e.stopPropagation()
       },
-        React.createElement('div', { className: 'widget__resize-overlay-title' }, 'Размер'),
-        React.createElement('div', { className: 'widget__resize-overlay-value' }, `${previewLabel} · ${previewCols}×${previewRows}`),
-        !!resizePreview?.overflowRight && React.createElement('div', { className: 'widget__resize-overlay-hint' }, 'Не помещается справа — может сдвинуться')
+        `${previewCols}×${previewRows}`,
+        !!resizePreview?.overflowRight && React.createElement('span', { className: 'widget__size-badge-warn' }, '↔')
       ),
       
       // Edit Mode: Delete button
@@ -495,10 +725,11 @@
       // Edit Mode: Resize handle (drag-resize)
       isEditMode && React.createElement(React.Fragment, null,
         React.createElement('button', {
+          ref: handleNRef,
           type: 'button',
           className: 'widget__resize-handle widget__resize-handle--n',
           onPointerDown: (e) => handleResizeHandlePointerDown('n', e),
-          onTouchStart: (e) => handleResizeHandleTouchStart('n', e),
+          // onTouchStart заменён на native listener в useEffect
           onPointerUp: (e) => e.stopPropagation(),
           onPointerMove: (e) => e.stopPropagation(),
           onTouchEnd: (e) => e.stopPropagation(),
@@ -507,10 +738,11 @@
           'aria-label': `Изменить высоту: потяни. Сейчас: ${currentSizeLabel}`
         }),
         React.createElement('button', {
+          ref: handleERef,
           type: 'button',
           className: 'widget__resize-handle widget__resize-handle--e',
           onPointerDown: (e) => handleResizeHandlePointerDown('e', e),
-          onTouchStart: (e) => handleResizeHandleTouchStart('e', e),
+          // onTouchStart заменён на native listener в useEffect
           onPointerUp: (e) => e.stopPropagation(),
           onPointerMove: (e) => e.stopPropagation(),
           onTouchEnd: (e) => e.stopPropagation(),
@@ -519,10 +751,11 @@
           'aria-label': `Изменить ширину: потяни. Сейчас: ${currentSizeLabel}`
         }),
         React.createElement('button', {
+          ref: handleSRef,
           type: 'button',
           className: 'widget__resize-handle widget__resize-handle--s',
           onPointerDown: (e) => handleResizeHandlePointerDown('s', e),
-          onTouchStart: (e) => handleResizeHandleTouchStart('s', e),
+          // onTouchStart заменён на native listener в useEffect
           onPointerUp: (e) => e.stopPropagation(),
           onPointerMove: (e) => e.stopPropagation(),
           onTouchEnd: (e) => e.stopPropagation(),
@@ -531,10 +764,11 @@
           'aria-label': `Изменить высоту: потяни. Сейчас: ${currentSizeLabel}`
         }),
         React.createElement('button', {
+          ref: handleWRef,
           type: 'button',
           className: 'widget__resize-handle widget__resize-handle--w',
           onPointerDown: (e) => handleResizeHandlePointerDown('w', e),
-          onTouchStart: (e) => handleResizeHandleTouchStart('w', e),
+          // onTouchStart заменён на native listener в useEffect
           onPointerUp: (e) => e.stopPropagation(),
           onPointerMove: (e) => e.stopPropagation(),
           onTouchEnd: (e) => e.stopPropagation(),
@@ -564,7 +798,11 @@
           setData(newData);
           setError(null);
         } catch (e) {
-          console.error('[Widget] Error loading data:', e);
+          trackWidgetIssue('widgets_loadData_failed', {
+            widgetType: widget?.type,
+            widgetId: widget?.id,
+            message: e?.message
+          });
           setError(e.message);
         }
         setLoading(false);
@@ -644,6 +882,9 @@
     const target = data.target || 2000;
     const pct = target > 0 ? Math.round((eaten / target) * 100) : 0;
     const remaining = Math.max(0, target - eaten);
+
+    const d = getWidgetDims(widget);
+    const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : d.isTall ? 'tall' : 'std';
     
     const getColor = () => {
       if (pct < 50) return 'var(--ratio-crash)';
@@ -652,19 +893,33 @@
       return 'var(--ratio-over)';
     };
     
-    return React.createElement('div', { className: 'widget-calories' },
-      React.createElement('div', { className: 'widget-calories__value', style: { color: getColor() } },
-        eaten.toLocaleString('ru-RU')
-      ),
-      React.createElement('div', { className: 'widget-calories__label' },
-        `из ${target.toLocaleString('ru-RU')} ккал`
-      ),
-      widget.settings?.showRemaining && remaining > 0 &&
-        React.createElement('div', { className: 'widget-calories__remaining' },
-          `Осталось: ${remaining.toLocaleString('ru-RU')}`
+    const showPct = widget.settings?.showPercentage !== false;
+    const showRemaining = widget.settings?.showRemaining !== false;
+    const showLabel = !d.isMicro;
+    const showProgress = !d.isMicro && !d.isTiny;
+    const showRemainingLine = showRemaining && remaining > 0 && d.rows >= 2 && !d.isShort;
+
+    return React.createElement('div', { className: `widget-calories widget-calories--${variant}` },
+      React.createElement('div', { className: 'widget-calories__top' },
+        React.createElement('div', { className: 'widget-calories__value', style: { color: getColor() } },
+          eaten.toLocaleString('ru-RU')
         ),
-      widget.settings?.showPercentage &&
-        React.createElement('div', { className: 'widget-calories__pct' }, `${pct}%`)
+        showPct ? React.createElement('div', { className: 'widget-calories__pct' }, `${pct}%`) : null
+      ),
+      showLabel
+        ? React.createElement('div', { className: 'widget-calories__label' }, `из ${target.toLocaleString('ru-RU')} ккал`)
+        : null,
+      showProgress
+        ? React.createElement('div', { className: 'widget-calories__progress' },
+            React.createElement('div', {
+              className: 'widget-calories__bar',
+              style: { width: `${Math.min(100, Math.max(0, pct))}%` }
+            })
+          )
+        : null,
+      showRemainingLine
+        ? React.createElement('div', { className: 'widget-calories__remaining' }, `Осталось: ${remaining.toLocaleString('ru-RU')}`)
+        : null
     );
   }
   
@@ -673,18 +928,28 @@
     const target = data.target || 2000;
     const pct = target > 0 ? Math.round((drunk / target) * 100) : 0;
     const glasses = Math.floor(drunk / 250);
+
+    const d = getWidgetDims(widget);
+    const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
+    const showProgress = !d.isMicro;
+    const showPctPill = !d.isMicro && !d.isTiny;
     
-    return React.createElement('div', { className: 'widget-water' },
-      React.createElement('div', { className: 'widget-water__value' },
-        widget.settings?.showGlasses ? `${glasses} 🥛` : `${drunk} мл`
+    return React.createElement('div', { className: `widget-water widget-water--${variant}` },
+      React.createElement('div', { className: 'widget-water__top' },
+        React.createElement('div', { className: 'widget-water__value' },
+          widget.settings?.showGlasses ? `${glasses} 🥛` : `${drunk} мл`
+        ),
+        d.isMicro ? React.createElement('div', { className: 'widget-water__pct-inline' }, `${pct}%`) : null
       ),
-      React.createElement('div', { className: 'widget-water__progress' },
-        React.createElement('div', {
-          className: 'widget-water__bar',
-          style: { width: `${Math.min(100, pct)}%` }
-        })
-      ),
-      React.createElement('div', { className: 'widget-water__label' }, `${pct}%`)
+      showProgress
+        ? React.createElement('div', { className: 'widget-water__progress' },
+            React.createElement('div', {
+              className: 'widget-water__bar',
+              style: { width: `${Math.min(100, pct)}%` }
+            })
+          )
+        : null,
+      showPctPill ? React.createElement('div', { className: 'widget-water__label' }, `${pct}%`) : null
     );
   }
   
@@ -692,6 +957,11 @@
     const hours = data.hours || 0;
     const target = data.target || 8;
     const quality = data.quality;
+
+    const d = getWidgetDims(widget);
+    const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
+    const showTarget = widget.settings?.showTarget !== false && !d.isMicro;
+    const showQuality = widget.settings?.showQuality !== false && !!quality && !d.isTiny;
     
     const getEmoji = () => {
       if (hours >= target) return '😊';
@@ -699,29 +969,29 @@
       return '😴';
     };
     
-    return React.createElement('div', { className: 'widget-sleep' },
-      React.createElement('div', { className: 'widget-sleep__value' },
-        `${hours.toFixed(1)}ч ${getEmoji()}`
-      ),
-      widget.settings?.showTarget &&
-        React.createElement('div', { className: 'widget-sleep__label' }, `из ${target}ч`),
-      widget.settings?.showQuality && quality &&
-        React.createElement('div', { className: 'widget-sleep__quality' }, `Качество: ${quality}/10`)
+    return React.createElement('div', { className: `widget-sleep widget-sleep--${variant}` },
+      React.createElement('div', { className: 'widget-sleep__value' }, `${hours.toFixed(1)}ч ${getEmoji()}`),
+      showTarget ? React.createElement('div', { className: 'widget-sleep__label' }, `из ${target}ч`) : null,
+      showQuality ? React.createElement('div', { className: 'widget-sleep__quality' }, `Качество: ${quality}/10`) : null
     );
   }
   
   function StreakWidgetContent({ widget, data }) {
     const current = data.current || 0;
     const max = data.max || 0;
+
+    const d = getWidgetDims(widget);
+    const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
+    const showMax = widget.settings?.showMax !== false && max > current && !d.isTiny;
+    const showFlame = widget.settings?.showFlame !== false && current > 0;
     
-    return React.createElement('div', { className: 'widget-streak' },
+    return React.createElement('div', { className: `widget-streak widget-streak--${variant}` },
       React.createElement('div', { className: 'widget-streak__value' },
-        widget.settings?.showFlame && current > 0 ? '🔥 ' : '',
+        showFlame ? '🔥 ' : '',
         current,
-        React.createElement('span', { className: 'widget-streak__days' }, ' дн.')
+        d.isMicro ? null : React.createElement('span', { className: 'widget-streak__days' }, ' дн.')
       ),
-      widget.settings?.showMax && max > current &&
-        React.createElement('div', { className: 'widget-streak__max' }, `Рекорд: ${max}`)
+      showMax ? React.createElement('div', { className: 'widget-streak__max' }, `Рекорд: ${max}`) : null
     );
   }
   
@@ -742,30 +1012,19 @@
     const monthChange = data.monthChange;
     const hasCleanTrend = data.hasCleanTrend;
 
-    const size = widget?.size || 'compact';
+    const size = widget?.size || '2x2';
     const showGoal = widget.settings?.showGoal !== false;
     const showTrend = widget.settings?.showTrend !== false;
 
     const hasCurrent = Number.isFinite(current);
     const hasGoal = Number.isFinite(goal) && goal > 0;
+    const hasBmi = Number.isFinite(bmi);
+    const hasAnalytics = !!monthChange || !!hasCleanTrend;
     const sparklinePoints = sparkline.filter(s => s.weight);
     const hasSparkline = sparklinePoints.length >= 2;
-    
-    // Размеры виджета в клетках → пиксели (примерно 80px на клетку)
-    const SIZE_MAP = {
-      mini:    { cols: 1, rows: 1, w: 80,  h: 80 },
-      compact: { cols: 2, rows: 2, w: 160, h: 160 },
-      medium:  { cols: 3, rows: 2, w: 240, h: 160 },
-      wide:    { cols: 4, rows: 2, w: 320, h: 160 },
-      tall3:   { cols: 2, rows: 3, w: 160, h: 240 },
-      tall:    { cols: 2, rows: 4, w: 160, h: 320 },
-      wide3:   { cols: 4, rows: 3, w: 320, h: 240 },
-      large:   { cols: 4, rows: 4, w: 320, h: 320 }
-    };
-    const sizeInfo = SIZE_MAP[size] || SIZE_MAP.compact;
-    const isWide = sizeInfo.cols >= 3;
-    const isTall = sizeInfo.rows >= 3;
-    const isLarge = sizeInfo.cols >= 3 && sizeInfo.rows >= 3;
+
+    // Размеры берём из реестра (единый источник правды). Здесь они не нужны для layout-веток,
+    // но логика остаётся совместимой: неизвестный size упадёт в fallback-рендер ниже.
     
     // Цвета тренда
     const getTrendInfo = () => {
@@ -787,7 +1046,7 @@
     
     // Блок: Главное значение веса
     const WeightValue = ({ scale = 'md' }) => {
-      const sizes = { sm: 'widget-weight__val--sm', md: '', lg: 'widget-weight__val--lg', xl: 'widget-weight__val--xl' };
+      const sizes = { sm: 'widget-weight__val--sm', md: 'widget-weight__val--md', lg: 'widget-weight__val--lg', xl: 'widget-weight__val--xl' };
       if (!hasCurrent) return React.createElement('div', { className: 'widget-weight__empty' }, '—');
       return React.createElement('div', { className: `widget-weight__val ${sizes[scale] || ''}` },
         current.toFixed(1),
@@ -827,10 +1086,11 @@
     // Блок: Цель
     const GoalBlock = ({ inline = false }) => {
       if (!showGoal || !hasGoal) return null;
-      const eta = weeksToGoal ? ` • ~${weeksToGoal} нед` : '';
       if (inline) {
         return React.createElement('div', { className: 'widget-weight__goal-line' },
-          `Цель: ${goal} кг${eta}`
+          React.createElement('span', { className: 'widget-weight__goal-label' }, 'Цель'),
+          React.createElement('span', { className: 'widget-weight__goal-inline-val' }, `${goal} кг`),
+          weeksToGoal && React.createElement('span', { className: 'widget-weight__goal-eta' }, `~${weeksToGoal} нед`)
         );
       }
       return React.createElement('div', { className: 'widget-weight__goal-block' },
@@ -851,7 +1111,7 @@
               style: { height: `${pct}%` }
             })
           ),
-          React.createElement('div', { className: 'widget-weight__progress-label' }, `${goal} кг`)
+          React.createElement('div', { className: 'widget-weight__progress-goal' }, `${goal} кг`)
         );
       }
       return React.createElement('div', { className: 'widget-weight__progress-h' },
@@ -862,8 +1122,8 @@
           })
         ),
         React.createElement('div', { className: 'widget-weight__progress-info' },
-          React.createElement('span', null, `${pct.toFixed(0)}%`),
-          React.createElement('span', null, `→ ${goal} кг`)
+          React.createElement('span', { className: 'widget-weight__progress-pct' }, `${pct.toFixed(0)}%`),
+          React.createElement('span', { className: 'widget-weight__progress-label' }, `→ ${goal} кг`)
         )
       );
     };
@@ -910,47 +1170,95 @@
     // ============ LAYOUTS ПО РАЗМЕРАМ ============
     
     // MINI (1×1) — только число
-    if (size === 'mini') {
-      return React.createElement('div', { className: 'widget-weight widget-weight--mini' },
+    if (size === '1x1') {
+      return React.createElement('div', { className: 'widget-weight widget-weight--1x1' },
         React.createElement(WeightValue, { scale: 'lg' })
       );
     }
-    
-    // COMPACT (2×2) — число + тренд
-    if (size === 'compact') {
-      return React.createElement('div', { className: 'widget-weight widget-weight--compact' },
+
+    // SHORT (2×1) — низкий: число слева + стрелка/плашки справа
+    if (size === '2x1') {
+      return React.createElement('div', { className: 'widget-weight widget-weight--2x1' },
+        React.createElement('div', { className: 'widget-weight__row-h' },
+          React.createElement('div', { className: 'widget-weight__left' },
+            React.createElement(WeightValue, { scale: 'lg' }),
+            showGoal && hasGoal ? React.createElement(GoalBlock, { inline: true }) : null
+          ),
+          React.createElement('div', { className: 'widget-weight__right' },
+            React.createElement(TrendBlock, { showText: false }),
+            React.createElement(BMIBlock, { compact: true })
+          )
+        )
+      );
+    }
+
+    // TALL2 (1×2) — узкий: число | тренд | прогресс/цель
+    if (size === '1x2') {
+      const showProgress = showGoal && hasGoal && progressPct !== null;
+      return React.createElement('div', { className: 'widget-weight widget-weight--1x2' },
         React.createElement(WeightValue, { scale: 'lg' }),
-        React.createElement(TrendBlock, { showText: true })
+        React.createElement(TrendBlock, { showText: false, vertical: true }),
+        showProgress ? React.createElement(ProgressBlock, { vertical: true }) : React.createElement(GoalBlock, { inline: false }),
+        React.createElement(BMIBlock, { compact: true })
       );
     }
     
-    // MEDIUM (3×2) — число слева + график справа + цель внизу
-    if (size === 'medium') {
-      return React.createElement('div', { className: 'widget-weight widget-weight--medium' },
+    // COMPACT (2×2) — число + тренд + (график или цель/BMI)
+    if (size === '2x2') {
+      return React.createElement('div', { className: 'widget-weight widget-weight--2x2' },
+        React.createElement(WeightValue, { scale: 'lg' }),
+        React.createElement(TrendBlock, { showText: true }),
+        hasSparkline
+          ? React.createElement('div', { className: 'widget-weight__chart-compact' },
+              React.createElement(ChartBlock, { days: 7, height: 46, showDots: false })
+            )
+          : (showGoal && hasGoal
+              ? React.createElement(GoalBlock, { inline: true })
+              : React.createElement(BMIBlock, { compact: true }))
+      );
+    }
+    
+    // MEDIUM (3×2) — число слева + (график или доп.блоки) справа + цель внизу
+    if (size === '3x2') {
+      return React.createElement('div', { className: 'widget-weight widget-weight--3x2' },
         React.createElement('div', { className: 'widget-weight__top' },
           React.createElement('div', { className: 'widget-weight__left' },
             React.createElement(WeightValue, { scale: 'lg' }),
             React.createElement(TrendBlock, { showText: true })
           ),
-          hasSparkline && React.createElement('div', { className: 'widget-weight__chart' },
-            React.createElement(ChartBlock, { days: 7, height: 50, showDots: true })
-          )
+          hasSparkline
+            ? React.createElement('div', { className: 'widget-weight__chart' },
+                React.createElement(ChartBlock, { days: 7, height: 50, showDots: true })
+              )
+            : ((hasBmi || hasAnalytics) && React.createElement('div', { className: 'widget-weight__side' },
+                React.createElement(BMIBlock, { compact: true }),
+                React.createElement(AnalyticsBlock, null)
+              ))
         ),
         React.createElement(GoalBlock, { inline: true })
       );
     }
     
-    // WIDE (4×2) — число + тренд | график | цель+прогресс
-    if (size === 'wide') {
-      return React.createElement('div', { className: 'widget-weight widget-weight--wide' },
+    // WIDE (4×2) — число + тренд | (график или прогресс/аналитика) | цель+BMI
+    if (size === '4x2') {
+      const wideMidFallback = (!hasSparkline) ? React.createElement('div', { className: 'widget-weight__mid' },
+        React.createElement(ProgressBlock, { vertical: false }),
+        React.createElement(AnalyticsBlock, null),
+        (!hasAnalytics && !(showGoal && hasGoal && progressPct !== null))
+          ? React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
+          : null
+      ) : null;
+      return React.createElement('div', { className: 'widget-weight widget-weight--4x2' },
         React.createElement('div', { className: 'widget-weight__row-h' },
           React.createElement('div', { className: 'widget-weight__left' },
             React.createElement(WeightValue, { scale: 'lg' }),
             React.createElement(TrendBlock, { showText: true })
           ),
-          React.createElement('div', { className: 'widget-weight__chart' },
-            React.createElement(ChartBlock, { days: 7, height: 55, showDots: true })
-          ),
+          hasSparkline
+            ? React.createElement('div', { className: 'widget-weight__chart' },
+                React.createElement(ChartBlock, { days: 7, height: 55, showDots: true, showLabels: true })
+              )
+            : wideMidFallback,
           React.createElement('div', { className: 'widget-weight__right' },
             React.createElement(GoalBlock, { inline: false }),
             React.createElement(BMIBlock, { compact: true })
@@ -960,8 +1268,8 @@
     }
     
     // TALL3 (2×3) — вертикальный: число | тренд | прогресс-бар
-    if (size === 'tall3') {
-      return React.createElement('div', { className: 'widget-weight widget-weight--tall3' },
+    if (size === '2x3') {
+      return React.createElement('div', { className: 'widget-weight widget-weight--2x3' },
         React.createElement(WeightValue, { scale: 'xl' }),
         React.createElement(TrendBlock, { showText: true, vertical: true }),
         React.createElement(ProgressBlock, { vertical: true }),
@@ -969,22 +1277,52 @@
       );
     }
     
-    // TALL (2×4) — вертикальный: число | тренд | график | цель
-    if (size === 'tall') {
-      return React.createElement('div', { className: 'widget-weight widget-weight--tall' },
+    // TALL (2×4) — вертикальный: число | тренд | (график или прогресс) | цель
+    if (size === '2x4') {
+      const tallMid = hasSparkline
+        ? React.createElement('div', { className: 'widget-weight__chart-vert' },
+            React.createElement(ChartBlock, { days: 7, height: 80, showDots: true, showGoalLine: true })
+          )
+        : (showGoal && hasGoal && progressPct !== null)
+            ? React.createElement(ProgressBlock, { vertical: true })
+            : React.createElement(AnalyticsBlock, null);
+      return React.createElement('div', { className: 'widget-weight widget-weight--2x4' },
         React.createElement(WeightValue, { scale: 'xl' }),
         React.createElement(TrendBlock, { showText: true }),
-        React.createElement('div', { className: 'widget-weight__chart-vert' },
-          React.createElement(ChartBlock, { days: 7, height: 80, showDots: true })
-        ),
+        tallMid,
         React.createElement(GoalBlock, { inline: false }),
         React.createElement(BMIBlock, { compact: true })
       );
     }
-    
-    // WIDE3 (4×3) — горизонтальный: верх(число+тренд | BMI) | график | цель+аналитика
-    if (size === 'wide3') {
-      return React.createElement('div', { className: 'widget-weight widget-weight--wide3' },
+
+    // 3×3 — близко к 4×3, но компактнее по ширине
+    if (size === '3x3') {
+      return React.createElement('div', { className: 'widget-weight widget-weight--3x3' },
+        React.createElement('div', { className: 'widget-weight__header' },
+          React.createElement('div', { className: 'widget-weight__left' },
+            React.createElement(WeightValue, { scale: 'xl' }),
+            React.createElement(TrendBlock, { showText: true })
+          ),
+          React.createElement(BMIBlock, { compact: true })
+        ),
+        hasSparkline
+          ? React.createElement('div', { className: 'widget-weight__chart-full' },
+              React.createElement(ChartBlock, { days: 10, height: 76, showDots: true, showLabels: false, showGoalLine: true })
+            )
+          : React.createElement('div', { className: 'widget-weight__chart-full' },
+              React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
+            ),
+        React.createElement('div', { className: 'widget-weight__footer' },
+          React.createElement(ProgressBlock, { vertical: false }),
+          React.createElement(AnalyticsBlock, null)
+        )
+      );
+    }
+
+    // 3×4 — почти как 4×4, но чуть плотнее
+    if (size === '3x4') {
+      const hasProgress = showGoal && hasGoal && progressPct !== null;
+      return React.createElement('div', { className: 'widget-weight widget-weight--3x4' },
         React.createElement('div', { className: 'widget-weight__header' },
           React.createElement('div', { className: 'widget-weight__left' },
             React.createElement(WeightValue, { scale: 'xl' }),
@@ -992,9 +1330,38 @@
           ),
           React.createElement(BMIBlock, { compact: false })
         ),
-        React.createElement('div', { className: 'widget-weight__chart-full' },
-          React.createElement(ChartBlock, { days: 10, height: 80, showDots: true, showLabels: true, showGoalLine: true })
+        hasSparkline
+          ? React.createElement('div', { className: 'widget-weight__chart-full' },
+              React.createElement(ChartBlock, { days: 14, height: 104, showDots: true, showLabels: false, showGoalLine: true })
+            )
+          : React.createElement('div', { className: 'widget-weight__chart-full' },
+              React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
+            ),
+        React.createElement('div', { className: 'widget-weight__bottom' },
+          React.createElement(ProgressBlock, { vertical: false }),
+          React.createElement(AnalyticsBlock, null),
+          !hasProgress ? React.createElement(GoalBlock, { inline: true }) : null
+        )
+      );
+    }
+    
+    // WIDE3 (4×3) — горизонтальный: верх(число+тренд | BMI) | график | цель+аналитика
+    if (size === '4x3') {
+      return React.createElement('div', { className: 'widget-weight widget-weight--4x3' },
+        React.createElement('div', { className: 'widget-weight__header' },
+          React.createElement('div', { className: 'widget-weight__left' },
+            React.createElement(WeightValue, { scale: 'xl' }),
+            React.createElement(TrendBlock, { showText: true })
+          ),
+          React.createElement(BMIBlock, { compact: false })
         ),
+        hasSparkline
+          ? React.createElement('div', { className: 'widget-weight__chart-full' },
+              React.createElement(ChartBlock, { days: 10, height: 72, showDots: true, showLabels: true, showGoalLine: true })
+            )
+          : React.createElement('div', { className: 'widget-weight__chart-full' },
+              React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
+            ),
         React.createElement('div', { className: 'widget-weight__footer' },
           React.createElement(ProgressBlock, { vertical: false }),
           React.createElement(AnalyticsBlock, null)
@@ -1003,8 +1370,9 @@
     }
     
     // LARGE (4×4) — максимум информации
-    if (size === 'large') {
-      return React.createElement('div', { className: 'widget-weight widget-weight--large' },
+    if (size === '4x4') {
+      const hasProgress = showGoal && hasGoal && progressPct !== null;
+      return React.createElement('div', { className: 'widget-weight widget-weight--4x4' },
         React.createElement('div', { className: 'widget-weight__header' },
           React.createElement('div', { className: 'widget-weight__left' },
             React.createElement(WeightValue, { scale: 'xl' }),
@@ -1012,20 +1380,33 @@
           ),
           React.createElement(BMIBlock, { compact: false })
         ),
-        React.createElement('div', { className: 'widget-weight__chart-full' },
-          React.createElement(ChartBlock, { days: 14, height: 120, showDots: true, showLabels: true, showGoalLine: true })
-        ),
+        hasSparkline
+          ? React.createElement('div', { className: 'widget-weight__chart-full' },
+              React.createElement(ChartBlock, { days: 14, height: 108, showDots: true, showLabels: true, showGoalLine: true })
+            )
+          : React.createElement('div', { className: 'widget-weight__chart-full' },
+              React.createElement('div', { className: 'widget-weight__hint' }, 'Добавьте вес 2+ дня для графика')
+            ),
         React.createElement('div', { className: 'widget-weight__bottom' },
           React.createElement(ProgressBlock, { vertical: false }),
           React.createElement(AnalyticsBlock, null),
-          React.createElement(GoalBlock, { inline: true })
+          // Если прогресс уже показан, цель видна в нём (→ goal кг). Не дублируем, чтобы не клиппило низ.
+          !hasProgress ? React.createElement(GoalBlock, { inline: true }) : null
         )
       );
     }
     
-    // Fallback
-    return React.createElement('div', { className: 'widget-weight' },
-      React.createElement(WeightValue, { scale: 'md' })
+    // Fallback — неизвестный размер: рендерим базово и (один раз) логируем для диагностики
+    if (widgetsOnce(`weight:unknownSize:${size}`)) {
+      trackWidgetIssue('widgets_weight_unknown_size', {
+        size,
+        widgetId: widget?.id,
+        availableSizes: HEYS.Widgets.registry?.getType?.('weight')?.availableSizes
+      });
+    }
+    return React.createElement('div', { className: `widget-weight widget-weight--${size || '2x2'}` },
+      React.createElement(WeightValue, { scale: 'md' }),
+      React.createElement(TrendBlock, { showText: false })
     );
   }
   
@@ -1136,49 +1517,60 @@
     const goal = data.goal || 10000;
     const pct = goal > 0 ? Math.round((steps / goal) * 100) : 0;
     const km = widget.settings?.showKilometers ? (steps * 0.0007).toFixed(1) : null;
+
+    const d = getWidgetDims(widget);
+    const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
+    const showKm = !!km && !d.isTiny;
+    const showGoalBar = widget.settings?.showGoal !== false && !d.isMicro;
+    const showPctInline = d.isShort || d.isMicro;
     
-    return React.createElement('div', { className: 'widget-steps' },
-      React.createElement('div', { className: 'widget-steps__value' },
-        steps.toLocaleString('ru-RU')
+    return React.createElement('div', { className: `widget-steps widget-steps--${variant}` },
+      React.createElement('div', { className: 'widget-steps__top' },
+        React.createElement('div', { className: 'widget-steps__value' }, steps.toLocaleString('ru-RU')),
+        showPctInline ? React.createElement('div', { className: 'widget-steps__pct' }, `${Math.min(999, Math.max(0, pct))}%`) : null
       ),
-      km && React.createElement('div', { className: 'widget-steps__km' }, `${km} км`),
-      widget.settings?.showGoal &&
-        React.createElement('div', { className: 'widget-steps__progress' },
-          React.createElement('div', {
-            className: 'widget-steps__bar',
-            style: { width: `${Math.min(100, pct)}%` }
-          })
-        )
+      showKm ? React.createElement('div', { className: 'widget-steps__km' }, `${km} км`) : null,
+      showGoalBar
+        ? React.createElement('div', { className: 'widget-steps__progress' },
+            React.createElement('div', {
+              className: 'widget-steps__bar',
+              style: { width: `${Math.min(100, pct)}%` }
+            })
+          )
+        : null
     );
   }
   
   function MacrosWidgetContent({ widget, data }) {
     const { protein, fat, carbs, proteinTarget, fatTarget, carbsTarget } = data;
+
+    const d = getWidgetDims(widget);
+    const variant = d.isMicro ? 'micro' : d.isTiny ? 'compact' : 'std';
+    const showGrams = widget.settings?.showGrams !== false && !d.isTiny;
     
-    const MacroBar = ({ label, value, target, color }) => {
+    const MacroBar = ({ label, value, target, color, cls }) => {
       const pct = target > 0 ? Math.round((value / target) * 100) : 0;
       return React.createElement('div', { className: 'widget-macros__row' },
-        React.createElement('span', { className: 'widget-macros__label' }, label),
+        React.createElement('span', { className: `widget-macros__label ${cls || ''}` }, label),
         React.createElement('div', { className: 'widget-macros__bar-container' },
           React.createElement('div', {
             className: 'widget-macros__bar',
             style: { width: `${Math.min(100, pct)}%`, backgroundColor: color }
           })
         ),
-        widget.settings?.showGrams &&
-          React.createElement('span', { className: 'widget-macros__value' }, `${Math.round(value)}г`)
+        showGrams ? React.createElement('span', { className: 'widget-macros__value' }, `${Math.round(value)}г`) : null
       );
     };
     
-    return React.createElement('div', { className: 'widget-macros' },
+    return React.createElement('div', { className: `widget-macros widget-macros--${variant}` },
       React.createElement(MacroBar, {
-        label: 'Б', value: protein || 0, target: proteinTarget || 100, color: '#ef4444'
+        label: 'Б', value: protein || 0, target: proteinTarget || 100, color: '#ef4444', cls: 'widget-macros__label--prot'
       }),
       React.createElement(MacroBar, {
-        label: 'Ж', value: fat || 0, target: fatTarget || 70, color: '#eab308'
+        label: 'Ж', value: fat || 0, target: fatTarget || 70, color: '#eab308', cls: 'widget-macros__label--fat'
       }),
       React.createElement(MacroBar, {
-        label: 'У', value: carbs || 0, target: carbsTarget || 250, color: '#3b82f6'
+        label: 'У', value: carbs || 0, target: carbsTarget || 250, color: '#3b82f6', cls: 'widget-macros__label--carbs'
       })
     );
   }
@@ -1187,6 +1579,9 @@
     const status = data.status || 'unknown';
     const remaining = data.remaining;
     const phase = data.phase;
+
+    const d = getWidgetDims(widget);
+    const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
     
     const getStatusInfo = () => {
       switch (status) {
@@ -1200,29 +1595,49 @@
     
     const info = getStatusInfo();
     
-    return React.createElement('div', { className: 'widget-insulin' },
-      React.createElement('div', { className: 'widget-insulin__status', style: { color: info.color } },
+    const showTimer = widget.settings?.showTimer !== false && Number.isFinite(remaining) && remaining > 0;
+    const showPhase = widget.settings?.showPhase !== false && !!phase && !d.isTiny;
+
+    if (d.isMicro) {
+      return React.createElement('div', { className: `widget-insulin widget-insulin--${variant}` },
+        React.createElement('div', { className: 'widget-insulin__micro' },
+          React.createElement('span', { className: 'widget-insulin__micro-emoji' }, info.emoji),
+          showTimer ? React.createElement('span', { className: 'widget-insulin__micro-time' }, `${remaining}м`) : null
+        )
+      );
+    }
+
+    return React.createElement('div', { className: `widget-insulin widget-insulin--${variant}` },
+      React.createElement('div', { className: `widget-insulin__status widget-insulin__status--${status}` },
         info.emoji, ' ', info.label
       ),
-      widget.settings?.showTimer && remaining > 0 &&
-        React.createElement('div', { className: 'widget-insulin__timer' },
-          `${remaining} мин`
-        ),
-      widget.settings?.showPhase && phase &&
-        React.createElement('div', { className: 'widget-insulin__phase' }, phase)
+      showTimer ? React.createElement('div', { className: 'widget-insulin__timer' }, `${remaining} мин`) : null,
+      showPhase ? React.createElement('div', { className: 'widget-insulin__phase' }, phase) : null
     );
   }
   
   function HeatmapWidgetContent({ widget, data }) {
     const days = data.days || [];
     const configuredPeriod = widget.settings?.period || 'week';
-    // В wide (и любом не-large) делаем компактный недельный вид,
-    // чтобы не «съедал» высоту карточки.
-    const period = widget?.size === 'large' ? configuredPeriod : 'week';
+
+    const d = getWidgetDims(widget);
+    const canShowMonth = configuredPeriod === 'month' && d.area >= 9 && d.rows >= 3;
+    const period = canShowMonth ? 'month' : 'week';
+
+    let renderDays = days;
+    if (d.isMicro) {
+      renderDays = days.slice(-1);
+    } else if (d.isTiny) {
+      renderDays = days.slice(-7);
+    } else if (period === 'week') {
+      renderDays = days.slice(-7);
+    }
     
-    return React.createElement('div', { className: 'widget-heatmap' },
+    const variant = d.isMicro ? 'micro' : d.isTiny ? 'compact' : 'std';
+
+    return React.createElement('div', { className: `widget-heatmap widget-heatmap--${variant}` },
       React.createElement('div', { className: `widget-heatmap__grid widget-heatmap__grid--${period}` },
-        days.map((day, i) =>
+        renderDays.map((day, i) =>
           React.createElement('div', {
             key: i,
             className: `widget-heatmap__cell widget-heatmap__cell--${day.status || 'empty'}`,
@@ -1236,16 +1651,19 @@
   function CycleWidgetContent({ widget, data }) {
     const day = data.day;
     const phase = data.phase;
+
+    const d = getWidgetDims(widget);
+    const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
     
     if (!day) {
       return React.createElement('div', { className: 'widget-cycle__empty' }, 'Нет данных');
     }
     
-    return React.createElement('div', { className: 'widget-cycle' },
+    return React.createElement('div', { className: `widget-cycle widget-cycle--${variant}` },
       React.createElement('div', { className: 'widget-cycle__day' },
         `День ${day}`
       ),
-      widget.settings?.showPhase && phase &&
+      widget.settings?.showPhase && phase && !d.isTiny &&
         React.createElement('div', { className: 'widget-cycle__phase' },
           phase.icon, ' ', phase.name
         )

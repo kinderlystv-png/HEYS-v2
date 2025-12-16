@@ -32,11 +32,11 @@
   const CELL_GAP_PX = 12; // fallback
   
   const DEFAULT_LAYOUT = [
-    // 4-колоночная сетка (compact = 2×2)
-    { type: 'calories', size: 'compact', position: { col: 0, row: 0 } },
-    { type: 'water', size: 'compact', position: { col: 2, row: 0 } },
-    { type: 'streak', size: 'compact', position: { col: 0, row: 2 } },
-    { type: 'sleep', size: 'compact', position: { col: 2, row: 2 } }
+    // 4-колоночная сетка (2x2 = 2×2)
+    { type: 'calories', size: '2x2', position: { col: 0, row: 0 } },
+    { type: 'water', size: '2x2', position: { col: 2, row: 0 } },
+    { type: 'streak', size: '2x2', position: { col: 0, row: 2 } },
+    { type: 'sleep', size: '2x2', position: { col: 2, row: 2 } }
   ];
   
   // === State Manager with Undo/Redo ===
@@ -313,12 +313,19 @@
     _normalizeWidget(w) {
       const registry = HEYS.Widgets.registry;
       const type = registry?.getType(w.type);
-      const size = registry?.getSize(w.size || type?.defaultSize || 'compact');
+
+      // Backward compatibility: в сохранённых layout'ах могут быть legacy size-id.
+      const rawSizeId = w.size || type?.defaultSize || '2x2';
+      const normalizedSizeId = registry?.normalizeSizeId
+        ? (registry.normalizeSizeId(rawSizeId) || '2x2')
+        : rawSizeId;
+
+      const size = registry?.getSize(normalizedSizeId);
       
       return {
         id: w.id || `widget_${w.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type: w.type,
-        size: w.size || type?.defaultSize || 'compact',
+        size: normalizedSizeId,
         cols: size?.cols || 1,
         rows: size?.rows || 1,
         position: w.position || { col: 0, row: 0 },
@@ -1590,8 +1597,8 @@
         name: 'Минимальный',
         description: 'Только калории и вода',
         widgets: [
-          { type: 'calories', size: 'compact', position: { col: 0, row: 0 } },
-          { type: 'water', size: 'compact', position: { col: 1, row: 0 } }
+          { type: 'calories', size: '2x2', position: { col: 0, row: 0 } },
+          { type: 'water', size: '2x2', position: { col: 2, row: 0 } }
         ]
       },
       balanced: {
@@ -1599,10 +1606,10 @@
         name: 'Сбалансированный',
         description: 'Основные показатели',
         widgets: [
-          { type: 'calories', size: 'compact', position: { col: 0, row: 0 } },
-          { type: 'water', size: 'compact', position: { col: 1, row: 0 } },
-          { type: 'streak', size: 'compact', position: { col: 0, row: 1 } },
-          { type: 'sleep', size: 'compact', position: { col: 1, row: 1 } }
+          { type: 'calories', size: '2x2', position: { col: 0, row: 0 } },
+          { type: 'water', size: '2x2', position: { col: 2, row: 0 } },
+          { type: 'streak', size: '2x2', position: { col: 0, row: 2 } },
+          { type: 'sleep', size: '2x2', position: { col: 2, row: 2 } }
         ]
       },
       fitness: {
@@ -1610,10 +1617,10 @@
         name: 'Фитнес',
         description: 'Для активного образа жизни',
         widgets: [
-          { type: 'calories', size: 'wide', position: { col: 0, row: 0 } },
-          { type: 'macros', size: 'wide', position: { col: 0, row: 1 } },
-          { type: 'steps', size: 'compact', position: { col: 0, row: 2 } },
-          { type: 'weight', size: 'compact', position: { col: 1, row: 2 } }
+          { type: 'calories', size: '4x2', position: { col: 0, row: 0 } },
+          { type: 'macros', size: '4x2', position: { col: 0, row: 2 } },
+          { type: 'steps', size: '2x2', position: { col: 0, row: 4 } },
+          { type: 'weight', size: '2x2', position: { col: 2, row: 4 } }
         ]
       },
       detailed: {
@@ -1621,14 +1628,14 @@
         name: 'Детальный',
         description: 'Максимум информации',
         widgets: [
-          { type: 'calories', size: 'compact', position: { col: 0, row: 0 } },
-          { type: 'insulin', size: 'compact', position: { col: 1, row: 0 } },
-          { type: 'macros', size: 'wide', position: { col: 0, row: 1 } },
-          { type: 'water', size: 'compact', position: { col: 0, row: 2 } },
-          { type: 'sleep', size: 'compact', position: { col: 1, row: 2 } },
-          { type: 'weight', size: 'wide', position: { col: 0, row: 3 } },
-          { type: 'streak', size: 'compact', position: { col: 0, row: 4 } },
-          { type: 'steps', size: 'compact', position: { col: 1, row: 4 } }
+          { type: 'calories', size: '2x2', position: { col: 0, row: 0 } },
+          { type: 'insulin', size: '2x2', position: { col: 2, row: 0 } },
+          { type: 'macros', size: '4x2', position: { col: 0, row: 2 } },
+          { type: 'water', size: '2x2', position: { col: 0, row: 4 } },
+          { type: 'sleep', size: '2x2', position: { col: 2, row: 4 } },
+          { type: 'weight', size: '4x2', position: { col: 0, row: 6 } },
+          { type: 'streak', size: '2x2', position: { col: 0, row: 8 } },
+          { type: 'steps', size: '2x2', position: { col: 2, row: 8 } }
         ]
       }
     },
