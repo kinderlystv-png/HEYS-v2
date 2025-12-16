@@ -4979,7 +4979,7 @@
       const { data, error } = await queryBuilder;
       
       if (error) {
-        logError('[SHARED PRODUCTS] Search error:', error);
+        err('[SHARED PRODUCTS] Search error:', error);
         return { data: null, error };
       }
       
@@ -4994,7 +4994,7 @@
       log(`[SHARED PRODUCTS] Found ${filtered.length} products for "${query}"`);
       return { data: filtered, error: null };
     } catch (e) {
-      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      err('[SHARED PRODUCTS] Unexpected error:', e);
       return { data: null, error: e.message };
     }
   };
@@ -5031,6 +5031,7 @@
       }
       
       // Публикуем новый продукт
+      // ВАЖНО: PostgreSQL lowercase-ит колонки, поэтому badfat100/goodfat100
       const { data, error } = await client
         .from('shared_products')
         .insert({
@@ -5041,8 +5042,8 @@
           simple100: product.simple100 || 0,
           complex100: product.complex100 || 0,
           protein100: product.protein100 || 0,
-          badFat100: product.badFat100 || 0,
-          goodFat100: product.goodFat100 || 0,
+          badfat100: product.badFat100 || 0,
+          goodfat100: product.goodFat100 || 0,
           trans100: product.trans100 || 0,
           fiber100: product.fiber100 || 0,
           gi: product.gi,
@@ -5055,14 +5056,14 @@
         .single();
       
       if (error) {
-        logError('[SHARED PRODUCTS] Publish error:', error);
+        err('[SHARED PRODUCTS] Publish error:', error);
         return { data: null, error, status: 'error' };
       }
       
       log('[SHARED PRODUCTS] Published:', product.name);
       return { data, error: null, status: 'published' };
     } catch (e) {
-      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      err('[SHARED PRODUCTS] Unexpected error:', e);
       return { data: null, error: e.message, status: 'error' };
     }
   };
@@ -5090,7 +5091,7 @@
       });
       
       if (error) {
-        logError('[SHARED PRODUCTS] Pending create error:', error);
+        err('[SHARED PRODUCTS] Pending create error:', error);
         return { data: null, error, status: 'error' };
       }
       
@@ -5102,7 +5103,7 @@
         message: data.message
       };
     } catch (e) {
-      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      err('[SHARED PRODUCTS] Unexpected error:', e);
       return { data: null, error: e.message, status: 'error' };
     }
   };
@@ -5125,14 +5126,14 @@
         .order('created_at', { ascending: false });
       
       if (error) {
-        logError('[SHARED PRODUCTS] Get pending error:', error);
+        err('[SHARED PRODUCTS] Get pending error:', error);
         return { data: null, error };
       }
       
       log(`[SHARED PRODUCTS] Found ${data?.length || 0} pending products`);
       return { data, error: null };
     } catch (e) {
-      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      err('[SHARED PRODUCTS] Unexpected error:', e);
       return { data: null, error: e.message };
     }
   };
@@ -5167,7 +5168,7 @@
         .eq('id', pendingId);
       
       if (updateError) {
-        logError('[SHARED PRODUCTS] Approve update error:', updateError);
+        err('[SHARED PRODUCTS] Approve update error:', updateError);
         return { data: null, error: updateError, status: 'error' };
       }
       
@@ -5179,7 +5180,7 @@
         existing: publishResult.status === 'exists'
       };
     } catch (e) {
-      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      err('[SHARED PRODUCTS] Unexpected error:', e);
       return { data: null, error: e.message, status: 'error' };
     }
   };
@@ -5209,14 +5210,14 @@
         .single();
       
       if (error) {
-        logError('[SHARED PRODUCTS] Reject error:', error);
+        err('[SHARED PRODUCTS] Reject error:', error);
         return { data: null, error };
       }
       
       log('[SHARED PRODUCTS] Rejected pending:', pendingId);
       return { data, error: null };
     } catch (e) {
-      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      err('[SHARED PRODUCTS] Unexpected error:', e);
       return { data: null, error: e.message };
     }
   };
@@ -5235,13 +5236,13 @@
         .eq('curator_id', user.id);
       
       if (error) {
-        logError('[SHARED PRODUCTS] Get blocklist error:', error);
+        err('[SHARED PRODUCTS] Get blocklist error:', error);
         return [];
       }
       
       return (data || []).map(row => row.product_id);
     } catch (e) {
-      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      err('[SHARED PRODUCTS] Unexpected error:', e);
       return [];
     }
   };
@@ -5267,14 +5268,14 @@
         .single();
       
       if (error) {
-        logError('[SHARED PRODUCTS] Block error:', error);
+        err('[SHARED PRODUCTS] Block error:', error);
         return { data: null, error };
       }
       
       log('[SHARED PRODUCTS] Blocked product:', productId);
       return { data, error: null };
     } catch (e) {
-      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      err('[SHARED PRODUCTS] Unexpected error:', e);
       return { data: null, error: e.message };
     }
   };
@@ -5297,14 +5298,14 @@
         .eq('product_id', productId);
       
       if (error) {
-        logError('[SHARED PRODUCTS] Unblock error:', error);
+        err('[SHARED PRODUCTS] Unblock error:', error);
         return { data: null, error };
       }
       
       log('[SHARED PRODUCTS] Unblocked product:', productId);
       return { data: true, error: null };
     } catch (e) {
-      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      err('[SHARED PRODUCTS] Unexpected error:', e);
       return { data: null, error: e.message };
     }
   };
