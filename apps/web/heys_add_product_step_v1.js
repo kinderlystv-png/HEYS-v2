@@ -627,19 +627,11 @@
         
         // Инфо
         React.createElement('div', { className: 'aps-product-info' },
-          React.createElement('div', { className: 'aps-product-name', style: { display: 'flex', alignItems: 'center', gap: '4px' } }, 
+          React.createElement('div', { className: 'aps-product-name' }, 
             highlightedName,
             // 🌐 Бейдж для продуктов из общей базы
             isFromShared && React.createElement('span', {
-              style: {
-                fontSize: '10px',
-                background: '#3b82f6',
-                color: '#fff',
-                padding: '1px 4px',
-                borderRadius: '4px',
-                marginLeft: '4px',
-                whiteSpace: 'nowrap'
-              }
+              className: 'aps-shared-badge'
             }, '🌐')
           ),
           React.createElement('div', { className: 'aps-product-meta' },

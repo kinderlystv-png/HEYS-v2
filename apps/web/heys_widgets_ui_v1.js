@@ -197,7 +197,18 @@
     }, []);
 
     const pickNearestSize = useCallback((targetCols, targetRows, deltaCols = 0, deltaRows = 0) => {
-      const sizes = (availableSizes && availableSizes.length) ? availableSizes : [widget.size || '2x2'];
+      // CRITICAL: Получаем актуальные cols/rows из registry по sizeId
+      const currentSizeId = widget.size || '2x2';
+      const currentSizeInfo = HEYS.Widgets.registry?.getSize?.(currentSizeId);
+      const currentCols = currentSizeInfo?.cols || widget.cols || 1;
+      const currentRows = currentSizeInfo?.rows || widget.rows || 1;
+      
+      // CRITICAL: Если нет движения — возвращаем текущий размер (не меняем)
+      if (deltaCols === 0 && deltaRows === 0) {
+        return { sizeId: currentSizeId, cols: currentCols, rows: currentRows };
+      }
+      
+      const sizes = (availableSizes && availableSizes.length) ? availableSizes : [currentSizeId];
       const reg = HEYS.Widgets.registry;
       const preferBigger = (deltaCols + deltaRows) >= 0;
 
@@ -241,8 +252,9 @@
         }
       }
 
-      return best || { sizeId: widget.size || '2x2', cols: widget.cols || 1, rows: widget.rows || 1 };
-    }, [availableSizes, widget.size, widget.cols, widget.rows]);
+      // Fallback: вернуть текущий размер
+      return best || { sizeId: currentSizeId, cols: currentCols, rows: currentRows };
+    }, [availableSizes, widget.size]);
 
     const updateResizePreview = useCallback((next) => {
       const ref = resizeDragRef.current;
@@ -277,8 +289,17 @@
 
     const endResizeDrag = useCallback((reason = 'up') => {
       const ref = resizeDragRef.current;
+      
+      // Сбрасываем глобальный флаг resize
+      try {
+        if (HEYS.Widgets.dnd) {
+          HEYS.Widgets.dnd._resizeActive = false;
+        }
+      } catch (err) { /* ignore */ }
+      
       if (!ref.active) return;
       ref.active = false;
+      ref.startedAt = null; // Сбрасываем timestamp для следующего resize
 
       // Коммитим только если реально выбран другой размер
       const finalSizeId = ref.last?.sizeId || resizePreview?.sizeId || null;
@@ -329,10 +350,21 @@
 
     // Стартует resize drag (вызывается из onPointerDown или onTouchStart)
     const startResizeDrag = useCallback((direction, e, isTouchEvent = false) => {
-      if (!isEditMode) return;
+      if (!isEditMode) {
+        return;
+      }
+      
+      const ref = resizeDragRef.current;
+      const now = Date.now();
+      
+      // Защита от двойного вызова (pointerdown + touchstart на одно касание)
+      // Если resize стартовал менее 100ms назад — игнорируем
+      if (ref?.startedAt && now - ref.startedAt < 100) {
+        return;
+      }
       
       // Защита от повторного запуска resize пока предыдущий активен
-      if (resizeDragRef.current?.active) {
+      if (ref?.active) {
         return;
       }
       
@@ -343,9 +375,12 @@
         e.preventDefault();
       }
 
-      // Если DnD уже «подготовился» (в edit-mode prepareForDrag ставит listeners),
-      // то при попытке resize он может внезапно стартовать. Отменяем только если DnD активен.
+      // CRITICAL: Устанавливаем глобальный флаг чтобы DnD не перехватывал события
       try {
+        if (HEYS.Widgets.dnd) {
+          HEYS.Widgets.dnd._resizeActive = true;
+        }
+        // Отменяем DnD если он уже начался
         if (HEYS.Widgets.dnd?.isDragging?.()) {
           HEYS.Widgets.dnd?.cancel?.();
         }
@@ -360,15 +395,23 @@
 
       const { clientX, clientY } = getEventCoords(e);
 
-      const ref = resizeDragRef.current;
+      // CRITICAL: Получаем cols/rows из registry по текущему sizeId,
+      // т.к. widget.cols/rows могут быть устаревшими (не обновлёнными после resize)
+      const currentSizeId = widget.size || '2x2';
+      const sizeInfo = HEYS.Widgets.registry?.getSize?.(currentSizeId);
+      const currentCols = sizeInfo?.cols || widget.cols || 1;
+      const currentRows = sizeInfo?.rows || widget.rows || 1;
+
+      // ref уже объявлен выше (строка 336)
       ref.active = true;
+      ref.startedAt = now; // Для debounce защиты от двойного вызова
       ref.pointerId = isTouchEvent ? 'touch' : (e.pointerId ?? null);
       ref.isTouchBased = isTouchEvent;
       ref.direction = direction;
       ref.startX = clientX;
       ref.startY = clientY;
-      ref.baseCols = widget.cols || 1;
-      ref.baseRows = widget.rows || 1;
+      ref.baseCols = currentCols;
+      ref.baseRows = currentRows;
       ref.baseSizeId = widget.size || '2x2';
       ref.basePos = {
         col: Number.isFinite(widget?.position?.col) ? widget.position.col : 0,
@@ -456,6 +499,7 @@
 
         ref.touchEndHandler = () => {
           ref.active = false; // ВАЖНО: сбрасываем active при touchend
+          ref.startedAt = null; // Сбрасываем timestamp
           if (ref.touchMoveHandler) {
             // CRITICAL: удаляем с теми же options что и добавляли (capture: true)
             document.removeEventListener('touchmove', ref.touchMoveHandler, { capture: true });
@@ -487,8 +531,15 @@
       });
     }, [endResizeDrag, getEventCoords, getGridCols, isEditMode, pickNearestSize, updateResizePreview, widget.cols, widget.rows, widget.size, widget?.position?.col, widget?.position?.row]);
 
-    // Pointer down handler (для desktop и некоторых мобильных)
+    // Pointer down handler (для desktop, НЕ для touch devices)
     const handleResizeHandlePointerDown = useCallback((direction, e) => {
+      // CRITICAL: На touch devices НЕ обрабатываем pointerdown — используем native touchstart
+      // pointerdown на touch срабатывает но pointerup может не сработать корректно
+      if (e.pointerType === 'touch') {
+        e.stopPropagation();
+        return; // Native touchstart handler обработает
+      }
+      
       // CRITICAL: stop propagation чтобы widget card handlePointerDown НЕ вызвал dnd._prepareForDrag
       e.stopPropagation();
       e.preventDefault();

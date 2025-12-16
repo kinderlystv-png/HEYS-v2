@@ -6,10 +6,10 @@
 > @heys/web@13.0.1 prebuild /Users/poplavskijanton/HEYS-v2/apps/web
 > node scripts/update-version.cjs && node -e "const fs=require('fs');const f=process.cwd()+'/public/sw.js';let c=fs.readFileSync(f,'utf8');c=c.replace(/heys-[\w.-]+/,'heys-'+Date.now());fs.writeFileSync(f,c);console.log('SW version:',Date.now())"
 
-✅ APP_VERSION updated to: 2025.12.17.0026.addca29
-✅ version.json created: 2025.12.17.0026.addca29
-✅ SW CACHE_VERSION updated to: heys-1765920414771
-SW version: 1765920414844
+✅ APP_VERSION updated to: 2025.12.17.0230.de5a3bd
+✅ version.json created: 2025.12.17.0230.de5a3bd
+✅ SW CACHE_VERSION updated to: heys-1765927815849
+SW version: 1765927815925
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 vite v4.5.14 building for production...
 <script src="heys_dev_utils.js"> in "/index.html" can't be bundled without type="module" attribute
@@ -69,8 +69,8 @@ computing gzip size...
 dist/assets/heys_simple_analytics-b3f08726.js      10.31 kB
 dist/index.html                                    14.84 kB │ gzip:   4.05 kB
 dist/assets/heys_models_v1-1bbf9edb.js             35.08 kB
-dist/assets/heys_core_v12-7ad4d8d3.js             111.72 kB
-dist/assets/heys_storage_supabase_v1-d287ef55.js  247.69 kB
-dist/assets/index-c93537de.css                    709.00 kB │ gzip: 115.30 kB
+dist/assets/heys_core_v12-9def5df5.js             113.72 kB
+dist/assets/heys_storage_supabase_v1-0f49f4f7.js  248.89 kB
+dist/assets/index-0f20d8ce.css                    709.17 kB │ gzip: 115.33 kB
 [vite-plugin-static-copy] Copied 1 items.
-✓ built in 1.36s
+✓ built in 1.37s

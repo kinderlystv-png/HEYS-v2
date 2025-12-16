@@ -170,8 +170,13 @@
       const positions = {};
 
       const occupy = (w, col, row) => {
-        for (let c = 0; c < w.cols; c++) {
-          for (let r = 0; r < w.rows; r++) {
+        // 🔧 FIX: Получаем размер из registry
+        const sizeInfo = HEYS.Widgets.registry.getSize(w.size);
+        const wCols = sizeInfo?.cols || w.cols || 1;
+        const wRows = sizeInfo?.rows || w.rows || 1;
+        
+        for (let c = 0; c < wCols; c++) {
+          for (let r = 0; r < wRows; r++) {
             occupied.add(`${col + c},${row + r}`);
           }
         }
@@ -189,10 +194,15 @@
       };
 
       for (const w of sorted) {
+        // 🔧 FIX: Получаем размер из registry
+        const sizeInfo = HEYS.Widgets.registry.getSize(w.size);
+        const wCols = sizeInfo?.cols || w.cols || 1;
+        const wRows = sizeInfo?.rows || w.rows || 1;
+        
         let placed = false;
         for (let row = 0; row < 200 && !placed; row++) {
-          for (let col = 0; col <= GRID_COLS - w.cols; col++) {
-            if (canPlace(col, row, w.cols, w.rows)) {
+          for (let col = 0; col <= GRID_COLS - wCols; col++) {
+            if (canPlace(col, row, wCols, wRows)) {
               positions[w.id] = { col, row };
               occupy(w, col, row);
               placed = true;
@@ -495,7 +505,12 @@
      * @param {boolean} skipHistory
      */
     moveWidget(id, position, skipHistory = false) {
-      return this.updateWidget(id, { position }, skipHistory);
+      const result = this.updateWidget(id, { position }, skipHistory);
+      if (result) {
+        // 🆕 Вытесняем перекрывающиеся виджеты на свободные места
+        gridEngine.displaceCollidingWidgets(id);
+      }
+      return result;
     },
 
     /**
@@ -521,6 +536,10 @@
       // Делаем swap без дополнительного history push
       this.updateWidget(idA, { position: posB }, true);
       this.updateWidget(idB, { position: posA }, true);
+
+      // 🆕 После swap проверяем коллизии для обоих виджетов
+      gridEngine.displaceCollidingWidgets(idA);
+      gridEngine.displaceCollidingWidgets(idB);
 
       HEYS.Widgets.emit('widget:swapped', { a: idA, b: idB, from: posA, to: posB });
       return true;
@@ -552,6 +571,12 @@
       if (changed) {
         this._debouncedSave();
         HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
+        
+        // 🆕 Финальная проверка: убедимся что нет коллизий
+        // (на случай если reflow расчёт был неточным)
+        for (const widgetId of Object.keys(positionsById)) {
+          gridEngine.displaceCollidingWidgets(widgetId);
+        }
       }
 
       return changed;
@@ -570,7 +595,7 @@
      * Изменить размер виджета с якорем (опционально) на конкретную позицию.
      * Нужно для resize от левого/верхнего края: меняется и size, и position.
      *
-     * Важно: остаётся одним атомарным действием (history + reflow + rollback).
+     * Свободная сетка: при resize вытесняем перекрывающиеся виджеты на свободные места.
      *
      * @param {string} id
      * @param {string} size
@@ -590,56 +615,20 @@
         ? { col: position.col, row: position.row }
         : { ...widget.position };
 
-      // iOS-like: resize = одно атомарное действие + reflow остальных,
-      // чтобы layout всегда оставался валидным и без наложений.
-      const prevSize = widget.size;
-      const prevPos = { ...widget.position };
-
       // 1) Одна запись в историю
       this._pushHistory();
 
-      // 2) Меняем размер (+ якорную позицию) без дополнительного history push
+      // 2) Меняем размер (+ якорную позицию)
       const resized = this.updateWidget(id, { size, position: nextPos }, true);
-      if (!resized) return false;
-
-      // 3) Пробуем перепаковать остальных, сохраняя заданную позицию
-      let positions = null;
-      try {
-        positions = gridEngine.computeReflowLayout(id, widget.position);
-      } catch (e) {
-        positions = null;
+      if (!resized) {
+        return false;
       }
 
-      // 4) Если не вышло — пробуем поставить виджет в первое свободное место
-      if (!positions) {
-        try {
-          const free = gridEngine.findFreePosition(widget.cols, widget.rows);
-          positions = gridEngine.computeReflowLayout(id, free);
-        } catch (e) {
-          positions = null;
-        }
-      }
+      // 3) 🆕 Вытесняем перекрывающиеся виджеты на свободные места
+      gridEngine.displaceCollidingWidgets(id);
 
-      // 5) Если перепаковка успешна — применяем одним действием
-      if (positions) {
-        // applyPositions сам сделает debounced save + layout:changed
-        // Важно: applyPositions возвращает false, если позиции не изменились.
-        // Это НЕ ошибка для resize — размер уже применён через updateWidget.
-        try {
-          this.applyPositions(positions, true);
-        } catch (e) {
-          // Если applyPositions упало (не должно), дальше сработает rollback
-          positions = null;
-        }
-
-        if (positions) return true;
-      }
-
-      // 6) Фолбэк: откатываем resize (чтобы не оставлять overlay/коллизии)
-      this.updateWidget(id, { size: prevSize, position: prevPos }, true);
-      HEYS.Widgets.emit('widget:resize_failed', { widgetId: id, from: prevSize, to: size });
       // layout:changed эмитится внутри updateWidget
-      return false;
+      return true;
     },
     
     /**
@@ -770,9 +759,9 @@
      * @param {number} rows - Высота виджета
      * @returns {Object} { col, row }
      */
-    findFreePosition(cols, rows) {
+    findFreePosition(cols, rows, excludeId = null) {
       const widgets = state.getWidgets();
-      const occupiedCells = this.getOccupiedCells(widgets);
+      const occupiedCells = this.getOccupiedCells(widgets, excludeId);
       
       // Ищем первую свободную позицию сверху вниз, слева направо
       for (let row = 0; row < 100; row++) {
@@ -784,7 +773,150 @@
       }
       
       // Fallback: добавляем в конец
-      const maxRow = Math.max(0, ...widgets.map(w => w.position.row + w.rows));
+      const maxRow = Math.max(0, ...widgets.map(w => {
+        const sizeInfo = HEYS.Widgets.registry.getSize(w.size);
+        const wRows = sizeInfo?.rows || w.rows || 1;
+        return w.position.row + wRows;
+      }));
+      return { col: 0, row: maxRow };
+    },
+
+    /**
+     * 🆕 Найти все виджеты, которые пересекаются с заданным прямоугольником
+     * @param {string} excludeId - ID виджета для исключения
+     * @param {Object} rect - { col, row, cols, rows }
+     * @returns {Object[]} массив пересекающихся виджетов
+     */
+    getCollidingWidgets(excludeId, rect) {
+      const widgets = state.getWidgets();
+      const colliding = [];
+      
+      const aLeft = rect.col;
+      const aTop = rect.row;
+      const aRight = rect.col + rect.cols;
+      const aBottom = rect.row + rect.rows;
+      
+      for (const other of widgets) {
+        if (!other || other.id === excludeId) continue;
+        
+        // 🔧 FIX: Получаем размер из registry
+        const otherSizeInfo = HEYS.Widgets.registry.getSize(other.size);
+        const otherCols = otherSizeInfo?.cols || other.cols || 1;
+        const otherRows = otherSizeInfo?.rows || other.rows || 1;
+        
+        const bLeft = other.position.col;
+        const bTop = other.position.row;
+        const bRight = other.position.col + otherCols;
+        const bBottom = other.position.row + otherRows;
+        
+        const overlap = aLeft < bRight && aRight > bLeft && aTop < bBottom && aBottom > bTop;
+        if (overlap) {
+          colliding.push(other);
+        }
+      }
+      
+      return colliding;
+    },
+
+    /**
+     * 🆕 Вытеснить перекрывающиеся виджеты на свободные места
+     * Вызывается после move/resize чтобы гарантировать отсутствие наложений
+     * @param {string} priorityWidgetId - ID виджета который остаётся на месте
+     * @returns {boolean} true если были вытеснения
+     */
+    displaceCollidingWidgets(priorityWidgetId) {
+      const priorityWidget = state.getWidget(priorityWidgetId);
+      if (!priorityWidget) return false;
+      
+      // 🔧 FIX: Получаем размер из registry
+      const prioritySizeInfo = HEYS.Widgets.registry.getSize(priorityWidget.size);
+      const priorityCols = prioritySizeInfo?.cols || priorityWidget.cols || 1;
+      const priorityRows = prioritySizeInfo?.rows || priorityWidget.rows || 1;
+      
+      const rect = {
+        col: priorityWidget.position.col,
+        row: priorityWidget.position.row,
+        cols: priorityCols,
+        rows: priorityRows
+      };
+      
+      console.log(`[GridEngine] displaceCollidingWidgets called for ${priorityWidgetId}`, rect);
+      
+      const colliding = this.getCollidingWidgets(priorityWidgetId, rect);
+      console.log(`[GridEngine] Found ${colliding.length} colliding widgets:`, colliding.map(w => w.id));
+      
+      if (colliding.length === 0) return false;
+      
+      // Сортируем по размеру (меньшие первыми — их проще разместить)
+      colliding.sort((a, b) => {
+        const aSizeInfo = HEYS.Widgets.registry.getSize(a.size);
+        const bSizeInfo = HEYS.Widgets.registry.getSize(b.size);
+        const aArea = (aSizeInfo?.cols || a.cols || 1) * (aSizeInfo?.rows || a.rows || 1);
+        const bArea = (bSizeInfo?.cols || b.cols || 1) * (bSizeInfo?.rows || b.rows || 1);
+        return aArea - bArea;
+      });
+      
+      let displaced = false;
+      for (const widget of colliding) {
+        // 🔧 FIX: Получаем размер из registry для вытесняемого виджета
+        const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
+        const wCols = sizeInfo?.cols || widget.cols || 1;
+        const wRows = sizeInfo?.rows || widget.rows || 1;
+        
+        // Ищем свободное место для этого виджета (исключая его самого и priority)
+        const freePos = this.findFreePositionExcluding(wCols, wRows, [priorityWidgetId, widget.id]);
+        if (freePos) {
+          console.log(`[GridEngine] Moving ${widget.id} from (${widget.position.col},${widget.position.row}) to (${freePos.col},${freePos.row})`);
+          state.updateWidget(widget.id, { position: freePos }, true);
+          displaced = true;
+        }
+      }
+      
+      return displaced;
+    },
+
+    /**
+     * 🆕 Найти свободное место, исключая несколько виджетов из расчёта occupied
+     * @param {number} cols
+     * @param {number} rows
+     * @param {string[]} excludeIds - массив ID для исключения
+     * @returns {Object} { col, row }
+     */
+    findFreePositionExcluding(cols, rows, excludeIds = []) {
+      const widgets = state.getWidgets();
+      const occupiedCells = new Set();
+      
+      // Собираем занятые ячейки, исключая указанные виджеты
+      widgets.forEach(widget => {
+        if (excludeIds.includes(widget.id)) return;
+        
+        // 🔧 FIX: Получаем размер из registry
+        const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
+        const wCols = sizeInfo?.cols || widget.cols || 1;
+        const wRows = sizeInfo?.rows || widget.rows || 1;
+        
+        for (let c = 0; c < wCols; c++) {
+          for (let r = 0; r < wRows; r++) {
+            occupiedCells.add(`${widget.position.col + c},${widget.position.row + r}`);
+          }
+        }
+      });
+      
+      // Ищем первую свободную позицию сверху вниз, слева направо
+      for (let row = 0; row < 100; row++) {
+        for (let col = 0; col <= GRID_COLS - cols; col++) {
+          if (this.canPlace(col, row, cols, rows, occupiedCells)) {
+            return { col, row };
+          }
+        }
+      }
+      
+      // Fallback: добавляем в конец
+      const maxRow = Math.max(0, ...widgets.map(w => {
+        const sizeInfo = HEYS.Widgets.registry.getSize(w.size);
+        const wRows = sizeInfo?.rows || w.rows || 1;
+        return w.position.row + wRows;
+      }));
       return { col: 0, row: maxRow };
     },
     
@@ -800,8 +932,13 @@
       widgets.forEach(widget => {
         if (widget.id === excludeId) return;
         
-        for (let c = 0; c < widget.cols; c++) {
-          for (let r = 0; r < widget.rows; r++) {
+        // 🔧 FIX: Получаем размер из registry — единственный источник правды
+        const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
+        const cols = sizeInfo?.cols || widget.cols || 1;
+        const rows = sizeInfo?.rows || widget.rows || 1;
+        
+        for (let c = 0; c < cols; c++) {
+          for (let r = 0; r < rows; r++) {
             cells.add(`${widget.position.col + c},${widget.position.row + r}`);
           }
         }
@@ -846,8 +983,13 @@
       const widget = state.getWidget(widgetId);
       if (!widget) return false;
       
+      // 🔧 FIX: Получаем размер из registry — единственный источник правды
+      const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
+      const cols = sizeInfo?.cols || widget.cols || 1;
+      const rows = sizeInfo?.rows || widget.rows || 1;
+      
       const occupiedCells = this.getOccupiedCells(state.getWidgets(), widgetId);
-      return this.canPlace(position.col, position.row, widget.cols, widget.rows, occupiedCells);
+      return this.canPlace(position.col, position.row, cols, rows, occupiedCells);
     },
 
     /**
@@ -861,18 +1003,29 @@
       const widget = state.getWidget(widgetId);
       if (!widget) return null;
 
+      // 🔧 FIX: Получаем размер из registry
+      const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
+      const widgetCols = sizeInfo?.cols || widget.cols || 1;
+      const widgetRows = sizeInfo?.rows || widget.rows || 1;
+
       const aLeft = position.col;
       const aTop = position.row;
-      const aRight = position.col + widget.cols;
-      const aBottom = position.row + widget.rows;
+      const aRight = position.col + widgetCols;
+      const aBottom = position.row + widgetRows;
 
       const widgets = state.getWidgets();
       for (const other of widgets) {
         if (!other || other.id === widgetId) continue;
+        
+        // 🔧 FIX: Получаем размер КАЖДОГО виджета из registry
+        const otherSizeInfo = HEYS.Widgets.registry.getSize(other.size);
+        const otherCols = otherSizeInfo?.cols || other.cols || 1;
+        const otherRows = otherSizeInfo?.rows || other.rows || 1;
+        
         const bLeft = other.position.col;
         const bTop = other.position.row;
-        const bRight = other.position.col + other.cols;
-        const bBottom = other.position.row + other.rows;
+        const bRight = other.position.col + otherCols;
+        const bBottom = other.position.row + otherRows;
 
         const overlap = aLeft < bRight && aRight > bLeft && aTop < bBottom && aBottom > bTop;
         if (overlap) return other;
@@ -896,10 +1049,15 @@
       const dragged = state.getWidget(draggedId);
       if (!dragged) return null;
 
+      // 🔧 FIX: Получаем размер из registry
+      const draggedSizeInfo = HEYS.Widgets.registry.getSize(dragged.size);
+      const draggedCols = draggedSizeInfo?.cols || dragged.cols || 1;
+      const draggedRows = draggedSizeInfo?.rows || dragged.rows || 1;
+
       // Нормализуем target позицию под ширину виджета и текущую высоту
       const currentHeight = this.getGridHeight();
       const target = {
-        col: Math.max(0, Math.min(position.col || 0, GRID_COLS - dragged.cols)),
+        col: Math.max(0, Math.min(position.col || 0, GRID_COLS - draggedCols)),
         row: Math.max(0, Math.min(position.row || 0, currentHeight + 6))
       };
 
@@ -924,14 +1082,19 @@
 
       // Ставим dragged на target (даже если там было занято)
       positions[draggedId] = target;
-      occupy(draggedId, target.col, target.row, dragged.cols, dragged.rows);
+      occupy(draggedId, target.col, target.row, draggedCols, draggedRows);
 
       // Функция поиска первого доступного слота
       const findSlot = (w) => {
+        // 🔧 FIX: Получаем размер из registry
+        const wSizeInfo = HEYS.Widgets.registry.getSize(w.size);
+        const wCols = wSizeInfo?.cols || w.cols || 1;
+        const wRows = wSizeInfo?.rows || w.rows || 1;
+        
         for (let row = 0; row < 120; row++) {
-          for (let col = 0; col <= GRID_COLS - w.cols; col++) {
-            if (this.canPlace(col, row, w.cols, w.rows, occupied)) {
-              return { col, row };
+          for (let col = 0; col <= GRID_COLS - wCols; col++) {
+            if (this.canPlace(col, row, wCols, wRows, occupied)) {
+              return { col, row, cols: wCols, rows: wRows };
             }
           }
         }
@@ -942,8 +1105,8 @@
       for (const w of others) {
         const slot = findSlot(w);
         if (!slot) return null;
-        positions[w.id] = slot;
-        occupy(w.id, slot.col, slot.row, w.cols, w.rows);
+        positions[w.id] = { col: slot.col, row: slot.row };
+        occupy(w.id, slot.col, slot.row, slot.cols, slot.rows);
       }
 
       return positions;
@@ -968,7 +1131,12 @@
         let bestRow = 0;
         const occupiedCells = this.getOccupiedCells(widgets, widget.id);
         
-        while (!this.canPlace(widget.position.col, bestRow, widget.cols, widget.rows, occupiedCells)) {
+        // 🔧 FIX: Получаем размер из registry
+        const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
+        const wCols = sizeInfo?.cols || widget.cols || 1;
+        const wRows = sizeInfo?.rows || widget.rows || 1;
+        
+        while (!this.canPlace(widget.position.col, bestRow, wCols, wRows, occupiedCells)) {
           bestRow++;
           if (bestRow > 100) break; // Safety limit
         }
@@ -989,7 +1157,12 @@
     getGridHeight() {
       const widgets = state.getWidgets();
       if (widgets.length === 0) return 1;
-      return Math.max(...widgets.map(w => w.position.row + w.rows));
+      return Math.max(...widgets.map(w => {
+        // 🔧 FIX: Получаем размер из registry
+        const sizeInfo = HEYS.Widgets.registry.getSize(w.size);
+        const wRows = sizeInfo?.rows || w.rows || 1;
+        return w.position.row + wRows;
+      }));
     },
     
     /**
@@ -1071,6 +1244,19 @@
      * @param {Object} event
      */
     handlePointerDown(widgetId, event) {
+      // CRITICAL: Если resize активен — НЕ начинаем DnD
+      if (this._resizeActive) {
+        return;
+      }
+      
+      // CRITICAL: Если клик по resize handle — НЕ начинаем DnD
+      const t = event?.target;
+      if (t && typeof t.closest === 'function') {
+        if (t.closest('.widget__resize-handle')) {
+          return;
+        }
+      }
+      
       // Фиксируем стартовую позицию для отмены long press при движении
       this._startPos = {
         x: event.clientX || event.touches?.[0]?.clientX || 0,
@@ -1126,6 +1312,11 @@
      * Отмена long press при движении
      */
     handlePointerMove(event) {
+      // CRITICAL: Если resize активен — НЕ обрабатываем move для DnD
+      if (this._resizeActive) {
+        return;
+      }
+      
       // На iOS/Safari без preventDefault страница может скроллиться и ломать drag
       if (this._dragging && event && event.cancelable) {
         event.preventDefault();
@@ -1173,6 +1364,11 @@
      * @private
      */
     _prepareForDrag(widgetId, event) {
+      // CRITICAL: Если resize активен — НЕ начинаем drag
+      if (this._resizeActive) {
+        return;
+      }
+      
       const widget = state.getWidget(widgetId);
       if (!widget) return;
       
@@ -1222,6 +1418,11 @@
      */
     start(widgetId, event) {
       if (!state.isEditMode()) return;
+      
+      // CRITICAL: Если resize активен — НЕ начинаем drag
+      if (this._resizeActive) {
+        return;
+      }
       
       const widget = state.getWidget(widgetId);
       if (!widget) return;
@@ -1315,18 +1516,10 @@
       placeholder.style.transition = 'all 0.15s ease-out';
       
       // Сохраняем размер виджета для placeholder (важно сделать ДО updatePlaceholderPosition)
-      this._placeholderCols = widget.cols || 1;
-      this._placeholderRows = widget.rows || 1;
-      
-      console.log('[DND DEBUG] _createPlaceholder:', {
-        widgetId: widget.id,
-        widgetType: widget.type,
-        widgetSize: widget.size,
-        widgetCols: widget.cols,
-        widgetRows: widget.rows,
-        placeholderCols: this._placeholderCols,
-        placeholderRows: this._placeholderRows
-      });
+      // 🔧 FIX: Получаем размер из registry
+      const sizeInfo = HEYS.Widgets.registry.getSize(widget.size);
+      this._placeholderCols = sizeInfo?.cols || widget.cols || 1;
+      this._placeholderRows = sizeInfo?.rows || widget.rows || 1;
       
       // Привязываем placeholder и ставим в нужную grid-позицию
       this._placeholderElement = placeholder;
@@ -1398,16 +1591,28 @@
         
         const newGridPos = gridEngine.pixelsToGrid(relX, relY);
         
+        // 🔧 FIX: Получаем размер из registry
+        const draggedSizeInfo = HEYS.Widgets.registry.getSize(this._draggedWidget.size);
+        const draggedCols = draggedSizeInfo?.cols || this._draggedWidget.cols || 1;
+        const draggedRows = draggedSizeInfo?.rows || this._draggedWidget.rows || 1;
+        
         // Ограничиваем позицию с учётом размера виджета
-        newGridPos.col = Math.min(newGridPos.col, GRID_COLS - this._draggedWidget.cols);
+        newGridPos.col = Math.min(newGridPos.col, GRID_COLS - draggedCols);
         
         // Проверяем валидность (пустое место) или swap (занято, но можно поменяться местами)
         const isValid = gridEngine.validatePosition(this._draggedWidget.id, newGridPos);
         let swapWith = null;
         if (!isValid) {
           const colliding = gridEngine.getCollidingWidget(this._draggedWidget.id, newGridPos);
-          if (colliding && colliding.cols === this._draggedWidget.cols && colliding.rows === this._draggedWidget.rows) {
-            swapWith = colliding;
+          if (colliding) {
+            // 🔧 FIX: Получаем размеры обоих виджетов из registry для сравнения
+            const collidingSizeInfo = HEYS.Widgets.registry.getSize(colliding.size);
+            const collidingCols = collidingSizeInfo?.cols || colliding.cols || 1;
+            const collidingRows = collidingSizeInfo?.rows || colliding.rows || 1;
+            
+            if (collidingCols === draggedCols && collidingRows === draggedRows) {
+              swapWith = colliding;
+            }
           }
         }
 
@@ -1705,6 +1910,40 @@
     setupKeyboardSupport();
   }
   
+  // === 🆕 Save on page unload ===
+  // Принудительное сохранение перед закрытием страницы
+  // чтобы не потерять данные из debounced save
+  window.addEventListener('beforeunload', () => {
+    // Отменяем debounced timeout
+    if (state._saveTimeout) {
+      clearTimeout(state._saveTimeout);
+      state._saveTimeout = null;
+    }
+    // Немедленно сохраняем
+    try {
+      state.saveLayout();
+    } catch (e) {
+      console.error('[Widgets] Failed to save on unload:', e);
+    }
+  });
+
+  // Также сохраняем при visibilitychange (переключение вкладок на мобилке)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      // Отменяем debounced timeout
+      if (state._saveTimeout) {
+        clearTimeout(state._saveTimeout);
+        state._saveTimeout = null;
+      }
+      // Немедленно сохраняем
+      try {
+        state.saveLayout();
+      } catch (e) {
+        console.error('[Widgets] Failed to save on visibility hidden:', e);
+      }
+    }
+  });
+
   // === Exports ===
   HEYS.Widgets.state = state;
   HEYS.Widgets.grid = gridEngine;

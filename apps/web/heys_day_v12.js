@@ -3950,6 +3950,9 @@
     // === Popup для научного объяснения TEF ===
     const [tefInfoPopup, setTefInfoPopup] = useState(null); // { x, y }
 
+    // === Popup для объяснения формулы цели ===
+    const [goalPopup, setGoalPopup] = useState(null); // { x, y, data }
+
     // === Данные замеров для карточки статистики ===
     const measurementFields = useMemo(() => ([
       { key: 'waist', label: 'Обхват талии', icon: '📏' },
@@ -4176,6 +4179,7 @@
       setMetricPopup(null);
       setTdeePopup(null);
       setMealQualityPopup(null);
+      setGoalPopup(null);
     }, []);
 
     const openExclusivePopup = React.useCallback((type, payload) => {
@@ -4185,6 +4189,7 @@
       setTdeePopup(type === 'tdee' ? payload : null);
       setMealQualityPopup(type === 'mealQuality' ? payload : null);
       setWeekNormPopup(type === 'weekNorm' ? payload : null);
+      setGoalPopup(type === 'goal' ? payload : null);
     }, []);
     
     // === Slider для интерактивного просмотра графика ===
@@ -4203,7 +4208,7 @@
     
     // Закрытие popup при клике вне
     React.useEffect(() => {
-      if (!sparklinePopup && !macroBadgePopup && !metricPopup && !mealQualityPopup && !tdeePopup && !weekNormPopup && !tefInfoPopup) return;
+      if (!sparklinePopup && !macroBadgePopup && !metricPopup && !mealQualityPopup && !tdeePopup && !weekNormPopup && !tefInfoPopup && !goalPopup) return;
       const handleClickOutside = (e) => {
         if (sparklinePopup && !e.target.closest('.sparkline-popup')) {
           setSparklinePopup(null);
@@ -4232,6 +4237,9 @@
         if (tefInfoPopup && !e.target.closest('.tef-info-popup') && !e.target.closest('.tef-help-icon')) {
           setTefInfoPopup(null);
         }
+        if (goalPopup && !e.target.closest('.goal-popup')) {
+          setGoalPopup(null);
+        }
       };
       // Delay to avoid closing immediately on the same click
       const timerId = setTimeout(() => {
@@ -4241,7 +4249,7 @@
         clearTimeout(timerId);
         document.removeEventListener('click', handleClickOutside);
       };
-    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup, weekNormPopup, weekDeficitPopup, balanceDayPopup, tefInfoPopup]);
+    }, [sparklinePopup, macroBadgePopup, metricPopup, mealQualityPopup, tdeePopup, weekNormPopup, weekDeficitPopup, balanceDayPopup, tefInfoPopup, goalPopup]);
     
     // === Утилита для умного позиционирования попапов ===
     // Не даёт выходить за границы экрана
@@ -8787,12 +8795,10 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         
         pastDays.forEach((d, idx) => {
           const target = d.target || optimum;
-          let delta = d.kcal - target;  // > 0 переел, < 0 недоел
-          
-          // Тренировка усиливает критичность недобора
-          if (delta < 0 && d.hasTraining) {
-            delta *= CFG.TRAINING_MULT;
-          }
+          const rawDelta = d.kcal - target;  // > 0 переел, < 0 недоел
+          let delta = rawDelta;
+          // УБРАН множитель тренировки — NDTE уже учитывает эффект тренировки в TDEE
+          // Раньше было: delta *= 1.3 при тренировке, но это двойной учёт
           
           // Собираем калории от тренировок за неделю
           if (d.hasTraining && d.trainingKcal) {
@@ -13944,7 +13950,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
           React.createElement('div', { className: 'metrics-value', style: { color: '#64748b' } }, tdee),
           React.createElement('div', { className: 'metrics-label' }, 'Затраты')
         ),
-        // Цель — кликабельная для изменения дефицита
+        // Цель — кликабельная для показа формулы
         React.createElement('div', { 
           className: 'metrics-card' + (day.isRefeedDay ? ' metrics-card--refeed' : ''),
           style: { 
@@ -13952,8 +13958,25 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             borderColor: day.isRefeedDay ? '#fdba74' : '#bae6fd', 
             cursor: 'pointer' 
           },
-          onClick: openDeficitPicker,
-          title: 'Нажми чтобы изменить цель дефицита'
+          onClick: (e) => {
+            e.stopPropagation();
+            const rect = e.currentTarget.getBoundingClientRect();
+            openExclusivePopup('goal', {
+              x: rect.left + rect.width / 2,
+              y: rect.bottom,
+              data: {
+                baseExpenditure,
+                deficitPct: dayTargetDef,
+                baseOptimum: optimum,
+                dailyBoost: caloricDebt?.dailyBoost || 0,
+                displayOptimum,
+                isRefeedDay: day.isRefeedDay,
+                refeedBoost: caloricDebt?.refeedBoost || 0
+              }
+            });
+            haptic('light');
+          },
+          title: 'Нажми чтобы узнать как считается цель'
         },
           React.createElement('div', { className: 'metrics-icon' }, '🎯'),
           React.createElement('div', { className: 'metrics-value', style: { color: day.isRefeedDay ? '#f97316' : (displayOptimum > optimum ? '#10b981' : '#0369a1') } }, displayOptimum),
@@ -14147,19 +14170,26 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 const isNegative = d.delta < 0;
                 const isTraining = d.hasTraining;
                 
+                // Tooltip для дня
+                const tooltip = `Съедено: ${d.eaten} ккал\nЦель: ${d.target} ккал\nБаланс: ${d.delta > 0 ? '+' : ''}${d.delta} ккал`;
+                
                 return React.createElement('div', {
                   key: d.date,
                   className: 'caloric-debt-day' + 
                     (isPositive ? ' positive' : '') + 
                     (isNegative ? ' negative' : '') +
-                    (isTraining ? ' training' : '')
+                    (isTraining ? ' training' : ''),
+                  title: tooltip
                 },
                   React.createElement('span', { className: 'caloric-debt-day-name' }, d.dayName),
                   React.createElement('span', { 
                     className: 'caloric-debt-day-delta',
                     style: { color: isPositive ? '#22c55e' : '#ef4444' }
                   }, formatDelta(d.delta)),
-                  isTraining && React.createElement('span', { className: 'caloric-debt-day-train' }, '🏋️')
+                  isTraining && React.createElement('span', { 
+                    className: 'caloric-debt-day-train',
+                    title: 'Была тренировка (эффект учтён в NDTE сегодня)'
+                  }, '🏋️')
                 );
               })
             ),
@@ -14990,7 +15020,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
         };
         
         return React.createElement('div', {
-          className: 'tdee-popup sparkline-popup sparkline-popup-v2',
+          className: 'tdee-popup',
           role: 'dialog',
           'aria-label': 'Расшифровка затрат: ' + d.tdee + ' ккал',
           'aria-modal': 'true',
@@ -14999,57 +15029,58 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
             left: left + 'px',
             top: top + 'px',
             width: popupW + 'px',
-            zIndex: 9999
+            background: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+            padding: '16px',
+            zIndex: 10000,
+            animation: 'fadeIn 0.15s ease-out'
           },
           onClick: (e) => e.stopPropagation(),
           onTouchStart: onTouchStart,
           onTouchEnd: onTouchEnd
         },
-          // Цветная полоса
+          // Header
           React.createElement('div', { 
-            className: 'sparkline-popup-stripe',
-            style: { background: 'linear-gradient(90deg, #64748b 0%, #94a3b8 100%)' }
-          }),
-          // Контент
-          React.createElement('div', { className: 'sparkline-popup-content' },
-            // Swipe indicator
-            React.createElement('div', { className: 'sparkline-popup-swipe' }),
-            // Header
-            React.createElement('div', { className: 'sparkline-popup-header-v2' },
-              React.createElement('span', { className: 'sparkline-popup-date' }, '⚡ Затраты энергии'),
-              React.createElement('span', { 
-                className: 'sparkline-popup-pct',
-                style: { color: '#475569', fontSize: '18px', fontWeight: 800 }
-              }, d.tdee + ' ккал')
+            style: { 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '12px',
+              paddingRight: '28px'
+            }
+          },
+            React.createElement('span', { style: { fontSize: '14px', fontWeight: 600, color: '#0f172a' } }, '⚡ Затраты энергии'),
+            React.createElement('span', { style: { fontSize: '18px', fontWeight: 800, color: '#475569' } }, d.tdee + ' ккал')
+          ),
+          // Визуальная полоса BMR + Activity
+          React.createElement('div', { className: 'tdee-bar-container' },
+            React.createElement('div', { className: 'tdee-bar' },
+              React.createElement('div', { 
+                className: 'tdee-bar-bmr',
+                style: { width: bmrPct + '%' }
+              }),
+              React.createElement('div', { 
+                className: 'tdee-bar-activity',
+                style: { width: actPct + '%' }
+              })
             ),
-            // Визуальная полоса BMR + Activity
-            React.createElement('div', { className: 'tdee-bar-container' },
-              React.createElement('div', { className: 'tdee-bar' },
-                React.createElement('div', { 
-                  className: 'tdee-bar-bmr',
-                  style: { width: bmrPct + '%' }
-                }),
-                React.createElement('div', { 
-                  className: 'tdee-bar-activity',
-                  style: { width: actPct + '%' }
-                })
-              ),
-              React.createElement('div', { className: 'tdee-bar-labels' },
-                React.createElement('span', null, '🧬 Базовый: ' + bmrPct + '%'),
-                React.createElement('span', null, '🏃 Активность: ' + actPct + '%')
-              )
+            React.createElement('div', { className: 'tdee-bar-labels' },
+              React.createElement('span', null, '🧬Базовый: ' + bmrPct + '%'),
+              React.createElement('span', null, '🏃 Активность: ' + actPct + '%')
+            )
+          ),
+          // Детали — строки
+          React.createElement('div', { className: 'tdee-details' },
+            // BMR
+            React.createElement('div', { className: 'tdee-row tdee-row-main' },
+              React.createElement('span', { className: 'tdee-row-icon' }, '🧬'),
+              React.createElement('span', { className: 'tdee-row-label' }, 'Базовый метаболизм (BMR)'),
+              React.createElement('span', { className: 'tdee-row-value' }, d.bmr + ' ккал')
             ),
-            // Детали — строки
-            React.createElement('div', { className: 'tdee-details' },
-              // BMR
-              React.createElement('div', { className: 'tdee-row tdee-row-main' },
-                React.createElement('span', { className: 'tdee-row-icon' }, '🧬'),
-                React.createElement('span', { className: 'tdee-row-label' }, 'Базовый метаболизм (BMR)'),
-                React.createElement('span', { className: 'tdee-row-value' }, d.bmr + ' ккал')
-              ),
-              React.createElement('div', { className: 'tdee-row-hint' }, 
-                'Формула Миффлина-Сан Жеора, вес ' + d.weight + ' кг'
-              ),
+            React.createElement('div', { className: 'tdee-row-hint' }, 
+              'Формула Миффлина-Сан Жеора, вес ' + d.weight + ' кг'
+            ),
               // Разделитель
               React.createElement('div', { className: 'tdee-divider' }),
               // Шаги
@@ -15114,17 +15145,30 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('span', { className: 'tdee-row-value' }, d.tdee + ' ккал')
               )
             ),
-            // Close button
-            React.createElement('button', {
-              className: 'sparkline-popup-close',
-              'aria-label': 'Закрыть',
-              onClick: () => setTdeePopup(null)
-            }, '✕')
-          ),
-          // Стрелка
-          React.createElement('div', { 
-            className: 'sparkline-popup-arrow' + (arrowPos !== 'center' ? ' ' + arrowPos : '')
-          })
+          // Close button
+          React.createElement('button', {
+            style: {
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              width: '24px',
+              height: '24px',
+              background: 'rgba(0,0,0,0.05)',
+              border: 'none',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              fontSize: '14px',
+              color: '#64748b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            },
+            'aria-label': 'Закрыть',
+            onClick: (e) => {
+              e.stopPropagation();
+              setTdeePopup(null);
+            }
+          }, '✕')
         );
       })(),
       // === WEEK NORM POPUP (детали недели X/Y в норме) ===
@@ -15884,6 +15928,125 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
               }, '✕')
             )
           )
+        );
+      })(),
+
+      // === GOAL POPUP (объяснение формулы цели) ===
+      goalPopup && (() => {
+        const popupW = 280;
+        const popupH = 240;
+        const pos = getSmartPopupPosition(
+          goalPopup.x,
+          goalPopup.y,
+          popupW,
+          popupH,
+          { preferAbove: false, offset: 8 }
+        );
+        const { left, top, arrowPos, showAbove } = pos;
+        const d = goalPopup.data;
+        
+        // Формула: baseExpenditure × (1 + deficitPct/100) + dailyBoost = displayOptimum
+        const baseOptimumCalc = Math.round(d.baseExpenditure * (1 + d.deficitPct / 100));
+        
+        return React.createElement('div', {
+          className: 'goal-popup',
+          style: {
+            position: 'fixed',
+            left: left + 'px',
+            top: top + 'px',
+            width: popupW + 'px',
+            background: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+            padding: '16px',
+            zIndex: 10000,
+            animation: 'fadeIn 0.15s ease-out'
+          },
+          onClick: (e) => e.stopPropagation()
+        },
+          // Заголовок
+          React.createElement('div', {
+            style: { fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#0f172a' }
+          }, '🎯 Как считается цель'),
+          
+          // Строки формулы
+          React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+            // 1. База
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+              React.createElement('span', { style: { fontSize: '13px', color: '#64748b' } }, 'База (без TEF)'),
+              React.createElement('span', { style: { fontSize: '13px', fontWeight: 500, color: '#0f172a' } }, d.baseExpenditure + ' ккал')
+            ),
+            // 2. Дефицит
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+              React.createElement('span', { style: { fontSize: '13px', color: '#64748b' } }, 
+                d.deficitPct >= 0 ? 'Профицит ' + d.deficitPct + '%' : 'Дефицит ' + Math.abs(d.deficitPct) + '%'
+              ),
+              React.createElement('span', { style: { fontSize: '13px', fontWeight: 500, color: d.deficitPct >= 0 ? '#10b981' : '#f59e0b' } }, 
+                (d.deficitPct >= 0 ? '+' : '') + Math.round(d.baseExpenditure * d.deficitPct / 100) + ' ккал'
+              )
+            ),
+            // Разделитель
+            React.createElement('div', { style: { borderTop: '1px dashed #e2e8f0', margin: '4px 0' } }),
+            // 3. Базовая цель
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+              React.createElement('span', { style: { fontSize: '13px', color: '#64748b' } }, 'Базовая цель'),
+              React.createElement('span', { style: { fontSize: '13px', fontWeight: 500, color: '#0f172a' } }, baseOptimumCalc + ' ккал')
+            ),
+            // 4. Долг (если есть)
+            d.dailyBoost > 0 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+              React.createElement('span', { style: { fontSize: '13px', color: '#10b981' } }, '💰 Компенсация долга'),
+              React.createElement('span', { style: { fontSize: '13px', fontWeight: 500, color: '#10b981' } }, '+' + Math.round(d.dailyBoost) + ' ккал')
+            ),
+            // 5. Refeed (если есть)
+            d.isRefeedDay && d.refeedBoost > 0 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+              React.createElement('span', { style: { fontSize: '13px', color: '#f97316' } }, '🍕 Refeed день'),
+              React.createElement('span', { style: { fontSize: '13px', fontWeight: 500, color: '#f97316' } }, '+' + Math.round(d.refeedBoost) + ' ккал')
+            ),
+            // Итого
+            React.createElement('div', { style: { borderTop: '1px solid #e2e8f0', paddingTop: '8px', marginTop: '4px' } },
+              React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                React.createElement('span', { style: { fontSize: '14px', fontWeight: 600, color: '#0f172a' } }, 'Итого цель'),
+                React.createElement('span', { style: { fontSize: '14px', fontWeight: 600, color: '#0369a1' } }, d.displayOptimum + ' ккал')
+              )
+            )
+          ),
+          
+          // Пояснение про TEF
+          React.createElement('div', {
+            style: { 
+              marginTop: '12px',
+              padding: '8px',
+              background: '#f8fafc',
+              borderRadius: '8px',
+              fontSize: '11px',
+              color: '#64748b',
+              lineHeight: '1.4'
+            }
+          }, '💡 Цель считается без TEF (термического эффекта пищи), чтобы норма не росла от съеденного.'),
+          
+          // Кнопка закрытия
+          React.createElement('button', {
+            style: {
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              width: '24px',
+              height: '24px',
+              background: 'rgba(0,0,0,0.05)',
+              border: 'none',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              fontSize: '14px',
+              color: '#64748b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            },
+            onClick: (e) => {
+              e.stopPropagation();
+              setGoalPopup(null);
+            }
+          }, '✕')
         );
       })(),
       
