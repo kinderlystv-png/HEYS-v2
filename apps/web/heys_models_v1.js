@@ -17,6 +17,7 @@
    * @property {number} [fat100]
    * @property {number} [kcal100]
    * @property {{name: string, grams: number}[]} [portions] - Порции продукта (опционально)
+   * @property {string} [shared_origin_id] - ID продукта в shared_products, если склонирован из общей базы
    */
 
   /** @typedef {Object} Portion
@@ -628,6 +629,75 @@
   M.mergeCloseTrainingSessions = mergeCloseTrainingSessions;
   M.TRAINING_LIMITS = TRAINING_LIMITS;
   M.DEFAULT_DURATION_BY_TYPE = DEFAULT_DURATION_BY_TYPE;
+  
+  // === Shared Products Helpers (v3.18.0) ===
+  
+  /**
+   * Вычисление fingerprint продукта для дедупликации
+   * Fingerprint строится из нормализованного имени + округлённых нутриентов
+   * @param {Product} product - Объект продукта
+   * @returns {Promise<string>} - SHA-256 fingerprint (hex)
+   */
+  async function computeProductFingerprint(product) {
+    if (!product) return '';
+    
+    // Нормализация имени: lowercase, trim, collapse whitespace
+    const namePart = (product.name || '')
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ');
+    
+    // Округление нутриентов до 1 знака для стабильности
+    const nutrientsPart = [
+      round1(product.simple100 || 0),
+      round1(product.complex100 || 0),
+      round1(product.protein100 || 0),
+      round1(product.badFat100 || 0),
+      round1(product.goodFat100 || 0),
+      round1(product.trans100 || 0),
+      round1(product.fiber100 || 0),
+      round1(product.gi || 0),
+      round1(product.harm || 0)
+    ].join('|');
+    
+    const combined = `${namePart}::${nutrientsPart}`;
+    
+    // SHA-256 через Web Crypto API
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(combined);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
+    } catch (e) {
+      // Fallback: простой детерминированный хеш
+      let hash = 0;
+      for (let i = 0; i < combined.length; i++) {
+        const char = combined.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      return Math.abs(hash).toString(16).padStart(8, '0');
+    }
+  }
+  
+  /**
+   * Нормализация имени продукта для поиска и дедупликации
+   * @param {string} name - Имя продукта
+   * @returns {string} - Нормализованное имя
+   */
+  function normalizeProductName(name) {
+    if (!name) return '';
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/ё/g, 'е'); // Русская нормализация
+  }
+  
+  M.computeProductFingerprint = computeProductFingerprint;
+  M.normalizeProductName = normalizeProductName;
   
   console.log('HEYS: Loaded', Object.keys(AUTO_PORTIONS).length, 'portion patterns');
 })(window);

@@ -4953,5 +4953,360 @@
       }
     });
   }
+  
+  // === Shared Products API (v3.18.0) ===
+  
+  /**
+   * Поиск продуктов в общей базе (через VIEW shared_products_public)
+   * @param {string} query - Поисковый запрос
+   * @param {Object} options - { limit, excludeBlocklist }
+   * @returns {Promise<{data: Array, error: any}>}
+   */
+  cloud.searchSharedProducts = async function(query, options = {}) {
+    if (!client) return { data: null, error: 'Client not initialized' };
+    
+    const { limit = 50, excludeBlocklist = true } = options;
+    const normQuery = query.toLowerCase().trim();
+    
+    try {
+      let queryBuilder = client
+        .from('shared_products_public')
+        .select('*')
+        .ilike('name_norm', `%${normQuery}%`)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      const { data, error } = await queryBuilder;
+      
+      if (error) {
+        logError('[SHARED PRODUCTS] Search error:', error);
+        return { data: null, error };
+      }
+      
+      // Фильтрация blocklist на клиенте (если нужно)
+      let filtered = data || [];
+      if (excludeBlocklist && user) {
+        const blocklist = await cloud.getBlocklist();
+        const blocklistSet = new Set(blocklist.map(id => id));
+        filtered = filtered.filter(p => !blocklistSet.has(p.id));
+      }
+      
+      log(`[SHARED PRODUCTS] Found ${filtered.length} products for "${query}"`);
+      return { data: filtered, error: null };
+    } catch (e) {
+      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      return { data: null, error: e.message };
+    }
+  };
+  
+  /**
+   * Публикация продукта в общую базу
+   * @param {Object} product - Объект продукта
+   * @returns {Promise<{data: any, error: any, status: string}>}
+   */
+  cloud.publishToShared = async function(product) {
+    if (!client || !user) {
+      return { data: null, error: 'Not authenticated', status: 'error' };
+    }
+    
+    try {
+      // Вычисляем fingerprint
+      const fingerprint = await HEYS.models.computeProductFingerprint(product);
+      const name_norm = HEYS.models.normalizeProductName(product.name);
+      
+      // Проверяем: продукт уже существует?
+      const { data: existing } = await client
+        .from('shared_products')
+        .select('id')
+        .eq('fingerprint', fingerprint)
+        .maybeSingle();
+      
+      if (existing) {
+        return { 
+          data: existing, 
+          error: null, 
+          status: 'exists',
+          message: 'Продукт уже существует в общей базе'
+        };
+      }
+      
+      // Публикуем новый продукт
+      const { data, error } = await client
+        .from('shared_products')
+        .insert({
+          created_by_user_id: user.id,
+          name: product.name,
+          name_norm,
+          fingerprint,
+          simple100: product.simple100 || 0,
+          complex100: product.complex100 || 0,
+          protein100: product.protein100 || 0,
+          badFat100: product.badFat100 || 0,
+          goodFat100: product.goodFat100 || 0,
+          trans100: product.trans100 || 0,
+          fiber100: product.fiber100 || 0,
+          gi: product.gi,
+          harm: product.harm,
+          category: product.category,
+          portions: product.portions || null,
+          description: product.description || null
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        logError('[SHARED PRODUCTS] Publish error:', error);
+        return { data: null, error, status: 'error' };
+      }
+      
+      log('[SHARED PRODUCTS] Published:', product.name);
+      return { data, error: null, status: 'published' };
+    } catch (e) {
+      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      return { data: null, error: e.message, status: 'error' };
+    }
+  };
+  
+  /**
+   * Создание pending-заявки для PIN-клиента
+   * @param {string} clientId - ID клиента
+   * @param {Object} product - Объект продукта
+   * @returns {Promise<{data: any, error: any, status: string}>}
+   */
+  cloud.createPendingProduct = async function(clientId, product) {
+    if (!client) {
+      return { data: null, error: 'Client not initialized', status: 'error' };
+    }
+    
+    try {
+      const fingerprint = await HEYS.models.computeProductFingerprint(product);
+      const name_norm = HEYS.models.normalizeProductName(product.name);
+      
+      const { data, error } = await client.rpc('create_pending_product', {
+        p_client_id: clientId,
+        p_product_data: product,
+        p_name_norm: name_norm,
+        p_fingerprint: fingerprint
+      });
+      
+      if (error) {
+        logError('[SHARED PRODUCTS] Pending create error:', error);
+        return { data: null, error, status: 'error' };
+      }
+      
+      log('[SHARED PRODUCTS] Pending created:', data);
+      return { 
+        data, 
+        error: null, 
+        status: data.status,
+        message: data.message
+      };
+    } catch (e) {
+      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      return { data: null, error: e.message, status: 'error' };
+    }
+  };
+  
+  /**
+   * Получить pending-заявки куратора
+   * @returns {Promise<{data: Array, error: any}>}
+   */
+  cloud.getPendingProducts = async function() {
+    if (!client || !user) {
+      return { data: null, error: 'Not authenticated' };
+    }
+    
+    try {
+      const { data, error } = await client
+        .from('shared_products_pending')
+        .select('*')
+        .eq('curator_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        logError('[SHARED PRODUCTS] Get pending error:', error);
+        return { data: null, error };
+      }
+      
+      log(`[SHARED PRODUCTS] Found ${data?.length || 0} pending products`);
+      return { data, error: null };
+    } catch (e) {
+      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      return { data: null, error: e.message };
+    }
+  };
+  
+  /**
+   * Подтвердить pending-заявку
+   * @param {string} pendingId - ID заявки
+   * @param {Object} productData - Данные продукта из заявки
+   * @returns {Promise<{data: any, error: any, status: string}>}
+   */
+  cloud.approvePendingProduct = async function(pendingId, productData) {
+    if (!client || !user) {
+      return { data: null, error: 'Not authenticated', status: 'error' };
+    }
+    
+    try {
+      // 1. Публикуем продукт в shared
+      const publishResult = await cloud.publishToShared(productData);
+      
+      if (publishResult.error && publishResult.status !== 'exists') {
+        return publishResult;
+      }
+      
+      // 2. Обновляем статус заявки
+      const { error: updateError } = await client
+        .from('shared_products_pending')
+        .update({
+          status: 'approved',
+          moderated_at: new Date().toISOString(),
+          moderated_by: user.id
+        })
+        .eq('id', pendingId);
+      
+      if (updateError) {
+        logError('[SHARED PRODUCTS] Approve update error:', updateError);
+        return { data: null, error: updateError, status: 'error' };
+      }
+      
+      log('[SHARED PRODUCTS] Approved pending:', pendingId);
+      return { 
+        data: publishResult.data, 
+        error: null, 
+        status: 'approved',
+        existing: publishResult.status === 'exists'
+      };
+    } catch (e) {
+      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      return { data: null, error: e.message, status: 'error' };
+    }
+  };
+  
+  /**
+   * Отклонить pending-заявку
+   * @param {string} pendingId - ID заявки
+   * @param {string} reason - Причина отклонения
+   * @returns {Promise<{data: any, error: any}>}
+   */
+  cloud.rejectPendingProduct = async function(pendingId, reason = '') {
+    if (!client || !user) {
+      return { data: null, error: 'Not authenticated' };
+    }
+    
+    try {
+      const { data, error } = await client
+        .from('shared_products_pending')
+        .update({
+          status: 'rejected',
+          reject_reason: reason,
+          moderated_at: new Date().toISOString(),
+          moderated_by: user.id
+        })
+        .eq('id', pendingId)
+        .select()
+        .single();
+      
+      if (error) {
+        logError('[SHARED PRODUCTS] Reject error:', error);
+        return { data: null, error };
+      }
+      
+      log('[SHARED PRODUCTS] Rejected pending:', pendingId);
+      return { data, error: null };
+    } catch (e) {
+      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      return { data: null, error: e.message };
+    }
+  };
+  
+  /**
+   * Получить blocklist текущего куратора
+   * @returns {Promise<Array<string>>} - Массив ID заблокированных продуктов
+   */
+  cloud.getBlocklist = async function() {
+    if (!client || !user) return [];
+    
+    try {
+      const { data, error } = await client
+        .from('shared_products_blocklist')
+        .select('product_id')
+        .eq('curator_id', user.id);
+      
+      if (error) {
+        logError('[SHARED PRODUCTS] Get blocklist error:', error);
+        return [];
+      }
+      
+      return (data || []).map(row => row.product_id);
+    } catch (e) {
+      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      return [];
+    }
+  };
+  
+  /**
+   * Добавить продукт в blocklist
+   * @param {string} productId - ID продукта
+   * @returns {Promise<{data: any, error: any}>}
+   */
+  cloud.blockProduct = async function(productId) {
+    if (!client || !user) {
+      return { data: null, error: 'Not authenticated' };
+    }
+    
+    try {
+      const { data, error } = await client
+        .from('shared_products_blocklist')
+        .insert({
+          curator_id: user.id,
+          product_id: productId
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        logError('[SHARED PRODUCTS] Block error:', error);
+        return { data: null, error };
+      }
+      
+      log('[SHARED PRODUCTS] Blocked product:', productId);
+      return { data, error: null };
+    } catch (e) {
+      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      return { data: null, error: e.message };
+    }
+  };
+  
+  /**
+   * Убрать продукт из blocklist
+   * @param {string} productId - ID продукта
+   * @returns {Promise<{data: any, error: any}>}
+   */
+  cloud.unblockProduct = async function(productId) {
+    if (!client || !user) {
+      return { data: null, error: 'Not authenticated' };
+    }
+    
+    try {
+      const { error } = await client
+        .from('shared_products_blocklist')
+        .delete()
+        .eq('curator_id', user.id)
+        .eq('product_id', productId);
+      
+      if (error) {
+        logError('[SHARED PRODUCTS] Unblock error:', error);
+        return { data: null, error };
+      }
+      
+      log('[SHARED PRODUCTS] Unblocked product:', productId);
+      return { data: true, error: null };
+    } catch (e) {
+      logError('[SHARED PRODUCTS] Unexpected error:', e);
+      return { data: null, error: e.message };
+    }
+  };
 
 })(window);
