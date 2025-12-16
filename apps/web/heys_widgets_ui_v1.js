@@ -30,6 +30,7 @@
     const resizeDragRef = useRef({
       active: false,
       pointerId: null,
+      isTouchBased: false, // true если запущено через touchstart (iOS Safari)
       direction: null, // 'n' | 'e' | 's' | 'w'
       startX: 0,
       startY: 0,
@@ -195,7 +196,18 @@
       }
     }, [resizePreview, widget.id, widget.position]);
 
-    const handleResizeHandlePointerDown = useCallback((direction, e) => {
+    // Универсальный хелпер для получения координат из event (pointer/touch/mouse)
+    const getEventCoords = useCallback((e) => {
+      // TouchEvent
+      if (e.touches && e.touches.length > 0) {
+        return { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
+      }
+      // PointerEvent / MouseEvent
+      return { clientX: e.clientX || 0, clientY: e.clientY || 0 };
+    }, []);
+
+    // Стартует resize drag (вызывается из onPointerDown или onTouchStart)
+    const startResizeDrag = useCallback((direction, e, isTouchEvent = false) => {
       if (!isEditMode) return;
       e.stopPropagation();
       e.preventDefault();
@@ -213,12 +225,15 @@
       const unitX = (metrics.cellWidth || 150) + (metrics.gap || 12);
       const unitY = (metrics.cellHeight || 76) + (metrics.gap || 12);
 
+      const { clientX, clientY } = getEventCoords(e);
+
       const ref = resizeDragRef.current;
       ref.active = true;
-      ref.pointerId = e.pointerId;
+      ref.pointerId = isTouchEvent ? 'touch' : (e.pointerId ?? null);
+      ref.isTouchBased = isTouchEvent;
       ref.direction = direction;
-      ref.startX = e.clientX;
-      ref.startY = e.clientY;
+      ref.startX = clientX;
+      ref.startY = clientY;
       ref.baseCols = widget.cols || 1;
       ref.baseRows = widget.rows || 1;
       ref.baseSizeId = widget.size || 'compact';
@@ -231,10 +246,13 @@
       ref.lastDeltaCols = 0;
       ref.lastDeltaRows = 0;
 
-      try {
-        e.currentTarget?.setPointerCapture?.(e.pointerId);
-      } catch (err) {
-        // ignore
+      // Pointer capture только для pointer events (не touch)
+      if (!isTouchEvent && e.pointerId != null) {
+        try {
+          e.currentTarget?.setPointerCapture?.(e.pointerId);
+        } catch (err) {
+          // ignore
+        }
       }
 
       const initial = pickNearestSize(ref.baseCols, ref.baseRows, 0, 0);
@@ -249,23 +267,46 @@
         unitY,
         gridCols
       });
-    }, [getGridCols, isEditMode, pickNearestSize, updateResizePreview, widget.cols, widget.rows, widget.size, widget?.position?.col, widget?.position?.row]);
+    }, [getEventCoords, getGridCols, isEditMode, pickNearestSize, updateResizePreview, widget.cols, widget.rows, widget.size, widget?.position?.col, widget?.position?.row]);
+
+    // Pointer down handler (для desktop и некоторых мобильных)
+    const handleResizeHandlePointerDown = useCallback((direction, e) => {
+      startResizeDrag(direction, e, false);
+    }, [startResizeDrag]);
+
+    // Touch start handler (для iOS Safari и PWA)
+    const handleResizeHandleTouchStart = useCallback((direction, e) => {
+      startResizeDrag(direction, e, true);
+    }, [startResizeDrag]);
 
     useEffect(() => {
       const ref = resizeDragRef.current;
       if (!ref.active) return;
 
+      // Универсальный обработчик движения (pointer и touch)
       const onMove = (e) => {
         if (!ref.active) return;
-        if (ref.pointerId != null && e.pointerId != null && e.pointerId !== ref.pointerId) return;
+        
+        // Проверяем pointerId только для pointer events
+        if (!ref.isTouchBased && ref.pointerId != null && e.pointerId != null && e.pointerId !== ref.pointerId) return;
 
         const gridCols = getGridCols();
         const metrics = HEYS.Widgets.gridEngine?.getCellMetrics?.() || { cellWidth: 150, cellHeight: 76, gap: 12 };
         const unitX = (metrics.cellWidth || 150) + (metrics.gap || 12);
         const unitY = (metrics.cellHeight || 76) + (metrics.gap || 12);
 
-        const dx = (e.clientX || 0) - ref.startX;
-        const dy = (e.clientY || 0) - ref.startY;
+        // Получаем координаты в зависимости от типа события
+        let clientX, clientY;
+        if (e.touches && e.touches.length > 0) {
+          clientX = e.touches[0].clientX;
+          clientY = e.touches[0].clientY;
+        } else {
+          clientX = e.clientX || 0;
+          clientY = e.clientY || 0;
+        }
+
+        const dx = clientX - ref.startX;
+        const dy = clientY - ref.startY;
 
         const rawDeltaCols = Math.round(dx / unitX);
         const rawDeltaRows = Math.round(dy / unitY);
@@ -322,13 +363,23 @@
       const onUp = () => endResizeDrag('up');
       const onCancel = () => endResizeDrag('cancel');
 
+      // Pointer events
       window.addEventListener('pointermove', onMove, { passive: false });
       window.addEventListener('pointerup', onUp, { passive: true });
       window.addEventListener('pointercancel', onCancel, { passive: true });
+      
+      // Touch events (fallback для iOS Safari / PWA)
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', onUp, { passive: true });
+      window.addEventListener('touchcancel', onCancel, { passive: true });
+      
       return () => {
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
         window.removeEventListener('pointercancel', onCancel);
+        window.removeEventListener('touchmove', onMove);
+        window.removeEventListener('touchend', onUp);
+        window.removeEventListener('touchcancel', onCancel);
       };
     }, [endResizeDrag, getGridCols, pickNearestSize, updateResizePreview, widget?.position?.col]);
     
@@ -433,8 +484,11 @@
           type: 'button',
           className: 'widget__resize-handle widget__resize-handle--n',
           onPointerDown: (e) => handleResizeHandlePointerDown('n', e),
+          onTouchStart: (e) => handleResizeHandleTouchStart('n', e),
           onPointerUp: (e) => e.stopPropagation(),
           onPointerMove: (e) => e.stopPropagation(),
+          onTouchEnd: (e) => e.stopPropagation(),
+          onTouchMove: (e) => e.stopPropagation(),
           title: `Изменить высоту: потяни (сейчас: ${currentSizeLabel})`,
           'aria-label': `Изменить высоту: потяни. Сейчас: ${currentSizeLabel}`
         }),
@@ -442,8 +496,11 @@
           type: 'button',
           className: 'widget__resize-handle widget__resize-handle--e',
           onPointerDown: (e) => handleResizeHandlePointerDown('e', e),
+          onTouchStart: (e) => handleResizeHandleTouchStart('e', e),
           onPointerUp: (e) => e.stopPropagation(),
           onPointerMove: (e) => e.stopPropagation(),
+          onTouchEnd: (e) => e.stopPropagation(),
+          onTouchMove: (e) => e.stopPropagation(),
           title: `Изменить ширину: потяни (сейчас: ${currentSizeLabel})`,
           'aria-label': `Изменить ширину: потяни. Сейчас: ${currentSizeLabel}`
         }),
@@ -451,8 +508,11 @@
           type: 'button',
           className: 'widget__resize-handle widget__resize-handle--s',
           onPointerDown: (e) => handleResizeHandlePointerDown('s', e),
+          onTouchStart: (e) => handleResizeHandleTouchStart('s', e),
           onPointerUp: (e) => e.stopPropagation(),
           onPointerMove: (e) => e.stopPropagation(),
+          onTouchEnd: (e) => e.stopPropagation(),
+          onTouchMove: (e) => e.stopPropagation(),
           title: `Изменить высоту: потяни (сейчас: ${currentSizeLabel})`,
           'aria-label': `Изменить высоту: потяни. Сейчас: ${currentSizeLabel}`
         }),
@@ -460,8 +520,11 @@
           type: 'button',
           className: 'widget__resize-handle widget__resize-handle--w',
           onPointerDown: (e) => handleResizeHandlePointerDown('w', e),
+          onTouchStart: (e) => handleResizeHandleTouchStart('w', e),
           onPointerUp: (e) => e.stopPropagation(),
           onPointerMove: (e) => e.stopPropagation(),
+          onTouchEnd: (e) => e.stopPropagation(),
+          onTouchMove: (e) => e.stopPropagation(),
           title: `Изменить ширину: потяни (сейчас: ${currentSizeLabel})`,
           'aria-label': `Изменить ширину: потяни. Сейчас: ${currentSizeLabel}`
         })
