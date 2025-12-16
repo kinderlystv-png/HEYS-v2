@@ -519,7 +519,7 @@
   });
   
   function MealTimeStepComponent({ data, onChange, context }) {
-    const { WheelPicker } = HEYS.StepModal;
+    const { TimePicker } = HEYS.StepModal;
     const insulinWave = HEYS.InsulinWave;
     const analytics = HEYS.analytics;
     const isEditMode = context?.mealIndex !== undefined || context?.initialHourIndex !== undefined;
@@ -537,13 +537,15 @@
     const minutes = data.minutes ?? defaultMinutes;
     const mealType = data.mealType ?? defaultMealType;
     
+    // Больше не нужен hourIndexRef — используем onTimeChange для linkedScroll
+    
     // Реальный час для отображения и логики
     const realHours = wheelIndexToHour(currentHourIndex);
     
-    // Значения для пикера часов (форматированные строки)
-    const hoursValues = useMemo(() => HOURS_ORDER.map(h => pad2(h)), []);
-    // Значения для пикера минут (форматированные строки с ведущим нулём)
-    const minutesValues = useMemo(() => Array.from({ length: 12 }, (_, i) => pad2(i * 5)), []);
+    // Значения для пикера часов (особый порядок: 04-23, 00-03)
+    const hoursValues = HOURS_ORDER;
+    // Значения для пикера минут (0, 5, 10... 55)
+    const minutesValues = useMemo(() => Array.from({ length: 12 }, (_, i) => i * 5), []);
     
     // Получаем существующие приёмы для определения типа
     const existingMeals = useMemo(() => {
@@ -575,23 +577,27 @@
       return `${d.getDate()} ${d.toLocaleDateString('ru-RU', { month: 'short' })}`;
     }, [context?.dateKey]);
     
-    // Обновление часов — сохраняем ИНДЕКС, не реальный час
-    const updateHours = (v) => {
-      // v — это строка вида "00", "01", ..., "23"
-      const hourValue = parseInt(v, 10);
+    // Обновление часов — сохраняем ИНДЕКС, не реальный час (haptic уже в TimePicker)
+    const updateHours = (hourValue) => {
+      // hourValue — это число (час) из HOURS_ORDER
       const newIndex = HOURS_ORDER.indexOf(hourValue);
-      haptic(5);
       onChange({ ...data, hourIndex: newIndex >= 0 ? newIndex : 0, minutes: data.minutes ?? minutes });
 
       // Первое взаимодействие с колесом — проверяем волну
       maybeShowInsulinWaveWarning();
     };
     
-    const updateMinutes = (v) => {
-      haptic(5);
-      onChange({ ...data, hourIndex: data.hourIndex ?? currentHourIndex, minutes: v });
+    const updateMinutes = (newMinutes) => {
+      onChange({ ...data, hourIndex: currentHourIndex, minutes: newMinutes });
 
       // Первое взаимодействие с колесом — проверяем волну
+      maybeShowInsulinWaveWarning();
+    };
+
+    // Единый callback для linkedScroll — решает проблему React batching
+    const updateTime = (hourValue, newMinutes) => {
+      const newIndex = HOURS_ORDER.indexOf(hourValue);
+      onChange({ ...data, hourIndex: newIndex >= 0 ? newIndex : 0, minutes: newMinutes });
       maybeShowInsulinWaveWarning();
     };
     
@@ -599,9 +605,6 @@
       haptic(10);
       onChange({ ...data, mealType: type });
     };
-    
-    // Текущее значение для пикера часов (форматированная строка)
-    const currentHourValue = pad2(realHours);
 
     // === Инсулиновая волна — предупреждение ===
     const isBulkMode = useMemo(() => {
@@ -801,25 +804,22 @@
         )
       ),
       
-      // Wheel pickers
-      React.createElement('div', { className: 'meal-time-pickers' },
-        React.createElement(WheelPicker, {
-          values: hoursValues,
-          value: currentHourValue,
-          onChange: updateHours,
-          label: 'Часы',
-          wrap: true
-        }),
-        React.createElement('span', { className: 'meal-time-separator' }, ':'),
-        React.createElement(WheelPicker, {
-          values: minutesValues,
-          value: pad2(minutes),
-          onChange: (v) => updateMinutes(parseInt(v, 10)),
-          label: 'Минуты',
-          suffix: '',
-          wrap: true
-        })
-      ),
+      // Переиспользуемый TimePicker с linkedScroll
+      React.createElement(TimePicker, {
+        hours: realHours,
+        minutes: minutes,
+        onHoursChange: updateHours,
+        onMinutesChange: updateMinutes,
+        onTimeChange: updateTime, // Единый callback для linkedScroll
+        hoursValues: hoursValues,
+        minutesValues: minutesValues,
+        hoursLabel: '',
+        minutesLabel: '',
+        linkedScroll: true,
+        wrap: true,
+        display: null,
+        className: 'meal-time-pickers'
+      }),
       
       // Подсказка для ночных часов
       React.createElement(NightHint, { isNightHour, dateLabel }),

@@ -3500,11 +3500,14 @@
         const updatedDate = e.detail?.date;
         const source = e.detail?.source || 'unknown';
         const forceReload = e.detail?.forceReload || false;
+        const field = e.detail?.field || 'unknown';
+        
+        console.log('[HEYS] 📅 handleDayUpdated RECEIVED | date:', updatedDate, '| field:', field, '| source:', source, '| forceReload:', forceReload, '| currentDate:', date);
         
         // 🔒 Игнорируем события во время начальной синхронизации
         // doLocal() в конце синхронизации загрузит все финальные данные
         if (isSyncingRef.current && (source === 'cloud' || source === 'merge')) {
-          // DEBUG (отключено): console.log('[HEYS] 📅 Ignored event during initial sync | source:', source);
+          console.log('[HEYS] 📅 Ignored event during initial sync | source:', source);
           return;
         }
         
@@ -3556,6 +3559,13 @@
                 const newMealsJson = JSON.stringify(newDay.meals || []);
                 const prevTrainingsJson = JSON.stringify(prevDay.trainings || []);
                 const newTrainingsJson = JSON.stringify(newDay.trainings || []);
+                const prevSupplementsPlanned = JSON.stringify(prevDay.supplementsPlanned || []);
+                const newSupplementsPlanned = JSON.stringify(newDay.supplementsPlanned || []);
+                const prevSupplementsTaken = JSON.stringify(prevDay.supplementsTaken || []);
+                const newSupplementsTaken = JSON.stringify(newDay.supplementsTaken || []);
+                
+                console.log('[HEYS] 📅 isSameContent CHECK | prevSupplements:', prevSupplementsPlanned, '| newSupplements:', newSupplementsPlanned);
+                
                 const isSameContent = 
                   prevMealsJson === newMealsJson &&
                   prevTrainingsJson === newTrainingsJson &&
@@ -3565,7 +3575,13 @@
                   // Утренние оценки из чек-ина
                   prevDay.moodMorning === newDay.moodMorning &&
                   prevDay.wellbeingMorning === newDay.wellbeingMorning &&
-                  prevDay.stressMorning === newDay.stressMorning;
+                  prevDay.stressMorning === newDay.stressMorning &&
+                  // Витамины/добавки
+                  prevSupplementsPlanned === newSupplementsPlanned &&
+                  prevSupplementsTaken === newSupplementsTaken;
+                
+                console.log('[HEYS] 📅 isSameContent RESULT:', isSameContent, '| forceReload:', forceReload);
+                
                 if (isSameContent) {
                   // DEBUG (отключено): console.log('[HEYS] 📅 handleDayUpdated SKIPPED — same content');
                   return prevDay;
@@ -6416,6 +6432,17 @@
       };
     }, [addMeal]);
 
+    // Экспорт addWater для внешних вызовов (например, FAB на вкладке Виджеты)
+    React.useEffect(() => {
+      HEYS.Day = HEYS.Day || {};
+      HEYS.Day.addWater = addWater;
+      return () => {
+        if (HEYS.Day && HEYS.Day.addWater === addWater) {
+          delete HEYS.Day.addWater;
+        }
+      };
+    }, [addWater]);
+
     // Экспорт addProductToMeal как публичный API
     // Позволяет добавлять продукт в приём извне: HEYS.Day.addProductToMeal(mealIndex, product, grams?)
     React.useEffect(() => {
@@ -6912,9 +6939,53 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
                 React.createElement('span', { className: 'sleep-card-title' }, 'Сон')
               ),
               React.createElement('div', { className: 'sleep-card-times' },
-                React.createElement('input', { className: 'sleep-time-input', type: 'time', value: day.sleepStart || '', onChange: e => setDay(prev => ({...prev, sleepStart: e.target.value, updatedAt: Date.now()})) }),
+                React.createElement('span', { 
+                  className: 'sleep-time-display clickable', 
+                  onClick: () => {
+                    if (HEYS.showCheckin?.sleep) {
+                      HEYS.showCheckin.sleep(date, (stepData) => {
+                        if (stepData) {
+                          // stepData = { sleepTime: {...}, sleepQuality: {...} }
+                          const timeData = stepData.sleepTime || {};
+                          const qualityData = stepData.sleepQuality || {};
+                          setDay(prev => ({
+                            ...prev,
+                            sleepStart: timeData.sleepStart ?? prev.sleepStart,
+                            sleepEnd: timeData.sleepEnd ?? prev.sleepEnd,
+                            sleepHours: timeData.sleepHours ?? prev.sleepHours,
+                            sleepQuality: qualityData.sleepQuality ?? prev.sleepQuality,
+                            sleepNote: qualityData.sleepNote || prev.sleepNote,
+                            updatedAt: Date.now()
+                          }));
+                        }
+                      });
+                    }
+                  }
+                }, day.sleepStart || '—:—'),
                 React.createElement('span', { className: 'sleep-arrow' }, '→'),
-                React.createElement('input', { className: 'sleep-time-input', type: 'time', value: day.sleepEnd || '', onChange: e => setDay(prev => ({...prev, sleepEnd: e.target.value, updatedAt: Date.now()})) })
+                React.createElement('span', { 
+                  className: 'sleep-time-display clickable', 
+                  onClick: () => {
+                    if (HEYS.showCheckin?.sleep) {
+                      HEYS.showCheckin.sleep(date, (stepData) => {
+                        if (stepData) {
+                          // stepData = { sleepTime: {...}, sleepQuality: {...} }
+                          const timeData = stepData.sleepTime || {};
+                          const qualityData = stepData.sleepQuality || {};
+                          setDay(prev => ({
+                            ...prev,
+                            sleepStart: timeData.sleepStart ?? prev.sleepStart,
+                            sleepEnd: timeData.sleepEnd ?? prev.sleepEnd,
+                            sleepHours: timeData.sleepHours ?? prev.sleepHours,
+                            sleepQuality: qualityData.sleepQuality ?? prev.sleepQuality,
+                            sleepNote: qualityData.sleepNote || prev.sleepNote,
+                            updatedAt: Date.now()
+                          }));
+                        }
+                      });
+                    }
+                  }
+                }, day.sleepEnd || '—:—')
               ),
               // Качество сна — большой блок как у оценки дня
               React.createElement('div', { 
@@ -17411,6 +17482,7 @@ const mainBlock = React.createElement('div', { className: 'area-main card tone-v
       // Supplements Card — карточка витаминов
       (!isMobile || mobileSubTab === 'stats') && HEYS.Supplements && HEYS.Supplements.renderCard({
         dateKey: date,
+        dayData: day, // 🆕 Передаём React state для hot reload
         onForceUpdate: () => {
           // Dispatch event to force day reload
           window.dispatchEvent(new CustomEvent('heys:day-updated', {

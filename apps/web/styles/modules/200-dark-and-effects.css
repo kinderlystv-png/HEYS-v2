@@ -2267,6 +2267,29 @@
   box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
 }
 
+/* Кликабельное отображение времени */
+.sleep-time-display {
+  min-width: 70px;
+  padding: 10px 12px;
+  border: 1px solid #fce7f3;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+  color: #be185d;
+  transition: all 0.15s ease;
+}
+
+.sleep-time-display.clickable {
+  cursor: pointer;
+}
+
+.sleep-time-display.clickable:active {
+  transform: scale(0.96);
+  background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+}
+
 .sleep-arrow {
   color: #f9a8d4;
   font-size: 14px;

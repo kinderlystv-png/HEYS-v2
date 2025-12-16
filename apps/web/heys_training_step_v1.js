@@ -91,12 +91,9 @@
     return '#ef4444';
   }
 
-  // WheelPicker из StepModal
+  // WheelPicker и TimePicker из StepModal
   const WheelPicker = HEYS.StepModal.WheelPicker;
-
-  // Генераторы значений для колёс
-  const HOURS = Array.from({ length: 24 }, (_, i) => i);
-  const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5); // 0, 5, 10, ... 55
+  const TimePicker = HEYS.StepModal.TimePicker;
 
   // ========================================
   // ШАГ 1: Время начала, тип, оценки, заметка
@@ -119,14 +116,18 @@
       return [now.getHours(), Math.floor(now.getMinutes() / 5) * 5];
     }, [time]);
 
+    // Обработчики времени (haptic уже в TimePicker)
     const setHours = (h) => {
-      haptic('light');
       onChange({ ...data, time: pad2(h) + ':' + pad2(minutes) });
     };
 
     const setMinutes = (m) => {
-      haptic('light');
       onChange({ ...data, time: pad2(hours) + ':' + pad2(m) });
+    };
+
+    // Единый callback для linkedScroll (решает проблему React batching)
+    const setTime = (h, m) => {
+      onChange({ ...data, time: pad2(h) + ':' + pad2(m) });
     };
 
     const updateField = (field, value) => {
@@ -152,26 +153,21 @@
         )
       ),
 
-      // === Время начала (колесо) ===
+      // === Время начала (переиспользуемый TimePicker с linkedScroll) ===
       React.createElement('div', { className: 'ts-section ts-time-wheel-section' },
         React.createElement('div', { className: 'ts-time-wheel-label' }, '⏰ Время начала'),
-        React.createElement('div', { className: 'ts-time-wheels' },
-          React.createElement(WheelPicker, {
-            values: HOURS,
-            value: hours,
-            onChange: setHours,
-            label: '',
-            suffix: ''
-          }),
-          React.createElement('span', { className: 'ts-time-wheel-sep' }, ':'),
-          React.createElement(WheelPicker, {
-            values: MINUTES,
-            value: minutes,
-            onChange: setMinutes,
-            label: '',
-            suffix: ''
-          })
-        )
+        React.createElement(TimePicker, {
+          hours,
+          minutes,
+          onHoursChange: setHours,
+          onMinutesChange: setMinutes,
+          onTimeChange: setTime, // Единый callback для linkedScroll
+          hoursLabel: '',
+          minutesLabel: '',
+          display: null, // Не показываем дублирующий дисплей
+          linkedScroll: true,
+          className: 'ts-time-wheels'
+        })
       ),
 
       // === Оценки после тренировки ===

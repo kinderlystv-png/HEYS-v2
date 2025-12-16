@@ -236,18 +236,89 @@
 
     const sleepHours = calcSleepHours(sleepStartH, sleepStartM, sleepEndH, sleepEndM);
 
-    const hoursValues = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
-    const minutesValues = useMemo(() => [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55], []);
-    const pad2 = (v) => String(v).padStart(2, '0');
+    // Используем переиспользуемый TimePicker из StepModal
+    const TimePicker = HEYS.StepModal.TimePicker;
 
-    const update = (field, value) => {
-      onChange({ 
-        ...data, 
+    // Helper для форматирования времени
+    const pad2 = (n) => String(n).padStart(2, '0');
+
+    // Обновляет данные с форматированными полями для onComplete
+    const updateData = (newData) => {
+      const startH = newData.sleepStartH ?? sleepStartH;
+      const startM = newData.sleepStartM ?? sleepStartM;
+      const endH = newData.sleepEndH ?? sleepEndH;
+      const endM = newData.sleepEndM ?? sleepEndM;
+      
+      onChange({
+        ...newData,
+        // Форматированные поля для onComplete callback
+        sleepStart: `${pad2(startH)}:${pad2(startM)}`,
+        sleepEnd: `${pad2(endH)}:${pad2(endM)}`,
+        sleepHours: Math.round(calcSleepHours(startH, startM, endH, endM) * 10) / 10
+      });
+    };
+
+    // Callbacks для времени засыпания
+    const setSleepStartH = (h) => {
+      updateData({
+        ...data,
+        sleepStartH: h,
+        sleepStartM: data.sleepStartM ?? sleepStartM,
+        sleepEndH: data.sleepEndH ?? sleepEndH,
+        sleepEndM: data.sleepEndM ?? sleepEndM
+      });
+    };
+    
+    const setSleepStartM = (m) => {
+      updateData({
+        ...data,
+        sleepStartH: data.sleepStartH ?? sleepStartH,
+        sleepStartM: m,
+        sleepEndH: data.sleepEndH ?? sleepEndH,
+        sleepEndM: data.sleepEndM ?? sleepEndM
+      });
+    };
+
+    // Единый callback для linkedScroll — засыпание
+    const setSleepStartTime = (h, m) => {
+      updateData({
+        ...data,
+        sleepStartH: h,
+        sleepStartM: m,
+        sleepEndH: data.sleepEndH ?? sleepEndH,
+        sleepEndM: data.sleepEndM ?? sleepEndM
+      });
+    };
+
+    // Callbacks для времени пробуждения
+    const setSleepEndH = (h) => {
+      updateData({
+        ...data,
+        sleepStartH: data.sleepStartH ?? sleepStartH,
+        sleepStartM: data.sleepStartM ?? sleepStartM,
+        sleepEndH: h,
+        sleepEndM: data.sleepEndM ?? sleepEndM
+      });
+    };
+    
+    const setSleepEndM = (m) => {
+      updateData({
+        ...data,
         sleepStartH: data.sleepStartH ?? sleepStartH,
         sleepStartM: data.sleepStartM ?? sleepStartM,
         sleepEndH: data.sleepEndH ?? sleepEndH,
-        sleepEndM: data.sleepEndM ?? sleepEndM,
-        [field]: value 
+        sleepEndM: m
+      });
+    };
+
+    // Единый callback для linkedScroll — пробуждение
+    const setSleepEndTime = (h, m) => {
+      updateData({
+        ...data,
+        sleepStartH: data.sleepStartH ?? sleepStartH,
+        sleepStartM: data.sleepStartM ?? sleepStartM,
+        sleepEndH: h,
+        sleepEndM: m
       });
     };
 
@@ -259,47 +330,33 @@
       React.createElement('div', { className: 'mc-sleep-times' },
         React.createElement('div', { className: 'mc-sleep-block' },
           React.createElement('div', { className: 'mc-sleep-label' }, '🌙 Лёг'),
-          React.createElement('div', { className: 'mc-time-pickers' },
-            React.createElement(WheelPicker, {
-              values: hoursValues,
-              value: sleepStartH,
-              onChange: (v) => update('sleepStartH', v),
-              label: 'ч',
-              formatValue: pad2,
-              wrap: true
-            }),
-            React.createElement('span', { className: 'mc-time-sep' }, ':'),
-            React.createElement(WheelPicker, {
-              values: minutesValues,
-              value: sleepStartM,
-              onChange: (v) => update('sleepStartM', v),
-              label: 'мин',
-              formatValue: pad2,
-              wrap: true
-            })
-          )
+          React.createElement(TimePicker, {
+            hours: sleepStartH,
+            minutes: sleepStartM,
+            onHoursChange: setSleepStartH,
+            onMinutesChange: setSleepStartM,
+            onTimeChange: setSleepStartTime,
+            hoursLabel: '',
+            minutesLabel: '',
+            display: null,
+            linkedScroll: true,
+            className: 'mc-time-pickers'
+          })
         ),
         React.createElement('div', { className: 'mc-sleep-block' },
           React.createElement('div', { className: 'mc-sleep-label' }, '☀️ Встал'),
-          React.createElement('div', { className: 'mc-time-pickers' },
-            React.createElement(WheelPicker, {
-              values: hoursValues,
-              value: sleepEndH,
-              onChange: (v) => update('sleepEndH', v),
-              label: 'ч',
-              formatValue: pad2,
-              wrap: true
-            }),
-            React.createElement('span', { className: 'mc-time-sep' }, ':'),
-            React.createElement(WheelPicker, {
-              values: minutesValues,
-              value: sleepEndM,
-              onChange: (v) => update('sleepEndM', v),
-              label: 'мин',
-              formatValue: pad2,
-              wrap: true
-            })
-          )
+          React.createElement(TimePicker, {
+            hours: sleepEndH,
+            minutes: sleepEndM,
+            onHoursChange: setSleepEndH,
+            onMinutesChange: setSleepEndM,
+            onTimeChange: setSleepEndTime,
+            hoursLabel: '',
+            minutesLabel: '',
+            display: null,
+            linkedScroll: true,
+            className: 'mc-time-pickers'
+          })
         )
       )
     );
@@ -310,28 +367,56 @@
     hint: 'Во сколько легли и встали',
     icon: '🛏️',
     component: SleepTimeStepComponent,
-    getInitialData: () => {
+    getInitialData: (context) => {
+      // Если есть dateKey в context — берём данные из того дня
+      if (context && context.dateKey) {
+        const dayData = lsGet(`heys_dayv2_${context.dateKey}`, {}) || {};
+        if (dayData.sleepStart && dayData.sleepEnd) {
+          const sleepStartH = parseInt(dayData.sleepStart.split(':')[0], 10);
+          const sleepStartM = parseInt(dayData.sleepStart.split(':')[1], 10);
+          const sleepEndH = parseInt(dayData.sleepEnd.split(':')[0], 10);
+          const sleepEndM = parseInt(dayData.sleepEnd.split(':')[1], 10);
+          return {
+            sleepStartH,
+            sleepStartM,
+            sleepEndH,
+            sleepEndM,
+            sleepStart: dayData.sleepStart,
+            sleepEnd: dayData.sleepEnd,
+            sleepHours: dayData.sleepHours || Math.round(calcSleepHours(sleepStartH, sleepStartM, sleepEndH, sleepEndM) * 10) / 10
+          };
+        }
+      }
+      // Иначе — последние данные о сне
       const last = getLastSleepData();
+      const sleepStartH = parseInt(last.sleepStart.split(':')[0], 10);
+      const sleepStartM = parseInt(last.sleepStart.split(':')[1], 10);
+      const sleepEndH = parseInt(last.sleepEnd.split(':')[0], 10);
+      const sleepEndM = parseInt(last.sleepEnd.split(':')[1], 10);
       return {
-        sleepStartH: parseInt(last.sleepStart.split(':')[0], 10),
-        sleepStartM: parseInt(last.sleepStart.split(':')[1], 10),
-        sleepEndH: parseInt(last.sleepEnd.split(':')[0], 10),
-        sleepEndM: parseInt(last.sleepEnd.split(':')[1], 10)
+        sleepStartH,
+        sleepStartM,
+        sleepEndH,
+        sleepEndM,
+        // Форматированные поля для onComplete
+        sleepStart: last.sleepStart,
+        sleepEnd: last.sleepEnd,
+        sleepHours: Math.round(calcSleepHours(sleepStartH, sleepStartM, sleepEndH, sleepEndM) * 10) / 10
       };
     },
-    save: (data) => {
-      const todayKey = getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${todayKey}`, {}) || {};
+    save: (data, context) => {
+      const dateKey = (context && context.dateKey) || getTodayKey();
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
       const sleepStart = `${String(data.sleepStartH).padStart(2, '0')}:${String(data.sleepStartM).padStart(2, '0')}`;
       const sleepEnd = `${String(data.sleepEndH).padStart(2, '0')}:${String(data.sleepEndM).padStart(2, '0')}`;
       const sleepHours = calcSleepHours(data.sleepStartH, data.sleepStartM, data.sleepEndH, data.sleepEndM);
       
-      dayData.date = todayKey;
+      dayData.date = dateKey;
       dayData.sleepStart = sleepStart;
       dayData.sleepEnd = sleepEnd;
       dayData.sleepHours = Math.round(sleepHours * 10) / 10;
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${todayKey}`, dayData);
+      lsSet(`heys_dayv2_${dateKey}`, dayData);
     },
     xpAction: 'sleep_logged'
   });
@@ -490,16 +575,27 @@
     hint: 'Как выспались?',
     icon: '✨',
     component: SleepQualityStepComponent,
-    getInitialData: () => {
+    getInitialData: (context) => {
+      // Если есть dateKey в context — берём данные из того дня
+      if (context && context.dateKey) {
+        const dayData = lsGet(`heys_dayv2_${context.dateKey}`, {}) || {};
+        if (dayData.sleepQuality !== undefined) {
+          return {
+            sleepQuality: dayData.sleepQuality,
+            sleepNote: ''  // Не предзаполняем заметку — каждый раз новая
+          };
+        }
+      }
+      // Иначе — последние данные
       const last = getLastSleepData();
       return {
         sleepQuality: last.sleepQuality || 7,
         sleepNote: ''
       };
     },
-    save: (data) => {
-      const todayKey = getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${todayKey}`, {}) || {};
+    save: (data, context) => {
+      const dateKey = (context && context.dateKey) || getTodayKey();
+      const dayData = lsGet(`heys_dayv2_${dateKey}`, {}) || {};
       dayData.sleepQuality = data.sleepQuality;
       
       if (data.sleepNote && data.sleepNote.trim()) {
@@ -512,7 +608,7 @@
       }
       
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${todayKey}`, dayData);
+      lsSet(`heys_dayv2_${dateKey}`, dayData);
     }
   });
 
@@ -905,20 +1001,30 @@
       return 'Супер активный день! 🔥';
     };
     
-    // Парсим время для WheelPicker
-    const [hh, mm] = useMemo(() => (householdTime || '12:00').split(':').map(Number), [householdTime]);
-    const hoursValues = useMemo(() => Array.from({ length: 16 }, (_, i) => String(i + 7).padStart(2, '0')), []); // 07-22
-    const minutesValues = ['00', '15', '30', '45'];
+    // Парсим время для TimePicker (числа)
+    const [currentHour, currentMinute] = useMemo(() => {
+      const [h, m] = (householdTime || '12:00').split(':').map(Number);
+      return [h || 12, Math.floor((m || 0) / 5) * 5]; // округляем минуты к ближайшим 5
+    }, [householdTime]);
     
-    const updateHours = (newHour) => {
-      const newTime = `${newHour}:${String(mm || 0).padStart(2, '0')}`;
-      triggerHaptic(5);
+    // Используем переиспользуемый TimePicker из StepModal
+    const TimePicker = HEYS.StepModal.TimePicker;
+    const pad2 = HEYS.StepModal.pad2;
+    
+    // Haptic уже в TimePicker
+    const setHour = (h) => {
+      const newTime = `${pad2(h)}:${pad2(currentMinute)}`;
       onChange({ ...data, householdTime: newTime });
     };
     
-    const updateMinutes = (newMin) => {
-      const newTime = `${String(hh || 12).padStart(2, '0')}:${newMin}`;
-      triggerHaptic(5);
+    const setMinute = (m) => {
+      const newTime = `${pad2(currentHour)}:${pad2(m)}`;
+      onChange({ ...data, householdTime: newTime });
+    };
+
+    // Единый callback для linkedScroll
+    const setTime = (h, m) => {
+      const newTime = `${pad2(h)}:${pad2(m)}`;
       onChange({ ...data, householdTime: newTime });
     };
     
@@ -984,23 +1090,18 @@
           React.createElement('span', { className: 'household-time-label' }, '⏰ Когда была активность?'),
           householdTime && React.createElement('span', { className: 'household-time-value-small' }, householdTime)
         ),
-        React.createElement('div', { className: 'household-time-pickers compact' },
-          React.createElement(WheelPicker, {
-            values: hoursValues,
-            value: String(Math.max(7, Math.min(22, hh || 12))).padStart(2, '0'),
-            onChange: updateHours,
-            label: 'Часы'
-          }),
-          React.createElement('span', { className: 'household-time-separator' }, ':'),
-          React.createElement(WheelPicker, {
-            values: minutesValues,
-            value: minutesValues.includes(String(mm).padStart(2, '0')) 
-              ? String(mm).padStart(2, '0') 
-              : '00',
-            onChange: updateMinutes,
-            label: 'Минуты'
-          })
-        ),
+        React.createElement(TimePicker, {
+          hours: currentHour,
+          minutes: currentMinute,
+          onHoursChange: setHour,
+          onMinutesChange: setMinute,
+          onTimeChange: setTime,
+          hoursLabel: '',
+          minutesLabel: '',
+          display: null,
+          linkedScroll: true,
+          className: 'household-time-pickers compact'
+        }),
         householdTime && React.createElement('button', {
           type: 'button',
           className: 'household-time-clear',
@@ -2897,82 +2998,89 @@
     return React.createElement('div', { 
       className: 'mc-supplements-step',
       style: { 
-        maxHeight: '60vh',
-        overflowY: 'auto',
-        paddingRight: '4px',
-        paddingBottom: '60px' // Место для sticky-счётчика
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: '60vh'
       }
     },
-      // Категории
-      Object.entries(byCategory).map(([catId, supps]) => {
-        const cat = Supps.CATEGORIES[catId];
-        return React.createElement('div', { 
-          key: catId,
-          style: { marginBottom: '16px' }
-        },
-          // Заголовок категории
-          React.createElement('div', { 
-            style: { 
-              fontSize: '13px', 
-              fontWeight: '600', 
-              color: '#64748b',
-              marginBottom: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }
-          }, 
-            React.createElement('span', null, cat.icon),
-            React.createElement('span', null, cat.name)
-          ),
-          // Чипы витаминов
-          React.createElement('div', { 
-            style: { 
-              display: 'flex', 
-              flexWrap: 'wrap', 
-              gap: '8px' 
-            }
+      // Скроллящийся список категорий
+      React.createElement('div', {
+        style: {
+          flex: 1,
+          overflowY: 'auto',
+          paddingRight: '4px'
+        }
+      },
+        // Категории
+        Object.entries(byCategory).map(([catId, supps]) => {
+          const cat = Supps.CATEGORIES[catId];
+          return React.createElement('div', { 
+            key: catId,
+            style: { marginBottom: '16px' }
           },
-            supps.map(supp => {
-              const isSelected = selected.includes(supp.id);
-              return React.createElement('button', {
-                key: supp.id,
-                onClick: () => toggle(supp.id),
-                style: {
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '8px 12px',
-                  borderRadius: '20px',
-                  border: isSelected ? '2px solid #f97316' : '2px solid #e2e8f0',
-                  background: isSelected ? 'rgba(249, 115, 22, 0.1)' : '#fff',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: isSelected ? '600' : '500',
-                  color: isSelected ? '#ea580c' : '#374151',
-                  transition: 'all 0.2s'
-                }
-              },
-                React.createElement('span', null, supp.icon),
-                React.createElement('span', null, supp.name)
-              );
-            })
-          )
-        );
-      }),
-      // Счётчик внизу
+            // Заголовок категории
+            React.createElement('div', { 
+              style: { 
+                fontSize: '13px', 
+                fontWeight: '600', 
+                color: '#64748b',
+                marginBottom: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }
+            }, 
+              React.createElement('span', null, cat.icon),
+              React.createElement('span', null, cat.name)
+            ),
+            // Чипы витаминов
+            React.createElement('div', { 
+              style: { 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: '8px' 
+              }
+            },
+              supps.map(supp => {
+                const isSelected = selected.includes(supp.id);
+                return React.createElement('button', {
+                  key: supp.id,
+                  onClick: () => toggle(supp.id),
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '8px 12px',
+                    borderRadius: '20px',
+                    border: isSelected ? '2px solid #f97316' : '2px solid #e2e8f0',
+                    background: isSelected ? 'rgba(249, 115, 22, 0.1)' : '#fff',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: isSelected ? '600' : '500',
+                    color: isSelected ? '#ea580c' : '#374151',
+                    transition: 'all 0.2s'
+                  }
+                },
+                  React.createElement('span', null, supp.icon),
+                  React.createElement('span', null, supp.name)
+                );
+              })
+            )
+          );
+        })
+      ),
+      // Счётчик внизу — ВНЕ скролла!
       React.createElement('div', { 
         style: { 
-          marginTop: '16px',
+          marginTop: '12px',
           padding: '12px',
-          background: selected.length > 0 ? 'rgba(249, 115, 22, 0.1)' : '#f8fafc',
+          background: selected.length > 0 ? '#fff7ed' : '#f8fafc',
           borderRadius: '12px',
           textAlign: 'center',
           fontSize: '14px',
           fontWeight: '600',
           color: selected.length > 0 ? '#ea580c' : '#64748b',
-          position: 'sticky',
-          bottom: '0'
+          flexShrink: 0
         }
       }, 
         selected.length > 0 
@@ -2993,23 +3101,33 @@
       const planned = HEYS.Supplements?.getPlanned() || [];
       return { selected: planned };
     },
-    save: (data) => {
-      const dateKey = getTodayKey();
+    save: (data, context) => {
+      // Используем dateKey из контекста (для редактирования прошлых дней) или сегодня
+      const dateKey = context?.dateKey || getTodayKey();
+      
+      console.log('[Supplements SAVE] 🔵 START | dateKey:', dateKey, '| selected:', data.selected, '| context:', context);
       
       // 1. Сохраняем в профиль (для следующего дня)
       if (HEYS.Supplements && HEYS.Supplements.savePlanned) {
         HEYS.Supplements.savePlanned(data.selected);
+        console.log('[Supplements SAVE] ✅ Saved to profile');
       }
       
       // 2. Сохраняем в день как planned
       const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      const oldPlanned = dayData.supplementsPlanned;
       dayData.supplementsPlanned = data.selected;
       dayData.updatedAt = Date.now();
       lsSet(`heys_dayv2_${dateKey}`, dayData);
+      console.log('[Supplements SAVE] ✅ Saved to day | old:', oldPlanned, '| new:', data.selected, '| updatedAt:', dayData.updatedAt);
       
-      window.dispatchEvent(new CustomEvent('heys:day-updated', { 
-        detail: { date: dateKey, field: 'supplementsPlanned' }
-      }));
+      // Диспатчим событие для обновления UI дня (с forceReload!)
+      if (typeof window !== 'undefined') {
+        console.log('[Supplements SAVE] 📤 Dispatching heys:day-updated with forceReload:true');
+        window.dispatchEvent(new CustomEvent('heys:day-updated', { 
+          detail: { date: dateKey, field: 'supplementsPlanned', forceReload: true }
+        }));
+      }
     },
     xpAction: 'supplements_planned'
   });

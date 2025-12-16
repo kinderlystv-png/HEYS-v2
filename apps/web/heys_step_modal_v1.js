@@ -305,6 +305,7 @@
     minutes,
     onHoursChange,
     onMinutesChange,
+    onTimeChange, // 🆕 Единый callback для linkedScroll: (newHours, newMinutes) => void
     hoursLabel = 'ЧАСЫ',
     minutesLabel = 'МИНУТЫ',
     wrap = true,
@@ -312,8 +313,83 @@
     className = '',
     hoursValues = DEFAULT_HOURS,
     minutesValues = DEFAULT_MINUTES,
-    display = 'HH:MM'
+    display = 'HH:MM',
+    linkedScroll = true, // При переходе минут через границу менять час
+    haptic = true // Включить haptic feedback
   }) {
+    // Haptic feedback helper
+    const triggerHaptic = React.useCallback((intensity = 5) => {
+      if (!haptic) return;
+      if (navigator.vibrate) navigator.vibrate(intensity);
+    }, [haptic]);
+
+    // Ref для отслеживания предыдущих минут — НЕ синхронизируем при каждом рендере!
+    // Обновляется ТОЛЬКО в handleMinutesChange после использования
+    const prevMinutesRef = useRef(minutes);
+    
+    // Обработчик изменения часов с haptic
+    const handleHoursChange = React.useCallback((newHours) => {
+      triggerHaptic(5);
+      onHoursChange(newHours);
+    }, [onHoursChange, triggerHaptic]);
+    
+    // Обработчик изменения минут с учётом overflow на час
+    const handleMinutesChange = React.useCallback((newMinutes) => {
+      const prevMin = prevMinutesRef.current;
+      
+      // Если linkedScroll включён и wrap=true — проверяем переход через границу
+      if (linkedScroll && wrap) {
+        const maxMinute = minutesValues[minutesValues.length - 1]; // 55
+        const minMinute = minutesValues[0]; // 0
+        
+        // 55 → 0: прокрутка вперёд через границу → час +1
+        if (prevMin === maxMinute && newMinutes === minMinute) {
+          const currentHourIndex = hoursValues.indexOf(hours);
+          const newHourIndex = (currentHourIndex + 1) % hoursValues.length;
+          const newHour = hoursValues[newHourIndex];
+          
+          // Обновляем ref ПЕРЕД вызовом callback
+          prevMinutesRef.current = newMinutes;
+          triggerHaptic(10); // Усиленный haptic при переходе часа
+          
+          // Если есть onTimeChange — вызываем его (один вызов = нет batching проблемы)
+          if (onTimeChange) {
+            onTimeChange(newHour, newMinutes);
+            return;
+          }
+          // Fallback: раздельные callbacks
+          onHoursChange(newHour);
+          onMinutesChange(newMinutes);
+          return;
+        }
+        // 0 → 55: прокрутка назад через границу → час -1
+        else if (prevMin === minMinute && newMinutes === maxMinute) {
+          const currentHourIndex = hoursValues.indexOf(hours);
+          const newHourIndex = (currentHourIndex - 1 + hoursValues.length) % hoursValues.length;
+          const newHour = hoursValues[newHourIndex];
+          
+          // Обновляем ref ПЕРЕД вызовом callback
+          prevMinutesRef.current = newMinutes;
+          triggerHaptic(10); // Усиленный haptic при переходе часа
+          
+          // Если есть onTimeChange — вызываем его (один вызов = нет batching проблемы)
+          if (onTimeChange) {
+            onTimeChange(newHour, newMinutes);
+            return;
+          }
+          // Fallback: раздельные callbacks
+          onHoursChange(newHour);
+          onMinutesChange(newMinutes);
+          return;
+        }
+      }
+      
+      // Обычное изменение минут (без overflow)
+      prevMinutesRef.current = newMinutes;
+      triggerHaptic(5);
+      onMinutesChange(newMinutes);
+    }, [onMinutesChange, onHoursChange, onTimeChange, hoursValues, minutesValues, linkedScroll, wrap, hours, triggerHaptic]);
+    
     return React.createElement('div', { className: `mc-time-picker ${className}`.trim() },
       // Дисплей времени сверху
       display && React.createElement('div', { className: 'mc-time-display' },
@@ -321,8 +397,8 @@
           `${pad2(hours)}:${pad2(minutes)}`
         )
       ),
-      // Подписи
-      React.createElement('div', { className: 'mc-time-labels' },
+      // Подписи (скрываем если пустые)
+      (hoursLabel || minutesLabel) && React.createElement('div', { className: 'mc-time-labels' },
         React.createElement('span', { className: 'mc-time-label' }, hoursLabel),
         React.createElement('span', { className: 'mc-time-label' }, minutesLabel)
       ),
@@ -331,7 +407,7 @@
         React.createElement(WheelPicker, {
           values: hoursValues,
           value: hours,
-          onChange: onHoursChange,
+          onChange: handleHoursChange, // С haptic
           label: '',
           formatValue: pad2,
           wrap,
@@ -341,7 +417,7 @@
         React.createElement(WheelPicker, {
           values: minutesValues,
           value: minutes,
-          onChange: onMinutesChange,
+          onChange: handleMinutesChange, // С haptic + linkedScroll
           label: '',
           formatValue: pad2,
           wrap,
@@ -569,12 +645,15 @@
         const closestSliderClass = e.target.closest ? e.target.closest('.mc-quality-slider') : null;
         const closestMoodCard = e.target.closest ? e.target.closest('.mood-rating-card') : null;
         
+        // Разрешаем touch на wheel picker (для выбора времени)
+        const closestWheelPicker = e.target.closest ? e.target.closest('.mc-wheel-picker') : null;
+        
         console.log('[TouchMove NATIVE] isRangeInput:', isRangeInput, 'hasRangeClass:', hasRangeClass);
         console.log('[TouchMove NATIVE] closestRange:', closestRange, 'closestSliderClass:', closestSliderClass, 'closestMoodCard:', closestMoodCard);
         
-        // Если это слайдер или внутри mood-rating-card — НЕ блокируем
-        if (isRangeInput || hasRangeClass || closestRange || closestSliderClass || closestMoodCard) {
-          console.log('[TouchMove NATIVE] ALLOWED — слайдер или карточка настроения');
+        // Если это слайдер или внутри mood-rating-card или wheel-picker — НЕ блокируем
+        if (isRangeInput || hasRangeClass || closestRange || closestSliderClass || closestMoodCard || closestWheelPicker) {
+          console.log('[TouchMove NATIVE] ALLOWED — слайдер, карточка настроения или wheel picker');
           return;
         }
         
