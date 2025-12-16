@@ -1768,6 +1768,45 @@
   gap: 0;
 }
 
+.widget-weight--compact {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 4px;
+}
+
+.widget-weight--medium {
+  gap: 8px;
+}
+
+.widget-weight--wide {
+  gap: 6px;
+}
+
+.widget-weight--tall3 {
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 8px 0;
+}
+
+.widget-weight--tall {
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 8px 0;
+  gap: 8px;
+}
+
+.widget-weight--wide3 {
+  gap: 10px;
+}
+
+.widget-weight--large {
+  gap: 12px;
+  height: 100%;
+}
+
 .widget-weight__value {
   font-size: 28px;
   font-weight: 700;
@@ -1782,6 +1821,15 @@
 .widget-weight__value--mini {
   font-size: 34px;
   line-height: 1.05;
+}
+
+.widget-weight__value--large {
+  font-size: 32px;
+}
+
+.widget-weight__value--xlarge {
+  font-size: 42px;
+  font-weight: 800;
 }
 
 .widget-weight__unit {
@@ -1803,6 +1851,196 @@
   color: var(--text-secondary, #6b7280);
 }
 
+/* Row layout (medium) */
+.widget-weight__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Trend arrow (compact) */
+.widget-weight__trend-arrow {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Trend badge (medium) */
+.widget-weight__trend-badge {
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Trend text (wide, tall, large) */
+.widget-weight__trend-text {
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Main layout (wide) */
+.widget-weight__main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.widget-weight__left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Footer (wide, wide3) */
+.widget-weight__footer {
+  font-size: 11px;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+.widget-weight__goal-inline {
+  font-weight: 500;
+}
+
+.widget-weight__eta {
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+/* Header (large, wide3) */
+.widget-weight__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Trend vertical (tall3) */
+.widget-weight__trend-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.widget-weight__trend-emoji-big {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.widget-weight__trend-week {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Vertical progress bar (tall3) */
+.widget-weight__progress-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.widget-weight__progress-track {
+  width: 8px;
+  height: 40px;
+  background: rgba(236, 72, 153, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.widget-weight__progress-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, #EC4899, #F472B6);
+  border-radius: 4px;
+  transition: height 0.5s ease;
+}
+
+.widget-weight__goal-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+/* Goal block (tall) */
+.widget-weight__goal-block {
+  text-align: center;
+}
+
+/* BMI (large) */
+.widget-weight__bmi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.widget-weight__bmi-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary, #1f2937);
+  font-feature-settings: 'tnum' on;
+}
+
+.widget-weight__bmi-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Analytics (large) */
+.widget-weight__analytics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.widget-weight__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary, #6b7280);
+  padding: 4px 8px;
+  background: var(--widget-surface-soft, rgba(0,0,0,0.03));
+  border-radius: 6px;
+}
+
+.widget-weight__stat-icon {
+  font-size: 12px;
+}
+
+.widget-weight__stat--clean {
+  color: #ec4899;
+  background: rgba(236, 72, 153, 0.1);
+}
+
+/* Sparkline */
+.widget-weight__sparkline {
+  display: block;
+  flex-shrink: 0;
+}
+
+.widget-weight__sparkline-label {
+  font-size: 8px;
+  fill: var(--text-tertiary, #9ca3af);
+  font-weight: 500;
+}
+
+/* Legacy trend styles */
 .widget-weight__trend {
   display: inline-flex;
   align-items: center;

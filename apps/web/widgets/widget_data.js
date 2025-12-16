@@ -115,20 +115,71 @@
     },
     
     /**
-     * Получить данные о весе
-     * @returns {Object} { current, goal, trend }
+     * Получить данные о весе (расширенные для адаптивных виджетов)
+     * @returns {Object} { current, goal, trend, weekChange, monthChange, daysToGoal, bmi, sparkline, ... }
      */
     getWeightData() {
       const day = this._getDay();
       const prof = this._getProfile();
       
-      // Расчёт тренда за последние 7 дней
-      const trend = this._calculateWeightTrend();
+      const current = day?.weightMorning || prof?.weight || null;
+      const goal = prof?.weightGoal || null;
+      
+      // Расчёт тренда и спарклайна
+      const trendData = this._calculateWeightTrendExtended();
+      const trend = trendData?.trend || null;
+      const sparkline = trendData?.sparkline || [];
+      
+      // BMI
+      const bmi = prof?.weight && prof?.height 
+        ? parseFloat((prof.weight / Math.pow(prof.height / 100, 2)).toFixed(1))
+        : null;
+      
+      // Прогноз изменения
+      const weekChange = trend ? parseFloat((trend * 7).toFixed(2)) : null;
+      const monthChange = trend ? parseFloat((trend * 30).toFixed(1)) : null;
+      
+      // Дней до цели (если тренд в нужном направлении)
+      let daysToGoal = null;
+      let weeksToGoal = null;
+      if (current && goal && trend) {
+        const diff = current - goal;
+        // Движение к цели: снижаем вес (diff>0, trend<0) или набираем (diff<0, trend>0)
+        if ((diff > 0 && trend < -0.01) || (diff < 0 && trend > 0.01)) {
+          daysToGoal = Math.round(Math.abs(diff / trend));
+          weeksToGoal = Math.round(daysToGoal / 7);
+        }
+      }
+      
+      // Прогресс к цели (0-100%)
+      let progressPct = null;
+      if (current && goal && prof?.weight) {
+        const startWeight = prof.weight; // начальный вес из профиля
+        const totalDiff = startWeight - goal;
+        const currentDiff = current - goal;
+        if (Math.abs(totalDiff) > 0.1) {
+          progressPct = Math.max(0, Math.min(100, Math.round((1 - currentDiff / totalDiff) * 100)));
+        }
+      }
+      
+      // Исключённые дни (цикл/refeed)
+      const excludedDays = sparkline?.filter(d => d.excluded)?.length || 0;
       
       return {
-        current: day?.weightMorning || prof?.weight || null,
-        goal: prof?.weightGoal || null,
-        trend: trend
+        current,
+        goal,
+        trend,                    // кг/день
+        weekChange,               // −0.5 кг/неделю
+        monthChange,              // −2.1 кг/месяц
+        daysToGoal,               // 98 (дней)
+        weeksToGoal,              // 14 (недель)
+        progressPct,              // 45%
+        bmi,                      // 26.4
+        bmiCategory: this._getBMICategory(bmi),
+        sparkline,                // массив точек для графика
+        dataPoints: sparkline?.length || 0,
+        excludedDays,
+        hasCleanTrend: excludedDays > 0
       };
     },
     
@@ -453,6 +504,77 @@
       const oldest = weights[weights.length - 1];
       
       return (latest.weight - oldest.weight) / oldest.daysAgo;
+    },
+    
+    /**
+     * Расширенный расчёт тренда веса + спарклайн
+     * @param {number} days - количество дней для анализа
+     * @returns {Object} { trend, sparkline }
+     */
+    _calculateWeightTrendExtended(days = 14) {
+      const weights = [];
+      const today = new Date();
+      
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = this._formatDate(date);
+        const dayData = this._getDayByDate(dateStr);
+        
+        // Проверка на исключённые дни (цикл/refeed)
+        const cycleDay = dayData?.cycleDay;
+        const isRefeed = dayData?.isRefeedDay;
+        const hasRetention = HEYS.Cycle?.getWaterRetentionInfo?.(cycleDay)?.hasRetention || false;
+        const excluded = hasRetention || isRefeed;
+        
+        weights.push({
+          date: dateStr,
+          dayNum: date.getDate(),
+          weight: dayData?.weightMorning || null,
+          daysAgo: i,
+          isToday: i === 0,
+          excluded,
+          cycleDay,
+          hasWaterRetention: hasRetention
+        });
+      }
+      
+      // Фильтруем для расчёта тренда (только с весом, без исключённых)
+      const validWeights = weights.filter(w => w.weight !== null && !w.excluded);
+      
+      let trend = null;
+      if (validWeights.length >= 2) {
+        // Линейная регрессия
+        const n = validWeights.length;
+        const sumX = validWeights.reduce((s, w, i) => s + i, 0);
+        const sumY = validWeights.reduce((s, w) => s + w.weight, 0);
+        const sumXY = validWeights.reduce((s, w, i) => s + i * w.weight, 0);
+        const sumX2 = validWeights.reduce((s, w, i) => s + i * i, 0);
+        
+        const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        trend = isNaN(slope) ? null : slope;
+      }
+      
+      return {
+        trend,
+        sparkline: weights,
+        dataPoints: validWeights.length,
+        excludedCount: weights.filter(w => w.excluded).length
+      };
+    },
+    
+    /**
+     * Определить категорию BMI
+     * @param {number} bmi
+     * @returns {Object} { id, label, color }
+     */
+    _getBMICategory(bmi) {
+      if (!bmi) return null;
+      
+      if (bmi < 18.5) return { id: 'underweight', label: 'Недостаток', color: '#3b82f6' };
+      if (bmi < 25) return { id: 'normal', label: 'Норма', color: '#22c55e' };
+      if (bmi < 30) return { id: 'overweight', label: 'Избыток', color: '#eab308' };
+      return { id: 'obese', label: 'Ожирение', color: '#ef4444' };
     },
     
     _formatDate(date) {
