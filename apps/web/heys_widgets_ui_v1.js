@@ -276,16 +276,30 @@
 
     // Touch start handler (для iOS Safari и PWA)
     const handleResizeHandleTouchStart = useCallback((direction, e) => {
+      console.log('[RESIZE] touchstart direction:', direction, 'touches:', e.touches?.length);
       startResizeDrag(direction, e, true);
     }, [startResizeDrag]);
 
+    // Ключевое: используем resizePreview?.active как триггер для useEffect
+    // (ref.active не триггерит ререндер, а state — да)
+    const isResizeDragActive = resizePreview?.active === true;
+
     useEffect(() => {
+      if (!isResizeDragActive) return;
+      console.log('[RESIZE] useEffect started, adding window listeners');
       const ref = resizeDragRef.current;
-      if (!ref.active) return;
 
       // Универсальный обработчик движения (pointer и touch)
       const onMove = (e) => {
-        if (!ref.active) return;
+        if (!ref.active) {
+          console.log('[RESIZE] onMove skipped: ref.active=false');
+          return;
+        }
+        
+        // CRITICAL: preventDefault чтобы iOS не скроллил страницу
+        e.preventDefault();
+        
+        console.log('[RESIZE] onMove type:', e.type, 'isTouchBased:', ref.isTouchBased);
         
         // Проверяем pointerId только для pointer events
         if (!ref.isTouchBased && ref.pointerId != null && e.pointerId != null && e.pointerId !== ref.pointerId) return;
@@ -381,7 +395,7 @@
         window.removeEventListener('touchend', onUp);
         window.removeEventListener('touchcancel', onCancel);
       };
-    }, [endResizeDrag, getGridCols, pickNearestSize, updateResizePreview, widget?.position?.col]);
+    }, [isResizeDragActive, endResizeDrag, getGridCols, pickNearestSize, updateResizePreview, widget?.position?.col]);
     
     const isResizing = !!resizePreview?.active;
     const previewCols = isResizing ? (resizePreview?.cols || widget.cols) : widget.cols;
@@ -712,8 +726,8 @@
   }
   
   /**
-   * WeightWidgetContent — Адаптивный виджет веса
-   * Размеры: mini(1×1), compact(2×2), medium(3×2), wide(4×2), tall3(2×3), tall(2×4), wide3(4×3), large(4×4)
+   * WeightWidgetContent — Адаптивный виджет веса с системой блоков
+   * Блоки заполняют пространство по приоритету
    */
   function WeightWidgetContent({ widget, data }) {
     const current = data.current;
@@ -734,13 +748,31 @@
 
     const hasCurrent = Number.isFinite(current);
     const hasGoal = Number.isFinite(goal) && goal > 0;
+    const sparklinePoints = sparkline.filter(s => s.weight);
+    const hasSparkline = sparklinePoints.length >= 2;
+    
+    // Размеры виджета в клетках → пиксели (примерно 80px на клетку)
+    const SIZE_MAP = {
+      mini:    { cols: 1, rows: 1, w: 80,  h: 80 },
+      compact: { cols: 2, rows: 2, w: 160, h: 160 },
+      medium:  { cols: 3, rows: 2, w: 240, h: 160 },
+      wide:    { cols: 4, rows: 2, w: 320, h: 160 },
+      tall3:   { cols: 2, rows: 3, w: 160, h: 240 },
+      tall:    { cols: 2, rows: 4, w: 160, h: 320 },
+      wide3:   { cols: 4, rows: 3, w: 320, h: 240 },
+      large:   { cols: 4, rows: 4, w: 320, h: 320 }
+    };
+    const sizeInfo = SIZE_MAP[size] || SIZE_MAP.compact;
+    const isWide = sizeInfo.cols >= 3;
+    const isTall = sizeInfo.rows >= 3;
+    const isLarge = sizeInfo.cols >= 3 && sizeInfo.rows >= 3;
     
     // Цвета тренда
     const getTrendInfo = () => {
       if (!Number.isFinite(trend)) return null;
-      if (trend < -0.02) return { cls: 'widget-weight__trend--down', emoji: '↓', label: 'снижается', color: '#22c55e' };
-      if (trend > 0.02) return { cls: 'widget-weight__trend--up', emoji: '↑', label: 'растёт', color: '#ef4444' };
-      return { cls: 'widget-weight__trend--stable', emoji: '→', label: 'стабилен', color: '#3b82f6' };
+      if (trend < -0.02) return { cls: 'down', emoji: '↓', label: 'снижается', color: '#22c55e' };
+      if (trend > 0.02) return { cls: 'up', emoji: '↑', label: 'растёт', color: '#ef4444' };
+      return { cls: 'stable', emoji: '→', label: 'стабилен', color: '#3b82f6' };
     };
     const trendInfo = getTrendInfo();
     
@@ -750,247 +782,250 @@
       const sign = weekChange >= 0 ? '+' : '';
       return `${sign}${weekChange.toFixed(1)} кг/нед`;
     };
+
+    // ============ БЛОКИ-КОМПОНЕНТЫ ============
     
-    // ========== MINI (1×1) — Только число ==========
+    // Блок: Главное значение веса
+    const WeightValue = ({ scale = 'md' }) => {
+      const sizes = { sm: 'widget-weight__val--sm', md: '', lg: 'widget-weight__val--lg', xl: 'widget-weight__val--xl' };
+      if (!hasCurrent) return React.createElement('div', { className: 'widget-weight__empty' }, '—');
+      return React.createElement('div', { className: `widget-weight__val ${sizes[scale] || ''}` },
+        current.toFixed(1),
+        React.createElement('span', { className: 'widget-weight__val-unit' }, 'кг')
+      );
+    };
+    
+    // Блок: Тренд (стрелка + текст)
+    const TrendBlock = ({ showText = false, vertical = false }) => {
+      if (!showTrend || !trendInfo) return null;
+      const weekText = formatWeekChange();
+      return React.createElement('div', { 
+        className: `widget-weight__trend ${vertical ? 'widget-weight__trend--vert' : ''}`,
+        style: { color: trendInfo.color }
+      },
+        React.createElement('span', { className: 'widget-weight__trend-arrow' }, trendInfo.emoji),
+        showText && weekText && React.createElement('span', { className: 'widget-weight__trend-label' }, weekText)
+      );
+    };
+    
+    // Блок: График
+    const ChartBlock = ({ days = 7, height = 60, showDots = true, showLabels = false, showGoalLine = false }) => {
+      if (!hasSparkline) return null;
+      const pts = sparklinePoints.slice(-days);
+      return React.createElement(WeightMiniSparkline, {
+        points: pts,
+        width: '100%',
+        height: height,
+        trendColor: trendInfo?.color || '#3b82f6',
+        showDots,
+        showLabels,
+        showGoalLine: showGoalLine && hasGoal,
+        goalWeight: goal
+      });
+    };
+    
+    // Блок: Цель
+    const GoalBlock = ({ inline = false }) => {
+      if (!showGoal || !hasGoal) return null;
+      const eta = weeksToGoal ? ` • ~${weeksToGoal} нед` : '';
+      if (inline) {
+        return React.createElement('div', { className: 'widget-weight__goal-line' },
+          `Цель: ${goal} кг${eta}`
+        );
+      }
+      return React.createElement('div', { className: 'widget-weight__goal-block' },
+        React.createElement('div', { className: 'widget-weight__goal-val' }, `${goal} кг`),
+        weeksToGoal && React.createElement('div', { className: 'widget-weight__goal-eta' }, `~${weeksToGoal} нед`)
+      );
+    };
+    
+    // Блок: Прогресс-бар к цели
+    const ProgressBlock = ({ vertical = false }) => {
+      if (!showGoal || !hasGoal || progressPct === null) return null;
+      const pct = Math.min(100, Math.max(0, progressPct));
+      if (vertical) {
+        return React.createElement('div', { className: 'widget-weight__progress-v' },
+          React.createElement('div', { className: 'widget-weight__progress-track-v' },
+            React.createElement('div', { 
+              className: 'widget-weight__progress-fill-v',
+              style: { height: `${pct}%` }
+            })
+          ),
+          React.createElement('div', { className: 'widget-weight__progress-label' }, `${goal} кг`)
+        );
+      }
+      return React.createElement('div', { className: 'widget-weight__progress-h' },
+        React.createElement('div', { className: 'widget-weight__progress-track-h' },
+          React.createElement('div', { 
+            className: 'widget-weight__progress-fill-h',
+            style: { width: `${pct}%` }
+          })
+        ),
+        React.createElement('div', { className: 'widget-weight__progress-info' },
+          React.createElement('span', null, `${pct.toFixed(0)}%`),
+          React.createElement('span', null, `→ ${goal} кг`)
+        )
+      );
+    };
+    
+    // Блок: BMI
+    const BMIBlock = ({ compact = false }) => {
+      if (!bmi) return null;
+      if (compact) {
+        return React.createElement('div', { 
+          className: 'widget-weight__bmi-badge',
+          style: { background: bmiCategory?.color ? `${bmiCategory.color}20` : undefined, color: bmiCategory?.color }
+        }, `BMI ${bmi.toFixed(1)}`);
+      }
+      return React.createElement('div', { className: 'widget-weight__bmi-block' },
+        React.createElement('div', { className: 'widget-weight__bmi-num' }, bmi.toFixed(1)),
+        React.createElement('div', { 
+          className: 'widget-weight__bmi-cat',
+          style: { color: bmiCategory?.color }
+        }, bmiCategory?.label || 'BMI')
+      );
+    };
+    
+    // Блок: Аналитика (прогноз на месяц, чистый тренд)
+    const AnalyticsBlock = () => {
+      const items = [];
+      if (monthChange) {
+        items.push({ icon: '📊', text: `Прогноз: ${monthChange > 0 ? '+' : ''}${monthChange.toFixed(1)} кг/мес` });
+      }
+      if (hasCleanTrend) {
+        items.push({ icon: '🌸', text: 'Чистый тренд', cls: 'widget-weight__stat--pink' });
+      }
+      if (items.length === 0) return null;
+      return React.createElement('div', { className: 'widget-weight__stats' },
+        items.map((item, i) => React.createElement('div', { 
+          key: i, 
+          className: `widget-weight__stat ${item.cls || ''}`
+        },
+          React.createElement('span', { className: 'widget-weight__stat-icon' }, item.icon),
+          React.createElement('span', null, item.text)
+        ))
+      );
+    };
+
+    // ============ LAYOUTS ПО РАЗМЕРАМ ============
+    
+    // MINI (1×1) — только число
     if (size === 'mini') {
       return React.createElement('div', { className: 'widget-weight widget-weight--mini' },
-        hasCurrent 
-          ? React.createElement('div', { className: 'widget-weight__value widget-weight__value--mini' },
-              current.toFixed(1),
-              React.createElement('span', { className: 'widget-weight__unit' }, 'кг')
-            )
-          : React.createElement('div', { className: 'widget-weight__value widget-weight__value--mini' }, '—')
+        React.createElement(WeightValue, { scale: 'lg' })
       );
     }
     
-    // ========== COMPACT (2×2) — Вес + стрелка тренда ==========
+    // COMPACT (2×2) — число + тренд
     if (size === 'compact') {
       return React.createElement('div', { className: 'widget-weight widget-weight--compact' },
-        hasCurrent 
-          ? React.createElement('div', { className: 'widget-weight__value' }, `${current.toFixed(1)} кг`)
-          : React.createElement('div', { className: 'widget-weight__empty' }, 'Нет данных'),
-        showTrend && trendInfo &&
-          React.createElement('div', { 
-            className: `widget-weight__trend-arrow ${trendInfo.cls}`,
-            style: { color: trendInfo.color }
-          }, trendInfo.emoji)
+        React.createElement(WeightValue, { scale: 'lg' }),
+        React.createElement(TrendBlock, { showText: true })
       );
     }
     
-    // ========== MEDIUM (3×2) — Вес + цель + тренд текстом ==========
+    // MEDIUM (3×2) — число слева + график справа + цель внизу
     if (size === 'medium') {
       return React.createElement('div', { className: 'widget-weight widget-weight--medium' },
-        React.createElement('div', { className: 'widget-weight__row' },
-          hasCurrent 
-            ? React.createElement('div', { className: 'widget-weight__value' }, `${current.toFixed(1)} кг`)
-            : React.createElement('div', { className: 'widget-weight__empty' }, 'Нет данных'),
-          showTrend && trendInfo &&
-            React.createElement('span', { 
-              className: 'widget-weight__trend-badge',
-              style: { color: trendInfo.color }
-            }, trendInfo.emoji, ' ', formatWeekChange())
+        React.createElement('div', { className: 'widget-weight__top' },
+          React.createElement('div', { className: 'widget-weight__left' },
+            React.createElement(WeightValue, { scale: 'lg' }),
+            React.createElement(TrendBlock, { showText: true })
+          ),
+          hasSparkline && React.createElement('div', { className: 'widget-weight__chart' },
+            React.createElement(ChartBlock, { days: 7, height: 50, showDots: true })
+          )
         ),
-        showGoal && hasGoal &&
-          React.createElement('div', { className: 'widget-weight__goal' }, `Цель: ${goal} кг`)
+        React.createElement(GoalBlock, { inline: true })
       );
     }
     
-    // ========== WIDE (4×2) — Вес + мини-спарклайн + прогноз ==========
+    // WIDE (4×2) — число + тренд | график | цель+прогресс
     if (size === 'wide') {
-      const sparklinePoints = sparkline.filter(s => s.weight).slice(-7);
-      
       return React.createElement('div', { className: 'widget-weight widget-weight--wide' },
-        React.createElement('div', { className: 'widget-weight__main' },
+        React.createElement('div', { className: 'widget-weight__row-h' },
           React.createElement('div', { className: 'widget-weight__left' },
-            hasCurrent 
-              ? React.createElement('div', { className: 'widget-weight__value' }, `${current.toFixed(1)} кг`)
-              : React.createElement('div', { className: 'widget-weight__empty' }, 'Нет данных'),
-            showTrend && trendInfo &&
-              React.createElement('div', { 
-                className: 'widget-weight__trend-text',
-                style: { color: trendInfo.color }
-              }, trendInfo.emoji, ' ', formatWeekChange())
+            React.createElement(WeightValue, { scale: 'lg' }),
+            React.createElement(TrendBlock, { showText: true })
           ),
-          // Мини-спарклайн
-          sparklinePoints.length >= 2 &&
-            React.createElement(WeightMiniSparkline, { 
-              points: sparklinePoints, 
-              width: 80, 
-              height: 28,
-              trendColor: trendInfo?.color || '#3b82f6'
-            })
-        ),
-        React.createElement('div', { className: 'widget-weight__footer' },
-          showGoal && hasGoal && React.createElement('span', { className: 'widget-weight__goal-inline' }, 
-            `Цель: ${goal} кг`
+          React.createElement('div', { className: 'widget-weight__chart' },
+            React.createElement(ChartBlock, { days: 7, height: 55, showDots: true })
           ),
-          showGoal && hasGoal && weeksToGoal && React.createElement('span', { className: 'widget-weight__eta' },
-            ` • ~${weeksToGoal} нед`
+          React.createElement('div', { className: 'widget-weight__right' },
+            React.createElement(GoalBlock, { inline: false }),
+            React.createElement(BMIBlock, { compact: true })
           )
         )
       );
     }
     
-    // ========== TALL3 (2×3) — Вертикальный с прогресс-баром ==========
+    // TALL3 (2×3) — вертикальный: число | тренд | прогресс-бар
     if (size === 'tall3') {
       return React.createElement('div', { className: 'widget-weight widget-weight--tall3' },
-        hasCurrent 
-          ? React.createElement('div', { className: 'widget-weight__value widget-weight__value--large' }, 
-              `${current.toFixed(1)} кг`)
-          : React.createElement('div', { className: 'widget-weight__empty' }, 'Нет данных'),
-        showTrend && trendInfo &&
-          React.createElement('div', { 
-            className: 'widget-weight__trend-vertical',
-            style: { color: trendInfo.color }
-          }, 
-            React.createElement('span', { className: 'widget-weight__trend-emoji-big' }, trendInfo.emoji),
-            React.createElement('span', { className: 'widget-weight__trend-week' }, formatWeekChange())
-          ),
-        // Прогресс-бар к цели (вертикальный)
-        showGoal && hasGoal && progressPct !== null &&
-          React.createElement('div', { className: 'widget-weight__progress-vertical' },
-            React.createElement('div', { className: 'widget-weight__progress-track' },
-              React.createElement('div', { 
-                className: 'widget-weight__progress-fill',
-                style: { height: `${Math.min(100, progressPct)}%` }
-              })
-            ),
-            React.createElement('div', { className: 'widget-weight__goal-label' }, `${goal} кг`)
-          )
+        React.createElement(WeightValue, { scale: 'xl' }),
+        React.createElement(TrendBlock, { showText: true, vertical: true }),
+        React.createElement(ProgressBlock, { vertical: true }),
+        React.createElement(BMIBlock, { compact: true })
       );
     }
     
-    // ========== TALL (2×4) — Вертикальный с графиком ==========
+    // TALL (2×4) — вертикальный: число | тренд | график | цель
     if (size === 'tall') {
-      const sparklinePoints = sparkline.filter(s => s.weight).slice(-7);
-      
       return React.createElement('div', { className: 'widget-weight widget-weight--tall' },
-        hasCurrent 
-          ? React.createElement('div', { className: 'widget-weight__value' }, `${current.toFixed(1)} кг`)
-          : React.createElement('div', { className: 'widget-weight__empty' }, 'Нет данных'),
-        showTrend && trendInfo &&
-          React.createElement('div', { 
-            className: 'widget-weight__trend-text',
-            style: { color: trendInfo.color }
-          }, trendInfo.emoji, ' ', formatWeekChange()),
-        // Вертикальный график
-        sparklinePoints.length >= 2 &&
-          React.createElement(WeightMiniSparkline, { 
-            points: sparklinePoints, 
-            width: 70, 
-            height: 70,
-            trendColor: trendInfo?.color || '#3b82f6',
-            showDots: true
-          }),
-        showGoal && hasGoal &&
-          React.createElement('div', { className: 'widget-weight__goal-block' },
-            React.createElement('div', { className: 'widget-weight__goal' }, `Цель: ${goal} кг`),
-            weeksToGoal && React.createElement('div', { className: 'widget-weight__eta' }, `~${weeksToGoal} нед`)
-          )
+        React.createElement(WeightValue, { scale: 'xl' }),
+        React.createElement(TrendBlock, { showText: true }),
+        React.createElement('div', { className: 'widget-weight__chart-vert' },
+          React.createElement(ChartBlock, { days: 7, height: 80, showDots: true })
+        ),
+        React.createElement(GoalBlock, { inline: false }),
+        React.createElement(BMIBlock, { compact: true })
       );
     }
     
-    // ========== WIDE3 (4×3) — Широкий с графиком ==========
+    // WIDE3 (4×3) — горизонтальный: верх(число+тренд | BMI) | график | цель+аналитика
     if (size === 'wide3') {
-      const sparklinePoints = sparkline.filter(s => s.weight).slice(-7);
-      
       return React.createElement('div', { className: 'widget-weight widget-weight--wide3' },
         React.createElement('div', { className: 'widget-weight__header' },
           React.createElement('div', { className: 'widget-weight__left' },
-            hasCurrent 
-              ? React.createElement('div', { className: 'widget-weight__value widget-weight__value--large' }, 
-                  `${current.toFixed(1)} кг`)
-              : React.createElement('div', { className: 'widget-weight__empty' }, 'Нет данных'),
-            showTrend && trendInfo &&
-              React.createElement('div', { 
-                className: 'widget-weight__trend-text',
-                style: { color: trendInfo.color }
-              }, trendInfo.emoji, ' ', formatWeekChange())
-          )
-        ),
-        // График 7 дней
-        sparklinePoints.length >= 2 &&
-          React.createElement(WeightMiniSparkline, { 
-            points: sparklinePoints, 
-            width: 200, 
-            height: 60,
-            trendColor: trendInfo?.color || '#3b82f6',
-            showDots: true,
-            showLabels: true
-          }),
-        React.createElement('div', { className: 'widget-weight__footer' },
-          showGoal && hasGoal && React.createElement('span', { className: 'widget-weight__goal-inline' }, 
-            `Цель: ${goal} кг`
+            React.createElement(WeightValue, { scale: 'xl' }),
+            React.createElement(TrendBlock, { showText: true })
           ),
-          weeksToGoal && React.createElement('span', { className: 'widget-weight__eta' },
-            ` • Осталось ~${weeksToGoal} нед`
-          )
+          React.createElement(BMIBlock, { compact: false })
+        ),
+        React.createElement('div', { className: 'widget-weight__chart-full' },
+          React.createElement(ChartBlock, { days: 10, height: 80, showDots: true, showLabels: true, showGoalLine: true })
+        ),
+        React.createElement('div', { className: 'widget-weight__footer' },
+          React.createElement(ProgressBlock, { vertical: false }),
+          React.createElement(AnalyticsBlock, null)
         )
       );
     }
     
-    // ========== LARGE (4×4) — Полная аналитика ==========
+    // LARGE (4×4) — максимум информации
     if (size === 'large') {
-      const sparklinePoints = sparkline.slice(-14); // 14 дней
-      const hasSparkline = sparklinePoints.filter(s => s.weight).length >= 2;
-      
       return React.createElement('div', { className: 'widget-weight widget-weight--large' },
-        // Заголовок: вес + BMI
         React.createElement('div', { className: 'widget-weight__header' },
           React.createElement('div', { className: 'widget-weight__left' },
-            hasCurrent 
-              ? React.createElement('div', { className: 'widget-weight__value widget-weight__value--xlarge' }, 
-                  `${current.toFixed(1)} кг`)
-              : React.createElement('div', { className: 'widget-weight__empty' }, 'Нет данных'),
-            showTrend && trendInfo &&
-              React.createElement('div', { 
-                className: 'widget-weight__trend-text',
-                style: { color: trendInfo.color }
-              }, trendInfo.emoji, ' ', formatWeekChange())
+            React.createElement(WeightValue, { scale: 'xl' }),
+            React.createElement(TrendBlock, { showText: true })
           ),
-          bmi && React.createElement('div', { className: 'widget-weight__bmi' },
-            React.createElement('div', { className: 'widget-weight__bmi-value' }, bmi.toFixed(1)),
-            React.createElement('div', { 
-              className: 'widget-weight__bmi-label',
-              style: { color: bmiCategory?.color }
-            }, bmiCategory?.label || 'BMI')
-          )
+          React.createElement(BMIBlock, { compact: false })
         ),
-        // Полный график 14 дней
-        hasSparkline &&
-          React.createElement(WeightMiniSparkline, { 
-            points: sparklinePoints, 
-            width: 280, 
-            height: 90,
-            trendColor: trendInfo?.color || '#3b82f6',
-            showDots: true,
-            showLabels: true,
-            showGoalLine: showGoal && hasGoal,
-            goalWeight: goal
-          }),
-        // Аналитика внизу
-        React.createElement('div', { className: 'widget-weight__analytics' },
-          monthChange && React.createElement('div', { className: 'widget-weight__stat' },
-            React.createElement('span', { className: 'widget-weight__stat-icon' }, '📊'),
-            React.createElement('span', null, `Прогноз: ${monthChange > 0 ? '+' : ''}${monthChange} кг/мес`)
-          ),
-          showGoal && hasGoal && weeksToGoal && React.createElement('div', { className: 'widget-weight__stat' },
-            React.createElement('span', { className: 'widget-weight__stat-icon' }, '🎯'),
-            React.createElement('span', null, `До цели: ~${weeksToGoal} нед`)
-          ),
-          hasCleanTrend && React.createElement('div', { className: 'widget-weight__stat widget-weight__stat--clean' },
-            React.createElement('span', { className: 'widget-weight__stat-icon' }, '🌸'),
-            React.createElement('span', null, 'Чистый тренд')
-          )
+        React.createElement('div', { className: 'widget-weight__chart-full' },
+          React.createElement(ChartBlock, { days: 14, height: 120, showDots: true, showLabels: true, showGoalLine: true })
+        ),
+        React.createElement('div', { className: 'widget-weight__bottom' },
+          React.createElement(ProgressBlock, { vertical: false }),
+          React.createElement(AnalyticsBlock, null),
+          React.createElement(GoalBlock, { inline: true })
         )
       );
     }
     
-    // Default fallback — compact style
-    return React.createElement('div', { className: 'widget-weight widget-weight--compact' },
-      hasCurrent 
-        ? React.createElement('div', { className: 'widget-weight__value' }, `${current.toFixed(1)} кг`)
-        : React.createElement('div', { className: 'widget-weight__empty' }, 'Нет данных')
+    // Fallback
+    return React.createElement('div', { className: 'widget-weight' },
+      React.createElement(WeightValue, { scale: 'md' })
     );
   }
   
@@ -1001,6 +1036,11 @@
     const validPoints = points.filter(p => p.weight !== null);
     if (validPoints.length < 2) return null;
     
+    // Если width = '100%', используем viewBox и сохраняем пропорции
+    const isFluid = width === '100%';
+    const svgW = isFluid ? 200 : width;
+    const svgH = height;
+    
     const weights = validPoints.map(p => p.weight);
     const minW = Math.min(...weights) - 0.3;
     const maxW = Math.max(...weights) + 0.3;
@@ -1008,8 +1048,8 @@
     
     const paddingX = showLabels ? 8 : 4;
     const paddingY = showLabels ? 12 : 4;
-    const chartW = width - paddingX * 2;
-    const chartH = height - paddingY * 2;
+    const chartW = svgW - paddingX * 2;
+    const chartH = svgH - paddingY * 2;
     
     const pts = validPoints.map((p, i) => ({
       x: paddingX + (i / (validPoints.length - 1)) * chartW,
@@ -1041,16 +1081,17 @@
     
     return React.createElement('svg', { 
       className: 'widget-weight__sparkline',
-      viewBox: `0 0 ${width} ${height}`,
-      width: width,
-      height: height
+      viewBox: `0 0 ${svgW} ${svgH}`,
+      width: isFluid ? '100%' : svgW,
+      height: svgH,
+      preserveAspectRatio: 'xMidYMid meet'
     },
       // Линия цели (пунктир)
-      goalY !== null && goalY > paddingY && goalY < height - paddingY &&
+      goalY !== null && goalY > paddingY && goalY < svgH - paddingY &&
         React.createElement('line', {
           x1: paddingX,
           y1: goalY,
-          x2: width - paddingX,
+          x2: svgW - paddingX,
           y2: goalY,
           stroke: '#8b5cf6',
           strokeWidth: 1,
@@ -1082,7 +1123,7 @@
         React.createElement('text', {
           key: 'lbl-' + i,
           x: p.x,
-          y: height - 2,
+          y: svgH - 2,
           textAnchor: i === 0 ? 'start' : 'end',
           className: 'widget-weight__sparkline-label'
         }, p.dayNum)

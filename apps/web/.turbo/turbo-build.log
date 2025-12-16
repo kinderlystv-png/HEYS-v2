@@ -6,10 +6,10 @@
 > @heys/web@13.0.1 prebuild /Users/poplavskijanton/HEYS-v2/apps/web
 > node scripts/update-version.cjs && node -e "const fs=require('fs');const f=process.cwd()+'/public/sw.js';let c=fs.readFileSync(f,'utf8');c=c.replace(/heys-[\w.-]+/,'heys-'+Date.now());fs.writeFileSync(f,c);console.log('SW version:',Date.now())"
 
-✅ APP_VERSION updated to: 2025.12.16.0102.4218a59
-✅ version.json created: 2025.12.16.0102.4218a59
-✅ SW CACHE_VERSION updated to: heys-1765836150068
-SW version: 1765836150168
+✅ APP_VERSION updated to: 2025.12.16.1916.1cb79d2
+✅ version.json created: 2025.12.16.1916.1cb79d2
+✅ SW CACHE_VERSION updated to: heys-1765901801504
+SW version: 1765901801573
 polyfillModulePreload is deprecated. Use modulePreload.polyfill instead.
 vite v4.5.14 building for production...
 <script src="heys_dev_utils.js"> in "/index.html" can't be bundled without type="module" attribute
@@ -57,8 +57,8 @@ vite v4.5.14 building for production...
 <script src="heys_widgets_events_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_widgets_registry_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_widgets_core_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-<script src="widgets/widget_data.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
-<script src="heys_widgets_ui_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
+<script src="widgets/widget_data.js?v=3"> in "/index.html" can't be bundled without type="module" attribute
+<script src="heys_widgets_ui_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_auth_v1.js?v=1"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_login_screen_v1.js?v=2"> in "/index.html" can't be bundled without type="module" attribute
 <script src="heys_app_v12.js?v=25"> in "/index.html" can't be bundled without type="module" attribute
@@ -68,9 +68,9 @@ rendering chunks...
 computing gzip size...
 dist/assets/heys_simple_analytics-b3f08726.js      10.31 kB
 dist/index.html                                    14.84 kB │ gzip:   4.05 kB
-dist/assets/heys_models_v1-57d1a83e.js             31.94 kB
-dist/assets/heys_core_v12-09188285.js              74.06 kB
+dist/assets/heys_models_v1-c63f5a9f.js             32.39 kB
+dist/assets/heys_core_v12-6f29c868.js              74.12 kB
 dist/assets/heys_storage_supabase_v1-a1e44576.js  233.46 kB
-dist/assets/index-175349ca.css                    666.30 kB │ gzip: 108.83 kB
+dist/assets/index-d1043845.css                    689.43 kB │ gzip: 112.81 kB
 [vite-plugin-static-copy] Copied 1 items.
-✓ built in 1.62s
+✓ built in 1.55s
