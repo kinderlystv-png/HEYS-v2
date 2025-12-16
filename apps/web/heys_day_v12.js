@@ -1578,39 +1578,51 @@
           products,
           dateKey: date,
           onAdd: ({ product, grams, mealIndex }) => {
-            // 🔍 DEBUG: Подробный лог при добавлении продукта в meal
-            const hasNutrients = !!(product?.kcal100 || product?.protein100 || product?.carbs100);
-            console.log('[DayTab] onAdd received:', product?.name, 'grams:', grams, {
-              id: product?.id,
-              hasNutrients,
-              kcal100: product?.kcal100,
-              protein100: product?.protein100,
-              mealIndex
-            });
-            if (!hasNutrients) {
-              console.error('🚨 [DayTab] CRITICAL: Received product with NO nutrients!', product);
+            // 🌐 Если продукт из общей базы — автоматически клонируем в личную
+            let finalProduct = product;
+            if (product?._fromShared || product?._source === 'shared') {
+              console.log('[DayTab] 🌐 Shared product detected, auto-cloning to local:', product.name);
+              const cloned = window.HEYS?.products?.addFromShared?.(product);
+              if (cloned) {
+                finalProduct = cloned;
+                console.log('[DayTab] ✅ Cloned product id:', cloned.id);
+              }
             }
             
-            const productId = product.id ?? product.product_id ?? product.name;
+            // 🔍 DEBUG: Подробный лог при добавлении продукта в meal
+            const hasNutrients = !!(finalProduct?.kcal100 || finalProduct?.protein100 || finalProduct?.carbs100);
+            console.log('[DayTab] onAdd received:', finalProduct?.name, 'grams:', grams, {
+              id: finalProduct?.id,
+              hasNutrients,
+              kcal100: finalProduct?.kcal100,
+              protein100: finalProduct?.protein100,
+              mealIndex,
+              wasShared: product?._fromShared || product?._source === 'shared'
+            });
+            if (!hasNutrients) {
+              console.error('🚨 [DayTab] CRITICAL: Received product with NO nutrients!', finalProduct);
+            }
+            
+            const productId = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
             const newItem = {
               id: uid('it_'),
-              product_id: product.id ?? product.product_id,
-              name: product.name,
+              product_id: finalProduct.id ?? finalProduct.product_id,
+              name: finalProduct.name,
               grams: grams || 100,
               // Для новых продуктов сохраняем нутриенты напрямую (fallback если продукт не в индексе)
-              ...(product.kcal100 !== undefined && {
-                kcal100: product.kcal100,
-                protein100: product.protein100,
-                carbs100: product.carbs100,
-                fat100: product.fat100,
-                simple100: product.simple100,
-                complex100: product.complex100,
-                badFat100: product.badFat100,
-                goodFat100: product.goodFat100,
-                trans100: product.trans100,
-                fiber100: product.fiber100,
-                gi: product.gi,
-                harmScore: product.harmScore
+              ...(finalProduct.kcal100 !== undefined && {
+                kcal100: finalProduct.kcal100,
+                protein100: finalProduct.protein100,
+                carbs100: finalProduct.carbs100,
+                fat100: finalProduct.fat100,
+                simple100: finalProduct.simple100,
+                complex100: finalProduct.complex100,
+                badFat100: finalProduct.badFat100,
+                goodFat100: finalProduct.goodFat100,
+                trans100: finalProduct.trans100,
+                fiber100: finalProduct.fiber100,
+                gi: finalProduct.gi,
+                harmScore: finalProduct.harmScore
               })
             };
             
@@ -1620,14 +1632,14 @@
               itemHasNutrients,
               kcal100: newItem.kcal100,
               protein100: newItem.protein100,
-              productKcal100: product.kcal100,
-              spreadCondition: product.kcal100 !== undefined
+              productKcal100: finalProduct.kcal100,
+              spreadCondition: finalProduct.kcal100 !== undefined
             });
             if (!itemHasNutrients) {
               console.error('🚨 [DayTab] CRITICAL: newItem has NO nutrients! Will be saved without data.', {
                 newItem,
-                product,
-                spreadCondition: product.kcal100 !== undefined
+                finalProduct,
+                spreadCondition: finalProduct.kcal100 !== undefined
               });
             }
             

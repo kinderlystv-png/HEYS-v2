@@ -220,6 +220,10 @@
       return merged;
     }, [context, productsVersion]);
     
+    // 🌐 Результаты из общей базы (асинхронный поиск)
+    const [sharedResults, setSharedResults] = useState([]);
+    const [sharedLoading, setSharedLoading] = useState(false);
+    
     // Debug: проверяем что products пришли
     // useEffect(() => {
     //   console.log('[AddProductStep] products count:', latestProducts?.length);
@@ -229,6 +233,70 @@
     useEffect(() => {
       setTimeout(() => inputRef.current?.focus(), 100);
     }, []);
+    
+    // 🌐 Асинхронный поиск по общей базе (debounced)
+    useEffect(() => {
+      const trimmed = search.trim();
+      if (trimmed.length < 2) {
+        setSharedResults([]);
+        return;
+      }
+      
+      const timeoutId = setTimeout(async () => {
+        setSharedLoading(true);
+        console.log('[SharedSearch] Searching for:', trimmed);
+        try {
+          const result = await HEYS?.cloud?.searchSharedProducts?.(trimmed, { limit: 30 });
+          console.log('[SharedSearch] Result:', result?.data?.length, 'products');
+          if (result?.data) {
+            // Преобразуем данные для совместимости с UI
+            const normalized = result.data.map(p => {
+              // Нормализация полей (snake_case → camelCase fallback)
+              const protein100 = p.protein100 ?? 0;
+              const simple100 = p.simple100 ?? 0;
+              const complex100 = p.complex100 ?? 0;
+              const badFat100 = p.badfat100 ?? p.badFat100 ?? 0;
+              const goodFat100 = p.goodfat100 ?? p.goodFat100 ?? 0;
+              const trans100 = p.trans100 ?? 0;
+              
+              // kcal100 — вычисляемое поле (не хранится в shared_products)
+              // Формула: protein*4 + carbs*4 + fat*9
+              const carbs100 = simple100 + complex100;
+              const fat100 = badFat100 + goodFat100 + trans100;
+              const kcal100 = Math.round(protein100 * 4 + carbs100 * 4 + fat100 * 9);
+              
+              return {
+                ...p,
+                protein100,
+                simple100,
+                complex100,
+                badFat100,
+                goodFat100,
+                trans100,
+                fiber100: p.fiber100 ?? 0,
+                gi: p.gi ?? 0,
+                harm: p.harm ?? 0,
+                harmScore: p.harmscore ?? p.harmScore ?? p.harm ?? 0,
+                // Вычисленные поля
+                kcal100,
+                carbs100,
+                fat100,
+                // Флаг что это из общей базы
+                _fromShared: true
+              };
+            });
+            console.log('[SharedSearch] Normalized first:', normalized[0]?.name, 'kcal100:', normalized[0]?.kcal100);
+            setSharedResults(normalized);
+          }
+        } catch (err) {
+          console.error('[AddProductStep] Shared search error:', err);
+        } finally {
+          setSharedLoading(false);
+        }
+      }, 300);
+      
+      return () => clearTimeout(timeoutId);
+    }, [search]);
     
     // Умный список: частота + свежесть (объединяет "часто" и "последние")
     const smartProducts = useMemo(() => 
@@ -290,15 +358,43 @@
       return results.slice(0, 20);
     }, [lc, latestProducts, selectedCategory]);
     
+    // 🌐 Объединённые результаты: личные + общая база (без дубликатов)
+    const combinedResults = useMemo(() => {
+      if (!lc) return [];
+      
+      const seen = new Set();
+      const combined = [];
+      
+      // Сначала личные (они в приоритете)
+      searchResults.forEach(p => {
+        const name = normalizeSearch(p.name || '');
+        if (!seen.has(name)) {
+          seen.add(name);
+          combined.push({ ...p, _source: 'personal' });
+        }
+      });
+      
+      // Затем из общей базы (помечаем)
+      sharedResults.forEach(p => {
+        const name = normalizeSearch(p.name || '');
+        if (!seen.has(name)) {
+          seen.add(name);
+          combined.push({ ...p, _source: 'shared' });
+        }
+      });
+      
+      return combined.slice(0, 25);
+    }, [searchResults, sharedResults, lc, normalizeSearch]);
+    
     // "Возможно вы искали" — альтернативные запросы при пустых результатах
     const didYouMean = useMemo(() => {
-      if (!lc || searchResults.length > 0) return [];
+      if (!lc || combinedResults.length > 0) return [];
       
       if (HEYS?.SmartSearchWithTypos?.getDidYouMean) {
         return HEYS.SmartSearchWithTypos.getDidYouMean(lc, latestProducts, 3);
       }
       return [];
-    }, [lc, searchResults.length, latestProducts]);
+    }, [lc, combinedResults.length, latestProducts]);
     
     // Toggle избранного
     const toggleFavorite = useCallback((e, productId) => {
@@ -510,6 +606,9 @@
       const harmVal = product.harm ?? product.harmScore ?? product.harm100;
       const harmBg = getHarmBg(harmVal);
       
+      // Флаг: продукт из общей базы (не из личной)
+      const isFromShared = product._source === 'shared' || product._fromShared;
+      
       // Подсветка совпадений в названии
       const highlightedName = lc && HEYS?.SmartSearchWithTypos?.renderHighlightedText
         ? HEYS.SmartSearchWithTypos.renderHighlightedText(product.name, search, React)
@@ -528,7 +627,21 @@
         
         // Инфо
         React.createElement('div', { className: 'aps-product-info' },
-          React.createElement('div', { className: 'aps-product-name' }, highlightedName),
+          React.createElement('div', { className: 'aps-product-name', style: { display: 'flex', alignItems: 'center', gap: '4px' } }, 
+            highlightedName,
+            // 🌐 Бейдж для продуктов из общей базы
+            isFromShared && React.createElement('span', {
+              style: {
+                fontSize: '10px',
+                background: '#3b82f6',
+                color: '#fff',
+                padding: '1px 4px',
+                borderRadius: '4px',
+                marginLeft: '4px',
+                whiteSpace: 'nowrap'
+              }
+            }, '🌐')
+          ),
           React.createElement('div', { className: 'aps-product-meta' },
             React.createElement('span', { className: 'aps-meta-kcal' }, kcal + ' ккал'),
             React.createElement('span', { className: 'aps-meta-sep' }, '·'),
@@ -540,15 +653,15 @@
         
         // Кнопки действий
         React.createElement('div', { className: 'aps-product-actions' },
-          // Кнопка удаления (маленькая)
-          React.createElement('button', {
+          // Кнопка удаления (маленькая) — только для личных
+          !isFromShared && React.createElement('button', {
             className: 'aps-delete-btn',
             onClick: (e) => handleDeleteProduct(e, product),
             title: 'Удалить из базы'
           }, '🗑'),
           
-          // Кнопка избранного
-          showFavorite && React.createElement('button', {
+          // Кнопка избранного — только для личных
+          showFavorite && !isFromShared && React.createElement('button', {
             className: 'aps-fav-btn' + (isFav ? ' active' : ''),
             onClick: (e) => toggleFavorite(e, pid)
           }, isFav ? '★' : '☆')
@@ -661,15 +774,15 @@
         // Результаты поиска
         showSearch && React.createElement('div', { className: 'aps-section' },
           React.createElement('div', { className: 'aps-section-title' }, 
-            searchResults.length > 0 
-              ? `Найдено: ${searchResults.length}` 
-              : 'Ничего не найдено'
+            combinedResults.length > 0 
+              ? `Найдено: ${combinedResults.length}${sharedLoading ? ' ⏳' : ''}` 
+              : (sharedLoading ? '⏳ Поиск...' : 'Ничего не найдено')
           ),
-          searchResults?.length > 0 && React.createElement('div', { className: 'aps-products-list' },
-            searchResults.map(p => renderProductCard(p))
+          combinedResults?.length > 0 && React.createElement('div', { className: 'aps-products-list' },
+            combinedResults.map(p => renderProductCard(p))
           ),
           // Пустой результат с "Возможно вы искали"
-          searchResults.length === 0 && React.createElement('div', { className: 'aps-empty' },
+          combinedResults.length === 0 && !sharedLoading && React.createElement('div', { className: 'aps-empty' },
             React.createElement('span', null, '😕'),
             
             // "Возможно вы искали" — кликабельные альтернативы
@@ -755,6 +868,12 @@
     const [error, setError] = useState('');
     const [parsedPreview, setParsedPreview] = useState(null);
     const textareaRef = useRef(null);
+    
+    // 🌐 Публикация в общую базу (по умолчанию включено)
+    const [publishToShared, setPublishToShared] = useState(true);
+    
+    // Определяем тип пользователя (куратор или клиент по PIN)
+    const isCurator = !!(HEYS.cloud?.getUser?.());
     
     // Доступ к навигации StepModal
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
@@ -875,57 +994,87 @@
       
       haptic('medium');
       
-      // 1. Добавляем в базу продуктов
+      // 1. Получаем текущую базу продуктов
       const U = HEYS.utils || {};
       const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
-      const newProducts = [...products, parsedPreview];
       
-      // 🔍 DEBUG: Логируем состояние перед сохранением
-      // console.log('[CreateProductStep] 🔍 DEBUG: HEYS.products =', ...);
+      // 🔍 Проверка на дубликат в личной базе (по fingerprint или названию)
+      let existingPersonal = null;
+      const newFingerprint = HEYS.models?.computeProductFingerprint?.(parsedPreview);
       
-      // Сохраняем через HEYS.products (React state + localStorage + cloud sync)
-      // или через HEYS.store.set (localStorage + cloud sync)
-      // ⚠️ ВАЖНО: Не использовать U.lsSet — он не синхронизирует с облаком!
-      let savedMethod = 'none';
-      if (HEYS.products?.setAll) {
-        HEYS.products.setAll(newProducts);
-        savedMethod = 'HEYS.products.setAll';
-      } else if (HEYS.store?.set) {
-        // Используем store.set для синхронизации с облаком
-        // ИСПРАВЛЕНО: 'heys_products' вместо 'products'
-        HEYS.store.set('heys_products', newProducts);
-        savedMethod = 'HEYS.store.set';
-      } else if (U.lsSet) {
-        // Fallback: только localStorage (без облака)
-        U.lsSet('heys_products', newProducts);
-        savedMethod = 'U.lsSet (LOCAL ONLY!)';
-        console.warn('[CreateProductStep] ⚠️ Продукт сохранён только локально (нет HEYS.store)');
+      if (newFingerprint) {
+        // Ищем по fingerprint
+        existingPersonal = products.find(p => {
+          const fp = HEYS.models?.computeProductFingerprint?.(p);
+          return fp === newFingerprint;
+        });
       }
       
-      // console.log('[CreateProductStep] ✅ Продукт сохранён:', parsedPreview.name, ...);
-      
-      // 🔍 ВЕРИФИКАЦИЯ: Проверяем что продукт действительно сохранился
-      setTimeout(() => {
-        const verifyProducts = HEYS.products?.getAll?.() || [];
-        const found = verifyProducts.find(p => 
-          p.name?.toLowerCase() === parsedPreview.name?.toLowerCase() ||
-          p.id === parsedPreview.id
+      if (!existingPersonal) {
+        // Fallback: ищем по нормализованному названию
+        const normName = (parsedPreview.name || '').trim().toLowerCase();
+        existingPersonal = products.find(p => 
+          (p.name || '').trim().toLowerCase() === normName
         );
-        if (found) {
-          // console.log('[CreateProductStep] ✅ VERIFIED: Продукт найден в базе после сохранения');
-        } else {
-          console.error('🚨 [CreateProductStep] CRITICAL: Продукт НЕ найден в базе после сохранения!', {
-            productName: parsedPreview.name,
-            productsCount: verifyProducts.length,
-            savedMethod
-          });
-          // Попытка повторного сохранения
-          if (HEYS.products?.setAll && newProducts.length > 0) {
-            // console.log('[CreateProductStep] 🔄 Retry save...');
-            HEYS.products.setAll(newProducts);
-          }
+      }
+      
+      let savedToPersonal = false;
+      let savedMethod = 'none';
+      
+      if (existingPersonal) {
+        // Продукт уже есть в личной базе — не дублируем
+        console.log('[CreateProductStep] ⚠️ Продукт уже есть в личной базе:', existingPersonal.name);
+        // Используем существующий для перехода на граммы
+        parsedPreview.id = existingPersonal.id;
+      } else {
+        // Добавляем в личную базу
+        const newProducts = [...products, parsedPreview];
+        
+        // Сохраняем через HEYS.products (React state + localStorage + cloud sync)
+        if (HEYS.products?.setAll) {
+          HEYS.products.setAll(newProducts);
+          savedMethod = 'HEYS.products.setAll';
+          savedToPersonal = true;
+        } else if (HEYS.store?.set) {
+          HEYS.store.set('heys_products', newProducts);
+          savedMethod = 'HEYS.store.set';
+          savedToPersonal = true;
+        } else if (U.lsSet) {
+          U.lsSet('heys_products', newProducts);
+          savedMethod = 'U.lsSet (LOCAL ONLY!)';
+          savedToPersonal = true;
+          console.warn('[CreateProductStep] ⚠️ Продукт сохранён только локально (нет HEYS.store)');
         }
-      }, 500);
+        
+        console.log('[CreateProductStep] ✅ Добавлен в личную базу:', parsedPreview.name, savedMethod);
+      }
+      
+      // 🔍 ВЕРИФИКАЦИЯ: Проверяем что продукт действительно сохранился (только если добавляли)
+      if (savedToPersonal) {
+        setTimeout(() => {
+          const verifyProducts = HEYS.products?.getAll?.() || [];
+          const found = verifyProducts.find(p => 
+            p.name?.toLowerCase() === parsedPreview.name?.toLowerCase() ||
+            p.id === parsedPreview.id
+          );
+          if (found) {
+            // console.log('[CreateProductStep] ✅ VERIFIED: Продукт найден в базе после сохранения');
+          } else {
+            console.error('🚨 [CreateProductStep] CRITICAL: Продукт НЕ найден в базе после сохранения!', {
+              productName: parsedPreview.name,
+              productsCount: verifyProducts.length,
+              savedMethod
+            });
+            // Попытка повторного сохранения
+            const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
+            const newProducts = [...products, parsedPreview];
+            if (HEYS.products?.setAll) {
+              // console.log('[CreateProductStep] 🔄 Retry save...');
+              HEYS.products.setAll(newProducts);
+            }
+          }
+        }, 500);
+      }
       
       // 🔄 Пересчитываем orphan-продукты (новый продукт мог быть orphan)
       if (HEYS.orphanProducts?.recalculate) {
@@ -934,6 +1083,71 @@
       // Также удаляем конкретно этот продукт из orphan (на случай если recalculate не сработал)
       if (HEYS.orphanProducts?.remove && parsedPreview.name) {
         HEYS.orphanProducts.remove(parsedPreview.name);
+      }
+      
+      // 🌐 Публикация в общую базу (если включено)
+      console.log('[CreateProductStep] 🔍 SHARED PUBLISH DEBUG:', {
+        publishToShared,
+        hasCloud: !!HEYS.cloud,
+        isCurator,
+        hasPublishToShared: !!HEYS.cloud?.publishToShared,
+        hasCreatePending: !!HEYS.cloud?.createPendingProduct,
+        hasModels: !!HEYS.models,
+        hasFingerprint: !!HEYS.models?.computeProductFingerprint,
+        productName: parsedPreview?.name
+      });
+      
+      if (publishToShared && HEYS.cloud) {
+        (async () => {
+          try {
+            console.log('[CreateProductStep] 🚀 Начинаем публикацию в shared...');
+            
+            // Проверяем fingerprint — есть ли уже такой продукт в shared
+            if (HEYS.models?.computeProductFingerprint) {
+              // ⚠️ ВАЖНО: await! computeProductFingerprint возвращает Promise
+              const fingerprint = await HEYS.models.computeProductFingerprint(parsedPreview);
+              console.log('[CreateProductStep] 🔑 Fingerprint:', fingerprint);
+              
+              if (!fingerprint) {
+                console.error('[CreateProductStep] ❌ Fingerprint пустой, невозможно проверить дубликаты');
+              }
+              
+              // Ищем по fingerprint через опции
+              const existing = await HEYS.cloud.searchSharedProducts?.('', { fingerprint, limit: 1 });
+              console.log('[CreateProductStep] 🔍 Поиск по fingerprint:', existing);
+              
+              if (existing?.data?.length > 0) {
+                // Продукт уже есть — не дублируем, просто логируем
+                console.log('[CreateProductStep] 🔄 Продукт уже в shared базе:', existing.data[0].name);
+                return;
+              }
+              
+              console.log('[CreateProductStep] ✅ Продукт НЕ найден в shared — можно добавлять!');
+            } else {
+              console.log('[CreateProductStep] ⚠️ Нет функции computeProductFingerprint, пропускаем проверку');
+            }
+            
+            // Публикуем: куратор напрямую, клиент через pending
+            console.log('[CreateProductStep] 👤 isCurator:', isCurator);
+            
+            if (isCurator && HEYS.cloud.publishToShared) {
+              console.log('[CreateProductStep] 📤 Вызываем publishToShared...');
+              const result = await HEYS.cloud.publishToShared(parsedPreview);
+              console.log('[CreateProductStep] ✅ Результат publishToShared:', result);
+            } else if (HEYS.cloud.createPendingProduct) {
+              console.log('[CreateProductStep] 📤 Вызываем createPendingProduct...');
+              const result = await HEYS.cloud.createPendingProduct(parsedPreview);
+              console.log('[CreateProductStep] ✅ Результат createPendingProduct:', result);
+            } else {
+              console.log('[CreateProductStep] ❌ Нет подходящей функции для публикации!');
+            }
+          } catch (err) {
+            console.error('[CreateProductStep] ❌ Ошибка публикации в shared:', err);
+            console.error('[CreateProductStep] Stack:', err.stack);
+          }
+        })();
+      } else {
+        console.log('[CreateProductStep] ⏭️ Пропуск публикации:', { publishToShared, hasCloud: !!HEYS.cloud });
       }
       
       // 2. Вызываем callback если есть (для обновления списка в родителе)
@@ -962,7 +1176,7 @@
       if (goToStep) {
         setTimeout(() => goToStep(2, 'left'), 150);
       }
-    }, [parsedPreview, data, onChange, context, goToStep, updateStepData]);
+    }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator]);
     
     return React.createElement('div', { className: 'aps-create-step' },
       // Заголовок
@@ -1047,6 +1261,32 @@
             React.createElement('span', { className: 'aps-preview-value' }, parsedPreview.harmScore)
           )
         )
+      ),
+      
+      // 🌐 Checkbox: Опубликовать в общую базу
+      parsedPreview && React.createElement('label', {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '10px 12px',
+          marginTop: '8px',
+          background: 'var(--bg-secondary, #f3f4f6)',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontSize: '14px'
+        }
+      },
+        React.createElement('input', {
+          type: 'checkbox',
+          checked: publishToShared,
+          onChange: (e) => setPublishToShared(e.target.checked),
+          style: { width: '18px', height: '18px', accentColor: '#22c55e' }
+        }),
+        React.createElement('span', null, '🌐 Опубликовать в общую базу'),
+        React.createElement('span', { 
+          style: { fontSize: '11px', color: 'var(--text-muted, #6b7280)', marginLeft: 'auto' }
+        }, isCurator ? 'сразу доступен всем' : 'на модерацию')
       ),
       
       // Кнопка добавить

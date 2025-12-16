@@ -4957,26 +4957,75 @@
   // === Shared Products API (v3.18.0) ===
   
   /**
+   * Получить все продукты из общей базы (для таблицы)
+   * @param {Object} options - { limit, excludeBlocklist }
+   * @returns {Promise<{data: Array, error: any}>}
+   */
+  cloud.getAllSharedProducts = async function(options = {}) {
+    if (!client) return { data: null, error: 'Client not initialized' };
+    
+    const { limit = 500, excludeBlocklist = true } = options;
+    
+    try {
+      const { data, error } = await client
+        .from('shared_products_public')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      if (error) {
+        err('[SHARED PRODUCTS] Get all error:', error);
+        return { data: null, error };
+      }
+      
+      // Фильтрация blocklist на клиенте (если нужно)
+      let filtered = data || [];
+      if (excludeBlocklist && user) {
+        const blocklist = await cloud.getBlocklist();
+        const blocklistSet = new Set(blocklist.map(id => id));
+        filtered = filtered.filter(p => !blocklistSet.has(p.id));
+      }
+      
+      log(`[SHARED PRODUCTS] Loaded ${filtered.length} products total`);
+      return { data: filtered, error: null };
+    } catch (e) {
+      err('[SHARED PRODUCTS] Unexpected error:', e);
+      return { data: null, error: e.message };
+    }
+  };
+
+  /**
    * Поиск продуктов в общей базе (через VIEW shared_products_public)
    * @param {string} query - Поисковый запрос
    * @param {Object} options - { limit, excludeBlocklist }
    * @returns {Promise<{data: Array, error: any}>}
    */
   cloud.searchSharedProducts = async function(query, options = {}) {
+    console.log('[SHARED SEARCH] Called with query:', query, 'client:', !!client, 'user:', !!user);
     if (!client) return { data: null, error: 'Client not initialized' };
     
-    const { limit = 50, excludeBlocklist = true } = options;
+    const { limit = 50, excludeBlocklist = true, fingerprint = null } = options;
     const normQuery = query.toLowerCase().trim();
+    console.log('[SHARED SEARCH] Normalized query:', normQuery);
     
     try {
       let queryBuilder = client
         .from('shared_products_public')
-        .select('*')
-        .ilike('name_norm', `%${normQuery}%`)
+        .select('*');
+      
+      // Поиск по fingerprint (точное совпадение) ИЛИ по названию
+      if (fingerprint) {
+        queryBuilder = queryBuilder.eq('fingerprint', fingerprint);
+      } else if (normQuery) {
+        queryBuilder = queryBuilder.ilike('name_norm', `%${normQuery}%`);
+      }
+      
+      queryBuilder = queryBuilder
         .order('created_at', { ascending: false })
         .limit(limit);
       
       const { data, error } = await queryBuilder;
+      console.log('[SHARED SEARCH] Query result:', data?.length, 'error:', error);
       
       if (error) {
         err('[SHARED PRODUCTS] Search error:', error);
@@ -5005,23 +5054,37 @@
    * @returns {Promise<{data: any, error: any, status: string}>}
    */
   cloud.publishToShared = async function(product) {
+    console.log('[SHARED] 📤 publishToShared called:', {
+      hasClient: !!client,
+      hasUser: !!user,
+      userId: user?.id,
+      productName: product?.name
+    });
+    
     if (!client || !user) {
+      console.log('[SHARED] ❌ Not authenticated:', { client: !!client, user: !!user });
       return { data: null, error: 'Not authenticated', status: 'error' };
     }
     
     try {
       // Вычисляем fingerprint
+      console.log('[SHARED] 🔑 Computing fingerprint...');
       const fingerprint = await HEYS.models.computeProductFingerprint(product);
       const name_norm = HEYS.models.normalizeProductName(product.name);
+      console.log('[SHARED] Fingerprint:', fingerprint, 'Name norm:', name_norm);
       
       // Проверяем: продукт уже существует?
-      const { data: existing } = await client
+      console.log('[SHARED] 🔍 Checking if exists...');
+      const { data: existing, error: checkError } = await client
         .from('shared_products')
         .select('id')
         .eq('fingerprint', fingerprint)
         .maybeSingle();
       
+      console.log('[SHARED] Check result:', { existing, checkError });
+      
       if (existing) {
+        console.log('[SHARED] ⚠️ Product already exists:', existing.id);
         return { 
           data: existing, 
           error: null, 
@@ -5032,42 +5095,84 @@
       
       // Публикуем новый продукт
       // ВАЖНО: PostgreSQL lowercase-ит колонки, поэтому badfat100/goodfat100
+      const insertData = {
+        created_by_user_id: user.id,
+        name: product.name,
+        name_norm,
+        fingerprint,
+        simple100: product.simple100 || 0,
+        complex100: product.complex100 || 0,
+        protein100: product.protein100 || 0,
+        badfat100: product.badFat100 || 0,
+        goodfat100: product.goodFat100 || 0,
+        trans100: product.trans100 || 0,
+        fiber100: product.fiber100 || 0,
+        gi: product.gi,
+        harm: product.harm,
+        category: product.category,
+        portions: product.portions || null,
+        description: product.description || null
+      };
+      
+      console.log('[SHARED] 📝 Inserting:', insertData);
+      
       const { data, error } = await client
         .from('shared_products')
-        .insert({
-          created_by_user_id: user.id,
-          name: product.name,
-          name_norm,
-          fingerprint,
-          simple100: product.simple100 || 0,
-          complex100: product.complex100 || 0,
-          protein100: product.protein100 || 0,
-          badfat100: product.badFat100 || 0,
-          goodfat100: product.goodFat100 || 0,
-          trans100: product.trans100 || 0,
-          fiber100: product.fiber100 || 0,
-          gi: product.gi,
-          harm: product.harm,
-          category: product.category,
-          portions: product.portions || null,
-          description: product.description || null
-        })
+        .insert(insertData)
         .select()
         .single();
       
+      console.log('[SHARED] Insert result:', { data, error });
+      
       if (error) {
+        console.error('[SHARED] ❌ Publish error:', error);
         err('[SHARED PRODUCTS] Publish error:', error);
         return { data: null, error, status: 'error' };
       }
       
+      console.log('[SHARED] ✅ Published successfully:', product.name);
       log('[SHARED PRODUCTS] Published:', product.name);
       return { data, error: null, status: 'published' };
     } catch (e) {
+      console.error('[SHARED] ❌ Unexpected error:', e);
       err('[SHARED PRODUCTS] Unexpected error:', e);
       return { data: null, error: e.message, status: 'error' };
     }
   };
   
+  /**
+   * Удаление продукта из общей базы (только куратор или автор)
+   * @param {string} productId - UUID продукта в shared_products
+   * @returns {Promise<{success: boolean, error: any}>}
+   */
+  cloud.deleteSharedProduct = async function(productId) {
+    console.log('[SHARED] 🗑️ deleteSharedProduct called:', productId);
+    
+    if (!client || !user) {
+      console.log('[SHARED] ❌ Not authenticated');
+      return { success: false, error: 'Not authenticated' };
+    }
+    
+    try {
+      // Удаляем продукт (RLS проверит права: только автор или куратор)
+      const { error } = await client
+        .from('shared_products')
+        .delete()
+        .eq('id', productId);
+      
+      if (error) {
+        console.error('[SHARED] ❌ Delete error:', error);
+        return { success: false, error: error.message };
+      }
+      
+      console.log('[SHARED] ✅ Deleted from shared:', productId);
+      return { success: true, error: null };
+    } catch (e) {
+      console.error('[SHARED] ❌ Unexpected error:', e);
+      return { success: false, error: e.message };
+    }
+  };
+
   /**
    * Создание pending-заявки для PIN-клиента
    * @param {string} clientId - ID клиента

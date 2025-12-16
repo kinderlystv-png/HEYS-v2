@@ -100,13 +100,17 @@
     const handleERef = useRef(null);
     const handleSRef = useRef(null);
     const handleWRef = useRef(null);
+    const handleNWRef = useRef(null);
+    const handleNERef = useRef(null);
+    const handleSWRef = useRef(null);
+    const handleSERef = useRef(null);
 
-    // Drag-resize (без popover): тянем за хендлы на гранях → снап к доступным размерам
+    // Drag-resize (без popover): тянем за хендлы на гранях/углах → снап к доступным размерам
     const resizeDragRef = useRef({
       active: false,
       pointerId: null,
       isTouchBased: false, // true если запущено через touchstart (iOS Safari)
-      direction: null, // 'n' | 'e' | 's' | 'w'
+      direction: null, // 'n'|'e'|'s'|'w'|'nw'|'ne'|'sw'|'se'
       startX: 0,
       startY: 0,
       baseCols: 1,
@@ -122,6 +126,10 @@
       last: null
     });
     const [resizePreview, setResizePreview] = useState(null);
+
+    // Snap feedback: короткая подсветка при смене sizeId во время drag-resize
+    const [isResizeSnap, setIsResizeSnap] = useState(false);
+    const snapTimerRef = useRef(0);
     
     // Pointer event handlers for DnD
     const handlePointerDown = useCallback((e) => {
@@ -238,8 +246,26 @@
 
     const updateResizePreview = useCallback((next) => {
       const ref = resizeDragRef.current;
+
+      const prevSizeId = ref.last?.sizeId || null;
+      const nextSizeId = next?.sizeId || null;
+
       ref.last = next;
       ref.pending = next;
+
+      // Если снапнули на другой размер — даём лёгкий визуальный “щелчок”
+      if (nextSizeId && prevSizeId && nextSizeId !== prevSizeId) {
+        setIsResizeSnap(true);
+        if (snapTimerRef.current) {
+          clearTimeout(snapTimerRef.current);
+          snapTimerRef.current = 0;
+        }
+        snapTimerRef.current = setTimeout(() => {
+          setIsResizeSnap(false);
+          snapTimerRef.current = 0;
+        }, 140);
+      }
+
       if (ref.raf) return;
       ref.raf = requestAnimationFrame(() => {
         ref.raf = 0;
@@ -266,6 +292,14 @@
         cancelAnimationFrame(ref.raf);
         ref.raf = 0;
       }
+
+      // Cleanup snap timer/state
+      if (snapTimerRef.current) {
+        clearTimeout(snapTimerRef.current);
+        snapTimerRef.current = 0;
+      }
+      setIsResizeSnap(false);
+
       ref.pending = null;
       ref.last = null;
 
@@ -296,6 +330,12 @@
     // Стартует resize drag (вызывается из onPointerDown или onTouchStart)
     const startResizeDrag = useCallback((direction, e, isTouchEvent = false) => {
       if (!isEditMode) return;
+      
+      // Защита от повторного запуска resize пока предыдущий активен
+      if (resizeDragRef.current?.active) {
+        return;
+      }
+      
       e.stopPropagation();
       // Для pointer events вызываем preventDefault здесь
       // Для touch events preventDefault уже вызван в native listener (с { passive: false })
@@ -304,9 +344,11 @@
       }
 
       // Если DnD уже «подготовился» (в edit-mode prepareForDrag ставит listeners),
-      // то при попытке resize он может внезапно стартовать. Отменяем.
+      // то при попытке resize он может внезапно стартовать. Отменяем только если DnD активен.
       try {
-        HEYS.Widgets.dnd?.cancel?.();
+        if (HEYS.Widgets.dnd?.isDragging?.()) {
+          HEYS.Widgets.dnd?.cancel?.();
+        }
       } catch (err) {
         // ignore
       }
@@ -351,17 +393,13 @@
       if (isTouchEvent) {
         // Сначала удаляем старые listeners если есть (защита от утечки)
         if (ref.touchMoveHandler) {
-          console.log('[RESIZE] Removing stale touch listeners from document');
           document.removeEventListener('touchmove', ref.touchMoveHandler, { capture: true });
           document.removeEventListener('touchend', ref.touchEndHandler, { capture: true });
           document.removeEventListener('touchcancel', ref.touchEndHandler, { capture: true });
         }
         
-        console.log('[RESIZE] Adding immediate touch listeners on document (capture)');
-        
         // Сохраняем handlers в ref для возможности cleanup
         ref.touchMoveHandler = (te) => {
-          console.log('[RESIZE] touchmove RAW, active:', ref.active, 'touches:', te.touches?.length);
           if (!ref.active) return;
           te.preventDefault();
           te.stopPropagation(); // Не даём другим handlers перехватить
@@ -375,8 +413,13 @@
           const rawDeltaCols = Math.round(dx / unitX);
           const rawDeltaRows = Math.round(dy / unitY);
 
-          const intentDeltaCols = (ref.direction === 'w') ? -rawDeltaCols : (ref.direction === 'e' ? rawDeltaCols : 0);
-          const intentDeltaRows = (ref.direction === 'n') ? -rawDeltaRows : (ref.direction === 's' ? rawDeltaRows : 0);
+          const dir = String(ref.direction || '');
+          const isW = dir.includes('w');
+          const isE = dir.includes('e');
+          const isN = dir.includes('n');
+          const isS = dir.includes('s');
+          const intentDeltaCols = isW ? -rawDeltaCols : (isE ? rawDeltaCols : 0);
+          const intentDeltaRows = isN ? -rawDeltaRows : (isS ? rawDeltaRows : 0);
 
           if (intentDeltaCols === ref.lastDeltaCols && intentDeltaRows === ref.lastDeltaRows) return;
           ref.lastDeltaCols = intentDeltaCols;
@@ -385,16 +428,14 @@
           const targetCols = Math.max(1, Math.min(ref.baseCols + intentDeltaCols, gridCols));
           const targetRows = Math.max(1, ref.baseRows + intentDeltaRows);
 
-          console.log('[RESIZE] touch calc:', { direction, dx, dy, intentDeltaCols, intentDeltaRows, targetCols, targetRows });
-
           const nearest = pickNearestSize(targetCols, targetRows, intentDeltaCols, intentDeltaRows);
           const cols = Math.max(1, Math.min(nearest.cols, gridCols));
           const rows = Math.max(1, nearest.rows);
 
           let col = ref.basePos.col;
           let row = ref.basePos.row;
-          if (ref.direction === 'w') col = ref.fixedRight - cols;
-          if (ref.direction === 'n') row = ref.fixedBottom - rows;
+          if (isW) col = ref.fixedRight - cols;
+          if (isN) row = ref.fixedBottom - rows;
           col = Math.max(0, col);
           if (col + cols > gridCols) col = Math.max(0, gridCols - cols);
           row = Math.max(0, row);
@@ -414,7 +455,6 @@
         };
 
         ref.touchEndHandler = () => {
-          console.log('[RESIZE] touch end - cleanup, ref.active was:', ref.active);
           ref.active = false; // ВАЖНО: сбрасываем active при touchend
           if (ref.touchMoveHandler) {
             // CRITICAL: удаляем с теми же options что и добавляли (capture: true)
@@ -427,12 +467,10 @@
           endResizeDrag('touchend');
         };
 
-        console.log('[RESIZE] About to add touchmove listener, handler exists:', !!ref.touchMoveHandler);
         // CRITICAL: capture: true гарантирует получение событий ДО любой отмены
         document.addEventListener('touchmove', ref.touchMoveHandler, { passive: false, capture: true });
         document.addEventListener('touchend', ref.touchEndHandler, { passive: true, capture: true });
         document.addEventListener('touchcancel', ref.touchEndHandler, { passive: true, capture: true });
-        console.log('[RESIZE] Touch listeners added to document (capture phase)');
       }
 
       const initial = pickNearestSize(ref.baseCols, ref.baseRows, 0, 0);
@@ -459,7 +497,6 @@
 
     // Touch start handler (для iOS Safari и PWA) — вызывается из native listener
     const handleResizeHandleTouchStart = useCallback((direction, e) => {
-      console.log('[RESIZE] touchstart direction:', direction, 'touches:', e.touches?.length);
       // preventDefault через native listener уже вызван
       startResizeDrag(direction, e, true);
     }, [startResizeDrag]);
@@ -472,12 +509,15 @@
         { ref: handleNRef, dir: 'n' },
         { ref: handleERef, dir: 'e' },
         { ref: handleSRef, dir: 's' },
-        { ref: handleWRef, dir: 'w' }
+        { ref: handleWRef, dir: 'w' },
+        { ref: handleNWRef, dir: 'nw' },
+        { ref: handleNERef, dir: 'ne' },
+        { ref: handleSWRef, dir: 'sw' },
+        { ref: handleSERef, dir: 'se' }
       ];
       
       const touchStartHandlers = handles.map(({ ref, dir }) => {
         const handler = (e) => {
-          console.log('[RESIZE] native touchstart', dir, e.touches?.length);
           e.preventDefault(); // Теперь работает!
           e.stopPropagation();
           handleResizeHandleTouchStart(dir, e);
@@ -504,20 +544,14 @@
 
     useEffect(() => {
       if (!isResizeDragActive) return;
-      console.log('[RESIZE] useEffect started, adding window listeners');
       const ref = resizeDragRef.current;
 
       // Универсальный обработчик движения (pointer и touch)
       const onMove = (e) => {
-        if (!ref.active) {
-          console.log('[RESIZE] onMove skipped: ref.active=false');
-          return;
-        }
+        if (!ref.active) return;
         
         // CRITICAL: preventDefault чтобы iOS не скроллил страницу
         e.preventDefault();
-        
-        console.log('[RESIZE] onMove type:', e.type, 'isTouchBased:', ref.isTouchBased);
         
         // Проверяем pointerId только для pointer events
         if (!ref.isTouchBased && ref.pointerId != null && e.pointerId != null && e.pointerId !== ref.pointerId) return;
@@ -545,8 +579,13 @@
 
         // Для левого/верхнего хендла инвертируем направление:
         // - drag left/up = увеличение, drag right/down = уменьшение
-        const intentDeltaCols = (ref.direction === 'w') ? -rawDeltaCols : (ref.direction === 'e' ? rawDeltaCols : 0);
-        const intentDeltaRows = (ref.direction === 'n') ? -rawDeltaRows : (ref.direction === 's' ? rawDeltaRows : 0);
+        const dir = String(ref.direction || '');
+        const isW = dir.includes('w');
+        const isE = dir.includes('e');
+        const isN = dir.includes('n');
+        const isS = dir.includes('s');
+        const intentDeltaCols = isW ? -rawDeltaCols : (isE ? rawDeltaCols : 0);
+        const intentDeltaRows = isN ? -rawDeltaRows : (isS ? rawDeltaRows : 0);
 
         // micro-оптимизация: не пересчитываем пока не изменились снап-делты
         if (intentDeltaCols === ref.lastDeltaCols && intentDeltaRows === ref.lastDeltaRows) return;
@@ -556,18 +595,7 @@
         const targetCols = Math.max(1, Math.min(ref.baseCols + intentDeltaCols, gridCols));
         const targetRows = Math.max(1, ref.baseRows + intentDeltaRows);
 
-        console.log('[RESIZE] calc:', {
-          direction: ref.direction,
-          baseCols: ref.baseCols,
-          baseRows: ref.baseRows,
-          intentDeltaCols,
-          intentDeltaRows,
-          targetCols,
-          targetRows
-        });
-
         const nearest = pickNearestSize(targetCols, targetRows, intentDeltaCols, intentDeltaRows);
-        console.log('[RESIZE] nearest:', nearest);
         const cols = Math.max(1, Math.min(nearest.cols, gridCols));
         const rows = Math.max(1, nearest.rows);
 
@@ -575,10 +603,10 @@
         let col = ref.basePos.col;
         let row = ref.basePos.row;
 
-        if (ref.direction === 'w') {
+        if (isW) {
           col = ref.fixedRight - cols;
         }
-        if (ref.direction === 'n') {
+        if (isN) {
           row = ref.fixedBottom - rows;
         }
 
@@ -659,7 +687,7 @@
     
     return React.createElement('div', {
       ref: elementRef,
-      className: `widget ${sizeClass} ${typeClass} ${isEditMode ? 'widget--editing' : ''} ${isResizing ? 'widget--resizing' : ''}`,
+      className: `widget ${sizeClass} ${typeClass} ${isEditMode ? 'widget--editing' : ''} ${isResizing ? 'widget--resizing' : ''} ${isResizing && isResizeSnap ? 'widget--resize-snap' : ''}`,
       'data-widget-id': widget.id,
       'data-widget-type': widget.type,
       style: {
@@ -727,7 +755,7 @@
         React.createElement('button', {
           ref: handleNRef,
           type: 'button',
-          className: 'widget__resize-handle widget__resize-handle--n',
+          className: `widget__resize-handle widget__resize-handle--n ${isResizing && resizePreview?.direction === 'n' ? 'widget__resize-handle--active' : ''}`,
           onPointerDown: (e) => handleResizeHandlePointerDown('n', e),
           // onTouchStart заменён на native listener в useEffect
           onPointerUp: (e) => e.stopPropagation(),
@@ -740,7 +768,7 @@
         React.createElement('button', {
           ref: handleERef,
           type: 'button',
-          className: 'widget__resize-handle widget__resize-handle--e',
+          className: `widget__resize-handle widget__resize-handle--e ${isResizing && resizePreview?.direction === 'e' ? 'widget__resize-handle--active' : ''}`,
           onPointerDown: (e) => handleResizeHandlePointerDown('e', e),
           // onTouchStart заменён на native listener в useEffect
           onPointerUp: (e) => e.stopPropagation(),
@@ -753,7 +781,7 @@
         React.createElement('button', {
           ref: handleSRef,
           type: 'button',
-          className: 'widget__resize-handle widget__resize-handle--s',
+          className: `widget__resize-handle widget__resize-handle--s ${isResizing && resizePreview?.direction === 's' ? 'widget__resize-handle--active' : ''}`,
           onPointerDown: (e) => handleResizeHandlePointerDown('s', e),
           // onTouchStart заменён на native listener в useEffect
           onPointerUp: (e) => e.stopPropagation(),
@@ -766,7 +794,7 @@
         React.createElement('button', {
           ref: handleWRef,
           type: 'button',
-          className: 'widget__resize-handle widget__resize-handle--w',
+          className: `widget__resize-handle widget__resize-handle--w ${isResizing && resizePreview?.direction === 'w' ? 'widget__resize-handle--active' : ''}`,
           onPointerDown: (e) => handleResizeHandlePointerDown('w', e),
           // onTouchStart заменён на native listener в useEffect
           onPointerUp: (e) => e.stopPropagation(),
@@ -775,6 +803,56 @@
           onTouchMove: (e) => e.stopPropagation(),
           title: `Изменить ширину: потяни (сейчас: ${currentSizeLabel})`,
           'aria-label': `Изменить ширину: потяни. Сейчас: ${currentSizeLabel}`
+        }),
+
+        // Диагональные (угловые) хендлы
+        React.createElement('button', {
+          ref: handleNWRef,
+          type: 'button',
+          className: `widget__resize-handle widget__resize-handle--nw ${isResizing && resizePreview?.direction === 'nw' ? 'widget__resize-handle--active' : ''}`,
+          onPointerDown: (e) => handleResizeHandlePointerDown('nw', e),
+          onPointerUp: (e) => e.stopPropagation(),
+          onPointerMove: (e) => e.stopPropagation(),
+          onTouchEnd: (e) => e.stopPropagation(),
+          onTouchMove: (e) => e.stopPropagation(),
+          title: `Изменить размер: потяни за угол (сейчас: ${currentSizeLabel})`,
+          'aria-label': `Изменить размер: потяни за угол. Сейчас: ${currentSizeLabel}`
+        }),
+        React.createElement('button', {
+          ref: handleNERef,
+          type: 'button',
+          className: `widget__resize-handle widget__resize-handle--ne ${isResizing && resizePreview?.direction === 'ne' ? 'widget__resize-handle--active' : ''}`,
+          onPointerDown: (e) => handleResizeHandlePointerDown('ne', e),
+          onPointerUp: (e) => e.stopPropagation(),
+          onPointerMove: (e) => e.stopPropagation(),
+          onTouchEnd: (e) => e.stopPropagation(),
+          onTouchMove: (e) => e.stopPropagation(),
+          title: `Изменить размер: потяни за угол (сейчас: ${currentSizeLabel})`,
+          'aria-label': `Изменить размер: потяни за угол. Сейчас: ${currentSizeLabel}`
+        }),
+        React.createElement('button', {
+          ref: handleSWRef,
+          type: 'button',
+          className: `widget__resize-handle widget__resize-handle--sw ${isResizing && resizePreview?.direction === 'sw' ? 'widget__resize-handle--active' : ''}`,
+          onPointerDown: (e) => handleResizeHandlePointerDown('sw', e),
+          onPointerUp: (e) => e.stopPropagation(),
+          onPointerMove: (e) => e.stopPropagation(),
+          onTouchEnd: (e) => e.stopPropagation(),
+          onTouchMove: (e) => e.stopPropagation(),
+          title: `Изменить размер: потяни за угол (сейчас: ${currentSizeLabel})`,
+          'aria-label': `Изменить размер: потяни за угол. Сейчас: ${currentSizeLabel}`
+        }),
+        React.createElement('button', {
+          ref: handleSERef,
+          type: 'button',
+          className: `widget__resize-handle widget__resize-handle--se ${isResizing && resizePreview?.direction === 'se' ? 'widget__resize-handle--active' : ''}`,
+          onPointerDown: (e) => handleResizeHandlePointerDown('se', e),
+          onPointerUp: (e) => e.stopPropagation(),
+          onPointerMove: (e) => e.stopPropagation(),
+          onTouchEnd: (e) => e.stopPropagation(),
+          onTouchMove: (e) => e.stopPropagation(),
+          title: `Изменить размер: потяни за угол (сейчас: ${currentSizeLabel})`,
+          'aria-label': `Изменить размер: потяни за угол. Сейчас: ${currentSizeLabel}`
         })
       )
     );
@@ -882,8 +960,11 @@
     const target = data.target || 2000;
     const pct = target > 0 ? Math.round((eaten / target) * 100) : 0;
     const remaining = Math.max(0, target - eaten);
+    const burned = data.burned || 0; // Тренировки
+    const deficit = data.deficit || 0; // Дефицит
 
     const d = getWidgetDims(widget);
+    const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : d.isTall ? 'tall' : 'std';
     
     const getColor = () => {
@@ -893,10 +974,52 @@
       return 'var(--ratio-over)';
     };
     
+    // 1x1 Micro
+    if (d.isMicro) {
+      return React.createElement('div', { className: 'widget-calories widget-calories--micro' },
+        React.createElement('div', { className: 'widget-micro__label' }, 'ккал'),
+        React.createElement('div', { className: 'widget-calories__value', style: { color: getColor() } }, eaten)
+      );
+    }
+    
+    // 2x2 — Оптимальный layout
+    if (size === '2x2') {
+      return React.createElement('div', { className: 'widget-calories widget-calories--2x2' },
+        // Верхняя строка: значение + процент
+        React.createElement('div', { className: 'widget-calories__header' },
+          React.createElement('div', { className: 'widget-calories__value widget-calories__value--lg', style: { color: getColor() } },
+            eaten.toLocaleString('ru-RU')
+          ),
+          React.createElement('div', { className: 'widget-calories__pct-badge', style: { background: `${getColor()}20`, color: getColor() } },
+            `${pct}%`
+          )
+        ),
+        // Прогресс-бар
+        React.createElement('div', { className: 'widget-calories__progress' },
+          React.createElement('div', {
+            className: 'widget-calories__bar',
+            style: { width: `${Math.min(100, pct)}%`, background: getColor() }
+          })
+        ),
+        // Нижняя строка: цель и осталось
+        React.createElement('div', { className: 'widget-calories__footer' },
+          React.createElement('div', { className: 'widget-calories__meta' },
+            React.createElement('span', { className: 'widget-calories__meta-label' }, 'Цель'),
+            React.createElement('span', { className: 'widget-calories__meta-val' }, target.toLocaleString('ru-RU'))
+          ),
+          remaining > 0 && React.createElement('div', { className: 'widget-calories__meta widget-calories__meta--accent' },
+            React.createElement('span', { className: 'widget-calories__meta-label' }, 'Осталось'),
+            React.createElement('span', { className: 'widget-calories__meta-val' }, remaining.toLocaleString('ru-RU'))
+          )
+        )
+      );
+    }
+    
+    // Остальные размеры — стандартный layout
     const showPct = widget.settings?.showPercentage !== false;
     const showRemaining = widget.settings?.showRemaining !== false;
-    const showLabel = !d.isMicro;
-    const showProgress = !d.isMicro && !d.isTiny;
+    const showLabel = true;
+    const showProgress = !d.isTiny;
     const showRemainingLine = showRemaining && remaining > 0 && d.rows >= 2 && !d.isShort;
 
     return React.createElement('div', { className: `widget-calories widget-calories--${variant}` },
@@ -928,18 +1051,74 @@
     const target = data.target || 2000;
     const pct = target > 0 ? Math.round((drunk / target) * 100) : 0;
     const glasses = Math.floor(drunk / 250);
+    const remaining = Math.max(0, target - drunk);
 
     const d = getWidgetDims(widget);
+    const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
-    const showProgress = !d.isMicro;
-    const showPctPill = !d.isMicro && !d.isTiny;
+    
+    const getWaterColor = () => {
+      if (pct >= 100) return '#22c55e';
+      if (pct >= 70) return '#3b82f6';
+      if (pct >= 40) return '#eab308';
+      return '#ef4444';
+    };
+    
+    // 1x1 Micro
+    if (d.isMicro) {
+      return React.createElement('div', { className: 'widget-water widget-water--micro' },
+        React.createElement('div', { className: 'widget-micro__label' }, '💧'),
+        React.createElement('div', { className: 'widget-water__value' },
+          widget.settings?.showGlasses ? `${glasses}🥛` : `${drunk}`
+        )
+      );
+    }
+    
+    // 2x2 — Оптимальный layout
+    if (size === '2x2') {
+      const waterColor = getWaterColor();
+      return React.createElement('div', { className: 'widget-water widget-water--2x2' },
+        // Верх: иконка + значение + процент
+        React.createElement('div', { className: 'widget-water__header' },
+          React.createElement('div', { className: 'widget-water__icon' }, '💧'),
+          React.createElement('div', { className: 'widget-water__main' },
+            React.createElement('div', { className: 'widget-water__value widget-water__value--lg' },
+              `${drunk}`,
+              React.createElement('span', { className: 'widget-water__unit' }, 'мл')
+            )
+          ),
+          React.createElement('div', { className: 'widget-water__pct-badge', style: { background: `${waterColor}20`, color: waterColor } },
+            `${pct}%`
+          )
+        ),
+        // Прогресс-бар
+        React.createElement('div', { className: 'widget-water__progress' },
+          React.createElement('div', {
+            className: 'widget-water__bar',
+            style: { width: `${Math.min(100, pct)}%`, background: waterColor }
+          })
+        ),
+        // Низ: цель + стаканы + осталось
+        React.createElement('div', { className: 'widget-water__footer' },
+          React.createElement('div', { className: 'widget-water__meta' },
+            React.createElement('span', { className: 'widget-water__glasses' }, `${glasses} 🥛`)
+          ),
+          remaining > 0 && React.createElement('div', { className: 'widget-water__meta widget-water__meta--muted' },
+            `ещё ${remaining} мл`
+          )
+        )
+      );
+    }
+    
+    // Остальные размеры — стандартный layout
+    const showProgress = true;
+    const showPctPill = !d.isTiny;
     
     return React.createElement('div', { className: `widget-water widget-water--${variant}` },
       React.createElement('div', { className: 'widget-water__top' },
         React.createElement('div', { className: 'widget-water__value' },
           widget.settings?.showGlasses ? `${glasses} 🥛` : `${drunk} мл`
-        ),
-        d.isMicro ? React.createElement('div', { className: 'widget-water__pct-inline' }, `${pct}%`) : null
+        )
       ),
       showProgress
         ? React.createElement('div', { className: 'widget-water__progress' },
@@ -957,17 +1136,73 @@
     const hours = data.hours || 0;
     const target = data.target || 8;
     const quality = data.quality;
+    const sleepStart = data.sleepStart; // "23:30"
+    const sleepEnd = data.sleepEnd; // "07:15"
 
     const d = getWidgetDims(widget);
+    const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
-    const showTarget = widget.settings?.showTarget !== false && !d.isMicro;
-    const showQuality = widget.settings?.showQuality !== false && !!quality && !d.isTiny;
+    
+    const pct = target > 0 ? Math.round((hours / target) * 100) : 0;
+    
+    const getSleepColor = () => {
+      if (hours >= target) return '#22c55e';
+      if (hours >= target - 1) return '#3b82f6';
+      if (hours >= target - 2) return '#eab308';
+      return '#ef4444';
+    };
     
     const getEmoji = () => {
       if (hours >= target) return '😊';
       if (hours >= target - 1) return '😐';
       return '😴';
     };
+    
+    // 1x1 Micro
+    if (d.isMicro) {
+      return React.createElement('div', { className: 'widget-sleep widget-sleep--micro' },
+        React.createElement('div', { className: 'widget-micro__label' }, '😴'),
+        React.createElement('div', { className: 'widget-sleep__value' }, `${hours.toFixed(1)}ч`)
+      );
+    }
+    
+    // 2x2 — Оптимальный layout
+    if (size === '2x2') {
+      const sleepColor = getSleepColor();
+      return React.createElement('div', { className: 'widget-sleep widget-sleep--2x2' },
+        // Верх: emoji + часы + процент
+        React.createElement('div', { className: 'widget-sleep__header' },
+          React.createElement('div', { className: 'widget-sleep__icon' }, getEmoji()),
+          React.createElement('div', { className: 'widget-sleep__main' },
+            React.createElement('div', { className: 'widget-sleep__value widget-sleep__value--lg' },
+              hours.toFixed(1),
+              React.createElement('span', { className: 'widget-sleep__unit' }, 'ч')
+            )
+          ),
+          React.createElement('div', { className: 'widget-sleep__pct-badge', style: { background: `${sleepColor}20`, color: sleepColor } },
+            `${pct}%`
+          )
+        ),
+        // Время: заснул → проснулся
+        (sleepStart || sleepEnd) && React.createElement('div', { className: 'widget-sleep__times' },
+          sleepStart && React.createElement('span', { className: 'widget-sleep__time' }, `🌙 ${sleepStart}`),
+          sleepEnd && React.createElement('span', { className: 'widget-sleep__time' }, `☀️ ${sleepEnd}`)
+        ),
+        // Низ: качество + цель
+        React.createElement('div', { className: 'widget-sleep__footer' },
+          quality && React.createElement('div', { className: 'widget-sleep__quality-badge' },
+            `⭐ ${quality}/10`
+          ),
+          React.createElement('div', { className: 'widget-sleep__target' },
+            `Цель: ${target}ч`
+          )
+        )
+      );
+    }
+    
+    // Остальные размеры
+    const showTarget = widget.settings?.showTarget !== false;
+    const showQuality = widget.settings?.showQuality !== false && !!quality && !d.isTiny;
     
     return React.createElement('div', { className: `widget-sleep widget-sleep--${variant}` },
       React.createElement('div', { className: 'widget-sleep__value' }, `${hours.toFixed(1)}ч ${getEmoji()}`),
@@ -979,9 +1214,59 @@
   function StreakWidgetContent({ widget, data }) {
     const current = data.current || 0;
     const max = data.max || 0;
+    const weekDays = data.weekDays || []; // [true, true, false, true, true, true, true] — последние 7 дней
 
     const d = getWidgetDims(widget);
+    const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
+    
+    const getStreakColor = () => {
+      if (current >= 7) return '#22c55e';
+      if (current >= 3) return '#f97316';
+      return '#ef4444';
+    };
+    
+    // 1x1 Micro
+    if (d.isMicro) {
+      return React.createElement('div', { className: 'widget-streak widget-streak--micro' },
+        React.createElement('div', { className: 'widget-micro__label' }, '🔥'),
+        React.createElement('div', { className: 'widget-streak__value' }, current)
+      );
+    }
+    
+    // 2x2 — Оптимальный layout с мини-heatmap недели
+    if (size === '2x2') {
+      const streakColor = getStreakColor();
+      const isNewRecord = current > 0 && current >= max;
+      
+      return React.createElement('div', { className: 'widget-streak widget-streak--2x2' },
+        // Верх: огонь + число + дни
+        React.createElement('div', { className: 'widget-streak__header' },
+          React.createElement('div', { className: 'widget-streak__icon' }, '🔥'),
+          React.createElement('div', { className: 'widget-streak__value widget-streak__value--lg', style: { color: streakColor } },
+            current
+          ),
+          React.createElement('div', { className: 'widget-streak__label' }, 'дн подряд')
+        ),
+        // Мини-heatmap недели (7 точек)
+        weekDays.length > 0 && React.createElement('div', { className: 'widget-streak__week' },
+          weekDays.slice(-7).map((ok, i) =>
+            React.createElement('div', {
+              key: i,
+              className: `widget-streak__dot widget-streak__dot--${ok ? 'ok' : 'miss'}`
+            })
+          )
+        ),
+        // Низ: рекорд или поздравление
+        React.createElement('div', { className: 'widget-streak__footer' },
+          isNewRecord
+            ? React.createElement('div', { className: 'widget-streak__record widget-streak__record--new' }, '🏆 Новый рекорд!')
+            : max > 0 && React.createElement('div', { className: 'widget-streak__record' }, `Рекорд: ${max} дн`)
+        )
+      );
+    }
+    
+    // Остальные размеры
     const showMax = widget.settings?.showMax !== false && max > current && !d.isTiny;
     const showFlame = widget.settings?.showFlame !== false && current > 0;
     
@@ -989,7 +1274,7 @@
       React.createElement('div', { className: 'widget-streak__value' },
         showFlame ? '🔥 ' : '',
         current,
-        d.isMicro ? null : React.createElement('span', { className: 'widget-streak__days' }, ' дн.')
+        React.createElement('span', { className: 'widget-streak__days' }, ' дн.')
       ),
       showMax ? React.createElement('div', { className: 'widget-streak__max' }, `Рекорд: ${max}`) : null
     );
@@ -1169,10 +1454,11 @@
 
     // ============ LAYOUTS ПО РАЗМЕРАМ ============
     
-    // MINI (1×1) — только число
+    // MINI (1×1) — метка + число (компактный шрифт для safe-area)
     if (size === '1x1') {
       return React.createElement('div', { className: 'widget-weight widget-weight--1x1' },
-        React.createElement(WeightValue, { scale: 'lg' })
+        React.createElement('div', { className: 'widget-micro__label' }, 'вес'),
+        React.createElement(WeightValue, { scale: 'sm' })
       );
     }
 
@@ -1192,6 +1478,31 @@
       );
     }
 
+    // WIDE SHORT (3×1) — широкий низкий: число + тренд + цель/BMI в ряд
+    if (size === '3x1') {
+      return React.createElement('div', { className: 'widget-weight widget-weight--3x1' },
+        React.createElement('div', { className: 'widget-weight__row-h' },
+          React.createElement(WeightValue, { scale: 'lg' }),
+          React.createElement(TrendBlock, { showText: true }),
+          showGoal && hasGoal 
+            ? React.createElement(GoalBlock, { inline: true }) 
+            : React.createElement(BMIBlock, { compact: true })
+        )
+      );
+    }
+
+    // EXTRA WIDE SHORT (4×1) — максимально широкий низкий: число + тренд + цель + BMI
+    if (size === '4x1') {
+      return React.createElement('div', { className: 'widget-weight widget-weight--4x1' },
+        React.createElement('div', { className: 'widget-weight__row-h' },
+          React.createElement(WeightValue, { scale: 'lg' }),
+          React.createElement(TrendBlock, { showText: true }),
+          showGoal && hasGoal ? React.createElement(GoalBlock, { inline: true }) : null,
+          React.createElement(BMIBlock, { compact: true })
+        )
+      );
+    }
+
     // TALL2 (1×2) — узкий: число | тренд | прогресс/цель
     if (size === '1x2') {
       const showProgress = showGoal && hasGoal && progressPct !== null;
@@ -1200,6 +1511,31 @@
         React.createElement(TrendBlock, { showText: false, vertical: true }),
         showProgress ? React.createElement(ProgressBlock, { vertical: true }) : React.createElement(GoalBlock, { inline: false }),
         React.createElement(BMIBlock, { compact: true })
+      );
+    }
+    
+    // TALL3 (1×3) — узкий высокий: число | тренд | прогресс | BMI вертикально
+    if (size === '1x3') {
+      const showProgress = showGoal && hasGoal && progressPct !== null;
+      return React.createElement('div', { className: 'widget-weight widget-weight--1x3' },
+        React.createElement(WeightValue, { scale: 'lg' }),
+        React.createElement(TrendBlock, { showText: false, vertical: true }),
+        showProgress ? React.createElement(ProgressBlock, { vertical: true }) : React.createElement(GoalBlock, { inline: false }),
+        React.createElement(BMIBlock, { compact: true }),
+        React.createElement(AnalyticsBlock, null)
+      );
+    }
+    
+    // TALL4 (1×4) — максимально высокий узкий: полная вертикальная компоновка
+    if (size === '1x4') {
+      const showProgress = showGoal && hasGoal && progressPct !== null;
+      return React.createElement('div', { className: 'widget-weight widget-weight--1x4' },
+        React.createElement(WeightValue, { scale: 'xl' }),
+        React.createElement(TrendBlock, { showText: true, vertical: true }),
+        showProgress ? React.createElement(ProgressBlock, { vertical: true }) : null,
+        React.createElement(GoalBlock, { inline: false }),
+        React.createElement(BMIBlock, { compact: true }),
+        React.createElement(AnalyticsBlock, null)
       );
     }
     
@@ -1516,18 +1852,70 @@
     const steps = data.steps || 0;
     const goal = data.goal || 10000;
     const pct = goal > 0 ? Math.round((steps / goal) * 100) : 0;
-    const km = widget.settings?.showKilometers ? (steps * 0.0007).toFixed(1) : null;
+    const km = (steps * 0.0007).toFixed(1);
+    const remaining = Math.max(0, goal - steps);
 
     const d = getWidgetDims(widget);
+    const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
-    const showKm = !!km && !d.isTiny;
-    const showGoalBar = widget.settings?.showGoal !== false && !d.isMicro;
-    const showPctInline = d.isShort || d.isMicro;
+    
+    const getStepsColor = () => {
+      if (pct >= 100) return '#22c55e';
+      if (pct >= 70) return '#3b82f6';
+      if (pct >= 40) return '#eab308';
+      return '#ef4444';
+    };
+    
+    // 1x1 Micro
+    if (d.isMicro) {
+      return React.createElement('div', { className: 'widget-steps widget-steps--micro' },
+        React.createElement('div', { className: 'widget-micro__label' }, '👟'),
+        React.createElement('div', { className: 'widget-steps__value' }, steps)
+      );
+    }
+    
+    // 2x2 — Оптимальный layout
+    if (size === '2x2') {
+      const stepsColor = getStepsColor();
+      return React.createElement('div', { className: 'widget-steps widget-steps--2x2' },
+        // Верх: иконка + шаги + процент
+        React.createElement('div', { className: 'widget-steps__header' },
+          React.createElement('div', { className: 'widget-steps__icon' }, '🚶'),
+          React.createElement('div', { className: 'widget-steps__value widget-steps__value--lg' },
+            steps.toLocaleString('ru-RU')
+          ),
+          React.createElement('div', { className: 'widget-steps__pct-badge', style: { background: `${stepsColor}20`, color: stepsColor } },
+            `${pct}%`
+          )
+        ),
+        // Прогресс-бар
+        React.createElement('div', { className: 'widget-steps__progress' },
+          React.createElement('div', {
+            className: 'widget-steps__bar',
+            style: { width: `${Math.min(100, pct)}%`, background: stepsColor }
+          })
+        ),
+        // Низ: километры + цель + осталось
+        React.createElement('div', { className: 'widget-steps__footer' },
+          React.createElement('div', { className: 'widget-steps__km' }, `${km} км`),
+          React.createElement('div', { className: 'widget-steps__meta' },
+            remaining > 0
+              ? `ещё ${remaining.toLocaleString('ru-RU')}`
+              : '🏆 Цель!'
+          )
+        )
+      );
+    }
+    
+    // Остальные размеры
+    const showKm = widget.settings?.showKilometers && !d.isTiny;
+    const showGoalBar = widget.settings?.showGoal !== false;
+    const showPctInline = d.isShort;
     
     return React.createElement('div', { className: `widget-steps widget-steps--${variant}` },
       React.createElement('div', { className: 'widget-steps__top' },
         React.createElement('div', { className: 'widget-steps__value' }, steps.toLocaleString('ru-RU')),
-        showPctInline ? React.createElement('div', { className: 'widget-steps__pct' }, `${Math.min(999, Math.max(0, pct))}%`) : null
+        showPctInline ? React.createElement('div', { className: 'widget-steps__pct' }, `${Math.min(999, pct)}%`) : null
       ),
       showKm ? React.createElement('div', { className: 'widget-steps__km' }, `${km} км`) : null,
       showGoalBar
@@ -1545,7 +1933,53 @@
     const { protein, fat, carbs, proteinTarget, fatTarget, carbsTarget } = data;
 
     const d = getWidgetDims(widget);
+    const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isTiny ? 'compact' : 'std';
+    
+    // Расчёт процентов
+    const pctP = proteinTarget > 0 ? Math.round((protein || 0) / proteinTarget * 100) : 0;
+    const pctF = fatTarget > 0 ? Math.round((fat || 0) / fatTarget * 100) : 0;
+    const pctC = carbsTarget > 0 ? Math.round((carbs || 0) / carbsTarget * 100) : 0;
+    const avgPct = Math.round((pctP + pctF + pctC) / 3);
+    
+    // 1x1 Micro
+    if (d.isMicro) {
+      return React.createElement('div', { className: 'widget-macros widget-macros--micro' },
+        React.createElement('div', { className: 'widget-micro__label' }, 'БЖУ'),
+        React.createElement('div', { className: 'widget-macros__micro-value' }, `${Math.min(999, avgPct)}%`)
+      );
+    }
+    
+    // 2x2 — Оптимальный layout с барами и числами
+    if (size === '2x2') {
+      const MacroRow = ({ label, emoji, value, target, pct, color }) => {
+        const isGood = pct >= 80 && pct <= 120;
+        return React.createElement('div', { className: 'widget-macros__row-2x2' },
+          React.createElement('div', { className: 'widget-macros__row-header' },
+            React.createElement('span', { className: 'widget-macros__emoji' }, emoji),
+            React.createElement('span', { className: 'widget-macros__grams' }, `${Math.round(value)}/${target}г`),
+            React.createElement('span', { 
+              className: 'widget-macros__pct-badge',
+              style: { background: isGood ? '#22c55e20' : `${color}20`, color: isGood ? '#22c55e' : color }
+            }, `${pct}%`)
+          ),
+          React.createElement('div', { className: 'widget-macros__bar-2x2' },
+            React.createElement('div', {
+              className: 'widget-macros__bar-fill',
+              style: { width: `${Math.min(100, pct)}%`, background: color }
+            })
+          )
+        );
+      };
+      
+      return React.createElement('div', { className: 'widget-macros widget-macros--2x2' },
+        React.createElement(MacroRow, { label: 'Белки', emoji: '🍖', value: protein || 0, target: proteinTarget || 100, pct: pctP, color: '#ef4444' }),
+        React.createElement(MacroRow, { label: 'Жиры', emoji: '🧈', value: fat || 0, target: fatTarget || 70, pct: pctF, color: '#eab308' }),
+        React.createElement(MacroRow, { label: 'Углеводы', emoji: '🍞', value: carbs || 0, target: carbsTarget || 250, pct: pctC, color: '#3b82f6' })
+      );
+    }
+    
+    // Остальные размеры
     const showGrams = widget.settings?.showGrams !== false && !d.isTiny;
     
     const MacroBar = ({ label, value, target, color, cls }) => {
@@ -1579,33 +2013,99 @@
     const status = data.status || 'unknown';
     const remaining = data.remaining;
     const phase = data.phase;
+    const totalWave = data.totalWave || 180; // Общая длина волны в минутах
+    const lastMealTime = data.lastMealTime; // "14:30"
 
     const d = getWidgetDims(widget);
+    const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
     
     const getStatusInfo = () => {
       switch (status) {
-        case 'active': return { emoji: '📈', label: 'Волна активна', color: '#f97316' };
-        case 'almost': return { emoji: '📉', label: 'Почти закончилась', color: '#eab308' };
-        case 'soon': return { emoji: '⏳', label: 'Скоро закончится', color: '#22c55e' };
-        case 'lipolysis': return { emoji: '🔥', label: 'Липолиз!', color: '#10b981' };
-        default: return { emoji: '❓', label: 'Нет данных', color: '#94a3b8' };
+        case 'active': return { emoji: '📈', label: 'Волна активна', color: '#f97316', short: 'Активна' };
+        case 'almost': return { emoji: '📉', label: 'Почти закончилась', color: '#eab308', short: 'Завершается' };
+        case 'soon': return { emoji: '⏳', label: 'Скоро закончится', color: '#22c55e', short: 'Скоро' };
+        case 'lipolysis': return { emoji: '🔥', label: 'Липолиз!', color: '#10b981', short: 'Липолиз!' };
+        default: return { emoji: '❓', label: 'Нет данных', color: '#94a3b8', short: '—' };
       }
     };
     
     const info = getStatusInfo();
+    const showTimer = Number.isFinite(remaining) && remaining > 0;
     
-    const showTimer = widget.settings?.showTimer !== false && Number.isFinite(remaining) && remaining > 0;
-    const showPhase = widget.settings?.showPhase !== false && !!phase && !d.isTiny;
-
+    // 1x1 Micro
     if (d.isMicro) {
-      return React.createElement('div', { className: `widget-insulin widget-insulin--${variant}` },
+      return React.createElement('div', { className: 'widget-insulin widget-insulin--micro' },
+        React.createElement('div', { className: 'widget-micro__label' }, '🩸'),
         React.createElement('div', { className: 'widget-insulin__micro' },
           React.createElement('span', { className: 'widget-insulin__micro-emoji' }, info.emoji),
           showTimer ? React.createElement('span', { className: 'widget-insulin__micro-time' }, `${remaining}м`) : null
         )
       );
     }
+    
+    // 2x2 — Оптимальный layout с кольцевым прогрессом
+    if (size === '2x2') {
+      const progressPct = showTimer && totalWave > 0 
+        ? Math.round(((totalWave - remaining) / totalWave) * 100) 
+        : (status === 'lipolysis' ? 100 : 0);
+      
+      // SVG кольцо прогресса
+      const ringSize = 44;
+      const strokeWidth = 5;
+      const radius = (ringSize - strokeWidth) / 2;
+      const circumference = 2 * Math.PI * radius;
+      const strokeDashoffset = circumference - (progressPct / 100) * circumference;
+      
+      return React.createElement('div', { className: 'widget-insulin widget-insulin--2x2' },
+        // Верх: статус + время последнего приёма
+        React.createElement('div', { className: 'widget-insulin__header' },
+          React.createElement('div', { className: 'widget-insulin__status-2x2', style: { color: info.color } },
+            info.emoji, ' ', info.short
+          ),
+          lastMealTime && React.createElement('div', { className: 'widget-insulin__meal-time' },
+            `🍽 ${lastMealTime}`
+          )
+        ),
+        // Центр: кольцо с таймером
+        React.createElement('div', { className: 'widget-insulin__ring-container' },
+          React.createElement('svg', {
+            className: 'widget-insulin__ring',
+            width: ringSize,
+            height: ringSize,
+            viewBox: `0 0 ${ringSize} ${ringSize}`
+          },
+            // Фон
+            React.createElement('circle', {
+              cx: ringSize / 2, cy: ringSize / 2, r: radius,
+              fill: 'none', stroke: '#e5e7eb', strokeWidth
+            }),
+            // Прогресс
+            React.createElement('circle', {
+              cx: ringSize / 2, cy: ringSize / 2, r: radius,
+              fill: 'none', stroke: info.color, strokeWidth,
+              strokeLinecap: 'round',
+              strokeDasharray: circumference,
+              strokeDashoffset,
+              transform: `rotate(-90 ${ringSize / 2} ${ringSize / 2})`
+            })
+          ),
+          // Таймер в центре
+          React.createElement('div', { className: 'widget-insulin__timer-center' },
+            showTimer 
+              ? `${remaining}м`
+              : (status === 'lipolysis' ? '🔥' : '—')
+          )
+        ),
+        // Низ: фаза волны
+        phase && React.createElement('div', { className: 'widget-insulin__phase-2x2' },
+          phase
+        )
+      );
+    }
+    
+    // Остальные размеры
+    const showPhase = widget.settings?.showPhase !== false && !!phase && !d.isTiny;
 
     return React.createElement('div', { className: `widget-insulin widget-insulin--${variant}` },
       React.createElement('div', { className: `widget-insulin__status widget-insulin__status--${status}` },
@@ -1618,9 +2118,11 @@
   
   function HeatmapWidgetContent({ widget, data }) {
     const days = data.days || [];
+    const currentStreak = data.currentStreak || 0;
     const configuredPeriod = widget.settings?.period || 'week';
 
     const d = getWidgetDims(widget);
+    const size = widget?.size || '2x2';
     const canShowMonth = configuredPeriod === 'month' && d.area >= 9 && d.rows >= 3;
     const period = canShowMonth ? 'month' : 'week';
 
@@ -1634,6 +2136,57 @@
     }
     
     const variant = d.isMicro ? 'micro' : d.isTiny ? 'compact' : 'std';
+    
+    // 1x1 Micro
+    if (d.isMicro) {
+      const today = renderDays[0];
+      return React.createElement('div', { className: 'widget-heatmap widget-heatmap--micro' },
+        React.createElement('div', { className: 'widget-micro__label' }, '📅'),
+        React.createElement('div', { className: `widget-heatmap__today widget-heatmap__today--${today?.status || 'empty'}` })
+      );
+    }
+    
+    // 2x2 — Оптимальный layout: заголовок + сетка 7 дней + стрик
+    if (size === '2x2') {
+      const weekDays = days.slice(-7);
+      const dayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+      // Определяем стартовый день недели
+      const today = new Date();
+      const startDayIndex = (today.getDay() + 6) % 7; // Понедельник = 0
+      
+      return React.createElement('div', { className: 'widget-heatmap widget-heatmap--2x2' },
+        // Заголовок: иконка + streak
+        React.createElement('div', { className: 'widget-heatmap__header' },
+          React.createElement('span', { className: 'widget-heatmap__title' }, '📅 Неделя'),
+          currentStreak > 0 && React.createElement('span', { className: 'widget-heatmap__streak' },
+            `🔥 ${currentStreak}`
+          )
+        ),
+        // Сетка с метками дней
+        React.createElement('div', { className: 'widget-heatmap__week-grid' },
+          weekDays.map((day, i) => {
+            const dayIndex = (startDayIndex - 6 + i + 7) % 7;
+            const isToday = i === weekDays.length - 1;
+            return React.createElement('div', {
+              key: i,
+              className: `widget-heatmap__day-col ${isToday ? 'widget-heatmap__day-col--today' : ''}`
+            },
+              React.createElement('div', { className: 'widget-heatmap__day-label' }, dayLabels[dayIndex]),
+              React.createElement('div', {
+                className: `widget-heatmap__cell widget-heatmap__cell--${day.status || 'empty'}`,
+                title: day.date
+              })
+            );
+          })
+        ),
+        // Легенда
+        React.createElement('div', { className: 'widget-heatmap__legend' },
+          React.createElement('span', { className: 'widget-heatmap__legend-item widget-heatmap__legend-item--green' }, '✔'),
+          React.createElement('span', { className: 'widget-heatmap__legend-item widget-heatmap__legend-item--yellow' }, '≈'),
+          React.createElement('span', { className: 'widget-heatmap__legend-item widget-heatmap__legend-item--red' }, '✖')
+        )
+      );
+    }
 
     return React.createElement('div', { className: `widget-heatmap widget-heatmap--${variant}` },
       React.createElement('div', { className: `widget-heatmap__grid widget-heatmap__grid--${period}` },
@@ -1651,14 +2204,79 @@
   function CycleWidgetContent({ widget, data }) {
     const day = data.day;
     const phase = data.phase;
+    const cycleLength = data.cycleLength || 28;
+    const recommendation = data.recommendation; // "Хорошее время для тренировок"
 
     const d = getWidgetDims(widget);
+    const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
     
     if (!day) {
       return React.createElement('div', { className: 'widget-cycle__empty' }, 'Нет данных');
     }
     
+    // 1x1 Micro
+    if (d.isMicro) {
+      return React.createElement('div', { className: 'widget-cycle widget-cycle--micro' },
+        React.createElement('div', { className: 'widget-micro__label' }, '🌸'),
+        React.createElement('div', { className: 'widget-cycle__day' }, day)
+      );
+    }
+    
+    // 2x2 — Оптимальный layout с кольцевым прогрессом
+    if (size === '2x2') {
+      const progressPct = Math.round((day / cycleLength) * 100);
+      const phaseColor = phase?.color || '#ec4899';
+      
+      // SVG кольцо
+      const ringSize = 48;
+      const strokeWidth = 5;
+      const radius = (ringSize - strokeWidth) / 2;
+      const circumference = 2 * Math.PI * radius;
+      const strokeDashoffset = circumference - (progressPct / 100) * circumference;
+      
+      return React.createElement('div', { className: 'widget-cycle widget-cycle--2x2' },
+        // Верх: фаза
+        phase && React.createElement('div', { className: 'widget-cycle__phase-header', style: { color: phaseColor } },
+          phase.icon, ' ', phase.name
+        ),
+        // Центр: кольцо с днём
+        React.createElement('div', { className: 'widget-cycle__ring-container' },
+          React.createElement('svg', {
+            className: 'widget-cycle__ring',
+            width: ringSize,
+            height: ringSize,
+            viewBox: `0 0 ${ringSize} ${ringSize}`
+          },
+            // Фон
+            React.createElement('circle', {
+              cx: ringSize / 2, cy: ringSize / 2, r: radius,
+              fill: 'none', stroke: '#fce7f3', strokeWidth
+            }),
+            // Прогресс
+            React.createElement('circle', {
+              cx: ringSize / 2, cy: ringSize / 2, r: radius,
+              fill: 'none', stroke: phaseColor, strokeWidth,
+              strokeLinecap: 'round',
+              strokeDasharray: circumference,
+              strokeDashoffset,
+              transform: `rotate(-90 ${ringSize / 2} ${ringSize / 2})`
+            })
+          ),
+          // День в центре
+          React.createElement('div', { className: 'widget-cycle__day-center' },
+            React.createElement('span', { className: 'widget-cycle__day-num' }, day),
+            React.createElement('span', { className: 'widget-cycle__day-label' }, 'день')
+          )
+        ),
+        // Низ: рекомендация
+        recommendation && React.createElement('div', { className: 'widget-cycle__tip' },
+          recommendation
+        )
+      );
+    }
+    
+    // Остальные размеры
     return React.createElement('div', { className: `widget-cycle widget-cycle--${variant}` },
       React.createElement('div', { className: 'widget-cycle__day' },
         `День ${day}`
@@ -1693,13 +2311,14 @@
       : availableTypes;
     
     const handleSelect = (type) => {
-      console.log('[CatalogModal] Item clicked:', type);
       onSelect?.(type);
       HEYS.Widgets.emit('catalog:select', { type: type.type });
       onClose?.();
     };
-    
-    console.log('[CatalogModal] Rendering with', filteredTypes.length, 'types');
+
+    if (widgetsDebugEnabled() && widgetsOnce(`catalog:render:${filteredTypes.length}`)) {
+      trackWidgetIssue('widgets_catalog_render', { count: filteredTypes.length });
+    }
     
     return React.createElement('div', { className: 'widgets-catalog-overlay', onClick: onClose },
       React.createElement('div', {
@@ -1904,7 +2523,6 @@
     useEffect(() => {
       if (HEYS.Widgets.data) {
         HEYS.Widgets.data._selectedDate = selectedDate;
-        console.log('[WidgetsTab] Updated selectedDate:', selectedDate);
       }
     }, [selectedDate]);
     
@@ -1990,27 +2608,24 @@
     
     // Handle catalog widget selection
     const handleCatalogSelect = useCallback((widgetType) => {
-      console.log('[Widgets UI] handleCatalogSelect called:', widgetType);
-      console.log('[Widgets UI] Registry:', HEYS.Widgets.registry);
-      console.log('[Widgets UI] State:', HEYS.Widgets.state);
-      
       if (!HEYS.Widgets.registry) {
-        console.error('[Widgets UI] Registry not initialized!');
+        trackWidgetIssue('widgets_registry_not_initialized', { source: 'handleCatalogSelect' });
         return;
       }
       
       const widget = HEYS.Widgets.registry.createWidget(widgetType.type);
-      console.log('[Widgets UI] Created widget:', widget);
       
       if (widget) {
         if (!HEYS.Widgets.state) {
-          console.error('[Widgets UI] State not initialized!');
+          trackWidgetIssue('widgets_state_not_initialized', { source: 'handleCatalogSelect' });
           return;
         }
         const added = HEYS.Widgets.state.addWidget(widget);
-        console.log('[Widgets UI] Added widget:', added);
+        if (!added) {
+          trackWidgetIssue('widgets_addWidget_failed', { type: widgetType?.type });
+        }
       } else {
-        console.error('[Widgets UI] createWidget returned null for type:', widgetType.type);
+        trackWidgetIssue('widgets_createWidget_null', { type: widgetType?.type });
       }
     }, []);
     
@@ -2179,6 +2794,8 @@
   HEYS.Widgets.CatalogModal = CatalogModal;
   HEYS.Widgets.SettingsModal = SettingsModal;
   
-  console.log('[HEYS] Widgets UI v1.1.0 loaded');
+  if (widgetsDebugEnabled() && widgetsOnce('widgets_ui_loaded')) {
+    trackWidgetIssue('widgets_ui_loaded', { version: '1.1.0' });
+  }
   
 })(typeof window !== 'undefined' ? window : global);

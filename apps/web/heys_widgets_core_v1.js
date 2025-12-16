@@ -1314,6 +1314,20 @@
       // Визуал — в CSS (.widget-placeholder). Здесь задаём только grid-геометрию.
       placeholder.style.transition = 'all 0.15s ease-out';
       
+      // Сохраняем размер виджета для placeholder (важно сделать ДО updatePlaceholderPosition)
+      this._placeholderCols = widget.cols || 1;
+      this._placeholderRows = widget.rows || 1;
+      
+      console.log('[DND DEBUG] _createPlaceholder:', {
+        widgetId: widget.id,
+        widgetType: widget.type,
+        widgetSize: widget.size,
+        widgetCols: widget.cols,
+        widgetRows: widget.rows,
+        placeholderCols: this._placeholderCols,
+        placeholderRows: this._placeholderRows
+      });
+      
       // Привязываем placeholder и ставим в нужную grid-позицию
       this._placeholderElement = placeholder;
       this._updatePlaceholderPosition(widget.position);
@@ -1331,8 +1345,9 @@
       // Важно: в некоторых браузерах (особенно iOS Safari) раздельная установка
       // gridColumnStart после шортхенда может сбрасывать span. Поэтому задаём
       // полные значения (start + span) каждый раз.
-      const cols = this._draggedWidget?.cols || 1;
-      const rows = this._draggedWidget?.rows || 1;
+      // Используем сохранённые размеры или fallback на _draggedWidget
+      const cols = this._placeholderCols || this._draggedWidget?.cols || 1;
+      const rows = this._placeholderRows || this._draggedWidget?.rows || 1;
       const c = (position?.col || 0) + 1;
       const r = (position?.row || 0) + 1;
 
@@ -1586,6 +1601,9 @@
       this._originalElement = null;
       this._longPressTriggered = false;
       this._dropIntent = null;
+      // Очищаем сохранённые размеры placeholder
+      this._placeholderCols = null;
+      this._placeholderRows = null;
     }
   };
   

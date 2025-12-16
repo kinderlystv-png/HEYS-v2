@@ -406,6 +406,119 @@
       const [draft, setDraft] = React.useState({ name:'', simple100:0, complex100:0, protein100:0, badFat100:0, goodFat100:0, trans100:0, fiber100:0, gi:0, harmScore:0 });
       const derived = computeDerived(draft);
       
+      // === PHASE 2: Shared Products UI ===
+      // Подвкладки: 'personal' (👤 Продукты клиента) | 'shared' (🌐 Общая база)
+      const [activeSubtab, setActiveSubtab] = React.useState('personal');
+      // Источник поиска: 'personal' (👤 Мои) | 'shared' (🌐 Общие) | 'both' (👤+🌐 Оба)
+      const [searchSource, setSearchSource] = React.useState('both');
+      // Результаты поиска из shared_products
+      const [sharedResults, setSharedResults] = React.useState([]);
+      const [sharedLoading, setSharedLoading] = React.useState(false);
+      const [sharedQuery, setSharedQuery] = React.useState('');
+      // ВСЕ продукты общей базы (для таблицы)
+      const [allSharedProducts, setAllSharedProducts] = React.useState([]);
+      const [allSharedLoading, setAllSharedLoading] = React.useState(false);
+      // Pending заявки (для куратора)
+      const [pendingProducts, setPendingProducts] = React.useState([]);
+      const [pendingLoading, setPendingLoading] = React.useState(false);
+      // Checkbox: опубликовать новый продукт в shared (по умолчанию ON)
+      const [publishToShared, setPublishToShared] = React.useState(true);
+      // Модалка мягкого merge при конфликте fingerprint
+      const [mergeModal, setMergeModal] = React.useState({ show: false, existing: null, draft: null });
+      
+      // Проверяем curator-режим (есть Supabase session)
+      // Используем state для реактивности при изменении auth
+      const [isCurator, setIsCurator] = React.useState(false);
+      React.useEffect(() => {
+        const checkCurator = () => {
+          const cloudUser = window.HEYS?.cloud?.getUser?.();
+          const rpcOnly = window.HEYS?.cloud?._rpcOnlyMode === true;
+          const result = cloudUser != null && !rpcOnly;
+          setIsCurator(result);
+        };
+        checkCurator();
+        // Подписываемся на изменения auth
+        const interval = setInterval(checkCurator, 1000);
+        return () => clearInterval(interval);
+      }, []);
+      
+      // Debounce для поиска в shared (300ms)
+      const searchSharedDebounced = React.useMemo(() => {
+        let timeoutId = null;
+        return (q) => {
+          if (timeoutId) clearTimeout(timeoutId);
+          timeoutId = setTimeout(async () => {
+            if (!q || q.length < 2) {
+              setSharedResults([]);
+              return;
+            }
+            setSharedLoading(true);
+            try {
+              const result = await window.HEYS?.cloud?.searchSharedProducts?.(q, { limit: 50 });
+              if (result?.data) {
+                setSharedResults(result.data);
+              }
+            } catch (err) {
+              console.error('[SHARED SEARCH] Error:', err);
+            } finally {
+              setSharedLoading(false);
+            }
+          }, 300);
+        };
+      }, []);
+      
+      // Загрузка pending заявок для куратора
+      const loadPendingProducts = React.useCallback(async () => {
+        if (!isCurator) return;
+        setPendingLoading(true);
+        try {
+          const result = await window.HEYS?.cloud?.getPendingProducts?.();
+          if (result?.data) {
+            setPendingProducts(result.data);
+          }
+        } catch (err) {
+          console.error('[PENDING] Load error:', err);
+        } finally {
+          setPendingLoading(false);
+        }
+      }, [isCurator]);
+      
+      // Загрузка ВСЕХ продуктов из общей базы
+      const loadAllSharedProducts = React.useCallback(async () => {
+        setAllSharedLoading(true);
+        try {
+          const result = await window.HEYS?.cloud?.getAllSharedProducts?.({ limit: 500 });
+          if (result?.data) {
+            setAllSharedProducts(result.data);
+          }
+        } catch (err) {
+          console.error('[SHARED ALL] Load error:', err);
+        } finally {
+          setAllSharedLoading(false);
+        }
+      }, []);
+      
+      // Загружаем pending при переключении на вкладку "Общая база"
+      React.useEffect(() => {
+        if (activeSubtab === 'shared' && isCurator) {
+          loadPendingProducts();
+        }
+      }, [activeSubtab, isCurator, loadPendingProducts]);
+      
+      // Загружаем ВСЕ продукты общей базы при переключении на вкладку "Общая база"
+      React.useEffect(() => {
+        if (activeSubtab === 'shared') {
+          loadAllSharedProducts();
+        }
+      }, [activeSubtab, loadAllSharedProducts]);
+      
+      // Поиск в shared при изменении sharedQuery
+      React.useEffect(() => {
+        if (activeSubtab === 'shared' || searchSource !== 'personal') {
+          searchSharedDebounced(sharedQuery || query);
+        }
+      }, [sharedQuery, query, activeSubtab, searchSource, searchSharedDebounced]);
+      
       // Оптимизированный поиск с индексацией
       const searchIndex = React.useMemo(() => {
         const index = new Map();
@@ -655,21 +768,69 @@
       }, [window.HEYS && window.HEYS.currentClientId]);
 
     function resetDraft(){ setDraft({name:'', simple100:0, complex100:0, protein100:0, badFat100:0, goodFat100:0, trans100:0, fiber100:0, gi:0, harmScore:0}); }
-    function addProduct(){ 
+    async function addProduct(){ 
       const name = (draft.name || '').trim();
       if (!name) {
         alert('Введите название продукта');
         return;
       }
-      // Проверка уникальности названия
+      // Проверка уникальности названия в личной базе
       const existingProduct = products.find(p => p.name && p.name.trim().toLowerCase() === name.toLowerCase());
       if (existingProduct) {
         alert(`Продукт "${name}" уже существует в базе!\\nИспользуйте другое название или отредактируйте существующий.`);
         return;
       }
       const base = { id: uuid(), name: name, simple100: toNum(draft.simple100), complex100: toNum(draft.complex100), protein100: toNum(draft.protein100), badFat100: toNum(draft.badFat100), goodFat100: toNum(draft.goodFat100), trans100: toNum(draft.trans100), fiber100: toNum(draft.fiber100), gi: toNum(draft.gi), harmScore: toNum(draft.harmScore), createdAt: Date.now() }; 
-      const d = computeDerived(base); 
-      setProducts([...products, { ...base, ...d }]); 
+      const d = computeDerived(base);
+      const newProduct = { ...base, ...d };
+      
+      // === Публикация в shared ===
+      if (publishToShared && window.HEYS?.cloud) {
+        try {
+          // Вычисляем fingerprint для проверки дубликатов
+          const fingerprint = window.HEYS?.models?.computeProductFingerprint?.(newProduct);
+          if (fingerprint) {
+            // Проверяем: есть ли в shared продукт с таким fingerprint
+            const { data: existing } = await window.HEYS.cloud.client
+              .from('shared_products')
+              .select('id, name, simple100, complex100, protein100, badfat100, goodfat100, trans100, fiber100, gi, harm')
+              .eq('fingerprint', fingerprint)
+              .maybeSingle();
+            
+            if (existing) {
+              // Показываем модалку мягкого merge
+              setMergeModal({ show: true, existing, draft: newProduct });
+              return; // Не закрываем модалку создания — ждём решения
+            }
+          }
+          
+          // Публикуем в shared (async, не блокируем)
+          if (isCurator) {
+            // Куратор — сразу в shared_products
+            window.HEYS.cloud.publishToShared?.(newProduct).catch(err => {
+              console.error('[SHARED] Failed to publish:', err);
+            });
+          } else {
+            // PIN-клиент — в pending очередь (через RPC)
+            const clientId = window.HEYS?.currentClientId;
+            if (clientId && fingerprint) {
+              const nameNorm = window.HEYS?.models?.normalizeProductName?.(name) || name.toLowerCase().trim();
+              window.HEYS.cloud.client.rpc('create_pending_product', {
+                p_client_id: clientId,
+                p_product_data: newProduct,
+                p_name_norm: nameNorm,
+                p_fingerprint: fingerprint
+              }).catch(err => {
+                console.error('[SHARED] Failed to create pending:', err);
+              });
+            }
+          }
+        } catch (err) {
+          console.error('[SHARED] Error during publish check:', err);
+        }
+      }
+      
+      setProducts([...products, newProduct]); 
       if (window.HEYS && window.HEYS.analytics) {
         window.HEYS.analytics.trackDataOperation('products-loaded', 1);
       }
@@ -1040,7 +1201,289 @@
       }
     }
 
+    // === PHASE 2: Helper функции для UI ===
+    
+    // Одобрить pending заявку
+    async function approvePending(pending) {
+      try {
+        // Передаём и pendingId и productData
+        const result = await window.HEYS?.cloud?.approvePendingProduct?.(pending.id, pending.product_data);
+        if (result?.error) {
+          alert('Ошибка: ' + result.error.message);
+          return;
+        }
+        // Обновляем список
+        setPendingProducts(prev => prev.filter(p => p.id !== pending.id));
+        if (result.existing) {
+          alert(`ℹ️ Продукт "${pending.product_data?.name || pending.name_norm}" уже существует в общей базе`);
+        } else {
+          alert(`✅ Продукт "${pending.product_data?.name || pending.name_norm}" добавлен в общую базу!`);
+        }
+      } catch (err) {
+        console.error('[APPROVE] Error:', err);
+        alert('Ошибка при подтверждении: ' + err.message);
+      }
+    }
+    
+    // Отклонить pending заявку
+    async function rejectPending(pending, reason = '') {
+      try {
+        const result = await window.HEYS?.cloud?.rejectPendingProduct?.(pending.id, reason);
+        if (result?.error) {
+          alert('Ошибка: ' + result.error.message);
+          return;
+        }
+        // Обновляем список
+        setPendingProducts(prev => prev.filter(p => p.id !== pending.id));
+        alert(`❌ Заявка "${pending.product_data?.name || pending.name_norm}" отклонена`);
+      } catch (err) {
+        console.error('[REJECT] Error:', err);
+        alert('Ошибка при отклонении: ' + err.message);
+      }
+    }
+    
+    // Клонировать shared продукт в личную базу
+    function cloneSharedProduct(sharedProduct) {
+      // Проверяем, нет ли уже клона этого продукта
+      const existingClone = products.find(p => p.shared_origin_id === sharedProduct.id);
+      if (existingClone) {
+        alert(`⚠️ Продукт "${sharedProduct.name}" уже есть в вашей базе!`);
+        return existingClone;
+      }
+      
+      // Создаём клон
+      const clone = {
+        id: uuid(),
+        name: sharedProduct.name,
+        simple100: toNum(sharedProduct.simple100),
+        complex100: toNum(sharedProduct.complex100),
+        protein100: toNum(sharedProduct.protein100),
+        badFat100: toNum(sharedProduct.badfat100), // lowercase from Supabase
+        goodFat100: toNum(sharedProduct.goodfat100),
+        trans100: toNum(sharedProduct.trans100),
+        fiber100: toNum(sharedProduct.fiber100),
+        gi: toNum(sharedProduct.gi),
+        harmScore: toNum(sharedProduct.harm),
+        category: sharedProduct.category || '',
+        portions: sharedProduct.portions || null,
+        shared_origin_id: sharedProduct.id, // Связь с shared продуктом
+        createdAt: Date.now()
+      };
+      
+      // Добавляем derived поля
+      const withDerived = { ...clone, ...computeDerived(clone) };
+      
+      // Добавляем в локальную базу
+      const newProducts = [...products, withDerived];
+      setProducts(newProducts);
+      
+      alert(`✅ Продукт "${sharedProduct.name}" добавлен в вашу базу!`);
+      return withDerived;
+    }
+    
+    // Скрыть продукт (blocklist)
+    async function hideSharedProduct(productId) {
+      try {
+        const result = await window.HEYS?.cloud?.blockProduct?.(productId);
+        if (result?.error) {
+          alert('Ошибка: ' + result.error.message);
+          return;
+        }
+        // Убираем из результатов поиска
+        setSharedResults(prev => prev.filter(p => p.id !== productId));
+        alert('🚫 Продукт скрыт для вас и ваших клиентов');
+      } catch (err) {
+        console.error('[BLOCKLIST] Error:', err);
+        alert('Ошибка: ' + err.message);
+      }
+    }
+    
+    // 🗑️ Удаление продукта из общей базы (только куратор или автор)
+    async function deleteSharedProduct(productId, productName) {
+      const confirmed = confirm(`🗑️ Удалить "${productName}" из общей базы?\n\nПродукт больше не будет находиться другими пользователями.\nУ тех, кто уже добавил его в личную базу — он останется.`);
+      if (!confirmed) return;
+      
+      try {
+        const result = await window.HEYS?.cloud?.deleteSharedProduct?.(productId);
+        if (!result?.success) {
+          alert('Ошибка: ' + (result?.error || 'Неизвестная ошибка'));
+          return;
+        }
+        
+        // Убираем из списка
+        setAllSharedProducts(prev => prev.filter(p => p.id !== productId));
+        setSharedResults(prev => prev.filter(p => p.id !== productId));
+        
+        alert(`✅ Продукт "${productName}" удалён из общей базы`);
+      } catch (err) {
+        console.error('[DELETE SHARED] Error:', err);
+        alert('Ошибка: ' + err.message);
+      }
+    }
+    
+    // Клонирование shared продукта в личную базу (anti-orphan)
+    function cloneSharedToPersonal(sharedProduct) {
+      // Проверяем: есть ли уже клон этого shared продукта
+      const existingClone = products.find(p => p.shared_origin_id === sharedProduct.id);
+      if (existingClone) {
+        return existingClone; // Возвращаем существующий клон
+      }
+      
+      // Создаём новый клон с shared_origin_id
+      const clone = {
+        id: uuid(),
+        name: sharedProduct.name,
+        simple100: sharedProduct.simple100 || 0,
+        complex100: sharedProduct.complex100 || 0,
+        protein100: sharedProduct.protein100 || 0,
+        badFat100: sharedProduct.badfat100 || sharedProduct.badFat100 || 0,
+        goodFat100: sharedProduct.goodfat100 || sharedProduct.goodFat100 || 0,
+        trans100: sharedProduct.trans100 || 0,
+        fiber100: sharedProduct.fiber100 || 0,
+        gi: sharedProduct.gi || 0,
+        harmScore: sharedProduct.harm || sharedProduct.harmScore || 0,
+        category: sharedProduct.category || '',
+        portions: sharedProduct.portions || null,
+        shared_origin_id: sharedProduct.id, // Связь с shared
+        createdAt: Date.now()
+      };
+      const d = computeDerived(clone);
+      const newProduct = { ...clone, ...d };
+      
+      // Добавляем в products
+      setProducts(prev => [...prev, newProduct]);
+      
+      return newProduct;
+    }
+    
+    // Обработка выбора продукта (с клонированием shared)
+    function handleProductSelect(product) {
+      if (product._source === 'shared') {
+        // Клонируем shared в личную базу
+        return cloneSharedToPersonal(product);
+      }
+      return product;
+    }
+    
+    // Обработка мягкого merge — использовать существующий
+    function handleMergeUseExisting() {
+      const { existing } = mergeModal;
+      if (!existing) return;
+      
+      // Клонируем existing из shared в личную базу
+      cloneSharedToPersonal(existing);
+      
+      // Закрываем обе модалки
+      setMergeModal({ show: false, existing: null, draft: null });
+      resetDraft();
+      setShowModal(false);
+    }
+    
+    // Обработка мягкого merge — создать свой (НЕ публиковать в shared)
+    function handleMergeCreateOwn() {
+      const { draft: draftProduct } = mergeModal;
+      if (!draftProduct) return;
+      
+      // Добавляем только в личную базу (без публикации в shared)
+      setProducts(prev => [...prev, draftProduct]);
+      
+      // Закрываем модалки
+      setMergeModal({ show: false, existing: null, draft: null });
+      resetDraft();
+      setShowModal(false);
+    }
+
+    // Комбинированный поиск (личные + shared)
+    const combinedResults = React.useMemo(() => {
+      if (searchSource === 'personal') {
+        return filtered.map(p => ({ ...p, _source: 'personal' }));
+      }
+      if (searchSource === 'shared') {
+        return sharedResults.map(p => ({ ...p, _source: 'shared' }));
+      }
+      // both — объединяем
+      const personal = filtered.map(p => ({ ...p, _source: 'personal' }));
+      const shared = sharedResults.map(p => ({ ...p, _source: 'shared' }));
+      // Дедупликация: если личный продукт склонирован из shared — показываем только личный
+      const sharedIds = new Set(personal.filter(p => p.shared_origin_id).map(p => p.shared_origin_id));
+      const uniqueShared = shared.filter(p => !sharedIds.has(p.id));
+      return [...personal, ...uniqueShared];
+    }, [filtered, sharedResults, searchSource]);
+
     return React.createElement('div', {className:'page page-ration'},
+      // === ПОДВКЛАДКИ (Subtabs) ===
+      React.createElement('div', {className:'card', style:{marginBottom:'8px', padding:'8px 12px'}},
+        React.createElement('div', {
+          className:'ration-subtabs',
+          style:{display:'flex', gap:'4px', background:'var(--bg-secondary, #f3f4f6)', borderRadius:'8px', padding:'4px'}
+        },
+          // 👤 Личные продукты (для клиента: "Мои", для куратора: "Клиента")
+          React.createElement('button', {
+            className: activeSubtab === 'personal' ? 'btn acc' : 'btn',
+            onClick: () => setActiveSubtab('personal'),
+            style:{flex:1, borderRadius:'6px'}
+          }, isCurator ? '👤 Личные' : '👤 Мои продукты'),
+          // 🌐 Общая база (только для куратора)
+          isCurator && React.createElement('button', {
+            className: activeSubtab === 'shared' ? 'btn acc' : 'btn',
+            onClick: () => setActiveSubtab('shared'),
+            style:{flex:1, borderRadius:'6px', position:'relative'}
+          },
+            '🌐 Общая база',
+            // Бейдж pending
+            pendingProducts.length > 0 && React.createElement('span', {
+              style:{
+                position:'absolute',
+                top:'-4px',
+                right:'-4px',
+                background:'#ef4444',
+                color:'#fff',
+                borderRadius:'50%',
+                minWidth:'18px',
+                height:'18px',
+                fontSize:'11px',
+                fontWeight:'600',
+                display:'flex',
+                alignItems:'center',
+                justifyContent:'center'
+              }
+            }, pendingProducts.length)
+          )
+        )
+      ),
+      
+      // === КОНТЕНТ ПОДВКЛАДКИ ===
+      activeSubtab === 'personal' ? (
+        // ============================================
+        // 👤 ПОДВКЛАДКА: Продукты клиента
+        // ============================================
+        React.createElement(React.Fragment, null,
+          // Переключатель источника поиска
+          React.createElement('div', {className:'card', style:{marginBottom:'8px', padding:'8px 12px'}},
+            React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap'}},
+              React.createElement('span', {style:{fontSize:'12px', color:'var(--text-muted, #6b7280)'}}, 'Источник:'),
+              React.createElement('div', {
+                style:{display:'flex', gap:'4px', background:'var(--bg-secondary, #f3f4f6)', borderRadius:'6px', padding:'2px'}
+              },
+                React.createElement('button', {
+                  className: searchSource === 'personal' ? 'btn acc' : 'btn',
+                  onClick: () => setSearchSource('personal'),
+                  style:{padding:'4px 8px', fontSize:'12px', borderRadius:'4px'}
+                }, '👤 Мои'),
+                React.createElement('button', {
+                  className: searchSource === 'shared' ? 'btn acc' : 'btn',
+                  onClick: () => setSearchSource('shared'),
+                  style:{padding:'4px 8px', fontSize:'12px', borderRadius:'4px'}
+                }, '🌐 Общие'),
+                React.createElement('button', {
+                  className: searchSource === 'both' ? 'btn acc' : 'btn',
+                  onClick: () => setSearchSource('both'),
+                  style:{padding:'4px 8px', fontSize:'12px', borderRadius:'4px'}
+                }, '👤+🌐 Оба')
+              ),
+              sharedLoading && React.createElement('span', {style:{fontSize:'12px', color:'var(--text-muted)'}}, '⏳ Поиск...')
+            )
+          ),
       // Кнопки экспорта и импорта бэкапа
       React.createElement('div', {className:'card', style:{marginBottom:'8px', padding:'12px 16px'}},
         // Полный бэкап
@@ -1175,6 +1618,202 @@
           )
         ),
         React.createElement('div', {className:'muted', style:{marginTop:'8px'}}, 'Серые поля — авто: У=простые+сложные; Ж=вредные+полезные+супервредные; Ккал=4×(Б+У)+8×Ж.')
+      )
+        ) // Закрываем React.Fragment для личной подвкладки
+      ) : (
+        // ============================================
+        // 🌐 ПОДВКЛАДКА: Общая база (Curator-only)
+        // ============================================
+        React.createElement(React.Fragment, null,
+          // Блок Pending-заявок
+          React.createElement('div', {className:'card', style:{marginBottom:'8px'}},
+            React.createElement('div', {
+              className:'section-title',
+              style:{display:'flex', alignItems:'center', gap:'8px'}
+            },
+              '🆕 Ожидают подтверждения',
+              pendingProducts.length > 0 && React.createElement('span', {
+                style:{
+                  background:'#ef4444',
+                  color:'#fff',
+                  borderRadius:'12px',
+                  padding:'2px 8px',
+                  fontSize:'12px',
+                  fontWeight:'600'
+                }
+              }, pendingProducts.length)
+            ),
+            pendingLoading ? (
+              React.createElement('div', {style:{padding:'16px', textAlign:'center', color:'var(--text-muted)'}}, '⏳ Загрузка заявок...')
+            ) : pendingProducts.length === 0 ? (
+              React.createElement('div', {style:{padding:'16px', textAlign:'center', color:'var(--text-muted)'}}, '✅ Нет заявок на модерацию')
+            ) : (
+              React.createElement('div', {style:{display:'flex', flexDirection:'column', gap:'8px'}},
+                pendingProducts.map(pending => {
+                  const p = pending.product_data || {};
+                  return React.createElement('div', {
+                    key: pending.id,
+                    className:'card',
+                    style:{padding:'12px', background:'var(--bg-secondary, #f9fafb)', border:'1px solid var(--border-color, #e5e5e5)'}
+                  },
+                    React.createElement('div', {style:{display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'12px'}},
+                      React.createElement('div', {style:{flex:1}},
+                        React.createElement('div', {style:{fontWeight:'500', marginBottom:'4px'}}, p.name || pending.name_norm),
+                        React.createElement('div', {style:{fontSize:'12px', color:'var(--text-muted)', display:'flex', gap:'8px', flexWrap:'wrap'}},
+                          React.createElement('span', null, `${Math.round(p.kcal100 || ((p.protein100||0)*4 + (p.simple100||0)*4 + (p.complex100||0)*4 + ((p.badFat100||0)+(p.goodFat100||0)+(p.trans100||0))*9))} ккал`),
+                          React.createElement('span', null, `Б:${p.protein100||0}`),
+                          React.createElement('span', null, `У:${(p.simple100||0)+(p.complex100||0)}`),
+                          React.createElement('span', null, `Ж:${(p.badFat100||0)+(p.goodFat100||0)+(p.trans100||0)}`),
+                          p.gi && React.createElement('span', null, `ГИ:${p.gi}`)
+                        ),
+                        React.createElement('div', {style:{fontSize:'11px', color:'var(--text-muted)', marginTop:'4px'}},
+                          `📅 ${new Date(pending.created_at).toLocaleDateString('ru-RU')}`
+                        )
+                      ),
+                      React.createElement('div', {style:{display:'flex', gap:'4px'}},
+                        React.createElement('button', {
+                          className:'btn acc',
+                          onClick:() => approvePending(pending),
+                          style:{padding:'6px 10px', fontSize:'12px'}
+                        }, '✅'),
+                        React.createElement('button', {
+                          className:'btn',
+                          onClick:() => {
+                            const reason = prompt('Причина отклонения (опционально):');
+                            if (reason !== null) rejectPending(pending, reason);
+                          },
+                          style:{padding:'6px 10px', fontSize:'12px'}
+                        }, '❌')
+                      )
+                    )
+                  );
+                })
+              )
+            )
+          ),
+          
+          // Таблица ВСЕХ продуктов общей базы (как в личной вкладке)
+          React.createElement('div', {className:'card tone-blue'},
+            React.createElement('div', {className:'topbar'},
+              React.createElement('div', {className:'row'},
+                React.createElement('input', {
+                  placeholder:'Поиск по названию…',
+                  value:sharedQuery,
+                  onChange:e=>setSharedQuery(e.target.value),
+                  style:{minWidth:'260px'}
+                }),
+                React.createElement('span', {className:'muted'},
+                  allSharedLoading ? '⏳ Загрузка...' : `Найдено: ${
+                    sharedQuery.length >= 2 
+                      ? allSharedProducts.filter(p => (p.name || '').toLowerCase().includes(sharedQuery.toLowerCase())).length 
+                      : allSharedProducts.length
+                  } из ${allSharedProducts.length}`
+                )
+              ),
+              React.createElement('button', {
+                className:'btn acc',
+                onClick:loadAllSharedProducts,
+                style:{marginLeft:'8px'}
+              }, '🔄 Обновить')
+            ),
+            allSharedLoading ? (
+              React.createElement('div', {style:{padding:'32px', textAlign:'center', color:'var(--text-muted)'}},
+                '⏳ Загрузка продуктов из общей базы...'
+              )
+            ) : (
+              React.createElement('div', {style:{overflowX:'auto'}},
+                React.createElement('table', {className: 'products-table'},
+                  React.createElement('thead', null,
+                    React.createElement('tr', null,
+                      React.createElement('th', null, 'Название'),
+                      React.createElement('th', {title: 'Калории на 100г'}, 'Ккал'),
+                      React.createElement('th', {title: 'Углеводы'}, 'У'),
+                      React.createElement('th', {title: 'Простые углеводы'}, 'Пр'),
+                      React.createElement('th', {title: 'Сложные углеводы'}, 'Сл'),
+                      React.createElement('th', {title: 'Белки'}, 'Б'),
+                      React.createElement('th', {title: 'Жиры'}, 'Ж'),
+                      React.createElement('th', {title: 'Вредные жиры'}, 'Вр'),
+                      React.createElement('th', {title: 'Полезные жиры'}, 'Пол'),
+                      React.createElement('th', {title: 'Транс-жиры'}, 'Тр'),
+                      React.createElement('th', {title: 'Клетчатка'}, 'Кл'),
+                      React.createElement('th', {title: 'Гликемический индекс'}, 'ГИ'),
+                      React.createElement('th', {title: 'Индекс вредности'}, 'Вред'),
+                      React.createElement('th', null, '')
+                    )
+                  ),
+                  React.createElement('tbody', null,
+                    (() => {
+                      // Фильтрация по поиску
+                      const filteredShared = sharedQuery.length >= 2
+                        ? allSharedProducts.filter(p => (p.name || '').toLowerCase().includes(sharedQuery.toLowerCase()))
+                        : allSharedProducts;
+                      // Ограничение для производительности
+                      const SHARED_DISPLAY_LIMIT = 100;
+                      return filteredShared.slice(0, SHARED_DISPLAY_LIMIT).map(p => {
+                        // Supabase возвращает snake_case поля
+                        const kcal = Math.round((p.protein100||0)*4 + (p.simple100||0)*4 + (p.complex100||0)*4 + ((p.badfat100||0)+(p.goodfat100||0)+(p.trans100||0))*9);
+                        const carbs = (p.simple100||0) + (p.complex100||0);
+                        const fat = (p.badfat100||0) + (p.goodfat100||0) + (p.trans100||0);
+                        return React.createElement('tr', {key:p.id},
+                          React.createElement('td', null,
+                            React.createElement('div', {style:{display:'flex', alignItems:'center', gap:'4px'}},
+                              p.name,
+                              p.is_mine && React.createElement('span', {
+                                style:{fontSize:'10px', background:'#22c55e', color:'#fff', padding:'1px 4px', borderRadius:'4px', whiteSpace:'nowrap'}
+                              }, 'Вы')
+                            )
+                          ),
+                          React.createElement('td', null, React.createElement('input', {className:'readOnly', value:kcal, readOnly:true})),
+                          React.createElement('td', null, React.createElement('input', {className:'readOnly', value:carbs, readOnly:true})),
+                          React.createElement('td', null, React.createElement('input', {className:'readOnly', value:p.simple100||0, readOnly:true})),
+                          React.createElement('td', null, React.createElement('input', {className:'readOnly', value:p.complex100||0, readOnly:true})),
+                          React.createElement('td', null, React.createElement('input', {className:'readOnly', value:p.protein100||0, readOnly:true})),
+                          React.createElement('td', null, React.createElement('input', {className:'readOnly', value:fat, readOnly:true})),
+                          React.createElement('td', null, React.createElement('input', {className:'readOnly', value:p.badfat100||0, readOnly:true})),
+                          React.createElement('td', null, React.createElement('input', {className:'readOnly', value:p.goodfat100||0, readOnly:true})),
+                          React.createElement('td', null, React.createElement('input', {className:'readOnly', value:p.trans100||0, readOnly:true})),
+                          React.createElement('td', null, React.createElement('input', {className:'readOnly', value:p.fiber100||0, readOnly:true})),
+                          React.createElement('td', null, React.createElement('input', {className:'readOnly', value:p.gi||0, readOnly:true})),
+                          React.createElement('td', null, React.createElement('input', {className:'readOnly', value:p.harmscore||0, readOnly:true})),
+                          React.createElement('td', null, 
+                            React.createElement('div', {style:{display:'flex', gap:'4px'}},
+                              // ➕ Добавить в мою базу (для всех)
+                              React.createElement('button', {
+                                className:'btn acc',
+                                onClick:() => cloneSharedProduct(p),
+                                title:'Добавить в мою базу',
+                                style:{padding:'4px 8px', fontSize:'11px'}
+                              }, '➕'),
+                              // 🚫 Скрыть для меня (для НЕ своих)
+                              !p.is_mine && React.createElement('button', {
+                                className:'btn',
+                                onClick:() => hideSharedProduct(p.id),
+                                title:'Скрыть для меня',
+                                style:{padding:'4px 8px', fontSize:'11px'}
+                              }, '🚫'),
+                              // 🗑️ Удалить из общей базы (куратор или автор)
+                              (isCurator || p.is_mine) && React.createElement('button', {
+                                className:'btn',
+                                onClick:() => deleteSharedProduct(p.id, p.name),
+                                title:'Удалить из общей базы',
+                                style:{padding:'4px 8px', fontSize:'11px', background:'#fee2e2', color:'#dc2626'}
+                              }, '🗑️')
+                            )
+                          )
+                        );
+                      });
+                    })()
+                  )
+                )
+              )
+            ),
+            // Показать сколько ещё есть
+            !allSharedLoading && allSharedProducts.length > 100 && React.createElement('div', {
+              className:'muted',
+              style:{marginTop:'8px', textAlign:'center', fontSize:'12px'}
+            }, `Показано 100 из ${allSharedProducts.length}. Используйте поиск для быстрого нахождения.`)
+          )
+        )
       ),
       showModal && React.createElement('div', {className:'modal-backdrop', onClick:(e)=>{ if(e.target.classList.contains('modal-backdrop')) setShowModal(false); }},
         React.createElement('div', {className:'modal'},
@@ -1197,9 +1836,54 @@
             React.createElement('div', null, React.createElement('label', null, 'Жиры (100г) — авто'), React.createElement('input', {className:'readOnly', readOnly:true, value:derived.fat100})),
             React.createElement('div', null, React.createElement('label', null, 'Калории (100г) — авто'), React.createElement('input', {className:'readOnly', readOnly:true, value:derived.kcal100}))
           ),
+          // Checkbox: Опубликовать в общую базу
+          React.createElement('label', {
+            style:{display:'flex', alignItems:'center', gap:'8px', marginTop:'12px', cursor:'pointer'}
+          },
+            React.createElement('input', {
+              type:'checkbox',
+              checked: publishToShared,
+              onChange: e => setPublishToShared(e.target.checked),
+              style:{width:'18px', height:'18px'}
+            }),
+            React.createElement('span', {style:{fontSize:'14px'}}, '🌐 Опубликовать в общую базу'),
+            React.createElement('span', {style:{fontSize:'11px', color:'var(--text-muted)'}}, 
+              isCurator ? '(сразу доступен всем)' : '(на модерацию куратору)'
+            )
+          ),
           React.createElement('div', {className:'row', style:{justifyContent:'flex-end', marginTop:'10px'}},
             React.createElement('button', {className:'btn', onClick:()=>{ setShowModal(false); resetDraft(); }}, 'Отмена'),
             React.createElement('button', {className:'btn acc', onClick:addProduct}, 'Добавить')
+          )
+        )
+      ),
+      // Модалка мягкого merge при конфликте fingerprint
+      mergeModal.show && React.createElement('div', {className:'modal-backdrop', onClick:(e)=>{ if(e.target.classList.contains('modal-backdrop')) setMergeModal({show:false, existing:null, draft:null}); }},
+        React.createElement('div', {className:'modal', style:{maxWidth:'400px'}},
+          React.createElement('div', {style:{fontWeight:'600', fontSize:'16px', marginBottom:'12px'}}, '🔍 Похожий продукт уже есть'),
+          React.createElement('div', {style:{background:'var(--bg-secondary)', borderRadius:'8px', padding:'12px', marginBottom:'12px'}},
+            React.createElement('div', {style:{fontWeight:'500'}}, mergeModal.existing?.name),
+            React.createElement('div', {style:{fontSize:'13px', color:'var(--text-muted)', marginTop:'4px'}},
+              `${Math.round((mergeModal.existing?.protein100 || 0) * 4 + (mergeModal.existing?.simple100 || 0 + mergeModal.existing?.complex100 || 0) * 4 + ((mergeModal.existing?.badfat100 || 0) + (mergeModal.existing?.goodfat100 || 0)) * 9)} ккал | ` +
+              `Б: ${mergeModal.existing?.protein100 || 0} | ` +
+              `У: ${(mergeModal.existing?.simple100 || 0) + (mergeModal.existing?.complex100 || 0)} | ` +
+              `Ж: ${(mergeModal.existing?.badfat100 || 0) + (mergeModal.existing?.goodfat100 || 0)}`
+            )
+          ),
+          React.createElement('div', {style:{fontSize:'13px', color:'var(--text-muted)', marginBottom:'16px'}},
+            'Продукт с такими же параметрами уже есть в общей базе. Выберите действие:'
+          ),
+          React.createElement('div', {style:{display:'flex', flexDirection:'column', gap:'8px'}},
+            React.createElement('button', {
+              className:'btn acc',
+              onClick: handleMergeUseExisting,
+              style:{width:'100%'}
+            }, '✅ Использовать существующий'),
+            React.createElement('button', {
+              className:'btn',
+              onClick: handleMergeCreateOwn,
+              style:{width:'100%'}
+            }, '➕ Создать свой (только для меня)')
           )
         )
       )
@@ -1384,6 +2068,64 @@
     getAll: ()=> (HEYS.store&&HEYS.store.get&&HEYS.store.get('heys_products', [])) || (HEYS.utils&&HEYS.utils.lsGet&&HEYS.utils.lsGet('heys_products', [])) || [],
     setAll: (arr)=> { if(HEYS.store&&HEYS.store.set) HEYS.store.set('heys_products', arr); else if(HEYS.utils&&HEYS.utils.lsSet) HEYS.utils.lsSet('heys_products', arr); },
     watch: (fn)=> { if(HEYS.store&&HEYS.store.watch) return HEYS.store.watch('heys_products', fn); return ()=>{}; },
+    
+    /**
+     * 🌐 Автоматическое клонирование продукта из общей базы в личную
+     * Вызывается при добавлении shared продукта в приём пищи
+     * @param {Object} sharedProduct - Продукт из общей базы (с _fromShared флагом)
+     * @returns {Object} Клонированный продукт с локальным id (или существующий если уже есть)
+     */
+    addFromShared: (sharedProduct) => {
+      if (!sharedProduct) return null;
+      
+      const products = HEYS.products.getAll();
+      
+      // Проверяем по shared_origin_id (если уже клонировали)
+      if (sharedProduct.id) {
+        const existingByOrigin = products.find(p => p.shared_origin_id === sharedProduct.id);
+        if (existingByOrigin) {
+          console.log('[SHARED→LOCAL] Already cloned:', sharedProduct.name);
+          return existingByOrigin;
+        }
+      }
+      
+      // Проверяем по имени (нормализованному)
+      const normName = (sharedProduct.name || '').toLowerCase().trim();
+      const existingByName = products.find(p => (p.name || '').toLowerCase().trim() === normName);
+      if (existingByName) {
+        console.log('[SHARED→LOCAL] Already exists by name:', sharedProduct.name);
+        return existingByName;
+      }
+      
+      // Создаём клон
+      const clone = {
+        id: uuid(),
+        name: sharedProduct.name,
+        simple100: toNum(sharedProduct.simple100),
+        complex100: toNum(sharedProduct.complex100),
+        protein100: toNum(sharedProduct.protein100),
+        badFat100: toNum(sharedProduct.badFat100 ?? sharedProduct.badfat100),
+        goodFat100: toNum(sharedProduct.goodFat100 ?? sharedProduct.goodfat100),
+        trans100: toNum(sharedProduct.trans100),
+        fiber100: toNum(sharedProduct.fiber100),
+        gi: toNum(sharedProduct.gi),
+        harmScore: toNum(sharedProduct.harm ?? sharedProduct.harmScore),
+        category: sharedProduct.category || '',
+        portions: sharedProduct.portions || null,
+        shared_origin_id: sharedProduct.id, // Связь с shared продуктом
+        createdAt: Date.now()
+      };
+      
+      // Добавляем derived поля (kcal100, carbs100, fat100)
+      const withDerived = { ...clone, ...computeDerived(clone) };
+      
+      // Добавляем в локальную базу
+      const newProducts = [...products, withDerived];
+      HEYS.products.setAll(newProducts);
+      
+      console.log('[SHARED→LOCAL] ✅ Auto-cloned:', sharedProduct.name, 'new id:', withDerived.id);
+      return withDerived;
+    },
     
     /**
      * Дедупликация продуктов по названию (первый с таким названием остаётся)
