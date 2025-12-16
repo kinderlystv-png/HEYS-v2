@@ -433,17 +433,6 @@
       const [showAll, setShowAll] = React.useState(false);
       
       const filtered = React.useMemo(() => {
-        const startTime = performance.now();
-        const result = performSearch();
-        const duration = performance.now() - startTime;
-        
-        // Трекинг поиска
-        if (window.HEYS && window.HEYS.analytics) {
-          window.HEYS.analytics.trackSearch(query, result.length, duration);
-        }
-        
-        return result;
-          
         // Используем normalizeText из SmartSearch (единый источник)
         const normalizeSearchText = window.HEYS?.SmartSearchWithTypos?.utils?.normalizeText 
           || ((text) => String(text || '').toLowerCase().replace(/ё/g, 'е'));
@@ -510,6 +499,18 @@
             return products.filter(p => normalizeSearchText(p.name).includes(q));
           }
         }
+        
+        // Выполняем поиск и трекаем время
+        const startTime = performance.now();
+        const result = performSearch();
+        const duration = performance.now() - startTime;
+        
+        // Трекинг поиска
+        if (window.HEYS && window.HEYS.analytics) {
+          window.HEYS.analytics.trackSearch(query, result.length, duration);
+        }
+        
+        return result;
       }, [products, query, searchIndex]);
 
       // Слушатель события обновления продуктов (для реактивности после sync)

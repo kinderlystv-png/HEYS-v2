@@ -309,7 +309,7 @@
       dayComment:d.dayComment||'',
       waterMl: +d.waterMl || 0,
       lastWaterTime: d.lastWaterTime || undefined,
-      meals:Array.isArray(d.meals)?d.meals:[{id:uuid(),name:'Приём пищи',time:'',mood:'',wellbeing:'',stress:'',items:[]}],
+      meals:Array.isArray(d.meals)?d.meals:[],
       // Замеры тела (сохраняем как есть если есть)
       measurements: d.measurements || undefined,
       // Холодовое воздействие (cold_exposure шаг)
@@ -327,6 +327,12 @@
       moodMorning: d.moodMorning != null ? +d.moodMorning : undefined,
       wellbeingMorning: d.wellbeingMorning != null ? +d.wellbeingMorning : undefined,
       stressMorning: d.stressMorning != null ? +d.stressMorning : undefined,
+      // Витамины/добавки
+      supplementsPlanned: Array.isArray(d.supplementsPlanned) ? d.supplementsPlanned : undefined,
+      supplementsTaken: Array.isArray(d.supplementsTaken) ? d.supplementsTaken : undefined,
+      supplementsTakenAt: d.supplementsTakenAt || undefined,
+      // Per-supp metadata (форма/доза/время приёма). Храним как объект.
+      supplementsTakenMeta: (d.supplementsTakenMeta && typeof d.supplementsTakenMeta === 'object') ? d.supplementsTakenMeta : undefined,
       // Сохраняем metadata для стабильности
       updatedAt: d.updatedAt || undefined,
       schemaVersion: d.schemaVersion || undefined,

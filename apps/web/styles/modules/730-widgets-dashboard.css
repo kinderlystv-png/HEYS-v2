@@ -1,60 +1,140 @@
 /* ===================================================================
  * 730-widgets-dashboard.css
- * Widget Dashboard System — Production CSS
- * Version: 1.0.0
+ * Widget Dashboard System — Premium Apple-style CSS
+ * Version: 2.0.0 — "Premium Edition"
  * Created: 2025-12-15
+ * Updated: 2025-12-16
  * 
  * Design System:
- * - Консистентность: единые tokens, border-radius, spacing
- * - Уникальность: border-top color + unique visualization
+ * - Apple-inspired glassmorphism и мягкие тени
+ * - SF Pro-like typography с правильными весами
+ * - Subtle gradients и premium feel
+ * - Smooth animations и микровзаимодействия
  * =================================================================== */
 
-/* ===== Design Tokens (CSS Custom Properties) ===== */
+/* ===== Premium Design Tokens ===== */
 :root {
-  /* Spacing (кратно 4px) */
+  /* Spacing (Apple 8pt grid) */
   --widget-spacing-xs: 4px;
   --widget-spacing-sm: 8px;
-  --widget-spacing-md: 12px;
-  --widget-spacing-lg: 16px;
+  --widget-spacing-md: 16px;
+  --widget-spacing-lg: 24px;
+  --widget-spacing-xl: 32px;
   
-  /* Border */
-  --widget-border-radius: 16px;
-  --widget-border-width: 1px;
+  /* Border Radius (Apple-style rounded) */
+  --widget-radius-sm: 12px;
+  --widget-radius-md: 20px;
+  --widget-radius-lg: 24px;
+  --widget-radius-xl: 28px;
   
-  /* Shadow */
-  --widget-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --widget-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --widget-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.2);
+  /* Premium Shadows (многослойные, как у Apple) */
+  --widget-shadow-subtle: 
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 2px 4px rgba(0, 0, 0, 0.04);
+  --widget-shadow-card: 
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.08);
+  --widget-shadow-elevated: 
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 12px 40px rgba(0, 0, 0, 0.12);
+  --widget-shadow-floating: 
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 24px 64px rgba(0, 0, 0, 0.14);
   
-  /* Typography */
-  --widget-font-title: 14px;
-  --widget-font-value: 24px;
-  --widget-font-label: 12px;
+  /* Typography Scale (Apple-like) */
+  --widget-font-caption: 11px;
+  --widget-font-footnote: 13px;
+  --widget-font-body: 15px;
+  --widget-font-title3: 17px;
+  --widget-font-title2: 20px;
+  --widget-font-title1: 28px;
+  --widget-font-largeTitle: 34px;
   
-  /* Colors (per category) */
-  --widget-nutrition: #f97316;  /* orange — калории, макросы */
-  --widget-health: #8b5cf6;     /* purple — сон, вес */
-  --widget-motivation: #10b981; /* green — streak, прогресс, шаги */
-  --widget-advanced: #3b82f6;   /* blue — инсулин, вода */
-  --widget-cycle: #ec4899;      /* pink — цикл */
+  /* Font Weights */
+  --widget-weight-regular: 400;
+  --widget-weight-medium: 500;
+  --widget-weight-semibold: 600;
+  --widget-weight-bold: 700;
+  
+  /* Premium Color Palette */
+  --widget-nutrition: #FF9500;  /* Apple Orange */
+  --widget-health: #AF52DE;     /* Apple Purple */
+  --widget-motivation: #30D158; /* Apple Green */
+  --widget-advanced: #0A84FF;   /* Apple Blue */
+  --widget-cycle: #FF375F;      /* Apple Pink */
+  --widget-water: #64D2FF;      /* Apple Cyan */
+  
+  /* Градиенты для акцентов */
+  --widget-gradient-orange: linear-gradient(135deg, #FF9500 0%, #FF6B00 100%);
+  --widget-gradient-purple: linear-gradient(135deg, #AF52DE 0%, #8944AB 100%);
+  --widget-gradient-green: linear-gradient(135deg, #30D158 0%, #28A745 100%);
+  --widget-gradient-blue: linear-gradient(135deg, #0A84FF 0%, #0066CC 100%);
+  --widget-gradient-pink: linear-gradient(135deg, #FF375F 0%, #E91E63 100%);
+  --widget-gradient-cyan: linear-gradient(135deg, #64D2FF 0%, #32ADE6 100%);
+  
+  /* Glassmorphism */
+  --widget-glass-bg: rgba(255, 255, 255, 0.72);
+  --widget-glass-border: rgba(255, 255, 255, 0.5);
+  --widget-glass-blur: 20px;
+
+  /* Neutral surfaces (for tracks/pills) */
+  --widget-surface-soft: rgba(0, 0, 0, 0.04);
+  --widget-surface-muted: rgba(0, 0, 0, 0.06);
+  --widget-surface-interactive: rgba(0, 0, 0, 0.05);
+  --widget-surface-interactive-hover: rgba(0, 0, 0, 0.10);
   
   /* Grid */
+  /* 4-колоночная сетка: 1 колонка/ряд = базовая единица */
   --widget-grid-columns: 4;
-  --widget-grid-gap: 8px;
-  --widget-row-height: 80px;
+  --widget-grid-gap: 12px;
+  --widget-row-height: 76px;
+  
+  /* Transitions */
+  --widget-transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --widget-transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --widget-transition-spring: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Dark mode overrides */
+/* Dark mode — Premium Dark */
 [data-theme="dark"] {
-  --widget-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --widget-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --widget-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.4);
+  --widget-glass-bg: rgba(30, 30, 30, 0.72);
+  --widget-glass-border: rgba(255, 255, 255, 0.1);
+
+  --widget-surface-soft: rgba(255, 255, 255, 0.08);
+  --widget-surface-muted: rgba(255, 255, 255, 0.10);
+  --widget-surface-interactive: rgba(255, 255, 255, 0.10);
+  --widget-surface-interactive-hover: rgba(255, 255, 255, 0.16);
+  
+  --widget-shadow-subtle: 
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+  --widget-shadow-card: 
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.25);
+  --widget-shadow-elevated: 
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 12px 40px rgba(0, 0, 0, 0.35);
+  --widget-shadow-floating: 
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 24px 64px rgba(0, 0, 0, 0.4);
 }
 
 /* ===== Tab Container ===== */
 .widgets-tab {
   min-height: calc(100vh - 120px);
   padding-bottom: 100px; /* safe area для navbar */
+  /* iOS-like system background (subtle) */
+  background:
+    radial-gradient(1200px 800px at 20% 0%, rgba(10, 132, 255, 0.08), transparent 55%),
+    radial-gradient(900px 600px at 80% 20%, rgba(175, 82, 222, 0.08), transparent 55%),
+    radial-gradient(900px 700px at 50% 100%, rgba(255, 149, 0, 0.06), transparent 60%);
+}
+
+[data-theme="dark"] .widgets-tab {
+  background:
+    radial-gradient(1200px 800px at 20% 0%, rgba(10, 132, 255, 0.12), transparent 55%),
+    radial-gradient(900px 600px at 80% 20%, rgba(175, 82, 222, 0.12), transparent 55%),
+    radial-gradient(900px 700px at 50% 100%, rgba(255, 149, 0, 0.10), transparent 60%);
 }
 
 .widgets-tab__header {
@@ -113,8 +193,16 @@
   padding: var(--widget-spacing-sm) var(--widget-spacing-md);
   position: sticky;
   top: 0;
-  background: var(--bg-primary, #f8f9fa);
+  /* Glassy iOS header */
+  background: color-mix(in srgb, var(--bg-primary, #f8f9fa) 72%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   z-index: 100;
+}
+
+[data-theme="dark"] .widgets-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .widgets-header__left {
@@ -125,15 +213,21 @@
 
 .widgets-header__btn {
   padding: 8px 14px;
-  border-radius: 8px;
-  background: var(--bg-secondary, #fff);
-  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: var(--widget-shadow-subtle);
   font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 4px;
   transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .widgets-header__btn {
+  background: rgba(30, 30, 30, 0.72);
+  border-color: rgba(255, 255, 255, 0.10);
 }
 
 .widgets-header__btn:hover:not(.disabled) {
@@ -172,40 +266,114 @@
   font-size: 16px;
 }
 
-/* ===== Grid Container ===== */
+/* ===== Grid Container — Premium Layout ===== */
 .widgets-grid {
   display: grid;
-  grid-template-columns: repeat(var(--widget-grid-columns), 1fr);
+  grid-template-columns: repeat(var(--widget-grid-columns), minmax(0, 1fr));
   gap: var(--widget-grid-gap);
-  padding: var(--widget-spacing-sm);
+  grid-auto-rows: var(--widget-row-height);
+  padding: var(--widget-spacing-md);
   min-height: calc(100vh - 180px);
   align-content: start;
 }
 
-/* ===== Widget Base (Консистентность) ===== */
+/* ===== Widget Base — Premium Glassmorphism ===== */
 .widget {
-  background: var(--card-bg, #fff);
-  border-radius: var(--widget-border-radius);
+  /* Accent vars (overridden per widget type) */
+  --widget-accent: rgba(10, 132, 255, 0.18);
+  --widget-accent-strong: rgba(10, 132, 255, 0.32);
+
+  /* Glassmorphism background */
+  background: var(--widget-glass-bg);
+  backdrop-filter: blur(var(--widget-glass-blur));
+  -webkit-backdrop-filter: blur(var(--widget-glass-blur));
+  
+  /* Premium rounded corners */
+  border-radius: var(--widget-radius-lg);
+  
+  /* Subtle border for depth */
+  border: 1px solid var(--widget-glass-border);
+  
+  /* Premium shadow */
+  box-shadow: var(--widget-shadow-card);
+  
+  /* Internal spacing */
   padding: var(--widget-spacing-md);
-  box-shadow: var(--widget-shadow-sm);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  
+  /* Smooth transitions */
+  transition: 
+    box-shadow var(--widget-transition-normal),
+    transform var(--widget-transition-spring),
+    border-color var(--widget-transition-fast);
+  
   cursor: pointer;
   position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  
+  /* Prevent text selection during drag */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.widget:hover {
-  box-shadow: var(--widget-shadow-md);
-  transform: translateY(-2px);
+/* iOS-like tinted corner glow */
+.widget::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(220px 180px at 8% 10%, var(--widget-accent-strong), transparent 60%),
+    radial-gradient(320px 260px at 110% 120%, rgba(255, 255, 255, 0.18), transparent 55%);
+  opacity: 0.9;
+  pointer-events: none;
 }
 
+[data-theme="dark"] .widget::before {
+  background:
+    radial-gradient(220px 180px at 8% 10%, var(--widget-accent-strong), transparent 60%),
+    radial-gradient(320px 260px at 110% 120%, rgba(255, 255, 255, 0.06), transparent 55%);
+}
+
+/* Subtle top highlight */
+.widget::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.08));
+  pointer-events: none;
+}
+
+[data-theme="dark"] .widget::after {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04));
+}
+
+/* Hover state — only on devices that actually hover */
+@media (hover: hover) and (pointer: fine) {
+  .widget:hover {
+    box-shadow: var(--widget-shadow-elevated);
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.8);
+  }
+}
+
+/* Active/pressed state */
 .widget:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
+  box-shadow: var(--widget-shadow-subtle);
+  transition-duration: 0.1s;
 }
 
-/* Widget Header */
+/* Focus state for accessibility */
+.widget:focus-visible {
+  outline: 3px solid var(--widget-advanced);
+  outline-offset: 2px;
+}
+
+/* ===== Widget Header — Clean Typography ===== */
 .widget__header {
   display: flex;
   align-items: center;
@@ -214,18 +382,21 @@
 }
 
 .widget__icon {
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1;
+  /* Subtle shadow on emoji */
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
 }
 
 .widget__title {
-  font-size: var(--widget-font-title);
-  font-weight: 600;
+  font-size: var(--widget-font-footnote);
+  font-weight: var(--widget-weight-semibold);
   color: var(--text-secondary, #6b7280);
+  letter-spacing: -0.01em;
   flex: 1;
 }
 
-/* Widget Body */
+/* Widget Body — Centered content */
 .widget__body {
   flex: 1;
   display: flex;
@@ -233,27 +404,38 @@
   justify-content: center;
 }
 
-/* Widget Value */
+/* ===== Widget Content — Premium Typography ===== */
+.widget__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Widget Value — Large, bold numbers */
 .widget__value {
-  font-size: var(--widget-font-value);
-  font-weight: 700;
+  font-size: var(--widget-font-title1);
+  font-weight: var(--widget-weight-bold);
   color: var(--text-primary, #111827);
-  line-height: 1.2;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-feature-settings: 'tnum' on, 'lnum' on; /* Tabular numbers */
 }
 
 .widget__value--small {
-  font-size: 18px;
+  font-size: var(--widget-font-title2);
 }
 
 .widget__value--large {
-  font-size: 32px;
+  font-size: var(--widget-font-largeTitle);
 }
 
-/* Widget Label */
+/* Widget Label — Subtle secondary text */
 .widget__label {
-  font-size: var(--widget-font-label);
+  font-size: var(--widget-font-caption);
+  font-weight: var(--widget-weight-medium);
   color: var(--text-tertiary, #9ca3af);
-  margin-top: 2px;
+  margin-top: 4px;
+  letter-spacing: 0.01em;
 }
 
 /* Widget Footer */
@@ -261,81 +443,110 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: var(--widget-spacing-sm);
+  margin-top: auto;
+  padding-top: var(--widget-spacing-sm);
 }
 
-/* Quick Action */
+/* Quick Action Button — Pill style */
 .widget__quick-action {
-  padding: 6px 12px;
-  border-radius: 20px;
-  background: var(--bg-secondary, #f3f4f6);
-  font-size: 12px;
-  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 100px;
+  background: var(--widget-surface-interactive);
+  font-size: var(--widget-font-caption);
+  font-weight: var(--widget-weight-semibold);
   border: none;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all var(--widget-transition-fast);
 }
 
 .widget__quick-action:hover {
-  background: var(--bg-hover, #e5e7eb);
+  background: var(--widget-surface-interactive-hover);
+  transform: scale(1.02);
 }
 
-/* ===== Widget Identity (Уникальность) ===== */
-
-/* Калории 🔥 — gradient progress */
-.widget--kcal {
-  border-top: 3px solid var(--widget-nutrition);
+.widget__quick-action:active {
+  transform: scale(0.98);
 }
 
-.widget--kcal .widget__progress-bar {
-  height: 8px;
-  border-radius: 4px;
-  background: #e5e7eb;
+/* ===== Widget Type Accents — Premium Gradient Borders ===== */
+
+/* Калории 🔥 — Orange accent */
+.widget--calories {
+  --widget-accent: rgba(255, 149, 0, 0.16);
+  --widget-accent-strong: rgba(255, 149, 0, 0.34);
+}
+
+.widget--calories .widget__value {
+  background: var(--widget-gradient-orange);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Progress Bar — Premium gradient with glow */
+.widget--kcal .widget__progress-bar,
+.widget--calories .widget__progress-bar {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--widget-surface-muted);
   overflow: hidden;
-  margin-top: var(--widget-spacing-sm);
+  margin-top: var(--widget-spacing-md);
+  position: relative;
 }
 
-.widget--kcal .widget__progress-fill {
+.widget--kcal .widget__progress-fill,
+.widget--calories .widget__progress-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 5px;
   background: linear-gradient(
     90deg,
     #ef4444 0%,    /* red at 0% */
-    #eab308 50%,   /* yellow at middle */
-    #22c55e 90%,   /* green at 90% */
+    #f97316 40%,   /* orange */
+    #eab308 60%,   /* yellow */
+    #22c55e 85%,   /* green */
     #10b981 100%   /* emerald at perfect */
   );
-  transition: width 0.5s ease;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
 }
 
-/* Вода 💧 — circular ring + wave */
+/* Вода 💧 — Blue accent with ring */
 .widget--water {
-  border-top: 3px solid var(--widget-advanced);
+  --widget-accent: rgba(10, 132, 255, 0.14);
+  --widget-accent-strong: rgba(10, 132, 255, 0.30);
+}
+
+.widget--water .widget__value {
+  background: var(--widget-gradient-blue);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .widget--water .widget__ring-container {
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   margin: 0 auto;
 }
 
 .widget--water .widget__ring {
   transform: rotate(-90deg);
+  filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3));
 }
 
 .widget--water .widget__ring-bg {
-  stroke: #e5e7eb;
-  stroke-width: 8;
+  stroke: rgba(59, 130, 246, 0.15);
+  stroke-width: 6;
   fill: none;
 }
 
 .widget--water .widget__ring-fill {
-  stroke: #3b82f6;
-  stroke-width: 8;
+  stroke: url(#waterGradient);
+  stroke-width: 6;
   fill: none;
   stroke-linecap: round;
-  transition: stroke-dashoffset 0.5s ease;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .widget--water .widget__wave {
@@ -343,38 +554,71 @@
   bottom: 20%;
   left: 50%;
   transform: translateX(-50%);
-  animation: wave 2s ease-in-out infinite;
+  animation: waterWave 2.5s ease-in-out infinite;
+  opacity: 0.8;
 }
 
-@keyframes wave {
+@keyframes waterWave {
   0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-4px); }
+  50% { transform: translateX(-50%) translateY(-6px); }
 }
 
-/* Сон 😴 — stars quality + time */
+/* Сон 😴 — Purple accent */
 .widget--sleep {
-  border-top: 3px solid var(--widget-health);
+  --widget-accent: rgba(175, 82, 222, 0.14);
+  --widget-accent-strong: rgba(175, 82, 222, 0.30);
+}
+
+.widget--sleep .widget__value {
+  background: var(--widget-gradient-purple);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .widget--sleep .widget__stars {
-  color: #fbbf24; /* yellow stars */
-  font-size: 16px;
-  letter-spacing: 2px;
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.widget--sleep .widget__star {
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(0 1px 2px rgba(251, 191, 36, 0.4));
+}
+
+.widget--sleep .widget__star--filled {
+  color: #fbbf24;
+}
+
+.widget--sleep .widget__star--empty {
+  color: rgba(251, 191, 36, 0.25);
 }
 
 .widget--sleep .widget__time-range {
-  font-size: 12px;
-  color: var(--text-tertiary, #9ca3af);
+  font-size: var(--widget-font-caption);
+  color: var(--text-tertiary);
+  margin-top: 4px;
 }
 
-/* Вес ⚖️ — mini sparkline */
+/* Вес ⚖️ — Pink/Health accent */
 .widget--weight {
-  border-top: 3px solid var(--widget-health);
+  --widget-accent: rgba(236, 72, 153, 0.14);
+  --widget-accent-strong: rgba(236, 72, 153, 0.30);
+}
+
+.widget--weight .widget__value {
+  background: linear-gradient(135deg, #EC4899, #F472B6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .widget--weight .widget__sparkline-container {
-  height: 40px;
-  margin-top: var(--widget-spacing-sm);
+  height: 48px;
+  margin-top: var(--widget-spacing-md);
+  position: relative;
 }
 
 .widget--weight .widget__sparkline {
@@ -383,61 +627,98 @@
 }
 
 .widget--weight .widget__sparkline-path {
-  stroke: var(--widget-health);
-  stroke-width: 2;
+  stroke: #EC4899;
+  stroke-width: 2.5;
   fill: none;
+  filter: drop-shadow(0 2px 4px rgba(236, 72, 153, 0.3));
+}
+
+.widget--weight .widget__sparkline-area {
+  fill: url(#weightGradient);
+  opacity: 0.2;
 }
 
 .widget--weight .widget__trend {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  font-size: 12px;
-  font-weight: 500;
+  gap: 4px;
+  font-size: var(--widget-font-caption);
+  font-weight: var(--widget-weight-semibold);
+  padding: 4px 10px;
+  border-radius: 100px;
+  margin-top: 8px;
 }
 
 .widget--weight .widget__trend--up {
   color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .widget--weight .widget__trend--down {
   color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
 }
 
-/* Шаги 👟 — radial ring */
+.widget--weight .widget__trend--stable {
+  color: #6b7280;
+  background: rgba(107, 114, 128, 0.1);
+}
+
+/* Шаги 👟 — Green/Motivation accent */
 .widget--steps {
-  border-top: 3px solid var(--widget-motivation);
+  --widget-accent: rgba(48, 209, 88, 0.14);
+  --widget-accent-strong: rgba(48, 209, 88, 0.28);
+}
+
+.widget--steps .widget__value {
+  background: var(--widget-gradient-green);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .widget--steps .widget__ring-fill {
-  stroke: var(--widget-motivation);
+  stroke: url(#stepsGradient);
+  filter: drop-shadow(0 2px 4px rgba(52, 211, 153, 0.3));
 }
 
-/* Streak 🔥 — flame + number */
+/* Streak 🔥 — Fire animation */
 .widget--streak {
-  border-top: 3px solid var(--widget-motivation);
+  --widget-accent: rgba(255, 149, 0, 0.14);
+  --widget-accent-strong: rgba(255, 149, 0, 0.30);
   text-align: center;
 }
 
 .widget--streak .widget__flame {
-  font-size: 48px;
-  animation: pulse 2s ease-in-out infinite;
+  font-size: 56px;
+  animation: flamePulse 2s ease-in-out infinite;
+  filter: drop-shadow(0 4px 8px rgba(249, 115, 22, 0.4));
 }
 
 .widget--streak .widget__streak-number {
-  font-size: 36px;
-  font-weight: 800;
-  color: var(--widget-motivation);
+  font-size: 40px;
+  font-weight: var(--widget-weight-black);
+  background: var(--widget-gradient-orange);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.8; }
+@keyframes flamePulse {
+  0%, 100% { 
+    transform: scale(1) translateY(0); 
+    filter: drop-shadow(0 4px 8px rgba(249, 115, 22, 0.4));
+  }
+  50% { 
+    transform: scale(1.08) translateY(-4px); 
+    filter: drop-shadow(0 8px 16px rgba(249, 115, 22, 0.6));
+  }
 }
 
-/* Инсулин 📈 — wave curve */
+/* Инсулин 📈 — Blue/Advanced accent */
 .widget--insulin {
-  border-top: 3px solid var(--widget-advanced);
+  --widget-accent: rgba(10, 132, 255, 0.14);
+  --widget-accent-strong: rgba(10, 132, 255, 0.30);
 }
 
 .widget--insulin .widget__wave-container {
@@ -446,154 +727,217 @@
 }
 
 .widget--insulin .widget__wave-curve {
-  stroke: var(--widget-advanced);
-  stroke-width: 2;
+  stroke: #0A84FF;
+  stroke-width: 2.5;
+  fill: none;
+  filter: drop-shadow(0 2px 4px rgba(10, 132, 255, 0.3));
+}
+
+.widget--insulin .widget__wave-area {
   fill: url(#insulinGradient);
+  opacity: 0.15;
 }
 
 .widget--insulin .widget__status {
-  font-size: 12px;
-  font-weight: 500;
-  padding: 4px 8px;
-  border-radius: 4px;
-  display: inline-block;
+  font-size: var(--widget-font-caption);
+  font-weight: var(--widget-weight-semibold);
+  padding: 6px 12px;
+  border-radius: 100px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .widget--insulin .widget__status--active {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
+  background: rgba(10, 132, 255, 0.12);
+  color: #0A84FF;
 }
 
 .widget--insulin .widget__status--lipolysis {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
+  background: rgba(48, 209, 88, 0.12);
+  color: #30D158;
 }
 
-/* Макросы 🥗 — 3 bars P/C/F */
+.widget--insulin .widget__status--soon {
+  background: rgba(255, 214, 10, 0.12);
+  color: #FFD60A;
+}
+
+/* Макросы 🥗 — Premium bar design */
 .widget--macros {
-  border-top: 3px solid var(--widget-nutrition);
+  --widget-accent: rgba(255, 159, 10, 0.14);
+  --widget-accent-strong: rgba(255, 159, 10, 0.28);
 }
 
 .widget--macros .widget__bars {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: var(--widget-spacing-sm);
+  gap: 10px;
+  margin-top: var(--widget-spacing-md);
 }
 
 .widget--macros .widget__bar-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .widget--macros .widget__bar-label {
-  width: 24px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary, #6b7280);
+  width: 28px;
+  font-size: var(--widget-font-caption);
+  font-weight: var(--widget-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.widget--macros .widget__bar-label--protein {
+  color: #FF453A;
+}
+
+.widget--macros .widget__bar-label--carbs {
+  color: #0A84FF;
+}
+
+.widget--macros .widget__bar-label--fat {
+  color: #FFD60A;
 }
 
 .widget--macros .widget__bar-track {
   flex: 1;
-  height: 6px;
-  background: #e5e7eb;
-  border-radius: 3px;
+  height: 8px;
+  background: var(--widget-surface-muted);
+  border-radius: 4px;
   overflow: hidden;
 }
 
 .widget--macros .widget__bar-fill {
   height: 100%;
-  border-radius: 3px;
-  transition: width 0.5s ease;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .widget--macros .widget__bar-fill--protein {
-  background: #ef4444; /* red */
+  background: linear-gradient(90deg, #FF453A, #FF6961);
+  box-shadow: 0 0 8px rgba(255, 69, 58, 0.4);
 }
 
 .widget--macros .widget__bar-fill--carbs {
-  background: #3b82f6; /* blue */
+  background: linear-gradient(90deg, #0A84FF, #64D2FF);
+  box-shadow: 0 0 8px rgba(10, 132, 255, 0.4);
 }
 
 .widget--macros .widget__bar-fill--fat {
-  background: #eab308; /* yellow */
+  background: linear-gradient(90deg, #FFD60A, #FFEA80);
+  box-shadow: 0 0 8px rgba(255, 214, 10, 0.4);
 }
 
-/* Цикл 🌸 — phase badge */
+.widget--macros .widget__bar-value {
+  width: 48px;
+  font-size: var(--widget-font-footnote);
+  font-weight: var(--widget-weight-semibold);
+  color: var(--text-secondary);
+  text-align: right;
+  font-feature-settings: 'tnum' on;
+}
+
+/* Цикл 🌸 — Premium phase badge */
 .widget--cycle {
-  border-top: 3px solid var(--widget-cycle);
+  --widget-accent: rgba(255, 45, 85, 0.14);
+  --widget-accent-strong: rgba(255, 45, 85, 0.28);
 }
 
 .widget--cycle .widget__phase-icon {
-  font-size: 32px;
+  font-size: 40px;
+  filter: drop-shadow(0 2px 4px rgba(255, 45, 85, 0.3));
 }
 
 .widget--cycle .widget__phase-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--widget-cycle);
+  font-size: var(--widget-font-headline);
+  font-weight: var(--widget-weight-semibold);
+  background: linear-gradient(135deg, #FF2D55, #FF6482);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .widget--cycle .widget__day-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  background: rgba(236, 72, 153, 0.15);
-  color: var(--widget-cycle);
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: rgba(255, 45, 85, 0.1);
+  color: #FF2D55;
+  border-radius: 100px;
+  font-size: var(--widget-font-caption);
+  font-weight: var(--widget-weight-bold);
 }
 
-/* Прогресс 📊 — linear bar + ETA */
+/* Прогресс 📊 — Premium progress bar */
 .widget--progress {
-  border-top: 3px solid var(--widget-motivation);
+  --widget-accent: rgba(48, 209, 88, 0.14);
+  --widget-accent-strong: rgba(48, 209, 88, 0.28);
 }
 
 .widget--progress .widget__progress-track {
-  height: 6px;
-  background: #e5e7eb;
-  border-radius: 3px;
+  height: 10px;
+  background: var(--widget-surface-muted);
+  border-radius: 5px;
   overflow: hidden;
-  margin-top: var(--widget-spacing-sm);
+  margin-top: var(--widget-spacing-md);
 }
 
 .widget--progress .widget__progress-fill {
   height: 100%;
-  background: var(--widget-motivation);
-  border-radius: 3px;
-  transition: width 0.5s ease;
+  background: var(--widget-gradient-green);
+  border-radius: 5px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 12px rgba(48, 209, 88, 0.4);
 }
 
 .widget--progress .widget__eta {
-  font-size: 12px;
-  color: var(--text-tertiary, #9ca3af);
-  margin-top: 4px;
+  font-size: var(--widget-font-caption);
+  color: var(--text-tertiary);
+  margin-top: 8px;
+  font-weight: var(--widget-weight-medium);
 }
 
 /* ===== Size Modifiers ===== */
+.widget--mini {
+  /* Мини-виджет — это полноценный 1×1.
+     Важно: НЕ выключаем растягивание grid-item, иначе высота станет «0.5» и визуально ломается единица сетки. */
+  min-height: 0;
+  height: 100%;
+  padding: 10px;
+  border-radius: var(--widget-radius-md);
+  align-self: stretch;
+}
+
 .widget--compact {
-  grid-column: span 2;
-  grid-row: span 2;
-  min-height: 160px;
+  min-height: 0;
+}
+
+.widget--medium {
+  min-height: 0;
 }
 
 .widget--wide {
-  grid-column: span 4;
-  grid-row: span 2;
-  min-height: 160px;
+  min-height: 0;
+}
+
+.widget--wide3 {
+  min-height: 0;
 }
 
 .widget--tall {
-  grid-column: span 2;
-  grid-row: span 4;
-  min-height: 320px;
+  min-height: 0;
+}
+
+.widget--tall3 {
+  min-height: 0;
 }
 
 .widget--large {
-  grid-column: span 4;
-  grid-row: span 4;
-  min-height: 320px;
+  min-height: 0;
 }
 
 /* ===== Edit Mode ===== */
@@ -608,8 +952,13 @@
 }
 
 .widget--editing {
-  animation: widget-shake 0.3s ease-in-out infinite;
+  /* iOS-like wiggle: еле заметное, не отвлекающее */
+  animation: widget-shake 1.2s ease-in-out infinite;
   cursor: grab;
+
+  /* В edit-mode кнопки (✕/⚙️) "выпирают" за радиус как на iOS.
+     Базовый .widget имеет overflow:hidden для glow, поэтому раскрываем только тут. */
+  overflow: visible;
 }
 
 .widget--editing:active {
@@ -617,8 +966,19 @@
 }
 
 @keyframes widget-shake {
-  0%, 100% { transform: rotate(-1deg); }
-  50% { transform: rotate(1deg); }
+  0%, 100% { transform: rotate(-0.25deg); }
+  50% { transform: rotate(0.25deg); }
+}
+
+/* Mini size: без хедера, центрируем контент */
+.widget--mini .widget__header {
+  display: none;
+}
+
+.widget--mini .widget__content {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
 }
 
 /* Delete Button */
@@ -631,7 +991,7 @@
   border-radius: 50%;
   background: #ef4444;
   color: white;
-  border: 2px solid white;
+  border: 2px solid var(--widget-control-ring, rgba(255, 255, 255, 0.92));
   display: none;
   align-items: center;
   justify-content: center;
@@ -661,7 +1021,7 @@
   border-radius: 50%;
   background: var(--primary, #3b82f6);
   color: white;
-  border: 2px solid white;
+  border: 2px solid var(--widget-control-ring, rgba(255, 255, 255, 0.92));
   display: none;
   align-items: center;
   justify-content: center;
@@ -671,8 +1031,41 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+[data-theme="dark"] .widget {
+  --widget-control-ring: rgba(0, 0, 0, 0.45);
+}
+
 .widget--editing .widget__settings-btn {
   display: flex;
+}
+
+/* Resize Button (cycle sizes) */
+.widget__resize-btn {
+  position: absolute;
+  top: -8px;
+  left: 18px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #0ea5e9;
+  color: white;
+  border: 2px solid var(--widget-control-ring, rgba(255, 255, 255, 0.92));
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.widget--editing .widget__resize-btn {
+  display: flex;
+}
+
+.widget__resize-btn:hover {
+  background: #0284c7;
+  transform: scale(1.1);
 }
 
 .widget__settings-btn:hover {
@@ -683,28 +1076,236 @@
 /* Resize Handle */
 .widget__resize-handle {
   position: absolute;
-  bottom: 4px;
-  right: 4px;
-  width: 20px;
-  height: 20px;
-  cursor: se-resize;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: none;
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.12s ease;
+  z-index: 12;
 }
 
 .widget--editing .widget__resize-handle {
-  opacity: 0.5;
+  opacity: 0.95;
 }
 
 .widget__resize-handle::before {
   content: '';
   position: absolute;
-  right: 4px;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 0 0 2px rgba(15, 23, 42, 0.22),
+    0 8px 18px rgba(2, 6, 23, 0.18);
+}
+
+[data-theme="dark"] .widget__resize-handle::before {
+  background: rgba(15, 23, 42, 0.86);
+  box-shadow:
+    0 0 0 2px rgba(226, 232, 240, 0.20),
+    0 12px 24px rgba(0, 0, 0, 0.35);
+}
+
+.widget__resize-handle:active::before {
+  transform: translate(-50%, -50%) scale(0.92);
+}
+
+/* 4 точки по центру сторон */
+.widget__resize-handle--n {
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.widget__resize-handle--s {
   bottom: 4px;
-  width: 8px;
-  height: 8px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.widget__resize-handle--e {
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.widget__resize-handle--w {
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.widget--resizing {
+  z-index: 60;
+}
+
+.widget--resizing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35), 0 18px 50px rgba(2, 6, 23, 0.20);
+  pointer-events: none;
+}
+
+.widget__resize-overlay {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.12);
+  pointer-events: none;
+  z-index: 20;
+}
+
+[data-theme="dark"] .widget__resize-overlay {
+  background: rgba(30, 41, 59, 0.65);
+  border-color: rgba(226, 232, 240, 0.12);
+}
+
+.widget__resize-overlay-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(15, 23, 42, 0.72);
+}
+
+[data-theme="dark"] .widget__resize-overlay-title {
+  color: rgba(226, 232, 240, 0.70);
+}
+
+.widget__resize-overlay-value {
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(15, 23, 42, 0.92);
+}
+
+[data-theme="dark"] .widget__resize-overlay-value {
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.widget__resize-overlay-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(239, 68, 68, 0.92);
+}
+
+.widget__resize-handle:hover {
+  opacity: 1;
+}
+
+/* Размер: popover пресетов (iOS-like) */
+.widget__size-popover {
+  position: absolute;
+  right: 8px;
+  bottom: 32px;
+  min-width: 170px;
+  padding: 10px;
+  border-radius: 16px;
+  background: var(--widget-glass-bg);
+  border: 1px solid var(--widget-glass-border);
+  box-shadow: var(--widget-shadow-elevated);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  z-index: 25;
+}
+
+.widget__size-popover-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(15, 23, 42, 0.72);
+  margin-bottom: 8px;
+}
+
+[data-theme="dark"] .widget__size-popover-title {
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.widget__size-popover-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.widget__size-option {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  background: rgba(255, 255, 255, 0.70);
+  color: rgba(15, 23, 42, 0.86);
+  font-size: 13px;
+  font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+[data-theme="dark"] .widget__size-option {
+  border-color: rgba(226, 232, 240, 0.14);
+  background: rgba(30, 41, 59, 0.65);
+  color: rgba(226, 232, 240, 0.90);
+}
+
+.widget__size-option:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.12);
+}
+
+.widget__size-option.active {
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 10px 26px rgba(59, 130, 246, 0.18);
+}
+
+/* FAB "Изменить" снизу слева (mobile) */
+.widgets-fab-left {
+  position: fixed;
+  left: 16px;
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  z-index: 1001;
+}
+
+.widgets-edit-fab {
+  width: 50px;
+  height: 50px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.95), rgba(37, 99, 235, 0.95));
+  color: #fff;
+  box-shadow: 0 18px 44px rgba(2, 6, 23, 0.22);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.widgets-edit-fab.active {
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+}
+
+.widgets-edit-fab:active {
+  transform: translateY(1px) scale(0.98);
 }
 
 /* ===== Dragging States ===== */
@@ -718,10 +1319,27 @@
 
 .widget--drag-over {
   border: 2px dashed var(--primary, #3b82f6);
-  background: rgba(59, 130, 246, 0.05);
+  /* iOS-like drop outline: реальный синий контур (не 1×1 и не dashed) */
+  border-radius: var(--widget-border-radius);
+  pointer-events: none;
+
+  /* Цвета и контраст (подходит и для light/dark) */
+  background: rgba(10, 132, 255, 0.10);
+  border: 2px solid rgba(10, 132, 255, 0.85);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.35) inset,
+    0 10px 28px rgba(10, 132, 255, 0.18),
+    0 0 22px rgba(10, 132, 255, 0.22);
+
+  transition:
+    background 0.12s ease-out,
+    border-color 0.12s ease-out,
+    box-shadow 0.12s ease-out,
+    transform 0.12s ease-out;
+
+  transform: scale(0.995);
 }
 
-/* Ghost Element (follows cursor/finger) */
 .widget-ghost {
   position: fixed;
   pointer-events: none;
@@ -750,13 +1368,43 @@
 }
 
 .widget-placeholder--valid {
-  border-color: #22c55e;
-  background: rgba(34, 197, 94, 0.08);
+  /* valid = яркий iOS blue (основной контур дропа) */
+  border-color: rgba(10, 132, 255, 0.95);
+  background: rgba(10, 132, 255, 0.12);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.40) inset,
+    0 12px 32px rgba(10, 132, 255, 0.20),
+    0 0 26px rgba(10, 132, 255, 0.28);
+  transform: scale(1.0);
 }
 
 .widget-placeholder--invalid {
-  border-color: #ef4444;
-  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.90);
+  background: rgba(239, 68, 68, 0.10);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.30) inset,
+    0 12px 32px rgba(239, 68, 68, 0.18),
+    0 0 26px rgba(239, 68, 68, 0.22);
+}
+
+/* Swap hint (drop на занятое место = обмен местами) */
+.widget-placeholder--swap.widget-placeholder--valid {
+  border-color: rgba(10, 132, 255, 1);
+  background: rgba(10, 132, 255, 0.14);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.45) inset,
+    0 14px 36px rgba(10, 132, 255, 0.24),
+    0 0 30px rgba(10, 132, 255, 0.32);
+}
+
+/* Reflow hint (drop с авто-сдвигом остальных) */
+.widget-placeholder--reflow.widget-placeholder--valid {
+  border-color: rgba(139, 92, 246, 0.95);
+  background: rgba(139, 92, 246, 0.12);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.38) inset,
+    0 14px 36px rgba(139, 92, 246, 0.22),
+    0 0 30px rgba(139, 92, 246, 0.28);
 }
 
 /* Drop Animation */
@@ -851,6 +1499,11 @@
   .widget {
     padding: 10px;
   }
+
+  .widget--mini {
+    min-height: 0;
+    padding: 8px;
+  }
   
   .widget__value {
     font-size: 20px;
@@ -897,90 +1550,166 @@
   font-size: 12px;
 }
 
-/* ===== Widget Content Styles ===== */
+/* ===== Widget Content Styles — Premium Apple Design ===== */
 
 /* Calories Widget */
 .widget-calories {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .widget-calories__value {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  background: var(--widget-gradient-orange);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-feature-settings: 'tnum' on;
 }
 
 .widget-calories__label {
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-tertiary, #9ca3af);
+  letter-spacing: 0.01em;
 }
 
 .widget-calories__remaining {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text-secondary, #6b7280);
-  margin-top: 2px;
+  margin-top: 4px;
+  padding: 4px 10px;
+  background: var(--widget-surface-soft);
+  border-radius: 100px;
 }
 
 .widget-calories__pct {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 100px;
+  background: rgba(255, 149, 0, 0.12);
+  color: #FF9500;
+}
+
+.widget-calories__progress {
+  height: 10px;
+  background: var(--widget-surface-muted);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.widget-calories__bar {
+  height: 100%;
+  border-radius: 5px;
+  background: linear-gradient(
+    90deg,
+    #ef4444 0%,
+    #f97316 40%,
+    #eab308 60%,
+    #22c55e 85%,
+    #10b981 100%
+  );
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.3);
 }
 
 /* Water Widget */
 .widget-water {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .widget-water__value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
-  color: var(--widget-advanced);
+  letter-spacing: -0.02em;
+  background: var(--widget-gradient-blue);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-feature-settings: 'tnum' on;
 }
 
 .widget-water__progress {
-  height: 6px;
-  background: var(--bg-secondary, #f3f4f6);
-  border-radius: 3px;
+  height: 10px;
+  background: rgba(10, 132, 255, 0.1);
+  border-radius: 5px;
   overflow: hidden;
 }
 
 .widget-water__bar {
   height: 100%;
-  background: var(--widget-advanced);
-  border-radius: 3px;
-  transition: width 0.3s ease;
+  background: var(--widget-gradient-blue);
+  border-radius: 5px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 12px rgba(10, 132, 255, 0.3);
 }
 
 .widget-water__label {
-  font-size: 11px;
-  color: var(--text-tertiary, #9ca3af);
+  font-size: 12px;
+  font-weight: 600;
+  color: #0A84FF;
+  padding: 4px 10px;
+  background: rgba(10, 132, 255, 0.1);
+  border-radius: 100px;
+  display: inline-block;
 }
 
 /* Sleep Widget */
 .widget-sleep {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .widget-sleep__value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
+  letter-spacing: -0.02em;
+  background: var(--widget-gradient-purple);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .widget-sleep__label {
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-tertiary, #9ca3af);
 }
 
 .widget-sleep__quality {
-  font-size: 11px;
-  color: var(--text-secondary, #6b7280);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  background: rgba(175, 82, 222, 0.1);
+  color: #AF52DE;
+  border-radius: 100px;
+}
+
+.widget-sleep__stars {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.widget-sleep__star {
+  font-size: 14px;
+  filter: drop-shadow(0 1px 2px rgba(255, 214, 10, 0.4));
 }
 
 /* Streak Widget */
@@ -989,63 +1718,143 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .widget-streak__value {
-  font-size: 28px;
+  font-size: 36px;
   font-weight: 800;
-  color: var(--widget-motivation);
+  letter-spacing: -0.02em;
+  background: var(--widget-gradient-orange);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.widget-streak__fire {
+  font-size: 40px;
+  animation: flamePulse 2s ease-in-out infinite;
+  filter: drop-shadow(0 4px 8px rgba(249, 115, 22, 0.4));
 }
 
 .widget-streak__days {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
+  color: var(--text-secondary, #6b7280);
 }
 
 .widget-streak__max {
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-tertiary, #9ca3af);
+  padding: 4px 10px;
+  background: var(--widget-surface-soft);
+  border-radius: 100px;
 }
 
 /* Weight Widget */
 .widget-weight {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+}
+
+.widget-weight--mini {
+  align-items: center;
+  justify-content: center;
+  gap: 0;
 }
 
 .widget-weight__value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #EC4899, #F472B6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-feature-settings: 'tnum' on;
+}
+
+.widget-weight__value--mini {
+  font-size: 34px;
+  line-height: 1.05;
+}
+
+.widget-weight__unit {
+  font-size: 14px;
+  font-weight: 700;
+  margin-left: 6px;
+  opacity: 0.9;
 }
 
 .widget-weight__empty {
   font-size: 14px;
+  font-weight: 500;
   color: var(--text-tertiary, #9ca3af);
 }
 
 .widget-weight__goal {
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-secondary, #6b7280);
+}
+
+.widget-weight__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 100px;
+  margin-top: 4px;
+}
+
+.widget-weight__trend--up {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.widget-weight__trend--down {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.widget-weight__trend--stable {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
 }
 
 /* Steps Widget */
 .widget-steps {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .widget-steps__value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
-  color: var(--widget-motivation);
+  letter-spacing: -0.02em;
+  background: var(--widget-gradient-green);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-feature-settings: 'tnum' on;
 }
 
 .widget-steps__km {
   font-size: 12px;
-  color: var(--text-secondary, #6b7280);
+  font-weight: 600;
+  color: #30D158;
+  padding: 4px 10px;
+  background: rgba(48, 209, 88, 0.1);
+  border-radius: 100px;
+  display: inline-block;
 }
 
 .widget-steps__goal {
@@ -1053,174 +1862,273 @@
   color: var(--text-tertiary, #9ca3af);
 }
 
-/* Macros Widget */
+.widget-steps__progress {
+  height: 10px;
+  background: rgba(48, 209, 88, 0.1);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.widget-steps__bar {
+  height: 100%;
+  background: var(--widget-gradient-green);
+  border-radius: 5px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 12px rgba(48, 209, 88, 0.3);
+}
+
+/* Macros Widget — Premium Design */
 .widget-macros {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .widget-macros__row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .widget-macros__label {
-  width: 16px;
-  font-size: 10px;
-  font-weight: 700;
+  width: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.widget-macros__label--prot { color: #ef4444; }
-.widget-macros__label--fat { color: #eab308; }
-.widget-macros__label--carbs { color: #3b82f6; }
+.widget-macros__label--prot { 
+  color: #FF453A;
+}
 
-.widget-macros__track {
+.widget-macros__label--fat { 
+  color: #FFD60A; 
+}
+
+.widget-macros__label--carbs { 
+  color: #0A84FF;
+}
+
+.widget-macros__bar-container {
   flex: 1;
-  height: 6px;
-  background: var(--bg-secondary, #f3f4f6);
-  border-radius: 3px;
+  height: 8px;
+  background: var(--widget-surface-muted);
+  border-radius: 4px;
   overflow: hidden;
 }
 
 .widget-macros__bar {
   height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s ease;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.widget-macros__bar--prot { background: #ef4444; }
-.widget-macros__bar--fat { background: #eab308; }
-.widget-macros__bar--carbs { background: #3b82f6; }
+.widget-macros__bar--prot { 
+  background: linear-gradient(90deg, #FF453A, #FF6961);
+  box-shadow: 0 0 8px rgba(255, 69, 58, 0.3);
+}
+
+.widget-macros__bar--fat { 
+  background: linear-gradient(90deg, #FFD60A, #FFEA80);
+  box-shadow: 0 0 8px rgba(255, 214, 10, 0.3);
+}
+
+.widget-macros__bar--carbs { 
+  background: linear-gradient(90deg, #0A84FF, #64D2FF);
+  box-shadow: 0 0 8px rgba(10, 132, 255, 0.3);
+}
 
 .widget-macros__value {
-  width: 28px;
-  font-size: 10px;
-  font-weight: 600;
+  width: 40px;
+  font-size: 11px;
+  font-weight: 700;
   text-align: right;
   color: var(--text-secondary, #6b7280);
+  font-feature-settings: 'tnum' on;
 }
 
-/* Insulin Widget */
+/* Insulin Widget — Premium Design */
 .widget-insulin {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.widget-insulin__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 100px;
+}
+
+.widget-insulin__status--active {
+  background: rgba(249, 115, 22, 0.12);
+  color: #f97316;
+}
+
+.widget-insulin__status--almost {
+  background: rgba(234, 179, 8, 0.12);
+  color: #eab308;
+}
+
+.widget-insulin__status--soon {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.widget-insulin__status--lipolysis {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.widget-insulin__timer {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: var(--widget-gradient-blue);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-feature-settings: 'tnum' on;
+}
+
+.widget-insulin__phase {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary, #9ca3af);
+}
+
+/* Heatmap Widget — Premium Design */
+.widget-heatmap {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.widget-insulin__status {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.widget-insulin__status--active {
-  color: var(--widget-advanced);
-}
-
-.widget-insulin__status--lipolysis {
-  color: var(--widget-motivation);
-}
-
-.widget-insulin__timer {
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.widget-insulin__label {
-  font-size: 11px;
-  color: var(--text-tertiary, #9ca3af);
-}
-
-/* Heatmap Widget */
-.widget-heatmap {
+.widget-heatmap__grid {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
-.widget-heatmap__days {
-  display: flex;
-  gap: 4px;
+.widget-heatmap__grid--week {
   justify-content: space-between;
 }
 
-.widget-heatmap__day {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  background: var(--bg-secondary, #f3f4f6);
+.widget-heatmap__grid--month {
+  flex-wrap: wrap;
 }
 
-.widget-heatmap__day--green {
-  background: #22c55e;
+.widget-heatmap__cell {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--widget-surface-muted);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.widget-heatmap__day--yellow {
-  background: #eab308;
+.widget-heatmap__cell:hover {
+  transform: scale(1.15);
 }
 
-.widget-heatmap__day--red {
-  background: #ef4444;
+.widget-heatmap__cell--empty {
+  background: var(--widget-surface-soft);
+}
+
+.widget-heatmap__cell--green {
+  background: linear-gradient(135deg, #22c55e, #10b981);
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+.widget-heatmap__cell--yellow {
+  background: linear-gradient(135deg, #eab308, #fbbf24);
+  box-shadow: 0 2px 8px rgba(234, 179, 8, 0.3);
+}
+
+.widget-heatmap__cell--red {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
 }
 
 .widget-heatmap__label {
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--text-tertiary, #9ca3af);
   text-align: center;
+  margin-top: 4px;
 }
 
-/* Cycle Widget */
+/* Cycle Widget — Premium Design */
 .widget-cycle {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .widget-cycle__empty {
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-tertiary, #9ca3af);
 }
 
 .widget-cycle__day {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
-  color: var(--widget-cycle);
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #FF2D55, #FF6482);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .widget-cycle__phase {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
-  color: var(--text-secondary, #6b7280);
+  font-weight: 600;
+  padding: 6px 12px;
+  background: rgba(255, 45, 85, 0.1);
+  color: #FF2D55;
+  border-radius: 100px;
 }
 
 /* ===================================================================
- * Widget Catalog Modal
+ * Widget Catalog Modal — Premium Design
  * =================================================================== */
 .widgets-catalog-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 1000;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding: 0;
-  animation: fadeIn 0.2s ease;
+  animation: catalogFadeIn 0.25s ease;
 }
 
-@keyframes fadeIn {
+@keyframes catalogFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
 .widgets-catalog {
   background: var(--bg-primary, #fff);
-  border-radius: 20px 20px 0 0;
+  border-radius: 24px 24px 0 0;
   width: 100%;
   max-width: 500px;
-  max-height: 80vh;
+  max-height: 85vh;
   overflow: hidden;
   display: flex;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15);
+  animation: catalogSlideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1);
   flex-direction: column;
   animation: slideUp 0.3s ease;
 }

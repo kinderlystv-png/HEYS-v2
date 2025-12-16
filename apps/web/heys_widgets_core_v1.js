@@ -20,18 +20,23 @@
   
   // === Constants ===
   const STORAGE_KEY = 'heys_widget_layout_v1';
-  const GRID_COLS = 2; // 2 колонки для мобильного
+  const STORAGE_META_KEY = 'heys_widget_layout_meta_v1';
+  const GRID_COLS = 4; // 4 колонки: 1 колонка/ряд = базовая единица
+  const GRID_VERSION = 2;
   const MAX_HISTORY = 20; // Максимум шагов undo/redo
   const SAVE_DEBOUNCE_MS = 500; // Debounce для сохранения
   const LONG_PRESS_MS = 500; // Время для long press
-  const CELL_HEIGHT_PX = 140; // Высота ячейки в пикселях (для расчёта drop position)
-  const CELL_GAP_PX = 12; // Gap между ячейками
+  // ВАЖНО: основной источник правды по высоте ряда — CSS var --widget-row-height.
+  // Здесь — fallback на случай ранней инициализации до применения стилей.
+  const CELL_HEIGHT_PX = 76; // fallback
+  const CELL_GAP_PX = 12; // fallback
   
   const DEFAULT_LAYOUT = [
+    // 4-колоночная сетка (compact = 2×2)
     { type: 'calories', size: 'compact', position: { col: 0, row: 0 } },
-    { type: 'water', size: 'compact', position: { col: 1, row: 0 } },
-    { type: 'streak', size: 'compact', position: { col: 0, row: 1 } },
-    { type: 'sleep', size: 'compact', position: { col: 1, row: 1 } }
+    { type: 'water', size: 'compact', position: { col: 2, row: 0 } },
+    { type: 'streak', size: 'compact', position: { col: 0, row: 2 } },
+    { type: 'sleep', size: 'compact', position: { col: 2, row: 2 } }
   ];
   
   // === State Manager with Undo/Redo ===
@@ -49,12 +54,27 @@
      */
     init() {
       if (this._initialized) return;
-      
-      const saved = this.loadLayout();
+
+      const meta = this.loadLayoutMeta();
+      let saved = this.loadLayout();
+
+      // Миграция layout 2-колоночной сетки → 4-колоночную.
+      // Важно: делаем ОДИН раз и фиксируем в meta.
+      const needsMigration = !meta || meta.gridVersion !== GRID_VERSION || meta.gridCols !== GRID_COLS;
+      if (needsMigration && saved && Array.isArray(saved) && saved.length > 0) {
+        saved = this._migrateLayout(saved, meta);
+        // После миграции — сохраняем meta + текущий layout
+        this.saveLayoutMeta({ gridVersion: GRID_VERSION, gridCols: GRID_COLS, migratedAt: Date.now() });
+        // saveLayout сделает storage в debounced, но тут хотим сразу
+        try { this.saveLayout(); } catch (e) {}
+      }
+
       if (saved && Array.isArray(saved) && saved.length > 0) {
         this._widgets = saved.map(w => this._normalizeWidget(w));
       } else {
         this._widgets = this._createDefaultLayout();
+        // фиксируем meta для чистого старта
+        this.saveLayoutMeta({ gridVersion: GRID_VERSION, gridCols: GRID_COLS, migratedAt: Date.now() });
       }
       
       // Очищаем историю при загрузке
@@ -64,6 +84,132 @@
       this._initialized = true;
       HEYS.Widgets.emit('layout:loaded', { layout: this._widgets });
       console.log('[Widgets Core] State initialized with', this._widgets.length, 'widgets');
+    },
+
+    /**
+     * Meta для layout (чтобы миграция не повторялась)
+     */
+    loadLayoutMeta() {
+      try {
+        if (HEYS.store?.get) {
+          return HEYS.store.get(STORAGE_META_KEY, null);
+        } else if (HEYS.utils?.lsGet) {
+          return HEYS.utils.lsGet(STORAGE_META_KEY, null);
+        } else {
+          const stored = localStorage.getItem(STORAGE_META_KEY);
+          return stored ? JSON.parse(stored) : null;
+        }
+      } catch (e) {
+        return null;
+      }
+    },
+
+    saveLayoutMeta(meta) {
+      try {
+        if (HEYS.store?.set) {
+          HEYS.store.set(STORAGE_META_KEY, meta);
+        } else if (HEYS.utils?.lsSet) {
+          HEYS.utils.lsSet(STORAGE_META_KEY, meta);
+        } else {
+          localStorage.setItem(STORAGE_META_KEY, JSON.stringify(meta));
+        }
+      } catch (e) {
+        // no-op
+      }
+    },
+
+    /**
+     * Миграция layout (v1: GRID_COLS=2) → (v2: GRID_COLS=4).
+     * Стратегия:
+     * 1) Масштабируем координаты ×2 (col/row)
+     * 2) Затем «упаковываем» виджеты заново по их визуальному порядку,
+     *    чтобы гарантировать отсутствие коллизий на новых размерах.
+     */
+    _migrateLayout(savedLayout, meta) {
+      const fromCols = meta?.gridCols || 2;
+      const toCols = GRID_COLS;
+      const scale = toCols / fromCols;
+
+      // Если внезапно уже совпадает — ничего не делаем
+      if (!Number.isFinite(scale) || scale <= 0 || scale === 1) {
+        return savedLayout;
+      }
+
+      const scaled = savedLayout.map((w) => {
+        const pos = w?.position || { col: 0, row: 0 };
+        return {
+          ...w,
+          position: {
+            col: Math.max(0, Math.round((pos.col || 0) * scale)),
+            row: Math.max(0, Math.round((pos.row || 0) * scale))
+          }
+        };
+      });
+
+      // Нормализуем (получим новые cols/rows из registry) и репакуем
+      const normalized = scaled.map((w) => this._normalizeWidget(w));
+      const packedPositions = this._packLayoutPositions(normalized);
+
+      return normalized.map((w) => ({
+        id: w.id,
+        type: w.type,
+        size: w.size,
+        position: packedPositions[w.id] || w.position,
+        settings: w.settings,
+        createdAt: w.createdAt
+      }));
+    },
+
+    _packLayoutPositions(widgets) {
+      const sorted = [...(widgets || [])].sort((a, b) => {
+        if ((a.position?.row || 0) !== (b.position?.row || 0)) return (a.position?.row || 0) - (b.position?.row || 0);
+        return (a.position?.col || 0) - (b.position?.col || 0);
+      });
+
+      const occupied = new Set();
+      const positions = {};
+
+      const occupy = (w, col, row) => {
+        for (let c = 0; c < w.cols; c++) {
+          for (let r = 0; r < w.rows; r++) {
+            occupied.add(`${col + c},${row + r}`);
+          }
+        }
+      };
+
+      const canPlace = (col, row, cols, rows) => {
+        if (col < 0 || col + cols > GRID_COLS) return false;
+        if (row < 0) return false;
+        for (let c = 0; c < cols; c++) {
+          for (let r = 0; r < rows; r++) {
+            if (occupied.has(`${col + c},${row + r}`)) return false;
+          }
+        }
+        return true;
+      };
+
+      for (const w of sorted) {
+        let placed = false;
+        for (let row = 0; row < 200 && !placed; row++) {
+          for (let col = 0; col <= GRID_COLS - w.cols; col++) {
+            if (canPlace(col, row, w.cols, w.rows)) {
+              positions[w.id] = { col, row };
+              occupy(w, col, row);
+              placed = true;
+              break;
+            }
+          }
+        }
+
+        if (!placed) {
+          // fallback: в самый низ
+          const maxRow = Math.max(0, ...Object.values(positions).map(p => p.row));
+          positions[w.id] = { col: 0, row: maxRow + 1 };
+          occupy(w, positions[w.id].col, positions[w.id].row);
+        }
+      }
+
+      return positions;
     },
     
     /**
@@ -344,6 +490,65 @@
     moveWidget(id, position, skipHistory = false) {
       return this.updateWidget(id, { position }, skipHistory);
     },
+
+    /**
+     * Поменять два виджета местами (позициями).
+     * Нужен для iOS-like перестановки: drop на занятое место делает swap.
+     * @param {string} idA
+     * @param {string} idB
+     * @param {boolean} skipHistory
+     * @returns {boolean}
+     */
+    swapWidgets(idA, idB, skipHistory = false) {
+      const a = this.getWidget(idA);
+      const b = this.getWidget(idB);
+      if (!a || !b) return false;
+
+      const posA = { ...a.position };
+      const posB = { ...b.position };
+
+      if (!skipHistory) {
+        this._pushHistory();
+      }
+
+      // Делаем swap без дополнительного history push
+      this.updateWidget(idA, { position: posB }, true);
+      this.updateWidget(idB, { position: posA }, true);
+
+      HEYS.Widgets.emit('widget:swapped', { a: idA, b: idB, from: posA, to: posB });
+      return true;
+    },
+
+    /**
+     * Массово применить позиции (одним действием для истории).
+     * @param {Record<string, {col:number,row:number}>} positionsById
+     * @param {boolean} skipHistory
+     * @returns {boolean}
+     */
+    applyPositions(positionsById, skipHistory = false) {
+      if (!positionsById || typeof positionsById !== 'object') return false;
+
+      if (!skipHistory) {
+        this._pushHistory();
+      }
+
+      let changed = false;
+      for (const w of this._widgets) {
+        const next = positionsById[w.id];
+        if (!next) continue;
+        if (w.position.col !== next.col || w.position.row !== next.row) {
+          w.position = { col: next.col, row: next.row };
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        this._debouncedSave();
+        HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
+      }
+
+      return changed;
+    },
     
     /**
      * Изменить размер виджета
@@ -351,16 +556,83 @@
      * @param {string} size
      */
     resizeWidget(id, size) {
+      return this.resizeWidgetAt(id, size, null);
+    },
+
+    /**
+     * Изменить размер виджета с якорем (опционально) на конкретную позицию.
+     * Нужно для resize от левого/верхнего края: меняется и size, и position.
+     *
+     * Важно: остаётся одним атомарным действием (history + reflow + rollback).
+     *
+     * @param {string} id
+     * @param {string} size
+     * @param {{col:number,row:number}|null} position
+     */
+    resizeWidgetAt(id, size, position = null) {
       const widget = this.getWidget(id);
       if (!widget) return false;
-      
+
       const registry = HEYS.Widgets.registry;
       if (!registry.supportsSize(widget.type, size)) {
         console.warn(`[Widgets Core] Widget ${widget.type} does not support size ${size}`);
         return false;
       }
-      
-      return this.updateWidget(id, { size });
+
+      const nextPos = (position && Number.isFinite(position.col) && Number.isFinite(position.row))
+        ? { col: position.col, row: position.row }
+        : { ...widget.position };
+
+      // iOS-like: resize = одно атомарное действие + reflow остальных,
+      // чтобы layout всегда оставался валидным и без наложений.
+      const prevSize = widget.size;
+      const prevPos = { ...widget.position };
+
+      // 1) Одна запись в историю
+      this._pushHistory();
+
+      // 2) Меняем размер (+ якорную позицию) без дополнительного history push
+      const resized = this.updateWidget(id, { size, position: nextPos }, true);
+      if (!resized) return false;
+
+      // 3) Пробуем перепаковать остальных, сохраняя заданную позицию
+      let positions = null;
+      try {
+        positions = gridEngine.computeReflowLayout(id, widget.position);
+      } catch (e) {
+        positions = null;
+      }
+
+      // 4) Если не вышло — пробуем поставить виджет в первое свободное место
+      if (!positions) {
+        try {
+          const free = gridEngine.findFreePosition(widget.cols, widget.rows);
+          positions = gridEngine.computeReflowLayout(id, free);
+        } catch (e) {
+          positions = null;
+        }
+      }
+
+      // 5) Если перепаковка успешна — применяем одним действием
+      if (positions) {
+        // applyPositions сам сделает debounced save + layout:changed
+        // Важно: applyPositions возвращает false, если позиции не изменились.
+        // Это НЕ ошибка для resize — размер уже применён через updateWidget.
+        try {
+          this.applyPositions(positions, true);
+        } catch (e) {
+          // Если applyPositions упало (не должно), дальше сработает rollback
+          positions = null;
+        }
+
+        if (positions) return true;
+      }
+
+      // 6) Фолбэк: откатываем resize (чтобы не оставлять overlay/коллизии)
+      this.updateWidget(id, { size: prevSize, position: prevPos }, true);
+      HEYS.Widgets.emit('widget:resize_failed', { widgetId: id, from: prevSize, to: size });
+      // layout:changed эмитится внутри updateWidget
+      return false;
     },
     
     /**
@@ -570,6 +842,105 @@
       const occupiedCells = this.getOccupiedCells(state.getWidgets(), widgetId);
       return this.canPlace(position.col, position.row, widget.cols, widget.rows, occupiedCells);
     },
+
+    /**
+     * Найти виджет, который пересекается с прямоугольником виджета widgetId,
+     * если тот поставить в position.
+     * @param {string} widgetId
+     * @param {Object} position - { col, row }
+     * @returns {Object|null}
+     */
+    getCollidingWidget(widgetId, position) {
+      const widget = state.getWidget(widgetId);
+      if (!widget) return null;
+
+      const aLeft = position.col;
+      const aTop = position.row;
+      const aRight = position.col + widget.cols;
+      const aBottom = position.row + widget.rows;
+
+      const widgets = state.getWidgets();
+      for (const other of widgets) {
+        if (!other || other.id === widgetId) continue;
+        const bLeft = other.position.col;
+        const bTop = other.position.row;
+        const bRight = other.position.col + other.cols;
+        const bBottom = other.position.row + other.rows;
+
+        const overlap = aLeft < bRight && aRight > bLeft && aTop < bBottom && aBottom > bTop;
+        if (overlap) return other;
+      }
+
+      return null;
+    },
+
+    /**
+     * 🆕 iOS-like reflow: пробуем поставить виджет в position, а остальные
+     * перепаковать так, чтобы не было коллизий.
+     *
+     * Это НЕ свободное позиционирование — сетка всё ещё grid-based, но drop
+     * теперь возможен "в занятое место" (остальные сдвинутся).
+     *
+     * @param {string} draggedId
+     * @param {{col:number,row:number}} position
+     * @returns {Record<string,{col:number,row:number}>|null}
+     */
+    computeReflowLayout(draggedId, position) {
+      const dragged = state.getWidget(draggedId);
+      if (!dragged) return null;
+
+      // Нормализуем target позицию под ширину виджета и текущую высоту
+      const currentHeight = this.getGridHeight();
+      const target = {
+        col: Math.max(0, Math.min(position.col || 0, GRID_COLS - dragged.cols)),
+        row: Math.max(0, Math.min(position.row || 0, currentHeight + 6))
+      };
+
+      // Список остальных виджетов в текущем визуальном порядке
+      const others = state.getWidgets()
+        .filter(w => w && w.id !== draggedId)
+        .sort((a, b) => {
+          if (a.position.row !== b.position.row) return a.position.row - b.position.row;
+          return a.position.col - b.position.col;
+        });
+
+      const positions = {};
+      const occupied = new Set();
+
+      const occupy = (wId, col, row, cols, rows) => {
+        for (let c = 0; c < cols; c++) {
+          for (let r = 0; r < rows; r++) {
+            occupied.add(`${col + c},${row + r}`);
+          }
+        }
+      };
+
+      // Ставим dragged на target (даже если там было занято)
+      positions[draggedId] = target;
+      occupy(draggedId, target.col, target.row, dragged.cols, dragged.rows);
+
+      // Функция поиска первого доступного слота
+      const findSlot = (w) => {
+        for (let row = 0; row < 120; row++) {
+          for (let col = 0; col <= GRID_COLS - w.cols; col++) {
+            if (this.canPlace(col, row, w.cols, w.rows, occupied)) {
+              return { col, row };
+            }
+          }
+        }
+        return null;
+      };
+
+      // Упаковываем остальных
+      for (const w of others) {
+        const slot = findSlot(w);
+        if (!slot) return null;
+        positions[w.id] = slot;
+        occupy(w.id, slot.col, slot.row, w.cols, w.rows);
+      }
+
+      return positions;
+    },
     
     /**
      * Компактизировать layout (убрать пустые строки)
@@ -623,11 +994,19 @@
       if (!grid) {
         return { cellWidth: 150, cellHeight: CELL_HEIGHT_PX, gap: CELL_GAP_PX };
       }
-      
+
       const rect = grid.getBoundingClientRect();
-      const cellWidth = (rect.width - CELL_GAP_PX * (GRID_COLS - 1)) / GRID_COLS;
-      
-      return { cellWidth, cellHeight: CELL_HEIGHT_PX, gap: CELL_GAP_PX };
+
+      // Считываем реальные значения из CSS variables (поддержка responsive)
+      const cs = window.getComputedStyle(grid);
+      const gapVar = parseFloat(cs.getPropertyValue('--widget-grid-gap'));
+      const rowVar = parseFloat(cs.getPropertyValue('--widget-row-height'));
+      const gap = Number.isFinite(gapVar) ? gapVar : CELL_GAP_PX;
+      const cellHeight = Number.isFinite(rowVar) ? rowVar : CELL_HEIGHT_PX;
+
+      const cellWidth = (rect.width - gap * (GRID_COLS - 1)) / GRID_COLS;
+
+      return { cellWidth, cellHeight, gap };
     },
     
     /**
@@ -677,6 +1056,7 @@
     _longPressTriggered: false,
     _lastValidPosition: null,
     _originalElement: null,
+    _dropIntent: null,
     
     /**
      * Обработка начала касания/клика (для long press detection)
@@ -684,6 +1064,12 @@
      * @param {Object} event
      */
     handlePointerDown(widgetId, event) {
+      // Фиксируем стартовую позицию для отмены long press при движении
+      this._startPos = {
+        x: event.clientX || event.touches?.[0]?.clientX || 0,
+        y: event.clientY || event.touches?.[0]?.clientY || 0
+      };
+
       // Если уже в edit mode — сразу начинаем drag
       if (state.isEditMode()) {
         this._prepareForDrag(widgetId, event);
@@ -711,6 +1097,12 @@
      * @param {Object} event
      */
     handlePointerUp(widgetId, event) {
+      // Поддержка вызова как handlePointerUp(event) из глобальных listeners
+      if (widgetId && typeof widgetId === 'object' && !event) {
+        event = widgetId;
+        widgetId = null;
+      }
+
       // Отменяем long press timer если не сработал
       if (this._longPressTimer) {
         clearTimeout(this._longPressTimer);
@@ -727,6 +1119,28 @@
      * Отмена long press при движении
      */
     handlePointerMove(event) {
+      // На iOS/Safari без preventDefault страница может скроллиться и ломать drag
+      if (this._dragging && event && event.cancelable) {
+        event.preventDefault();
+      }
+
+      // 🆕 Scroll intent cancel: в edit-mode пользователь часто хочет просто
+      // проскроллить страницу. Если до старта drag (порог 5px) движение явно
+      // вертикальное — отменяем подготовленный drag и не блокируем скролл.
+      if (this._draggedWidget && !this._dragging && state.isEditMode()) {
+        const cx = event.clientX || event.touches?.[0]?.clientX || 0;
+        const cy = event.clientY || event.touches?.[0]?.clientY || 0;
+        const dx = Math.abs(cx - (this._startPos?.x || 0));
+        const dy = Math.abs(cy - (this._startPos?.y || 0));
+
+        // Порог чуть выше, чем у старта drag, чтобы не мешать точному перетаскиванию.
+        // Если свайп вертикальный и заметный — считаем это скроллом.
+        if (dy > 14 && dy > dx * 1.4) {
+          this._cleanup();
+          return;
+        }
+      }
+
       // Если двигаемся во время ожидания long press — отменяем
       if (this._longPressTimer && !this._dragging) {
         const dx = Math.abs((event.clientX || event.touches?.[0]?.clientX || 0) - (this._startPos?.x || 0));
@@ -740,7 +1154,9 @@
       }
       
       // Если drag активен — двигаем
-      if (this._dragging) {
+      // Важно: move() сам стартует drag после порога (5px) — поэтому вызываем
+      // его и до фактического старта, когда _draggedWidget уже задан.
+      if (this._draggedWidget) {
         this.move(event);
       }
     },
@@ -805,6 +1221,7 @@
       
       this._dragging = true;
       this._draggedWidget = widget;
+      this._dropIntent = null;
       
       if (!this._startPos) {
         this._startPos = {
@@ -887,20 +1304,14 @@
       
       const placeholder = document.createElement('div');
       placeholder.className = 'widget-placeholder';
-      placeholder.style.cssText = `
-        grid-column: span ${widget.cols};
-        grid-row: span ${widget.rows};
-        background: var(--color-surface, rgba(59, 130, 246, 0.1));
-        border: 2px dashed var(--color-primary, #3b82f6);
-        border-radius: 16px;
-        transition: all 0.2s ease;
-      `;
+      // Визуал — в CSS (.widget-placeholder). Здесь задаём только grid-геометрию.
+      placeholder.style.transition = 'all 0.15s ease-out';
       
-      // Вставляем placeholder в нужную позицию
-      this._updatePlaceholderPosition(widget.position);
-      
-      grid.appendChild(placeholder);
+      // Привязываем placeholder и ставим в нужную grid-позицию
       this._placeholderElement = placeholder;
+      this._updatePlaceholderPosition(widget.position);
+
+      grid.appendChild(placeholder);
     },
     
     /**
@@ -909,9 +1320,17 @@
      */
     _updatePlaceholderPosition(position) {
       if (!this._placeholderElement) return;
-      
-      this._placeholderElement.style.gridColumnStart = position.col + 1;
-      this._placeholderElement.style.gridRowStart = position.row + 1;
+
+      // Важно: в некоторых браузерах (особенно iOS Safari) раздельная установка
+      // gridColumnStart после шортхенда может сбрасывать span. Поэтому задаём
+      // полные значения (start + span) каждый раз.
+      const cols = this._draggedWidget?.cols || 1;
+      const rows = this._draggedWidget?.rows || 1;
+      const c = (position?.col || 0) + 1;
+      const r = (position?.row || 0) + 1;
+
+      this._placeholderElement.style.gridColumn = `${c} / span ${cols}`;
+      this._placeholderElement.style.gridRow = `${r} / span ${rows}`;
     },
     
     /**
@@ -960,20 +1379,52 @@
         // Ограничиваем позицию с учётом размера виджета
         newGridPos.col = Math.min(newGridPos.col, GRID_COLS - this._draggedWidget.cols);
         
-        // Проверяем валидность и обновляем placeholder
+        // Проверяем валидность (пустое место) или swap (занято, но можно поменяться местами)
         const isValid = gridEngine.validatePosition(this._draggedWidget.id, newGridPos);
-        
-        if (isValid) {
+        let swapWith = null;
+        if (!isValid) {
+          const colliding = gridEngine.getCollidingWidget(this._draggedWidget.id, newGridPos);
+          if (colliding && colliding.cols === this._draggedWidget.cols && colliding.rows === this._draggedWidget.rows) {
+            swapWith = colliding;
+          }
+        }
+
+        // 🆕 Если ни move ни swap — пробуем reflow (авто-сдвиг остальных)
+        let reflowPositions = null;
+        if (!isValid && !swapWith) {
+          reflowPositions = gridEngine.computeReflowLayout(this._draggedWidget.id, newGridPos);
+        }
+
+        if (isValid || swapWith || reflowPositions) {
           this._lastValidPosition = newGridPos;
+          this._dropIntent = reflowPositions
+            ? { type: 'reflow', position: newGridPos, positionsById: reflowPositions }
+            : (swapWith
+              ? { type: 'swap', position: newGridPos, swapWithId: swapWith.id }
+              : { type: 'move', position: newGridPos });
+
           this._updatePlaceholderPosition(newGridPos);
-          
+
           if (this._placeholderElement) {
             this._placeholderElement.classList.remove('widget-placeholder--invalid');
             this._placeholderElement.classList.add('widget-placeholder--valid');
+            if (reflowPositions) {
+              this._placeholderElement.classList.add('widget-placeholder--reflow');
+              this._placeholderElement.classList.remove('widget-placeholder--swap');
+            } else if (swapWith) {
+              this._placeholderElement.classList.add('widget-placeholder--swap');
+              this._placeholderElement.classList.remove('widget-placeholder--reflow');
+            } else {
+              this._placeholderElement.classList.remove('widget-placeholder--swap');
+              this._placeholderElement.classList.remove('widget-placeholder--reflow');
+            }
           }
         } else {
+          this._dropIntent = null;
           if (this._placeholderElement) {
             this._placeholderElement.classList.remove('widget-placeholder--valid');
+            this._placeholderElement.classList.remove('widget-placeholder--swap');
+            this._placeholderElement.classList.remove('widget-placeholder--reflow');
             this._placeholderElement.classList.add('widget-placeholder--invalid');
           }
         }
@@ -1010,25 +1461,51 @@
       this._removeGhost();
       this._removePlaceholder();
       
-      // Если drag был активен и есть валидная позиция — применяем
-      if (hadDrag && this._lastValidPosition) {
-        const posChanged = 
-          this._lastValidPosition.col !== this._startGridPos.col ||
-          this._lastValidPosition.row !== this._startGridPos.row;
-        
-        if (posChanged && gridEngine.validatePosition(this._draggedWidget.id, this._lastValidPosition)) {
-          state.moveWidget(this._draggedWidget.id, this._lastValidPosition);
-          
-          // Вибрация при успешном drop
+      // Если drag был активен и есть намерение drop — применяем
+      if (hadDrag && this._dropIntent && this._dropIntent.position) {
+        const targetPos = this._dropIntent.position;
+        const posChanged = targetPos.col !== this._startGridPos.col || targetPos.row !== this._startGridPos.row;
+
+        if (!posChanged) {
+          HEYS.Widgets.emit('dnd:cancel', { widget: this._draggedWidget });
+        } else if (this._dropIntent.type === 'move' && gridEngine.validatePosition(this._draggedWidget.id, targetPos)) {
+          state.moveWidget(this._draggedWidget.id, targetPos);
+
           if (navigator.vibrate) {
             navigator.vibrate(10);
           }
-          
-          HEYS.Widgets.emit('dnd:drop', {
-            widget: this._draggedWidget,
-            from: this._startGridPos,
-            to: this._lastValidPosition
-          });
+
+          HEYS.Widgets.emit('dnd:drop', { widget: this._draggedWidget, from: this._startGridPos, to: targetPos });
+        } else if (this._dropIntent.type === 'swap' && this._dropIntent.swapWithId) {
+          const swapped = state.swapWidgets(this._draggedWidget.id, this._dropIntent.swapWithId);
+          if (swapped) {
+            if (navigator.vibrate) {
+              navigator.vibrate(10);
+            }
+            HEYS.Widgets.emit('dnd:swap', {
+              widget: this._draggedWidget,
+              with: this._dropIntent.swapWithId,
+              from: this._startGridPos,
+              to: targetPos
+            });
+          } else {
+            HEYS.Widgets.emit('dnd:cancel', { widget: this._draggedWidget });
+          }
+        } else if (this._dropIntent.type === 'reflow' && this._dropIntent.positionsById) {
+          const applied = state.applyPositions(this._dropIntent.positionsById);
+          if (applied) {
+            if (navigator.vibrate) {
+              navigator.vibrate(10);
+            }
+            HEYS.Widgets.emit('dnd:reflow', {
+              widget: this._draggedWidget,
+              from: this._startGridPos,
+              to: targetPos,
+              positionsById: this._dropIntent.positionsById
+            });
+          } else {
+            HEYS.Widgets.emit('dnd:cancel', { widget: this._draggedWidget });
+          }
         } else {
           HEYS.Widgets.emit('dnd:cancel', { widget: this._draggedWidget });
         }
@@ -1101,6 +1578,7 @@
       this._lastValidPosition = null;
       this._originalElement = null;
       this._longPressTriggered = false;
+      this._dropIntent = null;
     }
   };
   

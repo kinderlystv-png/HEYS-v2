@@ -48,10 +48,24 @@
   
   // === Widget Size Presets ===
   const SIZES = {
-    compact: { cols: 1, rows: 1, label: 'Компактный', cssClass: 'widget--compact' },
-    wide: { cols: 2, rows: 1, label: 'Широкий', cssClass: 'widget--wide' },
-    tall: { cols: 1, rows: 2, label: 'Высокий', cssClass: 'widget--tall' },
-    large: { cols: 2, rows: 2, label: 'Большой', cssClass: 'widget--large' }
+    // ВАЖНО: сетка теперь 4 колонки (единица = 1 колонка/ряд).
+    // Чтобы сохранить привычные пропорции старой 2-колоночной сетки,
+    // размеры "классических" виджетов масштабированы ×2.
+    // 4-колоночная сетка: 1 колонка/ряд = базовая единица.
+    // iOS-like:
+    // - compact = 2×2
+    // - wide    = 4×2
+    // - large   = 4×4
+    // Дополнительно: mini = 1×1 (value-only виджет)
+    mini: { cols: 1, rows: 1, label: 'Мини', cssClass: 'widget--mini' },
+    compact: { cols: 2, rows: 2, label: 'Компактный', cssClass: 'widget--compact' },
+    // Промежуточные размеры для ощущения «шаг 1 клетка»
+    medium: { cols: 3, rows: 2, label: '3×2', cssClass: 'widget--medium' },
+    wide: { cols: 4, rows: 2, label: 'Широкий', cssClass: 'widget--wide' },
+    wide3: { cols: 4, rows: 3, label: '4×3', cssClass: 'widget--wide3' },
+    tall3: { cols: 2, rows: 3, label: '2×3', cssClass: 'widget--tall3' },
+    tall: { cols: 2, rows: 4, label: 'Высокий', cssClass: 'widget--tall' },
+    large: { cols: 4, rows: 4, label: 'Большой', cssClass: 'widget--large' }
   };
   
   // === Widget Type Definitions ===
@@ -65,7 +79,7 @@
       icon: '🔥',
       description: 'Текущие калории и норма',
       defaultSize: 'compact',
-      availableSizes: ['compact', 'wide'],
+      availableSizes: ['compact', 'medium', 'wide'],
       dataKeys: ['dayTot.kcal', 'optimum'],
       component: 'WidgetCalories',
       settings: {
@@ -81,7 +95,7 @@
       icon: '🥗',
       description: 'Баланс белков, жиров, углеводов',
       defaultSize: 'wide',
-      availableSizes: ['wide', 'large'],
+      availableSizes: ['wide', 'wide3', 'large'],
       dataKeys: ['dayTot.prot', 'dayTot.fat', 'dayTot.carbs', 'normAbs'],
       component: 'WidgetMacros',
       settings: {
@@ -97,7 +111,7 @@
       icon: '📈',
       description: 'Таймер инсулиновой волны',
       defaultSize: 'compact',
-      availableSizes: ['compact', 'wide'],
+      availableSizes: ['compact', 'medium', 'wide'],
       dataKeys: ['waveData'],
       component: 'WidgetInsulin',
       settings: {
@@ -114,7 +128,7 @@
       icon: '😴',
       description: 'Часы сна и качество',
       defaultSize: 'compact',
-      availableSizes: ['compact', 'wide'],
+      availableSizes: ['compact', 'medium', 'wide'],
       dataKeys: ['day.sleepHours', 'day.sleepQuality', 'prof.sleepHours'],
       component: 'WidgetSleep',
       settings: {
@@ -130,7 +144,7 @@
       icon: '💧',
       description: 'Выпито воды и норма',
       defaultSize: 'compact',
-      availableSizes: ['compact', 'wide'],
+      availableSizes: ['compact', 'medium', 'wide'],
       dataKeys: ['day.waterMl', 'waterGoal'],
       component: 'WidgetWater',
       settings: {
@@ -146,7 +160,7 @@
       icon: '⚖️',
       description: 'Текущий вес и тренд',
       defaultSize: 'wide',
-      availableSizes: ['compact', 'wide', 'large'],
+      availableSizes: ['mini', 'compact', 'tall3', 'tall', 'medium', 'wide', 'wide3', 'large'],
       dataKeys: ['day.weightMorning', 'prof.weight', 'prof.weightGoal', 'weightTrend'],
       component: 'WidgetWeight',
       settings: {
@@ -163,7 +177,7 @@
       icon: '👟',
       description: 'Шаги за день',
       defaultSize: 'compact',
-      availableSizes: ['compact', 'wide'],
+      availableSizes: ['compact', 'medium', 'wide'],
       dataKeys: ['day.steps', 'prof.stepsGoal'],
       component: 'WidgetSteps',
       settings: {
@@ -180,7 +194,7 @@
       icon: '🔥',
       description: 'Серия дней в норме',
       defaultSize: 'compact',
-      availableSizes: ['compact', 'wide'],
+      availableSizes: ['compact', 'medium', 'wide'],
       dataKeys: ['currentStreak', 'maxStreak'],
       component: 'WidgetStreak',
       settings: {
@@ -196,7 +210,7 @@
       icon: '📅',
       description: 'Активность за неделю/месяц',
       defaultSize: 'wide',
-      availableSizes: ['wide', 'large'],
+      availableSizes: ['wide', 'wide3', 'large'],
       dataKeys: ['activeDays'],
       component: 'WidgetHeatmap',
       settings: {
@@ -215,7 +229,7 @@
       icon: '🌸',
       description: 'День менструального цикла',
       defaultSize: 'compact',
-      availableSizes: ['compact', 'wide'],
+      availableSizes: ['compact', 'medium', 'wide'],
       dataKeys: ['day.cycleDay', 'cyclePhase'],
       component: 'WidgetCycle',
       requiresCondition: () => {

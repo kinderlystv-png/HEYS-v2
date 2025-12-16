@@ -25,10 +25,52 @@
     const widgetType = registry?.getType(widget.type);
     const category = registry?.getCategory(widgetType?.category);
     const elementRef = useRef(null);
+
+    // Drag-resize (без popover): тянем за хендлы на гранях → снап к доступным размерам
+    const resizeDragRef = useRef({
+      active: false,
+      pointerId: null,
+      direction: null, // 'n' | 'e' | 's' | 'w'
+      startX: 0,
+      startY: 0,
+      baseCols: 1,
+      baseRows: 1,
+      baseSizeId: null,
+      basePos: { col: 0, row: 0 },
+      fixedRight: 0,
+      fixedBottom: 0,
+      lastDeltaCols: 0,
+      lastDeltaRows: 0,
+      raf: 0,
+      pending: null,
+      last: null
+    });
+    const [resizePreview, setResizePreview] = useState(null);
     
     // Pointer event handlers for DnD
     const handlePointerDown = useCallback((e) => {
+      // Во время resize не должны стартовать DnD/long-press/prepareForDrag
+      // (на iOS есть микродвижения пальца → drag стартует «сам»).
+      if (resizeDragRef.current?.active) return;
+
+      const t = e?.target;
+      if (t && typeof t.closest === 'function') {
+        // Клики/тачи по resize-хендлам и overlay не должны запускать drag
+        if (t.closest('.widget__resize-handle') || t.closest('.widget__resize-overlay')) {
+          return;
+        }
+      }
       HEYS.Widgets.dnd?.handlePointerDown?.(widget.id, e, elementRef.current);
+    }, [widget.id]);
+
+    const handlePointerMove = useCallback((e) => {
+      if (resizeDragRef.current?.active) return;
+      HEYS.Widgets.dnd?.handlePointerMove?.(e);
+    }, []);
+
+    const handlePointerUp = useCallback((e) => {
+      if (resizeDragRef.current?.active) return;
+      HEYS.Widgets.dnd?.handlePointerUp?.(widget.id, e);
     }, [widget.id]);
     
     const handleClick = useCallback(() => {
@@ -46,37 +88,329 @@
       e.stopPropagation();
       onSettings?.(widget);
     }, [widget, onSettings]);
+
+    const availableSizes = useMemo(() => {
+      const typeDef = widgetType;
+      if (typeDef?.availableSizes && typeDef.availableSizes.length) return typeDef.availableSizes;
+      return [typeDef?.defaultSize || widget.size || 'compact'];
+    }, [widgetType, widget.size]);
+
+    const currentSizeLabel = useMemo(() => {
+      const s = HEYS.Widgets.registry?.getSize?.(widget.size);
+      return s?.label || widget.size;
+    }, [widget.size]);
+
+    const getGridCols = useCallback(() => {
+      try {
+        const grid = document.querySelector('.widgets-grid');
+        if (!grid) return 4;
+        const cs = window.getComputedStyle(grid);
+        const v = parseInt(cs.getPropertyValue('--widget-grid-columns'), 10);
+        return Number.isFinite(v) && v > 0 ? v : 4;
+      } catch (e) {
+        return 4;
+      }
+    }, []);
+
+    const pickNearestSize = useCallback((targetCols, targetRows, deltaCols = 0, deltaRows = 0) => {
+      const sizes = (availableSizes && availableSizes.length) ? availableSizes : [widget.size || 'compact'];
+      const reg = HEYS.Widgets.registry;
+      const preferBigger = (deltaCols + deltaRows) >= 0;
+
+      let best = null;
+      for (const sizeId of sizes) {
+        const s = reg?.getSize?.(sizeId);
+        const cols = s?.cols || 1;
+        const rows = s?.rows || 1;
+        const dist = Math.abs(cols - targetCols) + Math.abs(rows - targetRows);
+        const area = cols * rows;
+
+        if (!best) {
+          best = { sizeId, cols, rows, dist, area };
+          continue;
+        }
+
+        if (dist < best.dist) {
+          best = { sizeId, cols, rows, dist, area };
+          continue;
+        }
+
+        if (dist === best.dist) {
+          // tie-break: при увеличении — предпочитаем больший area, при уменьшении — меньший
+          if (preferBigger && area > best.area) {
+            best = { sizeId, cols, rows, dist, area };
+          } else if (!preferBigger && area < best.area) {
+            best = { sizeId, cols, rows, dist, area };
+          }
+        }
+      }
+
+      return best || { sizeId: widget.size || 'compact', cols: widget.cols || 1, rows: widget.rows || 1 };
+    }, [availableSizes, widget.size, widget.cols, widget.rows]);
+
+    const updateResizePreview = useCallback((next) => {
+      const ref = resizeDragRef.current;
+      ref.last = next;
+      ref.pending = next;
+      if (ref.raf) return;
+      ref.raf = requestAnimationFrame(() => {
+        ref.raf = 0;
+        if (!ref.pending) return;
+        setResizePreview(ref.pending);
+        ref.pending = null;
+      });
+    }, []);
+
+    const endResizeDrag = useCallback((reason = 'up') => {
+      const ref = resizeDragRef.current;
+      if (!ref.active) return;
+      ref.active = false;
+
+      // Коммитим только если реально выбран другой размер
+      const finalSizeId = ref.last?.sizeId || resizePreview?.sizeId || null;
+      const finalPos = ref.last?.position || resizePreview?.position || widget.position || null;
+      const baseSizeId = ref.baseSizeId;
+      const basePos = ref.basePos || widget.position || { col: 0, row: 0 };
+      setResizePreview(null);
+
+      // Cleanup raf
+      if (ref.raf) {
+        cancelAnimationFrame(ref.raf);
+        ref.raf = 0;
+      }
+      ref.pending = null;
+      ref.last = null;
+
+      const posChanged = !!finalPos && (finalPos.col !== basePos.col || finalPos.row !== basePos.row);
+
+      if (finalSizeId && (finalSizeId !== baseSizeId || posChanged)) {
+        const st = HEYS.Widgets.state;
+        if (typeof st?.resizeWidgetAt === 'function') {
+          st.resizeWidgetAt(widget.id, finalSizeId, finalPos);
+        } else {
+          // Fallback (на всякий случай): может дать 2 действия в history
+          if (posChanged) st?.moveWidget?.(widget.id, finalPos);
+          if (finalSizeId !== baseSizeId) st?.resizeWidget?.(widget.id, finalSizeId);
+        }
+      }
+    }, [resizePreview, widget.id, widget.position]);
+
+    const handleResizeHandlePointerDown = useCallback((direction, e) => {
+      if (!isEditMode) return;
+      e.stopPropagation();
+      e.preventDefault();
+
+      // Если DnD уже «подготовился» (в edit-mode prepareForDrag ставит listeners),
+      // то при попытке resize он может внезапно стартовать. Отменяем.
+      try {
+        HEYS.Widgets.dnd?.cancel?.();
+      } catch (err) {
+        // ignore
+      }
+
+      const gridCols = getGridCols();
+      const metrics = HEYS.Widgets.gridEngine?.getCellMetrics?.() || { cellWidth: 150, cellHeight: 76, gap: 12 };
+      const unitX = (metrics.cellWidth || 150) + (metrics.gap || 12);
+      const unitY = (metrics.cellHeight || 76) + (metrics.gap || 12);
+
+      const ref = resizeDragRef.current;
+      ref.active = true;
+      ref.pointerId = e.pointerId;
+      ref.direction = direction;
+      ref.startX = e.clientX;
+      ref.startY = e.clientY;
+      ref.baseCols = widget.cols || 1;
+      ref.baseRows = widget.rows || 1;
+      ref.baseSizeId = widget.size || 'compact';
+      ref.basePos = {
+        col: Number.isFinite(widget?.position?.col) ? widget.position.col : 0,
+        row: Number.isFinite(widget?.position?.row) ? widget.position.row : 0
+      };
+      ref.fixedRight = ref.basePos.col + ref.baseCols;
+      ref.fixedBottom = ref.basePos.row + ref.baseRows;
+      ref.lastDeltaCols = 0;
+      ref.lastDeltaRows = 0;
+
+      try {
+        e.currentTarget?.setPointerCapture?.(e.pointerId);
+      } catch (err) {
+        // ignore
+      }
+
+      const initial = pickNearestSize(ref.baseCols, ref.baseRows, 0, 0);
+      updateResizePreview({
+        active: true,
+        direction,
+        sizeId: initial.sizeId,
+        cols: Math.max(1, Math.min(initial.cols, gridCols)),
+        rows: Math.max(1, initial.rows),
+        position: { ...ref.basePos },
+        unitX,
+        unitY,
+        gridCols
+      });
+    }, [getGridCols, isEditMode, pickNearestSize, updateResizePreview, widget.cols, widget.rows, widget.size, widget?.position?.col, widget?.position?.row]);
+
+    useEffect(() => {
+      const ref = resizeDragRef.current;
+      if (!ref.active) return;
+
+      const onMove = (e) => {
+        if (!ref.active) return;
+        if (ref.pointerId != null && e.pointerId != null && e.pointerId !== ref.pointerId) return;
+
+        const gridCols = getGridCols();
+        const metrics = HEYS.Widgets.gridEngine?.getCellMetrics?.() || { cellWidth: 150, cellHeight: 76, gap: 12 };
+        const unitX = (metrics.cellWidth || 150) + (metrics.gap || 12);
+        const unitY = (metrics.cellHeight || 76) + (metrics.gap || 12);
+
+        const dx = (e.clientX || 0) - ref.startX;
+        const dy = (e.clientY || 0) - ref.startY;
+
+        const rawDeltaCols = Math.round(dx / unitX);
+        const rawDeltaRows = Math.round(dy / unitY);
+
+        // Для левого/верхнего хендла инвертируем направление:
+        // - drag left/up = увеличение, drag right/down = уменьшение
+        const intentDeltaCols = (ref.direction === 'w') ? -rawDeltaCols : (ref.direction === 'e' ? rawDeltaCols : 0);
+        const intentDeltaRows = (ref.direction === 'n') ? -rawDeltaRows : (ref.direction === 's' ? rawDeltaRows : 0);
+
+        // micro-оптимизация: не пересчитываем пока не изменились снап-делты
+        if (intentDeltaCols === ref.lastDeltaCols && intentDeltaRows === ref.lastDeltaRows) return;
+        ref.lastDeltaCols = intentDeltaCols;
+        ref.lastDeltaRows = intentDeltaRows;
+
+        const targetCols = Math.max(1, Math.min(ref.baseCols + intentDeltaCols, gridCols));
+        const targetRows = Math.max(1, ref.baseRows + intentDeltaRows);
+
+        const nearest = pickNearestSize(targetCols, targetRows, intentDeltaCols, intentDeltaRows);
+        const cols = Math.max(1, Math.min(nearest.cols, gridCols));
+        const rows = Math.max(1, nearest.rows);
+
+        // Позиция зависит от направления (якорим противоположную грань)
+        let col = ref.basePos.col;
+        let row = ref.basePos.row;
+
+        if (ref.direction === 'w') {
+          col = ref.fixedRight - cols;
+        }
+        if (ref.direction === 'n') {
+          row = ref.fixedBottom - rows;
+        }
+
+        // clamp по границам грида
+        col = Math.max(0, col);
+        if (col + cols > gridCols) {
+          col = Math.max(0, gridCols - cols);
+        }
+        row = Math.max(0, row);
+
+        updateResizePreview({
+          active: true,
+          direction: ref.direction,
+          sizeId: nearest.sizeId,
+          cols,
+          rows,
+          position: { col, row },
+          unitX,
+          unitY,
+          gridCols,
+          overflowRight: (col + cols > gridCols)
+        });
+      };
+
+      const onUp = () => endResizeDrag('up');
+      const onCancel = () => endResizeDrag('cancel');
+
+      window.addEventListener('pointermove', onMove, { passive: false });
+      window.addEventListener('pointerup', onUp, { passive: true });
+      window.addEventListener('pointercancel', onCancel, { passive: true });
+      return () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onCancel);
+      };
+    }, [endResizeDrag, getGridCols, pickNearestSize, updateResizePreview, widget?.position?.col]);
     
-    const sizeClass = `widget--${widget.size}`;
-    const typeClass = `widget--${widget.type}`;
+    const isResizing = !!resizePreview?.active;
+    const previewCols = isResizing ? (resizePreview?.cols || widget.cols) : widget.cols;
+    const previewRows = isResizing ? (resizePreview?.rows || widget.rows) : widget.rows;
+    const previewSizeId = isResizing ? (resizePreview?.sizeId || widget.size) : widget.size;
+    const previewPosition = isResizing ? (resizePreview?.position || widget.position) : widget.position;
+    const effectiveWidget = useMemo(() => {
+      if (!isResizing) return widget;
+      return {
+        ...widget,
+        size: previewSizeId,
+        cols: previewCols,
+        rows: previewRows,
+        position: previewPosition
+      };
+    }, [isResizing, previewCols, previewRows, previewPosition, previewSizeId, widget]);
+
+    const sizeClass = `widget--${effectiveWidget.size}`;
+    const typeClass = `widget--${effectiveWidget.type}`;
+    const isMini = effectiveWidget?.size === 'mini';
+    const previewLabel = useMemo(() => {
+      const s = HEYS.Widgets.registry?.getSize?.(previewSizeId);
+      return s?.label || previewSizeId;
+    }, [previewSizeId]);
+
+    // Важно: Core хранит позицию в grid-координатах (col/row),
+    // а CSS Grid по умолчанию раскладывает элементы по DOM-порядку.
+    // Поэтому для реального reorder нужно явно задавать start линии.
+    const gridCol = effectiveWidget?.position?.col;
+    const gridRow = effectiveWidget?.position?.row;
+    const hasGridPos = Number.isFinite(gridCol) && Number.isFinite(gridRow);
     
     return React.createElement('div', {
       ref: elementRef,
-      className: `widget ${sizeClass} ${typeClass} ${isEditMode ? 'widget--editing' : ''}`,
+      className: `widget ${sizeClass} ${typeClass} ${isEditMode ? 'widget--editing' : ''} ${isResizing ? 'widget--resizing' : ''}`,
       'data-widget-id': widget.id,
       'data-widget-type': widget.type,
       style: {
-        gridColumn: `span ${widget.cols}`,
-        gridRow: `span ${widget.rows}`,
-        touchAction: isEditMode ? 'none' : 'auto' // Disable browser scrolling during drag
+        // 1-based линии в CSS Grid
+        gridColumn: hasGridPos ? `${gridCol + 1} / span ${previewCols}` : `span ${previewCols}`,
+        gridRow: hasGridPos ? `${gridRow + 1} / span ${previewRows}` : `span ${previewRows}`,
+        // В edit-mode оставляем вертикальный скролл, а сам drag защищён в core
+        touchAction: isResizing ? 'none' : (isEditMode ? 'pan-y' : 'auto'),
+        zIndex: isResizing ? 60 : undefined
       },
       onClick: handleClick,
-      onPointerDown: handlePointerDown
+      onPointerDown: handlePointerDown,
+      onPointerMove: handlePointerMove,
+      onPointerUp: handlePointerUp,
+      onPointerCancel: handlePointerUp
     },
-      // Widget Header
-      React.createElement('div', { className: 'widget__header' },
+      // Widget Header (mini = без хедера)
+      !isMini && React.createElement('div', { className: 'widget__header' },
         React.createElement('span', { className: 'widget__icon' }, widgetType?.icon || '📊'),
         React.createElement('span', { className: 'widget__title' }, widgetType?.name || widget.type)
       ),
       
       // Widget Content (placeholder - будет заменён конкретными виджетами)
       React.createElement('div', { className: 'widget__content' },
-        React.createElement(WidgetContent, { widget, widgetType })
+        React.createElement(WidgetContent, { widget: effectiveWidget, widgetType })
+      ),
+
+      // Resize preview overlay
+      isEditMode && isResizing && React.createElement('div', {
+        className: 'widget__resize-overlay',
+        onPointerDown: (e) => e.stopPropagation(),
+        onPointerMove: (e) => e.stopPropagation(),
+        onPointerUp: (e) => e.stopPropagation()
+      },
+        React.createElement('div', { className: 'widget__resize-overlay-title' }, 'Размер'),
+        React.createElement('div', { className: 'widget__resize-overlay-value' }, `${previewLabel} · ${previewCols}×${previewRows}`),
+        !!resizePreview?.overflowRight && React.createElement('div', { className: 'widget__resize-overlay-hint' }, 'Не помещается справа — может сдвинуться')
       ),
       
       // Edit Mode: Delete button
       isEditMode && React.createElement('button', {
         className: 'widget__delete-btn',
+        onPointerDown: (e) => e.stopPropagation(),
+        onPointerUp: (e) => e.stopPropagation(),
+        onPointerMove: (e) => e.stopPropagation(),
         onClick: handleRemoveClick,
         title: 'Удалить'
       }, '✕'),
@@ -84,9 +418,54 @@
       // Edit Mode: Settings button (optional)
       isEditMode && widgetType?.settings && React.createElement('button', {
         className: 'widget__settings-btn',
+        onPointerDown: (e) => e.stopPropagation(),
+        onPointerUp: (e) => e.stopPropagation(),
+        onPointerMove: (e) => e.stopPropagation(),
         onClick: handleSettingsClick,
         title: 'Настройки'
       }, '⚙️')
+
+      ,
+
+      // Edit Mode: Resize handle (drag-resize)
+      isEditMode && React.createElement(React.Fragment, null,
+        React.createElement('button', {
+          type: 'button',
+          className: 'widget__resize-handle widget__resize-handle--n',
+          onPointerDown: (e) => handleResizeHandlePointerDown('n', e),
+          onPointerUp: (e) => e.stopPropagation(),
+          onPointerMove: (e) => e.stopPropagation(),
+          title: `Изменить высоту: потяни (сейчас: ${currentSizeLabel})`,
+          'aria-label': `Изменить высоту: потяни. Сейчас: ${currentSizeLabel}`
+        }),
+        React.createElement('button', {
+          type: 'button',
+          className: 'widget__resize-handle widget__resize-handle--e',
+          onPointerDown: (e) => handleResizeHandlePointerDown('e', e),
+          onPointerUp: (e) => e.stopPropagation(),
+          onPointerMove: (e) => e.stopPropagation(),
+          title: `Изменить ширину: потяни (сейчас: ${currentSizeLabel})`,
+          'aria-label': `Изменить ширину: потяни. Сейчас: ${currentSizeLabel}`
+        }),
+        React.createElement('button', {
+          type: 'button',
+          className: 'widget__resize-handle widget__resize-handle--s',
+          onPointerDown: (e) => handleResizeHandlePointerDown('s', e),
+          onPointerUp: (e) => e.stopPropagation(),
+          onPointerMove: (e) => e.stopPropagation(),
+          title: `Изменить высоту: потяни (сейчас: ${currentSizeLabel})`,
+          'aria-label': `Изменить высоту: потяни. Сейчас: ${currentSizeLabel}`
+        }),
+        React.createElement('button', {
+          type: 'button',
+          className: 'widget__resize-handle widget__resize-handle--w',
+          onPointerDown: (e) => handleResizeHandlePointerDown('w', e),
+          onPointerUp: (e) => e.stopPropagation(),
+          onPointerMove: (e) => e.stopPropagation(),
+          title: `Изменить ширину: потяни (сейчас: ${currentSizeLabel})`,
+          'aria-label': `Изменить ширину: потяни. Сейчас: ${currentSizeLabel}`
+        })
+      )
     );
   }
   
@@ -273,22 +652,52 @@
     const current = data.current;
     const goal = data.goal;
     const trend = data.trend;
+
+    const size = widget?.size || 'compact';
+    const isMini = size === 'mini';
+    const isCompact = size === 'compact' || isMini;
+    const isLarge = size === 'large';
+
+    const hasCurrent = Number.isFinite(current);
+    const hasGoal = Number.isFinite(goal);
     
-    const getTrendEmoji = () => {
-      if (!trend) return '';
-      if (trend < -0.1) return ' ↓';
-      if (trend > 0.1) return ' ↑';
-      return ' →';
+    const getTrendInfo = () => {
+      if (!Number.isFinite(trend)) return null;
+      if (trend < -0.1) return { cls: 'widget-weight__trend--down', emoji: '↓', label: 'снижается' };
+      if (trend > 0.1) return { cls: 'widget-weight__trend--up', emoji: '↑', label: 'растёт' };
+      return { cls: 'widget-weight__trend--stable', emoji: '→', label: 'стабилен' };
     };
+
+    const trendInfo = getTrendInfo();
     
-    return React.createElement('div', { className: 'widget-weight' },
-      current ? 
-        React.createElement('div', { className: 'widget-weight__value' },
-          `${current.toFixed(1)} кг${widget.settings?.showTrend ? getTrendEmoji() : ''}`
-        ) :
-        React.createElement('div', { className: 'widget-weight__empty' }, 'Нет данных'),
-      widget.settings?.showGoal && goal &&
-        React.createElement('div', { className: 'widget-weight__goal' }, `Цель: ${goal} кг`)
+    return React.createElement('div', { className: `widget-weight ${isMini ? 'widget-weight--mini' : ''}` },
+      hasCurrent ? (
+        isMini
+          ? React.createElement('div', { className: 'widget-weight__value widget-weight__value--mini' },
+              current.toFixed(1),
+              React.createElement('span', { className: 'widget-weight__unit' }, 'кг')
+            )
+          : React.createElement('div', { className: 'widget-weight__value' },
+              `${current.toFixed(1)} кг`
+            )
+      ) : (
+        isMini
+          ? React.createElement('div', { className: 'widget-weight__value widget-weight__value--mini' }, '—')
+          : React.createElement('div', { className: 'widget-weight__empty' }, 'Нет данных')
+      ),
+
+      // Компактный размер — минимум деталей
+      !isCompact && widget.settings?.showGoal && hasGoal &&
+        React.createElement('div', { className: 'widget-weight__goal' }, `Цель: ${goal} кг`),
+
+      // В широком/большом — показываем тренд аккуратной строкой
+      !isCompact && widget.settings?.showTrend && trendInfo &&
+        React.createElement('div', { className: `widget-weight__trend ${trendInfo.cls}` },
+          React.createElement('span', { className: 'widget-weight__trend-emoji' }, trendInfo.emoji),
+          isLarge
+            ? React.createElement('span', { className: 'widget-weight__trend-text' }, `${trendInfo.label}`)
+            : null
+        )
     );
   }
   
@@ -376,7 +785,10 @@
   
   function HeatmapWidgetContent({ widget, data }) {
     const days = data.days || [];
-    const period = widget.settings?.period || 'week';
+    const configuredPeriod = widget.settings?.period || 'week';
+    // В wide (и любом не-large) делаем компактный недельный вид,
+    // чтобы не «съедал» высоту карточки.
+    const period = widget?.size === 'large' ? configuredPeriod : 'week';
     
     return React.createElement('div', { className: 'widget-heatmap' },
       React.createElement('div', { className: `widget-heatmap__grid widget-heatmap__grid--${period}` },
@@ -589,13 +1001,56 @@
   }
   
   // === Main WidgetsTab Component ===
-  function WidgetsTab({ selectedDate, clientId }) {
+  function WidgetsTab({ selectedDate, clientId, setTab, setSelectedDate }) {
     const [widgets, setWidgets] = useState([]);
+    const [isLayoutHydrated, setIsLayoutHydrated] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [catalogOpen, setCatalogOpen] = useState(false);
     const [settingsWidget, setSettingsWidget] = useState(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const containerRef = useRef(null);
+    const gridRef = useRef(null);
+
+    // Mobile detection (используем существующий хук Day)
+    const isMobile = (HEYS.dayHooks && typeof HEYS.dayHooks.useMobileDetection === 'function')
+      ? HEYS.dayHooks.useMobileDetection(768)
+      : false;
+
+    // На мобиле делаем единицу сетки ближе к квадрату (row-height = ширина колонки)
+    // Это критично для mini (1×1), чтобы оно не выглядело как «0.5 по высоте».
+    useEffect(() => {
+      const grid = gridRef.current;
+      if (!grid) return;
+
+      const update = () => {
+        try {
+          if (!isMobile) return;
+          const cs = window.getComputedStyle(grid);
+          const colsVar = parseInt(cs.getPropertyValue('--widget-grid-columns'), 10);
+          const cols = Number.isFinite(colsVar) && colsVar > 0 ? colsVar : 4;
+          const gapVar = parseFloat(cs.getPropertyValue('--widget-grid-gap'));
+          const gap = Number.isFinite(gapVar) ? gapVar : 8;
+
+          const w = grid.clientWidth;
+          if (!w) return;
+          const cellW = (w - gap * (cols - 1)) / cols;
+          if (!Number.isFinite(cellW) || cellW <= 0) return;
+
+          const target = Math.max(60, Math.min(Math.round(cellW), 140));
+          grid.style.setProperty('--widget-row-height', `${target}px`);
+        } catch (e) {
+          // silent
+        }
+      };
+
+      update();
+      window.addEventListener('resize', update);
+      window.addEventListener('orientationchange', update);
+      return () => {
+        window.removeEventListener('resize', update);
+        window.removeEventListener('orientationchange', update);
+      };
+    }, [isMobile, widgets.length, isEditMode]);
     
     // Сохраняем selectedDate в HEYS.Widgets.data для использования в widget_data.js
     useEffect(() => {
@@ -607,6 +1062,10 @@
     
     // Initialize and subscribe to state changes
     useEffect(() => {
+      // Важно: на первом рендере widgets=[] и UI может кратко показать empty-state.
+      // Поэтому показываем empty-state только после первичной инициализации.
+      setIsLayoutHydrated(false);
+
       // Initialize state if not already
       HEYS.Widgets.state?.init?.();
       
@@ -614,11 +1073,20 @@
       setWidgets(HEYS.Widgets.state?.getWidgets?.() || []);
       setIsEditMode(HEYS.Widgets.state?.isEditMode?.() || false);
       updateHistoryInfo();
+      setIsLayoutHydrated(true);
+
+      // Subscribe to layout loaded (первичная загрузка)
+      const unsubLoaded = HEYS.Widgets.on('layout:loaded', ({ layout }) => {
+        setWidgets([...(layout || [])]);
+        updateHistoryInfo();
+        setIsLayoutHydrated(true);
+      });
       
       // Subscribe to layout changes
       const unsubLayout = HEYS.Widgets.on('layout:changed', ({ layout }) => {
         setWidgets([...layout]);
         updateHistoryInfo();
+        setIsLayoutHydrated(true);
       });
       
       // Subscribe to edit mode changes
@@ -634,6 +1102,7 @@
       const unsubHistory = HEYS.Widgets.on('history:changed', updateHistoryInfo);
       
       return () => {
+        unsubLoaded?.();
         unsubLayout?.();
         unsubEditEnter?.();
         unsubEditExit?.();
@@ -656,7 +1125,7 @@
       };
       
       const handlePointerUp = (e) => {
-        HEYS.Widgets.dnd?.handlePointerUp?.(e);
+        HEYS.Widgets.dnd?.handlePointerUp?.(null, e);
       };
       
       // Attach global listeners
@@ -711,6 +1180,27 @@
     const toggleEdit = useCallback(() => {
       HEYS.Widgets.toggleEditMode?.();
     }, []);
+
+    // FAB: добавить приём пищи / воду — переключаемся на нужную вкладку и вызываем Day API
+    const goToDayAndRun = useCallback((targetTab, fnName, fnArgs = []) => {
+      const doSetTab = typeof setTab === 'function' ? setTab : (window.HEYS?.App?.setTab);
+
+      if (typeof doSetTab === 'function') {
+        doSetTab(targetTab);
+      }
+
+      // Даем React смонтировать DayTab
+      setTimeout(() => {
+        const fn = window.HEYS?.Day?.[fnName];
+        if (typeof fn === 'function') {
+          try {
+            fn(...fnArgs);
+          } catch (e) {
+            // silent: внешние вызовы не должны ломать UI
+          }
+        }
+      }, 600);
+    }, [setTab]);
     
     // Undo/Redo handlers
     const handleUndo = useCallback(() => {
@@ -721,8 +1211,8 @@
       HEYS.Widgets.redo?.();
     }, []);
     
-    // Render empty state
-    if (widgets.length === 0 && !isEditMode) {
+    // Render empty state (только после первичной гидратации layout)
+    if (isLayoutHydrated && widgets.length === 0 && !isEditMode) {
       return React.createElement('div', { className: 'widgets-tab' },
         React.createElement('div', { className: 'widgets-empty' },
           React.createElement('div', { className: 'widgets-empty__icon' }, '📊'),
@@ -770,7 +1260,8 @@
             }, '↪')
           )
         ),
-        React.createElement('button', {
+        // На мобиле кнопку "Изменить" переносим в FAB снизу слева
+        !isMobile && React.createElement('button', {
           className: `widgets-header__btn widgets-header__btn--edit ${isEditMode ? 'active' : ''}`,
           onClick: toggleEdit
         }, isEditMode ? '✓ Готово' : '✏️ Изменить')
@@ -778,7 +1269,8 @@
       
       // Widgets Grid
       React.createElement('div', {
-        className: `widgets-grid ${isEditMode ? 'widgets-grid--editing' : ''}`
+        className: `widgets-grid ${isEditMode ? 'widgets-grid--editing' : ''}`,
+        ref: gridRef
       },
         widgets.map(widget =>
           React.createElement(WidgetCard, {
@@ -802,7 +1294,34 @@
         isOpen: !!settingsWidget,
         onClose: () => setSettingsWidget(null),
         onSave: handleSettingsSave
-      })
+      }),
+
+      // === FABs (mobile) ===
+      isMobile && React.createElement(React.Fragment, null,
+        // Edit FAB — снизу слева
+        React.createElement('div', { className: 'widgets-fab-left' },
+          React.createElement('button', {
+            className: `widgets-edit-fab ${isEditMode ? 'active' : ''}`,
+            onClick: toggleEdit,
+            'aria-label': isEditMode ? 'Готово' : 'Изменить'
+          }, isEditMode ? '✓' : '✏️')
+        ),
+
+        // Meal/Water FAB group — как на остальных вкладках (справа).
+        // В edit-mode прячем, чтобы не мешали перетаскиванию.
+        !isEditMode && React.createElement('div', { className: 'fab-group' },
+          React.createElement('button', {
+            className: 'meal-fab',
+            onClick: () => goToDayAndRun('diary', 'addMeal', []),
+            'aria-label': 'Добавить приём пищи'
+          }, '🍽️'),
+          React.createElement('button', {
+            className: 'water-fab',
+            onClick: () => goToDayAndRun('stats', 'addWater', [200]),
+            'aria-label': 'Добавить стакан воды'
+          }, '🥛')
+        )
+      )
     );
   }
   
