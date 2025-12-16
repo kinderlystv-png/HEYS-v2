@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm run prebuild && vite build && cp heys_*.js dist/ && mkdir -p dist/styles && cp styles/*.css dist/styles/",
+  "buildCommand": "pnpm run prebuild && vite build && cp heys_*.js dist/ && mkdir -p dist/styles && cp styles/*.css dist/styles/ && mkdir -p dist/widgets && cp widgets/*.js dist/widgets/",
   "outputDirectory": "dist",
   "installCommand": "cd ../.. && pnpm install",
   "rewrites": [
