@@ -615,6 +615,10 @@
         ? { col: position.col, row: position.row }
         : { ...widget.position };
 
+      // 🔍 DEBUG: Логируем что происходит
+      const sizeInfo = registry.getSize(size);
+      console.log(`[resizeWidgetAt] Widget ${id}: size ${widget.size} → ${size}, pos (${widget.position.col},${widget.position.row}) → (${nextPos.col},${nextPos.row}), new dims: ${sizeInfo?.cols}x${sizeInfo?.rows}`);
+
       // 1) Одна запись в историю
       this._pushHistory();
 
@@ -625,7 +629,9 @@
       }
 
       // 3) 🆕 Вытесняем перекрывающиеся виджеты на свободные места
-      gridEngine.displaceCollidingWidgets(id);
+      console.log(`[resizeWidgetAt] Calling displaceCollidingWidgets for ${id}`);
+      const displaced = gridEngine.displaceCollidingWidgets(id);
+      console.log(`[resizeWidgetAt] Displacement result: ${displaced}`);
 
       // layout:changed эмитится внутри updateWidget
       return true;
